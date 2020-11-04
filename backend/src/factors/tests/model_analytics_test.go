@@ -741,6 +741,100 @@ func TestAnalyticsFunnelQueryRepeatedEvents(t *testing.T) {
 	assert.Equal(t, "100.0", result1.Rows[0][4])
 	assert.Equal(t, "100.0", result1.Rows[0][5])
 }
+
+func TestAnalyticsFunnelQueryCRMEventsWithSameTimestamp(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user1.ID)
+
+	// create 3 events with 2 users for the same timestamp
+	// user1 : s1, user2 : s1,s2
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+		"s1", user1.ID, startTimestamp)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload1), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user2.ID)
+	payload2 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+		"s1", user2.ID, startTimestamp)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload2), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload3 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+		"s2", user2.ID, startTimestamp)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload3), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	query := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	// should result in 0 conversions for the same timestamp and same event name
+	result, errCode, _ := M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, int64(2), result.Rows[0][0])
+	assert.Equal(t, int(0), result.Rows[0][1])
+	assert.Equal(t, "0.0", result.Rows[0][2])
+	assert.Equal(t, "0.0", result.Rows[0][3])
+
+	query1 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s2",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	// should have 1 conversion as events are different but the timestamp is same
+	result1, errCode, _ := M.Analyze(project.ID, query1)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, int64(2), result1.Rows[0][0])
+	assert.Equal(t, int64(1), result1.Rows[0][1])
+	assert.Equal(t, "50.0", result1.Rows[0][2])
+	assert.Equal(t, int64(1), result1.Rows[0][3])
+	assert.Equal(t, "50.0", result1.Rows[0][4])
+	assert.Equal(t, "50.0", result1.Rows[0][5])
+}
 func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
