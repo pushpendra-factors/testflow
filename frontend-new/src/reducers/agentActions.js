@@ -420,3 +420,26 @@ export function forgotPassword(email){
     });
   }
 } 
+
+export function setPassword(password, token){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      dispatch({type: "AGENT_SET_PASSWORD"});
+
+      post(dispatch, host+"agents/setpassword?token="+token, {
+        password: password
+      })
+        .then(() => {
+          resolve(dispatch({
+            type: "AGENT_SET_PASSWORD_FULFILLED",
+            payload: {}
+          }));
+        })
+        .catch(() => {
+          dispatch({type: "AGENT_SET_PASSWORD_REJECTED", payload: null});
+
+          reject("Reset password failed. Please try again.");
+        });
+    });
+  }
+}
