@@ -399,3 +399,24 @@ export function updateAgentRole(projectId,uuid,role){
     });
   }
 }
+
+export function forgotPassword(email){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      dispatch({type: "AGENT_FORGOT_PASSWORD"});
+
+      post(dispatch, host+"agents/forgotpassword", { email: email })
+        .then(() => {
+          resolve(dispatch({
+            type: "AGENT_FORGOT_PASSWORD_FULFILLED",
+            payload: {}
+          }));
+        })
+        .catch(() => {
+          dispatch({type: "AGENT_FORGOT_PASSWORD_REJECTED", payload: null});
+
+          reject("Failed sending the email. Please try again.")
+        });
+    });
+  }
+} 
