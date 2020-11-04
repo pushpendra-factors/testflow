@@ -831,9 +831,7 @@ func TestAnalyticsFunnelQueryCRMEventsWithSameTimestamp(t *testing.T) {
 	assert.Equal(t, int64(2), result1.Rows[0][0])
 	assert.Equal(t, int64(1), result1.Rows[0][1])
 	assert.Equal(t, "50.0", result1.Rows[0][2])
-	assert.Equal(t, int64(1), result1.Rows[0][3])
-	assert.Equal(t, "50.0", result1.Rows[0][4])
-	assert.Equal(t, "50.0", result1.Rows[0][5])
+	assert.Equal(t, "50.0", result1.Rows[0][3])
 }
 func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	// Initialize routes and dependent data.
