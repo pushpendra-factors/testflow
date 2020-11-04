@@ -1,7 +1,7 @@
 /* eslint-disable */
 
 import { get, getHostUrl, post, del } from '../../utils/request';
-import { QUERIES_LOADING, QUERIES_LOADED, QUERIES_LOADING_FAILED, QUERY_DELETED } from '../types';
+import { QUERIES_LOADING, QUERIES_LOADED, QUERIES_LOADING_FAILED, QUERY_DELETED, DASHBOARDS_LOADED } from '../types';
 const host = getHostUrl();
 
 export const getEventNames = (dispatch, projectId) => {
@@ -29,14 +29,14 @@ export function fetchUserProperties(projectId, queryType) {
   return get(null, url);
 }
 
-export const getFinalData = (projectId, query) => {
+export const getFunnelData = (projectId, query) => {
   const url = host + "projects/" + projectId + "/query";
   return post(null, url, { query });
 }
 
-export const saveQuery = (projectId, title, query) => {
+export const saveQuery = (projectId, title, query, type) => {
   const url = host + "projects/" + projectId + "/queries";
-  return post(null, url, { query: JSON.stringify(query), title });
+  return post(null, url, { query: { query_group: [query] }, title, type });
 }
 
 export const deleteQuery = async (dispatch, query) => {

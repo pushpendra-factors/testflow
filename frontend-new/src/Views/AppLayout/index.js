@@ -14,6 +14,7 @@ import {
 } from 'react-router-dom';
 import { fetchProjects } from '../../reducers/global';
 import { fetchQueries } from '../../reducers/coreQuery/services';
+import { fetchDashboards } from '../../reducers/dashboard/services';
 
 function AppLayout({ fetchProjects }) {
   const [dataLoading, setDataLoading] = useState(true);
@@ -39,6 +40,7 @@ function AppLayout({ fetchProjects }) {
 
   useEffect(() => {
     if (active_project.id) {
+      fetchDashboards(dispatch, active_project.id);
       fetchQueries(dispatch, active_project.id);
     }
   }, [dispatch, active_project.id]);
@@ -74,7 +76,8 @@ function AppLayout({ fetchProjects }) {
 }
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-  fetchProjects
+  fetchProjects,
+  fetchDashboards
 }, dispatch);
 
 export default connect(null, mapDispatchToProps)(AppLayout);

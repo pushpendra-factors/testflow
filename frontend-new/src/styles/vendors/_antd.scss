@@ -2662,10 +2662,10 @@ html {
   -webkit-transition: all 0.3s;
   transition: all 0.3s;
 }
-.ant-select-multiple .ant-select-selection-search-input {
-  width: 100%;
-  min-width: 3px;
-}
+// .ant-select-multiple .ant-select-selection-search-input {
+//   width: 100%;
+//   min-width: 3px;
+// }
 .ant-select-multiple .ant-select-selection-search-mirror {
   position: absolute;
   top: 0;
@@ -2674,9 +2674,9 @@ html {
   white-space: nowrap;
   visibility: hidden;
 }
-.ant-select-multiple .ant-select-selection-search:first-child .ant-select-selection-search-input {
-  margin-left: 6.5px;
-}
+// .ant-select-multiple .ant-select-selection-search:first-child .ant-select-selection-search-input {
+//   margin-left: 6.5px;
+// }
 .ant-select-multiple .ant-select-selection-placeholder {
   position: absolute;
   top: 50%;

@@ -7,6 +7,13 @@ export const labelsObj = {
   frequency: 'Count'
 };
 
+export const presentationObj = {
+  pb: 'barchart',
+  pl: 'linechart',
+  pt: 'linechart',
+  pc: 'sparklines'
+};
+
 const constantObj = {
   each: 'each_given_event',
   any: 'any_given_event',

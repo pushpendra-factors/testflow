@@ -6,7 +6,7 @@ import CoreQueryHome from '../CoreQueryHome';
 import { Drawer, Button } from 'antd';
 import { SVG, Text } from '../../components/factorsComponents';
 import EventsAnalytics from '../EventsAnalytics';
-import { runQuery as runQueryService, getFinalData } from '../../reducers/coreQuery/services';
+import { runQuery as runQueryService, getFunnelData } from '../../reducers/coreQuery/services';
 import {
   initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, formatApiData, getQuery, initialState, getFunnelQuery
 } from './utils';
@@ -212,7 +212,7 @@ function CoreQuery({ activeProject }) {
       updateFunnelResult({ ...initialState, loading: true });
       const query = getFunnelQuery(groupBy, queries);
       updateRequestQuery(query);
-      const res = await getFinalData(activeProject.id, query);
+      const res = await getFunnelData(activeProject.id, query);
       if (res.status === 200) {
         updateFunnelResult({ ...initialState, data: res.data });
       } else {

@@ -71,7 +71,13 @@ function EventsAnalytics({
         </div>
       </Header>
       <div className="mt-40 mb-8 fa-container">
-        <ContentTabs breakdownTypeData={breakdownTypeData} resultState={resultState} onChange={handleTabChange} activeKey={activeKey} tabItems={tabItems} />
+        <ContentTabs
+          breakdownTypeData={breakdownTypeData}
+          resultState={resultState}
+          onChange={handleTabChange}
+          activeKey={activeKey}
+          tabItems={tabItems}
+        />
       </div>
     </>
   );

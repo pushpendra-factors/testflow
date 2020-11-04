@@ -76,7 +76,7 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
 
   const getFormattedRow = (q) => {
     let svgName = 'events_cq';
-    let requestQuery = JSON.parse(q.query);
+    let requestQuery = q.query;
     if (requestQuery.cl === 'funnel') {
       svgName = 'funnels_cq';
     }
@@ -122,7 +122,7 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
   }, [])
 
   const setQueryToState = useCallback((record) => {
-    const equivalentQuery = getStateQueryFromRequestQuery(record.query);
+    const equivalentQuery = getStateQueryFromRequestQuery(record.query.query_group[0]);
     dispatch({ type: INITIALIZE_GROUPBY, payload: equivalentQuery.breakdown })
     setQueries(equivalentQuery.events);
     setQueryType(equivalentQuery.queryType);
@@ -163,7 +163,6 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
         onOk={confirmDelete}
         onCancel={showDeleteModal.bind(this, false)}
         title="Delete Query"
-        width={400}
         okText="Confirm"
         cancelText="Cancel"
       />

@@ -5,7 +5,7 @@ import { checkForWindowSizeChange } from '../../Views/CoreQuery/FunnelsResultPag
 import { getMaxYpoint } from './utils';
 import ChartLegends from './ChartLegends';
 
-function BarChart({ chartData, queries }) {
+function BarChart({ chartData, queries, title = 'chart' }) {
   const tooltip = useRef(null);
   const chartRef = useRef(null);
 
@@ -56,8 +56,8 @@ function BarChart({ chartData, queries }) {
 
   const drawChart = useCallback(() => {
     const availableWidth = d3.select(chartRef.current).node().getBoundingClientRect().width;
-    d3.select(chartRef.current).html('').append('svg').attr('width', availableWidth).attr('height', 400).attr('id', 'chart');
-    const svg = d3.select('#chart');
+    d3.select(chartRef.current).html('').append('svg').attr('width', availableWidth).attr('height', 350).attr('id', `chart-${title}`);
+    const svg = d3.select(`#chart-${title}`);
     const max = getMaxYpoint(Math.max(...chartData.map(elem => parseInt(elem.value))));
     const margin = {
       top: 10, right: 0, bottom: 30, left: 50
@@ -122,7 +122,7 @@ function BarChart({ chartData, queries }) {
         hideTooltip();
       });
     d3.select(chartRef.current).select('.axis.axis--x').selectAll('.tick').select('text').attr('dy', '16px');
-  }, [chartData, showTooltip, hideTooltip]);
+  }, [chartData, showTooltip, hideTooltip, title]);
 
   const displayChart = useCallback(() => {
     drawChart();

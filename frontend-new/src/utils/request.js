@@ -47,8 +47,11 @@ function request(dispatch, method, url, headers, data) {
             const responsePayload = { status: response.status, ok: isRequestSuccess(response.status) };
             if (text === '') responsePayload.data = {};
             else responsePayload.data = JSON.parse(text);
-  
-            return responsePayload;
+            if(responsePayload.status >= 400) {
+              return Promise.reject(responsePayload);
+            } else {
+              return Promise.resolve(responsePayload);
+            }
           });
       });
   }

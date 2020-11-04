@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Row, Col, Tabs, Modal, Button, Select
+  Row, Col, Tabs, Modal, Button, Spin
 } from 'antd';
-import { Text, SVG } from 'factorsComponents';
+import { Text, SVG } from '../../components/factorsComponents';
 import WidgetCard from './WidgetCard';
 import { ReactSortable } from 'react-sortablejs';
 import {
   LockOutlined, ReloadOutlined, UserAddOutlined, MoreOutlined
 } from '@ant-design/icons';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchActiveDashboardUnits } from '../../reducers/dashboard/services';
+import { ACTIVE_DASHBOARD_CHANGE } from '../../reducers/types';
 const { TabPane } = Tabs;
-const { Option } = Select;
+// const { Option } = Select;
 
 const widgetCardCollection = [
   {
@@ -49,33 +52,54 @@ const widgetCardCollection = [
 
 const DashboardSubMenu = () => {
   return (
-    <div className={'flex justify-between items-center px-4 mb-4'}>
-      <div className={'flex justify-between items-center'}>
-          <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>Date from</Text>
-          <Select className={'fa-select mx-2 mr-4 ml-4'} defaultValue="Last 30 days">
-                    <Option value="jack">1 Month</Option>
-                    <Option value="lucy2">2 Months</Option>
-                    <Option value="lucy3">6 Months</Option>
-                    <Option value="lucy4">1 Year</Option>
-                    <Option value="lucy5">1+ Year</Option>
-          </Select>
-          <Button size={'large'} type={'text'} className={'m-0 fa-button-ghost  p-0 py-2'}><LockOutlined /> Personal.</Button>
-          {/* <Text type={'title'} level={7}  extraClass={'m-0 mx-2'}><LockOutlined /> Private.</Text>                         */}
-          <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Refreshed 3m ago</Text>
-      </div>
-      <div className={'flex justify-between items-center'}>
-          <Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><ReloadOutlined /> Refresh Data.</Button>
-          <Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined /></Button>
-          <Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><MoreOutlined /></Button>
+		<div className={'flex justify-between items-center px-4 mb-4'}>
+			<div className={'flex justify-between items-center'}>
+				{/* <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>Date from</Text>
+        <Select className={'fa-select mx-2 mr-4 ml-4'} defaultValue="Last 30 days">
+          <Option value="jack">1 Month</Option>
+          <Option value="lucy2">2 Months</Option>
+          <Option value="lucy3">6 Months</Option>
+          <Option value="lucy4">1 Year</Option>
+          <Option value="lucy5">1+ Year</Option>
+        </Select> */}
+				<Button size={'large'} type={'text'} className={'m-0 fa-button-ghost flex items-center p-0 py-2'}><LockOutlined /> Personal.</Button>
+				{/* <Text type={'title'} level={7}  extraClass={'m-0 mx-2'}><LockOutlined /> Private.</Text>                         */}
+				<Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Refreshed 3m ago</Text>
+			</div>
+			<div className={'flex justify-between items-center'}>
+				<Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><ReloadOutlined /> Refresh Data.</Button>
+				<Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined /></Button>
+				<Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><MoreOutlined /></Button>
 
-      </div>
-    </div>
+			</div>
+		</div>
   );
 };
 
 function ProjectTabs({ setaddDashboardModal }) {
   const [widgetModal, setwidgetModal] = useState(false);
   const [widgets, setWidgets] = useState(widgetCardCollection);
+  const { active_project } = useSelector(state => state.global);
+  const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(state => state.dashboard);
+  const { data: savedQueries } = useSelector(state => state.queries);
+  const dispatch = useDispatch();
+
+  const fetchUnits = useCallback(() => {
+    if (active_project.id && activeDashboard.id) {
+      fetchActiveDashboardUnits(dispatch, active_project.id, activeDashboard.id);
+    }
+  }, [active_project.id, activeDashboard.id, dispatch]);
+
+  useEffect(() => {
+    fetchUnits();
+  }, [fetchUnits]);
+
+  const handleTabChange = useCallback((value) => {
+    dispatch({
+      type: ACTIVE_DASHBOARD_CHANGE,
+      payload: dashboards.data.find(d => d.id === parseInt(value))
+    });
+  }, [dashboards, dispatch]);
 
   const onDrop = (newState) => {
     setWidgets(newState);
@@ -102,81 +126,100 @@ function ProjectTabs({ setaddDashboardModal }) {
     setWidgets(newArray);
   };
 
-  const operations = <>
-  <Button type="text" size={'small'} onClick={() => setaddDashboardModal(true)}><SVG name="plus" color={'grey'}/></Button>
-  <Button type="text" size={'small'}><SVG name="edit" color={'grey'}/></Button>
-  </>;
+  const operations = (
+    <>
+			<Button type="text" size={'small'} onClick={() => setaddDashboardModal(true)}><SVG name="plus" color={'grey'} /></Button>
+			<Button type="text" size={'small'}><SVG name="edit" color={'grey'} /></Button>
+    </>
+  );
 
-  useEffect(() => {
-    // console.log('widgets', widgets);
-  });
+  const loading = dashboards.loading || activeDashboardUnits.loading;
+  const error = dashboards.error || activeDashboardUnits.error;
 
-  return (<>
+  if (loading) {
+    return (
+			<div className="flex justify-center items-center w-full h-64">
+				<Spin size="large" />
+			</div>
+    );
+  }
 
-        <Row className={'mt-2'}>
-          <Col span={24}>
-             <Tabs defaultActiveKey="1"
-              className={'fa-tabs--dashboard'}
-              tabBarExtraContent={operations}
-              >
-                <TabPane tab="My Dashboard" key="1">
-                   <div className={'fa-container mt-6'}>
-                   <DashboardSubMenu />
-                   <ReactSortable className={'ant-row'} list={widgets} setList={onDrop}>
-                      {widgets.map((item, index) => {
-                        return (
-                          <WidgetCard widthSize={item.size} key={index} index={index} resizeWidth={resizeWidth} title={item.title} id={item.type}/>
-                        );
-                      })}
-                  </ReactSortable>
-                   </div>
-                </TabPane>
-                <TabPane tab="Paid Marketing" key="2">
-                <div className={'fa-container mt-6'}>
-                  <ReactSortable className={'ant-row'} list={widgets} setList={onDrop}>
-                      {widgets.map((item, index) => {
-                        return (
-                          <WidgetCard widthSize={item.size} key={index} index={index} resizeWidth={resizeWidth} title={item.title} id={item.type}/>
-                        );
-                      })}
-                  </ReactSortable>
-                </div>
-                </TabPane>
-                <TabPane tab="Campaigns" key="3">
-                <div className={'fa-container mt-6'}>
-                    <ReactSortable className={'ant-row'} list={widgets} setList={onDrop}>
-                        {widgets.map((item, index) => {
-                          return (
-                            <WidgetCard widthSize={item.size} key={index} index={index} resizeWidth={resizeWidth} title={item.title} id={item.type}/>
-                          );
-                        })}
-                    </ReactSortable>
-                   </div>
-                </TabPane>
-              </Tabs>
-          </Col>
-        </Row>
+  if (error) {
+    return (
+			<div className="flex justify-center items-center w-full h-64">
+				Something went wrong!
+			</div>
+    );
+  }
 
-    <Modal
-        title={null}
-        visible={widgetModal}
-        footer={null}
-        centered={false}
-        zIndex={1005}
-        mask={false}
-        onCancel={() => setwidgetModal(false)}
-        // closable={false}
-        className={'fa-modal--full-width'}
-        >
-            <div className={'py-10 flex justify-center'}>
-                <div className={'fa-container'}>
-                    <Text type={'title'} level={5} weight={'bold'} size={'grey'} extraClass={'m-0'}>Full width Modal</Text>
-                    <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Core Query results page comes here..</Text>
-                </div>
-            </div>
-    </Modal>
+  const units = activeDashboardUnits.data
+    .filter(unit => {
+      const idx = savedQueries.findIndex(sq => sq.id === unit.query_id);
+      return idx > -1;
+    })
+    .map(unit => {
+      const savedQuery = savedQueries.find(sq => sq.id === unit.query_id);
+      return { ...unit, query: savedQuery };
+    });
 
-  </>);
+  return (
+    <>
+			<Row className={'mt-2'}>
+				<Col span={24}>
+					<Tabs
+						onChange={handleTabChange}
+						activeKey={activeDashboard.id.toString()}
+						className={'fa-tabs--dashboard'}
+						tabBarExtraContent={operations}
+					>
+						{dashboards.data.map(d => {
+						  return (
+								<TabPane tab={d.name} key={d.id}>
+									{d.id === activeDashboard.id ? (
+										<div className={'fa-container mt-6'}>
+											<DashboardSubMenu />
+											<ReactSortable className={'ant-row'} list={widgets} setList={onDrop}>
+												{units.map(unit => {
+												  return (
+														<WidgetCard
+															key={unit.id}
+															widthSize={3}
+															resizeWidth={resizeWidth}
+															unit={unit}
+															dashboard={d}
+														/>
+												  );
+												})}
+											</ReactSortable>
+										</div>
+									) : null}
+								</TabPane>
+						  );
+						})}
+					</Tabs>
+				</Col>
+			</Row>
+
+			<Modal
+				title={null}
+				visible={widgetModal}
+				footer={null}
+				centered={false}
+				zIndex={1005}
+				mask={false}
+				onCancel={() => setwidgetModal(false)}
+				// closable={false}
+				className={'fa-modal--full-width'}
+			>
+				<div className={'py-10 flex justify-center'}>
+					<div className={'fa-container'}>
+						<Text type={'title'} level={5} weight={'bold'} size={'grey'} extraClass={'m-0'}>Full width Modal</Text>
+						<Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Core Query results page comes here..</Text>
+					</div>
+				</div>
+			</Modal>
+    </>
+  );
 }
 
-export default ProjectTabs;
+export default React.memo(ProjectTabs);

@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
+// import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import {
   formatData, formatDataInLineChartFormat
-} from './utils';
-import BarChart from '../../../components/BarChart';
-import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
-import LineChart from '../../../components/LineChart';
-import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
+} from '../EventsAnalytics/SingleEventSingleBreakdown/utils';
+import BarChart from '../../components/BarChart';
+// import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
+import LineChart from '../../components/LineChart';
+import { generateColors } from '../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventSingleBreakdown({
-  queries, breakdown, resultState, page
+  resultState, page, chartType, title
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [chartType, setChartType] = useState('barchart');
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
   const maxAllowedVisibleProperties = 5;
@@ -27,19 +26,6 @@ function SingleEventSingleBreakdown({
   if (!chartsData.length) {
     return null;
   }
-
-  const menuItems = [
-    {
-      key: 'barchart',
-      onClick: setChartType,
-      name: 'Barchart'
-    },
-    {
-      key: 'linechart',
-      onClick: setChartType,
-      name: 'Line Chart'
-    }
-  ];
 
   const mapper = {};
   const reverseMapper = {};
@@ -59,47 +45,34 @@ function SingleEventSingleBreakdown({
 
   if (chartType === 'barchart') {
     chartContent = (
-      <div className="flex mt-8">
-        <BarChart
-          chartData={visibleProperties}
-        />
-      </div>
+            <div className="flex mt-8">
+                <BarChart
+                    title={title}
+                    chartData={visibleProperties}
+                />
+            </div>
     );
   } else {
     chartContent = (
-      <div className="flex mt-8">
-        <LineChart
-          chartData={lineChartData}
-          appliedColors={appliedColors}
-          queries={visibleLabels}
-          reverseEventsMapper={reverseMapper}
-          eventsMapper={mapper}
-          setHiddenEvents={setHiddenProperties}
-          hiddenEvents={hiddenProperties}
-          isDecimalAllowed = {page === 'activeUsers' || page === 'frequency'}
-        />
-      </div>
+            <div className="flex mt-8">
+                <LineChart
+                    chartData={lineChartData}
+                    appliedColors={appliedColors}
+                    queries={visibleLabels}
+                    reverseEventsMapper={reverseMapper}
+                    eventsMapper={mapper}
+                    setHiddenEvents={setHiddenProperties}
+                    hiddenEvents={hiddenProperties}
+                    isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
+                />
+            </div>
     );
   }
 
   return (
-    <div className="total-events">
-      <div className="flex items-center justify-between">
-        <div className="filters-info">
-
-        </div>
-        <div className="user-actions">
-          <ChartTypeDropdown
-            chartType={chartType}
-            menuItems={menuItems}
-            onClick={(item) => {
-              setChartType(item.key);
-            }}
-          />
-        </div>
-      </div>
-      {chartContent}
-      <div className="mt-8">
+        <div className="total-events">
+            {chartContent}
+            {/* <div className="mt-8">
         <SingleEventSingleBreakdownTable
           data={chartsData}
           breakdown={breakdown}
@@ -112,8 +85,8 @@ function SingleEventSingleBreakdown({
           lineChartData={lineChartData}
           originalData={resultState.data}
         />
-      </div>
-    </div>
+      </div> */}
+        </div>
   );
 }
 

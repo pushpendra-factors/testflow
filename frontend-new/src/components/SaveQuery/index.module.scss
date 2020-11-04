@@ -17,3 +17,28 @@
 .noteText {
     color: #3E516C;
 }
+
+.selectStyles {
+    cursor: pointer;
+
+    :global(.ant-select-selector) {
+        border-radius: 6px !important;
+        padding-left: 12px !important;
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
+    
+        :global(.ant-select-selection-item) {
+            background-color: #E7E9ED !important;
+            height: unset !important;
+            border-radius: 4px !important;
+        }
+    
+        :global(.ant-select-selection-item-content) {
+            padding: 4px 8px 4px 8px !important;
+        }
+    
+        :global(.ant-select-selection-item-remove) {
+            display: none !important;
+        }
+    }
+}

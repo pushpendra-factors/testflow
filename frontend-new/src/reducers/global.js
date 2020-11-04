@@ -1,7 +1,7 @@
 /* eslint-disable */
 
 import {
-  FUNNEL_RESULTS_AVAILABLE, FUNNEL_RESULTS_UNAVAILABLE, SET_PROJECTS, SET_ACTIVE_PROJECT, CREATE_PROJECT_FULFILLED, FETCH_PROJECTS_REJECTED
+  SET_PROJECTS, SET_ACTIVE_PROJECT, CREATE_PROJECT_FULFILLED, FETCH_PROJECTS_REJECTED
 } from './types';
 import { get, post, put } from '../utils/request';
 var host = BUILD_CONFIG.backend_host;
@@ -20,10 +20,6 @@ const defaultState = {
 
 export default function (state = defaultState, action) {
   switch (action.type) {
-    case FUNNEL_RESULTS_AVAILABLE:
-      return { ...state, is_funnel_results_visible: true, funnel_events: action.payload };
-    case FUNNEL_RESULTS_UNAVAILABLE:
-      return { ...state, is_funnel_results_visible: false, funnel_events: [] };
     case SET_PROJECTS:
       return { ...state, projects: action.payload };
     case SET_ACTIVE_PROJECT:
