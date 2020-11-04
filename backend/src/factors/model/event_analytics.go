@@ -1775,7 +1775,7 @@ func addEventCountAggregationQuery(query *Query, qStmnt *string, qParams *[]inte
 	if hasNumericalGroupBy(query.GroupByProperties) {
 		eventName := AliasEventName
 		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
-			&termStmnt, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "")
+			&termStmnt, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_id")
 		aggregateFromStepName = bucketedStepName
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
