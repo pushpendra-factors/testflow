@@ -60,8 +60,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", DeleteDashboardUnitHandler)
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
 		DashboardUnitsWebAnalyticsQueryHandler)
-	authRouteGroup.GET("/:project_id/queries", GetSavedQueriesHandler)
-	authRouteGroup.POST("/:project_id/queries", CreateSavedQueryHandler)
+	authRouteGroup.GET("/:project_id/queries", GetQueriesHandler)
+	authRouteGroup.POST("/:project_id/queries", CreateQueryHandler)
 	authRouteGroup.PUT("/:project_id/queries/:query_id", UpdateSavedQueryHandler)
 	authRouteGroup.DELETE("/:project_id/queries/:query_id", DeleteSavedQueryHandler)
 	authRouteGroup.GET("/:project_id/queries/search", SearchQueriesHandler)

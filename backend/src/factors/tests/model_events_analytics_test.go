@@ -606,7 +606,7 @@ func TestEventAnalyticsQueryGroupSingleQueryHandler(t *testing.T) {
 			EventsCondition: M.EventCondAnyGivenEvent,
 		}
 
-		queryGroup := H.QueryGroup{}
+		queryGroup := M.QueryGroup{}
 		queryGroup.Queries = make([]M.Query, 0)
 		queryGroup.Queries = append(queryGroup.Queries, query1)
 
@@ -719,7 +719,7 @@ func TestEventAnalyticsQueryGroupMultiQueryHandler(t *testing.T) {
 			EventsCondition: M.EventCondAnyGivenEvent,
 		}
 
-		queryGroup := H.QueryGroup{}
+		queryGroup := M.QueryGroup{}
 		queryGroup.Queries = make([]M.Query, 0)
 		queryGroup.Queries = append(queryGroup.Queries, query1)
 		queryGroup.Queries = append(queryGroup.Queries, query2)
@@ -747,7 +747,7 @@ func TestEventAnalyticsQueryGroupMultiQueryHandler(t *testing.T) {
 	})
 }
 
-func sendEventsQueryHandler(r *gin.Engine, projectId uint64, agent *M.Agent, queryGroup *H.QueryGroup) *httptest.ResponseRecorder {
+func sendEventsQueryHandler(r *gin.Engine, projectId uint64, agent *M.Agent, queryGroup *M.QueryGroup) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {

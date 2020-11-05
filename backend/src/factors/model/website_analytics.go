@@ -237,7 +237,7 @@ func getWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *WebAna
 
 	db := C.GetServices().Db
 	err := db.
-		Where("project_id = ? AND query->>'cl' = ?", projectID, QueryClassWeb).
+		Where("project_id = ?", projectID).
 		Find(&dashboardUnits).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get web analytics queries from dashboard units.")
@@ -254,16 +254,28 @@ func getWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *WebAna
 	for i := range dashboardUnits {
 		dunit := dashboardUnits[i]
 
-		queryMap, err := U.DecodePostgresJsonb(&dunit.Query)
+		savedQuery, errCode := GetDashboardQueryWithQueryId(projectID, dunit.QueryId)
+		if errCode != http.StatusFound {
+			logCtx.Errorf("Failed to fetch query from query_id %d", dunit.QueryId)
+			continue
+		}
+
+		queryMap, err := U.DecodePostgresJsonb(&savedQuery.Query)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to decode web analytics dashboard unit query.")
+			continue
+		}
+
+		// ignoring other queries (query_group or core queries)
+		queryClass, exists := (*queryMap)["cl"]
+		if !exists || queryClass != QueryClassWeb {
 			continue
 		}
 
 		queryTypeInf, exists := (*queryMap)["type"]
 		if !exists {
 			logCtx.WithError(err).
-				Error("Invalid web analytics query type on dashoard unit")
+				Error("Invalid web analytics query type on dashboard unit")
 			continue
 		}
 
@@ -357,12 +369,26 @@ func addWebAnalyticsDefaultDashboardUnits(projectId uint64,
 			return http.StatusInternalServerError
 		}
 
-		_, errCode, errMsg := CreateDashboardUnit(projectId, agentUUID,
+		// creating query
+		query, errCode, errMsg := CreateQuery(projectId,
+			&Queries{
+				Query: *queryJsonb,
+				Title: U.GetSnakeCaseToTitleString(queryName),
+				Type:  QueryTypeDashboardQuery,
+			})
+		if errCode != http.StatusCreated {
+			log.WithFields(log.Fields{"dashboardId": dashboardId,
+				"project_id": projectId}).Error(errMsg)
+			return http.StatusInternalServerError
+		}
+
+		// creating dashboard unit for query created just above
+		_, errCode, errMsg = CreateDashboardUnit(projectId, agentUUID,
 			&DashboardUnit{
 				DashboardId:  dashboardId,
 				Title:        U.GetSnakeCaseToTitleString(queryName),
 				Presentation: presentation,
-				Query:        *queryJsonb,
+				QueryId:      query.ID,
 			}, DashboardUnitForNoQueryID)
 
 		if errCode != http.StatusCreated {

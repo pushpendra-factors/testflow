@@ -51,6 +51,32 @@ type BaseQuery interface {
 	SetQueryDateRange(from, to int64)
 }
 
+type QueryGroup struct {
+	Queries []Query `json:"query_group"`
+}
+
+func (q *QueryGroup) GetClass() string {
+	if len(q.Queries) > 0 {
+		// all queries in query group are expected to belong to same class
+		return q.Queries[0].Class
+	}
+	return ""
+}
+
+func (q *QueryGroup) GetQueryDateRange() (from, to int64) {
+	if len(q.Queries) > 0 {
+		// all queries in query group are expected to run for same time range
+		return q.Queries[0].From, q.Queries[0].To
+	}
+	return 0, 0
+}
+
+func (q *QueryGroup) SetQueryDateRange(from, to int64) {
+	for i := 0; i < len(q.Queries); i++ {
+		q.Queries[i].From, q.Queries[i].To = from, to
+	}
+}
+
 type Query struct {
 	Class                string                     `json:"cl"`
 	Type                 string                     `json:"ty"`
@@ -1058,6 +1084,10 @@ func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery
 		baseQuery = &query
 	case QueryClassChannel:
 		var query ChannelQueryUnit
+		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+		baseQuery = &query
+	case QueryClassEvents:
+		var query QueryGroup
 		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
 		baseQuery = &query
 	default:

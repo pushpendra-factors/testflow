@@ -15,10 +15,6 @@ type QueryRequestPayload struct {
 	Query M.Query `json:"query"`
 }
 
-type QueryGroup struct {
-	Queries []M.Query `json:"query_group"`
-}
-
 /*
 Test Command
 
@@ -43,7 +39,7 @@ func EventsQueryHandler(c *gin.Context) {
 		return
 	}
 
-	var requestPayload QueryGroup
+	var requestPayload M.QueryGroup
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestPayload); err != nil {
@@ -51,8 +47,73 @@ func EventsQueryHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Json decode failed."})
 		return
 	}
-	// TODO (Anil) Add dashboard caching layer by query/query_group?
-	resultGroup := M.RunEventsGroupQuery(requestPayload.Queries, projectId)
+
+	var commonQueryFrom int64
+	var commonQueryTo int64
+	if len(requestPayload.Queries) == 0 {
+		logCtx.Error("Query failed. Empty query group.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Empty query group."})
+		return
+	} else {
+		// all group queries are run for same time duration, used in dashboard unit caching
+		commonQueryFrom = requestPayload.Queries[0].From
+		commonQueryTo = requestPayload.Queries[0].To
+	}
+
+	var dashboardId uint64
+	var unitId uint64
+	var err error
+	hardRefresh := false
+	dashboardIdParam := c.Query("dashboard_id")
+	unitIdParam := c.Query("dashboard_unit_id")
+	refreshParam := c.Query("refresh")
+
+	if refreshParam != "" {
+		hardRefresh, _ = strconv.ParseBool(refreshParam)
+	}
+	if dashboardIdParam != "" || unitIdParam != "" {
+		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+	}
+
+	// If refresh is passed, refresh only is Query.From is of todays beginning.
+	if (dashboardIdParam != "" || unitIdParam != "") && !isHardRefreshForToday(commonQueryFrom, hardRefresh) {
+		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
+		if errCode == http.StatusFound && cacheResult != nil {
+			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true, "refreshed_at": cacheResult.RefreshedAt})
+			return
+		}
+		if errCode == http.StatusBadRequest {
+			c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+			return
+		}
+		if errCode != http.StatusNotFound {
+			logCtx.WithFields(log.Fields{"project_id": projectId,
+				"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
+			}).WithError(errMsg).Error("Failed to get GetCacheResultByDashboardIdAndUnitId from cache.")
+		}
+	}
+
+	resultGroup, errCode := M.RunEventsGroupQuery(requestPayload.Queries, projectId)
+	if errCode != http.StatusOK {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "group query failed to run"})
+		return
+	}
+
+	// if it is a dashboard query, cache it
+	if dashboardId != 0 && unitId != 0 {
+		M.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
+		c.JSON(http.StatusOK, gin.H{"result": resultGroup, "cache": false, "refreshed_at": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
+		return
+	}
 	c.JSON(http.StatusOK, resultGroup)
 }
 

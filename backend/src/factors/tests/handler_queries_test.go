@@ -160,6 +160,7 @@ func TestAPISearchQueryHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
+		Type:  M.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
@@ -177,6 +178,7 @@ func TestAPISearchQueryHandler(t *testing.T) {
 	w = sendSearchQueryReq(r, project.ID, "a", agent)
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
+
 func TestAPICreateQueryHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
@@ -205,6 +207,7 @@ func TestAPICreateQueryHandler(t *testing.T) {
 		assert.Nil(t, err)
 
 		w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
+			Type:  M.QueryTypeSavedQuery,
 			Query: &postgres.Jsonb{queryJson}})
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
@@ -223,6 +226,7 @@ func TestAPICreateQueryHandler(t *testing.T) {
 		assert.Nil(t, err)
 
 		w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
+			Type:  M.QueryTypeSavedQuery,
 			Query: &postgres.Jsonb{queryJson}})
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
@@ -244,6 +248,7 @@ func TestAPICreateQueryHandler(t *testing.T) {
 		assert.Nil(t, err)
 
 		w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: "",
+			Type:  M.QueryTypeSavedQuery,
 			Query: &postgres.Jsonb{queryJson}})
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
@@ -276,6 +281,7 @@ func TestAPIUpdateSavedQueryHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
+		Type:  M.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
@@ -320,6 +326,7 @@ func TestAPIDeleteSavedQueryHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
+		Type:  M.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
@@ -361,11 +368,13 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
+		Type:  M.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	rTitle1 := U.RandomString(5)
 	w = sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle1,
+		Type:  M.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
