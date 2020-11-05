@@ -5,7 +5,7 @@ import { Button } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
-import { setGroupBy } from '../../../reducers/coreQuery/middleware';
+import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 
 import FilterBlock from '../FilterBlock';
 
@@ -14,7 +14,8 @@ import EventGroupBlock from '../EventGroupBlock';
 
 function QueryBlock({
   index, event, eventChange, queries, queryType, eventOptions,
-  activeProject, groupBy, setGroupBy, userProperties, eventProperties
+  activeProject, groupBy, setGroupBy, 
+  delGroupBy, userProperties, eventProperties
 }) {
   const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event));
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -91,6 +92,10 @@ function QueryBlock({
     }
   };
 
+  const deleteGroupBy = (groupState, index) => {
+    delGroupBy('event', groupState, index);
+  }
+
   const pushGroupBy = (groupState, index) => {
     const ind = index || groupBy.length;
     setGroupBy('event', groupState, ind);
@@ -139,13 +144,15 @@ function QueryBlock({
 
   const groupByItems = () => {
     const groupByEvents = [];
-    if (groupBy && groupBy.length && groupBy[0].property) {
+    if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
       groupBy.filter(gbp => gbp.eventName === event.label && gbp.eventIndex === index).forEach((gbp, gbpIndex) => {
+        console.log(gbp);
         groupByEvents.push(<div key={gbpIndex} className={'fa--query_block--filters'}>
           <EventGroupBlock
             index={gbpIndex}
             eventIndex={index}
             groupByEvent={gbp} event={event}
+            delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
             setGroupState={pushGroupBy}
             closeDropDown={() => setGroupByDDVisible(false)}
             ></EventGroupBlock>
@@ -195,7 +202,8 @@ const mapStateToProps = (state) => ({
 });
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-  setGroupBy
+  setGroupBy,
+  delGroupBy
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(QueryBlock);

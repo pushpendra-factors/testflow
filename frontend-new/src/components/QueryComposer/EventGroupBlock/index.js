@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 
+import { Button } from 'antd';
+
+import { SVG } from 'factorsComponents';
+
 import { connect } from 'react-redux';
 import GroupSelect from '../GroupSelect';
 
 const EventGroupBlock = ({
-  eventIndex, groupByEvent, event, userProperties, eventProperties, setGroupState, closeDropDown
+  eventIndex, groupByEvent, event, userProperties, eventProperties, 
+  setGroupState, 
+  delGroupState, closeDropDown
 }) => {
   const [filterOptions, setFilterOptions] = useState([
     {
@@ -52,6 +58,7 @@ const EventGroupBlock = ({
   const renderGroupContent = () => {
     return (
           <div className={`${styles.group_block__group_content} ml-4`}>
+
             {groupByEvent.property}
           </div>
     );
@@ -68,6 +75,7 @@ const EventGroupBlock = ({
 
   return (
         <div className={styles.group_block}>
+        <Button size={'large'} type="text" onClick={() => delGroupState(groupByEvent)} className={`${styles.group_block__remove} mr-1`}><SVG name="remove"></SVG></Button>
         <span className={`${styles.group_block__prefix} ml-10`}>group by</span>
         {groupByEvent && groupByEvent.property
           ? renderGroupContent()

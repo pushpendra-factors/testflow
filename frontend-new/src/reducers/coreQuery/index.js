@@ -6,6 +6,7 @@ import {
   FETCH_EVENT_PROPERTIES,
   FETCH_USER_PROPERTIES,
   SET_GROUPBY,
+  DEL_GROUPBY,
   INITIALIZE_GROUPBY
 } from './actions';
 
@@ -34,8 +35,23 @@ export default function (state = defaultState, action) {
         ...state, groupBy: action.payload
       }
     }
-    case SET_GROUPBY:
+    case DEL_GROUPBY: {
       const groupByState = Object.assign({}, state.groupBy);
+      let gbp;
+      if(groupByState[action.groupByType] && groupByState[action.groupByType][action.index]) {
+        if(groupByState[action.groupByType][action.index] === action.payload) {
+          delete groupByState[action.groupByType][action.index]
+        } else {
+          gbp = groupByState[action.groupByType].findIndex(i => i === state.payload)
+          gbp && delete groupByState[gbp];
+        }
+        
+      }
+      return { ...state, groupBy: groupByState };
+    }
+      
+    case SET_GROUPBY:
+      let groupByState = Object.assign({}, state.groupBy);
       if (groupByState[action.groupByType] && groupByState[action.groupByType][action.index]) {
         groupByState[action.groupByType][action.index] = action.payload;
       } else if (groupByState[action.groupByType] && action.index === groupByState[action.groupByType].length) {

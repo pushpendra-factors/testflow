@@ -418,17 +418,29 @@ const CalendarSVG = ({ size = 24, color, extraClass }) => {
 };
 const GroupbySVG = ({ size = 24, color, extraClass }) => {
   return (
-    <svg width={size} height={size} className={extraClass} viewBox="0 0 32 33" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M15 11.18H22C22.5523 11.18 23 11.6277 23 12.18C23 12.7323 22.5523 13.18 22 13.18H15V11.18Z" fill={color} />
-      <path d="M13 15.18L13 22.18C13 22.7323 12.5523 23.18 12 23.18C11.4477 23.18 11 22.7323 11 22.18L11 15.18L13 15.18Z" fill={color} />
-      <path d="M12.2492 9.26471V12.4618L9.04308 12.4618" stroke="#5949BC" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M19.9859 15.757C19.9859 20.1812 19.9859 20.1812 15.4687 20.1812" stroke="#5949BC" />
-      <path d="M16.0459 21.8572L16.3577 22.1816L17.0066 21.558L16.6948 21.2335L16.0459 21.8572ZM15.0592 20.1812L14.7367 19.8674L14.4333 20.1793L14.7348 20.493L15.0592 20.1812ZM16.6929 19.1473L17.0067 18.8247L16.3616 18.1972L16.0478 18.5197L16.6929 19.1473ZM16.6948 21.2335L15.3837 19.8694L14.7348 20.493L16.0459 21.8572L16.6948 21.2335ZM15.3818 20.495L16.6929 19.1473L16.0478 18.5197L14.7367 19.8674L15.3818 20.495Z" fill={color} />
-      <path d="M21.3531 16.5626L19.986 15.18L18.6412 16.5626" stroke="#5949BC" strokeWidth="0.9" strokeLinecap="square" />
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15.3174 10.9078H22.9544C23.557 10.9078 24.0455 11.3963 24.0455 11.9989C24.0455 12.6014 23.557 13.0899 22.9544 13.0899H15.3174V10.9078Z" fill="#8692A3"/>
+    <path d="M13.1353 15.2719L13.1353 22.909C13.1353 23.5115 12.6469 24 12.0443 24C11.4418 24 10.9533 23.5115 10.9533 22.909L10.9533 15.2719H13.1353Z" fill="#8692A3"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.3162 8C12.7681 8 13.1345 8.36635 13.1345 8.81826V13.1246L8.81825 13.1246C8.36634 13.1246 8 12.7582 8 12.3063C8 11.8544 8.36635 11.4881 8.81827 11.4881L11.498 11.4881V8.81826C11.498 8.36635 11.8643 8 12.3162 8Z" fill="#8692A3"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M20.1381 18.6304C20.2107 17.9897 20.2116 17.1217 20.2116 15.9014H21.3026V15.9377C21.3026 17.1137 21.3026 18.0439 21.2221 18.7534C21.1411 19.4673 20.9685 20.0781 20.5227 20.5146C20.0793 20.9489 19.4615 21.1163 18.7369 21.1952C18.0143 21.2738 17.0662 21.2738 15.8638 21.2738H15.8287V20.1828C17.0739 20.1828 17.9624 20.182 18.6189 20.1106C19.2804 20.0386 19.5867 19.9042 19.7593 19.7352C19.9296 19.5684 20.065 19.2741 20.1381 18.6304Z" fill="#8692A3"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M17.5066 19.2484L16.0649 20.7303L17.5066 22.2304L16.7986 22.9108L14.699 20.7262L16.8028 18.5637L17.5066 19.2484Z" fill="#8692A3"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M22.2448 17.4746L20.76 15.9731L19.2996 17.4746L18.5957 16.79L20.7542 14.5707L22.943 16.7842L22.2448 17.4746Z" fill="#8692A3"/>
     </svg>
 
   );
 };
+
+const RemoveSVG = () => {
+  return (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g opacity="0.3">
+    <path d="M4.34741 12.949L12.3474 4.94897" stroke="#0E2647" stroke-width="2" stroke-linecap="round"/>
+    <path d="M4.34741 4.94897L12.3474 12.949" stroke="black" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    </svg>
+
+  )
+}
 const SortdownSVG = ({ size = 24, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -676,6 +688,7 @@ export {
   TimesSVG,
   CalendarSVG,
   GroupbySVG,
+  RemoveSVG,
   SortdownSVG,
   DownloadSVG,
   NextSVG,
