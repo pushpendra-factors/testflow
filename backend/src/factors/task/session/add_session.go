@@ -147,7 +147,10 @@ func getAllEventsAsUserEventsMap(projectId, sessionEventNameId uint64,
 
 	queryStartTime := U.TimeNowUnix()
 	db := C.GetServices().Db
-	if err := db.Order("timestamp ASC").
+	// Ordered by timestamp, created_at to fix the order for events with same 
+	// timestamp, as event timestamp is in seconds. This fixes the invalid first
+	// event used for enrichment.
+	if err := db.Order("timestamp, created_at ASC").
 		Where("project_id = ? AND event_name_id != ? AND timestamp BETWEEN ? AND ?",
 			projectId, sessionEventNameId, startTimestamp, endTimestamp).
 		Find(&events).Error; err != nil {
