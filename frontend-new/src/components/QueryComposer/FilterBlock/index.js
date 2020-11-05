@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 
-import { Input } from 'antd';
+import { Input, Button } from 'antd';
 import { SVG } from 'factorsComponents';
 
 import { fetchEventPropertyValues } from '../../../reducers/coreQuery/services';
@@ -281,6 +281,10 @@ export default function FilterBlock({ filterProps, activeProject, event, filter,
 
   return (
     <div className={styles.filter_block}>
+      <Button size={'large'} 
+      type="text" 
+      className={`${styles.filter_block__remove} mr-1`}>
+        <SVG name="remove"></SVG></Button>
       <span className={`${styles.filter_block__prefix} ml-10`}>where</span>
       {filter
         ? renderFilterContent()

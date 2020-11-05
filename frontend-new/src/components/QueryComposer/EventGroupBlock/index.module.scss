@@ -10,4 +10,9 @@
         font-weight: 500;
         font-size: 14px;
     }
+
+    &__remove {
+        position: absolute;
+        left: -12px;
+    }
 }

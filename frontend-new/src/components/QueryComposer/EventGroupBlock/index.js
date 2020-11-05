@@ -9,8 +9,8 @@ import { connect } from 'react-redux';
 import GroupSelect from '../GroupSelect';
 
 const EventGroupBlock = ({
-  eventIndex, groupByEvent, event, userProperties, eventProperties, 
-  setGroupState, 
+  eventIndex, groupByEvent, event, userProperties, eventProperties,
+  setGroupState,
   delGroupState, closeDropDown
 }) => {
   const [filterOptions, setFilterOptions] = useState([
