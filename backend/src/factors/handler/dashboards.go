@@ -24,6 +24,14 @@ type DashboardIdUnitsPositions struct {
 	ID uint64 `json:"id"`
 }
 
+// GetDashboardsHandler godoc
+// @Summary Fetches all dashboards for the given project id.
+// @Tags Dashboard
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {array} model.Dashboard
+// @Router /{project_id}/dashboards [get]
 func GetDashboardsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -42,6 +50,15 @@ func GetDashboardsHandler(c *gin.Context) {
 	c.JSON(http.StatusFound, dashboards)
 }
 
+// CreateDashboardHandler godoc
+// @Summary Creates a new dashboard for the given input.
+// @Tags Dashboard
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param unit body DashboardRequestPayload true "Create new dashboard"
+// @Success 200 {object} model.Dashboard
+// @Router /{project_id}/dashboards [post]
 func CreateDashboardHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -134,6 +151,16 @@ func GetDashboardUnitsHandler(c *gin.Context) {
 	c.JSON(http.StatusFound, dashboardUnits)
 }
 
+// CreateDashboardUnitHandler godoc
+// @Summary Creates a new dashboard unit for the given input.
+// @Tags DashboardUnit
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Param unit body model.DashboardUnitRequestPayload true "Create dashboard unit"
+// @Success 200 {object} model.DashboardUnit
+// @Router /{project_id}/dashboards/{dashboard_id}/units [post]
 func CreateDashboardUnitHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {

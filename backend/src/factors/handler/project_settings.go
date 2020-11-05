@@ -13,6 +13,13 @@ import (
 
 // Test Command
 // curl -i -X GET http://localhost:8080/projects/1/settings
+// GetProjectSettingHandler godoc
+// @Summary Retrieves the project settings for given project id
+// @Tags ProjectSettings
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {object} model.ProjectSetting
+// @Router /{project_id}/settings [get]
 func GetProjectSettingHandler(c *gin.Context) {
 
 	logCtx := log.WithFields(log.Fields{
