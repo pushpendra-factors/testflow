@@ -1,14 +1,50 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Row, Col, Button, Input
+  Row, Col, Button, Input, Form, message
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
+import queryString from 'query-string';
+import { setPassword } from 'Reducers/agentActions';
+import { connect } from 'react-redux';
 
-function ResetPassword() {
+function ResetPassword(props) {
+  const [form] = Form.useForm();
+  const [errorInfo, seterrorInfo] = useState(null);
+  const [dataLoading, setDataLoading] = useState(false);
+
   const history = useHistory();
   const routeChange = (url) => {
     history.push(url);
+  };
+
+  const ResetPassword = () => {
+    setDataLoading(true);
+    const tokenFromUrl = queryString.parse(props.location.search)?.token;
+
+    form.validateFields().then((value) => {
+      setDataLoading(true);
+      setTimeout(() => {
+        props.setPassword(value.password, tokenFromUrl)
+          .then(() => {
+            setDataLoading(false);
+            history.push('/');
+            message.success('Password Changed!');
+          }).catch((err) => {
+            setDataLoading(false);
+            form.resetFields();
+            seterrorInfo(err);
+          });
+      }, 200);
+    }).catch((info) => {
+      setDataLoading(false);
+      form.resetFields();
+      seterrorInfo(info);
+    });
+  };
+
+  const onChange = () => {
+    seterrorInfo(null);
   };
 
   return (
@@ -17,6 +53,12 @@ function ResetPassword() {
             <Row justify={'center'}>
                 <Col span={12} >
                     <div className={'flex flex-col justify-center items-center login-container'}>
+                    <Form
+                        form={form}
+                        onFinish={ResetPassword}
+                        className={'w-full'}
+                        onChange={onChange}
+                        >
                         <Row>
                             <Col span={24} >
                                 <div className={'flex justify-center items-center mb-5'} >
@@ -32,19 +74,58 @@ function ResetPassword() {
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
-                                    <Input className={'fa-input fa-input-50'} size={'large'} placeholder="Enter Your New Password" />
+                                <Form.Item
+                                name="password"
+                                rules={[
+                                  {
+                                    required: true,
+                                    message: 'Please input your old password.'
+                                  }
+                                ]}
+
+                                >
+                                <Input.Password disabled={dataLoading} size="large" className={'fa-input w-full'} placeholder="Enter New Password" />
+                                </Form.Item>
                                 </div>
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Input className={'fa-input fa-input-50'} size={'large'} placeholder="Confirm New Password" />
+                                <Form.Item
+                                    name="confirm_password"
+                                    dependencies={['password']}
+                                    rules={[
+                                      {
+                                        required: true,
+                                        message: 'Please confirm your new password.'
+                                      },
+                                      ({ getFieldValue }) => ({
+                                        validator(rule, value) {
+                                          if (!value || getFieldValue('password') === value) {
+                                            return Promise.resolve();
+                                          }
+                                          return Promise.reject(new Error('The new password that you entered do not match!'));
+                                        }
+                                      })
+                                    ]}
+
+                                    >
+                                    <Input.Password disabled={dataLoading} size="large" className={'fa-input w-full'} placeholder="Confirm New Password" />
+                                    </Form.Item>
                                 </div>
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Button type={'primary'} className={'fa-button-50'} size={'large'} onClick={() => routeChange('/login')}>Reset Password</Button>
+                                    <Form.Item className={'m-0'} loading={dataLoading}>
+                                            <Button htmlType="submit" loading={dataLoading} type={'primary'} size={'large'} className={'w-full'}>Reset Password</Button>
+                                        </Form.Item>
                                 </div>
                             </Col>
+                            {errorInfo && <Col span={24}>
+                                <div className={'flex flex-col justify-center items-center mt-1'} >
+                                    <Text type={'title'} color={'red'} size={'7'} className={'m-0'}>{errorInfo}</Text>
+                                </div>
+                            </Col>
+                            }
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
                                     <a type={'text'} size={'large'} onClick={() => routeChange('/login')}>Go back to login</a>
@@ -56,6 +137,7 @@ function ResetPassword() {
                                 </div>
                             </Col>
                         </Row>
+                        </Form>
                     </div>
                 </Col>
             </Row>
@@ -67,4 +149,4 @@ function ResetPassword() {
   );
 }
 
-export default ResetPassword;
+export default connect(null, { setPassword })(ResetPassword);

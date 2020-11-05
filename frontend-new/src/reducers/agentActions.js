@@ -399,3 +399,47 @@ export function updateAgentRole(projectId,uuid,role){
     });
   }
 }
+
+export function forgotPassword(email){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      dispatch({type: "AGENT_FORGOT_PASSWORD"});
+
+      post(dispatch, host+"agents/forgotpassword", { email: email })
+        .then(() => {
+          resolve(dispatch({
+            type: "AGENT_FORGOT_PASSWORD_FULFILLED",
+            payload: {}
+          }));
+        })
+        .catch(() => {
+          dispatch({type: "AGENT_FORGOT_PASSWORD_REJECTED", payload: null});
+
+          reject("Failed sending the email. Please try again.")
+        });
+    });
+  }
+} 
+
+export function setPassword(password, token){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      dispatch({type: "AGENT_SET_PASSWORD"});
+
+      post(dispatch, host+"agents/setpassword?token="+token, {
+        password: password
+      })
+        .then(() => {
+          resolve(dispatch({
+            type: "AGENT_SET_PASSWORD_FULFILLED",
+            payload: {}
+          }));
+        })
+        .catch(() => {
+          dispatch({type: "AGENT_SET_PASSWORD_REJECTED", payload: null});
+
+          reject("Reset password failed. Please try again.");
+        });
+    });
+  }
+}

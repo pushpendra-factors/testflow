@@ -13,7 +13,7 @@ function App({ isAgentLoggedIn }) {
     <div className="App">
       <HashRouter>
         <Switch>
-          <Route exact path="/resetpassword" name="login" component={ResetPassword} />
+          <Route exact path="/setpassword" name="login" component={ResetPassword} />
           <Route exact path="/forgotpassword" name="login" component={ForgotPassword} />
           <Route exact path="/login" name="login" component={Login} />
           {
