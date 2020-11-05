@@ -387,6 +387,7 @@ func addWebAnalyticsDefaultDashboardUnits(projectId uint64,
 			&DashboardUnit{
 				DashboardId:  dashboardId,
 				Title:        U.GetSnakeCaseToTitleString(queryName),
+				Query:        postgres.Jsonb{json.RawMessage(`{}`)},
 				Presentation: presentation,
 				QueryId:      query.ID,
 			}, DashboardUnitForNoQueryID)
