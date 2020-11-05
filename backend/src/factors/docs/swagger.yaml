@@ -1,5 +1,63 @@
 basePath: /projects
 definitions:
+  handler.DashboardRequestPayload:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      type:
+        type: string
+    type: object
+  handler.DashboardUnitWebAnalyticsCustomGroupQuery:
+    properties:
+      gbp:
+        items:
+          type: string
+        type: array
+      metrics:
+        items:
+          type: string
+        type: array
+      unit_id:
+        type: integer
+    type: object
+  handler.DashboardUnitWebAnalyticsQueryName:
+    properties:
+      query_name:
+        type: string
+      unit_id:
+        type: integer
+    type: object
+  handler.DashboardUnitsWebAnalyticsQuery:
+    properties:
+      custom_group_units:
+        description: CustomGroupUnits - Customize query with group by properties and metrics.
+        items:
+          $ref: '#/definitions/handler.DashboardUnitWebAnalyticsCustomGroupQuery'
+        type: array
+      from:
+        type: integer
+      to:
+        type: integer
+      units:
+        description: Units - Supports redundant metric keys with different unit_ids.
+        items:
+          $ref: '#/definitions/handler.DashboardUnitWebAnalyticsQueryName'
+        type: array
+    type: object
+  handler.SavedQueryRequestPayload:
+    properties:
+      query:
+        type: string
+      title:
+        type: string
+    type: object
+  handler.SavedQueryUpdatePayload:
+    properties:
+      title:
+        type: string
+    type: object
   model.Dashboard:
     properties:
       created_at:
@@ -113,6 +171,38 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.Queries:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        description: Composite primary key, id + project_id.
+        type: integer
+      is_deleted:
+        type: boolean
+      project_id:
+        description: Foreign key queries(project_id) ref projects(id).
+        type: integer
+      query:
+        type: string
+      title:
+        type: string
+      type:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  model.UpdatableDashboard:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      units_position:
+        type: object
+    type: object
 host: factors-dev.com:8080
 info:
   contact: {}
@@ -121,6 +211,38 @@ info:
   title: Factors Backend Api
   version: "1.0"
 paths:
+  /{project_id}/dashboard/{dashboard_id}/units/query/web_analytics:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: path
+        name: dashboard_id
+        required: true
+        type: integer
+      - description: Web analytics units
+        in: body
+        name: unit
+        required: true
+        schema:
+          $ref: '#/definitions/handler.DashboardUnitsWebAnalyticsQuery'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"result": "result", "cache": "true", "refreshed_at": "timestamp"}'
+          schema:
+            type: string
+      summary: To fetch result for website analytics dashboard queries.
+      tags:
+      - DashboardUnit
   /{project_id}/dashboards:
     get:
       consumes:
@@ -134,8 +256,8 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "302":
+          description: Found
           schema:
             items:
               $ref: '#/definitions/model.Dashboard'
@@ -154,23 +276,78 @@ paths:
         type: integer
       - description: Create new dashboard
         in: body
-        name: unit
+        name: dashboard
         required: true
         schema:
-          $ref: '#/definitions/DashboardRequestPayload'
+          $ref: '#/definitions/handler.DashboardRequestPayload'
           type: object
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
             $ref: '#/definitions/model.Dashboard'
             type: object
       summary: Creates a new dashboard for the given input.
       tags:
       - Dashboard
+  /{project_id}/dashboards/{dashboard_id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: path
+        name: dashboard_id
+        required: true
+        type: integer
+      - description: Update dashboard
+        in: body
+        name: unit
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdatableDashboard'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "202": {}
+      summary: Updates an existing dashboard.
+      tags:
+      - Dashboard
   /{project_id}/dashboards/{dashboard_id}/units:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: path
+        name: dashboard_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          schema:
+            items:
+              $ref: '#/definitions/model.DashboardUnit'
+            type: array
+      summary: Fetches dashboard units for the given project and dashboard id.
+      tags:
+      - DashboardUnit
     post:
       consumes:
       - application/json
@@ -195,14 +372,208 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
             $ref: '#/definitions/model.DashboardUnit'
             type: object
       summary: Creates a new dashboard unit for the given input.
       tags:
       - DashboardUnit
+  /{project_id}/dashboards/{dashboard_id}/units/{unit_id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: path
+        name: dashboard_id
+        required: true
+        type: integer
+      - description: Dashboard Unit ID
+        in: path
+        name: unit_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: '{"message": "Successfully deleted."}'
+          schema:
+            type: string
+      summary: To delete an existing dashboard unit.
+      tags:
+      - DashboardUnit
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: path
+        name: dashboard_id
+        required: true
+        type: integer
+      - description: Dashboard Unit ID
+        in: path
+        name: unit_id
+        required: true
+        type: integer
+      - description: Update dashboard unit
+        in: body
+        name: unit
+        required: true
+        schema:
+          $ref: '#/definitions/model.DashboardUnitRequestPayload'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: '{"message": "Successfully updated."}'
+          schema:
+            type: string
+      summary: To update an existing dashboard unit.
+      tags:
+      - DashboardUnit
+  /{project_id}/queries:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          schema:
+            items:
+              $ref: '#/definitions/model.Queries'
+            type: array
+      summary: To get list of all saved queries in project.
+      tags:
+      - SavedQuery
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Create saved query
+        in: body
+        name: query
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SavedQueryRequestPayload'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/model.Queries'
+            type: array
+      summary: To create a new saved query for given query.
+      tags:
+      - SavedQuery
+  /{project_id}/queries/{query_id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Query ID
+        in: path
+        name: query_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: '{"message": "Successfully deleted."}'
+          schema:
+            type: string
+      summary: To delete an existing saved query.
+      tags:
+      - SavedQuery
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Query ID
+        in: path
+        name: query_id
+        required: true
+        type: integer
+      - description: Update saved query
+        in: body
+        name: query
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SavedQueryUpdatePayload'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: '{"message": "Successfully updated."}'
+          schema:
+            type: string
+      summary: To update an existing saved query.
+      tags:
+      - SavedQuery
+  /{project_id}/queries/search:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          schema:
+            items:
+              $ref: '#/definitions/model.Queries'
+            type: array
+      summary: To search on existing saved queries.
+      tags:
+      - SavedQuery
   /{project_id}/settings:
     get:
       parameters:

@@ -30,7 +30,7 @@ type DashboardIdUnitsPositions struct {
 // @Accept  json
 // @Produce json
 // @Param project_id path integer true "Project ID"
-// @Success 200 {array} model.Dashboard
+// @Success 302 {array} model.Dashboard
 // @Router /{project_id}/dashboards [get]
 func GetDashboardsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -56,8 +56,8 @@ func GetDashboardsHandler(c *gin.Context) {
 // @Accept  json
 // @Produce json
 // @Param project_id path integer true "Project ID"
-// @Param unit body DashboardRequestPayload true "Create new dashboard"
-// @Success 200 {object} model.Dashboard
+// @Param dashboard body handler.DashboardRequestPayload true "Create new dashboard"
+// @Success 201 {object} model.Dashboard
 // @Router /{project_id}/dashboards [post]
 func CreateDashboardHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -89,6 +89,16 @@ func CreateDashboardHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, dashboard)
 }
 
+// UpdateDashboardHandler godoc
+// @Summary Updates an existing dashboard.
+// @Tags Dashboard
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Param unit body model.UpdatableDashboard true "Update dashboard"
+// @Success 202
+// @Router /{project_id}/dashboards/{dashboard_id} [put]
 func UpdateDashboardHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -126,6 +136,15 @@ func UpdateDashboardHandler(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{})
 }
 
+// GetDashboardUnitsHandler godoc
+// @Summary Fetches dashboard units for the given project and dashboard id.
+// @Tags DashboardUnit
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Success 302 {array} model.DashboardUnit
+// @Router /{project_id}/dashboards/{dashboard_id}/units [get]
 func GetDashboardUnitsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -159,7 +178,7 @@ func GetDashboardUnitsHandler(c *gin.Context) {
 // @Param project_id path integer true "Project ID"
 // @Param dashboard_id path integer true "Dashboard ID"
 // @Param unit body model.DashboardUnitRequestPayload true "Create dashboard unit"
-// @Success 200 {object} model.DashboardUnit
+// @Success 201 {object} model.DashboardUnit
 // @Router /{project_id}/dashboards/{dashboard_id}/units [post]
 func CreateDashboardUnitHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -297,6 +316,17 @@ func CreateDashboardUnitsForMultipleQueriesHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, dashboardUnits)
 }
 
+// UpdateDashboardUnitHandler godoc
+// @Summary To update an existing dashboard unit.
+// @Tags DashboardUnit
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Param unit_id path integer true "Dashboard Unit ID"
+// @Param unit body model.DashboardUnitRequestPayload true "Update dashboard unit"
+// @Success 202 {string} json "{"message": "Successfully updated."}"
+// @Router /{project_id}/dashboards/{dashboard_id}/units/{unit_id} [put]
 func UpdateDashboardUnitHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -340,6 +370,16 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully updated."})
 }
 
+// DeleteDashboardUnitHandler godoc
+// @Summary To delete an existing dashboard unit.
+// @Tags DashboardUnit
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Param unit_id path integer true "Dashboard Unit ID"
+// @Success 202 {string} json "{"message": "Successfully deleted."}"
+// @Router /{project_id}/dashboards/{dashboard_id}/units/{unit_id} [delete]
 func DeleteDashboardUnitHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -391,6 +431,16 @@ type DashboardUnitsWebAnalyticsQuery struct {
 	To               int64                                       `json:"to"`
 }
 
+// DashboardUnitsWebAnalyticsQueryHandler godoc
+// @Summary To fetch result for website analytics dashboard queries.
+// @Tags DashboardUnit
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Param unit body handler.DashboardUnitsWebAnalyticsQuery true "Web analytics units"
+// @Success 200 {string} json "{"result": "result", "cache": "true", "refreshed_at": "timestamp"}"
+// @Router /{project_id}/dashboard/{dashboard_id}/units/query/web_analytics [post]
 func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)})
 

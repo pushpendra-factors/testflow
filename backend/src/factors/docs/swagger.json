@@ -10,6 +10,54 @@
     "host": "factors-dev.com:8080",
     "basePath": "/projects",
     "paths": {
+        "/{project_id}/dashboard/{dashboard_id}/units/query/web_analytics": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DashboardUnit"
+                ],
+                "summary": "To fetch result for website analytics dashboard queries.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard ID",
+                        "name": "dashboard_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Web analytics units",
+                        "name": "unit",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/handler.DashboardUnitsWebAnalyticsQuery"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"result\": \"result\", \"cache\": \"true\", \"refreshed_at\": \"timestamp\"}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/{project_id}/dashboards": {
             "get": {
                 "consumes": [
@@ -32,8 +80,8 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "302": {
+                        "description": "Found",
                         "schema": {
                             "type": "array",
                             "items": {
@@ -64,18 +112,18 @@
                     },
                     {
                         "description": "Create new dashboard",
-                        "name": "unit",
+                        "name": "dashboard",
                         "in": "body",
                         "required": true,
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/DashboardRequestPayload"
+                            "$ref": "#/definitions/handler.DashboardRequestPayload"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/model.Dashboard"
@@ -84,7 +132,89 @@
                 }
             }
         },
+        "/{project_id}/dashboards/{dashboard_id}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Updates an existing dashboard.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard ID",
+                        "name": "dashboard_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update dashboard",
+                        "name": "unit",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/model.UpdatableDashboard"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {}
+                }
+            }
+        },
         "/{project_id}/dashboards/{dashboard_id}/units": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DashboardUnit"
+                ],
+                "summary": "Fetches dashboard units for the given project and dashboard id.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard ID",
+                        "name": "dashboard_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Found",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.DashboardUnit"
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -123,11 +253,303 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
+                    "201": {
+                        "description": "Created",
                         "schema": {
                             "type": "object",
                             "$ref": "#/definitions/model.DashboardUnit"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/dashboards/{dashboard_id}/units/{unit_id}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DashboardUnit"
+                ],
+                "summary": "To update an existing dashboard unit.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard ID",
+                        "name": "dashboard_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard Unit ID",
+                        "name": "unit_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update dashboard unit",
+                        "name": "unit",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/model.DashboardUnitRequestPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "{\"message\": \"Successfully updated.\"}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DashboardUnit"
+                ],
+                "summary": "To delete an existing dashboard unit.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard ID",
+                        "name": "dashboard_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard Unit ID",
+                        "name": "unit_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "{\"message\": \"Successfully deleted.\"}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/queries": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SavedQuery"
+                ],
+                "summary": "To get list of all saved queries in project.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Found",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Queries"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SavedQuery"
+                ],
+                "summary": "To create a new saved query for given query.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Create saved query",
+                        "name": "query",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/handler.SavedQueryRequestPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Queries"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/queries/search": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SavedQuery"
+                ],
+                "summary": "To search on existing saved queries.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Found",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Queries"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/queries/{query_id}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SavedQuery"
+                ],
+                "summary": "To update an existing saved query.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Query ID",
+                        "name": "query_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update saved query",
+                        "name": "query",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "$ref": "#/definitions/handler.SavedQueryUpdatePayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "{\"message\": \"Successfully updated.\"}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SavedQuery"
+                ],
+                "summary": "To delete an existing saved query.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Query ID",
+                        "name": "query_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "{\"message\": \"Successfully deleted.\"}",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -164,6 +586,95 @@
         }
     },
     "definitions": {
+        "handler.DashboardRequestPayload": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.DashboardUnitWebAnalyticsCustomGroupQuery": {
+            "type": "object",
+            "properties": {
+                "gbp": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "unit_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.DashboardUnitWebAnalyticsQueryName": {
+            "type": "object",
+            "properties": {
+                "query_name": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.DashboardUnitsWebAnalyticsQuery": {
+            "type": "object",
+            "properties": {
+                "custom_group_units": {
+                    "description": "CustomGroupUnits - Customize query with group by properties and metrics.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.DashboardUnitWebAnalyticsCustomGroupQuery"
+                    }
+                },
+                "from": {
+                    "type": "integer"
+                },
+                "to": {
+                    "type": "integer"
+                },
+                "units": {
+                    "description": "Units - Supports redundant metric keys with different unit_ids.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.DashboardUnitWebAnalyticsQueryName"
+                    }
+                }
+            }
+        },
+        "handler.SavedQueryRequestPayload": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SavedQueryUpdatePayload": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Dashboard": {
             "type": "object",
             "properties": {
@@ -317,6 +828,54 @@
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "model.Queries": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "description": "Composite primary key, id + project_id.",
+                    "type": "integer"
+                },
+                "is_deleted": {
+                    "type": "boolean"
+                },
+                "project_id": {
+                    "description": "Foreign key queries(project_id) ref projects(id).",
+                    "type": "integer"
+                },
+                "query": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UpdatableDashboard": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "units_position": {
+                    "type": "object"
                 }
             }
         }

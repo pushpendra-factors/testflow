@@ -24,7 +24,14 @@ type SavedQueryUpdatePayload struct {
 	Title string `json:"title"`
 }
 
-// GetSavedQueriesHandler is for getting saved queries
+// GetSavedQueriesHandler godoc
+// @Summary To get list of all saved queries in project.
+// @Tags SavedQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 302 {array} model.Queries
+// @Router /{project_id}/queries [get]
 func GetSavedQueriesHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
@@ -39,6 +46,16 @@ func GetSavedQueriesHandler(c *gin.Context) {
 
 	c.JSON(http.StatusFound, queries)
 }
+
+// CreateSavedQueryHandler godoc
+// @Summary To create a new saved query for given query.
+// @Tags SavedQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param query body handler.SavedQueryRequestPayload true "Create saved query"
+// @Success 201 {array} model.Queries
+// @Router /{project_id}/queries [post]
 func CreateSavedQueryHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
@@ -84,6 +101,17 @@ func CreateSavedQueryHandler(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, query)
 }
+
+// UpdateSavedQueryHandler godoc
+// @Summary To update an existing saved query.
+// @Tags SavedQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param query_id path integer true "Query ID"
+// @Param query body handler.SavedQueryUpdatePayload true "Update saved query"
+// @Success 202 {string} string "{"message": "Successfully updated."}"
+// @Router /{project_id}/queries/{query_id} [put]
 func UpdateSavedQueryHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
@@ -126,6 +154,16 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully updated."})
 }
+
+// DeleteSavedQueryHandler godoc
+// @Summary To delete an existing saved query.
+// @Tags SavedQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param query_id path integer true "Query ID"
+// @Success 202 {string} string "{"message": "Successfully deleted."}"
+// @Router /{project_id}/queries/{query_id} [delete]
 func DeleteSavedQueryHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
@@ -148,6 +186,15 @@ func DeleteSavedQueryHandler(c *gin.Context) {
 
 	c.JSON(errCode, gin.H{"message": "Successfully deleted."})
 }
+
+// SearchQueriesHandler godoc
+// @Summary To search on existing saved queries.
+// @Tags SavedQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 302 {array} model.Queries
+// @Router /{project_id}/queries/search [get]
 func SearchQueriesHandler(c *gin.Context) {
 
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
