@@ -219,7 +219,7 @@ class ChannelQuery extends Component {
 
   presentMetricsBreakdown(isAddToDashboardModal) {
     if (!this.state.resultMetricsBreakdown ||  !this.state.resultMetricsBreakdown.headers ||
-      !this.state.resultMetricsBreakdown.rows) return;
+      !this.state.resultMetricsBreakdown.rows || this.state.breakdownKey === NONE_OPT) return;
 
     let resultMetricsBreakdown = { ...this.state.resultMetricsBreakdown };
     for (let ri=0; ri < resultMetricsBreakdown.rows.length; ri++ ) {
