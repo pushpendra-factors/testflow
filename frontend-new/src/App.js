@@ -3,6 +3,7 @@ import AppLayout from './Views/AppLayout';
 import Login from './Views/Pages/Login';
 import ForgotPassword from './Views/Pages/ForgotPassword';
 import ResetPassword from './Views/Pages/ResetPassword';
+import SignUp from './Views/Pages/SignUp';
 import { connect } from 'react-redux';
 import {
   HashRouter, Route, Switch, Redirect
@@ -13,6 +14,7 @@ function App({ isAgentLoggedIn }) {
     <div className="App">
       <HashRouter>
         <Switch>
+          <Route exact path="/signup" name="login" component={SignUp} />
           <Route exact path="/setpassword" name="login" component={ResetPassword} />
           <Route exact path="/forgotpassword" name="login" component={ForgotPassword} />
           <Route exact path="/login" name="login" component={Login} />
