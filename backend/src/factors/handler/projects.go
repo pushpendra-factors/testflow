@@ -132,6 +132,14 @@ func GetProjectsHandler(c *gin.Context) {
 }
 
 // curl -i -X GET http://localhost:8080/projects/1/models
+// GetProjectModelsHandler godoc
+// @Summary To get model infos for the given project id.
+// @Tags Factors
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {array} string "{"mid": uint64, "mt": string, "st": timestamp, "et": timestamp}"
+// @Router /{project_id}/models [get]
 func GetProjectModelsHandler(c *gin.Context) {
 	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	logCtx := log.WithFields(log.Fields{

@@ -20,6 +20,11 @@ definitions:
       project_id:
         type: integer
     type: object
+  handler.AttributionRequestPayload:
+    properties:
+      query:
+        type: string
+    type: object
   handler.DashboardRequestPayload:
     properties:
       description:
@@ -66,6 +71,11 @@ definitions:
           $ref: '#/definitions/handler.DashboardUnitWebAnalyticsQueryName'
         type: array
     type: object
+  handler.QueryRequestPayload:
+    properties:
+      query:
+        type: string
+    type: object
   handler.SavedQueryRequestPayload:
     properties:
       query:
@@ -77,6 +87,28 @@ definitions:
     properties:
       title:
         type: string
+    type: object
+  model.ChannelQuery:
+    properties:
+      breakdown:
+        type: string
+      channel:
+        type: string
+      filter_key:
+        type: string
+      filter_value:
+        type: string
+      from:
+        description: unix timestamp
+        type: integer
+      match_type:
+        description: optional
+        type: string
+      status:
+        type: string
+      to:
+        description: unix timestamp
+        type: integer
     type: object
   model.Dashboard:
     properties:
@@ -223,6 +255,68 @@ definitions:
       units_position:
         type: object
     type: object
+  model.User:
+    properties:
+      ampuserId:
+        type: string
+      c_uid:
+        description: |-
+          UserId provided by the customer.
+          An unique index is creatd on ProjectId+UserId.
+        type: string
+      created_at:
+        type: string
+      id:
+        description: Composite primary key with project_id and random uuid.
+        type: string
+      join_timestamp:
+        description: unix epoch timestamp in seconds.
+        type: integer
+      project_id:
+        description: |-
+          Below are the foreign key constraints added in creation script.
+          project_id -> projects(id)
+        type: integer
+      properties:
+        description: Not part of table, but part of json. Stored in UserProperties table.
+        type: string
+      properties_id:
+        type: string
+      seg_aid:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  pattern_service_wrapper.FactorGraphResults:
+    properties:
+      charts:
+        items:
+          $ref: '#/definitions/pattern_service_wrapper.graphResult'
+        type: array
+    type: object
+  pattern_service_wrapper.graphResult:
+    properties:
+      datasets:
+        items:
+          type: '&{%!s(token.Pos=1941) string %!s(*ast.InterfaceType=&{1952 0xc00350b4a0 false})}'
+        type: array
+      explanations:
+        items:
+          type: string
+        type: array
+      header:
+        type: string
+      labels:
+        items:
+          type: string
+        type: array
+      type:
+        type: string
+      x_label:
+        type: string
+      y_label:
+        type: string
+    type: object
 host: factors-dev.com:8080
 info:
   contact: {}
@@ -231,6 +325,106 @@ info:
   title: Factors Backend Api
   version: "1.0"
 paths:
+  /{project_id}/attribution/query:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: query
+        name: dashboard_id
+        type: integer
+      - description: Dashboard Unit ID
+        in: query
+        name: dashboard_unit_id
+        type: integer
+      - description: Create dashboard unit
+        in: body
+        name: unit
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AttributionRequestPayload'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}'
+          schema:
+            type: string
+      summary: To run attribution query.
+      tags:
+      - CoreQuery
+  /{project_id}/channels/filter_values:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Channel
+        in: query
+        name: channel
+        required: true
+        type: string
+      - description: Filter
+        in: query
+        name: filter
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: '{"filter_values": []string}'
+          schema:
+            type: string
+      summary: To filter on values for channel query.
+      tags:
+      - CoreQuery
+  /{project_id}/channels/query:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: query
+        name: dashboard_id
+        type: integer
+      - description: Dashboard Unit ID
+        in: query
+        name: dashboard_unit_id
+        type: integer
+      - description: Query payload
+        in: body
+        name: query
+        required: true
+        schema:
+          $ref: '#/definitions/model.ChannelQuery'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"result": model.ChannelQueryResult, "cache": false, "refreshed_at": timestamp}'
+          schema:
+            type: string
+      summary: To run a channel query.
+      tags:
+      - CoreQuery
   /{project_id}/dashboard/{dashboard_id}/units/query/web_analytics:
     post:
       consumes:
@@ -466,6 +660,108 @@ paths:
       summary: To update an existing dashboard unit.
       tags:
       - DashboardUnit
+  /{project_id}/event_names:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"event_names": []string}'
+          schema:
+            type: string
+      summary: Te fetch event names for a given project id.
+      tags:
+      - Events
+  /{project_id}/event_names/{event_name}/properties:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Event Name
+        in: path
+        name: event_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: map[string]string
+          schema:
+            type: string
+      summary: To get properties for a given event name.
+      tags:
+      - Events
+  /{project_id}/event_names/{event_name}/properties/{property_name}/values:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Event Name
+        in: path
+        name: event_name
+        required: true
+        type: integer
+      - description: Property Name
+        in: path
+        name: property_name
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '[]string'
+          schema:
+            type: string
+      summary: Creates a new dashboard unit for the given input.
+      tags:
+      - Events
+  /{project_id}/factor:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Factors query
+        in: formData
+        name: query
+        required: true
+        type: json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/pattern_service_wrapper.FactorGraphResults'
+            type: array
+      summary: To run factors model for the given query.
+      tags:
+      - Factors
   /{project_id}/filters:
     get:
       consumes:
@@ -573,6 +869,28 @@ paths:
       summary: To update an existing filter.
       tags:
       - Filters
+  /{project_id}/models:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"mid": uint64, "mt": string, "st": timestamp, "et": timestamp}'
+          schema:
+            items:
+              type: string
+            type: array
+      summary: To get model infos for the given project id.
+      tags:
+      - Factors
   /{project_id}/queries:
     get:
       consumes:
@@ -701,6 +1019,41 @@ paths:
       summary: To search on existing saved queries.
       tags:
       - SavedQuery
+  /{project_id}/query:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: query
+        name: dashboard_id
+        type: integer
+      - description: Dashboard Unit ID
+        in: query
+        name: dashboard_unit_id
+        type: integer
+      - description: Query payload
+        in: body
+        name: query
+        required: true
+        schema:
+          $ref: '#/definitions/handler.QueryRequestPayload'
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}'
+          schema:
+            type: string
+      summary: To run a particular query from core query or dashboards.
+      tags:
+      - CoreQuery
   /{project_id}/settings:
     get:
       parameters:
@@ -720,4 +1073,105 @@ paths:
       summary: Retrieves the project settings for given project id
       tags:
       - ProjectSettings
+  /{project_id}/user_properties:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: map[string]string
+          schema:
+            type: string
+      summary: Gets users properties for the given project id.
+      tags:
+      - Users
+  /{project_id}/user_properties/{property_name}/values:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Property Name
+        in: path
+        name: property_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '[]string'
+          schema:
+            type: string
+      summary: Get property values for given property name.
+      tags:
+      - Users
+  /{project_id}/users:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.User'
+            type: array
+      summary: Gets users for the given project id.
+      tags:
+      - Users
+  /{project_id}/users/{user_id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+            type: object
+      summary: Get a user for the given project and user id.
+      tags:
+      - Users
 swagger: "2.0"

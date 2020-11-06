@@ -26,6 +26,14 @@ var FORCED_EVENT_NAMES = map[uint64][]string{
 	},
 }
 
+// GetEventNamesHandler godoc
+// @Summary Te fetch event names for a given project id.
+// @Tags Events
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {string} json "{"event_names": []string}"
+// @Router /{project_id}/event_names [get]
 func GetEventNamesHandler(c *gin.Context) {
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -72,6 +80,15 @@ func GetEventNamesHandler(c *gin.Context) {
 
 // GetEventPropertiesHandler Test command.
 // curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties?model_id=:model_id
+// GetEventPropertiesHandler godoc
+// @Summary To get properties for a given event name.
+// @Tags Events
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param event_name path string true "Event Name"
+// @Success 200 {string} json "map[string]string"
+// @Router /{project_id}/event_names/{event_name}/properties [get]
 func GetEventPropertiesHandler(c *gin.Context) {
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -120,6 +137,16 @@ func GetEventPropertiesHandler(c *gin.Context) {
 }
 
 // GetEventPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties/offer_id?model_id=:model_id
+// GetEventPropertyValuesHandler godoc
+// @Summary Creates a new dashboard unit for the given input.
+// @Tags Events
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param event_name path integer true "Event Name"
+// @Param property_name path integer true "Property Name"
+// @Success 200 {string} json "[]string"
+// @Router /{project_id}/event_names/{event_name}/properties/{property_name}/values [get]
 func GetEventPropertyValuesHandler(c *gin.Context) {
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)

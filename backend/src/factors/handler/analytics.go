@@ -5,10 +5,11 @@ import (
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
-	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 type QueryRequestPayload struct {
@@ -56,6 +57,17 @@ func EventsQueryHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, resultGroup)
 }
 
+// QueryHandler godoc
+// @Summary To run a particular query from core query or dashboards.
+// @Tags CoreQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id query integer false "Dashboard ID"
+// @Param dashboard_unit_id query integer false "Dashboard Unit ID"
+// @Param query body handler.QueryRequestPayload true "Query payload"
+// @Success 200 {string} json "{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}"
+// @Router /{project_id}/query [post]
 func QueryHandler(c *gin.Context) {
 
 	logCtx := log.WithFields(log.Fields{
