@@ -22,7 +22,7 @@ type ResultGroup struct {
 	Results []QueryResult `json:"result_group"`
 }
 
-func RunEventsGroupQuery(queries []Query, projectId uint64) ResultGroup {
+func RunEventsGroupQuery(queries []Query, projectId uint64) (ResultGroup, int) {
 
 	var resultGroup ResultGroup
 	resultGroup.Results = make([]QueryResult, len(queries))
@@ -38,7 +38,7 @@ func RunEventsGroupQuery(queries []Query, projectId uint64) ResultGroup {
 		}
 	}
 	waitGroup.Wait()
-	return resultGroup
+	return resultGroup, http.StatusOK
 }
 
 func runSingleEventsQuery(projectId uint64, query Query, resultHolder *QueryResult, waitGroup *sync.WaitGroup) {
@@ -67,6 +67,8 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		log.WithError(err).Error(ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
+	// keeping Println debug query commented for quick debugging
+	// fmt.Println("EVENTS DEBUG QUERY ->>>>>>>>>>>>>>>>>>>>>>>>\n" + U.DBDebugPreparedStatement(stmnt, params))
 	logCtx := log.WithFields(log.Fields{"analytics_query": query,
 		"statement": stmnt, "params": params})
 	if stmnt == "" || len(params) == 0 {

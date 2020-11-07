@@ -16,6 +16,7 @@ import (
 //SavedQueryRequestPayload is struct for post request to create saved query
 type SavedQueryRequestPayload struct {
 	Title string          `json:"title"`
+	Type  int             `json:"type"`
 	Query *postgres.Jsonb `json:"query"`
 }
 
@@ -24,7 +25,7 @@ type SavedQueryUpdatePayload struct {
 	Title string `json:"title"`
 }
 
-// GetSavedQueriesHandler godoc
+// GetQueriesHandler godoc
 // @Summary To get list of all saved queries in project.
 // @Tags SavedQuery
 // @Accept  json
@@ -32,13 +33,13 @@ type SavedQueryUpdatePayload struct {
 // @Param project_id path integer true "Project ID"
 // @Success 302 {array} model.Queries
 // @Router /{project_id}/queries [get]
-func GetSavedQueriesHandler(c *gin.Context) {
+func GetQueriesHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get Queries failed. Invalid project."})
 		return
 	}
-	queries, errCode := M.GetSavedQueriesWithProjectId(projectID)
+	queries, errCode := M.GetALLSavedQueriesWithProjectId(projectID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get Saved Queries failed."})
 		return
@@ -47,7 +48,7 @@ func GetSavedQueriesHandler(c *gin.Context) {
 	c.JSON(http.StatusFound, queries)
 }
 
-// CreateSavedQueryHandler godoc
+// CreateQueryHandler godoc
 // @Summary To create a new saved query for given query.
 // @Tags SavedQuery
 // @Accept  json
@@ -56,7 +57,7 @@ func GetSavedQueriesHandler(c *gin.Context) {
 // @Param query body handler.SavedQueryRequestPayload true "Create saved query"
 // @Success 201 {array} model.Queries
 // @Router /{project_id}/queries [post]
-func CreateSavedQueryHandler(c *gin.Context) {
+func CreateQueryHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Create query failed. Invalid project."})
@@ -87,11 +88,16 @@ func CreateSavedQueryHandler(c *gin.Context) {
 		return
 	}
 
+	if requestPayload.Type == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid query type. empty type"})
+		return
+	}
+
 	query, errCode, errMsg := M.CreateQuery(projectID,
 		&M.Queries{
 			Query:     *requestPayload.Query,
 			Title:     requestPayload.Title,
-			Type:      M.QueryTypeSavedQuery,
+			Type:      requestPayload.Type,
 			CreatedBy: agentUUID,
 		})
 	if errCode != http.StatusCreated {
@@ -177,7 +183,7 @@ func DeleteSavedQueryHandler(c *gin.Context) {
 		return
 	}
 
-	errCode, errMsg := M.DeleteSavedQuery(projectID, queryID)
+	errCode, errMsg := M.DeleteQuery(projectID, queryID)
 
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, errMsg)

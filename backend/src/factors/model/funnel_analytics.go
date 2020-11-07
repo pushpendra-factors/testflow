@@ -287,11 +287,15 @@ func isSessionAnalysisReq(start int64, end int64) bool {
 func buildStepXToYJoin(stepName string, prevStepName string, previousCombinedUsersStepName string,
 	isSessionAnalysisReqBool bool, q Query, i int) string {
 
-	stepXToYJoin := fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id WHERE %s.timestamp > %s.timestamp",
-		stepName, previousCombinedUsersStepName, stepName, stepName, previousCombinedUsersStepName)
+	comparisonSymbol := ">="
+	if q.EventsWithProperties[i].Name == q.EventsWithProperties[i-1].Name {
+		comparisonSymbol = ">"
+	}
+	stepXToYJoin := fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id WHERE %s.timestamp %s %s.timestamp",
+		stepName, previousCombinedUsersStepName, stepName, stepName, comparisonSymbol, previousCombinedUsersStepName)
 	if i == 1 {
-		stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id WHERE %s.timestamp > %s.timestamp",
-			stepName, prevStepName, stepName, stepName, prevStepName)
+		stepXToYJoin = fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id = %s.coal_user_id WHERE %s.timestamp %s %s.timestamp",
+			stepName, prevStepName, stepName, stepName, comparisonSymbol, prevStepName)
 	}
 
 	if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent) && i < int(q.SessionEndEvent) {

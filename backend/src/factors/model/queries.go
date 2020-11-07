@@ -50,11 +50,11 @@ func CreateQuery(projectId uint64, query *Queries) (*Queries, int, string) {
 	return query, http.StatusCreated, ""
 }
 
-func GetSavedQueriesWithProjectId(projectID uint64) ([]Queries, int) {
+func GetALLSavedQueriesWithProjectId(projectID uint64) ([]Queries, int) {
 	db := C.GetServices().Db
 
 	queries := make([]Queries, 0, 0)
-	err := db.Table("queries").Select("*").Where("project_id = ? AND type = ? AND is_deleted = ?", projectID, QueryTypeSavedQuery, "false").Find(&queries).Error
+	err := db.Table("queries").Select("*").Where("project_id = ? AND is_deleted = ?", projectID, "false").Find(&queries).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error("Failed to fetch rows from queries table for project")
 		return queries, http.StatusInternalServerError
@@ -62,7 +62,35 @@ func GetSavedQueriesWithProjectId(projectID uint64) ([]Queries, int) {
 	return queries, http.StatusFound
 }
 
-func DeleteSavedQuery(projectID uint64, queryID uint64) (int, string) {
+func GetDashboardQueryWithQueryId(projectID uint64, queryID uint64) (*Queries, int) {
+	return getQueryWithQueryId(projectID, queryID, QueryTypeDashboardQuery)
+}
+
+func GetSavedQueryWithQueryId(projectID uint64, queryID uint64) (*Queries, int) {
+	return getQueryWithQueryId(projectID, queryID, QueryTypeSavedQuery)
+}
+
+func getQueryWithQueryId(projectID uint64, queryID uint64, queryType int) (*Queries, int) {
+	db := C.GetServices().Db
+	var query Queries
+	err := db.Table("queries").Where("project_id = ? AND id=? AND type=? AND is_deleted = ?", projectID, queryID, queryType, "false").Find(&query).Error
+	if err != nil {
+		return &Queries{}, http.StatusNotFound
+	}
+	return &query, http.StatusFound
+}
+
+func GetQueryForProjectByQueryId(projectID uint64, queryID uint64) (*Queries, int) {
+	db := C.GetServices().Db
+	var query Queries
+	err := db.Table("queries").Where("project_id = ? AND id=? AND is_deleted = ?", projectID, queryID, "false").Find(&query).Error
+	if err != nil {
+		return &Queries{}, http.StatusNotFound
+	}
+	return &query, http.StatusFound
+}
+
+func DeleteQuery(projectID uint64, queryID uint64) (int, string) {
 	db := C.GetServices().Db
 	if projectID == 0 {
 		return http.StatusBadRequest, "Invalid project ID"
@@ -70,7 +98,30 @@ func DeleteSavedQuery(projectID uint64, queryID uint64) (int, string) {
 	if queryID == 0 {
 		return http.StatusBadRequest, "Invalid query ID"
 	}
-	err := db.Model(&Queries{}).Where("id= ? AND project_id=? AND type=?", queryID, projectID, QueryTypeSavedQuery).Update("is_deleted", true).Error
+	err := db.Model(&Queries{}).Where("id= ? AND project_id=?", queryID, projectID).Update("is_deleted", true).Error
+	if err != nil {
+		return http.StatusInternalServerError, "Failed to delete saved query"
+	}
+	return http.StatusAccepted, ""
+}
+
+func DeleteSavedQuery(projectID uint64, queryID uint64) (int, string) {
+	return deleteQuery(projectID, queryID, QueryTypeSavedQuery)
+}
+
+func DeleteDashboardQuery(projectID uint64, queryID uint64) (int, string) {
+	return deleteQuery(projectID, queryID, QueryTypeDashboardQuery)
+}
+
+func deleteQuery(projectID uint64, queryID uint64, queryType int) (int, string) {
+	db := C.GetServices().Db
+	if projectID == 0 {
+		return http.StatusBadRequest, "Invalid project ID"
+	}
+	if queryID == 0 {
+		return http.StatusBadRequest, "Invalid query ID"
+	}
+	err := db.Model(&Queries{}).Where("id= ? AND project_id=? AND type=?", queryID, projectID, queryType).Update("is_deleted", true).Error
 	if err != nil {
 		return http.StatusInternalServerError, "Failed to delete saved query"
 	}
@@ -90,6 +141,7 @@ func UpdateSavedQuery(projectID uint64, queryID uint64, query *Queries) (*Querie
 	}
 	return query, http.StatusAccepted
 }
+
 func GetQueryWithQueryId(projectID uint64, queryID uint64) (*Queries, int) {
 	db := C.GetServices().Db
 
@@ -101,6 +153,7 @@ func GetQueryWithQueryId(projectID uint64, queryID uint64) (*Queries, int) {
 	}
 	return &query, http.StatusFound
 }
+
 func SearchQueriesWithProjectId(projectID uint64, searchString string) ([]Queries, int) {
 	db := C.GetServices().Db
 

@@ -212,7 +212,7 @@ func GetDashboardUnitsForProjectID(projectID uint64) ([]DashboardUnit, int) {
 	if projectID == 0 {
 		log.Errorf("Invalid project id %d", projectID)
 		return dashboardUnits, http.StatusBadRequest
-	} else if err := db.Where("project_id = ? and query->>'cl' != ?", projectID, QueryClassWeb).Find(&dashboardUnits).Error; err != nil {
+	} else if err := db.Where("project_id = ?", projectID).Find(&dashboardUnits).Error; err != nil {
 		log.WithError(err).Errorf("Failed to get dashboard units for projectID %d", projectID)
 		return dashboardUnits, http.StatusInternalServerError
 	}
@@ -292,8 +292,9 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 		return http.StatusForbidden
 	}
 
+	var dashboardUnit DashboardUnit
 	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?",
-		id, projectId, dashboardId).Delete(&DashboardUnit{}).Error
+		id, projectId, dashboardId).Delete(&dashboardUnit).Error
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectId, "dashboard_id": dashboardId,
 			"unit_id": id}).WithError(err).Error("Failed to delete dashboard unit.")
@@ -309,6 +310,14 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 		return http.StatusAccepted
 	}
 
+	// removing dashboard saved query
+	errCode, errMsg := DeleteDashboardQuery(projectId, dashboardUnit.QueryId)
+	if errCode != http.StatusAccepted {
+		log.WithFields(log.Fields{"project_id": projectId, "unitId": id}).Error(errMsg)
+		// log error and continue to delete dashboard unit.
+		// To avoid improper experience.
+		return http.StatusAccepted
+	}
 	return http.StatusAccepted
 }
 
@@ -434,9 +443,32 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 	})
 	defer waitGroup.Done()
 
+	savedQuery, errCode := GetDashboardQueryWithQueryId(projectID, dashboardUnit.QueryId)
+	if errCode != http.StatusFound {
+		logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+		return
+	}
+
+	var queryClass string
 	var query Query
-	if err := U.DecodePostgresJsonbToStructType(&dashboardUnit.Query, &query); err != nil {
-		logCtx.WithError(err).Errorf("Failed to decode jsonb query")
+	var queryGroup QueryGroup
+	// try decoding for Query
+	err := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &query)
+	if err != nil || query.Class == "" {
+		// if fails, try decoding for QueryGroup
+		err1 := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &queryGroup)
+		if err1 != nil {
+			logCtx.WithError(err).Errorf("Failed to decode jsonb query")
+			return
+		} else {
+			queryClass = queryGroup.GetClass()
+		}
+	} else {
+		queryClass = query.Class
+	}
+
+	// excluding 'Web' class dashboard units
+	if queryClass == QueryClassWeb {
 		return
 	}
 
@@ -445,7 +477,7 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to := rangeFunction()
 		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
-		baseQuery, err := DecodeQueryForClass(dashboardUnit.Query, query.Class)
+		baseQuery, err := DecodeQueryForClass(dashboardUnit.Query, queryClass)
 		if err != nil {
 			logCtx.WithError(err).Errorf("Error decoding query")
 			return
@@ -488,6 +520,9 @@ func cacheDashboardUnitForDateRange(projectID, dashboardID, dashboardUnitID uint
 	} else if baseQuery.GetClass() == QueryClassChannel {
 		channelQuery := baseQuery.(*ChannelQueryUnit)
 		result, errCode = ExecuteChannelQuery(projectID, channelQuery.Query)
+	} else if baseQuery.GetClass() == QueryClassEvents {
+		groupQuery := baseQuery.(*QueryGroup)
+		result, errCode = RunEventsGroupQuery(groupQuery.Queries, projectID)
 	}
 	if errCode != http.StatusOK {
 		logCtx.Errorf("Error while running query %s", errMsg)

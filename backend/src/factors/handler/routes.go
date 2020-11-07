@@ -16,6 +16,7 @@ import (
 const ROUTE_SDK_ROOT = "/sdk"
 const ROUTE_SDK_AMP_ROOT = "/sdk/amp"
 const ROUTE_PROJECTS_ROOT = "/projects"
+const ROUTE_PROJECTS_ROOT_V1 = "v1/projects"
 const ROUTE_INTEGRATIONS_ROOT = "/integrations"
 const ROUTE_DATA_SERVICE_ROOT = "/data_service"
 const ROUTE_VERSION_V1 = "/v1"
@@ -68,8 +69,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", DeleteDashboardUnitHandler)
 	authRouteGroup.POST("/:project_id/dashboard/:dashboard_id/units/query/web_analytics",
 		DashboardUnitsWebAnalyticsQueryHandler)
-	authRouteGroup.GET("/:project_id/queries", GetSavedQueriesHandler)
-	authRouteGroup.POST("/:project_id/queries", CreateSavedQueryHandler)
+	authRouteGroup.GET("/:project_id/queries", GetQueriesHandler)
+	authRouteGroup.POST("/:project_id/queries", CreateQueryHandler)
 	authRouteGroup.PUT("/:project_id/queries/:query_id", UpdateSavedQueryHandler)
 	authRouteGroup.DELETE("/:project_id/queries/:query_id", DeleteSavedQueryHandler)
 	authRouteGroup.GET("/:project_id/queries/search", SearchQueriesHandler)
@@ -110,6 +111,10 @@ func InitAppRoutes(r *gin.Engine) {
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/v1/agents", V1.GetProjectAgentsHandler)
+	r.GET(ROUTE_PROJECTS_ROOT_V1,
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		V1.GetProjectsHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

@@ -279,9 +279,13 @@ func AgentUpdate(c *gin.Context) {
 		c.AbortWithStatus(errCode)
 		return
 	}
-	resp := make(map[string]interface{})
-	resp["status"] = "success"
-	c.JSON(http.StatusCreated, resp)
+	agentMappingDetails, errCode := M.GetProjectAgentMapping(projectId, agentUUIDToEdit)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		logCtx.Errorln("Failed to fetch agentMappingDetails")
+		return
+	}
+	c.JSON(http.StatusCreated, agentMappingDetails)
 	return
 }
 
