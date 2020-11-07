@@ -13,6 +13,7 @@ import (
 const ROUTE_SDK_ROOT = "/sdk"
 const ROUTE_SDK_AMP_ROOT = "/sdk/amp"
 const ROUTE_PROJECTS_ROOT = "/projects"
+const ROUTE_PROJECTS_ROOT_V1 = "v1/projects"
 const ROUTE_INTEGRATIONS_ROOT = "/integrations"
 const ROUTE_DATA_SERVICE_ROOT = "/data_service"
 const ROUTE_VERSION_V1 = "/v1"
@@ -102,6 +103,10 @@ func InitAppRoutes(r *gin.Engine) {
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/v1/agents", V1.GetProjectAgentsHandler)
+	r.GET(ROUTE_PROJECTS_ROOT_V1,
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		V1.GetProjectsHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
