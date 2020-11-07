@@ -14,7 +14,7 @@ import (
 // Test Command
 // curl -i -X GET http://localhost:8080/projects/1/settings
 // GetProjectSettingHandler godoc
-// @Summary Retrieves the project settings for given project id
+// @Summary Retrieves the project settings for given project id.
 // @Tags ProjectSettings
 // @Produce json
 // @Param project_id path integer true "Project ID"
@@ -43,6 +43,15 @@ func GetProjectSettingHandler(c *gin.Context) {
 
 // Test Command
 // curl -i -H "Content-Type: application/json" -X PUT http://localhost:8080/projects/1/settings -d '{"auto_track": false}'
+// UpdateProjectSettingsHandler godoc
+// @Summary Update the project settings for given project id.
+// @Tags ProjectSettings
+// @Accept json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param setting body model.ProjectSetting true "Project Setting"
+// @Success 200 {object} model.ProjectSetting
+// @Router /{project_id}/settings [put]
 func UpdateProjectSettingsHandler(c *gin.Context) {
 	r := c.Request
 

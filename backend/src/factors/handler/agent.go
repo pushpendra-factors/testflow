@@ -102,6 +102,15 @@ func getAgentInviteParams(c *gin.Context) (*agentInviteParams, error) {
 }
 
 // curl -X POST -d '{"email":"value1"}' http://localhost:8080/:project_id/agents/invite -v
+// AgentInvite godoc
+// @Summary To invite an agent to the given project id.
+// @Tags ProjectAdmin
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param invite body handler.agentInviteParams true "Invite"
+// @Success 201 {string} json "{"status": "success", "agents": agentInfoMap, "project_agent_mappings": projectAgentMappings}"
+// @Router /{project_id}/agents/invite [post]
 func AgentInvite(c *gin.Context) {
 
 	logCtx := log.WithFields(log.Fields{
@@ -221,6 +230,15 @@ func AgentInvite(c *gin.Context) {
 }
 
 // curl -X PUT -d '{"email":"value1"}' http://localhost:8080/:project_id/agents/update -v
+// AgentUpdate godoc
+// @Summary To update an agent from the given project id.
+// @Tags ProjectAdmin
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param update body handler.updateProjectAgentParams true "Update"
+// @Success 201 {string} json "{"status": "success"}"
+// @Router /{project_id}/agents/update [put]
 func AgentUpdate(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -295,6 +313,15 @@ func getUpdateProjectAgentParams(c *gin.Context) (*updateProjectAgentParams, err
 }
 
 // curl -X POST -d '{"agent_uuid":"value1"}' http://localhost:8080/:project_id/agents/remove -v
+// RemoveProjectAgent godoc
+// @Summary To remove an agent from the given project id.
+// @Tags ProjectAdmin
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param remove body handler.removeProjectAgentParams true "Remove"
+// @Success 202 {string} json "{"project_id": uint64, "agent_uuid": string}"
+// @Router /{project_id}/agents/remove [put]
 func RemoveProjectAgent(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -529,6 +556,14 @@ func AgentInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, agentInfo)
 }
 
+// GetProjectAgentsHandler godoc
+// @Summary Gets agents list for the given project id.
+// @Tags ProjectAdmin
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {string} json "{"agents": agentInfoMap, "project_agent_mappings": projectAgentMappings}"
+// @Router /{project_id}/agents [get]
 func GetProjectAgentsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {

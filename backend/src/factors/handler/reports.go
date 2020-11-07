@@ -10,6 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// GetReportsHandler godoc
+// @Summary Get reports for given project id.
+// @Tags Reports
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {string} json "{"status": "success", "report": []ReportDescription}"
+// @Router /{project_id}/reports [get]
 func GetReportsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -33,6 +41,15 @@ func GetReportsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// GetReportHandler godoc
+// @Summary Get report for given project and report id.
+// @Tags Reports
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param report_id path integer true "Report ID"
+// @Success 200 {string} json "{"status": "success", "report": "report"}"
+// @Router /{project_id}/reports/{report_id} [get]
 func GetReportHandler(c *gin.Context) {
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)

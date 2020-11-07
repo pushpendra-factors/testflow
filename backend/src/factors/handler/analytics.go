@@ -30,6 +30,17 @@ Events Occurence:
 curl -i -H 'cookie: factors-sid=<COOKIE>' -H "Content-Type: application/json" -i -X POST http://factors-dev.com:8080/projects/2/query -d '{"query":{"type":"events_occurrence","eventsCondition":"any","from":1393632004,"to":1396310325,"eventsWithProperties":[{"name":"View Project","properties":[{"entity":"user","property":"gender","operator":"equals","type":"categorical","value":"M"}]},{"name":"Fund Project","properties":[{"entity":"user","property":"gender","operator":"equals","type":"categorical","value":"M"}]}],"groupByProperties":[{"property":"$region","entity":"user","index":0},{"property":"category","entity":"event","index":1}]}}'
 */
 
+// EventsQueryHandler godoc
+// @Summary To run a particular query group from core query or dashboards.
+// @Tags V1Api
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id query integer false "Dashboard ID"
+// @Param dashboard_unit_id query integer false "Dashboard Unit ID"
+// @Param query_group body handler.QueryGroup true "Query group"
+// @Success 200 {string} json "{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}"
+// @Router /{project_id}/v1/query [post]
 func EventsQueryHandler(c *gin.Context) {
 
 	logCtx := log.WithFields(log.Fields{

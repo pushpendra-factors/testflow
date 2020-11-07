@@ -230,6 +230,16 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, dashboardUnit)
 }
 
+// CreateDashboardUnitForMultiDashboardsHandler godoc
+// @Summary Creates a new dashboard unit for the given input.
+// @Tags V1Api
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_ids path string true "Dashboard IDs comma separated"
+// @Param payload body model.DashboardUnitRequestPayload true "Create dashboard unit"
+// @Success 201 {array} model.DashboardUnit
+// @Router /{project_id}/v1/dashboards/multi/{dashboard_ids}/units [post]
 func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -279,6 +289,16 @@ func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, dashboardUnits)
 }
 
+// CreateDashboardUnitsForMultipleQueriesHandler godoc
+// @Summary Creates a new dashboard unit for multiple given queries.
+// @Tags V1Api
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Param payload body model.DashboardUnitRequestPayload true "Array of DashboardUnitRequestPayload"
+// @Success 201 {array} model.DashboardUnit
+// @Router /{project_id}/v1/dashboards/queries/{dashboard_id}/units [post]
 func CreateDashboardUnitsForMultipleQueriesHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
