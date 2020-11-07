@@ -2252,7 +2252,7 @@
                 "datasets": {
                     "type": "array",
                     "items": {
-                        "type": "\u0026{%!s(token.Pos=1941) string %!s(*ast.InterfaceType=\u0026{1952 0xc002354000 false})}"
+                        "type": "\u0026{%!s(token.Pos=1941) string %!s(*ast.InterfaceType=\u0026{1952 0xc0052f0bd0 false})}"
                     }
                 },
                 "explanations": {
