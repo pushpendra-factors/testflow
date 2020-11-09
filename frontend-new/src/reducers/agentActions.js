@@ -1,4 +1,5 @@
 /* eslint-disable */
+import _ from 'lodash';
 import { get, post, put } from '../utils/request';
 var host = BUILD_CONFIG.backend_host;
 host = (host[host.length - 1] === '/') ? host : host + '/';
@@ -91,14 +92,18 @@ export default function reducer(state = {
     case "FETCH_PROJECTS_FULFILLED": {
       // Indexed project objects by projectId. Kept projectId on value also intentionally 
       // for array of projects from Object.values().
-      let projects = {};
-      for (let project of action.payload.projects) {
-        projects[project.id] = project;
-      } 
+     
+      let projectsWithRoles = [];
+      _.toArray(action.payload).map((project, index)=>{
+        project.map((projectDetails)=>{
+        projectDetails.role = index+1; 
+        projectsWithRoles.push(projectDetails); 
+        }) 
+      })
 
       return {
         ...state, 
-        projects: projects, 
+        projects: projectsWithRoles, 
       }
     }
     case "PROJECT_AGENT_INVITE_FULFILLED": {
@@ -249,7 +254,7 @@ export function activate(password, token){
 export function fetchProjects() {
   return function(dispatch) {
     return new Promise((resolve,reject) => {
-      get(dispatch, host + "projects")
+      get(dispatch, host + "v1/projects")
         .then((response)=>{        
           dispatch({type:"FETCH_PROJECTS_FULFILLED", payload: response.data});
           resolve(response)

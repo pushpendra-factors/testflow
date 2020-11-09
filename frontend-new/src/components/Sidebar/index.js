@@ -208,7 +208,7 @@ function Sidebar(props) {
 }
 const mapStateToProps = (state) => {
   return {
-    projects: state.global.projects,
+    projects: state.agent.projects,
     active_project: state.global.active_project
   };
 };
