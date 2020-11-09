@@ -19,7 +19,7 @@ function WidgetCard({
   };
 
   return (
-		<div className={`${unit.title} ant-col ant-col-${calcWidth(widthSize)}`} style={{ padding: '12px', transition: 'all 0.1s' }}>
+		<div className={`${unit.title} py-3 ant-col ant-col-${calcWidth(widthSize)}`} style={{ transition: 'all 0.1s' }}>
 			<div className={'fa-dashboard--widget-card'}>
 				<div className={'fa-widget-card--resize-container'}>
 					<span className={'fa-widget-card--resize-contents'}>

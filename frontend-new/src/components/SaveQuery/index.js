@@ -69,8 +69,14 @@ function SaveQuery({
     }
     try {
       setApisCalled(true);
+      let query;
+      if (requestQuery.cl === 'funnel') {
+        query = JSON.stringify(requestQuery);
+      } else {
+        query = { query_group: [requestQuery] };
+      }
       const queryType = addToDashboard ? 1 : 2;
-      const res = await saveQuery(active_project.id, title, requestQuery, queryType);
+      const res = await saveQuery(active_project.id, title, query, queryType);
       if (addToDashboard) {
         const reqBody = {
           presentation: dashboardPresentation,
@@ -96,6 +102,20 @@ function SaveQuery({
 
   if (addToDashboard) {
     dashboardHelpText = 'This widget will appear on the following dashboards:';
+
+    let secondOption = null;
+    if (requestQuery.cl === 'events') {
+      if (requestQuery.gbp.length) {
+        secondOption = (
+          <Radio value="pl">Display Line Chart</Radio>
+        );
+      } else {
+        secondOption = (
+          <Radio value="pc">Display Spark Line Chart</Radio>
+        );
+      }
+    }
+
     dashboardOptions = (
       <>
         <div className="mt-5">
@@ -119,7 +139,7 @@ function SaveQuery({
         <div className="mt-6">
           <Radio.Group value={dashboardPresentation} onChange={handlePresentationChange}>
             <Radio value="pb">Display Bar Chart</Radio>
-            <Radio value="pl">Display Line Chart</Radio>
+            {secondOption}
             <Radio value="pt">Display Table</Radio>
           </Radio.Group>
         </div>

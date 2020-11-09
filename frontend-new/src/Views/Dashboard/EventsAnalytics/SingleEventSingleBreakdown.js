@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
+// import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import {
   formatData, formatDataInLineChartFormat
-} from '../EventsAnalytics/SingleEventMultipleBreakdown/utils';
-import BarChart from '../../components/BarChart';
-import LineChart from '../../components/LineChart';
-// import SingleEventMultipleBreakdownTable from './SingleEventMultipleBreakdownTable';
-import { generateColors } from '../CoreQuery/FunnelsResultPage/utils';
+} from '../../EventsAnalytics/SingleEventSingleBreakdown/utils';
+import BarChart from '../../../components/BarChart';
+// import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
+import LineChart from '../../../components/LineChart';
+import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
-function SingleEventMultipleBreakdown({
+function SingleEventSingleBreakdown({
   resultState, page, chartType, title
 }) {
   const [chartsData, setChartsData] = useState([]);
@@ -72,21 +73,21 @@ function SingleEventMultipleBreakdown({
         <div className="total-events">
             {chartContent}
             {/* <div className="mt-8">
-        <SingleEventMultipleBreakdownTable
+        <SingleEventSingleBreakdownTable
           data={chartsData}
-          lineChartData={lineChartData}
           breakdown={breakdown}
           events={queries}
           chartType={chartType}
+          page={page}
           setVisibleProperties={setVisibleProperties}
           visibleProperties={visibleProperties}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+          lineChartData={lineChartData}
           originalData={resultState.data}
-          page={page}
         />
       </div> */}
         </div>
   );
 }
 
-export default SingleEventMultipleBreakdown;
+export default SingleEventSingleBreakdown;

@@ -1,9 +1,10 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import * as d3 from 'd3';
 import styles from './index.module.scss';
-import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
+import { checkForWindowSizeChange, generateColors } from '../utils';
+// import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
 
-function Chart({ chartData }) {
+function Chart({ chartData, title = 'chart' }) {
   const chartRef = useRef(null);
   const tooltip = useRef(null);
   const appliedColors = generateColors(chartData.length);
@@ -53,25 +54,15 @@ function Chart({ chartData }) {
     const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
     barNodes.forEach((node, index) => {
       const positionCurrentBar = node.getBoundingClientRect();
-
-      // show values inside bar
-
-      document.getElementById(`value${index}`).style.left = positionCurrentBar.left + 'px';
-      document.getElementById(`value${index}`).style.width = positionCurrentBar.width + 'px';
-
-      if (positionCurrentBar.height < 30) {
-        document.getElementById(`value${index}`).style.top = (positionCurrentBar.top - 30 + scrollTop) + 'px';
-      } else {
-        document.getElementById(`value${index}`).style.top = (positionCurrentBar.top + scrollTop + 5) + 'px';
-        document.getElementById(`value${index}`).style.color = 'white';
-      }
-
       // show change percentages in grey polygon areas
       if (index < (barNodes.length - 1)) {
         const positionNextBar = barNodes[index + 1].getBoundingClientRect();
-        document.getElementById(`change${index}`).style.left = positionCurrentBar.right + 'px';
+        // 28 is the padding of the card
+        const subtractLeft = title !== 'chart' ? document.getElementById(`change${index}`).parentElement.getBoundingClientRect().x - 28 : 0;
+        const subtractTop = title !== 'chart' ? document.getElementById(`change${index}`).parentElement.getBoundingClientRect().y : 0;
+        document.getElementById(`change${index}`).style.left = positionCurrentBar.right - subtractLeft + 'px';
         document.getElementById(`change${index}`).style.width = (positionNextBar.left - positionCurrentBar.right) + 'px';
-        document.getElementById(`change${index}`).style.top = (xAxis.getBoundingClientRect().top - xAxis.getBoundingClientRect().height - 30 + scrollTop) + 'px';
+        document.getElementById(`change${index}`).style.top = (xAxis.getBoundingClientRect().top - xAxis.getBoundingClientRect().height - 30 - subtractTop + scrollTop) + 'px';
       }
     });
   }, []);
@@ -85,25 +76,18 @@ function Chart({ chartData }) {
     const topGridLine = yGridLines[yGridLines.length - 1];
     const top = topGridLine.getBoundingClientRect().y;
     const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
-    const conversionText = document.getElementById('conversionText');
-    conversionText.style.left = `${lastBarPosition.x}px`;
+    const conversionText = document.getElementById(`conversionText-${title}`);
+    const subtractLeft = title !== 'chart' ? document.getElementById(`conversionText-${title}`).parentElement.getBoundingClientRect().x - 28 : 0;
+    const subtractTop = title !== 'chart' ? document.getElementById(`conversionText-${title}`).parentElement.getBoundingClientRect().y - 32 - 28 : 0;
+    conversionText.style.left = `${lastBarPosition.x - subtractLeft}px`;
     conversionText.style.width = `${lastBarPosition.width}px`;
-    conversionText.style.top = `${top + scrollTop}px`;
-
-    // show vertical grid line
-    const verticalLine = document.getElementById('overAllConversionLine');
-    verticalLine.style.left = `${lastBarPosition.x + lastBarPosition.width - 1}px`;
-    const bottomGridLine = yGridLines[0];
-    const bottom = bottomGridLine.getBoundingClientRect().y;
-    const height = bottom - top;
-    verticalLine.style.height = `${height}px`;
-    verticalLine.style.top = `${top + scrollTop}px`;
+    conversionText.style.top = `${top + scrollTop - subtractTop}px`;
   }, []);
 
   const drawChart = useCallback(() => {
     const availableWidth = d3.select(chartRef.current).node().getBoundingClientRect().width;
-    d3.select(chartRef.current).html('').append('svg').attr('width', availableWidth).attr('height', 400).attr('id', 'chart');
-    const svg = d3.select('#chart');
+    d3.select(chartRef.current).html('').append('svg').attr('width', availableWidth).attr('height', 400).attr('id', `chart-${title}`);
+    const svg = d3.select(`#chart-${title}`);
     const margin = {
       top: 30, right: 0, bottom: 30, left: 40
     };
@@ -111,7 +95,6 @@ function Chart({ chartData }) {
     const height = +svg.attr('height') - margin.top - margin.bottom;
 
     tooltip.current = d3.select(chartRef.current).append('div').attr('class', 'toolTip').style('opacity', 0).style('transition', '0.5s');
-
     const xScale = d3.scaleBand()
       .rangeRound([0, width])
       .paddingOuter(0.15)
@@ -164,13 +147,55 @@ function Chart({ chartData }) {
       .on('mouseout', () => {
         hideTooltip();
       });
+
     d3.select(chartRef.current).select('.axis.axis--x').selectAll('.tick').select('text').attr('dy', '16px');
+
+    g.selectAll('.text')
+      .data(chartData)
+      .enter()
+      .append('text')
+      .attr('class', 'text')
+      .text(function (d) { return d.netCount; })
+      .attr('x', function (d) {
+        return xScale(d.event) + (xScale.bandwidth() / 2);
+      })
+
+      .attr('y', function (d) {
+        return yScale(d.value) + 20 < 320 ? yScale(d.value) + 20 : 320;
+      })
+      .attr('class', 'font-bold')
+      .attr('fill', function (d) {
+        return yScale(d.value) + 20 < 320 ? 'white' : 'black';
+      })
+      .attr('text-anchor', 'middle');
+
+    g.selectAll('.vLine')
+      .data(chartData)
+      .enter()
+      .append('line')
+      .attr('class', 'vLine')
+      .attr('x1', function (d) {
+        return xScale(d.event) + (xScale.bandwidth());
+      })
+      .attr('y1', function () {
+        return 0;
+      })
+      .attr('x2', function (d) {
+        return xScale(d.event) + (xScale.bandwidth());
+      })
+      .attr('y2', height)
+      .style('stroke-width', function (_, i) {
+        return i === chartData.length - 1 ? 1 : 0;
+      })
+      .style('stroke', '#B7BEC8')
+      .style('fill', 'none');
 
     // Add polygons
     g.selectAll('.area')
       .data(chartData)
       .enter().append('polygon')
       .attr('class', 'area')
+      .text(function (d) { return d.netCount; })
       .attr('points', (d, i, nodes) => {
         if (i < nodes.length - 1) {
           const dNext = d3.select(nodes[i + 1]).datum();
@@ -194,8 +219,8 @@ function Chart({ chartData }) {
 
   const displayChart = useCallback(() => {
     drawChart();
-    showChangePercentage();
-    showOverAllConversionPercentage();
+    // showChangePercentage();
+    // showOverAllConversionPercentage();
   }, [drawChart, showChangePercentage, showOverAllConversionPercentage]);
 
   useEffect(() => {
@@ -209,34 +234,20 @@ function Chart({ chartData }) {
     displayChart();
   }, [displayChart]);
 
-  const percentChanges = chartData.slice(1).map((elem, index) => {
-    return calculatePercentage(chartData[index].netCount - elem.netCount, chartData[index].netCount);
-  });
+  // const percentChanges = chartData.slice(1).map((elem, index) => {
+  //   return calculatePercentage(chartData[index].netCount - elem.netCount, chartData[index].netCount);
+  // });
 
   return (
-    <div className="ungrouped-chart">
+    <div id={`${title}-ungroupedChart`} className="ungrouped-chart">
 
-      <div id="overAllConversionLine" className={`absolute border-l border-solid ${styles.overAllConversionLine}`}></div>
-
-      <div style={{ transition: '2s' }} id="conversionText" className="absolute flex justify-end pr-1">
+      {/* <div style={{ transition: '2s' }} id={`conversionText-${title}`} className="absolute flex justify-end pr-1">
         <div className={styles.conversionText}>
           <div className="font-semibold flex justify-end">{chartData[chartData.length - 1].value}%</div>
           <div className="font-normal">Conversion</div>
         </div>
       </div>
 
-      {chartData.map((d, index) => {
-        return (
-          <div
-            onMouseOut={hideTooltip}
-            onMouseMove={() => { showTooltip(d, index); }}
-            className={`${styles.valueText} absolute font-bold flex justify-center`}
-            id={`value${index}`} key={d.event + index}
-          >
-            {d.netCount}
-          </div>
-        );
-      })}
       {percentChanges.map((change, index) => {
         return (
           <div className={`absolute flex flex-col items-center ${styles.changePercents}`} id={`change${index}`} key={index}>
@@ -248,7 +259,7 @@ function Chart({ chartData }) {
             <div className="flex justify-center">{change}%</div>
           </div>
         );
-      })}
+      })} */}
       <div ref={chartRef} className={styles.ungroupedChart}>
       </div>
     </div>

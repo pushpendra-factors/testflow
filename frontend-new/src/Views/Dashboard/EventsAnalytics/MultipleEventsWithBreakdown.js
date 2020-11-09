@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { formatData, formatVisibleProperties, formatDataInLineChartFormat } from '../EventsAnalytics/MultipleEventsWIthBreakdown/utils';
-import { generateColors } from '../CoreQuery/FunnelsResultPage/utils';
-import BarChart from '../../components/BarChart';
+import { formatData, formatVisibleProperties, formatDataInLineChartFormat } from '../../EventsAnalytics/MultipleEventsWIthBreakdown/utils';
+import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
+import BarChart from '../../../components/BarChart';
 // import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable';
-import LineChart from '../../components/LineChart';
+import LineChart from '../../../components/LineChart';
 // import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
