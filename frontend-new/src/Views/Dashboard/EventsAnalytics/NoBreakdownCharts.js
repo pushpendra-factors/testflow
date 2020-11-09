@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { formatSingleEventAnalyticsData, formatMultiEventsAnalyticsData, getDataInLineChartFormat } from '../EventsAnalytics/NoBreakdownCharts/utils';
+import { formatSingleEventAnalyticsData, formatMultiEventsAnalyticsData, getDataInLineChartFormat } from '../../EventsAnalytics/NoBreakdownCharts/utils';
 // import NoBreakdownTable from './NoBreakdownTable';
-import SparkLineChart from '../../components/SparkLineChart';
-import LineChart from '../../components/LineChart';
-import { generateColors } from '../CoreQuery/FunnelsResultPage/utils';
+import SparkLineChart from '../../../components/SparkLineChart';
+import LineChart from '../../../components/LineChart';
+import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function NoBreakdownCharts({
   queries, eventsMapper, reverseEventsMapper, resultState, page, chartType

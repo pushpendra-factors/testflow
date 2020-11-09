@@ -13,6 +13,7 @@ import { getStateQueryFromRequestQuery } from '../CoreQuery/utils';
 import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { deleteQuery } from '../../reducers/coreQuery/services';
+import { typeOf } from 'react-is';
 
 const coreQueryoptions = [
   {
@@ -75,10 +76,10 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
   const dispatch = useDispatch();
 
   const getFormattedRow = (q) => {
-    let svgName = 'events_cq';
+    let svgName = 'funnels_cq';
     let requestQuery = q.query;
-    if (requestQuery.cl === 'funnel') {
-      svgName = 'funnels_cq';
+    if(requestQuery.query_group) {
+      svgName = 'events_cq';
     }
 
     return {
@@ -122,7 +123,12 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
   }, [])
 
   const setQueryToState = useCallback((record) => {
-    const equivalentQuery = getStateQueryFromRequestQuery(record.query.query_group[0]);
+    let equivalentQuery;
+    if(typeof(record.query) === 'string') {
+      equivalentQuery = getStateQueryFromRequestQuery(JSON.parse(record.query));
+    } else {
+      equivalentQuery = getStateQueryFromRequestQuery(record.query.query_group[0]);
+    }
     dispatch({ type: INITIALIZE_GROUPBY, payload: equivalentQuery.breakdown })
     setQueries(equivalentQuery.events);
     setQueryType(equivalentQuery.queryType);

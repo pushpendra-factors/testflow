@@ -36,7 +36,7 @@ export const getFunnelData = (projectId, query) => {
 
 export const saveQuery = (projectId, title, query, type) => {
   const url = host + "projects/" + projectId + "/queries";
-  return post(null, url, { query: { query_group: [query] }, title, type });
+  return post(null, url, { query, title, type });
 }
 
 export const deleteQuery = async (dispatch, query) => {

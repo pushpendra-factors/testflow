@@ -5,7 +5,7 @@ import * as d3 from 'd3';
 import styles from './index.module.scss';
 import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
 
-function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMapper }) {
+function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMapper, title = "chart" }) {
 
   // console.log(eventsData)
   // console.log(groups)
@@ -31,16 +31,16 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
 
     groups
       .forEach((elem) => {
-        document.getElementById(`conversion-text-${elem.name}`).style.top = `${top + scrollTop}px`;
-        document.getElementById(`conversion-text-${elem.name}`).style.height = `${height}px`;
+        document.getElementById(`${title}-conversion-text-${elem.name}`).style.top = `${top + scrollTop}px`;
+        document.getElementById(`${title}-conversion-text-${elem.name}`).style.height = `${height}px`;
       });
 
     d3.select(chartRef.current).select('g.c3-axis-x').selectAll('g.tick').nodes()
       .forEach((elem, index) => {
         const position = elem.getBoundingClientRect();
-        document.getElementById(`conversion-text-${groups[index].name}`).style.left = `${position.x}px`;
-        const width = document.getElementById(groups[index].name).getBoundingClientRect().x - position.x;
-        document.getElementById(`conversion-text-${groups[index].name}`).style.width = `${width}px`;
+        document.getElementById(`${title}-conversion-text-${groups[index].name}`).style.left = `${position.x}px`;
+        const width = document.getElementById(`${title}-${groups[index].name}`).getBoundingClientRect().x - position.x;
+        document.getElementById(`${title}-conversion-text-${groups[index].name}`).style.width = `${width}px`;
       });
   }, [groups]);
 
@@ -57,16 +57,12 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
     d3.select(chartRef.current).select(`g.c3-shapes-${lastBarClassNmae}`).selectAll('path').nodes()
       .forEach((elem, index) => {
         const position = elem.getBoundingClientRect();
-        const verticalLine = document.getElementById(groups[index].name);
+        const verticalLine = document.getElementById(`${title}-${groups[index].name}`);
         verticalLine.style.left = `${position.x + position.width - 1}px`;
         verticalLine.style.height = `${height}px`;
         verticalLine.style.top = `${top + scrollTop}px`;
       });
   }, [groups, eventsData]);
-
-  const adjustLegends = useCallback(() => {
-
-  }, [])
 
   const drawChart = useCallback(() => {
     const chart = c3.generate({
@@ -275,9 +271,8 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
 
   const displayChart = useCallback(() => {
     drawChart();
-    showVerticalGridLines();
-    showConverionRates();
-    adjustLegends();
+    // showVerticalGridLines();
+    // showConverionRates();
   }, [drawChart, showVerticalGridLines, showConverionRates]);
 
   useEffect(() => {
@@ -295,11 +290,11 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
 
   return (
     <div className="grouped-chart">
-      {
+      {/* {
         groups
           .map(elem => {
             return (
-              <div className={`absolute border-l border-solid ${styles.verticalGridLines}`} key={elem.name} id={elem.name}></div>
+              <div className={`absolute border-l border-solid ${styles.verticalGridLines}`} key={elem.name} id={`${title}-${elem.name}`}></div>
             );
           })
       }
@@ -307,7 +302,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
         groups
           .map(elem => {
             return (
-              <div style={{ transition: '2s' }} key={elem.name} id={`conversion-text-${elem.name}`} className="absolute z-10 leading-5 text-base flex justify-end pr-1">
+              <div style={{ transition: '2s' }} key={elem.name} id={`${title}-conversion-text-${elem.name}`} className="absolute z-10 leading-5 text-base flex justify-end pr-1">
                 <div style={{ fontSize: '14px' }} className={styles.conversionText}>
                   <div className="font-semibold flex justify-end">{elem.conversion_rate}</div>
                   <div>Conversion</div>
@@ -315,7 +310,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
               </div>
             );
           })
-      }
+      } */}
       <div className={styles.groupedChart} ref={chartRef} />
     </div>
   );
