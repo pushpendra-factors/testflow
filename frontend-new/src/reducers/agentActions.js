@@ -193,35 +193,35 @@ export function signout() {
   };
 }
 
-// export function signup(email, phone, planCode){
-//   return function(dispatch){
-//     return new Promise((resolve, reject) => {
-//       dispatch({type: "AGENT_SIGNUP"});
+export function signup(data){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      dispatch({type: "AGENT_SIGNUP"});
 
-//       post(dispatch, host+"accounts/signup", { email: email, phone: phone, plan_code: planCode })
-//         .then((r) => {
-//           // status 302 for duplicate email
-//           if(r.status != 302)
-//           {
-//             dispatch({
-//               type: "AGENT_SIGNUP_FULFILLED",
-//               payload: {}
-//             });
-//             resolve(r);
-//           }
-//           else
-//           {
-//             dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
-//             reject("Email already exists. Try logging in.")
-//           }
-//         })
-//         .catch( () => {
-//           dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
-//           reject("Sign up failed. Please try again.");
-//         });
-//     });
-//   }
-// }
+      post(dispatch, host+"accounts/signup", data)
+        .then((r) => {
+          // status 302 for duplicate email
+          if(r.status != 302)
+          {
+            dispatch({
+              type: "AGENT_SIGNUP_FULFILLED",
+              payload: {}
+            });
+            resolve(r);
+          }
+          else
+          {
+            dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
+            reject("Email already exists. Try logging in.")
+          }
+        })
+        .catch( () => {
+          dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
+          reject("Sign up failed. Please try again.");
+        });
+    });
+  }
+}
 
 export function fetchProjects() {
   return function(dispatch) {
