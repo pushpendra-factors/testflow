@@ -223,6 +223,29 @@ export function signup(data){
   }
 }
 
+export function activate(password, token){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      dispatch({type: "AGENT_VERIFY"});
+
+      post(dispatch, host+"agents/activate?token="+token, { 
+        password: password
+      })
+      .then(() => {
+        resolve(dispatch({
+          type: "AGENT_VERIFY_FULFILLED",
+          payload: {}
+        }));
+      })
+      .catch(() => {
+        dispatch({type: "AGENT_VERIFY_REJECTED", payload: null});
+        
+        reject("Activation failed. Please try again.");
+      })
+    });
+  }
+}
+
 export function fetchProjects() {
   return function(dispatch) {
     return new Promise((resolve,reject) => {
