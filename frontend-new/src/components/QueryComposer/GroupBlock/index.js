@@ -7,11 +7,12 @@ import { bindActionCreators } from 'redux';
 import { Button } from 'antd';
 import GroupSelect from '../GroupSelect';
 
-import { setGroupBy } from '../../../reducers/coreQuery/middleware';
+import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 
 function GroupBlock({
   groupByState,
   setGroupBy,
+  delGroupBy,
   userProperties
 }) {
   const [isDDVisible, setDDVisible] = useState([false]);
@@ -29,6 +30,10 @@ function GroupBlock({
     filterOpts[0].values = userProperties;
     setFilterOptions(filterOpts);
   }, [userProperties]);
+
+  const delOption = (index) => {
+    delGroupBy('global', groupByState[index], index);
+  }
 
   const onChange = (value, index) => {
     const newGroupByState = Object.assign({}, groupByState[index]);
@@ -82,7 +87,16 @@ function GroupBlock({
       {
         groupByState.map((opt, index) => (
           <div key={index} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
-            {!isDDVisible[index] && <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" />} {opt.property ? opt.property : 'Select user property'}</Button> }
+            {!isDDVisible[index] && <>
+            <Button size={'large'} 
+            type="text" 
+            onClick={() => delOption(index)}
+            className={`${styles.filter_block__remove} mr-2ß`}>
+              <SVG name="remove"></SVG></Button>
+            
+            <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" />} {opt.property ? opt.property : 'Select user property'}</Button>
+            </>
+            }
             {isDDVisible[index]
               ? (<GroupSelect groupedProperties={filterOptions}
                 placeholder="Select Property"
@@ -114,7 +128,9 @@ const mapStateToProps = (state) => ({
 });
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-  setGroupBy
+  setGroupBy,
+  delGroupBy
+
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(GroupBlock);

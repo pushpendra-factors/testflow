@@ -7,7 +7,7 @@ import { SVG } from 'factorsComponents';
 
 import { fetchEventPropertyValues } from '../../../reducers/coreQuery/services';
 
-export default function FilterBlock({ filterProps, activeProject, event, filter, insertFilter, closeFilter }) {
+export default function FilterBlock({ index, filterProps, activeProject, event, filter, deleteFilter, insertFilter, closeFilter }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -120,6 +120,10 @@ export default function FilterBlock({ filterProps, activeProject, event, filter,
     }
 
   }, [newFilterState])
+
+  const delFilter = () => {
+    deleteFilter(index);
+  }
 
   const optionClick = (value) => {
     const newFilter = Object.assign({}, newFilterState);
@@ -283,9 +287,10 @@ export default function FilterBlock({ filterProps, activeProject, event, filter,
     <div className={styles.filter_block}>
       <Button size={'large'} 
       type="text" 
+      onClick={delFilter}
       className={`${styles.filter_block__remove} mr-1`}>
         <SVG name="remove"></SVG></Button>
-      <span className={`${styles.filter_block__prefix} ml-10`}>where</span>
+      <span className={`${styles.filter_block__prefix} ml-10`}>{index >=1 ? 'and' : 'where'}</span>
       {filter
         ? renderFilterContent()
         : <>

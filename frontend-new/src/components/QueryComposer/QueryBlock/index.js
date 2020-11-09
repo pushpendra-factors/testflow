@@ -14,7 +14,7 @@ import EventGroupBlock from '../EventGroupBlock';
 
 function QueryBlock({
   index, event, eventChange, queries, queryType, eventOptions,
-  activeProject, groupBy, setGroupBy, 
+  activeProject, groupBy, setGroupBy,
   delGroupBy, userProperties, eventProperties
 }) {
   const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event));
@@ -61,7 +61,7 @@ function QueryBlock({
                    {isDDVisible
                      ? <GroupSelect
                   groupedProperties={eventOptions}
-                  placeholder="Select Property"
+                  placeholder="Select Event"
                   optionClick={(group, val) => onChange(val[0])}
                   onClickOutside={() => setDDVisible(false)}
 
@@ -86,14 +86,31 @@ function QueryBlock({
     eventChange(newEvent, index - 1);
   };
 
+  const removeFilters = (index) => {
+    const newEvent = Object.assign({}, event);
+    if (newEvent.filters[index]) {
+      delete newEvent.filters[index];
+      newEvent.filters.length -= 1;
+    }
+    eventChange(newEvent, index - 1);
+  }
+
   const selectEventFilter = () => {
     if (isFilterDDVisible) {
-      return <FilterBlock filterProps={filterProps} activeProject={activeProject} event={event} insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>;
+      return <FilterBlock 
+      filterProps={filterProps} 
+      activeProject={activeProject} 
+      event={event} 
+      insertFilter={insertFilters} 
+      closeFilter={() => setFilterDDVisible(false)}
+      >
+
+      </FilterBlock>;
     }
   };
 
-  const deleteGroupBy = (groupState, index) => {
-    delGroupBy('event', groupState, index);
+  const deleteGroupBy = (groupState, index, type = 'event') => {
+    delGroupBy(type, groupState, index);
   }
 
   const pushGroupBy = (groupState, index) => {
@@ -128,7 +145,7 @@ function QueryBlock({
       event.filters.forEach((filter, index) => {
         filters.push(
                     <div key={index} className={'fa--query_block--filters'}>
-                        <FilterBlock filter={filter} insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>
+                        <FilterBlock index={index} filter={filter} deleteFilter={removeFilters} insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>
                     </div>
         );
       });

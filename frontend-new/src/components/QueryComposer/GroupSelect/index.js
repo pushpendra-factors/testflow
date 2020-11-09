@@ -67,6 +67,7 @@ function GroupSelect({
             className={styles.dropdown__filter_select__input}
             placeholder={placeholder}
             onKeyUp={(userInput) => setSearchTerm(userInput.currentTarget.value)}
+            prefix={(<SVG name="search" />)}
           />
           <div className={styles.dropdown__filter_select__content}>
             {renderOptions(groupedProperties)}
