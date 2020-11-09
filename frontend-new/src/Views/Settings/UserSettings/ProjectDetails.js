@@ -1,18 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Button, Avatar, Skeleton, Tooltip
+  Row, Col, Button, Avatar, Skeleton, Tooltip, message
 } from 'antd';
 import { Text } from 'factorsComponents';
-import { fetchProjects } from 'Reducers/agentActions';
+import { fetchProjects, projectAgentRemove, fetchAgentInfo } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 
-function ProjectDetails({ fetchProjects, projects }) {
+function ProjectDetails({
+  fetchProjects, projects, projectAgentRemove, fetchAgentInfo, currentAgent
+}) {
   const [dataLoading, setDataLoading] = useState(true);
-
+  const leaveProject = (projectId, agentUUID, projectName) => {
+    projectAgentRemove(projectId, agentUUID).then(() => {
+      message.succcess(`Left project ${projectName}`);
+    }).catch((err) => {
+      console.log('leave project err->>', err);
+      message.error('Oops something went wrong!');
+    });
+  };
   useEffect(() => {
-    fetchProjects().then((res) => {
+    const getData = async () => {
+      await fetchAgentInfo();
+    };
+    getData();
+    fetchProjects().then(() => {
       setDataLoading(false);
-      console.log('res->>', res);
     });
   }, [fetchProjects]);
   return (
@@ -41,7 +53,7 @@ function ProjectDetails({ fetchProjects, projects }) {
                       <div>
 
                       <Tooltip placement="top" trigger={'hover'} title={isAdmin ? 'Admin can\'t remove himself' : null}>
-                          <Button size={'large'} disabled={isAdmin} type="text">Leave Project</Button>
+                          <Button onClick={() => leaveProject(item.id, currentAgent.uuid, item.name)} size={'large'} disabled={isAdmin} type="text">Leave Project</Button>
                       </Tooltip>
 
                       </div>
@@ -61,8 +73,10 @@ function ProjectDetails({ fetchProjects, projects }) {
 
 const mapStateToProps = (state) => {
   return ({
-    projects: state.agent.projects
+    projects: state.agent.projects,
+    currentAgent: state.agent.agent_details
+
   }
   );
 };
-export default connect(mapStateToProps, { fetchProjects })(ProjectDetails);
+export default connect(mapStateToProps, { fetchProjects, projectAgentRemove, fetchAgentInfo })(ProjectDetails);
