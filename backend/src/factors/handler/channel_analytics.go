@@ -12,6 +12,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ChannelQueryHandler godoc
+// @Summary To run a channel query.
+// @Tags CoreQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id query integer false "Dashboard ID"
+// @Param dashboard_unit_id query integer false "Dashboard Unit ID"
+// @Param query body model.ChannelQuery true "Query payload"
+// @Success 200 {string} json "{"result": model.ChannelQueryResult, "cache": false, "refreshed_at": timestamp}"
+// @Router /{project_id}/channels/query [post]
 func ChannelQueryHandler(c *gin.Context) {
 	r := c.Request
 
@@ -96,6 +107,16 @@ func ChannelQueryHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, queryResult)
 }
 
+// GetChannelFilterValuesHandler godoc
+// @Summary To filter on values for channel query.
+// @Tags CoreQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param channel query string true "Channel"
+// @Param filter query string true "Filter"
+// @Success 302 {string} json "{"filter_values": []string}"
+// @Router /{project_id}/channels/filter_values [get]
 func GetChannelFilterValuesHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {

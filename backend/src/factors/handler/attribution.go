@@ -16,6 +16,17 @@ type AttributionRequestPayload struct {
 	Query *M.AttributionQuery `json:"query"`
 }
 
+// AttributionHandler godoc
+// @Summary To run attribution query.
+// @Tags CoreQuery
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id query integer false "Dashboard ID"
+// @Param dashboard_unit_id query integer false "Dashboard Unit ID"
+// @Param query body handler.AttributionRequestPayload true "Query payload"
+// @Success 200 {string} json "{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}"
+// @Router /{project_id}/attribution/query [post]
 func AttributionHandler(c *gin.Context) {
 
 	r := c.Request

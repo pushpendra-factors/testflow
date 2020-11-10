@@ -15,6 +15,15 @@ import (
 
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/users/bc7318e8-2b69-49b6-baf3-fdf47bcb1af9
+// GetUserHandler godoc
+// @Summary Get a user for the given project and user id.
+// @Tags Users
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param user_id path string true "User ID"
+// @Success 200 {object} model.User
+// @Router /{project_id}/users/{user_id} [get]
 func GetUserHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -41,6 +50,16 @@ func GetUserHandler(c *gin.Context) {
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/users
 // curl -i -X GET http://localhost:8080/projects/1/users?offset=50&limit=10
+// GetUsersHandler godoc
+// @Summary Gets users for the given project id.
+// @Tags Users
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param offset query integer false "Offset"
+// @Param limit query integer false "Limit"
+// @Success 200 {array} model.User
+// @Router /{project_id}/users [get]
 func GetUsersHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -86,6 +105,14 @@ func GetUsersHandler(c *gin.Context) {
 
 // GetUserPropertiesHandler Test command.
 // curl -i -X GET http://localhost:8080/projects/1/user_properties
+// GetUserPropertiesHandler godoc
+// @Summary Gets users properties for the given project id.
+// @Tags Users
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {string} json "map[string]string"
+// @Router /{project_id}/user_properties [get]
 func GetUserPropertiesHandler(c *gin.Context) {
 	var err error
 	var properties map[string][]string
@@ -117,6 +144,15 @@ func GetUserPropertiesHandler(c *gin.Context) {
 }
 
 //GetUserPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/user_properties/$country
+// GetUserPropertiesHandler godoc
+// @Summary Get property values for given property name.
+// @Tags Users
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param property_name path string true "Property Name"
+// @Success 200 {string} json "[]string"
+// @Router /{project_id}/user_properties/{property_name}/values [get]
 func GetUserPropertyValuesHandler(c *gin.Context) {
 	var err error
 	var propertyValues []string

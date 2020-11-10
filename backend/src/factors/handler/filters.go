@@ -26,6 +26,15 @@ type API_FilterResponePayload struct {
 }
 
 // Test command: curl -H "Content-Type: application/json" -i -X POST http://localhost:8080/projects/1/filters -d '{ "name": "login", "expr": "a.com/u1/u2"}'
+// CreateFilterHandler godoc
+// @Summary To create a new filter.
+// @Tags Filters
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param filter body handler.API_FilterRequestPayload true "Create filter"
+// @Success 201 {object} handler.API_FilterResponePayload
+// @Router /{project_id}/filters [post]
 func CreateFilterHandler(c *gin.Context) {
 	r := c.Request
 
@@ -62,6 +71,14 @@ func CreateFilterHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, responsePayload)
 }
 
+// GetFiltersHandler godoc
+// @Summary Get the list of existing filters.
+// @Tags Filters
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {array} handler.API_FilterResponePayload
+// @Router /{project_id}/filters [get]
 func GetFiltersHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -89,6 +106,16 @@ func GetFiltersHandler(c *gin.Context) {
 }
 
 // Test command: curl -H "Content-Type: application/json" -i -X PUT http://localhost:8080/projects/1/filters/364 -d '{ "name": "updated_name" }'
+// UpdateFilterHandler godoc
+// @Summary To update an existing filter.
+// @Tags Filters
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param filter_id path integer true "Filter ID"
+// @Param filter body handler.API_FilterRequestPayload true "Update filter"
+// @Success 202 {object} handler.API_FilterResponePayload
+// @Router /{project_id}/filters/{filter_id} [put]
 func UpdateFilterHandler(c *gin.Context) {
 	r := c.Request
 
@@ -136,6 +163,15 @@ func UpdateFilterHandler(c *gin.Context) {
 	c.JSON(http.StatusAccepted, responsePayload)
 }
 
+// DeleteFilterHandler godoc
+// @Summary To delete an existing filter.
+// @Tags Filters
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param filter_id path integer true "Filter ID"
+// @Success 202 {object} handler.API_FilterResponePayload
+// @Router /{project_id}/filters/{filter_id} [delete]
 func DeleteFilterHandler(c *gin.Context) {
 
 	logCtx := log.WithFields(log.Fields{
