@@ -126,9 +126,9 @@ export default function reducer(state = {
     }
     case "PROJECT_AGENT_REMOVE_FULFILLED": {
       let nextState = { ...state }; 
-      nextState.agents = state.agents.filter((projectAgent)=>{ 
+      nextState.projects = state.projects.filter((projectAgent)=>{ 
         return projectAgent.uuid != action.payload.agent_uuid
-      }) 
+      })  
       return nextState
     }
     case "FETCH_PROJECT_AGENTS_FULFILLED":{
@@ -354,7 +354,7 @@ export function projectAgentRemove(projectId, agentUUID){
   return function(dispatch){
     return new Promise((resolve, reject) => {
       put(dispatch, host + "projects/" + projectId +"/agents/remove", {"agent_uuid":agentUUID})
-        .then((r) => {
+        .then((r) => { 
           if (r.status == 403) {
             dispatch({
               type: "PROJECT_AGENT_REMOVE_REJECTED",
@@ -362,13 +362,22 @@ export function projectAgentRemove(projectId, agentUUID){
             });
             reject(r.data.error);
           }
+          if (r.status == 202) {
+            dispatch({
+              type: "PROJECT_AGENT_REMOVE_FULFILLED",
+              payload: r.data
+            });
+            resolve(r.data);
+          }
+
           dispatch({
             type: "PROJECT_AGENT_REMOVE_FULFILLED",
             payload: r.data
           });
           resolve(r.data);
+
         })
-        .catch((r) => {
+        .catch((r) => { 
           dispatch({
             type: "PROJECT_AGENT_REMOVE_REJECTED",
             error: r

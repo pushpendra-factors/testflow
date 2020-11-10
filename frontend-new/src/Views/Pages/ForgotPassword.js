@@ -68,7 +68,7 @@ function ForgotPassword({ forgotPassword }) {
                             <Row>
                                 <Col span={24}>
                                     <div className={'flex justify-center items-center mt-10'} >
-                                        <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>Forget password?</Text>
+                                        <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>Forgot password?</Text>
                                     </div>
                                 </Col>
                                 {!userEmail && <>
