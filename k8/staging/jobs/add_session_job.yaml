@@ -42,7 +42,7 @@ spec:
             - --num_routines
             - $(ADD_SESSION_NUM_ROUTINES)
             - --max_lookback_days
-            - $(ADD_SESSION_MAX_LOOKBACK_DAYS)
+            - $(ADD_SESSION_MAX_LOOKBACK_HOURS)
             - --redis_host_ps
             - $(PERSISTENT_REDIS_HOST)
             - --redis_port_ps
