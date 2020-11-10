@@ -58,6 +58,15 @@ func CreateProjectHandler(c *gin.Context) {
 
 // Test command.
 // curl -H "Content-Type: application/json" -i -X PUT http://localhost:8080/projects/1 -d '{ "name": "project_name"}'
+// EditProjectHandler godoc
+// @Summary To edit the allowed fields of an existing project.
+// @Tags Projects
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param unit body model.Project true "Edit project"
+// @Success 201 {object} model.Project
+// @Router /{project_id} [put]
 func EditProjectHandler(c *gin.Context) {
 	r := c.Request
 
@@ -112,6 +121,13 @@ func EditProjectHandler(c *gin.Context) {
 
 // Test command.
 // curl -i -X GET http://localhost:8080/projects
+// GetProjectsHandler godoc
+// @Summary To fetch the list of authorized projects for the user.
+// @Tags Projects
+// @Accept  json
+// @Produce json
+// @Success 200 {string} json "{"projects": []Project}"
+// @Router / [get]
 func GetProjectsHandler(c *gin.Context) {
 	authorizedProjects := U.GetScopeByKey(c, "authorizedProjects")
 
