@@ -18,7 +18,7 @@ const MenuTabs = {
   EventAlias: 'Event Alias'
 };
 
-function ProjectSettings() {
+function ProjectSettings({ activeProject }) {
   const [selectedMenu, setSelectedMenu] = useState(MenuTabs.generalSettings);
   // const [editPasswordModal, setPasswordModal] = useState(false);
   // const [editDetailsModal, setDetailsModal] = useState(false);
@@ -47,7 +47,7 @@ function ProjectSettings() {
         <Row gutter={[24, 24]} justify={'center'} className={'pt-16 pb-2 m-0 '}>
           <Col span={20}>
             <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'}>Project Settings</Text>
-            <Text type={'title'} level={7} weight={'regular'} extraClass={'m-0'} color={'grey'}>FactorsAI</Text>
+            <Text type={'title'} level={7} weight={'regular'} extraClass={'m-0'} color={'grey'}>{activeProject.name}</Text>
           </Col>
         </Row>
         <Row gutter={[24, 24]} justify={'center'}>
@@ -80,8 +80,7 @@ function ProjectSettings() {
 }
 
 const mapStateToProps = (state) => ({
-  // activeProjectID: state.global.active_project.id,
-  agents: state.agent.agents
+  activeProject: state.global.active_project
 });
 
 export default connect(mapStateToProps)(ProjectSettings);
