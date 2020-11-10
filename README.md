@@ -159,6 +159,8 @@ cd $GOPATH/bin
 ```
 
 * Backend available at factors-dev.com:8080
+* Api documentation for the app server will be available at http://factors-dev.com:8080/swagger/index.html
+* To regenerate documentation after any changes, run `make build-api-doc`.
 
 ## Managing dependencies with go mod (Optional)
 
