@@ -27,7 +27,7 @@ curl -i -H 'cookie: factors-sid=<COOKIE>' -H "Content-Type: application/json" -i
 */
 
 // EventsQueryHandler godoc
-// @Summary To run a particular query group from core query or dashboards.
+// @Summary To run events core query as a query group for user and event count.
 // @Tags V1Api
 // @Accept  json
 // @Produce json

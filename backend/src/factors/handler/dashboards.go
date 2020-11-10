@@ -231,7 +231,7 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 }
 
 // CreateDashboardUnitForMultiDashboardsHandler godoc
-// @Summary Creates a new dashboard unit for the given input.
+// @Summary Creates a new dashboard unit for each of the given dashboard Ids.
 // @Tags V1Api
 // @Accept  json
 // @Produce json
@@ -290,7 +290,7 @@ func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) {
 }
 
 // CreateDashboardUnitsForMultipleQueriesHandler godoc
-// @Summary Creates a new dashboard unit for multiple given queries.
+// @Summary Creates a new dashboard unit for each of the given queries.
 // @Tags V1Api
 // @Accept  json
 // @Produce json
