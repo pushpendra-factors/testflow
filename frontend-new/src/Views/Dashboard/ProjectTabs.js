@@ -168,7 +168,7 @@ function ProjectTabs({ setaddDashboardModal }) {
 				<Col span={24}>
 					<Tabs
 						onChange={handleTabChange}
-						activeKey={activeDashboard.id.toString()}
+						activeKey={activeDashboard?.id?.toString()}
 						className={'fa-tabs--dashboard'}
 						tabBarExtraContent={operations}
 					>

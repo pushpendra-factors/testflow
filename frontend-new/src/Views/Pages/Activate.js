@@ -5,10 +5,10 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
 import queryString from 'query-string';
-import { setPassword } from 'Reducers/agentActions';
+import { activate } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 
-function ResetPassword(props) {
+function Activate(props) {
   const [form] = Form.useForm();
   const [errorInfo, seterrorInfo] = useState(null);
   const [dataLoading, setDataLoading] = useState(false);
@@ -25,11 +25,11 @@ function ResetPassword(props) {
     form.validateFields().then((value) => {
       setDataLoading(true);
       setTimeout(() => {
-        props.setPassword(value.password, tokenFromUrl)
+        props.activate(value.password, tokenFromUrl)
           .then(() => {
             setDataLoading(false);
             history.push('/');
-            message.success('Password Changed!');
+            message.success('Account activated!');
           }).catch((err) => {
             setDataLoading(false);
             form.resetFields();
@@ -69,7 +69,7 @@ function ResetPassword(props) {
                         <Row>
                             <Col span={24}>
                                 <div className={'flex justify-center items-center mt-10'} >
-                                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>Reset your Password</Text>
+                                    <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>Activate your account </Text>
                                 </div>
                             </Col>
                             <Col span={24}>
@@ -79,12 +79,12 @@ function ResetPassword(props) {
                                 rules={[
                                   {
                                     required: true,
-                                    message: 'Please input your old password.'
+                                    message: 'Please enter password.'
                                   }
                                 ]}
 
                                 >
-                                <Input.Password disabled={dataLoading} size="large" className={'fa-input w-full'} placeholder="Enter New Password" />
+                                <Input.Password disabled={dataLoading} size="large" className={'fa-input w-full'} placeholder="Enter Password" />
                                 </Form.Item>
                                 </div>
                             </Col>
@@ -96,27 +96,27 @@ function ResetPassword(props) {
                                     rules={[
                                       {
                                         required: true,
-                                        message: 'Please confirm your new password.'
+                                        message: 'Please confirm your password.'
                                       },
                                       ({ getFieldValue }) => ({
                                         validator(rule, value) {
                                           if (!value || getFieldValue('password') === value) {
                                             return Promise.resolve();
                                           }
-                                          return Promise.reject(new Error('The new password that you entered do not match!'));
+                                          return Promise.reject(new Error('The password that you entered do not match!'));
                                         }
                                       })
                                     ]}
 
                                     >
-                                    <Input.Password disabled={dataLoading} size="large" className={'fa-input w-full'} placeholder="Confirm New Password" />
+                                    <Input.Password disabled={dataLoading} size="large" className={'fa-input w-full'} placeholder="Confirm Password" />
                                     </Form.Item>
                                 </div>
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
                                     <Form.Item className={'m-0'} loading={dataLoading}>
-                                            <Button htmlType="submit" loading={dataLoading} type={'primary'} size={'large'} className={'w-full'}>Reset Password</Button>
+                                            <Button htmlType="submit" loading={dataLoading} type={'primary'} size={'large'} className={'w-full'}>Activate</Button>
                                         </Form.Item>
                                 </div>
                             </Col>
@@ -126,11 +126,11 @@ function ResetPassword(props) {
                                 </div>
                             </Col>
                             }
-                            <Col span={24}>
+                            {/* <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
                                     <a type={'text'} size={'large'} onClick={() => routeChange('/login')}>Go back to login</a>
                                 </div>
-                            </Col>
+                            </Col> */}
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
                                     <Text type={'paragraph'} mini color={'grey'}>Don’t have an account? <a onClick={() => routeChange('/signup')}>Sign Up</a></Text>
@@ -149,4 +149,4 @@ function ResetPassword(props) {
   );
 }
 
-export default connect(null, { setPassword })(ResetPassword);
+export default connect(null, { activate })(Activate);

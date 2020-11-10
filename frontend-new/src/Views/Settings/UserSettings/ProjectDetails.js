@@ -1,20 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Button, Avatar, Skeleton
+  Row, Col, Button, Avatar, Skeleton, Tooltip, message
 } from 'antd';
 import { Text } from 'factorsComponents';
-import { fetchProjects } from 'Reducers/agentActions';
+import { fetchProjects, projectAgentRemove, fetchAgentInfo } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 
-function ProjectDetails({ fetchProjects, projects }) {
+function ProjectDetails({
+  fetchProjects, projects, projectAgentRemove, fetchAgentInfo, currentAgent
+}) {
   const [dataLoading, setDataLoading] = useState(true);
-
+  const leaveProject = (projectId, agentUUID, projectName) => {
+    projectAgentRemove(projectId, agentUUID).then(() => {
+      message.succcess(`Left project ${projectName}`);
+    }).catch((err) => {
+      console.log('leave project err->>', err);
+      message.error('Oops something went wrong!');
+    });
+  };
   useEffect(() => {
+    const getData = async () => {
+      await fetchAgentInfo();
+    };
+    getData();
     fetchProjects().then(() => {
       setDataLoading(false);
     });
   }, [fetchProjects]);
-
   return (
     <>
       <div className={'mb-10 pl-4'}>
@@ -28,17 +40,22 @@ function ProjectDetails({ fetchProjects, projects }) {
             { dataLoading ? <Skeleton avatar active paragraph={{ rows: 4 }}/>
               : <>
                 {projects.map((item, index) => {
+                  const isAdmin = (item.role === 2);
                   return (
                     <div key={index} className="flex justify-between items-center border-bottom--thin-2 py-5" >
                       <div className="flex justify-start items-center" >
                         <Avatar size={60} shape={'square'} />
                         <div className="flex justify-start flex-col ml-4" >
                           <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>{item.name}</Text>
-                          <Text type={'title'} level={7} weight={'regular'} extraClass={'m-0 mt-1'}>Owner</Text>
+                          <Text type={'title'} level={7} weight={'regular'} extraClass={'m-0 mt-1'}>{isAdmin ? 'Admin' : 'User'}</Text>
                         </div>
                       </div>
                       <div>
-                        <Button size={'large'} type="text">Leave Project</Button>
+
+                      <Tooltip placement="top" trigger={'hover'} title={isAdmin ? 'Admin can\'t remove himself' : null}>
+                          <Button onClick={() => leaveProject(item.id, currentAgent.uuid, item.name)} size={'large'} disabled={isAdmin} type="text">Leave Project</Button>
+                      </Tooltip>
+
                       </div>
                     </div>
                   );
@@ -56,8 +73,10 @@ function ProjectDetails({ fetchProjects, projects }) {
 
 const mapStateToProps = (state) => {
   return ({
-    projects: state.global.projects
+    projects: state.agent.projects,
+    currentAgent: state.agent.agent_details
+
   }
   );
 };
-export default connect(mapStateToProps, { fetchProjects })(ProjectDetails);
+export default connect(mapStateToProps, { fetchProjects, projectAgentRemove, fetchAgentInfo })(ProjectDetails);

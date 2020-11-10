@@ -118,7 +118,7 @@ function ForgotPassword({ forgotPassword }) {
                                 </Col>
                                 <Col span={24}>
                                     <div className={'flex flex-col justify-center items-center mt-5'} >
-                                        <Text type={'paragraph'} mini color={'grey'}>Don’t have an account? <a>Sign Up</a></Text>
+                                        <Text type={'paragraph'} mini color={'grey'}>Don’t have an account? <a onClick={() => routeChange('/signup')}>Sign Up</a></Text>
                                     </div>
                                 </Col>
                             </Row>
