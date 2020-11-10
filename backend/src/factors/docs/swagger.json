@@ -1599,7 +1599,7 @@
                 "tags": [
                     "V1Api"
                 ],
-                "summary": "Creates a new dashboard unit for the given input.",
+                "summary": "Creates a new dashboard unit for each of the given dashboard Ids.",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1650,7 +1650,7 @@
                 "tags": [
                     "V1Api"
                 ],
-                "summary": "Creates a new dashboard unit for multiple given queries.",
+                "summary": "Creates a new dashboard unit for each of the given queries.",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1732,7 +1732,7 @@
                 "tags": [
                     "V1Api"
                 ],
-                "summary": "To run a particular query group from core query or dashboards.",
+                "summary": "To run events core query as a query group for user and event count.",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1760,7 +1760,7 @@
                         "required": true,
                         "schema": {
                             "type": "object",
-                            "$ref": "#/definitions/handler.QueryGroup"
+                            "$ref": "#/definitions/model.QueryGroup"
                         }
                     }
                 ],
@@ -1885,14 +1885,6 @@
                 }
             }
         },
-        "handler.QueryGroup": {
-            "type": "object",
-            "properties": {
-                "query_group": {
-                    "type": "string"
-                }
-            }
-        },
         "handler.QueryRequestPayload": {
             "type": "object",
             "properties": {
@@ -1909,6 +1901,9 @@
                 },
                 "title": {
                     "type": "string"
+                },
+                "type": {
+                    "type": "integer"
                 }
             }
         },
@@ -2181,6 +2176,135 @@
                 }
             }
         },
+        "model.Query": {
+            "type": "object",
+            "properties": {
+                "cl": {
+                    "type": "string"
+                },
+                "ec": {
+                    "description": "all or any",
+                    "type": "string"
+                },
+                "ewp": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.QueryEventWithProperties"
+                    }
+                },
+                "fr": {
+                    "type": "integer"
+                },
+                "gbp": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.QueryGroupByProperty"
+                    }
+                },
+                "gbt": {
+                    "type": "object"
+                },
+                "ovp": {
+                    "description": "Deprecated: Keeping it for old dashboard units.",
+                    "type": "boolean"
+                },
+                "see": {
+                    "type": "integer"
+                },
+                "sse": {
+                    "type": "integer"
+                },
+                "to": {
+                    "type": "integer"
+                },
+                "ty": {
+                    "type": "string"
+                },
+                "tz": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.QueryEventWithProperties": {
+            "type": "object",
+            "properties": {
+                "na": {
+                    "type": "string"
+                },
+                "pr": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.QueryProperty"
+                    }
+                }
+            }
+        },
+        "model.QueryGroup": {
+            "type": "object",
+            "properties": {
+                "query_group": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Query"
+                    }
+                }
+            }
+        },
+        "model.QueryGroupByProperty": {
+            "type": "object",
+            "properties": {
+                "en": {
+                    "description": "Entity: user or event.",
+                    "type": "string"
+                },
+                "ena": {
+                    "description": "group by specific event name.",
+                    "type": "string"
+                },
+                "eni": {
+                    "type": "integer"
+                },
+                "grn": {
+                    "description": "currently used only for datetime - year/month/week/day/hour",
+                    "type": "string"
+                },
+                "in": {
+                    "type": "integer"
+                },
+                "pr": {
+                    "type": "string"
+                },
+                "pty": {
+                    "description": "Property type categorical / numerical.",
+                    "type": "string"
+                }
+            }
+        },
+        "model.QueryProperty": {
+            "type": "object",
+            "properties": {
+                "en": {
+                    "description": "Entity: user or event.",
+                    "type": "string"
+                },
+                "lop": {
+                    "type": "string"
+                },
+                "op": {
+                    "type": "string"
+                },
+                "pr": {
+                    "type": "string"
+                },
+                "ty": {
+                    "description": "Type: categorical or numerical",
+                    "type": "string"
+                },
+                "va": {
+                    "type": "string"
+                }
+            }
+        },
         "model.UpdatableDashboard": {
             "type": "object",
             "properties": {
@@ -2252,7 +2376,7 @@
                 "datasets": {
                     "type": "array",
                     "items": {
-                        "type": "\u0026{%!s(token.Pos=1941) string %!s(*ast.InterfaceType=\u0026{1952 0xc0023f56b0 false})}"
+                        "type": "\u0026{%!s(token.Pos=1941) string %!s(*ast.InterfaceType=\u0026{1952 0xc00226f8f0 false})}"
                     }
                 },
                 "explanations": {

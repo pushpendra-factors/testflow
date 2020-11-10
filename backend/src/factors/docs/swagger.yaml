@@ -71,11 +71,6 @@ definitions:
           $ref: '#/definitions/handler.DashboardUnitWebAnalyticsQueryName'
         type: array
     type: object
-  handler.QueryGroup:
-    properties:
-      query_group:
-        type: string
-    type: object
   handler.QueryRequestPayload:
     properties:
       query:
@@ -87,6 +82,8 @@ definitions:
         type: string
       title:
         type: string
+      type:
+        type: integer
     type: object
   handler.SavedQueryUpdatePayload:
     properties:
@@ -276,6 +273,93 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.Query:
+    properties:
+      cl:
+        type: string
+      ec:
+        description: all or any
+        type: string
+      ewp:
+        items:
+          $ref: '#/definitions/model.QueryEventWithProperties'
+        type: array
+      fr:
+        type: integer
+      gbp:
+        items:
+          $ref: '#/definitions/model.QueryGroupByProperty'
+        type: array
+      gbt:
+        type: object
+      ovp:
+        description: 'Deprecated: Keeping it for old dashboard units.'
+        type: boolean
+      see:
+        type: integer
+      sse:
+        type: integer
+      to:
+        type: integer
+      ty:
+        type: string
+      tz:
+        type: string
+    type: object
+  model.QueryEventWithProperties:
+    properties:
+      na:
+        type: string
+      pr:
+        items:
+          $ref: '#/definitions/model.QueryProperty'
+        type: array
+    type: object
+  model.QueryGroup:
+    properties:
+      query_group:
+        items:
+          $ref: '#/definitions/model.Query'
+        type: array
+    type: object
+  model.QueryGroupByProperty:
+    properties:
+      en:
+        description: 'Entity: user or event.'
+        type: string
+      ena:
+        description: group by specific event name.
+        type: string
+      eni:
+        type: integer
+      grn:
+        description: currently used only for datetime - year/month/week/day/hour
+        type: string
+      in:
+        type: integer
+      pr:
+        type: string
+      pty:
+        description: Property type categorical / numerical.
+        type: string
+    type: object
+  model.QueryProperty:
+    properties:
+      en:
+        description: 'Entity: user or event.'
+        type: string
+      lop:
+        type: string
+      op:
+        type: string
+      pr:
+        type: string
+      ty:
+        description: 'Type: categorical or numerical'
+        type: string
+      va:
+        type: string
+    type: object
   model.UpdatableDashboard:
     properties:
       description:
@@ -328,7 +412,7 @@ definitions:
     properties:
       datasets:
         items:
-          type: '&{%!s(token.Pos=1941) string %!s(*ast.InterfaceType=&{1952 0xc0023f56b0 false})}'
+          type: '&{%!s(token.Pos=1941) string %!s(*ast.InterfaceType=&{1952 0xc00226f8f0 false})}'
         type: array
       explanations:
         items:
@@ -1430,7 +1514,7 @@ paths:
             items:
               $ref: '#/definitions/model.DashboardUnit'
             type: array
-      summary: Creates a new dashboard unit for the given input.
+      summary: Creates a new dashboard unit for each of the given dashboard Ids.
       tags:
       - V1Api
   /{project_id}/v1/dashboards/queries/{dashboard_id}/units:
@@ -1464,7 +1548,7 @@ paths:
             items:
               $ref: '#/definitions/model.DashboardUnit'
             type: array
-      summary: Creates a new dashboard unit for multiple given queries.
+      summary: Creates a new dashboard unit for each of the given queries.
       tags:
       - V1Api
   /{project_id}/v1/event_names:
@@ -1510,7 +1594,7 @@ paths:
         name: query_group
         required: true
         schema:
-          $ref: '#/definitions/handler.QueryGroup'
+          $ref: '#/definitions/model.QueryGroup'
           type: object
       produces:
       - application/json
@@ -1519,7 +1603,7 @@ paths:
           description: '{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}'
           schema:
             type: string
-      summary: To run a particular query group from core query or dashboards.
+      summary: To run events core query as a query group for user and event count.
       tags:
       - V1Api
 swagger: "2.0"

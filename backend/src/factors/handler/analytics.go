@@ -34,7 +34,7 @@ curl -i -H 'cookie: factors-sid=<COOKIE>' -H "Content-Type: application/json" -i
 // @Param project_id path integer true "Project ID"
 // @Param dashboard_id query integer false "Dashboard ID"
 // @Param dashboard_unit_id query integer false "Dashboard Unit ID"
-// @Param query_group body handler.QueryGroup true "Query group"
+// @Param query_group body model.QueryGroup true "Query group"
 // @Success 200 {string} json "{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}"
 // @Router /{project_id}/v1/query [post]
 func EventsQueryHandler(c *gin.Context) {
