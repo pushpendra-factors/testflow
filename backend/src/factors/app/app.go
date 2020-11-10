@@ -11,15 +11,16 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
+	// Empty import added for swagger api docs.
 	_ "factors/docs"
 )
 
+// TODO(prateek): Set the host from code while enabling for staging.
 // ./app --env=development --api_domain=localhost:8080 --app_domain=localhost:3000  --api_http_port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb --aws_region=us-east-1 --aws_key=dummy --aws_secret=dummy --email_sender=support@factors.ai --error_reporting_interval=300
 // @title Factors Backend Api
 // @version 1.0
 // @description Factors usage doc for golang api server.
 // @host factors-dev.com:8080
-
 // @BasePath /projects
 func main() {
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")

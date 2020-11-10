@@ -328,7 +328,7 @@ definitions:
     properties:
       datasets:
         items:
-          type: '&{%!s(token.Pos=1941) string %!s(*ast.InterfaceType=&{1952 0xc0052f0bd0 false})}'
+          type: '&{%!s(token.Pos=1941) string %!s(*ast.InterfaceType=&{1952 0xc0023f56b0 false})}'
         type: array
       explanations:
         items:
