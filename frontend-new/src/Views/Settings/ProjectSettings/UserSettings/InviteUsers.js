@@ -17,7 +17,7 @@ function InviteUsers(props) {
     props.projectAgentInvite(props.activeProjectID, payload).then(() => {
       props.fetchProjectAgents(props.activeProjectID);
       props.onCancel();
-      message.success('Invite Sent!');
+      message.success('Invitation sent successfully!');
     }).catch((err) => {
       console.log('invite error', err);
       form.resetFields();

@@ -1,21 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Button, Avatar, Skeleton, Tooltip, message
+  Row, Col, Button, Avatar, Skeleton, Tooltip, message, Modal
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { fetchProjects, projectAgentRemove, fetchAgentInfo } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
+import { ExclamationCircleOutlined } from '@ant-design/icons';
+const { confirm } = Modal;
 
 function ProjectDetails({
   fetchProjects, projects, projectAgentRemove, fetchAgentInfo, currentAgent
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const leaveProject = (projectId, agentUUID, projectName) => {
-    projectAgentRemove(projectId, agentUUID).then(() => {
-      message.succcess(`Left project ${projectName}`);
-    }).catch((err) => {
-      console.log('leave project err->>', err);
-      message.error('Oops something went wrong!');
+    confirm({
+      title: 'Are you sure you want to leave project?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Please confirm to proceed',
+      okText: 'Yes',
+      onOk() {
+        projectAgentRemove(projectId, agentUUID).then(() => {
+          message.success(`Left project ${projectName}`);
+        }).catch((err) => {
+          console.log('leave project err->>', err);
+          message.error('Oops something went wrong!');
+        });
+      }
     });
   };
   useEffect(() => {

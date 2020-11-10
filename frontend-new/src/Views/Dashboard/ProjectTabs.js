@@ -85,10 +85,10 @@ function ProjectTabs({ setaddDashboardModal }) {
   const dispatch = useDispatch();
 
   const fetchUnits = useCallback(() => {
-    if (active_project.id && activeDashboard.id) {
+    if (active_project?.id && activeDashboard?.id) {
       fetchActiveDashboardUnits(dispatch, active_project.id, activeDashboard.id);
     }
-  }, [active_project.id, activeDashboard.id, dispatch]);
+  }, [active_project?.id, activeDashboard?.id, dispatch]);
 
   useEffect(() => {
     fetchUnits();
