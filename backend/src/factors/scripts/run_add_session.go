@@ -33,7 +33,7 @@ func main() {
 	projectIds := flag.String("project_ids", "", "Allowed projects to create sessions offline.")
 	disabledProjectIds := flag.String("disabled_project_ids", "", "Disallowed projects to create sessions offline.")
 	numRoutines := flag.Int("num_routines", 1, "Number of routines to use.")
-	maxLookbackDays := flag.Int64("max_lookback_days", 0, "Max lookback days to look for session existence.")
+	maxLookbackHours := flag.Int64("max_lookback_hours", 0, "Max lookback hours to look for session existence.")
 	bufferTimeBeforeCreateSessionInMins := flag.Int64("buffer_time_in_mins", 30, "Buffer time to wait before processing an event for session.")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
@@ -65,11 +65,11 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:                          *redisHost,
-		RedisPort:                          *redisPort,
-		RedisHostPersistent:                *redisHostPersistent,
-		RedisPortPersistent:                *redisPortPersistent,
-		SentryDSN:                          *sentryDSN,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:           *sentryDSN,
 	}
 
 	C.InitConf(config.Env)
@@ -96,8 +96,8 @@ func main() {
 	}
 
 	var maxLookbackTimestamp int64
-	if *maxLookbackDays > 0 {
-		maxLookbackTimestamp = util.UnixTimeBeforeDuration(time.Hour * 24 * time.Duration(*maxLookbackDays))
+	if *maxLookbackHours > 0 {
+		maxLookbackTimestamp = util.UnixTimeBeforeDuration(time.Hour * time.Duration(*maxLookbackHours))
 	}
 
 	statusMap, _ := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
