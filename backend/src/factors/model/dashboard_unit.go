@@ -31,11 +31,12 @@ type DashboardUnit struct {
 }
 
 type DashboardUnitRequestPayload struct {
-	Title        string          `json:"title"`
-	Description  string          `json:"description"`
-	Presentation string          `json:"presentation"`
-	Query        *postgres.Jsonb `json:"query"`
-	QueryId      uint64          `json:"query_id"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	Presentation string `json:"presentation"`
+	// TODO (Anil) remove this field once we move to saved queries
+	Query   *postgres.Jsonb `json:"query"`
+	QueryId uint64          `json:"query_id"`
 }
 
 type DashboardCacheResult struct {
@@ -110,7 +111,7 @@ func CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId u
 			&DashboardUnit{
 				DashboardId:  dashboardId,
 				Description:  unitPayload.Description,
-				Query:        postgres.Jsonb{json.RawMessage(`{}`)},
+				Query:        postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
 				Title:        unitPayload.Title,
 				Presentation: unitPayload.Presentation,
 				QueryId:      unitPayload.QueryId,
@@ -137,7 +138,7 @@ func CreateMultipleDashboardUnits(requestPayload []DashboardUnitRequestPayload, 
 			&DashboardUnit{
 				DashboardId:  dashboardId,
 				Description:  payload.Description,
-				Query:        postgres.Jsonb{json.RawMessage(`{}`)},
+				Query:        postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
 				Title:        payload.Title,
 				Presentation: payload.Presentation,
 				QueryId:      payload.QueryId,
@@ -183,7 +184,7 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 	}
 	dashboardUnit.ProjectId = projectId
 	if err := db.Create(dashboardUnit).Error; err != nil {
-		errMsg := "Falied to create dashboard unit."
+		errMsg := "Failed to create dashboard unit."
 		log.WithFields(log.Fields{"dashboard_unit": dashboardUnit,
 			"project_id": projectId}).WithError(err).Error(errMsg)
 		return nil, http.StatusInternalServerError, errMsg

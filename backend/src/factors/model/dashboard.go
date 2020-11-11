@@ -179,7 +179,7 @@ func addUnitPositionOnDashboard(projectId uint64, agentUUID string,
 		}
 	}
 
-	// if maxPos exists, increament the maxPos by one for newPos.
+	// if maxPos exists, increment the maxPos by one for newPos.
 	// else start positions from 0.
 	if maxPos > -1 {
 		newPos = maxPos + 1
@@ -253,7 +253,7 @@ func isValidUnitsPosition(positions *map[string]map[uint64]int) (bool, error) {
 
 			// validates positions.
 			sort.Sort(sort.IntSlice(actualPos))
-			// sorted positions should be unique and increamented.
+			// sorted positions should be unique and incremented.
 			for i := range actualPos {
 				for futureIndex := i + 1; futureIndex < len(actualPos)-1; futureIndex++ {
 					if actualPos[i] == actualPos[futureIndex] {
@@ -331,7 +331,7 @@ func GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId uint64,
 		"CacheKey": fmt.Sprintf("PID:%d:DID:%d:DUID:%d", projectId, dashboardId, unitId),
 	})
 	if projectId == 0 || dashboardId == 0 || unitId == 0 {
-		return cacheResult, http.StatusBadRequest, errors.New("invalid scope ids.")
+		return cacheResult, http.StatusBadRequest, errors.New("invalid scope ids")
 	}
 
 	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to)
@@ -343,7 +343,7 @@ func GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId uint64,
 	if err == redis.ErrNil {
 		return cacheResult, http.StatusNotFound, nil
 	} else if err != nil {
-		logCtx.WithError(err).Error("Error doing Get from redis")
+		logCtx.WithError(err).Error("error doing Get from redis")
 		return cacheResult, http.StatusInternalServerError, err
 	}
 
@@ -360,18 +360,18 @@ func GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId uint64,
 }
 
 func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, dashboardId uint64, unitId uint64, from, to int64) {
-	logctx := log.WithFields(log.Fields{"project_id": projectId,
+	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
 	})
 
 	if projectId == 0 || dashboardId == 0 || unitId == 0 {
-		logctx.Error("Invalid scope ids.")
+		logCtx.Error("Invalid scope ids.")
 		return
 	}
 
 	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to)
 	if err != nil {
-		logctx.WithError(err).Error("Failed to get cache key")
+		logCtx.WithError(err).Error("Failed to get cache key")
 		return
 	}
 
@@ -384,13 +384,13 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 
 	enDashboardCacheResult, err := json.Marshal(dashboardCacheResult)
 	if err != nil {
-		logctx.WithError(err).Error("Failed to encode dashboardCacheResult.")
+		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult.")
 		return
 	}
 
 	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), DashboardCachingDurationInSeconds)
 	if err != nil {
-		logctx.WithError(err).Error("Failed to set cache for channel query")
+		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return
 	}
 }
