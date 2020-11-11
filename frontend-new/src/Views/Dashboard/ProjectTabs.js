@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Row, Col, Tabs, Modal, Button, Spin
+  Tabs, Modal, Button, Spin
 } from 'antd';
 import { Text, SVG } from '../../components/factorsComponents';
 import WidgetCard from './WidgetCard';
@@ -52,9 +52,9 @@ const widgetCardCollection = [
 
 const DashboardSubMenu = () => {
   return (
-		<div className={'flex justify-between items-center px-4 mb-4'}>
-			<div className={'flex justify-between items-center'}>
-				{/* <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>Date from</Text>
+    <div className={'flex justify-between items-center px-4 mb-4'}>
+      <div className={'flex justify-between items-center'}>
+        {/* <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>Date from</Text>
         <Select className={'fa-select mx-2 mr-4 ml-4'} defaultValue="Last 30 days">
           <Option value="jack">1 Month</Option>
           <Option value="lucy2">2 Months</Option>
@@ -62,17 +62,17 @@ const DashboardSubMenu = () => {
           <Option value="lucy4">1 Year</Option>
           <Option value="lucy5">1+ Year</Option>
         </Select> */}
-				<Button size={'large'} type={'text'} className={'m-0 fa-button-ghost flex items-center p-0 py-2'}><LockOutlined /> Personal.</Button>
-				{/* <Text type={'title'} level={7}  extraClass={'m-0 mx-2'}><LockOutlined /> Private.</Text>                         */}
-				<Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Refreshed 3m ago</Text>
-			</div>
-			<div className={'flex justify-between items-center'}>
-				<Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><ReloadOutlined /> Refresh Data.</Button>
-				<Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined /></Button>
-				<Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><MoreOutlined /></Button>
+        <Button size={'large'} type={'text'} className={'m-0 fa-button-ghost flex items-center p-0 py-2'}><LockOutlined /> Personal.</Button>
+        {/* <Text type={'title'} level={7}  extraClass={'m-0 mx-2'}><LockOutlined /> Private.</Text>                         */}
+        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Refreshed 3m ago</Text>
+      </div>
+      <div className={'flex justify-between items-center'}>
+        <Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><ReloadOutlined /> Refresh Data.</Button>
+        <Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined /></Button>
+        <Button size={'large'} className={'m-0 fa-button-ghost p-0 py-2'}><MoreOutlined /></Button>
 
-			</div>
-		</div>
+      </div>
+    </div>
   );
 };
 
@@ -128,8 +128,8 @@ function ProjectTabs({ setaddDashboardModal }) {
 
   const operations = (
     <>
-			<Button type="text" size={'small'} onClick={() => setaddDashboardModal(true)}><SVG name="plus" color={'grey'} /></Button>
-			<Button type="text" size={'small'}><SVG name="edit" color={'grey'} /></Button>
+      <Button type="text" size={'small'} onClick={() => setaddDashboardModal(true)}><SVG name="plus" color={'grey'} /></Button>
+      <Button type="text" size={'small'}><SVG name="edit" color={'grey'} /></Button>
     </>
   );
 
@@ -138,17 +138,17 @@ function ProjectTabs({ setaddDashboardModal }) {
 
   if (loading) {
     return (
-			<div className="flex justify-center items-center w-full h-64">
-				<Spin size="large" />
-			</div>
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
+      </div>
     );
   }
 
   if (error) {
     return (
-			<div className="flex justify-center items-center w-full h-64">
-				Something went wrong!
-			</div>
+      <div className="flex justify-center items-center w-full h-64">
+        Something went wrong!
+      </div>
     );
   }
 
@@ -164,60 +164,56 @@ function ProjectTabs({ setaddDashboardModal }) {
 
   return (
     <>
-			<Row className={'mt-2'}>
-				<Col span={24}>
-					<Tabs
-						onChange={handleTabChange}
-						activeKey={activeDashboard?.id?.toString()}
-						className={'fa-tabs--dashboard'}
-						tabBarExtraContent={operations}
-					>
-						{dashboards.data.map(d => {
-						  return (
-								<TabPane tab={d.name} key={d.id}>
-									{d.id === activeDashboard.id ? (
-										<div className={'fa-container mt-6'}>
-											<DashboardSubMenu />
-											<ReactSortable className={'ant-row'} list={widgets} setList={onDrop}>
-												{units.map(unit => {
-												  return (
-														<WidgetCard
-															key={unit.id}
-															widthSize={3}
-															resizeWidth={resizeWidth}
-															unit={unit}
-															dashboard={d}
-														/>
-												  );
-												})}
-											</ReactSortable>
-										</div>
-									) : null}
-								</TabPane>
-						  );
-						})}
-					</Tabs>
-				</Col>
-			</Row>
+      <Tabs
+        onChange={handleTabChange}
+        activeKey={activeDashboard.id.toString()}
+        className={'fa-tabs--dashboard'}
+        tabBarExtraContent={operations}
+      >
+        {dashboards.data.map(d => {
+          return (
+            <TabPane tab={d.name} key={d.id}>
+              {d.id === activeDashboard.id ? (
+                <div className={'fa-container mt-6 min-h-screen'}>
+                  <DashboardSubMenu />
+                  <ReactSortable list={widgets} setList={onDrop}>
+                    {units.map(unit => {
+                      return (
+                        <WidgetCard
+                          key={unit.id}
+                          widthSize={3}
+                          resizeWidth={resizeWidth}
+                          unit={unit}
+                          dashboard={d}
+                        />
+                      );
+                    })}
+                  </ReactSortable>
+                </div>
+              ) : null}
+            </TabPane>
+          );
+        })}
+      </Tabs>
 
-			<Modal
-				title={null}
-				visible={widgetModal}
-				footer={null}
-				centered={false}
-				zIndex={1005}
-				mask={false}
-				onCancel={() => setwidgetModal(false)}
-				// closable={false}
-				className={'fa-modal--full-width'}
-			>
-				<div className={'py-10 flex justify-center'}>
-					<div className={'fa-container'}>
-						<Text type={'title'} level={5} weight={'bold'} size={'grey'} extraClass={'m-0'}>Full width Modal</Text>
-						<Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Core Query results page comes here..</Text>
-					</div>
-				</div>
-			</Modal>
+      <Modal
+        title={null}
+        visible={widgetModal}
+        footer={null}
+        centered={false}
+        zIndex={1005}
+        mask={false}
+        onCancel={() => setwidgetModal(false)}
+        // closable={false}
+        className={'fa-modal--full-width'}
+      >
+        <div className={'py-10 flex justify-center'}>
+          <div className={'fa-container'}>
+            <Text type={'title'} level={5} weight={'bold'} size={'grey'} extraClass={'m-0'}>Full width Modal</Text>
+            <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Core Query results page comes here..</Text>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

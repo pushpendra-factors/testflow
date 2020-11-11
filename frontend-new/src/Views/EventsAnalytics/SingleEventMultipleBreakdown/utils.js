@@ -22,7 +22,7 @@ export const formatData = (data) => {
   return result;
 };
 
-export const getTableColumns = (breakdown, currentSorter, handleSorting, page) => {
+export const getTableColumns = (events, breakdown, currentSorter, handleSorting, page) => {
   const eventBreakdowns = breakdown
     .filter(elem => elem.prop_category === 'event')
     .map(elem => {
@@ -40,7 +40,7 @@ export const getTableColumns = (breakdown, currentSorter, handleSorting, page) =
       };
     });
   const valCol = {
-    title: getTitleWithSorter(labelsObj[page], 'Event Count', currentSorter, handleSorting),
+    title: getTitleWithSorter(`${events[0]}: ${labelsObj[page]}`, 'Event Count', currentSorter, handleSorting),
     dataIndex: 'Event Count'
   };
   return [...eventBreakdowns, ...userBreakdowns, valCol];

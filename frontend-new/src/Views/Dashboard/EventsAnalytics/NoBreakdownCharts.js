@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { formatSingleEventAnalyticsData, formatMultiEventsAnalyticsData, getDataInLineChartFormat } from '../../EventsAnalytics/NoBreakdownCharts/utils';
-// import NoBreakdownTable from './NoBreakdownTable';
+import NoBreakdownTable from '../../EventsAnalytics/NoBreakdownCharts/NoBreakdownTable';
 import SparkLineChart from '../../../components/SparkLineChart';
 import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
@@ -10,7 +10,6 @@ function NoBreakdownCharts({
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
-  //   const [chartType, setChartType] = useState('sparklines');
 
   let chartsData = [];
   if (queries.length === 1) {
@@ -27,36 +26,20 @@ function NoBreakdownCharts({
 
   if (chartType === 'sparklines') {
     chartContent = (
-            <SparkLineChart
-                queries={queries}
-                chartsData={chartsData}
-                parentClass="flex items-center flex-wrap mt-4"
-                appliedColors={appliedColors}
-                eventsMapper={eventsMapper}
-                page={page}
-            />
+      <div className="mt-4">
+        <SparkLineChart
+          queries={queries}
+          chartsData={chartsData}
+          parentClass="flex items-center flex-wrap mt-4"
+          appliedColors={appliedColors}
+          eventsMapper={eventsMapper}
+          page={page}
+        />
+      </div>
     );
-  } else if (chartType === 'linechart') {
+  } else if (chartType === 'table') {
     chartContent = (
-            <div className="flex mt-8">
-                <LineChart
-                    chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper, hiddenEvents)}
-                    appliedColors={appliedColors}
-                    queries={queries}
-                    reverseEventsMapper={reverseEventsMapper}
-                    eventsMapper={eventsMapper}
-                    setHiddenEvents={setHiddenEvents}
-                    hiddenEvents={hiddenEvents}
-                    isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
-                />
-            </div>
-    );
-  }
-
-  return (
-        <div className="total-events">
-            {chartContent}
-            {/* <div className="mt-8">
+      <div className="mt-4">
         <NoBreakdownTable
           data={chartsData}
           events={queries}
@@ -65,8 +48,29 @@ function NoBreakdownCharts({
           setHiddenEvents={setHiddenEvents}
           hiddenEvents={hiddenEvents}
         />
-      </div> */}
-        </div>
+      </div>
+    )
+  } else {
+    chartContent = (
+      <div className="flex mt-4">
+        <LineChart
+          chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper, hiddenEvents)}
+          appliedColors={appliedColors}
+          queries={queries}
+          reverseEventsMapper={reverseEventsMapper}
+          eventsMapper={eventsMapper}
+          setHiddenEvents={setHiddenEvents}
+          hiddenEvents={hiddenEvents}
+          isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="total-events">
+      {chartContent}
+    </div>
   );
 }
 

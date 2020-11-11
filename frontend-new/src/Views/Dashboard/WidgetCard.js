@@ -1,32 +1,32 @@
 import React from 'react';
 import {
-  Button
+	Button
 } from 'antd';
 import { Text } from '../../components/factorsComponents';
 import { FullscreenOutlined, RightOutlined, LeftOutlined } from '@ant-design/icons';
 import CardContent from './CardContent';
 
 function WidgetCard({
-  setwidgetModal, resizeWidth, widthSize, unit, dashboard
+	setwidgetModal, resizeWidth, widthSize, unit, dashboard
 }) {
-  const calcWidth = (size) => {
-    switch (size) {
-      case 1: return 6;
-      case 2: return 12;
-      case 3: return 24;
-      default: return 12;
-    }
-  };
+	const calcWidth = (size) => {
+		switch (size) {
+			case 1: return 6;
+			case 2: return 12;
+			case 3: return 24;
+			default: return 12;
+		}
+	};
 
-  return (
-		<div className={`${unit.title} py-3 ant-col ant-col-${calcWidth(widthSize)}`} style={{ transition: 'all 0.1s' }}>
-			<div className={'fa-dashboard--widget-card'}>
-				<div className={'fa-widget-card--resize-container'}>
+	return (
+		<div className={`${unit.title} w-full`} style={{ transition: 'all 0.1s' }}>
+			<div className={'my-4 fa-dashboard--widget-card'}>
+				{/* <div className={'fa-widget-card--resize-container'}>
 					<span className={'fa-widget-card--resize-contents'}>
 						{widthSize < 3 && <a onClick={() => resizeWidth(unit.id, '+')}><RightOutlined /></a>}
 						{widthSize > 1 && <a onClick={() => resizeWidth(unit.id, '-')}><LeftOutlined /></a>}
 					</span>
-				</div>
+				</div> */}
 				<div className={'fa-widget-card--top flex justify-between items-start'}>
 					<div className={'w-full'} >
 						<Text ellipsis type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{unit.title}</Text>
@@ -41,7 +41,7 @@ function WidgetCard({
 				</div>
 			</div>
 		</div>
-  );
+	);
 }
 
 export default React.memo(WidgetCard);

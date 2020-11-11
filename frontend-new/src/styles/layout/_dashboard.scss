@@ -1,7 +1,7 @@
 .fa-dashboard--widget-card
 {
     background-color: $fa-color--white;
-    position: relative;
+    // position: relative;
     border-radius: 8px; 
     // margin: 10px;
     width: 100%; 
@@ -64,7 +64,7 @@
 
     .fa-widget-card--top
     {
-        padding: 1.2em 2em;
+        padding: 1.5rem;
     }
     .fa-widget-card--legend
     {
@@ -104,4 +104,9 @@
         border: thin solid $fa-color--brand-color;
         background-color: $fa-color--brand-1;
     }
+}
+
+.fa-dasboard-privacy--card.selected{
+    border: thin solid $fa-color--brand-color;
+    background-color: $fa-color--brand-1;
 }

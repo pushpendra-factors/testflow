@@ -5,7 +5,7 @@ import {
 import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
 
 function SingleEventMultipleBreakdownTable({
-  originalData, chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, page
+  originalData, chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, page, events
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -19,7 +19,7 @@ function SingleEventMultipleBreakdownTable({
     setSorter(sorter);
   }, []);
 
-  const nonDatecolumns = getTableColumns(breakdown, sorter, handleSorting, page);
+  const nonDatecolumns = getTableColumns(events, breakdown, sorter, handleSorting, page);
 
   let columns;
   let tableData = [];

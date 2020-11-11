@@ -4,11 +4,11 @@ import {
 } from '../../EventsAnalytics/SingleEventMultipleBreakdown/utils';
 import BarChart from '../../../components/BarChart';
 import LineChart from '../../../components/LineChart';
-// import SingleEventMultipleBreakdownTable from './SingleEventMultipleBreakdownTable';
+import SingleEventMultipleBreakdownTable from '../../EventsAnalytics/SingleEventMultipleBreakdown/SingleEventMultipleBreakdownTable';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventMultipleBreakdown({
-  resultState, page, chartType, title
+  resultState, page, chartType, title, breakdown, queries
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -44,34 +44,16 @@ function SingleEventMultipleBreakdown({
 
   if (chartType === 'barchart') {
     chartContent = (
-            <div className="flex mt-8">
-                <BarChart
-                    title={title}
-                    chartData={visibleProperties}
-                />
-            </div>
+      <div className="flex mt-4">
+        <BarChart
+          title={title}
+          chartData={visibleProperties}
+        />
+      </div>
     );
-  } else {
+  } else if (chartType === 'table') {
     chartContent = (
-            <div className="flex mt-8">
-                <LineChart
-                    chartData={lineChartData}
-                    appliedColors={appliedColors}
-                    queries={visibleLabels}
-                    reverseEventsMapper={reverseMapper}
-                    eventsMapper={mapper}
-                    setHiddenEvents={setHiddenProperties}
-                    hiddenEvents={hiddenProperties}
-                    isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
-                />
-            </div>
-    );
-  }
-
-  return (
-        <div className="total-events">
-            {chartContent}
-            {/* <div className="mt-8">
+      <div className="mt-4">
         <SingleEventMultipleBreakdownTable
           data={chartsData}
           lineChartData={lineChartData}
@@ -84,8 +66,29 @@ function SingleEventMultipleBreakdown({
           originalData={resultState.data}
           page={page}
         />
-      </div> */}
-        </div>
+      </div>
+    )
+  } else {
+    chartContent = (
+      <div className="flex mt-4">
+        <LineChart
+          chartData={lineChartData}
+          appliedColors={appliedColors}
+          queries={visibleLabels}
+          reverseEventsMapper={reverseMapper}
+          eventsMapper={mapper}
+          setHiddenEvents={setHiddenProperties}
+          hiddenEvents={hiddenProperties}
+          isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="total-events">
+      {chartContent}
+    </div>
   );
 }
 

@@ -7,10 +7,6 @@ import { checkForWindowSizeChange, calculatePercentage, generateColors } from '.
 
 function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMapper, title = "chart" }) {
 
-  // console.log(eventsData)
-  // console.log(groups)
-  // console.log(chartData);
-
   const appliedColors = generateColors(chartData.length);
   const chartColors = {};
   chartData.forEach((elem, index) => {
@@ -71,7 +67,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
       },
       padding: {
         left: 40,
-        bottom: 24
+        bottom: 16
       },
       bindto: chartRef.current,
       data: {
@@ -271,8 +267,8 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
 
   const displayChart = useCallback(() => {
     drawChart();
-    // showVerticalGridLines();
-    // showConverionRates();
+    showVerticalGridLines();
+    showConverionRates();
   }, [drawChart, showVerticalGridLines, showConverionRates]);
 
   useEffect(() => {
@@ -286,11 +282,9 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
     displayChart();
   }, [displayChart]);
 
-  // const visibleEvents = eventsData.filter(elem => elem.display);
-
   return (
     <div className="grouped-chart">
-      {/* {
+      {
         groups
           .map(elem => {
             return (
@@ -310,7 +304,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
               </div>
             );
           })
-      } */}
+      }
       <div className={styles.groupedChart} ref={chartRef} />
     </div>
   );

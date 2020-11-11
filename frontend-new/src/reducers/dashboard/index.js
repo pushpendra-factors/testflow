@@ -5,10 +5,13 @@ import {
   DASHBOARD_UNITS_LOADING,
   DASHBOARD_UNITS_LOADING_FAILED,
   DASHBOARD_UNITS_LOADED,
-  ACTIVE_DASHBOARD_CHANGE
+  ACTIVE_DASHBOARD_CHANGE,
+  DASHBOARD_UNIT_DATA_LOADED,
+  DASHBOARD_CREATED
 } from '../types';
 
 const defaultState = {
+  dashboards_loaded: 0,
   dashboards: {
     loading: false, error: false, data: []
   },
@@ -38,6 +41,10 @@ export default function (state = defaultState, action) {
       return { ...state, activeDashboardUnits: { ...defaultState.activeDashboardUnits, data: action.payload } };
     case ACTIVE_DASHBOARD_CHANGE:
       return { ...state, activeDashboard: action.payload, activeDashboardUnits: { ...defaultState.activeDashboardUnits } };
+    case DASHBOARD_UNIT_DATA_LOADED:
+      return { ...state, dashboards_loaded: state.dashboards_loaded + 1 }
+    case DASHBOARD_CREATED:
+      return { ...state, dashboards: { ...state.dashboards, data: [...state.dashboards.data, action.payload] } }
     default:
       return state;
   }
