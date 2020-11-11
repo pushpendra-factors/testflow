@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-  Button, Modal, Input, Switch, Select, Radio
+  Button, Modal, Input, Switch, Select, Radio, notification
 } from 'antd';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
@@ -62,9 +62,19 @@ function SaveQuery({
 
   const handleSave = useCallback(async () => {
     if (!title.trim().length) {
+      notification.error({
+        message: 'Incorrect Input!',
+        description: 'Please Enter query title',
+        duration: 5
+      });
       return false;
     }
     if (addToDashboard && !selectedDashboards.length) {
+      notification.error({
+        message: 'Incorrect Input!',
+        description: 'Please select atleast one dashboard',
+        duration: 5
+      });
       return false;
     }
     try {
@@ -103,14 +113,18 @@ function SaveQuery({
   if (addToDashboard) {
     dashboardHelpText = 'This widget will appear on the following dashboards:';
 
+
+    let firstOption = (
+      <Radio value="pb">Display Bar Chart</Radio>
+    );
     let secondOption = null;
+
     if (requestQuery.cl === 'events') {
-      if (requestQuery.gbp.length) {
-        secondOption = (
-          <Radio value="pl">Display Line Chart</Radio>
-        );
-      } else {
-        secondOption = (
+      secondOption = (
+        <Radio value="pl">Display Line Chart</Radio>
+      )
+      if (!requestQuery.gbp.length) {
+        firstOption = (
           <Radio value="pc">Display Spark Line Chart</Radio>
         );
       }
@@ -138,7 +152,7 @@ function SaveQuery({
         </div>
         <div className="mt-6">
           <Radio.Group value={dashboardPresentation} onChange={handlePresentationChange}>
-            <Radio value="pb">Display Bar Chart</Radio>
+            {firstOption}
             {secondOption}
             <Radio value="pt">Display Table</Radio>
           </Radio.Group>

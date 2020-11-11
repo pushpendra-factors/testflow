@@ -3,11 +3,14 @@ import MultipleEventsWithBreakdown from './MultipleEventsWithBreakdown';
 import SingleEventSingleBreakdown from './SingleEventSingleBreakdown';
 import SingleEventMultipleBreakdown from './SingleEventMultipleBreakdown';
 import NoBreakdownCharts from './NoBreakdownCharts';
+import { useSelector } from 'react-redux';
 
 function EventsAnalytics({
   breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper
 }) {
   let content = null;
+
+  const { dashboards_loaded } = useSelector(state => state.dashboard)
 
   if (events.length > 1 && breakdown.length) {
     content = (
@@ -19,6 +22,7 @@ function EventsAnalytics({
                 page="totalEvents"
                 chartType={chartType}
                 title={title}
+                dashboards_loaded={dashboards_loaded}
             />
     );
   }
@@ -33,6 +37,7 @@ function EventsAnalytics({
                 page="totalEvents"
                 chartType={chartType}
                 title={title}
+                dashboards_loaded={dashboards_loaded}
             />
     );
   }

@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Spin } from 'antd';
 import { runQuery, getFunnelData } from '../../reducers/coreQuery/services';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { initialState, getStateQueryFromRequestQuery, presentationObj } from '../CoreQuery/utils';
 import EventsAnalytics from './EventsAnalytics';
 import Funnels from './Funnels';
+import { DASHBOARD_UNIT_DATA_LOADED } from '../../reducers/types';
 
 function CardContent({ unit }) {
   const [resultState, setResultState] = useState(initialState);
   const { active_project } = useSelector(state => state.global);
+  const dispatch = useDispatch();
 
   const getData = useCallback(async () => {
     try {
@@ -29,6 +31,7 @@ function CardContent({ unit }) {
           data: res.data.result_group[0]
         });
       }
+      dispatch({ type: DASHBOARD_UNIT_DATA_LOADED });
     } catch (err) {
       console.log(err);
       console.log(err.response);
@@ -37,7 +40,7 @@ function CardContent({ unit }) {
         error: true
       });
     }
-  }, [active_project.id, unit.query]);
+  }, [active_project.id, unit.query, dispatch]);
 
   useEffect(() => {
     getData();
@@ -47,17 +50,17 @@ function CardContent({ unit }) {
 
   if (resultState.loading) {
     content = (
-			<div className="flex justify-center items-center w-full h-64">
-				<Spin size="small" />
-			</div>
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="small" />
+      </div>
     );
   }
 
   if (resultState.error) {
     content = (
-			<div className="flex justify-center items-center w-full h-64">
-				Something went wrong!
-			</div>
+      <div className="flex justify-center items-center w-full h-64">
+        Something went wrong!
+      </div>
     );
   }
 
@@ -83,36 +86,36 @@ function CardContent({ unit }) {
 
     if (queryType === 'funnel') {
       content = (
-				<Funnels
-					breakdown={breakdown}
-					events={events.map(elem => elem.label)}
-					resultState={resultState}
-					chartType={presentationObj[unit.presentation]}
-					title={unit.id}
-					eventsMapper={eventsMapper}
-					reverseEventsMapper={reverseEventsMapper}
-				/>
+        <Funnels
+          breakdown={breakdown}
+          events={events.map(elem => elem.label)}
+          resultState={resultState}
+          chartType={presentationObj[unit.presentation]}
+          title={unit.id}
+          eventsMapper={eventsMapper}
+          reverseEventsMapper={reverseEventsMapper}
+        />
       );
     }
 
     if (queryType === 'event') {
       content = (
-				<EventsAnalytics
-					breakdown={breakdown}
-					events={events.map(elem => elem.label)}
-					resultState={resultState}
-					chartType={presentationObj[unit.presentation]}
-					title={unit.id}
-					eventsMapper={eventsMapper}
-					reverseEventsMapper={reverseEventsMapper}
-				/>
+        <EventsAnalytics
+          breakdown={breakdown}
+          events={events.map(elem => elem.label)}
+          resultState={resultState}
+          chartType={presentationObj[unit.presentation]}
+          title={unit.id}
+          eventsMapper={eventsMapper}
+          reverseEventsMapper={reverseEventsMapper}
+        />
       );
     }
   }
 
   return (
     <>
-			{content}
+      {content}
     </>
   );
 }

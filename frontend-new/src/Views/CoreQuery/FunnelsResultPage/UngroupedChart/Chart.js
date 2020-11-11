@@ -1,8 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import * as d3 from 'd3';
 import styles from './index.module.scss';
-import { checkForWindowSizeChange, generateColors } from '../utils';
-// import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
+import { checkForWindowSizeChange, generateColors, calculatePercentage } from '../utils';
 
 function Chart({ chartData, title = 'chart' }) {
   const chartRef = useRef(null);
@@ -57,15 +56,12 @@ function Chart({ chartData, title = 'chart' }) {
       // show change percentages in grey polygon areas
       if (index < (barNodes.length - 1)) {
         const positionNextBar = barNodes[index + 1].getBoundingClientRect();
-        // 28 is the padding of the card
-        const subtractLeft = title !== 'chart' ? document.getElementById(`change${index}`).parentElement.getBoundingClientRect().x - 28 : 0;
-        const subtractTop = title !== 'chart' ? document.getElementById(`change${index}`).parentElement.getBoundingClientRect().y : 0;
-        document.getElementById(`change${index}`).style.left = positionCurrentBar.right - subtractLeft + 'px';
-        document.getElementById(`change${index}`).style.width = (positionNextBar.left - positionCurrentBar.right) + 'px';
-        document.getElementById(`change${index}`).style.top = (xAxis.getBoundingClientRect().top - xAxis.getBoundingClientRect().height - 30 - subtractTop + scrollTop) + 'px';
+        document.getElementById(`${title}-change${index}`).style.left = positionCurrentBar.right + 'px';
+        document.getElementById(`${title}-change${index}`).style.width = (positionNextBar.left - positionCurrentBar.right) + 'px';
+        document.getElementById(`${title}-change${index}`).style.top = (xAxis.getBoundingClientRect().top - xAxis.getBoundingClientRect().height - 30 + scrollTop) + 'px';
       }
     });
-  }, []);
+  }, [title]);
 
   const showOverAllConversionPercentage = useCallback(() => {
     // place percentage text in the chart
@@ -77,12 +73,10 @@ function Chart({ chartData, title = 'chart' }) {
     const top = topGridLine.getBoundingClientRect().y;
     const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
     const conversionText = document.getElementById(`conversionText-${title}`);
-    const subtractLeft = title !== 'chart' ? document.getElementById(`conversionText-${title}`).parentElement.getBoundingClientRect().x - 28 : 0;
-    const subtractTop = title !== 'chart' ? document.getElementById(`conversionText-${title}`).parentElement.getBoundingClientRect().y - 32 - 28 : 0;
-    conversionText.style.left = `${lastBarPosition.x - subtractLeft}px`;
+    conversionText.style.left = `${lastBarPosition.x}px`;
     conversionText.style.width = `${lastBarPosition.width}px`;
-    conversionText.style.top = `${top + scrollTop - subtractTop}px`;
-  }, []);
+    conversionText.style.top = `${top + scrollTop}px`;
+  }, [title]);
 
   const drawChart = useCallback(() => {
     const availableWidth = d3.select(chartRef.current).node().getBoundingClientRect().width;
@@ -215,12 +209,12 @@ function Chart({ chartData, title = 'chart' }) {
           return `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4} ${x1},${y1}`;
         }
       });
-  }, [chartData, showTooltip, hideTooltip, appliedColors]);
+  }, [chartData, showTooltip, hideTooltip, appliedColors, title]);
 
   const displayChart = useCallback(() => {
     drawChart();
-    // showChangePercentage();
-    // showOverAllConversionPercentage();
+    showChangePercentage();
+    showOverAllConversionPercentage();
   }, [drawChart, showChangePercentage, showOverAllConversionPercentage]);
 
   useEffect(() => {
@@ -234,14 +228,14 @@ function Chart({ chartData, title = 'chart' }) {
     displayChart();
   }, [displayChart]);
 
-  // const percentChanges = chartData.slice(1).map((elem, index) => {
-  //   return calculatePercentage(chartData[index].netCount - elem.netCount, chartData[index].netCount);
-  // });
+  const percentChanges = chartData.slice(1).map((elem, index) => {
+    return calculatePercentage(chartData[index].netCount - elem.netCount, chartData[index].netCount);
+  });
 
   return (
     <div id={`${title}-ungroupedChart`} className="ungrouped-chart">
 
-      {/* <div style={{ transition: '2s' }} id={`conversionText-${title}`} className="absolute flex justify-end pr-1">
+      <div style={{ transition: '2s' }} id={`conversionText-${title}`} className="absolute flex justify-end pr-1">
         <div className={styles.conversionText}>
           <div className="font-semibold flex justify-end">{chartData[chartData.length - 1].value}%</div>
           <div className="font-normal">Conversion</div>
@@ -250,7 +244,7 @@ function Chart({ chartData, title = 'chart' }) {
 
       {percentChanges.map((change, index) => {
         return (
-          <div className={`absolute flex flex-col items-center ${styles.changePercents}`} id={`change${index}`} key={index}>
+          <div className={`absolute flex flex-col items-center ${styles.changePercents}`} id={`${title}-change${index}`} key={index}>
             <div className="flex justify-center">
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path fillRule="evenodd" clipRule="evenodd" d="M2.64045 1.27306C2.37516 0.788663 1.76742 0.61104 1.28302 0.876329C0.798626 1.14162 0.621004 1.74936 0.886293 2.23376L5.29748 10.2882C5.55527 10.7589 6.13864 10.9422 6.6193 10.7036L9.91856 9.06529L13.0943 14.1005L11.318 15.1145C10.9341 15.3337 11.0026 15.9067 11.4273 16.0292L15.4142 17.1791C15.6796 17.2556 15.9567 17.1025 16.0332 16.8372L17.2161 12.736C17.3405 12.3047 16.8776 11.9407 16.4878 12.1632L14.8329 13.108L11.1285 7.23455C10.8548 6.80069 10.2973 6.64423 9.83789 6.87235L6.59021 8.48501L2.64045 1.27306Z" fill="#8692A3" />
@@ -259,7 +253,7 @@ function Chart({ chartData, title = 'chart' }) {
             <div className="flex justify-center">{change}%</div>
           </div>
         );
-      })} */}
+      })}
       <div ref={chartRef} className={styles.ungroupedChart}>
       </div>
     </div>

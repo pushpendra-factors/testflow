@@ -10,7 +10,7 @@ export const labelsObj = {
 export const presentationObj = {
   pb: 'barchart',
   pl: 'linechart',
-  pt: 'linechart',
+  pt: 'table',
   pc: 'sparklines'
 };
 

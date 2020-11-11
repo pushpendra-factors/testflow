@@ -38,3 +38,8 @@ export const fetchActiveDashboardUnits = async (dispatch, projectId, activeDashb
     dispatch({ type: DASHBOARD_UNITS_LOADING_FAILED });
   }
 };
+
+export const createDashboard = async(projectId, reqBody) => {
+  const url = host + 'projects/' + projectId + '/dashboards';
+  return post(null, url, reqBody);
+}
