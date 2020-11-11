@@ -1,18 +1,31 @@
 import React from 'react';
 import styles from './index.module.scss';
+import { DateRangePicker } from 'react-date-range';
+import moment from 'moment';
+import {
+  DEFAULT_DATE_RANGE,
+  DEFINED_DATE_RANGES
+} from './utils';
 
-import { DatePicker } from 'antd';
-
-const { RangePicker } = DatePicker;
-
-const DateRangeSelector = ({ setDates, pickerVisible }) => {
+const DateRangeSelector = ({
+  ranges,
+  setDates, staticRanges,
+  inputRanges, minDate, maxDate, closeDatePicker, pickerVisible
+}) => {
   const onChange = (dates) => {
-    setDates(dates);
+    console.log(staticRanges);
+    console.log(inputRanges);
+    console.log(dates);
+    // setDates(dates);
   };
 
   return (
-        <div className={styles.dr_container}>
-            <RangePicker open={pickerVisible} onChange={onChange}></RangePicker>
+        <div className={'fapp-date-picker'} style={{ display: 'block', marginTop: '10px' }}>
+            <DateRangePicker ranges={ranges}
+            onChange={onChange}
+            minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
+            maxDate={moment(new Date()).subtract(1, 'days').endOf('day').toDate()}
+            closeDatePicker={closeDatePicker} />
         </div>
   );
 };

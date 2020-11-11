@@ -1,0 +1,62 @@
+.rdrStaticRanges {
+    padding: 15px;
+}
+
+.rdrStaticRange {
+    padding: 15px 10px;
+    min-width: 140px;
+}
+
+.rdrStaticRange:hover {
+    background: #F5F6F8;
+}
+
+.rdrStaticRangeSelected {
+    background: #F5F6F8;
+}
+
+.rdrDateDisplayItem {
+    padding: 20px 10px;
+
+}
+
+.rdrCalendarWrapper {
+    width: 500px;
+}
+
+.rdrMonth {
+    width: auto;
+}
+
+.rdrMonthAndYearWrapper {
+    padding: 15px;
+}
+
+.rdrMonthAndYearPickers {
+    select {
+        font-weight: bold;
+    }
+}
+
+.rdrDay {
+    border-radius: 100px;
+    padding: 10px;
+}
+
+.rdrDayHovered {
+    background: #5949BC;
+    span {color: white;}
+    
+}
+
+.rdrStartEdge {
+    @extend .rdrDayHovered;
+}
+
+.rdrEndEdge {
+    @extend .rdrDayHovered;
+}
+
+.rdrInputRanges {
+    display: none;
+}

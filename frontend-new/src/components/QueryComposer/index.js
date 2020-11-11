@@ -11,6 +11,11 @@ import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
 import DateRangeSelector from './DateRangeSelector';
 
+import {
+  DEFAULT_DATE_RANGE,
+  DEFINED_DATE_RANGES
+} from './DateRangeSelector/utils';
+
 import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
 
 const { Option } = Select;
@@ -173,6 +178,23 @@ function QueryComposer({
     }
   };
 
+  const getDateRange = () => {
+    const ranges = [DEFAULT_DATE_RANGE];
+    const queryOptionsState = Object.assign({}, queryOptions);
+    
+    if(
+      queryOptionsState 
+      && queryOptionsState.date_range 
+      && queryOptionsState.date_range.from 
+      && queryOptionsState.date_range.to
+      ) {
+      ranges[0].startDate = moment(queryOptionsState.date_range.from).toDate();
+      ranges[0].endDate = moment(queryOptionsState.date_range.to).toDate();
+    }
+    
+    return ranges;
+  }
+
   const setDateRange = (dates) => {
     const queryOptionsState = Object.assign({}, queryOptions);
     if (dates && dates.length) {
@@ -200,7 +222,10 @@ function QueryComposer({
             className="fa-event-popover"
             trigger="click"
             visible={dateRangeOpen}
-            content={<DateRangeSelector pickerVisible={dateRangeOpen} setDates={setDateRange} />}
+            content={
+            <DateRangeSelector 
+              ranges={getDateRange()}
+              pickerVisible={dateRangeOpen} setDates={setDateRange} />}
             onVisibleChange={(visible) => setDateRangeVisibile(visible)}
           >
             <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
