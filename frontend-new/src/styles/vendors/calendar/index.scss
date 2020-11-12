@@ -38,23 +38,33 @@
     }
 }
 
-.rdrDay {
-    border-radius: 100px;
+
+
+.rdrInRange + span {
+    background: #EEEDF8;
+    span {color: #5949BC;}
     padding: 10px;
 }
 
-.rdrDayHovered {
+.rdrStartEdge + span {
     background: #5949BC;
     span {color: white;}
-    
+    border-radius: 25px;
+    padding: 10px 0;
 }
 
-.rdrStartEdge {
-    @extend .rdrDayHovered;
-}
+// .rdrDayHovered{
+//     .rdrStartEdge + span {
+//         background: #5949BC;
+//         span {color: white;}
+//         border-radius: 100px;
+//         padding: 5px;
+//     }
+    
+// }
 
 .rdrEndEdge {
-    @extend .rdrDayHovered;
+    @extend .rdrStartEdge;
 }
 
 .rdrInputRanges {
