@@ -324,6 +324,50 @@ func UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *U
 	return http.StatusAccepted
 }
 
+func DeleteDashboard(projectID uint64, agentUUID string, dashboardID uint64) int {
+	db := C.GetServices().Db
+
+	if projectID == 0 || agentUUID == "" ||
+		dashboardID == 0 {
+
+		log.Error("Failed to delete dashboard. Invalid scope ids.")
+		return http.StatusBadRequest
+	}
+
+	hasAccess, _ := HasAccessToDashboard(projectID, agentUUID, dashboardID)
+	if !hasAccess {
+		return http.StatusForbidden
+	}
+
+	dashboardUnits, errCode := GetDashboardUnits(projectID, agentUUID, dashboardID)
+	if errCode != http.StatusFound {
+		log.Error("failed to fetch dashboard units for delete dashboard")
+		return http.StatusBadRequest
+	}
+
+	// delete dashboard units for the the given dashboard first
+	for _, dashboardUnit := range dashboardUnits {
+		errCode := deleteDashboardUnit(projectID, dashboardID, dashboardUnit.ID)
+		if errCode != http.StatusAccepted {
+			// continue
+			log.WithFields(log.Fields{"project_id": projectID, "dashboard_id": dashboardID,
+				"dashboard_uint_id": dashboardUnit.ID}).Error("failed to delete dashboard unit.")
+		}
+	}
+
+	// delete the dashboard itself
+	var dashboardDeleted Dashboard
+	err := db.Where("id = ? AND project_id = ?",
+		dashboardID, projectID).Delete(&dashboardDeleted).Error
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID, "dashboard_id": dashboardID}).
+			WithError(err).Error("Failed to delete dashboard.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
 func GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId uint64, from, to int64) (*DashboardCacheResult, int, error) {
 	var cacheResult *DashboardCacheResult
 	logCtx := log.WithFields(log.Fields{

@@ -136,6 +136,40 @@ func UpdateDashboardHandler(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{})
 }
 
+// DeleteDashboardHandler godoc
+// @Summary To delete an existing dashboard.
+// @Tags Dashboard,V1Api
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Success 202 {string} json "{"message": "Successfully deleted."}"
+// @Router /{project_id}/dashboards/{dashboard_id} [delete]
+func DeleteDashboardHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden,
+			gin.H{"error": "Delete dashboard unit failed. Invalid project."})
+		return
+	}
+
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	if err != nil || dashboardId == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
+		return
+	}
+
+	errCode := M.DeleteDashboard(projectId, agentUUID, dashboardId)
+	if errCode != http.StatusAccepted {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to delete dashboard."})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully deleted."})
+}
+
 // GetDashboardUnitsHandler godoc
 // @Summary Fetches dashboard units for the given project and dashboard id.
 // @Tags DashboardUnit
@@ -232,7 +266,7 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 
 // CreateDashboardUnitForMultiDashboardsHandler godoc
 // @Summary Creates a new dashboard unit for each of the given dashboard Ids.
-// @Tags V1Api
+// @Tags Dashboard,DashboardUnit,V1Api
 // @Accept  json
 // @Produce json
 // @Param project_id path integer true "Project ID"
@@ -291,7 +325,7 @@ func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) {
 
 // CreateDashboardUnitsForMultipleQueriesHandler godoc
 // @Summary Creates a new dashboard unit for each of the given queries.
-// @Tags V1Api
+// @Tags Dashboard,DashboardUnit,V1Api
 // @Accept  json
 // @Produce json
 // @Param project_id path integer true "Project ID"

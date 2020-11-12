@@ -18,7 +18,7 @@ type DashboardUnit struct {
 	// Composite primary key, id + project_id.
 	ID uint64 `gorm:"primary_key:true" json:"id"`
 	// Foreign key dashboard_units(project_id) ref projects(id).
-	ProjectId    uint64    `gorm:"primary_key:true" json:"project_id"`
+	ProjectID    uint64    `gorm:"primary_key:true" json:"project_id"`
 	DashboardId  uint64    `gorm:"primary_key:true" json:"dashboard_id"`
 	Title        string    `gorm:"not null" json:"title"`
 	Description  string    `json:"description"`
@@ -26,17 +26,19 @@ type DashboardUnit struct {
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 	// TODO (Anil) remove this field once we move to saved queries
-	Query   postgres.Jsonb `gorm:"not null" json:"query"`
-	QueryId uint64         `gorm:"not null" json:"query_id"`
+	Query    postgres.Jsonb `gorm:"not null" json:"query"`
+	QueryId  uint64         `gorm:"not null" json:"query_id"`
+	Settings postgres.Jsonb `json:"settings"`
 }
 
 type DashboardUnitRequestPayload struct {
-	Title        string `json:"title"`
-	Description  string `json:"description"`
-	Presentation string `json:"presentation"`
-	// TODO (Anil) remove this field once we move to saved queries
-	Query   *postgres.Jsonb `json:"query"`
-	QueryId uint64          `json:"query_id"`
+	Title        string          `json:"title"`
+	Description  string          `json:"description"`
+	Presentation string          `json:"presentation"`
+  // TODO (Anil) remove this field once we move to saved queries
+	Query        *postgres.Jsonb `json:"query"`
+	QueryId      uint64          `json:"query_id"`
+	Settings     *postgres.Jsonb `json:"settings"`
 }
 
 type DashboardCacheResult struct {
@@ -115,6 +117,7 @@ func CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId u
 				Title:        unitPayload.Title,
 				Presentation: unitPayload.Presentation,
 				QueryId:      unitPayload.QueryId,
+				Settings:     *unitPayload.Settings,
 			}, DashboardUnitWithQueryID)
 		if errCode != http.StatusCreated {
 			return nil, errCode, errMsg
@@ -142,6 +145,7 @@ func CreateMultipleDashboardUnits(requestPayload []DashboardUnitRequestPayload, 
 				Title:        payload.Title,
 				Presentation: payload.Presentation,
 				QueryId:      payload.QueryId,
+				Settings:     *payload.Settings,
 			}, DashboardUnitWithQueryID)
 		if errCode != http.StatusCreated {
 			return nil, errCode, errMsg
@@ -157,6 +161,8 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 	if projectId == 0 || agentUUID == "" {
 		return nil, http.StatusBadRequest, "Invalid request"
 	}
+
+	updateDashboardUnitSettingsAndPresentation(dashboardUnit)
 
 	valid, errMsg := isValidDashboardUnit(dashboardUnit)
 	if !valid {
@@ -182,7 +188,7 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 		}
 		dashboardUnit.QueryId = query.ID
 	}
-	dashboardUnit.ProjectId = projectId
+	dashboardUnit.ProjectID = projectId
 	if err := db.Create(dashboardUnit).Error; err != nil {
 		errMsg := "Failed to create dashboard unit."
 		log.WithFields(log.Fields{"dashboard_unit": dashboardUnit,
@@ -203,6 +209,34 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 		}
 	}
 	return dashboardUnit, http.StatusCreated, ""
+}
+
+// updateDashboardUnitSettingsAndPresentation updates Settings or Presentation for
+// dashboard Unit using the other's value.
+func updateDashboardUnitSettingsAndPresentation(unit *DashboardUnit) {
+
+	if unit.Presentation != "" {
+		// request is received from old UI updating Settings
+		s := make(map[string]string)
+		s["chart"] = unit.Presentation
+		settings, err := json.Marshal(s)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": unit.ProjectID,
+				"dashboardUnitId": unit.ID}).Error("failed to update settings for given presentation")
+			return
+		}
+		unit.Settings = postgres.Jsonb{settings}
+	} else {
+		// request is received from new UI updating Presentation
+		settings := make(map[string]string)
+		err := json.Unmarshal(unit.Settings.RawMessage, &settings)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": unit.ProjectID,
+				"dashboardUnitId": unit.ID}).Error("failed to update presentation for given settings")
+			return
+		}
+		unit.Presentation = settings["chart"]
+	}
 }
 
 // GetDashboardUnitsForProjectID Returns all dashboard units for the given projectID.
@@ -279,7 +313,6 @@ func GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID u
 }
 
 func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64) int {
-	db := C.GetServices().Db
 
 	if projectId == 0 || agentUUID == "" ||
 		dashboardId == 0 || id == 0 {
@@ -293,31 +326,34 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 		return http.StatusForbidden
 	}
 
-	var dashboardUnit DashboardUnit
-	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?",
-		id, projectId, dashboardId).Delete(&dashboardUnit).Error
-	if err != nil {
-		log.WithFields(log.Fields{"project_id": projectId, "dashboard_id": dashboardId,
-			"unit_id": id}).WithError(err).Error("Failed to delete dashboard unit.")
-		return http.StatusInternalServerError
-	}
-
 	errCode := removeUnitPositionOnDashboard(projectId, agentUUID, dashboardId, id, dashboard.UnitsPosition)
 	if errCode != http.StatusAccepted {
 		errMsg := "Failed remove position for unit on dashboard."
 		log.WithFields(log.Fields{"project_id": projectId, "unitId": id}).Error(errMsg)
 		// log error and continue to delete dashboard unit.
 		// To avoid improper experience.
-		return http.StatusAccepted
+	}
+	return deleteDashboardUnit(projectId, dashboardId, id)
+}
+
+func deleteDashboardUnit(projectID uint64, dashboardID uint64, ID uint64) int {
+
+	db := C.GetServices().Db
+	var dashboardUnit DashboardUnit
+	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?",
+		ID, projectID, dashboardID).Delete(&dashboardUnit).Error
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID, "dashboard_id": dashboardID,
+			"unit_id": ID}).WithError(err).Error("Failed to delete dashboard unit.")
+		return http.StatusInternalServerError
 	}
 
 	// removing dashboard saved query
-	errCode, errMsg := DeleteDashboardQuery(projectId, dashboardUnit.QueryId)
+	errCode, errMsg := DeleteDashboardQuery(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusAccepted {
-		log.WithFields(log.Fields{"project_id": projectId, "unitId": id}).Error(errMsg)
+		log.WithFields(log.Fields{"project_id": projectID, "unitId": ID}).Error(errMsg)
 		// log error and continue to delete dashboard unit.
 		// To avoid improper experience.
-		return http.StatusAccepted
 	}
 	return http.StatusAccepted
 }
