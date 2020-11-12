@@ -44,7 +44,7 @@ function NoBreakdownCharts({
       <SparkLineChart
         queries={queries}
         chartsData={chartsData}
-        parentClass="flex items-center flex-wrap mt-4"
+        parentClass="flex items-center flex-wrap mt-4 justify-center"
         appliedColors={appliedColors}
         eventsMapper={eventsMapper}
         page={page}

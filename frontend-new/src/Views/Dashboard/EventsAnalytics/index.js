@@ -10,7 +10,7 @@ function EventsAnalytics({
 }) {
   let content = null;
 
-  const { dashboards_loaded } = useSelector(state => state.dashboard)
+  const { dashboards_loaded } = useSelector(state => state.dashboard);
 
   if (events.length > 1 && breakdown.length) {
     content = (

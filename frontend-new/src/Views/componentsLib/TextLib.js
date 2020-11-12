@@ -3,7 +3,7 @@ import React from 'react';
 import {
   Layout, Breadcrumb, Row, Col, Divider
 } from 'antd';
-import { Text } from 'factorsComponents';
+import { Text } from '../../components/factorsComponents';
 
 function TextLib() {
   const { Content } = Layout;

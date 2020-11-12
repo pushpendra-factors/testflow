@@ -113,7 +113,6 @@ function SaveQuery({
   if (addToDashboard) {
     dashboardHelpText = 'This widget will appear on the following dashboards:';
 
-
     let firstOption = (
       <Radio value="pb">Display Bar Chart</Radio>
     );
@@ -122,7 +121,7 @@ function SaveQuery({
     if (requestQuery.cl === 'events') {
       secondOption = (
         <Radio value="pl">Display Line Chart</Radio>
-      )
+      );
       if (!requestQuery.gbp.length) {
         firstOption = (
           <Radio value="pc">Display Spark Line Chart</Radio>

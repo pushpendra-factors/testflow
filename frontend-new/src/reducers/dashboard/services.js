@@ -39,7 +39,12 @@ export const fetchActiveDashboardUnits = async (dispatch, projectId, activeDashb
   }
 };
 
-export const createDashboard = async(projectId, reqBody) => {
+export const createDashboard = async (projectId, reqBody) => {
   const url = host + 'projects/' + projectId + '/dashboards';
+  return post(null, url, reqBody);
+};
+
+export const assignUnitsToDashboard = async (projectId, dashboardId, reqBody) => {
+  const url = host + 'projects/' + projectId + '/v1/dashboards/queries/' + dashboardId + '/units';
   return post(null, url, reqBody);
 }
