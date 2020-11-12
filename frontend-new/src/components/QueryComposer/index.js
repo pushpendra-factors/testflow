@@ -183,19 +183,19 @@ function QueryComposer({
   const getDateRange = () => {
     const ranges = [DEFAULT_DATE_RANGE];
     const queryOptionsState = Object.assign({}, queryOptions);
-    
-    if(
-      queryOptionsState 
-      && queryOptionsState.date_range 
-      && queryOptionsState.date_range.from 
-      && queryOptionsState.date_range.to
-      ) {
+
+    if (
+      queryOptionsState &&
+      queryOptionsState.date_range &&
+      queryOptionsState.date_range.from &&
+      queryOptionsState.date_range.to
+    ) {
       ranges[0].startDate = moment(queryOptionsState.date_range.from).toDate();
       ranges[0].endDate = moment(queryOptionsState.date_range.to).toDate();
     }
-    
+
     return ranges;
-  }
+  };
 
   const setDateRange = (dates) => {
     const queryOptionsState = Object.assign({}, queryOptions);
@@ -226,7 +226,7 @@ function QueryComposer({
             trigger="click"
             visible={dateRangeOpen}
             content={
-            <DateRangeSelector 
+            <DateRangeSelector
               ranges={getDateRange()}
               pickerVisible={dateRangeOpen} setDates={setDateRange} />}
             onVisibleChange={(visible) => setDateRangeVisibile(visible)}

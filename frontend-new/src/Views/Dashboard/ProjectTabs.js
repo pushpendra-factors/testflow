@@ -63,7 +63,7 @@ const DashboardSubMenu = ({ dashboard }) => {
       >
         <UnlockOutlined /> Public.
       </Button>
-    )
+    );
   } else {
     btn = (
       <Button
@@ -74,7 +74,7 @@ const DashboardSubMenu = ({ dashboard }) => {
       >
         <LockOutlined /> Private.
       </Button>
-    )
+    );
   }
 
   return (

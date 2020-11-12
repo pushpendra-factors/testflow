@@ -7,7 +7,6 @@ import styles from './index.module.scss';
 import { SearchOutlined } from '@ant-design/icons';
 
 function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
-
   const [searchVal, setSearchVal] = useState('');
 
   const handleSearchChange = useCallback((e) => {
@@ -19,13 +18,12 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
     if (isSelected) {
       setSelectedQueries(currData => {
         return currData.filter(c => c.id !== q.id);
-      })
+      });
     } else {
       setSelectedQueries(currData => {
-        return [...currData, q]
-      })
+        return [...currData, q];
+      });
     }
-
   }, [selectedQueries, setSelectedQueries]);
 
   if (!queries.length) {
@@ -38,7 +36,7 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
     );
   }
 
-  const filteredQueries = queries.filter(q => q.title.toLowerCase().indexOf(searchVal.toLowerCase()) > -1)
+  const filteredQueries = queries.filter(q => q.title.toLowerCase().indexOf(searchVal.toLowerCase()) > -1);
 
   return (
     <div className="widget-selection">
@@ -49,14 +47,14 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
           value={searchVal}
           className={styles.searchInput}
           placeholder="Make widgets from saved queries"
-          prefix={<SearchOutlined style={{ width: "1rem" }}
+          prefix={<SearchOutlined style={{ width: '1rem' }}
             color="#0E2647" />} />
       </div>
 
       <div className="queries-list">
         {filteredQueries.map(q => {
           let svgName = 'funnels_cq';
-          let requestQuery = q.query;
+          const requestQuery = q.query;
           if (requestQuery.query_group) {
             svgName = 'events_dashboard_cq';
           }
@@ -75,7 +73,7 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
                 <SVG name={svgName} size={24} />
               </div>
             </div>
-          )
+          );
         })}
       </div>
     </div>

@@ -63,13 +63,13 @@ function AddDashboard({ addDashboardModal, setaddDashboardModal, editDashboard }
         if (selectedQueries.length) {
           const reqBody = selectedQueries.map(sq => {
             return {
-              "presentation": sq.query.query_group ? 'pl' : 'pb',
-              "title": sq.title,
-              "description": sq.description,
-              "query_id": sq.id
-            }
-          })
-          await assignUnitsToDashboard(active_project.id, res.data.id, reqBody)
+              presentation: sq.query.query_group ? 'pl' : 'pb',
+              title: sq.title,
+              description: sq.description,
+              query_id: sq.id
+            };
+          });
+          await assignUnitsToDashboard(active_project.id, res.data.id, reqBody);
         }
         dispatch({ type: DASHBOARD_CREATED, payload: res.data });
         resetState();

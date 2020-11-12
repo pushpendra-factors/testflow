@@ -27,15 +27,15 @@ export const initialResultState = [1, 2, 3, 4].map(() => {
 });
 
 const operatorMap = {
-  '=' : "equals",
-  "!=" : "notEqual",
-  "contains": "contains",
-  "not contains" : "notContains",
-  "<" : "lesserThan",
-  '<=' : "lesserThanOrEqual",
-  '>': "greaterThan",
-  '>=': "greaterThanOrEqual"
-}
+  '=': 'equals',
+  '!=': 'notEqual',
+  contains: 'contains',
+  'not contains': 'notContains',
+  '<': 'lesserThan',
+  '<=': 'lesserThanOrEqual',
+  '>': 'greaterThan',
+  '>=': 'greaterThanOrEqual'
+};
 
 const getEventsWithProperties = (queries) => {
   const ewps = [];
