@@ -5,25 +5,24 @@ import ProjectTabs from './ProjectTabs';
 import AddDashboard from './AddDashboard';
 
 function Dashboard() {
+  const [addDashboardModal, setaddDashboardModal] = useState(false);
+  // const [editDashboard, setEditDashboard] = useState(null);
 
-    const [addDashboardModal, setaddDashboardModal] = useState(false);
+  return (
+    <>
+      <Header>
+        <div className="w-full h-full py-4 flex flex-col justify-center items-center">
+          <SearchBar />
+        </div>
+      </Header>
 
-    return (
-        <>
-            <Header>
-                <div className="w-full h-full py-4 flex flex-col justify-center items-center">
-                    <SearchBar />
-                </div>
-            </Header>
+      <div className={'mt-16'}>
+        <ProjectTabs setaddDashboardModal={setaddDashboardModal} />
+      </div>
 
-            <div className={'mt-16'}>
-                <ProjectTabs setaddDashboardModal={setaddDashboardModal} />
-            </div>
-
-            <AddDashboard addDashboardModal={addDashboardModal} setaddDashboardModal={setaddDashboardModal} />
-
-        </>
-    );
+      <AddDashboard addDashboardModal={addDashboardModal} setaddDashboardModal={setaddDashboardModal} />
+    </>
+  );
 }
 
 export default Dashboard;

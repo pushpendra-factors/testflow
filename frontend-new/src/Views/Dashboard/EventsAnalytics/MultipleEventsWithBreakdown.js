@@ -68,6 +68,24 @@ function MultipleEventsWithBreakdown({
           page={page}
         />
       </div>
+    );
+  } else if (chartType === 'table') {
+    chartContent = (
+      <div className="mt-4">
+        <MultipleEventsWithBreakdownTable
+          data={chartsData}
+          lineChartData={lineChartData}
+          queries={queries}
+          breakdown={breakdown}
+          events={queries}
+          chartType={chartType}
+          setVisibleProperties={setVisibleProperties}
+          visibleProperties={visibleProperties}
+          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+          originalData={resultState.data}
+          page={page}
+        />
+      </div>
     )
   } else {
     chartContent = (

@@ -42,9 +42,9 @@ export default function (state = defaultState, action) {
     case ACTIVE_DASHBOARD_CHANGE:
       return { ...state, activeDashboard: action.payload, activeDashboardUnits: { ...defaultState.activeDashboardUnits } };
     case DASHBOARD_UNIT_DATA_LOADED:
-      return { ...state, dashboards_loaded: state.dashboards_loaded + 1 }
+      return { ...state, dashboards_loaded: state.dashboards_loaded + 1 };
     case DASHBOARD_CREATED:
-      return { ...state, dashboards: { ...state.dashboards, data: [...state.dashboards.data, action.payload] } }
+      return { ...state, dashboards: { ...state.dashboards, data: [...state.dashboards.data, action.payload] } };
     default:
       return state;
   }

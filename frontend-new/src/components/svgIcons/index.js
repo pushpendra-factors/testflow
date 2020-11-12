@@ -619,7 +619,7 @@ const SaveSVG = ({ size = 24, color, extraClass }) => {
   )
 }
 const SpikeupSVG = ({ size = 24, color, extraClass }) => {
-  return ( 
+  return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 47 48" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M23.7651 45.1318C35.3036 45.1318 44.5532 35.5034 44.5532 23.7566C44.5532 12.0098 35.3036 2.38135 23.7651 2.38135C12.2266 2.38135 2.97699 12.0098 2.97699 23.7566C2.97699 35.5034 12.2266 45.1318 23.7651 45.1318Z" fill="#3AAD6B" stroke="white" strokeWidth="4"/>
       <path d="M20.5588 18.3906C19.8676 17.996 19.9909 16.9643 20.7557 16.7437L27.9345 14.6732C28.4123 14.5354 28.9113 14.811 29.049 15.2887L31.1789 22.6733C31.4028 23.4499 30.5694 24.1054 29.8675 23.7047L26.8197 21.9648L22.2378 28.9886C21.7071 29.7538 20.6806 29.9882 19.8704 29.5291L15.6161 27.1184L10.2478 35.3399C9.72347 36.1849 8.61344 36.4449 7.76844 35.9206C6.92344 35.3963 6.66347 34.2863 7.18777 33.4413L13.4684 23.7494C13.978 22.9281 15.0452 22.6556 15.8861 23.1322L20.2154 25.5854L23.6802 20.1725L20.5588 18.3906Z" fill="#F5F6F8"/>
@@ -627,12 +627,12 @@ const SpikeupSVG = ({ size = 24, color, extraClass }) => {
   )
 }
 const SpikedownSVG = ({ size = 24, color, extraClass }) => {
-  return ( 
+  return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 47 48" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M23.7651 45.1318C35.3036 45.1318 44.5532 35.5034 44.5532 23.7566C44.5532 12.0098 35.3036 2.38135 23.7651 2.38135C12.2266 2.38135 2.97699 12.0098 2.97699 23.7566C2.97699 35.5034 12.2266 45.1318 23.7651 45.1318Z" fill="#EA6262" stroke="white" strokeWidth="4"/>
       <path d="M20.5588 28.8731C19.8676 29.2677 19.9909 30.2994 20.7557 30.52L27.9345 32.5905C28.4123 32.7283 28.9113 32.4527 29.049 31.9749L31.1789 24.5904C31.4028 23.8138 30.5694 23.1583 29.8675 23.559L26.8197 25.2989L22.2378 18.2751C21.7071 17.5099 20.6806 17.2755 19.8704 17.7346L15.6161 20.1453L10.2478 11.9237C9.72347 11.0787 8.61344 10.8188 7.76844 11.3431C6.92344 11.8674 6.66347 12.9774 7.18777 13.8224L13.4684 23.5143C13.978 24.3356 15.0452 24.608 15.8861 24.1315L20.2154 21.6783L23.6802 27.0912L20.5588 28.8731Z" fill="white"/>
     </svg>
-    
+
   )
 }
 
@@ -658,6 +658,36 @@ const BreadcrumbSVG = ({ size = 24, color, extraClass }) => {
         <rect x="13.593" y="12.8784" width="6.90698" height="8" rx="1" stroke={color} strokeWidth="4" mask="url(#path-4-inside-4)" />
       </g>
     </svg>
+  )
+}
+
+const Events_dashboard_cqSVG = ({ size = 24, color, extraClass }) => {
+  return (
+    <svg className={extraClass} width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M23.2438 13.838C23.8108 13.838 24.3069 13.4128 24.3069 12.8458C24.3069 12.2788 23.8108 11.7827 23.2438 11.7827H19.6293C19.0623 11.7827 18.5662 12.2788 18.5662 12.8458C18.5662 13.3419 19.0623 13.838 19.6293 13.838H23.2438Z" fill="url(#paint0_linear)" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M13.8177 9.93999L2.90309 13.4128C2.05261 13.6963 1.91086 14.9012 2.6196 15.3264L5.80892 17.3109L0.706005 22.4847C0.139014 23.0517 0.139014 23.9021 0.706005 24.3983C1.20212 24.8944 2.05261 24.9652 2.6196 24.3983L7.72252 19.2245L9.70699 22.4138C10.2031 23.1934 11.3371 23.0517 11.6206 22.2012L15.1643 11.2866C15.3769 10.4361 14.5973 9.65649 13.8177 9.93999Z" fill="url(#paint1_linear)" />
+      <path d="M20.7634 5.75845C21.1886 5.3332 21.1886 4.69534 20.7634 4.34097C20.3381 3.91573 19.7003 3.91573 19.3459 4.34097L16.7236 6.89243C16.3692 7.31767 16.3692 7.95554 16.7236 8.30991C17.1488 8.73515 17.7867 8.73515 18.141 8.30991L20.7634 5.75845Z" fill="url(#paint2_linear)" />
+      <path d="M13.2508 1.7896C13.2508 1.22261 12.8255 0.797363 12.2586 0.797363C11.6916 0.797363 11.2663 1.22261 11.2663 1.7896V5.47504C11.2663 6.04203 11.6916 6.46727 12.2586 6.46727C12.8255 6.46727 13.2508 6.04203 13.2508 5.47504V1.7896Z" fill="url(#paint3_linear)" />
+      <defs>
+        <linearGradient id="paint0_linear" x1="4.19456" y1="21.2668" x2="17.9063" y2="6.02223" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#7A6DC9" />
+          <stop offset="1" stopColor="#5DB9C8" />
+        </linearGradient>
+        <linearGradient id="paint1_linear" x1="4.19456" y1="21.2668" x2="17.9063" y2="6.02223" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#7A6DC9" />
+          <stop offset="1" stopColor="#5DB9C8" />
+        </linearGradient>
+        <linearGradient id="paint2_linear" x1="4.19456" y1="21.2668" x2="17.9063" y2="6.02223" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#7A6DC9" />
+          <stop offset="1" stopColor="#5DB9C8" />
+        </linearGradient>
+        <linearGradient id="paint3_linear" x1="4.19456" y1="21.2668" x2="17.9063" y2="6.02223" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#7A6DC9" />
+          <stop offset="1" stopColor="#5DB9C8" />
+        </linearGradient>
+      </defs>
+    </svg>
+
   )
 }
 
@@ -713,5 +743,6 @@ export {
   SaveSVG,
   BreadcrumbSVG,
   SpikeupSVG,
-  SpikedownSVG
+  SpikedownSVG,
+  Events_dashboard_cqSVG
 };

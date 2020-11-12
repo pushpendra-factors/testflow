@@ -68,7 +68,7 @@ function SingleEventSingleBreakdown({
           originalData={resultState.data}
         />
       </div>
-    )
+    );
   } else {
     chartContent = (
       <div className="flex mt-4">

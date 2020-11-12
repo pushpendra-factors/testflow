@@ -67,7 +67,7 @@ function SingleEventMultipleBreakdown({
           page={page}
         />
       </div>
-    )
+    );
   } else {
     chartContent = (
       <div className="flex mt-4">

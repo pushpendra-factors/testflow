@@ -1,14 +1,15 @@
 import React from 'react';
 import { Text, SVG } from '../../../components/factorsComponents';
 import {
-    Row, Col, Input
+  Row, Col, Input
 } from 'antd';
 // const { Option } = Select;
 
-function AddDashboardTab({ title, setTitle, description, setDescription, dashboardType, setDashboardType }) {
-
-    return (
-        <>
+function AddDashboardTab({
+  title, setTitle, description, setDescription, dashboardType, setDashboardType
+}) {
+  return (
+    <>
             <Row className={'pt-4'} gutter={[24, 24]}>
                 <Col span={12}>
                     <Text type={'title'} level={7} extraClass={'m-0'}>Title</Text>
@@ -69,8 +70,8 @@ function AddDashboardTab({ title, setTitle, description, setDescription, dashboa
                 </Select>
             </Col>
         </Row> */}
-        </>
-    );
+    </>
+  );
 }
 
 export default AddDashboardTab;

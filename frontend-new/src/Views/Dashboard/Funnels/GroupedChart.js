@@ -35,7 +35,7 @@ function GroupedChart({
           title={title}
         />
       </div>
-    )
+    );
   } else {
     chartContent = (
       <div className="mt-4">
@@ -49,9 +49,8 @@ function GroupedChart({
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
         />
       </div>
-    )
+    );
   }
-
 
   return (
     <div className="total-events">

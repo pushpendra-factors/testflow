@@ -17,7 +17,6 @@ function UngroupedChart({
     return null;
   }
 
-
   let chartContent = null;
 
   if (chartType === 'barchart') {
@@ -28,7 +27,7 @@ function UngroupedChart({
           chartData={chartData}
         />
       </div>
-    )
+    );
   } else {
     chartContent = (
       <div className="mt-4">
@@ -40,7 +39,7 @@ function UngroupedChart({
           eventsMapper={eventsMapper}
         />
       </div>
-    )
+    );
   }
 
   return (

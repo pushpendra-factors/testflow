@@ -27,7 +27,7 @@ function SparkLineChart({
 
           total = total % 1 !== 0 ? parseFloat(total.toFixed(2)) : numberWithCommas(total);
           return (
-            <div key={q + index} className="w-1/3 mt-4 px-1">
+            <div style={{ minWidth: '300px' }} key={q + index} className="w-1/3 mt-4 px-1">
               <div className="flex flex-col">
                 <ChartHeader total={total} query={q} bgColor={appliedColors[index]} />
                 <div className="mt-8">
