@@ -4,6 +4,7 @@ import { bindActionCreators } from 'redux';
 import {
   Button, Collapse, Select, Popover
 } from 'antd';
+import moment from 'moment';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
@@ -35,6 +36,7 @@ function QueryComposer({
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [dateRangeOpen, setDateRangeVisibile] = useState(false);
+  const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -197,9 +199,10 @@ function QueryComposer({
 
   const setDateRange = (dates) => {
     const queryOptionsState = Object.assign({}, queryOptions);
-    if (dates && dates.length) {
-      queryOptionsState.date_range.from = dates[0];
-      queryOptionsState.date_range.to = dates[1];
+    if (dates && dates.selected) {
+      queryOptionsState.date_range.from = dates.selected.startDate;
+      queryOptionsState.date_range.to = dates.selected.endDate;
+      setCalendarLabel(dates.selected.label);
       setQueryOptions(queryOptionsState);
     }
     setDateRangeVisibile(false);
@@ -228,7 +231,7 @@ function QueryComposer({
               pickerVisible={dateRangeOpen} setDates={setDateRange} />}
             onVisibleChange={(visible) => setDateRangeVisibile(visible)}
           >
-            <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
+            <Button><SVG name={'calendar'} extraClass={'mr-1'} /> {calendarLabel} </Button>
           </Popover>
           <Button type="primary" onClick={handleRunQuery}>Run Query</Button>
         </div>

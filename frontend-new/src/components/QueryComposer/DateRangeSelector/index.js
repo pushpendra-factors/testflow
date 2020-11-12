@@ -13,10 +13,10 @@ const DateRangeSelector = ({
   inputRanges, minDate, maxDate, closeDatePicker, pickerVisible
 }) => {
   const onChange = (dates) => {
-    console.log(staticRanges);
-    console.log(inputRanges);
-    console.log(dates);
-    // setDates(dates);
+    // console.log(staticRanges);
+    // console.log(inputRanges);
+    // console.log(dates);
+    setDates(dates);
   };
 
   return (
