@@ -26,6 +26,17 @@ export const initialResultState = [1, 2, 3, 4].map(() => {
   return initialState;
 });
 
+const operatorMap = {
+  '=' : "equals",
+  "!=" : "notEqual",
+  "contains": "contains",
+  "not contains" : "notContains",
+  "<" : "lesserThan",
+  '<=' : "lesserThanOrEqual",
+  '>': "greaterThan",
+  '>=': "greaterThanOrEqual"
+}
+
 const getEventsWithProperties = (queries) => {
   const ewps = [];
   queries.forEach(ev => {
@@ -33,8 +44,9 @@ const getEventsWithProperties = (queries) => {
     ev.filters.forEach(fil => {
       const vals = Array.isArray(fil.values) ? fil.values.join(',') : fil.values;
       filterProps.push({
+        en: fil.props[2],
         lop: 'AND',
-        op: fil.operator,
+        op: operatorMap[fil.operator],
         pr: fil.props[0],
         ty: fil.props[1],
         va: vals
