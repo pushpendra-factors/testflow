@@ -68,9 +68,6 @@ func main() {
 	salesforceAppId := flag.String("salesforce_app_id", "", "")
 	salesforceAppSecret := flag.String("salesforce_app_secret", "", "")
 
-	skipSessionProjectIds := flag.String("skip_session_project_ids",
-		"", "List or projects to skip session creation.")
-
 	blockedSDKRequestProjectTokens := flag.String("blocked_sdk_request_project_tokens",
 		"", "List of project tokens blocked for all sdk requests.")
 	cacheLookUpRangeProjects := flag.String("cache_look_up_range_projects",
@@ -112,7 +109,6 @@ func main() {
 		SentryDSN:                       *sentryDSN,
 		LoginTokenMap:                   C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
 		SkipTrackProjectIds:             C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
-		SkipSessionProjectIds:           *skipSessionProjectIds,                                  // comma seperated project ids, supports "*".
 		BlockedSDKRequestProjectTokens:  C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
 		CacheLookUpRangeProjects:        C.ExtractProjectIdDateFromConfig(*cacheLookUpRangeProjects),
 		LookbackWindowForEventUserCache: *lookbackWindowForEventUserCache,

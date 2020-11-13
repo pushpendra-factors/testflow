@@ -29,8 +29,8 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
-	// projectIds: supports * (asterisk) for all projects.
-	projectIds := flag.String("project_ids", "", "Allowed projects to create sessions offline.")
+	// Allowed list of projects to add session. Defaults to all (*), if not given.
+	projectIds := flag.String("project_ids", "*", "Allowed projects to create sessions offline.")
 	disabledProjectIds := flag.String("disabled_project_ids", "", "Disallowed projects to create sessions offline.")
 	numRoutines := flag.Int("num_routines", 1, "Number of routines to use.")
 	maxLookbackHours := flag.Int64("max_lookback_hours", 0, "Max lookback hours to look for session existence.")

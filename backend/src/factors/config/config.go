@@ -87,7 +87,6 @@ type Configuration struct {
 	SkipTrackProjectIds              []uint64
 	SDKRequestQueueProjectTokens     []string
 	SegmentRequestQueueProjectTokens []string
-	SkipSessionProjectIds            string // comma seperated project ids, supports "*" for all projects.
 	UseDefaultProjectSettingForSDK   bool
 	BlockedSDKRequestProjectTokens   []string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
@@ -857,13 +856,6 @@ func ProjectIdsFromProjectIdBoolMap(mp map[uint64]bool) []uint64 {
 		keys = append(keys, k)
 	}
 	return keys
-}
-
-func GetSkipSessionProjects() (allProjects bool, projectIds []uint64) {
-	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(
-		configuration.SkipSessionProjectIds, "")
-	projectIds = ProjectIdsFromProjectIdBoolMap(projectIDsMap)
-	return allProjects, projectIds
 }
 
 // IsBlockedSDKRequestProjectToken - Tells whether to block the sdk request or

@@ -52,9 +52,6 @@ func main() {
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
-	skipSessionProjectIds := flag.String("skip_session_project_ids",
-		"", "List or projects to create session offline.")
-
 	workerConcurrency := flag.Int("worker_concurrency", 10, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
@@ -74,16 +71,15 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:                          *redisHost,
-		RedisPort:                          *redisPort,
-		QueueRedisHost:                     *queueRedisHost,
-		QueueRedisPort:                     *queueRedisPort,
-		GeolocationFile:                    *geoLocFilePath,
-		DeviceDetectorPath:                 *deviceDetectorPath,
-		SentryDSN:                          *sentryDSN,
-		SkipSessionProjectIds:              *skipSessionProjectIds, // comma seperated project ids, supports "*".
-		RedisHostPersistent:                *redisHostPersistent,
-		RedisPortPersistent:                *redisPortPersistent,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		QueueRedisHost:      *queueRedisHost,
+		QueueRedisPort:      *queueRedisPort,
+		GeolocationFile:     *geoLocFilePath,
+		DeviceDetectorPath:  *deviceDetectorPath,
+		SentryDSN:           *sentryDSN,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
 	}
 
 	err := C.InitQueueWorker(config)

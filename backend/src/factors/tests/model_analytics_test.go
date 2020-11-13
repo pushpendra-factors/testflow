@@ -2,6 +2,7 @@ package tests
 
 import (
 	M "factors/model"
+	TaskSession "factors/task/session"
 	U "factors/util"
 	"net/http"
 	"testing"
@@ -888,6 +889,11 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		assert.NotNil(t, response["event_id"])
 		stepTimestamp = stepTimestamp + 10
 	}
+
+	// add session to created events.
+	_, err = TaskSession.AddSession([]uint64{project.ID}, startTimestamp-(60*30), 0, 1)
+	assert.Nil(t, err)
+
 	//x1 -> x2
 	// (breakdown by user_property u1)
 	query := M.Query{
@@ -1353,7 +1359,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	assert.Equal(t, "100.0", result7.Rows[1][4])
 
 	query8 := M.Query{
-		From: startTimestamp,
+		From: startTimestamp - 1, // session created before timestamp of first event.
 		To:   time.Now().UTC().Unix(),
 		EventsWithProperties: []M.QueryEventWithProperties{
 			M.QueryEventWithProperties{

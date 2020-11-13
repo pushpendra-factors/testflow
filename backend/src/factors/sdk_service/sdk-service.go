@@ -47,9 +47,6 @@ func main() {
 	segmentRequestQueueProjectTokens := flag.String("segment_request_queue_project_tokens", "",
 		"List of project tokens allowed to use segment request queue")
 
-	skipSessionProjectIds := flag.String("skip_session_project_ids",
-		"", "List or projects to create session offline.")
-
 	useDefaultProjectSettingForSDK := flag.Bool("use_defaul_project_setting_for_sdk",
 		false, "Once set to true, it will skip db query to get project_settings, if not found on cache.")
 
@@ -70,19 +67,18 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		GeolocationFile:                    *geoLocFilePath,
-		DeviceDetectorPath:                 *deviceDetectorPath,
-		RedisHost:                          *redisHost,
-		RedisPort:                          *redisPort,
-		QueueRedisHost:                     *queueRedisHost,
-		QueueRedisPort:                     *queueRedisPort,
-		SentryDSN:                          *sentryDSN,
-		SDKRequestQueueProjectTokens:       C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
-		SegmentRequestQueueProjectTokens:   C.GetTokensFromStringListAsString(*segmentRequestQueueProjectTokens),
-		SkipSessionProjectIds:              *skipSessionProjectIds, // comma seperated project ids, supports "*".
-		RedisHostPersistent:                *redisHostPersistent,
-		RedisPortPersistent:                *redisPortPersistent,
-		UseDefaultProjectSettingForSDK:     *useDefaultProjectSettingForSDK,
+		GeolocationFile:                  *geoLocFilePath,
+		DeviceDetectorPath:               *deviceDetectorPath,
+		RedisHost:                        *redisHost,
+		RedisPort:                        *redisPort,
+		QueueRedisHost:                   *queueRedisHost,
+		QueueRedisPort:                   *queueRedisPort,
+		SentryDSN:                        *sentryDSN,
+		SDKRequestQueueProjectTokens:     C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
+		SegmentRequestQueueProjectTokens: C.GetTokensFromStringListAsString(*segmentRequestQueueProjectTokens),
+		RedisHostPersistent:              *redisHostPersistent,
+		RedisPortPersistent:              *redisPortPersistent,
+		UseDefaultProjectSettingForSDK:   *useDefaultProjectSettingForSDK,
 		// List of tokens (public and private) to block SDK requests.
 		BlockedSDKRequestProjectTokens: C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
 	}

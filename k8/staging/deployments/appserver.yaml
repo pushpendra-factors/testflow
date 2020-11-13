@@ -112,8 +112,6 @@ spec:
           - $(SALESFORCE_APP_SECRET)
           - --salesforce_app_id
           - $(SALESFORCE_APP_ID)
-          - --skip_session_project_ids
-          - $(OFFLINE_SESSION_PROJECT_IDS)
           - --sentry_dsn
           - $(SENTRY_DSN)
           - --gcp_project_id

@@ -17,6 +17,7 @@ import (
 	H "factors/handler"
 	IntSegment "factors/integration/segment"
 	M "factors/model"
+	TaskSession "factors/task/session"
 	U "factors/util"
 )
 
@@ -779,7 +780,8 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	t.Run("CreateNewSesssionForNewUser", func(t *testing.T) {
-		timestamp := time.Now().UTC().Format(time.RFC3339)
+		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		eventTimestamp := time.Unix(timestamp, 0).Format(time.RFC3339)
 		// Page.
 		samplePagePayload := fmt.Sprintf(`
 	{
@@ -879,7 +881,7 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		"userId": "xxx123",
 		"version": "1.1"
 	  }
-	`, timestamp)
+	`, eventTimestamp)
 
 		w := ServePostRequestWithHeaders(r, uri, []byte(samplePagePayload),
 			map[string]string{"Authorization": project.PrivateToken})
@@ -891,16 +893,18 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		assert.NotEmpty(t, jsonResponseMap2["event_id"])
 		assert.NotEmpty(t, jsonResponseMap2["user_id"])
 
-		sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.NotNil(t, sessionEventName)
+		_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+		assert.Nil(t, err)
 
-		userSessionEvents, errCode := M.GetUserEventsByEventNameId(project.ID,
-			jsonResponseMap2["user_id"].(string), sessionEventName.ID)
+		event, errCode := M.GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
 		assert.Equal(t, http.StatusFound, errCode)
-		assert.True(t, len(userSessionEvents) == 1)
+		assert.NotNil(t, event.SessionId)
 
-		sessionPropertiesBytes, err := userSessionEvents[0].Properties.Value()
+		sessionEvent, errCode := M.GetEventById(project.ID, *event.SessionId)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, sessionEvent)
+
+		sessionPropertiesBytes, err := sessionEvent.Properties.Value()
 		assert.Nil(t, err)
 		var sessionProperties map[string]interface{}
 		json.Unmarshal(sessionPropertiesBytes.([]byte), &sessionProperties)

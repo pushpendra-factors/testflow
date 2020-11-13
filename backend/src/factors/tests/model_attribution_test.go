@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	H "factors/handler"
 	M "factors/model"
+	SDK "factors/sdk"
+	TaskSession "factors/task/session"
 	U "factors/util"
 
 	"github.com/gin-gonic/gin"
@@ -15,21 +17,58 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createEventWithSession(projectId uint64, conversionEventName string, userId string, timestamp int64, userPropertiesId string, sessionCampaignName string) int {
+// Creating mock session with campaign.
+func createSession(projectId uint64, userId string, timestamp int64, campaignName string) (*M.Event, int) {
+	randomEventName := RandomURL()
 
-	userSession, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, false, timestamp,
-		&U.PropertiesMap{"$campaign": sessionCampaignName}, &U.PropertiesMap{}, userPropertiesId)
+	properties := U.PropertiesMap{}
+	if campaignName != "" {
+		properties["$qp_utm_campaign"] = campaignName
+	}
 
+	trackPayload := SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp - 1, // session is created OneSec before the event.
+		UserId:          userId,
+		EventProperties: properties,
+	}
+	_, response := SDK.Track(projectId, &trackPayload, false, SDK.SourceJSSDK)
+	TaskSession.AddSession([]uint64{projectId}, timestamp-60, 0, 0)
+
+	event, errCode := M.GetEventById(projectId, response.EventId)
+	if errCode != http.StatusFound {
+		return nil, errCode
+	}
+
+	if event.SessionId == nil || *event.SessionId == "" {
+		return nil, http.StatusInternalServerError
+	}
+
+	sessionEvent, errCode := M.GetEventById(projectId, *event.SessionId)
+	if errCode == http.StatusFound {
+		return sessionEvent, http.StatusCreated
+	}
+
+	return sessionEvent, errCode
+}
+
+func createEventWithSession(projectId uint64, conversionEventName string, userId string, timestamp int64,
+	userPropertiesId string, sessionCampaignName string) int {
+
+	userSession, errCode := createSession(projectId, userId, timestamp, sessionCampaignName)
 	if errCode != http.StatusCreated {
 		return errCode
 	}
 
-	userEventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: projectId, Name: conversionEventName})
+	userEventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{
+		ProjectId: projectId, Name: conversionEventName})
 	if errCode != http.StatusCreated && errCode != http.StatusConflict {
 		return errCode
 	}
 
-	_, errCode = M.CreateEvent(&M.Event{ProjectId: projectId, EventNameId: userEventName.ID, UserId: userId, Timestamp: timestamp, SessionId: &userSession.ID})
+	_, errCode = M.CreateEvent(&M.Event{ProjectId: projectId, EventNameId: userEventName.ID,
+		UserId: userId, Timestamp: timestamp, SessionId: &userSession.ID})
 	if errCode != http.StatusCreated {
 		return errCode
 	}
@@ -46,7 +85,7 @@ func TestAttributionModel(t *testing.T) {
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
-	//Should return error for non adwords customer account id
+	// Should return error for non adwords customer account id
 	result, err := M.ExecuteAttributionQuery(project.ID, &M.AttributionQuery{})
 	assert.Nil(t, result)
 	assert.NotNil(t, err)
@@ -239,19 +278,20 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	user1Properties := make(map[string]interface{})
 	user1Properties[U.UP_LATEST_CAMPAIGN] = 123456
 	user1PropertiesBytes, _ := json.Marshal(user1Properties)
-	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{user1PropertiesBytes}, JoinTimestamp: timestamp})
+	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{user1PropertiesBytes},
+		JoinTimestamp: timestamp})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user1)
 
-	_, errCode = M.CreateOrGetSessionEvent(project.ID, user1.ID, false, false, timestamp+4*day,
-		&U.PropertiesMap{}, &U.PropertiesMap{}, user1.PropertiesId)
+	_, errCode = createSession(project.ID, user1.ID, timestamp+4*day, "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	userEventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "event1"})
 	assert.Equal(t, http.StatusCreated, errCode)
 	_, errCode = M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "event2"})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	_, errCode = M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: userEventName.ID, UserId: user1.ID, Timestamp: timestamp + 3*day})
+	_, errCode = M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: userEventName.ID, UserId: user1.ID,
+		Timestamp: timestamp + 3*day})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &M.AttributionQuery{
@@ -271,11 +311,11 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	_, err = M.ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 
-	_, errCode = M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: userEventName.ID, UserId: user1.ID, Timestamp: timestamp + 5*day})
+	_, errCode = M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: userEventName.ID,
+		UserId: user1.ID, Timestamp: timestamp + 5*day})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	_, errCode = M.CreateOrGetSessionEvent(project.ID, user1.ID, false, false, timestamp+8*day,
-		&U.PropertiesMap{}, &U.PropertiesMap{}, user1.PropertiesId)
+	_, errCode = createSession(project.ID, user1.ID, timestamp+8*day, "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	query.From = timestamp + 5*day
 
@@ -340,9 +380,9 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
 		//continuation to previous users
 		user1NewPropertiesId, status := M.UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
-		assert.Equal(t, http.StatusAccepted, status)		
+		assert.Equal(t, http.StatusAccepted, status)
 		user2NewPropertiesId, status := M.UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
-		// Status should be not_modified as user1 and user2 belong to 
+		// Status should be not_modified as user1 and user2 belong to
 		// same customer_user and user_properites merged on first UpdateUserProperties.
 		assert.Equal(t, http.StatusNotModified, status)
 		/*

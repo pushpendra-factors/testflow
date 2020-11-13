@@ -17,6 +17,7 @@ import (
 	H "factors/handler"
 	M "factors/model"
 	SDK "factors/sdk"
+	TaskSession "factors/task/session"
 	U "factors/util"
 )
 
@@ -898,10 +899,11 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	project, _, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 	eventName := U.RandomLowerAphaNumString(10)
 	w := ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"$referrer": "https://example.com/abc?ref=1", "$referrer_url": "https://example.com/abc", "$referrer_domain": "example.com", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$platform": "web", "$browser": "Mozilla", "$browser_version": "v0.1", "$browser_with_version": "Mozilla_v0.1", "$user_agent": "browser", "$os": "Linux", "$os_version": "v0.1", "$os_with_version": "Linux_v0.1", "$country": "india", "$region": "karnataka", "$city": "bengaluru", "$timezone": "Asia/Calcutta"}}`,
-			eventName)), map[string]string{"Authorization": project.Token})
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"$referrer": "https://example.com/abc?ref=1", "$referrer_url": "https://example.com/abc", "$referrer_domain": "example.com", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$platform": "web", "$browser": "Mozilla", "$browser_version": "v0.1", "$browser_with_version": "Mozilla_v0.1", "$user_agent": "browser", "$os": "Linux", "$os_version": "v0.1", "$os_with_version": "Linux_v0.1", "$country": "india", "$region": "karnataka", "$city": "bengaluru", "$timezone": "Asia/Calcutta"}}`,
+			eventName, timestamp)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap := DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
@@ -909,6 +911,10 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotNil(t, responseMap["user_id"])
 	responseEventId := responseMap["event_id"].(string)
 	responseUserId := responseMap["user_id"].(string)
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	assert.Nil(t, err)
+
 	sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
@@ -966,20 +972,21 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotEmpty(t, *rEvent.SessionId)
 	assert.Equal(t, latestSessionEvent.ID, *rEvent.SessionId)
 
-	eventPropertiesMap, _ := U.DecodePostgresJsonb(&rEvent.Properties)
-	assert.NotNil(t, (*eventPropertiesMap)[U.EP_SESSION_COUNT])
-	assert.Equal(t, (*eventPropertiesMap)[U.EP_SESSION_COUNT], float64(latestSessionEvent.Count))
-
 	// session with existing user and active.
 	eventName = U.RandomLowerAphaNumString(10)
 	// using user created on prev request.
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "event_properties": {}}`, eventName, responseUserId)), map[string]string{"Authorization": project.Token})
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "user_id": "%s", "event_properties": {}}`,
+		eventName, timestamp+1, responseUserId)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
 	assert.Nil(t, responseMap["user_id"])
 	responseEventId2 := responseMap["event_id"].(string)
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	assert.Nil(t, err)
+
 	sessionEventName, errCode = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
@@ -991,9 +998,6 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.Equal(t, userSessionEvents[0].ID, userSessionEvents2[0].ID)
 	// Tracked event should have latest session of active user associated with it.
 	rEvent2, errCode := M.GetEvent(project.ID, responseUserId, responseEventId2)
-	eventPropertiesMap, _ = U.DecodePostgresJsonb(&rEvent2.Properties)
-	assert.NotNil(t, (*eventPropertiesMap)[U.EP_SESSION_COUNT])
-	assert.Equal(t, (*eventPropertiesMap)[U.EP_SESSION_COUNT], float64(latestSessionEvent.Count))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent2.SessionId)
 	assert.NotEmpty(t, *rEvent2.SessionId)
@@ -1021,6 +1025,8 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	responseMap := DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestampBeforeOneDay-60, 0, 1)
+	assert.Nil(t, err)
 	event1, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event1.SessionId)
@@ -1034,10 +1040,12 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
+	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 1)
+	assert.Nil(t, err)
 	event2, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event2.SessionId)
-	assert.Equal(t, event1.SessionId, event2.SessionId)
+	assert.Equal(t, *event1.SessionId, *event2.SessionId)
 	// No of sessions should be 1.
 	sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1057,10 +1065,12 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
+	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 1)
+	assert.Nil(t, err)
 	event3, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event3.SessionId)
-	assert.NotEqual(t, event2.SessionId, event3.SessionId) // new session.
+	assert.NotEqual(t, *event2.SessionId, *event3.SessionId) // new session.
 	// No of sessions should be 2.
 	sessionEventName, errCode = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1092,37 +1102,6 @@ func TestBlockSDKRequestByToken(t *testing.T) {
 	assert.NotEmpty(t, responseMap)
 	assert.Nil(t, responseMap["event_id"])
 	assert.Equal(t, "Request failed. Blocked.", responseMap["error"])
-}
-
-func TestOldUserSessionProperties(t *testing.T) {
-	r := gin.Default()
-	H.InitSDKServiceRoutes(r)
-	uri := "/sdk/event/track"
-
-	project, err := SetupProjectReturnDAO()
-	assert.Nil(t, err)
-
-	timestampBeforeOneDay := U.UnixTimeBeforeDuration(time.Hour * 24)
-	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID,
-		JoinTimestamp: timestampBeforeOneDay})
-	assert.Equal(t, http.StatusCreated, errCode)
-
-	// Checking for old users
-	payload := fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
-		user.ID, timestampBeforeOneDay)
-	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusOK, w.Code)
-	responseMap := DecodeJSONResponseToMap(w.Body)
-	assert.NotEmpty(t, responseMap)
-	assert.NotNil(t, responseMap["event_id"])
-	eventOldUser, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotEmpty(t, eventOldUser.SessionId)
-	oldUserPropertiesMap, errCode := M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
-	assert.Equal(t, errCode, http.StatusFound)
-	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
-	assert.Equal(t, float64(1), (*oldUserPropertiesMap)[U.UP_SESSION_COUNT])
 }
 
 func TestTrackHandlerWithFormSubmit(t *testing.T) {
@@ -1277,7 +1256,9 @@ func assertEqualJoinTimePropertyOnAllRecords(t *testing.T, records []M.UserPrope
 		assert.Nil(t, err)
 
 		assert.Contains(t, propertiesMap, U.UP_JOIN_TIME)
-		assert.Equal(t, float64(expectedJoinTime), propertiesMap[U.UP_JOIN_TIME])
+		expected, _ := U.FloatRoundOffWithPrecision(float64(expectedJoinTime), 2)
+		actual, _ := U.FloatRoundOffWithPrecision(propertiesMap[U.UP_JOIN_TIME].(float64), 2)
+		assert.Equal(t, expected, actual)
 	}
 }
 
@@ -1550,14 +1531,22 @@ func getAutoTrackedEventIdWithPageRawURL(t *testing.T, projectAuthToken, pageRaw
 	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
-	w := ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"event_name": "%s", "auto": true, "event_properties": {"mobile" : "true", "$page_raw_url": "%s"}}`,
-			"https://example.com/", pageRawURL)), map[string]string{"Authorization": projectAuthToken})
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+	payload := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "auto": true, "event_properties": {"mobile" : "true", "$page_raw_url": "%s"}}`,
+		"https://example.com/", timestamp, pageRawURL)
+
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": projectAuthToken})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap := DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
 	assert.NotNil(t, responseMap["user_id"])
+
+	project, errCode := M.GetProjectByToken(projectAuthToken)
+	assert.Equal(t, http.StatusFound, errCode)
+	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	assert.Nil(t, err)
+
 	return responseMap["event_id"].(string), responseMap["user_id"].(string)
 }
 
@@ -1566,13 +1555,21 @@ func getAutoTrackedEventIdWithUserIdAndPageRawURL(t *testing.T, projectAuthToken
 	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+	payload := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "user_id": "%s", "auto": true, "event_properties": {"mobile" : "true", "$page_raw_url": "%s"}}`,
+		"https://example.com/", timestamp, userId, pageRawURL)
+
 	w := ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "auto": true, "event_properties": {"mobile" : "true", "$page_raw_url": "%s"}}`,
-			"https://example.com/", userId, pageRawURL)), map[string]string{"Authorization": projectAuthToken})
+		[]byte(payload), map[string]string{"Authorization": projectAuthToken})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap := DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
+
+	project, errCode := M.GetProjectByToken(projectAuthToken)
+	assert.Equal(t, http.StatusFound, errCode)
+	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	assert.Nil(t, err)
 
 	return responseMap["event_id"].(string)
 }

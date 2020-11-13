@@ -38,7 +38,7 @@ spec:
             - --db_pass
             - $(POSTGRES_PASSWORD)
             - --project_ids
-            - $(OFFLINE_SESSION_PROJECT_IDS)
+            - "*"
             - --num_routines
             - $(ADD_SESSION_NUM_ROUTINES)
             - --max_lookback_days

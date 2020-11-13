@@ -264,6 +264,12 @@ cd $PATH_TO_FACTORS/factors/backend/src/factors/workers/integration_request
 go run process.go
 ```
 
+### Add Session (Optional)
+```
+cd $PATH_TO_FACTORS/factors/backend/src/factors/scripts
+go run add_session.go --project_ids="<LIST_OF_PROJECT_IDS>"
+```
+
 ### Adwords Server (Optional)
 * Install python3
 ```

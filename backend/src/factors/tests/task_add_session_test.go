@@ -10,7 +10,6 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 
-	C "factors/config"
 	M "factors/model"
 	SDK "factors/sdk"
 	TaskSession "factors/task/session"
@@ -59,9 +58,6 @@ func assertAssociatedSession(t *testing.T, projectId uint64, eventIdsInOrder []s
 func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	project, _, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
-
-	// skip realtime session creation for project.
-	C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
 
 	maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
@@ -377,9 +373,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
 
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
-
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
 		// Test: New user with one event and one skip_session event.
@@ -441,9 +434,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 	t.Run("ContinuingSessionCreatedWithMarketingProperty", func(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
-
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
 
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
@@ -519,9 +509,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
 
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
-
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
 		// Test: New user with one event and one skip_session event.
@@ -578,9 +565,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 	t.Run("ContinuingSessionButFirstEventWithMarketingProperty", func(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
-
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
 
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
@@ -643,9 +627,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
 
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
-
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
 		// Test: New user with one event and one skip_session event.
@@ -703,9 +684,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 	t.Run("MarketingPropertyInTheMiddle", func(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
-
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
 
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
@@ -772,9 +750,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 	t.Run("InactivityImmediatelyAfterMarketingProperty", func(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
-
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
 
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
@@ -861,9 +836,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
 
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
-
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
 		// Test: New user with one event and one skip_session event.
@@ -929,9 +901,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
 
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
-
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
 		// Test: New user with one event and one skip_session event.
@@ -969,9 +938,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 	t.Run("LastEventWithMarketingProperty", func(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
-
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
 
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
@@ -1039,9 +1005,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
 
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
-
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
 		// Test: New user with one event and one skip_session event.
@@ -1101,9 +1064,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 	t.Run("PageViewEventsWithUserCreatedEvents", func(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
-
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
 
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
@@ -1186,9 +1146,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
 
-		// skip realtime session creation for project.
-		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
-
 		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
 		// Test: New user with one event and one skip_session event.
@@ -1250,8 +1207,6 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 func TestAddSessionCreationBufferTime(t *testing.T) {
 	project, _, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
-
-	C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
 
 	// Event before session buffer time.
 	timestamp := U.UnixTimeBeforeDuration(time.Minute * 35)

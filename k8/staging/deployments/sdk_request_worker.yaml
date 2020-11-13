@@ -64,8 +64,6 @@ spec:
           - $(GEO_LOC_FILE_PATH)
           - --worker_concurrency
           - "10"
-          - --skip_session_project_ids
-          - $(OFFLINE_SESSION_PROJECT_IDS)
           - --sentry_dsn
           - $(SENTRY_DSN)
           - --redis_host_ps

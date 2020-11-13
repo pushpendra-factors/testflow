@@ -38,7 +38,7 @@ spec:
             - --redis_port
             - $(REDIS_PORT)
             - --project_ids
-            - $(OFFLINE_SESSION_PROJECT_IDS)
+            - "*"
             - --num_routines
             - $(ADD_SESSION_NUM_ROUTINES)
             - --max_lookback_hours
