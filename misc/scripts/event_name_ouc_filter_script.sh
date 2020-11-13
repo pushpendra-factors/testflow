@@ -27,11 +27,11 @@ final_join_file=result_chunk_"$chunk_start"_"$chunk_end".txt
 for i in "${chunk_names[@]}"
 do
   #echo $i
-  gsutil cat "$cloud_location""$i" |grep "\"ouc\"" | grep "\"en\"" | grep -oE "\"ouc\":[0-9]*|\"en\":\[\".[a-zA-Z0-9].*\"\]" | sed -e s/"\"en\":\["//g | sed -e s/"\]"//g | sed -e s/"\"ouc\""//g > en_ouc_report_$i.txt
-  paste -sd "\0\n" en_ouc_report_$i.txt > good_report_"$i".txt
+  gsutil cat "$cloud_location""$i" |grep "\"ouc\"" | grep "\"en\"" | grep -oE "\"ouc\":[0-9]*|\"en\":\[\".[a-zA-Z0-9].*\"\]" | sed -e s/"\"en\":\["//g | sed -e s/"\]"//g | sed -e s/"\"ouc\""//g > en_ouc_report_"$i".txt
+  paste -sd "\0\n" en_ouc_report_"$i".txt > good_report_"$i".txt
   gsutil cp good_report_"$i".txt "$upload_loc"
   cat good_report_"$i".txt >> "$final_join_file"
-  rm en_ouc_report_$i.txt
+  rm en_ouc_report_"$i".txt
   #rm good_report_"$i".txt
 done
 # Upload the final
