@@ -6,6 +6,7 @@ import (
 	M "factors/model"
 	U "factors/util"
 	"fmt"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"strconv"
 	"strings"
@@ -144,7 +145,7 @@ func UpdateDashboardHandler(c *gin.Context) {
 // @Param project_id path integer true "Project ID"
 // @Param dashboard_id path integer true "Dashboard ID"
 // @Success 202 {string} json "{"message": "Successfully deleted."}"
-// @Router /{project_id}/dashboards/{dashboard_id} [delete]
+// @Router /{project_id}/v1/dashboards/{dashboard_id} [delete]
 func DeleteDashboardHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -243,9 +244,19 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
-	if requestPayload.Query == nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid query. empty query."})
+	if requestPayload.Query == nil && requestPayload.QueryId == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid query. empty query. no queryId."})
 		return
+	}
+
+	// to support V1 Api with QueryId & settings
+	if requestPayload.Query == nil {
+		requestPayload.Query = &postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
+	}
+
+	// to support V1 Api with QueryId & settings
+	if requestPayload.Settings == nil {
+		requestPayload.Settings = &postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
 	}
 
 	dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(projectId, agentUUID,
@@ -255,6 +266,7 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 			Title:        requestPayload.Title,
 			Presentation: requestPayload.Presentation,
 			QueryId:      requestPayload.QueryId,
+			Settings:     *requestPayload.Settings,
 		}, M.DashboardUnitForNoQueryID)
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, errMsg)
