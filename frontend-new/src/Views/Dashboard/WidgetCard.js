@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-	Button
+  Button
 } from 'antd';
 import { Text } from '../../components/factorsComponents';
 // import { FullscreenOutlined, RightOutlined, LeftOutlined } from '@ant-design/icons';
@@ -8,22 +8,22 @@ import { FullscreenOutlined } from '@ant-design/icons';
 import CardContent from './CardContent';
 
 function WidgetCard({
-	setwidgetModal,
-	//   resizeWidth,
-	//   widthSize,
-	unit,
-	dashboard
+  setwidgetModal,
+  //   resizeWidth,
+  //   widthSize,
+  unit,
+  dashboard
 }) {
-	//   const calcWidth = (size) => {
-	//     switch (size) {
-	//       case 1: return 6;
-	//       case 2: return 12;
-	//       case 3: return 24;
-	//       default: return 12;
-	//     }
-	//   };
+  //   const calcWidth = (size) => {
+  //     switch (size) {
+  //       case 1: return 6;
+  //       case 2: return 12;
+  //       case 3: return 24;
+  //       default: return 12;
+  //     }
+  //   };
 
-	return (
+  return (
 		<div className={`${unit.title} w-full py-4 px-2`} >
 			<div style={{ transition: 'all 0.1s' }} className={'fa-dashboard--widget-card w-full'}>
 				{/* <div className={'fa-widget-card--resize-container'}>
@@ -47,7 +47,7 @@ function WidgetCard({
 			</div>
 		</div>
 
-	);
+  );
 }
 
 export default React.memo(WidgetCard);

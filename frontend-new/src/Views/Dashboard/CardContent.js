@@ -12,23 +12,50 @@ function CardContent({ unit }) {
   const { active_project } = useSelector(state => state.global);
   const dispatch = useDispatch();
 
-  const getData = useCallback(async () => {
+  const getData = useCallback(async (refresh = false) => {
     try {
       setResultState({
         ...initialState,
         loading: true
       });
       if (typeof unit.query.query === 'string') {
-        const res = await getFunnelData(active_project.id, JSON.parse(unit.query.query));
+        let res;
+        if (refresh) {
+          res = await getFunnelData(active_project.id, JSON.parse(unit.query.query));
+        } else {
+          res = await getFunnelData(active_project.id, JSON.parse(unit.query.query), { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
+        }
+        // const res = await getFunnelData(active_project.id, JSON.parse(unit.query.query));
+        let resultantData = null;
+        if (res.data.result) {
+          // cached data
+          resultantData = res.data.result
+        } else {
+          // refreshed data
+          resultantData = res.data
+        }
         setResultState({
           ...initialState,
-          data: res.data
+          data: resultantData
         });
       } else {
-        const res = await runQuery(active_project.id, [unit.query.query.query_group[0]]);
+        let res;
+        if (refresh) {
+          res = await runQuery(active_project.id, [unit.query.query.query_group[0]]);
+        } else {
+          res = await runQuery(active_project.id, [unit.query.query.query_group[0]], { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
+        }
+        let resultantData = null;
+        if (res.data.result) {
+          // cached data
+          resultantData = res.data.result.result_group[0]
+        } else {
+          // refreshed data
+          resultantData = res.data.result.result_group[0]
+        }
         setResultState({
           ...initialState,
-          data: res.data.result_group[0]
+          data: resultantData
         });
       }
       dispatch({ type: DASHBOARD_UNIT_DATA_LOADED });
@@ -40,7 +67,7 @@ function CardContent({ unit }) {
         error: true
       });
     }
-  }, [active_project.id, unit.query, dispatch]);
+  }, [active_project.id, unit.query, dispatch, unit.id, unit.dashboard_id]);
 
   useEffect(() => {
     getData();
@@ -84,13 +111,22 @@ function CardContent({ unit }) {
       reverseEventsMapper[`event${index + 1}`] = q.label;
     });
 
+    let dashboardPresentation = 'pl';
+
+    try {
+      dashboardPresentation = unit.settings.chart;
+    } catch (err) {
+      console.log(err);
+    }
+
+
     if (queryType === 'funnel') {
       content = (
         <Funnels
           breakdown={breakdown}
           events={events.map(elem => elem.label)}
           resultState={resultState}
-          chartType={presentationObj[unit.presentation]}
+          chartType={presentationObj[dashboardPresentation]}
           title={unit.id}
           eventsMapper={eventsMapper}
           reverseEventsMapper={reverseEventsMapper}
@@ -104,7 +140,7 @@ function CardContent({ unit }) {
           breakdown={breakdown}
           events={events.map(elem => elem.label)}
           resultState={resultState}
-          chartType={presentationObj[unit.presentation]}
+          chartType={presentationObj[dashboardPresentation]}
           title={unit.id}
           eventsMapper={eventsMapper}
           reverseEventsMapper={reverseEventsMapper}

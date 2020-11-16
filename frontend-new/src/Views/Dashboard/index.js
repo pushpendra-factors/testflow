@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
 import ProjectTabs from './ProjectTabs';
@@ -6,7 +6,12 @@ import AddDashboard from './AddDashboard';
 
 function Dashboard() {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
-  // const [editDashboard, setEditDashboard] = useState(null);
+  const [editDashboard, setEditDashboard] = useState(null);
+
+  const handleEditClick = useCallback((dashboard) => {
+    setaddDashboardModal(true);
+    setEditDashboard(dashboard);
+  }, []);
 
   return (
     <>
@@ -17,10 +22,18 @@ function Dashboard() {
       </Header>
 
       <div className={'mt-16'}>
-        <ProjectTabs setaddDashboardModal={setaddDashboardModal} />
+        <ProjectTabs
+          handleEditClick={handleEditClick}
+          setaddDashboardModal={setaddDashboardModal}
+        />
       </div>
 
-      <AddDashboard addDashboardModal={addDashboardModal} setaddDashboardModal={setaddDashboardModal} />
+      <AddDashboard
+        setEditDashboard={setEditDashboard}
+        editDashboard={editDashboard}
+        addDashboardModal={addDashboardModal}
+        setaddDashboardModal={setaddDashboardModal}
+      />
     </>
   );
 }

@@ -47,4 +47,8 @@ export const createDashboard = async (projectId, reqBody) => {
 export const assignUnitsToDashboard = async (projectId, dashboardId, reqBody) => {
   const url = host + 'projects/' + projectId + '/v1/dashboards/queries/' + dashboardId + '/units';
   return post(null, url, reqBody);
+};
+
+export const DeleteDashboard = (projectId) => {
+  return null;
 }

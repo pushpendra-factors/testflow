@@ -88,8 +88,12 @@ function SaveQuery({
       const queryType = addToDashboard ? 1 : 2;
       const res = await saveQuery(active_project.id, title, query, queryType);
       if (addToDashboard) {
+        const settings = {
+          chart: dashboardPresentation
+        }
         const reqBody = {
           presentation: dashboardPresentation,
+          settings: JSON.stringify(settings),
           description: '',
           title,
           query_id: res.data.id
@@ -104,6 +108,11 @@ function SaveQuery({
       setApisCalled(false);
       console.log(err.response);
       console.log(err);
+      notification.error({
+        message: 'Error!',
+        description: 'Something went wrong.',
+        duration: 5
+      });
     }
   }, [title, active_project.id, requestQuery, dispatch, setQuerySaved, resetModalState, addToDashboard, dashboardPresentation, selectedDashboards]);
 

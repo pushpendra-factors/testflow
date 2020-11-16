@@ -2877,7 +2877,7 @@ html {
   position: absolute;
   top: -9999px;
   left: -9999px;
-  z-index: 1050;
+  z-index: 10000;
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
   padding: 4px 0;
@@ -21937,6 +21937,7 @@ textarea.ant-mentions {
 }
 .ant-modal-centered {
   text-align: center;
+  z-index: 10000;
 }
 .ant-modal-centered::before {
   display: inline-block;
@@ -22076,7 +22077,7 @@ textarea.ant-mentions {
   -webkit-font-feature-settings: 'tnum';
           font-feature-settings: 'tnum';
   position: fixed;
-  z-index: 1010;
+  z-index: 10000;
   max-width: calc(100vw - 32px);
   margin-right: 24px;
 }
