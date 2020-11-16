@@ -51,4 +51,4 @@ export const assignUnitsToDashboard = async (projectId, dashboardId, reqBody) =>
 
 export const DeleteDashboard = (projectId) => {
   return null;
-}
+};

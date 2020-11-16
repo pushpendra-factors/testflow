@@ -90,7 +90,7 @@ function SaveQuery({
       if (addToDashboard) {
         const settings = {
           chart: dashboardPresentation
-        }
+        };
         const reqBody = {
           presentation: dashboardPresentation,
           settings: JSON.stringify(settings),
