@@ -18,7 +18,7 @@ spec:
             cloud.google.com/gke-nodepool: persistent-pool-highmem-jobs2
           containers:
           - name: add-session-job
-            image: us.gcr.io/factors-production/add-session-job:v0.96-5b54ac0-870
+            image: us.gcr.io/factors-production/add-session-job:v0.98-2c51baf-880
             imagePullPolicy: IfNotPresent
             args:
             - --env
