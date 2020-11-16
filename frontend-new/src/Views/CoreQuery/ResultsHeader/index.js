@@ -38,7 +38,7 @@ function ResultsHeader({
     <>
             <ConfirmationModal
                 visible={showModal}
-                confirmationText="You have not saved this query yet. If you like to run this query often, we recommed to save this."
+                confirmationText="You have not saved this query yet. If you like to run this query often, we recommend to save this."
                 onOk={handleSaveQuery}
                 onCancel={exitResultsPage}
                 title="Exit without saving?"

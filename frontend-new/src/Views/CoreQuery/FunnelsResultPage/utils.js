@@ -1,6 +1,7 @@
 /* eslint-disable */
 import React from 'react';
 import tableStyles from './FunnelsResultTable/index.module.scss';
+import { SortData } from '../utils';
 
 const windowSize = {
   w: window.outerWidth,
@@ -121,16 +122,7 @@ export const generateTableData = (data, breakdown, queries, groups, eventsMapper
       };
     });
 
-    result.sort((a, b) => {
-      if (currentSorter.order === 'ascend') {
-        return parseInt(a[eventsMapper[currentSorter.key]].split(' ')[0]) >= parseInt(b[eventsMapper[currentSorter.key]].split(' ')[0]) ? 1 : -1;
-      }
-      if (currentSorter.order === 'descend') {
-        return parseInt(a[eventsMapper[currentSorter.key]].split(' ')[0]) <= parseInt(b[eventsMapper[currentSorter.key]].split(' ')[0]) ? 1 : -1;
-      }
-      return 0;
-    });
-    return result;
+    return SortData(result, eventsMapper[currentSorter.key], currentSorter.order);
   }
 };
 

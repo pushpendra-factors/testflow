@@ -77,7 +77,6 @@ export const getFunnelQuery = (groupBy, queries) => {
   query.gbt = '';
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
-
   query.gbp = appliedGroupBy
     .map(opt => {
       if (opt.eventIndex) {
@@ -221,6 +220,10 @@ const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
 };
 
 const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
+  const differentDates = new Set();
+  userData.rows.forEach(ud => {
+    differentDates.add(ud[0])
+  })
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(elem.length - 1).map((e) => {
       if (!e) return e;
@@ -294,3 +297,17 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   };
   return result;
 };
+
+export const SortData = (arr, key, order) => {
+  const result = [...arr];
+  result.sort((a, b) => {
+    if (order === 'ascend') {
+      return parseFloat(a[key]) >= parseFloat(b[key]) ? 1 : -1;
+    }
+    if (order === 'descend') {
+      return parseFloat(a[key]) <= parseFloat(b[key]) ? 1 : -1;
+    }
+    return 0;
+  });
+  return result;
+}

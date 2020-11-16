@@ -200,7 +200,7 @@ function SaveQuery({
             <Text type={'title'} level={7} extraClass={`m-0 ${styles.inputLabel}`}>Title</Text>
             <Input onChange={handleTitleChange} value={title} className={'fa-input'} size={'large'} />
           </div>
-          <div className={`pt-2 ${styles.linkText}`}>Help others to find this query easily?</div>
+          {/* <div className={`pt-2 ${styles.linkText}`}>Help others to find this query easily?</div> */}
           <div className={'pt-6 flex items-center'}>
             <Switch onChange={toggleAddToDashboard} checked={addToDashboard} className={styles.switchBtn} checkedChildren="On" unCheckedChildren="Off" />
             <Text extraClass="m-0" type="title" level={6} weight="bold">Add to Dashboard</Text>

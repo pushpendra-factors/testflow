@@ -1,6 +1,7 @@
 import moment from 'moment';
 
 import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
+import { SortData } from '../../CoreQuery/utils';
 
 export const getNoGroupingTableData = (data, currentSorter, searchText, reverseEventsMapper) => {
   const clonedData = data.map(elem => {
@@ -22,16 +23,7 @@ export const getNoGroupingTableData = (data, currentSorter, searchText, reverseE
     };
   });
 
-  result.sort((a, b) => {
-    if (currentSorter.order === 'ascend') {
-      return parseInt(a[currentSorter.key]) >= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    if (currentSorter.order === 'descend') {
-      return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    return 0;
-  });
-  return result;
+  return SortData(result, currentSorter.key, currentSorter.order);
 };
 
 export const getColumns = (events, currentSorter, handleSorting) => {
@@ -136,14 +128,6 @@ export const getNoGroupingTablularDatesBasedData = (data, currentSorter, searchT
       ...eventsData
     };
   });
-  result.sort((a, b) => {
-    if (currentSorter.order === 'ascend') {
-      return parseInt(a[currentSorter.key]) >= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    if (currentSorter.order === 'descend') {
-      return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    return 0;
-  });
-  return result;
+  
+  return SortData(result, currentSorter.key, currentSorter.order);
 };
