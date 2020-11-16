@@ -1,6 +1,6 @@
 import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
 import moment from 'moment';
-import { labelsObj } from '../../CoreQuery/utils';
+import { labelsObj, SortData } from '../../CoreQuery/utils';
 
 export const getTableColumns = (events, breakdown, currentSorter, handleSorting, page) => {
   const breakdownColumns = breakdown.map(e => {
@@ -29,16 +29,7 @@ export const getDataInTableFormat = (data, events, breakdown, searchText, curren
         [events[0]]: d.value
       };
     });
-    result.sort((a, b) => {
-      if (currentSorter.order === 'ascend') {
-        return parseInt(a[currentSorter.key]) >= parseInt(b[currentSorter.key]) ? 1 : -1;
-      }
-      if (currentSorter.order === 'descend') {
-        return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
-      }
-      return 0;
-    });
-    return result;
+    return SortData(result, currentSorter.key, currentSorter.order);
   }
   return [];
 };
@@ -125,14 +116,5 @@ export const getDateBasedTableData = (labels, data, breakdown, searchText, curre
     });
     return obj;
   });
-  result.sort((a, b) => {
-    if (currentSorter.order === 'ascend') {
-      return parseInt(a[currentSorter.key]) >= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    if (currentSorter.order === 'descend') {
-      return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    return 0;
-  });
-  return result;
+  return SortData(result, currentSorter.key, currentSorter.order);;
 };

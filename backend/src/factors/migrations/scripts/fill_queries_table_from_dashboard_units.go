@@ -83,7 +83,7 @@ func main() {
 				logCtx.Infof("  Skipping already migrated unit %d", dashboardUnit.ID)
 				continue
 			}
-			query := M.Queries{ProjectID: dashboardUnit.ProjectId, Title: dashboardUnit.Title, Query: dashboardUnit.Query, Type: M.QueryTypeDashboardQuery, CreatedAt: dashboardUnit.CreatedAt, UpdatedAt: dashboardUnit.UpdatedAt}
+			query := M.Queries{ProjectID: dashboardUnit.ProjectID, Title: dashboardUnit.Title, Query: dashboardUnit.Query, Type: M.QueryTypeDashboardQuery, CreatedAt: dashboardUnit.CreatedAt, UpdatedAt: dashboardUnit.UpdatedAt}
 			err = db.Create(&query).Error
 			if err != nil {
 				logCtx.WithError(err).Error("Migration failed. Failed to add data to queries table.")

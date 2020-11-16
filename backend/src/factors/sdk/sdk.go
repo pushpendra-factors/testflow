@@ -55,10 +55,10 @@ type IdentifyPayload struct {
 	CustomerUserId string `json:"c_uid"`
 	Timestamp      int64  `json:"timestamp"`
 
-	CreateUser     bool   `json:"create_user"`
+	CreateUser bool `json:"create_user"`
 	// join_timestamp to use at the time of creating user,
 	// if not provided, request timestamp will be used.
-	JoinTimestamp  int64  `json:"join_timestamp"`
+	JoinTimestamp int64 `json:"join_timestamp"`
 }
 
 // AMPIdentifyPayload holds required fields for AMP identification
@@ -259,20 +259,6 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
 
 	return http.StatusOK, string(responseBytes), nil
-}
-
-func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectIds []uint64) bool {
-	if skipSession {
-		return false
-	}
-
-	for _, skipProjectId := range skipProjectIds {
-		if skipProjectId == projectId {
-			return false
-		}
-	}
-
-	return true
 }
 
 func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int, perQueryPullRange int, skipExpiryForCache bool) {
@@ -533,7 +519,6 @@ func Track(projectId uint64, request *TrackPayload,
 
 	// if create_user not true and user is not found,
 	// allow to create_user.
-	isNewUser := request.IsNewUser
 	if !request.CreateUser && request.UserId != "" {
 		_, errCode := M.GetUser(projectId, request.UserId)
 		if errCode == http.StatusNotFound {
@@ -567,7 +552,6 @@ func Track(projectId uint64, request *TrackPayload,
 
 		request.UserId = createdUser.ID
 		response.UserId = createdUser.ID
-		isNewUser = true
 	} else {
 		// Adding initial user properties if user_id exists,
 		// but initial properties are not. i.e user created on identify.
@@ -664,26 +648,6 @@ func Track(projectId uint64, request *TrackPayload,
 	// Property used as flag for skipping session on offline session worker.
 	if skipSession {
 		(*eventProperties)[U.EP_SKIP_SESSION] = U.PROPERTY_VALUE_TRUE
-	}
-
-	skipSessionForAllProjects, skipSessionProjectIds := C.GetSkipSessionProjects()
-	skipSessionRealtime := skipSession || skipSessionForAllProjects
-
-	if isRealtimeSessionRequired(skipSessionRealtime, projectId, skipSessionProjectIds) {
-		session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId,
-			isNewUser, hasDefinedMarketingProperty, request.Timestamp,
-			eventProperties, userProperties, userPropertiesId)
-		if errCode != http.StatusCreated && errCode != http.StatusFound {
-			response.Error = "Failed to associate with a session."
-		}
-
-		if session == nil || errCode == http.StatusNotFound || errCode == http.StatusInternalServerError {
-			log.Error("Session is nil even after CreateOrGetSessionEvent.")
-			return errCode, &TrackResponse{Error: "Tracking failed. Unable to associate with a session."}
-		}
-
-		(*eventProperties)[U.EP_SESSION_COUNT] = session.Count
-		event.SessionId = &session.ID
 	}
 
 	if isPropertiesDefaultableTrackRequest(source, request.Auto) {

@@ -4,6 +4,7 @@ import (
 	H "factors/handler"
 	M "factors/model"
 	"factors/task/event_user_cache"
+	TaskSession "factors/task/session"
 	U "factors/util"
 	"fmt"
 	"math"
@@ -514,12 +515,14 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+
 	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
 	assert.NotNil(t, user)
 	assert.Equal(t, http.StatusCreated, errCode)
 	rEventName := "event1"
 	w := ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "timestamp": %d, "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName, timestamp)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -528,7 +531,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	rEventName = "event2"
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "timestamp": %d, "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName, timestamp+1)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -537,12 +540,16 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 
 	rEventName = "event3"
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "timestamp": %d, "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName, timestamp+2)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
 		})
 	assert.Equal(t, http.StatusOK, w.Code)
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	assert.Nil(t, err)
+
 	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
 	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
 	// with limit.
@@ -557,8 +564,6 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
 		})
-	assert.Equal(t, http.StatusOK, w.Code)
-
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)

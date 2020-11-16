@@ -249,6 +249,7 @@ func getWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *WebAna
 	}
 
 	// Build web analytics queries from dashboard units.
+	var webAnalyticsDashboardID uint64
 	namedQueries := make([]string, 0, 0)
 	customGroupQueries := make([]WebAnalyticsCustomGroupQuery, 0, 0)
 	for i := range dashboardUnits {
@@ -305,11 +306,17 @@ func getWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *WebAna
 				Error("Invalid web analytics query type on dashoard unit")
 			continue
 		}
+		webAnalyticsDashboardID = dunit.DashboardId
+	}
+
+	if webAnalyticsDashboardID == 0 {
+		// No units found with cl='web'. Website analytics is not enabled for project.
+		return 0, nil, http.StatusNotFound
 	}
 
 	// Todo: Return all dashboard ids which has web
 	// analytics unit, for caching.
-	return dashboardUnits[0].DashboardId,
+	return webAnalyticsDashboardID,
 		&WebAnalyticsQueries{
 			QueryNames:         namedQueries,
 			CustomGroupQueries: customGroupQueries,

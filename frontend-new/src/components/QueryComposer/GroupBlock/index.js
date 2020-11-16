@@ -33,7 +33,7 @@ function GroupBlock({
 
   const delOption = (index) => {
     delGroupBy('global', groupByState[index], index);
-  }
+  };
 
   const onChange = (value, index) => {
     const newGroupByState = Object.assign({}, groupByState[index]);
@@ -88,12 +88,12 @@ function GroupBlock({
         groupByState.map((opt, index) => (
           <div key={index} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
             {!isDDVisible[index] && <>
-            <Button size={'large'} 
-            type="text" 
+            <Button size={'large'}
+            type="text"
             onClick={() => delOption(index)}
             className={`${styles.filter_block__remove} mr-2ß`}>
               <SVG name="remove"></SVG></Button>
-            
+
             <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" />} {opt.property ? opt.property : 'Select user property'}</Button>
             </>
             }

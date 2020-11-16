@@ -92,19 +92,19 @@ export const setActiveProject = project => {
 
 // Service Call
 
-export function fetchProjects(projects) {
-  return function (dispatch) {
-    return new Promise((resolve, reject) => {
-      get(dispatch, host + 'projects', {})
-        .then((response) => {
-          // dispatch(setActiveProject(response.data.projects[0]));
-          resolve(dispatch(fetchProjectAction(response.data.projects)));
-        }).catch((err) => {
-          resolve(dispatch(fetchProjectAction([])));
-        });
-    });
-  };
-}
+// export function fetchProjects(projects) {
+//   return function (dispatch) {
+//     return new Promise((resolve, reject) => {
+//       get(dispatch, host + 'projects', {})
+//         .then((response) => {
+//           // dispatch(setActiveProject(response.data.projects[0]));
+//           resolve(dispatch(fetchProjectAction(response.data.projects)));
+//         }).catch((err) => {
+//           resolve(dispatch(fetchProjectAction([])));
+//         });
+//     });
+//   };
+// }
 
 
 export function createProject(projectName){ 

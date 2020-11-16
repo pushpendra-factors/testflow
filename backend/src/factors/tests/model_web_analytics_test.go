@@ -1,14 +1,12 @@
 package tests
 
 import (
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	C "factors/config"
 	M "factors/model"
 	TaskSession "factors/task/session"
 	U "factors/util"
@@ -19,9 +17,6 @@ import (
 func TestExecuteWebAnalyticsQueries(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
-
-	// skip realtime session creation for project.
-	C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
 
 	timestamp := U.UnixTimeBeforeDuration(time.Minute * 15)
 
@@ -58,7 +53,7 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 30, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
 	assert.Nil(t, err)
 
 	queryResult, errCode := M.ExecuteWebAnalyticsQueries(
@@ -160,6 +155,9 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
 
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	assert.Nil(t, err)
+
 	unitID := U.GetUUID()
 	queryResult, errCode := M.ExecuteWebAnalyticsQueries(
 		project.ID,
@@ -211,6 +209,9 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 	status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	assert.Nil(t, err)
 
 	queryResult, errCode = M.ExecuteWebAnalyticsQueries(
 		project.ID,

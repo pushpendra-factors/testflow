@@ -93,15 +93,15 @@ function QueryBlock({
       newEvent.filters.length -= 1;
     }
     eventChange(newEvent, index - 1);
-  }
+  };
 
   const selectEventFilter = () => {
     if (isFilterDDVisible) {
-      return <FilterBlock 
-      filterProps={filterProps} 
-      activeProject={activeProject} 
-      event={event} 
-      insertFilter={insertFilters} 
+      return <FilterBlock
+      filterProps={filterProps}
+      activeProject={activeProject}
+      event={event}
+      insertFilter={insertFilters}
       closeFilter={() => setFilterDDVisible(false)}
       >
 
@@ -111,7 +111,7 @@ function QueryBlock({
 
   const deleteGroupBy = (groupState, index, type = 'event') => {
     delGroupBy(type, groupState, index);
-  }
+  };
 
   const pushGroupBy = (groupState, index) => {
     const ind = index || groupBy.length;

@@ -1,4 +1,5 @@
 /* eslint-disable */
+import _ from 'lodash';
 import { get, post, put } from '../utils/request';
 var host = BUILD_CONFIG.backend_host;
 host = (host[host.length - 1] === '/') ? host : host + '/';
@@ -91,14 +92,18 @@ export default function reducer(state = {
     case "FETCH_PROJECTS_FULFILLED": {
       // Indexed project objects by projectId. Kept projectId on value also intentionally 
       // for array of projects from Object.values().
-      let projects = {};
-      for (let project of action.payload.projects) {
-        projects[project.id] = project;
-      } 
+     
+      let projectsWithRoles = [];
+      _.toArray(action.payload).map((project, index)=>{
+        project.map((projectDetails)=>{
+        projectDetails.role = index+1; 
+        projectsWithRoles.push(projectDetails); 
+        }) 
+      })
 
       return {
         ...state, 
-        projects: projects, 
+        projects: projectsWithRoles, 
       }
     }
     case "PROJECT_AGENT_INVITE_FULFILLED": {
@@ -121,9 +126,9 @@ export default function reducer(state = {
     }
     case "PROJECT_AGENT_REMOVE_FULFILLED": {
       let nextState = { ...state }; 
-      nextState.agents = state.agents.filter((projectAgent)=>{ 
+      nextState.projects = state.projects.filter((projectAgent)=>{ 
         return projectAgent.uuid != action.payload.agent_uuid
-      }) 
+      })  
       return nextState
     }
     case "FETCH_PROJECT_AGENTS_FULFILLED":{
@@ -193,40 +198,63 @@ export function signout() {
   };
 }
 
-// export function signup(email, phone, planCode){
-//   return function(dispatch){
-//     return new Promise((resolve, reject) => {
-//       dispatch({type: "AGENT_SIGNUP"});
+export function signup(data){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      dispatch({type: "AGENT_SIGNUP"});
 
-//       post(dispatch, host+"accounts/signup", { email: email, phone: phone, plan_code: planCode })
-//         .then((r) => {
-//           // status 302 for duplicate email
-//           if(r.status != 302)
-//           {
-//             dispatch({
-//               type: "AGENT_SIGNUP_FULFILLED",
-//               payload: {}
-//             });
-//             resolve(r);
-//           }
-//           else
-//           {
-//             dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
-//             reject("Email already exists. Try logging in.")
-//           }
-//         })
-//         .catch( () => {
-//           dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
-//           reject("Sign up failed. Please try again.");
-//         });
-//     });
-//   }
-// }
+      post(dispatch, host+"accounts/signup", data)
+        .then((r) => {
+          // status 302 for duplicate email
+          if(r.status != 302)
+          {
+            dispatch({
+              type: "AGENT_SIGNUP_FULFILLED",
+              payload: {}
+            });
+            resolve(r);
+          }
+          else
+          {
+            dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
+            reject("Email already exists. Try logging in.")
+          }
+        })
+        .catch( () => {
+          dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
+          reject("Sign up failed. Please try again.");
+        });
+    });
+  }
+}
+
+export function activate(password, token){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      dispatch({type: "AGENT_VERIFY"});
+
+      post(dispatch, host+"agents/activate?token="+token, { 
+        password: password
+      })
+      .then(() => {
+        resolve(dispatch({
+          type: "AGENT_VERIFY_FULFILLED",
+          payload: {}
+        }));
+      })
+      .catch(() => {
+        dispatch({type: "AGENT_VERIFY_REJECTED", payload: null});
+        
+        reject("Activation failed. Please try again.");
+      })
+    });
+  }
+}
 
 export function fetchProjects() {
   return function(dispatch) {
     return new Promise((resolve,reject) => {
-      get(dispatch, host + "projects")
+      get(dispatch, host + "v1/projects")
         .then((response)=>{        
           dispatch({type:"FETCH_PROJECTS_FULFILLED", payload: response.data});
           resolve(response)
@@ -326,7 +354,7 @@ export function projectAgentRemove(projectId, agentUUID){
   return function(dispatch){
     return new Promise((resolve, reject) => {
       put(dispatch, host + "projects/" + projectId +"/agents/remove", {"agent_uuid":agentUUID})
-        .then((r) => {
+        .then((r) => { 
           if (r.status == 403) {
             dispatch({
               type: "PROJECT_AGENT_REMOVE_REJECTED",
@@ -334,13 +362,22 @@ export function projectAgentRemove(projectId, agentUUID){
             });
             reject(r.data.error);
           }
+          if (r.status == 202) {
+            dispatch({
+              type: "PROJECT_AGENT_REMOVE_FULFILLED",
+              payload: r.data
+            });
+            resolve(r.data);
+          }
+
           dispatch({
             type: "PROJECT_AGENT_REMOVE_FULFILLED",
             payload: r.data
           });
           resolve(r.data);
+
         })
-        .catch((r) => {
+        .catch((r) => { 
           dispatch({
             type: "PROJECT_AGENT_REMOVE_REJECTED",
             error: r

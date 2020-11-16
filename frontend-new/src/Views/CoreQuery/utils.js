@@ -26,6 +26,17 @@ export const initialResultState = [1, 2, 3, 4].map(() => {
   return initialState;
 });
 
+const operatorMap = {
+  '=': 'equals',
+  '!=': 'notEqual',
+  contains: 'contains',
+  'not contains': 'notContains',
+  '<': 'lesserThan',
+  '<=': 'lesserThanOrEqual',
+  '>': 'greaterThan',
+  '>=': 'greaterThanOrEqual'
+};
+
 const getEventsWithProperties = (queries) => {
   const ewps = [];
   queries.forEach(ev => {
@@ -33,8 +44,9 @@ const getEventsWithProperties = (queries) => {
     ev.filters.forEach(fil => {
       const vals = Array.isArray(fil.values) ? fil.values.join(',') : fil.values;
       filterProps.push({
+        en: fil.props[2],
         lop: 'AND',
-        op: fil.operator,
+        op: operatorMap[fil.operator],
         pr: fil.props[0],
         ty: fil.props[1],
         va: vals
@@ -65,7 +77,6 @@ export const getFunnelQuery = (groupBy, queries) => {
   query.gbt = '';
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
-
   query.gbp = appliedGroupBy
     .map(opt => {
       if (opt.eventIndex) {
@@ -209,6 +220,10 @@ const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
 };
 
 const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
+  const differentDates = new Set();
+  userData.rows.forEach(ud => {
+    differentDates.add(ud[0])
+  })
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(elem.length - 1).map((e) => {
       if (!e) return e;
@@ -282,3 +297,17 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   };
   return result;
 };
+
+export const SortData = (arr, key, order) => {
+  const result = [...arr];
+  result.sort((a, b) => {
+    if (order === 'ascend') {
+      return parseFloat(a[key]) >= parseFloat(b[key]) ? 1 : -1;
+    }
+    if (order === 'descend') {
+      return parseFloat(a[key]) <= parseFloat(b[key]) ? 1 : -1;
+    }
+    return 0;
+  });
+  return result;
+}

@@ -175,7 +175,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
                   if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                     valuesOptions.push(
                       <span className={styles.filter_block__filter_select__option}
-                        onClick={() => optionClick(val)} >
+                        onClick={() => optionClick([...val, ['user', 'event'][grpIndex]])} >
                         {val[0]}
                       </span>
                     );

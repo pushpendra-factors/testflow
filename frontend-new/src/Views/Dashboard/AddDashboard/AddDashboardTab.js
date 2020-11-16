@@ -1,16 +1,16 @@
 import React from 'react';
 import { Text, SVG } from '../../../components/factorsComponents';
 import {
-    Row, Col, Input, Button
+  Row, Col, Input, Button
 } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 // const { Option } = Select;
 
 function AddDashboardTab({
-    title, setTitle, description, setDescription, dashboardType, setDashboardType, editDashboard, showDeleteModal
+  title, setTitle, description, setDescription, dashboardType, setDashboardType, editDashboard, showDeleteModal
 }) {
-    return (
-        <>
+  return (
+    <>
             <Row className={'pt-4'} gutter={[24, 24]}>
                 <Col span={12}>
                     <Text type={'title'} level={7} extraClass={'m-0'}>Title</Text>
@@ -60,7 +60,7 @@ function AddDashboardTab({
                 <div className="pt-2">
                     <Button
                         onClick={showDeleteModal.bind(this, true)}
-                        style={{ display: "flex", alignItems: 'center', padding: 0 }}
+                        style={{ display: 'flex', alignItems: 'center', padding: 0 }}
                         type="text"
                         icon={<DeleteOutlined />}
                     >
@@ -83,8 +83,8 @@ function AddDashboardTab({
                 </Select>
             </Col>
         </Row> */}
-        </>
-    );
+    </>
+  );
 }
 
 export default AddDashboardTab;

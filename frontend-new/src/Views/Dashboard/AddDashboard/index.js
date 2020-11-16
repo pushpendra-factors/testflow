@@ -11,7 +11,9 @@ import { DASHBOARD_CREATED, DASHBOARD_DELETED } from '../../../reducers/types';
 import styles from './index.module.scss';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
-function AddDashboard({ addDashboardModal, setaddDashboardModal, editDashboard, setEditDashboard }) {
+function AddDashboard({
+  addDashboardModal, setaddDashboardModal, editDashboard, setEditDashboard
+}) {
   const [activeKey, setActiveKey] = useState('1');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -32,7 +34,7 @@ function AddDashboard({ addDashboardModal, setaddDashboardModal, editDashboard, 
       setTitle(editDashboard.name);
       setDescription(editDashboard.description);
       setDashboardType(editDashboard.type);
-      setSelectedQueries([...activeDashboardUnits.data])
+      setSelectedQueries([...activeDashboardUnits.data]);
     }
   }, [editDashboard, activeDashboardUnits.data]);
 
@@ -52,7 +54,7 @@ function AddDashboard({ addDashboardModal, setaddDashboardModal, editDashboard, 
       // setDeleteApiCalled(true);
       // await DeleteDashboard(active_project.id, editDashboard);
       // setDeleteApiCalled(false);
-      dispatch({ type: DASHBOARD_DELETED, payload: editDashboard })
+      dispatch({ type: DASHBOARD_DELETED, payload: editDashboard });
       showDeleteModal(false);
       resetState();
     } catch (err) {
@@ -138,7 +140,7 @@ function AddDashboard({ addDashboardModal, setaddDashboardModal, editDashboard, 
         }
       }
     }
-  }, [activeKey, editDashboard, selectedQueries.length])
+  }, [activeKey, editDashboard, selectedQueries.length]);
 
   return (
     <>

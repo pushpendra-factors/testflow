@@ -10,7 +10,7 @@ channel_id=$3
 app_token=$4
 
 if [[ "${path_to_repo}" != "" ]]; then
-  cd "${path_to_repo}"
+  cd "${path_to_repo}" || exit
 fi
 
 IFS=$'\n'
@@ -25,8 +25,8 @@ do
   author_lines=$(git log --author="$author" --pretty=tformat: --numstat --since="$stats_since" | awk '{ add += $1; subs += $2; loc += $1 - $2 } END { printf "added_lines: %s,     removed_lines: %s,    total_lines: %s\n", add, subs, loc }' -)
   payload="${payload}\n${author_lines}"
 done
-payload=`echo "${payload}" | sed 's/"/\\\"/g'`
-echo $payload
+payload=$(echo "${payload}" | sed 's/"/\\\"/g')
+echo "$payload"
 
 if [[ "${channel_id}" != "" && ${app_token} != "" ]]; then
   curl -X POST -H "Authorization: Bearer ${app_token}" -H "Content-type: application/json" --data '{"text":"'"${payload}"'", "channel": "'"${channel_id}"'" }' https://slack.com/api/chat.postMessage

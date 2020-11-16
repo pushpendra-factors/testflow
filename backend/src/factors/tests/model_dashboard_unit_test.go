@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 
@@ -39,11 +40,14 @@ func TestCreateDashboardUnit(t *testing.T) {
 	t.Run("CreateDashboardUnit", func(t *testing.T) {
 		rName := U.RandomString(5)
 		dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
-			Title: rName, Presentation: M.PresentationLine, Query: postgres.Jsonb{json.RawMessage(`{}`)}}, M.DashboardUnitForNoQueryID)
+			Title: rName, Presentation: M.PresentationLine,
+			Query: postgres.Jsonb{json.RawMessage(`{}`)}}, M.DashboardUnitForNoQueryID)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboardUnit)
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, dashboardUnit.QueryId)
+		assert.NotNil(t, dashboardUnit.Settings)
+		assert.NotNil(t, dashboardUnit.Presentation)
 
 		rName1 := U.RandomString(5)
 		dashboardUnit1, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
@@ -51,7 +55,9 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboardUnit1)
 		assert.Empty(t, errMsg)
-		assert.NotNil(t, dashboardUnit.QueryId)
+		assert.NotNil(t, dashboardUnit1.QueryId)
+		assert.NotNil(t, dashboardUnit1.Settings)
+		assert.NotNil(t, dashboardUnit1.Presentation)
 
 		rName2 := U.RandomString(5)
 		dashboardUnit2, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
@@ -59,7 +65,9 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboardUnit2)
 		assert.Empty(t, errMsg)
-		assert.NotNil(t, dashboardUnit.QueryId)
+		assert.NotNil(t, dashboardUnit2.QueryId)
+		assert.NotNil(t, dashboardUnit2.Settings)
+		assert.NotNil(t, dashboardUnit2.Presentation)
 
 		// should be given a positions on dashboard.
 		gDashboard, errCode := M.GetDashboard(project.ID, agent.UUID, dashboard.ID)
@@ -67,14 +75,106 @@ func TestCreateDashboardUnit(t *testing.T) {
 		var currentPosition map[string]map[uint64]int
 		err := json.Unmarshal((*gDashboard.UnitsPosition).RawMessage, &currentPosition)
 		assert.Nil(t, err)
-		// inc position on unit type chart.
 		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationLine)], dashboardUnit.ID)
 		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationBar)], dashboardUnit1.ID)
-		assert.Equal(t, currentPosition[M.GetUnitType(M.PresentationLine)][dashboardUnit.ID], 0)
-		assert.Equal(t, currentPosition[M.GetUnitType(M.PresentationLine)][dashboardUnit1.ID], 1)
-		// inc position on unit type card.
+		assert.NotNil(t, currentPosition[M.GetUnitType(M.PresentationLine)][dashboardUnit.ID])
+		assert.NotNil(t, currentPosition[M.GetUnitType(M.PresentationLine)][dashboardUnit1.ID])
 		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationCard)], dashboardUnit2.ID)
-		assert.Equal(t, currentPosition[M.GetUnitType(M.PresentationCard)][dashboardUnit2.ID], 0)
+		assert.NotNil(t, currentPosition[M.GetUnitType(M.PresentationCard)][dashboardUnit2.ID])
+
+	})
+
+	t.Run("CreateDashboardUnitWithSetting", func(t *testing.T) {
+		rName := U.RandomString(5)
+		dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rName, Settings: postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)},
+			Query: postgres.Jsonb{json.RawMessage(`{}`)}}, M.DashboardUnitForNoQueryID)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardUnit.QueryId)
+		assert.NotNil(t, dashboardUnit.Settings)
+		assert.NotNil(t, dashboardUnit.Presentation)
+
+		rName1 := U.RandomString(5)
+		dashboardUnit1, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rName1, Settings: postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, Query: postgres.Jsonb{json.RawMessage(`{}`)}}, M.DashboardUnitForNoQueryID)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit1)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardUnit1.QueryId)
+		assert.NotNil(t, dashboardUnit1.Settings)
+		assert.NotNil(t, dashboardUnit1.Presentation)
+
+		rName2 := U.RandomString(5)
+		dashboardUnit2, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rName2, Settings: postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, Query: postgres.Jsonb{json.RawMessage(`{}`)}}, M.DashboardUnitForNoQueryID)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit2)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardUnit2.QueryId)
+		assert.NotNil(t, dashboardUnit2.Settings)
+		assert.NotNil(t, dashboardUnit2.Presentation)
+
+		// should be given a positions on dashboard.
+		gDashboard, errCode := M.GetDashboard(project.ID, agent.UUID, dashboard.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		var currentPosition map[string]map[uint64]int
+		err := json.Unmarshal((*gDashboard.UnitsPosition).RawMessage, &currentPosition)
+		assert.Nil(t, err)
+		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationCard)], dashboardUnit.ID)
+		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationCard)], dashboardUnit1.ID)
+		assert.NotNil(t, currentPosition[M.GetUnitType(M.PresentationCard)][dashboardUnit.ID])
+		assert.NotNil(t, currentPosition[M.GetUnitType(M.PresentationCard)][dashboardUnit1.ID])
+		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationCard)], dashboardUnit2.ID)
+		assert.NotNil(t, currentPosition[M.GetUnitType(M.PresentationCard)][dashboardUnit2.ID])
+
+	})
+
+	t.Run("CreateDashboardUnitWithPresentation", func(t *testing.T) {
+		rName := U.RandomString(5)
+		dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rName, Presentation: M.PresentationCard,
+			Query: postgres.Jsonb{json.RawMessage(`{}`)}}, M.DashboardUnitForNoQueryID)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardUnit.QueryId)
+		assert.NotNil(t, dashboardUnit.Settings)
+		assert.NotNil(t, dashboardUnit.Presentation)
+
+		rName1 := U.RandomString(5)
+		dashboardUnit1, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rName1, Presentation: M.PresentationCard, Query: postgres.Jsonb{json.RawMessage(`{}`)}}, M.DashboardUnitForNoQueryID)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit1)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardUnit1.QueryId)
+		assert.NotNil(t, dashboardUnit1.Settings)
+		assert.NotNil(t, dashboardUnit1.Presentation)
+
+		rName2 := U.RandomString(5)
+		dashboardUnit2, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rName2, Presentation: M.PresentationCard, Query: postgres.Jsonb{json.RawMessage(`{}`)}}, M.DashboardUnitForNoQueryID)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit2)
+		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardUnit2.QueryId)
+		assert.NotNil(t, dashboardUnit2.Settings)
+		assert.NotNil(t, dashboardUnit2.Presentation)
+
+		// should be given a positions on dashboard.
+		gDashboard, errCode := M.GetDashboard(project.ID, agent.UUID, dashboard.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		var currentPosition map[string]map[uint64]int
+		err := json.Unmarshal((*gDashboard.UnitsPosition).RawMessage, &currentPosition)
+		assert.Nil(t, err)
+		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationCard)], dashboardUnit.ID)
+		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationCard)], dashboardUnit1.ID)
+		assert.NotNil(t, currentPosition[M.GetUnitType(M.PresentationCard)][dashboardUnit.ID])
+		assert.NotNil(t, currentPosition[M.GetUnitType(M.PresentationCard)][dashboardUnit1.ID])
+		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationCard)], dashboardUnit2.ID)
+		assert.NotNil(t, currentPosition[M.GetUnitType(M.PresentationCard)][dashboardUnit2.ID])
 
 	})
 
@@ -127,6 +227,157 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, errCode)
 		assert.Nil(t, dashboardUnit)
 	})
+}
+
+func TestCreateMultipleDashboardUnits(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
+	assert.Equal(t, http.StatusCreated, errCode)
+	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent2.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	rName := U.RandomString(5)
+	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, rName, dashboard.Name)
+
+	type args struct {
+		requestPayload []M.DashboardUnitRequestPayload
+		projectId      uint64
+		agentUUID      string
+		dashboardId    uint64
+	}
+
+	requestPayload1 := []M.DashboardUnitRequestPayload{{Title: U.RandomString(10), Description: U.RandomString(20),
+		Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, QueryId: uint64(U.RandomIntInRange(50, 100))},
+	}
+
+	testArgs1 := args{requestPayload: requestPayload1,
+		projectId:   project.ID,
+		agentUUID:   agent.UUID,
+		dashboardId: dashboard.ID}
+
+	requestPayload2 := []M.DashboardUnitRequestPayload{{Title: U.RandomString(10), Description: U.RandomString(20),
+		Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, QueryId: uint64(U.RandomIntInRange(50, 100))},
+		{Title: U.RandomString(10), Description: U.RandomString(20),
+			Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, QueryId: uint64(U.RandomIntInRange(50, 100))},
+		{Title: U.RandomString(10), Description: U.RandomString(20),
+			Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, QueryId: uint64(U.RandomIntInRange(50, 100))},
+	}
+
+	testArgs2 := args{requestPayload: requestPayload2,
+		projectId:   project.ID,
+		agentUUID:   agent.UUID,
+		dashboardId: dashboard.ID}
+
+	tests := []struct {
+		name   string
+		args   args
+		units  int
+		status int
+		error  string
+	}{
+		{name: "SingleDashboardUnitOnOneDashboard", args: testArgs1, units: 1, status: http.StatusCreated, error: ""},
+		{name: "MultiDashboardUnitsOnOneDashboard", args: testArgs2, units: 3, status: http.StatusCreated, error: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dashboardUnits, responseStatus, errorMsg := M.CreateMultipleDashboardUnits(tt.args.requestPayload, tt.args.projectId, tt.args.agentUUID, tt.args.dashboardId)
+
+			assert.NotNil(t, dashboardUnits)
+			if !reflect.DeepEqual(len(dashboardUnits), tt.units) {
+				t.Errorf("CreateMultipleDashboardUnits() got = %v, want %v", len(dashboardUnits), tt.units)
+			}
+			if responseStatus != tt.status {
+				t.Errorf("CreateMultipleDashboardUnits() got1 = %v, want %v", responseStatus, tt.status)
+			}
+			if errorMsg != tt.error {
+				t.Errorf("CreateMultipleDashboardUnits() got2 = %v, want %v", errorMsg, tt.error)
+			}
+		})
+	}
+}
+
+func TestCreateDashboardUnitForMultipleDashboards(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
+	assert.Equal(t, http.StatusCreated, errCode)
+	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent2.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	rName := U.RandomString(5)
+	dashboard1, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard1)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, rName, dashboard1.Name)
+
+	rName = U.RandomString(5)
+	dashboard2, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard2)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, rName, dashboard2.Name)
+
+	rName = U.RandomString(5)
+	dashboard3, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard3)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, rName, dashboard3.Name)
+
+	type args struct {
+		dashboardIds []uint64
+		projectId    uint64
+		agentUUID    string
+		unitPayload  M.DashboardUnitRequestPayload
+	}
+	requestPayload := M.DashboardUnitRequestPayload{Title: U.RandomString(10), Description: U.RandomString(20),
+		Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, QueryId: uint64(U.RandomIntInRange(50, 100))}
+
+	testArgs1 := args{
+		dashboardIds: []uint64{dashboard1.ID},
+		projectId:    project.ID,
+		agentUUID:    agent.UUID,
+		unitPayload:  requestPayload}
+
+	testArgs2 := args{
+		dashboardIds: []uint64{dashboard1.ID, dashboard2.ID, dashboard3.ID},
+		projectId:    project.ID,
+		agentUUID:    agent.UUID,
+		unitPayload:  requestPayload}
+
+	tests := []struct {
+		name   string
+		args   args
+		units  int
+		status int
+		error  string
+	}{
+		{name: "SingleUnitOnOneDashboards", args: testArgs1, units: 1, status: http.StatusCreated, error: ""},
+		{name: "SingleUnitOnThreeDashboards", args: testArgs2, units: 3, status: http.StatusCreated, error: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dashboardUnits, got1, got2 := M.CreateDashboardUnitForMultipleDashboards(tt.args.dashboardIds, tt.args.projectId, tt.args.agentUUID, tt.args.unitPayload)
+
+			assert.NotNil(t, dashboardUnits)
+			if !reflect.DeepEqual(len(dashboardUnits), tt.units) {
+				t.Errorf("CreateMultipleDashboardUnits() got = %v, want %v", len(dashboardUnits), tt.units)
+			}
+			if got1 != tt.status {
+				t.Errorf("CreateDashboardUnitForMultipleDashboards() got1 = %v, want %v", got1, tt.status)
+			}
+			if got2 != tt.error {
+				t.Errorf("CreateDashboardUnitForMultipleDashboards() got2 = %v, want %v", got2, tt.error)
+			}
+		})
+	}
 }
 
 func TestGetDashboardUnits(t *testing.T) {

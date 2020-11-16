@@ -262,3 +262,20 @@ $cq-card-transition: transform .2s ease-in-out;
 .fa-event-popover{
     background-color: pink;
 }
+
+.fapp-date-picker {
+    position: absolute;
+    z-index: 100; 
+    display: inline-block;
+    background: white;
+
+
+}
+
+.fapp-date-picker .rdrDateRangePickerWrapper {
+    border: 2px solid #eff2f7;
+}
+
+.ant-popover-inner {
+    display: contents;
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import moment from 'moment';
 import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
-import { labelsObj } from '../../CoreQuery/utils';
+import { labelsObj, SortData } from '../../CoreQuery/utils';
 
 export const getBreakdownTitle = (breakdown) => {
   const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -127,16 +127,7 @@ export const getTableData = (data, breakdown, searchText, currentSorter) => {
       ...d, 'Event Count': d.value, ...breakdownValues
     });
   });
-  result.sort((a, b) => {
-    if (currentSorter.order === 'ascend') {
-      return parseInt(a[currentSorter.key]) >= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    if (currentSorter.order === 'descend') {
-      return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    return 0;
-  });
-  return result;
+  return SortData(result, currentSorter.key, currentSorter.order);
 };
 
 export const formatDataInLineChartFormat = (visibleProperties, mapper, hiddenProperties) => {
@@ -198,14 +189,5 @@ export const getDateBasedTableData = (data, breakdown, currentSorter, searchText
       ...dateWiseValues
     };
   });
-  result.sort((a, b) => {
-    if (currentSorter.order === 'ascend') {
-      return parseInt(a[currentSorter.key]) >= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    if (currentSorter.order === 'descend') {
-      return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    return 0;
-  });
-  return result;
+  return SortData(result, currentSorter.key, currentSorter.order);
 };

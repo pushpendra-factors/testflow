@@ -1,4 +1,5 @@
 import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
+import { SortData } from '../../CoreQuery/utils';
 
 export const formatData = (data) => {
   const resultInObjFormat = {};
@@ -61,14 +62,5 @@ export const getTableData = (data, breakdown, searchText, currentSorter) => {
     });
     return { ...breakdownValues, 'User Count': d.value, index: d.index };
   });
-  result.sort((a, b) => {
-    if (currentSorter.order === 'ascend') {
-      return parseInt(a[currentSorter.key]) >= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    if (currentSorter.order === 'descend') {
-      return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
-    }
-    return 0;
-  });
-  return result;
+  return SortData(result, currentSorter.key, currentSorter.order);
 };

@@ -181,6 +181,16 @@ func addPropertyConstraintsToMap(
 }
 
 // TODO(Ankit): Pass req id to subsequent calls to pattern server
+// FactorHandler godoc
+// @Summary To run factors model for the given query.
+// @Tags Factors
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param query formData json true "Factors query"
+// @Success 200 {array} pattern_service_wrapper.FactorGraphResults
+// @Router /{project_id}/factor [post]
+// TODO(prateek): Check for a better way to define query.
 func FactorHandler(c *gin.Context) {
 
 	logCtx := log.WithFields(log.Fields{

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	C "factors/config"
 	mid "factors/middleware"
 	"net/http"
 
@@ -8,6 +9,8 @@ import (
 	V1 "factors/handler/v1"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 const ROUTE_SDK_ROOT = "/sdk"
@@ -26,6 +29,11 @@ func InitAppRoutes(r *gin.Engine) {
 		c.JSON(http.StatusOK, resp)
 		return
 	})
+
+	// Initialize swagger api docs only for development / staging.
+	if C.GetConfig().Env == C.DEVELOPMENT {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	r.POST("/accounts/signup", SignUp)
 	r.POST("/agents/signin", Signin)
@@ -90,6 +98,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", EventsQueryHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", CreateDashboardUnitForMultiDashboardsHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", CreateDashboardUnitsForMultipleQueriesHandler)
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", DeleteDashboardHandler)
 
 	// TODO
 	// Scope this with Project Admin

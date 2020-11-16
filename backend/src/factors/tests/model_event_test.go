@@ -289,33 +289,6 @@ func TestUpdateEventProperties(t *testing.T) {
 	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
 }
 
-func TestGetLatestAnyEventOfUserInDuration(t *testing.T) {
-	projectId, userId, eventNameId, err := SetupProjectUserEventName()
-	assert.Nil(t, err)
-
-	// no event exist in 10 secs.
-	event, errCode := M.GetLatestAnyEventOfUserForSession(projectId, userId,
-		U.UnixTimeBeforeDuration(30*time.Minute))
-	assert.Equal(t, http.StatusNotFound, errCode)
-	assert.Nil(t, event)
-
-	createEventTimestamp := U.UnixTimeBeforeDuration(time.Minute * 100)
-	// user active.
-	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
-		ProjectId: projectId, UserId: userId, Timestamp: createEventTimestamp})
-	assert.Equal(t, http.StatusCreated, errCode)
-	event, errCode = M.GetLatestAnyEventOfUserForSession(projectId, userId,
-		createEventTimestamp+300) // after 5 mins of last activity.
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotNil(t, errCode)
-	assert.Equal(t, createdEvent.ID, event.ID)
-
-	// inactivity.
-	_, errCode = M.GetLatestAnyEventOfUserForSession(projectId, userId,
-		createEventTimestamp+1800) // after 30 mins of last activity.
-	assert.Equal(t, http.StatusNotFound, errCode)
-}
-
 func TestCacheEvent(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
@@ -343,82 +316,6 @@ func TestCacheEvent(t *testing.T) {
 		assert.True(t, cacheEvent.Timestamp > timestamp)
 		assert.Nil(t, err)
 	}
-}
-
-func TestGetLatestAnyEventOfUserInDurationFromCache(t *testing.T) {
-	projectId, userId, eventNameId, err := SetupProjectUserEventName()
-	assert.Nil(t, err)
-
-	// no event exist in 10 secs.
-	event, errCode := M.GetLatestAnyEventOfUserForSessionFromCache(projectId, userId,
-		U.UnixTimeBeforeDuration(30*time.Minute))
-	assert.Equal(t, http.StatusNotFound, errCode)
-	assert.Nil(t, event)
-
-	createEventTimestamp := U.UnixTimeBeforeDuration(time.Minute * 100)
-	// user active.
-	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
-		ProjectId: projectId, UserId: userId, Timestamp: createEventTimestamp})
-	assert.Equal(t, http.StatusCreated, errCode)
-	event, errCode = M.GetLatestAnyEventOfUserForSessionFromCache(projectId,
-		userId, createEventTimestamp+300) // after 5 mins of last activity.
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotNil(t, errCode)
-	assert.Equal(t, createdEvent.ID, event.ID)
-
-	// inactivity.
-	_, errCode = M.GetLatestAnyEventOfUserForSessionFromCache(projectId, userId,
-		createEventTimestamp+1800) // after 30 mins of last activity.
-	assert.Equal(t, http.StatusNotFound, errCode)
-}
-
-func TestCreateOrGetSessionEvent(t *testing.T) {
-	projectId, userId, eventNameId, err := SetupProjectUserEventName()
-	assert.Nil(t, err)
-
-	user, _ := M.GetUser(projectId, userId)
-	userPropertiesId := user.PropertiesId
-	sessionEventTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
-
-	t.Run("ShouldCreateNewSessionAsNoEventInLast30Mins", func(t *testing.T) {
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, false, sessionEventTimestamp,
-			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, userPropertiesId)
-		assert.Equal(t, http.StatusCreated, errCode)
-		assert.NotNil(t, session)
-
-		// Session event should exist with initial event properites.
-		sessionEvent, errCode := M.GetEvent(projectId, userId, session.ID)
-		assert.Equal(t, http.StatusFound, errCode)
-		eventPropertiesBytes, err := sessionEvent.Properties.Value()
-		assert.Nil(t, err)
-		var eventPropertiesMap map[string]interface{}
-		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
-		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
-
-		userPropertiesMap, errCode := M.GetLatestUserPropertiesOfUserAsMap(projectId, userId)
-		assert.Equal(t, errCode, http.StatusFound)
-		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME])
-		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
-	})
-
-	t.Run("ShouldReturnLatestSessionAsUserWasActive", func(t *testing.T) {
-		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
-			ProjectId: projectId, UserId: userId, Timestamp: sessionEventTimestamp + 10})
-
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, false,
-			false, sessionEventTimestamp+20, &U.PropertiesMap{}, &U.PropertiesMap{}, userPropertiesId)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.NotNil(t, session)
-
-		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
-		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
-		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
-
-		userPropertiesMap, errCode = M.GetLatestUserPropertiesOfUserAsMap(projectId, userId)
-		assert.Equal(t, errCode, http.StatusFound)
-		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME])
-		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
-	})
 }
 
 func TestOverwriteEventProperties(t *testing.T) {

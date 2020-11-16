@@ -18,6 +18,14 @@ var FORCED_EVENT_NAMES = map[uint64][]string{
 	},
 }
 
+// GetEventNamesHandler godoc
+// @Summary Get event names for the given project id.
+// @Tags V1Api
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Success 200 {string} json "{"event_names": map[string][]string}"
+// @Router /{project_id}/v1/event_names [get]
 func GetEventNamesHandler(c *gin.Context) {
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)

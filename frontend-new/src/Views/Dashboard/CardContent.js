@@ -29,10 +29,10 @@ function CardContent({ unit }) {
         let resultantData = null;
         if (res.data.result) {
           // cached data
-          resultantData = res.data.result
+          resultantData = res.data.result;
         } else {
           // refreshed data
-          resultantData = res.data
+          resultantData = res.data;
         }
         setResultState({
           ...initialState,
@@ -48,10 +48,10 @@ function CardContent({ unit }) {
         let resultantData = null;
         if (res.data.result) {
           // cached data
-          resultantData = res.data.result.result_group[0]
+          resultantData = res.data.result.result_group[0];
         } else {
           // refreshed data
-          resultantData = res.data.result.result_group[0]
+          resultantData = res.data.result.result_group[0];
         }
         setResultState({
           ...initialState,
@@ -118,7 +118,6 @@ function CardContent({ unit }) {
     } catch (err) {
       console.log(err);
     }
-
 
     if (queryType === 'funnel') {
       content = (

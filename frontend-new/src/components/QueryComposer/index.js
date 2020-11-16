@@ -4,12 +4,18 @@ import { bindActionCreators } from 'redux';
 import {
   Button, Collapse, Select, Popover
 } from 'antd';
+import moment from 'moment';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
 import DateRangeSelector from './DateRangeSelector';
+
+import {
+  DEFAULT_DATE_RANGE,
+  DEFINED_DATE_RANGES
+} from './DateRangeSelector/utils';
 
 import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
 
@@ -30,6 +36,7 @@ function QueryComposer({
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [dateRangeOpen, setDateRangeVisibile] = useState(false);
+  const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -173,11 +180,29 @@ function QueryComposer({
     }
   };
 
+  const getDateRange = () => {
+    const ranges = [DEFAULT_DATE_RANGE];
+    const queryOptionsState = Object.assign({}, queryOptions);
+
+    if (
+      queryOptionsState &&
+      queryOptionsState.date_range &&
+      queryOptionsState.date_range.from &&
+      queryOptionsState.date_range.to
+    ) {
+      ranges[0].startDate = moment(queryOptionsState.date_range.from).toDate();
+      ranges[0].endDate = moment(queryOptionsState.date_range.to).toDate();
+    }
+
+    return ranges;
+  };
+
   const setDateRange = (dates) => {
     const queryOptionsState = Object.assign({}, queryOptions);
-    if (dates && dates.length) {
-      queryOptionsState.date_range.from = dates[0];
-      queryOptionsState.date_range.to = dates[1];
+    if (dates && dates.selected) {
+      queryOptionsState.date_range.from = dates.selected.startDate;
+      queryOptionsState.date_range.to = dates.selected.endDate;
+      setCalendarLabel(dates.selected.label);
       setQueryOptions(queryOptionsState);
     }
     setDateRangeVisibile(false);
@@ -200,10 +225,13 @@ function QueryComposer({
             className="fa-event-popover"
             trigger="click"
             visible={dateRangeOpen}
-            content={<DateRangeSelector pickerVisible={dateRangeOpen} setDates={setDateRange} />}
+            content={
+            <DateRangeSelector
+              ranges={getDateRange()}
+              pickerVisible={dateRangeOpen} setDates={setDateRange} />}
             onVisibleChange={(visible) => setDateRangeVisibile(visible)}
           >
-            <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
+            <Button><SVG name={'calendar'} extraClass={'mr-1'} /> {calendarLabel} </Button>
           </Popover>
           <Button type="primary" onClick={handleRunQuery}>Run Query</Button>
         </div>

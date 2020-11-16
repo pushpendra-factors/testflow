@@ -716,28 +716,3 @@ func TestGetUserPropertiesAsMap(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, userProperties, decodedUserProperties)
 }
-
-func TestUserPropertiesEnrichmentWithPreviousSessionData(t *testing.T) {
-	project, user, err := SetupProjectUserReturnDAO()
-	assert.Nil(t, err)
-	assert.NotNil(t, project)
-	assert.NotNil(t, user)
-	assert.True(t, len(user.PropertiesId) > 0)
-
-	decodedUserProperties, err := U.DecodePostgresJsonb(&user.Properties)
-	assert.Nil(t, err)
-	assert.Nil(t, (*decodedUserProperties)["Hello"])
-
-	newUserProperties := make(map[string]interface{})
-	newUserProperties["Hello"] = "World"
-	errCode := M.EnrichUserPropertiesWithSessionProperties(project.ID, user.ID,
-		user.PropertiesId, newUserProperties, false)
-	assert.Equal(t, errCode, http.StatusAccepted)
-
-	userProperties, errCode := M.GetUserProperties(project.ID, user.ID, user.PropertiesId)
-	assert.Equal(t, errCode, http.StatusFound)
-	userPropertiesMap, err := U.DecodePostgresJsonb(userProperties)
-	assert.Nil(t, err)
-	assert.NotNil(t, (*userPropertiesMap)["Hello"])
-	assert.Equal(t, (*userPropertiesMap)["Hello"], "World")
-}
