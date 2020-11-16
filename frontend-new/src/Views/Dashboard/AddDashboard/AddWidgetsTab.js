@@ -17,11 +17,11 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
     const isSelected = selectedQueries.findIndex(sq => sq.id === q.id) > -1;
     if (isSelected) {
       setSelectedQueries(currData => {
-        return currData.filter(c => c.id !== q.id);
+        return currData.filter(c => c.query_id !== q.id);
       });
     } else {
       setSelectedQueries(currData => {
-        return [...currData, q];
+        return [...currData, { ...q, query_id: q.id }];
       });
     }
   }, [selectedQueries, setSelectedQueries]);
@@ -59,7 +59,7 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
             svgName = 'events_dashboard_cq';
           }
 
-          const isSelected = selectedQueries.findIndex(sq => sq.id === q.id) > -1;
+          const isSelected = selectedQueries.findIndex(sq => sq.query_id === q.id) > -1;
 
           return (
             <div key={q.id} className={`flex items-center justify-between px-1 py-3 cursor-pointer ${styles.queryRow} ${isSelected ? styles.selected : ''}`}>

@@ -50,7 +50,7 @@ const widgetCardCollection = [
   }
 ];
 
-const DashboardSubMenu = ({ dashboard }) => {
+const DashboardSubMenu = ({ dashboard, handleEditClick }) => {
   let btn = null;
 
   if (dashboard.type === 'pr') {
@@ -89,7 +89,7 @@ const DashboardSubMenu = ({ dashboard }) => {
           <Option value="lucy5">1+ Year</Option>
         </Select>
         {btn}
-        <Button size={'large'} type={'text'} className={'m-0 fa-button-ghost flex items-center p-0 py-2'}><EditOutlined /> Edit</Button>
+        <Button onClick={handleEditClick.bind(this, dashboard)} size={'large'} type={'text'} className={'m-0 fa-button-ghost flex items-center p-0 py-2'}><EditOutlined /> Edit</Button>
       </div>
       <div className={'flex justify-between items-center'}>
         <Button style={{ display: 'flex' }} size={'large'} className={'items-center flex m-0 fa-button-ghost p-0 py-2'}><ReloadOutlined /> Refresh Data.</Button>
@@ -101,7 +101,7 @@ const DashboardSubMenu = ({ dashboard }) => {
   );
 };
 
-function ProjectTabs({ setaddDashboardModal }) {
+function ProjectTabs({ setaddDashboardModal, handleEditClick }) {
   const [widgetModal, setwidgetModal] = useState(false);
   const [widgets, setWidgets] = useState(widgetCardCollection);
   const { active_project } = useSelector(state => state.global);
@@ -177,72 +177,76 @@ function ProjectTabs({ setaddDashboardModal }) {
     );
   }
 
-  const units = activeDashboardUnits.data
-    .filter(unit => {
-      const idx = savedQueries.findIndex(sq => sq.id === unit.query_id);
-      return idx > -1;
-    })
-    .map(unit => {
-      const savedQuery = savedQueries.find(sq => sq.id === unit.query_id);
-      return { ...unit, query: savedQuery };
-    });
+  if (dashboards.data.length) {
+    const units = activeDashboardUnits.data
+      .filter(unit => {
+        const idx = savedQueries.findIndex(sq => sq.id === unit.query_id);
+        return idx > -1;
+      })
+      .map(unit => {
+        const savedQuery = savedQueries.find(sq => sq.id === unit.query_id);
+        return { ...unit, query: savedQuery };
+      });
 
-  return (
-    <>
-      <Tabs
-        onChange={handleTabChange}
-        activeKey={activeDashboard.id.toString()}
-        className={'fa-tabs--dashboard'}
-        tabBarExtraContent={operations}
-      >
-        {dashboards.data.map(d => {
-          return (
-            <TabPane tab={d.name} key={d.id}>
-              {d.id === activeDashboard.id ? (
-                <div className={'fa-container mt-6 min-h-screen'}>
-                  <DashboardSubMenu dashboard={activeDashboard} />
-                  <ReactSortable list={widgets} setList={onDrop}>
-                    <div className="flex flex-wrap">
-                      {units.map(unit => {
-                        return (
-                          <WidgetCard
-                            key={unit.id}
-                            widthSize={3}
-                            resizeWidth={resizeWidth}
-                            unit={unit}
-                            dashboard={d}
-                          />
-                        );
-                      })}
-                    </div>
-                  </ReactSortable>
-                </div>
-              ) : null}
-            </TabPane>
-          );
-        })}
-      </Tabs>
+    return (
+      <>
+        <Tabs
+          onChange={handleTabChange}
+          activeKey={activeDashboard.id.toString()}
+          className={'fa-tabs--dashboard'}
+          tabBarExtraContent={operations}
+        >
+          {dashboards.data.map(d => {
+            return (
+              <TabPane tab={d.name} key={d.id}>
+                {d.id === activeDashboard.id ? (
+                  <div className={'fa-container mt-6 min-h-screen'}>
+                    <DashboardSubMenu dashboard={activeDashboard} handleEditClick={handleEditClick} />
+                    <ReactSortable list={widgets} setList={onDrop}>
+                      <div className="flex flex-wrap">
+                        {units.map(unit => {
+                          return (
+                            <WidgetCard
+                              key={unit.id}
+                              widthSize={3}
+                              resizeWidth={resizeWidth}
+                              unit={unit}
+                              dashboard={d}
+                            />
+                          );
+                        })}
+                      </div>
+                    </ReactSortable>
+                  </div>
+                ) : null}
+              </TabPane>
+            );
+          })}
+        </Tabs>
 
-      <Modal
-        title={null}
-        visible={widgetModal}
-        footer={null}
-        centered={false}
-        zIndex={1005}
-        mask={false}
-        onCancel={() => setwidgetModal(false)}
-        // closable={false}
-        className={'fa-modal--full-width'}
-      >
-        <div className={'py-10 flex justify-center'}>
-          <div className={'fa-container'}>
-            <Text type={'title'} level={5} weight={'bold'} size={'grey'} extraClass={'m-0'}>Full width Modal</Text>
-            <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Core Query results page comes here..</Text>
+        <Modal
+          title={null}
+          visible={widgetModal}
+          footer={null}
+          centered={false}
+          zIndex={1005}
+          mask={false}
+          onCancel={() => setwidgetModal(false)}
+          // closable={false}
+          className={'fa-modal--full-width'}
+        >
+          <div className={'py-10 flex justify-center'}>
+            <div className={'fa-container'}>
+              <Text type={'title'} level={5} weight={'bold'} size={'grey'} extraClass={'m-0'}>Full width Modal</Text>
+              <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Core Query results page comes here..</Text>
+            </div>
           </div>
-        </div>
-      </Modal>
-    </>
-  );
+        </Modal>
+      </>
+    );
+  }
+
+  return null;
 }
 
 export default React.memo(ProjectTabs);

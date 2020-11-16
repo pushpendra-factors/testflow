@@ -7,7 +7,8 @@ import {
   DASHBOARD_UNITS_LOADED,
   ACTIVE_DASHBOARD_CHANGE,
   DASHBOARD_UNIT_DATA_LOADED,
-  DASHBOARD_CREATED
+  DASHBOARD_CREATED,
+  DASHBOARD_DELETED
 } from '../types';
 
 const defaultState = {
@@ -45,6 +46,15 @@ export default function (state = defaultState, action) {
       return { ...state, dashboards_loaded: state.dashboards_loaded + 1 };
     case DASHBOARD_CREATED:
       return { ...state, dashboards: { ...state.dashboards, data: [...state.dashboards.data, action.payload] } };
+    case DASHBOARD_DELETED:
+      const newDashboardList = state.dashboards.data.filter(d => d.id !== action.payload.id);
+      const newActiveDashboard = newDashboardList[0];
+      return {
+        ...state,
+        activeDashboardUnits: { ...defaultState.activeDashboardUnits },
+        dashboards: { ...defaultState.dashboards, data: newDashboardList },
+        activeDashboard: newActiveDashboard
+      }
     default:
       return state;
   }

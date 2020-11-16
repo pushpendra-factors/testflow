@@ -8,8 +8,13 @@ export const getEventNames = (dispatch, projectId) => {
   return get(dispatch, host + 'projects/' + projectId + '/v1/event_names', {});
 }
 
-export const runQuery = (projectId, query_group) => {
-  const url = host + "projects/" + projectId + "/v1/query";
+export const runQuery = (projectId, query_group, dashboard = { refresh: true }) => {
+  let url;
+  if (dashboard.refresh) {
+    url = host + "projects/" + projectId + "/v1/query";
+  } else {
+    url = host + "projects/" + projectId + "/v1/query?refresh=false&dashboard_id=" + dashboard.id + "&dashboard_unit_id=" + dashboard.unit_id;
+  }
   return post(null, url, { query_group });
 }
 
@@ -29,8 +34,13 @@ export function fetchUserProperties(projectId, queryType) {
   return get(null, url);
 }
 
-export const getFunnelData = (projectId, query) => {
-  const url = host + "projects/" + projectId + "/query";
+export const getFunnelData = (projectId, query, dashboard = { refresh: true }) => {
+  let url;
+  if (dashboard.refresh) {
+    url = host + "projects/" + projectId + "/query";
+  } else {
+    url = host + "projects/" + projectId + "/query?refresh=false&dashboard_id=" + dashboard.id + "&dashboard_unit_id=" + dashboard.unit_id;
+  }
   return post(null, url, { query });
 }
 

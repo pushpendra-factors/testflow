@@ -46,6 +46,7 @@ function WidgetCard({
 				</div>
 			</div>
 		</div>
+
   );
 }
 
