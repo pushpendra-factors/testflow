@@ -209,8 +209,8 @@ export const calculateActiveUsersData = (userData, sessionData, appliedBreakdown
 const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(1).map((e) => {
-      if (!e) return e;
-      const eVal = sessionData.rows[0][1] / e;
+      if (!e || !sessionData.rows[0][1]) return e;
+      const eVal = e / sessionData.rows[0][1] * 100;
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [elem[0], ...eventVals];
@@ -226,8 +226,8 @@ const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
   })
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(elem.length - 1).map((e) => {
-      if (!e) return e;
-      const eVal = sessionData.rows[0][1] / e;
+      if (!e || !sessionData.rows[0][1]) return e;
+      const eVal = e / sessionData.rows[0][1] * 100;
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [...elem.slice(0, elem.length - 1), ...eventVals];

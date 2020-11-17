@@ -52,6 +52,7 @@ function EventsAnalytics({
                 page="totalEvents"
                 chartType={chartType}
                 title={title}
+                dashboards_loaded={dashboards_loaded}
             />
     );
   }
@@ -66,6 +67,7 @@ function EventsAnalytics({
                 page="totalEvents"
                 chartType={chartType}
                 title={title}
+                dashboards_loaded={dashboards_loaded}
             />
     );
   }

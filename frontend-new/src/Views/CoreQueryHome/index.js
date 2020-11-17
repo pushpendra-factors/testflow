@@ -78,7 +78,7 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
   const getFormattedRow = (q) => {
     let svgName = 'funnels_cq';
     let requestQuery = q.query;
-    if(requestQuery.query_group) {
+    if (requestQuery.query_group) {
       svgName = 'events_cq';
     }
 
@@ -124,10 +124,10 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
 
   const setQueryToState = useCallback((record) => {
     let equivalentQuery;
-    if(typeof(record.query) === 'string') {
-      equivalentQuery = getStateQueryFromRequestQuery(JSON.parse(record.query));
-    } else {
+    if (record.query.query_group) {
       equivalentQuery = getStateQueryFromRequestQuery(record.query.query_group[0]);
+    } else {
+      equivalentQuery = getStateQueryFromRequestQuery(record.query);
     }
     dispatch({ type: INITIALIZE_GROUPBY, payload: equivalentQuery.breakdown })
     setQueries(equivalentQuery.events);

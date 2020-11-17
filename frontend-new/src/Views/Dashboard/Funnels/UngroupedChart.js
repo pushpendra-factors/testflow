@@ -4,7 +4,7 @@ import Chart from '../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
 
 function UngroupedChart({
-  resultState, queries, title, chartType, eventsMapper
+  resultState, queries, title, chartType, eventsMapper, dashboards_loaded
 }) {
   const [chartData, setChartData] = useState([]);
 
@@ -25,6 +25,7 @@ function UngroupedChart({
         <Chart
           title={title}
           chartData={chartData}
+          dashboards_loaded={dashboards_loaded}
         />
       </div>
     );

@@ -1,4 +1,4 @@
-import { get, getHostUrl, post } from '../../utils/request';
+import { get, getHostUrl, post, del, put } from '../../utils/request';
 import {
   DASHBOARDS_LOADED,
   DASHBOARD_UNITS_LOADING_FAILED,
@@ -49,6 +49,12 @@ export const assignUnitsToDashboard = async (projectId, dashboardId, reqBody) =>
   return post(null, url, reqBody);
 };
 
-export const DeleteDashboard = (projectId) => {
-  return null;
+export const deleteDashboard = (projectId, dashboardId) => {
+  const url = host + 'projects/' + projectId + '/v1/dashboards/' + dashboardId;
+  return del(null, url);
 };
+
+export const updateDashboard = (projectId, dashboardId, body) => {
+  const url = host + 'projects/' + projectId + '/dashboards/' + dashboardId;
+  return put(null, url, body);
+}
