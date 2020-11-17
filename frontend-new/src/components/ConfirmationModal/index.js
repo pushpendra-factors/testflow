@@ -5,7 +5,7 @@ import {
 import { Text } from '../factorsComponents';
 
 function ConfirmationModal({
-  visible, confirmationText, onOk, onCancel, title, width, cancelText, okText
+  visible, confirmationText, onOk, onCancel, title, width, cancelText, okText, confirmLoading 
 }) {
   return (
     <Modal
@@ -19,6 +19,7 @@ function ConfirmationModal({
       okText={okText}
       cancelText={cancelText}
       closable={false}
+      confirmLoading={confirmLoading}
     >
       <div className="p-6">
         <Text extraClass="m-0" type={'title'} level={3} weight={'bold'}>{title}</Text>

@@ -6,7 +6,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import AddDashboardTab from './AddDashboardTab';
 import AddWidgetsTab from './AddWidgetsTab';
 import { Text } from '../../../components/factorsComponents';
-import { createDashboard, assignUnitsToDashboard } from '../../../reducers/dashboard/services';
+import { createDashboard, assignUnitsToDashboard, deleteDashboard } from '../../../reducers/dashboard/services';
 import { DASHBOARD_CREATED, DASHBOARD_DELETED } from '../../../reducers/types';
 import styles from './index.module.scss';
 import ConfirmationModal from '../../../components/ConfirmationModal';
@@ -20,7 +20,7 @@ function AddDashboard({
   const [dashboardType, setDashboardType] = useState('pr');
   const [apisCalled, setApisCalled] = useState(false);
   const [selectedQueries, setSelectedQueries] = useState([]);
-  // const [deleteApiCalled, setDeleteApiCalled] = useState(false);
+  const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const [deleteModal, showDeleteModal] = useState(false);
   const { data: queries } = useSelector(state => state.queries);
   const { active_project } = useSelector(state => state.global);
@@ -51,17 +51,17 @@ function AddDashboard({
 
   const confirmDelete = useCallback(async () => {
     try {
-      // setDeleteApiCalled(true);
-      // await DeleteDashboard(active_project.id, editDashboard);
-      // setDeleteApiCalled(false);
+      setDeleteApiCalled(true);
+      await deleteDashboard(active_project.id, editDashboard.id);
+      setDeleteApiCalled(false);
       dispatch({ type: DASHBOARD_DELETED, payload: editDashboard });
       showDeleteModal(false);
       resetState();
     } catch (err) {
       console.log(err);
-      // setDeleteApiCalled(false);
+      setDeleteApiCalled(false);
     }
-  }, [editDashboard, dispatch, resetState]);
+  }, [editDashboard, dispatch, resetState, active_project.id]);
 
   const handleCancel = useCallback(() => {
     if (!apisCalled) {
@@ -99,7 +99,7 @@ function AddDashboard({
               settings.chart = 'pb';
             }
             return {
-              settings: JSON.stringify(settings),
+              settings,
               title: sq.title,
               description: sq.description,
               query_id: sq.query_id
@@ -198,6 +198,7 @@ function AddDashboard({
         title="Delete Dashboard"
         okText="Confirm"
         cancelText="Cancel"
+        confirmLoading={deleteApiCalled}
       />
     </>
   );

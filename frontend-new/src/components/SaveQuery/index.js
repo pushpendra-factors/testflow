@@ -15,7 +15,7 @@ function SaveQuery({
   const [title, setTitle] = useState('');
   const [addToDashboard, setAddToDashboard] = useState(false);
   const [selectedDashboards, setSelectedDashboards] = useState([]);
-  const [dashboardPresentation, setDashboardPresentation] = useState('pb');
+  const [dashboardPresentation, setDashboardPresentation] = useState('pt');
   const [apisCalled, setApisCalled] = useState(false);
   const { active_project } = useSelector(state => state.global);
   const { dashboards } = useSelector(state => state.dashboard);
@@ -81,7 +81,7 @@ function SaveQuery({
       setApisCalled(true);
       let query;
       if (requestQuery.cl === 'funnel') {
-        query = JSON.stringify(requestQuery);
+        query = requestQuery;
       } else {
         query = { query_group: [requestQuery] };
       }
@@ -92,8 +92,7 @@ function SaveQuery({
           chart: dashboardPresentation
         };
         const reqBody = {
-          presentation: dashboardPresentation,
-          settings: JSON.stringify(settings),
+          settings,
           description: '',
           title,
           query_id: res.data.id

@@ -8,8 +8,12 @@ import {
   ACTIVE_DASHBOARD_CHANGE,
   DASHBOARD_UNIT_DATA_LOADED,
   DASHBOARD_CREATED,
-  DASHBOARD_DELETED
+  DASHBOARD_DELETED,
+  CARD_SIZE_CHANGED,
+  UNITS_ORDER_CHANGED,
+  DASHBOARD_UNMOUNTED
 } from '../types';
+import { getRearrangedData, cardClassNames } from './utils';
 
 const defaultState = {
   dashboards_loaded: 0,
@@ -39,7 +43,7 @@ export default function (state = defaultState, action) {
     case DASHBOARD_UNITS_LOADING_FAILED:
       return { ...state, activeDashboardUnits: { ...defaultState.activeDashboardUnits, error: true } };
     case DASHBOARD_UNITS_LOADED:
-      return { ...state, activeDashboardUnits: { ...defaultState.activeDashboardUnits, data: action.payload } };
+      return { ...state, activeDashboardUnits: { ...defaultState.activeDashboardUnits, data: getRearrangedData(action.payload, state.activeDashboard) } };
     case ACTIVE_DASHBOARD_CHANGE:
       return { ...state, activeDashboard: action.payload, activeDashboardUnits: { ...defaultState.activeDashboardUnits } };
     case DASHBOARD_UNIT_DATA_LOADED:
@@ -56,6 +60,41 @@ export default function (state = defaultState, action) {
         activeDashboard: newActiveDashboard
       };
     }
+    case CARD_SIZE_CHANGED: {
+      const unitIndex = state.activeDashboardUnits.data.findIndex(au => au.id === action.payload.unit.id);
+      const updatedUnit = {
+        ...action.payload.unit,
+        className: cardClassNames[action.payload.cardSize],
+        cardSize: action.payload.cardSize
+      }
+      return {
+        ...state,
+        activeDashboardUnits: {
+          ...state.activeDashboardUnits,
+          data: [
+            ...state.activeDashboardUnits.data.slice(0, unitIndex),
+            updatedUnit,
+            ...state.activeDashboardUnits.data.slice(unitIndex + 1)
+          ]
+        },
+        dashboards_loaded: state.dashboards_loaded + 1
+      }
+    }
+    case UNITS_ORDER_CHANGED: {
+      return {
+        ...state,
+        activeDashboardUnits: {
+          ...state.activeDashboardUnits,
+          data: [...action.payload]
+        },
+        dashboards_loaded: state.dashboards_loaded + 1
+      }
+    }
+    case DASHBOARD_UNMOUNTED:
+      return {
+        ...state,
+        activeDashboardUnits: { ...defaultState.activeDashboardUnits },
+      }
     default:
       return state;
   }

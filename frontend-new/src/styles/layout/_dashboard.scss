@@ -23,14 +23,12 @@
         .fa-widget-card--resize-container
         { 
             display: flex;
+            position: absolute;
         } 
     }
     .fa-widget-card--resize-container
     {  
         margin: auto;
-        position: absolute;
-        top: 0;  bottom: 0; right: -12px;
-        display: flex;
         justify-content: center;
         flex-direction: column;
         align-items: center;
