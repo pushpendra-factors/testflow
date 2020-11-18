@@ -21,7 +21,7 @@ function Dashboard() {
     return () => {
       dispatch({ type: DASHBOARD_UNMOUNTED });
     };
-  }, []);
+  }, [dispatch]);
 
   return (
     <>

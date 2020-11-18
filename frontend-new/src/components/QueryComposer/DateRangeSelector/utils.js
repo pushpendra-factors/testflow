@@ -173,19 +173,19 @@ export const WEB_ANALYTICS_DEFINED_DATE_RANGES = createStaticRanges([...DEFAULT_
 // updates the daterange with currentTime, if ovp true.
 // stored = { fr: UNIX_TIMESTAMP, to: UNIX_TIMESTAMP, ovp: true }
 // datepicker = [{ startDate: DATE, endDate: DATE, key: 'selected' }]
-export const getDateRangeFromStoredDateRange = (storedRange) => {
-  if (storedRange.ovp) {
-    const newInterval = slideUnixTimeWindowToCurrentTime(storedRange.fr, storedRange.to);
-    storedRange.fr = newInterval.from;
-    storedRange.to = newInterval.to;
-  }
+// export const getDateRangeFromStoredDateRange = (storedRange) => {
+//   if (storedRange.ovp) {
+//     const newInterval = slideUnixTimeWindowToCurrentTime(storedRange.fr, storedRange.to);
+//     storedRange.fr = newInterval.from;
+//     storedRange.to = newInterval.to;
+//   }
 
-  return [{
-    startDate: moment.unix(storedRange.fr).toDate(),
-    endDate: moment.unix(storedRange.to).toDate(),
-    key: 'selected'
-  }];
-};
+//   return [{
+//     startDate: moment.unix(storedRange.fr).toDate(),
+//     endDate: moment.unix(storedRange.to).toDate(),
+//     key: 'selected'
+//   }];
+// };
 
 export const readableDateRange = function (range) {
   const defaultRange = DEFAULT_DATE_RANGES.filter((rng) => {

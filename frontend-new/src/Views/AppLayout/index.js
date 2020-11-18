@@ -12,7 +12,7 @@ import { bindActionCreators } from 'redux';
 import {
   HashRouter, Route, Switch, useHistory
 } from 'react-router-dom';
-import { fetchProjects } from 'Reducers/agentActions';
+import { fetchProjects } from '../../reducers/agentActions';
 import { fetchQueries } from '../../reducers/coreQuery/services';
 import { fetchDashboards } from '../../reducers/dashboard/services';
 

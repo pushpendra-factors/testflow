@@ -3,7 +3,6 @@ import React from 'react';
 import {
   Layout
 } from 'antd';
-import Sidebar from '../../components/Sidebar';
 import TextLib from './TextLib';
 import ButtonLib from './ButtonLib';
 import ColorLib from './ColorLib';

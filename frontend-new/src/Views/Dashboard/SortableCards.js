@@ -29,6 +29,7 @@ function SortableCards() {
           <WidgetCard
             key={item.id}
             unit={{ ...item, query: savedQuery }}
+            onDrop={onDrop}
           />
         );
       })}

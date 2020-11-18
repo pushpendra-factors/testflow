@@ -7,18 +7,18 @@ import { Text } from '../../components/factorsComponents';
 import { RightOutlined, LeftOutlined } from '@ant-design/icons';
 import CardContent from './CardContent';
 import { useSelector, useDispatch } from 'react-redux';
-import { DASHBOARD_UNIT_DATA_LOADED, UNITS_ORDER_CHANGED } from '../../reducers/types';
+import { DASHBOARD_UNIT_DATA_LOADED } from '../../reducers/types';
 import { initialState } from '../CoreQuery/utils';
 import { runQuery, getFunnelData } from '../../reducers/coreQuery/services';
-import { cardClassNames, getRequestForNewState } from '../../reducers/dashboard/utils';
-import { updateDashboard } from '../../reducers/dashboard/services';
+import { cardClassNames } from '../../reducers/dashboard/utils';
 
 function WidgetCard({
-  unit
+  unit,
+  onDrop
 }) {
   const [resultState, setResultState] = useState(initialState);
   const { active_project } = useSelector(state => state.global);
-  const { activeDashboardUnits, activeDashboard } = useSelector(state => state.dashboard);
+  const { activeDashboardUnits } = useSelector(state => state.dashboard);
   const dispatch = useDispatch();
 
   const getData = useCallback(async (refresh = false) => {
@@ -99,10 +99,8 @@ function WidgetCard({
       cardSize
     };
     const newState = [...activeDashboardUnits.data.slice(0, unitIndex), updatedUnit, ...activeDashboardUnits.data.slice(unitIndex + 1)];
-    const body = getRequestForNewState(newState);
-    updateDashboard(active_project.id, activeDashboard.id, { units_position: body });
-    dispatch({ type: UNITS_ORDER_CHANGED, payload: newState });
-  }, [unit, dispatch]);
+    onDrop(newState)
+  }, [unit, activeDashboardUnits.data, onDrop]);
 
   const { dashboards_loaded } = useSelector(state => state.dashboard);
 
