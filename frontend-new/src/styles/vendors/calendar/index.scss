@@ -38,30 +38,36 @@
     }
 }
 
+.rdrDay {
+    justify-content: center;
+    display: flex;
+}
 
-
-.rdrInRange + span {
-    background: #EEEDF8;
-    span {color: #5949BC;}
+.rdrDayNumber {
+    width: 40px;
     padding: 10px 0;
 }
 
-.rdrStartEdge + span {
+
+.rdrInRange + .rdrDayNumber {
+    background: #EEEDF8;
+    span {color: #5949BC;}
+}
+
+.rdrStartEdge + .rdrDayNumber {
     background: #5949BC;
     span {color: white;}
     border-radius: 25px;
-    padding: 10px 0;
 }
 
-// .rdrDayHovered{
-//     .rdrStartEdge + span {
-//         background: #5949BC;
-//         span {color: white;}
-//         border-radius: 100px;
-//         padding: 5px;
-//     }
+.rdrDayHovered{
+    .rdrDayNumber {
+        background: #5949BC;
+        span {color: white;}
+        border-radius: 25px;
+    }
     
-// }
+}
 
 .rdrEndEdge {
     @extend .rdrStartEdge;

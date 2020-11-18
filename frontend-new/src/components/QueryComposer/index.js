@@ -14,7 +14,8 @@ import DateRangeSelector from './DateRangeSelector';
 
 import {
   DEFAULT_DATE_RANGE,
-  DEFINED_DATE_RANGES
+  DEFINED_DATE_RANGES,
+  readableDateRange
 } from './DateRangeSelector/utils';
 
 import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
@@ -52,6 +53,10 @@ function QueryComposer({
       }
     });
   }, [queries]);
+
+  useEffect(() => {
+    convertToDateRange();
+  }, [queryOptions])
 
   const queryList = () => {
     const blockList = [];
@@ -202,11 +207,15 @@ function QueryComposer({
     if (dates && dates.selected) {
       queryOptionsState.date_range.from = dates.selected.startDate;
       queryOptionsState.date_range.to = dates.selected.endDate;
-      setCalendarLabel(dates.selected.label);
       setQueryOptions(queryOptionsState);
     }
     setDateRangeVisibile(false);
   };
+
+  const convertToDateRange = () => {
+    const range = getDateRange();
+    setCalendarLabel(readableDateRange(range[0]));
+  }
 
   const handleRunQuery = useCallback(() => {
     if (queryType === 'event') {
