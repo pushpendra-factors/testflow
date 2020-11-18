@@ -188,9 +188,21 @@ export const getDateRangeFromStoredDateRange = (storedRange) => {
 };
 
 export const readableDateRange = function (range) {
+
+
+  const defaultRange = DEFAULT_DATE_RANGES.filter((rng) => {
+    const rngDates = rng.range();
+    return (rngDates.startDate.toString() === range.startDate.toString()) 
+      && 
+      (rngDates.endDate.toString() === range.endDate.toString())
+  });
+  if(defaultRange.length) {
+    return defaultRange[0].label;
+  }
+
   // Use label for default date range.
-  if (range.startDate.toString() ===  DEFAULT_DATE_RANGE.startDate .toString()
-  && range.endDate.toString() === DEFAULT_DATE_RANGE.endDate.toString()) { return DEFAULT_DATE_RANGE.label; }
+  // if (range.startDate.toString() ===  DEFAULT_DATE_RANGE.startDate .toString()
+  // && range.endDate.toString() === DEFAULT_DATE_RANGE.endDate.toString()) { return DEFAULT_DATE_RANGE.label; }
 
   return moment(range.startDate).format('MMM DD, YYYY') + ' - ' +
       moment(range.endDate).format('MMM DD, YYYY');

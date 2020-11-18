@@ -3,7 +3,6 @@ import styles from './index.module.scss';
 import { DateRangePicker } from 'react-date-range';
 import moment from 'moment';
 import {
-  DEFAULT_DATE_RANGE,
   DEFINED_DATE_RANGES
 } from './utils';
 
@@ -13,9 +12,6 @@ const DateRangeSelector = ({
   inputRanges, minDate, maxDate, closeDatePicker, pickerVisible
 }) => {
   const onChange = (dates) => {
-    // console.log(staticRanges);
-    // console.log(inputRanges);
-    // console.log(dates);
     setDates(dates);
   };
 
