@@ -116,5 +116,5 @@ export const getDateBasedTableData = (labels, data, breakdown, searchText, curre
     });
     return obj;
   });
-  return SortData(result, currentSorter.key, currentSorter.order);;
+  return SortData(result, currentSorter.key, currentSorter.order); ;
 };

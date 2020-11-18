@@ -19,9 +19,9 @@ function Dashboard() {
 
   useEffect(() => {
     return () => {
-      dispatch({ type: DASHBOARD_UNMOUNTED })
-    }
-  }, [])
+      dispatch({ type: DASHBOARD_UNMOUNTED });
+    };
+  }, []);
 
   return (
     <>

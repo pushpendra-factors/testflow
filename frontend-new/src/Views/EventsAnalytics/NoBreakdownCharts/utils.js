@@ -128,6 +128,6 @@ export const getNoGroupingTablularDatesBasedData = (data, currentSorter, searchT
       ...eventsData
     };
   });
-  
+
   return SortData(result, currentSorter.key, currentSorter.order);
 };

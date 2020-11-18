@@ -222,8 +222,8 @@ const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
 const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
   const differentDates = new Set();
   userData.rows.forEach(ud => {
-    differentDates.add(ud[0])
-  })
+    differentDates.add(ud[0]);
+  });
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(elem.length - 1).map((e) => {
       if (!e || !sessionData.rows[0][1]) return e;
@@ -310,4 +310,4 @@ export const SortData = (arr, key, order) => {
     return 0;
   });
   return result;
-}
+};

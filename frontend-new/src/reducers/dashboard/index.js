@@ -66,7 +66,7 @@ export default function (state = defaultState, action) {
         ...action.payload.unit,
         className: cardClassNames[action.payload.cardSize],
         cardSize: action.payload.cardSize
-      }
+      };
       return {
         ...state,
         activeDashboardUnits: {
@@ -78,7 +78,7 @@ export default function (state = defaultState, action) {
           ]
         },
         dashboards_loaded: state.dashboards_loaded + 1
-      }
+      };
     }
     case UNITS_ORDER_CHANGED: {
       return {
@@ -88,13 +88,13 @@ export default function (state = defaultState, action) {
           data: [...action.payload]
         },
         dashboards_loaded: state.dashboards_loaded + 1
-      }
+      };
     }
     case DASHBOARD_UNMOUNTED:
       return {
         ...state,
-        activeDashboardUnits: { ...defaultState.activeDashboardUnits },
-      }
+        activeDashboardUnits: { ...defaultState.activeDashboardUnits }
+      };
     default:
       return state;
   }

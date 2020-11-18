@@ -1,4 +1,6 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, {
+  useRef, useEffect, useCallback, useState
+} from 'react';
 import * as d3 from 'd3';
 import { Text } from '../../components/factorsComponents';
 // import { FullscreenOutlined, RightOutlined, LeftOutlined } from '@ant-design/icons';
@@ -10,98 +12,97 @@ import { initialState } from '../CoreQuery/utils';
 import { runQuery, getFunnelData } from '../../reducers/coreQuery/services';
 
 function WidgetCard({
-	unit,
+  unit
 }) {
-	const [resultState, setResultState] = useState(initialState);
-	const { active_project } = useSelector(state => state.global);
-	const dispatch = useDispatch();
+  const [resultState, setResultState] = useState(initialState);
+  const { active_project } = useSelector(state => state.global);
+  const dispatch = useDispatch();
 
-	const getData = useCallback(async (refresh = false) => {
-		try {
-			setResultState({
-				...initialState,
-				loading: true
-			});
+  const getData = useCallback(async (refresh = false) => {
+    try {
+      setResultState({
+        ...initialState,
+        loading: true
+      });
 
-			if (unit.query.query.query_group) {
-				let res;
-				if (refresh) {
-					res = await runQuery(active_project.id, unit.query.query.query_group);
-				} else {
-					res = await runQuery(active_project.id, unit.query.query.query_group, { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
-				}
-				let resultantData = null;
-				if (res.data.result) {
-					// cached data
-					resultantData = res.data.result.result_group[0];
-				} else {
-					// refreshed data
-					resultantData = res.data.result_group[0];
-				}
-				setResultState({
-					...initialState,
-					data: resultantData
-				});
-			} else {
-				let res;
-				if (refresh) {
-					res = await getFunnelData(active_project.id, unit.query.query);
-				} else {
-					res = await getFunnelData(active_project.id, unit.query.query, { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
-				}
-				let resultantData = null;
-				if (res.data.result) {
-					// cached data
-					resultantData = res.data.result;
-				} else {
-					// refreshed data
-					resultantData = res.data;
-				}
-				setResultState({
-					...initialState,
-					data: resultantData
-				});
-				setTimeout(() => {
-					dispatch({ type: DASHBOARD_UNIT_DATA_LOADED, payload: unit.id })
-				}, 1000);
-			}
-		} catch (err) {
-			console.log(err);
-			console.log(err.response);
-			setResultState({
-				...initialState,
-				error: true
-			});
-		}
-	}, [active_project.id, unit.query, unit.dashboard_id, unit.id, dispatch]);
+      if (unit.query.query.query_group) {
+        let res;
+        if (refresh) {
+          res = await runQuery(active_project.id, unit.query.query.query_group);
+        } else {
+          res = await runQuery(active_project.id, unit.query.query.query_group, { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
+        }
+        let resultantData = null;
+        if (res.data.result) {
+          // cached data
+          resultantData = res.data.result.result_group[0];
+        } else {
+          // refreshed data
+          resultantData = res.data.result_group[0];
+        }
+        setResultState({
+          ...initialState,
+          data: resultantData
+        });
+      } else {
+        let res;
+        if (refresh) {
+          res = await getFunnelData(active_project.id, unit.query.query);
+        } else {
+          res = await getFunnelData(active_project.id, unit.query.query, { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
+        }
+        let resultantData = null;
+        if (res.data.result) {
+          // cached data
+          resultantData = res.data.result;
+        } else {
+          // refreshed data
+          resultantData = res.data;
+        }
+        setResultState({
+          ...initialState,
+          data: resultantData
+        });
+        setTimeout(() => {
+          dispatch({ type: DASHBOARD_UNIT_DATA_LOADED, payload: unit.id });
+        }, 1000);
+      }
+    } catch (err) {
+      console.log(err);
+      console.log(err.response);
+      setResultState({
+        ...initialState,
+        error: true
+      });
+    }
+  }, [active_project.id, unit.query, unit.dashboard_id, unit.id, dispatch]);
 
-	useEffect(() => {
-		getData();
-	}, [getData]);
+  useEffect(() => {
+    getData();
+  }, [getData]);
 
+  const positionResizeContainer = useCallback(() => {
+    const parentPositions = d3.select(`#card-${unit.id}`).node().getBoundingClientRect();
+    d3.select(`#resize-${unit.id}`).style('left', parentPositions.right - 10 + 'px');
+    const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
+    d3.select(`#resize-${unit.id}`).style('top', parentPositions.top + (parentPositions.height / 2) - 10 + scrollTop + 'px');
+  }, [unit.id]);
 
-	const positionResizeContainer = useCallback(() => {
-		const parentPositions = d3.select(`#card-${unit.id}`).node().getBoundingClientRect();
-		d3.select(`#resize-${unit.id}`).style('left', parentPositions.right - 10 + 'px');
-		const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
-		d3.select(`#resize-${unit.id}`).style('top', parentPositions.top + (parentPositions.height / 2) - 10 + scrollTop + 'px');
-	}, [unit.id]);
+  const changeCardSize = useCallback((cardSize) => {
+    dispatch({ type: CARD_SIZE_CHANGED, payload: { unit, cardSize } });
+  }, [unit, dispatch]);
 
-	const changeCardSize = useCallback((cardSize) => {
-		dispatch({ type: CARD_SIZE_CHANGED, payload: { unit, cardSize } });
-	}, [unit, dispatch]);
+  const { dashboards_loaded } = useSelector(state => state.dashboard);
 
-	const { dashboards_loaded } = useSelector(state => state.dashboard);
+  const cardRef = useRef();
 
-	const cardRef = useRef();
+  useEffect(() => {
+    setTimeout(() => {
+      positionResizeContainer();
+    }, 0);
+  }, [dashboards_loaded, positionResizeContainer]);
 
-	useEffect(() => {
-		setTimeout(() => {
-			positionResizeContainer();
-		}, 0)
-	}, [dashboards_loaded, positionResizeContainer]);
-
-	return (
+  return (
 		<div className={`${unit.title} ${unit.className} py-4 px-2`} >
 			<div id={`card-${unit.id}`} ref={cardRef} style={{ transition: 'all 0.1s' }} className={'fa-dashboard--widget-card w-full'}>
 				<div id={`resize-${unit.id}`} className={'fa-widget-card--resize-container'}>
@@ -133,7 +134,7 @@ function WidgetCard({
 			</div>
 		</div>
 
-	);
+  );
 }
 
 export default React.memo(WidgetCard);

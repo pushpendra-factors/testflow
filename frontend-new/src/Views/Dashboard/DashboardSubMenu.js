@@ -1,19 +1,19 @@
 import React from 'react';
 import {
-    Button, Select
+  Button, Select
 } from 'antd';
 import { Text } from '../../components/factorsComponents';
 import {
-    LockOutlined, ReloadOutlined, UserAddOutlined, MoreOutlined, EditOutlined, UnlockOutlined
+  LockOutlined, ReloadOutlined, UserAddOutlined, MoreOutlined, EditOutlined, UnlockOutlined
 } from '@ant-design/icons';
 
 const { Option } = Select;
 
 function DashboardSubMenu({ dashboard, handleEditClick }) {
-    let btn = null;
+  let btn = null;
 
-    if (dashboard.type === 'pr') {
-        btn = (
+  if (dashboard.type === 'pr') {
+    btn = (
             <Button
                 style={{ display: 'flex' }}
                 size={'large'}
@@ -22,9 +22,9 @@ function DashboardSubMenu({ dashboard, handleEditClick }) {
             >
                 <UnlockOutlined /> Public.
             </Button>
-        );
-    } else {
-        btn = (
+    );
+  } else {
+    btn = (
             <Button
                 style={{ display: 'flex' }}
                 size={'large'}
@@ -33,10 +33,10 @@ function DashboardSubMenu({ dashboard, handleEditClick }) {
             >
                 <LockOutlined /> Private.
             </Button>
-        );
-    }
+    );
+  }
 
-    return (
+  return (
         <div className={'flex justify-between items-center px-4 mb-4'}>
             <div className={'flex justify-between items-center'}>
                 <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>Date from</Text>
@@ -57,7 +57,7 @@ function DashboardSubMenu({ dashboard, handleEditClick }) {
 
             </div>
         </div>
-    );
+  );
 };
 
 export default DashboardSubMenu;

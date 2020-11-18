@@ -59,7 +59,7 @@ export const getDataInTableFormat = (data, columns, searchText, currentSorter) =
     });
     return { ...obj, 'Event Count': d.value, index };
   });
-  
+
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 

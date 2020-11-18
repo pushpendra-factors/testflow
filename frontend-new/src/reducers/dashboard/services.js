@@ -1,4 +1,6 @@
-import { get, getHostUrl, post, del, put } from '../../utils/request';
+import {
+  get, getHostUrl, post, del, put
+} from '../../utils/request';
 import {
   DASHBOARDS_LOADED,
   DASHBOARD_UNITS_LOADING_FAILED,
@@ -57,4 +59,4 @@ export const deleteDashboard = (projectId, dashboardId) => {
 export const updateDashboard = (projectId, dashboardId, body) => {
   const url = host + 'projects/' + projectId + '/dashboards/' + dashboardId;
   return put(null, url, body);
-}
+};

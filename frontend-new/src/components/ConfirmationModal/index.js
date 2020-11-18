@@ -5,7 +5,7 @@ import {
 import { Text } from '../factorsComponents';
 
 function ConfirmationModal({
-  visible, confirmationText, onOk, onCancel, title, width, cancelText, okText, confirmLoading 
+  visible, confirmationText, onOk, onCancel, title, width, cancelText, okText, confirmLoading
 }) {
   return (
     <Modal
