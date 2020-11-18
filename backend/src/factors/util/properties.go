@@ -220,6 +220,7 @@ var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
 var UP_SESSION_COUNT string = "$session_count"
 var UP_PAGE_COUNT string = "$page_count"
 var UP_TOTAL_SPENT_TIME string = "$session_spent_time" // unit:seconds
+var UP_META_OBJECT_IDENTIFIER_KEY = "$identifiers"
 
 var UP_LATEST_PAGE_URL string = "$latest_page_url"
 var UP_LATEST_PAGE_DOMAIN string = "$latest_page_domain"
@@ -673,6 +674,7 @@ var DISABLED_CORE_QUERY_USER_PROPERTIES = [...]string{
 	UP_DEVICE_ID,
 	UP_MERGE_TIMESTAMP,
 	UP_INITIAL_PAGE_EVENT_ID,
+	UP_META_OBJECT_IDENTIFIER_KEY,
 }
 
 // DISABLED_CORE_QUERY_EVENT_PROPERTIES Less important event properties in core query context.
@@ -705,6 +707,7 @@ var DISABLED_FACTORS_USER_PROPERTIES = [...]string{
 	UP_INITIAL_REFERRER,
 	UP_MERGE_TIMESTAMP,
 	UP_INITIAL_PAGE_EVENT_ID,
+	UP_META_OBJECT_IDENTIFIER_KEY,
 }
 
 // DISABLED_FACTORS_EVENT_PROPERTIES Event properties disabled for the factors analysis.

@@ -237,7 +237,7 @@ func buildUserCreatedEvent(projectID uint64, properties map[string]interface{}, 
 		customerUserId := getPhoneNoAsCustomerUserId(properties["SF_Mobile"].(string))
 
 		status, _ = SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userId, CustomerUserId: customerUserId})
+			UserId: userId, CustomerUserId: customerUserId}, false)
 		if status != http.StatusOK {
 			return errors.New(fmt.Sprintf("Failed to identify user %s", customerUserId))
 		}

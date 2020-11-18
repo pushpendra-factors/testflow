@@ -32,13 +32,13 @@ type DashboardUnit struct {
 }
 
 type DashboardUnitRequestPayload struct {
-	Title        string          `json:"title"`
-	Description  string          `json:"description"`
-	Presentation string          `json:"presentation"`
-  // TODO (Anil) remove this field once we move to saved queries
-	Query        *postgres.Jsonb `json:"query"`
-	QueryId      uint64          `json:"query_id"`
-	Settings     *postgres.Jsonb `json:"settings"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	Presentation string `json:"presentation"`
+	// TODO (Anil) remove this field once we move to saved queries
+	Query    *postgres.Jsonb `json:"query"`
+	QueryId  uint64          `json:"query_id"`
+	Settings *postgres.Jsonb `json:"settings"`
 }
 
 type DashboardCacheResult struct {
@@ -187,6 +187,16 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 			return nil, errCode, errMsg
 		}
 		dashboardUnit.QueryId = query.ID
+	} else {
+		// Todo (Anil) for new UI requests, fill up Query using queryId for backward compatibility
+		query, errCode := GetQueryForProjectByQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+		// skip if error exists
+		if errCode == http.StatusFound {
+			queryJsonb, err := U.EncodeStructTypeToPostgresJsonb((*query).Query)
+			if err == nil {
+				dashboardUnit.Query = *queryJsonb
+			}
+		}
 	}
 	dashboardUnit.ProjectID = projectId
 	if err := db.Create(dashboardUnit).Error; err != nil {
@@ -251,7 +261,26 @@ func GetDashboardUnitsForProjectID(projectID uint64) ([]DashboardUnit, int) {
 		log.WithError(err).Errorf("Failed to get dashboard units for projectID %d", projectID)
 		return dashboardUnits, http.StatusInternalServerError
 	}
+
+	dashboardUnits = fillQueryInDashboardUnits(dashboardUnits)
+
 	return dashboardUnits, http.StatusFound
+}
+
+// Todo (Anil) Remove: Adding query using queryId for units from new UI
+// fillQueryInDashboardUnits updates unit.Query by fetching query using queryId
+func fillQueryInDashboardUnits(units []DashboardUnit) []DashboardUnit {
+
+	for i, unit := range units {
+		query, errCode := GetQueryForProjectByQueryId(unit.ProjectID, unit.QueryId)
+		if errCode == http.StatusFound {
+			queryJsonb, err := U.EncodeStructTypeToPostgresJsonb((*query).Query)
+			if err == nil {
+				units[i].Query = *queryJsonb
+			}
+		}
+	}
+	return units
 }
 
 func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) ([]DashboardUnit, int) {
@@ -273,6 +302,8 @@ func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) (
 		log.WithField("project_id", projectId).WithError(err).Error("Failed to get dashboard units.")
 		return dashboardUnits, http.StatusInternalServerError
 	}
+
+	dashboardUnits = fillQueryInDashboardUnits(dashboardUnits)
 
 	return dashboardUnits, http.StatusFound
 }
@@ -308,6 +339,8 @@ func GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID u
 	if len(dashboardUnits) == 0 {
 		return dashboardUnits, http.StatusNotFound
 	}
+
+	dashboardUnits = fillQueryInDashboardUnits(dashboardUnits)
 
 	return dashboardUnits, http.StatusFound
 }

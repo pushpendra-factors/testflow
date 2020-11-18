@@ -353,7 +353,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 				UserId:         user.ID,
 				CustomerUserId: event.UserId,
 				Timestamp:      requestTimestamp,
-			})
+			}, false)
 		// Log and continue to track, if identification fails.
 		if status != http.StatusOK {
 			logCtx.WithField("customer_user_id", event.UserId).

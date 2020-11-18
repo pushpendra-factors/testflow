@@ -389,7 +389,7 @@ func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user)
 	assert.Empty(t, user.CustomerUserId)
-	status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user.ID, CustomerUserId: customerUserID})
+	status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user.ID, CustomerUserId: customerUserID}, false)
 	assert.Equal(t, http.StatusOK, status)
 	user, errCode = M.GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -421,7 +421,7 @@ func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user3)
 	assert.Equal(t, user1.ID, user3.ID)
-	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user3.ID, CustomerUserId: custId})
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user3.ID, CustomerUserId: custId}, false)
 	assert.Equal(t, http.StatusOK, status)
 	user3, errCode = M.GetUser(project.ID, user3.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -459,7 +459,7 @@ func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	// new user with new seg_aid and identified with cuid.
 	assert.Equal(t, segAid2, user7.SegmentAnonymousId)
-	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user7.ID, CustomerUserId: custId2})
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user7.ID, CustomerUserId: custId2}, false)
 	assert.Equal(t, http.StatusOK, status)
 	user7, errCode = M.GetUser(project.ID, user7.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -582,14 +582,12 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 			U.UP_EMAIL: "xxx@example.com",
 			U.UP_PHONE: "99999999999",
 		}
-		newProperties := U.PropertiesMap{"plan": "enterprise"}
-		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
-			user.ID, &newProperties, &formSubmitProperties)
+		customerUserId, formSubmitUserProperties, errCode := M.GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
+			user.ID, &formSubmitProperties)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "xxx@example.com", customerUserId)
-		assert.Equal(t, "xxx@example.com", newProperties[U.UP_EMAIL])
-		assert.Equal(t, "99999999999", newProperties[U.UP_PHONE])
-		assert.Equal(t, "enterprise", newProperties["plan"])
+		assert.Equal(t, "xxx@example.com", (*formSubmitUserProperties)[U.UP_EMAIL])
+		assert.Equal(t, "99999999999", (*formSubmitUserProperties)[U.UP_PHONE])
 	})
 
 	t.Run("FormSubmitWithEmailAndUserPropertiesWithSameEmail", func(t *testing.T) {
@@ -601,17 +599,15 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 			U.UP_PHONE:   "99999999999",
 			U.UP_COMPANY: "Example Inc",
 		}
-		newProperties := U.PropertiesMap{"plan": "enterprise"}
-		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
-			user.ID, &newProperties, &formSubmitProperties)
+		customerUserId, formSubmitUserProperties, errCode := M.GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
+			user.ID, &formSubmitProperties)
 		assert.Equal(t, http.StatusOK, errCode)
 		// Should add phone and other properties from
 		// form submit as email matches.
 		assert.Equal(t, "xxx@example.com", customerUserId)
-		assert.Equal(t, "xxx@example.com", newProperties[U.UP_EMAIL])
-		assert.Equal(t, "99999999999", newProperties[U.UP_PHONE])
-		assert.Equal(t, "Example Inc", newProperties[U.UP_COMPANY])
-		assert.Equal(t, "enterprise", newProperties["plan"])
+		assert.Equal(t, "xxx@example.com", (*formSubmitUserProperties)[U.UP_EMAIL])
+		assert.Equal(t, "99999999999", (*formSubmitUserProperties)[U.UP_PHONE])
+		assert.Equal(t, "Example Inc", (*formSubmitUserProperties)[U.UP_COMPANY])
 	})
 
 	t.Run("FormSubmitWithEmailAndUserPropertiesWithDifferentEmail", func(t *testing.T) {
@@ -623,17 +619,12 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 			U.UP_PHONE:   "99999999999",
 			U.UP_COMPANY: "Example Inc",
 		}
-		newProperties := U.PropertiesMap{}
-		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
-			user.ID, &newProperties, &formSubmitProperties)
+		customerUserId, formSubmitUserProperties, errCode := M.GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
+			user.ID, &formSubmitProperties)
+		// free email overwrite will be avoided
 		assert.Equal(t, http.StatusBadRequest, errCode)
 		assert.Equal(t, "", customerUserId)
-		// Should not add user properties as email is different
-		// from existing properties.
-		assert.Equal(t, "", customerUserId)
-		assert.Nil(t, newProperties[U.UP_EMAIL])
-		assert.Nil(t, newProperties[U.UP_PHONE])
-		assert.Nil(t, newProperties[U.UP_COMPANY])
+		assert.Nil(t, formSubmitUserProperties)
 	})
 
 	t.Run("FormSubmitWithPhoneAndUserPropertiesWithSamePhone", func(t *testing.T) {
@@ -645,16 +636,14 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 			U.UP_PHONE:   "99999999999",
 			U.UP_COMPANY: "Example Inc",
 		}
-		newProperties := U.PropertiesMap{"plan": "enterprise"}
-		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
-			user.ID, &newProperties, &formSubmitProperties)
+		customerUserId, formSubmitUserProperties, errCode := M.GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
+			user.ID, &formSubmitProperties)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "99999999999", customerUserId)
 		// Should add all other properties from form submit as phone matches.
-		assert.Equal(t, "xxx@example.com", newProperties[U.UP_EMAIL])
-		assert.Equal(t, "99999999999", newProperties[U.UP_PHONE])
-		assert.Equal(t, "Example Inc", newProperties[U.UP_COMPANY])
-		assert.Equal(t, "enterprise", newProperties["plan"])
+		assert.Equal(t, "xxx@example.com", (*formSubmitUserProperties)[U.UP_EMAIL])
+		assert.Equal(t, "99999999999", (*formSubmitUserProperties)[U.UP_PHONE])
+		assert.Equal(t, "Example Inc", (*formSubmitUserProperties)[U.UP_COMPANY])
 	})
 
 	t.Run("FormSubmitWithPhoneAndUserPropertiesWithDifferentPhone", func(t *testing.T) {
@@ -666,15 +655,12 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 			U.UP_PHONE:   "8888888888",
 			U.UP_COMPANY: "Example Inc",
 		}
-		newProperties := U.PropertiesMap{}
-		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
-			user.ID, &newProperties, &formSubmitProperties)
+		customerUserId, formSubmitUserProperties, errCode := M.GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
+			user.ID, &formSubmitProperties)
 		assert.Equal(t, http.StatusBadRequest, errCode)
 		// Should add all other properties from form submit as phone matches.
 		assert.Equal(t, "", customerUserId)
-		assert.Nil(t, newProperties[U.UP_EMAIL])
-		assert.Nil(t, newProperties[U.UP_PHONE])
-		assert.Nil(t, newProperties[U.UP_COMPANY])
+		assert.Nil(t, formSubmitUserProperties)
 	})
 
 	t.Run("FormSubmitWithCaseSensitiveEmailAndLeadingZeroPhoneNo", func(t *testing.T) {
@@ -686,18 +672,17 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 			U.UP_COMPANY: "Example Inc",
 		}
 
-		newProperties := U.PropertiesMap{}
-		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
-			user.ID, &newProperties, &formSubmitProperties)
+		customerUserId, formSubmitUserProperties, errCode := M.GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
+			user.ID, &formSubmitProperties)
 		assert.Equal(t, http.StatusOK, errCode)
 
 		// email translated to lower case
 		assert.Equal(t, "xyz@example.com", customerUserId)
 		// Should add all other properties from form submit as phone matches.
-		assert.Equal(t, "xyz@example.com", newProperties[U.UP_EMAIL])
+		assert.Equal(t, "xyz@example.com", (*formSubmitUserProperties)[U.UP_EMAIL])
 		// sanatized phone number
-		assert.Equal(t, "123456789", newProperties[U.UP_PHONE])
-		assert.Equal(t, "Example Inc", newProperties[U.UP_COMPANY])
+		assert.Equal(t, "123456789", (*formSubmitUserProperties)[U.UP_PHONE])
+		assert.Equal(t, "Example Inc", (*formSubmitUserProperties)[U.UP_COMPANY])
 	})
 
 }

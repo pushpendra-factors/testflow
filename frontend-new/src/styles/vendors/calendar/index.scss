@@ -22,6 +22,7 @@
 
 .rdrCalendarWrapper {
     width: 500px;
+    padding: 25px;
 }
 
 .rdrMonth {
@@ -44,27 +45,40 @@
 }
 
 .rdrDayNumber {
-    width: 40px;
-    padding: 10px 0;
+    width: 100%;
+    
+    span {
+        display: inline-block;
+        padding: 10px 0;
+        width: 40px
+    }
 }
 
 
 .rdrInRange + .rdrDayNumber {
     background: #EEEDF8;
-    span {color: #5949BC;}
+    span {
+        color: #5949BC;
+    }
 }
 
 .rdrStartEdge + .rdrDayNumber {
-    background: #5949BC;
-    span {color: white;}
-    border-radius: 25px;
+    
+    span {
+        background: #5949BC;
+        color: white;
+        border-radius: 25px;
+    }
+    
 }
 
 .rdrDayHovered{
     .rdrDayNumber {
-        background: #5949BC;
-        span {color: white;}
-        border-radius: 25px;
+        span {
+            background: #5949BC;
+            color: white;
+            border-radius: 25px;
+        }
     }
     
 }

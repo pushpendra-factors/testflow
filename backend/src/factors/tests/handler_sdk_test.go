@@ -792,7 +792,7 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 			CustomerUserId: customerUserID,
 			JoinTimestamp:  timestamp,
 		}
-		status, response := SDK.Identify(project.ID, payload)
+		status, response := SDK.Identify(project.ID, payload, false)
 		assert.Equal(t, http.StatusOK, status)
 		assert.Equal(t, userID, response.UserId)
 		user, _ := M.GetUser(project.ID, response.UserId)
@@ -812,7 +812,7 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 			CustomerUserId: customerUserID,
 			JoinTimestamp:  timestamp,
 		}
-		status, response := SDK.Identify(project.ID, payload)
+		status, response := SDK.Identify(project.ID, payload, false)
 		assert.Equal(t, http.StatusOK, status)
 		assert.Equal(t, userID2, response.UserId)
 		user, _ := M.GetUser(project.ID, response.UserId)
@@ -829,7 +829,7 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 			CreateUser:     false,
 			CustomerUserId: customerUserId,
 		}
-		status, response := SDK.Identify(project.ID, payload)
+		status, response := SDK.Identify(project.ID, payload, false)
 		assert.Equal(t, http.StatusOK, status)
 		// Should use the existing user.
 		assert.Empty(t, response.UserId)
@@ -1143,6 +1143,152 @@ func TestTrackHandlerWithFormSubmit(t *testing.T) {
 	assert.Equal(t, "xxx@example.com", user.CustomerUserId)
 }
 
+func TestTrackHandlerFormSubmitWithUserAlreadyIdentfiedBySDKRequest(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user.ID)
+
+	identifyURI := "/sdk/user/identify"
+	customerUserID := U.RandomLowerAphaNumString(15)
+	w := ServePostRequestWithHeaders(r, identifyURI, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
+		customerUserID, user.ID)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	user, errCode = M.GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, customerUserID, user.CustomerUserId)
+	userProperties, errCode := M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
+	metaObj := M.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	assert.NotNil(t, (*metaObj)[customerUserID])
+	assert.NotEqual(t, "", (*metaObj)[customerUserID].Source)
+	assert.Equal(t, "", (*metaObj)[customerUserID].PageURL)
+
+	// track form submit event with differe customer_user_id.
+	trackURI := "/sdk/event/track"
+	w = ServePostRequestWithHeaders(r, trackURI,
+		[]byte(fmt.Sprintf(`{"event_name": "%s","user_id":"%s", "event_properties": {"$email": "xxx@business.com", "$company": "Example Inc"}}`,
+			U.EVENT_NAME_FORM_SUBMITTED, user.ID)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	user, errCode = M.GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	// shouldn't overwrite the user identified by sdk identify request
+	assert.Equal(t, customerUserID, user.CustomerUserId)
+}
+
+func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// track form submit event with free email.
+	w := ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"$email": "xxx@gmail.com", "$company": "Example Inc"}}`,
+			U.EVENT_NAME_FORM_SUBMITTED)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	assert.NotNil(t, responseMap["user_id"])
+	userId := responseMap["user_id"].(string)
+
+	user, errCode := M.GetUser(project.ID, userId)
+	assert.Equal(t, http.StatusFound, errCode)
+	userPropertiesMap, errCode := M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, "xxx@gmail.com", (*userPropertiesMap)[U.UP_EMAIL])
+	assert.Equal(t, "Example Inc", (*userPropertiesMap)[U.UP_COMPANY])
+	assert.Equal(t, "xxx@gmail.com", user.CustomerUserId)
+	metaObj := M.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaData, ok := (*metaObj)["xxx@gmail.com"]
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "sdk_event_track", metaData.Source)
+	assert.NotEqual(t, 0, metaData.Timestamp)
+
+	// form submit by same user with different free email
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s","user_id":"%s", "event_properties": {"$email": "yyy@gmail.com", "$company": "Example Inc","$name":"username"}}`,
+			U.EVENT_NAME_FORM_SUBMITTED, userId)), map[string]string{"Authorization": project.Token})
+	userId = responseMap["user_id"].(string)
+	user, _ = M.GetUser(project.ID, userId)
+	assert.Equal(t, "xxx@gmail.com", user.CustomerUserId)
+	assert.Nil(t, (*userPropertiesMap)["$name"])
+	metaObj = M.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	_, ok = (*metaObj)["yyy@gmail.com"]
+	assert.Equal(t, false, ok)
+
+	// form submit by same user with business email
+	currentTime := time.Now().Unix()
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s","user_id":"%s","timestamp":%d, "event_properties": {"$email": "yyy@business.com", "$company": "Example Inc", "$page_url":"www.test.com/new1"}}`,
+			U.EVENT_NAME_FORM_SUBMITTED, userId, currentTime)), map[string]string{"Authorization": project.Token})
+	userId = responseMap["user_id"].(string)
+	user, _ = M.GetUser(project.ID, userId)
+	assert.Equal(t, "yyy@business.com", user.CustomerUserId)
+	userPropertiesMap, errCode = M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, (*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY])
+	metaObj = M.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaData, ok = (*metaObj)["yyy@business.com"]
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "www.test.com/new1", metaData.PageURL)
+	assert.Equal(t, "sdk_event_track", metaData.Source)
+	assert.Equal(t, currentTime, metaData.Timestamp)
+
+	// 3rd form submit with different business email, with properties
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s","user_id":"%s", "event_properties": {"$email": "yyz@business.com", "$company": "Example Inc2","$name":"username2"}}`,
+			U.EVENT_NAME_FORM_SUBMITTED, userId)), map[string]string{"Authorization": project.Token})
+	user, _ = M.GetUser(project.ID, userId)
+	assert.Equal(t, "yyz@business.com", user.CustomerUserId)
+	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, "Example Inc2", (*userPropertiesMap)["$company"])
+	assert.Equal(t, "username2", (*userPropertiesMap)["$name"])
+	assert.NotNil(t, (*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY])
+	metaObj = M.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	_, ok = (*metaObj)["xxx@gmail.com"]
+	assert.Equal(t, true, ok)
+	_, ok = (*metaObj)["yyy@business.com"]
+	assert.Equal(t, true, ok)
+
+	/* form submit with free email and other properties,
+	should avoid overwriting with free email properties to user_properties
+	*/
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s","user_id":"%s", "event_properties": {"$email": "yyz@example.com", "$company": "Example Inc2","$name":"username3"}}`,
+			U.EVENT_NAME_FORM_SUBMITTED, userId)), map[string]string{"Authorization": project.Token})
+	user, _ = M.GetUser(project.ID, userId)
+	assert.Equal(t, "yyz@business.com", user.CustomerUserId)
+	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	// should not overwrite previous user_properties on overwrite failure
+	assert.Equal(t, "Example Inc2", (*userPropertiesMap)["$company"])
+	assert.Equal(t, "username2", (*userPropertiesMap)["$name"])
+	assert.Equal(t, "yyz@business.com", (*userPropertiesMap)["$email"])
+	assert.Equal(t, "yyz@business.com", (*userPropertiesMap)["$user_id"])
+	assert.NotNil(t, (*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY])
+	metaObj = M.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	_, ok = (*metaObj)["xxx@gmail.com"]
+	assert.Equal(t, true, ok)
+	_, ok = (*metaObj)["yyy@business.com"]
+	assert.Equal(t, true, ok)
+	_, ok = (*metaObj)["yyz@example.com"]
+	assert.Equal(t, false, ok)
+}
+
 func TestSDKIdentifyHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
@@ -1231,22 +1377,28 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	assert.Equal(t, r1CustomerUserId, (*userProperties)[U.UP_USER_ID])
 
 	// Test re-identify an identified user with different customer_user
-	// should respond with new user_id mapped to customer_user_id
+	// should overwrite the customer_user and add meta information
 	r2CustomerUserId := U.RandomLowerAphaNumString(15)
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
 		r2CustomerUserId, user.ID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
-	responseMap = DecodeJSONResponseToMap(w.Body)
-	assert.NotNil(t, responseMap["user_id"])
-	assert.NotEmpty(t, responseMap["user_id"].(string))
-	assert.NotEqual(t, responseMap["user_id"], user.ID)
-	retUser, errCode = M.GetUser(project.ID, responseMap["user_id"].(string))
+	retUser, errCode = M.GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, retUser)
 	userProperties, err = U.DecodePostgresJsonb(&retUser.Properties)
 	assert.Nil(t, err)
 	assert.NotNil(t, (*userProperties)[U.UP_USER_ID])
 	assert.Equal(t, r2CustomerUserId, (*userProperties)[U.UP_USER_ID])
+	assert.Equal(t, r2CustomerUserId, retUser.CustomerUserId)
+	metaObj := M.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	metaData, ok := (*metaObj)[r2CustomerUserId]
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "", metaData.PageURL)
+	assert.NotEqual(t, 0, metaData.Timestamp)
+	metaData, ok = (*metaObj)[r1CustomerUserId]
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "", metaData.PageURL)
+	assert.NotEqual(t, 0, metaData.Timestamp)
 }
 
 func assertEqualJoinTimePropertyOnAllRecords(t *testing.T, records []M.UserProperties, expectedJoinTime int64) {
