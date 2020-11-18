@@ -23,7 +23,8 @@ definitions:
   handler.AttributionRequestPayload:
     properties:
       query:
-        type: string
+        $ref: '#/definitions/model.AttributionQuery'
+        type: object
     type: object
   handler.DashboardRequestPayload:
     properties:
@@ -74,7 +75,8 @@ definitions:
   handler.QueryRequestPayload:
     properties:
       query:
-        type: string
+        $ref: '#/definitions/model.Query'
+        type: object
     type: object
   handler.SavedQueryRequestPayload:
     properties:
@@ -114,6 +116,30 @@ definitions:
         type: integer
     required:
     - agent_uuid
+    type: object
+  model.AttributionQuery:
+    properties:
+      attribution_key:
+        type: string
+      attribution_methodology:
+        type: string
+      ce:
+        $ref: '#/definitions/model.QueryEventWithProperties'
+        type: object
+      cm:
+        items:
+          type: string
+        type: array
+      from:
+        type: integer
+      lbw:
+        type: integer
+      lfe:
+        items:
+          $ref: '#/definitions/model.QueryEventWithProperties'
+        type: array
+      to:
+        type: integer
     type: object
   model.ChannelQuery:
     properties:
@@ -180,6 +206,8 @@ definitions:
         type: string
       query_id:
         type: integer
+      settings:
+        type: string
       title:
         type: string
       updated_at:
@@ -192,9 +220,12 @@ definitions:
       presentation:
         type: string
       query:
+        description: TODO (Anil) remove this field once we move to saved queries
         type: string
       query_id:
         type: integer
+      settings:
+        type: string
       title:
         type: string
     type: object
@@ -392,6 +423,10 @@ definitions:
       name:
         type: string
       units_position:
+        additionalProperties:
+          additionalProperties:
+            type: integer
+          type: object
         type: object
     type: object
   model.User:
@@ -437,7 +472,8 @@ definitions:
     properties:
       datasets:
         items:
-          type: '&{%!s(token.Pos=1941) string %!s(*ast.InterfaceType=&{1952 0xc0023ed050 false})}'
+          additionalProperties: true
+          type: object
         type: array
       explanations:
         items:
@@ -454,6 +490,33 @@ definitions:
       x_label:
         type: string
       y_label:
+        type: string
+    type: object
+  v1.AgentInfoWithProjectMapping:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      invited_by:
+        type: string
+      is_email_verified:
+        type: boolean
+      last_logged_in:
+        type: string
+      last_name:
+        type: string
+      phone:
+        type: string
+      project_id:
+        type: integer
+      role:
+        type: integer
+      updated_at:
+        type: string
+      uuid:
         type: string
     type: object
 host: factors-dev.com:8080
@@ -494,7 +557,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.Project'
-          type: object
       produces:
       - application/json
       responses:
@@ -502,7 +564,6 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/model.Project'
-            type: object
       summary: To edit the allowed fields of an existing project.
       tags:
       - Projects
@@ -542,7 +603,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.agentInviteParams'
-          type: object
       produces:
       - application/json
       responses:
@@ -569,7 +629,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.removeProjectAgentParams'
-          type: object
       produces:
       - application/json
       responses:
@@ -596,7 +655,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.updateProjectAgentParams'
-          type: object
       produces:
       - application/json
       responses:
@@ -631,7 +689,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.AttributionRequestPayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -696,7 +753,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.ChannelQuery'
-          type: object
       produces:
       - application/json
       responses:
@@ -728,7 +784,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.DashboardUnitsWebAnalyticsQuery'
-          type: object
       produces:
       - application/json
       responses:
@@ -776,7 +831,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.DashboardRequestPayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -784,7 +838,6 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/model.Dashboard'
-            type: object
       summary: Creates a new dashboard for the given input.
       tags:
       - Dashboard
@@ -809,11 +862,11 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.UpdatableDashboard'
-          type: object
       produces:
       - application/json
       responses:
-        "202": {}
+        "202":
+          description: ""
       summary: Updates an existing dashboard.
       tags:
       - Dashboard
@@ -864,7 +917,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.DashboardUnitRequestPayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -872,7 +924,6 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/model.DashboardUnit'
-            type: object
       summary: Creates a new dashboard unit for the given input.
       tags:
       - DashboardUnit
@@ -931,7 +982,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.DashboardUnitRequestPayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -1028,10 +1078,11 @@ paths:
         required: true
         type: integer
       - description: Factors query
-        in: formData
+        in: body
         name: query
         required: true
-        type: json
+        schema:
+          type: object
       produces:
       - application/json
       responses:
@@ -1081,7 +1132,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.API_FilterRequestPayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -1089,7 +1139,6 @@ paths:
           description: Created
           schema:
             $ref: '#/definitions/handler.API_FilterResponePayload'
-            type: object
       summary: To create a new filter.
       tags:
       - Filters
@@ -1115,7 +1164,6 @@ paths:
           description: Accepted
           schema:
             $ref: '#/definitions/handler.API_FilterResponePayload'
-            type: object
       summary: To delete an existing filter.
       tags:
       - Filters
@@ -1139,7 +1187,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.API_FilterRequestPayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -1147,7 +1194,6 @@ paths:
           description: Accepted
           schema:
             $ref: '#/definitions/handler.API_FilterResponePayload'
-            type: object
       summary: To update an existing filter.
       tags:
       - Filters
@@ -1210,7 +1256,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.SavedQueryRequestPayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -1268,7 +1313,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.SavedQueryUpdatePayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -1325,7 +1369,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/handler.QueryRequestPayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -1396,7 +1439,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.ProjectSetting'
-            type: object
       summary: Retrieves the project settings for given project id.
       tags:
       - ProjectSettings
@@ -1415,7 +1457,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.ProjectSetting'
-          type: object
       produces:
       - application/json
       responses:
@@ -1423,7 +1464,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.ProjectSetting'
-            type: object
       summary: Update the project settings for given project id.
       tags:
       - ProjectSettings
@@ -1524,7 +1564,6 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.User'
-            type: object
       summary: Get a user for the given project and user id.
       tags:
       - Users
@@ -1545,10 +1584,36 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/handler.v1.AgentInfoWithProjectMapping'
+              $ref: '#/definitions/v1.AgentInfoWithProjectMapping'
             type: array
       summary: Gets agents list for the given project id.
       tags:
+      - V1Api
+  /{project_id}/v1/dashboards/{dashboard_id}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: path
+        name: dashboard_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: '{"message": "Successfully deleted."}'
+          schema:
+            type: string
+      summary: To delete an existing dashboard.
+      tags:
+      - Dashboard
       - V1Api
   /{project_id}/v1/dashboards/multi/{dashboard_ids}/units:
     post:
@@ -1571,7 +1636,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.DashboardUnitRequestPayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -1583,6 +1647,8 @@ paths:
             type: array
       summary: Creates a new dashboard unit for each of the given dashboard Ids.
       tags:
+      - Dashboard
+      - DashboardUnit
       - V1Api
   /{project_id}/v1/dashboards/queries/{dashboard_id}/units:
     post:
@@ -1605,7 +1671,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.DashboardUnitRequestPayload'
-          type: object
       produces:
       - application/json
       responses:
@@ -1617,6 +1682,8 @@ paths:
             type: array
       summary: Creates a new dashboard unit for each of the given queries.
       tags:
+      - Dashboard
+      - DashboardUnit
       - V1Api
   /{project_id}/v1/event_names:
     get:
@@ -1662,7 +1729,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/model.QueryGroup'
-          type: object
       produces:
       - application/json
       responses:

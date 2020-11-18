@@ -16,8 +16,8 @@ import (
 // @Accept  json
 // @Produce json
 // @Param project_id path integer true "Project ID"
-// @Success 200 {array} handler.v1.AgentInfoWithProjectMapping
-// @Router /{project_id}/v1/agents" [get]
+// @Success 200 {array} AgentInfoWithProjectMapping
+// @Router /{project_id}/v1/agents [get]
 func GetProjectAgentsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
