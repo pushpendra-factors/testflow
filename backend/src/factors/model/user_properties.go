@@ -2,11 +2,13 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/metrics"
 	U "factors/util"
 	"sort"
+	"strings"
 
 	"fmt"
 	"net"
@@ -43,6 +45,16 @@ type CachedVisitedUsersList struct {
 // indexed hubspot user property.
 const UserPropertyHubspotContactLeadGUID = "$hubspot_contact_lead_guid"
 const MaxUsersForPropertiesMerge = 100
+
+// IdentifyMeta holds data for overwriting customer_user_id
+type IdentifyMeta struct {
+	Timestamp int64  `json:"timestamp"`
+	PageURL   string `json:"page_url,omitempty"`
+	Source    string `json:"source"`
+}
+
+// UserPropertiesMeta is a map for customer_user_id to IdentifyMeta
+type UserPropertiesMeta map[string]IdentifyMeta
 
 func createUserPropertiesIfChanged(projectId uint64, userId string,
 	currentPropertiesId string, newProperties *postgres.Jsonb, timestamp int64) (string, int) {
@@ -761,39 +773,62 @@ func FillLocationUserProperties(properties *U.PropertiesMap, clientIP string) er
 	return nil
 }
 
-func fillUserPropertiesFromFormSubmitEventProperties(properties *U.PropertiesMap,
-	formSubmitProperties *U.PropertiesMap) {
+func getUserPropertiesFromFormSubmitEventProperties(formSubmitProperties *U.PropertiesMap) *U.PropertiesMap {
 
+	properties := make(U.PropertiesMap)
 	for k, v := range *formSubmitProperties {
 		if U.IsFormSubmitUserProperty(k) {
 			if k == U.UP_EMAIL {
 				email := U.GetEmailLowerCase(v)
 				if email != "" {
-					(*properties)[k] = email
+					properties[k] = email
 				}
 
 			} else if k == U.UP_PHONE {
 				sPhoneNo := U.SanitizePhoneNumber(v)
 				if sPhoneNo != "" {
-					(*properties)[k] = sPhoneNo
+					properties[k] = sPhoneNo
 				}
 
 			} else {
-				(*properties)[k] = v
+				properties[k] = v
 			}
 		}
 	}
+	return &properties
 }
 
-func FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(projectId uint64, userId string,
-	properties, formSubmitProperties *U.PropertiesMap) (string, int) {
+func shouldAllowCustomerUserID(current, incoming string) bool {
+	if current == "" || incoming == "" {
+		return false
+	}
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+	if U.IsEmail(current) {
+		if U.IsContainsAnySubString(incoming, "@example", "@yahoo", "@gmail") {
+			return false
+		}
+		return true
+	}
 
-	user, errCode := GetUser(projectId, userId)
+	if len(incoming) > len(current) &&
+		strings.Contains(incoming, current) {
+		return true
+	}
+
+	return false
+
+}
+
+// GetCustomerUserIDAndUserPropertiesFromFormSubmit return customer_user_id na and validated user_properties from form submit properties
+func GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID uint64, userID string,
+	formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID})
+
+	user, errCode := GetUser(projectID, userID)
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get latest user properties on fill form submitted properties.")
-		return "", http.StatusInternalServerError
+		return "", nil, http.StatusInternalServerError
 	}
 
 	logCtx = logCtx.WithFields(log.Fields{"existing_user_properties": user.Properties,
@@ -810,32 +845,45 @@ func FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(projectId uint64, user
 	formPropertyPhone, formPropertyPhoneExists := (*formSubmitProperties)[U.UP_PHONE]
 	userPropertyPhone, userPropertyPhoneExists := (*userProperties)[U.UP_PHONE]
 
+	formSubmitUserProperties := getUserPropertiesFromFormSubmitEventProperties(formSubmitProperties)
+
 	if formPropertyEmailExists && userPropertyEmailExists {
+
 		if userPropertyEmail != formPropertyEmail {
 			logCtx.WithField("tag", "different_email_seen_for_customer_user_id").
 				Warn("Different email seen on form event. User property not updated.")
-			return "", http.StatusBadRequest
+
+			// avoid free email update
+			lowerCaseEmail := U.GetEmailLowerCase(formPropertyEmail)
+			if !shouldAllowCustomerUserID(U.GetPropertyValueAsString(userPropertyEmail), lowerCaseEmail) {
+				return "", nil, http.StatusBadRequest
+			}
+			return lowerCaseEmail, formSubmitUserProperties, http.StatusConflict
 		}
 
-		// form event email is same as user properties, update other user properties.
-		fillUserPropertiesFromFormSubmitEventProperties(properties, formSubmitProperties)
-		return U.GetEmailLowerCase(formPropertyEmail), http.StatusOK
+		return U.GetEmailLowerCase(formPropertyEmail), formSubmitUserProperties, http.StatusOK
 	}
 
 	if formPropertyPhoneExists && userPropertyPhoneExists {
+
 		if userPropertyPhone != formPropertyPhone {
 			logCtx.WithField("tag", "different_phone_seen_for_customer_user_id").
 				Warn("Different phone seen on form event. User property not updated.")
-			return "", http.StatusBadRequest
+
+			// only allow update if phone number contains previous substring
+			sanitizedPhoneNumber := U.SanitizePhoneNumber(formPropertyPhone)
+			if shouldAllowCustomerUserID(U.GetPropertyValueAsString(userPropertyPhone), sanitizedPhoneNumber) {
+				return sanitizedPhoneNumber, formSubmitUserProperties, http.StatusConflict
+			}
+
+			return "", nil, http.StatusBadRequest
 		}
 
-		// form event phone is same as user propertie, update other user properties.
-		fillUserPropertiesFromFormSubmitEventProperties(properties, formSubmitProperties)
-		return U.SanitizePhoneNumber(formPropertyPhone), http.StatusOK
+		return U.SanitizePhoneNumber(formPropertyPhone), formSubmitUserProperties, http.StatusOK
 	}
 
 	if !formPropertyEmailExists && !formPropertyPhoneExists {
-		return "", http.StatusBadRequest
+		return "", nil, http.StatusBadRequest
 	}
 
 	var identity string
@@ -845,8 +893,7 @@ func FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(projectId uint64, user
 		identity = U.SanitizePhoneNumber(formPropertyPhone)
 	}
 
-	fillUserPropertiesFromFormSubmitEventProperties(properties, formSubmitProperties)
-	return identity, http.StatusOK
+	return identity, formSubmitUserProperties, http.StatusOK
 }
 
 func GetUserPropertyRecordsByUserId(projectId uint64, userId string) ([]UserProperties, int) {
@@ -1081,4 +1128,78 @@ func updateLatestUserPropertiesForSessionIfNotUpdated(projectID uint64,
 	}
 
 	return http.StatusAccepted
+}
+
+// GetDecodedUserPropertiesIdentifierMetaObject gets the identifier meta data from the user properties
+func GetDecodedUserPropertiesIdentifierMetaObject(existingUserProperties *map[string]interface{}) *UserPropertiesMeta {
+	metaObj := make(UserPropertiesMeta)
+	if existingUserProperties == nil {
+		return &metaObj
+	}
+
+	if enMetaObj, exists := (*existingUserProperties)[U.UP_META_OBJECT_IDENTIFIER_KEY]; !exists {
+		return &metaObj
+	} else {
+		err := json.Unmarshal([]byte(U.GetPropertyValueAsString(enMetaObj)), &metaObj)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to get meta data from user properties")
+		}
+	}
+
+	return &metaObj
+}
+
+// UpdateUserPropertiesIdentifierMetaObject overwrites the identifier meta date in the user properties
+func UpdateUserPropertiesIdentifierMetaObject(userProperties *postgres.Jsonb, metaObj *UserPropertiesMeta) error {
+
+	enMetaObj, err := json.Marshal(*metaObj)
+	if err != nil {
+		return err
+	}
+
+	userPropertiesMap, err := U.DecodePostgresJsonbAsPropertiesMap(userProperties)
+	if err != nil {
+		return err
+	}
+
+	(*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY] = string(enMetaObj)
+	newUserProperties, err := U.EncodeStructTypeToPostgresJsonb(userPropertiesMap)
+	if err != nil {
+		return err
+	}
+	*userProperties = *newUserProperties
+	return nil
+}
+
+// UpdateIdentifyOverwriteUserPropertiesMeta adds overwrite information to user properties for debuging purpose. Not available while querying
+func UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error {
+	if projectID == 0 || customerUserID == "" {
+		return errors.New("invalid or empty parameter")
+	}
+	if source == "" {
+		return errors.New("source missing")
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "customer_user_id": customerUserID})
+
+	var existingUserProperties *map[string]interface{}
+	var errCode int
+	if !isNewUser {
+		existingUserProperties, errCode = GetLatestUserPropertiesOfUserAsMap(projectID, userID)
+		if errCode != http.StatusFound {
+			logCtx.WithField("err_code", errCode).Error("Failed to get user properties as map.")
+			return errors.New("failed to get user properties as map")
+		}
+	}
+
+	customerUserIDMeta := &IdentifyMeta{
+		Timestamp: timestamp,
+		PageURL:   pageURL,
+		Source:    source,
+	}
+
+	metaObj := GetDecodedUserPropertiesIdentifierMetaObject(existingUserProperties)
+
+	(*metaObj)[customerUserID] = *customerUserIDMeta
+	return UpdateUserPropertiesIdentifierMetaObject(userProperties, metaObj)
 }

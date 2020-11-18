@@ -236,7 +236,7 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 	customerUserId := getCustomerUserIdFromProperties(projectId, properties)
 	if customerUserId != "" {
 		status, _ := SDK.Identify(projectId, &SDK.IdentifyPayload{
-			UserId: userId, CustomerUserId: customerUserId})
+			UserId: userId, CustomerUserId: customerUserId}, false)
 		if status != http.StatusOK {
 			logCtx.WithField("customer_user_id", customerUserId).Error(
 				"Failed to identify user on hubspot contact sync.")

@@ -273,7 +273,7 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument) int {
 	customerUserID, _ := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userID, CustomerUserId: customerUserID})
+			UserId: userID, CustomerUserId: customerUserID}, false)
 		if status != http.StatusOK {
 			logCtx.WithField("customer_user_id", customerUserID).Error(
 				"Failed to identify user on salesforce account sync.")
@@ -323,7 +323,7 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument) int {
 	customerUserID, _ := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userID, CustomerUserId: customerUserID})
+			UserId: userID, CustomerUserId: customerUserID}, false)
 		if status != http.StatusOK {
 			logCtx.WithField("customer_user_id", customerUserID).Error(
 				"Failed to identify user on salesforce contact sync.")
@@ -425,7 +425,7 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument) int {
 	customerUserID, _ := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userID, CustomerUserId: customerUserID})
+			UserId: userID, CustomerUserId: customerUserID}, false)
 		if status != http.StatusOK {
 			logCtx.WithField("customer_user_id", customerUserID).Error(
 				"Failed to identify user on salesforce lead sync.")

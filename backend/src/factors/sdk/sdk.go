@@ -59,6 +59,10 @@ type IdentifyPayload struct {
 	// join_timestamp to use at the time of creating user,
 	// if not provided, request timestamp will be used.
 	JoinTimestamp int64 `json:"join_timestamp"`
+
+	// identify overwrite info
+	PageURL string `json:"page_url"`
+	Source  string `json:"source"`
 }
 
 // AMPIdentifyPayload holds required fields for AMP identification
@@ -587,8 +591,8 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 	// Add user properties from form submit event properties.
 	if request.Name == U.EVENT_NAME_FORM_SUBMITTED {
-		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(
-			projectId, request.UserId, userProperties, eventProperties)
+		customerUserID, formSubmitUserProperties, errCode := M.GetCustomerUserIDAndUserPropertiesFromFormSubmit(
+			projectId, request.UserId, eventProperties)
 		if errCode == http.StatusInternalServerError {
 			log.WithFields(log.Fields{"userProperties": userProperties,
 				"eventProperties": eventProperties}).Error(
@@ -596,12 +600,21 @@ func Track(projectId uint64, request *TrackPayload,
 			response.Error = "Failed adding user properties."
 		}
 
-		if customerUserId != "" {
+		if customerUserID != "" {
+			pageURL := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
+
 			errCode, _ := Identify(projectId, &IdentifyPayload{
-				UserId: request.UserId, CustomerUserId: customerUserId})
+				UserId: request.UserId, CustomerUserId: customerUserID, Timestamp: request.Timestamp, PageURL: pageURL, Source: sdkRequestTypeEventTrack}, true)
 			if errCode != http.StatusOK {
 				log.WithFields(log.Fields{"projectId": projectId, "userId": request.UserId,
-					"customerUserId": customerUserId}).Error("Failed to identify user on form submit event.")
+					"customerUserId": customerUserID}).Error("Failed to identify user on form submit event.")
+			}
+
+			// fill form submit properties once identification is sucessfull
+			if errCode == http.StatusOK {
+				for k, v := range *formSubmitUserProperties {
+					(*userProperties)[k] = v
+				}
 			}
 		}
 	}
@@ -691,7 +704,23 @@ func getIdentifiedUserPropertiesAsJsonb(customerUserId string) (*postgres.Jsonb,
 	return U.EncodeToPostgresJsonb(&properties)
 }
 
-func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyResponse) {
+func isUserAlreadyIdentifiedBySDKRequest(projectID uint64, userID string) bool {
+	userProperties, status := M.GetLatestUserPropertiesOfUserAsMap(projectID, userID)
+	if status != http.StatusFound {
+		return false
+	}
+
+	metaObj := M.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	for _, customerUserIDMeta := range *metaObj {
+		if customerUserIDMeta.Source == sdkRequestTypeUserIdentify {
+			return true
+		}
+	}
+
+	return false
+}
+
+func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, *IdentifyResponse) {
 	// Precondition: Fails to identify if customer_user_id not present.
 	if request.CustomerUserId == "" {
 		log.Error("Identification failed. Missing user_id or c_uid.")
@@ -743,6 +772,20 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 			CustomerUserId: request.CustomerUserId,
 			JoinTimestamp:  request.JoinTimestamp,
 		}
+
+		if overwrite {
+			if request.Source == "" {
+				logCtx.WithFields(log.Fields{"userId": request.UserId, "customerUserId": request.CustomerUserId}).Error("Source missing in indentify overwrite.")
+			}
+
+			err := M.UpdateIdentifyOverwriteUserPropertiesMeta(projectId, request.CustomerUserId, request.UserId, request.PageURL,
+				request.Source, userProperties, request.Timestamp, request.CreateUser)
+			if err != nil {
+				logCtx.WithFields(log.Fields{"userId": request.UserId,
+					"customerUserId": request.CustomerUserId}).WithError(err).Error("Failed to add identify overwrite meta")
+			}
+		}
+
 		if userProperties != nil {
 			newUser.Properties = *userProperties
 		}
@@ -752,6 +795,7 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 			return errCode, &IdentifyResponse{
 				Error: "Identification failed. User creation failed."}
 		}
+
 		response.UserId = request.UserId
 
 		response.Message = "User has been identified successfully."
@@ -807,12 +851,19 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 		return http.StatusOK, &IdentifyResponse{Message: "Identified already."}
 	}
 
+	// avoid overwrite if user was identified by sdk request identify
+	if overwrite && isUserAlreadyIdentifiedBySDKRequest(projectId, request.UserId) {
+		if request.Source != sdkRequestTypeUserIdentify {
+			overwrite = false
+		}
+	}
+
 	// Precondition: user is already identified with different customer_user.
 	// Creating a new user with the given customer_user_id and respond with new_user_id.
-	if scopeUser.CustomerUserId != "" {
+	if scopeUser.CustomerUserId != "" && !overwrite {
 		newUser := M.User{
 			ProjectId:      projectId,
-			CustomerUserId: scopeUser.CustomerUserId,
+			CustomerUserId: request.CustomerUserId,
 			JoinTimestamp:  request.JoinTimestamp,
 		}
 
@@ -837,6 +888,15 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 
 		return http.StatusOK, &IdentifyResponse{UserId: newUser.ID,
 			Message: "User has been identified successfully"}
+
+	}
+
+	if overwrite {
+		err := M.UpdateIdentifyOverwriteUserPropertiesMeta(projectId, request.CustomerUserId, request.UserId, request.PageURL, request.Source, userProperties, request.Timestamp, request.CreateUser)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"userId": request.UserId,
+				"customerUserId": request.CustomerUserId}).WithError(err).Error("Failed to add identify overwrite meta")
+		}
 	}
 
 	// Happy path. Maps customer_user to an user.
@@ -1031,7 +1091,7 @@ func TrackWithQueue(token string, reqPayload *TrackPayload,
 func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyResponse) {
 	project, errCode := M.GetProjectByToken(token)
 	if errCode == http.StatusFound {
-		return Identify(project.ID, reqPayload)
+		return Identify(project.ID, reqPayload, true)
 	}
 
 	if errCode == http.StatusNotFound {
@@ -1070,7 +1130,7 @@ func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *Ide
 		Timestamp:      reqPayload.Timestamp,
 	}
 
-	return Identify(project.ID, identifyPayload)
+	return Identify(project.ID, identifyPayload, false)
 }
 
 // AMPIdentifyWithQueue identifies AMP user by customer_user_id. Uses queue if alowed for the poject
@@ -1101,6 +1161,7 @@ func AMPIdentifyWithQueue(token string, reqPayload *AMPIdentifyPayload,
 
 func IdentifyWithQueue(token string, reqPayload *IdentifyPayload,
 	queueAllowedTokens []string) (int, *IdentifyResponse) {
+	reqPayload.Source = sdkRequestTypeUserIdentify
 
 	if U.UseQueue(token, queueAllowedTokens) {
 		response := &IdentifyResponse{}
