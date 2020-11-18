@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Tabs, Modal, Button, Spin
+    Tabs, Modal, Button, Spin
 } from 'antd';
 import { Text, SVG } from '../../components/factorsComponents';
 // import WidgetCard from './WidgetCard';
@@ -13,54 +13,54 @@ import DashboardSubMenu from './DashboardSubMenu';
 const { TabPane } = Tabs;
 
 function ProjectTabs({ setaddDashboardModal, handleEditClick }) {
-  const [widgetModal, setwidgetModal] = useState(false);
-  const { active_project } = useSelector(state => state.global);
-  const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(state => state.dashboard);
-  const dispatch = useDispatch();
+    const [widgetModal, setwidgetModal] = useState(false);
+    const { active_project } = useSelector(state => state.global);
+    const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(state => state.dashboard);
+    const dispatch = useDispatch();
 
-  const handleTabChange = useCallback((value) => {
-    dispatch({
-      type: ACTIVE_DASHBOARD_CHANGE,
-      payload: dashboards.data.find(d => d.id === parseInt(value))
-    });
-  }, [dashboards, dispatch]);
+    const handleTabChange = useCallback((value) => {
+        dispatch({
+            type: ACTIVE_DASHBOARD_CHANGE,
+            payload: dashboards.data.find(d => d.id === parseInt(value))
+        });
+    }, [dashboards, dispatch]);
 
-  const fetchUnits = useCallback(() => {
-    if (active_project.id && activeDashboard.id) {
-      fetchActiveDashboardUnits(dispatch, active_project.id, activeDashboard.id);
-    }
-  }, [active_project.id, activeDashboard.id, dispatch]);
+    const fetchUnits = useCallback(() => {
+        if (active_project.id && activeDashboard.id) {
+            fetchActiveDashboardUnits(dispatch, active_project.id, activeDashboard.id);
+        }
+    }, [active_project.id, activeDashboard.id, dispatch]);
 
-  useEffect(() => {
-    fetchUnits();
-  }, [fetchUnits]);
+    useEffect(() => {
+        fetchUnits();
+    }, [fetchUnits]);
 
-  const operations = (
-    <>
+    const operations = (
+        <>
             <Button type="text" size={'small'} onClick={() => setaddDashboardModal(true)}><SVG name="plus" color={'grey'} /></Button>
             <Button type="text" size={'small'}><SVG name="edit" color={'grey'} /></Button>
-    </>
-  );
+        </>
+    );
 
-  if (dashboards.loading || activeDashboardUnits.loading) {
-    return (
+    if (dashboards.loading || activeDashboardUnits.loading) {
+        return (
             <div className="flex justify-center items-center w-full h-64">
                 <Spin size="large" />
             </div>
-    );
-  }
+        );
+    }
 
-  if (dashboards.error || activeDashboardUnits.error) {
-    return (
+    if (dashboards.error || activeDashboardUnits.error) {
+        return (
             <div className="flex justify-center items-center w-full h-64">
                 Something went wrong!
             </div>
-    );
-  }
+        );
+    }
 
-  if (dashboards.data.length) {
-    return (
-      <>
+    if (dashboards.data.length) {
+        return (
+            <>
                 <Tabs
                     onChange={handleTabChange}
                     activeKey={activeDashboard.id.toString()}
@@ -68,14 +68,14 @@ function ProjectTabs({ setaddDashboardModal, handleEditClick }) {
                     tabBarExtraContent={operations}
                 >
                     {dashboards.data.map(d => {
-                      return (
+                        return (
                             <TabPane tab={d.name} key={d.id}>
                                 <div className={'fa-container mt-6 min-h-screen'}>
                                     <DashboardSubMenu dashboard={activeDashboard} handleEditClick={handleEditClick} />
                                     <SortableCards />
                                 </div>
                             </TabPane>
-                      );
+                        );
                     })}
                 </Tabs>
 
@@ -97,11 +97,11 @@ function ProjectTabs({ setaddDashboardModal, handleEditClick }) {
                     </div>
                 </Modal>
 
-      </>
-    );
-  }
+            </>
+        );
+    }
 
-  return null;
+    return null;
 }
 
 export default ProjectTabs;

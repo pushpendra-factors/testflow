@@ -99,7 +99,7 @@ function WidgetCard({
   useEffect(() => {
     setTimeout(() => {
       positionResizeContainer();
-    }, 0);
+    }, 1000);
   }, [dashboards_loaded, positionResizeContainer]);
 
   return (
