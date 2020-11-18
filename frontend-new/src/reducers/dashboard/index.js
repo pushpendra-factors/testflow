@@ -9,11 +9,10 @@ import {
   DASHBOARD_UNIT_DATA_LOADED,
   DASHBOARD_CREATED,
   DASHBOARD_DELETED,
-  CARD_SIZE_CHANGED,
   UNITS_ORDER_CHANGED,
   DASHBOARD_UNMOUNTED
 } from '../types';
-import { getRearrangedData, cardClassNames } from './utils';
+import { getRearrangedData } from './utils';
 
 const defaultState = {
   dashboards_loaded: 0,
@@ -58,26 +57,6 @@ export default function (state = defaultState, action) {
         activeDashboardUnits: { ...defaultState.activeDashboardUnits },
         dashboards: { ...defaultState.dashboards, data: newDashboardList },
         activeDashboard: newActiveDashboard
-      };
-    }
-    case CARD_SIZE_CHANGED: {
-      const unitIndex = state.activeDashboardUnits.data.findIndex(au => au.id === action.payload.unit.id);
-      const updatedUnit = {
-        ...action.payload.unit,
-        className: cardClassNames[action.payload.cardSize],
-        cardSize: action.payload.cardSize
-      };
-      return {
-        ...state,
-        activeDashboardUnits: {
-          ...state.activeDashboardUnits,
-          data: [
-            ...state.activeDashboardUnits.data.slice(0, unitIndex),
-            updatedUnit,
-            ...state.activeDashboardUnits.data.slice(unitIndex + 1)
-          ]
-        },
-        dashboards_loaded: state.dashboards_loaded + 1
       };
     }
     case UNITS_ORDER_CHANGED: {

@@ -3,7 +3,8 @@ import { ReactSortable } from 'react-sortablejs';
 import WidgetCard from './WidgetCard';
 import { useSelector, useDispatch } from 'react-redux';
 import { UNITS_ORDER_CHANGED } from '../../reducers/types';
-// import { updateDashboard } from '../../reducers/dashboard/services';
+import { updateDashboard } from '../../reducers/dashboard/services';
+import { getRequestForNewState } from '../../reducers/dashboard/utils';
 
 function SortableCards() {
   const dispatch = useDispatch();
@@ -13,14 +14,8 @@ function SortableCards() {
   const { activeDashboardUnits, activeDashboard } = useSelector(state => state.dashboard);
 
   const onDrop = (newState) => {
-    const body = {};
-    newState.forEach((elem, index) => {
-      body[elem.id] = {
-        position: index,
-        size: elem.cardSize
-      };
-    });
-    //updateDashboard(active_project.id, activeDashboard.id, { units_position: body });
+    const body = getRequestForNewState(newState);
+    updateDashboard(active_project.id, activeDashboard.id, { units_position: body });
     dispatch({ type: UNITS_ORDER_CHANGED, payload: newState });
   };
 

@@ -7,15 +7,18 @@ import { Text } from '../../components/factorsComponents';
 import { RightOutlined, LeftOutlined } from '@ant-design/icons';
 import CardContent from './CardContent';
 import { useSelector, useDispatch } from 'react-redux';
-import { CARD_SIZE_CHANGED, DASHBOARD_UNIT_DATA_LOADED } from '../../reducers/types';
+import { DASHBOARD_UNIT_DATA_LOADED, UNITS_ORDER_CHANGED } from '../../reducers/types';
 import { initialState } from '../CoreQuery/utils';
 import { runQuery, getFunnelData } from '../../reducers/coreQuery/services';
+import { cardClassNames, getRequestForNewState } from '../../reducers/dashboard/utils';
+import { updateDashboard } from '../../reducers/dashboard/services';
 
 function WidgetCard({
   unit
 }) {
   const [resultState, setResultState] = useState(initialState);
   const { active_project } = useSelector(state => state.global);
+  const { activeDashboardUnits, activeDashboard } = useSelector(state => state.dashboard);
   const dispatch = useDispatch();
 
   const getData = useCallback(async (refresh = false) => {
@@ -89,7 +92,16 @@ function WidgetCard({
   }, [unit.id]);
 
   const changeCardSize = useCallback((cardSize) => {
-    dispatch({ type: CARD_SIZE_CHANGED, payload: { unit, cardSize } });
+    const unitIndex = activeDashboardUnits.data.findIndex(au => au.id === unit.id);
+    const updatedUnit = {
+      ...unit,
+      className: cardClassNames[cardSize],
+      cardSize
+    };
+    const newState = [...activeDashboardUnits.data.slice(0, unitIndex), updatedUnit, ...activeDashboardUnits.data.slice(unitIndex + 1)];
+    const body = getRequestForNewState(newState);
+    updateDashboard(active_project.id, activeDashboard.id, { units_position: body });
+    dispatch({ type: UNITS_ORDER_CHANGED, payload: newState });
   }, [unit, dispatch]);
 
   const { dashboards_loaded } = useSelector(state => state.dashboard);
@@ -103,36 +115,36 @@ function WidgetCard({
   }, [dashboards_loaded, positionResizeContainer]);
 
   return (
-		<div className={`${unit.title} ${unit.className} py-4 px-2`} >
-			<div id={`card-${unit.id}`} ref={cardRef} style={{ transition: 'all 0.1s' }} className={'fa-dashboard--widget-card w-full'}>
-				<div id={`resize-${unit.id}`} className={'fa-widget-card--resize-container'}>
-					<span className={'fa-widget-card--resize-contents'}>
-						{unit.cardSize === 'half-page' ? (
-							<a onClick={changeCardSize.bind(this, 'full-page')}><RightOutlined /></a>
-						) : null}
-						{unit.cardSize === 'full-page' ? (
-							<a onClick={changeCardSize.bind(this, 'half-page')}><LeftOutlined /></a>
-						) : null}
-					</span>
-				</div>
-				<div className={'fa-widget-card--top flex justify-between items-start'}>
-					<div className={'w-full'} >
-						<Text ellipsis type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{unit.title}</Text>
-						<Text ellipsis type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{unit.description}</Text>
-						<div className="mt-4">
-							<CardContent
-								unit={unit}
-								resultState={resultState}
-								dashboards_loaded={dashboards_loaded}
-							/>
-						</div>
-					</div>
-					{/* <div className={'flex flex-col justify-start items-start fa-widget-card--top-actions'}>
+    <div className={`${unit.title} ${unit.className} py-4 px-2`} >
+      <div id={`card-${unit.id}`} ref={cardRef} style={{ transition: 'all 0.1s' }} className={'fa-dashboard--widget-card w-full'}>
+        <div id={`resize-${unit.id}`} className={'fa-widget-card--resize-container'}>
+          <span className={'fa-widget-card--resize-contents'}>
+            {unit.cardSize === 0 ? (
+              <a onClick={changeCardSize.bind(this, 1)}><RightOutlined /></a>
+            ) : null}
+            {unit.cardSize === 1 ? (
+              <a onClick={changeCardSize.bind(this, 0)}><LeftOutlined /></a>
+            ) : null}
+          </span>
+        </div>
+        <div className={'fa-widget-card--top flex justify-between items-start'}>
+          <div className={'w-full'} >
+            <Text ellipsis type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{unit.title}</Text>
+            <Text ellipsis type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{unit.description}</Text>
+            <div className="mt-4">
+              <CardContent
+                unit={unit}
+                resultState={resultState}
+                dashboards_loaded={dashboards_loaded}
+              />
+            </div>
+          </div>
+          {/* <div className={'flex flex-col justify-start items-start fa-widget-card--top-actions'}>
 						<Button size={'large'} onClick={() => setwidgetModal(true)} icon={<FullscreenOutlined />} type="text" />
 					</div> */}
-				</div>
-			</div>
-		</div>
+        </div>
+      </div>
+    </div>
 
   );
 }

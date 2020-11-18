@@ -56,7 +56,7 @@ function QueryComposer({
 
   useEffect(() => {
     convertToDateRange();
-  }, [queryOptions])
+  }, [queryOptions]);
 
   const queryList = () => {
     const blockList = [];
@@ -215,7 +215,7 @@ function QueryComposer({
   const convertToDateRange = () => {
     const range = getDateRange();
     setCalendarLabel(readableDateRange(range[0]));
-  }
+  };
 
   const handleRunQuery = useCallback(() => {
     if (queryType === 'event') {
