@@ -1,31 +1,49 @@
-import React, { Component } from 'react';
-import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
-import { Card, CardHeader, CardBody, Modal, ModalBody } from 'reactstrap';
-import { Redirect } from 'react-router-dom';
-import moment from 'moment';
+import React, {Component} from 'react';
+import {connect} from 'react-redux';
+import {bindActionCreators} from 'redux';
+import {Card, CardBody, CardHeader, Modal, ModalBody} from 'reactstrap';
+import {Redirect} from 'react-router-dom';
 
-import { runQuery, runDashboardQuery , viewQuery, runDashboardChannelQuery, runDashboardAttributionQuery } from '../../actions/projectsActions';
-import { deleteDashboardUnit, updateDashboardUnit } from '../../actions/dashboardActions';
+import {
+  runDashboardAttributionQuery,
+  runDashboardChannelQuery,
+  runDashboardQuery,
+  runQuery,
+  viewQuery
+} from '../../actions/projectsActions';
+import {deleteDashboardUnit, updateDashboardUnit} from '../../actions/dashboardActions';
 import Loading from '../../loading';
 import BarChart from '../Query/BarChart';
 import LineChart from '../Query/LineChart';
 import TableChart from '../Query/TableChart';
-import { 
-  PRESENTATION_BAR, PRESENTATION_LINE, 
-  PRESENTATION_TABLE, PRESENTATION_CARD, 
-  PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME, 
-  PROPERTY_KEY_JOIN_TIME, getGroupByTimestampType,
-  QUERY_CLASS_CHANNEL, QUERY_CLASS_FUNNEL, QUERY_CLASS_WEB, QUERY_CLASS_ATTRIBUTION,
-  getQueryPeriod, convertFunnelResultForTable
+import {
+  convertFunnelResultForTable,
+  getGroupByTimestampType,
+  getQueryPeriod,
+  PRESENTATION_BAR,
+  PRESENTATION_CARD,
+  PRESENTATION_FUNNEL,
+  PRESENTATION_LINE,
+  PRESENTATION_TABLE,
+  PROPERTY_KEY_JOIN_TIME,
+  PROPERTY_VALUE_TYPE_DATE_TIME,
+  QUERY_CLASS_ATTRIBUTION,
+  QUERY_CLASS_CHANNEL,
+  QUERY_CLASS_FUNNEL,
+  QUERY_CLASS_WEB,
+  QUERY_CLASS_INSIGHTS,
+  QUERY_CLASS_EVENTS
 } from '../Query/common';
-import { slideUnixTimeWindowToCurrentTime, getTimezoneString, 
-  getReadableKeyFromSnakeKey } from '../../util';
+import {
+  getReadableKeyFromSnakeKey,
+  getTimezoneString,
+  slideUnixTimeWindowToCurrentTime
+} from '../../util';
 import FunnelChart from '../Query/FunnelChart';
-import { getReadableChannelMetricValue } from '../ChannelQuery/common';
+import {getReadableChannelMetricValue} from '../ChannelQuery/common';
 
 const CARD_FONT_COLOR = '#FFF';
-const CARD_BACKGROUNDS = ['#63c2de', '#eb9532', '#20a8d8', '#4dbd74', '#f86c6b' ]
+const CARD_BACKGROUNDS = ['#63c2de', '#eb9532', '#20a8d8', '#4dbd74', '#f86c6b']
 
 const mapStateToProps = store => {
   return {
@@ -34,7 +52,7 @@ const mapStateToProps = store => {
 }
 
 const mapDispatchToProps = dispatch => {
-  return bindActionCreators({ 
+  return bindActionCreators({
     runQuery,
     viewQuery,
     deleteDashboardUnit,
@@ -68,7 +86,7 @@ class DashboardUnit extends Component {
     let props = null;
 
     if (this.props.data.presentation === PRESENTATION_BAR) {
-      props = { queryResult: result, legend: false } 
+      props = { queryResult: result, legend: false }
     }
 
     if (this.props.data.presentation === PRESENTATION_LINE) {
@@ -77,8 +95,8 @@ class DashboardUnit extends Component {
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {
       // convert funnel result for table view.
-      if (result.meta && result.meta.query && 
-        result.meta.query.cl == QUERY_CLASS_FUNNEL) {        
+      if (result.meta && result.meta.query &&
+        result.meta.query.cl == QUERY_CLASS_FUNNEL) {
         result = convertFunnelResultForTable(result)
       }
 
@@ -141,7 +159,7 @@ class DashboardUnit extends Component {
     }
 
     let presentation = this.props.data.presentation;
-    query.gbt = (presentation == PRESENTATION_LINE) ? 
+    query.gbt = (presentation == PRESENTATION_LINE) ?
       getGroupByTimestampType(query.fr, query.to) : '';
 
     let timezone = getTimezoneString();
@@ -228,12 +246,15 @@ class DashboardUnit extends Component {
       this.execWebAnalyticsQuery();
     } else if(this.props.data.query.cl === QUERY_CLASS_ATTRIBUTION) {
       this.execAttributionAnalyticsQuery(hardRefresh);
-    }else{
+    } else if (this.props.data.query.cl === QUERY_CLASS_INSIGHTS || this.props.data.query.cl === QUERY_CLASS_FUNNEL) {
       this.execAnalyticsQuery(hardRefresh);
+    }else {
+      // for QUERY_CLASS_EVENTS & query_group
+      console.log("Ignoring the query: "+ this.props.data.query)
     }
   }
 
-  componentWillMount() { 
+  componentWillMount() {
     this.execQuery(false);
   }
 
@@ -264,7 +285,7 @@ class DashboardUnit extends Component {
     if (this.props.data.presentation == PRESENTATION_FUNNEL) {
       return <FunnelChart {...props} />;
     }
-    
+
     return null;
   }
 
@@ -288,11 +309,11 @@ class DashboardUnit extends Component {
   }
 
   getInlineButtonStyle() {
-    return { 
-      background: 'none', 
+    return {
+      background: 'none',
       border: 'none',
-      padding: '0 4px', 
-      fontSize: '17px', 
+      padding: '0 4px',
+      fontSize: '17px',
       color: this.isCard() ? '#FFF' : '#444'
     }
   }
@@ -305,7 +326,7 @@ class DashboardUnit extends Component {
     style.color = CARD_FONT_COLOR;
     return style;
   }
-  
+
   getCardStyleByProps() {
     let style = { marginBottom: '30px' };
     if (this.props.editDashboard) style.cursor = 'all-scroll';
@@ -341,7 +362,7 @@ class DashboardUnit extends Component {
 
     let isCard = this.isCard();
     style.color = isCard ? '#fff' : '#444';
-    style.border = isCard ? '1px solid #fff' : '1px solid #DDD'; 
+    style.border = isCard ? '1px solid #fff' : '1px solid #DDD';
     style.padding = isCard ? '0 7px' : '3px 7px';
 
     return style;
@@ -360,7 +381,7 @@ class DashboardUnit extends Component {
     let state = { editTitle : false };
     // reset state.
     if (this.isTitleChanged()) state.title = this.props.data.title;
-  
+
     this.setState(state);
   }
 
@@ -375,7 +396,7 @@ class DashboardUnit extends Component {
   getTitle() {
     return this.state.title == null ? this.props.data.title : this.state.title;
   }
-  
+
   handleUpdateTitleFailure() {
     this.setState({ title: this.props.data.title });
     // Todo: show title update failure on UI.
@@ -389,9 +410,9 @@ class DashboardUnit extends Component {
       this.setState({ editTitle: false, title: unit.title });
       return;
     }
-    
-    
-    this.props.updateDashboardUnit(unit.project_id, unit.dashboard_id, 
+
+
+    this.props.updateDashboardUnit(unit.project_id, unit.dashboard_id,
       unit.id, {title: this.state.title})
       .then((r) => {
         if (r.error) this.handleUpdateTitleFailure();
@@ -404,8 +425,8 @@ class DashboardUnit extends Component {
   getEditTitleStyle() {
     if (!this.props.editDashboard) return null;
 
-    return { 
-      maxWidth: this.isCard() ? '180px' : null, 
+    return {
+      maxWidth: this.isCard() ? '180px' : null,
       display: 'inline-block'
     }
   }
@@ -413,7 +434,7 @@ class DashboardUnit extends Component {
   // Todo: Avoid execQuery on position change by
   // moving the query result to ParentComponent (dashboard).
   componentDidUpdate(prevProps) {
-    if (prevProps.data.id != this.props.data.id || 
+    if (prevProps.data.id != this.props.data.id ||
       JSON.stringify(prevProps.dateRange) != JSON.stringify(this.props.dateRange)) {
       this.execQuery(false);
     } else if (prevProps.hardRefresh != this.props.hardRefresh) {
@@ -435,49 +456,49 @@ class DashboardUnit extends Component {
   renderChannelTag() {
     if (!this.isCard()) return null;
     // show channel name only for channel query class.
-    if (!this.props.data || !this.props.data.query ||!this.props.data.query.cl || 
+    if (!this.props.data || !this.props.data.query ||!this.props.data.query.cl ||
       this.props.data.query.cl != QUERY_CLASS_CHANNEL ) return null;
     // channel name not exist.
     if (!this.props.data.query.query || !this.props.data.query.query.channel) return null;
 
-    return <div style={{ float: 'left', fontSize: '11px', fontWeight: '700' }}> 
-      { getReadableKeyFromSnakeKey(this.props.data.query.query.channel) } 
+    return <div style={{ float: 'left', fontSize: '11px', fontWeight: '700' }}>
+      { getReadableKeyFromSnakeKey(this.props.data.query.query.channel) }
     </div>;
   }
 
   render() {
-    if (this.state.redirectToViewQuery) 
+    if (this.state.redirectToViewQuery)
       return <Redirect to='/core?view=true' />;
 
     return (
       <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
         <CardHeader style={this.getCardHeaderStyleByProps()}>
-          
+
 
           <div style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px' }}>
-            <strong onClick={this.delete} style={{ fontSize: '14px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }} 
+            <strong onClick={this.delete} style={{ fontSize: '14px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }}
               hidden={!this.props.editDashboard}>x</strong>
           </div>
 
           <div style={{ textAlign: 'right', marginTop: '-15px', marginRight: '-22px', height: '22px' }} hidden={this.isCard()}>
-            <strong onClick={this.toggleFullScreen} style={{ fontSize: '13px', cursor: 'pointer', padding: '0 10px', color: '#888' }} 
+            <strong onClick={this.toggleFullScreen} style={{ fontSize: '13px', cursor: 'pointer', padding: '0 10px', color: '#888' }}
               hidden={this.props.editDashboard} >
               <i className='fa fa-expand'></i>
             </strong>
           </div>
 
-          <div style={{ marginTop: this.isCard() ? '-17px' : '-18px', height: '22px', marginRight: this.isCard() ? '-22px' : null, 
+          <div style={{ marginTop: this.isCard() ? '-17px' : '-18px', height: '22px', marginRight: this.isCard() ? '-22px' : null,
             marginLeft: this.isCard() ? '-22px' : null }}>
             { this.renderChannelTag() }
-            <strong onClick={this.addQueryToViewStore} style={{ float: 'right', fontSize: '13px', cursor: 'pointer', 
+            <strong onClick={this.addQueryToViewStore} style={{ float: 'right', fontSize: '13px', cursor: 'pointer',
               padding: '0 10px', color: this.isCard() ? '#FFF' : '#444' }} hidden={this.props.editDashboard} >
               <i className='cui-graph'></i>
             </strong>
           </div>
 
           <div hidden={!this.showTitle()}>
-            <div className='fapp-overflow-dot' style={this.getEditTitleStyle()}> 
-              <strong style={{ fontWeight: 500, fontSize: !this.isCard() ? '0.85rem' : '0.95rem' }} >{ this.getTitle() }</strong> 
+            <div className='fapp-overflow-dot' style={this.getEditTitleStyle()}>
+              <strong style={{ fontWeight: 500, fontSize: !this.isCard() ? '0.85rem' : '0.95rem' }} >{ this.getTitle() }</strong>
             </div>
             <button style={{...this.getInlineButtonStyle(), fontSize: '14px'}} onClick={this.editTitle} hidden={!this.props.editDashboard}>
               <i className='icon-pencil'></i>
@@ -498,7 +519,7 @@ class DashboardUnit extends Component {
           { this.present(this.state.presentationProps) }
         </CardBody>
 
-        <Modal isOpen={this.state.fullScreen} toggle={this.toggleFullScreen} style={{ marginTop: "2.5rem", minWidth: "80rem"  }}> 
+        <Modal isOpen={this.state.fullScreen} toggle={this.toggleFullScreen} style={{ marginTop: "2.5rem", minWidth: "80rem"  }}>
           <ModalBody>
             <div>
               <span onClick={this.toggleFullScreen} style={{ position: 'absolute', right: '25px', fontSize: '18px', fontWeight: '600', color: '#888', cursor: 'pointer' }}>x</span>

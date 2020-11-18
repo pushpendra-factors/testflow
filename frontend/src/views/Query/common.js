@@ -33,6 +33,8 @@ export const QUERY_CLASS_CHANNEL = "channel";
 export const QUERY_CLASS_FUNNEL = "funnel";
 export const QUERY_CLASS_ATTRIBUTION = 'attribution';
 export const QUERY_CLASS_WEB = 'web';
+export const QUERY_CLASS_INSIGHTS = 'insights';
+export const QUERY_CLASS_EVENTS = 'events';
 export const PROPERTY_VALUE_TYPE_DATE_TIME = 'datetime';
 
 export const USER_PREF_PROPERTY_TYPE_OPTS = {
