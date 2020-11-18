@@ -217,6 +217,7 @@ def get_company_contacts(project_id, api_key, company_id):
         return contacts
     if not r.ok:
         log.error("Failure response %d from hubspot on get_company_contacts", r.status_code)
+        return contacts
     try:
         response = json.loads(r.text)
     except Exception as e:
@@ -308,6 +309,7 @@ def sync_forms(project_id, api_key):
         raise Exception("Hubspot API rate limit exceeded for project %d", project_id)
     if not r.ok:
         log.error("Failure response %d from hubspot on sync_forms", r.status_code)
+        return
     docs = json.loads(r.text)
 
     create_all_documents(project_id, 'form', docs)
@@ -352,6 +354,7 @@ def sync_form_submissions(project_id, api_key):
             raise Exception("Hubspot API rate limit exceeded for project "+str(project_id))
         if not r.ok:
             log.error("Failure response %d from hubspot on sync_form_submissions", r.status_code)
+            return
         response = json.loads(r.text)
         docs = response.get("results")
         if docs == None:
