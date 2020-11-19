@@ -100,6 +100,8 @@ func main() {
 
 	C.InitRedis(config.RedisHost, config.RedisPort)
 
+	C.InitRedisPersistent(config.RedisHost, config.RedisPort)
+
 	if filePath == nil || *filePath == "" {
 		log.Error("No file path provided")
 		os.Exit(1)

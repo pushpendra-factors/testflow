@@ -1524,6 +1524,9 @@ func isURLProperty(property string) bool {
 
 func SanitizeProperties(properties *PropertiesMap) {
 	for k, v := range *properties {
+		if v == nil {
+			continue
+		}
 		if isURLProperty(k) {
 			(*properties)[k] = strings.TrimSuffix(v.(string), "/")
 		}

@@ -166,6 +166,9 @@ func addEventDetailsToCache(projectId uint64, event *Event, isUpdateEventPropert
 	eventsToIncr = append(eventsToIncr, eventNamesKey)
 
 	for property, value := range eventProperties {
+		if value == nil {
+			continue
+		}
 		if !blackListedForUpdate[property] || !isUpdateEventProperty {
 			category := U.GetPropertyTypeByKeyValue(property, value)
 			var propertyValue string
