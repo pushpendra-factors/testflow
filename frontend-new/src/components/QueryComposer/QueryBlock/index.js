@@ -82,6 +82,8 @@ function QueryBlock({
 
   const insertFilters = (filter) => {
     const newEvent = Object.assign({}, event);
+    const filt = newEvent.filters.filter(fil => JSON.stringify(fil) === JSON.stringify(filter));
+    if (filt && filt.length) return;
     newEvent.filters.push(filter);
     eventChange(newEvent, index - 1);
   };

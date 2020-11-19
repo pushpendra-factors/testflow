@@ -31,6 +31,10 @@ function GroupBlock({
     setFilterOptions(filterOpts);
   }, [userProperties]);
 
+  useEffect(() => {
+    console.log(groupByState);
+  }, [groupByState]);
+
   const delOption = (index) => {
     delGroupBy('global', groupByState[index], index);
   };
@@ -76,6 +80,37 @@ function GroupBlock({
     </div>);
   };
 
+  const renderExistingBreakdowns = () => {
+    if (groupByState.length < 1) return;
+    return (groupByState.map((opt, index) => (
+      <div key={index} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
+        {!isDDVisible[index] && <>
+        <Button size={'large'}
+        type="text"
+        onClick={() => delOption(index)}
+        className={`${styles.filter_block__remove} mr-2ß`}>
+          <SVG name="remove"></SVG></Button>
+
+        <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" />} {opt.property ? opt.property : 'Select user property'}</Button>
+        </>
+        }
+        {isDDVisible[index]
+          ? (<GroupSelect groupedProperties={filterOptions}
+            placeholder="Select Property"
+            optionClick={(group, val) => onChange([group, val], index)}
+            onClickOutside={() => triggerDropDown(index, true)}
+
+            >
+              </GroupSelect>
+
+          )
+
+          : null
+        }
+      </div>
+    )));
+  };
+
   return (
     <div className={'flex flex-col justify-start'}>
 
@@ -84,37 +119,7 @@ function GroupBlock({
         <Text type={'title'} level={6} weight={'thin'} extraClass={'m-0'}>Group By</Text>
       </div>
 
-      {
-        groupByState.map((opt, index) => (
-          <div key={index} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
-            {!isDDVisible[index] && <>
-            <Button size={'large'}
-            type="text"
-            onClick={() => delOption(index)}
-            className={`${styles.filter_block__remove} mr-2ß`}>
-              <SVG name="remove"></SVG></Button>
-
-            <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" />} {opt.property ? opt.property : 'Select user property'}</Button>
-            </>
-            }
-            {isDDVisible[index]
-              ? (<GroupSelect groupedProperties={filterOptions}
-                placeholder="Select Property"
-                optionClick={(group, val) => onChange([group, val], index)}
-                onClickOutside={() => triggerDropDown(index, true)}
-
-                >
-                  </GroupSelect>
-
-              )
-
-              : null
-            }
-        </div>
-        ))
-
-      }
-
+      {renderExistingBreakdowns()}
       {renderInitGroupSelect(groupByState.length)}
     </div>
   );

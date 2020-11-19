@@ -99,7 +99,7 @@ function WidgetCard({
       cardSize
     };
     const newState = [...activeDashboardUnits.data.slice(0, unitIndex), updatedUnit, ...activeDashboardUnits.data.slice(unitIndex + 1)];
-    onDrop(newState)
+    onDrop(newState);
   }, [unit, activeDashboardUnits.data, onDrop]);
 
   const { dashboards_loaded } = useSelector(state => state.dashboard);

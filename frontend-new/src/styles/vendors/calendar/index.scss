@@ -1,9 +1,12 @@
 .rdrStaticRanges {
     padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
 }
 
 .rdrStaticRange {
-    padding: 15px 10px;
     min-width: 140px;
 }
 
@@ -13,11 +16,6 @@
 
 .rdrStaticRangeSelected {
     background: #F5F6F8;
-}
-
-.rdrDateDisplayItem {
-    padding: 20px 10px;
-
 }
 
 .rdrCalendarWrapper {
@@ -56,7 +54,6 @@
 
 
 .rdrInRange + .rdrDayNumber {
-    background: #EEEDF8;
     span {
         color: #5949BC;
     }

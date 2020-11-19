@@ -157,7 +157,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
         options.forEach((group, grpIndex) => {
           const collState = groupCollapseState[grpIndex];
           renderOptions.push(
-          <div class={styles.filter_block__filter_select__option_group_container}>
+          <div className={styles.filter_block__filter_select__option_group_container}>
             <div className={styles.filter_block__filter_select__option_group}
               onClick={() => collapseGroup(grpIndex)}
             >
@@ -167,7 +167,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
               </div>
               <SVG name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
             </div>
-            <div class={styles.filter_block__filter_select__option_group_container_sec}>
+            <div className={styles.filter_block__filter_select__option_group_container_sec}>
             { collState
               ? (() => {
                 const valuesOptions = [];
