@@ -1589,6 +1589,7 @@ paths:
       summary: Gets agents list for the given project id.
       tags:
       - V1Api
+      - ProjectAdmin
   /{project_id}/v1/dashboards/{dashboard_id}:
     delete:
       consumes:

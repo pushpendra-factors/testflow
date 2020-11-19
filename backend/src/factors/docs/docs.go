@@ -1620,7 +1620,8 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "V1Api"
+                    "V1Api",
+                    "ProjectAdmin"
                 ],
                 "summary": "Gets agents list for the given project id.",
                 "parameters": [
