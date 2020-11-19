@@ -187,7 +187,7 @@ func addPropertyConstraintsToMap(
 // @Accept  json
 // @Produce json
 // @Param project_id path integer true "Project ID"
-// @Param query formData json true "Factors query"
+// @Param query body object true "Factors query"
 // @Success 200 {array} pattern_service_wrapper.FactorGraphResults
 // @Router /{project_id}/factor [post]
 // TODO(prateek): Check for a better way to define query.

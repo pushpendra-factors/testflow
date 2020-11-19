@@ -164,14 +164,16 @@ github.com/gin-gonic/gin/binding
 github.com/gin-gonic/gin/internal/bytesconv
 github.com/gin-gonic/gin/internal/json
 github.com/gin-gonic/gin/render
-# github.com/go-openapi/jsonpointer v0.19.3
+# github.com/go-openapi/jsonpointer v0.19.5
+## explicit
 github.com/go-openapi/jsonpointer
 # github.com/go-openapi/jsonreference v0.19.4
 github.com/go-openapi/jsonreference
-# github.com/go-openapi/spec v0.19.12
+# github.com/go-openapi/spec v0.19.13
 ## explicit
 github.com/go-openapi/spec
-# github.com/go-openapi/swag v0.19.11
+# github.com/go-openapi/swag v0.19.12
+## explicit
 github.com/go-openapi/swag
 # github.com/go-playground/locales v0.13.0
 github.com/go-playground/locales
@@ -373,6 +375,8 @@ github.com/richardlehane/msoleps/types
 # github.com/rs/xid v1.2.1
 ## explicit
 github.com/rs/xid
+# github.com/russross/blackfriday/v2 v2.1.0
+## explicit
 # github.com/sirupsen/logrus v1.4.2
 ## explicit
 github.com/sirupsen/logrus
@@ -388,7 +392,7 @@ github.com/swaggo/files
 # github.com/swaggo/gin-swagger v1.3.0
 ## explicit
 github.com/swaggo/gin-swagger
-# github.com/swaggo/swag v1.6.2
+# github.com/swaggo/swag v1.6.7
 ## explicit
 github.com/swaggo/swag
 # github.com/thinkerou/favicon v0.1.0
@@ -493,7 +497,7 @@ golang.org/x/lint/golint
 # golang.org/x/mod v0.3.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
+# golang.org/x/net v0.0.0-20201110031124-69a78807bb2b
 ## explicit
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -546,7 +550,7 @@ golang.org/x/text/unicode/norm
 golang.org/x/text/width
 # golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
 ## explicit
-# golang.org/x/tools v0.0.0-20201105220310-78b158585360
+# golang.org/x/tools v0.0.0-20201118030313-598b068a9102
 ## explicit
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/analysis
@@ -720,7 +724,7 @@ google.golang.org/protobuf/types/pluginpb
 # gopkg.in/yaml.v2 v2.3.0
 ## explicit
 gopkg.in/yaml.v2
-# gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+# gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 gopkg.in/yaml.v3
 # honnef.co/go/tools v0.0.1-2020.1.6
 ## explicit
