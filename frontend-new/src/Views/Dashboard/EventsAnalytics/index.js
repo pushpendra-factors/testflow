@@ -6,7 +6,7 @@ import NoBreakdownCharts from './NoBreakdownCharts';
 import { useSelector } from 'react-redux';
 
 function EventsAnalytics({
-  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper
+  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper, unit
 }) {
   let content = null;
 
@@ -23,6 +23,7 @@ function EventsAnalytics({
                 chartType={chartType}
                 title={title}
                 dashboards_loaded={dashboards_loaded}
+                unit={unit}
             />
     );
   }
@@ -38,6 +39,7 @@ function EventsAnalytics({
                 chartType={chartType}
                 title={title}
                 dashboards_loaded={dashboards_loaded}
+                unit={unit}
             />
     );
   }
@@ -53,6 +55,7 @@ function EventsAnalytics({
                 chartType={chartType}
                 title={title}
                 dashboards_loaded={dashboards_loaded}
+                unit={unit}
             />
     );
   }

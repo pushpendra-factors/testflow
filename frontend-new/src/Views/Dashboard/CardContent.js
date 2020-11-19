@@ -60,7 +60,8 @@ function CardContent({ unit, resultState }) {
 					chartType={presentationObj[dashboardPresentation]}
 					title={unit.id}
 					eventsMapper={eventsMapper}
-					reverseEventsMapper={reverseEventsMapper}
+          reverseEventsMapper={reverseEventsMapper}
+          unit={unit}
 				/>
       );
     }
@@ -74,7 +75,8 @@ function CardContent({ unit, resultState }) {
 					chartType={presentationObj[dashboardPresentation]}
 					title={unit.id}
 					eventsMapper={eventsMapper}
-					reverseEventsMapper={reverseEventsMapper}
+          reverseEventsMapper={reverseEventsMapper}
+          unit={unit}
 				/>
       );
     }

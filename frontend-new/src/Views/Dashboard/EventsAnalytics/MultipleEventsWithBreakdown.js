@@ -7,13 +7,13 @@ import LineChart from '../../../components/LineChart';
 // import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
-  queries, resultState, page, chartType, title, breakdown
+  queries, resultState, page, chartType, title, breakdown, unit
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
-  const maxAllowedVisibleProperties = 5;
+  const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
 
   useEffect(() => {
     const appliedColors = generateColors(queries.length);

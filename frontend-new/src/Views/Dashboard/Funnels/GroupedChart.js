@@ -4,10 +4,10 @@ import Chart from '../../CoreQuery/FunnelsResultPage/GroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
 
 function GroupedChart({
-  resultState, queries, eventsMapper, reverseEventsMapper, title, breakdown, chartType
+  resultState, queries, eventsMapper, reverseEventsMapper, title, breakdown, chartType, unit
 }) {
   const [groups, setGroups] = useState([]);
-  const maxAllowedVisibleProperties = 5;
+  const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
 
   useEffect(() => {
     const formattedGroups = generateGroups(resultState.data, maxAllowedVisibleProperties);

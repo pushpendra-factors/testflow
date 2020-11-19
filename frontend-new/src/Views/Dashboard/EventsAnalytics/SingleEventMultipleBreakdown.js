@@ -8,13 +8,13 @@ import SingleEventMultipleBreakdownTable from '../../EventsAnalytics/SingleEvent
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventMultipleBreakdown({
-  resultState, page, chartType, title, breakdown, queries
+  resultState, page, chartType, title, breakdown, queries, unit
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
-  const maxAllowedVisibleProperties = 5;
+  const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
 
   useEffect(() => {
     const formattedData = formatData(resultState.data);

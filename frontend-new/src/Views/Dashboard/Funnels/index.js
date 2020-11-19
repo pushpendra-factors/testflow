@@ -4,7 +4,7 @@ import GroupedChart from './GroupedChart';
 import { useSelector } from 'react-redux';
 
 function Funnels({
-  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper
+  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper, unit
 }) {
   const { dashboards_loaded } = useSelector(state => state.dashboard);
 
@@ -29,6 +29,7 @@ function Funnels({
         reverseEventsMapper={reverseEventsMapper}
         chartType={chartType}
         dashboards_loaded={dashboards_loaded}
+        unit={unit}
       />
     );
   }
