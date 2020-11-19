@@ -1,0 +1,186 @@
+package model
+
+import (
+	C "factors/config"
+	"net/http"
+	"time"
+
+	U "factors/util"
+
+	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
+)
+
+// TrackedEvent - DB model for table: tracked_events
+type FactorsTrackedEvent struct {
+	ID            uint64     `gorm:"primary_key:true;" json:"id"`
+	ProjectID     uint64     `json:"project_id"`
+	EventNameID   uint64     `json:"event_name_id"`
+	Type          string     `gorm:"not null;type:varchar(2)" json:"type"`
+	CreatedBy     string     `json:"created_by"`
+	LastTrackedAt *time.Time `json:"last_tracked_at"`
+	IsActive      bool       `json:"is_active"`
+	CreatedAt     *time.Time `json:"created_at"`
+	UpdatedAt     *time.Time `json:"updated_at"`
+}
+
+//CreateTrackedEvent - Inserts the tracked event to db
+func CreateFactorsTrackedEvent(ProjectID uint64, EventName string, agentUUID string) (int64, int) {
+	if isActiveFactorsTrackedEventsLimitExceeded(ProjectID) {
+		return 0, http.StatusBadRequest
+	}
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
+	db := C.GetServices().Db
+	insertType := U.UserCreated
+	if agentUUID == "" {
+		insertType = U.AutoTracked
+	}
+	transTime := gorm.NowFunc()
+
+	eventData, err := GetEventName(EventName, ProjectID)
+	if err != http.StatusFound {
+		logCtx.Error("Get Event details failed")
+		return 0, http.StatusNotFound // Janani: return error
+	}
+	existingFactorsTrackedEvent, dbErr := GetFactorsTrackedEvent(eventData.ID, ProjectID)
+	if dbErr == nil {
+		if existingFactorsTrackedEvent.IsActive == false {
+			updatedFields := map[string]interface{}{
+				"is_active":  true,
+				"updated_at": transTime,
+			}
+			return updateFactorsTrackedEvent(existingFactorsTrackedEvent.ID, ProjectID, updatedFields)
+		}
+		logCtx.Error("Create tracked Event failed")
+		return 0, http.StatusConflict // Janani: return error
+
+	} else if dbErr.Error() == "record not found" {
+		trackedEvent := FactorsTrackedEvent{
+			ProjectID:     ProjectID,
+			EventNameID:   eventData.ID,
+			Type:          insertType,
+			CreatedBy:     agentUUID,
+			LastTrackedAt: new(time.Time),
+			IsActive:      true,
+			CreatedAt:     &transTime,
+			UpdatedAt:     &transTime,
+		}
+		if err := db.Create(&trackedEvent).Error; err != nil {
+			logCtx.WithError(dbErr).Error("Insert into tracked_events table failed")
+			return 0, http.StatusInternalServerError
+		}
+		return int64(trackedEvent.ID), http.StatusCreated
+	} else {
+		logCtx.WithError(dbErr).Error("Tracked Event creation Failed")
+		return 0, http.StatusInternalServerError
+	}
+}
+
+// DeactivateFactorsTrackedEvent - Mark the tracked event inactive
+func DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (int64, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
+	transTime := gorm.NowFunc()
+	existingFactorsTrackedEvent, dbErr := GetFactorsTrackedEventByID(ID, ProjectID)
+	if dbErr == nil {
+		if existingFactorsTrackedEvent.IsActive == true {
+			updatedFields := map[string]interface{}{
+				"is_active":  false,
+				"updated_at": transTime,
+			}
+			return updateFactorsTrackedEvent(existingFactorsTrackedEvent.ID, ProjectID, updatedFields)
+		}
+		logCtx.Error("Remove Tracked Event failed")
+		return 0, http.StatusConflict
+
+	}
+	logCtx.WithError(dbErr).Error("Tracked Events not found")
+	return 0, http.StatusNotFound
+}
+
+// GetAllFactorsTrackedEventsByProject - get all the tracked events by project
+func GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]FactorsTrackedEvent, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
+	db := C.GetServices().Db
+
+	var trackedEvents []FactorsTrackedEvent
+	if err := db.Limit(1000).Where("project_id = ?", ProjectID).Find(&trackedEvents).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusFound
+		}
+		logCtx.WithError(err).Error("Get All Trackedevents failed")
+		return nil, http.StatusInternalServerError
+	}
+	return trackedEvents, http.StatusFound
+}
+
+// GetAllActiveFactorsTrackedEventsByProject - get all the tracked events by project
+func GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64) ([]FactorsTrackedEvent, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
+	db := C.GetServices().Db
+
+	var trackedEvents []FactorsTrackedEvent
+	if err := db.Limit(1000).Where("project_id = ?", ProjectID).Where("is_active = ?", true).Find(&trackedEvents).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusFound
+		}
+		logCtx.WithError(err).Error("Get All Trackedevents failed")
+		return nil, http.StatusInternalServerError
+	}
+	return trackedEvents, http.StatusFound
+}
+
+// GetFactorsTrackedEvent - Get details of tracked event
+func GetFactorsTrackedEvent(EventNameID uint64, ProjectID uint64) (*FactorsTrackedEvent, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
+	db := C.GetServices().Db
+
+	var trackedEvent FactorsTrackedEvent
+	if err := db.Where("event_name_id = ?", EventNameID).Where("project_id = ?", ProjectID).Take(&trackedEvent).Error; err != nil {
+		logCtx.WithFields(log.Fields{"ProjectID": ProjectID}).WithError(err).Error(
+			"Getting tracked event failed on GetFactorsTrackedEvent")
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, err
+		}
+		return nil, err
+	}
+	return &trackedEvent, nil
+}
+
+// GetFactorsTrackedEventByID - Get details of tracked event
+func GetFactorsTrackedEventByID(ID int64, ProjectID uint64) (*FactorsTrackedEvent, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
+	db := C.GetServices().Db
+
+	var trackedEvent FactorsTrackedEvent
+	if err := db.Where("id = ?", ID).Where("project_id = ?", ProjectID).Take(&trackedEvent).Error; err != nil {
+		logCtx.WithFields(log.Fields{"ProjectID": ProjectID}).WithError(err).Error(
+			"Getting tracked event failed on GetFactorsTrackedEvent")
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, err
+		}
+		return nil, err
+	}
+	return &trackedEvent, nil
+}
+
+func updateFactorsTrackedEvent(FactorsTrackedEventID uint64, ProjectID uint64, updatedFields map[string]interface{}) (int64, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
+	db := C.GetServices().Db
+	dbErr := db.Model(&FactorsTrackedEvent{}).Where("project_id = ? AND id = ?", ProjectID, FactorsTrackedEventID).Update(updatedFields).Error
+	if dbErr != nil {
+		logCtx.WithError(dbErr).Error("updating tracked_event failed")
+		return 0, http.StatusInternalServerError
+	}
+	return int64(FactorsTrackedEventID), http.StatusOK
+}
+
+func isActiveFactorsTrackedEventsLimitExceeded(ProjectID uint64) bool {
+	trackedEvents, errCode := GetAllActiveFactorsTrackedEventsByProject(ProjectID)
+	if errCode != http.StatusFound {
+		return true
+	}
+	if len(trackedEvents) >= C.GetFactorsTrackedEventsLimit() {
+		return true
+	}
+	return false
+}

@@ -229,6 +229,117 @@ definitions:
       title:
         type: string
     type: object
+  model.FactorsGoal:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      last_tracked_at:
+        type: string
+      name:
+        type: string
+      project_id:
+        type: integer
+      rule:
+        type: string
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.FactorsGoalFilter:
+    properties:
+      en_en_ft:
+        items:
+          $ref: '#/definitions/model.KeyValueTuple'
+        type: array
+      en_us_ft:
+        items:
+          $ref: '#/definitions/model.KeyValueTuple'
+        type: array
+      ft:
+        items:
+          $ref: '#/definitions/model.KeyValueTuple'
+        type: array
+      st_en_ft:
+        items:
+          $ref: '#/definitions/model.KeyValueTuple'
+        type: array
+      st_us_ft:
+        items:
+          $ref: '#/definitions/model.KeyValueTuple'
+        type: array
+    type: object
+  model.FactorsGoalRule:
+    properties:
+      en_en:
+        type: string
+      en_time:
+        type: string
+      rule:
+        $ref: '#/definitions/model.FactorsGoalFilter'
+        type: object
+      st_en:
+        type: string
+      st_time:
+        type: string
+      vs:
+        type: boolean
+    type: object
+  model.FactorsTrackedEvent:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      event_name_id:
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      last_tracked_at:
+        type: string
+      project_id:
+        type: integer
+      type:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.FactorsTrackedUserProperty:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      last_tracked_at:
+        type: string
+      project_id:
+        type: integer
+      type:
+        type: string
+      updated_at:
+        type: string
+      user_property_name:
+        type: string
+    type: object
+  model.KeyValueTuple:
+    properties:
+      key:
+        type: string
+      vl:
+        type: string
+    type: object
   model.Project:
     properties:
       created_at:
@@ -518,6 +629,73 @@ definitions:
         type: string
       uuid:
         type: string
+    type: object
+  v1.CreateFactorsGoalParams:
+    properties:
+      name:
+        type: string
+      rule:
+        $ref: '#/definitions/model.FactorsGoalRule'
+        type: object
+    required:
+    - name
+    - rule
+    type: object
+  v1.CreateFactorsTrackedEventParams:
+    properties:
+      event_name:
+        type: string
+    required:
+    - event_name
+    type: object
+  v1.CreateTrackeduserPropertyParams:
+    properties:
+      user_property_name:
+        type: string
+    required:
+    - user_property_name
+    type: object
+  v1.RemoveFactorsGoalParams:
+    properties:
+      id:
+        type: integer
+    required:
+    - id
+    type: object
+  v1.RemoveFactorsTrackedEventParams:
+    properties:
+      id:
+        type: integer
+    required:
+    - id
+    type: object
+  v1.RemoveFactorsTrackedUserPropertyParams:
+    properties:
+      id:
+        type: integer
+    required:
+    - id
+    type: object
+  v1.SearchFactorsGoalParams:
+    properties:
+      search_text:
+        type: string
+    required:
+    - search_text
+    type: object
+  v1.UpdateFactorsGoalParams:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      rule:
+        $ref: '#/definitions/model.FactorsGoalRule'
+        type: object
+    required:
+    - id
+    - name
+    - rule
     type: object
 host: factors-dev.com:8080
 info:
@@ -1706,6 +1884,279 @@ paths:
       summary: Get event names for the given project id.
       tags:
       - V1Api
+  /{project_id}/v1/factors/goals:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.FactorsGoal'
+            type: array
+      summary: Get All the saved goals for a given project
+      tags:
+      - V1FactorsApi
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Create
+        in: body
+        name: create
+        required: true
+        schema:
+          $ref: '#/definitions/v1.CreateFactorsGoalParams'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: '{"id": uint64, "status": string}'
+          schema:
+            type: string
+      summary: Create a saved goal with specified name and rule
+      tags:
+      - V1FactorsApi
+  /{project_id}/v1/factors/goals/remove:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Remove
+        in: body
+        name: remove
+        required: true
+        schema:
+          $ref: '#/definitions/v1.RemoveFactorsGoalParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"id": uint64, "status": string}'
+          schema:
+            type: string
+      summary: Remove a saved goal
+      tags:
+      - V1FactorsApi
+  /{project_id}/v1/factors/goals/search:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Search
+        in: body
+        name: search
+        required: true
+        schema:
+          $ref: '#/definitions/v1.SearchFactorsGoalParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.FactorsGoal'
+            type: array
+      summary: Remove a saved goal
+      tags:
+      - V1FactorsApi
+  /{project_id}/v1/factors/goals/update:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Update
+        in: body
+        name: update
+        required: true
+        schema:
+          $ref: '#/definitions/v1.UpdateFactorsGoalParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"id": uint64, "status": string}'
+          schema:
+            type: string
+      summary: Update a saved goal with specified name and rule
+      tags:
+      - V1FactorsApi
+  /{project_id}/v1/factors/tracked_event:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.FactorsTrackedEvent'
+            type: array
+      summary: Get all tracked events
+      tags:
+      - V1FactorsApi
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: create
+        in: body
+        name: create
+        required: true
+        schema:
+          $ref: '#/definitions/v1.CreateFactorsTrackedEventParams'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: '{"id": uint64, "status": string}'
+          schema:
+            type: string
+      summary: create a tracked event
+      tags:
+      - V1FactorsApi
+  /{project_id}/v1/factors/tracked_event/remove:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: remove
+        in: body
+        name: remove
+        required: true
+        schema:
+          $ref: '#/definitions/v1.RemoveFactorsTrackedEventParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"id": uint64, "status": string}'
+          schema:
+            type: string
+      summary: Remove a tracked event
+      tags:
+      - V1FactorsApi
+  /{project_id}/v1/factors/tracked_user_property:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.FactorsTrackedUserProperty'
+            type: array
+      summary: Get all tracked user properties
+      tags:
+      - V1FactorsApi
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: create
+        in: body
+        name: create
+        required: true
+        schema:
+          $ref: '#/definitions/v1.CreateTrackeduserPropertyParams'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: '{"id": uint64, "status": string}'
+          schema:
+            type: string
+      summary: create a tracked event
+      tags:
+      - V1FactorsApi
+  /{project_id}/v1/factors/tracked_user_property/remove:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: remove
+        in: body
+        name: remove
+        required: true
+        schema:
+          $ref: '#/definitions/v1.RemoveFactorsTrackedUserPropertyParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"id": uint64, "status": string}'
+          schema:
+            type: string
+      summary: Remove a tracked user property
+      tags:
+      - V1FactorsApi
   /{project_id}/v1/query:
     post:
       consumes:

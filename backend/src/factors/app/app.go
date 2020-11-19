@@ -72,6 +72,12 @@ func main() {
 		"", "List of project tokens blocked for all sdk requests.")
 	cacheLookUpRangeProjects := flag.String("cache_look_up_range_projects",
 		"", "List of projects and the overrided date range")
+	factorsActiveGoalsLimit := flag.Int("active_goals_limit",
+		50, "Active Goals limit per project")
+	factorsActiveTrackedEventsLimit := flag.Int("active_tracked_events_limit",
+		50, "Active Tracked events limit per project")
+	factorsActiveTrackedUserPropertiesLimit := flag.Int("active_tracked_user_properties_limit",
+		50, "Active Tracked user properties limit per project")
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -88,30 +94,33 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:                       *redisHost,
-		RedisPort:                       *redisPort,
-		RedisHostPersistent:             *redisHostPersistent,
-		RedisPortPersistent:             *redisPortPersistent,
-		GeolocationFile:                 *geoLocFilePath,
-		DeviceDetectorPath:              *deviceDetectorPath,
-		APIDomain:                       *apiDomain,
-		APPDomain:                       *appDomain,
-		AWSKey:                          *awsAccessKeyId,
-		AWSSecret:                       *awsSecretAccessKey,
-		AWSRegion:                       *awsRegion,
-		EmailSender:                     *factorsEmailSender,
-		AdminLoginEmail:                 *adminLoginEmail,
-		AdminLoginToken:                 *adminLoginToken,
-		FacebookAppID:                   *facebookAppId,
-		FacebookAppSecret:               *facebookAppSecret,
-		SalesforceAppID:                 *salesforceAppId,
-		SalesforceAppSecret:             *salesforceAppSecret,
-		SentryDSN:                       *sentryDSN,
-		LoginTokenMap:                   C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
-		SkipTrackProjectIds:             C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
-		BlockedSDKRequestProjectTokens:  C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
-		CacheLookUpRangeProjects:        C.ExtractProjectIdDateFromConfig(*cacheLookUpRangeProjects),
-		LookbackWindowForEventUserCache: *lookbackWindowForEventUserCache,
+		RedisHost:                               *redisHost,
+		RedisPort:                               *redisPort,
+		RedisHostPersistent:                     *redisHostPersistent,
+		RedisPortPersistent:                     *redisPortPersistent,
+		GeolocationFile:                         *geoLocFilePath,
+		DeviceDetectorPath:                      *deviceDetectorPath,
+		APIDomain:                               *apiDomain,
+		APPDomain:                               *appDomain,
+		AWSKey:                                  *awsAccessKeyId,
+		AWSSecret:                               *awsSecretAccessKey,
+		AWSRegion:                               *awsRegion,
+		EmailSender:                             *factorsEmailSender,
+		AdminLoginEmail:                         *adminLoginEmail,
+		AdminLoginToken:                         *adminLoginToken,
+		FacebookAppID:                           *facebookAppId,
+		FacebookAppSecret:                       *facebookAppSecret,
+		SalesforceAppID:                         *salesforceAppId,
+		SalesforceAppSecret:                     *salesforceAppSecret,
+		SentryDSN:                               *sentryDSN,
+		LoginTokenMap:                           C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
+		SkipTrackProjectIds:                     C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
+		BlockedSDKRequestProjectTokens:          C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
+		CacheLookUpRangeProjects:                C.ExtractProjectIdDateFromConfig(*cacheLookUpRangeProjects),
+		LookbackWindowForEventUserCache:         *lookbackWindowForEventUserCache,
+		ActiveFactorsGoalsLimit:                 *factorsActiveGoalsLimit,
+		ActiveFactorsTrackedEventsLimit:         *factorsActiveTrackedEventsLimit,
+		ActiveFactorsTrackedUserPropertiesLimit: *factorsActiveTrackedUserPropertiesLimit,
 	}
 
 	// Initialize configs and connections.

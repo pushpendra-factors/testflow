@@ -75,6 +75,10 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
 }
 
+// Factors API constants
+const UserCreated string = "UC"
+const AutoTracked string = "AT"
+
 /* Properties Constants */
 
 // Generic Event Properties.

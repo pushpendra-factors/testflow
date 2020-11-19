@@ -116,6 +116,23 @@ func InitAppRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		V1.GetProjectsHandler)
+
+	// Tracked Events
+	authRouteGroup.POST("/:project_id/v1/factors/tracked_event", V1.CreateFactorsTrackedEventsHandler)
+	authRouteGroup.DELETE("/:project_id/v1/factors/tracked_event/remove", V1.RemoveFactorsTrackedEventsHandler)
+	authRouteGroup.GET("/:project_id/v1/factors/tracked_event", V1.GetAllFactorsTrackedEventsHandler)
+
+	// Tracked User Property
+	authRouteGroup.POST("/:project_id/v1/factors/tracked_user_property", V1.CreateFactorsTrackedUserPropertyHandler)
+	authRouteGroup.DELETE("/:project_id/v1/factors/tracked_user_property/remove", V1.RemoveFactorsTrackedUserPropertyHandler)
+	authRouteGroup.GET("/:project_id/v1/factors/tracked_user_property", V1.GetAllFactorsTrackedUserPropertiesHandler)
+
+	// Goals
+	authRouteGroup.POST("/:project_id/v1/factors/goals", V1.CreateFactorsGoalsHandler)
+	authRouteGroup.DELETE("/:project_id/v1/factors/goals/remove", V1.RemoveFactorsGoalsHandler)
+	authRouteGroup.GET("/:project_id/v1/factors/goals", V1.GetAllFactorsGoalsHandler)
+	authRouteGroup.PUT("/:project_id/v1/factors/goals/update", V1.UpdateFactorsGoalsHandler)
+	authRouteGroup.GET("/:project_id/v1/factors/goals/search", V1.SearchFactorsGoalHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

@@ -480,4 +480,88 @@ func main() {
 			log.Infof("Updated config for %s table", tableName)
 		}
 	}
+
+	// tracked events
+	if err := db.CreateTable(&M.FactorsTrackedEvent{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_events table creation failed.")
+	} else {
+		log.Info("created factors_tracked_events table.")
+	}
+
+	// Adding unique index.
+	if err := db.Exec("CREATE UNIQUE INDEX projectid_eventnameid_unique_idx ON factors_tracked_events (project_id, event_name_id);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_Events unique index creation failed ")
+	} else {
+		log.Info("Created unique index on tracked events table")
+	}
+
+	// Add foreign key constraint
+	if err := db.Model(&M.FactorsTrackedEvent{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_events table association with projects table failed.")
+	} else {
+		log.Info("factors_tracked_events table is associated with projects table.")
+	}
+
+	// Add foreign key constraint
+	if err := db.Model(&M.FactorsTrackedEvent{}).AddForeignKey("created_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_events table association with agents table failed.")
+	} else {
+		log.Info("factors_tracked_events table is associated with agents table.")
+	}
+
+	// tracked user properties
+	if err := db.CreateTable(&M.FactorsTrackedUserProperty{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_user_properties table creation failed.")
+	} else {
+		log.Info("created factors_tracked_user_properties table.")
+	}
+
+	// Adding unique index.
+	if err := db.Exec("CREATE UNIQUE INDEX projectid_userpropertyname_unique_idx ON factors_tracked_user_properties (project_id, user_property_name);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_user_properties unique index creation failed ")
+	} else {
+		log.Info("Created unique index on tracked user properties table")
+	}
+
+	// Add foreign key constraint
+	if err := db.Model(&M.FactorsTrackedUserProperty{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_user_properties table association with projects table failed.")
+	} else {
+		log.Info("factors_tracked_user_properties table is associated with projects table.")
+	}
+
+	// Add foreign key constraint
+	if err := db.Model(&M.FactorsTrackedUserProperty{}).AddForeignKey("created_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_user_properties table association with agents table failed.")
+	} else {
+		log.Info("factors_tracked_user_properties table is associated with agents table.")
+	}
+
+	// saved goals
+	if err := db.CreateTable(&M.FactorsGoal{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_goals table creation failed.")
+	} else {
+		log.Info("created factors_goals table.")
+	}
+
+	// Adding unique index.
+	if err := db.Exec("CREATE UNIQUE INDEX name_projectId_unique_idx ON factors_goals (project_id, \"name\");").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_goals unique index creation failed ")
+	} else {
+		log.Info("Created unique index on factors_goals table")
+	}
+
+	// Add foreign key constraint
+	if err := db.Model(&M.FactorsGoal{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_goals table association with projects table failed.")
+	} else {
+		log.Info("factors_goals table is associated with projects table.")
+	}
+
+	// Add foreign key constraint
+	if err := db.Model(&M.FactorsGoal{}).AddForeignKey("created_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("factors_goals table association with agents table failed.")
+	} else {
+		log.Info("factors_goals table is associated with agents table.")
+	}
 }

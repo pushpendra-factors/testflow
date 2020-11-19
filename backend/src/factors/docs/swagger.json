@@ -1805,6 +1805,425 @@
                 }
             }
         },
+        "/{project_id}/v1/factors/goals": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "Get All the saved goals for a given project",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.FactorsGoal"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "Create a saved goal with specified name and rule",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Create",
+                        "name": "create",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.CreateFactorsGoalParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "{\"id\": uint64, \"status\": string}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/v1/factors/goals/remove": {
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "Remove a saved goal",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Remove",
+                        "name": "remove",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.RemoveFactorsGoalParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"id\": uint64, \"status\": string}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/v1/factors/goals/search": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "Remove a saved goal",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Search",
+                        "name": "search",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.SearchFactorsGoalParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.FactorsGoal"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/v1/factors/goals/update": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "Update a saved goal with specified name and rule",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update",
+                        "name": "update",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.UpdateFactorsGoalParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"id\": uint64, \"status\": string}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/v1/factors/tracked_event": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "Get all tracked events",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.FactorsTrackedEvent"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "create a tracked event",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "create",
+                        "name": "create",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.CreateFactorsTrackedEventParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "{\"id\": uint64, \"status\": string}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/v1/factors/tracked_event/remove": {
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "Remove a tracked event",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "remove",
+                        "name": "remove",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.RemoveFactorsTrackedEventParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"id\": uint64, \"status\": string}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/v1/factors/tracked_user_property": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "Get all tracked user properties",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.FactorsTrackedUserProperty"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "create a tracked event",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "create",
+                        "name": "create",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.CreateTrackeduserPropertyParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "{\"id\": uint64, \"status\": string}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/v1/factors/tracked_user_property/remove": {
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1FactorsApi"
+                ],
+                "summary": "Remove a tracked user property",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "remove",
+                        "name": "remove",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/v1.RemoveFactorsTrackedUserPropertyParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"id\": uint64, \"status\": string}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/{project_id}/v1/query": {
             "post": {
                 "consumes": [
@@ -2200,6 +2619,175 @@
                     "type": "string"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.FactorsGoal": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "last_tracked_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "integer"
+                },
+                "rule": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.FactorsGoalFilter": {
+            "type": "object",
+            "properties": {
+                "en_en_ft": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.KeyValueTuple"
+                    }
+                },
+                "en_us_ft": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.KeyValueTuple"
+                    }
+                },
+                "ft": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.KeyValueTuple"
+                    }
+                },
+                "st_en_ft": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.KeyValueTuple"
+                    }
+                },
+                "st_us_ft": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.KeyValueTuple"
+                    }
+                }
+            }
+        },
+        "model.FactorsGoalRule": {
+            "type": "object",
+            "properties": {
+                "en_en": {
+                    "type": "string"
+                },
+                "en_time": {
+                    "type": "string"
+                },
+                "rule": {
+                    "type": "object",
+                    "$ref": "#/definitions/model.FactorsGoalFilter"
+                },
+                "st_en": {
+                    "type": "string"
+                },
+                "st_time": {
+                    "type": "string"
+                },
+                "vs": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "model.FactorsTrackedEvent": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "event_name_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "last_tracked_at": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.FactorsTrackedUserProperty": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "last_tracked_at": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_property_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.KeyValueTuple": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "vl": {
                     "type": "string"
                 }
             }
@@ -2615,6 +3203,108 @@
                 },
                 "uuid": {
                     "type": "string"
+                }
+            }
+        },
+        "v1.CreateFactorsGoalParams": {
+            "type": "object",
+            "required": [
+                "name",
+                "rule"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "rule": {
+                    "type": "object",
+                    "$ref": "#/definitions/model.FactorsGoalRule"
+                }
+            }
+        },
+        "v1.CreateFactorsTrackedEventParams": {
+            "type": "object",
+            "required": [
+                "event_name"
+            ],
+            "properties": {
+                "event_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.CreateTrackeduserPropertyParams": {
+            "type": "object",
+            "required": [
+                "user_property_name"
+            ],
+            "properties": {
+                "user_property_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.RemoveFactorsGoalParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.RemoveFactorsTrackedEventParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.RemoveFactorsTrackedUserPropertyParams": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "v1.SearchFactorsGoalParams": {
+            "type": "object",
+            "required": [
+                "search_text"
+            ],
+            "properties": {
+                "search_text": {
+                    "type": "string"
+                }
+            }
+        },
+        "v1.UpdateFactorsGoalParams": {
+            "type": "object",
+            "required": [
+                "id",
+                "name",
+                "rule"
+            ],
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rule": {
+                    "type": "object",
+                    "$ref": "#/definitions/model.FactorsGoalRule"
                 }
             }
         }
