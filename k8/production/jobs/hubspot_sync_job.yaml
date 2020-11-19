@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: hubspot-sync-job
-            image: us.gcr.io/factors-production/hubspot-sync-job:v0.01-a182c1b
+            image: us.gcr.io/factors-production/hubspot-sync-job:v0.04-f2ae612-912
             imagePullPolicy: IfNotPresent
             args:
             - --env

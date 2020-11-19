@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: salesforce-enrich-job
-            image: us.gcr.io/factors-production/salesforce-enrich-job:v0.03-051e30c-798
+            image: us.gcr.io/factors-production/salesforce-enrich-job:v0.08-5d4a6f2-873
             imagePullPolicy: IfNotPresent
             args:
             - --env
