@@ -39,7 +39,7 @@ func GetQueriesHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get Queries failed. Invalid project."})
 		return
 	}
-	queries, errCode := M.GetALLSavedQueriesWithProjectId(projectID)
+	queries, errCode := M.GetALLQueriesWithProjectId(projectID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get Saved Queries failed."})
 		return

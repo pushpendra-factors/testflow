@@ -51,16 +51,21 @@ func CreateQuery(projectId uint64, query *Queries) (*Queries, int, string) {
 	return query, http.StatusCreated, ""
 }
 
-func GetALLSavedQueriesWithProjectId(projectID uint64) ([]Queries, int) {
+func GetALLQueriesWithProjectId(projectID uint64) ([]Queries, int) {
 	db := C.GetServices().Db
 
 	queries := make([]Queries, 0, 0)
-	err := db.Table("queries").Select("*").Where("project_id = ? AND is_deleted = ? AND type = ?", projectID, "false", QueryTypeSavedQuery).Order("created_at DESC").Find(&queries).Error
+	err := db.Table("queries").Select("*").Where("project_id = ? AND is_deleted = ?", projectID, "false").Order("created_at DESC").Find(&queries).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error("Failed to fetch rows from queries table for project")
 		return queries, http.StatusInternalServerError
 	}
-	q, errCode := addCreatedByNameInQueries(queries)
+	if len(queries) == 0 {
+		log.WithField("project_id", projectID).Error("No Saved Queries found")
+		return queries, http.StatusNoContent
+
+	}
+	q, errCode := addCreatedByNameInQueries(queries, projectID)
 	if errCode != http.StatusFound {
 		log.WithField("project_id", projectID).Error("could not update created " +
 			"by name for queries")
@@ -70,7 +75,7 @@ func GetALLSavedQueriesWithProjectId(projectID uint64) ([]Queries, int) {
 }
 
 // addCreatedByName Adds agent name in the query.CreatedByName
-func addCreatedByNameInQueries(queries []Queries) ([]Queries, int) {
+func addCreatedByNameInQueries(queries []Queries, projectID uint64) ([]Queries, int) {
 
 	agentUUIDs := make([]string, 0, 0)
 	for _, q := range queries {
@@ -79,6 +84,7 @@ func addCreatedByNameInQueries(queries []Queries) ([]Queries, int) {
 
 	agents, errCode := GetAgentsByUUIDs(agentUUIDs)
 	if errCode != http.StatusFound {
+		log.WithField("project_id", projectID).Error("could not get agents for given agentUUIDs")
 		return queries, errCode
 	}
 
@@ -89,7 +95,9 @@ func addCreatedByNameInQueries(queries []Queries) ([]Queries, int) {
 	}
 
 	for i, _ := range queries {
-		queries[i].CreatedByName = agentUUIDsToName[queries[i].CreatedBy]
+		if _, exists := agentUUIDsToName[queries[i].CreatedBy]; !exists {
+			queries[i].CreatedByName = agentUUIDsToName[queries[i].CreatedBy]
+		}
 	}
 	return queries, http.StatusFound
 }

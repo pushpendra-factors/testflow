@@ -167,6 +167,7 @@ func GetAgentByUUID(uuid string) (*Agent, int) {
 
 func GetAgentsByUUIDs(uuids []string) ([]*Agent, int) {
 	if len(uuids) == 0 {
+		log.Error("No uuids for agents")
 		return nil, http.StatusBadRequest
 	}
 	db := C.GetServices().Db
@@ -174,10 +175,12 @@ func GetAgentsByUUIDs(uuids []string) ([]*Agent, int) {
 	agents := make([]*Agent, 0, 0)
 
 	if err := db.Limit(len(uuids)).Where("uuid IN (?)", uuids).Find(&agents).Error; err != nil {
+		log.Error("could not get agents for given agentUUIDs", err)
 		return nil, http.StatusInternalServerError
 	}
 
 	if len(agents) == 0 {
+		log.Error("No agents are found for given agentUUID")
 		return nil, http.StatusNotFound
 	}
 
