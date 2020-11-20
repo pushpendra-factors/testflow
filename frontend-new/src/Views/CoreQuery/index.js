@@ -351,7 +351,7 @@ function CoreQuery({ activeProject }) {
             setQueryType={setQueryType}
             setDrawerVisible={setDrawerVisible}
             setQueries={setQueries}
-            setQueryOptions={setQueryOptions}
+            setQueryOptions={setExtraOptions}
             setRowClicked={setRowClicked}
           />
       )}
