@@ -7,6 +7,7 @@ import EditPassword from './EditPassword';
 import EditUserDetails from './EditUserDetails';
 import ViewUserDetails from './ViewUserDetails';
 import ProjectDetails from './ProjectDetails';
+import { connect } from 'react-redux';
 
 // const { SubMenu } = Menu;
 
@@ -20,6 +21,7 @@ function UserSettings(props) {
   const [editPasswordModal, setPasswordModal] = useState(false);
   const [editDetailsModal, setDetailsModal] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const { agent } = props;
 
   const handleClick = (e) => {
     setSelectedMenu(e.key);
@@ -66,7 +68,7 @@ function UserSettings(props) {
           <Row gutter={[24, 24]} justify={'center'} className={'pt-4 pb-2 m-0 '}>
             <Col span={20}>
               <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'}>My Account Details</Text>
-              <Text type={'title'} level={7} weight={'regular'} extraClass={'m-0'} color={'grey'}>Vishnu Baliga (baliga@factors.ai)</Text>
+              <Text type={'title'} level={7} weight={'regular'} extraClass={'m-0'} color={'grey'}>{agent ? `${agent.first_name} ${agent.last_name} (${agent.email})` : ''}</Text>
             </Col>
           </Row>
           <Row gutter={[24, 24]} justify={'center'}>
@@ -121,4 +123,11 @@ function UserSettings(props) {
   );
 }
 
-export default UserSettings;
+const mapStateToProps = (state) => {
+  return ({
+    agent: state.agent.agent_details
+  }
+  );
+};
+
+export default connect(mapStateToProps)(UserSettings);

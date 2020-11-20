@@ -5,7 +5,7 @@ import {
 import { Text } from 'factorsComponents';
 import { UserOutlined } from '@ant-design/icons';
 import { connect } from 'react-redux';
-import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
+import { fetchProjectAgents, fetchAgentInfo, fetchProjects } from 'Reducers/agentActions';
 
 function ViewBasicSettings({
   activeProject,
@@ -13,18 +13,28 @@ function ViewBasicSettings({
   fetchProjectAgents,
   fetchAgentInfo,
   agents,
-  currentAgent
+  projects,
+  currentAgent,
+  fetchProjects
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [enableEdit, setEnableEdit] = useState(false);
 
   useEffect(() => {
     const getData = async () => {
-      await fetchAgentInfo();
-      await fetchProjectAgents(activeProject.id);
+      if(!currentAgent){
+        await fetchAgentInfo(); 
+      }
+      if(!activeProject.id){ 
+        await fetchProjects() 
+      } 
+      if(!agents){
+        await fetchProjectAgents(activeProject.id); 
+      }
     };
-    getData();
-    agents && currentAgent && agents.map((agent) => {
+    getData(); 
+    setEnableEdit(false);
+    agents && currentAgent && agents.map((agent) => { 
       if (agent.uuid === currentAgent.uuid) {
         if (agent.role === 1) {
           setEnableEdit(true);
@@ -32,7 +42,7 @@ function ViewBasicSettings({
       }
     });
     setDataLoading(false);
-  }, [activeProject]);
+  }, [activeProject, projects, currentAgent, agents]); 
 
   return (
     <>
@@ -105,7 +115,8 @@ function ViewBasicSettings({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   agents: state.agent.agents,
+  projects: state.agent.projects,
   currentAgent: state.agent.agent_details
 });
 
-export default connect(mapStateToProps, { fetchProjectAgents, fetchAgentInfo })(ViewBasicSettings);
+export default connect(mapStateToProps, { fetchProjectAgents, fetchAgentInfo, fetchProjects })(ViewBasicSettings);
