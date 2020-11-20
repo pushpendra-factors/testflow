@@ -146,7 +146,7 @@ func GetAgentByEmail(email string) (*Agent, int) {
 
 func GetAgentByUUID(uuid string) (*Agent, int) {
 	if uuid == "" {
-		log.Error("GetAgentyUUID Failed. UUID not provided.")
+		log.Error("GetAgentByUUID Failed. UUID not provided.")
 		return nil, http.StatusBadRequest
 	}
 
@@ -158,7 +158,7 @@ func GetAgentByUUID(uuid string) (*Agent, int) {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
-		log.WithError(err).Error("GetAgentyUUID Failed.")
+		log.WithError(err).Error("GetAgentByUUID Failed.")
 		return nil, http.StatusInternalServerError
 	}
 

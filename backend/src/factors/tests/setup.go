@@ -98,6 +98,11 @@ func getRandomEmail() string {
 	return email
 }
 
+func getRandomName() string {
+	name := U.RandomLowerAphaNumString(8)
+	return name
+}
+
 func getRandomAgentUUID() string {
 	return "6ba7b814-9dad-11d1-80b4-00c04fd430c8"
 }
@@ -108,7 +113,8 @@ func SetupAgentReturnDAO(email string, phone string) (*M.Agent, int) {
 		email = getRandomEmail()
 	}
 
-	createAgentParams := &M.CreateAgentParams{Agent: &M.Agent{Email: email, Phone: phone}, PlanCode: M.FreePlanCode}
+	createAgentParams := &M.CreateAgentParams{Agent: &M.Agent{FirstName: getRandomName(),
+		LastName: getRandomName(), Email: email, Phone: phone}, PlanCode: M.FreePlanCode}
 	resp, errCode := M.CreateAgentWithDependencies(createAgentParams)
 	if errCode != http.StatusCreated {
 		return nil, errCode
