@@ -134,9 +134,9 @@ function QueryBlock({
   const additionalActions = () => {
     return (
             <div className={'fa--query_block--actions'}>
-              <Button size={'large'} type="link" onClick={addGroupBy} className={'mr-1'}><SVG name="groupby"></SVG></Button>
-               <Button size={'large'} type="link" onClick={addFilter} className={'mr-1'}><SVG name="filter"></SVG></Button>
-               <Button size={'large'} type="link" onClick={deleteItem}><SVG name="trash"></SVG></Button>
+              <Button size={'large'} type="text" onClick={addGroupBy} className={'mr-1'}><SVG name="groupby"></SVG></Button>
+               <Button size={'large'} type="text" onClick={addFilter} className={'mr-1'}><SVG name="filter"></SVG></Button>
+               <Button size={'large'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
             </div>
     );
   };
@@ -153,11 +153,12 @@ function QueryBlock({
       });
     }
 
-    filters.push(<div key={'init'} className={'fa--query_block--filters'}>
-            {additionalActions()}
+    if(isFilterDDVisible) {
+      filters.push(<div key={'init'} className={'fa--query_block--filters'}>
             {selectEventFilter()}
         </div>);
-
+    }
+    
     return filters;
   };
 
@@ -165,7 +166,6 @@ function QueryBlock({
     const groupByEvents = [];
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
       groupBy.filter(gbp => gbp.eventName === event.label && gbp.eventIndex === index).forEach((gbp, gbpIndex) => {
-        console.log(gbp);
         groupByEvents.push(<div key={gbpIndex} className={'fa--query_block--filters'}>
           <EventGroupBlock
             index={gbpIndex}
@@ -178,11 +178,15 @@ function QueryBlock({
         </div>);
       });
     }
-    groupByEvents.push(
-      <div key={'init'} className={'fa--query_block--filters'}>
-        {selectGroupByEvent()}
-      </div>
-    );
+
+    if (isGroupByDDVisible) {
+      groupByEvents.push(
+        <div key={'init'} className={'fa--query_block--filters'}>
+          {selectGroupByEvent()}
+        </div>
+      );
+    }
+    
     return groupByEvents;
   };
 
@@ -204,6 +208,7 @@ function QueryBlock({
             <div className={`${styles.query_block__event} flex justify-start items-center`}>
                 <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{queryType === 'funnel' ? index : alphabetIndex[index - 1]}</Text> </div>
                 {!isDDVisible && <Button size={'large'} type="link" onClick={triggerDropDown}><SVG name="mouseevent" extraClass={'mr-1'}></SVG> {event.label} </Button> }
+                {additionalActions()}
                 {selectEvents()}
             </div>
             {eventFilters()}

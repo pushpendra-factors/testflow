@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { createStaticRanges } from 'react-date-range';
 import moment from 'moment';
 import mt from 'moment-timezone';

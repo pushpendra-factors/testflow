@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React from 'react';
 import styles from './index.module.scss';
 import { DateRangePicker } from 'react-date-range';
