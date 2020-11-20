@@ -235,7 +235,7 @@ function Chart({ chartData, title = 'chart' }) {
   return (
     <div id={`${title}-ungroupedChart`} className="ungrouped-chart">
 
-      <div style={{ transition: '2s' }} id={`conversionText-${title}`} className="absolute flex justify-end pr-1">
+      <div id={`conversionText-${title}`} className="absolute flex justify-end pr-1">
         <div className={styles.conversionText}>
           <div className="font-semibold flex justify-end">{chartData[chartData.length - 1].value}%</div>
           <div className="font-normal">Conversion</div>

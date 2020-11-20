@@ -296,7 +296,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
         groups
           .map(elem => {
             return (
-              <div style={{ transition: '2s' }} key={elem.name} id={`${title}-conversion-text-${elem.name}`} className="absolute z-10 leading-5 text-base flex justify-end pr-1">
+              <div key={elem.name} id={`${title}-conversion-text-${elem.name}`} className="absolute z-10 leading-5 text-base flex justify-end pr-1">
                 <div style={{ fontSize: '14px' }} className={styles.conversionText}>
                   <div className="font-semibold flex justify-end">{elem.conversion_rate}</div>
                   <div>Conversion</div>
