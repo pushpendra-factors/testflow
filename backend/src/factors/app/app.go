@@ -11,8 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
-	// Empty import added for swagger api docs.
-	_ "factors/docs"
+	swaggerDocs "factors/docs"
 )
 
 // TODO(prateek): Set the host from code while enabling for staging.
@@ -20,7 +19,6 @@ import (
 // @title Factors Backend Api
 // @version 1.0
 // @description Factors usage doc for golang api server.
-// @host factors-dev.com:8080
 // @BasePath /projects
 func main() {
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
@@ -146,6 +144,11 @@ func main() {
 	r.Use(mid.Recovery())
 
 	// Initialize routes.
+	if config.Env == C.DEVELOPMENT {
+		swaggerDocs.SwaggerInfo.Host = "factors-dev.com:8080"
+	} else if config.Env == C.STAGING {
+		swaggerDocs.SwaggerInfo.Host = "staging-api.factors.ai"
+	}
 	H.InitAppRoutes(r)
 	H.InitIntRoutes(r)
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))

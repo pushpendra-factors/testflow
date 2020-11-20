@@ -7,7 +7,6 @@
         "license": {},
         "version": "1.0"
     },
-    "host": "factors-dev.com:8080",
     "basePath": "/projects",
     "paths": {
         "/": {
@@ -1928,7 +1927,7 @@
                 "tags": [
                     "V1FactorsApi"
                 ],
-                "summary": "Remove a saved goal",
+                "summary": "Search on saved goals",
                 "parameters": [
                     {
                         "type": "integer",
@@ -2043,7 +2042,7 @@
                 "tags": [
                     "V1FactorsApi"
                 ],
-                "summary": "create a tracked event",
+                "summary": "Create a tracked event",
                 "parameters": [
                     {
                         "type": "integer",
@@ -2155,7 +2154,7 @@
                 "tags": [
                     "V1FactorsApi"
                 ],
-                "summary": "create a tracked event",
+                "summary": "Create a tracked user property",
                 "parameters": [
                     {
                         "type": "integer",

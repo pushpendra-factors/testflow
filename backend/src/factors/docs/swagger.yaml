@@ -697,7 +697,6 @@ definitions:
     - name
     - rule
     type: object
-host: factors-dev.com:8080
 info:
   contact: {}
   description: Factors usage doc for golang api server.
@@ -1982,7 +1981,7 @@ paths:
             items:
               $ref: '#/definitions/model.FactorsGoal'
             type: array
-      summary: Remove a saved goal
+      summary: Search on saved goals
       tags:
       - V1FactorsApi
   /{project_id}/v1/factors/goals/update:
@@ -2055,7 +2054,7 @@ paths:
           description: '{"id": uint64, "status": string}'
           schema:
             type: string
-      summary: create a tracked event
+      summary: Create a tracked event
       tags:
       - V1FactorsApi
   /{project_id}/v1/factors/tracked_event/remove:
@@ -2128,7 +2127,7 @@ paths:
           description: '{"id": uint64, "status": string}'
           schema:
             type: string
-      summary: create a tracked event
+      summary: Create a tracked user property
       tags:
       - V1FactorsApi
   /{project_id}/v1/factors/tracked_user_property/remove:

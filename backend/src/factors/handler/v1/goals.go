@@ -228,9 +228,9 @@ func getSearchFactorsGoalParams(c *gin.Context) (*SearchFactorsGoalParams, error
 	return &params, nil
 }
 
-// SearchFactorsGoalHandler - remove FactorsGoal Handler
+// SearchFactorsGoalHandler - search FactorsGoal Handler
 // SearchFactorsGoalHandler godoc
-// @Summary Remove a saved goal
+// @Summary Search on saved goals
 // @Tags V1FactorsApi
 // @Accept  json
 // @Produce json
