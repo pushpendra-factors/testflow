@@ -70,14 +70,11 @@ function CoreQuery({ activeProject }) {
   const callRunQueryApiService = useCallback(async (activeProjectId, activeTab) => {
     try {
       const query = getQuery(activeTab, queryType, groupBy, queries);
-      if (activeTab === '0') {
-        updateRequestQuery(query);
-      }
-      const res = await runQueryService(activeProjectId, [query]);
+      updateRequestQuery(query);
+      const res = await runQueryService(activeProjectId, query);
       if (res.status === 200 && !hasApiFailed(res)) {
         if (activeTab !== '2') {
-          const bkDown = [...groupBy.event, ...groupBy.global].filter(elem => elem.prop_category);
-          updateResultState(activeTab, { loading: false, error: false, data: formatApiData(res.data.result_group[0], bkDown) });
+          updateResultState(activeTab, { loading: false, error: false, data: formatApiData(res.data.result_group[0], res.data.result_group[1]) });
         }
         return res.data;
       } else {
@@ -93,6 +90,7 @@ function CoreQuery({ activeProject }) {
 
   const runQuery = useCallback(async (activeTab, refresh = false, isQuerySaved = false) => {
     setActiveKey(activeTab);
+    setBreakdownType('each');
 
     if (!refresh) {
       if (resultState[parseInt(activeTab)].data) {
@@ -115,7 +113,7 @@ function CoreQuery({ activeProject }) {
           const res1 = await callRunQueryApiService(activeProject.id, '1');
           const res2 = await callRunQueryApiService(activeProject.id, '2');
           if (res1 && res2) {
-            userData = formatApiData(res1.result_group[0], appliedBreakdown);
+            userData = formatApiData(res1.result_group[0], res1.result_group[1]);
             sessionData = res2.result_group[0];
           }
         }
@@ -137,7 +135,7 @@ function CoreQuery({ activeProject }) {
           updateResultState(activeTab, { loading: true, error: false, data: null });
           const res = await callRunQueryApiService(activeProject.id, '1');
           if (res) {
-            userData = formatApiData(res.result_group[0], appliedBreakdown);
+            userData = formatApiData(res.result_group[0], res.result_group[1]);
           }
         }
 
@@ -181,7 +179,8 @@ function CoreQuery({ activeProject }) {
           return { ...currState, loading: true };
         });
         const query = getQuery('1', queryType, groupBy, queries, key);
-        const res = await runQueryService(activeProject.id, [query]);
+        updateRequestQuery(query);
+        const res = await runQueryService(activeProject.id, query);
         if (res.status === 200 && !hasApiFailed(res)) {
           setBreakdownTypeData(currState => {
             return {

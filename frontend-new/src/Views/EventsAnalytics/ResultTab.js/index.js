@@ -36,6 +36,8 @@ function ResultTab({
         reverseEventsMapper={reverseEventsMapper}
         resultState={resultState[index]}
         page={page}
+        breakdownType={breakdownType}
+        handleBreakdownTypeChange={handleBreakdownTypeChange}
       />
     );
   }

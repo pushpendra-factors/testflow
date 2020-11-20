@@ -3,10 +3,12 @@ import { formatData } from './utils';
 import BarChart from '../../../components/BarChart';
 import EventBreakdownTable from './EventBreakdownTable';
 import BreakdownType from '../BreakdownType';
+import ChartHeader from '../../../components/SparkLineChart/ChartHeader';
 
 function EventBreakdownCharts({
   data, breakdownType, handleBreakdownTypeChange, breakdown
 }) {
+  console.log(data);
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
   const maxAllowedVisibleProperties = 5;
@@ -19,6 +21,24 @@ function EventBreakdownCharts({
 
   if (!chartsData.length) {
     return null;
+  }
+
+  let content = null;
+
+  if (breakdown.length) {
+    content = (
+            <div className="flex mt-8">
+                <BarChart
+                    chartData={visibleProperties}
+                />
+            </div>
+    );
+  } else {
+    content = (
+            <div className="flex mt-8 justify-center">
+                <ChartHeader total={data.rows[0]} query={'Count'} bgColor="#4D7DB4" />
+            </div>
+    );
   }
 
   return (
@@ -37,11 +57,7 @@ function EventBreakdownCharts({
                     </div>
                 </div>
             </div>
-            <div className="flex mt-8">
-                <BarChart
-                    chartData={visibleProperties}
-                />
-            </div>
+            {content}
             <div className="mt-8">
                 <EventBreakdownTable
                     data={chartsData}

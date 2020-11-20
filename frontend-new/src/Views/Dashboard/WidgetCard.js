@@ -8,7 +8,7 @@ import { RightOutlined, LeftOutlined } from '@ant-design/icons';
 import CardContent from './CardContent';
 import { useSelector, useDispatch } from 'react-redux';
 import { DASHBOARD_UNIT_DATA_LOADED } from '../../reducers/types';
-import { initialState } from '../CoreQuery/utils';
+import { initialState, formatApiData } from '../CoreQuery/utils';
 import { runQuery, getFunnelData } from '../../reducers/coreQuery/services';
 import { cardClassNames } from '../../reducers/dashboard/utils';
 
@@ -35,18 +35,19 @@ function WidgetCard({
         } else {
           res = await runQuery(active_project.id, unit.query.query.query_group, { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
         }
-        let resultantData = null;
         if (res.data.result) {
           // cached data
-          resultantData = res.data.result.result_group[0];
+          setResultState({
+            ...initialState,
+            data: formatApiData(res.data.result.result_group[0], res.data.result.result_group[1])
+          });
         } else {
           // refreshed data
-          resultantData = res.data.result_group[0];
+          setResultState({
+            ...initialState,
+            data: formatApiData(res.data.result_group[0], res.data.result_group[1])
+          });
         }
-        setResultState({
-          ...initialState,
-          data: resultantData
-        });
       } else {
         let res;
         if (refresh) {

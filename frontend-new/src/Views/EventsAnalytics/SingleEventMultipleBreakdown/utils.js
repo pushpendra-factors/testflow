@@ -3,23 +3,14 @@ import moment from 'moment';
 import { labelsObj, SortData } from '../../CoreQuery/utils';
 
 export const formatData = (data) => {
-  const result = [];
-  data.rows.forEach(d => {
-    const str = d.slice(2, d.length - 1).join(',');
-    const idx = result.findIndex(r => r.label === str);
-    if (idx === -1) {
-      result.push({
-        label: str,
-        value: d[d.length - 1]
-      });
-    } else {
-      result[idx].value += d[d.length - 1];
-    }
+  const result = data.metrics.rows.map(d => {
+    const str = d.slice(1, d.length - 1).join(',');
+    return {
+      label: str,
+      value: d[d.length - 1]
+    };
   });
-  result.sort((a, b) => {
-    return parseInt(a.value) <= parseInt(b.value) ? 1 : -1;
-  });
-  return result;
+  return SortData(result, 'value', 'descend');
 };
 
 export const getTableColumns = (events, breakdown, currentSorter, handleSorting, page) => {

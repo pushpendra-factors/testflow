@@ -61,6 +61,9 @@ function EventsAnalytics({
           requestQuery={requestQuery}
           querySaved={querySaved}
           setQuerySaved={setQuerySaved}
+          activeKey={activeKey}
+          breakdownType={breakdownType}
+          queryType="event"
         />
         <div className="py-4">
           <EventsInfo

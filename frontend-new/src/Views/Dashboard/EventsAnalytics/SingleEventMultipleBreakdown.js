@@ -20,7 +20,7 @@ function SingleEventMultipleBreakdown({
     const formattedData = formatData(resultState.data);
     setChartsData(formattedData);
     setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
-  }, [resultState.data]);
+  }, [resultState.data, maxAllowedVisibleProperties]);
 
   if (!chartsData.length) {
     return null;

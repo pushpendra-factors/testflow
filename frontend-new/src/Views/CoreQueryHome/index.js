@@ -86,7 +86,7 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
       key: q.id,
       type: <SVG name={svgName} size={24} />,
       title: q.title,
-      author: q.created_by,
+      author: q.created_by_name,
       date: (
         <div className="flex justify-between items-center">
           <div>{moment(q.created_at).format('MMM DD, YYYY')}</div>

@@ -4,7 +4,7 @@ import SaveQuery from '../../../components/SaveQuery';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
 function ResultsHeader({
-  setShowResult, requestQuery, querySaved, setQuerySaved
+  setShowResult, requestQuery, querySaved, setQuerySaved, activeKey, breakdownType, queryType
 }) {
   const [showModal, setShowModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -61,6 +61,9 @@ function ResultsHeader({
                         setQuerySaved={setQuerySaved}
                         visible={showSaveModal}
                         setVisible={setShowSaveModal}
+                        activeKey={activeKey}
+                        breakdownType={breakdownType}
+                        queryType={queryType}
                     />
                 </div>
             </div>

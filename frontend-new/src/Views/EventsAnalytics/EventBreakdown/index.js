@@ -5,6 +5,7 @@ import EventBreakdownCharts from './EventBreakdownCharts';
 function EventBreakdown({
   breakdown, data, breakdownType, handleBreakdownTypeChange
 }) {
+  console.log(breakdown);
   if (data.loading) {
     return (
 			<div className="flex justify-center items-center w-full h-64">

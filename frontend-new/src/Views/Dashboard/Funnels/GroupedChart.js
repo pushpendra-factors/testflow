@@ -12,7 +12,7 @@ function GroupedChart({
   useEffect(() => {
     const formattedGroups = generateGroups(resultState.data, maxAllowedVisibleProperties);
     setGroups(formattedGroups);
-  }, [queries, resultState.data]);
+  }, [queries, resultState.data, maxAllowedVisibleProperties]);
 
   if (!groups.length) {
     return null;

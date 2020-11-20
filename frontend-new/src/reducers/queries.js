@@ -17,7 +17,7 @@ export default function (state = inititalState, action) {
     case QUERIES_LOADED:
       return { ...inititalState, data: action.payload };
     case QUERY_CREATED:
-      return { ...inititalState, data: [...state.data, action.payload] };
+      return { ...inititalState, data: [action.payload, ...state.data] };
     case QUERY_DELETED:
       var index = state.data.findIndex(d => d.id === action.payload);
       return { ...inititalState, data: [...state.data.slice(0, index), ...state.data.slice(index + 1)] };
