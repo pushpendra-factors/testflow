@@ -5,9 +5,10 @@ import NoBreakdownTable from './NoBreakdownTable';
 import SparkLineChart from '../../../components/SparkLineChart';
 import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
+import BreakdownType from '../BreakdownType';
 
 function NoBreakdownCharts({
-  queries, eventsMapper, reverseEventsMapper, resultState, page
+  queries, eventsMapper, reverseEventsMapper, resultState, page, breakdownType, handleBreakdownTypeChange
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
@@ -48,6 +49,7 @@ function NoBreakdownCharts({
         appliedColors={appliedColors}
         eventsMapper={eventsMapper}
         page={page}
+        resultState={resultState}
       />
     );
   } else if (chartType === 'linechart') {
@@ -73,7 +75,17 @@ function NoBreakdownCharts({
         <div className="filters-info">
 
         </div>
-        <div className="user-actions">
+        <div className="user-actions w-1/2 flex justify-end">
+        {page === 'totalUsers' && queries.length > 1 ? (
+            <div className="px-4">
+              <BreakdownType
+                breakdown={[]}
+                breakdownType={breakdownType}
+                handleBreakdownTypeChange={handleBreakdownTypeChange}
+              />
+            </div>
+        ) : null}
+
           <ChartTypeDropdown
             chartType={chartType}
             menuItems={menuItems}

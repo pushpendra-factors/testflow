@@ -34,6 +34,7 @@ function NoBreakdownCharts({
           appliedColors={appliedColors}
           eventsMapper={eventsMapper}
           page={page}
+          resultState={resultState}
         />
       </div>
     );

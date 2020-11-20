@@ -10,7 +10,7 @@ import { QUERY_CREATED } from '../../reducers/types';
 import { saveQueryToDashboard } from '../../reducers/dashboard/services';
 
 function SaveQuery({
-  requestQuery, setQuerySaved, visible, setVisible
+  requestQuery, setQuerySaved, visible, setVisible, activeKey, breakdownType, queryType
 }) {
   const [title, setTitle] = useState('');
   const [addToDashboard, setAddToDashboard] = useState(false);
@@ -77,20 +77,31 @@ function SaveQuery({
       });
       return false;
     }
+
     try {
       setApisCalled(true);
       let query;
-      if (requestQuery.cl === 'funnel') {
+      if (queryType === 'funnel') {
         query = requestQuery;
       } else {
-        query = { query_group: [requestQuery] };
+        if (activeKey === '0' || activeKey === '1') {
+          query = { query_group: requestQuery };
+        } else {
+          return false;
+        }
       }
-      const queryType = addToDashboard ? 1 : 2;
-      const res = await saveQuery(active_project.id, title, query, queryType);
+      const type = addToDashboard ? 1 : 2;
+      const res = await saveQuery(active_project.id, title, query, type);
       if (addToDashboard) {
         const settings = {
           chart: dashboardPresentation
         };
+        if (activeKey) {
+          settings.activeKey = activeKey;
+        }
+        if (breakdownType) {
+          settings.breakdownType = breakdownType;
+        }
         const reqBody = {
           settings,
           description: '',
@@ -113,7 +124,7 @@ function SaveQuery({
         duration: 5
       });
     }
-  }, [title, active_project.id, requestQuery, dispatch, setQuerySaved, resetModalState, addToDashboard, dashboardPresentation, selectedDashboards]);
+  }, [activeKey, breakdownType, title, active_project.id, requestQuery, dispatch, setQuerySaved, resetModalState, addToDashboard, dashboardPresentation, selectedDashboards, queryType]);
 
   let dashboardHelpText = 'Create a dashboard widget for regular monitoring';
   let dashboardOptions = null;
@@ -126,11 +137,11 @@ function SaveQuery({
     );
     let secondOption = null;
 
-    if (requestQuery.cl === 'events') {
+    if (queryType === 'event') {
       secondOption = (
         <Radio value="pl">Display Line Chart</Radio>
       );
-      if (!requestQuery.gbp.length) {
+      if (!requestQuery[0].gbp.length) {
         firstOption = (
           <Radio value="pc">Display Spark Line Chart</Radio>
         );

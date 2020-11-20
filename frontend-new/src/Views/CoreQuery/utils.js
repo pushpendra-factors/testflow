@@ -124,7 +124,7 @@ export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType =
     query.gbt = '';
   } else {
     query.ewp = getEventsWithProperties(queries);
-    query.gbt = 'date';
+    query.gbt = breakdownType === 'each' ? 'date' : '';
 
     const appliedGroupBy = [...groupBy.event, ...groupBy.global];
 
@@ -150,7 +150,15 @@ export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType =
   }
   query.ec = constantObj[breakdownType];
   query.tz = 'Asia/Kolkata';
-  return query;
+  if (breakdownType === 'each') {
+    if (activeTab === '2') {
+      return [query];
+    } else {
+      return [query, { ...query, gbt: '' }];
+    }
+  } else {
+    return [query];
+  }
 };
 
 export const calculateFrequencyData = (eventData, userData, appliedBreakdown) => {
@@ -170,7 +178,20 @@ export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
     });
     return [elem[0], ...eventVals];
   });
-  const result = { ...eventData, rows };
+  const metrics = eventData.metrics.rows.map((elem) => {
+    const idx = userData.metrics.rows.findIndex(r => r[0] === elem[0]);
+    if (!elem[1] || !userData.metrics.rows[idx][1]) return 0;
+    const eVal = (elem[1] / userData.metrics.rows[idx][1]);
+    return [elem[0], parseFloat(eVal.toFixed(2))];
+  });
+  const result = {
+    ...userData,
+    rows,
+    metrics: {
+      ...userData.metrics,
+      rows: metrics
+    }
+  };
   return result;
 };
 
@@ -194,7 +215,28 @@ export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
     }
     return [...userObj.slice(0, userObj.length - 1), eVal];
   });
-  const result = { ...userData, rows };
+
+  const metrics = userData.metrics.rows.map(userObj => {
+    const eventIdx = getEventIdx(eventData.metrics.rows, userObj);
+    let eventObj = null;
+    let eVal = 0;
+    if (eventIdx > -1) {
+      eventObj = eventData.metrics.rows[eventIdx];
+    }
+    if (eventObj && userObj[userObj.length - 1] && eventObj[eventObj.length - 1]) {
+      eVal = (eventObj[eventObj.length - 1] / userObj[userObj.length - 1]);
+    }
+    return [...userObj.slice(0, userObj.length - 1), parseFloat(eVal.toFixed(2))];
+  });
+
+  const result = {
+    ...userData,
+    rows,
+    metrics: {
+      ...userData.metrics,
+      rows: metrics
+    }
+  };
   return result;
 };
 
@@ -209,13 +251,26 @@ export const calculateActiveUsersData = (userData, sessionData, appliedBreakdown
 const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(1).map((e) => {
-      if (!e || !sessionData.rows[0][1]) return e;
+      if (!e || !sessionData.rows[0][1]) return 0;
       const eVal = e / sessionData.rows[0][1] * 100;
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [elem[0], ...eventVals];
   });
-  const result = { ...userData, rows };
+
+  const metrics = userData.metrics.rows.map(elem => {
+    if (!elem[1] || !sessionData.rows[0][1]) return 0;
+    const eVal = (elem[1] / sessionData.rows[0][1]) * 100;
+    return [elem[0], parseFloat(eVal.toFixed(2))];
+  });
+  const result = {
+    ...userData,
+    rows,
+    metrics: {
+      ...userData.metrics,
+      rows: metrics
+    }
+  };
   return result;
 };
 
@@ -232,7 +287,20 @@ const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
     });
     return [...elem.slice(0, elem.length - 1), ...eventVals];
   });
-  const result = { ...userData, rows };
+
+  const metrics = userData.metrics.rows.map(elem => {
+    if (!elem[elem.length - 1] || !sessionData.rows[0][1]) return 0;
+    const eVal = (elem[elem.length - 1] / sessionData.rows[0][1]) * 100;
+    return [...elem.slice(0, elem.length - 1), parseFloat(eVal.toFixed(2))];
+  });
+  const result = {
+    ...userData,
+    rows,
+    metrics: {
+      ...userData.metrics,
+      rows: metrics
+    }
+  };
   return result;
 };
 
@@ -247,25 +315,8 @@ export const numberWithCommas = (x) => {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
 
-export const formatApiData = (data, appliedBreakdown) => {
-  if (!appliedBreakdown.length) {
-    return data;
-  }
-
-  const result = { ...data };
-
-  if (result.headers.indexOf('event_name') !== 1) {
-    const idx = result.headers.indexOf('event_name');
-    if (idx === -1) {
-      return null;
-    } else {
-      result.headers = [result.headers[0], 'event_name', ...result.headers.slice(1, idx)];
-      result.rows = result.rows.map(row => {
-        return [row[0], row[idx], ...row.slice(1, idx)];
-      });
-    }
-  }
-  return result;
+export const formatApiData = (data, metrics) => {
+  return { ...data, metrics };
 };
 
 export const getStateQueryFromRequestQuery = (requestQuery) => {

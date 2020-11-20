@@ -35,23 +35,13 @@ export const getDataInTableFormat = (data, events, breakdown, searchText, curren
 };
 
 export const formatData = (data) => {
-  const properties = {};
-  const result = [];
-  data.rows.forEach(elem => {
-    if (Object.prototype.hasOwnProperty.call(properties, elem[2])) {
-      result[properties[elem[2]]].value += elem[3];
-    } else {
-      properties[elem[2]] = result.length;
-      result.push({
-        label: elem[2],
-        value: elem[3]
-      });
-    }
+  const result = data.metrics.rows.map(elem => {
+    return {
+      label: elem[1],
+      value: elem[2]
+    };
   });
-  result.sort((a, b) => {
-    return parseInt(a.value) <= parseInt(b.value) ? 1 : -1;
-  });
-  return result;
+  return SortData(result, 'value', 'descend');
 };
 
 export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hiddenProperties) => {

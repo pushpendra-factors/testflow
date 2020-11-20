@@ -21,64 +21,48 @@ export const formatData = (data, queries, colors) => {
   queries.forEach(query => {
     splittedData[query] = [];
   });
-  let gIdx = 0;
 
-  data.rows.forEach(d => {
-    const date = d[0];
-    const str = d.slice(2, d.length - 1).join(',');
-    const idx = splittedData[d[1]].findIndex(r => r.label === str);
-    if (idx === -1) {
-      const queryIndex = queries.findIndex(q => q === d[1]);
-      splittedData[d[1]].push({
-        label: str,
-        value: d[d.length - 1],
-        index: gIdx,
-        event: d[1],
-        color: colors[queryIndex],
-        dateWise: [{
-          date,
-          value: d[d.length - 1]
-        }]
+  const result = data.metrics.rows.map((d, index) => {
+    const str = d.slice(1, d.length - 1).join(',');
+    const queryIndex = queries.findIndex(q => q === d[0]);
+    const dateRows = data.rows
+      .filter(row => {
+        const rowStr = row.slice(2, row.length - 1).join(',');
+        return ((row[1] === d[0]) && rowStr === str);
+      })
+      .map(row => {
+        return {
+          date: row[0],
+          value: row[row.length - 1]
+        };
       });
-      gIdx++;
-    } else {
-      splittedData[d[1]][idx].dateWise.push({
-        date,
-        value: d[d.length - 1]
-      });
-      splittedData[d[1]][idx].value += d[d.length - 1];
-    }
+    return {
+      label: str,
+      value: d[d.length - 1],
+      index,
+      event: d[0],
+      color: colors[queryIndex],
+      dateWise: dateRows
+    };
   });
 
-  let allData = [];
-
-  for (const key in splittedData) {
-    splittedData[key].sort((a, b) => {
-      return parseInt(a.value) <= parseInt(b.value) ? 1 : -1;
-    });
-  }
-
-  const result = [];
-
-  for (const key in splittedData) {
-    if (splittedData[key].length) {
-      allData = [...allData, ...splittedData[key]];
-      result.push(splittedData[key][0]);
+  const sortedData = SortData(result, 'value', 'descend');
+  const maxIndices = [];
+  queries.forEach(q => {
+    const idx = sortedData.findIndex(elem => elem.event === q);
+    if (idx > -1) {
+      maxIndices.push(idx);
     }
-  }
-
-  allData.sort((a, b) => {
-    return parseInt(a.value) <= parseInt(b.value) ? 1 : -1;
   });
-
-  for (let j = 0; j < allData.length; j++) {
-    const obj = result.find(elem => elem.index === allData[j].index);
-    if (!obj) {
-      result.push(allData[j]);
+  const finalResult = maxIndices.map(m => {
+    return sortedData[m];
+  });
+  sortedData.forEach((sd, idx) => {
+    if (maxIndices.indexOf(idx) === -1) {
+      finalResult.push(sd);
     }
-  }
-
-  return result;
+  });
+  return finalResult;
 };
 
 export const formatVisibleProperties = (data, queries) => {
