@@ -34,6 +34,7 @@ type Dashboard struct {
 
 type UpdatableDashboard struct {
 	Name          string                     `json:"name"`
+	Type          string                     `json:"type"`
 	Description   string                     `json:"description"`
 	UnitsPosition *map[string]map[uint64]int `json:"units_position"`
 }
@@ -307,6 +308,14 @@ func UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *U
 
 	if dashboard.Name != "" {
 		updateFields["name"] = dashboard.Name
+	}
+
+	if dashboard.Description != "" {
+		updateFields["description"] = dashboard.Description
+	}
+
+	if dashboard.Type != "" {
+		updateFields["type"] = dashboard.Type
 	}
 
 	// nothing to update.

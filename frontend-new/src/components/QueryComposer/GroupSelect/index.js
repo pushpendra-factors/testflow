@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { Input } from 'antd';
 import { SVG } from 'factorsComponents';
@@ -9,6 +9,15 @@ function GroupSelect({
 }) {
   const [groupCollapseState, setGroupCollapseState] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const groupColState = Object.assign({}, groupCollapseState);
+    groupedProperties.forEach((grp, index) => {
+      groupColState[index] = true;
+    });
+
+    setGroupCollapseState(groupColState);
+  }, [groupedProperties]);
 
   const collapseGroup = (index) => {
     const groupColState = Object.assign({}, groupCollapseState);
@@ -26,7 +35,7 @@ function GroupSelect({
       const collState = groupCollapseState[grpIndex];
       renderGroupedOptions.push(
             <div className={styles.dropdown__filter_select__option_group_container}>
-              <div className={styles.dropdown__filter_select__option_group}
+              {!searchTerm.length && <div className={styles.dropdown__filter_select__option_group}
                 onClick={() => collapseGroup(grpIndex)}
               >
                 <div>
@@ -34,7 +43,7 @@ function GroupSelect({
                     <span className={'ml-1'}>{group.label}</span>
                 </div>
                 <SVG name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
-              </div>
+              </div>}
               <div className={styles.dropdown__filter_select__option_group_container_sec}>
                 { collState
                   ? (() => {
