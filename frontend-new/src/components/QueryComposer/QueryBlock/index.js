@@ -153,10 +153,12 @@ function QueryBlock({
       });
     }
 
-    filters.push(<div key={'init'} className={'fa--query_block--filters'}>
+    if(isFilterDDVisible) {
+      filters.push(<div key={'init'} className={'fa--query_block--filters'}>
             {selectEventFilter()}
         </div>);
-
+    }
+    
     return filters;
   };
 
@@ -164,7 +166,6 @@ function QueryBlock({
     const groupByEvents = [];
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
       groupBy.filter(gbp => gbp.eventName === event.label && gbp.eventIndex === index).forEach((gbp, gbpIndex) => {
-        console.log(gbp);
         groupByEvents.push(<div key={gbpIndex} className={'fa--query_block--filters'}>
           <EventGroupBlock
             index={gbpIndex}
@@ -177,11 +178,15 @@ function QueryBlock({
         </div>);
       });
     }
-    groupByEvents.push(
-      <div key={'init'} className={'fa--query_block--filters'}>
-        {selectGroupByEvent()}
-      </div>
-    );
+
+    if (isGroupByDDVisible) {
+      groupByEvents.push(
+        <div key={'init'} className={'fa--query_block--filters'}>
+          {selectGroupByEvent()}
+        </div>
+      );
+    }
+    
     return groupByEvents;
   };
 
