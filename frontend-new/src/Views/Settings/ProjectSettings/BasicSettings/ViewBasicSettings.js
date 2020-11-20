@@ -22,19 +22,19 @@ function ViewBasicSettings({
 
   useEffect(() => {
     const getData = async () => {
-      if(!currentAgent){
-        await fetchAgentInfo(); 
+      if (!currentAgent) {
+        await fetchAgentInfo();
       }
-      if(!activeProject.id){ 
-        await fetchProjects() 
-      } 
-      if(!agents){
-        await fetchProjectAgents(activeProject.id); 
+      if (!activeProject.id) {
+        await fetchProjects();
+      }
+      if (!agents) {
+        await fetchProjectAgents(activeProject.id);
       }
     };
-    getData(); 
+    getData();
     setEnableEdit(false);
-    agents && currentAgent && agents.map((agent) => { 
+    agents && currentAgent && agents.map((agent) => {
       if (agent.uuid === currentAgent.uuid) {
         if (agent.role === 1) {
           setEnableEdit(true);
@@ -42,7 +42,7 @@ function ViewBasicSettings({
       }
     });
     setDataLoading(false);
-  }, [activeProject, projects, currentAgent, agents]); 
+  }, [activeProject, projects, currentAgent, agents]);
 
   return (
     <>
