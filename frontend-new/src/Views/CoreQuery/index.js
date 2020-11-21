@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { bindActionCreators } from 'redux';
 import { connect, useSelector } from 'react-redux';
 import FunnelsResultPage from './FunnelsResultPage';
 import QueryComposer from '../../components/QueryComposer';
@@ -6,12 +7,13 @@ import CoreQueryHome from '../CoreQueryHome';
 import { Drawer, Button } from 'antd';
 import { SVG, Text } from '../../components/factorsComponents';
 import EventsAnalytics from '../EventsAnalytics';
+import { deleteGroupByForEvent } from '../../reducers/coreQuery/middleware';
 import { runQuery as runQueryService, getFunnelData } from '../../reducers/coreQuery/services';
 import {
   initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, formatApiData, getQuery, initialState, getFunnelQuery
 } from './utils';
 
-function CoreQuery({ activeProject }) {
+function CoreQuery({ activeProject, deleteGroupByForEvent }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [queryType, setQueryType] = useState('event');
   const [activeKey, setActiveKey] = useState('1');
@@ -240,17 +242,16 @@ function CoreQuery({ activeProject }) {
       if (changeType === 'add') {
         queryupdated[index] = newEvent;
       } else {
+        deleteGroupByForEvent(newEvent, index);
         queryupdated.splice(index, 1);
       }
-    }
-    else if (queryType === 'event') {
+    } else if (queryType === 'event') {
       const queryExist = queryupdated.findIndex((q) => q.label === newEvent.label);
-      if(queryExist < 0) {
+      if (queryExist < 0) {
         queryupdated.push(newEvent);
       }
-    }
-    else {
-        queryupdated.push(newEvent);
+    } else {
+      queryupdated.push(newEvent);
     }
     setQueries(queryupdated);
   };
@@ -371,4 +372,8 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project
 });
 
-export default connect(mapStateToProps)(CoreQuery);
+const mapDispatchToProps = dispatch => bindActionCreators({
+  deleteGroupByForEvent
+}, dispatch);
+
+export default connect(mapStateToProps, mapDispatchToProps)(CoreQuery);

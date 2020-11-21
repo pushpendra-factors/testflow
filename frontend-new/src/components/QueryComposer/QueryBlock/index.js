@@ -153,12 +153,12 @@ function QueryBlock({
       });
     }
 
-    if(isFilterDDVisible) {
+    if (isFilterDDVisible) {
       filters.push(<div key={'init'} className={'fa--query_block--filters'}>
             {selectEventFilter()}
         </div>);
     }
-    
+
     return filters;
   };
 
@@ -186,7 +186,7 @@ function QueryBlock({
         </div>
       );
     }
-    
+
     return groupByEvents;
   };
 

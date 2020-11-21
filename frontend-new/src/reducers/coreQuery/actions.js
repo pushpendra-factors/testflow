@@ -6,6 +6,7 @@ export const FETCH_USER_PROPERTIES = 'FETCH_USER_PROPERTIES';
 export const INITIALIZE_GROUPBY = 'INITIALIZE_GROUPBY';
 export const SET_GROUPBY = 'SET_GROUPBY';
 export const DEL_GROUPBY = 'DEL_GROUPBY';
+export const DEL_GROUPBY_EVENT = 'DEL_GROUPBY_EVENT';
 
 // Action creators
 export const fetchEventsAction = (events, status = 'started') => {
@@ -22,6 +23,10 @@ export const fetchEventPropertiesAction = (eventProps, name) => {
 
 export const delGroupByAction = (type, payload, index) => {
   return { type: DEL_GROUPBY, payload: payload, index: index, groupByType: type };
+}
+
+export const deleteGroupByEventAction = (ev, index) => {
+  return { type: DEL_GROUPBY_EVENT, payload: ev, index: index};
 }
 
 export const setGroupByAction = (type, groupBy, index) => {

@@ -1,4 +1,3 @@
-/* eslint-disable */
 import React from 'react';
 import { DateRangePicker } from 'react-date-range';
 import moment from 'moment';
@@ -8,7 +7,7 @@ import {
 
 const DateRangeSelector = ({
   ranges,
-  setDates,  closeDatePicker,
+  setDates, closeDatePicker
 }) => {
   const onChange = (dates) => {
     setDates(dates);

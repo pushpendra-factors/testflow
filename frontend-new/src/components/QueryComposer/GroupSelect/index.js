@@ -29,10 +29,14 @@ function GroupSelect({
     setGroupCollapseState(groupColState);
   };
 
+  const onInputSearch = (userInput) => {
+    setSearchTerm(userInput.currentTarget.value);
+  };
+
   const renderOptions = (options) => {
     const renderGroupedOptions = [];
     options.forEach((group, grpIndex) => {
-      const collState = groupCollapseState[grpIndex];
+      const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
       renderGroupedOptions.push(
             <div className={styles.dropdown__filter_select__option_group_container}>
               {!searchTerm.length && <div className={styles.dropdown__filter_select__option_group}
@@ -51,10 +55,11 @@ function GroupSelect({
                     group.values.forEach((val) => {
                       if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                         valuesOptions.push(
-                            <span className={styles.dropdown__filter_select__option}
+                          <div className={styles.dropdown__filter_select__option}
                             onClick={() => optionClick(group.label, val)} >
-                            {val[0]}
-                            </span>
+                              {searchTerm.length > 0 && <SVG name={group.icon} extraClass={'self-center'}></SVG>}
+                              <span className={'ml-1'}>{val[0]}</span>
+                          </div>
                         );
                       }
                     });
@@ -75,7 +80,7 @@ function GroupSelect({
           <Input
             className={styles.dropdown__filter_select__input}
             placeholder={placeholder}
-            onKeyUp={(userInput) => setSearchTerm(userInput.currentTarget.value)}
+            onKeyUp={onInputSearch}
             prefix={(<SVG name="search" />)}
           />
           <div className={styles.dropdown__filter_select__content}>

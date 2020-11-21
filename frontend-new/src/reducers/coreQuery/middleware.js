@@ -2,7 +2,7 @@
 
 import { fetchEventsAction, fetchEventPropertiesAction, 
   fetchUserPropertiesAction, 
-  setGroupByAction, delGroupByAction} from './actions';
+  setGroupByAction, delGroupByAction, deleteGroupByEventAction} from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties } from './services';
 import { convertToEventOptions, convertPropsToOptions } from './utils';
 
@@ -59,6 +59,14 @@ export const delGroupBy = (type, payload, index) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(delGroupByAction(type, payload, index)))
+    })
+  }
+}
+
+export const deleteGroupByForEvent = (ev, index) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(deleteGroupByEventAction(ev, index)))
     })
   }
 }

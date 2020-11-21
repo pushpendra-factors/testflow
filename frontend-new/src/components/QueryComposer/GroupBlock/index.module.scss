@@ -23,6 +23,21 @@
 
     &__select {
         position: relative;
+
+        
+    }
+
+    &__select:hover {
+        .group_block__remove {
+            display: initial;
+        }
+    }
+
+    &__remove {
+        display: none;
+        position: absolute;
+        right: 0;
+
     }
 }
 

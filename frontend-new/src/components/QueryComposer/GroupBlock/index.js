@@ -31,16 +31,12 @@ function GroupBlock({
     setFilterOptions(filterOpts);
   }, [userProperties]);
 
-  useEffect(() => {
-    console.log(groupByState);
-  }, [groupByState]);
-
   const delOption = (index) => {
-    delGroupBy('global', groupByState[index], index);
+    delGroupBy('global', groupByState.global[index], index);
   };
 
   const onChange = (value, index) => {
-    const newGroupByState = Object.assign({}, groupByState[index]);
+    const newGroupByState = Object.assign({}, groupByState.global[index]);
     newGroupByState.prop_category = 'user';
     newGroupByState.eventName = '$present';
     newGroupByState.property = value[1][0];
@@ -81,14 +77,14 @@ function GroupBlock({
   };
 
   const renderExistingBreakdowns = () => {
-    if (groupByState.length < 1) return;
-    return (groupByState.map((opt, index) => (
+    if (groupByState.global.length < 1) return;
+    return (groupByState.global.map((opt, index) => (
       <div key={index} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
         {!isDDVisible[index] && <>
         <Button size={'large'}
         type="text"
         onClick={() => delOption(index)}
-        className={`${styles.filter_block__remove} mr-2ß`}>
+        className={`${styles.group_block__remove} mr-2ß`}>
           <SVG name="remove"></SVG></Button>
 
         <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" />} {opt.property ? opt.property : 'Select user property'}</Button>
@@ -120,7 +116,7 @@ function GroupBlock({
       </div>
 
       {renderExistingBreakdowns()}
-      {renderInitGroupSelect(groupByState.length)}
+      {renderInitGroupSelect(groupByState.global.length)}
     </div>
   );
 }
@@ -129,7 +125,7 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   userProperties: state.coreQuery.userProperties,
   eventProperties: state.coreQuery.eventProperties,
-  groupByState: state.coreQuery.groupBy.global
+  groupByState: state.coreQuery.groupBy
 });
 
 const mapDispatchToProps = dispatch => bindActionCreators({

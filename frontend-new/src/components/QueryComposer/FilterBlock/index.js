@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 
-import { Input, Button } from 'antd';
-import { SVG } from 'factorsComponents';
+import { Input, Button, Result } from 'antd';
+import { SVG, Text } from 'factorsComponents';
 
 import { fetchEventPropertyValues } from '../../../reducers/coreQuery/services';
 
@@ -163,7 +163,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
             >
               <div>
                 <SVG name={group.icon} extraClass={'self-center'}></SVG>
-                <span className={'ml-1'}>{group.label}</span>
+                <Text type={'title'} extraClass={'ml-1'} weight={'bold'}>{group.label}</Text>
               </div>
               <SVG name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
             </div>
@@ -203,15 +203,32 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
         break;
       case 'values':
         if(newFilterState.props[1] === 'categorical') {
-          options[newFilterState.props[0]] && options[newFilterState.props[0]].forEach(opt => {
-            if (opt.toLowerCase().includes(searchTerm.toLowerCase())) {
-              renderOptions.push(<span className={styles.filter_block__filter_select__option}
-                onClick={() => optionClick(opt)} >
-                {opt}
-              </span>
-              );
-            }
-          });
+          if (options[newFilterState.props[0]] && options[newFilterState.props[0]].length) {
+            options[newFilterState.props[0]].forEach(opt => {
+              if (opt.toLowerCase().includes(searchTerm.toLowerCase())) {
+                renderOptions.push(<span className={styles.filter_block__filter_select__option}
+                  onClick={() => optionClick(opt)} >
+                  {opt}
+                </span>
+                );
+              }
+            });
+          } else {
+            renderOptions.push(<span className={styles.filter_block__filter_select__option_empty}
+              >
+              <Result
+                title="No Results"
+                subTitle="Sorry, Couldn't load the data."
+              />
+            </span>)
+          }
+
+          if(!renderOptions.length && searchTerm.length) {
+            renderOptions.push(<span className={styles.filter_block__filter_select__option_nomatch}
+              >
+               Sorry! No matches
+            </span>)
+          }
         }
         
         break;

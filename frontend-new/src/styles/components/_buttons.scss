@@ -92,3 +92,11 @@
     }
 
 }
+
+.ant-btn-lg {
+    span {
+        max-width: 300px;
+        text-overflow: ellipsis;
+        overflow: clip;
+    }
+}

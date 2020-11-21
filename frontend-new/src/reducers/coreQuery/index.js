@@ -7,7 +7,8 @@ import {
   FETCH_USER_PROPERTIES,
   SET_GROUPBY,
   DEL_GROUPBY,
-  INITIALIZE_GROUPBY
+  INITIALIZE_GROUPBY,
+  DEL_GROUPBY_EVENT
 } from './actions';
 
 const defaultState = {
@@ -63,6 +64,15 @@ export default function (state = defaultState, action) {
         return a.prop_category >= b.prop_category ? 1 : -1;
       });
       return { ...state, groupBy: groupByState };
+    case DEL_GROUPBY_EVENT: {
+      const groupByState = Object.assign({}, state.groupBy);
+      const eventGroups = groupByState.event;
+      const filteredEventGroups = eventGroups.filter(gbp => {
+        gbp.eventIndex !== action.index +1 && gbp.eventName !== action.payload.label
+      })
+      groupByState.event = filteredEventGroups;
+      return { ...state, groupBy: groupByState };
+    }
     default:
       return state;
   }
