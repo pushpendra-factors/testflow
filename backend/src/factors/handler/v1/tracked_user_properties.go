@@ -49,7 +49,7 @@ func getcreateFactorsTrackedUserPropertyParams(c *gin.Context) (*CreateTrackedus
 
 //CreateFactorsTrackedUserPropertyHandler - Handler for creating tracked user property
 // CreateTrackedEventsHandler godoc
-// @Summary create a tracked event
+// @Summary Create a tracked user property
 // @Tags V1FactorsApi
 // @Accept  json
 // @Produce json

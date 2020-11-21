@@ -51,7 +51,7 @@ func getcreateFactorsTrackedEventParams(c *gin.Context) (*CreateFactorsTrackedEv
 
 // CreateFactorsTrackedEventsHandler - Handler for creating tracked event
 // CreateFactorsTrackedEventsHandler godoc
-// @Summary create a tracked event
+// @Summary Create a tracked event
 // @Tags V1FactorsApi
 // @Accept  json
 // @Produce json

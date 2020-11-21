@@ -31,7 +31,7 @@ func InitAppRoutes(r *gin.Engine) {
 	})
 
 	// Initialize swagger api docs only for development / staging.
-	if C.GetConfig().Env == C.DEVELOPMENT {
+	if C.GetConfig().Env != C.PRODUCTION {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 

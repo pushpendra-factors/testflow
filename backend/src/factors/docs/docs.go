@@ -1943,7 +1943,7 @@ var doc = `{
                 "tags": [
                     "V1FactorsApi"
                 ],
-                "summary": "Remove a saved goal",
+                "summary": "Search on saved goals",
                 "parameters": [
                     {
                         "type": "integer",
@@ -2058,7 +2058,7 @@ var doc = `{
                 "tags": [
                     "V1FactorsApi"
                 ],
-                "summary": "create a tracked event",
+                "summary": "Create a tracked event",
                 "parameters": [
                     {
                         "type": "integer",
@@ -2170,7 +2170,7 @@ var doc = `{
                 "tags": [
                     "V1FactorsApi"
                 ],
-                "summary": "create a tracked event",
+                "summary": "Create a tracked user property",
                 "parameters": [
                     {
                         "type": "integer",
@@ -3338,7 +3338,7 @@ type swaggerInfo struct {
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = swaggerInfo{
 	Version:     "1.0",
-	Host:        "factors-dev.com:8080",
+	Host:        "",
 	BasePath:    "/projects",
 	Schemes:     []string{},
 	Title:       "Factors Backend Api",
