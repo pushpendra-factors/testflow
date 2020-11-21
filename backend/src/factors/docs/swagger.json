@@ -2903,6 +2903,9 @@
                 "created_by": {
                     "type": "string"
                 },
+                "created_by_name": {
+                    "type": "string"
+                },
                 "id": {
                     "description": "Composite primary key, id + project_id.",
                     "type": "integer"
@@ -3064,6 +3067,9 @@
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 },
                 "units_position": {

@@ -2919,6 +2919,9 @@ var doc = `{
                 "created_by": {
                     "type": "string"
                 },
+                "created_by_name": {
+                    "type": "string"
+                },
                 "id": {
                     "description": "Composite primary key, id + project_id.",
                     "type": "integer"
@@ -3080,6 +3083,9 @@ var doc = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 },
                 "units_position": {
