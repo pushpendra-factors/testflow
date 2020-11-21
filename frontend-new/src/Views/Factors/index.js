@@ -4,11 +4,13 @@ import SearchBar from '../../components/SearchBar';
 import {
   Row, Col, Table, Avatar, Button
 } from 'antd';
-import { Text, SVG } from 'factorsComponents';
+import { Text } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
 import ConfigureDP from './ConfigureDP';
 import CreateGoalDrawer from './CreateGoalDrawer';
-
+import { fetchFactorsGoals } from 'Reducers/factors';
+import { connect } from 'react-redux';
+import { fetchProjectAgents } from 'Reducers/agentActions';
 const columns = [
   {
     title: 'Saved Goals',
@@ -24,29 +26,15 @@ const columns = [
   }
 ];
 
-const data = [
-  {
-    key: '1',
-    type: <SVG name={'events_cq'} size={24} />,
-    title: 'Monthly User signups from Google Campaigns',
-    author: 'Vishnu Baliga',
-    date: 'Jan 10, 2020'
-  },
-  {
-    key: '2',
-    type: <SVG name={'attributions_cq'} size={24} />,
-    title: 'Quarterly Lead Acquisition Rate by Region',
-    author: 'Praveen Das',
-    date: 'Feb 21, 2020'
-  },
-  {
-    key: '3',
-    type: <SVG name={'funnels_cq'} size={24} />,
-    title: 'Onboarding Funnel Over month',
-    author: 'Anand Nair',
-    date: 'Jan 04, 2020'
-  }
-];
+// const data = [
+//   {
+//     key: '1',
+//     type: <SVG name={'events_cq'} size={24} />,
+//     title: 'Monthly User signups from Google Campaigns',
+//     author: 'Vishnu Baliga',
+//     date: 'Jan 10, 2020'
+//   },
+// ];
 
 const suggestionList = [
   {
@@ -71,16 +59,45 @@ const suggestionList = [
   }
 ];
 
-const Factors = () => {
+const Factors = ({
+  fetchFactorsGoals
+  , activeProject
+  , goals
+  , agents
+  , fetchProjectAgents
+}) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [showConfigureDPModal, setConfigureDPModal] = useState(false);
   const [showGoalDrawer, setGoalDrawer] = useState(false);
+  const [dataSource, setdataSource] = useState(null);
 
   useEffect(() => {
-    setInterval(() => {
+    if (!goals || !agents) {
+      const getData = async () => {
+        await fetchProjectAgents(activeProject.id);
+        await fetchFactorsGoals(activeProject.id);
+      };
+      getData();
+    }
+    if (goals) {
+      const formattedArray = [];
+      goals.map((goal, index) => {
+        let createdUser = '';
+        agents.map((agent) => {
+          if (agent.uuid === goal.created_by) {
+            createdUser = `${agent.first_name} ${agent.last_name}`;
+          }
+        });
+        formattedArray.push({
+          key: index,
+          title: goal.name,
+          author: createdUser
+        });
+        setdataSource(formattedArray);
+      });
       SetLoadingTable(false);
-    }, 2000);
-  });
+    }
+  }, [activeProject, goals, agents]);
   const handleCancel = () => {
     setConfigureDPModal(false);
   };
@@ -127,7 +144,7 @@ const Factors = () => {
                     </Row>
                     <Row gutter={[24, 24]} justify="center">
                         <Col span={20}>
-                        <Table loading={loadingTable} className="ant-table--custom mt-8" columns={columns} dataSource={data} pagination={false} />
+                        <Table loading={loadingTable} className="ant-table--custom mt-8" columns={columns} dataSource={dataSource} pagination={false} />
                         </Col>
                     </Row>
                 </Col>
@@ -147,5 +164,11 @@ const Factors = () => {
     </>
   );
 };
-
-export default Factors;
+const mapStateToProps = (state) => {
+  return {
+    activeProject: state.global.active_project,
+    goals: state.factors.goals,
+    agents: state.agent.agents
+  };
+};
+export default connect(mapStateToProps, { fetchFactorsGoals, fetchProjectAgents })(Factors);
