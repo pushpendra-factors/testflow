@@ -242,8 +242,15 @@ function CoreQuery({ activeProject }) {
       } else {
         queryupdated.splice(index, 1);
       }
-    } else {
-      queryupdated.push(newEvent);
+    }
+    else if (queryType === 'event') {
+      const queryExist = queryupdated.findIndex((q) => q.label === newEvent.label);
+      if(queryExist < 0) {
+        queryupdated.push(newEvent);
+      }
+    }
+    else {
+        queryupdated.push(newEvent);
     }
     setQueries(queryupdated);
   };

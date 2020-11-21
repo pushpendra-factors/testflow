@@ -94,7 +94,7 @@ function QueryBlock({
       delete newEvent.filters[index];
       newEvent.filters.length -= 1;
     }
-    eventChange(newEvent, index - 1);
+    eventChange(newEvent, index);
   };
 
   const selectEventFilter = () => {
