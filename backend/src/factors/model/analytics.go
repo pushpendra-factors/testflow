@@ -187,21 +187,27 @@ const (
 )
 
 const (
-	EqualsOpStr   = "equals"
-	EqualsOp      = "="
-	NotEqualOpStr = "notEqual"
-	NotEqualOp    = "!="
+	EqualsOpStr             = "equals"
+	EqualsOp                = "="
+	NotEqualOpStr           = "notEqual"
+	NotEqualOp              = "!="
+	GreaterThanOpStr        = "greaterThan"
+	LesserThanOpStr         = "lesserThan"
+	GreaterThanOrEqualOpStr = "greaterThanOrEqual"
+	LesserThanOrEqualOpStr  = "lesserThanOrEqual"
+	ContainsOpStr           = "contains"
+	NotContainsOpStr        = "notContains"
 )
 
 var queryOps = map[string]string{
-	EqualsOpStr:          EqualsOp,
-	NotEqualOpStr:        NotEqualOp,
-	"greaterThan":        ">",
-	"lesserThan":         "<",
-	"greaterThanOrEqual": ">=",
-	"lesserThanOrEqual":  "<=",
-	"contains":           "LIKE",
-	"notContains":        "NOT LIKE",
+	EqualsOpStr:             EqualsOp,
+	NotEqualOpStr:           NotEqualOp,
+	GreaterThanOpStr:        ">",
+	LesserThanOpStr:         "<",
+	GreaterThanOrEqualOpStr: ">=",
+	LesserThanOrEqualOpStr:  "<=",
+	ContainsOpStr:           "LIKE",
+	NotContainsOpStr:        "NOT LIKE",
 }
 
 const (
@@ -325,7 +331,7 @@ func buildWhereFromProperties(properties []QueryProperty) (rStmnt string, rParam
 			} else {
 				// categorical property type.
 				var pValue string
-				if p.Operator == "contains" || p.Operator == "notContains" {
+				if p.Operator == ContainsOpStr || p.Operator == NotContainsOpStr {
 					pValue = fmt.Sprintf("%%%s%%", p.Value)
 				} else {
 					pValue = p.Value
