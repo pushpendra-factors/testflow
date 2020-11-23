@@ -1,34 +1,73 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Row, Col, Modal, Button, Progress
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
+import { fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
+import { connect } from 'react-redux';
 
-const suggestionList = [
-  {
-    name: 'User_SignUp',
-    img: ''
-  },
-  {
-    name: 'chargebee.com...ebinar/Thank-you',
-    img: ''
-  },
-  {
-    name: 'chargebee.com/Plans',
-    img: ''
-  },
-  {
-    name: 'chargebee.com/Features',
-    img: ''
-  },
-  {
-    name: 'chargebee.com...ebinar/Thank-you',
-    img: ''
-  }
-];
+// const suggestionList = [
+//   {
+//     name: 'User_SignUp',
+//     img: ''
+//   },
+//   {
+//     name: 'chargebee.com...ebinar/Thank-you',
+//     img: ''
+//   },
+//   {
+//     name: 'chargebee.com/Plans',
+//     img: ''
+//   },
+//   {
+//     name: 'chargebee.com/Features',
+//     img: ''
+//   },
+//   {
+//     name: 'chargebee.com...ebinar/Thank-you',
+//     img: ''
+//   }
+// ];
 
 const ConfigureDP = (props) => {
+  const {
+    activeProject, fetchFactorsTrackedEvents, tracked_events, fetchFactorsTrackedUserProperties, tracked_user_property
+  } = props;
+  const [activeEventsTracked, setActiveEventsTracked] = useState(0);
+  const [activeUserProperties, setActiveUserProperties] = useState(0);
+
+  useEffect(() => {
+    setActiveEventsTracked(0);
+    setActiveUserProperties(0);
+    if (!tracked_events || !tracked_user_property) {
+      const getData = async () => {
+        await fetchFactorsTrackedEvents(activeProject.id);
+        await fetchFactorsTrackedUserProperties(activeProject.id);
+      };
+      getData();
+    }
+    if (tracked_events) {
+      let activeEvents = 0;
+      tracked_events.map((event) => {
+        if (event.is_active) {
+          activeEvents = activeEvents + 1;
+        }
+      });
+      setActiveEventsTracked(activeEvents);
+    };
+
+    if (tracked_user_property) {
+      let activeUserProperties = 0;
+      tracked_user_property.map((event) => {
+        if (event.is_active) {
+          activeUserProperties = activeUserProperties + 1;
+        }
+      });
+      setActiveUserProperties(activeUserProperties);
+    }
+  }, [tracked_events, tracked_user_property]);
+
   return (
     <Modal
     title={null}
@@ -84,7 +123,7 @@ const ConfigureDP = (props) => {
                         <Row gutter={[24, 12]} justify={'center'}>
                             <Col span={24}>
                                 <div className={'flex items-center mt-6'}>
-                                    <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >Events</Text><Text type={'title'} level={4} color={'grey'} extraClass={'m-0 ml-2'} >(34)</Text>
+                                    <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >Events</Text><Text type={'title'} level={4} color={'grey'} extraClass={'m-0 ml-2'} >{tracked_events && `(${tracked_events.length})`}</Text>
                                 </div>
                             </Col>
                             <Col span={24}>
@@ -94,11 +133,11 @@ const ConfigureDP = (props) => {
                                 <div className={'flex w-full justify-between items-center border-bottom--thin-2 pb-4'}>
                                     <div className={'flex items-center'}>
                                         <div className={'flex flex-col'}>
-                                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >14</Text>
+                                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >{activeEventsTracked}</Text>
                                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Tracked</Text>
                                         </div>
                                         <div className={'flex flex-col ml-6'}>
-                                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >20</Text>
+                                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >{tracked_events && `${tracked_events.length - activeEventsTracked}`}</Text>
                                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >In Queue</Text>
                                         </div>
                                     </div>
@@ -108,10 +147,10 @@ const ConfigureDP = (props) => {
                                 </div>
                             </Col>
                             <Col span={24}>
-                            {suggestionList.map((item, index) => {
+                            {tracked_events && tracked_events.map((event, index) => {
                               return (
                                     <div key={index} className={'flex justify-between items-center mt-2'}>
-                                        <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{item.name}</Text>
+                                        <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{event.event_name_id}</Text>
                                     </div>
                               );
                             })}
@@ -125,7 +164,7 @@ const ConfigureDP = (props) => {
                         <Row gutter={[24, 12]} justify={'center'}>
                             <Col span={24}>
                                 <div className={'flex items-center mt-6'}>
-                                    <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >Events</Text><Text type={'title'} level={4} color={'grey'} extraClass={'m-0 ml-2'} >(14)</Text>
+                                    <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >User Properties</Text><Text type={'title'} level={4} color={'grey'} extraClass={'m-0 ml-2'} >{tracked_user_property && `(${tracked_user_property.length})`}</Text>
                                 </div>
                             </Col>
                             <Col span={24}>
@@ -135,11 +174,11 @@ const ConfigureDP = (props) => {
                                 <div className={'flex w-full justify-between items-center border-bottom--thin-2 pb-4'}>
                                     <div className={'flex items-center'}>
                                         <div className={'flex flex-col'}>
-                                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >10</Text>
+                                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >{activeUserProperties}</Text>
                                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Tracked</Text>
                                         </div>
                                         <div className={'flex flex-col ml-6'}>
-                                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >4</Text>
+                                        <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >{tracked_user_property && `${tracked_user_property.length - activeUserProperties}`}</Text>
                                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >In Queue</Text>
                                         </div>
                                     </div>
@@ -149,14 +188,12 @@ const ConfigureDP = (props) => {
                                 </div>
                             </Col>
                             <Col span={24}>
-                            {suggestionList.map((item, index) => {
-                              if (index < 2) {
-                                return (
+                            {tracked_user_property && tracked_user_property.map((event, index) => {
+                              return (
                                       <div key={index} className={'flex justify-between items-center mt-2'}>
-                                          <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{item.name}</Text>
+                                          <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{event.user_property_name}</Text>
                                       </div>
-                                );
-                              }
+                              );
                             })}
                             </Col>
                         </Row>
@@ -173,4 +210,12 @@ const ConfigureDP = (props) => {
   );
 };
 
-export default ConfigureDP;
+const mapStateToProps = (state) => {
+  return {
+    activeProject: state.global.active_project,
+    tracked_events: state.factors.tracked_events,
+    tracked_user_property: state.factors.tracked_user_property
+  };
+};
+
+export default connect(mapStateToProps, { fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties })(ConfigureDP);

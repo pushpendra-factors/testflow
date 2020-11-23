@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
