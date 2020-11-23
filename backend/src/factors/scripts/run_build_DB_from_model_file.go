@@ -424,7 +424,7 @@ func getPatterns(file *os.File, countOccurence bool) ([]*P.Pattern, error) {
 		return nil, err
 	}
 	scanner := bufio.NewScanner(file)
-	err = P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
+	_, err = P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
 	if err != nil {
 		return nil, err
 	}

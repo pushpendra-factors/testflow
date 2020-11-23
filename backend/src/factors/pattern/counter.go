@@ -38,6 +38,12 @@ type UserAndEventsInfo struct {
 	ModelVersion           int
 }
 
+type PropertiesCount struct {
+	PropertyName string
+	PropertyType string
+	Count        uint
+}
+
 const CURRENT_MODEL_VERSION = 2.0
 
 func NewUserAndEventsInfo() *UserAndEventsInfo {
@@ -200,7 +206,7 @@ func PatternPropertyKey(patternIndex int, propertyName string) string {
 const max_SEEN_PROPERTIES = 10000
 const max_SEEN_PROPERTY_VALUES = 1000
 
-func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo) error {
+func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo) (*map[string]PropertiesCount, error) {
 	lineNum := 0
 	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
 	eventInfoMap := userAndEventsInfo.EventPropertiesInfoMap
@@ -208,15 +214,27 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 	maxProperties := max_SEEN_PROPERTIES / (int(float64(numUniqueEvents)/150.0) + 1)
 	maxPropertyValues := max_SEEN_PROPERTY_VALUES / (int(float64(numUniqueEvents)/150.0) + 1)
 
+	allProps := make(map[string]PropertiesCount)
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		lineNum++
 		var eventDetails CounterEventFormat
 		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
-			return err
+			return nil, err
 		}
 		for key, value := range eventDetails.UserProperties {
+			if Pval, ok := allProps[key]; ok {
+				Pval.Count = Pval.Count + 1
+				Pval.PropertyName = key
+				Pval.PropertyType = "UP"
+				allProps[key] = Pval
+			} else {
+				PrVal := PropertiesCount{key, "UP", 1}
+				allProps[key] = PrVal
+			}
+
 			propertyType := U.GetPropertyTypeByKeyValue(key, value)
 			if propertyType == U.PropertyTypeNumerical {
 				if len(userPropertiesInfo.NumericPropertyKeys) > maxProperties {
@@ -248,6 +266,15 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 			continue
 		}
 		for key, value := range eventDetails.EventProperties {
+			if Pval, ok := allProps[key]; ok {
+				Pval.Count = Pval.Count + 1
+				Pval.PropertyName = key
+				Pval.PropertyType = "EP"
+				allProps[key] = Pval
+			} else {
+				PrVal := PropertiesCount{key, "EP", 1}
+				allProps[key] = PrVal
+			}
 			propertyType := U.GetPropertyTypeByKeyValue(key, value)
 			if propertyType == U.PropertyTypeNumerical {
 				if len(eInfo.NumericPropertyKeys) > maxProperties {
@@ -273,7 +300,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 			}
 		}
 	}
-	return nil
+	return &allProps, nil
 }
 
 func ComputeAllUserPropertiesHistogram(scanner *bufio.Scanner, pattern *Pattern) error {

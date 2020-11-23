@@ -35,6 +35,7 @@ const max_SEGMENTS = 25000
 const max_EVENT_NAMES = 250
 const top_K = 5
 const topK_patterns = 10
+const topKProperties = 4
 const keventsSpecial = 5
 const keventsURL = 100
 const max_PATTERN_LENGTH = 3
@@ -432,7 +433,6 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 
 	filteredTopKPatterns := FilterTopKEventsOnTypes(filteredPatterns, eventNamesWithType, topK_patterns, keventsSpecial, keventsURL)
 
-
 	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil
 	}
@@ -522,7 +522,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	return nil
 }
 
-func buildPropertiesInfoFromInput(projectId uint64, eventNames []string, filepath string) (*P.UserAndEventsInfo, error) {
+func buildPropertiesInfoFromInput(projectId uint64, eventNames []string, filepath string) (*P.UserAndEventsInfo, map[string]P.PropertiesCount, error) {
 	userAndEventsInfo := P.NewUserAndEventsInfo()
 	eMap := *userAndEventsInfo.EventPropertiesInfoMap
 	for _, eventName := range eventNames {
@@ -535,16 +535,16 @@ func buildPropertiesInfoFromInput(projectId uint64, eventNames []string, filepat
 
 	file, err := os.Open(filepath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	err = P.CollectPropertiesInfo(scanner, userAndEventsInfo)
+	allProperty, err := P.CollectPropertiesInfo(scanner, userAndEventsInfo)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return userAndEventsInfo, nil
+	return userAndEventsInfo, *allProperty, nil
 }
 
 func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
@@ -737,37 +737,159 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 	return uploadedChunkIds, nil
 }
 
-func filterDisabledFactorsProperties(reader io.Reader) (io.Reader, error) {
+func filterAndWriteFactorsProperties(tmpPath string, reader io.Reader, userPropMap, eventPropMap map[string]bool) error {
 	scanner := bufio.NewScanner(reader)
-	var allLines [][]byte
+	file, err := os.Create(tmpPath)
+	if err != nil {
+		return err
+	}
+	log.Info("Create a temp file to save and read events")
+	defer file.Close()
 
+	w := bufio.NewWriter(file)
 	for scanner.Scan() {
 		line := scanner.Text()
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Error("Read failed")
-			return nil, err
+			return err
 		}
 
-		// Remove disabled user properties from model building.
-		for _, key := range U.DISABLED_FACTORS_USER_PROPERTIES {
-			delete(eventDetails.UserProperties, key)
+		for uKey := range eventDetails.UserProperties {
+			if _, ok := userPropMap[uKey]; !ok {
+				delete(eventDetails.UserProperties, uKey)
+			}
 		}
-		// Remove disabled event properties from model building.
-		for _, key := range U.DISABLED_FACTORS_EVENT_PROPERTIES {
-			delete(eventDetails.EventProperties, key)
+
+		for eKey := range eventDetails.EventProperties {
+			if _, ok := eventPropMap[eKey]; !ok {
+				delete(eventDetails.EventProperties, eKey)
+			}
 		}
 
 		eventDetailsBytes, err := json.Marshal(eventDetails)
+
 		if err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Error("Failed to marshal eventDetails")
-			return nil, err
+			return err
 		}
 
-		allLines = append(allLines, eventDetailsBytes)
+		lineWrite := string(eventDetailsBytes)
+		if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
+			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+			return err
+		}
+
+	}
+	w.Flush()
+
+	return nil
+}
+
+func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64) ([]string, map[string]string, error) {
+	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
+	eventNames, err := M.GetEventNamesFromFile(scanner, projectId)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": tmpEventsFilePath}).Error("Failed to read event names from file")
+		return nil, nil, err
+	}
+	mineLog.WithField("tmpEventsFilePath",
+		tmpEventsFilePath).Info("Unique EventNames", eventNames)
+
+	mineLog.WithField("tmpEventsFilePath",
+		tmpEventsFilePath).Info("Building user and event properties info and writing it to file.")
+	eventNamesWithType, err := M.GetEventTypeFromDb(projectId, eventNames, 100000)
+
+	mineLog.WithField("Event Names and type",
+		eventNamesWithType).Info("Building user and type from DB.")
+
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get event names and Type from DB")
+		return nil, nil, err
 	}
 
-	return bytes.NewReader(bytes.Join(allLines, []byte("\n"))), nil
+	return eventNames, eventNamesWithType, nil
+}
+
+func buildWhiteListProperties(allProperty map[string]P.PropertiesCount, numProp int) (map[string]bool, map[string]bool) {
+
+	userPropertiesMap := make(map[string]int)
+	eventPropertiesMap := make(map[string]int)
+	for _, v := range allProperty {
+		if v.PropertyType == "UC" {
+			userPropertiesMap[v.PropertyName] = int(v.Count)
+		} else {
+			eventPropertiesMap[v.PropertyName] = int(v.Count)
+		}
+	}
+	upSortedList := U.RankByWordCount(userPropertiesMap)
+	epSortedList := U.RankByWordCount(eventPropertiesMap)
+
+	// restrict number of properties
+	if len(upSortedList) > numProp {
+		upSortedList = upSortedList[0:numProp]
+	}
+	if len(epSortedList) > numProp {
+		epSortedList = epSortedList[0:numProp]
+	}
+
+	upFilteredMap := make(map[string]bool)
+	epFilteredMap := make(map[string]bool)
+
+	// add keys based on ranking
+	for _, u := range upSortedList {
+		upFilteredMap[u.Key] = true
+	}
+	for _, u := range epSortedList {
+		epFilteredMap[u.Key] = true
+	}
+	//add keys based on WHITELIST_Properties
+	for _, v := range U.WHITELIST_FACTORS_USER_PROPERTIES {
+		upFilteredMap[v] = true
+	}
+	for _, v := range U.WHITELIST_FACTORS_EVENT_PROPERTIES {
+		epFilteredMap[v] = true
+	}
+	//delete keys based on disabled_Properties
+	for _, Uprop := range U.DISABLED_FACTORS_USER_PROPERTIES {
+		delete(upFilteredMap, Uprop)
+	}
+	for _, Eprop := range U.DISABLED_FACTORS_EVENT_PROPERTIES {
+		delete(epFilteredMap, Eprop)
+	}
+
+	return upFilteredMap, epFilteredMap
+}
+
+func buildEventsFileOnProperties(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, projectId uint64,
+	modelId uint64, eReader io.Reader, userPropList, eventPropList map[string]bool) error {
+
+	var err error
+	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, modelId)
+	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
+	efPath := efTmpPath + "tmpEvents" + efTmpName
+	err = filterAndWriteFactorsProperties(efPath, eReader, userPropList, eventPropList)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+			"eventFileName": efCloudName}).Error("Failed to filter disabled properties")
+		return err
+	}
+	r, err := os.Open(efPath)
+	err = diskManager.Create(efTmpPath, efTmpName, r)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efTmpPath,
+			"eventFileName": efTmpName}).Error("Failed to create event file on disk.")
+		return err
+	}
+	err = os.Remove(efPath)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efPath}).Error("Failed to remove file")
+		return err
+
+	}
+
+	return nil
+
 }
 
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
@@ -788,43 +910,18 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
 		return "", 0, err
 	}
-	filteredReader, err := filterDisabledFactorsProperties(eReader)
-	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-			"eventFileName": efCloudName}).Error("Failed to filter disabled properties")
-		return "", 0, err
-	}
 
-	err = diskManager.Create(efTmpPath, efTmpName, filteredReader)
-	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efTmpPath,
-			"eventFileName": efTmpName}).Error("Failed to create event file on disk.")
-		return "", 0, err
-	}
 	tmpEventsFilepath := efTmpPath + efTmpName
 	mineLog.Info("Successfuly downloaded events file from cloud.")
-	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilepath)
-	eventNames, err := M.GetEventNamesFromFile(scanner, projectId)
+
+	eventNames, eventNamesWithType, err := GetEventNamesAndType(tmpEventsFilepath, projectId)
 	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efTmpPath,
-			"eventFileName": efTmpName}).Error("Failed to read event names from file")
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
 		return "", 0, err
 	}
-	mineLog.WithField("tmpEventsFilePath",
-		tmpEventsFilepath).Info("Unique EventNames", eventNames)
 
-	mineLog.WithField("tmpEventsFilePath",
-		tmpEventsFilepath).Info("Building user and event properties info and writing it to file.")
-	eventNamesWithType, err := M.GetEventTypeFromDb(projectId, eventNames, 100000)
-
-	mineLog.WithField("Event Names and type",
-		eventNamesWithType).Info("Building user and type from DB.")
-
-	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get event names and Type from DB")
-		return "", 0, err
-	}
-	userAndEventsInfo, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
+	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
+	userPropList, eventPropList := buildWhiteListProperties(allPropsMap, topKProperties)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return "", 0, err
@@ -848,6 +945,14 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		return "", 0, err
 	}
 	mineLog.Info("Successfully Built user and event properties info and written it to file.")
+
+	err = buildEventsFileOnProperties(diskManager, cloudManager, projectId,
+		modelId, eReader, userPropList, eventPropList)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")
+		return "", 0, err
+	}
+	mineLog.Info("Successfully Built events data and written to file.")
 
 	// build histogram of all user properties.
 	mineLog.WithField("tmpEventsFilePath", tmpEventsFilepath).Info("Building all user properties histogram.")
