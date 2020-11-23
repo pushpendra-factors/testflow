@@ -95,7 +95,7 @@ func addCreatedByNameInQueries(queries []Queries, projectID uint64) ([]Queries, 
 	}
 
 	for i, _ := range queries {
-		if _, exists := agentUUIDsToName[queries[i].CreatedBy]; !exists {
+		if _, exists := agentUUIDsToName[queries[i].CreatedBy]; exists {
 			queries[i].CreatedByName = agentUUIDsToName[queries[i].CreatedBy]
 		}
 	}
