@@ -68,7 +68,7 @@ export default function (state = defaultState, action) {
       const groupByState = Object.assign({}, state.groupBy);
       const eventGroups = groupByState.event;
       const filteredEventGroups = eventGroups.filter(gbp => {
-        gbp.eventIndex !== action.index +1 && gbp.eventName !== action.payload.label
+        return gbp.eventIndex !== action.index +1 && gbp.eventName !== action.payload.label
       })
       groupByState.event = filteredEventGroups;
       return { ...state, groupBy: groupByState };

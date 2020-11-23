@@ -238,21 +238,16 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
 
   const queryChange = (newEvent, index, changeType = 'add') => {
     const queryupdated = [...queries];
-    const queryExist = queryupdated.findIndex((q) => q.label === newEvent.label);
     if (queryupdated[index]) {
-      if (changeType === 'add') { 
-        if (queryExist < 0 && queryType === 'event') {
-          queryupdated[index] = newEvent;
-        }
+      if (changeType === 'add') {
+        queryupdated[index] = newEvent;
         deleteGroupByForEvent(newEvent, index);
       } else {
         deleteGroupByForEvent(newEvent, index);
         queryupdated.splice(index, 1);
       }
     } else {
-      if (queryExist < 0 && queryType === 'event') {
-        queryupdated.push(newEvent);
-      }
+      queryupdated.push(newEvent);
     }
     setQueries(queryupdated);
   };

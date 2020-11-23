@@ -112,8 +112,8 @@ function QueryBlock({
     }
   };
 
-  const deleteGroupBy = (groupState, index, type = 'event') => {
-    delGroupBy(type, groupState, index);
+  const deleteGroupBy = (groupState, id, type = 'event') => {
+    delGroupBy(type, groupState, id);
   };
 
   const pushGroupBy = (groupState, index) => {
