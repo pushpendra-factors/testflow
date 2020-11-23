@@ -104,7 +104,7 @@ def get_collections(facebook_int_setting, sync_info_with_type, date_stop):
         get_ad_account_data(facebook_int_setting["project_id"], facebook_int_setting[ACCESS_TOKEN],
             facebook_int_setting[FACEBOOK_AD_ACCOUNT], date_stop)
 
-        campaigns_url = "https://graph.facebook.com/v6.0/{}/campaigns?access_token={}".format(
+        campaigns_url = "https://graph.facebook.com/v9.0/{}/campaigns?access_token={}".format(
         facebook_int_setting[FACEBOOK_AD_ACCOUNT], facebook_int_setting[ACCESS_TOKEN])
         campaigns_response = requests.get(campaigns_url)
         if campaigns_response.ok:
@@ -117,7 +117,7 @@ def get_collections(facebook_int_setting, sync_info_with_type, date_stop):
                 get_campaign_data(facebook_int_setting["project_id"],facebook_int_setting[FACEBOOK_AD_ACCOUNT],
                     facebook_int_setting[ACCESS_TOKEN], campaigns, sync_info_with_type[CAMPAIGN_INSIGHTS+FACEBOOK_ALL], date_stop)
 
-        adsets_url = "https://graph.facebook.com/v6.0/{}/adsets?access_token={}".format(
+        adsets_url = "https://graph.facebook.com/v9.0/{}/adsets?access_token={}".format(
         facebook_int_setting[FACEBOOK_AD_ACCOUNT], facebook_int_setting[ACCESS_TOKEN])
         adsets_response = requests.get(adsets_url)
         if adsets_response.ok:
@@ -129,7 +129,7 @@ def get_collections(facebook_int_setting, sync_info_with_type, date_stop):
                 get_adset_data(facebook_int_setting["project_id"],facebook_int_setting[FACEBOOK_AD_ACCOUNT],
                     facebook_int_setting[ACCESS_TOKEN], adsets, sync_info_with_type[AD_SET_INSIGHTS+FACEBOOK_ALL], date_stop)
 
-        ads_url = "https://graph.facebook.com/v6.0/{}/ads?access_token={}".format(
+        ads_url = "https://graph.facebook.com/v9.0/{}/ads?access_token={}".format(
         facebook_int_setting[FACEBOOK_AD_ACCOUNT], facebook_int_setting[ACCESS_TOKEN])
         ads_response = requests.get(ads_url)
         if ads_response.ok:
@@ -152,7 +152,7 @@ def get_ad_account_data(project_id, access_token, ad_account_id, date_stop):
     timestamp = int(datetime.timestamp(date_stop))
     fields_ad_account = ["id", "balance", "name","partner", "spend_cap"]
     
-    url = "https://graph.facebook.com/v6.0/{}?fields={}&&access_token={}".format(
+    url = "https://graph.facebook.com/v9.0/{}?fields={}&&access_token={}".format(
         ad_account_id, fields_ad_account, access_token)
     response = requests.get(url)
     if not response.ok:
@@ -167,7 +167,7 @@ def get_campaign_data(project_id, ad_account_id, access_token, campaigns, date_s
         
         fields_campaign = ["id", "name", "account_id", "buying_type","effective_status","spend_cap","start_time","stop_time"]
         
-        url = "https://graph.facebook.com/v6.0/{}?fields={}&&access_token={}".format(
+        url = "https://graph.facebook.com/v9.0/{}?fields={}&&access_token={}".format(
         campaign["id"], fields_campaign, access_token)
         response = requests.get(url)
         if not response.ok:
@@ -186,7 +186,7 @@ def get_adset_data(project_id, ad_account_id, access_token, adsets, date_start, 
         
         fields_adset = ["id", "account_id","campaign_id","configured_status", "daily_budget", "effective_status","end_time","name"]
         
-        url = "https://graph.facebook.com/v6.0/{}?fields={}&&access_token={}".format(
+        url = "https://graph.facebook.com/v9.0/{}?fields={}&&access_token={}".format(
         adset["id"], fields_adset, access_token)
         response = requests.get(url)
         if not response.ok:
@@ -204,7 +204,7 @@ def get_ad_data(project_id, ad_account_id, access_token, ads, date_start, date_s
     for ad in ads:
         fields_ad = ["id","adset_id","account_id","bid_amount","bid_type","campaign_id","name","status"]
         
-        url = "https://graph.facebook.com/v6.0/{}?fields={}&&access_token={}".format(
+        url = "https://graph.facebook.com/v9.0/{}?fields={}&&access_token={}".format(
         ad["id"], fields_ad, access_token)
         response = requests.get(url)
         if not response.ok:
@@ -224,7 +224,7 @@ def get_insights(project_id, ad_account_id, access_token, id, doc_type, fields_i
         date_start = get_datetime_from_datestring(date_start)
     time_ranges = get_time_ranges_list(date_start, date_stop)
 
-    url = "https://graph.facebook.com/v6.0/{}/insights?time_ranges={}&&fields={}&&access_token={}".format(
+    url = "https://graph.facebook.com/v9.0/{}/insights?time_ranges={}&&fields={}&&access_token={}".format(
     id, time_ranges, fields_insight, access_token)
     facebook_all_response = requests.get(url)
     if not facebook_all_response.ok:
@@ -232,7 +232,7 @@ def get_insights(project_id, ad_account_id, access_token, id, doc_type, fields_i
         return
 
     breakdowns = ["publisher_platform"]
-    url = "https://graph.facebook.com/v6.0/{}/insights?breakdowns={}&&time_ranges={}&&fields={}&&access_token={}".format(
+    url = "https://graph.facebook.com/v9.0/{}/insights?breakdowns={}&&time_ranges={}&&fields={}&&access_token={}".format(
     id, breakdowns, time_ranges, fields_insight, access_token)
     breakdown_response = requests.get(url)
     if not breakdown_response.ok:

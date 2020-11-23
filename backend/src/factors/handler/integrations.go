@@ -602,10 +602,10 @@ func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 		return
 	}
 
-	resp, err := http.Get("https://graph.facebook.com/v6.0/oauth/access_token?" +
+	resp, err := http.Get("https://graph.facebook.com/v9.0/oauth/access_token?" +
 		"grant_type=fb_exchange_token&client_id=" + C.GetFacebookAppId() + "&client_secret=" + C.GetFacebookAppSecret() +
 		"&fb_exchange_token=" + requestPayload.AccessToken)
-	if err != nil {
+	if err != nil || resp.StatusCode != http.StatusOK {
 		log.WithError(err).Error("Failed to get long lived access token")
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to get long lived token"})
 		return

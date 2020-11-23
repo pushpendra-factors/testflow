@@ -11,7 +11,7 @@ import {
 import Toggle from 'react-toggle';
 import facebookSvg from '../../assets/img/settings/logo-social-fb-facebook-icon.svg';
 import FacebookLogin from 'react-facebook-login';
-import { addFacebookAccessToken } from '../../actions/projectsActions'
+import { addFacebookAccessToken, fetchProjectSettings } from '../../actions/projectsActions'
 import Loading from '../../loading';
 import Select from 'react-select';
 import { createSelectOpts, makeSelectOpt } from '../../util';
@@ -24,7 +24,7 @@ const mapStateToProps = store => {
     }
 }
 const mapDispatchToProps = dispatch => {
-  return bindActionCreators({addFacebookAccessToken}, dispatch)
+  return bindActionCreators({addFacebookAccessToken, fetchProjectSettings}, dispatch)
 }
 
 
@@ -37,13 +37,21 @@ class Facebook extends Component {
           SelectedAdAccount : "",
         }
     }
-    componentClicked = () => console.log("clicked");
+    componentWillMount() {
+      this.props.fetchProjectSettings(this.props.currentProjectId)
+        .then((r) => {
+          this.setState({ loaded: true });
+        })
+        .catch((r) => {
+          this.setState({loaded: true, error: r.payload });
+        });
+    }
     responseFacebook = (response) => {
       this.setState({
         response: response
       })
       if(response.id != undefined) {
-        fetch(`https://graph.facebook.com/v6.0/${response.id}/adaccounts?access_token=${response.accessToken}`)
+        fetch(`https://graph.facebook.com/v9.0/${response.id}/adaccounts?access_token=${response.accessToken}`)
         .then(res=> res.json().then((r)=> {
           let adAccounts = r.data.map(account => {
             return {value: account.id, label: account.id} 
@@ -57,7 +65,7 @@ class Facebook extends Component {
     }
 
     renderFacebookLogin = () => {
-      if(!(this.props.currentProjectSettings.int_facebook_user_id)) {
+      if(!(this.props.currentProjectSettings.int_facebook_access_token)) {
         return (
           <FacebookLogin
             appId={BUILD_CONFIG.facebook_app_id}
@@ -65,7 +73,6 @@ class Facebook extends Component {
             scope="ads_management,ads_read,attribution_read,business_management,catalog_management,leads_retrieval,
             public_profile,pages_show_list,user_friends,manage_pages,email,read_insights,instagram_basic,
             instagram_manage_comments, instagram_manage_insights"
-            onClick={this.componentClicked}
             callback={this.responseFacebook}
             cssClass='facebook-css'
           />
@@ -104,18 +111,20 @@ class Facebook extends Component {
       }
     }
     formComponent = () => {
-      if (!(this.props.currentProjectSettings.int_facebook_user_id)) {
+      if (!(this.props.currentProjectSettings.int_facebook_access_token)) {
         if (this.state.adAccounts != "" && this.state.adAccounts.length != 0) {
           return (
-            <div>
+            <div className="p-2">
               <form onSubmit={e => this.handleSubmit(e)}>
-                <h2>Choose your ad account:</h2>
-                <Select
-                value={this.state.SelectedAdAccount}
-                onChange={this.handleChange}
-                options={createSelectOpts(this.getAdAccountsOptSrc())}
-                />
-                <input type="submit" value="submit"/>
+                <div className="w-50 pb-2">
+                  <h5>Choose your ad account:</h5>
+                  <Select
+                  value={this.state.SelectedAdAccount}
+                  onChange={this.handleChange}
+                  options={createSelectOpts(this.getAdAccountsOptSrc())}
+                  />
+                </div>
+                <input className="btn btn-primary shadow-none" type="submit" value="Submit"/>
               </form>
             </div>
             )
