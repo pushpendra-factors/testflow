@@ -136,9 +136,16 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
       newFilter[filterTypeState] = value;
     }
     // One more check for props and fetch prop values;
+    
     changeFilterTypeState();
     setNewFilterState(newFilter);
+    clearInputSearch()
   };
+
+  const clearInputSearch = () => {
+    document.getElementById('fai-filter-input').value = '';
+    setSearchTerm('');
+  }
 
   const collapseGroup = (index) => {
     const groupColState = Object.assign({}, groupCollapseState);
@@ -271,6 +278,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
     return (
       <div className={`${styles.filter_block__filter_select} ml-4 fa-filter-select`}>
         <Input
+          id='fai-filter-input'
           className={styles.filter_block__filter_select__input}
           placeholder={newFilterState.values.length >= 2 ? null
             : placeHolder[filterTypeState]}

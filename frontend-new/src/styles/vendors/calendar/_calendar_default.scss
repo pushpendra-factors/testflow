@@ -27,11 +27,13 @@
     }
   
   .rdrDateDisplayItemActive{
-    border-color: currentColor;
+    border-color: #5949BC;
   }
   
   .rdrDateDisplayItemActive input{
-      color: #7d888d
+    font-size: 14px;
+    padding: 10px 12px;
+    color: #3E516C;
     }
   
   .rdrMonthAndYearWrapper {

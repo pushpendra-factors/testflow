@@ -237,8 +237,10 @@ function QueryComposer({
             visible={dateRangeOpen}
             content={
             <DateRangeSelector
-              ranges={getDateRange()}
-              pickerVisible={dateRangeOpen} setDates={setDateRange} />}
+                ranges={getDateRange()}
+                pickerVisible={dateRangeOpen} setDates={setDateRange} 
+                closeDatePicker={() => setDateRangeVisibile(false)}
+              />}
             onVisibleChange={(visible) => setDateRangeVisibile(visible)}
           >
             <Button><SVG name={'calendar'} extraClass={'mr-1'} /> {calendarLabel} </Button>
