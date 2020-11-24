@@ -39,7 +39,7 @@ type CreateFactorsGoalParams struct {
 	Rule M.FactorsGoalRule `json:"rule" binding:"required"`
 }
 
-func getcreateFactorsGoalParams(c *gin.Context) (*CreateFactorsGoalParams, error) {
+func GetcreateFactorsGoalParams(c *gin.Context) (*CreateFactorsGoalParams, error) {
 	params := CreateFactorsGoalParams{}
 	err := c.BindJSON(&params)
 	if err != nil {
@@ -69,7 +69,7 @@ func CreateFactorsGoalsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusForbidden)
 		return
 	}
-	params, err := getcreateFactorsGoalParams(c)
+	params, err := GetcreateFactorsGoalParams(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
