@@ -5,34 +5,17 @@ import {
 import { Text } from 'factorsComponents';
 import { UserOutlined } from '@ant-design/icons';
 import { connect } from 'react-redux';
-import { fetchProjectAgents, fetchAgentInfo, fetchProjects } from 'Reducers/agentActions';
 
 function ViewBasicSettings({
   activeProject,
   setEditMode,
-  fetchProjectAgents,
-  fetchAgentInfo,
   agents,
-  projects,
-  currentAgent,
-  fetchProjects
+  currentAgent
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [enableEdit, setEnableEdit] = useState(false);
 
   useEffect(() => {
-    const getData = async () => {
-      if (!currentAgent) {
-        await fetchAgentInfo();
-      }
-      if (!activeProject.id) {
-        await fetchProjects();
-      }
-      if (!agents) {
-        await fetchProjectAgents(activeProject.id);
-      }
-    };
-    getData();
     setEnableEdit(false);
     agents && currentAgent && agents.map((agent) => {
       if (agent.uuid === currentAgent.uuid) {
@@ -42,7 +25,7 @@ function ViewBasicSettings({
       }
     });
     setDataLoading(false);
-  }, [activeProject, projects, currentAgent, agents]);
+  }, [activeProject, agents, currentAgent]);
 
   return (
     <>
@@ -119,4 +102,4 @@ const mapStateToProps = (state) => ({
   currentAgent: state.agent.agent_details
 });
 
-export default connect(mapStateToProps, { fetchProjectAgents, fetchAgentInfo, fetchProjects })(ViewBasicSettings);
+export default connect(mapStateToProps)(ViewBasicSettings);

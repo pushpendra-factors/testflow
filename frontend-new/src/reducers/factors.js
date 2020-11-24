@@ -30,6 +30,12 @@
           case 'FETCH_TRACKED_USER_PROPERTIES_REJECTED': {
             return { ...state, error: action.payload };
           } 
+          case 'FETCH_GOAL_INSIGHTS_FULFILLED': {
+            return { ...state, goal_insights: action.payload };
+          } 
+          case 'FETCH_GOAL_INSIGHTS_REJECTED': {
+            return { ...state, error: action.payload };
+          } 
         }
         return state;
       }
@@ -75,6 +81,20 @@
             resolve(response)
           }).catch((err)=>{        
             dispatch({type:"FETCH_TRACKED_USER_PROPERTIES_REJECTED", payload: err});
+            reject(err);
+          });
+      });
+    }
+  }
+  export function fetchGoalInsights(projectID) {
+    return function(dispatch) {
+      return new Promise((resolve,reject) => {
+        get(dispatch, host + "projects/"+projectID+"/v1/factor")
+          .then((response)=>{        
+            dispatch({type:"FETCH_GOAL_INSIGHTS_FULFILLED", payload: response.data});
+            resolve(response)
+          }).catch((err)=>{        
+            dispatch({type:"FETCH_GOAL_INSIGHTS_REJECTED", payload: err});
             reject(err);
           });
       });
