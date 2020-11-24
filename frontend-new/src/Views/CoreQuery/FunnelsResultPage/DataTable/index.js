@@ -40,7 +40,7 @@ function DataTable({
                 searchBar={searchBar}
             />
             <Table
-                pagination={false}
+                pagination={true}
                 bordered={true}
                 rowKey="index"
                 rowSelection={rowSelection}

@@ -2,9 +2,10 @@ import React, {
   useRef, useEffect, useCallback, useState
 } from 'react';
 import * as d3 from 'd3';
+import { Button } from 'antd';
 import { Text } from '../../components/factorsComponents';
 // import { FullscreenOutlined, RightOutlined, LeftOutlined } from '@ant-design/icons';
-import { RightOutlined, LeftOutlined } from '@ant-design/icons';
+import { RightOutlined, LeftOutlined, FullscreenOutlined } from '@ant-design/icons';
 import CardContent from './CardContent';
 import { useSelector, useDispatch } from 'react-redux';
 import { DASHBOARD_UNIT_DATA_LOADED } from '../../reducers/types';
@@ -14,11 +15,14 @@ import { cardClassNames } from '../../reducers/dashboard/utils';
 
 function WidgetCard({
   unit,
-  onDrop
+  onDrop,
+  setwidgetModal
 }) {
   const [resultState, setResultState] = useState(initialState);
   const { active_project } = useSelector(state => state.global);
   const { activeDashboardUnits } = useSelector(state => state.dashboard);
+  const [resizerVisible, setResizerVisible] = useState(false);
+
   const dispatch = useDispatch();
 
   const getData = useCallback(async (refresh = false) => {
@@ -86,13 +90,22 @@ function WidgetCard({
   }, [getData]);
 
   const positionResizeContainer = useCallback(() => {
-    const parentPositions = d3.select(`#card-${unit.id}`).node().getBoundingClientRect();
-    d3.select(`#resize-${unit.id}`).style('left', parentPositions.right - 10 + 'px');
-    const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
-    d3.select(`#resize-${unit.id}`).style('top', parentPositions.top + (parentPositions.height / 2) - 10 + scrollTop + 'px');
+    // for charts to load properly and then show the expandable icons
+    setTimeout(() => {
+      try {
+        setResizerVisible(true);
+        const parentPositions = d3.select(`#card-${unit.id}`).node().getBoundingClientRect();
+        d3.select(`#resize-${unit.id}`).style('left', parentPositions.right - 10 + 'px');
+        const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
+        d3.select(`#resize-${unit.id}`).style('top', parentPositions.top + (parentPositions.height / 2) - 10 + scrollTop + 'px');
+      } catch (err) {
+        console.log(err);
+      }
+    }, 1000);
   }, [unit.id]);
 
   const changeCardSize = useCallback((cardSize) => {
+    setResizerVisible(false);
     const unitIndex = activeDashboardUnits.data.findIndex(au => au.id === unit.id);
     const updatedUnit = {
       ...unit,
@@ -103,44 +116,48 @@ function WidgetCard({
     onDrop(newState);
   }, [unit, activeDashboardUnits.data, onDrop]);
 
-  const { dashboards_loaded } = useSelector(state => state.dashboard);
+  const { dashboardsLoaded } = useSelector(state => state.dashboard);
 
   const cardRef = useRef();
 
   useEffect(() => {
-    setTimeout(() => {
-      positionResizeContainer();
-    }, 1000);
-  }, [dashboards_loaded, positionResizeContainer]);
+    positionResizeContainer();
+  }, [dashboardsLoaded, positionResizeContainer]);
 
   return (
     <div className={`${unit.title} ${unit.className} py-4 px-2`} >
-      <div id={`card-${unit.id}`} ref={cardRef} style={{ transition: 'all 0.1s' }} className={'fa-dashboard--widget-card w-full'}>
-        <div id={`resize-${unit.id}`} className={'fa-widget-card--resize-container'}>
-          <span className={'fa-widget-card--resize-contents'}>
-            {unit.cardSize === 0 ? (
-              <a onClick={changeCardSize.bind(this, 1)}><RightOutlined /></a>
-            ) : null}
-            {unit.cardSize === 1 ? (
-              <a onClick={changeCardSize.bind(this, 0)}><LeftOutlined /></a>
-            ) : null}
-          </span>
-        </div>
+      <div id={`card-${unit.id}`} ref={cardRef} className={'fa-dashboard--widget-card w-full'}>
+        {resizerVisible ? (
+          <div id={`resize-${unit.id}`} className={'fa-widget-card--resize-container'}>
+            <span className={'fa-widget-card--resize-contents'}>
+              {unit.cardSize === 0 ? (
+                <a onClick={changeCardSize.bind(this, 1)}><RightOutlined /></a>
+              ) : null}
+              {unit.cardSize === 1 ? (
+                <a onClick={changeCardSize.bind(this, 0)}><LeftOutlined /></a>
+              ) : null}
+            </span>
+          </div>
+        ) : null}
         <div className={'fa-widget-card--top flex justify-between items-start'}>
           <div className={'w-full'} >
-            <Text ellipsis type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{unit.title}</Text>
-            <Text ellipsis type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{unit.description}</Text>
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <Text ellipsis type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{unit.title}</Text>
+                <Text ellipsis type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{unit.description}</Text>
+              </div>
+              <div>
+                <Button size={'large'} onClick={() => setwidgetModal({ unit, data: resultState.data })} icon={<FullscreenOutlined />} type="text" />
+              </div>
+            </div>
             <div className="mt-4">
               <CardContent
                 unit={unit}
                 resultState={resultState}
-                dashboards_loaded={dashboards_loaded}
+                dashboardsLoaded={dashboardsLoaded}
               />
             </div>
           </div>
-          {/* <div className={'flex flex-col justify-start items-start fa-widget-card--top-actions'}>
-						<Button size={'large'} onClick={() => setwidgetModal(true)} icon={<FullscreenOutlined />} type="text" />
-					</div> */}
         </div>
       </div>
     </div>

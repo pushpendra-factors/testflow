@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { generateEventsData, generateGroups, generateGroupedChartsData } from '../utils';
-import Header from '../../../AppLayout/Header';
-import EventsInfo from '../EventsInfo';
 import Chart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
-import ResultsHeader from '../../ResultsHeader';
 
 function GroupedChart({
-  resultState, queries, setDrawerVisible, breakdown, eventsMapper, reverseEventsMapper, requestQuery, setShowResult, querySaved, setQuerySaved
+  resultState, queries, breakdown, eventsMapper, reverseEventsMapper, modal
 }) {
   const [groups, setGroups] = useState([]);
   const maxAllowedVisibleProperties = 5;
@@ -26,39 +23,26 @@ function GroupedChart({
 
   return (
     <>
-      <Header>
-        <ResultsHeader
-          setShowResult={setShowResult}
-          requestQuery={requestQuery}
-          querySaved={querySaved}
-          setQuerySaved={setQuerySaved}
-        />
-        <div className="py-4">
-          <EventsInfo setDrawerVisible={setDrawerVisible} queries={queries} />
-        </div>
-      </Header>
 
-      <div className="mt-40 mb-8 fa-container">
+      <Chart
+        modal={modal}
+        chartData={chartData}
+        groups={groups.filter(elem => elem.is_visible)}
+        eventsData={eventsData}
+        eventsMapper={eventsMapper}
+        reverseEventsMapper={reverseEventsMapper}
+      />
 
-        <Chart
-          chartData={chartData}
-          groups={groups.filter(elem => elem.is_visible)}
-          eventsData={eventsData}
+      <div className="mt-8">
+        <FunnelsResultTable
+          breakdown={breakdown}
+          queries={queries}
+          groups={groups}
+          setGroups={setGroups}
+          chartData={eventsData}
           eventsMapper={eventsMapper}
-          reverseEventsMapper={reverseEventsMapper}
+          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
         />
-
-        <div className="mt-8">
-          <FunnelsResultTable
-            breakdown={breakdown}
-            queries={queries}
-            groups={groups}
-            setGroups={setGroups}
-            chartData={eventsData}
-            eventsMapper={eventsMapper}
-            maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          />
-        </div>
       </div>
     </>
   );

@@ -4,7 +4,7 @@ import Chart from '../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
 
 function UngroupedChart({
-  resultState, queries, title, chartType, eventsMapper, dashboards_loaded
+  resultState, queries, title, chartType, eventsMapper
 }) {
   const [chartData, setChartData] = useState([]);
 
@@ -25,7 +25,6 @@ function UngroupedChart({
         <Chart
           title={title}
           chartData={chartData}
-          dashboards_loaded={dashboards_loaded}
         />
       </div>
     );
@@ -44,7 +43,7 @@ function UngroupedChart({
   }
 
   return (
-    <div className="total-events">
+    <div className="total-events w-full">
       {chartContent}
     </div>
   );

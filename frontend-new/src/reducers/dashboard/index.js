@@ -15,7 +15,7 @@ import {
 import { getRearrangedData } from './utils';
 
 const defaultState = {
-  dashboards_loaded: 0,
+  dashboardsLoaded: 0,
   dashboards: {
     loading: false, error: false, data: []
   },
@@ -46,7 +46,7 @@ export default function (state = defaultState, action) {
     case ACTIVE_DASHBOARD_CHANGE:
       return { ...state, activeDashboard: action.payload, activeDashboardUnits: { ...defaultState.activeDashboardUnits } };
     case DASHBOARD_UNIT_DATA_LOADED:
-      return { ...state, dashboards_loaded: state.dashboards_loaded + 1 };
+      return { ...state, dashboardsLoaded: state.dashboardsLoaded + 1 };
     case DASHBOARD_CREATED:
       return { ...state, dashboards: { ...state.dashboards, data: [...state.dashboards.data, action.payload] } };
     case DASHBOARD_DELETED: {
@@ -66,7 +66,7 @@ export default function (state = defaultState, action) {
           ...state.activeDashboardUnits,
           data: [...action.payload]
         },
-        dashboards_loaded: state.dashboards_loaded + 1
+        dashboardsLoaded: state.dashboardsLoaded + 1
       };
     }
     case DASHBOARD_UNMOUNTED:

@@ -59,7 +59,7 @@ function SingleEventSingleBreakdown({
 
   if (chartType === 'barchart') {
     chartContent = (
-      <div className="flex mt-8">
+      <div className="flex mt-8 w-full">
         <BarChart
           chartData={visibleProperties}
         />
@@ -83,7 +83,7 @@ function SingleEventSingleBreakdown({
   }
 
   return (
-    <div className="total-events">
+    <div className="total-events w-full">
       <div className="flex items-center justify-between">
         <div className="filters-info">
 

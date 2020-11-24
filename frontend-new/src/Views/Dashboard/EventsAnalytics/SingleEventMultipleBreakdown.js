@@ -86,7 +86,7 @@ function SingleEventMultipleBreakdown({
   }
 
   return (
-    <div className="total-events">
+    <div className="total-events w-full">
       {chartContent}
     </div>
   );

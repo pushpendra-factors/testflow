@@ -10,7 +10,7 @@ function EventsAnalytics({
 }) {
   let content = null;
 
-  const { dashboards_loaded } = useSelector(state => state.dashboard);
+  const { dashboardsLoaded } = useSelector(state => state.dashboard);
 
   if (events.length > 1 && breakdown.length) {
     content = (
@@ -22,7 +22,7 @@ function EventsAnalytics({
                 page="totalEvents"
                 chartType={chartType}
                 title={title}
-                dashboards_loaded={dashboards_loaded}
+                dashboardsLoaded={dashboardsLoaded}
                 unit={unit}
             />
     );
@@ -38,7 +38,7 @@ function EventsAnalytics({
                 page="totalEvents"
                 chartType={chartType}
                 title={title}
-                dashboards_loaded={dashboards_loaded}
+                dashboardsLoaded={dashboardsLoaded}
                 unit={unit}
             />
     );
@@ -54,7 +54,7 @@ function EventsAnalytics({
                 page="totalEvents"
                 chartType={chartType}
                 title={title}
-                dashboards_loaded={dashboards_loaded}
+                dashboardsLoaded={dashboardsLoaded}
                 unit={unit}
             />
     );
@@ -70,7 +70,7 @@ function EventsAnalytics({
                 page="totalEvents"
                 chartType={chartType}
                 title={title}
-                dashboards_loaded={dashboards_loaded}
+                dashboardsLoaded={dashboardsLoaded}
             />
     );
   }

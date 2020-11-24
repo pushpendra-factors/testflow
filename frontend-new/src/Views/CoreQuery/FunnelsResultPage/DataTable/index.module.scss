@@ -4,6 +4,23 @@ $boxShadowSecondaryColor: #E7E9ED;
 
 .table {
 
+
+    :global(.ant-pagination-item:focus),
+    :global(.ant-pagination-item:hover),
+    :global(.ant-pagination-item-active),
+    :global(.ant-pagination-item-active:focus),
+    :global(.ant-pagination-item-active:hover) {
+        border-color: #5949BC !important;
+    }
+
+    :global(.ant-pagination-item:focus a),
+    :global(.ant-pagination-item:hover a),
+    :global(.ant-pagination-item-active a),
+    :global(.ant-pagination-item-active:focus a),
+    :global(.ant-pagination-item-active:hover a) {
+        color: #5949BC;
+    }
+
     :global(.ant-table.ant-table-bordered > .ant-table-container > .ant-table-content > table > thead > tr > th),
     :global(.ant-table.ant-table-bordered > .ant-table-container > .ant-table-content > table > tbody > tr > td) {
         border: none;

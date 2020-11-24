@@ -6,7 +6,7 @@ import { useSelector } from 'react-redux';
 function Funnels({
   breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper, unit
 }) {
-  const { dashboards_loaded } = useSelector(state => state.dashboard);
+  const { dashboardsLoaded } = useSelector(state => state.dashboard);
 
   if (!breakdown.length) {
     return (
@@ -16,7 +16,7 @@ function Funnels({
         eventsMapper={eventsMapper}
         title={title}
         chartType={chartType}
-        dashboards_loaded={dashboards_loaded}
+        dashboardsLoaded={dashboardsLoaded}
       />
     );
   } else {
@@ -28,7 +28,7 @@ function Funnels({
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}
         chartType={chartType}
-        dashboards_loaded={dashboards_loaded}
+        dashboardsLoaded={dashboardsLoaded}
         unit={unit}
       />
     );

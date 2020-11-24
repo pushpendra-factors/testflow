@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { generateUngroupedChartsData } from '../utils';
-import Header from '../../../AppLayout/Header';
-import EventsInfo from '../EventsInfo';
+
 import Chart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
-import ResultsHeader from '../../ResultsHeader';
 
 function UngroupedChart({
-  resultState, queries, setDrawerVisible, eventsMapper, requestQuery, setShowResult, querySaved, setQuerySaved
+  resultState, queries, eventsMapper
 }) {
   const [chartData, setChartData] = useState([]);
 
@@ -22,33 +20,18 @@ function UngroupedChart({
 
   return (
     <>
-      <Header>
-        <ResultsHeader
-          setShowResult={setShowResult}
-          requestQuery={requestQuery}
-          querySaved={querySaved}
-          setQuerySaved={setQuerySaved}
-        />
-        <div className="py-4">
-          <EventsInfo setDrawerVisible={setDrawerVisible} queries={queries} />
-        </div>
-      </Header>
+      <Chart
+        chartData={chartData}
+      />
 
-      <div className="mt-40 mb-8 fa-container">
-
-        <Chart
+      <div className="mt-8">
+        <FunnelsResultTable
           chartData={chartData}
+          breakdown={[]}
+          queries={queries}
+          groups={[]}
+          eventsMapper={eventsMapper}
         />
-
-        <div className="mt-8">
-          <FunnelsResultTable
-            chartData={chartData}
-            breakdown={[]}
-            queries={queries}
-            groups={[]}
-            eventsMapper={eventsMapper}
-          />
-        </div>
       </div>
     </>
   );

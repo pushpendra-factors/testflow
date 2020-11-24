@@ -5,7 +5,7 @@ import * as d3 from 'd3';
 import styles from './index.module.scss';
 import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
 
-function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMapper, title = "chart" }) {
+function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMapper, title = "chart", modal=false }) {
 
   const appliedColors = generateColors(chartData.length);
   const chartColors = {};
@@ -14,6 +14,14 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
   });
 
   const chartRef = useRef(null);
+
+  const getElemId = (key) => {
+    if(!modal) {
+      return key;
+    } else {
+      return `modal-${key}`;
+    }
+  }
 
   const showConverionRates = useCallback(() => {
     const yGridLines = d3.select(chartRef.current).select('g.c3-ygrids').selectAll('line').nodes();
@@ -27,16 +35,16 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
 
     groups
       .forEach((elem) => {
-        document.getElementById(`${title}-conversion-text-${elem.name}`).style.top = `${top + scrollTop}px`;
-        document.getElementById(`${title}-conversion-text-${elem.name}`).style.height = `${height}px`;
+        document.getElementById(getElemId(`${title}-conversion-text-${elem.name}`)).style.top = `${top + scrollTop}px`;
+        document.getElementById(getElemId(`${title}-conversion-text-${elem.name}`)).style.height = `${height}px`;
       });
 
     d3.select(chartRef.current).select('g.c3-axis-x').selectAll('g.tick').nodes()
       .forEach((elem, index) => {
         const position = elem.getBoundingClientRect();
-        document.getElementById(`${title}-conversion-text-${groups[index].name}`).style.left = `${position.x}px`;
-        const width = document.getElementById(`${title}-${groups[index].name}`).getBoundingClientRect().x - position.x;
-        document.getElementById(`${title}-conversion-text-${groups[index].name}`).style.width = `${width}px`;
+        document.getElementById(getElemId(`${title}-conversion-text-${groups[index].name}`)).style.left = `${position.x}px`;
+        const width = document.getElementById(getElemId(`${title}-${groups[index].name}`)).getBoundingClientRect().x - position.x;
+        document.getElementById(getElemId(`${title}-conversion-text-${groups[index].name}`)).style.width = `${width}px`;
       });
   }, [groups]);
 
@@ -53,7 +61,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
     d3.select(chartRef.current).select(`g.c3-shapes-${lastBarClassNmae}`).selectAll('path').nodes()
       .forEach((elem, index) => {
         const position = elem.getBoundingClientRect();
-        const verticalLine = document.getElementById(`${title}-${groups[index].name}`);
+        const verticalLine = document.getElementById(getElemId(`${title}-${groups[index].name}`));
         verticalLine.style.left = `${position.x + position.width - 1}px`;
         verticalLine.style.height = `${height}px`;
         verticalLine.style.top = `${top + scrollTop}px`;
@@ -63,7 +71,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
   const drawChart = useCallback(() => {
     const chart = c3.generate({
       size: {
-        height: 400
+        height: 350
       },
       padding: {
         left: 40,
@@ -288,7 +296,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
         groups
           .map(elem => {
             return (
-              <div className={`absolute border-l border-solid ${styles.verticalGridLines}`} key={elem.name} id={`${title}-${elem.name}`}></div>
+              <div className={`absolute border-l border-solid ${styles.verticalGridLines}`} key={elem.name} id={getElemId(`${title}-${elem.name}`)}></div>
             );
           })
       }
@@ -296,7 +304,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
         groups
           .map(elem => {
             return (
-              <div key={elem.name} id={`${title}-conversion-text-${elem.name}`} className="absolute z-10 leading-5 text-base flex justify-end pr-1">
+              <div key={elem.name} id={getElemId(`${title}-conversion-text-${elem.name}`)} className="absolute z-10 leading-5 text-base flex justify-end pr-1">
                 <div style={{ fontSize: '14px' }} className={styles.conversionText}>
                   <div className="font-semibold flex justify-end">{elem.conversion_rate}</div>
                   <div>Conversion</div>

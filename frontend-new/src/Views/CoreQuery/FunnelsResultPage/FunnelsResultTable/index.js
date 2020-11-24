@@ -48,6 +48,7 @@ function FunnelsResultTable({
       columns={columns}
       rowSelection={breakdown.length ? rowSelection : null}
       className={styles.funnelResultsTable}
+      scroll={{ x: 250 }}
     />
   );
 }

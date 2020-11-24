@@ -1,8 +1,12 @@
 import React from 'react';
-import GroupedChart from './GroupedChart';
+// import GroupedChart from './GroupedChart';
 // import FiltersInfo from './FiltersInfo';
-import UngroupedChart from './UngroupedChart';
+// import UngroupedChart from './UngroupedChart';
+import Header from '../../AppLayout/Header';
+import ResultsHeader from '../ResultsHeader';
+import EventsInfo from './EventsInfo';
 import { Spin } from 'antd';
+import ResultantChart from './ResultantChart';
 
 function FunnelsResultPage({
   queries, setDrawerVisible, resultState, breakdown, eventsMapper, reverseEventsMapper, requestQuery, setShowResult, querySaved, setQuerySaved
@@ -23,35 +27,36 @@ function FunnelsResultPage({
     );
   }
 
-  if (!breakdown.length) {
-    return (
-      <UngroupedChart
-        resultState={resultState}
-        queries={queries}
-        setDrawerVisible={setDrawerVisible}
-        eventsMapper={eventsMapper}
-        requestQuery={requestQuery}
-        setShowResult={setShowResult}
-        querySaved={querySaved}
-        setQuerySaved={setQuerySaved}
-      />
-    );
-  } else {
-    return (
-      <GroupedChart
-        queries={queries}
-        setDrawerVisible={setDrawerVisible}
-        resultState={resultState}
-        breakdown={breakdown}
-        eventsMapper={eventsMapper}
-        reverseEventsMapper={reverseEventsMapper}
-        requestQuery={requestQuery}
-        setShowResult={setShowResult}
-        querySaved={querySaved}
-        setQuerySaved={setQuerySaved}
-      />
-    );
-  }
+  return (
+    <>
+      <Header>
+        <ResultsHeader
+          setShowResult={setShowResult}
+          requestQuery={requestQuery}
+          querySaved={querySaved}
+          setQuerySaved={setQuerySaved}
+          queryType="funnel"
+        />
+        <div className="py-4">
+          <EventsInfo setDrawerVisible={setDrawerVisible} queries={queries} />
+        </div>
+      </Header>
+      <div className="mt-40 mb-8 fa-container">
+        <ResultantChart
+          queries={queries}
+          setDrawerVisible={setDrawerVisible}
+          resultState={resultState}
+          breakdown={breakdown}
+          eventsMapper={eventsMapper}
+          reverseEventsMapper={reverseEventsMapper}
+          requestQuery={requestQuery}
+          setShowResult={setShowResult}
+          querySaved={querySaved}
+          setQuerySaved={setQuerySaved}
+        />
+      </div>
+    </>
+  );
 }
 
 export default FunnelsResultPage;
