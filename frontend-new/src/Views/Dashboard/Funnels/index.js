@@ -30,6 +30,7 @@ function Funnels({
         chartType={chartType}
         dashboardsLoaded={dashboardsLoaded}
         unit={unit}
+        title={title}
       />
     );
   }
