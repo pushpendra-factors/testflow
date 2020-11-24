@@ -2,8 +2,9 @@
 {
     position: absolute;
     top: 25px;
-    left: -50px;;
+    right: 97.5%;
 }
+
 .fa-sub-insights-box--spike
 {
     position: absolute;
@@ -24,3 +25,41 @@
         margin: 0px
     }
 }
+
+.fa-insights-box--type
+{
+    position: absolute;
+    top: 1rem;
+    left:4rem;
+    font-size: 12px !important; 
+    transition: all 0.3s;
+    opacity: 0;
+    transform: translate3d(0, -10%, 0);
+}
+
+.fa-insights-box--actions
+{
+    position: absolute;
+    top: 25px;
+    right: -50px;
+    transition: all 1s; 
+    opacity: 0;
+    transform: translate3d(0, -10%, 0);
+}
+
+.fa-insights-box--animate{
+    transition: all 0.3s; 
+    opacity: 0;
+    transform: translate3d(0, -10%, 0);
+}
+
+.fa-insight-item{ 
+    &:hover{
+        .fa-insights-box--actions,.fa-insights-box--type,.fa-insights-box--animate
+        {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+        }
+    }
+}
+
