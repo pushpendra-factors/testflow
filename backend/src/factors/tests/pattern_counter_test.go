@@ -231,7 +231,7 @@ func TestGenLenThreeCandidatePatterns(t *testing.T) {
 	endPatterns := []*P.Pattern{}
 	maxCandidates := 5
 	cPatterns, err := P.GenLenThreeCandidatePatterns(
-		pattern, startPatterns, endPatterns, maxCandidates, nil)
+		pattern, startPatterns, endPatterns, maxCandidates, nil, nil)
 	assert.NotNil(t, err)
 	assert.Nil(t, cPatterns)
 
@@ -243,14 +243,14 @@ func TestGenLenThreeCandidatePatterns(t *testing.T) {
 	maxCandidates = 5
 	// Mismatch start event.
 	cPatterns, err = P.GenLenThreeCandidatePatterns(
-		pattern, patterns1, patterns2, maxCandidates, nil)
+		pattern, patterns1, patterns2, maxCandidates, nil, nil)
 	assert.NotNil(t, err)
 	assert.Nil(t, cPatterns)
 	// Mismatch end event.
 	cPatterns, err = P.GenLenThreeCandidatePatterns(
-		pattern, patterns2, patterns1, maxCandidates, nil)
-	assert.NotNil(t, err)
-	assert.Nil(t, cPatterns)
+		pattern, patterns2, patterns1, maxCandidates, nil, nil)
+	assert.Nil(t, err)
+	assert.NotNil(t, cPatterns)
 
 	// Mismatch length.
 	pattern, _ = P.NewPattern([]string{"A", "Z"}, nil)
@@ -260,12 +260,12 @@ func TestGenLenThreeCandidatePatterns(t *testing.T) {
 	maxCandidates = 5
 	// Mismatch in startPatterns.
 	cPatterns, err = P.GenLenThreeCandidatePatterns(
-		pattern, patterns1, patterns2, maxCandidates, nil)
+		pattern, patterns1, patterns2, maxCandidates, nil, nil)
 	assert.NotNil(t, err)
 	assert.Nil(t, cPatterns)
 	// Mismatch in endPatterns.
 	cPatterns, err = P.GenLenThreeCandidatePatterns(
-		pattern, patterns2, patterns1, maxCandidates, nil)
+		pattern, patterns2, patterns1, maxCandidates, nil, nil)
 	assert.NotNil(t, err)
 	assert.Nil(t, cPatterns)
 
@@ -285,7 +285,7 @@ func TestGenLenThreeCandidatePatterns(t *testing.T) {
 	ep4, _ := P.NewPattern([]string{"F", "Z"}, nil) // Ignored. Greater than maxCandidates.
 	endPatterns = []*P.Pattern{ep1, ep2, ep3, ep4}
 	cPatterns, err = P.GenLenThreeCandidatePatterns(
-		pattern, startPatterns, endPatterns, maxCandidates, nil)
+		pattern, startPatterns, endPatterns, maxCandidates, nil, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, maxCandidates, len(cPatterns))
 	// Not expected in order.
@@ -296,6 +296,103 @@ func TestGenLenThreeCandidatePatterns(t *testing.T) {
 	assert.Equal(t, true, cMap["A,C,Z"])
 	assert.Equal(t, true, cMap["A,D,Z"])
 	assert.Equal(t, true, cMap["A,E,Z"])
+}
+
+func TestGenLenThreeCandidateCyclic(t *testing.T) {
+	// Not of length 2.
+	pattern, _ := P.NewPattern([]string{"A", "X", "Z"}, nil)
+	cycEvents := []string{"A", "B", "D"}
+	startPatterns := []*P.Pattern{}
+	endPatterns := []*P.Pattern{}
+	maxCandidates := 5
+	cPatterns, err := P.GenLenThreeCandidatePatterns(
+		pattern, startPatterns, endPatterns, maxCandidates, nil, cycEvents)
+	assert.NotNil(t, err)
+	assert.Nil(t, cPatterns)
+
+	// two Candidate
+	pattern, _ = P.NewPattern([]string{"A", "Z"}, nil)
+	cycEvents = []string{"A", "Z"}
+	startPatterns = []*P.Pattern{}
+	endPatterns = []*P.Pattern{}
+	maxCandidates = 5
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, startPatterns, endPatterns, maxCandidates, nil, cycEvents)
+	assert.Nil(t, err)
+	assert.NotNil(t, cPatterns)
+	assert.Equal(t, 2, len(cPatterns))
+	cMap := make(map[string]bool)
+	for _, c := range cPatterns {
+		cMap[c.String()] = true
+	}
+	assert.Equal(t, true, cMap["A,A,Z"])
+	assert.Equal(t, true, cMap["A,Z,Z"])
+
+	// Mismatch event.
+	pattern, _ = P.NewPattern([]string{"A", "Z"}, nil)
+	mismatchPattern, _ := P.NewPattern([]string{"B", "X"}, nil)
+	patterns1 := []*P.Pattern{mismatchPattern}
+	patterns2 := []*P.Pattern{}
+	maxCandidates = 5
+	// Mismatch start event.
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, patterns1, patterns2, maxCandidates, nil, cycEvents)
+	assert.NotNil(t, err)
+	assert.Nil(t, cPatterns)
+	// Mismatch end event.
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, patterns2, patterns1, maxCandidates, nil, cycEvents)
+	assert.Nil(t, err)
+	assert.NotNil(t, cPatterns)
+
+	// Mismatch length.
+	pattern, _ = P.NewPattern([]string{"A", "Z"}, nil)
+	mismatchPattern, _ = P.NewPattern([]string{"A", "B", "Z"}, nil)
+	patterns1 = []*P.Pattern{mismatchPattern}
+	patterns2 = []*P.Pattern{}
+	maxCandidates = 5
+	// Mismatch in startPatterns.
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, patterns1, patterns2, maxCandidates, nil, cycEvents)
+	assert.NotNil(t, err)
+	assert.Nil(t, cPatterns)
+	// Mismatch in endPatterns.
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, patterns2, patterns1, maxCandidates, nil, cycEvents)
+	assert.NotNil(t, err)
+	assert.Nil(t, cPatterns)
+
+	// Candidate generation.
+	pattern, _ = P.NewPattern([]string{"A", "Z"}, nil)
+	cycEvents = []string{"A", "B", "Z"}
+	maxCandidates = 5
+	sp1, _ := P.NewPattern([]string{"A", "D"}, nil) // Skipped. BZ not found.
+	sp2, _ := P.NewPattern([]string{"A", "Z"}, nil) // Skipped. Same as pattern.
+	sp3, _ := P.NewPattern([]string{"A", "C"}, nil) // Skipped. ACZ Repeat.
+	sp4, _ := P.NewPattern([]string{"A", "D"}, nil) // Skipped. ADZ Repeat.
+	sp5, _ := P.NewPattern([]string{"A", "E"}, nil) // Skipped. AEZ Repeat.
+	sp6, _ := P.NewPattern([]string{"A", "F"}, nil) // Ignored. Greater than maxCandidates.
+	startPatterns = []*P.Pattern{sp1, sp2, sp3, sp4, sp5, sp6}
+	ep1, _ := P.NewPattern([]string{"C", "Z"}, nil) // cPatterns[0] ACZ
+	ep2, _ := P.NewPattern([]string{"D", "Z"}, nil) // cPatterns[1] ADZ
+	ep3, _ := P.NewPattern([]string{"E", "Z"}, nil) // cPatterns[2] AEZ
+	ep4, _ := P.NewPattern([]string{"B", "Z"}, nil) // Ignored. Greater than maxCandidates.
+	endPatterns = []*P.Pattern{ep1, ep2, ep3, ep4}
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, startPatterns, endPatterns, maxCandidates, nil, cycEvents)
+	assert.Nil(t, err)
+	assert.Equal(t, maxCandidates, len(cPatterns))
+	// Not expected in order.
+	cMap = make(map[string]bool)
+	for _, c := range cPatterns {
+		cMap[c.String()] = true
+	}
+	assert.Equal(t, true, cMap["A,A,Z"])
+	assert.Equal(t, true, cMap["A,Z,Z"])
+	assert.Equal(t, true, cMap["A,E,Z"])
+	assert.Equal(t, true, cMap["A,D,Z"])
+	assert.Equal(t, true, cMap["A,C,Z"])
+
 }
 
 func TestCollectAndCountEventsWithProperties(t *testing.T) {

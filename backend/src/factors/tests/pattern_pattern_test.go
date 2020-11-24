@@ -436,8 +436,8 @@ func TestPatternEdgeConditions(t *testing.T) {
 
 	// Test NewPattern with repeated elements.
 	p, err = P.NewPattern([]string{"A", "B", "A", "C"}, nil)
-	assert.NotNil(t, err)
-	assert.Nil(t, p)
+	assert.Nil(t, err)
+	assert.NotNil(t, p)
 
 	// Test Empty Pattern Creation.
 	p, err = P.NewPattern([]string{"A", "B", "C"}, nil)
@@ -909,8 +909,8 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 
 	// Test NewPattern with repeated elements.
 	p, err = P.NewPattern([]string{"A", "B", "A", "C"}, nil)
-	assert.NotNil(t, err)
-	assert.Nil(t, p)
+	assert.Nil(t, err)
+	assert.NotNil(t, p)
 
 	// Test Empty Pattern Creation.
 	p, err = P.NewPattern([]string{"A", "B", "C"}, nil)
@@ -1064,4 +1064,34 @@ func TestGenSegmentsForTopGoals(t *testing.T) {
 	}
 
 	assert.Equal(t, 80, len(filterdPatterns), "total number of patterns")
+}
+
+func TestGenRepeatedEventCandidates(t *testing.T) {
+	cycEvents := []string{"A", "B", "C"}
+	sp1, _ := P.NewPattern([]string{"A", "B"}, nil)
+	sp2, _ := P.NewPattern([]string{"A", "Z"}, nil)
+	sp3, _ := P.NewPattern([]string{"A", "A"}, nil)
+	sp4, _ := P.NewPattern([]string{"A", "D"}, nil)
+	sp5, _ := P.NewPattern([]string{"A", "E"}, nil)
+	sp6, _ := P.NewPattern([]string{"A", "F", "B", "C"}, nil)
+	startPatterns := []*P.Pattern{sp1, sp2, sp3, sp4, sp5, sp6}
+	cMap := make(map[string]bool)
+	for _, pt := range startPatterns {
+		tmp, _ := P.GenRepeatedEventCandidates(cycEvents, pt, nil)
+		for _, v := range tmp {
+			cMap[v.String()] = true
+		}
+	}
+	assert.Equal(t, true, cMap["A,A,A"])
+	assert.Equal(t, true, cMap["A,A,D"])
+	assert.Equal(t, true, cMap["A,A,E"])
+	assert.Equal(t, false, cMap["A,B,A"])
+	assert.Equal(t, true, cMap["A,B,B"])
+
+	cycEvents = []string{}
+	sp7, _ := P.NewPattern([]string{"A"}, nil)
+	emptyPt, err := P.GenRepeatedEventCandidates(cycEvents, sp7, nil)
+	assert.Equal(t, 0, len(emptyPt))
+	assert.Nil(t, err, "Empty cyclic set with no error")
+
 }

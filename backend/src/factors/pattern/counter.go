@@ -104,7 +104,7 @@ func candidatesMapToSlice(candidatesMap map[string]*Pattern) []*Pattern {
 	return candidates
 }
 
-func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsInfo *UserAndEventsInfo) (
+func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsInfo *UserAndEventsInfo, repeatedEvents []string) (
 	[]*Pattern, uint, error) {
 	numPatterns := len(currentPatterns)
 	var currentMinCount uint
@@ -136,10 +136,60 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsI
 			}
 		}
 	}
+	//TODO(Vinith):The ordering might change if there is a count field in Pattern object,
+	//and there could be no repeated patterns.
+	for i := 0; i < numPatterns; i++ {
+		repeatedCandidatesMap, err := GenRepeatedEventCandidates(repeatedEvents, currentPatterns[i], userAndEventsInfo)
+		if err != nil {
+			log.Error("unable to create repeated Pair")
+			return nil, 0, err
+		}
+		for cKey, cPt := range repeatedCandidatesMap {
+			candidatesMap[cKey] = cPt
+		}
+
+	}
+
 	if len(candidatesMap) > maxCandidates {
 		log.Fatal("More than max candidates generated.")
 	}
 	return candidatesMapToSlice(candidatesMap), currentMinCount, nil
+}
+
+//GenRepeatedEventCandidates Generate patterns with one off repeated string based on cyclic events
+func GenRepeatedEventCandidates(repeatedEvents []string, pt *Pattern, userAndEventsInfo *UserAndEventsInfo) (map[string]*Pattern, error) {
+	repeatedCandidatesMap := make(map[string]*Pattern)
+	cyclicSet := make(map[string]bool)
+	for _, cy := range repeatedEvents {
+		cyclicSet[cy] = true
+	}
+
+	if len(pt.EventNames) < 2 {
+		log.Error("Creating Patterns for length less than 2")
+		return nil, nil
+	}
+	eventNamesList := pt.EventNames
+	repeatedPatterns := make([]*Pattern, 0)
+	for idx, ename := range eventNamesList {
+		if _, ok := cyclicSet[ename]; ok {
+			tmpEventsList := append(eventNamesList[:0:0], eventNamesList...)
+			tmpEventsList = U.InsertRepeated(tmpEventsList, idx+1, ename)
+			tmpPattern, err := NewPattern(tmpEventsList, userAndEventsInfo)
+			if err != nil {
+				log.Error("Error creating Pattern for repeated Events")
+				return nil, err
+			}
+			repeatedPatterns = append(repeatedPatterns, tmpPattern)
+
+		}
+	}
+
+	for _, p := range repeatedPatterns {
+		repeatedCandidatesMap[p.String()] = p
+	}
+
+	return repeatedCandidatesMap, nil
+
 }
 
 //GenSegmentsForTopGoals form candidated with topK goal events
@@ -164,21 +214,26 @@ func GenSegmentsForTopGoals(currentPatterns []*Pattern, userAndEventsInfo *UserA
 	// Candidates are formed with TopK goal Events
 	for i := 0; i < numPatterns; i++ {
 		for j := 0; j < numGoalPatterns; j++ {
-			if currentPatterns[i] != GoalPatterns[j] {
 
-				if len(currentPatterns[i].EventNames) > 1 || len(GoalPatterns[j].EventNames) > 1 {
+			cr := currentPatterns[i]
+			gl := GoalPatterns[j]
+			if strings.Compare(cr.EventNames[0], gl.EventNames[0]) != 0 {
+
+				if len(cr.EventNames) > 1 || len(gl.EventNames) > 1 {
 					return nil, currentMinCount, fmt.Errorf("Length of events more than 1")
 				}
 
 				if c1, c2, ok := GenCandidatesPair(
-					currentPatterns[i], GoalPatterns[j], userAndEventsInfo); ok {
-					currentMinCount = GoalPatterns[j].PerUserCount
+					cr, gl, userAndEventsInfo); ok {
+					currentMinCount = gl.PerUserCount
 					candidatesMap[c1.String()] = c1
 					candidatesMap[c2.String()] = c2
 				}
 			}
+
 		}
 	}
+
 	// removing max Candidates filtering condition
 	return candidatesMapToSlice(candidatesMap), currentMinCount, nil
 }
@@ -419,7 +474,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern, shouldCountOccur
 // Special candidate generation method that generates upto maxCandidates with
 // events that start with and end with the two event patterns.
 func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
-	endPatterns []*Pattern, maxCandidates int, userAndEventsInfo *UserAndEventsInfo) ([]*Pattern, error) {
+	endPatterns []*Pattern, maxCandidates int, userAndEventsInfo *UserAndEventsInfo, repeatedEvents []string) ([]*Pattern, error) {
 	if len(pattern.EventNames) != 2 {
 		return nil, fmt.Errorf(fmt.Sprintf("Pattern %s length is not two.", pattern.String()))
 	}
@@ -448,11 +503,9 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 		}
 		if strings.Compare(
 			endPatterns[i].EventNames[len(endPatterns[i].EventNames)-1],
-			pattern.EventNames[1]) != 0 {
-			return nil, fmt.Errorf("Pattern %s does not match end event of %s",
-				endPatterns[i].String(), pattern.String())
+			pattern.EventNames[1]) == 0 {
+			eventsWithEndMap[endPatterns[i].EventNames[0]] = true
 		}
-		eventsWithEndMap[endPatterns[i].EventNames[0]] = true
 	}
 
 	candidatesMap := make(map[string]*Pattern)
@@ -518,6 +571,12 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 			return candidatesMapToSlice(candidatesMap), nil
 		}
 	}
+	//TODO(Vinith): Add quota for repeatedCandidate and candidates
+	repeatedCandidateMap, err := GenRepeatedEventCandidates(repeatedEvents, pattern, userAndEventsInfo)
+	for cKey, cPt := range repeatedCandidateMap {
+		candidatesMap[cKey] = cPt
+	}
+
 	if err != nil {
 		return nil, err
 	}
