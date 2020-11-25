@@ -58,9 +58,21 @@
         // display: none;
     }
 }
-
-.fa-insight-item{ 
+.fa-insight-item--container
+{
     &:hover{
+        box-shadow: 0 10px 10px -10px $fa-color--mono-2;  
+    }
+
+}
+.fa-insight-item--sub-container
+{
+    &:hover{
+        box-shadow: 0 10px 10px -10px $fa-color--mono-2;  
+    }
+}
+.fa-insight-item{ 
+    &:hover{ 
         .fa-insights-box--fixed-count{ 
             width: 50px;
             span{
