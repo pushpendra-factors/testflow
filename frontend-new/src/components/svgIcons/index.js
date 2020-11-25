@@ -636,6 +636,15 @@ const SpikedownSVG = ({ size = 24, color, extraClass }) => {
   )
 }
 
+const ArrowdownSVG = ({ size = 24, color, extraClass }) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 8 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3.65768 15.0264C3.85294 15.2217 4.16952 15.2217 4.36478 15.0264L7.54677 11.8444C7.74203 11.6492 7.74203 11.3326 7.54677 11.1373C7.35151 10.9421 7.03492 10.9421 6.83966 11.1373L4.01123 13.9657L1.18281 11.1373C0.987545 10.9421 0.670962 10.9421 0.4757 11.1373C0.280438 11.3326 0.280437 11.6492 0.475699 11.8444L3.65768 15.0264ZM3.51124 0.672851L3.51123 14.6729L4.51123 14.6729L4.51124 0.672852L3.51124 0.672851Z" fill={color}/>
+    </svg>
+
+  )
+}
+
 const BreadcrumbSVG = ({ size = 24, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -744,5 +753,6 @@ export {
   BreadcrumbSVG,
   SpikeupSVG,
   SpikedownSVG,
-  Events_dashboard_cqSVG
+  Events_dashboard_cqSVG,
+  ArrowdownSVG
 };
