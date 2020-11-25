@@ -85,10 +85,7 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		err := fmt.Errorf("No events in pattern")
 		return nil, err
 	}
-	if !isEventsUnique(events) {
-		err := fmt.Errorf("Events are not unique")
-		return nil, err
-	}
+
 	defaultHistTemplate := Hist.NumericHistogramTemplate{}
 	for _, propertyName := range U.GENERIC_NUMERIC_USER_PROPERTIES {
 		nptu := Hist.NumericHistogramTemplateUnit{

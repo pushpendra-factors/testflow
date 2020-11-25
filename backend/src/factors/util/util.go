@@ -679,6 +679,15 @@ func SanitizePhoneNumber(v interface{}) string {
 	return phoneNo
 }
 
+func InsertRepeated(strList []string, index int, value string) []string {
+	if len(strList) == index { // nil or empty slice or after last element
+		return append(strList, value)
+	}
+	strList = append(strList[:index+1], strList[index:]...) // index < len(a)
+	strList[index] = value
+	return strList
+}
+
 func RankByWordCount(wordFrequencies map[string]int) PairList {
 	pl := make(PairList, len(wordFrequencies))
 	i := 0

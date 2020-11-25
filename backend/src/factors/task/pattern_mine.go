@@ -282,7 +282,7 @@ func compressPatterns(patterns []*P.Pattern, maxBytesSize int64) ([]*P.Pattern, 
 }
 
 func genSegmentedCandidates(
-	patterns []*P.Pattern, userAndEventsInfo *P.UserAndEventsInfo) (map[string][]*P.Pattern, error) {
+	patterns []*P.Pattern, userAndEventsInfo *P.UserAndEventsInfo, cyclicEvents []string) (map[string][]*P.Pattern, error) {
 	pSegments := make(map[string][]*P.Pattern)
 	for _, p := range patterns {
 		segmentKey := fmt.Sprintf("%s,%s", p.EventNames[0], p.EventNames[len(p.EventNames)-1])
@@ -294,7 +294,7 @@ func genSegmentedCandidates(
 
 	candidateSegments := make(map[string][]*P.Pattern)
 	for k, patterns := range pSegments {
-		cPatterns, _, err := P.GenCandidates(patterns, top_K, userAndEventsInfo)
+		cPatterns, _, err := P.GenCandidates(patterns, top_K, userAndEventsInfo, cyclicEvents)
 		if err != nil {
 			mineLog.Error("Failure on generate segemented candidates.")
 			return pSegments, err
@@ -305,12 +305,11 @@ func genSegmentedCandidates(
 }
 
 func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
-	userAndEventsInfo *P.UserAndEventsInfo) (map[string][]*P.Pattern, error) {
+	userAndEventsInfo *P.UserAndEventsInfo, cyclicEvents []string) (map[string][]*P.Pattern, error) {
 	startPatternsMap := make(map[string][]*P.Pattern)
 	endPatternsMap := make(map[string][]*P.Pattern)
 
 	segmentedCandidates := make(map[string][]*P.Pattern)
-
 	for _, p := range lenTwoPatterns {
 		pEvents := p.EventNames
 		if len(pEvents) != 2 {
@@ -352,7 +351,7 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 			continue
 		}
 		lenThreeCandidates, err := P.GenLenThreeCandidatePatterns(
-			p, startPatterns, endPatterns, top_K, userAndEventsInfo)
+			p, startPatterns, endPatterns, top_K, userAndEventsInfo, cyclicEvents)
 		if err != nil {
 			mineLog.WithError(err).Error("Failed on genLenThreeSegmentedCandidates.")
 			return segmentedCandidates, err
@@ -360,6 +359,22 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 		segmentedCandidates[p.String()] = lenThreeCandidates
 	}
 	return segmentedCandidates, nil
+}
+
+func getUniqueCandidates(allCandidates []*P.Pattern) []*P.Pattern {
+
+	patternDict := make(map[*P.Pattern]bool)
+	allUniquePatterns := make([]*P.Pattern, 0)
+	for _, c := range allCandidates {
+
+		if _, ok := patternDict[c]; !ok {
+			patternDict[c] = true
+			allUniquePatterns = append(allUniquePatterns, c)
+		}
+	}
+
+	return allUniquePatterns
+
 }
 
 func mineAndWriteLenOnePatterns(
@@ -415,7 +430,7 @@ func mineAndWriteLenTwoPatterns(
 func mineAndWritePatterns(projectId uint64, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, eventNames []string,
 	numRoutines int, chunkDir string,
-	maxModelSize int64, countOccurence bool, eventNamesWithType map[string]string) error {
+	maxModelSize int64, countOccurence bool, eventNamesWithType map[string]string, repeatedEvents []string) error {
 	var filteredPatterns []*P.Pattern
 	var cumulativePatternsSize int64 = 0
 
@@ -461,7 +476,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 			return nil
 		}
 		lenThreeSegmentedPatterns, err := genLenThreeSegmentedCandidates(
-			filteredPatterns, userAndEventsInfo)
+			filteredPatterns, userAndEventsInfo, repeatedEvents)
 		if err != nil {
 			return err
 		}
@@ -495,7 +510,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		}
 
 		candidatePatternsMap, err = genSegmentedCandidates(
-			filteredPatterns, userAndEventsInfo)
+			filteredPatterns, userAndEventsInfo, repeatedEvents)
 		if err != nil {
 			return err
 		}
@@ -931,6 +946,9 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal events Info.")
 		return "", 0, err
 	}
+
+	repeatedEvents := GetAllRepeatedEvents(eventNames)
+
 	if len(userAndEventsInfoBytes) > 249900000 {
 		// Limit is 250MB
 		errorString := fmt.Sprintf(
@@ -980,7 +998,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.WithFields(log.Fields{"projectId": projectId, "tmpEventsFilepath": tmpEventsFilepath,
 		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
 	err = mineAndWritePatterns(projectId, tmpEventsFilepath,
-		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize, countOccurence, eventNamesWithType)
+		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize, countOccurence, eventNamesWithType, repeatedEvents)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		return "", 0, err
@@ -1198,4 +1216,20 @@ func takeTopK(patterns []patternProperties, topKPatterns int) []patternPropertie
 
 	}
 	return patterns
+}
+
+//GetAllCyclicEvents Filter all special events
+func GetAllRepeatedEvents(eventNames []string) []string {
+
+	CyclicEvents := make([]string, 0)
+	for _, v := range eventNames {
+
+		if strings.HasPrefix(v, "$") == true {
+			CyclicEvents = append(CyclicEvents, v)
+		}
+
+	}
+
+	return CyclicEvents
+
 }
