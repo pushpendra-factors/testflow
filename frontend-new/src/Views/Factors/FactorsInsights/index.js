@@ -10,7 +10,7 @@ import _ from 'lodash';
 const { TabPane } = Tabs;
 
 function numberWithCommas(x) {
-    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
 const MoreInsightsLines = ({ insightCount, onClick }) => {
