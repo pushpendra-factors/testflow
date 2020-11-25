@@ -187,12 +187,12 @@ func isEventObjectValid(event string, eventFilters []KeyValueTuple, ProjectID ui
 }
 func isRuleValid(Rule FactorsGoalRule, ProjectID uint64) (bool, string) {
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
-	res, msg := isEventObjectValid(Rule.StartEvent, Rule.Rule.StartEnEventFitler, ProjectID)
+	res, msg := isEventObjectValid(Rule.EndEvent, Rule.Rule.EndEnEventFitler, ProjectID)
 	if res == false {
 		return res, msg
 	}
-	if Rule.EndEvent != "" {
-		res, msg := isEventObjectValid(Rule.EndEvent, Rule.Rule.EndEnEventFitler, ProjectID)
+	if Rule.StartEvent != "" {
+		res, msg := isEventObjectValid(Rule.StartEvent, Rule.Rule.StartEnEventFitler, ProjectID)
 		if res == false {
 			return res, msg
 		}

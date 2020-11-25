@@ -186,11 +186,12 @@ func TestCreateFactorsTrackedEvent(t *testing.T) {
 	// get all tracked events
 	w = sendGetAllFactorsTrackedEventRequest(r, agent, projectId)
 	assert.Equal(t, http.StatusOK, w.Code)
-	trackedEvent := []M.FactorsTrackedEvent{}
+	trackedEvent := []M.FactorsTrackedEventInfo{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &trackedEvent)
 	assert.Equal(t, successFactorsTrackedEventIds[0], int64(trackedEvent[0].ID))
 	assert.Equal(t, true, trackedEvent[0].IsActive)
+	assert.Equal(t, "event1", trackedEvent[0].Name)
 
 	// remove event
 	removeRequest := V1.RemoveFactorsTrackedEventParams{
@@ -206,11 +207,12 @@ func TestCreateFactorsTrackedEvent(t *testing.T) {
 	// get all events
 	w = sendGetAllFactorsTrackedEventRequest(r, agent, projectId)
 	assert.Equal(t, http.StatusOK, w.Code)
-	trackedEvent = []M.FactorsTrackedEvent{}
+	trackedEvent = []M.FactorsTrackedEventInfo{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &trackedEvent)
 	assert.Equal(t, successFactorsTrackedEventIds[0], int64(trackedEvent[0].ID))
 	assert.Equal(t, false, trackedEvent[0].IsActive)
+	assert.Equal(t, "event1", trackedEvent[0].Name)
 
 	// Limit exceeded
 	C.GetConfig().ActiveFactorsTrackedEventsLimit = 0

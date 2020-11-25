@@ -405,7 +405,7 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal10"
 	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event1"
+	request.Rule.EndEvent = "event1"
 	request.Rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})

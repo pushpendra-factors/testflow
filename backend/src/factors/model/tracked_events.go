@@ -24,6 +24,19 @@ type FactorsTrackedEvent struct {
 	UpdatedAt     *time.Time `json:"updated_at"`
 }
 
+type FactorsTrackedEventInfo struct {
+	ID            uint64     `gorm:"primary_key:true;" json:"id"`
+	ProjectID     uint64     `json:"project_id"`
+	EventNameID   uint64     `json:"event_name_id"`
+	Type          string     `gorm:"not null;type:varchar(2)" json:"type"`
+	CreatedBy     string     `json:"created_by"`
+	LastTrackedAt *time.Time `json:"last_tracked_at"`
+	IsActive      bool       `json:"is_active"`
+	CreatedAt     *time.Time `json:"created_at"`
+	UpdatedAt     *time.Time `json:"updated_at"`
+	Name          string     `json:"name"`
+}
+
 //CreateTrackedEvent - Inserts the tracked event to db
 func CreateFactorsTrackedEvent(ProjectID uint64, EventName string, agentUUID string) (int64, int) {
 	if isActiveFactorsTrackedEventsLimitExceeded(ProjectID) {
@@ -98,33 +111,55 @@ func DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (int64, int) {
 }
 
 // GetAllFactorsTrackedEventsByProject - get all the tracked events by project
-func GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]FactorsTrackedEvent, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
+func GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]FactorsTrackedEventInfo, int) {
 	db := C.GetServices().Db
 
-	var trackedEvents []FactorsTrackedEvent
-	if err := db.Limit(1000).Where("project_id = ?", ProjectID).Find(&trackedEvents).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusFound
-		}
-		logCtx.WithError(err).Error("Get All Trackedevents failed")
+	queryStr := "WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = ? LIMIT ?) " +
+		"SELECT tracked_events.*, event_names.name FROM tracked_events LEFT JOIN event_names " +
+		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = ?;"
+	params := make([]interface{}, 0)
+	params = append(params, ProjectID, 10000, ProjectID)
+	trackedEvents := make([]FactorsTrackedEventInfo, 0)
+	rows, err := db.Raw(queryStr, params...).Rows()
+	if err != nil {
+		log.WithError(err).Error("Tracked events get all failed")
 		return nil, http.StatusInternalServerError
+	}
+
+	var trackedEvent FactorsTrackedEventInfo
+	for rows.Next() {
+		if dbErr := db.ScanRows(rows, &trackedEvent); dbErr != nil {
+			log.WithError(dbErr).Error("Tracked events get all parsing failed")
+			return nil, http.StatusInternalServerError
+		}
+		trackedEvents = append(trackedEvents, trackedEvent)
 	}
 	return trackedEvents, http.StatusFound
 }
 
 // GetAllActiveFactorsTrackedEventsByProject - get all the tracked events by project
-func GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64) ([]FactorsTrackedEvent, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
+func GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64) ([]FactorsTrackedEventInfo, int) {
 	db := C.GetServices().Db
 
-	var trackedEvents []FactorsTrackedEvent
-	if err := db.Limit(1000).Where("project_id = ?", ProjectID).Where("is_active = ?", true).Find(&trackedEvents).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusFound
-		}
-		logCtx.WithError(err).Error("Get All Trackedevents failed")
+	queryStr := "WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = ? AND is_active = true LIMIT ?) " +
+		"SELECT tracked_events.*, event_names.name FROM tracked_events LEFT JOIN event_names " +
+		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = ?;"
+	params := make([]interface{}, 0)
+	params = append(params, ProjectID, 10000, ProjectID)
+	trackedEvents := make([]FactorsTrackedEventInfo, 0)
+	rows, err := db.Raw(queryStr, params...).Rows()
+	if err != nil {
+		log.WithError(err).Error("Tracked events get all failed")
 		return nil, http.StatusInternalServerError
+	}
+
+	var trackedEvent FactorsTrackedEventInfo
+	for rows.Next() {
+		if dbErr := db.ScanRows(rows, &trackedEvent); dbErr != nil {
+			log.WithError(dbErr).Error("Tracked events get all parsing failed")
+			return nil, http.StatusInternalServerError
+		}
+		trackedEvents = append(trackedEvents, trackedEvent)
 	}
 	return trackedEvents, http.StatusFound
 }
