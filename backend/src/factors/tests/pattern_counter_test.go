@@ -528,7 +528,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		},
 		EventPropertiesInfoMap: &actualEventInfoMap,
 	}
-	err := P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
+	_, err := P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
 	assert.Nil(t, err)
 
 	expectedNumericKeys := map[string][]string{
@@ -1173,7 +1173,7 @@ func TestCollectAndCountEventsWithPropertiesWithOccurenceFalse(t *testing.T) {
 		},
 		EventPropertiesInfoMap: &actualEventInfoMap,
 	}
-	err := P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
+	_, err := P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
 	assert.Nil(t, err)
 
 	expectedNumericKeys := map[string][]string{
