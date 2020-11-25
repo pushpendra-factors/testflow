@@ -33,6 +33,7 @@ function ActiveUnitContent({ unit, unitData }) {
                 reverseEventsMapper={reverseEventsMapper}
                 breakdown={breakdown}
                 queryType={queryType}
+                isWidgetModal={true}
                 page="totalEvents"
                 resultState={
                     [

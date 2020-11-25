@@ -80,7 +80,7 @@ const DEFAULT_DATE_RANGES = [
       const definedRange = this.range();
       return (
         moment(range.startDate).isSame(definedRange.startDate, 'seconds') &&
-          moment(range.endDate).isSame(definedRange.endDate, 'seconds')
+        moment(range.endDate).isSame(definedRange.endDate, 'seconds')
       );
     }
   },
@@ -148,7 +148,7 @@ export const DEFAULT_TODAY_DATE_RANGES = [
       const definedRange = this.range();
       return (
         moment(range.startDate).isSame(definedRange.startDate, 'seconds') &&
-          moment(range.endDate).isSame(definedRange.endDate, 'seconds')
+        moment(range.endDate).isSame(definedRange.endDate, 'seconds')
       );
     }
   },
@@ -162,7 +162,7 @@ export const DEFAULT_TODAY_DATE_RANGES = [
       const definedRange = this.range();
       return (
         moment(range.startDate).isSame(definedRange.startDate, 'seconds') &&
-          moment(range.endDate).isSame(definedRange.endDate, 'seconds')
+        moment(range.endDate).isSame(definedRange.endDate, 'seconds')
       );
     }
   }
@@ -191,17 +191,28 @@ export const WEB_ANALYTICS_DEFINED_DATE_RANGES = createStaticRanges([...DEFAULT_
 export const readableDateRange = function (range) {
   const defaultRange = DEFAULT_DATE_RANGES.filter((rng) => {
     const rngDates = rng.range();
-    return (rngDates.startDate.toString() === range.startDate.toString()) &&
-      (rngDates.endDate.toString() === range.endDate.toString());
+    return moment(rngDates.startDate).isSame(moment(range.startDate)) && moment(rngDates.endDate).isSame(moment(range.endDate));
   });
   if (defaultRange.length) {
     return defaultRange[0].label;
   }
 
-  // Use label for default date range.
-  // if (range.startDate.toString() ===  DEFAULT_DATE_RANGE.startDate .toString()
-  // && range.endDate.toString() === DEFAULT_DATE_RANGE.endDate.toString()) { return DEFAULT_DATE_RANGE.label; }
-
   return moment(range.startDate).format('MMM DD, YYYY') + ' - ' +
-      moment(range.endDate).format('MMM DD, YYYY');
+    moment(range.endDate).format('MMM DD, YYYY');
+};
+
+export const getDateRange = (durationObj) => {
+  const ranges = [{ ...DEFAULT_DATE_RANGE }];
+  const queryOptionsState = { ...durationObj };
+
+  if (
+    queryOptionsState &&
+    queryOptionsState.from &&
+    queryOptionsState.to
+  ) {
+    ranges[0].startDate = moment(queryOptionsState.from).toDate();
+    ranges[0].endDate = moment(queryOptionsState.to).toDate();
+  }
+
+  return ranges;
 };

@@ -1,6 +1,7 @@
 import React, {
   useRef, useEffect, useCallback, useState
 } from 'react';
+import moment from 'moment';
 import * as d3 from 'd3';
 import { Button } from 'antd';
 import { Text } from '../../components/factorsComponents';
@@ -16,7 +17,8 @@ import { cardClassNames } from '../../reducers/dashboard/utils';
 function WidgetCard({
   unit,
   onDrop,
-  setwidgetModal
+  setwidgetModal,
+  durationObj
 }) {
   const [resultState, setResultState] = useState(initialState);
   const { active_project } = useSelector(state => state.global);
@@ -27,6 +29,7 @@ function WidgetCard({
 
   const getData = useCallback(async (refresh = false) => {
     try {
+      setResizerVisible(false);
       setResultState({
         ...initialState,
         loading: true
@@ -34,10 +37,28 @@ function WidgetCard({
 
       if (unit.query.query.query_group) {
         let res;
-        if (refresh) {
-          res = await runQuery(active_project.id, unit.query.query.query_group);
+        let queryGroup = unit.query.query.query_group;
+        if (durationObj.from && durationObj.to) {
+          queryGroup = queryGroup.map(elem => {
+            return {
+              ...elem,
+              fr: moment(durationObj.from).startOf('day').utc().unix(),
+              to: moment(durationObj.to).startOf('day').utc().unix()
+            };
+          });
         } else {
-          res = await runQuery(active_project.id, unit.query.query.query_group, { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
+          queryGroup = queryGroup.map(elem => {
+            return {
+              ...elem,
+              fr: moment().startOf('week').utc().unix(),
+              to: moment().utc().unix()
+            };
+          });
+        }
+        if (refresh) {
+          res = await runQuery(active_project.id, queryGroup);
+        } else {
+          res = await runQuery(active_project.id, queryGroup, { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
         }
         if (res.data.result) {
           // cached data
@@ -54,10 +75,24 @@ function WidgetCard({
         }
       } else {
         let res;
-        if (refresh) {
-          res = await getFunnelData(active_project.id, unit.query.query);
+        let funnelQuery = unit.query.query;
+        if (durationObj.from && durationObj.to) {
+          funnelQuery = {
+            ...funnelQuery,
+            fr: moment(durationObj.from).startOf('day').utc().unix(),
+            to: moment(durationObj.to).startOf('day').utc().unix()
+          };
         } else {
-          res = await getFunnelData(active_project.id, unit.query.query, { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
+          funnelQuery = {
+            ...funnelQuery,
+            fr: moment().startOf('week').utc().unix(),
+            to: moment().utc().unix()
+          };
+        }
+        if (refresh) {
+          res = await getFunnelData(active_project.id, funnelQuery);
+        } else {
+          res = await getFunnelData(active_project.id, funnelQuery, { refresh: false, unit_id: unit.id, id: unit.dashboard_id });
         }
         let resultantData = null;
         if (res.data.result) {
@@ -83,11 +118,11 @@ function WidgetCard({
         error: true
       });
     }
-  }, [active_project.id, unit.query, unit.dashboard_id, unit.id, dispatch]);
+  }, [active_project.id, unit.query, unit.dashboard_id, unit.id, dispatch, durationObj]);
 
   useEffect(() => {
     getData();
-  }, [getData]);
+  }, [getData, durationObj]);
 
   const positionResizeContainer = useCallback(() => {
     // for charts to load properly and then show the expandable icons

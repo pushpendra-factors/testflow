@@ -37,6 +37,5 @@ export const getTableData = (data, breakdown, searchText, currentSorter) => {
     });
     return { ...breakdownValues, 'User Count': d.value, index: d.index };
   });
-  console.log(SortData(result, currentSorter.key, currentSorter.order));
   return SortData(result, currentSorter.key, currentSorter.order);
 };

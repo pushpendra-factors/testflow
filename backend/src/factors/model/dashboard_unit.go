@@ -524,7 +524,7 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 	var queryGroup QueryGroup
 	// try decoding for Query
 	err := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &query)
-	if err != nil || query.Class == "" {
+	if query.Class == "" {
 		// if fails, try decoding for QueryGroup
 		err1 := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &queryGroup)
 		if err1 != nil {

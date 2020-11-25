@@ -11,7 +11,9 @@ import DashboardSubMenu from './DashboardSubMenu';
 import ExpandableView from './ExpandableView';
 const { TabPane } = Tabs;
 
-function ProjectTabs({ setaddDashboardModal, handleEditClick }) {
+function ProjectTabs({
+  setaddDashboardModal, handleEditClick, durationObj, handleDurationChange
+}) {
   const [widgetModal, setwidgetModal] = useState(false);
   const [widgetModalLoading, setwidgetModalLoading] = useState(false);
   const { active_project } = useSelector(state => state.global);
@@ -47,53 +49,61 @@ function ProjectTabs({ setaddDashboardModal, handleEditClick }) {
 
   const operations = (
     <>
-			<Button type="text" size={'small'} onClick={() => setaddDashboardModal(true)}><SVG name="plus" color={'grey'} /></Button>
-			<Button type="text" size={'small'}><SVG name="edit" color={'grey'} /></Button>
+      <Button type="text" size={'small'} onClick={() => setaddDashboardModal(true)}><SVG name="plus" color={'grey'} /></Button>
+      <Button type="text" size={'small'}><SVG name="edit" color={'grey'} /></Button>
     </>
   );
 
   if (dashboards.loading || activeDashboardUnits.loading) {
     return (
-			<div className="flex justify-center items-center w-full h-64">
-				<Spin size="large" />
-			</div>
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
+      </div>
     );
   }
 
   if (dashboards.error || activeDashboardUnits.error) {
     return (
-			<div className="flex justify-center items-center w-full h-64">
-				Something went wrong!
-			</div>
+      <div className="flex justify-center items-center w-full h-64">
+        Something went wrong!
+      </div>
     );
   }
 
   if (dashboards.data.length) {
     return (
       <>
-				<Tabs
-					onChange={handleTabChange}
-					activeKey={activeDashboard.id.toString()}
-					className={'fa-tabs--dashboard'}
-					tabBarExtraContent={operations}
-				>
-					{dashboards.data.map(d => {
-					  return (
-							<TabPane tab={d.name} key={d.id}>
-								<div className={'fa-container mt-6 min-h-screen'}>
-									<DashboardSubMenu dashboard={activeDashboard} handleEditClick={handleEditClick} />
-									<SortableCards setwidgetModal={handleToggleWidgetModal} />
-								</div>
-							</TabPane>
-					  );
-					})}
-				</Tabs>
+        <Tabs
+          onChange={handleTabChange}
+          activeKey={activeDashboard.id.toString()}
+          className={'fa-tabs--dashboard'}
+          tabBarExtraContent={operations}
+        >
+          {dashboards.data.map(d => {
+            return (
+              <TabPane tab={d.name} key={d.id}>
+                <div className={'fa-container mt-6 min-h-screen'}>
+                  <DashboardSubMenu
+                    durationObj={durationObj}
+                    handleDurationChange={handleDurationChange}
+                    dashboard={activeDashboard}
+                    handleEditClick={handleEditClick}
+                  />
+                  <SortableCards
+                    durationObj={durationObj}
+                    setwidgetModal={handleToggleWidgetModal}
+                  />
+                </div>
+              </TabPane>
+            );
+          })}
+        </Tabs>
 
-				<ExpandableView
-					loading={widgetModalLoading}
-					widgetModal={widgetModal}
-					setwidgetModal={setwidgetModal}
-				/>
+        <ExpandableView
+          loading={widgetModalLoading}
+          widgetModal={widgetModal}
+          setwidgetModal={setwidgetModal}
+        />
 
       </>
     );

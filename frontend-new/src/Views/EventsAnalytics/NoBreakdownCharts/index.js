@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import { formatSingleEventAnalyticsData, formatMultiEventsAnalyticsData, getDataInLineChartFormat } from './utils';
-import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import NoBreakdownTable from './NoBreakdownTable';
 import SparkLineChart from '../../../components/SparkLineChart';
 import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
-import BreakdownType from '../BreakdownType';
 
 function NoBreakdownCharts({
-  queries, eventsMapper, reverseEventsMapper, resultState, page, breakdownType, handleBreakdownTypeChange
+  queries, eventsMapper, reverseEventsMapper, resultState, page, chartType
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
-  const [chartType, setChartType] = useState('sparklines');
 
   let chartsData = [];
   if (queries.length === 1) {
@@ -24,19 +21,6 @@ function NoBreakdownCharts({
   if (!chartsData.length) {
     return null;
   }
-
-  const menuItems = [
-    {
-      key: 'sparklines',
-      onClick: setChartType,
-      name: 'Sparkline'
-    },
-    {
-      key: 'linechart',
-      onClick: setChartType,
-      name: 'Line Chart'
-    }
-  ];
 
   let chartContent = null;
 
@@ -63,38 +47,14 @@ function NoBreakdownCharts({
           eventsMapper={eventsMapper}
           setHiddenEvents={setHiddenEvents}
           hiddenEvents={hiddenEvents}
-          isDecimalAllowed = {page === 'activeUsers' || page === 'frequency'}
+          isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
         />
       </div>
     );
   }
 
   return (
-    <div className="total-events w-full">
-      <div className="flex items-center justify-between">
-        <div className="filters-info">
-
-        </div>
-        <div className="user-actions w-1/2 flex justify-end">
-        {page === 'totalUsers' && queries.length > 1 ? (
-            <div className="px-4">
-              <BreakdownType
-                breakdown={[]}
-                breakdownType={breakdownType}
-                handleBreakdownTypeChange={handleBreakdownTypeChange}
-              />
-            </div>
-        ) : null}
-
-          <ChartTypeDropdown
-            chartType={chartType}
-            menuItems={menuItems}
-            onClick={(item) => {
-              setChartType(item.key);
-            }}
-          />
-        </div>
-      </div>
+    <div className="w-full">
       {chartContent}
       <div className="mt-8">
         <NoBreakdownTable

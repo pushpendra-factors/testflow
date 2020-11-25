@@ -60,15 +60,19 @@ const getEventsWithProperties = (queries) => {
   return ewps;
 };
 
-export const getFunnelQuery = (groupBy, queries) => {
+export const getFunnelQuery = (groupBy, queries, dateRange) => {
   const query = {};
   query.cl = 'funnel';
   query.ty = 'unique_users';
 
-  const period = {
-    from: moment().subtract(7, 'days').startOf('day').utc().unix(),
-    to: moment().utc().unix()
-  };
+  const period = {};
+  if (dateRange.from && dateRange.to) {
+    period.from = moment(dateRange.from).startOf('day').utc().unix();
+    period.to = moment(dateRange.to).endOf('day').utc().unix();
+  } else {
+    period.from = moment().startOf('week').utc().unix();
+    period.to = moment().utc().unix();
+  }
 
   query.fr = period.from;
   query.to = period.to;
@@ -101,15 +105,19 @@ export const getFunnelQuery = (groupBy, queries) => {
   return query;
 };
 
-export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType = 'each') => {
+export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType = 'each', dateRange) => {
   const query = {};
   query.cl = queryType === 'event' ? 'events' : 'funnel';
   query.ty = parseInt(activeTab) === 1 ? 'unique_users' : 'events_occurrence';
 
-  const period = {
-    from: moment().subtract(7, 'days').startOf('day').utc().unix(),
-    to: moment().utc().unix()
-  };
+  const period = {};
+  if (dateRange.from && dateRange.to) {
+    period.from = moment(dateRange.from).startOf('day').utc().unix();
+    period.to = moment(dateRange.to).endOf('day').utc().unix();
+  } else {
+    period.from = moment().startOf('week').utc().unix();
+    period.to = moment().utc().unix();
+  }
 
   query.fr = period.from;
   query.to = period.to;
@@ -124,7 +132,7 @@ export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType =
     query.gbt = '';
   } else {
     query.ewp = getEventsWithProperties(queries);
-    query.gbt = breakdownType === 'each' ? 'date' : '';
+    query.gbt = breakdownType === 'each' ? dateRange.frequency || 'date' : '';
 
     const appliedGroupBy = [...groupBy.event, ...groupBy.global];
 

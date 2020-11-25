@@ -1,24 +1,25 @@
 import React from 'react';
 import { Spin } from 'antd';
 import EventBreakdownCharts from './EventBreakdownCharts';
+import BreakdownType from '../BreakdownType';
+import DurationInfo from '../../CoreQuery/DurationInfo';
 
 function EventBreakdown({
-  breakdown, data, breakdownType, handleBreakdownTypeChange
+  breakdown, data, breakdownType, handleBreakdownTypeChange, durationObj, handleDurationChange, isWidgetModal = false
 }) {
-  console.log(breakdown);
   if (data.loading) {
     return (
-			<div className="flex justify-center items-center w-full h-64">
-				<Spin size="large" />
-			</div>
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
+      </div>
     );
   }
 
   if (data.error) {
     return (
-			<div className="flex justify-center items-center w-full h-64">
-				Something went wrong!
-			</div>
+      <div className="flex justify-center items-center w-full h-64">
+        Something went wrong!
+      </div>
     );
   }
 
@@ -26,13 +27,46 @@ function EventBreakdown({
     return null;
   }
 
+  let durationContent = (
+		<div></div>
+  );
+
+  if (!isWidgetModal) {
+    durationContent = (
+			<div className="flex items-center filters-info">
+				<div className="mr-1">Data from </div>
+				<DurationInfo
+					durationObj={durationObj}
+					handleDurationChange={handleDurationChange}
+				/>
+				{breakdown.length ? (
+					<div className="ml-1">shown as top 5 groups</div>
+				) : null}
+			</div>
+    );
+  }
+
   return (
-		<EventBreakdownCharts
-			data={data[breakdownType]}
-			breakdown={breakdown}
-			breakdownType={breakdownType}
-			handleBreakdownTypeChange={handleBreakdownTypeChange}
-		/>
+    <div className="total-events w-full">
+      <div className="flex items-center justify-between">
+        {durationContent}
+        <div className="flex justify-end">
+          <div className="px-4">
+            <BreakdownType
+              breakdown={breakdown}
+              breakdownType={breakdownType}
+              handleBreakdownTypeChange={handleBreakdownTypeChange}
+            />
+          </div>
+        </div>
+      </div>
+      <EventBreakdownCharts
+        data={data[breakdownType]}
+        breakdown={breakdown}
+        breakdownType={breakdownType}
+        handleBreakdownTypeChange={handleBreakdownTypeChange}
+      />
+    </div>
   );
 }
 

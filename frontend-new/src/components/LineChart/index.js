@@ -77,7 +77,7 @@ function LineChart({
         height: 350
       },
       padding: {
-        left: 50,
+        left: 40,
         bottom: 24,
         right: 10
       },

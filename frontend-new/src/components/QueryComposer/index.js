@@ -187,7 +187,7 @@ function QueryComposer({
   };
 
   const getDateRange = () => {
-    const ranges = [DEFAULT_DATE_RANGE];
+    const ranges = [{...DEFAULT_DATE_RANGE}];
     const queryOptionsState = Object.assign({}, queryOptions);
 
     if (
