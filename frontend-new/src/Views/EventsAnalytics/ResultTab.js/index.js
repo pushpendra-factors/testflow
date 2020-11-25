@@ -11,7 +11,7 @@ import BreakdownType from '../BreakdownType';
 function ResultTab({
   queries, eventsMapper, reverseEventsMapper, breakdown, resultState, page, index, breakdownType, handleBreakdownTypeChange, durationObj, handleDurationChange, isWidgetModal = false
 }) {
-const [chartType, setChartType] = useState('');
+  const [chartType, setChartType] = useState('');
 
   let menuItems;
 
