@@ -30,7 +30,7 @@ function DurationInfo({ durationObj, handleDurationChange }) {
       onVisibleChange={setDateRangeVisibile}
       content={
         <DateRangeSelector
-          ranges={getDateRange()}
+          ranges={getDateRange(durationObj)}
           pickerVisible={dateRangeVisible}
           setDates={setDateRange}
           closeDatePicker={() => setDateRangeVisibile(false)}

@@ -25,7 +25,7 @@ const DateRangeSelector = ({
   const setDateRange = () => {
     if (!selectedDate || !selectedDate.selected) return;
 
-    const ranges = [DEFAULT_DATE_RANGE];
+    const ranges = [{...DEFAULT_DATE_RANGE}];
     ranges[0].startDate = moment(selectedDate.selected.startDate).toDate();
     ranges[0].endDate = moment(selectedDate.selected.endDate).toDate();
 
