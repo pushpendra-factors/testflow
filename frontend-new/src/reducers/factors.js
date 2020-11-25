@@ -89,7 +89,7 @@
   export function fetchGoalInsights(projectID) {
     return function(dispatch) {
       return new Promise((resolve,reject) => {
-        get(dispatch, host + "projects/"+projectID+"/v1/factor")
+        post(dispatch, host + "projects/"+projectID+"/v1/factor")
           .then((response)=>{        
             dispatch({type:"FETCH_GOAL_INSIGHTS_FULFILLED", payload: response.data});
             resolve(response)
