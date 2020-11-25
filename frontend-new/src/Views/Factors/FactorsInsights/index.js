@@ -102,12 +102,11 @@ const InsightItem = ({
   if (data) {
     return data.insights.map((dataItem, index) => {
       if (dataItem.factors_insights_type === type) {
-        let insightKey = "";
-        if(_.isEmpty(dataItem.factors_insights_key)){
-            insightKey = `${dataItem.factors_insights_attribute[0].factors_attribute_key} = ${dataItem.factors_insights_attribute[0].factors_attribute_value}`
-        }
-        else{
-            insightKey = dataItem.factors_insights_key;
+        let insightKey = '';
+        if (_.isEmpty(dataItem.factors_insights_key)) {
+          insightKey = `${dataItem.factors_insights_attribute[0].factors_attribute_key} = ${dataItem.factors_insights_attribute[0].factors_attribute_value}`;
+        } else {
+          insightKey = dataItem.factors_insights_key;
         }
         return (
                   <div key={index} className={'relative border-bottom--thin'}>
@@ -126,7 +125,7 @@ const InsightItem = ({
                                   </div>
                                   <Progress percent={100} strokeColor={'#5949BC'} showInfo={false} />
 
-                                  <div className={'flex items-end'}> 
+                                  <div className={'flex items-end'}>
                                     <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2'} >{`${dataItem.factors_goal_users_count}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
                                     <div className={'flex items-center ml-4 fa-insights-box--animate'}><SVG name={'arrowdown'} size={12} color={'grey'} /><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${data?.goal?.en_en} (${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
                                   </div>
