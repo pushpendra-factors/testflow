@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import {
   formatData, formatDataInLineChartFormat
 } from './utils';
@@ -9,11 +8,10 @@ import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventSingleBreakdown({
-  queries, breakdown, resultState, page
+  queries, breakdown, resultState, page, chartType
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [chartType, setChartType] = useState('barchart');
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
   const maxAllowedVisibleProperties = 5;
@@ -27,19 +25,6 @@ function SingleEventSingleBreakdown({
   if (!chartsData.length) {
     return null;
   }
-
-  const menuItems = [
-    {
-      key: 'barchart',
-      onClick: setChartType,
-      name: 'Barchart'
-    },
-    {
-      key: 'linechart',
-      onClick: setChartType,
-      name: 'Line Chart'
-    }
-  ];
 
   const mapper = {};
   const reverseMapper = {};
@@ -76,28 +61,14 @@ function SingleEventSingleBreakdown({
           eventsMapper={mapper}
           setHiddenEvents={setHiddenProperties}
           hiddenEvents={hiddenProperties}
-          isDecimalAllowed = {page === 'activeUsers' || page === 'frequency'}
+          isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
         />
       </div>
     );
   }
 
   return (
-    <div className="total-events w-full">
-      <div className="flex items-center justify-between">
-        <div className="filters-info">
-
-        </div>
-        <div className="user-actions">
-          <ChartTypeDropdown
-            chartType={chartType}
-            menuItems={menuItems}
-            onClick={(item) => {
-              setChartType(item.key);
-            }}
-          />
-        </div>
-      </div>
+    <div className="w-full">
       {chartContent}
       <div className="mt-8">
         <SingleEventSingleBreakdownTable

@@ -6,7 +6,7 @@ import { UNITS_ORDER_CHANGED } from '../../reducers/types';
 import { updateDashboard } from '../../reducers/dashboard/services';
 import { getRequestForNewState } from '../../reducers/dashboard/utils';
 
-function SortableCards({ setwidgetModal }) {
+function SortableCards({ setwidgetModal, durationObj }) {
   const dispatch = useDispatch();
 
   const { active_project } = useSelector(state => state.global);
@@ -27,6 +27,7 @@ function SortableCards({ setwidgetModal }) {
         const savedQuery = savedQueries.find(sq => sq.id === item.query_id);
         return (
           <WidgetCard
+            durationObj={durationObj}
             key={item.id}
             unit={{ ...item, query: savedQuery }}
             onDrop={onDrop}

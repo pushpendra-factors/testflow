@@ -16,7 +16,8 @@ import { cardClassNames } from '../../reducers/dashboard/utils';
 function WidgetCard({
   unit,
   onDrop,
-  setwidgetModal
+  setwidgetModal,
+  durationObj
 }) {
   const [resultState, setResultState] = useState(initialState);
   const { active_project } = useSelector(state => state.global);
@@ -87,7 +88,7 @@ function WidgetCard({
 
   useEffect(() => {
     getData();
-  }, [getData]);
+  }, [getData, durationObj]);
 
   const positionResizeContainer = useCallback(() => {
     // for charts to load properly and then show the expandable icons

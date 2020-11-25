@@ -10,11 +10,28 @@ import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
 function Dashboard() {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
+  const [durationObj, setDurationObj] = useState({
+    from: '',
+    to: '',
+    frequency: 'date'
+  });
   const dispatch = useDispatch();
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
     setEditDashboard(dashboard);
+  }, []);
+
+  const handleDurationChange = useCallback((dates) => {
+    if (dates && dates.selected) {
+      setDurationObj(currState => {
+        return {
+          ...currState,
+          from: dates.selected.startDate,
+          to: dates.selected.endDate
+        };
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -35,6 +52,8 @@ function Dashboard() {
         <ProjectTabs
           handleEditClick={handleEditClick}
           setaddDashboardModal={setaddDashboardModal}
+          durationObj={durationObj}
+          handleDurationChange={handleDurationChange}
         />
       </div>
 

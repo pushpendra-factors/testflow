@@ -4,16 +4,14 @@ import {
 } from './utils';
 import BarChart from '../../../components/BarChart';
 import LineChart from '../../../components/LineChart';
-import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import SingleEventMultipleBreakdownTable from './SingleEventMultipleBreakdownTable';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventMultipleBreakdown({
-  queries, breakdown, resultState, page
+  queries, breakdown, resultState, page, chartType
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [chartType, setChartType] = useState('barchart');
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
   const maxAllowedVisibleProperties = 5;
@@ -27,19 +25,6 @@ function SingleEventMultipleBreakdown({
   if (!chartsData.length) {
     return null;
   }
-
-  const menuItems = [
-    {
-      key: 'barchart',
-      onClick: setChartType,
-      name: 'Barchart'
-    },
-    {
-      key: 'linechart',
-      onClick: setChartType,
-      name: 'Line Chart'
-    }
-  ];
 
   const mapper = {};
   const reverseMapper = {};
@@ -83,21 +68,7 @@ function SingleEventMultipleBreakdown({
   }
 
   return (
-    <div className="total-events w-full">
-      <div className="flex items-center justify-between">
-        <div className="filters-info">
-
-        </div>
-        <div className="user-actions">
-          <ChartTypeDropdown
-            chartType={chartType}
-            menuItems={menuItems}
-            onClick={(item) => {
-              setChartType(item.key);
-            }}
-          />
-        </div>
-      </div>
+    <div className="w-full">
       {chartContent}
       <div className="mt-8">
         <SingleEventMultipleBreakdownTable

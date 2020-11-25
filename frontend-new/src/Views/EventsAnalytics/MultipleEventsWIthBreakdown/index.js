@@ -2,17 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { formatData, formatVisibleProperties, formatDataInLineChartFormat } from './utils';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 import BarChart from '../../../components/BarChart';
-import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable';
 import LineChart from '../../../components/LineChart';
-import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
-  queries, breakdown, resultState, page, breakdownType, handleBreakdownTypeChange
+  queries, breakdown, resultState, page, chartType
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [chartType, setChartType] = useState('barchart');
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
   const maxAllowedVisibleProperties = 5;
@@ -37,19 +34,6 @@ function MultipleEventsWithBreakdown({
     mapper[`${q}`] = `event${index + 1}`;
     reverseMapper[`event${index + 1}`] = q;
   });
-
-  const menuItems = [
-    {
-      key: 'barchart',
-      onClick: setChartType,
-      name: 'Barchart'
-    },
-    {
-      key: 'linechart',
-      onClick: setChartType,
-      name: 'Line Chart'
-    }
-  ];
 
   let chartContent = null;
 
@@ -84,31 +68,6 @@ function MultipleEventsWithBreakdown({
 
   return (
     <div className="total-events w-full">
-      <div className="flex items-center justify-between">
-        <div className="filters-info w-1/2">
-
-        </div>
-        <div className="user-actions w-1/2 flex justify-end">
-
-          {page === 'totalUsers' ? (
-            <div className="px-4">
-              <BreakdownType
-                breakdown={breakdown}
-                breakdownType={breakdownType}
-                handleBreakdownTypeChange={handleBreakdownTypeChange}
-              />
-            </div>
-          ) : null}
-
-          <ChartTypeDropdown
-            chartType={chartType}
-            menuItems={menuItems}
-            onClick={(item) => {
-              setChartType(item.key);
-            }}
-          />
-        </div>
-      </div>
       {chartContent}
       <div className="mt-8">
         <MultipleEventsWithBreakdownTable

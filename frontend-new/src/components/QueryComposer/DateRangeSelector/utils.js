@@ -80,7 +80,7 @@ const DEFAULT_DATE_RANGES = [
       const definedRange = this.range();
       return (
         moment(range.startDate).isSame(definedRange.startDate, 'seconds') &&
-          moment(range.endDate).isSame(definedRange.endDate, 'seconds')
+        moment(range.endDate).isSame(definedRange.endDate, 'seconds')
       );
     }
   },
@@ -148,7 +148,7 @@ export const DEFAULT_TODAY_DATE_RANGES = [
       const definedRange = this.range();
       return (
         moment(range.startDate).isSame(definedRange.startDate, 'seconds') &&
-          moment(range.endDate).isSame(definedRange.endDate, 'seconds')
+        moment(range.endDate).isSame(definedRange.endDate, 'seconds')
       );
     }
   },
@@ -162,7 +162,7 @@ export const DEFAULT_TODAY_DATE_RANGES = [
       const definedRange = this.range();
       return (
         moment(range.startDate).isSame(definedRange.startDate, 'seconds') &&
-          moment(range.endDate).isSame(definedRange.endDate, 'seconds')
+        moment(range.endDate).isSame(definedRange.endDate, 'seconds')
       );
     }
   }
@@ -203,5 +203,21 @@ export const readableDateRange = function (range) {
   // && range.endDate.toString() === DEFAULT_DATE_RANGE.endDate.toString()) { return DEFAULT_DATE_RANGE.label; }
 
   return moment(range.startDate).format('MMM DD, YYYY') + ' - ' +
-      moment(range.endDate).format('MMM DD, YYYY');
+    moment(range.endDate).format('MMM DD, YYYY');
+};
+
+export const getDateRange = (durationObj) => {
+  const ranges = [DEFAULT_DATE_RANGE];
+  const queryOptionsState = { ...durationObj };
+
+  if (
+    queryOptionsState &&
+    queryOptionsState.from &&
+    queryOptionsState.to
+  ) {
+    ranges[0].startDate = moment(queryOptionsState.from).toDate();
+    ranges[0].endDate = moment(queryOptionsState.to).toDate();
+  }
+
+  return ranges;
 };

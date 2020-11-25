@@ -46,11 +46,13 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
     },
     date_range: {
       from: '',
-      to: ''
+      to: '',
+      frequency: 'date'
     }
   });
 
   const groupBy = useSelector(state => state.coreQuery.groupBy);
+  const dateRange = queryOptions.date_range;
 
   const updateResultState = useCallback((activeTab, newState) => {
     const idx = parseInt(activeTab);
@@ -71,7 +73,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
 
   const callRunQueryApiService = useCallback(async (activeProjectId, activeTab) => {
     try {
-      const query = getQuery(activeTab, queryType, groupBy, queries);
+      const query = getQuery(activeTab, queryType, groupBy, queries, breakdownType, dateRange);
       updateRequestQuery(query);
       const res = await runQueryService(activeProjectId, query);
       if (res.status === 200 && !hasApiFailed(res)) {
@@ -88,7 +90,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
       updateResultState(activeTab, { loading: false, error: true, data: null });
       return null;
     }
-  }, [updateResultState, queryType, groupBy, queries]);
+  }, [updateResultState, queryType, groupBy, queries, dateRange, breakdownType]);
 
   const runQuery = useCallback(async (activeTab, refresh = false, isQuerySaved = false) => {
     setActiveKey(activeTab);
@@ -180,7 +182,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
         setBreakdownTypeData(currState => {
           return { ...currState, loading: true };
         });
-        const query = getQuery('1', queryType, groupBy, queries, key);
+        const query = getQuery('1', queryType, groupBy, queries, key, dateRange);
         updateRequestQuery(query);
         const res = await runQueryService(activeProject.id, query);
         if (res.status === 200 && !hasApiFailed(res)) {
@@ -201,7 +203,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
         });
       }
     }
-  }, [activeProject.id, queries, groupBy, queryType, breakdownTypeData]);
+  }, [activeProject.id, queries, groupBy, queryType, breakdownTypeData, dateRange]);
 
   const runFunnelQuery = useCallback(async (isQuerySaved) => {
     try {
@@ -211,7 +213,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
       setAppliedQueries(queries.map(elem => elem.label));
       updateAppliedBreakdown();
       updateFunnelResult({ ...initialState, loading: true });
-      const query = getFunnelQuery(groupBy, queries);
+      const query = getFunnelQuery(groupBy, queries, dateRange);
       updateRequestQuery(query);
       const res = await getFunnelData(activeProject.id, query);
       if (res.status === 200) {
@@ -223,7 +225,27 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
       console.log(err);
       updateFunnelResult({ ...initialState, error: true });
     }
-  }, [queries, updateAppliedBreakdown, activeProject.id, groupBy]);
+  }, [queries, updateAppliedBreakdown, activeProject.id, groupBy, dateRange]);
+
+  const handleDurationChange = useCallback((dates) => {
+    if (dates && dates.selected) {
+      setQueryOptions(currState => {
+        return {
+          ...currState,
+          date_range: {
+            ...currState.date_range,
+            from: dates.selected.startDate,
+            to: dates.selected.endDate
+          }
+        };
+      });
+      if (queryType === 'funnel') {
+        runFunnelQuery(false);
+      } else {
+        runQuery('0', true);
+      }
+    }
+  }, [queryType, runFunnelQuery, runQuery]);
 
   useEffect(() => {
     if (rowClicked) {
@@ -301,6 +323,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
       setShowResult={setShowResult}
       querySaved={querySaved}
       setQuerySaved={setQuerySaved}
+      durationObj={queryOptions.date_range}
+      handleDurationChange={handleDurationChange}
     />
   );
 
@@ -317,6 +341,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
         setShowResult={setShowResult}
         querySaved={querySaved}
         setQuerySaved={setQuerySaved}
+        durationObj={queryOptions.date_range}
+        handleDurationChange={handleDurationChange}
       />
     );
   }
