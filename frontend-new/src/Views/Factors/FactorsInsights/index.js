@@ -9,6 +9,10 @@ import _ from 'lodash';
 
 const { TabPane } = Tabs;
 
+function numberWithCommas(x) {
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
 const MoreInsightsLines = ({ insightCount, onClick }) => {
   return (
         <div className="fa-insight-item--more cursor-pointer" onClick={onClick}>
@@ -27,7 +31,7 @@ const InsightHighlightItem = ({ data }) => {
                         <div className={'relative border-left--thin-2 m-0 pl-16 py-2'}>
                             <div className={'w-full'}>
                             <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{data.goal?.st_en}</Text>
-                            <Progress percent={100} strokeColor={'#5949BC'} showInfo={false} />
+                            <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
 
                             <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'} >{data.overall_percentage_text}</Text>
 
@@ -37,12 +41,12 @@ const InsightHighlightItem = ({ data }) => {
 
                             <div className={'fa-insights-box--highlight'}>
                                 <div className={'flex justify-between items-end flex-col h-full'}>
-                                    <Text type={'title'} level={5} color={'blue'} weight={'bold'} extraClass={'m-0'} >{data.total_users_count}</Text>
+                                    <Text type={'title'} level={5} color={'blue'} weight={'bold'} extraClass={'m-0'} >{numberWithCommas(data.total_users_count)}</Text>
                                     <div className={'flex flex-col items-center justify-center '}>
                                         <Text type={'title'} level={4} color={'grey'} weight={'bold'} extraClass={'m-0'} >{`${data.overall_multiplier}x`}</Text>
                                         <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Impact</Text>
                                     </div>
-                                    <Text type={'title'} level={5} color={'yellow'} weight={'bold'} extraClass={'m-0'} >{data.goal_user_count}</Text>
+                                    <Text type={'title'} level={5} color={'yellow'} weight={'bold'} extraClass={'m-0'} >{numberWithCommas(data.goal_user_count)}</Text>
                                 </div>
                             </div>
                         </div>
@@ -88,13 +92,13 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
 
                                 <div className={'mt-8 w-9/12'}>
                                   <div className={'flex items-end'}>
-                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{dataItem.factors_insights_users_count}</Text></a> </div>
+                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div>
                                     <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKey}</Text></div>
                                   </div>
-                                  <Progress percent={100} strokeColor={'#5949BC'} showInfo={false} />
+                                  <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
 
                                   <div className={'flex items-end'}>
-                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2'} >{`${dataItem.factors_goal_users_count}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
+                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
                                     <div className={'flex items-center ml-4 fa-insights-box--animate'}><SVG name={'arrowdown'} size={12} color={'grey'} /><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
                                   </div>
                                   <Progress percent={dataItem.factors_insights_percentage} strokeColor={'#F9C06E'} showInfo={false} />
@@ -142,13 +146,13 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
 
                                     <div className={'mt-8 w-9/12'}>
                                   <div className={'flex items-end'}>
-                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{dataItem.factors_insights_users_count}</Text></a> </div>
+                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div>
                                     <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKey}</Text></div>
                                   </div>
-                                  <Progress percent={100} strokeColor={'#5949BC'} showInfo={false} />
+                                  <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
 
                                   <div className={'flex items-end'}>
-                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2'} >{`${dataItem.factors_goal_users_count}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
+                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
                                     <div className={'flex items-center ml-4 fa-insights-box--animate'}><SVG name={'arrowdown'} size={12} color={'grey'} /><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
                                   </div>
                                   <Progress percent={dataItem.factors_insights_percentage} strokeColor={'#F9C06E'} showInfo={false} />
@@ -201,13 +205,13 @@ const InsightItem = ({
 
                                   <div className={'mt-8 w-9/12'}>
                                   <div className={'flex items-end'}>
-                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{dataItem.factors_insights_users_count}</Text></a> </div>
+                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div>
                                     <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKey}</Text></div>
                                   </div>
-                                  <Progress percent={100} strokeColor={'#5949BC'} showInfo={false} />
+                                  <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
 
                                   <div className={'flex items-end'}>
-                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2'} >{`${dataItem.factors_goal_users_count}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
+                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
                                     <div className={'flex items-center ml-4 fa-insights-box--animate'}><SVG name={'arrowdown'} size={12} color={'grey'} /><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${data?.goal?.en_en} (${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
                                   </div>
                                   <Progress percent={dataItem.factors_insights_percentage} strokeColor={'#F9C06E'} showInfo={false} />

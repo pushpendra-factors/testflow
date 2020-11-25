@@ -1,3 +1,4 @@
+
 .fa-insights-box--spike
 {
     position: absolute;
@@ -97,4 +98,18 @@
         margin-bottom:10px;
     }
     margin-bottom:10px;
+}
+.fa-custom-stroke-bg
+{
+    .ant-progress-inner
+    {
+        .ant-progress-bg
+        {
+            background-color: transparent !important;
+            background-image: url('../assets/images/progress-bar-fill-pattern-1.png') !important;
+            background-repeat: no-repeat !important;
+            background-size: cover !important;
+
+        }
+    }
 }
