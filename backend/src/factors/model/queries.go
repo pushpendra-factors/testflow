@@ -131,14 +131,18 @@ func getQueryWithQueryId(projectID uint64, queryID uint64, queryType int) (*Quer
 	if err != nil {
 		return &Queries{}, http.StatusNotFound
 	}
-	q, errCode := addCreatedByNameInQuery(query)
-	if errCode != http.StatusFound {
-		// cccccccc
-		log.WithField("project_id", projectID).Error("could not update created " +
-			"by name for queries")
-		return &query, http.StatusFound
+
+	if queryType == QueryTypeSavedQuery {
+		q, errCode := addCreatedByNameInQuery(query)
+		if errCode != http.StatusFound {
+			// logging error but still sending the queries
+			log.WithField("project_id", projectID).WithField("query_id",
+				queryID).Error("could not update created by name for queries")
+			return &query, http.StatusFound
+		}
+		return &q, http.StatusFound
 	}
-	return &q, http.StatusFound
+	return &query, http.StatusFound
 }
 
 func GetQueryForProjectByQueryId(projectID uint64, queryID uint64) (*Queries, int) {
