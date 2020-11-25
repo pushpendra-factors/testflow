@@ -71,9 +71,9 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
     setAppliedBreakdown(newAppliedBreakdown);
   }, [groupBy]);
 
-  const callRunQueryApiService = useCallback(async (activeProjectId, activeTab) => {
+  const callRunQueryApiService = useCallback(async (activeProjectId, activeTab, appliedDateRange) => {
     try {
-      const query = getQuery(activeTab, queryType, groupBy, queries, breakdownType, dateRange);
+      const query = getQuery(activeTab, queryType, groupBy, queries, breakdownType, appliedDateRange);
       updateRequestQuery(query);
       const res = await runQueryService(activeProjectId, query);
       if (res.status === 200 && !hasApiFailed(res)) {
@@ -92,7 +92,10 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
     }
   }, [updateResultState, queryType, groupBy, queries, dateRange, breakdownType]);
 
-  const runQuery = useCallback(async (activeTab, refresh = false, isQuerySaved = false) => {
+  const runQuery = useCallback(async (activeTab, refresh = false, isQuerySaved = false, appliedDateRange) => {
+    if(!appliedDateRange) {
+      appliedDateRange = dateRange
+    }
     setActiveKey(activeTab);
     setBreakdownType('each');
 
@@ -107,15 +110,15 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
         let activeUsersData = null; let userData = null; let sessionData = null;
 
         if (resultState[1].data) {
-          const res = await callRunQueryApiService(activeProject.id, '2');
+          const res = await callRunQueryApiService(activeProject.id, '2', appliedDateRange);
           userData = resultState[1].data;
           if (res) {
             sessionData = res.result_group[0];
           }
         } else {
           // combine these two and make one query group to get both session and user data
-          const res1 = await callRunQueryApiService(activeProject.id, '1');
-          const res2 = await callRunQueryApiService(activeProject.id, '2');
+          const res1 = await callRunQueryApiService(activeProject.id, '1', appliedDateRange);
+          const res2 = await callRunQueryApiService(activeProject.id, '2', appliedDateRange);
           if (res1 && res2) {
             userData = formatApiData(res1.result_group[0], res1.result_group[1]);
             sessionData = res2.result_group[0];
@@ -137,7 +140,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
           userData = resultState[1].data;
         } else {
           updateResultState(activeTab, { loading: true, error: false, data: null });
-          const res = await callRunQueryApiService(activeProject.id, '1');
+          const res = await callRunQueryApiService(activeProject.id, '1', appliedDateRange);
           if (res) {
             userData = formatApiData(res.result_group[0], res.result_group[1]);
           }
@@ -166,7 +169,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
     }
 
     updateResultState(activeTab, { loading: true, error: false, data: null });
-    callRunQueryApiService(activeProject.id, activeTab);
+    callRunQueryApiService(activeProject.id, activeTab, appliedDateRange);
   }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService, updateAppliedBreakdown, appliedBreakdown]);
 
   const handleBreakdownTypeChange = useCallback(async (e) => {
@@ -205,15 +208,18 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
     }
   }, [activeProject.id, queries, groupBy, queryType, breakdownTypeData, dateRange]);
 
-  const runFunnelQuery = useCallback(async (isQuerySaved) => {
+  const runFunnelQuery = useCallback(async (isQuerySaved, appliedDateRange) => {
     try {
+      if(!appliedDateRange) {
+        appliedDateRange = dateRange
+      }
       closeDrawer();
       setShowResult(true);
       setQuerySaved(isQuerySaved);
       setAppliedQueries(queries.map(elem => elem.label));
       updateAppliedBreakdown();
       updateFunnelResult({ ...initialState, loading: true });
-      const query = getFunnelQuery(groupBy, queries, dateRange);
+      const query = getFunnelQuery(groupBy, queries, appliedDateRange);
       updateRequestQuery(query);
       const res = await getFunnelData(activeProject.id, query);
       if (res.status === 200) {
@@ -239,13 +245,19 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
           }
         };
       });
+      const appliedDateRange = {
+        ...queryOptions.date_range,
+        from: dates.selected.startDate,
+        to: dates.selected.endDate
+      }
+      
       if (queryType === 'funnel') {
-        runFunnelQuery(false);
+        runFunnelQuery(querySaved, appliedDateRange);
       } else {
-        runQuery('0', true);
+        runQuery('0', true, querySaved, appliedDateRange);
       }
     }
-  }, [queryType, runFunnelQuery, runQuery]);
+  }, [queryType, runFunnelQuery, runQuery, querySaved]);
 
   useEffect(() => {
     if (rowClicked) {
