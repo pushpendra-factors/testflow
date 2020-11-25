@@ -9,6 +9,15 @@ import _ from 'lodash';
 
 const { TabPane } = Tabs;
 
+const MoreInsightsLines = ({ insightCount, onClick }) => {
+  return (
+        <div className="fa-insight-item--more cursor-pointer" onClick={onClick}>
+            <Text type={'title'} weight={'thin'} color={'grey'} align={'center'} level={7} extraClass={'m-0 cursor-pointer'} >{insightCount ? `+${insightCount} More Insights` : '++ More Insights'}</Text>
+            <div className={'relative border-bottom--thin-2'}/>
+            <div className={'relative border-bottom--thin-2'}/>
+        </div>
+  );
+};
 const InsightHighlightItem = ({ data }) => {
   if (data) {
     return (
@@ -30,7 +39,7 @@ const InsightHighlightItem = ({ data }) => {
                                 <div className={'flex justify-between items-end flex-col h-full'}>
                                     <Text type={'title'} level={5} color={'blue'} weight={'bold'} extraClass={'m-0'} >{data.total_users_count}</Text>
                                     <div className={'flex flex-col items-center justify-center '}>
-                                        <Text type={'title'} level={4} color={'grey'} weight={'bold'} extraClass={'m-0'} >1x</Text>
+                                        <Text type={'title'} level={4} color={'grey'} weight={'bold'} extraClass={'m-0'} >{`${data.overall_multiplier}x`}</Text>
                                         <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Impact</Text>
                                     </div>
                                     <Text type={'title'} level={5} color={'yellow'} weight={'bold'} extraClass={'m-0'} >{data.goal_user_count}</Text>
@@ -45,6 +54,7 @@ const InsightHighlightItem = ({ data }) => {
   } else return null;
 };
 const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
+  const [SubLevel2Data, SetSubLevel2Data] = useState(null);
   if (SubInsightsData) {
     return (
         <Modal
@@ -56,14 +66,15 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
         footer={null}
         title={null}
       >
-      {SubInsightsData.map((dataItem, index) => {
+
+      {!SubLevel2Data && SubInsightsData.map((dataItem, index) => {
         return (
             <Row key={index} gutter={[0, 0]} justify={'center'}>
             <Col span={22}>
               <div className={'relative border-bottom--thin'}>
                     <Row gutter={[0, 0]} justify={'center'}>
                         <Col span={24}>
-                            <div className={'relative border-left--thin-2 m-0 pl-10 py-6'}>
+                            <div className={'relative border-left--thin-2 m-0 pl-10 py-6 cursor-pointer'} onClick={() => { SetSubLevel2Data(dataItem.factors_sub_insights); }}>
                                 <Text type={'title'} level={4} extraClass={'m-0'} >{dataItem.factors_insights_text}</Text>
                                 <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
 
@@ -83,12 +94,56 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
                             </div>
                         </Col>
                     </Row>
-                  </div>
+                    {dataItem?.factors_sub_insights && <MoreInsightsLines onClick={() => SetSubLevel2Data(dataItem.factors_sub_insights)} insightCount={dataItem?.factors_sub_insights.length} /> }
+                </div>
                 </Col>
             </Row>
-
         );
       })}
+      {SubLevel2Data &&
+      <>
+          <Row gutter={[0, 0]} justify={'center'}>
+            <Col span={24}>
+                <div className={'w-full p-4 background-color--brand-color-1'}>
+                    <Button ghost type={'text'} onClick={() => { SetSubLevel2Data(false); }}>Back</Button>
+                </div>
+            </Col>
+        </Row>
+          {SubLevel2Data.map((dataItem, index) => {
+            return (
+                <Row key={index} gutter={[0, 0]} justify={'center'}>
+                <Col span={22}>
+                  <div className={'relative border-bottom--thin'}>
+                        <Row gutter={[0, 0]} justify={'center'}>
+                            <Col span={24}>
+                                <div className={'relative border-left--thin-2 m-0 pl-10 py-6'}>
+                                    <Text type={'title'} level={4} extraClass={'m-0'} >{dataItem.factors_insights_text}</Text>
+                                    <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
+
+                                    <div className={'mt-8 w-9/12'}>
+                                    <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{dataItem.factors_insights_users_count}</Text>
+                                    <Progress percent={100} strokeColor={'#5949BC'} showInfo={false} />
+
+                                    <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2'} >{`${dataItem.factors_goal_users_count} (${dataItem.factors_insights_percentage}% goal completion)`}</Text>
+                                    <Progress percent={dataItem.factors_insights_percentage} strokeColor={'#F9C06E'} showInfo={false} />
+                                    </div>
+
+                                    <div className={'fa-sub-insights-box--spike'}>
+                                        <div className={'flex justify-end items-center'}>
+                                            {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
+                                        </div>
+                                    </div>
+                                </div>
+                            </Col>
+                        </Row>
+                        {dataItem?.factors_sub_insights && <MoreInsightsLines insightCount={dataItem?.factors_sub_insights.length} /> }
+                      </div>
+                    </Col>
+                </Row>
+            );
+          })}
+      </>
+      }
 
       </Modal>
 
@@ -109,7 +164,7 @@ const InsightItem = ({
           insightKey = dataItem.factors_insights_key;
         }
         return (
-                  <div key={index} className={'relative border-bottom--thin'}>
+                  <div key={index} className={'relative border-bottom--thin-2'}>
                       <Row gutter={[0, 0]} justify={'center'}>
                           <Col span={16}>
                               <div className={'relative border-left--thin-2 m-0 pl-16 py-8 cursor-pointer fa-insight-item'} onClick={() => { showSubInsightsData(dataItem.factors_sub_insights); }}>
@@ -133,7 +188,7 @@ const InsightItem = ({
                                   </div>
 
                                   {dataItem?.factors_sub_insights?.length > 0 && <div className={'fa-insights-box--actions'}>
-                                    <Button size={'large'}>
+                                    <Button type={'link'} size={'large'}>
                                         <SVG name={'corequery'} size={24} color={'grey'} />
                                     </Button>
                                   </div>
@@ -149,6 +204,7 @@ const InsightItem = ({
                               </div>
                           </Col>
                       </Row>
+                      {dataItem?.factors_sub_insights && <MoreInsightsLines onClick={() => showSubInsightsData(dataItem.factors_sub_insights)} insightCount={dataItem?.factors_sub_insights.length} /> }
                   </div>
         );
       }
