@@ -93,8 +93,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
   }, [updateResultState, queryType, groupBy, queries, dateRange, breakdownType]);
 
   const runQuery = useCallback(async (activeTab, refresh = false, isQuerySaved = false, appliedDateRange) => {
-    if(!appliedDateRange) {
-      appliedDateRange = dateRange
+    if (!appliedDateRange) {
+      appliedDateRange = dateRange;
     }
     setActiveKey(activeTab);
     setBreakdownType('each');
@@ -210,8 +210,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
 
   const runFunnelQuery = useCallback(async (isQuerySaved, appliedDateRange) => {
     try {
-      if(!appliedDateRange) {
-        appliedDateRange = dateRange
+      if (!appliedDateRange) {
+        appliedDateRange = dateRange;
       }
       closeDrawer();
       setShowResult(true);
@@ -249,8 +249,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
         ...queryOptions.date_range,
         from: dates.selected.startDate,
         to: dates.selected.endDate
-      }
-      
+      };
+
       if (queryType === 'funnel') {
         runFunnelQuery(querySaved, appliedDateRange);
       } else {

@@ -44,16 +44,16 @@ function WidgetCard({
               ...elem,
               fr: moment(durationObj.from).startOf('day').utc().unix(),
               to: moment(durationObj.to).startOf('day').utc().unix()
-            }
-          })
+            };
+          });
         } else {
           queryGroup = queryGroup.map(elem => {
             return {
               ...elem,
               fr: moment().startOf('week').utc().unix(),
               to: moment().utc().unix()
-            }
-          })
+            };
+          });
         }
         if (refresh) {
           res = await runQuery(active_project.id, queryGroup);
@@ -81,13 +81,13 @@ function WidgetCard({
             ...funnelQuery,
             fr: moment(durationObj.from).startOf('day').utc().unix(),
             to: moment(durationObj.to).startOf('day').utc().unix()
-          }
+          };
         } else {
           funnelQuery = {
             ...funnelQuery,
             fr: moment().startOf('week').utc().unix(),
             to: moment().utc().unix()
-          }
+          };
         }
         if (refresh) {
           res = await getFunnelData(active_project.id, funnelQuery);
