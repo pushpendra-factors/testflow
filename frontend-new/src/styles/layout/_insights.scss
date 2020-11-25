@@ -52,9 +52,21 @@
     opacity: 0;
     transform: translate3d(0, -10%, 0);
 }
+.fa-insights-box--fixed-count{ 
+    span{
+
+        // display: none;
+    }
+}
 
 .fa-insight-item{ 
     &:hover{
+        .fa-insights-box--fixed-count{ 
+            width: 50px;
+            span{
+                display: none;
+            }
+        }
         .fa-insights-box--actions,.fa-insights-box--type,.fa-insights-box--animate
         {
             opacity: 1;
