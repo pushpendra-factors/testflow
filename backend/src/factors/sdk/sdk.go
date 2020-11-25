@@ -1377,7 +1377,7 @@ func UpdateEventProperties(projectId uint64,
 
 	event, errCode := M.GetEventById(projectId, request.EventId)
 	if errCode == http.StatusNotFound && request.Timestamp > U.UnixTimeBeforeDuration(time.Hour*5) {
-		logCtx.Error("Failed old update event properties request with unavailable event_id permanently.")
+		logCtx.Warn("Failed old update event properties request with unavailable event_id permanently.")
 		return http.StatusBadRequest, &UpdateEventPropertiesResponse{
 			Error: "Update event properties failed permanantly."}
 	}

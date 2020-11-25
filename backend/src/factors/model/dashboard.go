@@ -126,7 +126,7 @@ func GetDashboard(projectId uint64, agentUUID string, id uint64) (*Dashboard, in
 
 	if err := db.Where("project_id = ? AND id = ? AND (type = ? OR agent_uuid = ?)", projectId, id,
 		DashboardTypeProjectVisible, agentUUID).First(&dashboard).Error; err != nil {
-		logCtx.WithError(err).Error(
+		logCtx.WithError(err).WithField("dashboardID", id).Error(
 			"Getting dashboard failed in GetDashboard")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound

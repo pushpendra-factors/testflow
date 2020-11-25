@@ -976,7 +976,7 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 				validatedProperties[k] = v
 			}
 		} else {
-			log.WithError(err).Errorf("Invalid type for property %s with value %v", k, v)
+			log.WithError(err).Warnf("Invalid type for property %s with value %v", k, v)
 		}
 	}
 	return &validatedProperties

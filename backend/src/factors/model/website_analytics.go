@@ -263,7 +263,8 @@ func getWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *WebAna
 
 		queryMap, err := U.DecodePostgresJsonb(&savedQuery.Query)
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to decode web analytics dashboard unit query.")
+			logCtx.WithError(err).WithField("unidID", dunit.ID).
+				Error("Failed to decode web analytics dashboard unit query.")
 			continue
 		}
 

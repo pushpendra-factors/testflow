@@ -965,7 +965,7 @@ func FilterEventNameByEventURL(projectId uint64, eventURL string) (*EventName, i
 
 	parsedEventURL, err := U.ParseURLStable(eventURL)
 	if err != nil {
-		log.WithFields(log.Fields{"event_url": eventURL}).WithError(err).Error(
+		log.WithFields(log.Fields{"event_url": eventURL}).WithError(err).Warn(
 			"Failed parsing event_url.")
 		return nil, http.StatusBadRequest
 	}

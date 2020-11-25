@@ -305,7 +305,6 @@ func getDealUserId(projectId uint64, deal *Deal) string {
 	}
 
 	if len(contactIds) == 0 {
-		logCtx.Error("Failed to get deal user. No contact associated to deal.")
 		return ""
 	}
 

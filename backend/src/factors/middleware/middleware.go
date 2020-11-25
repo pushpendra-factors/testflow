@@ -80,8 +80,6 @@ func SetScopeProjectToken() gin.HandlerFunc {
 		token = strings.TrimSpace(token)
 		if token == "" {
 			errorMessage := "Missing authorization header"
-			log.WithFields(log.Fields{"error": errorMessage}).Error(
-				"Failed to get project token on set scope sdk project token.")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
 			return
 		}
