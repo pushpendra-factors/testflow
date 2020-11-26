@@ -48,6 +48,13 @@
         border-top-left-radius: 12px; 
     }
 }
+.fa-modal-body--no-padding
+{
+    .ant-modal-body
+    {
+        padding: 0;
+    }
+}
 
 //global
 .ant-modal-close{

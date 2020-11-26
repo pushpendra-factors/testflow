@@ -9,6 +9,7 @@ import _ from 'lodash';
 import InsightHighlightItem from './InsightHighlightItem';
 import SubInsightItem from './SubInsightItem';
 import InsightItem from './InsightItem';
+import HeaderContents from './HeaderContents';
 
 const { TabPane } = Tabs;
 
@@ -32,6 +33,8 @@ const FactorsInsights = ({ fetchGoalInsights, activeProject, goal_insights }) =>
 
   return (
     <>
+            <HeaderContents />
+
            <div className={'fa-container mt-24'}>
                 <Row gutter={[24, 24]}>
                     <Col span={24}>

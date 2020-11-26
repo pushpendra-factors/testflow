@@ -22,11 +22,15 @@ const InsightItem = ({
         } else {
           insightKey = dataItem.factors_insights_key;
         }
+
+        const insightLevel1Percentage = (dataItem.factors_goal_users_count / dataItem.factors_insights_users_count) * 100;
         return (
                   <div key={index} className={'relative border-bottom--thin-2 fa-insight-item--container'}>
                       <Row gutter={[0, 0]} justify={'center'}>
                           <Col span={16}>
-                              <div className={'relative border-left--thin-2 m-0 pl-16 py-8 cursor-pointer fa-insight-item'} onClick={() => { showSubInsightsData(dataItem.factors_sub_insights); }}>
+                              <div className={'relative border-left--thin-2 m-0 pl-16 py-8 cursor-pointer fa-insight-item'} onClick={() => {
+                                showSubInsightsData(dataItem);
+                              }}>
                                  {displayType && <Text type={'paragraph'} mini color={'grey'} weight={'bold'} extraClass={'uppercase fa-insights-box--type'} >{type}</Text>}
                                   <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0 pr-2'} >{dataItem.factors_insights_text}</Text>
                                     {!_.isEmpty(dataItem.factors_higher_completion_text) && <Text type={'title'} level={6} color={'grey'} extraClass={'mt-4'} >{dataItem.factors_higher_completion_text}</Text>}
@@ -43,7 +47,7 @@ const InsightItem = ({
                                     <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
                                     <div className={'flex items-center ml-4 fa-insights-box--animate'}><SVG name={'arrowdown'} size={12} color={'grey'} /><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${data?.goal?.en_en} (${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
                                   </div>
-                                  <Progress percent={dataItem.factors_insights_percentage} strokeColor={'#F9C06E'} showInfo={false} />
+                                  <Progress percent={insightLevel1Percentage} strokeColor={'#F9C06E'} showInfo={false} />
                                   </div>
 
                                   {dataItem?.factors_sub_insights?.length > 0 && <div className={'fa-insights-box--actions'}>
