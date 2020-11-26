@@ -21,7 +21,7 @@ const ModalHeader = (SubInsightsData,handleClose) => {
           }
 
     return (
-      <div className={'flex justify-between items-center'}>
+      <div className={'flex justify-between items-center px-4 py-3'}>
         <div className={'flex flex-col'}> 
          <Text type={'title'} level={7} weight={'bold'} color={'grey'} extraClass={'ml-2 m-0 capitalize'}>{SubInsightsData.factors_insights_type}</Text>
          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{insightKey}</Text>
@@ -42,7 +42,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
   if (SubInsightsData) { 
     return (
           <Modal
-          className={'fa-modal--regular fa-modal-body--no-padding'}
+          className={'fa-modal--regular fa-modal-body--no-padding fa-modal-header--no-padding'}
           visible={showModal}
           onOk={handleClose}
           title={ModalHeader(SubInsightsData,handleClose)}
@@ -54,7 +54,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
             SetSubLevel1Data(null);
           }
           }
-          width={750}
+          width={900}
           footer={null} 
         >
         
@@ -138,12 +138,12 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
         <>
             <Row gutter={[0, 0]} justify={'center'}>
               <Col span={24}>
-                  <div className={'w-full p-4 background-color--brand-color-1 flex items-center'}>  
+                  <div className={'w-full px-4 py-2 background-color--brand-color-1 flex items-center'}>  
                       <Button className={'fa-button-ghost'} type={'text'} onClick={() => { SetSubLevel2Data(false); }}><SVG name={'doubleArrowLeft'} size={16} color={"#8692A3"} extraClass={'mr-2'}/> Back</Button>
                   </div>
               </Col>
           </Row>
-          <div className={'fa-modal-body--custom-scrollable'}>
+          <div className={'fa-modal-body--custom-scrollable fa-modal-body--custom-scrollable-1'}>
             {SubLevel2Data?.factors_sub_insights?.map((dataItem, index) => {
               let insightKeyLevel1 = '';
               if (_.isEmpty(SubLevel1Data.factors_insights_key)) {
