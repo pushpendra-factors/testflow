@@ -48,6 +48,11 @@
         border-top-left-radius: 12px; 
     }
 }
+.fa-modal-header--no-padding{
+    .ant-modal-header{
+        padding: 0;
+    }
+}
 .fa-modal-body--no-padding
 {
     .ant-modal-body
@@ -57,10 +62,15 @@
 }
 .fa-modal-body--custom-scrollable
 { 
-    max-height: 72vh;
+    max-height: 80vh;
     overflow-x: hidden;
     overflow-y: auto;
     padding-bottom: 5em;
+    
+}
+.fa-modal-body--custom-scrollable-1
+{ 
+    max-height: calc(80vh - 48px); 
     
 }
 
