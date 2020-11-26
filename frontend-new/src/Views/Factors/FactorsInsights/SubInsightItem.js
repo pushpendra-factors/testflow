@@ -47,6 +47,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
           onOk={handleClose}
           title={ModalHeader(SubInsightsData,handleClose)}
           closable={false}
+          style={{ top: 30 }}
           onCancel={() => {
             handleClose();
             SetSubLevel2Data(null);
@@ -56,8 +57,9 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
           width={750}
           footer={null} 
         >
-
-        {!SubLevel2Data && SubInsightsData.factors_sub_insights.map((dataItem, index) => {
+        
+        {!SubLevel2Data && <div className={'fa-modal-body--custom-scrollable'}>
+         { SubInsightsData.factors_sub_insights.map((dataItem, index) => {
 
           let insightKeyLevel1 = '';
           if (_.isEmpty(SubInsightsData.factors_insights_key)) {
@@ -129,6 +131,9 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
               </Row>
           );
         })}
+        </div>
+  }
+        
         {SubLevel2Data &&
         <>
             <Row gutter={[0, 0]} justify={'center'}>
@@ -138,6 +143,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
                   </div>
               </Col>
           </Row>
+          <div className={'fa-modal-body--custom-scrollable'}>
             {SubLevel2Data?.factors_sub_insights?.map((dataItem, index) => {
               let insightKeyLevel1 = '';
               if (_.isEmpty(SubLevel1Data.factors_insights_key)) {
@@ -216,6 +222,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
                   </Row>
               );
             })}
+            </div>
         </>
         }
 
