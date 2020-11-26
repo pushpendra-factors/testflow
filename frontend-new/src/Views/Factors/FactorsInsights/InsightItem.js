@@ -29,7 +29,9 @@ const InsightItem = ({
                       <Row gutter={[0, 0]} justify={'center'}>
                           <Col span={16}>
                               <div className={'relative border-left--thin-2 m-0 pl-16 py-8 cursor-pointer fa-insight-item'} onClick={() => {
-                                showSubInsightsData(dataItem);
+                                  if(dataItem?.factors_sub_insights){
+                                      showSubInsightsData(dataItem); 
+                                  }
                               }}>
                                  {displayType && <Text type={'paragraph'} mini color={'grey'} weight={'bold'} extraClass={'uppercase fa-insights-box--type'} >{type}</Text>}
                                   <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0 pr-2'} >{dataItem.factors_insights_text}</Text>

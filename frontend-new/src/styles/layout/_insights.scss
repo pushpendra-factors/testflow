@@ -72,7 +72,11 @@
         box-shadow: 0 10px 10px -10px $fa-color--mono-2;  
     }
 }
-.fa-insight-item{ 
+
+.fa-insight-item{
+    animation-name: fa-fadeInDown; 
+    animation-duration: 0.3s;
+
     &:hover{ 
         .fa-insights-box--fixed-count{ 
             width: 50px;
