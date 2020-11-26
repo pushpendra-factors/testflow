@@ -150,7 +150,7 @@ const ConfigureDP = (props) => {
                             {tracked_events && tracked_events.map((event, index) => {
                               return (
                                     <div key={index} className={'flex justify-between items-center mt-2'}>
-                                        <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{event.event_name_id}</Text>
+                                        <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{event.name}</Text>
                                     </div>
                               );
                             })}
