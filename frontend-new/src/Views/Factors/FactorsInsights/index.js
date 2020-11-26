@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Tabs, Row, Col
+  Tabs, Row, Col, Spin
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { fetchGoalInsights } from 'Reducers/factors';
@@ -33,6 +33,8 @@ const FactorsInsights = ({ fetchGoalInsights, activeProject, goal_insights }) =>
 
   return (
     <>
+           {!goal_insights ? <Spin size={'large'} className={'fa-page-loader'} /> :  <> 
+            
             <HeaderContents />
 
            <div className={'fa-container mt-24'}>
@@ -78,6 +80,8 @@ const FactorsInsights = ({ fetchGoalInsights, activeProject, goal_insights }) =>
                 <SubInsightItem showModal={showModal} SubInsightsData={SubInsightsData} handleClose={handleClose} />
 
             </div>
+            </>
+           }
 
     </>
   );
