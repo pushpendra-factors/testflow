@@ -122,7 +122,7 @@ function QueryComposer({
           <Collapse bordered={false} expandIcon={() => { }} expandIconPosition={'right'}>
             <Panel header={<div className={'flex justify-between items-center'}>
               <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 mb-2 inline'}>More options</Text>
-              <SVG name="plus" />
+              <SVG name="plus" color={'grey'} />
             </div>
             }>
               <div className={'flex justify-start items-center'}>
@@ -243,9 +243,9 @@ function QueryComposer({
               />}
             onVisibleChange={(visible) => setDateRangeVisibile(visible)}
           >
-            <Button><SVG name={'calendar'} extraClass={'mr-1'} /> {calendarLabel} </Button>
+            <Button size={'large'}><SVG name={'calendar'} extraClass={'mr-1'} /> {calendarLabel} </Button>
           </Popover>
-          <Button type="primary" onClick={handleRunQuery}>Run Query</Button>
+          <Button size={'large'}type="primary" onClick={handleRunQuery}>Run Query</Button>
         </div>
       );
     }
