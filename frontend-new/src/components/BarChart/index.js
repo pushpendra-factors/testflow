@@ -121,6 +121,13 @@ function BarChart({ chartData, queries, title = 'chart' }) {
       .on('mouseout', () => {
         hideTooltip();
       });
+    // g.selectAll(".bar")
+    //   .transition()
+    //   .duration(500)
+    //   .attr("y", function (d) { console.log(yScale(d.value)); return yScale(d.value); })
+    //   .attr("height", function (d) { return height - yScale(d.value); })
+    //   .delay(function (d, i) { console.log(i); return (i * 1000) })
+
     d3.select(chartRef.current).select('.axis.axis--x').selectAll('.tick').select('text').attr('dy', '16px');
   }, [chartData, showTooltip, hideTooltip, title]);
 
