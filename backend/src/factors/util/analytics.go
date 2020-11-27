@@ -66,6 +66,62 @@ func GetAllDatesAsTimestamp(fromUnix int64, toUnix int64, timezone string) []tim
 	return rTimestamps
 }
 
+// GetAllMonthsAsTimestamp buckets the days into start of weeks i.e.
+// returns list of Sundays for from to to
+func GetAllMonthsAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
+	rTimestamps := make([]time.Time, 0, 0)
+
+	from, err := getTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	if err != nil {
+		return rTimestamps
+	}
+	from = now.New(from).BeginningOfMonth()
+
+	to, err := getTimeFromUnixTimestampWithZone(toUnix, timezone)
+	if err != nil {
+		return rTimestamps
+	}
+	to = now.New(to).BeginningOfMonth()
+
+	toStr := GetTimestampAsStrWithTimezone(to, timezone)
+	for t, tStr := from, ""; tStr != toStr; {
+		tStr = GetTimestampAsStrWithTimezone(t, timezone)
+		rTimestamps = append(rTimestamps, t)
+		// get the some date in next month, here it can be 4th, 5th, or 6th
+		t = t.AddDate(0, 0, 35) // next week.
+		t = now.New(t).BeginningOfMonth()
+	}
+
+	return rTimestamps
+}
+
+// GetAllWeeksAsTimestamp buckets the days into start of weeks i.e.
+// returns list of Sundays for from to to
+func GetAllWeeksAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
+	rTimestamps := make([]time.Time, 0, 0)
+
+	from, err := getTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	if err != nil {
+		return rTimestamps
+	}
+	from = now.New(from).BeginningOfWeek()
+
+	to, err := getTimeFromUnixTimestampWithZone(toUnix, timezone)
+	if err != nil {
+		return rTimestamps
+	}
+	to = now.New(to).BeginningOfWeek()
+
+	toStr := GetTimestampAsStrWithTimezone(to, timezone)
+	for t, tStr := from, ""; tStr != toStr; {
+		tStr = GetTimestampAsStrWithTimezone(t, timezone)
+		rTimestamps = append(rTimestamps, t)
+		t = t.AddDate(0, 0, 7) // next week.
+	}
+
+	return rTimestamps
+}
+
 func GetAllHoursAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
 	rTimestamps := make([]time.Time, 0, 0)
 

@@ -62,7 +62,7 @@ func GetALLQueriesWithProjectId(projectID uint64) ([]Queries, int) {
 	}
 	if len(queries) == 0 {
 		log.WithField("project_id", projectID).Error("No Saved Queries found")
-		return queries, http.StatusNoContent
+		return queries, http.StatusFound
 
 	}
 	q, errCode := addCreatedByNameInQueries(queries, projectID)

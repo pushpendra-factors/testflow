@@ -211,13 +211,17 @@ var queryOps = map[string]string{
 }
 
 const (
-	GroupByTimestampHour = "hour"
-	GroupByTimestampDate = "date"
+	GroupByTimestampHour  = "hour"
+	GroupByTimestampDate  = "date"
+	GroupByTimestampWeek  = "week"
+	GroupByTimestampMonth = "month"
 )
 
 var groupByTimestampTypes = []string{
 	GroupByTimestampDate,
 	GroupByTimestampHour,
+	GroupByTimestampWeek,
+	GroupByTimestampMonth,
 }
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
@@ -753,6 +757,10 @@ func getSelectTimestampByType(timestampType, timezone string) string {
 	var selectStr string
 	if timestampType == GroupByTimestampHour {
 		selectStr = fmt.Sprintf("date_trunc('hour', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)
+	} else if timestampType == GroupByTimestampWeek {
+		selectStr = fmt.Sprintf("date_trunc('week', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)
+	} else if timestampType == GroupByTimestampMonth {
+		selectStr = fmt.Sprintf("date_trunc('month', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)
 	} else {
 		// defaults to GroupByTimestampDate.
 		selectStr = fmt.Sprintf("date_trunc('day', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)

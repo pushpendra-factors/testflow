@@ -67,8 +67,7 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		log.WithError(err).Error(ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
-	// keeping Println debug query commented for quick debugging
-	// fmt.Println("EVENTS DEBUG QUERY ->>>>>>>>>>>>>>>>>>>>>>>>\n" + U.DBDebugPreparedStatement(stmnt, params))
+
 	logCtx := log.WithFields(log.Fields{"analytics_query": query,
 		"statement": stmnt, "params": params})
 	if stmnt == "" || len(params) == 0 {
@@ -442,6 +441,13 @@ func getAllTimestampsBetweenByType(from, to int64, typ, timezone string) []time.
 		return U.GetAllHoursAsTimestamp(from, to, timezone)
 	}
 
+	if typ == GroupByTimestampWeek {
+		return U.GetAllWeeksAsTimestamp(from, to, timezone)
+	}
+
+	if typ == GroupByTimestampMonth {
+		return U.GetAllMonthsAsTimestamp(from, to, timezone)
+	}
 	return []time.Time{}
 }
 
