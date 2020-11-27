@@ -90,7 +90,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
                                     SetSubLevel1Data(SubInsightsData); 
                                 }
                               }}>
-                                  <Text type={'title'} level={4} extraClass={'m-0'} >{dataItem.factors_insights_text}</Text>
+                                  <Text type={'title'} level={4} extraClass={'m-0'} > <span dangerouslySetInnerHTML={{__html: dataItem.factors_insights_text}}/> </Text>
                                   <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
                                   {!_.isEmpty(dataItem.factors_higher_completion_text) && <Text type={'title'} level={6} color={'grey'} extraClass={'mt-2'} >{dataItem.factors_higher_completion_text}</Text>}
                                   {!_.isEmpty(dataItem.factors_lower_completion_text) && <Text type={'title'} level={6} color={'grey'} extraClass={'mt-2'} >{dataItem.factors_lower_completion_text}</Text>}
@@ -177,7 +177,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
                           <Row gutter={[0, 0]} justify={'center'}>
                               <Col span={24}>
                                   <div className={'relative border-left--thin-2 m-0 pl-10 py-6 fa-insight-item'}>
-                                      <Text type={'title'} level={4} extraClass={'m-0'} >{`and then ${insightKeyLevel2} ${dataItem.factors_insights_text}`}</Text>
+                                      <Text type={'title'} level={4} extraClass={'m-0'} > <span dangerouslySetInnerHTML={{__html: `and then <a>${insightKeyLevel2}</a> ${dataItem.factors_insights_text}` }}/>  </Text>
                                       <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
 
                                       <div className={'mt-8 w-9/12'}>
