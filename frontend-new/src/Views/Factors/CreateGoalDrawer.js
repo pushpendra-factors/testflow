@@ -142,7 +142,7 @@ const [event2, setEvent2] = useState(null);
                             <GroupSelect 
                               groupedProperties={EventNames ? [
                                 {             
-                                label: 'Most Recent',
+                                label: 'MOST RECENT',
                                 icon: 'fav',
                                 values: EventNames
                                 }
@@ -200,7 +200,7 @@ const [event2, setEvent2] = useState(null);
                             <GroupSelect 
                                groupedProperties={EventNames ? [
                                 {             
-                                label: 'Most Recent',
+                                label: 'MOST RECENT',
                                 icon: 'fav',
                                 values: EventNames
                                 }
