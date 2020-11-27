@@ -70,7 +70,7 @@ function ResultTab({
   let content = null;
   let breakdownTypeContent = null;
 
-  if (resultState[index].data) {
+  if (resultState[index].data && resultState[index].data.metrics.rows.length) {
     if (!breakdown.length) {
       if (page === 'totalUsers' && queries.length > 1) {
         breakdownTypeContent = (
@@ -157,6 +157,14 @@ function ResultTab({
 				/>
       );
     }
+  }
+
+  if (resultState[index].data && !resultState[index].data.metrics.rows.length) {
+    content = (
+			<div className="flex justify-center items-center h-64">
+				No Data Found!
+			</div>
+    );
   }
 
   let durationContent = (

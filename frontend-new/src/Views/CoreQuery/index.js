@@ -13,7 +13,7 @@ import {
   initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, formatApiData, getQuery, initialState, getFunnelQuery
 } from './utils';
 
-function CoreQuery({ activeProject, deleteGroupByForEvent }) {
+function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [queryType, setQueryType] = useState('event');
   const [activeKey, setActiveKey] = useState('1');
@@ -90,7 +90,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
       updateResultState(activeTab, { loading: false, error: true, data: null });
       return null;
     }
-  }, [updateResultState, queryType, groupBy, queries, dateRange, breakdownType]);
+  }, [updateResultState, queryType, groupBy, queries, breakdownType]);
 
   const runQuery = useCallback(async (activeTab, refresh = false, isQuerySaved = false, appliedDateRange) => {
     if (!appliedDateRange) {
@@ -170,7 +170,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
 
     updateResultState(activeTab, { loading: true, error: false, data: null });
     callRunQueryApiService(activeProject.id, activeTab, appliedDateRange);
-  }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService, updateAppliedBreakdown, appliedBreakdown]);
+  }, [activeProject, dateRange, resultState, queries, updateResultState, callRunQueryApiService, updateAppliedBreakdown, appliedBreakdown]);
 
   const handleBreakdownTypeChange = useCallback(async (e) => {
     const key = e.target.value;
@@ -257,7 +257,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
         runQuery('0', true, querySaved, appliedDateRange);
       }
     }
-  }, [queryType, runFunnelQuery, runQuery, querySaved]);
+  }, [queryType, runFunnelQuery, runQuery, querySaved, queryOptions.date_range]);
 
   useEffect(() => {
     if (rowClicked) {
@@ -297,8 +297,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
   const title = () => {
     return (
       <div className={'flex justify-between items-center'}>
-        <div className={'flex'}>
-          <SVG name={queryType === 'funnel' ? 'funnels_cq' : 'events_cq'} size="24px"></SVG>
+        <div className={'flex items-center'}>
+          <SVG name={queryType === 'funnel' ? 'funnels_cq' : 'events_dashboard_cq'} size="24px"></SVG>
           <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? 'Find event funnel for' : 'Analyse Events'}</Text>
         </div>
         <div className={'flex justify-end items-center'}>
@@ -395,6 +395,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent }) {
             setQueries={setQueries}
             setQueryOptions={setExtraOptions}
             setRowClicked={setRowClicked}
+            location={location}
           />
       )}
 

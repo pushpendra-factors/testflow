@@ -156,7 +156,7 @@ export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType =
         }
       });
   }
-  query.ec = constantObj[breakdownType];
+  query.ec = activeTab === '2' ? constantObj.each : constantObj[breakdownType];
   query.tz = 'Asia/Kolkata';
   if (breakdownType === 'each') {
     if (activeTab === '2') {

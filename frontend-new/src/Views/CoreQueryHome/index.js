@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Text, SVG } from '../../components/factorsComponents';
 import {
   Row, Col, Table, Avatar, Button, Dropdown, Menu
@@ -69,7 +69,7 @@ const columns = [
   }
 ];
 
-function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, setQueryOptions }) {
+function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, setQueryOptions, location }) {
   const queriesState = useSelector(state => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
@@ -157,9 +157,18 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
     )
   };
 
-  const data = queriesState.data.map(q => {
-    return getFormattedRow(q);
-  })
+  useEffect(() => {
+    if (location.state && location.state.global_search) {
+      setQueryToState(location.state.query);
+      location.state = undefined;
+    }
+  }, [location.state, setQueryToState]);
+
+  const data = queriesState.data
+    .filter(q => parseInt(q.type) === 2)
+    .map(q => {
+      return getFormattedRow(q);
+    })
 
   return (
     <>
@@ -174,7 +183,7 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
       />
       <Header>
         <div className="w-full h-full py-4 flex flex-col justify-center items-center">
-          <SearchBar />
+          <SearchBar setQueryToState={setQueryToState} />
         </div>
       </Header>
       <div className={'fa-container mt-24'}>
