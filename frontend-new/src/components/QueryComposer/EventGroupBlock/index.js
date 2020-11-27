@@ -75,7 +75,7 @@ const EventGroupBlock = ({
 
   return (
         <div className={styles.group_block}>
-        <Button size={'large'} type="text" onClick={() => delGroupState(groupByEvent)} className={`${styles.group_block__remove} mr-1`}><SVG name="remove"></SVG></Button>
+        <Button size={'small'} type="text" onClick={() => delGroupState(groupByEvent)} className={`${styles.group_block__remove} mr-1`}><SVG name="remove"></SVG></Button>
         <span className={`${styles.group_block__prefix} ml-10`}>group by</span>
         {groupByEvent && groupByEvent.property
           ? renderGroupContent()

@@ -81,7 +81,7 @@ function GroupBlock({
     return (groupByState.global.map((opt, index) => (
       <div key={index} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
         {!isDDVisible[index] && <>
-        <Button size={'large'}
+        <Button size={'small'}
         type="text"
         onClick={() => delOption(index)}
         className={`${styles.group_block__remove} mr-2ß`}>

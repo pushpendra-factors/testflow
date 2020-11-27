@@ -40,14 +40,15 @@ export default function (state = defaultState, action) {
       const groupByState = Object.assign({}, state.groupBy);
       let gbp;
       if(groupByState[action.groupByType] && groupByState[action.groupByType][action.index]) {
-        if(groupByState[action.groupByType][action.index] === action.payload) {
-          delete groupByState[action.groupByType][action.index]
-          groupByState[action.groupByType].length -= 1;
+        const groupTypeState = [...groupByState[action.groupByType]];
+        if(groupTypeState[action.index] === action.payload) {
+          groupTypeState.splice(action.index, 1);
+          // groupTypeState.length -= 1;
         } else {
-          gbp = groupByState[action.groupByType].findIndex(i => i === state.payload)
-          gbp && delete groupByState[gbp];
-          groupByState[action.groupByType].length -= 1;
+          gbp = groupTypeState.findIndex(i => i === state.payload)
+          gbp && groupTypeState.splice(gbp, 1);
         }
+        groupByState.event = groupTypeState;
         
       }
       return { ...state, groupBy: groupByState };
