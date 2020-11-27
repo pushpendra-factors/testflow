@@ -1,9 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Drawer, Button
+  Drawer, Button, Row, Col, Select
 } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { NavLink } from 'react-router-dom';
+
+
+const { Option } = Select;
+
+const EventNames = ["$session","www.acme.com","www.acme.com/pricing","www.acme.com/product","www.acme.com/solutions","www.acme.com/product/collaboration","www.acme.com/product/analytics","www.acme.com/schedule-a-demo","www.acme.com/product/unified-dashboard","www.acme.com/resources","www.acme.com/integrations","www.acme.com/company","www.acme.com/customers","Subscribe to Newsletter Form","Schedule A Demo Form","www.acme.com/investors","www.acme.com/webinars","www.acme.com/resources/guides","www.acme.com/customers/New World","www.acme.com/resources/guides/subscription-billing-and-management-guide","www.acme.com/customers/Old World","www.acme.com/resources/downloads/infographics/saas-revenue-benchmark-first-100-customers.pdf","Discovery Call Booked","webinars.acme.com/analytics after-covid","Opportunity Created","Deal Created","Deal Lost","Deal Won"];
+
 
 const title = (props) => {
   return (
@@ -20,6 +26,39 @@ const title = (props) => {
 };
 
 const CreateGoalDrawer = (props) => {
+
+
+  const onChange = (value) => {
+    setShowDropDown(false);
+    setEvent1(value);
+    console.log(`selected ${value}`);
+  }
+  const onChangeDropDown2 = (value) => {
+    setShowDropDown2(false);
+    setEvent2(value);
+    console.log(`onChangeDropDown2 ${value}`);
+  }
+  
+  const onBlur = ()  =>{
+    console.log('blur');
+  }
+  
+  const onFocus = ()  =>{
+    console.log('focus');
+  }
+  
+  const onSearch = (val) => {
+    console.log('search:', val);
+  }
+
+const [eventCount, SetEventCount] = useState(1);
+
+const [showDropDown, setShowDropDown] = useState(false);
+const [event1, setEvent1] = useState(null);
+
+const [showDropDown2, setShowDropDown2] = useState(false);
+const [event2, setEvent2] = useState(null);
+
   return (
         <Drawer
         title={title(props)}
@@ -33,6 +72,114 @@ const CreateGoalDrawer = (props) => {
       >
 
 <div className={' fa--query_block bordered '}>
+
+          <Row gutter={[24, 4]}>
+                  <Col span={12}>
+                      <div className={`fa-dasboard-privacy--card border-radius--medium p-4 ${eventCount===1 ? 'selected': null}`} onClick={()=>SetEventCount(1)}>
+                          <div className={'flex flex-col justify-between items-start'}>  
+                                  <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Analyze a single event</Text>
+                                  <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Eg: users who joined the webinar</Text> 
+                          </div>
+                      </div>
+                  </Col>
+                  <Col span={12}>
+                      <div className={`fa-dasboard-privacy--card border-radius--medium p-4 ${eventCount===2 ? 'selected': null}`} onClick={()=>SetEventCount(2)}>
+                          <div className={'flex flex-col justify-between items-start'}>  
+                                  <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Analyze a user journey</Text>
+                                  <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Eg: Visited pricing and then signed up</Text> 
+                          </div>
+                      </div>
+                  </Col>
+          </Row>
+
+          
+          
+          <Row gutter={[24, 4]}>
+              <Col span={24}>
+                <div  className={'mt-4'}> 
+                      
+                      <div className={'flex items-center'}>
+                        {event1 &&  <>
+                        <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'} style={{height:'24px', width: '24px'}}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{1}</Text> </div> 
+                        <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>Users who</Text>
+                        {/* <Text type={'title'} level={6} weight={'bold'} color={'black'} extraClass={'m-0 ml-2'}>performed</Text> */}
+                        </>}
+                        <div className='relative' style={{height: '42px'}}>
+                          {!showDropDown && !event1 && <Button onClick={()=>setShowDropDown(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>{eventCount === 2 ? 'Add First event': 'Add an event'}</Button> }
+                          { showDropDown && <Select
+                              showSearch
+                              style={{ width: 280, position: 'absolute', top:0, left:'8px' }}
+                              placeholder="Search Events"
+                              optionFilterProp="children"
+                              onChange={onChange}
+                              onFocus={onFocus}
+                              size={'large'}
+                              onBlur={onBlur}
+                              onSearch={onSearch} 
+                              filterOption={(input, option) =>
+                                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                              }
+                            > 
+                            {EventNames.map((item,index)=>{
+                              return <Option key={index} value={item}>{item}</Option> 
+                            })}; 
+                            </Select>}
+
+                            {event1 && !showDropDown  && <Button type={'link'} size={'large'} style={{maxWidth: '220px',textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} className={'ml-2'} ellipsis onClick={()=>{
+                              setShowDropDown(true); 
+                              }} ><SVG name={'plus'} size={14} color={'grey'} extraClass={'ml-2'}/>{event1}</Button> 
+                            } 
+                        </div> 
+                      </div>
+                </div>
+              </Col>
+          </Row>
+
+          {eventCount === 2 &&
+          <Row gutter={[24, 4]}>
+              <Col span={24}>
+                <div  className={'mt-4'}> 
+                      
+                      <div className={'flex items-center'}>
+                        {event2 &&  <>
+                        <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'} style={{height:'24px', width: '24px'}}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{1}</Text> </div> 
+                        <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>And then</Text>
+                        {/* <Text type={'title'} level={6} weight={'bold'} color={'black'} extraClass={'m-0 ml-2'}>performed</Text> */}
+                        </>}
+                        <div className='relative' style={{height: '42px'}}>
+                          {!showDropDown2 && !event2 && <Button onClick={()=>setShowDropDown2(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>Add next event</Button> }
+                          { showDropDown2 && <Select
+                              showSearch
+                              style={{ width: 280, position: 'absolute', top:0, left:'8px' }}
+                              placeholder="Search Events"
+                              optionFilterProp="children"
+                              onChange={onChangeDropDown2}
+                              onFocus={onFocus}
+                              size={'large'}
+                              onBlur={onBlur}
+                              onSearch={onSearch} 
+                              filterOption={(input, option) =>
+                                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                              }
+                            > 
+                            {EventNames.map((item,index)=>{
+                              return <Option key={index} value={item}>{item}</Option> 
+                            })}; 
+                            </Select>}
+
+                            {event2 && !showDropDown2  && <Button type={'link'} size={'large'} style={{maxWidth: '220px',textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} className={'ml-2'} ellipsis onClick={()=>{
+                              setShowDropDown2(true); 
+                              }} ><SVG name={'plus'} size={14} color={'grey'} extraClass={'ml-2'}/>{event2}</Button> 
+                            } 
+                        </div> 
+                      </div>
+                </div>
+              </Col>
+          </Row>
+          }
+
+
+
     <div className={'flex flex-col justify-center items-center'} style={{ height: '300px' }}>
         <p style={{ color: '#bbb' }}>CoreQuery reusable drawer components comes here..</p>
         <p className={'mt-2'} style={{ color: '#bbb' }}>{'Click on \'Find Insights\' to view Insights page.'}</p>
