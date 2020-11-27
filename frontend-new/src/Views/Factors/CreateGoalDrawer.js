@@ -28,7 +28,7 @@ const title = (props) => {
 
 const CreateGoalDrawer = (props) => {
 
-  const [EventNames, SetEventNames] = useState();
+  const [EventNames, SetEventNames] = useState([]);
 
 
   const onChangeGroupSelect1 = (grp, value) => {
@@ -140,13 +140,13 @@ const [event2, setEvent2] = useState(null);
                           {!showDropDown && !event1 && <Button onClick={()=>setShowDropDown(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>{eventCount === 2 ? 'Add First event': 'Add an event'}</Button> }
                           { showDropDown && <>
                             <GroupSelect 
-                              groupedProperties={[
+                              groupedProperties={EventNames ? [
                                 {             
                                 label: 'Most Recent',
                                 icon: 'fav',
                                 values: EventNames
                                 }
-                              ]}
+                              ]:null}
                               placeholder="Select Events"
                               optionClick={(group, val) => onChangeGroupSelect1(group, val)}
                               // onClickOutside={() => closeDropDown()}
@@ -198,13 +198,13 @@ const [event2, setEvent2] = useState(null);
                           { showDropDown2 && <>
 
                             <GroupSelect 
-                              groupedProperties={[
+                               groupedProperties={EventNames ? [
                                 {             
                                 label: 'Most Recent',
                                 icon: 'fav',
                                 values: EventNames
                                 }
-                              ]}
+                              ]:null}
                               placeholder="Select Events"
                               optionClick={(group, val) => onChangeGroupSelect2(group, val)}
                               // onClickOutside={() => closeDropDown()}
