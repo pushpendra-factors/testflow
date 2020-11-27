@@ -38,15 +38,15 @@ function GroupSelect({
     options.forEach((group, grpIndex) => {
       const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
       renderGroupedOptions.push(
-            <div className={styles.dropdown__filter_select__option_group_container}>
-              {!searchTerm.length && <div className={styles.dropdown__filter_select__option_group}
+            <div className={`fa-select-group-select--content`}>
+              {!searchTerm.length && <div className={'fa-select-group-select--option-group'}
                 onClick={() => collapseGroup(grpIndex)}
               >
                 <div>
-                    <SVG name={group.icon} extraClass={'self-center'}></SVG>
+                    <SVG name={group.icon} size={16} extraClass={'self-center'}></SVG>
                     <span className={'ml-1'}>{group.label}</span>
                 </div>
-                <SVG name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
+                <SVG color={'grey'} color={'grey'} name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
               </div>}
               <div className={styles.dropdown__filter_select__option_group_container_sec}>
                 { collState
@@ -55,7 +55,7 @@ function GroupSelect({
                     group.values.forEach((val) => {
                       if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                         valuesOptions.push(
-                          <div className={styles.dropdown__filter_select__option}
+                          <div className={`fa-select-group-select--options`}
                             onClick={() => optionClick(group.label, val)} >
                               {searchTerm.length > 0 && <SVG name={group.icon} extraClass={'self-center'}></SVG>}
                               <span className={'ml-1'}>{val[0]}</span>
@@ -76,12 +76,12 @@ function GroupSelect({
 
   return (
     <>
-        <div className={`${styles.dropdown__filter_select} ml-4 fa-filter-select`}>
+        <div className={`${styles.dropdown__filter_select} ml-4 fa-select fa-select--group-select`}>
           <Input
             className={styles.dropdown__filter_select__input}
             placeholder={placeholder}
             onKeyUp={onInputSearch}
-            prefix={(<SVG name="search" />)}
+            prefix={(<SVG name="search" size={16} color={'grey'} />)}
           />
           <div className={styles.dropdown__filter_select__content}>
             {renderOptions(groupedProperties)}

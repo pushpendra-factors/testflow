@@ -19,3 +19,71 @@
         } 
     }
 }
+
+
+.fa-select--group-select{
+
+    animation-name: fa-fadeInDown; 
+    animation-timing-function: ease-in-out;
+    animation-duration: 0.2s;
+    overflow: hidden;
+
+        width: 320px;
+        padding: 0px;
+        background: #FFFFFF;
+        border: 1px solid $fa-color--mono-2;
+        box-shadow: 0px 6px 20px $fa-color--mono-2;
+        border-radius: 10px;
+        z-index: 75;
+
+        .fa-select-group-select--options
+        {
+            padding: 10px 10px;
+            color: $fa-color--mono-5;
+            font-weight: $font-weight--regular;
+            cursor: pointer;
+            display: inline-flex;
+            &:hover{
+                background-color: rgba($fa-color--brand-1, 1);
+            }
+        }
+
+        .fa-select-group-select--content
+        {
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid $fa-color--mono-2;
+        }
+        .fa-select-group-select--option-group
+        {
+            padding: 12px 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #5949BC;
+            cursor: pointer;
+            span{
+                font-size: 12px;
+                font-weight:$font-weight--bold;
+                color:  $fa-color--mono-5;
+            }
+            div {
+                display: flex;
+            }
+        }
+
+
+    .ant-input-affix-wrapper{
+        padding: 8px 0 8px 10px;
+        border-top-right-radius: 10px;
+        border-top-left-radius: 10px;
+        border: none !important;
+        box-shadow: none !important;
+        input.ant-input{
+            height: 40px !important;
+        }
+        &:focus, &:hover, &:active{ 
+            border: none !important;
+            box-shadow: none !important
+        } 
+    }
+}
