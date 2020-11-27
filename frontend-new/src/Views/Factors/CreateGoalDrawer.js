@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Drawer, Button, Row, Col, Select
 } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import { NavLink } from 'react-router-dom';
-
+import GroupSelect from '../../components/QueryComposer/GroupSelect';
+import { fetchEventNames } from 'Reducers/coreQuery/middleware';
+import {connect} from 'react-redux';
 
 const { Option } = Select;
 
-const EventNames = ["$session","www.acme.com","www.acme.com/pricing","www.acme.com/product","www.acme.com/solutions","www.acme.com/product/collaboration","www.acme.com/product/analytics","www.acme.com/schedule-a-demo","www.acme.com/product/unified-dashboard","www.acme.com/resources","www.acme.com/integrations","www.acme.com/company","www.acme.com/customers","Subscribe to Newsletter Form","Schedule A Demo Form","www.acme.com/investors","www.acme.com/webinars","www.acme.com/resources/guides","www.acme.com/customers/New World","www.acme.com/resources/guides/subscription-billing-and-management-guide","www.acme.com/customers/Old World","www.acme.com/resources/downloads/infographics/saas-revenue-benchmark-first-100-customers.pdf","Discovery Call Booked","webinars.acme.com/analytics after-covid","Opportunity Created","Deal Created","Deal Lost","Deal Won"];
-
+ 
 
 const title = (props) => {
   return (
@@ -27,29 +28,62 @@ const title = (props) => {
 
 const CreateGoalDrawer = (props) => {
 
+  const [EventNames, SetEventNames] = useState([]);
 
-  const onChange = (value) => {
+
+  const onChangeGroupSelect1 = (grp, value) => {
     setShowDropDown(false);
-    setEvent1(value);
-    console.log(`selected ${value}`);
+    setEvent1(value[0]);
+    // console.log(`selectedevent1-- ${grp} ${value[0]}`);
   }
-  const onChangeDropDown2 = (value) => {
+  const onChangeGroupSelect2 = (grp, value) => {
     setShowDropDown2(false);
-    setEvent2(value);
-    console.log(`onChangeDropDown2 ${value}`);
+    setEvent2(value[0]);
+    // console.log(`selected-event2-- ${grp} ${value[0]}`);
   }
+
+  // const onChange = (value) => {
+  //   setShowDropDown(false);
+  //   setEvent1(value);
+  //   console.log(`selected ${value}`);
+  // }
+  // const onChangeDropDown2 = (value) => {
+  //   setShowDropDown2(false);
+  //   setEvent2(value);
+  //   console.log(`onChangeDropDown2 ${value}`);
+  // }
   
-  const onBlur = ()  =>{
-    console.log('blur');
-  }
+  // const onBlur = ()  =>{
+  //   console.log('blur');
+  // }
   
-  const onFocus = ()  =>{
-    console.log('focus');
-  }
+  // const onFocus = ()  =>{
+  //   console.log('focus');
+  // }
   
-  const onSearch = (val) => {
-    console.log('search:', val);
-  }
+  // const onSearch = (val) => {
+  //   console.log('search:', val);
+  // }
+  // const onChangeGroupSelect = (val,grp) => {
+  //   console.log('onChangeGroupSelect:', val, grp);
+  // }
+
+  useEffect(()=>{
+
+    if(!props.GlobalEventNames){
+      const getData = async () => {
+        await props.fetchEventNames(props.activeProject.id);
+      };
+      getData();  
+    } 
+    if(props.GlobalEventNames){
+      // const EventNames1 = props.GlobalEventNames.map((item)=>{
+      //   return [item]
+      // });
+      SetEventNames(props.GlobalEventNames);
+      
+    }  
+  },[props.GlobalEventNames])
 
 const [eventCount, SetEventCount] = useState(1);
 
@@ -90,9 +124,7 @@ const [event2, setEvent2] = useState(null);
                           </div>
                       </div>
                   </Col>
-          </Row>
-
-          
+          </Row> 
           
           <Row gutter={[24, 4]}>
               <Col span={24}>
@@ -106,7 +138,20 @@ const [event2, setEvent2] = useState(null);
                         </>}
                         <div className='relative' style={{height: '42px'}}>
                           {!showDropDown && !event1 && <Button onClick={()=>setShowDropDown(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>{eventCount === 2 ? 'Add First event': 'Add an event'}</Button> }
-                          { showDropDown && <Select
+                          { showDropDown && <>
+                            <GroupSelect 
+                              groupedProperties={EventNames ? [
+                                {             
+                                label: 'Most Recent',
+                                icon: 'fav',
+                                values: EventNames
+                                }
+                              ]:null}
+                              placeholder="Select Events"
+                              optionClick={(group, val) => onChangeGroupSelect1(group, val)}
+                              // onClickOutside={() => closeDropDown()}
+                              />
+                          {/* <Select
                               showSearch
                               style={{ width: 280, position: 'absolute', top:0, left:'8px' }}
                               placeholder="Search Events"
@@ -123,11 +168,13 @@ const [event2, setEvent2] = useState(null);
                             {EventNames.map((item,index)=>{
                               return <Option key={index} value={item}>{item}</Option> 
                             })}; 
-                            </Select>}
+                            </Select> */}
+                            </>
+                            }
 
                             {event1 && !showDropDown  && <Button type={'link'} size={'large'} style={{maxWidth: '220px',textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} className={'ml-2'} ellipsis onClick={()=>{
                               setShowDropDown(true); 
-                              }} ><SVG name={'plus'} size={14} color={'grey'} extraClass={'ml-2'}/>{event1}</Button> 
+                              }} >{event1}</Button> 
                             } 
                         </div> 
                       </div>
@@ -148,7 +195,22 @@ const [event2, setEvent2] = useState(null);
                         </>}
                         <div className='relative' style={{height: '42px'}}>
                           {!showDropDown2 && !event2 && <Button onClick={()=>setShowDropDown2(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>Add next event</Button> }
-                          { showDropDown2 && <Select
+                          { showDropDown2 && <>
+
+                            <GroupSelect 
+                               groupedProperties={EventNames ? [
+                                {             
+                                label: 'Most Recent',
+                                icon: 'fav',
+                                values: EventNames
+                                }
+                              ]:null}
+                              placeholder="Select Events"
+                              optionClick={(group, val) => onChangeGroupSelect2(group, val)}
+                              // onClickOutside={() => closeDropDown()}
+                              />
+                          
+                          {/* <Select
                               showSearch
                               style={{ width: 280, position: 'absolute', top:0, left:'8px' }}
                               placeholder="Search Events"
@@ -165,28 +227,28 @@ const [event2, setEvent2] = useState(null);
                             {EventNames.map((item,index)=>{
                               return <Option key={index} value={item}>{item}</Option> 
                             })}; 
-                            </Select>}
+                            </Select> */}
+                            </>
+                            }
 
                             {event2 && !showDropDown2  && <Button type={'link'} size={'large'} style={{maxWidth: '220px',textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} className={'ml-2'} ellipsis onClick={()=>{
                               setShowDropDown2(true); 
-                              }} ><SVG name={'plus'} size={14} color={'grey'} extraClass={'ml-2'}/>{event2}</Button> 
+                              }} >{event2}</Button> 
                             } 
                         </div> 
                       </div>
                 </div>
               </Col>
           </Row>
-          }
-
-
+          } 
 
     <div className={'flex flex-col justify-center items-center'} style={{ height: '300px' }}>
-        <p style={{ color: '#bbb' }}>CoreQuery reusable drawer components comes here..</p>
-        <p className={'mt-2'} style={{ color: '#bbb' }}>{'Click on \'Find Insights\' to view Insights page.'}</p>
+        {/* <p style={{ color: '#bbb' }}>CoreQuery reusable drawer components comes here..</p>
+        <p className={'mt-2'} style={{ color: '#bbb' }}>{'Click on \'Find Insights\' to view Insights page.'}</p> */}
     </div>
         <div className={'flex justify-between items-center'}>
-            <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
-            <NavLink to="/factors/insights"><Button type="primary">Find Insights</Button></NavLink>
+            <Button size={'large'}><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
+            <NavLink to="/factors/insights"><Button type="primary" size={'large'}>Find Insights</Button></NavLink>
         </div>
 </div>
 
@@ -194,4 +256,10 @@ const [event2, setEvent2] = useState(null);
   );
 };
 
-export default CreateGoalDrawer;
+const mapStateToProps = (state) => {
+  return {
+    activeProject: state.global.active_project, 
+    GlobalEventNames: state.coreQuery?.eventOptions[0]?.values, 
+  };
+};
+export default connect(mapStateToProps, {fetchEventNames})(CreateGoalDrawer);
