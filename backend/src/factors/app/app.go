@@ -19,6 +19,9 @@ import (
 // @version 1.0
 // @description Factors usage doc for golang api server.
 // @BasePath /projects
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 func main() {
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")

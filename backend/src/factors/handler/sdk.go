@@ -19,12 +19,28 @@ import (
 	U "factors/util"
 )
 
+// SDKStatusHandler godoc
+// @Summary To check the status and availability of the sdk service.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Success 200 {string} json "{"message": "I'm ok."}"
+// @Router /sdk/service/status [get]
 func SDKStatusHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "I'm ok."})
 }
 
 // Test command.
 // curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "auto": false, "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}'
+// SDKTrackHandler godoc
+// @Summary Create a new track request.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Param request body sdk.TrackPayload true "Track payload"
+// @Success 200 {object} sdk.TrackResponse
+// @Router /sdk/event/track [post]
+// @Security ApiKeyAuth
 func SDKTrackHandler(c *gin.Context) {
 	r := c.Request
 
@@ -69,6 +85,15 @@ func SDKTrackHandler(c *gin.Context) {
 
 // Test command.
 // curl -i -H "Content-Type: application/json" -H "Authorization: PROJECT_TOKEN" -X POST http://localhost:8080/sdk/event/bulk -d '[{"user_id": "YOUR_USER_ID", "event_name": "login", "auto": false, "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}]'
+// SDKBulkEventHandler godoc
+// @Summary Create a new bulk events track request.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Param request body []sdk.TrackPayload true "Array of Track payload"
+// @Success 200 {array} sdk.TrackResponse
+// @Router /sdk/event/track/bulk [post]
+// @Security ApiKeyAuth
 func SDKBulkEventHandler(c *gin.Context) {
 	r := c.Request
 
@@ -128,6 +153,15 @@ func SDKBulkEventHandler(c *gin.Context) {
 
 // Test command.
 // curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/user/identify -d '{"user_id":"USER_ID", "c_uid": "CUSTOMER_USER_ID"}'
+// SDKIdentifyHandler godoc
+// @Summary To identify a factors user id with customer user id.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Param request body sdk.IdentifyPayload true "Identify payload"
+// @Success 200 {object} sdk.IdentifyResponse
+// @Router /sdk/user/identify [post]
+// @Security ApiKeyAuth
 func SDKIdentifyHandler(c *gin.Context) {
 	r := c.Request
 
@@ -161,6 +195,15 @@ func SDKIdentifyHandler(c *gin.Context) {
 
 // Test command.
 // curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/user/add_properties -d '{"id": "USER_ID", "properties": {"name": "USER_NAME"}}'
+// SDKAddUserPropertiesHandler godoc
+// @Summary To update properties of a factors user.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Param request body sdk.AddUserPropertiesPayload true "Add user properties payload"
+// @Success 200 {object} sdk.AddUserPropertiesResponse
+// @Router /sdk/user/add_properties [post]
+// @Security ApiKeyAuth
 func SDKAddUserPropertiesHandler(c *gin.Context) {
 	r := c.Request
 
@@ -201,6 +244,14 @@ type sdkSettingsResponse struct {
 
 // Test command.
 // curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X GET http://localhost:8080/sdk/project/get_settings
+// SDKGetProjectSettingsHandler godoc
+// @Summary To get project settings.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Success 200 {object} handler.sdkSettingsResponse
+// @Router /sdk/project/get_settings [get]
+// @Security ApiKeyAuth
 func SDKGetProjectSettingsHandler(c *gin.Context) {
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 
@@ -219,6 +270,15 @@ func SDKGetProjectSettingsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// SDKUpdateEventPropertiesHandler godoc
+// @Summary To update event properties for an existing event.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Param request body sdk.UpdateEventPropertiesPayload true "Update properties payload"
+// @Success 202 {object} sdk.UpdateEventPropertiesResponse
+// @Router /sdk/event/update_properties [post]
+// @Security ApiKeyAuth
 func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 	r := c.Request
 
@@ -260,6 +320,21 @@ https://app.factors.ai/sdk/amp/event/track?token=${token}&title=${title}&referre
 &screen_height=${screenHeight}&screen_width=${screenWidth}&page_load_time_in_ms=${pageLoadTime}
 &client_id=${clientId(_factorsai_amp_id)}&source_url=${sourceUrl}
 */
+// SDKAMPTrackHandler godoc
+// @Summary Create a new AMP track request.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Param token query string true "SDK token"
+// @Param client_id query string true "Client id"
+// @Param source_url query string false "Source url"
+// @Param referrer query string false "Referrer"
+// @Param title query string false "Title"
+// @Param page_load_time_in_ms query number false "Page load time in milliseconds"
+// @Param screen_height query number false "Screen height"
+// @Param screen_width query number false "Screen width"
+// @Success 200 {object} sdk.Response
+// @Router /sdk/amp/event/track [post]
 func SDKAMPTrackHandler(c *gin.Context) {
 	metrics.Increment(metrics.IncrSDKRequestOverallCount)
 	metrics.Increment(metrics.IncrSDKRequestTypeAMPTrack)
@@ -346,6 +421,18 @@ func SDKAMPTrackHandler(c *gin.Context) {
 	c.JSON(SDK.AMPTrackWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens()))
 }
 
+// SDKAMPUpdateEventPropertiesHandler godoc
+// @Summary To update AMP event properties for an existing event.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Param token query string true "SDK token"
+// @Param client_id query string true "Client id"
+// @Param source_url query string false "Source url"
+// @Param page_spent_time query number false "Page spent time"
+// @Param page_scroll_percent query number false "Page scroll percent"
+// @Success 202 {object} sdk.Response
+// @Router /sdk/amp/event/update_properties [post]
 func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 	metrics.Increment(metrics.IncrSDKRequestOverallCount)
 	metrics.Increment(metrics.IncrSDKRequestTypeAMPUpdateEventProperties)
@@ -397,6 +484,16 @@ func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 
 // SDKAMPIdentifyHandler Test command.
 // curl -i GET 'http://localhost:8085/sdk/amp/user/identify?token=<token>&client_id=<amp_id>&customer_user_id=<customer_user_id>
+// SDKAMPIdentifyHandler godoc
+// @Summary To identify factors user with customer user id from AMP pages.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Param token query string true "SDK token"
+// @Param client_id query string true "Client id"
+// @Param customer_user_id query string false "Customer user id"
+// @Success 200 {object} sdk.IdentifyResponse
+// @Router /sdk/amp/user/identify [post]
 func SDKAMPIdentifyHandler(c *gin.Context) {
 	token := c.Query("token")
 	customerUserID := c.Query("customer_user_id")
@@ -427,6 +524,14 @@ type SDKError struct {
 	Error        string `json:"error"`
 }
 
+// SDKErrorHandler godoc
+// @Summary To report errors on SDK requests.
+// @Tags SDK
+// @Accept  json
+// @Produce json
+// @Param error body handler.SDKError true "Error payload"
+// @Success 200
+// @Router /sdk/service/error [post]
 func SDKErrorHandler(c *gin.Context) {
 	var request SDKError
 

@@ -11,8 +11,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+
+	swaggerDocs "factors/sdk_docs"
 )
 
+// @title Factors SDK Service Backend Api
+// @version 1.0
+// @description Factors usage doc for SDK service.
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 func main() {
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
@@ -100,6 +108,12 @@ func main() {
 	r.Use(mid.Logger())
 	r.Use(mid.Recovery())
 
+	// Initialize routes.
+	if config.Env == C.DEVELOPMENT {
+		swaggerDocs.SwaggerInfo.Host = "factors-dev.com:8085"
+	} else if config.Env == C.STAGING {
+		swaggerDocs.SwaggerInfo.Host = "staging-api.factors.ai"
+	}
 	H.InitSDKServiceRoutes(r)
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))
 }

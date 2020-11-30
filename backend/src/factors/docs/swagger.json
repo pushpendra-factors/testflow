@@ -31,6 +31,731 @@
                 }
             }
         },
+        "/integrations/adwords/enable": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Integrations"
+                ],
+                "summary": "To enable adwords for the project.",
+                "parameters": [
+                    {
+                        "description": "Request payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AdwordsRequestPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ProjectSetting"
+                        }
+                    }
+                }
+            }
+        },
+        "/integrations/facebook/add_access_token": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Integrations"
+                ],
+                "summary": "To add access token for Facebook.",
+                "parameters": [
+                    {
+                        "description": "Request payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.FacebookAddAccessTokenPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "{\"error\": \"Error message\"}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/integrations/salesforce/auth": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Integrations"
+                ],
+                "summary": "For Salesforce authentication. Redirects to Salesforce oauth page.",
+                "parameters": [
+                    {
+                        "description": "Request payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SalesforceRedirectRequestPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "307": {
+                        "description": "{\"redirectURL\": redirectURL}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/integrations/salesforce/auth/callback": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Integrations"
+                ],
+                "summary": "Handles the callback url from salesforce auth redirect url and requests access token.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "State",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "308": {
+                        "description": "redirectURL",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/integrations/salesforce/enable": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Integrations"
+                ],
+                "summary": "To enable Salesforce for a project.",
+                "parameters": [
+                    {
+                        "description": "Request payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SalesforceEnableRequestPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ProjectSetting"
+                        }
+                    }
+                }
+            }
+        },
+        "/integrations/segment": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK",
+                    "Integrations"
+                ],
+                "summary": "To create event from segment.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard ID",
+                        "name": "dashboard_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Event payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/segment.Event"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/segment.EventResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/integrations/segment_platform": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK",
+                    "Integrations"
+                ],
+                "summary": "To create event from segment.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard ID",
+                        "name": "dashboard_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Event payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/segment.Event"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/segment.EventResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sdk/amp/event/track": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "Create a new AMP track request.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "SDK token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Client id",
+                        "name": "client_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Source url",
+                        "name": "source_url",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Referrer",
+                        "name": "referrer",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Title",
+                        "name": "title",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Page load time in milliseconds",
+                        "name": "page_load_time_in_ms",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Screen height",
+                        "name": "screen_height",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Screen width",
+                        "name": "screen_width",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/sdk.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/sdk/amp/event/update_properties": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "To update AMP event properties for an existing event.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "SDK token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Client id",
+                        "name": "client_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Source url",
+                        "name": "source_url",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Page spent time",
+                        "name": "page_spent_time",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Page scroll percent",
+                        "name": "page_scroll_percent",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/sdk.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/sdk/amp/user/identify": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "To identify factors user with customer user id from AMP pages.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "SDK token",
+                        "name": "token",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Client id",
+                        "name": "client_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Customer user id",
+                        "name": "customer_user_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/sdk.IdentifyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sdk/event/track": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "Create a new track request.",
+                "parameters": [
+                    {
+                        "description": "Track payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sdk.TrackPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/sdk.TrackResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sdk/event/track/bulk": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "Create a new bulk events track request.",
+                "parameters": [
+                    {
+                        "description": "Array of Track payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/sdk.TrackPayload"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/sdk.TrackResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sdk/event/update_properties": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "To update event properties for an existing event.",
+                "parameters": [
+                    {
+                        "description": "Update properties payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sdk.UpdateEventPropertiesPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/sdk.UpdateEventPropertiesResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sdk/project/get_settings": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "To get project settings.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.sdkSettingsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sdk/service/error": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "To report errors on SDK requests.",
+                "parameters": [
+                    {
+                        "description": "Error payload",
+                        "name": "error",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.SDKError"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/sdk/service/status": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "To check the status and availability of the sdk service.",
+                "responses": {
+                    "200": {
+                        "description": "{\"message\": \"I'm ok.\"}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/sdk/user/add_properties": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "To update properties of a factors user.",
+                "parameters": [
+                    {
+                        "description": "Add user properties payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sdk.AddUserPropertiesPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/sdk.AddUserPropertiesResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sdk/user/identify": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDK"
+                ],
+                "summary": "To identify a factors user id with customer user id.",
+                "parameters": [
+                    {
+                        "description": "Identify payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/sdk.IdentifyPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/sdk.IdentifyResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/{project_id}": {
             "put": {
                 "consumes": [
@@ -2308,6 +3033,14 @@
                 }
             }
         },
+        "handler.AdwordsRequestPayload": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.AttributionRequestPayload": {
             "type": "object",
             "properties": {
@@ -2387,12 +3120,68 @@
                 }
             }
         },
+        "handler.FacebookAddAccessTokenPayload": {
+            "type": "object",
+            "properties": {
+                "int_facebook_access_token": {
+                    "type": "string"
+                },
+                "int_facebook_ad_account": {
+                    "type": "string"
+                },
+                "int_facebook_email": {
+                    "type": "string"
+                },
+                "int_facebook_user_id": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.QueryRequestPayload": {
             "type": "object",
             "properties": {
                 "query": {
                     "type": "object",
                     "$ref": "#/definitions/model.Query"
+                }
+            }
+        },
+        "handler.SDKError": {
+            "type": "object",
+            "properties": {
+                "auto_track_url": {
+                    "type": "string"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SalesforceEnableRequestPayload": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.SalesforceRedirectRequestPayload": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string"
                 }
             }
         },
@@ -2440,6 +3229,20 @@
             "properties": {
                 "agent_uuid": {
                     "type": "string"
+                }
+            }
+        },
+        "handler.sdkSettingsResponse": {
+            "type": "object",
+            "properties": {
+                "auto_form_capture": {
+                    "type": "boolean"
+                },
+                "auto_track": {
+                    "type": "boolean"
+                },
+                "exclude_bot": {
+                    "type": "boolean"
                 }
             }
         },
@@ -3170,6 +3973,453 @@
                 }
             }
         },
+        "sdk.AddUserPropertiesPayload": {
+            "type": "object",
+            "properties": {
+                "client_ip": {
+                    "type": "string"
+                },
+                "create_user": {
+                    "description": "if create_user is true, create user with given id.",
+                    "type": "boolean"
+                },
+                "properties": {
+                    "type": "object",
+                    "$ref": "#/definitions/util.PropertiesMap"
+                },
+                "timestamp": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "sdk.AddUserPropertiesResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "sdk.IdentifyPayload": {
+            "type": "object",
+            "properties": {
+                "c_uid": {
+                    "description": "if create_user is true, create user with given id.",
+                    "type": "string"
+                },
+                "create_user": {
+                    "type": "boolean"
+                },
+                "join_timestamp": {
+                    "description": "join_timestamp to use at the time of creating user,\nif not provided, request timestamp will be used.",
+                    "type": "integer"
+                },
+                "page_url": {
+                    "description": "identify overwrite info",
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "sdk.IdentifyResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "sdk.Response": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "sdk.TrackPayload": {
+            "type": "object",
+            "properties": {
+                "auto": {
+                    "type": "boolean"
+                },
+                "c_event_id": {
+                    "type": "string"
+                },
+                "client_ip": {
+                    "type": "string"
+                },
+                "create_user": {
+                    "description": "internal: create user with the user_id given, if true.",
+                    "type": "boolean"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "event_name": {
+                    "type": "string"
+                },
+                "event_properties": {
+                    "type": "object",
+                    "$ref": "#/definitions/util.PropertiesMap"
+                },
+                "project_id": {
+                    "type": "integer"
+                },
+                "timestamp": {
+                    "type": "integer"
+                },
+                "user_agent": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "user_properties": {
+                    "type": "object",
+                    "$ref": "#/definitions/util.PropertiesMap"
+                }
+            }
+        },
+        "sdk.TrackResponse": {
+            "type": "object",
+            "properties": {
+                "c_event_id": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "sdk.UpdateEventPropertiesPayload": {
+            "type": "object",
+            "properties": {
+                "event_id": {
+                    "type": "string"
+                },
+                "properties": {
+                    "type": "object",
+                    "$ref": "#/definitions/util.PropertiesMap"
+                },
+                "timestamp": {
+                    "type": "integer"
+                },
+                "user_agent": {
+                    "type": "string"
+                }
+            }
+        },
+        "sdk.UpdateEventPropertiesResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "segment.App": {
+            "type": "object",
+            "properties": {
+                "build": {
+                    "type": "object"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "namespace": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "object"
+                }
+            }
+        },
+        "segment.Campaign": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "medium": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "term": {
+                    "type": "string"
+                }
+            }
+        },
+        "segment.Context": {
+            "type": "object",
+            "properties": {
+                "app": {
+                    "type": "object",
+                    "$ref": "#/definitions/segment.App"
+                },
+                "campaign": {
+                    "type": "object",
+                    "$ref": "#/definitions/segment.Campaign"
+                },
+                "device": {
+                    "type": "object",
+                    "$ref": "#/definitions/segment.Device"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "locale": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "object",
+                    "$ref": "#/definitions/segment.Location"
+                },
+                "network": {
+                    "type": "object",
+                    "$ref": "#/definitions/segment.Network"
+                },
+                "os": {
+                    "type": "object",
+                    "$ref": "#/definitions/segment.OS"
+                },
+                "page": {
+                    "type": "object",
+                    "$ref": "#/definitions/segment.Page"
+                },
+                "screen": {
+                    "type": "object",
+                    "$ref": "#/definitions/segment.Screen"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "userAgent": {
+                    "type": "string"
+                }
+            }
+        },
+        "segment.Device": {
+            "type": "object",
+            "properties": {
+                "adTrackingEnabled": {
+                    "type": "boolean"
+                },
+                "advertisingId": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "manufacturer": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "segment.Event": {
+            "type": "object",
+            "properties": {
+                "anonymousId": {
+                    "type": "string"
+                },
+                "channel": {
+                    "type": "string"
+                },
+                "context": {
+                    "type": "object",
+                    "$ref": "#/definitions/segment.Context"
+                },
+                "event": {
+                    "type": "string"
+                },
+                "messageId": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "properties": {
+                    "type": "object",
+                    "$ref": "#/definitions/util.PropertiesMap"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "traits": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "object"
+                }
+            }
+        },
+        "segment.EventResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "event_id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "segment.Location": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "region": {
+                    "type": "string"
+                }
+            }
+        },
+        "segment.Network": {
+            "type": "object",
+            "properties": {
+                "bluetooth": {
+                    "type": "boolean"
+                },
+                "carrier": {
+                    "type": "string"
+                },
+                "cellular": {
+                    "type": "boolean"
+                },
+                "wifi": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "segment.OS": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "object"
+                }
+            }
+        },
+        "segment.Page": {
+            "type": "object",
+            "properties": {
+                "referrer": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "segment.Screen": {
+            "type": "object",
+            "properties": {
+                "density": {
+                    "type": "number"
+                },
+                "height": {
+                    "type": "number"
+                },
+                "width": {
+                    "type": "number"
+                }
+            }
+        },
+        "util.PropertiesMap": {
+            "type": "object",
+            "additionalProperties": true
+        },
         "v1.AgentInfoWithProjectMapping": {
             "type": "object",
             "properties": {
@@ -3312,6 +4562,14 @@
                     "$ref": "#/definitions/model.FactorsGoalRule"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "authorizationUrl": ""
         }
     }
 }

@@ -20,6 +20,11 @@ definitions:
       project_id:
         type: integer
     type: object
+  handler.AdwordsRequestPayload:
+    properties:
+      project_id:
+        type: string
+    type: object
   handler.AttributionRequestPayload:
     properties:
       query:
@@ -72,11 +77,47 @@ definitions:
           $ref: '#/definitions/handler.DashboardUnitWebAnalyticsQueryName'
         type: array
     type: object
+  handler.FacebookAddAccessTokenPayload:
+    properties:
+      int_facebook_access_token:
+        type: string
+      int_facebook_ad_account:
+        type: string
+      int_facebook_email:
+        type: string
+      int_facebook_user_id:
+        type: string
+      project_id:
+        type: string
+    type: object
   handler.QueryRequestPayload:
     properties:
       query:
         $ref: '#/definitions/model.Query'
         type: object
+    type: object
+  handler.SDKError:
+    properties:
+      auto_track_url:
+        type: string
+      domain:
+        type: string
+      error:
+        type: string
+      url:
+        type: string
+      user_id:
+        type: string
+    type: object
+  handler.SalesforceEnableRequestPayload:
+    properties:
+      project_id:
+        type: string
+    type: object
+  handler.SalesforceRedirectRequestPayload:
+    properties:
+      project_id:
+        type: string
     type: object
   handler.SavedQueryRequestPayload:
     properties:
@@ -107,6 +148,15 @@ definitions:
         type: string
     required:
     - agent_uuid
+    type: object
+  handler.sdkSettingsResponse:
+    properties:
+      auto_form_capture:
+        type: boolean
+      auto_track:
+        type: boolean
+      exclude_bot:
+        type: boolean
     type: object
   handler.updateProjectAgentParams:
     properties:
@@ -606,6 +656,306 @@ definitions:
         type: string
       y_label:
         type: string
+    type: object
+  sdk.AddUserPropertiesPayload:
+    properties:
+      client_ip:
+        type: string
+      create_user:
+        description: if create_user is true, create user with given id.
+        type: boolean
+      properties:
+        $ref: '#/definitions/util.PropertiesMap'
+        type: object
+      timestamp:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  sdk.AddUserPropertiesResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+      user_id:
+        type: string
+    type: object
+  sdk.IdentifyPayload:
+    properties:
+      c_uid:
+        description: if create_user is true, create user with given id.
+        type: string
+      create_user:
+        type: boolean
+      join_timestamp:
+        description: |-
+          join_timestamp to use at the time of creating user,
+          if not provided, request timestamp will be used.
+        type: integer
+      page_url:
+        description: identify overwrite info
+        type: string
+      source:
+        type: string
+      timestamp:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  sdk.IdentifyResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+      user_id:
+        type: string
+    type: object
+  sdk.Response:
+    properties:
+      error:
+        type: string
+      event_id:
+        type: string
+      message:
+        type: string
+    type: object
+  sdk.TrackPayload:
+    properties:
+      auto:
+        type: boolean
+      c_event_id:
+        type: string
+      client_ip:
+        type: string
+      create_user:
+        description: 'internal: create user with the user_id given, if true.'
+        type: boolean
+      event_id:
+        type: string
+      event_name:
+        type: string
+      event_properties:
+        $ref: '#/definitions/util.PropertiesMap'
+        type: object
+      project_id:
+        type: integer
+      timestamp:
+        type: integer
+      user_agent:
+        type: string
+      user_id:
+        type: string
+      user_properties:
+        $ref: '#/definitions/util.PropertiesMap'
+        type: object
+    type: object
+  sdk.TrackResponse:
+    properties:
+      c_event_id:
+        type: string
+      error:
+        type: string
+      event_id:
+        type: string
+      message:
+        type: string
+      type:
+        type: string
+      user_id:
+        type: string
+    type: object
+  sdk.UpdateEventPropertiesPayload:
+    properties:
+      event_id:
+        type: string
+      properties:
+        $ref: '#/definitions/util.PropertiesMap'
+        type: object
+      timestamp:
+        type: integer
+      user_agent:
+        type: string
+    type: object
+  sdk.UpdateEventPropertiesResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  segment.App:
+    properties:
+      build:
+        type: object
+      name:
+        type: string
+      namespace:
+        type: string
+      version:
+        type: object
+    type: object
+  segment.Campaign:
+    properties:
+      content:
+        type: string
+      medium:
+        type: string
+      name:
+        type: string
+      source:
+        type: string
+      term:
+        type: string
+    type: object
+  segment.Context:
+    properties:
+      app:
+        $ref: '#/definitions/segment.App'
+        type: object
+      campaign:
+        $ref: '#/definitions/segment.Campaign'
+        type: object
+      device:
+        $ref: '#/definitions/segment.Device'
+        type: object
+      ip:
+        type: string
+      locale:
+        type: string
+      location:
+        $ref: '#/definitions/segment.Location'
+        type: object
+      network:
+        $ref: '#/definitions/segment.Network'
+        type: object
+      os:
+        $ref: '#/definitions/segment.OS'
+        type: object
+      page:
+        $ref: '#/definitions/segment.Page'
+        type: object
+      screen:
+        $ref: '#/definitions/segment.Screen'
+        type: object
+      timezone:
+        type: string
+      userAgent:
+        type: string
+    type: object
+  segment.Device:
+    properties:
+      adTrackingEnabled:
+        type: boolean
+      advertisingId:
+        type: string
+      id:
+        type: string
+      manufacturer:
+        type: string
+      model:
+        type: string
+      name:
+        type: string
+      token:
+        type: string
+      type:
+        type: string
+    type: object
+  segment.Event:
+    properties:
+      anonymousId:
+        type: string
+      channel:
+        type: string
+      context:
+        $ref: '#/definitions/segment.Context'
+        type: object
+      event:
+        type: string
+      messageId:
+        type: string
+      name:
+        type: string
+      properties:
+        $ref: '#/definitions/util.PropertiesMap'
+        type: object
+      timestamp:
+        type: string
+      traits:
+        type: string
+      type:
+        type: string
+      userId:
+        type: string
+      version:
+        type: object
+    type: object
+  segment.EventResponse:
+    properties:
+      error:
+        type: string
+      event_id:
+        type: string
+      message:
+        type: string
+      type:
+        type: string
+      user_id:
+        type: string
+    type: object
+  segment.Location:
+    properties:
+      city:
+        type: string
+      country:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      region:
+        type: string
+    type: object
+  segment.Network:
+    properties:
+      bluetooth:
+        type: boolean
+      carrier:
+        type: string
+      cellular:
+        type: boolean
+      wifi:
+        type: boolean
+    type: object
+  segment.OS:
+    properties:
+      name:
+        type: string
+      version:
+        type: object
+    type: object
+  segment.Page:
+    properties:
+      referrer:
+        type: string
+      title:
+        type: string
+      url:
+        type: string
+    type: object
+  segment.Screen:
+    properties:
+      density:
+        type: number
+      height:
+        type: number
+      width:
+        type: number
+    type: object
+  util.PropertiesMap:
+    additionalProperties: true
     type: object
   v1.AgentInfoWithProjectMapping:
     properties:
@@ -2194,4 +2544,470 @@ paths:
       summary: To run events core query as a query group for user and event count.
       tags:
       - V1Api
+  /integrations/adwords/enable:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AdwordsRequestPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ProjectSetting'
+      summary: To enable adwords for the project.
+      tags:
+      - Integrations
+  /integrations/facebook/add_access_token:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.FacebookAddAccessTokenPayload'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: '{"error": "Error message"}'
+          schema:
+            type: string
+      summary: To add access token for Facebook.
+      tags:
+      - Integrations
+  /integrations/salesforce/auth:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SalesforceRedirectRequestPayload'
+      produces:
+      - application/json
+      responses:
+        "307":
+          description: '{"redirectURL": redirectURL}'
+          schema:
+            type: string
+      summary: For Salesforce authentication. Redirects to Salesforce oauth page.
+      tags:
+      - Integrations
+  /integrations/salesforce/auth/callback:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Code
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: State
+        in: query
+        name: state
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "308":
+          description: redirectURL
+          schema:
+            type: string
+      summary: Handles the callback url from salesforce auth redirect url and requests access token.
+      tags:
+      - Integrations
+  /integrations/salesforce/enable:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SalesforceEnableRequestPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ProjectSetting'
+      summary: To enable Salesforce for a project.
+      tags:
+      - Integrations
+  /integrations/segment:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: path
+        name: dashboard_id
+        required: true
+        type: integer
+      - description: Event payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/segment.Event'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/segment.EventResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: To create event from segment.
+      tags:
+      - SDK
+      - Integrations
+  /integrations/segment_platform:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: path
+        name: dashboard_id
+        required: true
+        type: integer
+      - description: Event payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/segment.Event'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/segment.EventResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: To create event from segment.
+      tags:
+      - SDK
+      - Integrations
+  /sdk/amp/event/track:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: SDK token
+        in: query
+        name: token
+        required: true
+        type: string
+      - description: Client id
+        in: query
+        name: client_id
+        required: true
+        type: string
+      - description: Source url
+        in: query
+        name: source_url
+        type: string
+      - description: Referrer
+        in: query
+        name: referrer
+        type: string
+      - description: Title
+        in: query
+        name: title
+        type: string
+      - description: Page load time in milliseconds
+        in: query
+        name: page_load_time_in_ms
+        type: number
+      - description: Screen height
+        in: query
+        name: screen_height
+        type: number
+      - description: Screen width
+        in: query
+        name: screen_width
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/sdk.Response'
+      summary: Create a new AMP track request.
+      tags:
+      - SDK
+  /sdk/amp/event/update_properties:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: SDK token
+        in: query
+        name: token
+        required: true
+        type: string
+      - description: Client id
+        in: query
+        name: client_id
+        required: true
+        type: string
+      - description: Source url
+        in: query
+        name: source_url
+        type: string
+      - description: Page spent time
+        in: query
+        name: page_spent_time
+        type: number
+      - description: Page scroll percent
+        in: query
+        name: page_scroll_percent
+        type: number
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/sdk.Response'
+      summary: To update AMP event properties for an existing event.
+      tags:
+      - SDK
+  /sdk/amp/user/identify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: SDK token
+        in: query
+        name: token
+        required: true
+        type: string
+      - description: Client id
+        in: query
+        name: client_id
+        required: true
+        type: string
+      - description: Customer user id
+        in: query
+        name: customer_user_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/sdk.IdentifyResponse'
+      summary: To identify factors user with customer user id from AMP pages.
+      tags:
+      - SDK
+  /sdk/event/track:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Track payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sdk.TrackPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/sdk.TrackResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new track request.
+      tags:
+      - SDK
+  /sdk/event/track/bulk:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Array of Track payload
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/sdk.TrackPayload'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/sdk.TrackResponse'
+            type: array
+      security:
+      - ApiKeyAuth: []
+      summary: Create a new bulk events track request.
+      tags:
+      - SDK
+  /sdk/event/update_properties:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Update properties payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sdk.UpdateEventPropertiesPayload'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/sdk.UpdateEventPropertiesResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: To update event properties for an existing event.
+      tags:
+      - SDK
+  /sdk/project/get_settings:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.sdkSettingsResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: To get project settings.
+      tags:
+      - SDK
+  /sdk/service/error:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Error payload
+        in: body
+        name: error
+        required: true
+        schema:
+          $ref: '#/definitions/handler.SDKError'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+      summary: To report errors on SDK requests.
+      tags:
+      - SDK
+  /sdk/service/status:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"message": "I''m ok."}'
+          schema:
+            type: string
+      summary: To check the status and availability of the sdk service.
+      tags:
+      - SDK
+  /sdk/user/add_properties:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Add user properties payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sdk.AddUserPropertiesPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/sdk.AddUserPropertiesResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: To update properties of a factors user.
+      tags:
+      - SDK
+  /sdk/user/identify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Identify payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/sdk.IdentifyPayload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/sdk.IdentifyResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: To identify a factors user id with customer user id.
+      tags:
+      - SDK
+securityDefinitions:
+  ApiKeyAuth:
+    authorizationUrl: ""
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

@@ -24,6 +24,17 @@ import (
 	U "factors/util"
 )
 
+// IntSegmentHandler godoc
+// @Summary To create event from segment.
+// @Tags SDK,Integrations
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Param request body segment.Event true "Event payload"
+// @Success 200 {object} segment.EventResponse
+// @Router /integrations/segment [post]
+// @Security ApiKeyAuth
 func IntSegmentHandler(c *gin.Context) {
 	r := c.Request
 
@@ -68,6 +79,22 @@ func IntSegmentHandler(c *gin.Context) {
 
 	// Always send StatusOK for failure on direct processing.
 	c.JSON(http.StatusOK, response)
+}
+
+// IntSegmentPlatformHandler godoc
+// @Summary To create event from segment.
+// @Tags SDK,Integrations
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Param request body segment.Event true "Event payload"
+// @Success 200 {object} segment.EventResponse
+// @Router /integrations/segment_platform [post]
+// @Security ApiKeyAuth
+// Wrapper to support documentation for segment_platform route.
+func IntSegmentPlatformHandler(c *gin.Context) {
+	IntSegmentHandler(c)
 }
 
 // Verifies agent access to projects using middlewares.
@@ -185,6 +212,14 @@ func IntAdwordsGetRefreshTokenHandler(c *gin.Context) {
 // IntEnableAdwordsHandler - Checks for refresh_token for the
 // agent if exists: then add the agent_uuid as adwords_enabled_agent_uuid
 // on project settings. if not exists: return 304.
+// IntEnableAdwordsHandler godoc
+// @Summary To enable adwords for the project.
+// @Tags Integrations
+// @Accept  json
+// @Produce json
+// @Param request body AdwordsRequestPayload true "Request payload"
+// @Success 200 {object} model.ProjectSetting
+// @Router /integrations/adwords/enable [post]
 func IntEnableAdwordsHandler(c *gin.Context) {
 	r := c.Request
 
@@ -239,6 +274,14 @@ type SalesforceEnableRequestPayload struct {
 // IntEnableSalesforceHandler - Checks for refresh_token for the
 // agent if exists: then add the agent_uuid as int_salesforce_enabled_agent_uuid
 // on project settings. if not exists: return 304.
+// IntEnableSalesforceHandler godoc
+// @Summary To enable Salesforce for a project.
+// @Tags Integrations
+// @Accept  json
+// @Produce json
+// @Param request body SalesforceEnableRequestPayload true "Request payload"
+// @Success 200 {object} model.ProjectSetting
+// @Router /integrations/salesforce/enable [post]
 func IntEnableSalesforceHandler(c *gin.Context) {
 	r := c.Request
 
@@ -577,6 +620,14 @@ type FacebookLongLivedTokenResponse struct {
 	AccessToken string `json:"access_token"`
 }
 
+// IntFacebookAddAccessTokenHandler godoc
+// @Summary To add access token for Facebook.
+// @Tags Integrations
+// @Accept  json
+// @Produce json
+// @Param request body FacebookAddAccessTokenPayload true "Request payload"
+// @Success 202 {string} json "{"error": "Error message"}"
+// @Router /integrations/facebook/add_access_token [post]
 func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 	r := c.Request
 
@@ -700,6 +751,15 @@ func GetSalesforceRedirectURL() string {
 }
 
 // SalesforceCallbackHandler handles the callback url from salesforce auth redirect url and requests access token
+// SalesforceCallbackHandler godoc
+// @Summary Handles the callback url from salesforce auth redirect url and requests access token.
+// @Tags Integrations
+// @Accept  json
+// @Produce json
+// @Param code query string true "Code"
+// @Param state query string true "State"
+// @Success 308 {string} json "redirectURL"
+// @Router /integrations/salesforce/auth/callback [get]
 func SalesforceCallbackHandler(c *gin.Context) {
 	var oauthState IntSalesforce.OAuthState
 	accessCode := c.Query("code")
@@ -771,6 +831,14 @@ func getRequiredSalesforceCredentials(credentials map[string]interface{}) (strin
 }
 
 // SalesforceAuthRedirectHandler redirects to Salesforce oauth page
+// SalesforceAuthRedirectHandler godoc
+// @Summary For Salesforce authentication. Redirects to Salesforce oauth page.
+// @Tags Integrations
+// @Accept  json
+// @Produce json
+// @Param request body SalesforceRedirectRequestPayload true "Request payload"
+// @Success 307 {string} json "{"redirectURL": redirectURL}"
+// @Router /integrations/salesforce/auth [post]
 func SalesforceAuthRedirectHandler(c *gin.Context) {
 	r := c.Request
 

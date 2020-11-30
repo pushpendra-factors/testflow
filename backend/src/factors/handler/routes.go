@@ -137,6 +137,11 @@ func InitAppRoutes(r *gin.Engine) {
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
+	// Initialize swagger api docs only for development / staging.
+	if C.GetConfig().Env != C.PRODUCTION {
+		r.GET("/sdk/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
+
 	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
 	r.POST(ROUTE_SDK_ROOT+"/service/error", SDKErrorHandler)
 
@@ -164,7 +169,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	intRouteGroup := r.Group(ROUTE_INTEGRATIONS_ROOT)
 	intRouteGroup.POST("/segment", mid.SetScopeProjectPrivateToken(), IntSegmentHandler)
 	intRouteGroup.POST("/segment_platform",
-		mid.SetScopeProjectPrivateTokenUsingBasicAuth(), IntSegmentHandler)
+		mid.SetScopeProjectPrivateTokenUsingBasicAuth(), IntSegmentPlatformHandler)
 }
 
 func InitIntRoutes(r *gin.Engine) {
