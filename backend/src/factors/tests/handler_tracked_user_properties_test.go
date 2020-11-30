@@ -223,6 +223,11 @@ func TestCreateTrackedUserProperty(t *testing.T) {
 	assert.Equal(t, successTrackedUPIds[0], int64(trackedUserProperty[0].ID))
 	assert.Equal(t, false, trackedUserProperty[0].IsActive)
 
+	// Null AgentID
+	id, errCode := M.CreateFactorsTrackedUserProperty(projectId, "up2", "")
+	assert.NotEqual(t, 0, id)
+	assert.Equal(t, 201, errCode)
+
 	// Limit exceeded
 	C.GetConfig().ActiveFactorsTrackedUserPropertiesLimit = 0
 	request = V1.CreateTrackeduserPropertyParams{}

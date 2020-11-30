@@ -214,6 +214,11 @@ func TestCreateFactorsTrackedEvent(t *testing.T) {
 	assert.Equal(t, false, trackedEvent[0].IsActive)
 	assert.Equal(t, "event1", trackedEvent[0].Name)
 
+	// Null AgentID
+	id, errCode := M.CreateFactorsTrackedEvent(projectId, "event2", "")
+	assert.NotEqual(t, 0, id)
+	assert.Equal(t, 201, errCode)
+
 	// Limit exceeded
 	C.GetConfig().ActiveFactorsTrackedEventsLimit = 0
 	request = V1.CreateFactorsTrackedEventParams{}

@@ -17,7 +17,7 @@ type FactorsTrackedUserProperty struct {
 	ProjectID        uint64     `json:"project_id"`
 	UserPropertyName string     `json:"user_property_name"`
 	Type             string     `gorm:"not null;type:varchar(2)" json:"type"`
-	CreatedBy        string     `json:"created_by"`
+	CreatedBy        *string    `json:"created_by;default:null"`
 	LastTrackedAt    *time.Time `json:"last_tracked_at"`
 	IsActive         bool       `json:"is_active"`
 	CreatedAt        *time.Time `json:"created_at"`
@@ -52,15 +52,28 @@ func CreateFactorsTrackedUserProperty(ProjectID uint64, UserPropertyName string,
 		return 0, http.StatusConflict // Janani: return error
 
 	} else if dbErr.Error() == "record not found" {
-		trackedUserProperty := FactorsTrackedUserProperty{
-			ProjectID:        ProjectID,
-			UserPropertyName: UserPropertyName,
-			Type:             insertType,
-			CreatedBy:        agentUUID,
-			LastTrackedAt:    new(time.Time),
-			IsActive:         true,
-			CreatedAt:        &transTime,
-			UpdatedAt:        &transTime,
+		var trackedUserProperty FactorsTrackedUserProperty
+		if insertType == "UC" {
+			trackedUserProperty = FactorsTrackedUserProperty{
+				ProjectID:        ProjectID,
+				UserPropertyName: UserPropertyName,
+				Type:             insertType,
+				LastTrackedAt:    new(time.Time),
+				CreatedBy:        &agentUUID,
+				IsActive:         true,
+				CreatedAt:        &transTime,
+				UpdatedAt:        &transTime,
+			}
+		} else {
+			trackedUserProperty = FactorsTrackedUserProperty{
+				ProjectID:        ProjectID,
+				UserPropertyName: UserPropertyName,
+				Type:             insertType,
+				LastTrackedAt:    new(time.Time),
+				IsActive:         true,
+				CreatedAt:        &transTime,
+				UpdatedAt:        &transTime,
+			}
 		}
 		if err := db.Create(&trackedUserProperty).Error; err != nil {
 			logCtx.WithError(dbErr).Error("Insert into tracked_user_property table failed")

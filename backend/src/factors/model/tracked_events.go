@@ -17,7 +17,7 @@ type FactorsTrackedEvent struct {
 	ProjectID     uint64     `json:"project_id"`
 	EventNameID   uint64     `json:"event_name_id"`
 	Type          string     `gorm:"not null;type:varchar(2)" json:"type"`
-	CreatedBy     string     `json:"created_by"`
+	CreatedBy     *string    `json:"created_by"`
 	LastTrackedAt *time.Time `json:"last_tracked_at"`
 	IsActive      bool       `json:"is_active"`
 	CreatedAt     *time.Time `json:"created_at"`
@@ -29,7 +29,7 @@ type FactorsTrackedEventInfo struct {
 	ProjectID     uint64     `json:"project_id"`
 	EventNameID   uint64     `json:"event_name_id"`
 	Type          string     `gorm:"not null;type:varchar(2)" json:"type"`
-	CreatedBy     string     `json:"created_by"`
+	CreatedBy     *string    `json:"created_by"`
 	LastTrackedAt *time.Time `json:"last_tracked_at"`
 	IsActive      bool       `json:"is_active"`
 	CreatedAt     *time.Time `json:"created_at"`
@@ -68,15 +68,28 @@ func CreateFactorsTrackedEvent(ProjectID uint64, EventName string, agentUUID str
 		return 0, http.StatusConflict // Janani: return error
 
 	} else if dbErr.Error() == "record not found" {
-		trackedEvent := FactorsTrackedEvent{
-			ProjectID:     ProjectID,
-			EventNameID:   eventData.ID,
-			Type:          insertType,
-			CreatedBy:     agentUUID,
-			LastTrackedAt: new(time.Time),
-			IsActive:      true,
-			CreatedAt:     &transTime,
-			UpdatedAt:     &transTime,
+		var trackedEvent FactorsTrackedEvent
+		if insertType == "UC" {
+			trackedEvent = FactorsTrackedEvent{
+				ProjectID:     ProjectID,
+				EventNameID:   eventData.ID,
+				Type:          insertType,
+				CreatedBy:     &agentUUID,
+				LastTrackedAt: new(time.Time),
+				IsActive:      true,
+				CreatedAt:     &transTime,
+				UpdatedAt:     &transTime,
+			}
+		} else {
+			trackedEvent = FactorsTrackedEvent{
+				ProjectID:     ProjectID,
+				EventNameID:   eventData.ID,
+				Type:          insertType,
+				LastTrackedAt: new(time.Time),
+				IsActive:      true,
+				CreatedAt:     &transTime,
+				UpdatedAt:     &transTime,
+			}
 		}
 		if err := db.Create(&trackedEvent).Error; err != nil {
 			logCtx.WithError(dbErr).Error("Insert into tracked_events table failed")

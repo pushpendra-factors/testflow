@@ -22,7 +22,7 @@ type FactorsGoal struct {
 	Name          string         `json:"name"`
 	Rule          postgres.Jsonb `json:"rule,omitempty"`
 	Type          string         `gorm:"not null;type:varchar(2)" json:"type"`
-	CreatedBy     string         `json:"created_by"`
+	CreatedBy     *string        `json:"created_by"`
 	LastTrackedAt *time.Time     `json:"last_tracked_at"`
 	IsActive      bool           `json:"is_active"`
 	CreatedAt     *time.Time     `json:"created_at"`
@@ -112,17 +112,30 @@ func CreateFactorsGoal(ProjectID uint64, Name string, Rule FactorsGoalRule, agen
 	if isDulplicateFactorsGoalRule(ProjectID, Rule) {
 		return 0, http.StatusConflict, "Rule already exist"
 	}
-
-	goal := FactorsGoal{
-		ProjectID:     ProjectID,
-		Name:          Name,
-		Rule:          ruleJsonb,
-		Type:          insertType,
-		CreatedBy:     agentUUID,
-		LastTrackedAt: new(time.Time),
-		IsActive:      true,
-		CreatedAt:     &transTime,
-		UpdatedAt:     &transTime,
+	var goal FactorsGoal
+	if insertType == "UC" {
+		goal = FactorsGoal{
+			ProjectID:     ProjectID,
+			Name:          Name,
+			Rule:          ruleJsonb,
+			Type:          insertType,
+			CreatedBy:     &agentUUID,
+			LastTrackedAt: new(time.Time),
+			IsActive:      true,
+			CreatedAt:     &transTime,
+			UpdatedAt:     &transTime,
+		}
+	} else {
+		goal = FactorsGoal{
+			ProjectID:     ProjectID,
+			Name:          Name,
+			Rule:          ruleJsonb,
+			Type:          insertType,
+			LastTrackedAt: new(time.Time),
+			IsActive:      true,
+			CreatedAt:     &transTime,
+			UpdatedAt:     &transTime,
+		}
 	}
 	if err := db.Create(&goal).Error; err != nil {
 		if isDuplicateName(err) {

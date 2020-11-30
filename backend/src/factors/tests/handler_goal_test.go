@@ -486,6 +486,11 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	json.Unmarshal(jsonResponse, &goals)
 	assert.Equal(t, len(goals), 3)
 
+	// nul agentID
+	id, errCode, _ := M.CreateFactorsGoal(projectId, "WithoutAgentID", M.FactorsGoalRule{EndEvent: "event1"}, "")
+	assert.NotEqual(t, 0, id)
+	assert.Equal(t, 201, errCode)
+
 	// Limit exceeded
 	C.GetConfig().ActiveFactorsGoalsLimit = 2
 	request = V1.CreateFactorsGoalParams{}
