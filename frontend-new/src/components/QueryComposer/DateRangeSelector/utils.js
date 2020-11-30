@@ -3,12 +3,13 @@ import { createStaticRanges } from 'react-date-range';
 import moment from 'moment';
 import mt from 'moment-timezone';
 
-export const DATE_RANGE_LABEL_CURRENT_MONTH = 'Current Month';
-export const DEFAULT_DATE_RANGE_LABEL = 'Current Week';
+export const DATE_RANGE_LABEL_CURRENT_MONTH = 'This Month';
+export const DEFAULT_DATE_RANGE_LABEL = 'This Week';
 export const DATE_RANGE_LABEL_LAST_MONTH = 'Last Month';
 export const DATE_RANGE_LABEL_LAST_WEEK = 'Last Week';
 export const DATE_RANGE_YESTERDAY_LABEL = 'Yesterday';
 export const DATE_RANGE_TODAY_LABEL = 'Today';
+export const DATE_RANGE_LABEL_LAST_7_DAYS = 'Last 7 Days';
 export const DATE_RANGE_LAST_2_MIN_LABEL = 'Last 2 mins';
 export const DATE_RANGE_LAST_30_MIN_LABEL = 'Last 30 mins';
 
@@ -134,6 +135,13 @@ const DEFAULT_DATE_RANGES = [
       startDate: moment(getFirstDayOfLastMonth()).startOf('day').toDate(),
       endDate: moment(getLastDayOfLastMonth()).endOf('day').toDate()
     })
+  },
+  {
+    label: DATE_RANGE_LABEL_LAST_7_DAYS,
+    range: () => ({
+      startDate: moment(new Date()).subtract(7, 'days').startOf('day').toDate(),
+      endDate: moment(new Date())
+    })
   }
 ];
 
@@ -200,6 +208,11 @@ export const readableDateRange = function (range) {
   return moment(range.startDate).format('MMM DD, YYYY') + ' - ' +
     moment(range.endDate).format('MMM DD, YYYY');
 };
+
+export const displayRange = (range) => {
+  return moment(range.startDate).format('MMM DD, YYYY') + ' - ' +
+    moment(range.endDate).format('MMM DD, YYYY');
+}
 
 export const getDateRange = (durationObj) => {
   const ranges = [{ ...DEFAULT_DATE_RANGE }];

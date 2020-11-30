@@ -29,6 +29,11 @@ export function fetchEventPropertyValues(projectId, eventName, propertyName) {
   return get(null, url);
 }
 
+export function fetchUserPropertyValues(projectId, propertyName) {
+  const url = host + "projects/" + projectId + "/user_properties/" + propertyName + "/values";
+  return get(null, url);
+}
+
 export function fetchUserProperties(projectId, queryType) {
   const url = host + "projects/" + projectId + "/user_properties?query_type=" + queryType;
   return get(null, url);

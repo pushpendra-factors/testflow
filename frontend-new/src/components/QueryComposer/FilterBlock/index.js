@@ -9,7 +9,7 @@ import {
   DEFAULT_DATE_RANGE,
 } from '../DateRangeSelector/utils';
 
-import { fetchEventPropertyValues } from '../../../reducers/coreQuery/services';
+import { fetchEventPropertyValues, fetchUserPropertyValues } from '../../../reducers/coreQuery/services';
 
 export default function FilterBlock({ index, filterProps, activeProject, event, filter, deleteFilter, insertFilter, closeFilter }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
@@ -130,11 +130,19 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
 
   useEffect(() => {
     if(newFilterState.props[1] === 'categorical' && !dropDownValues[newFilterState.props[0]]) {
+      if(newFilterState.props[2] === 'user') {
+      fetchUserPropertyValues(activeProject.id, newFilterState.props[0]).then(res => {
+        const ddValues = Object.assign({}, dropDownValues);
+        ddValues[newFilterState.props[0]] = res.data;
+        setDropDownValues(ddValues);
+      })
+    } else {
       fetchEventPropertyValues(activeProject.id, event.label, newFilterState.props[0]).then(res => {
         const ddValues = Object.assign({}, dropDownValues);
         ddValues[newFilterState.props[0]] = res.data;
         setDropDownValues(ddValues);
       })
+    }
     }
 
   }, [newFilterState])

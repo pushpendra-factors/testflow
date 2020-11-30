@@ -15,8 +15,7 @@ import DateRangeSelector from './DateRangeSelector';
 
 import {
   DEFAULT_DATE_RANGE,
-  DEFINED_DATE_RANGES,
-  readableDateRange
+  displayRange
 } from './DateRangeSelector/utils';
 
 import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
@@ -215,7 +214,7 @@ function QueryComposer({
 
   const convertToDateRange = () => {
     const range = getDateRange();
-    setCalendarLabel(readableDateRange(range[0]));
+    setCalendarLabel(displayRange(range[0]));
   };
 
   const handleRunQuery = useCallback(() => {
