@@ -274,8 +274,10 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     const queryupdated = [...queries];
     if (queryupdated[index]) {
       if (changeType === 'add') {
+        if(JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
+          deleteGroupByForEvent(newEvent, index);
+        }
         queryupdated[index] = newEvent;
-        deleteGroupByForEvent(newEvent, index);
       } else {
         deleteGroupByForEvent(newEvent, index);
         queryupdated.splice(index, 1);

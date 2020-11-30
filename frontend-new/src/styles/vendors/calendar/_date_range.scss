@@ -196,7 +196,18 @@
             user-select: none;
   }
   
-  .rdrDefinedRangesWrapper{}
+
+  .fa_date_filter {
+    .rdrDefinedRangesWrapper{
+      display: none;
+    }
+
+    .rdrCalendarWrapper {
+      width: auto;
+      padding: 15px;
+    }
+  }
+  
   
   .rdrStaticRanges{
     display: -webkit-box;

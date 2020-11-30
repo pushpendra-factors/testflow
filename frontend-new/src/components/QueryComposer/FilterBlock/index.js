@@ -1,9 +1,13 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
-
+import { DateRangePicker } from 'react-date-range';
 import { Input, Button, Result } from 'antd';
+import moment from 'moment';
 import { SVG, Text } from 'factorsComponents';
+import {
+  DEFAULT_DATE_RANGE,
+} from '../DateRangeSelector/utils';
 
 import { fetchEventPropertyValues } from '../../../reducers/coreQuery/services';
 
@@ -18,6 +22,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
   });
 
   const [dropDownValues, setDropDownValues] = useState({});
+  const [selectedRngState, setSelectedRngState] = useState([{ ...DEFAULT_DATE_RANGE }]);
 
   const placeHolder = {
     props: 'Choose a property',
@@ -51,14 +56,27 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
         '<=',
         '>',
         '>='
+      ],
+      "datetime": [
+        '='
       ]
   },
   };
 
   const renderFilterContent = () => {
+    let values;
+    if(filter.props[1] === 'categorical'){ 
+      values = filter.values.join(', ');
+    } else if (filter.props[1] === 'datetime') { 
+      const parsedValues = JSON.parse(filter.values);
+      values = (moment(parsedValues.fr).format('MMM DD, YYYY') + ' - ' +
+              moment(parsedValues.to).format('MMM DD, YYYY'));
+    } else {
+      values = filter.values;
+    }
     return (
       <div className={`${styles.filter_block__filter_content} ml-4`}>
-        {filter.props[0] + ' ' + filter.operator + ' ' + filter.values.join(', ')}
+        {filter.props[0] + ' ' + filter.operator + ' ' + values}
       </div>
     );
   };
@@ -157,15 +175,35 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
     setGroupCollapse(groupColState);
   };
 
+  const addInput = ($event) => {
+    const newFilter = Object.assign({}, newFilterState);
+    newFilter[filterTypeState] = $event.target.value;
+    setNewFilterState(newFilter);
+  }
+
+  const onDateSelect = (range) => {
+    const newRange = [...selectedRngState];
+    const newFilter = Object.assign({}, newFilterState);
+    newRange[0] = range.selected;
+    setSelectedRngState(newRange);
+    const rangeValue = {
+      "fr": newRange[0].startDate.getTime(),
+      "to": newRange[0].endDate.getTime(),
+      "ovp": false
+    }
+    newFilter[filterTypeState] = JSON.stringify(rangeValue);
+    setNewFilterState(newFilter)
+  }
+
   const renderOptions = (options) => {
     const renderOptions = [];
     switch (filterTypeState) {
       case 'props':
         options.forEach((group, grpIndex) => {
-          const collState = groupCollapseState[grpIndex];
+          const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
           renderOptions.push(
-          <div className={styles.filter_block__filter_select__option_group_container}>
-            <div className={styles.filter_block__filter_select__option_group}
+            <div className={`fa-select-group-select--content`}>
+            {!searchTerm.length && <div className={'fa-select-group-select--option-group'}
               onClick={() => collapseGroup(grpIndex)}
             >
               <div>
@@ -173,7 +211,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
                 <Text type={'title'} extraClass={'ml-1'} weight={'bold'}>{group.label}</Text>
               </div>
               <SVG name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
-            </div>
+            </div>}
             <div className={styles.filter_block__filter_select__option_group_container_sec}>
             { collState
               ? (() => {
@@ -181,10 +219,11 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
                 filterProps[['user', 'event'][grpIndex]].forEach((val) => {
                   if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                     valuesOptions.push(
-                      <span className={styles.filter_block__filter_select__option}
-                        onClick={() => optionClick([...val, ['user', 'event'][grpIndex]])} >
-                        {val[0]}
-                      </span>
+                      <div className={`fa-select-group-select--options`}
+                            onClick={() => optionClick([...val, ['user', 'event'][grpIndex]])} >
+                          {searchTerm.length > 0 && <SVG name={group.icon} extraClass={'self-center'}></SVG>}
+                          <span className={'ml-1'}>{val[0]}</span>
+                      </div>
                     );
                   }
                 });
@@ -210,6 +249,14 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
         break;
       case 'values':
         if(newFilterState.props[1] === 'categorical') {
+          
+          if(!searchTerm.length)
+          renderOptions.push(<span className={styles.filter_block__filter_select__option}
+            onClick={() => optionClick('$none')} >
+            {'$none'}
+          </span>
+          );
+
           if (options[newFilterState.props[0]] && options[newFilterState.props[0]].length) {
             options[newFilterState.props[0]].forEach(opt => {
               if (opt.toLowerCase().includes(searchTerm.toLowerCase())) {
@@ -220,14 +267,6 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
                 );
               }
             });
-          } else {
-            renderOptions.push(<span className={styles.filter_block__filter_select__option_empty}
-              >
-              <Result
-                title="No Results"
-                subTitle="Sorry, Couldn't load the data."
-              />
-            </span>)
           }
 
           if(!renderOptions.length && searchTerm.length) {
@@ -235,7 +274,35 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
               >
                Sorry! No matches
             </span>)
+          } else {
+            renderOptions.push(<span className={styles.filter_block__filter_select__apply}
+              onClick={() => applyFilter()} >
+              <Button className={styles.filter_block__filter_select__apply_btn} size={'large'} type="primary" onClick={() => applyFilter()}>Apply Filter</Button>
+            </span>)
           }
+        } else if (newFilterState.props[1] === 'numerical') {
+          renderOptions.push(<span className={styles.filter_block__filter_select__option_numerical}>
+            <Input placeholder={"Enter a value"} onChange={addInput}></Input>
+          </span>)
+
+          renderOptions.push(<span className={styles.filter_block__filter_select__apply}
+            onClick={() => applyFilter()} >
+            <Button className={styles.filter_block__filter_select__apply_btn} size={'large'} type="primary" onClick={() => applyFilter()}>Apply Filter</Button>
+          </span>)
+        } else if (newFilterState.props[1] === 'datetime') {
+          
+          renderOptions.push(<span className={`${styles.filter_block__filter_select__date} fa_date_filter`}>
+            <DateRangePicker 
+              ranges={selectedRngState}
+              onChange={onDateSelect}
+              minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
+              maxDate={moment(new Date()).subtract(1, 'days').endOf('day').toDate()}
+            />
+          </span>)
+          renderOptions.push(<span className={styles.filter_block__filter_select__apply}
+            onClick={() => applyFilter()} >
+            <Button className={styles.filter_block__filter_select__apply_btn} size={'large'} type="primary" onClick={() => applyFilter()}>Apply Filter</Button>
+          </span>)
         }
         
         break;
@@ -257,17 +324,25 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
       </span>) : (() => {})();
 
     if (newFilterState.values.length > 0) {
-      newFilterState.values.slice(0, 2).forEach((val, i) => {
+      if(newFilterState.props[1] === 'categorical') {
+        newFilterState.values.slice(0, 2).forEach((val, i) => {
+          tags.push(<span className={tagClass}>
+            {newFilterState.values[i]}
+          </span>);
+        });
+        newFilterState.values.length >= 3 ? tags.push(
+          <span>
+                      ...+{newFilterState.values.length - 2}
+          </span>
+        ) : (() => {})();
+      }
+      else {
         tags.push(<span className={tagClass}>
-          {newFilterState.values[i]}
+          {newFilterState.values}
         </span>);
-      });
-      newFilterState.values.length >= 3 ? tags.push(
-        <span>
-                    ...+{newFilterState.values.length - 2}
-        </span>
-      ) : (() => {})();
-    }
+      }
+    } 
+
     if (tags.length < 1) {
       tags.push(<SVG name="search" />);
     }
@@ -276,7 +351,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
 
   const renderFilterSelect = () => {
     return (
-      <div className={`${styles.filter_block__filter_select} ml-4 fa-filter-select`}>
+      <div className={`${styles.filter_block__filter_select} ml-4 fa-select fa-filter-select fa-select--group-select`}>
         <Input
           id='fai-filter-input'
           className={styles.filter_block__filter_select__input}
@@ -296,16 +371,18 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
     );
   };
 
-  const onClickOutside = () => {
+  const applyFilter = () => {
     if (newFilterState.props.length &&
-            newFilterState.operator.length &&
-            newFilterState.values.length
+      newFilterState.operator.length &&
+      newFilterState.values.length
     ) {
       insertFilter(newFilterState);
       closeFilter();
-    } else {
-      closeFilter();
     }
+  }
+
+  const onClickOutside = () => {
+    closeFilter();
   };
 
   return (

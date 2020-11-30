@@ -43,7 +43,31 @@
 
         }
 
+        &__apply {
+            @extend .filter_block__filter_select__option_nomatch;
+            justify-content: center;
+        }
+
+        &__date {
+            @extend .filter_block__filter_select__apply;
+        }
+
+        &__apply_btn {
+            width: 280px;
+        }
+
         &_option_empty {
+
+        }
+
+        &__option_numerical {
+            @extend .filter_block__filter_select__option_nomatch;
+            justify-content: center;
+
+            input {
+                box-sizing: border-box;
+                border-radius: 6px;
+            }
 
         }
 
