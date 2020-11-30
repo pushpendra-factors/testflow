@@ -7,7 +7,6 @@ import (
 	"time"
 
 	C "factors/config"
-	"factors/metrics"
 	M "factors/model"
 	"factors/util"
 
@@ -37,7 +36,8 @@ func main() {
 
 	flag.Parse()
 	taskID := "dashboard_caching"
-	defer util.NotifyOnPanic(taskID, *envFlag)
+	healthcheckPingID := C.HealthcheckDashboardCachingPingID
+	defer C.PingHealthcheckForPanic(taskID, *envFlag, healthcheckPingID)
 	logCtx := log.WithFields(log.Fields{"Prefix": taskID})
 
 	if *envFlag != C.DEVELOPMENT && *envFlag != C.STAGING && *envFlag != C.PRODUCTION {
@@ -69,7 +69,7 @@ func main() {
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
-		logCtx.WithError(err).Fatal("Failed to initialize DB")
+		logCtx.WithError(err).Panic("Failed to initialize DB")
 	}
 	C.InitRedisPersistent(config.RedisHost, config.RedisPort)
 
@@ -100,8 +100,7 @@ func main() {
 	timeTakenStringWeb, _ := timeTaken.Load("web")
 	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %+v. Time taken for web analytics: %+v",
 		*projectIDFlag, timeTakenString, timeTakenStringWeb)
-	util.NotifyThroughSNS(taskID, *envFlag, notifyMessage)
-	metrics.Increment(metrics.IncrCronDashboardCachingSuccess)
+	C.PingHealthcheckForSuccess(healthcheckPingID, notifyMessage)
 }
 
 func cacheDashboardUnitsForProjects(projectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {

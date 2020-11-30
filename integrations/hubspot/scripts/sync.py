@@ -16,6 +16,7 @@ PAGE_SIZE = 50
 DOC_TYPES = [ "contact", "company", "deal", "form", "form_submission" ]
 
 METRIC_TYPE_INCR = "incr"
+HEALTHCHECK_PING_ID = "87137001-b18b-474c-8bc5-63324baff2a8"
 
 # Todo: Boilerplate, move this to a reusable module.
 def notify(env, source, message):
@@ -28,6 +29,13 @@ def notify(env, source, message):
     response = requests.post(sns_url, json=payload)
     if not response.ok: log.error("Failed to notify through sns.")
     return response
+
+def ping_healthcheck_success(healthcheck_id, message):
+    try:
+        requests.post("https://hc-ping.com/" + healthcheck_id, data=json.dumps(message, indent=1), timeout=10)
+    except requests.RequestException as e:
+        # Log ping failure here...
+        log.error("Ping failed to healthchecks.io: %s" % e)
 
 def record_metric(metric_type, metric_name, metric_value=0):
     payload = {
@@ -476,5 +484,5 @@ if __name__ == "__main__":
     notify(options.env, APP_NAME, notification_payload)
 
     log.warning("Successfully synced. End of hubspot sync job.")
-    record_metric(METRIC_TYPE_INCR, "cron_hubspot_sync_success")
+    ping_healthcheck_success(HEALTHCHECK_PING_ID, notification_payload)
     sys.exit(0)

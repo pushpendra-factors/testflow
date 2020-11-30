@@ -2,8 +2,6 @@ package main
 
 import (
 	C "factors/config"
-	"factors/metrics"
-	U "factors/util"
 	"flag"
 	"fmt"
 	"time"
@@ -44,7 +42,8 @@ func main() {
 	}
 
 	taskID := "Task#CleanUpEventUserCache"
-	defer U.NotifyOnPanic(taskID, *env)
+	healthcheckPingID := C.HealthcheckCleanupEventUserCachePingID
+	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	config := &C.Configuration{
 		AppName:            "CleanUpEventUserCache",
@@ -74,9 +73,6 @@ func main() {
 
 	status := cleanup.DoRollUpAndCleanUp(eventsLimit, propertiesLimit, valuesLimit, rollupLookback)
 
-	if err := U.NotifyThroughSNS(taskID, *env, status); err != nil {
-		log.Fatalf("Failed to notify status %+v", status)
-	}
 	log.Info("Done!!!")
-	metrics.Increment(metrics.IncrCronCleanUpEventUserCacheSuccess)
+	C.PingHealthcheckForSuccess(healthcheckPingID, status)
 }

@@ -56,7 +56,7 @@ func TestRecordIncrementMetricType(t *testing.T) {
 	assert.NotNil(t, project)
 	assert.NotNil(t, agent)
 
-	registeredMetricName := "cron_hubspot_sync_success" // Type incr.
+	registeredMetricName := "data_server_dummy_incr_metric" // Type incr.
 	registeredMetricType := metrics.MetricTypeIncr
 
 	// For unknow metric type, it should fail.

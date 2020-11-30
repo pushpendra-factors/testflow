@@ -1,7 +1,11 @@
 package config
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -112,6 +116,19 @@ type Services struct {
 	SentryHook         *logrus_sentry.SentryHook
 	MetricsExporter    *stackdriver.Exporter
 }
+
+// Healthchecks.io ping IDs for monitoring. Can be used anywhere in code to report error on job.
+const (
+	HealthcheckAddSessionPingID             = "8da15fff-15f0-4410-9efc-524f624fd388"
+	HealthcheckArchiveEventsPingID          = "b2d0f1df-901e-4113-bb45-eed95539790b"
+	HealthcheckBigqueryUploadPingID         = "03e0fba3-d660-4679-8595-29b6cd04e87c"
+	HealthcheckCleanupEventUserCachePingID  = "85e21b5c-5503-4172-af40-de918741a4d1"
+	HealthcheckDashboardCachingPingID       = "72e5eadc-b46e-45ca-ba78-29819532307d"
+	HealthcheckHubspotEnrichPingID          = "6f522e60-6bf8-4aea-99fe-f5a1c68a00e7"
+	HealthcheckMonitoringJobPingID          = "18db44be-c193-4f11-84e5-5ff144e272e9"
+	HealthcheckSalesforceEnrichPingID       = "e56175aa-3407-4595-bb94-d8325952b224"
+	HealthcheckYourstoryAddPropertiesPingID = "acf7faab-c56f-415e-aa10-ca2aa9246172"
+)
 
 func (service *Services) GetPatternServerAddresses() []string {
 	service.patternServersLock.RLock()
@@ -881,4 +898,76 @@ func IsBlockedSDKRequestProjectToken(projectToken string) bool {
 	}
 
 	return U.StringValueIn(projectToken, configuration.BlockedSDKRequestProjectTokens)
+}
+
+// PingHealthcheckForSuccess Ping healthchecks.io for cron success.
+func PingHealthcheckForSuccess(healthcheckID string, message interface{}) {
+	log.Info("Job successful with message ", message)
+	if configuration.Env != PRODUCTION {
+		return
+	}
+	var client = &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	payload, _ := json.MarshalIndent(message, "", " ")
+	if string(payload) == "{}" {
+		payload = []byte(fmt.Sprintf("%#v", message))
+	}
+	_, err := client.Post("https://hc-ping.com/"+healthcheckID, "application/json", bytes.NewBuffer(payload))
+	if err != nil {
+		log.WithError(err).Error("Failed to report to healthchecks.io")
+	}
+}
+
+// PingHealthcheckForStart Ping healthchecks.io for cron start. Used to show run time for jobs.
+func PingHealthcheckForStart(healthcheckID string) {
+	if configuration.Env != PRODUCTION {
+		return
+	}
+	var client = &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	_, err := client.Head("https://hc-ping.com/" + healthcheckID + "/start")
+	if err != nil {
+		log.WithError(err).Error("Failed to report to healthchecks.io")
+	}
+}
+
+// PingHealthcheckForFailure Ping healthchecks.io for cron failure.
+func PingHealthcheckForFailure(healthcheckID string, message interface{}) {
+	log.Error("Job failed with message ", message)
+	if configuration.Env != PRODUCTION {
+		return
+	}
+	var client = &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	payload, _ := json.MarshalIndent(message, "", " ")
+	if string(payload) == "{}" {
+		payload = []byte(fmt.Sprintf("%#v", message))
+	}
+	_, err := client.Post("https://hc-ping.com/"+healthcheckID+"/fail", "application/json", bytes.NewBuffer(payload))
+	if err != nil {
+		log.WithError(err).Error("Failed to report to healthchecks.io")
+	}
+}
+
+// PingHealthcheckForPanic To capture panics in crons and send an alert to healthcheck and SNS.
+func PingHealthcheckForPanic(taskID, env, healthcheckID string) {
+	if pe := recover(); pe != nil {
+		if configuration == nil {
+			// In case panic happens before conf is initialized.
+			InitConf(env)
+		}
+		panicMessage := map[string]interface{}{"panic_error": pe, "stacktrace": string(debug.Stack())}
+		PingHealthcheckForFailure(healthcheckID, panicMessage)
+
+		if ne := U.NotifyThroughSNS(taskID, env, panicMessage); ne != nil {
+			log.Fatal(ne, pe) // using fatal to avoid panic loop.
+		}
+		log.Fatal(pe) // using fatal to avoid panic loop.
+	}
 }

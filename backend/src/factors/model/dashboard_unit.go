@@ -505,17 +505,12 @@ func CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int {
 
 // CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
 func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup *sync.WaitGroup) {
-	logCtx := log.WithFields(log.Fields{
-		"Method":      "CacheDashboardUnit",
-		"ProjectID":   projectID,
-		"DashboardID": dashboardUnit.DashboardId,
-		"UnitID":      dashboardUnit.ID,
-	})
 	defer waitGroup.Done()
 
 	savedQuery, errCode := GetDashboardQueryWithQueryId(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusFound {
-		logCtx.Errorf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+		errMsg := fmt.Sprintf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
 	}
 
@@ -523,12 +518,13 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 	var query Query
 	var queryGroup QueryGroup
 	// try decoding for Query
-	err := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &query)
+	U.DecodePostgresJsonbToStructType(&savedQuery.Query, &query)
 	if query.Class == "" {
 		// if fails, try decoding for QueryGroup
 		err1 := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &queryGroup)
 		if err1 != nil {
-			logCtx.WithError(err).Errorf("Failed to decode jsonb query")
+			errMsg := fmt.Sprintf("Failed to decode jsonb query, query_id %d", dashboardUnit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 			return
 		} else {
 			queryClass = queryGroup.GetClass()
@@ -549,7 +545,8 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
 		baseQuery, err := DecodeQueryForClass(dashboardUnit.Query, queryClass)
 		if err != nil {
-			logCtx.WithError(err).Errorf("Error decoding query")
+			errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 			return
 		}
 		baseQuery.SetQueryDateRange(from, to)

@@ -2,8 +2,6 @@ package main
 
 import (
 	C "factors/config"
-	"factors/metrics"
-	"factors/util"
 	"flag"
 	"fmt"
 	"net/http"
@@ -41,7 +39,8 @@ func main() {
 	}
 
 	taskID := "Task#HubspotEnrich"
-	defer util.NotifyOnPanic(taskID, *env)
+	healthcheckPingID := C.HealthcheckHubspotEnrichPingID
+	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	// init DB, etcd
 	config := &C.Configuration{
@@ -56,11 +55,11 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:                          *redisHost,
-		RedisPort:                          *redisPort,
-		RedisHostPersistent:                *redisHostPersistent,
-		RedisPortPersistent:                *redisPortPersistent,
-		SentryDSN:                          *sentryDSN,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
+		SentryDSN:           *sentryDSN,
 	}
 
 	C.InitConf(config.Env)
@@ -68,7 +67,7 @@ func main() {
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"env": *env,
-			"host": *dbHost, "port": *dbPort}).Fatal("Failed to initialize DB.")
+			"host": *dbHost, "port": *dbPort}).Panic("Failed to initialize DB.")
 	}
 	db := C.GetServices().Db
 	defer db.Close()
@@ -81,7 +80,7 @@ func main() {
 
 	hubspotEnabledProjectSettings, errCode := M.GetAllHubspotProjectSettings()
 	if errCode != http.StatusFound {
-		log.Fatal("No projects enabled hubspot integration.")
+		log.Panic("No projects enabled hubspot integration.")
 	}
 
 	statusList := make([]IntHubspot.Status, 0, 0)
@@ -90,9 +89,5 @@ func main() {
 		statusList = append(statusList, status...)
 	}
 
-	err = util.NotifyThroughSNS("hubspot_enrich", *env, statusList)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to notify through SNS on hubspot sync.")
-	}
-	metrics.Increment(metrics.IncrCronHubspotEnrichSuccess)
+	C.PingHealthcheckForSuccess(healthcheckPingID, statusList)
 }

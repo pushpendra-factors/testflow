@@ -229,7 +229,7 @@ func getWebAnalyticsEnabledProjectIDs() ([]uint64, int) {
 
 func getWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *WebAnalyticsQueries, int) {
 	logCtx := log.WithFields(log.Fields{
-		"Method":    "GetWebAnalyticsDashboardIDForProject",
+		"Method":    "getWebAnalyticsQueriesFromDashboardUnits",
 		"ProjectID": projectID,
 	})
 
@@ -1527,6 +1527,8 @@ func cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGroup *sync.WaitGro
 
 	dashboardID, webAnalyticsQueries, errCode := getWebAnalyticsQueriesFromDashboardUnits(projectID)
 	if errCode != http.StatusFound {
+		errMsg := fmt.Sprintf("Failed to get web analytics queries for project %d", projectID)
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
 	}
 

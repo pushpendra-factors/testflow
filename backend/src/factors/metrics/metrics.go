@@ -48,18 +48,6 @@ const (
 	BytesTableSizeUserProperties   = "table_user_properties_size"
 	BytesTableSizeUsers            = "table_users_size"
 
-	// Used to report successful completion at the end of the job.
-	// Alert can be added on GCP side with metric 'is absent for' scheduled job frequency.
-	IncrCronMonitoringJobSuccess          = "cron_monitoring_job_success"
-	IncrCronBigqueryUploadSuccess         = "cron_bigquery_upload_success"
-	IncrCronArchiveEventsSuccess          = "cron_archive_events_success"
-	IncrCronDashboardCachingSuccess       = "cron_dashboard_caching_success"
-	IncrCronAddSessionSuccess             = "cron_add_session_success"
-	IncrCronCleanUpEventUserCacheSuccess  = "cron_cleanup_eventuser_cache_success"
-	IncrCronHubspotEnrichSuccess          = "cron_hubspot_enrich_success"
-	IncrCronSalesforceEnrichSuccess       = "cron_salesforce_enrich_success"
-	IncrCronYourstoryAddPropertiesSuccess = "cron_yourstory_add_properties_success"
-
 	// Metrics related to user properties merge. TODO(prateek): Can be removed later since not actively tracked.
 	IncrUserPropertiesMergeMoreThan10    = "user_properties_merge_more_than_10"
 	IncrUserPropertiesMergeCount         = "user_properties_merge_count"
@@ -77,10 +65,12 @@ const (
 // PythonServerMetrics All python job related metrics to be added here.
 var PythonServerMetrics = map[string]map[string]bool{
 	MetricTypeIncr: {
-		"cron_adwords_sync_success":  true,
-		"cron_hubspot_sync_success":  true,
-		"cron_facebook_sync_success": true,
+		// Dummy metric for tests.
+		"data_server_dummy_incr_metric": true,
 	},
+	MetricTypeCount:   {},
+	MetricTypeBytes:   {},
+	MetricTypeLatency: {},
 }
 
 var (

@@ -10,7 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
-	"factors/metrics"
 	"factors/util"
 
 	"factors/task/session"
@@ -51,7 +50,8 @@ func main() {
 	}
 
 	taskID := "Task#AddSession"
-	defer util.NotifyOnPanic(taskID, *env)
+	healthcheckPingID := C.HealthcheckAddSessionPingID
+	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	config := &C.Configuration{
 		AppName:            "add_session",
@@ -79,7 +79,7 @@ func main() {
 	// and will be used continiously.
 	err := C.InitDBWithMaxIdleAndMaxOpenConn(config.DBInfo, 50, 50)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to initialize db in add session.")
+		log.WithError(err).Panic("Failed to initialize db in add session.")
 	}
 
 	// Cache dependency for requests not using queue.
@@ -100,29 +100,26 @@ func main() {
 		maxLookbackTimestamp = util.UnixTimeBeforeDuration(time.Hour * time.Duration(*maxLookbackHours))
 	}
 
-	statusMap, _ := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
+	statusMap, err := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
 		*bufferTimeBeforeCreateSessionInMins, *numRoutines)
 
 	modifiedStatusMap := make(map[uint64]session.Status, 0)
-	notModifiedProjects := make([]uint64, 0, 0)
 
 	for pid, status := range statusMap {
 		if status.Status == session.StatusNotModified {
-			notModifiedProjects = append(notModifiedProjects, pid)
 			continue
 		}
 		modifiedStatusMap[pid] = status
 	}
 
 	status := map[string]interface{}{
-		"no_session_projects": notModifiedProjects,
-		"new_session_status":  modifiedStatusMap,
-	}
-
-	if err := util.NotifyThroughSNS(taskID, *env, status); err != nil {
-		log.Fatalf("Failed to notify status %+v", status)
+		"new_session_status": modifiedStatusMap,
 	}
 
 	log.WithField("no_of_projects", len(allowedProjectIds)).Info("Successfully added sessions.")
-	metrics.Increment(metrics.IncrCronAddSessionSuccess)
+	if err != nil {
+		C.PingHealthcheckForFailure(healthcheckPingID, err)
+	} else {
+		C.PingHealthcheckForSuccess(healthcheckPingID, status)
+	}
 }

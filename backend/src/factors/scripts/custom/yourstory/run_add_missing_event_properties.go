@@ -9,7 +9,6 @@ import (
 	"time"
 
 	C "factors/config"
-	"factors/metrics"
 	M "factors/model"
 	U "factors/util"
 
@@ -361,10 +360,11 @@ func main() {
 	}
 
 	taskID := "Task:Yourstory:AddMissingEventProperties"
-	defer U.NotifyOnPanic(taskID, *env)
+	healthcheckPingID := C.HealthcheckYourstoryAddPropertiesPingID
+	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	config := &C.Configuration{
-		AppName:            "yourstory:add_missing_event_properties",
+		AppName:            "yourstory_add_missing_event_properties",
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -381,7 +381,7 @@ func main() {
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to initialize db.")
+		log.WithError(err).Panic("Failed to initialize db.")
 	}
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
@@ -391,7 +391,7 @@ func main() {
 	}
 
 	if *customEndTimestamp > 0 && *customEndTimestamp < 1577836800 {
-		log.WithField("end_timestamp", *customEndTimestamp).Fatal("Invalid custom end timestamp.")
+		log.WithField("end_timestamp", *customEndTimestamp).Panic("Invalid custom end timestamp.")
 	}
 
 	var to int64
@@ -432,11 +432,9 @@ func main() {
 
 	// Notify only on failure.
 	if failureMsg != "" {
-		if err := U.NotifyThroughSNS(taskID, *env, failureMsg); err != nil {
-			log.Fatalf("Failed to notify status %+v", failureMsg)
-		}
+		C.PingHealthcheckForFailure(healthcheckPingID, failureMsg)
 	} else {
-		metrics.Increment(metrics.IncrCronYourstoryAddPropertiesSuccess)
+		C.PingHealthcheckForSuccess(healthcheckPingID, "Successfully completed")
 	}
 
 	log.WithFields(log.Fields{

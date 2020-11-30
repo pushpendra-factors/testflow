@@ -7,7 +7,6 @@ import (
 
 	C "factors/config"
 	"factors/filestore"
-	"factors/metrics"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
@@ -37,8 +36,9 @@ func main() {
 	flag.Parse()
 
 	var taskID = "bigquery_upload"
+	var healthcheckPingID = C.HealthcheckBigqueryUploadPingID
 	var pbLog = log.WithField("prefix", taskID)
-	defer util.NotifyOnPanic(taskID, *envFlag)
+	defer C.PingHealthcheckForPanic(taskID, *envFlag, healthcheckPingID)
 
 	if *envFlag != "development" && *envFlag != "staging" && *envFlag != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *envFlag))
@@ -67,7 +67,7 @@ func main() {
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
-		pbLog.WithError(err).Fatal("Failed to initialize DB")
+		pbLog.WithError(err).Panic("Failed to initialize DB")
 	}
 
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
@@ -89,11 +89,11 @@ func main() {
 	if *startDateFlag != "" {
 		startDate, err = time.Parse(util.DATETIME_FORMAT_YYYYMMDD_HYPHEN, *startDateFlag)
 		if err != nil {
-			pbLog.WithError(err).Fatal("Start date must have format YYYY-MM-DD")
+			pbLog.WithError(err).Panic("Start date must have format YYYY-MM-DD")
 		}
 		endDate, err = time.Parse(util.DATETIME_FORMAT_YYYYMMDD_HYPHEN, *endDateFlag)
 		if err != nil {
-			pbLog.WithError(err).Fatal("End date must have format YYYY-MM-DD")
+			pbLog.WithError(err).Panic("End date must have format YYYY-MM-DD")
 		}
 	}
 
@@ -108,16 +108,13 @@ func main() {
 		}
 		allJobDetails[*projectIDFlag] = jobDetails
 	}
-	err = util.NotifyThroughSNS(taskID, *envFlag, allJobDetails)
-	if err != nil {
-		pbLog.WithError(err).Error("SNS notification failed", allJobDetails)
-	}
 
 	if len(projectErrors) != 0 {
 		for _, err = range projectErrors {
 			pbLog.WithError(err).Error("Error while processing files for Bigquery")
+			C.PingHealthcheckForFailure(healthcheckPingID, err)
 		}
 	} else {
-		metrics.Increment(metrics.IncrCronBigqueryUploadSuccess)
+		C.PingHealthcheckForSuccess(healthcheckPingID, allJobDetails)
 	}
 }

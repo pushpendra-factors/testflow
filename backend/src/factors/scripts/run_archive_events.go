@@ -7,7 +7,6 @@ import (
 
 	C "factors/config"
 	"factors/filestore"
-	"factors/metrics"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
@@ -38,8 +37,9 @@ func main() {
 
 	flag.Parse()
 	var taskID = "archive_events"
+	var healthcheckPingID = C.HealthcheckArchiveEventsPingID
 	var pbLog = log.WithField("prefix", taskID)
-	defer util.NotifyOnPanic(taskID, *envFlag)
+	defer C.PingHealthcheckForPanic(taskID, *envFlag, healthcheckPingID)
 
 	if *envFlag != "development" && *envFlag != "staging" && *envFlag != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *envFlag))
@@ -68,7 +68,7 @@ func main() {
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
-		pbLog.WithError(err).Fatal("Failed to initialize DB")
+		pbLog.WithError(err).Panic("Failed to initialize DB")
 	}
 	db := C.GetServices().Db
 	defer db.Close()
@@ -92,11 +92,11 @@ func main() {
 	if *startDateFlag != "" {
 		startTime, err = time.Parse(util.DATETIME_FORMAT_YYYYMMDD_HYPHEN, *startDateFlag)
 		if err != nil {
-			pbLog.WithError(err).Fatal("Invalid start_time. Format must be YYYY-MM-DD")
+			pbLog.WithError(err).Panic("Invalid start_time. Format must be YYYY-MM-DD")
 		}
 		endTime, err = time.Parse(util.DATETIME_FORMAT_YYYYMMDD_HYPHEN, *endDateFlag)
 		if err != nil {
-			pbLog.WithError(err).Fatal("Invalid end_time. Format must be YYYY-MM-DD")
+			pbLog.WithError(err).Panic("Invalid end_time. Format must be YYYY-MM-DD")
 		}
 	}
 
@@ -114,15 +114,12 @@ func main() {
 		allJobDetails[*projectIDFlag] = jobDetails
 	}
 
-	err = util.NotifyThroughSNS(taskID, *envFlag, allJobDetails)
-	if err != nil {
-		pbLog.WithError(err).Error("SNS notification failed", allJobDetails)
-	}
 	if len(projectErrors) != 0 {
 		for _, err = range projectErrors {
 			pbLog.WithError(err).Error("Error while archiving events")
+			C.PingHealthcheckForFailure(healthcheckPingID, err)
 		}
 	} else {
-		metrics.Increment(metrics.IncrCronArchiveEventsSuccess)
+		C.PingHealthcheckForSuccess(healthcheckPingID, allJobDetails)
 	}
 }

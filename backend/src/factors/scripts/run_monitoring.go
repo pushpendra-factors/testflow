@@ -36,6 +36,8 @@ func main() {
 
 	flag.Parse()
 	taskID := "monitoring_job"
+	healthcheckPingID := C.HealthcheckMonitoringJobPingID
+	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	config := &C.Configuration{
 		AppName:            taskID,
@@ -56,12 +58,12 @@ func main() {
 	C.InitConf(config.Env)
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to initalize db.")
+		log.WithError(err).Panic("Failed to initalize db.")
 	}
 
 	err = C.InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to initalize queue client.")
+		log.WithError(err).Panic("Failed to initalize queue client.")
 	}
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
@@ -76,13 +78,13 @@ func main() {
 		` ORDER BY runtime DESC LIMIT 10`
 	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
-		log.WithError(err).Error("Failed to get slow queries from pg_stat_activity")
+		log.WithError(err).Panic("Failed to get slow queries from pg_stat_activity")
 	}
 
 	for rows.Next() {
 		var slowQuery SlowQueries
 		if err := db.ScanRows(rows, &slowQuery); err != nil {
-			log.WithError(err).Error("Failed to scan slow queries from db.")
+			log.WithError(err).Panic("Failed to scan slow queries from db.")
 		}
 		if slowQuery.Query != "" {
 			slowQueries = append(slowQueries, slowQuery)
@@ -92,17 +94,17 @@ func main() {
 	queueClient := C.GetServices().QueueClient
 	delayedTaskCount, err := queueClient.GetBroker().GetDelayedTasksCount()
 	if err != nil {
-		log.WithError(err).Error("Failed to get delayed task count from redis")
+		log.WithError(err).Panic("Failed to get delayed task count from redis")
 	}
 
 	sdkQueueLength, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueue)
 	if err != nil {
-		log.WithError(err).Error("Failed to get sdk_request_queue length")
+		log.WithError(err).Panic("Failed to get sdk_request_queue length")
 	}
 
 	integrationQueueLength, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueue)
 	if err != nil {
-		log.WithError(err).Error("Failed to get integration_request_queue length")
+		log.WithError(err).Panic("Failed to get integration_request_queue length")
 	}
 
 	tableSizes := collectTableSizes()
@@ -114,20 +116,7 @@ func main() {
 		"integrationQueueLength": integrationQueueLength,
 		"tableSizes":             tableSizes,
 	}
-
-	if *env == "development" {
-		log.Info(slowQueriesStatus)
-	} else {
-		if len(slowQueries) > 0 || delayedTaskCount > 1000 ||
-			sdkQueueLength > 1000 || integrationQueueLength > 1000 {
-			if err := util.NotifyThroughSNS(taskID, *env, slowQueriesStatus); err != nil {
-				log.WithError(err).Error("Failed to notify slow queries status.")
-			} else {
-				log.Info("Notified slow queries status.")
-			}
-		}
-	}
-	metrics.Increment(metrics.IncrCronMonitoringJobSuccess)
+	C.PingHealthcheckForSuccess(healthcheckPingID, slowQueriesStatus)
 }
 
 // collectTableSizes Captures size for major tables as metrics.

@@ -4,9 +4,7 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	IntSalesforce "factors/integration/salesforce"
-	"factors/metrics"
 	M "factors/model"
-	"factors/util"
 	"flag"
 	"fmt"
 	"net/http"
@@ -46,6 +44,9 @@ func main() {
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
 	flag.Parse()
+	taskID := "Task#SalesforceEnrich"
+	healthcheckPingID := C.HealthcheckSalesforceEnrichPingID
+	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	if *env != "development" && *env != "staging" && *env != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
@@ -67,14 +68,14 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		APIDomain:                          *apiDomain,
-		SentryDSN:                          *sentryDSN,
-		SalesforceAppID:                    *salesforceAppID,
-		SalesforceAppSecret:                *salesforceAppSecret,
-		RedisHost:                          *redisHost,
-		RedisPort:                          *redisPort,
-		RedisHostPersistent:                *redisHostPersistent,
-		RedisPortPersistent:                *redisPortPersistent,
+		APIDomain:           *apiDomain,
+		SentryDSN:           *sentryDSN,
+		SalesforceAppID:     *salesforceAppID,
+		SalesforceAppSecret: *salesforceAppSecret,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
 	}
 
 	C.InitConf(config.Env)
@@ -88,19 +89,16 @@ func main() {
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"env": *env,
-			"host": *dbHost, "port": *dbPort}).Fatal("Failed to initialize DB.")
+			"host": *dbHost, "port": *dbPort}).Panic("Failed to initialize DB.")
 		os.Exit(0)
 	}
 
 	db := C.GetServices().Db
 	defer db.Close()
 
-	taskID := "Task#SalesforceEnrich"
-	defer util.NotifyOnPanic(taskID, *env)
-
 	syncInfo, status := M.GetSalesforceSyncInfo()
 	if status != http.StatusFound {
-		log.Errorf("Failed to get salesforce syncinfo: %d", status)
+		log.Panicf("Failed to get salesforce syncinfo: %d", status)
 	}
 
 	var syncStatus salesforceSyncStatus
@@ -124,7 +122,7 @@ func main() {
 	// salesforce enrich
 	salesforceEnabledProjects, status := M.GetAllSalesforceProjectSettings()
 	if status != http.StatusFound {
-		log.Fatal("No projects enabled salesforce integration.")
+		log.Panic("No projects enabled salesforce integration.")
 	}
 
 	statusList := make([]IntSalesforce.Status, 0, 0)
@@ -136,9 +134,5 @@ func main() {
 	var jobStatus salesforceJobStatus
 	jobStatus.SyncStatus = syncStatus
 	jobStatus.EnrichStatus = statusList
-	err = util.NotifyThroughSNS("salesforce_enrich", *env, jobStatus)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to notify through SNS on salesforce enrich.")
-	}
-	metrics.Increment(metrics.IncrCronSalesforceEnrichSuccess)
+	C.PingHealthcheckForSuccess(healthcheckPingID, jobStatus)
 }

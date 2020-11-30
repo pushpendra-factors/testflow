@@ -35,6 +35,7 @@ FACEBOOK_ALL = "facebook_all"
 PLATFORM = "platform"
 
 METRIC_TYPE_INCR = "incr"
+HEALTHCHECK_PING_ID = "f2265955-a71c-42fe-a5ba-36d22a98419c"
 
 def get_datetime_from_datestring(date):
     date = date.split("-")
@@ -51,6 +52,13 @@ def notify(env, source, message):
     response = requests.post(sns_url, json=payload)
     if not response.ok: log.error("Failed to notify through sns.")
     return response
+
+def ping_healthcheck_success(healthcheck_id, message):
+    try:
+        requests.post("https://hc-ping.com/" + healthcheck_id, data=json.dumps(message, indent=1), timeout=10)
+    except requests.RequestException as e:
+        # Log ping failure here...
+        log.error("Ping failed to healthchecks.io: %s" % e)
 
 def record_metric(metric_type, metric_name, metric_value=0):
     payload = {
@@ -300,7 +308,7 @@ if __name__ == "__main__":
         notify(options.env, APP_NAME, notification_payload)
 
         log.warning("Successfully synced. End of facebook sync job.")
-        record_metric(METRIC_TYPE_INCR, "cron_facebook_sync_success")
+        ping_healthcheck_success(HEALTHCHECK_PING_ID, notification_payload)
         sys.exit(0)
         
         
