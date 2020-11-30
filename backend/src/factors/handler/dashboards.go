@@ -81,7 +81,7 @@ func CreateDashboardHandler(c *gin.Context) {
 	}
 
 	dashboard, errCode := M.CreateDashboard(projectId, agentUUID,
-		&M.Dashboard{Name: requestPayload.Name, Type: requestPayload.Type})
+		&M.Dashboard{Name: requestPayload.Name, Description: requestPayload.Description, Type: requestPayload.Type})
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to create dashboard."})
 		return
