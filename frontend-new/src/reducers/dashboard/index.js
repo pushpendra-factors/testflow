@@ -6,7 +6,6 @@ import {
   DASHBOARD_UNITS_LOADING_FAILED,
   DASHBOARD_UNITS_LOADED,
   ACTIVE_DASHBOARD_CHANGE,
-  DASHBOARD_UNIT_DATA_LOADED,
   DASHBOARD_CREATED,
   DASHBOARD_DELETED,
   UNITS_ORDER_CHANGED,
@@ -45,8 +44,6 @@ export default function (state = defaultState, action) {
       return { ...state, activeDashboardUnits: { ...defaultState.activeDashboardUnits, data: getRearrangedData(action.payload, state.activeDashboard) } };
     case ACTIVE_DASHBOARD_CHANGE:
       return { ...state, activeDashboard: action.payload, activeDashboardUnits: { ...defaultState.activeDashboardUnits } };
-    case DASHBOARD_UNIT_DATA_LOADED:
-      return { ...state, dashboardsLoaded: state.dashboardsLoaded + 1 };
     case DASHBOARD_CREATED:
       return { ...state, dashboards: { ...state.dashboards, data: [...state.dashboards.data, action.payload] } };
     case DASHBOARD_DELETED: {

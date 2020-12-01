@@ -5,7 +5,7 @@ import {
 } from './utils';
 
 function SingleEventSingleBreakdownTable({
-  data, events, breakdown, chartType, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, originalData, page
+  data, events, breakdown, chartType, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, originalData, page, isWidgetModal
 }) {
   const appliedBreakdown = [breakdown[0].property];
 
@@ -60,6 +60,7 @@ function SingleEventSingleBreakdownTable({
 
   return (
     <DataTable
+      isWidgetModal={isWidgetModal}
       tableData={tableData}
       searchText={searchText}
       setSearchText={setSearchText}

@@ -4,7 +4,7 @@ import Chart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
 
 function GroupedChart({
-  resultState, queries, breakdown, eventsMapper, reverseEventsMapper, modal
+  resultState, queries, breakdown, eventsMapper, reverseEventsMapper, isWidgetModal
 }) {
   const [groups, setGroups] = useState([]);
   const maxAllowedVisibleProperties = 5;
@@ -25,7 +25,7 @@ function GroupedChart({
     <>
 
       <Chart
-        modal={modal}
+        isWidgetModal={isWidgetModal}
         chartData={chartData}
         groups={groups.filter(elem => elem.is_visible)}
         eventsData={eventsData}
@@ -42,6 +42,7 @@ function GroupedChart({
           chartData={eventsData}
           eventsMapper={eventsMapper}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+          isWidgetModal={isWidgetModal}
         />
       </div>
     </>

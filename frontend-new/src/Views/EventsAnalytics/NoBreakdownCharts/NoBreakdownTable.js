@@ -5,7 +5,7 @@ import {
 } from './utils';
 
 function NoBreakdownTable({
-  data, events, reverseEventsMapper, chartType, setHiddenEvents, hiddenEvents
+  data, events, reverseEventsMapper, chartType, setHiddenEvents, hiddenEvents, isWidgetModal
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -47,6 +47,7 @@ function NoBreakdownTable({
 
   return (
     <DataTable
+      isWidgetModal={isWidgetModal}
       tableData={tableData}
       searchText={searchText}
       setSearchText={setSearchText}

@@ -7,7 +7,7 @@ import styles from './index.module.scss';
 import { useHistory } from 'react-router-dom';
 
 function DataTable({
-  tableData, searchText, setSearchText, columns, className, rowSelection, scroll
+  tableData, searchText, setSearchText, columns, className, rowSelection, scroll, isWidgetModal
 }) {
   const componentRef = useRef(null);
 
@@ -15,10 +15,10 @@ function DataTable({
 
   const history = useHistory();
 
-  let isDashboardView = true;
+  let isDashboardWidget = !isWidgetModal;
 
   if (history.location.pathname === '/core-analytics') {
-    isDashboardView = false;
+    isDashboardWidget = false;
   }
 
   const handleSearchTextChange = useCallback((value) => {
@@ -43,20 +43,20 @@ function DataTable({
 
   return (
     <div ref={componentRef} className="data-table">
-      {!isDashboardView && (
+      {!isDashboardWidget ? (
         <SearchBar
           searchText={searchText}
           handleSearchTextChange={handleSearchTextChange}
           searchBar={searchBar}
         />
-      )}
+      ) : null}
       <Table
-        pagination={{ pageSize: isDashboardView ? 5 : 10 }}
+        pagination={!isDashboardWidget ? { pageSize: 10 } : false}
         bordered={true}
         rowKey="index"
-        rowSelection={!isDashboardView ? rowSelection : null}
+        rowSelection={!isDashboardWidget ? rowSelection : null}
         columns={columns}
-        dataSource={tableData}
+        dataSource={isDashboardWidget ? tableData.slice(0, 5) : tableData}
         className={`${styles.table} ${className}`}
         scroll={scroll}
       />

@@ -6,7 +6,7 @@ import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function NoBreakdownCharts({
-  queries, eventsMapper, reverseEventsMapper, resultState, page, chartType
+  queries, eventsMapper, reverseEventsMapper, resultState, page, chartType, isWidgetModal
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
@@ -58,6 +58,7 @@ function NoBreakdownCharts({
       {chartContent}
       <div className="mt-8">
         <NoBreakdownTable
+          isWidgetModal={isWidgetModal}
           data={chartsData}
           events={queries}
           reverseEventsMapper={reverseEventsMapper}

@@ -8,7 +8,7 @@ import SingleEventMultipleBreakdownTable from './SingleEventMultipleBreakdownTab
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventMultipleBreakdown({
-  queries, breakdown, resultState, page, chartType
+  queries, breakdown, resultState, page, chartType, isWidgetModal
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -72,6 +72,7 @@ function SingleEventMultipleBreakdown({
       {chartContent}
       <div className="mt-8">
         <SingleEventMultipleBreakdownTable
+          isWidgetModal={isWidgetModal}
           data={chartsData}
           lineChartData={lineChartData}
           breakdown={breakdown}

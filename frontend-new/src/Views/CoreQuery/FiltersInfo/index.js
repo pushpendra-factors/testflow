@@ -3,7 +3,7 @@ import DurationInfo from '../DurationInfo';
 
 function FiltersInfo({ durationObj, breakdown, handleDurationChange }) {
   return (
-        <div className="flex items-center leading-4 py-4">
+        <div className="flex items-center leading-4">
             <div className="mr-1">Data from </div>
             <DurationInfo
                 durationObj={durationObj}

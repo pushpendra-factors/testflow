@@ -5,7 +5,7 @@ import Chart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
 
 function UngroupedChart({
-  resultState, queries, eventsMapper
+  resultState, queries, eventsMapper, isWidgetModal
 }) {
   const [chartData, setChartData] = useState([]);
 
@@ -26,6 +26,7 @@ function UngroupedChart({
 
       <div className="mt-8">
         <FunnelsResultTable
+          isWidgetModal={isWidgetModal}
           chartData={chartData}
           breakdown={[]}
           queries={queries}

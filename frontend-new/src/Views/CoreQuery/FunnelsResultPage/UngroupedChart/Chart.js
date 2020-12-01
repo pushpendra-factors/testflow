@@ -80,7 +80,7 @@ function Chart({ chartData, title = 'chart' }) {
 
   const drawChart = useCallback(() => {
     const availableWidth = d3.select(chartRef.current).node().getBoundingClientRect().width;
-    d3.select(chartRef.current).html('').append('svg').attr('width', availableWidth).attr('height', 400).attr('id', `chart-${title}`);
+    d3.select(chartRef.current).html('').append('svg').attr('width', availableWidth).attr('height', 300).attr('id', `chart-${title}`);
     const svg = d3.select(`#chart-${title}`);
     const margin = {
       top: 30, right: 0, bottom: 30, left: 40

@@ -4,7 +4,7 @@ import { generateTableColumns, generateTableData } from '../utils';
 import DataTable from '../DataTable';
 
 function FunnelsResultTable({
-  chartData, breakdown, setGroups, queries, groups, maxAllowedVisibleProperties, eventsMapper
+  chartData, breakdown, setGroups, queries, groups, maxAllowedVisibleProperties, eventsMapper, isWidgetModal
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -42,6 +42,7 @@ function FunnelsResultTable({
 
   return (
     <DataTable
+      isWidgetModal={isWidgetModal}
       tableData={tableData}
       searchText={searchText}
       setSearchText={setSearchText}

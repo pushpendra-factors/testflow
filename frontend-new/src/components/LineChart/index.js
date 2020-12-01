@@ -74,7 +74,7 @@ function LineChart({
     c3.generate({
       bindto: chartRef.current,
       size: {
-        height: 350
+        height: 300
       },
       padding: {
         left: 50,

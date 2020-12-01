@@ -48,7 +48,8 @@ function AddWidgetsTab({ queries, selectedQueries, setSelectedQueries }) {
           className={styles.searchInput}
           placeholder="Make widgets from saved queries"
           prefix={<SearchOutlined style={{ width: '1rem' }}
-            color="#0E2647" />} />
+            color="#0E2647" />}
+        />
       </div>
 
       <div className="queries-list">

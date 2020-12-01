@@ -100,9 +100,10 @@ function ProjectTabs({
         </Tabs>
 
         <ExpandableView
-          loading={widgetModalLoading}
+          widgetModalLoading={widgetModalLoading}
           widgetModal={widgetModal}
           setwidgetModal={setwidgetModal}
+          durationObj={durationObj}
         />
 
       </>

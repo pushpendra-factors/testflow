@@ -60,3 +60,8 @@ export const updateDashboard = (projectId, dashboardId, body) => {
   const url = host + 'projects/' + projectId + '/dashboards/' + dashboardId;
   return put(null, url, body);
 };
+
+export const DeleteUnitFromDashboard = (projectId, dashboardId, unitId) => {
+  const url = host + 'projects/' + projectId + '/dashboards/' + dashboardId + '/units/' + unitId;
+  return del(null, url);
+}

@@ -8,7 +8,7 @@ import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventSingleBreakdown({
-  queries, breakdown, resultState, page, chartType
+  queries, breakdown, resultState, page, chartType, isWidgetModal
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -72,6 +72,7 @@ function SingleEventSingleBreakdown({
       {chartContent}
       <div className="mt-8">
         <SingleEventSingleBreakdownTable
+          isWidgetModal={isWidgetModal}
           data={chartsData}
           breakdown={breakdown}
           events={queries}
