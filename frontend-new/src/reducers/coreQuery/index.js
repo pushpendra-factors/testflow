@@ -37,10 +37,10 @@ export default function (state = defaultState, action) {
       }
     }
     case DEL_GROUPBY: {
-      const groupByState = Object.assign({}, state.groupBy);
+      let groupByState = Object.assign({}, state.groupBy);
       let gbp;
       if(groupByState[action.groupByType] && groupByState[action.groupByType][action.index]) {
-        const groupTypeState = [...groupByState[action.groupByType]];
+        let groupTypeState = [...groupByState[action.groupByType]];
         if(groupTypeState[action.index] === action.payload) {
           groupTypeState.splice(action.index, 1);
           // groupTypeState.length -= 1;
@@ -48,7 +48,7 @@ export default function (state = defaultState, action) {
           gbp = groupTypeState.findIndex(i => i === state.payload)
           gbp && groupTypeState.splice(gbp, 1);
         }
-        groupByState.event = groupTypeState;
+        groupByState[action.groupByType] = groupTypeState;
         
       }
       return { ...state, groupBy: groupByState };
@@ -66,8 +66,8 @@ export default function (state = defaultState, action) {
       });
       return { ...state, groupBy: groupByState };
     case DEL_GROUPBY_EVENT: {
-      const groupByState = Object.assign({}, state.groupBy);
-      const eventGroups = groupByState.event;
+      let groupByState = Object.assign({}, state.groupBy);
+      let eventGroups = groupByState.event;
       const filteredEventGroups = eventGroups.filter(gbp => {
         return gbp.eventIndex !== action.index +1 && gbp.eventName !== action.payload.label
       })
