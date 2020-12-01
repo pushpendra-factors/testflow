@@ -242,7 +242,7 @@ const [event2, setEvent2] = useState(null);
           </Row>
           } 
 
-    <div className={'flex flex-col justify-center items-center'} style={{ height: '300px' }}>
+    <div className={'flex flex-col justify-center items-center'} style={{ height: '50px' }}>
         {/* <p style={{ color: '#bbb' }}>CoreQuery reusable drawer components comes here..</p>
         <p className={'mt-2'} style={{ color: '#bbb' }}>{'Click on \'Find Insights\' to view Insights page.'}</p> */}
     </div>
