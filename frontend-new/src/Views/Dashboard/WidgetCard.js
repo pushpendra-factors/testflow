@@ -1,9 +1,9 @@
 import React, {
 	useRef, useEffect, useCallback, useState
 } from 'react';
-import { Button } from 'antd';
-import { Text } from '../../components/factorsComponents';
-import { RightOutlined, LeftOutlined, FullscreenOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Menu } from 'antd';
+import { Text, SVG } from '../../components/factorsComponents';
+import { RightOutlined, LeftOutlined, MoreOutlined } from '@ant-design/icons';
 import CardContent from './CardContent';
 import { useSelector } from 'react-redux';
 import { initialState, formatApiData } from '../CoreQuery/utils';
@@ -14,6 +14,7 @@ function WidgetCard({
 	unit,
 	onDrop,
 	setwidgetModal,
+	showDeleteWidgetModal,
 	durationObj
 }) {
 	const [resultState, setResultState] = useState(initialState);
@@ -78,6 +79,20 @@ function WidgetCard({
 		getData();
 	}, [getData, durationObj]);
 
+	const handleDelete = useCallback(()=>{
+		showDeleteWidgetModal(unit);
+	}, [unit, showDeleteWidgetModal])
+
+	const getMenu = () => {
+		return (
+		  <Menu>
+			<Menu.Item key="0">
+			  <a onClick={handleDelete} href="#!">Delete Widget</a>
+			</Menu.Item>
+		  </Menu>
+		)
+	  };
+
 	const changeCardSize = useCallback((cardSize) => {
 		const unitIndex = activeDashboardUnits.data.findIndex(au => au.id === unit.id);
 		const updatedUnit = {
@@ -89,8 +104,6 @@ function WidgetCard({
 		onDrop(newState);
 	}, [unit, activeDashboardUnits.data, onDrop]);
 
-	const { dashboardsLoaded } = useSelector(state => state.dashboard);
-
 	const cardRef = useRef();
 
 	return (
@@ -100,18 +113,27 @@ function WidgetCard({
 					<div className={'w-full'} >
 						<div className="flex items-center justify-between">
 							<div className="flex flex-col">
-								<Text ellipsis type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{unit.title}</Text>
-								<Text ellipsis type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{unit.description}</Text>
+								<div className="flex cursor-pointer items-center" onClick={() => setwidgetModal({ unit, data: resultState.data })}>
+									<Text ellipsis type={'title'} level={5} weight={'bold'} extraClass={'m-0 mr-1'}>{unit.title}</Text>
+									<SVG color="#8692A3" size={20} name='expand' />
+								</div>
+								<div>
+									<Text ellipsis type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{unit.description}</Text>
+								</div>
+
+
 							</div>
 							<div>
-								<Button size={'large'} onClick={() => setwidgetModal({ unit, data: resultState.data })} icon={<FullscreenOutlined />} type="text" />
+								<Dropdown overlay={getMenu()} trigger={['hover']}>
+									<Button type="text" icon={<MoreOutlined />} />
+								</Dropdown>
 							</div>
 						</div>
 						<div className="mt-4">
 							<CardContent
 								unit={unit}
 								resultState={resultState}
-								dashboardsLoaded={dashboardsLoaded}
+								setwidgetModal={setwidgetModal}
 							/>
 						</div>
 					</div>

@@ -9,12 +9,13 @@ import {
   DASHBOARD_CREATED,
   DASHBOARD_DELETED,
   UNITS_ORDER_CHANGED,
-  DASHBOARD_UNMOUNTED
+  DASHBOARD_UNMOUNTED,
+  WIDGET_DELETED,
+  DASHBOARD_UPDATED
 } from '../types';
 import { getRearrangedData } from './utils';
 
 const defaultState = {
-  dashboardsLoaded: 0,
   dashboards: {
     loading: false, error: false, data: []
   },
@@ -56,6 +57,12 @@ export default function (state = defaultState, action) {
         activeDashboard: newActiveDashboard
       };
     }
+    case WIDGET_DELETED: {
+      return {
+        ...state,
+        activeDashboardUnits: { ...state.activeDashboardUnits, data: state.activeDashboardUnits.data.filter(elem => elem.id !== action.payload) },
+      };
+    }
     case UNITS_ORDER_CHANGED: {
       return {
         ...state,
@@ -63,7 +70,6 @@ export default function (state = defaultState, action) {
           ...state.activeDashboardUnits,
           data: [...action.payload]
         },
-        dashboardsLoaded: state.dashboardsLoaded + 1
       };
     }
     case DASHBOARD_UNMOUNTED:
@@ -71,6 +77,17 @@ export default function (state = defaultState, action) {
         ...state,
         activeDashboardUnits: { ...defaultState.activeDashboardUnits }
       };
+    case DASHBOARD_UPDATED:
+      const dashboardIndex = state.dashboards.data.findIndex(dashboard => dashboard.id === action.payload.id);
+      const editedDashboard = { ...state.dashboards.data[dashboardIndex], ...action.payload };
+      return {
+        ...state,
+        activeDashboard: editedDashboard,
+        dashboards: {
+          ...state.dashboards,
+          data: [...state.dashboards.data.slice(0, dashboardIndex), editedDashboard, ...state.dashboards.data.slice(dashboardIndex + 1)]
+        }
+      }
     default:
       return state;
   }

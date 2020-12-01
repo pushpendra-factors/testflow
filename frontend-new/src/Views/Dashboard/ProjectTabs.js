@@ -4,17 +4,20 @@ import {
 } from 'antd';
 import { SVG } from '../../components/factorsComponents';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchActiveDashboardUnits } from '../../reducers/dashboard/services';
-import { ACTIVE_DASHBOARD_CHANGE } from '../../reducers/types';
+import { fetchActiveDashboardUnits, DeleteUnitFromDashboard } from '../../reducers/dashboard/services';
+import { ACTIVE_DASHBOARD_CHANGE, WIDGET_DELETED } from '../../reducers/types';
 import SortableCards from './SortableCards';
 import DashboardSubMenu from './DashboardSubMenu';
 import ExpandableView from './ExpandableView';
+import ConfirmationModal from '../../components/ConfirmationModal';
 const { TabPane } = Tabs;
 
 function ProjectTabs({
   setaddDashboardModal, handleEditClick, durationObj, handleDurationChange
 }) {
   const [widgetModal, setwidgetModal] = useState(false);
+  const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
+  const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const [widgetModalLoading, setwidgetModalLoading] = useState(false);
   const { active_project } = useSelector(state => state.global);
   const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(state => state.dashboard);
@@ -46,6 +49,20 @@ function ProjectTabs({
       setwidgetModalLoading(false);
     }, 1000);
   };
+
+  const confirmDelete = useCallback(async () => {
+    try {
+      setDeleteApiCalled(true);
+      await DeleteUnitFromDashboard(active_project.id, deleteWidgetModal.dashboard_id, deleteWidgetModal.id)
+      dispatch({ type: WIDGET_DELETED, payload: deleteWidgetModal.id });
+      setDeleteApiCalled(false);
+      showDeleteWidgetModal(false);
+    } catch (err) {
+      console.log(err);
+      console.log(err.response);
+    }
+
+  }, [deleteWidgetModal.dashboard_id, deleteWidgetModal.id, active_project.id, dispatch]);
 
   const operations = (
     <>
@@ -92,6 +109,7 @@ function ProjectTabs({
                   <SortableCards
                     durationObj={durationObj}
                     setwidgetModal={handleToggleWidgetModal}
+                    showDeleteWidgetModal={showDeleteWidgetModal}
                   />
                 </div>
               </TabPane>
@@ -104,6 +122,17 @@ function ProjectTabs({
           widgetModal={widgetModal}
           setwidgetModal={setwidgetModal}
           durationObj={durationObj}
+        />
+
+        <ConfirmationModal
+          visible={deleteWidgetModal ? true : false}
+          confirmationText="Are you sure you want to delete this widget?"
+          onOk={confirmDelete}
+          onCancel={showDeleteWidgetModal.bind(this, false)}
+          title="Delete Widget"
+          okText="Confirm"
+          cancelText="Cancel"
+          confirmLoading={deleteApiCalled}
         />
 
       </>

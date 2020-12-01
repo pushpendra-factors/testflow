@@ -772,6 +772,16 @@ const CloseSVG = ({ size = 32, extraClass, color }) => {
   )
 }
 
+const ExpandSVG = ({ size = 20, extraClass, color }) => {
+  return (
+    <svg className={extraClass} width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16.2369 4.16675C16.4526 4.16675 16.6275 4.34164 16.6275 4.55737V9.19068C16.6275 9.57137 16.1384 9.72717 15.9182 9.41664L14.4926 7.40647L11.7308 10.1683L10.6259 9.06345L13.3954 6.29401L11.3846 4.87665C11.073 4.65699 11.2284 4.16675 11.6097 4.16675H16.2369Z" fill={color} />
+      <path d="M9.06345 10.6259L6.24353 13.4459L4.87955 11.4564C4.66248 11.1398 4.16675 11.2935 4.16675 11.6773V16.2761C4.16675 16.4919 4.34164 16.6667 4.55737 16.6667H9.1564C9.54025 16.6667 9.69388 16.1711 9.37732 15.954L7.34134 14.5578L10.1683 11.7308L9.06345 10.6259Z" fill={color} />
+    </svg>
+
+  )
+}
+
 export {
   BrandSVG,
   DeleteSVG,
@@ -831,5 +841,6 @@ export {
   DoubleArrowLeftSVG,
   Corequery_coloredSVG,
   Factors_coloredSVG,
-  CloseSVG
+  CloseSVG,
+  ExpandSVG
 };

@@ -4,7 +4,7 @@ import Chart from '../../CoreQuery/FunnelsResultPage/GroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
 
 function GroupedChart({
-  resultState, queries, eventsMapper, reverseEventsMapper, title, breakdown, chartType, unit
+  resultState, queries, eventsMapper, reverseEventsMapper, title, breakdown, chartType, unit, setwidgetModal
 }) {
   const [groups, setGroups] = useState([]);
   const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
@@ -51,10 +51,19 @@ function GroupedChart({
       </div>
     );
   }
+  
+  let tableContent = null;
+
+  if (chartType === 'table') {
+    tableContent = (
+      <div onClick={() => setwidgetModal({ unit, data: resultState.data })} style={{ color: '#5949BC' }} className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center">Show More &rarr;</div>
+    )
+  }
 
   return (
     <div className="total-events w-full">
       {chartContent}
+      {tableContent}
     </div>
   );
 }

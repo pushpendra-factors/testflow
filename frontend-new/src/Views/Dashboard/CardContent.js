@@ -4,7 +4,7 @@ import { getStateQueryFromRequestQuery, presentationObj } from '../CoreQuery/uti
 import EventsAnalytics from './EventsAnalytics';
 import Funnels from './Funnels';
 
-function CardContent({ unit, resultState }) {
+function CardContent({ unit, resultState, setwidgetModal }) {
   let content = null;
 
   if (resultState.loading) {
@@ -62,6 +62,7 @@ function CardContent({ unit, resultState }) {
 					eventsMapper={eventsMapper}
           reverseEventsMapper={reverseEventsMapper}
           unit={unit}
+          setwidgetModal={setwidgetModal}
 				/>
       );
     }
@@ -77,6 +78,7 @@ function CardContent({ unit, resultState }) {
 					eventsMapper={eventsMapper}
           reverseEventsMapper={reverseEventsMapper}
           unit={unit}
+          setwidgetModal={setwidgetModal}
 				/>
       );
     }

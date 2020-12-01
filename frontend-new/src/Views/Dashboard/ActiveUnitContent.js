@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { getStateQueryFromRequestQuery } from '../CoreQuery/utils';
 import ResultTab from '../EventsAnalytics/ResultTab.js';
 import ResultantChart from '../CoreQuery/FunnelsResultPage/ResultantChart';
@@ -6,8 +6,11 @@ import { Text, SVG } from '../../components/factorsComponents';
 import { Button, Divider, Spin } from 'antd';
 import styles from './index.module.scss';
 import FiltersInfo from '../CoreQuery/FiltersInfo';
+import { useHistory } from 'react-router-dom';
 
 function ActiveUnitContent({ unit, resultState, setwidgetModal, durationObj, handleDurationChange }) {
+
+	const history = useHistory();
 
 	let equivalentQuery;
 	if (unit.query.query.query_group) {
@@ -96,13 +99,20 @@ function ActiveUnitContent({ unit, resultState, setwidgetModal, durationObj, han
 		);
 	}
 
+	const handleEditQuery = useCallback(() => {
+		history.push({
+			pathname: '/core-analytics',
+			state: { query: unit.query, global_search: true }
+		});
+	}, [history, unit])
+
 	return (
 		<div className="p-4">
 			<div className="flex flex-col">
 				<div className="flex justify-between items-center">
 					<Text extraClass="m-0" type={'title'} level={3} weight={'bold'}>{unit.title}</Text>
 					<div className="flex items-center">
-						<Button style={{ display: 'flex' }} className="flex items-center mr-2" size="small">Edit Query</Button>
+						<Button onClick={handleEditQuery} style={{ display: 'flex' }} className="flex items-center mr-2" size="small">Edit Query</Button>
 						<Button style={{ display: 'flex' }} className='flex items-center' size={'small'} type="text" onClick={setwidgetModal.bind(this, false)}>
 							<SVG size={24} name="times"></SVG>
 						</Button>

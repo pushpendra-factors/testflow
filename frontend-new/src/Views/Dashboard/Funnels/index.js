@@ -1,12 +1,10 @@
 import React from 'react';
 import UngroupedChart from './UngroupedChart';
 import GroupedChart from './GroupedChart';
-import { useSelector } from 'react-redux';
 
 function Funnels({
-  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper, unit
+  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper, unit, setwidgetModal
 }) {
-  const { dashboardsLoaded } = useSelector(state => state.dashboard);
 
   if (!breakdown.length) {
     return (
@@ -16,7 +14,8 @@ function Funnels({
         eventsMapper={eventsMapper}
         title={title}
         chartType={chartType}
-        dashboardsLoaded={dashboardsLoaded}
+        setwidgetModal={setwidgetModal}
+        unit={unit}
       />
     );
   } else {
@@ -28,9 +27,9 @@ function Funnels({
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}
         chartType={chartType}
-        dashboardsLoaded={dashboardsLoaded}
         unit={unit}
         title={title}
+        setwidgetModal={setwidgetModal}
       />
     );
   }
