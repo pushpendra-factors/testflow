@@ -99,7 +99,7 @@
         width: 100%;
         background-color: white;
         height:2px; 
-        margin-bottom:10px;
+        margin-bottom:8px;
     }
     margin-bottom:10px;
 }
@@ -107,6 +107,7 @@
 {
     .ant-progress-inner
     {
+        background-color: transparent !important;
         .ant-progress-bg
         {
             background-color: transparent !important;
@@ -115,5 +116,12 @@
             background-size: cover !important;
 
         }
+    }
+}
+.fa-progress
+{
+    .ant-progress-inner
+    {
+        background-color: transparent !important;
     }
 }
