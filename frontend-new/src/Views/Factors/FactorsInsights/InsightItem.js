@@ -61,7 +61,7 @@ const InsightItem = ({
 
                                   <div className={'fa-insights-box--spike'}>
                                       <div className={'flex justify-end items-center'}>
-                                        <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 mr-2'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
+                                        <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 mr-4'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
                                         {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
                                       </div>
                                   </div>
