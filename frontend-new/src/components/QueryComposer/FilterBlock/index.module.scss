@@ -34,7 +34,16 @@
         &__content {
             display: flex;
             flex-direction: column;
-            border-top: 1px solid gray;
+            border-top: 1px solid #8692A3;;
+        }
+
+        &__options {
+            overflow: scroll;
+            max-height: 310px;
+            max-width: 400px;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         &__option {
@@ -46,6 +55,8 @@
         &__apply {
             @extend .filter_block__filter_select__option_nomatch;
             justify-content: center;
+            position: static;
+            bottom: 0;
         }
 
         &__date {
