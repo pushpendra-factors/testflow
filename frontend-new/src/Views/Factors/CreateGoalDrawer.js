@@ -149,7 +149,7 @@ const [event2, setEvent2] = useState(null);
                               ]:null}
                               placeholder="Select Events"
                               optionClick={(group, val) => onChangeGroupSelect1(group, val)}
-                              // onClickOutside={() => closeDropDown()}
+                              onClickOutside={() => setShowDropDown(false)}
                               />
                           {/* <Select
                               showSearch
@@ -207,7 +207,7 @@ const [event2, setEvent2] = useState(null);
                               ]:null}
                               placeholder="Select Events"
                               optionClick={(group, val) => onChangeGroupSelect2(group, val)}
-                              // onClickOutside={() => closeDropDown()}
+                              onClickOutside={() => setShowDropDown2(false)}
                               />
                           
                           {/* <Select
