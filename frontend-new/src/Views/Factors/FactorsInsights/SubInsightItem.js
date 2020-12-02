@@ -6,10 +6,7 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import _ from 'lodash';
 import MoreInsightsLines from './MoreInsightsLines';
-
-function numberWithCommas(x) {
-  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
+import { numberWithCommas } from 'Utils/dataFormatter';
 
 
 const ModalHeader = (SubInsightsData,handleClose) => { 

@@ -29,7 +29,7 @@ function ViewUserDetails({
         <Row className={'mt-2'}>
           <Col>
             {dataLoading ? <Skeleton.Avatar active={true} size={104} shape={'square'} />
-              : <Avatar size={104} shape={'square'} icon={<UserOutlined />} />
+              : <Avatar size={104} src="assets/avatar/avatar.png" />
             }
             <Text type={'paragraph'} mini extraClass={'m-0 mt-1'} color={'grey'} >A photo helps personalise your account</Text>
           </Col>

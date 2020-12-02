@@ -120,7 +120,8 @@ module.exports = {
     alias: {
       factorsComponents: path.resolve(__dirname, './src/components/factorsComponents'),
       svgIcons: path.resolve(__dirname, './src/components/svgIcons'),
-      Reducers: path.resolve(__dirname, './src/reducers')
+      Reducers: path.resolve(__dirname, './src/reducers'),
+      Utils: path.resolve(__dirname, './src/utils')
     }
   },
   plugins: [
