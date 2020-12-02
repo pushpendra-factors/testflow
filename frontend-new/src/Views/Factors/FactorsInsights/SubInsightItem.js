@@ -35,11 +35,12 @@ const ModalHeader = (SubInsightsData,handleClose) => {
     );
   };
 
-const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
+const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=null }) => {
   
   const [SubLevel2Data, SetSubLevel2Data] = useState(null);
   const [SubLevel1Data, SetSubLevel1Data] = useState(null);
-  if (SubInsightsData) { 
+  if (SubInsightsData) {  
+    const isJourney = ParentData?.type === 'journey' ? true : false; 
     return (
           <Modal
           className={'fa-modal--regular fa-modal-body--no-padding fa-modal-header--no-padding'}
@@ -74,9 +75,23 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
           } else {
             insightKeyLevel2 = dataItem.factors_insights_key;
           }
+ 
 
-          const insightLevel2Percentage = (dataItem.factors_insights_users_count / SubInsightsData.factors_insights_users_count) * 100;
-          const insightLevel3Percentage = (dataItem.factors_goal_users_count / SubInsightsData.factors_insights_users_count) * 100;
+          
+          let insightLevel1Percentage = 100; 
+          let insightLevel2Percentage = 100;
+          let insightLevel3Percentage = 100;
+
+          if(isJourney){ 
+            insightLevel1Percentage = (SubInsightsData.factors_insights_users_count / ParentData.total_users_count) * 100;
+            insightLevel2Percentage = (dataItem.factors_insights_users_count / ParentData.total_users_count) * 100;
+           insightLevel3Percentage = (dataItem.factors_goal_users_count / ParentData.total_users_count) * 100;
+          } 
+          else{
+           insightLevel2Percentage = (dataItem.factors_insights_users_count / SubInsightsData.factors_insights_users_count) * 100;
+           insightLevel3Percentage = (dataItem.factors_goal_users_count / SubInsightsData.factors_insights_users_count) * 100;
+          }
+
 
           return (
               <Row key={index} gutter={[0, 0]} justify={'center'}>
@@ -96,12 +111,22 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose }) => {
                                   {!_.isEmpty(dataItem.factors_lower_completion_text) && <Text type={'title'} level={6} color={'grey'} extraClass={'mt-2'} >{dataItem.factors_lower_completion_text}</Text>}
 
                                 <div className={'mt-8 w-9/12'}>
+                                  
+                                  {
+                                    isJourney && <>
+                                      <div className={'flex items-end'}>
+                                        <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(ParentData.total_users_count)}</Text></a> </div>
+                                        <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{ParentData?.goal?.st_en}</Text></div>
+                                      </div>
+                                      <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
+                                    </>
+                                  } 
 
                                     <div className={'flex items-end'}>
                                       <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(SubInsightsData.factors_insights_users_count)}</Text></a> </div>
                                       <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel1}</Text></div>
                                     </div>
-                                    <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
+                                    <Progress percent={insightLevel1Percentage} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
 
                                     <div className={'flex items-end'}>
                                       <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div>
