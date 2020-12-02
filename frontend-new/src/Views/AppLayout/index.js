@@ -60,8 +60,7 @@ function AppLayout({ fetchProjects }) {
                 <Switch>
                   <Route path="/components/" name="componentsLib" component={componentsLib} />
                   <Route path="/settings/" component={ProjectSettings} />
-                  <Route path="/core-analytics" name="Home" component={CoreQuery} />
-                  <Route path="/factors/insights" name="Factors" component={FactorsInsights} />
+                  <Route path="/core-analytics" name="Home" component={CoreQuery} /> 
                   <Route path="/factors" name="Factors" component={Factors} />
                   <Route path="/" name="Home" component={Dashboard} />
                 </Switch>
