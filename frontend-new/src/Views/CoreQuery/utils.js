@@ -45,7 +45,7 @@ const getEventsWithProperties = (queries) => {
       const vals = Array.isArray(fil.values) ? fil.values.join(',') : fil.values;
       filterProps.push({
         en: fil.props[2],
-        lop: 'OR',
+        lop: 'AND',
         op: operatorMap[fil.operator],
         pr: fil.props[0],
         ty: fil.props[1],
