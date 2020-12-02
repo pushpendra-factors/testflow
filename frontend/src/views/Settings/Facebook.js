@@ -107,7 +107,7 @@ class Facebook extends Component {
           "project_id": this.props.currentProjectId.toString(),
           "int_facebook_access_token": this.state.response.accessToken,
         }
-        this.props.addFacebookAccessToken(data).then(()=> console.log("access token added")).catch((e)=> console.log(e))
+        this.props.addFacebookAccessToken(data).then(()=> this.props.fetchProjectSettings(this.props.currentProjectId)).catch((e)=> console.log(e))
       }
     }
     formComponent = () => {
@@ -132,9 +132,14 @@ class Facebook extends Component {
         if (this.state.adAccounts != "" && this.state.adAccounts.length == 0) {
           return <div>You don't have any ad accounts associated to the id you logged in with.</div>
         }
+    } 
+    else {
+      if(this.props.currentProjectSettings.int_facebook_ad_account !== "" || this.props.currentProjectSettings.int_facebook_ad_account !== undefined) {
+        return <h5 className="p-2 m-2">Selected ad account: {this.props.currentProjectSettings.int_facebook_ad_account}</h5>
+      }
     }
-      return
-    }
+    return
+  }
     render() {
         return (
           <div className='fapp-content fapp-content-margin'>
