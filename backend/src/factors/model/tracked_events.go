@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	C "factors/config"
 	"net/http"
 	"time"
@@ -112,6 +113,24 @@ func DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (int64, int) {
 			updatedFields := map[string]interface{}{
 				"is_active":  false,
 				"updated_at": transTime,
+			}
+			eventDetails, err := GetEventNameFromEventNameId(existingFactorsTrackedEvent.EventNameID, ProjectID)
+			if err != nil {
+				return 0, http.StatusBadRequest
+			}
+			goals, errCode := GetAllActiveFactorsGoals(ProjectID)
+			if errCode != 302 {
+				return 0, http.StatusInternalServerError
+			}
+			for _, goal := range goals {
+				rule := FactorsGoalRule{}
+				json.Unmarshal(goal.Rule.RawMessage, &rule)
+				if rule.StartEvent == eventDetails.Name || rule.EndEvent == eventDetails.Name {
+					_, errCode := DeactivateFactorsGoal(int64(goal.ID), goal.ProjectID)
+					if errCode != 200 {
+						return 0, http.StatusInternalServerError
+					}
+				}
 			}
 			return updateFactorsTrackedEvent(existingFactorsTrackedEvent.ID, ProjectID, updatedFields)
 		}
