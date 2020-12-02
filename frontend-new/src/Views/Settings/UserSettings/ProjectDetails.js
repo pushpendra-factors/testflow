@@ -54,7 +54,7 @@ function ProjectDetails({
                   return (
                     <div key={index} className="flex justify-between items-center border-bottom--thin-2 py-5" >
                       <div className="flex justify-start items-center" >
-                        <Avatar size={60} shape={'square'} />
+                        <Avatar size={60} shape={'square'}  src="assets/avatar/company-logo.png" />
                         <div className="flex justify-start flex-col ml-4" >
                           <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>{item.name}</Text>
                           <Text type={'title'} level={7} weight={'regular'} extraClass={'m-0 mt-1'}>{isAdmin ? 'Admin' : 'User'}</Text>

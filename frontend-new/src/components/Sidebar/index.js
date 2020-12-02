@@ -61,7 +61,7 @@ function Sidebar(props) {
                 setShowPopOver(false);
                 showUserSettingsModal();
               }}>
-                <Avatar src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'} size={28}/><Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
+                <Avatar src="assets/avatar/avatar.png" size={28}/><Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
           </div>
           <Button size={'large'} type={'text'}
           onClick={() => {
@@ -155,7 +155,9 @@ function Sidebar(props) {
               }}
                 trigger="click">
                   <Avatar
-                     icon={<BankOutlined />}
+                    //  icon={<BankOutlined />} 
+                    shape={'square'} 
+                     src="assets/avatar/company-logo.png"
                     className={'flex justify-center flex-col items-center fa-aside--avatar'}
                   />
               </Popover>

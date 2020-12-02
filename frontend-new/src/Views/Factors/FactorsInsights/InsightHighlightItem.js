@@ -4,10 +4,7 @@ import {
 } from 'antd';
 import { Text } from 'factorsComponents';
 import _ from 'lodash';
-
-function numberWithCommas(x) {
-  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
+import { numberWithCommas } from 'Utils/dataFormatter';
 
 const InsightHighlightItem = ({ data }) => {
   if (data) {
