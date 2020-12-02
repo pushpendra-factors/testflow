@@ -86,10 +86,11 @@
       });
     }
   }
-  export function fetchGoalInsights(projectID) {
+  export function fetchGoalInsights(projectID, isJourney=false) {
     return function(dispatch) {
       return new Promise((resolve,reject) => {
-        post(dispatch, host + "projects/"+projectID+"/v1/factor")
+        const insightsUrl = isJourney ? `/v1/factor?type=journey` : `/v1/factor`;
+        post(dispatch, host + "projects/"+projectID+ insightsUrl)
           .then((response)=>{        
             dispatch({type:"FETCH_GOAL_INSIGHTS_FULFILLED", payload: response.data});
             resolve(response)

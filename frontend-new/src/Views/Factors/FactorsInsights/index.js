@@ -16,6 +16,7 @@ const { TabPane } = Tabs;
 const FactorsInsights = ({ fetchGoalInsights, activeProject, goal_insights }) => {
   const [showModal, SetShowModal] = useState(false);
   const [SubInsightsData, setSubInsightsData] = useState(null);
+  const [ParentData, setParentData] = useState(null);
 
   useEffect(() => {
     if (!goal_insights) {
@@ -26,7 +27,8 @@ const FactorsInsights = ({ fetchGoalInsights, activeProject, goal_insights }) =>
   const handleClose = () => {
     SetShowModal(false);
   };
-  const showSubInsightsData = (data) => {
+  const showSubInsightsData = (data,parentData=null) => {
+    setParentData(parentData);
     setSubInsightsData(data);
     SetShowModal(true);
   };
@@ -49,27 +51,27 @@ const FactorsInsights = ({ fetchGoalInsights, activeProject, goal_insights }) =>
                     <div className={'fa-insights--tab'}>
                     <Tabs defaultActiveKey="1" >
                         <TabPane tab="All Insights" key="1">
-                                    <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} displayType={true} type={'journey'} />
-                                    <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} displayType={true} type={'attribute'} />
-                                    <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} displayType={true} type={'campaign'} />
+                                    <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} displayType={true} category={'journey'} />
+                                    <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} displayType={true} category={'attribute'} />
+                                    <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} displayType={true} category={'campaign'} />
                         </TabPane>
                         <TabPane tab="Attributes" key="2">
                             <div className={'w-full p-4 background-color--brand-color-1'}>
                                     <Text type={'title'} level={7} weight={'regular'} align={'center'} extraClass={'m-0'} >Show insights with reference to <a>Attributes</a></Text>
                             </div>
-                            <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} type={'attribute'} />
+                            <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} category={'attribute'} />
                         </TabPane>
                         <TabPane tab="Campaigns" key="3">
                             <div className={'w-full p-4 background-color--brand-color-1'}>
                                     <Text type={'title'} level={7} weight={'regular'} align={'center'} extraClass={'m-0'} >Show insights with reference to <a>Campaigns</a></Text>
                             </div>
-                                    <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} type={'campaign'} />
+                                    <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} category={'campaign'} />
                         </TabPane>
                         <TabPane tab="Journeys" key="4">
                              <div className={'w-full p-4 background-color--brand-color-1'}>
                                     <Text type={'title'} level={7} weight={'regular'} align={'center'} extraClass={'m-0'} >Show insights with reference to <a>Journeys</a></Text>
                              </div>
-                                <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} type={'journey'} />
+                                <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} category={'journey'} />
                         </TabPane>
                     </Tabs>
                     </div>
@@ -77,7 +79,7 @@ const FactorsInsights = ({ fetchGoalInsights, activeProject, goal_insights }) =>
                     </Col>
                 </Row>
 
-                <SubInsightItem showModal={showModal} SubInsightsData={SubInsightsData} handleClose={handleClose} />
+                <SubInsightItem showModal={showModal} ParentData={ParentData} SubInsightsData={SubInsightsData} handleClose={handleClose} />
 
             </div>
             </>
