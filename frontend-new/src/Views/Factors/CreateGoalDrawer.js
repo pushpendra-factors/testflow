@@ -2,13 +2,12 @@ import React, { useEffect, useState } from 'react';
 import {
   Drawer, Button, Row, Col, Select
 } from 'antd';
-import { SVG, Text } from 'factorsComponents';
-import { NavLink } from 'react-router-dom';
+import { SVG, Text } from 'factorsComponents'; 
 import GroupSelect from '../../components/QueryComposer/GroupSelect';
 import { fetchEventNames } from 'Reducers/coreQuery/middleware';
+import { fetchGoalInsights } from 'Reducers/factors';
 import {connect} from 'react-redux';
-
-const { Option } = Select;
+import { useHistory } from 'react-router-dom';
 
  
 
@@ -27,71 +26,48 @@ const title = (props) => {
 };
 
 const CreateGoalDrawer = (props) => {
+  const history = useHistory();
+  const { Option } = Select;
 
   const [EventNames, SetEventNames] = useState([]);
+  const [eventCount, SetEventCount] = useState(1);
 
+  const [showDropDown, setShowDropDown] = useState(false);
+  const [event1, setEvent1] = useState(null);
+  
+  const [showDropDown2, setShowDropDown2] = useState(false);
+  const [event2, setEvent2] = useState(null);
 
   const onChangeGroupSelect1 = (grp, value) => {
     setShowDropDown(false);
-    setEvent1(value[0]);
-    // console.log(`selectedevent1-- ${grp} ${value[0]}`);
+    setEvent1(value[0]); 
   }
   const onChangeGroupSelect2 = (grp, value) => {
     setShowDropDown2(false);
-    setEvent2(value[0]);
-    // console.log(`selected-event2-- ${grp} ${value[0]}`);
+    setEvent2(value[0]); 
   }
 
-  // const onChange = (value) => {
-  //   setShowDropDown(false);
-  //   setEvent1(value);
-  //   console.log(`selected ${value}`);
-  // }
-  // const onChangeDropDown2 = (value) => {
-  //   setShowDropDown2(false);
-  //   setEvent2(value);
-  //   console.log(`onChangeDropDown2 ${value}`);
-  // }
-  
-  // const onBlur = ()  =>{
-  //   console.log('blur');
-  // }
-  
-  // const onFocus = ()  =>{
-  //   console.log('focus');
-  // }
-  
-  // const onSearch = (val) => {
-  //   console.log('search:', val);
-  // }
-  // const onChangeGroupSelect = (val,grp) => {
-  //   console.log('onChangeGroupSelect:', val, grp);
-  // }
 
   useEffect(()=>{
-
     if(!props.GlobalEventNames){
       const getData = async () => {
         await props.fetchEventNames(props.activeProject.id);
       };
       getData();  
     } 
-    if(props.GlobalEventNames){
-      // const EventNames1 = props.GlobalEventNames.map((item)=>{
-      //   return [item]
-      // });
-      SetEventNames(props.GlobalEventNames);
-      
+    if(props.GlobalEventNames){ 
+      SetEventNames(props.GlobalEventNames); 
     }  
   },[props.GlobalEventNames])
 
-const [eventCount, SetEventCount] = useState(1);
+const getInsights = (projectID, isJourney=false) =>{  
+  const getData = async () => {
+    await props.fetchGoalInsights(projectID, isJourney); 
+  };
+  getData();
+  history.push('/factors/insights');
 
-const [showDropDown, setShowDropDown] = useState(false);
-const [event1, setEvent1] = useState(null);
-
-const [showDropDown2, setShowDropDown2] = useState(false);
-const [event2, setEvent2] = useState(null);
+}
 
   return (
         <Drawer
@@ -133,8 +109,7 @@ const [event2, setEvent2] = useState(null);
                       <div className={'flex items-center'}>
                         {event1 &&  <>
                         <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'} style={{height:'24px', width: '24px'}}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{1}</Text> </div> 
-                        <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>Users who</Text>
-                        {/* <Text type={'title'} level={6} weight={'bold'} color={'black'} extraClass={'m-0 ml-2'}>performed</Text> */}
+                        <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>Users who</Text> 
                         </>}
                         <div className='relative' style={{height: '42px'}}>
                           {!showDropDown && !event1 && <Button onClick={()=>setShowDropDown(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>{eventCount === 2 ? 'Add First event': 'Add an event'}</Button> }
@@ -149,26 +124,8 @@ const [event2, setEvent2] = useState(null);
                               ]:null}
                               placeholder="Select Events"
                               optionClick={(group, val) => onChangeGroupSelect1(group, val)}
-                              // onClickOutside={() => closeDropDown()}
-                              />
-                          {/* <Select
-                              showSearch
-                              style={{ width: 280, position: 'absolute', top:0, left:'8px' }}
-                              placeholder="Search Events"
-                              optionFilterProp="children"
-                              onChange={onChange}
-                              onFocus={onFocus}
-                              size={'large'}
-                              onBlur={onBlur}
-                              onSearch={onSearch} 
-                              filterOption={(input, option) =>
-                                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                              }
-                            > 
-                            {EventNames.map((item,index)=>{
-                              return <Option key={index} value={item}>{item}</Option> 
-                            })}; 
-                            </Select> */}
+                              onClickOutside={() => setShowDropDown(false)}
+                              /> 
                             </>
                             }
 
@@ -207,27 +164,8 @@ const [event2, setEvent2] = useState(null);
                               ]:null}
                               placeholder="Select Events"
                               optionClick={(group, val) => onChangeGroupSelect2(group, val)}
-                              // onClickOutside={() => closeDropDown()}
-                              />
-                          
-                          {/* <Select
-                              showSearch
-                              style={{ width: 280, position: 'absolute', top:0, left:'8px' }}
-                              placeholder="Search Events"
-                              optionFilterProp="children"
-                              onChange={onChangeDropDown2}
-                              onFocus={onFocus}
-                              size={'large'}
-                              onBlur={onBlur}
-                              onSearch={onSearch} 
-                              filterOption={(input, option) =>
-                                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                              }
-                            > 
-                            {EventNames.map((item,index)=>{
-                              return <Option key={index} value={item}>{item}</Option> 
-                            })}; 
-                            </Select> */}
+                              onClickOutside={() => setShowDropDown2(false)}
+                              /> 
                             </>
                             }
 
@@ -242,13 +180,11 @@ const [event2, setEvent2] = useState(null);
           </Row>
           } 
 
-    <div className={'flex flex-col justify-center items-center'} style={{ height: '300px' }}>
-        {/* <p style={{ color: '#bbb' }}>CoreQuery reusable drawer components comes here..</p>
-        <p className={'mt-2'} style={{ color: '#bbb' }}>{'Click on \'Find Insights\' to view Insights page.'}</p> */}
+    <div className={'flex flex-col justify-center items-center'} style={{ height: '50px' }}> 
     </div>
         <div className={'flex justify-between items-center'}>
             <Button size={'large'}><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
-            <NavLink to="/factors/insights"><Button type="primary" size={'large'}>Find Insights</Button></NavLink>
+            <Button type="primary" size={'large'} onClick={()=>getInsights(props.activeProject.id, eventCount===2?true:false )}>Find Insights</Button>
         </div>
 </div>
 
@@ -262,4 +198,4 @@ const mapStateToProps = (state) => {
     GlobalEventNames: state.coreQuery?.eventOptions[0]?.values, 
   };
 };
-export default connect(mapStateToProps, {fetchEventNames})(CreateGoalDrawer);
+export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights})(CreateGoalDrawer);

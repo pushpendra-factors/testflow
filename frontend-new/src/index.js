@@ -17,7 +17,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['global', 'agent']
+  whitelist: ['global', 'agent', 'factors']
 };
 const persistedReducer = persistReducer(persistConfig, reducers);
 
