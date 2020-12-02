@@ -134,6 +134,8 @@ func sendUpdateFactorsGoalRequest(r *gin.Engine, agent *M.Agent, projectID uint6
 	return w
 }
 
+var id1, id2, id3 int64
+
 func createProjectAgentEvents(r *gin.Engine) (uint64, *M.Agent) {
 
 	C.GetConfig().LookbackWindowForEventUserCache = 1
@@ -173,9 +175,9 @@ func createProjectAgentEvents(r *gin.Engine) (uint64, *M.Agent) {
 	C.GetConfig().ActiveFactorsGoalsLimit = 50
 	C.GetConfig().ActiveFactorsTrackedUserPropertiesLimit = 50
 	C.GetConfig().ActiveFactorsTrackedEventsLimit = 50
-	M.CreateFactorsTrackedEvent(project.ID, "event1", agent.UUID)
-	M.CreateFactorsTrackedEvent(project.ID, "event2", agent.UUID)
-	M.CreateFactorsTrackedUserProperty(project.ID, "up1", agent.UUID)
+	id1, _ = M.CreateFactorsTrackedEvent(project.ID, "event1", agent.UUID)
+	id2, _ = M.CreateFactorsTrackedEvent(project.ID, "event2", agent.UUID)
+	id3, _ = M.CreateFactorsTrackedUserProperty(project.ID, "up1", agent.UUID)
 	return project.ID, agent
 }
 
@@ -464,6 +466,20 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	json.Unmarshal(jsonResponse, &obj)
 	successFactorsGoalIds = append(successFactorsGoalIds, obj.Id)
 
+	M.DeactivateFactorsTrackedEvent(id2, projectId)
+	M.RemoveFactorsTrackedUserProperty(id3, projectId)
+
+	// get all goals
+	w = sendGetAllFactorsGoalsRequest(r, agent, projectId)
+	assert.Equal(t, http.StatusOK, w.Code)
+	goals = []M.FactorsGoal{}
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &goals)
+	assert.Equal(t, successFactorsGoalIds[0], int64(goals[0].ID))
+	assert.Equal(t, false, goals[0].IsActive)
+	assert.Equal(t, false, goals[1].IsActive)
+	assert.Equal(t, false, goals[2].IsActive)
+
 	// search goals
 	searchRequest := V1.SearchFactorsGoalParams{
 		SearchText: "FactorsGoal1",
@@ -492,7 +508,7 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	assert.Equal(t, 201, errCode)
 
 	// Limit exceeded
-	C.GetConfig().ActiveFactorsGoalsLimit = 2
+	C.GetConfig().ActiveFactorsGoalsLimit = 0
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal12"
 	request.Rule = M.FactorsGoalRule{}
