@@ -89,12 +89,12 @@ function QueryBlock({
     eventChange(newEvent, index - 1);
   };
 
-  const removeFilters = (index) => {
+  const removeFilters = (i) => {
     const newEvent = Object.assign({}, event);
-    if (newEvent.filters[index]) {
-      newEvent.filters.splice(index, 1);
+    if (newEvent.filters[i]) {
+      newEvent.filters.splice(i, 1);
     }
-    eventChange(newEvent, index);
+    eventChange(newEvent, index-1);
   };
 
   const selectEventFilter = () => {
