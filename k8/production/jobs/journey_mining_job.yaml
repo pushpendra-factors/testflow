@@ -15,7 +15,7 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem-jobs2
+            cloud.google.com/gke-nodepool: job-pool-small
           containers:
           - name: journey-mining-job
             image: us.gcr.io/factors-production/journey-mining-job:v0.71_4a75f686

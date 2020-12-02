@@ -15,7 +15,7 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem-jobs2
+            cloud.google.com/gke-nodepool: job-pool-small
           containers:
           - name: dashboard-caching-job
             image: us.gcr.io/factors-production/dashboard-caching-job:v1.01-8663283-800

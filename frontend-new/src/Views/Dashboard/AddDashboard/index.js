@@ -6,8 +6,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import AddDashboardTab from './AddDashboardTab';
 import AddWidgetsTab from './AddWidgetsTab';
 import { Text } from '../../../components/factorsComponents';
-import { createDashboard, assignUnitsToDashboard, deleteDashboard } from '../../../reducers/dashboard/services';
-import { DASHBOARD_CREATED, DASHBOARD_DELETED } from '../../../reducers/types';
+import { createDashboard, assignUnitsToDashboard, deleteDashboard, DeleteUnitFromDashboard, updateDashboard, fetchActiveDashboardUnits } from '../../../reducers/dashboard/services';
+import { DASHBOARD_CREATED, DASHBOARD_DELETED, WIDGET_DELETED, DASHBOARD_UPDATED } from '../../../reducers/types';
 import styles from './index.module.scss';
 import ConfirmationModal from '../../../components/ConfirmationModal';
 
@@ -85,33 +85,87 @@ function AddDashboard({
     }
   }, [activeKey, title]);
 
+  const getUnitsAssignRequestBody = useCallback(() => {
+    const reqBody = selectedQueries.map(sq => {
+      const settings = {};
+      if (sq.query.query_group) {
+        settings.chart = 'pl';
+      } else {
+        settings.chart = 'pb';
+      }
+      return {
+        settings,
+        title: sq.title,
+        description: sq.description,
+        query_id: sq.query_id
+      };
+    });
+    return reqBody;
+  }, [selectedQueries]);
+
+  const createNewDashboard = useCallback(async () => {
+    try {
+      setApisCalled(true);
+      const res = await createDashboard(active_project.id, { name: title, description, type: dashboardType });
+      if (selectedQueries.length) {
+        const reqBody = getUnitsAssignRequestBody();
+        await assignUnitsToDashboard(active_project.id, res.data.id, reqBody);
+      }
+      dispatch({ type: DASHBOARD_CREATED, payload: res.data });
+      resetState();
+    } catch (err) {
+      console.log(err.response);
+      setApisCalled(false);
+    }
+  }, [active_project.id, dashboardType, description, dispatch, resetState, selectedQueries, title, getUnitsAssignRequestBody]);
+
+  const editExistingDashboard = useCallback(async () => {
+    try {
+      setApisCalled(true);
+      const newAddedUnits = selectedQueries.filter(elem => activeDashboardUnits.data.findIndex(unit => unit.id === elem.id) === -1);
+      if (newAddedUnits.length) {
+        //delete all units and add them back along with the newly added widgets
+        const deletedUnits = [...activeDashboardUnits.data];
+        const deletePromises = deletedUnits.map(q => {
+          return DeleteUnitFromDashboard(active_project.id, editDashboard.id, q.id)
+        });
+        await Promise.all(deletePromises);
+        const reqBody = getUnitsAssignRequestBody();
+        await assignUnitsToDashboard(active_project.id, editDashboard.id, reqBody);
+      } else {
+        const deletedUnits = activeDashboardUnits.data.filter(elem => selectedQueries.findIndex(query => query.id === elem.id) === -1);
+        if (deletedUnits.length) {
+          //just delete the deleted widgets
+          const deletePromises = deletedUnits.map(q => {
+            return DeleteUnitFromDashboard(active_project.id, editDashboard.id, q.id)
+          });
+          await Promise.all(deletePromises);
+          deletedUnits.forEach(unit => {
+            dispatch({ type: WIDGET_DELETED, payload: unit.id });
+          })
+        }
+      }
+      await updateDashboard(active_project.id, editDashboard.id, { name: title, description, type: dashboardType });
+      dispatch({ type: DASHBOARD_UPDATED, payload: { name: title, description, id: editDashboard.id, type: dashboardType } })
+
+      if (newAddedUnits.length) {
+        fetchActiveDashboardUnits(dispatch, active_project.id, editDashboard.id);
+      }
+
+      setApisCalled(false);
+      resetState();
+    } catch (err) {
+      console.log(err);
+      setApisCalled(false);
+    }
+  }, [activeDashboardUnits, dashboardType, selectedQueries, active_project.id, description, dispatch, editDashboard, getUnitsAssignRequestBody, resetState, title]);
+
   const handleOk = useCallback(async () => {
     if (activeKey === '2') {
-      try {
-        setApisCalled(true);
-        const res = await createDashboard(active_project.id, { name: title, description, type: dashboardType });
-        if (selectedQueries.length) {
-          const reqBody = selectedQueries.map(sq => {
-            const settings = {};
-            if (sq.query.query_group) {
-              settings.chart = 'pl';
-            } else {
-              settings.chart = 'pb';
-            }
-            return {
-              settings,
-              title: sq.title,
-              description: sq.description,
-              query_id: sq.query_id
-            };
-          });
-          await assignUnitsToDashboard(active_project.id, res.data.id, reqBody);
-        }
-        dispatch({ type: DASHBOARD_CREATED, payload: res.data });
-        resetState();
-      } catch (err) {
-        console.log(err.response);
-        setApisCalled(false);
+      if (!editDashboard) {
+        createNewDashboard();
+      } else {
+        editExistingDashboard();
       }
     } else {
       if (!title.trim().length) {
@@ -124,7 +178,7 @@ function AddDashboard({
       }
       setActiveKey('2');
     }
-  }, [activeKey, title, dashboardType, description, resetState, active_project.id, dispatch, selectedQueries]);
+  }, [activeKey, title, createNewDashboard, editDashboard, editExistingDashboard]);
 
   const getOkText = useCallback(() => {
     if (activeKey === '1') {

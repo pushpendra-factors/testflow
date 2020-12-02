@@ -6,7 +6,7 @@ import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable
 import LineChart from '../../../components/LineChart';
 
 function MultipleEventsWithBreakdown({
-  queries, breakdown, resultState, page, chartType
+  queries, breakdown, resultState, page, chartType, isWidgetModal
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -71,6 +71,7 @@ function MultipleEventsWithBreakdown({
       {chartContent}
       <div className="mt-8">
         <MultipleEventsWithBreakdownTable
+          isWidgetModal={isWidgetModal}
           data={chartsData}
           lineChartData={lineChartData}
           queries={queries}

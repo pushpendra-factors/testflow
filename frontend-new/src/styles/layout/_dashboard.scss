@@ -1,110 +1,119 @@
-.fa-dashboard--widget-card
-{
+.fa-dashboard--widget-card {
     background-color: $fa-color--white;
     // position: relative;
-    border-radius: 8px; 
+    border-radius: 8px;
     // margin: 10px;
     // width: 100%; 
-    height: 100%; 
-    display: inline-block;
+    height: 420px;
+    overflow: scroll;
+    // display: inline-block;
     border: thin solid $fa-color--mono-2;
     transition: all 0.3s;
-    .fa-widget-card--top-actions{
+
+    .fa-widget-card--top-actions {
         transition: all 0.3s;
         opacity: 0;
     }
-    &:hover{
-        .fa-widget-card--top-actions{
+
+    &:hover {
+        .fa-widget-card--top-actions {
             opacity: 1;
         }
+
         border: thin solid $fa-color--brand-color;
-        box-shadow: 0px 0px 8px $fa-color--mono-2; 
-
-        .fa-widget-card--resize-container
-        { 
-            display: flex;
-            position: absolute;
-        } 
-    }
-    .fa-widget-card--resize-container
-    {  
-        margin: auto;
-        justify-content: center;
-        flex-direction: column;
-        align-items: center;
-        transition: all 0.3s;
-        display: none;
-        .fa-widget-card--resize-contents
-        {
-            background-color: $fa-color--brand-color;
-            border-radius: 8px;
-            padding: 5px 2px;
-            display: flex;
-            justify-content: center;
-            flex-direction: column;
-            align-items: center; 
-            transition: all 0.3s; 
-            a{
-                display: flex;
-                justify-content: center;
-                flex-direction: column;
-                align-items: center;
-                color: $fa-color--white;
-                transition: all 0.3s;
-                opacity: 0.6;
-                padding: 5px 2px;
-                &:hover,&:focus,&:active{
-                    opacity: 1; 
-                }
-            }
-        }
+        box-shadow: 0px 0px 8px $fa-color--mono-2;
     }
 
-    .fa-widget-card--top
-    {
-        padding: 1.5rem;
-    }
-    .fa-widget-card--legend
-    {
+    .fa-widget-card--legend {
         padding: 0.5em 2em;
         border-top: thin solid $fa-color--mono-1;
         border-bottom: thin solid $fa-color--mono-1;
-        .ant-badge
-        {
+
+        .ant-badge {
             margin-right: 12px;
-            .ant-badge-status-dot
-            {
+
+            .ant-badge-status-dot {
                 width: 12px;
-                height: 12px; 
+                height: 12px;
             }
-            .ant-badge-status-text
-            {
+
+            .ant-badge-status-text {
                 font-size: 12px;
                 margin-left: 3px;
                 color: $fa-color--mono-4;
             }
         }
     }
-    .fa-widget-card--visuals
-    {
-        img{
+
+    .fa-widget-card--visuals {
+        img {
             max-width: 100%;
             max-height: 100%;
         }
     }
 }
 
-.fa-dasboard-privacy--card{
+.fa-dasboard-privacy--card {
     border: thin solid $fa-color--mono-1;
     transition: all 0.3s;
     cursor: pointer;
-    &:hover{
+
+    &:hover {
         border: thin solid $fa-color--brand-color;
         background-color: $fa-color--brand-1;
     }
 }
 
-.fa-dasboard-privacy--card.selected{
+.fa-dasboard-privacy--card.selected {
     border: thin solid $fa-color--brand-color;
     background-color: $fa-color--brand-1;
+}
+
+.fa-widget-card--resize-container {
+    // margin: auto;
+    position: relative;
+    right: 10px;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    // transition: all 0.3s;
+    visibility: hidden;
+    display: flex;
+    align-items: center;
+
+    .fa-widget-card--resize-contents {
+        background-color: $fa-color--brand-color;
+        border-radius: 8px;
+        padding: 5px 2px;
+        display: flex;
+        justify-content: center;
+        flex-direction: column;
+        align-items: center;
+        // transition: all 0.3s;
+
+        a {
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            color: $fa-color--white;
+            transition: all 0.3s;
+            opacity: 0.6;
+            padding: 5px 2px;
+
+            &:hover,
+            &:focus,
+            &:active {
+                opacity: 1;
+            }
+        }
+    }
+}
+
+.widget-card-top-div {
+    &:hover {
+        .fa-widget-card--resize-container {
+            visibility: visible;
+        }
+    }
 }

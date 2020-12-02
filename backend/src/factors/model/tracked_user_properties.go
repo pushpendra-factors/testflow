@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	C "factors/config"
 	"net/http"
 	"time"
@@ -97,6 +98,22 @@ func RemoveFactorsTrackedUserProperty(ID int64, ProjectID uint64) (int64, int) {
 				"is_active":  false,
 				"updated_at": transTime,
 			}
+			goals, errCode := GetAllActiveFactorsGoals(ProjectID)
+			if errCode != 302 {
+				return 0, http.StatusInternalServerError
+			}
+			for _, goal := range goals {
+				rule := FactorsGoalRule{}
+				json.Unmarshal(goal.Rule.RawMessage, &rule)
+				if isUserPropertyInList(rule.Rule.StartEnUserFitler, existingFactorsTrackedUserProperty.UserPropertyName) ||
+					isUserPropertyInList(rule.Rule.EndEnUserFitler, existingFactorsTrackedUserProperty.UserPropertyName) ||
+					isUserPropertyInList(rule.Rule.GlobalFilters, existingFactorsTrackedUserProperty.UserPropertyName) {
+					_, errCode := DeactivateFactorsGoal(int64(goal.ID), goal.ProjectID)
+					if errCode != 200 {
+						return 0, http.StatusInternalServerError
+					}
+				}
+			}
 			return updateFactorsTrackedUserProperty(existingFactorsTrackedUserProperty.ID, ProjectID, updatedFields)
 		}
 		logCtx.Error("Remove Tracked User Property failed")
@@ -105,6 +122,15 @@ func RemoveFactorsTrackedUserProperty(ID int64, ProjectID uint64) (int64, int) {
 	}
 	logCtx.WithError(dbErr).Error("Tracked User Property not found")
 	return 0, http.StatusNotFound
+}
+
+func isUserPropertyInList(properties []KeyValueTuple, searchKey string) bool {
+	for _, property := range properties {
+		if property.Key == searchKey {
+			return true
+		}
+	}
+	return false
 }
 
 // GetAllFactorsTrackedUserPropertiesByProject - get all the tracked user properties by project

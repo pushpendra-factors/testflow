@@ -22,7 +22,7 @@ const InsightHighlightItem = ({ data }) => {
 
                             <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'} >{data.overall_percentage_text}</Text>
 
-                            <Progress percent={data.overall_percentage} strokeColor={'#F9C06E'} showInfo={false} />
+                            <Progress percent={data.overall_percentage} strokeColor={'#F9C06E'} className={'fa-progress'} showInfo={false} />
                             <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{data.goal?.en_en}</Text>
                             </div>
 

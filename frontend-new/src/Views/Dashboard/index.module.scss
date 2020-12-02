@@ -5,3 +5,25 @@
     bottom: 0;
     min-height: 100vh;
 }
+
+.eventCharacter {
+    border-radius: 10px;
+    background: #3E516C;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 0.25rem;
+    color: white;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 20px;
+}
+
+.eventName {
+    font-weight: 500;
+    color: #3E516C;
+    font-size: 16px;
+    line-height: 24px;
+}

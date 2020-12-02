@@ -57,11 +57,13 @@ function FunnelsResultPage({
           queryType="funnel"
         />
         <EventsInfo setDrawerVisible={setDrawerVisible} queries={queries} />
-        <FiltersInfo
-          durationObj={durationObj}
-          handleDurationChange={handleDurationChange}
-          breakdown={breakdown}
-        />
+        <div className="py-4">
+          <FiltersInfo
+            durationObj={durationObj}
+            handleDurationChange={handleDurationChange}
+            breakdown={breakdown}
+          />
+        </div>
       </Header>
       {content}
     </>

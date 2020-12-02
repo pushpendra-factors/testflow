@@ -21,7 +21,7 @@ function DashboardSubMenu({
         type={'text'}
         className={'m-0 fa-button-ghost items-center p-0 py-2'}
       >
-        <UnlockOutlined /> Public.
+        <LockOutlined /> Private.
       </Button>
     );
   } else {
@@ -32,7 +32,7 @@ function DashboardSubMenu({
         type={'text'}
         className={'m-0 fa-button-ghost items-center p-0 py-2'}
       >
-        <LockOutlined /> Private.
+        <UnlockOutlined /> Public.
       </Button>
     );
   }

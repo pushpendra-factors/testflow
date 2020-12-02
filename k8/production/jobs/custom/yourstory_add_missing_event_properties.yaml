@@ -15,7 +15,7 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem-jobs2
+            cloud.google.com/gke-nodepool: job-pool-small
           containers:
           - name: yourstory-add-properties-job
             image: us.gcr.io/factors-production/yourstory-add-properties-job:v0.02-e8c91a1

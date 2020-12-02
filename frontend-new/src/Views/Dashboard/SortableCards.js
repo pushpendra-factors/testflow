@@ -6,7 +6,7 @@ import { UNITS_ORDER_CHANGED } from '../../reducers/types';
 import { updateDashboard } from '../../reducers/dashboard/services';
 import { getRequestForNewState } from '../../reducers/dashboard/utils';
 
-function SortableCards({ setwidgetModal, durationObj }) {
+function SortableCards({ setwidgetModal, durationObj, showDeleteWidgetModal }) {
   const dispatch = useDispatch();
 
   const { active_project } = useSelector(state => state.global);
@@ -32,6 +32,7 @@ function SortableCards({ setwidgetModal, durationObj }) {
             unit={{ ...item, query: savedQuery }}
             onDrop={onDrop}
             setwidgetModal={setwidgetModal}
+            showDeleteWidgetModal={showDeleteWidgetModal}
           />
         );
       })}

@@ -5,7 +5,7 @@ import * as d3 from 'd3';
 import styles from './index.module.scss';
 import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
 
-function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMapper, title = "chart", modal=false }) {
+function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMapper, title = "chart", isWidgetModal }) {
 
   const appliedColors = generateColors(chartData.length);
   const chartColors = {};
@@ -16,7 +16,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
   const chartRef = useRef(null);
 
   const getElemId = (key) => {
-    if(!modal) {
+    if (!isWidgetModal) {
       return key;
     } else {
       return `modal-${key}`;
@@ -71,7 +71,7 @@ function Chart({ eventsData, groups, chartData, eventsMapper, reverseEventsMappe
   const drawChart = useCallback(() => {
     const chart = c3.generate({
       size: {
-        height: 350
+        height: 300
       },
       padding: {
         left: 40,

@@ -5,7 +5,7 @@ import {
 import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
 
 function SingleEventMultipleBreakdownTable({
-  originalData, chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, page, events
+  originalData, chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, page, events, isWidgetModal
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -68,6 +68,7 @@ function SingleEventMultipleBreakdownTable({
 
   return (
     <DataTable
+      isWidgetModal={isWidgetModal}
       tableData={tableData}
       searchText={searchText}
       setSearchText={setSearchText}
