@@ -92,8 +92,7 @@ function QueryBlock({
   const removeFilters = (index) => {
     const newEvent = Object.assign({}, event);
     if (newEvent.filters[index]) {
-      delete newEvent.filters[index];
-      newEvent.filters.length -= 1;
+      newEvent.filters.splice(index, 1);
     }
     eventChange(newEvent, index);
   };
