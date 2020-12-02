@@ -204,7 +204,19 @@
 
     .rdrCalendarWrapper {
       width: auto;
-      padding: 15px;
+      padding: 0;
+    }
+
+    .rdrMonthAndYearWrapper {
+      padding-top: 4px;
+    }
+
+    .rdrMonth {
+      padding-bottom: 0;
+    }
+
+    .rdrDateDisplay {
+      margin: 4px 0;
     }
   }
   

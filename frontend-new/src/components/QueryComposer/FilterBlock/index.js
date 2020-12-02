@@ -286,7 +286,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
           } 
         } else if (newFilterState.props[1] === 'numerical') {
           renderOptions.push(<span className={styles.filter_block__filter_select__option_numerical}>
-            <Input placeholder={"Enter a value"} onChange={addInput}></Input>
+            <Input size="large" placeholder={"Enter a value"} onChange={addInput}></Input>
           </span>)
         } else if (newFilterState.props[1] === 'datetime') {
           
@@ -355,7 +355,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
     if(filterTypeState === 'values') {
       return (<span className={styles.filter_block__filter_select__apply}
         onClick={() => applyFilter()} >
-        <Button disabled={!newFilterState.values.length} className={styles.filter_block__filter_select__apply_btn} size={'large'} type="primary" onClick={() => applyFilter()}>Apply Filter</Button>
+        <Button block disabled={!newFilterState.values.length} className={styles.filter_block__filter_select__apply_btn} size={'large'} type="primary" onClick={() => applyFilter()}>Apply Filter</Button>
       </span>)
     }
   }

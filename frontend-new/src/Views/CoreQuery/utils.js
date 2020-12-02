@@ -42,15 +42,30 @@ const getEventsWithProperties = (queries) => {
   queries.forEach(ev => {
     const filterProps = [];
     ev.filters.forEach(fil => {
-      const vals = Array.isArray(fil.values) ? fil.values.join(',') : fil.values;
-      filterProps.push({
-        en: fil.props[2],
-        lop: 'AND',
-        op: operatorMap[fil.operator],
-        pr: fil.props[0],
-        ty: fil.props[1],
-        va: vals
-      });
+      let vals;
+      if(Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            en: fil.props[2],
+            lop: 'OR',
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: val
+          });
+        })
+      } else {
+        vals = fil.values;
+        filterProps.push({
+          en: fil.props[2],
+          lop: 'AND',
+          op: operatorMap[fil.operator],
+          pr: fil.props[0],
+          ty: fil.props[1],
+          va: vals
+        });
+      }
+      
     });
     ewps.push({
       na: ev.label,
@@ -138,22 +153,28 @@ export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType =
 
     query.gbp = appliedGroupBy
       .map(opt => {
+        let gbpReq = {};
         if (opt.eventIndex) {
-          return {
+          gbpReq = {
             pr: opt.property,
             en: opt.prop_category,
             pty: opt.prop_type,
             ena: opt.eventName,
             eni: opt.eventIndex
-          };
+          }; 
         } else {
-          return {
+          gbpReq = {
             pr: opt.property,
             en: opt.prop_category,
             pty: opt.prop_type,
             ena: opt.eventName
           };
         }
+        if(opt.prop_type === 'datetime') {
+          gbpReq['grn'] = "day";
+        }
+
+        return gbpReq;
       });
   }
   query.ec = activeTab === '2' ? constantObj.each : constantObj[breakdownType];

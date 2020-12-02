@@ -8,6 +8,8 @@
         left: -12px;
     }
 
+
+
     &__filter_content {
         color: #5949BC;
         font-weight: 500;
@@ -39,7 +41,7 @@
 
         &__options {
             overflow: scroll;
-            max-height: 310px;
+            max-height: 360px;
             max-width: 400px;
             overflow-x: hidden;
             display: flex;
@@ -63,17 +65,10 @@
             @extend .filter_block__filter_select__apply;
         }
 
-        &__apply_btn {
-            width: 280px;
-        }
-
-        &_option_empty {
-
-        }
-
         &__option_numerical {
             @extend .filter_block__filter_select__option_nomatch;
             justify-content: center;
+            padding-top: 20px !important;
 
             input {
                 box-sizing: border-box;
