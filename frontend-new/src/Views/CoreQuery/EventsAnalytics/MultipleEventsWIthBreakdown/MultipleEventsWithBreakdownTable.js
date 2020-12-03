@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   getTableColumns, getTableData, getDateBasedColumns, getDateBasedTableData
 } from './utils';
-import DataTable from '../../../components/DataTable';
+import DataTable from '../../../../components/DataTable';
 
 function MultipleEventsWithBreakdownTable({
   chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, page, lineChartData, isWidgetModal, durationObj

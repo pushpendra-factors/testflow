@@ -7,7 +7,7 @@ import QueryComposer from '../../components/QueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
 import { Drawer, Button } from 'antd';
 import { SVG, Text } from '../../components/factorsComponents';
-import EventsAnalytics from '../EventsAnalytics';
+import EventsAnalytics from './EventsAnalytics';
 import { deleteGroupByForEvent } from '../../reducers/coreQuery/middleware';
 import { runQuery as runQueryService, getFunnelData } from '../../reducers/coreQuery/services';
 import {

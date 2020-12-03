@@ -1,5 +1,4 @@
-import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
-import { SortData } from '../../CoreQuery/utils';
+import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 
 export const formatData = (data) => {
   const result = data.rows.map((d, index) => {

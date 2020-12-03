@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import DataTable from '../../../components/DataTable';
+import DataTable from '../../../../components/DataTable';
 import {
   getNoGroupingTableData, getColumns, getDateBasedColumns, getNoGroupingTablularDatesBasedData
 } from './utils';

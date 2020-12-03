@@ -1,11 +1,11 @@
 import React from 'react';
-import Header from '../AppLayout/Header';
-import EventsInfo from '../CoreQuery/FunnelsResultPage/EventsInfo';
-import ContentTabs from '../../components/ContentTabs';
+import Header from '../../AppLayout/Header';
+import EventsInfo from '../FunnelsResultPage/EventsInfo';
+import ContentTabs from '../../../components/ContentTabs';
 import ResultTab from './ResultTab.js';
-import { SVG } from '../../components/factorsComponents';
+import { SVG } from '../../../components/factorsComponents';
 import EventBreakdown from './EventBreakdown';
-import ResultsHeader from '../CoreQuery/ResultsHeader';
+import ResultsHeader from '../ResultsHeader';
 
 function EventsAnalytics({
   queries, eventsMapper, reverseEventsMapper, breakdown, resultState, setDrawerVisible, runQuery, activeKey, breakdownType, handleBreakdownTypeChange, breakdownTypeData, queryType, requestQuery, setShowResult, querySaved, setQuerySaved, durationObj, handleDurationChange

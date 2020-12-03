@@ -1,5 +1,5 @@
 import React from 'react';
-import DurationInfo from '../DurationInfo';
+import DurationInfo from '../../../components/DurationInfo';
 
 function FiltersInfo({ durationObj, breakdown, handleDurationChange }) {
   return (

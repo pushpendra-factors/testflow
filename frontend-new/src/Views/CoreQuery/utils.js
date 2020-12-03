@@ -378,20 +378,6 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   return result;
 };
 
-export const SortData = (arr, key, order) => {
-  const result = [...arr];
-  result.sort((a, b) => {
-    if (order === 'ascend') {
-      return parseFloat(a[key]) >= parseFloat(b[key]) ? 1 : -1;
-    }
-    if (order === 'descend') {
-      return parseFloat(a[key]) <= parseFloat(b[key]) ? 1 : -1;
-    }
-    return 0;
-  });
-  return result;
-};
-
 export const DefaultDateRangeFormat = {
   from: '',
   to: '',

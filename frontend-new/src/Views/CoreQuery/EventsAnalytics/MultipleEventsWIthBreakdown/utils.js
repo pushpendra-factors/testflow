@@ -1,7 +1,7 @@
 import React from 'react';
 import moment from 'moment';
-import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
-import { labelsObj, SortData } from '../../CoreQuery/utils';
+import { labelsObj } from '../../utils';
+import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 
 export const getBreakdownTitle = (breakdown) => {
   const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -159,7 +159,6 @@ export const getDateBasedColumns = (data, breakdown, currentSorter, handleSortin
 };
 
 export const getDateBasedTableData = (data, breakdown, currentSorter, searchText, frequency) => {
-  console.log(frequency)
   const filteredData = data.filter(elem => elem.label.toLowerCase().includes(searchText.toLowerCase()) || elem.event.toLowerCase().includes(searchText.toLowerCase()));
   let format = 'MMM D';
   if (frequency === 'hour') {

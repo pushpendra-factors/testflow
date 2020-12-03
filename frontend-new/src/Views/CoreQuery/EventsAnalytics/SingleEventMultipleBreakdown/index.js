@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { formatData, formatVisibleProperties, formatDataInLineChartFormat } from './utils';
-import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
-import BarChart from '../../../components/BarChart';
-import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable';
-import LineChart from '../../../components/LineChart';
+import React, { useState, useEffect } from "react";
+import { formatData, formatDataInLineChartFormat } from "./utils";
+import BarChart from "../../../../components/BarChart";
+import LineChart from "../../../../components/LineChart";
+import SingleEventMultipleBreakdownTable from "./SingleEventMultipleBreakdownTable";
+import { generateColors } from "../../../../utils/dataFormatter";
 
-function MultipleEventsWithBreakdown({
-  queries, breakdown, resultState, page, chartType, isWidgetModal, durationObj
+function SingleEventMultipleBreakdown({
+  queries,
+  breakdown,
+  resultState,
+  page,
+  chartType,
+  isWidgetModal,
+  durationObj,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -15,11 +21,12 @@ function MultipleEventsWithBreakdown({
   const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
-    const appliedColors = generateColors(queries.length);
-    const formattedData = formatData(resultState.data, queries, appliedColors);
+    const formattedData = formatData(resultState.data);
     setChartsData(formattedData);
-    setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
-  }, [resultState.data, queries]);
+    setVisibleProperties([
+      ...formattedData.slice(0, maxAllowedVisibleProperties),
+    ]);
+  }, [resultState.data]);
 
   if (!chartsData.length) {
     return null;
@@ -28,25 +35,29 @@ function MultipleEventsWithBreakdown({
   const mapper = {};
   const reverseMapper = {};
 
-  const visibleLabels = visibleProperties.map(v => `${v.event},${v.label}`);
+  const visibleLabels = visibleProperties.map((v) => v.label);
 
   visibleLabels.forEach((q, index) => {
     mapper[`${q}`] = `event${index + 1}`;
     reverseMapper[`event${index + 1}`] = q;
   });
 
-  let chartContent = null;
+  const lineChartData = formatDataInLineChartFormat(
+    resultState.data,
+    visibleProperties,
+    mapper,
+    hiddenProperties,
+    durationObj.frequency
+  );
 
-  const lineChartData = formatDataInLineChartFormat(visibleProperties, mapper, hiddenProperties, durationObj.frequency);
   const appliedColors = generateColors(visibleProperties.length);
 
-  if (chartType === 'barchart') {
+  let chartContent = null;
+
+  if (chartType === "barchart") {
     chartContent = (
       <div className="flex mt-8">
-        <BarChart
-          chartData={formatVisibleProperties(visibleProperties, queries)}
-          queries={queries}
-        />
+        <BarChart chartData={visibleProperties} />
       </div>
     );
   } else {
@@ -61,21 +72,20 @@ function MultipleEventsWithBreakdown({
           eventsMapper={mapper}
           setHiddenEvents={setHiddenProperties}
           hiddenEvents={hiddenProperties}
-          isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
+          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
         />
       </div>
     );
   }
 
   return (
-    <div className="total-events w-full">
+    <div className="w-full">
       {chartContent}
       <div className="mt-8">
-        <MultipleEventsWithBreakdownTable
+        <SingleEventMultipleBreakdownTable
           isWidgetModal={isWidgetModal}
           data={chartsData}
           lineChartData={lineChartData}
-          queries={queries}
           breakdown={breakdown}
           events={queries}
           chartType={chartType}
@@ -91,4 +101,4 @@ function MultipleEventsWithBreakdown({
   );
 }
 
-export default MultipleEventsWithBreakdown;
+export default SingleEventMultipleBreakdown;

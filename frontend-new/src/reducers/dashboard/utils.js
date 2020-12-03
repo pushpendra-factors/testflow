@@ -1,4 +1,4 @@
-import { SortData } from '../../Views/CoreQuery/utils';
+import { SortData } from "../../utils/dataFormatter";
 
 export const cardClassNames = {
   1: 'w-full',

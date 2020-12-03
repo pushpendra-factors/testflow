@@ -4,8 +4,8 @@ import SingleEventSingleBreakdown from '../SingleEventSingleBreakdown';
 import { Spin } from 'antd';
 import SingleEventMultipleBreakdown from '../SingleEventMultipleBreakdown';
 import MultipleEventsWithBreakdown from '../MultipleEventsWIthBreakdown';
-import DurationInfo from '../../CoreQuery/DurationInfo';
-import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
+import DurationInfo from '../../../../components/DurationInfo';
+import ChartTypeDropdown from '../../../../components/ChartTypeDropdown';
 import BreakdownType from '../BreakdownType';
 
 function ResultTab({

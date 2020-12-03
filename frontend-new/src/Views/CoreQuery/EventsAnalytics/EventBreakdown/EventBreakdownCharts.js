@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { formatData } from './utils';
-import BarChart from '../../../components/BarChart';
+import BarChart from '../../../../components/BarChart';
 import EventBreakdownTable from './EventBreakdownTable';
-import ChartHeader from '../../../components/SparkLineChart/ChartHeader';
+import ChartHeader from '../../../../components/SparkLineChart/ChartHeader';
 
 function EventBreakdownCharts({
   data, breakdown

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Popover, Button } from 'antd';
-import DateRangeSelector from '../../../components/QueryComposer/DateRangeSelector';
-import { getDateRange, readableDateRange } from '../../../components/QueryComposer/DateRangeSelector/utils';
-import { SVG } from '../../../components/factorsComponents';
+import DateRangeSelector from '../QueryComposer/DateRangeSelector';;
+import { getDateRange, readableDateRange } from '../QueryComposer/DateRangeSelector/utils';
+import { SVG } from '../factorsComponents';
 
 function DurationInfo({ durationObj, handleDurationChange }) {
   const [dateRangeVisible, setDateRangeVisibile] = useState(false);

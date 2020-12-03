@@ -1,7 +1,5 @@
 import moment from 'moment';
-
-import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
-import { SortData } from '../../CoreQuery/utils';
+import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 
 export const getNoGroupingTableData = (data, currentSorter, searchText, reverseEventsMapper) => {
   const clonedData = data.map(elem => {

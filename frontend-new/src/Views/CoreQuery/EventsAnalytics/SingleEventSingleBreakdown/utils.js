@@ -1,6 +1,6 @@
-import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
 import moment from 'moment';
-import { labelsObj, SortData } from '../../CoreQuery/utils';
+import { labelsObj } from '../../utils';
+import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 
 export const getTableColumns = (events, breakdown, currentSorter, handleSorting, page) => {
   const breakdownColumns = breakdown.map(e => {
