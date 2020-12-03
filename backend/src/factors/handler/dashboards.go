@@ -477,6 +477,53 @@ func DeleteDashboardUnitHandler(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully deleted."})
 }
 
+// DeleteMultiDashboardUnitHandler godoc
+// @Summary To delete multiple existing dashboard unit.
+// @Tags DashboardUnit
+// @Accept  json
+// @Produce json
+// @Param project_id path integer true "Project ID"
+// @Param dashboard_id path integer true "Dashboard ID"
+// @Param unit_ids path string true "Dashboard Unit IDs"
+// @Success 202 {string} json "{"message": "Successfully deleted."}"
+// @Router /{project_id}/v1/dashboards/{dashboard_id}/units/multi/{unit_ids} [delete]
+func DeleteMultiDashboardUnitHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden,
+			gin.H{"error": "Delete dashboard unit failed. Invalid project."})
+		return
+	}
+
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	dashboardID, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	if err != nil || dashboardID == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
+		return
+	}
+
+	dashboardUnitIDsStr := strings.Split(c.Params.ByName("unit_ids"), ",")
+
+	var dashboardUnitIDs []uint64
+	for _, ID := range dashboardUnitIDsStr {
+		dashboardUnitID, err := strconv.ParseUint(ID, 10, 64)
+		if err != nil || dashboardUnitID == 0 {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id =" + ID})
+			return
+		}
+		dashboardUnitIDs = append(dashboardUnitIDs, dashboardUnitID)
+	}
+
+	errCode, errMsg := M.DeleteMultipleDashboardUnits(projectID, agentUUID, dashboardID, dashboardUnitIDs)
+	if errCode != http.StatusAccepted {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully deleted."})
+}
+
 type DashboardUnitWebAnalyticsQueryName struct {
 	UnitID    uint64 `json:"unit_id"`
 	QueryName string `json:"query_name"`
