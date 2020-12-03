@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   getTableColumns, getDataInTableFormat, getDateBasedColumns, getDateBasedTableData
 } from './utils';
-import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
+import DataTable from '../../../components/DataTable';
 
 function SingleEventMultipleBreakdownTable({
-  originalData, chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, page, events, isWidgetModal
+  originalData, chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, page, events, isWidgetModal, durationObj
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -25,8 +25,8 @@ function SingleEventMultipleBreakdownTable({
   let tableData = [];
 
   if (chartType === 'linechart') {
-    tableData = getDateBasedTableData(data.map(elem => elem.label), originalData, nonDatecolumns, searchText, sorter);
-    columns = getDateBasedColumns(lineChartData, breakdown, sorter, handleSorting);
+    tableData = getDateBasedTableData(data.map(elem => elem.label), originalData, nonDatecolumns, searchText, sorter, durationObj.frequency);
+    columns = getDateBasedColumns(lineChartData, breakdown, sorter, handleSorting, durationObj.frequency);
   } else {
     tableData = getDataInTableFormat(data, nonDatecolumns, searchText, sorter);
     columns = nonDatecolumns;

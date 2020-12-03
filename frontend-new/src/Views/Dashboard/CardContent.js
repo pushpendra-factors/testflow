@@ -4,7 +4,7 @@ import { getStateQueryFromRequestQuery, presentationObj } from '../CoreQuery/uti
 import EventsAnalytics from './EventsAnalytics';
 import Funnels from './Funnels';
 
-function CardContent({ unit, resultState, setwidgetModal }) {
+function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
   let content = null;
 
   if (resultState.loading) {
@@ -70,6 +70,7 @@ function CardContent({ unit, resultState, setwidgetModal }) {
     if (queryType === 'event') {
       content = (
 				<EventsAnalytics
+          durationObj={durationObj}
 					breakdown={breakdown}
 					events={events.map(elem => elem.label)}
 					resultState={resultState}

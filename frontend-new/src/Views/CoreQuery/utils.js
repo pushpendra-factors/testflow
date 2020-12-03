@@ -391,3 +391,9 @@ export const SortData = (arr, key, order) => {
   });
   return result;
 };
+
+export const DefaultDateRangeFormat = {
+  from: '',
+  to: '',
+  frequency: moment().format('dddd') === 'Sunday' ? 'hour' : 'date'
+};

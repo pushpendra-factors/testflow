@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import moment from 'moment';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector } from 'react-redux';
 import FunnelsResultPage from './FunnelsResultPage';
@@ -10,7 +11,7 @@ import EventsAnalytics from '../EventsAnalytics';
 import { deleteGroupByForEvent } from '../../reducers/coreQuery/middleware';
 import { runQuery as runQueryService, getFunnelData } from '../../reducers/coreQuery/services';
 import {
-  initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, formatApiData, getQuery, initialState, getFunnelQuery
+  initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, formatApiData, getQuery, initialState, getFunnelQuery, DefaultDateRangeFormat
 } from './utils';
 
 function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
@@ -44,11 +45,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       start: 1,
       end: 2
     },
-    date_range: {
-      from: '',
-      to: '',
-      frequency: 'date'
-    }
+    date_range: { ...DefaultDateRangeFormat }
   });
 
   const groupBy = useSelector(state => state.coreQuery.groupBy);
@@ -235,20 +232,26 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
 
   const handleDurationChange = useCallback((dates) => {
     if (dates && dates.selected) {
+      let frequency = 'date';
+      if(moment(dates.selected.endDate).diff(dates.selected.startDate, 'hours') <= 24) {
+        frequency = 'hour';
+      }
       setQueryOptions(currState => {
         return {
           ...currState,
           date_range: {
             ...currState.date_range,
             from: dates.selected.startDate,
-            to: dates.selected.endDate
+            to: dates.selected.endDate,
+            frequency
           }
         };
       });
       const appliedDateRange = {
         ...queryOptions.date_range,
         from: dates.selected.startDate,
-        to: dates.selected.endDate
+        to: dates.selected.endDate,
+        frequency
       };
 
       if (queryType === 'funnel') {
@@ -274,7 +277,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     const queryupdated = [...queries];
     if (queryupdated[index]) {
       if (changeType === 'add') {
-        if(JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
+        if (JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
           deleteGroupByForEvent(newEvent, index);
         }
         queryupdated[index] = newEvent;
@@ -399,7 +402,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
             setRowClicked={setRowClicked}
             location={location}
           />
-      )}
+        )}
 
     </>
   );

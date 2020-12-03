@@ -15,7 +15,9 @@ function WidgetCard({
 	onDrop,
 	setwidgetModal,
 	showDeleteWidgetModal,
-	durationObj
+	durationObj,
+	refreshClicked,
+	setRefreshClicked
 }) {
 	const [resultState, setResultState] = useState(initialState);
 	const { active_project } = useSelector(state => state.global);
@@ -28,6 +30,10 @@ function WidgetCard({
 				loading: true
 			});
 
+			if (!refresh && durationObj.from && durationObj.to) {
+				refresh = true;
+			}
+
 			const res = await getDataFromServer(unit.query, unit.id, unit.dashboard_id, durationObj, refresh, active_project.id);
 			let queryType;
 
@@ -39,31 +45,28 @@ function WidgetCard({
 
 			if (queryType === 'funnel') {
 				let resultantData;
-				if (res.data.result) {
-					// cached data
-					resultantData = res.data.result;
-				} else {
-					// refreshed data
+				if (refresh) {
 					resultantData = res.data;
+				} else {
+					resultantData = res.data.result;
 				}
 				setResultState({
 					...initialState,
 					data: resultantData
 				});
 			} else {
-				if (res.data.result) {
-					// cached data
-					setResultState({
-						...initialState,
-						data: formatApiData(res.data.result.result_group[0], res.data.result.result_group[1])
-					});
-				} else {
-					// refreshed data
+				if (refresh) {
 					setResultState({
 						...initialState,
 						data: formatApiData(res.data.result_group[0], res.data.result_group[1])
 					});
+				} else {
+					setResultState({
+						...initialState,
+						data: formatApiData(res.data.result.result_group[0], res.data.result.result_group[1])
+					});
 				}
+				setRefreshClicked(false);
 			}
 		} catch (err) {
 			console.log(err);
@@ -73,25 +76,31 @@ function WidgetCard({
 				error: true
 			});
 		}
-	}, [active_project.id, unit.query, unit.id, unit.dashboard_id, durationObj]);
+	}, [active_project.id, unit.query, unit.id, unit.dashboard_id, durationObj, setRefreshClicked]);
 
 	useEffect(() => {
 		getData();
 	}, [getData, durationObj]);
 
-	const handleDelete = useCallback(()=>{
+	useEffect(() => {
+		if (refreshClicked) {
+			getData(true);
+		}
+	}, [refreshClicked, getData]);
+
+	const handleDelete = useCallback(() => {
 		showDeleteWidgetModal(unit);
 	}, [unit, showDeleteWidgetModal])
 
 	const getMenu = () => {
 		return (
-		  <Menu>
-			<Menu.Item key="0">
-			  <a onClick={handleDelete} href="#!">Delete Widget</a>
-			</Menu.Item>
-		  </Menu>
+			<Menu>
+				<Menu.Item key="0">
+					<a onClick={handleDelete} href="#!">Delete Widget</a>
+				</Menu.Item>
+			</Menu>
 		)
-	  };
+	};
 
 	const changeCardSize = useCallback((cardSize) => {
 		const unitIndex = activeDashboardUnits.data.findIndex(au => au.id === unit.id);
@@ -131,6 +140,7 @@ function WidgetCard({
 						</div>
 						<div className="mt-4">
 							<CardContent
+								durationObj={durationObj}
 								unit={unit}
 								resultState={resultState}
 								setwidgetModal={setwidgetModal}
@@ -142,10 +152,10 @@ function WidgetCard({
 			<div id={`resize-${unit.id}`} className={'fa-widget-card--resize-container'}>
 				<span className={'fa-widget-card--resize-contents'}>
 					{unit.cardSize === 0 ? (
-						<a onClick={changeCardSize.bind(this, 1)}><RightOutlined /></a>
+						<a href="#!" onClick={changeCardSize.bind(this, 1)}><RightOutlined /></a>
 					) : null}
 					{unit.cardSize === 1 ? (
-						<a onClick={changeCardSize.bind(this, 0)}><LeftOutlined /></a>
+						<a href="#!" onClick={changeCardSize.bind(this, 0)}><LeftOutlined /></a>
 					) : null}
 				</span>
 			</div>

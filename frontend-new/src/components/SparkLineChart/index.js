@@ -4,7 +4,7 @@ import SparkChart from './Chart';
 import { numberWithCommas } from '../../Views/CoreQuery/utils';
 
 function SparkLineChart({
-  queries, chartsData, parentClass, appliedColors, eventsMapper, page, resultState
+  queries, chartsData, parentClass, appliedColors, eventsMapper, page, resultState, frequency
 }) {
   if (queries.length > 1) {
     return (
@@ -26,7 +26,7 @@ function SparkLineChart({
 							<div className="flex flex-col">
 								<ChartHeader total={total} query={q} bgColor={appliedColors[index]} />
 								<div className="mt-8">
-									<SparkChart page={page} event={eventsMapper[q]} chartData={data} chartColor={appliedColors[index]} />
+									<SparkChart frequency={frequency} page={page} event={eventsMapper[q]} chartData={data} chartColor={appliedColors[index]} />
 								</div>
 							</div>
 						</div>
@@ -44,7 +44,7 @@ function SparkLineChart({
 					<ChartHeader bgColor="#4D7DB4" query={queries[0]} total={total} />
 				</div>
 				<div className="w-3/4">
-					<SparkChart page={page} event={eventsMapper[queries[0]]} chartData={chartsData} chartColor="#4D7DB4" />
+					<SparkChart frequency={frequency} page={page} event={eventsMapper[queries[0]]} chartData={chartsData} chartColor="#4D7DB4" />
 				</div>
 			</div>
     );

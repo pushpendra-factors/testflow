@@ -8,7 +8,7 @@ import SingleEventMultipleBreakdownTable from '../../EventsAnalytics/SingleEvent
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventMultipleBreakdown({
-  resultState, page, chartType, title, breakdown, queries, unit
+  resultState, page, chartType, title, breakdown, queries, unit, durationObj
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -36,7 +36,7 @@ function SingleEventMultipleBreakdown({
     reverseMapper[`event${index + 1}`] = q;
   });
 
-  const lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
+  const lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties, durationObj.frequency);
 
   const appliedColors = generateColors(visibleProperties.length);
 
@@ -72,6 +72,7 @@ function SingleEventMultipleBreakdown({
     chartContent = (
       <div className="flex mt-4">
         <LineChart
+          frequency={durationObj.frequency}
           chartData={lineChartData}
           appliedColors={appliedColors}
           queries={visibleLabels}

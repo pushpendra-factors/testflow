@@ -7,7 +7,7 @@ import LineChart from '../../../components/LineChart';
 // import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
-  queries, resultState, page, chartType, title, breakdown, unit
+  queries, resultState, page, chartType, title, breakdown, unit, durationObj
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -38,7 +38,7 @@ function MultipleEventsWithBreakdown({
 
   let chartContent = null;
 
-  const lineChartData = formatDataInLineChartFormat(visibleProperties, mapper, hiddenProperties);
+  const lineChartData = formatDataInLineChartFormat(visibleProperties, mapper, hiddenProperties, durationObj.frequency);
   const appliedColors = generateColors(visibleProperties.length);
 
   if (chartType === 'barchart') {
@@ -73,6 +73,7 @@ function MultipleEventsWithBreakdown({
     chartContent = (
       <div className="flex mt-4">
         <LineChart
+          frequency={durationObj.frequency}
           chartData={lineChartData}
           appliedColors={appliedColors}
           queries={visibleLabels}

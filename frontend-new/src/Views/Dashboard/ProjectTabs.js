@@ -13,7 +13,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 const { TabPane } = Tabs;
 
 function ProjectTabs({
-  setaddDashboardModal, handleEditClick, durationObj, handleDurationChange
+  setaddDashboardModal, handleEditClick, durationObj, handleDurationChange, refreshClicked, setRefreshClicked
 }) {
   const [widgetModal, setwidgetModal] = useState(false);
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
@@ -105,11 +105,15 @@ function ProjectTabs({
                     handleDurationChange={handleDurationChange}
                     dashboard={activeDashboard}
                     handleEditClick={handleEditClick}
+                    refreshClicked={refreshClicked}
+                    setRefreshClicked={setRefreshClicked}
                   />
                   <SortableCards
                     durationObj={durationObj}
                     setwidgetModal={handleToggleWidgetModal}
                     showDeleteWidgetModal={showDeleteWidgetModal}
+                    refreshClicked={refreshClicked}
+                    setRefreshClicked={setRefreshClicked}
                   />
                 </div>
               </TabPane>

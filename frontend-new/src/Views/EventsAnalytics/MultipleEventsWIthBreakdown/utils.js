@@ -114,9 +114,10 @@ export const getTableData = (data, breakdown, searchText, currentSorter) => {
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
-export const formatDataInLineChartFormat = (visibleProperties, mapper, hiddenProperties) => {
+export const formatDataInLineChartFormat = (visibleProperties, mapper, hiddenProperties, frequency) => {
   const result = [];
-  const dates = visibleProperties[0].dateWise.map(elem => moment(elem.date).format('YYYY-MM-DD'));
+  const format = 'YYYY-MM-DD HH-mm';
+  const dates = visibleProperties[0].dateWise.map(elem => moment(elem.date).format(format));
   result.push(['x', ...dates]);
   visibleProperties.forEach(v => {
     const label = `${v.event},${v.label}`;
@@ -128,7 +129,7 @@ export const formatDataInLineChartFormat = (visibleProperties, mapper, hiddenPro
   return result;
 };
 
-export const getDateBasedColumns = (data, breakdown, currentSorter, handleSorting) => {
+export const getDateBasedColumns = (data, breakdown, currentSorter, handleSorting, frequency) => {
   const breakdownColumns = breakdown.map((elem, index) => {
     return {
       title: getBreakdownTitle(elem),
@@ -137,11 +138,15 @@ export const getDateBasedColumns = (data, breakdown, currentSorter, handleSortin
       width: 200
     };
   });
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D'
+  }
   const dateColumns = data[0].slice(1).map(elem => {
     return {
-      title: getTitleWithSorter(moment(elem).format('MMM D'), moment(elem).format('MMM D'), currentSorter, handleSorting),
+      title: getTitleWithSorter(moment(elem).utc().format(format), moment(elem).utc().format(format), currentSorter, handleSorting),
       width: 100,
-      dataIndex: moment(elem).format('MMM D')
+      dataIndex: moment(elem).utc().format(format)
     };
   });
   const eventCol = {
@@ -153,8 +158,13 @@ export const getDateBasedColumns = (data, breakdown, currentSorter, handleSortin
   return [eventCol, ...breakdownColumns, ...dateColumns];
 };
 
-export const getDateBasedTableData = (data, breakdown, currentSorter, searchText) => {
+export const getDateBasedTableData = (data, breakdown, currentSorter, searchText, frequency) => {
+  console.log(frequency)
   const filteredData = data.filter(elem => elem.label.toLowerCase().includes(searchText.toLowerCase()) || elem.event.toLowerCase().includes(searchText.toLowerCase()));
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D'
+  }
   const result = filteredData.map(d => {
     const breakdownValues = {};
     breakdown.forEach((b, index) => {
@@ -163,7 +173,7 @@ export const getDateBasedTableData = (data, breakdown, currentSorter, searchText
 
     const dateWiseValues = {};
     d.dateWise.forEach(w => {
-      const key = moment(w.date).format('MMM D');
+      const key = moment(w.date).format(format);
       dateWiseValues[key] = w.value;
     });
     return {

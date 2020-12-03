@@ -6,7 +6,7 @@ import styles from './index.module.scss';
 import ChartLegends from './ChartLegends';
 
 function LineChart({
-  chartData, appliedColors, queries, reverseEventsMapper, eventsMapper, setHiddenEvents, hiddenEvents, isDecimalAllowed
+  chartData, appliedColors, queries, reverseEventsMapper, eventsMapper, setHiddenEvents, hiddenEvents, isDecimalAllowed, frequency
 }) {
   const chartRef = useRef(null);
 
@@ -86,6 +86,7 @@ function LineChart({
       },
       data: {
         x: 'x',
+        xFormat: '%Y-%m-%d %H-%M',
         columns: chartData,
         colors,
         onmouseover: (d) => {
@@ -101,7 +102,7 @@ function LineChart({
           tick: {
             values: finalXaxisValues,
             format: (d) => {
-              return moment(d).format('MMM D');
+              return frequency === 'hour' ? moment(d).format('MMM D, h A') : moment(d).format('MMM D');
             }
           }
         },
@@ -138,7 +139,7 @@ function LineChart({
           return (
             `   
               <div class="toolTip">
-                  <div class="font-semibold">${moment(data.x).format('MMM D, YYYY')}</div>
+                  <div class="font-semibold">${frequency === 'hour' ? moment(data.x).format('h A, MMM D, YYYY') : moment(data.x).format('MMM D, YYYY')}</div>
                   <div class="my-2">${label}</div>
                   <div class="flex items-center justify-start">
                       <div class="mr-1" style="background-color:${colors[data.name]};width:16px;height:16px;border-radius:8px"></div>
@@ -150,7 +151,7 @@ function LineChart({
         }
       }
     });
-  }, [chartData, finalXaxisValues, colors, reverseEventsMapper, focusHoveredLines, focusAllLines, isDecimalAllowed]);
+  }, [chartData, finalXaxisValues, colors, reverseEventsMapper, focusHoveredLines, focusAllLines, isDecimalAllowed, frequency]);
 
   const displayChart = useCallback(() => {
     drawChart();

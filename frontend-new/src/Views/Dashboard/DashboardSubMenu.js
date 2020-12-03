@@ -4,12 +4,13 @@ import {
 } from 'antd';
 import { Text } from '../../components/factorsComponents';
 import {
-  LockOutlined, ReloadOutlined, UserAddOutlined, MoreOutlined, EditOutlined, UnlockOutlined
+  // LockOutlined, ReloadOutlined, UserAddOutlined, MoreOutlined, EditOutlined, UnlockOutlined
+  LockOutlined, ReloadOutlined, EditOutlined, UnlockOutlined
 } from '@ant-design/icons';
 import DurationInfo from '../CoreQuery/DurationInfo';
 
 function DashboardSubMenu({
-  dashboard, handleEditClick, durationObj, handleDurationChange
+  dashboard, handleEditClick, durationObj, handleDurationChange, refreshClicked, setRefreshClicked
 }) {
   let btn = null;
 
@@ -49,9 +50,9 @@ function DashboardSubMenu({
         <Button onClick={handleEditClick.bind(this, dashboard)} size={'large'} type={'text'} className={'m-0 fa-button-ghost flex items-center p-0 py-2'}><EditOutlined /> Edit</Button>
       </div>
       <div className={'flex justify-between items-center'}>
-        <Button style={{ display: 'flex' }} size={'large'} className={'items-center flex m-0 fa-button-ghost p-0 py-2'}><ReloadOutlined /> Refresh Data.</Button>
-        <Button style={{ display: 'flex' }} size={'large'} className={'items-center m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined /></Button>
-        <Button style={{ display: 'flex' }} size={'large'} className={'items-center m-0 fa-button-ghost p-0 py-2'}><MoreOutlined /></Button>
+        <Button onClick={setRefreshClicked.bind(this, true)} disabled={refreshClicked} style={{ display: 'flex' }} size={'large'} className={'items-center flex m-0 fa-button-ghost p-0 py-2'}><ReloadOutlined /> Refresh Data</Button>
+        {/* <Button style={{ display: 'flex' }} size={'large'} className={'items-center m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined /></Button>
+        <Button style={{ display: 'flex' }} size={'large'} className={'items-center m-0 fa-button-ghost p-0 py-2'}><MoreOutlined /></Button> */}
 
       </div>
     </div>

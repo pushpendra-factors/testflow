@@ -9,7 +9,7 @@ import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventSingleBreakdown({
-  resultState, page, chartType, title, breakdown, queries, unit
+  resultState, page, chartType, title, breakdown, queries, unit, durationObj
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -37,7 +37,7 @@ function SingleEventSingleBreakdown({
     reverseMapper[`event${index + 1}`] = q;
   });
 
-  const lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
+  const lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties, durationObj.frequency);
 
   const appliedColors = generateColors(visibleProperties.length);
 
@@ -73,6 +73,7 @@ function SingleEventSingleBreakdown({
     chartContent = (
       <div className="flex mt-4">
         <LineChart
+          frequency={durationObj.frequency}
           chartData={lineChartData}
           appliedColors={appliedColors}
           queries={visibleLabels}

@@ -16,7 +16,6 @@ function ResultsHeader({
   };
 
   const exitResultsPage = () => {
-    setShowModal(false);
     setShowResult(false);
   };
 

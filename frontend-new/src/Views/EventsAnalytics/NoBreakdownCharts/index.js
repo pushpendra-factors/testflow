@@ -6,7 +6,7 @@ import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function NoBreakdownCharts({
-  queries, eventsMapper, reverseEventsMapper, resultState, page, chartType, isWidgetModal
+  queries, eventsMapper, reverseEventsMapper, resultState, page, chartType, isWidgetModal, durationObj
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
@@ -27,6 +27,7 @@ function NoBreakdownCharts({
   if (chartType === 'sparklines') {
     chartContent = (
       <SparkLineChart
+        frequency={durationObj.frequency}
         queries={queries}
         chartsData={chartsData}
         parentClass="flex items-center flex-wrap mt-4 justify-center"
@@ -40,7 +41,8 @@ function NoBreakdownCharts({
     chartContent = (
       <div className="flex mt-8">
         <LineChart
-          chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper, hiddenEvents)}
+          frequency={durationObj.frequency}
+          chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper, hiddenEvents, durationObj.frequency)}
           appliedColors={appliedColors}
           queries={queries}
           reverseEventsMapper={reverseEventsMapper}
@@ -65,6 +67,7 @@ function NoBreakdownCharts({
           chartType={chartType}
           setHiddenEvents={setHiddenEvents}
           hiddenEvents={hiddenEvents}
+          durationObj={durationObj}
         />
       </div>
     </div>

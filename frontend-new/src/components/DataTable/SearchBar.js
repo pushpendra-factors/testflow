@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './index.module.scss';
 import { Input, Button } from 'antd';
-import { SVG } from '../../../../components/factorsComponents';
+import { SVG } from '../factorsComponents';
 
 function SearchBar({ searchText, handleSearchTextChange, searchBar }) {
   const downloadCSV = () => {

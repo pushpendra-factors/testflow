@@ -1,15 +1,15 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import * as d3 from 'd3';
+import moment from 'moment';
 import styles from './index.module.scss';
 
 function SparkChart({
-  chartData, chartColor, page, event
+  chartData, chartColor, page, event, frequency
 }) {
   const chartRef = useRef(null);
 
   const bisectDate = d3.bisector(function (d) { return d.date; }).left;
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
+  
   const drawChart = useCallback(() => {
     const margin = {
       top: 10, right: 10, bottom: 30, left: 10
@@ -119,14 +119,18 @@ function SparkChart({
       }
       focus.attr('transform', 'translate(' + x(d.date) + ',' + y(d[event]) + ')');
       tooltip.style('display', 'block');
+      let format = 'MMM D, YYYY';
+      if(frequency === 'hour') {
+        format = 'h A, MMM D, YYYY';
+      }
       tooltip.html(`
-                <div class="font-semibold">${months[new Date(d.date).getMonth()] + ' ' + new Date(d.date).getDate() + ', ' + new Date(d.date).getFullYear()}</div>
+                <div class="font-semibold">${moment(d.date).format(format)}</div>
                 <div class="font-normal mt-1">${d[event]}</div>
             `)
         .style('left', left + 'px')
         .style('top', d3.event.pageY - 40 + 'px');
     }
-  }, [bisectDate, chartData, months, chartColor, event, page]);
+  }, [bisectDate, chartData, chartColor, event, page, frequency]);
 
   useEffect(() => {
     drawChart();
