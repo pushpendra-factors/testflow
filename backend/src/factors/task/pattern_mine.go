@@ -16,6 +16,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"net/http"
 	"os"
 	"regexp"
 	"sort"
@@ -35,7 +36,7 @@ const max_SEGMENTS = 25000
 const max_EVENT_NAMES = 250
 const top_K = 5
 const topK_patterns = 10
-const topKProperties = 4
+const topKProperties = 5
 const keventsSpecial = 5
 const keventsURL = 100
 const max_PATTERN_LENGTH = 3
@@ -427,6 +428,60 @@ func mineAndWriteLenTwoPatterns(
 	return filteredLenTwoPatterns, patternsSize, nil
 }
 
+//GetGoalPatterns get all goalPatterns from DB
+func GetGoalPatterns(projectId uint64, filteredPatterns []*P.Pattern, eventNamesWithType map[string]string) ([]*P.Pattern, error) {
+
+	goalPatternsFromDB, errCode := M.GetAllActiveFactorsGoals(projectId)
+
+	if errCode != http.StatusFound {
+		mineLog.Info("Failure on Get goal patterns.")
+	}
+	var goalPatterns []*P.Pattern
+	if goalPatternsFromDB != nil && len(goalPatternsFromDB) > 0 {
+		mineLog.Info(fmt.Sprintf("Number of Goals from DB:%d", len(goalPatternsFromDB)))
+
+		tmpPatterns := make(map[string]*P.Pattern)
+
+		for _, v := range filteredPatterns {
+			tmpPatterns[v.String()] = v
+		}
+		for _, p := range goalPatternsFromDB {
+			if valPattern, ok := tmpPatterns[p.Name]; ok {
+				goalPatterns = append(goalPatterns, valPattern)
+				mineLog.Info(fmt.Sprint("Goal event from db ", valPattern.String()))
+
+			}
+		}
+		return goalPatterns, nil
+	}
+
+	goalTopKPatterns := FilterTopKEventsOnTypes(filteredPatterns, eventNamesWithType, topK_patterns, keventsSpecial, keventsURL)
+	mineLog.Info(fmt.Sprintf("Mining goals from topk events"))
+	for _, v := range goalTopKPatterns {
+		mineLog.Info(fmt.Sprint("Goal event: ", v.String()))
+	}
+
+	for _, valPat := range goalTopKPatterns {
+		tmpFactorsRule := M.FactorsGoalRule{EndEvent: valPat.String()}
+		goalID, httpStatusTrackedEvent := M.CreateFactorsTrackedEvent(projectId, valPat.String(), "")
+		if goalID == 0 {
+			mineLog.Error("Unable to create a trackedEvent ", httpStatusTrackedEvent, " ", goalID)
+			return nil, fmt.Errorf("unable to write tracked event to db")
+		}
+		mineLog.Info("trackedEvent in db  ", httpStatusTrackedEvent, " ", goalID)
+
+		_, httpstatus, err := M.CreateFactorsGoal(projectId, valPat.String(), tmpFactorsRule, "")
+		if httpstatus != http.StatusCreated {
+			mineLog.Error("Unable to write to db ", httpstatus, err)
+			return nil, fmt.Errorf("unable to write factors goal to db")
+
+		}
+	}
+
+	return goalTopKPatterns, nil
+
+}
+
 func mineAndWritePatterns(projectId uint64, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, eventNames []string,
 	numRoutines int, chunkDir string,
@@ -446,7 +501,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
 
-	filteredTopKPatterns := FilterTopKEventsOnTypes(filteredPatterns, eventNamesWithType, topK_patterns, keventsSpecial, keventsURL)
+	goalPatterns, err := GetGoalPatterns(projectId, filteredPatterns, eventNamesWithType)
 
 	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil
@@ -458,7 +513,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	}
 	filteredPatterns, patternsSize, err = mineAndWriteLenTwoPatterns(
 		filteredPatterns, filepath, userAndEventsInfo,
-		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize, countOccurence, filteredTopKPatterns)
+		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize, countOccurence, goalPatterns)
 	if err != nil {
 		return err
 	}
@@ -826,48 +881,79 @@ func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64) ([]string,
 	return eventNames, eventNamesWithType, nil
 }
 
-func buildWhiteListProperties(allProperty map[string]P.PropertiesCount, numProp int) (map[string]bool, map[string]bool) {
+func buildWhiteListProperties(projectId uint64, allProperty map[string]P.PropertiesCount, numProp int) (map[string]bool, map[string]bool) {
 
 	userPropertiesMap := make(map[string]int)
 	eventPropertiesMap := make(map[string]int)
+	upFilteredMap := make(map[string]bool)
+	epFilteredMap := make(map[string]bool)
+
 	for _, v := range allProperty {
-		if v.PropertyType == "UC" {
+		if strings.Compare(v.PropertyType, "UP") == 0 {
 			userPropertiesMap[v.PropertyName] = int(v.Count)
 		} else {
 			eventPropertiesMap[v.PropertyName] = int(v.Count)
 		}
 	}
-	upSortedList := U.RankByWordCount(userPropertiesMap)
+
+	userPropertiesList, errInt := M.GetAllActiveFactorsTrackedUserPropertiesByProject(projectId)
+	if errInt != http.StatusFound {
+		mineLog.WithFields(log.Fields{"err": errInt}).Error("Unable to fetch UserProperties from db")
+		return nil, nil
+	}
+
+	if userPropertiesList != nil && len(userPropertiesList) > 0 {
+		mineLog.WithFields(log.Fields{"user properties": userPropertiesList}).Info("Number of User properties from db :", len(userPropertiesList))
+
+		for _, v := range userPropertiesList {
+			upFilteredMap[v.UserPropertyName] = true
+		}
+	} else {
+		upSortedList := U.RankByWordCount(userPropertiesMap)
+
+		// restrict number of properties
+		if len(upSortedList) > numProp {
+			upSortedList = upSortedList[0:numProp]
+		}
+		// add keys based on ranking
+		for _, u := range upSortedList {
+			upFilteredMap[u.Key] = true
+		}
+
+		//add keys based on WHITELIST_Properties
+		for _, v := range U.WHITELIST_FACTORS_USER_PROPERTIES {
+			upFilteredMap[v] = true
+		}
+
+		//delete keys based on disabled_Properties
+		for _, Uprop := range U.DISABLED_FACTORS_USER_PROPERTIES {
+			delete(upFilteredMap, Uprop)
+		}
+
+		for key := range upFilteredMap {
+			mineLog.Info("insert user property", key)
+			_, errInt = M.CreateFactorsTrackedUserProperty(projectId, key, "")
+			if errInt != http.StatusCreated {
+				errorString := fmt.Sprintf("unable to insert user property to db %s", key)
+				mineLog.WithFields(log.Fields{"http status": errInt}).Error(errorString)
+
+			}
+		}
+	}
+	//ep : event Properties : addkeys based on ranking , add based on whitelist properties
+	// delete based on disables properties
+
 	epSortedList := U.RankByWordCount(eventPropertiesMap)
 
-	// restrict number of properties
-	if len(upSortedList) > numProp {
-		upSortedList = upSortedList[0:numProp]
-	}
 	if len(epSortedList) > numProp {
 		epSortedList = epSortedList[0:numProp]
 	}
 
-	upFilteredMap := make(map[string]bool)
-	epFilteredMap := make(map[string]bool)
-
-	// add keys based on ranking
-	for _, u := range upSortedList {
-		upFilteredMap[u.Key] = true
-	}
 	for _, u := range epSortedList {
 		epFilteredMap[u.Key] = true
 	}
-	//add keys based on WHITELIST_Properties
-	for _, v := range U.WHITELIST_FACTORS_USER_PROPERTIES {
-		upFilteredMap[v] = true
-	}
 	for _, v := range U.WHITELIST_FACTORS_EVENT_PROPERTIES {
 		epFilteredMap[v] = true
-	}
-	//delete keys based on disabled_Properties
-	for _, Uprop := range U.DISABLED_FACTORS_USER_PROPERTIES {
-		delete(upFilteredMap, Uprop)
 	}
 	for _, Eprop := range U.DISABLED_FACTORS_EVENT_PROPERTIES {
 		delete(epFilteredMap, Eprop)
@@ -936,7 +1022,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 
 	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
-	userPropList, eventPropList := buildWhiteListProperties(allPropsMap, topKProperties)
+	userPropList, eventPropList := buildWhiteListProperties(projectId, allPropsMap, topKProperties)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return "", 0, err

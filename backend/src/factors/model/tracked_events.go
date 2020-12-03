@@ -63,6 +63,7 @@ func CreateFactorsTrackedEvent(ProjectID uint64, EventName string, agentUUID str
 				"is_active":  true,
 				"updated_at": transTime,
 			}
+			logCtx.Info("Event already exist")
 			return updateFactorsTrackedEvent(existingFactorsTrackedEvent.ID, ProjectID, updatedFields)
 		}
 		logCtx.Error("Create tracked Event failed")
