@@ -7,7 +7,7 @@ import {
   // LockOutlined, ReloadOutlined, UserAddOutlined, MoreOutlined, EditOutlined, UnlockOutlined
   LockOutlined, ReloadOutlined, EditOutlined, UnlockOutlined
 } from '@ant-design/icons';
-import DurationInfo from '../CoreQuery/DurationInfo';
+import DurationInfo from '../../components/DurationInfo';
 
 function DashboardSubMenu({
   dashboard, handleEditClick, durationObj, handleDurationChange, refreshClicked, setRefreshClicked
