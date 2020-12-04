@@ -1,3 +1,5 @@
+import React from 'react';
+
 const visualizationColors = [
   "#4D7DB4",
   "#4C9FC8",
