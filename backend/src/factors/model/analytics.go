@@ -303,76 +303,97 @@ func buildWhereFromProperties(properties []QueryProperty) (rStmnt string, rParam
 		return rStmnt, rParams, nil
 	}
 
+	groupedProperties := make(map[string][]QueryProperty)
+	for _, p := range properties {
+		// Use Entity.Property as key to distinquish same property filter on user and event entity.
+		propertyKey := p.Entity + "." + p.Property
+		groupedProperties[propertyKey] = append(groupedProperties[propertyKey], p)
+	}
+
 	rParams = make([]interface{}, 0, 0)
-	for i, p := range properties {
-		// defaults logic op if not given.
-		if p.LogicalOp == "" {
-			p.LogicalOp = "AND"
-		}
+	groupIndex := 0
+	for _, groupProperties := range groupedProperties {
+		var groupStmnt string
+		for i, p := range groupProperties {
+			// defaults logic op if not given.
+			if p.LogicalOp == "" {
+				p.LogicalOp = "AND"
+			}
 
-		if !isValidLogicalOp(p.LogicalOp) {
-			return rStmnt, rParams, errors.New("invalid logical op on where condition")
-		}
+			if !isValidLogicalOp(p.LogicalOp) {
+				return rStmnt, rParams, errors.New("invalid logical op on where condition")
+			}
 
-		propertyEntity := getPropertyEntityField(p.Entity)
-		propertyOp := getOp(p.Operator)
+			propertyEntity := getPropertyEntityField(p.Entity)
+			propertyOp := getOp(p.Operator)
 
-		if p.Value != PropertyValueNone {
-			var pStmnt string
-			if p.Type == U.PropertyTypeDateTime {
-				pStmnt = fmt.Sprintf("(%s->>?>=? AND %s->>?<=?)", propertyEntity, propertyEntity)
+			if p.Value != PropertyValueNone {
+				var pStmnt string
+				if p.Type == U.PropertyTypeDateTime {
+					pStmnt = fmt.Sprintf("(%s->>?>=? AND %s->>?<=?)", propertyEntity, propertyEntity)
 
-				dateTimeValue, err := DecodeDateTimePropertyValue(p.Value)
-				if err != nil {
-					log.WithError(err).Error("Failed reading timestamp on user join query.")
-					return "", nil, err
-				}
-				rParams = append(rParams, p.Property, dateTimeValue.From, p.Property, dateTimeValue.To)
-			} else if p.Type == U.PropertyTypeNumerical {
-				// convert to float for numerical properties.
-				pStmnt = fmt.Sprintf("CASE WHEN json_typeof(%s::json->?) = 'number' THEN  (%s->>?)::float %s ? ELSE false END", propertyEntity, propertyEntity, propertyOp)
-				rParams = append(rParams, p.Property, p.Property, p.Value)
-			} else {
-				// categorical property type.
-				var pValue string
-				if p.Operator == ContainsOpStr || p.Operator == NotContainsOpStr {
-					pValue = fmt.Sprintf("%%%s%%", p.Value)
+					dateTimeValue, err := DecodeDateTimePropertyValue(p.Value)
+					if err != nil {
+						log.WithError(err).Error("Failed reading timestamp on user join query.")
+						return "", nil, err
+					}
+					rParams = append(rParams, p.Property, dateTimeValue.From, p.Property, dateTimeValue.To)
+				} else if p.Type == U.PropertyTypeNumerical {
+					// convert to float for numerical properties.
+					pStmnt = fmt.Sprintf("CASE WHEN json_typeof(%s::json->?) = 'number' THEN  (%s->>?)::float %s ? ELSE false END", propertyEntity, propertyEntity, propertyOp)
+					rParams = append(rParams, p.Property, p.Property, p.Value)
 				} else {
-					pValue = p.Value
+					// categorical property type.
+					var pValue string
+					if p.Operator == ContainsOpStr || p.Operator == NotContainsOpStr {
+						pValue = fmt.Sprintf("%%%s%%", p.Value)
+					} else {
+						pValue = p.Value
+					}
+
+					pStmnt = fmt.Sprintf("%s->>? %s ?", propertyEntity, propertyOp)
+					rParams = append(rParams, p.Property, pValue)
 				}
 
-				pStmnt = fmt.Sprintf("%s->>? %s ?", propertyEntity, propertyOp)
-				rParams = append(rParams, p.Property, pValue)
+				if i == 0 {
+					groupStmnt = pStmnt
+				} else {
+					groupStmnt = fmt.Sprintf("%s %s %s", groupStmnt, p.LogicalOp, pStmnt)
+				}
+
+				continue
+			}
+
+			// where condition for $none value.
+			var whereCond string
+			if propertyOp == EqualsOp {
+				// i.e: (NOT jsonb_exists(events.properties, 'property_name') OR events.properties->>'property_name'='')
+				whereCond = fmt.Sprintf("(NOT jsonb_exists(%s, ?) OR %s->>?='')", propertyEntity, propertyEntity)
+			} else if propertyOp == NotEqualOp {
+				// i.e: (jsonb_exists(events.properties, 'property_name') AND events.properties->>'property_name'!='')
+				whereCond = fmt.Sprintf("(jsonb_exists(%s, ?) AND %s->>?!='')", propertyEntity, propertyEntity)
+			} else {
+				return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
 			}
 
 			if i == 0 {
-				rStmnt = pStmnt
+				groupStmnt = whereCond
 			} else {
-				rStmnt = fmt.Sprintf("%s %s %s", rStmnt, p.LogicalOp, pStmnt)
+				groupStmnt = fmt.Sprintf("%s %s %s", groupStmnt, p.LogicalOp, whereCond)
 			}
 
-			continue
+			rParams = append(rParams, p.Property, p.Property)
 		}
-
-		// where condition for $none value.
-		var whereCond string
-		if propertyOp == EqualsOp {
-			// i.e: (NOT jsonb_exists(events.properties, 'property_name') OR events.properties->>'property_name'='')
-			whereCond = fmt.Sprintf("(NOT jsonb_exists(%s, ?) OR %s->>?='')", propertyEntity, propertyEntity)
-		} else if propertyOp == NotEqualOp {
-			// i.e: (jsonb_exists(events.properties, 'property_name') AND events.properties->>'property_name'!='')
-			whereCond = fmt.Sprintf("(jsonb_exists(%s, ?) AND %s->>?!='')", propertyEntity, propertyEntity)
+		if groupIndex == 0 {
+			rStmnt = fmt.Sprintf("(%s)", groupStmnt)
 		} else {
-			return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+			logicalOp := groupProperties[0].LogicalOp
+			if logicalOp == "" {
+				logicalOp = "AND"
+			}
+			rStmnt = fmt.Sprintf("%s %s (%s)", rStmnt, logicalOp, groupStmnt)
 		}
-
-		if i == 0 {
-			rStmnt = whereCond
-		} else {
-			rStmnt = fmt.Sprintf("%s %s %s", rStmnt, p.LogicalOp, whereCond)
-		}
-
-		rParams = append(rParams, p.Property, p.Property)
+		groupIndex++
 	}
 
 	return rStmnt, rParams, nil
