@@ -70,9 +70,7 @@ class Facebook extends Component {
           <FacebookLogin
             appId={BUILD_CONFIG.facebook_app_id}
             fields="name,email,picture"
-            scope="ads_management,ads_read,attribution_read,business_management,catalog_management,leads_retrieval,
-            public_profile,pages_show_list,email,read_insights,instagram_basic,
-            instagram_manage_comments, instagram_manage_insights"
+            scope="ads_read,email"
             callback={this.responseFacebook}
             cssClass='facebook-css'
           />
