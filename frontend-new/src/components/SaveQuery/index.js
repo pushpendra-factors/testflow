@@ -98,7 +98,7 @@ function SaveQuery({
     }
 
     try {
-      // setApisCalled(true);
+      setApisCalled(true);
       let query;
       if (queryType === "funnel") {
         query = {
