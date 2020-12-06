@@ -118,7 +118,7 @@ func main() {
 
 	if err != nil {
 		C.PingHealthcheckForFailure(healthcheckPingID, err)
-		log.WithError(err).WithField("status", statusMap).Warn("Seen failures while adding sessions.")
+		log.WithError(err).WithField("status", statusMap).Error("Seen failures while adding sessions.")
 	} else {
 		C.PingHealthcheckForSuccess(healthcheckPingID, status)
 		log.WithField("no_of_projects", len(allowedProjectIds)).Info("Successfully added sessions.")
