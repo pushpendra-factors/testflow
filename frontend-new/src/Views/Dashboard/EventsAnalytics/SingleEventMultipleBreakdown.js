@@ -78,6 +78,7 @@ function SingleEventMultipleBreakdown({
                     maxAllowedVisibleProperties={maxAllowedVisibleProperties}
                     originalData={resultState.data}
                     page={page}
+                    durationObj={durationObj}
                 />
             </div>
         );

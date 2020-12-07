@@ -67,6 +67,7 @@ function NoBreakdownCharts({
                     chartType={chartType}
                     setHiddenEvents={setHiddenEvents}
                     hiddenEvents={hiddenEvents}
+                    durationObj={durationObj}
                 />
             </div>
         );

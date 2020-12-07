@@ -79,6 +79,7 @@ function SingleEventSingleBreakdown({
                     maxAllowedVisibleProperties={maxAllowedVisibleProperties}
                     lineChartData={lineChartData}
                     originalData={resultState.data}
+                    durationObj={durationObj}
                 />
             </div>
         );
