@@ -107,7 +107,7 @@ function WidgetCard({
 	const cardRef = useRef();
 
 	return (
-		<div className={`${unit.title.split(' ').join('-')} ${unit.className} py-4 px-2 flex widget-card-top-div`} >
+		<div className={`${unit.title.split(' ').join('-')} ${unit.className} pb-5 flex widget-card-top-div`} >
 			<div id={`card-${unit.id}`} ref={cardRef} className={'fa-dashboard--widget-card w-full flex'}>
 				<div className={'px-8 py-4 flex justify-between items-start w-full'}>
 					<div className={'w-full'} >
