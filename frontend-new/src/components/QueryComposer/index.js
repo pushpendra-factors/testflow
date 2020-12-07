@@ -12,6 +12,7 @@ import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
 import DateRangeSelector from './DateRangeSelector';
+import {QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT} from 'Utils/constants';
 
 import {
   DEFAULT_DATE_RANGE,
@@ -89,8 +90,8 @@ function QueryComposer({
   };
 
   const groupByBlock = () => {
-    if (queryType === 'event' && queries.length < 1) { return null; }
-    if (queryType === 'funnel' && queries.length < 2) { return null; }
+    if (queryType === QUERY_TYPE_EVENT && queries.length < 1) { return null; }
+    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) { return null; }
 
     return (
       <div key={0} className={'fa--query_block bordered '}>
@@ -223,7 +224,7 @@ function QueryComposer({
   };
 
   const handleRunQuery = useCallback(() => {
-    if (queryType === 'event') {
+    if (queryType === QUERY_TYPE_EVENT) {
       runQuery('0', true);
     } else {
       runFunnelQuery();
@@ -231,8 +232,8 @@ function QueryComposer({
   }, [runFunnelQuery, runQuery, queryType]);
 
   const footer = () => {
-    if (queryType === 'event' && queries.length < 1) { return null; }
-    if (queryType === 'funnel' && queries.length < 2) { return null; } else {
+    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 1) { return null; }
+    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) { return null; } else {
       return (
         <div className={styles.composer_footer}>
           <Popover
@@ -259,7 +260,7 @@ function QueryComposer({
     <div className={styles.composer_body}>
       {queryList()}
       {groupByBlock()}
-      {queryType === 'funnel' ? moreOptionsBlock() : null}
+      {queryType === QUERY_TYPE_FUNNEL ? moreOptionsBlock() : null}
       {footer()}
     </div>
   );
