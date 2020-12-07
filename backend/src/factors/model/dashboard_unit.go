@@ -369,6 +369,22 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 	return deleteDashboardUnit(projectId, dashboardId, id)
 }
 
+// DeleteMultipleDashboardUnits deletes multiple dashboard units for given dashboard
+func DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID uint64,
+	dashboardUnitIDs []uint64) (int, string) {
+
+	for _, dashboardUnitID := range dashboardUnitIDs {
+		errCode := DeleteDashboardUnit(projectID, agentUUID, dashboardID, dashboardUnitID)
+		if errCode != http.StatusAccepted {
+			errMsg := "Failed delete unit on dashboard."
+			log.WithFields(log.Fields{"project_id": projectID,
+				"dashboard_id": dashboardID, "unit_id": dashboardUnitID}).Error(errMsg)
+			return errCode, errMsg
+		}
+	}
+	return http.StatusAccepted, ""
+}
+
 func deleteDashboardUnit(projectID uint64, dashboardID uint64, ID uint64) int {
 
 	db := C.GetServices().Db

@@ -5,13 +5,14 @@ import SingleEventMultipleBreakdown from './SingleEventMultipleBreakdown';
 import NoBreakdownCharts from './NoBreakdownCharts';
 
 function EventsAnalytics({
-  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper, unit, setwidgetModal
+  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper, unit, setwidgetModal, durationObj
 }) {
   let content = null;
 
   if (events.length > 1 && breakdown.length) {
     content = (
       <MultipleEventsWithBreakdown
+        durationObj={durationObj}
         breakdownType="each"
         queries={events}
         breakdown={breakdown}
@@ -27,6 +28,7 @@ function EventsAnalytics({
   if (events.length === 1 && breakdown.length === 1) {
     content = (
       <SingleEventSingleBreakdown
+        durationObj={durationObj}
         breakdownType="each"
         queries={events}
         breakdown={breakdown}
@@ -42,6 +44,7 @@ function EventsAnalytics({
   if (events.length === 1 && breakdown.length > 1) {
     content = (
       <SingleEventMultipleBreakdown
+        durationObj={durationObj}
         breakdownType="each"
         queries={events}
         breakdown={breakdown}
@@ -57,6 +60,7 @@ function EventsAnalytics({
   if (!breakdown.length) {
     content = (
       <NoBreakdownCharts
+        durationObj={durationObj}
         queries={events}
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import {
   getTableColumns, getTableData
 } from './utils';
-import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
+import DataTable from '../../../../components/DataTable';
 
 function EventBreakdownTable({
   breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties

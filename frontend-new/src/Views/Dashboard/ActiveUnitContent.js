@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { getStateQueryFromRequestQuery } from '../CoreQuery/utils';
-import ResultTab from '../EventsAnalytics/ResultTab.js';
+import ResultTab from '../CoreQuery/EventsAnalytics/ResultTab.js';
 import ResultantChart from '../CoreQuery/FunnelsResultPage/ResultantChart';
 import { Text, SVG } from '../../components/factorsComponents';
 import { Button, Divider, Spin } from 'antd';

@@ -1,7 +1,7 @@
 import moment from 'moment';
 import { runQuery, getFunnelData } from "../../reducers/coreQuery/services";
 
-export const getDataFromServer = (query, unitId, dashboardId,durationObj, refresh, activeProjectId) => {
+export const getDataFromServer = (query, unitId, dashboardId, durationObj, refresh, activeProjectId) => {
     if (query.query.query_group) {
         let queryGroup = query.query.query_group;
         if (durationObj.from && durationObj.to) {
@@ -9,7 +9,8 @@ export const getDataFromServer = (query, unitId, dashboardId,durationObj, refres
                 return {
                     ...elem,
                     fr: moment(durationObj.from).startOf('day').utc().unix(),
-                    to: moment(durationObj.to).startOf('day').utc().unix()
+                    to: moment(durationObj.to).endOf('day').utc().unix(),
+                    gbt: elem.gbt ? durationObj.frequency : ''
                 };
             });
         } else {
@@ -17,7 +18,8 @@ export const getDataFromServer = (query, unitId, dashboardId,durationObj, refres
                 return {
                     ...elem,
                     fr: moment().startOf('week').utc().unix(),
-                    to: moment().utc().unix()
+                    to: moment().utc().unix(),
+                    gbt: elem.gbt ? durationObj.frequency : ''
                 };
             });
         }
@@ -32,7 +34,7 @@ export const getDataFromServer = (query, unitId, dashboardId,durationObj, refres
             funnelQuery = {
                 ...funnelQuery,
                 fr: moment(durationObj.from).startOf('day').utc().unix(),
-                to: moment(durationObj.to).startOf('day').utc().unix()
+                to: moment(durationObj.to).endOf('day').utc().unix()
             };
         } else {
             funnelQuery = {

@@ -1,7 +1,5 @@
 import moment from 'moment';
-
-import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
-import { SortData } from '../../CoreQuery/utils';
+import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 
 export const getNoGroupingTableData = (data, currentSorter, searchText, reverseEventsMapper) => {
   const clonedData = data.map(elem => {
@@ -72,14 +70,15 @@ export const formatMultiEventsAnalyticsData = (response, queries, eventsMapper) 
   return result;
 };
 
-export const getDataInLineChartFormat = (data, queries, eventsMapper, hiddenEvents = []) => {
+export const getDataInLineChartFormat = (data, queries, eventsMapper, hiddenEvents = [], frequency) => {
   data.sort((a, b) => {
     return moment(a.date).utc().unix() > moment(b.date).utc().unix() ? 1 : -1;
   });
   const result = [];
   const hashedData = {};
+  const format = 'YYYY-MM-DD HH-mm';
   hashedData.x = data.map(elem => {
-    return moment(elem.date).format('YYYY-MM-DD');
+    return moment(elem.date).format(format);
   });
   queries.forEach(q => {
     if (hiddenEvents.indexOf(q) === -1) {
@@ -94,7 +93,7 @@ export const getDataInLineChartFormat = (data, queries, eventsMapper, hiddenEven
   return result;
 };
 
-export const getDateBasedColumns = (data, currentSorter, handleSorting) => {
+export const getDateBasedColumns = (data, currentSorter, handleSorting, frequency) => {
   const result = [
     {
       title: 'Events',
@@ -102,25 +101,33 @@ export const getDateBasedColumns = (data, currentSorter, handleSorting) => {
       fixed: 'left',
       width: 200
     }];
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D'
+  }
 
   const dateColumns = data.map(elem => {
     return {
-      title: getTitleWithSorter(moment(elem.date).format('MMM D'), moment(elem.date).format('MMM D'), currentSorter, handleSorting),
+      title: getTitleWithSorter(moment(elem.date).format(format), moment(elem.date).format(format), currentSorter, handleSorting),
       width: 100,
-      dataIndex: moment(elem.date).format('MMM D')
+      dataIndex: moment(elem.date).format(format)
     };
   });
   return [...result, ...dateColumns];
 };
 
-export const getNoGroupingTablularDatesBasedData = (data, currentSorter, searchText, reverseEventsMapper) => {
+export const getNoGroupingTablularDatesBasedData = (data, currentSorter, searchText, reverseEventsMapper, frequency) => {
   const events = Object.keys(reverseEventsMapper);
-  const dates = data.map(elem => moment(elem.date).format('MMM D'));
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D'
+  }
+  const dates = data.map(elem => moment(elem.date).format(format));
   const filteredEvents = events.filter(event => reverseEventsMapper[event].includes(searchText));
   const result = filteredEvents.map((elem, index) => {
     const eventsData = {};
     dates.forEach(date => {
-      eventsData[date] = data.find(elem => moment(elem.date).format('MMM D') === date)[elem];
+      eventsData[date] = data.find(elem => moment(elem.date).format(format) === date)[elem];
     });
     return {
       index,

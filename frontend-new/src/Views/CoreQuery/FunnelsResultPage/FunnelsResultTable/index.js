@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import styles from './index.module.scss';
 import { generateTableColumns, generateTableData } from '../utils';
-import DataTable from '../DataTable';
+import DataTable from '../../../../components/DataTable';
 
 function FunnelsResultTable({
   chartData, breakdown, setGroups, queries, groups, maxAllowedVisibleProperties, eventsMapper, isWidgetModal

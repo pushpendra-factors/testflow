@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import {
-  formatData, formatDataInLineChartFormat
-} from './utils';
-import BarChart from '../../../components/BarChart';
-import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
-import LineChart from '../../../components/LineChart';
-import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
+import React, { useState, useEffect } from "react";
+import { formatData, formatDataInLineChartFormat } from "./utils";
+import BarChart from "../../../../components/BarChart";
+import LineChart from "../../../../components/LineChart";
+import SingleEventMultipleBreakdownTable from "./SingleEventMultipleBreakdownTable";
+import { generateColors } from "../../../../utils/dataFormatter";
 
-function SingleEventSingleBreakdown({
-  queries, breakdown, resultState, page, chartType, isWidgetModal
+function SingleEventMultipleBreakdown({
+  queries,
+  breakdown,
+  resultState,
+  page,
+  chartType,
+  isWidgetModal,
+  durationObj,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -19,7 +23,9 @@ function SingleEventSingleBreakdown({
   useEffect(() => {
     const formattedData = formatData(resultState.data);
     setChartsData(formattedData);
-    setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
+    setVisibleProperties([
+      ...formattedData.slice(0, maxAllowedVisibleProperties),
+    ]);
   }, [resultState.data]);
 
   if (!chartsData.length) {
@@ -29,31 +35,36 @@ function SingleEventSingleBreakdown({
   const mapper = {};
   const reverseMapper = {};
 
-  const visibleLabels = visibleProperties.map(v => v.label);
+  const visibleLabels = visibleProperties.map((v) => v.label);
 
   visibleLabels.forEach((q, index) => {
     mapper[`${q}`] = `event${index + 1}`;
     reverseMapper[`event${index + 1}`] = q;
   });
 
-  const lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
+  const lineChartData = formatDataInLineChartFormat(
+    resultState.data,
+    visibleProperties,
+    mapper,
+    hiddenProperties,
+    durationObj.frequency
+  );
 
   const appliedColors = generateColors(visibleProperties.length);
 
   let chartContent = null;
 
-  if (chartType === 'barchart') {
+  if (chartType === "barchart") {
     chartContent = (
-      <div className="flex mt-8 w-full">
-        <BarChart
-          chartData={visibleProperties}
-        />
+      <div className="flex mt-8">
+        <BarChart chartData={visibleProperties} />
       </div>
     );
   } else {
     chartContent = (
       <div className="flex mt-8">
         <LineChart
+          frequency={durationObj.frequency}
           chartData={lineChartData}
           appliedColors={appliedColors}
           queries={visibleLabels}
@@ -61,7 +72,7 @@ function SingleEventSingleBreakdown({
           eventsMapper={mapper}
           setHiddenEvents={setHiddenProperties}
           hiddenEvents={hiddenProperties}
-          isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
+          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
         />
       </div>
     );
@@ -71,22 +82,23 @@ function SingleEventSingleBreakdown({
     <div className="w-full">
       {chartContent}
       <div className="mt-8">
-        <SingleEventSingleBreakdownTable
+        <SingleEventMultipleBreakdownTable
           isWidgetModal={isWidgetModal}
           data={chartsData}
+          lineChartData={lineChartData}
           breakdown={breakdown}
           events={queries}
           chartType={chartType}
-          page={page}
           setVisibleProperties={setVisibleProperties}
           visibleProperties={visibleProperties}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          lineChartData={lineChartData}
           originalData={resultState.data}
+          page={page}
+          durationObj={durationObj}
         />
       </div>
     </div>
   );
 }
 
-export default SingleEventSingleBreakdown;
+export default SingleEventMultipleBreakdown;

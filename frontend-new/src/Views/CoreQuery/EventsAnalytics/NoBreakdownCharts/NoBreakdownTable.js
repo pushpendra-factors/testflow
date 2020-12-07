@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
+import DataTable from '../../../../components/DataTable';
 import {
   getNoGroupingTableData, getColumns, getDateBasedColumns, getNoGroupingTablularDatesBasedData
 } from './utils';
 
 function NoBreakdownTable({
-  data, events, reverseEventsMapper, chartType, setHiddenEvents, hiddenEvents, isWidgetModal
+  data, events, reverseEventsMapper, chartType, setHiddenEvents, hiddenEvents, isWidgetModal, durationObj
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -20,10 +20,10 @@ function NoBreakdownTable({
     columns = getColumns(events, sorter, handleSorting);
     tableData = getNoGroupingTableData(data, sorter, searchText, reverseEventsMapper);
   } else {
-    columns = getDateBasedColumns(data, sorter, handleSorting);
-    tableData = getNoGroupingTablularDatesBasedData(data, sorter, searchText, reverseEventsMapper);
+    columns = getDateBasedColumns(data, sorter, handleSorting, durationObj.frequency);
+    tableData = getNoGroupingTablularDatesBasedData(data, sorter, searchText, reverseEventsMapper, durationObj.frequency);
 
-    onSelectionChange = (selectedRowKeys, selectedRows) => {
+    onSelectionChange = (_, selectedRows) => {
       const skippedEvents = events.filter(event => selectedRows.findIndex(r => r.event === event) === -1);
       if (skippedEvents.length === events.length) {
         return false;

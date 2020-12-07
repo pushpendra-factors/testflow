@@ -6,7 +6,7 @@ import { UNITS_ORDER_CHANGED } from '../../reducers/types';
 import { updateDashboard } from '../../reducers/dashboard/services';
 import { getRequestForNewState } from '../../reducers/dashboard/utils';
 
-function SortableCards({ setwidgetModal, durationObj, showDeleteWidgetModal }) {
+function SortableCards({ setwidgetModal, durationObj, showDeleteWidgetModal, refreshClicked, setRefreshClicked }) {
   const dispatch = useDispatch();
 
   const { active_project } = useSelector(state => state.global);
@@ -33,6 +33,8 @@ function SortableCards({ setwidgetModal, durationObj, showDeleteWidgetModal }) {
             onDrop={onDrop}
             setwidgetModal={setwidgetModal}
             showDeleteWidgetModal={showDeleteWidgetModal}
+            refreshClicked={refreshClicked}
+            setRefreshClicked={setRefreshClicked}
           />
         );
       })}

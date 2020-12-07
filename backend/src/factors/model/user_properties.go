@@ -564,7 +564,7 @@ func anyPropertyChanged(propertyValuesMap map[string][]interface{}, numUsers int
 		}
 		initialValue := propertyValuesMap[property][0]
 		for _, propertyValue := range propertyValuesMap[property][1:] {
-			if propertyValue != initialValue {
+			if fmt.Sprintf("%v", propertyValue) != fmt.Sprintf("%v", initialValue) {
 				return true
 			}
 		}

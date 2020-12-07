@@ -2,7 +2,7 @@ import React from 'react';
 import { Spin } from 'antd';
 import EventBreakdownCharts from './EventBreakdownCharts';
 import BreakdownType from '../BreakdownType';
-import DurationInfo from '../../CoreQuery/DurationInfo';
+import DurationInfo from '../../../../components/DurationInfo';
 
 function EventBreakdown({
   breakdown, data, breakdownType, handleBreakdownTypeChange, durationObj, handleDurationChange, isWidgetModal = false

@@ -10,6 +10,7 @@ function DataTable({
   tableData, searchText, setSearchText, columns, className, rowSelection, scroll, isWidgetModal
 }) {
   const componentRef = useRef(null);
+  const [pageSize, setPageSize] = useState(10);
 
   const [searchBar, showSearchBar] = useState(false);
 
@@ -41,6 +42,10 @@ function DataTable({
     };
   }, [handleDocumentClick]);
 
+  const handlePageSizeChange = (...args) => {
+    setPageSize(args[1]);
+  }
+
   return (
     <div ref={componentRef} className="data-table">
       {!isDashboardWidget ? (
@@ -51,7 +56,7 @@ function DataTable({
         />
       ) : null}
       <Table
-        pagination={!isDashboardWidget ? { pageSize: 10 } : false}
+        pagination={!isDashboardWidget ? { pageSize, onShowSizeChange: handlePageSizeChange } : false}
         bordered={true}
         rowKey="index"
         rowSelection={!isDashboardWidget ? rowSelection : null}

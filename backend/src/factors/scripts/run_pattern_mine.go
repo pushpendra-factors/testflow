@@ -38,6 +38,9 @@ func main() {
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
 	maxModelSizeFlag := flag.Int64("max_size", 10000000000, "Max size of the model")
 	shouldCountOccurence := flag.Bool("count_occurence", false, "")
+	numActiveFactorsGoalsLimit := flag.Int("goals_limit", 50, "Max number of goals model")
+	numActiveFactorsTrackedEventsLimit := flag.Int("max_tracked_events", 50, "Max number of Tracked Events")
+	numActiveFactorsTrackedUserPropertiesLimit := flag.Int("max_user_properties", 50, "Max numbr of Tracked user properties")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -119,6 +122,9 @@ func main() {
 	}
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
+	C.GetConfig().ActiveFactorsGoalsLimit = *numActiveFactorsGoalsLimit
+	C.GetConfig().ActiveFactorsTrackedEventsLimit = *numActiveFactorsTrackedEventsLimit
+	C.GetConfig().ActiveFactorsTrackedUserPropertiesLimit = *numActiveFactorsTrackedUserPropertiesLimit
 
 	// modelType, startTime, endTime is part of update meta.
 	// kept null on run script.

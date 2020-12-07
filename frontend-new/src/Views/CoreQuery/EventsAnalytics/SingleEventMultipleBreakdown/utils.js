@@ -1,6 +1,6 @@
-import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
 import moment from 'moment';
-import { labelsObj, SortData } from '../../CoreQuery/utils';
+import { labelsObj } from '../../utils';
+import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 
 export const formatData = (data) => {
   const result = data.metrics.rows.map(d => {
@@ -54,7 +54,7 @@ export const getDataInTableFormat = (data, columns, searchText, currentSorter) =
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
-export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hiddenProperties) => {
+export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hiddenProperties, frequency) => {
   const visibleLabels = visibleProperties.map(v => v.label).filter(l => hiddenProperties.indexOf(l) === -1);
   const resultInObjFormat = {};
   const result = [];
@@ -78,7 +78,8 @@ export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hid
     keysMapper[v] = result.length - 1;
   });
   for (const key in resultInObjFormat) {
-    result[0].push(moment(key).format('YYYY-MM-DD'));
+    const format = 'YYYY-MM-DD HH-mm';
+    result[0].push(moment(key).format(format));
     for (const b in resultInObjFormat[key]) {
       result[keysMapper[b]].push(resultInObjFormat[key][b]);
     }
@@ -86,7 +87,7 @@ export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hid
   return result;
 };
 
-export const getDateBasedColumns = (data, breakdown, currentSorter, handleSorting) => {
+export const getDateBasedColumns = (data, breakdown, currentSorter, handleSorting, frequency) => {
   const eventBreakdowns = breakdown
     .filter(elem => elem.prop_category === 'event')
     .map(elem => {
@@ -107,19 +108,26 @@ export const getDateBasedColumns = (data, breakdown, currentSorter, handleSortin
         width: 200
       };
     });
-
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D'
+  }
   const dateColumns = data[0].slice(1).map(elem => {
     return {
-      title: getTitleWithSorter(moment(elem).format('MMM D'), moment(elem).format('MMM D'), currentSorter, handleSorting),
+      title: getTitleWithSorter(moment(elem).utc().format(format), moment(elem).utc().format(format), currentSorter, handleSorting),
       width: 100,
-      dataIndex: moment(elem).format('MMM D')
+      dataIndex: moment(elem).utc().format(format)
     };
   });
   return [...eventBreakdowns, ...userBreakdowns, ...dateColumns];
 };
 
-export const getDateBasedTableData = (labels, data, columns, searchText, currentSorter) => {
+export const getDateBasedTableData = (labels, data, columns, searchText, currentSorter, frequency) => {
   const filteredLabels = labels.filter(d => d.toLowerCase().indexOf(searchText.toLowerCase()) > -1);
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D'
+  }
   const result = filteredLabels.map((elem, index) => {
     const entries = data.rows.filter(d => d.slice(2, d.length - 1).join(',') === elem);
     const obj = {
@@ -135,7 +143,7 @@ export const getDateBasedTableData = (labels, data, columns, searchText, current
       obj[c.title] = val.join(',');
     });
     entries.forEach(entry => {
-      obj[moment(entry[0]).format('MMM D')] = entry[entry.length - 1];
+      obj[moment(entry[0]).format(format)] = entry[entry.length - 1];
     });
     return obj;
   });

@@ -35,6 +35,9 @@ func main() {
 		"Optional: Build projects which were build in last N days. Provide N here.")
 	noOfDaysToBuild := flag.Int64("no_of_days", 0, "Optional: No.of days to build for. Defaults to current_timestamp.")
 	shouldCountOccurence := flag.Bool("count_occurence", false, "")
+	numActiveFactorsGoalsLimit := flag.Int("goals_limit", 50, "Max number of goals model")
+	numActiveFactorsTrackedEventsLimit := flag.Int("max_tracked_events", 50, "Max number of Tracked Events")
+	numActiveFactorsTrackedUserPropertiesLimit := flag.Int("max_user_properties", 50, "Max numbr of Tracked user properties")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -137,6 +140,10 @@ func main() {
 		}
 	}
 
+	C.GetConfig().ActiveFactorsGoalsLimit = *numActiveFactorsGoalsLimit
+	C.GetConfig().ActiveFactorsTrackedEventsLimit = *numActiveFactorsTrackedEventsLimit
+	C.GetConfig().ActiveFactorsTrackedUserPropertiesLimit = *numActiveFactorsTrackedUserPropertiesLimit
+	log.Info("config :", config)
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
 	_ = T.BuildSequential(*envFlag, db, &cloudManager, etcdClient, diskManager,

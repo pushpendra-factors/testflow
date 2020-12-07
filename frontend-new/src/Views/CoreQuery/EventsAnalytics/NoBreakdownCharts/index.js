@@ -1,21 +1,40 @@
-import React, { useState } from 'react';
-import { formatSingleEventAnalyticsData, formatMultiEventsAnalyticsData, getDataInLineChartFormat } from './utils';
-import NoBreakdownTable from './NoBreakdownTable';
-import SparkLineChart from '../../../components/SparkLineChart';
-import LineChart from '../../../components/LineChart';
-import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
+import React, { useState } from "react";
+import {
+  formatSingleEventAnalyticsData,
+  formatMultiEventsAnalyticsData,
+  getDataInLineChartFormat,
+} from "./utils";
+import NoBreakdownTable from "./NoBreakdownTable";
+import SparkLineChart from "../../../../components/SparkLineChart";
+import LineChart from "../../../../components/LineChart";
+import { generateColors } from "../../../../utils/dataFormatter";
 
 function NoBreakdownCharts({
-  queries, eventsMapper, reverseEventsMapper, resultState, page, chartType, isWidgetModal
+  queries,
+  eventsMapper,
+  reverseEventsMapper,
+  resultState,
+  page,
+  chartType,
+  isWidgetModal,
+  durationObj,
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
 
   let chartsData = [];
   if (queries.length === 1) {
-    chartsData = formatSingleEventAnalyticsData(resultState.data, queries[0], eventsMapper);
+    chartsData = formatSingleEventAnalyticsData(
+      resultState.data,
+      queries[0],
+      eventsMapper
+    );
   } else {
-    chartsData = formatMultiEventsAnalyticsData(resultState.data, queries, eventsMapper);
+    chartsData = formatMultiEventsAnalyticsData(
+      resultState.data,
+      queries,
+      eventsMapper
+    );
   }
 
   if (!chartsData.length) {
@@ -24,9 +43,10 @@ function NoBreakdownCharts({
 
   let chartContent = null;
 
-  if (chartType === 'sparklines') {
+  if (chartType === "sparklines") {
     chartContent = (
       <SparkLineChart
+        frequency={durationObj.frequency}
         queries={queries}
         chartsData={chartsData}
         parentClass="flex items-center flex-wrap mt-4 justify-center"
@@ -36,18 +56,25 @@ function NoBreakdownCharts({
         resultState={resultState}
       />
     );
-  } else if (chartType === 'linechart') {
+  } else if (chartType === "linechart") {
     chartContent = (
       <div className="flex mt-8">
         <LineChart
-          chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper, hiddenEvents)}
+          frequency={durationObj.frequency}
+          chartData={getDataInLineChartFormat(
+            chartsData,
+            queries,
+            eventsMapper,
+            hiddenEvents,
+            durationObj.frequency
+          )}
           appliedColors={appliedColors}
           queries={queries}
           reverseEventsMapper={reverseEventsMapper}
           eventsMapper={eventsMapper}
           setHiddenEvents={setHiddenEvents}
           hiddenEvents={hiddenEvents}
-          isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
+          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
         />
       </div>
     );
@@ -65,6 +92,7 @@ function NoBreakdownCharts({
           chartType={chartType}
           setHiddenEvents={setHiddenEvents}
           hiddenEvents={hiddenEvents}
+          durationObj={durationObj}
         />
       </div>
     </div>

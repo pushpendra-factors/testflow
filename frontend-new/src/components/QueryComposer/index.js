@@ -207,6 +207,11 @@ function QueryComposer({
     if (dates && dates.selected) {
       queryOptionsState.date_range.from = dates.selected.startDate;
       queryOptionsState.date_range.to = dates.selected.endDate;
+      if(moment(dates.selected.endDate).diff(dates.selected.startDate, 'hours') <= 24) {
+        queryOptionsState.date_range.frequency = 'hour';
+      } else {
+        queryOptionsState.date_range.frequency = 'date';
+      }
       setQueryOptions(queryOptionsState);
     }
     setDateRangeVisibile(false);
