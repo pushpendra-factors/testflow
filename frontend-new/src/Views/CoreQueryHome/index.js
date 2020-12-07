@@ -14,6 +14,7 @@ import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { deleteQuery } from '../../reducers/coreQuery/services';
 import { typeOf } from 'react-is';
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../utils/constants';
 
 const coreQueryoptions = [
   {
@@ -199,7 +200,7 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
               <Col span={4} key={index}>
                 <div onClick={() => {
                   setDrawerVisible(true);
-                  item.title === 'Funnels' ? setQueryType('funnel') : setQueryType('event');
+                  item.title === 'Funnels' ? setQueryType(QUERY_TYPE_FUNNEL) : setQueryType(QUERY_TYPE_EVENT);
                 }} className="fai--custom-card flex justify-center items-center flex-col ">
                   <div className={'fai--custom-card--icon'}><SVG name={item.icon} size={48} /> </div>
                   <div className="flex justify-start items-center flex-col before-hover">

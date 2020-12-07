@@ -5,6 +5,7 @@ import EventsInfo from './EventsInfo';
 import { Spin } from 'antd';
 import ResultantChart from './ResultantChart';
 import FiltersInfo from '../FiltersInfo';
+import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 
 function FunnelsResultPage({
   queries, setDrawerVisible, resultState, breakdown, eventsMapper, reverseEventsMapper, requestQuery, setShowResult, querySaved, setQuerySaved, handleDurationChange, durationObj
@@ -54,7 +55,7 @@ function FunnelsResultPage({
           requestQuery={requestQuery}
           querySaved={querySaved}
           setQuerySaved={setQuerySaved}
-          queryType="funnel"
+          queryType={QUERY_TYPE_FUNNEL}
         />
         <EventsInfo setDrawerVisible={setDrawerVisible} queries={queries} />
         <div className="py-4">

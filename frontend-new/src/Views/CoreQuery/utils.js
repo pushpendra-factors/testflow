@@ -120,9 +120,9 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
   return query;
 };
 
-export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType = 'each', dateRange) => {
+export const getQuery = (activeTab, groupBy, queries, breakdownType = 'each', dateRange) => {
   const query = {};
-  query.cl = queryType === 'event' ? 'events' : 'funnel';
+  query.cl = 'events';
   query.ty = parseInt(activeTab) === 1 ? 'unique_users' : 'events_occurrence';
 
   const period = {};
@@ -355,7 +355,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       filters: []
     };
   });
-  const queryType = requestQuery.cl === 'events' ? 'event' : 'funnel';
+  const queryType = requestQuery.cl;
   const breakdown = requestQuery.gbp.map(opt => {
     return {
       property: opt.pr,

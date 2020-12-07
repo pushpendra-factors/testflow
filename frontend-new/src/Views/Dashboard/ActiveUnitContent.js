@@ -7,6 +7,7 @@ import { Button, Divider, Spin } from 'antd';
 import styles from './index.module.scss';
 import FiltersInfo from '../CoreQuery/FiltersInfo';
 import { useHistory } from 'react-router-dom';
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../utils/constants';
 
 function ActiveUnitContent({ unit, resultState, setwidgetModal, durationObj, handleDurationChange }) {
 
@@ -33,7 +34,7 @@ function ActiveUnitContent({ unit, resultState, setwidgetModal, durationObj, han
 
 	let content = null;
 
-	if (queryType === 'event') {
+	if (queryType === QUERY_TYPE_EVENT) {
 		content = (
 			<ResultTab
 				queries={events.map(elem => elem.label)}
@@ -51,7 +52,7 @@ function ActiveUnitContent({ unit, resultState, setwidgetModal, durationObj, han
 		);
 	}
 
-	if (queryType === 'funnel') {
+	if (queryType === QUERY_TYPE_FUNNEL) {
 
 		let subcontent = null;
 

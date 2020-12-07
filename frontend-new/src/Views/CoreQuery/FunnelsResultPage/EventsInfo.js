@@ -1,10 +1,11 @@
 import React from 'react';
 import styles from './index.module.scss';
+import { QUERY_TYPE_EVENT } from '../../../utils/constants';
 
 function EventsInfo({ queries, setDrawerVisible, queryType }) {
   const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
-  if (queryType === 'event') {
+  if (queryType === QUERY_TYPE_EVENT) {
     return (
             <div onClick={setDrawerVisible.bind(this, true)} className={`whitespace-no-wrap pb-1 flex items-center cursor-pointer leading-6 overflow-hidden ${styles.eventsText}`}>
                 {queries.map((q, index) => {

@@ -3,6 +3,7 @@ import { Spin } from 'antd';
 import { getStateQueryFromRequestQuery, presentationObj } from '../CoreQuery/utils';
 import EventsAnalytics from './EventsAnalytics';
 import Funnels from './Funnels';
+import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from '../../utils/constants';
 
 function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
   let content = null;
@@ -51,7 +52,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       console.log(err);
     }
 
-    if (queryType === 'funnel') {
+    if (queryType === QUERY_TYPE_FUNNEL) {
       content = (
 				<Funnels
 					breakdown={breakdown}
@@ -67,7 +68,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       );
     }
 
-    if (queryType === 'event') {
+    if (queryType === QUERY_TYPE_EVENT) {
       content = (
 				<EventsAnalytics
           durationObj={durationObj}

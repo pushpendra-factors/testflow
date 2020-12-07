@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
-import { SVG, Text } from 'factorsComponents';
+import { SVG, Text } from '../../factorsComponents';
 import styles from './index.module.scss';
 import { Button } from 'antd';
 import { connect } from 'react-redux';
@@ -12,6 +12,7 @@ import FilterBlock from '../FilterBlock';
 
 import GroupSelect from '../GroupSelect';
 import EventGroupBlock from '../EventGroupBlock';
+import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 
 function QueryBlock({
   index, event, eventChange, queries, queryType, eventOptions,
@@ -206,7 +207,7 @@ function QueryBlock({
   return (
         <div className={`${styles.query_block} fa--query_block bordered `}>
             <div className={`${styles.query_block__event} flex justify-start items-center`}>
-                <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{queryType === 'funnel' ? index : alphabetIndex[index - 1]}</Text> </div>
+                <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{queryType === QUERY_TYPE_FUNNEL ? index : alphabetIndex[index - 1]}</Text> </div>
                 {!isDDVisible && <Button size={'large'} type="link" onClick={triggerDropDown}><SVG name="mouseevent" extraClass={'mr-1'}></SVG> {event.label} </Button> }
                 {additionalActions()}
                 {selectEvents()}

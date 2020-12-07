@@ -13,10 +13,11 @@ import { runQuery as runQueryService, getFunnelData } from '../../reducers/coreQ
 import {
   initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, formatApiData, getQuery, initialState, getFunnelQuery, DefaultDateRangeFormat
 } from './utils';
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../utils/constants';
 
 function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [queryType, setQueryType] = useState('event');
+  const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
   const [activeKey, setActiveKey] = useState('1');
   const [showResult, setShowResult] = useState(false);
   const [appliedQueries, setAppliedQueries] = useState([]);
@@ -70,7 +71,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
 
   const callRunQueryApiService = useCallback(async (activeProjectId, activeTab, appliedDateRange) => {
     try {
-      const query = getQuery(activeTab, queryType, groupBy, queries, breakdownType, appliedDateRange);
+      const query = getQuery(activeTab, groupBy, queries, breakdownType, appliedDateRange);
       updateRequestQuery(query);
       const res = await runQueryService(activeProjectId, query);
       if (res.status === 200 && !hasApiFailed(res)) {
@@ -87,7 +88,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       updateResultState(activeTab, { loading: false, error: true, data: null });
       return null;
     }
-  }, [updateResultState, queryType, groupBy, queries, breakdownType]);
+  }, [updateResultState, groupBy, queries, breakdownType]);
 
   const runQuery = useCallback(async (activeTab, refresh = false, isQuerySaved = false, appliedDateRange) => {
     if (!appliedDateRange) {
@@ -182,7 +183,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         setBreakdownTypeData(currState => {
           return { ...currState, loading: true };
         });
-        const query = getQuery('1', queryType, groupBy, queries, key, dateRange);
+        const query = getQuery('1', groupBy, queries, key, dateRange);
         updateRequestQuery(query);
         const res = await runQueryService(activeProject.id, query);
         if (res.status === 200 && !hasApiFailed(res)) {
@@ -203,7 +204,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         });
       }
     }
-  }, [activeProject.id, queries, groupBy, queryType, breakdownTypeData, dateRange]);
+  }, [activeProject.id, queries, groupBy, breakdownTypeData, dateRange]);
 
   const runFunnelQuery = useCallback(async (isQuerySaved, appliedDateRange) => {
     try {
@@ -254,7 +255,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         frequency
       };
 
-      if (queryType === 'funnel') {
+      if (queryType === QUERY_TYPE_FUNNEL) {
         runFunnelQuery(querySaved, appliedDateRange);
       } else {
         runQuery('0', true, querySaved, appliedDateRange);
@@ -264,7 +265,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
 
   useEffect(() => {
     if (rowClicked) {
-      if (rowClicked === 'funnel') {
+      if (rowClicked === QUERY_TYPE_FUNNEL) {
         runFunnelQuery(true);
       } else {
         runQuery('0', true, true);
@@ -303,8 +304,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     return (
       <div className={'flex justify-between items-center'}>
         <div className={'flex items-center'}>
-          <SVG name={queryType === 'funnel' ? 'funnels_cq' : 'events_dashboard_cq'} size="24px"></SVG>
-          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? 'Find event funnel for' : 'Analyse Events'}</Text>
+          <SVG name={queryType === QUERY_TYPE_FUNNEL ? 'funnels_cq' : 'events_dashboard_cq'} size="24px"></SVG>
+          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === QUERY_TYPE_FUNNEL ? 'Find event funnel for' : 'Analyse Events'}</Text>
         </div>
         <div className={'flex justify-end items-center'}>
           <Button size={'large'} type="text"><SVG name="play"></SVG>Help</Button>
@@ -345,7 +346,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     />
   );
 
-  if (queryType === 'funnel') {
+  if (queryType === QUERY_TYPE_FUNNEL) {
     result = (
       <FunnelsResultPage
         setDrawerVisible={setDrawerVisible}

@@ -7,6 +7,7 @@ import { useSelector } from "react-redux";
 import { initialState, formatApiData } from "../CoreQuery/utils";
 import { cardClassNames } from "../../reducers/dashboard/utils";
 import { getDataFromServer } from "./utils";
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from "../../utils/constants";
 
 function WidgetCard({
   unit,
@@ -48,12 +49,12 @@ function WidgetCard({
         let queryType;
 
         if (unit.query.query.query_group) {
-          queryType = "event";
+          queryType = QUERY_TYPE_EVENT;
         } else {
-          queryType = "funnel";
+          queryType = QUERY_TYPE_FUNNEL;
         }
 
-        if (queryType === "funnel") {
+        if (queryType === QUERY_TYPE_FUNNEL) {
           let resultantData;
           if (refresh) {
             resultantData = res.data;

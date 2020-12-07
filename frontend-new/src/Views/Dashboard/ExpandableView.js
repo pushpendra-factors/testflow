@@ -6,6 +6,7 @@ import ActiveUnitContent from './ActiveUnitContent';
 import { initialState, formatApiData, DefaultDateRangeFormat } from '../CoreQuery/utils';
 import { useSelector } from 'react-redux';
 import { getDataFromServer } from './utils';
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../utils/constants';
 
 function ExpandableView({ widgetModal, setwidgetModal, widgetModalLoading, durationObj }) {
 
@@ -26,12 +27,12 @@ function ExpandableView({ widgetModal, setwidgetModal, widgetModalLoading, durat
       let queryType;
 
       if (unit.query.query.query_group) {
-        queryType = 'event';
+        queryType = QUERY_TYPE_EVENT;
       } else {
-        queryType = 'funnel';
+        queryType = QUERY_TYPE_FUNNEL;
       }
 
-      if (queryType === 'funnel') {
+      if (queryType === QUERY_TYPE_FUNNEL) {
         setResultState({
           ...initialState,
           data: res.data

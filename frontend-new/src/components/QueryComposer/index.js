@@ -12,7 +12,7 @@ import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
 import DateRangeSelector from './DateRangeSelector';
-import {QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT} from 'Utils/constants';
+import {QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT} from '../../utils/constants';
 
 import {
   DEFAULT_DATE_RANGE,
@@ -224,6 +224,7 @@ function QueryComposer({
   };
 
   const handleRunQuery = useCallback(() => {
+    console.log(queryType)
     if (queryType === QUERY_TYPE_EVENT) {
       runQuery('0', true);
     } else {

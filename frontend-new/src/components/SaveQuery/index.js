@@ -15,6 +15,7 @@ import { saveQuery } from "../../reducers/coreQuery/services";
 import { useSelector, useDispatch } from "react-redux";
 import { QUERY_CREATED } from "../../reducers/types";
 import { saveQueryToDashboard } from "../../reducers/dashboard/services";
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from "../../utils/constants";
 
 function SaveQuery({
   requestQuery,
@@ -100,13 +101,13 @@ function SaveQuery({
     try {
       setApisCalled(true);
       let query;
-      if (queryType === "funnel") {
+      if (queryType === QUERY_TYPE_FUNNEL) {
         query = {
           ...requestQuery,
           fr: moment().startOf("week").utc().unix(),
           to: moment().utc().unix(),
         };
-      } else if(queryType === 'event') {
+      } else if(queryType === QUERY_TYPE_EVENT) {
         if (activeKey === "0" || activeKey === "1") {
           query = {
             query_group: requestQuery.map((q) => {
@@ -184,7 +185,7 @@ function SaveQuery({
     let firstOption = <Radio value="pb">Display Bar Chart</Radio>;
     let secondOption = null;
 
-    if (queryType === "event") {
+    if (queryType === QUERY_TYPE_EVENT) {
       secondOption = <Radio value="pl">Display Line Chart</Radio>;
       if (!requestQuery[0].gbp.length) {
         firstOption = <Radio value="pc">Display Spark Line Chart</Radio>;
