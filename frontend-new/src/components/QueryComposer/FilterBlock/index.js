@@ -7,12 +7,24 @@ import moment from 'moment';
 import { SVG, Text } from 'factorsComponents';
 import {
   DEFAULT_DATE_RANGE,
-  displayRange
 } from '../DateRangeSelector/utils';
 
 import { fetchEventPropertyValues, fetchUserPropertyValues } from '../../../reducers/coreQuery/services';
 
-export default function FilterBlock({ index, filterProps, activeProject, event, filter, deleteFilter, insertFilter, closeFilter }) {
+export default function FilterBlock({ 
+  index, 
+  blockType = 'event', 
+  filterProps, 
+  activeProject,
+  event, 
+  filter, 
+  delIcon = 'remove',
+  extraClass,
+  delBtnClass,
+  deleteFilter, 
+  insertFilter, 
+  closeFilter 
+}) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -208,7 +220,8 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
     const renderOptions = [];
     switch (filterTypeState) {
       case 'props':
-        options.forEach((group, grpIndex) => {
+        const groupOpts = blockType === 'event'? options : [options[0]];
+        groupOpts.forEach((group, grpIndex) => {
           const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
           renderOptions.push(
             <div className={`fa-select-group-select--content`}>
@@ -362,7 +375,7 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
 
   const renderFilterSelect = () => {
     return (
-      <div className={`${styles.filter_block__filter_select} ml-4 fa-select fa-filter-select fa-select--group-select`}>
+      <div className={`${styles.filter_block__filter_select} ml-4 fa-select fa-filter-select fa-select--group-select ${extraClass}`}>
         <Input
           id='fai-filter-input'
           className={styles.filter_block__filter_select__input}
@@ -401,20 +414,27 @@ export default function FilterBlock({ index, filterProps, activeProject, event, 
     closeFilter();
   };
 
+  const filterSelComp = () => {
+    return <>
+      {renderFilterSelect()}
+      <div className={styles.filter_block__hd_overlay} onClick={onClickOutside}></div>
+    </>
+  }
+
   return (
     <div className={styles.filter_block}>
       <Button size={'small'} 
       type="text" 
       onClick={delFilter}
-      className={`${styles.filter_block__remove} mr-1`}>
-        <SVG name="remove"></SVG></Button>
-      <span className={`${styles.filter_block__prefix} ml-10`}>{index >=1 ? 'and' : 'where'}</span>
+      className={`${styles.filter_block__remove} mr-1 ${delBtnClass}`}>
+        <SVG name={delIcon}></SVG></Button>
+      {  
+          blockType === 'event' 
+          && <span className={`${styles.filter_block__prefix} ml-10`}>{index >=1 ? 'and' : 'where'}</span> 
+      }
       {filter
         ? renderFilterContent()
-        : <>
-          {renderFilterSelect()}
-          <div className={styles.filter_block__hd_overlay} onClick={onClickOutside}></div>
-        </>
+        : filterSelComp()
       }
 
     </div>
