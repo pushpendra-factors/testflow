@@ -17,11 +17,19 @@
         outline: transparent !important;
         box-shadow: none !important;
         padding: 2px 8px !important;
+
+        &:hover, &:focus, &:active{
+            background:transparent !important; 
+            border-color:transparent !important;
+            outline: transparent !important;
+            box-shadow: none !important;  
+        }
+
     }
 
     font-weight: $font-weight--bold;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.5;
     
     svg{
         display: inline;
@@ -29,7 +37,7 @@
     
     &.ant-btn-sm
     {  
-        padding: 3px 6px;
+        // padding: 3px 6px;
     }
     
 

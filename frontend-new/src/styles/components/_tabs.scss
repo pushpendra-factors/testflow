@@ -22,7 +22,7 @@
 .ant-tabs.fa-tabs--dashboard {
     &.ant-tabs-top {
         .ant-tabs-nav-wrap {
-            padding: 0 2em;
+            padding: 0 3em;
             flex: none !important;
         }
 
@@ -38,8 +38,9 @@
         }
 
         .ant-tabs-tab {
-            padding: 12px 24px;
+            padding: 12px 12px;
             margin: 0;
+            margin-right: 16px
         }
 
         .ant-tabs-tab-btn {

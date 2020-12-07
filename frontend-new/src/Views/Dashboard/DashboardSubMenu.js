@@ -39,7 +39,7 @@ function DashboardSubMenu({
   }
 
   return (
-    <div className={'flex justify-between items-center px-4 mb-4'}>
+    <div className={'flex justify-between items-center px-0 mb-5'}>
       <div className={'flex justify-between items-center'}>
         <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>Data from</Text>
         <DurationInfo

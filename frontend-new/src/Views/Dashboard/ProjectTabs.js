@@ -99,7 +99,7 @@ function ProjectTabs({
           {dashboards.data.map(d => {
             return (
               <TabPane tab={d.name} key={d.id}>
-                <div className={'fa-container mt-6 min-h-screen'}>
+                <div className={'fa-container mt-4 min-h-screen'}>
                   <DashboardSubMenu
                     durationObj={durationObj}
                     handleDurationChange={handleDurationChange}
