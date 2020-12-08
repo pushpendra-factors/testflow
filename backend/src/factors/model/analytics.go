@@ -170,6 +170,7 @@ const (
 
 	GroupKeyPrefix  = "_group_key_"
 	AliasEventName  = "event_name"
+	AliasEventIndex = "event_index"
 	AliasDateTime   = "datetime"
 	AliasAggr       = "count"
 	AliasError      = "error"

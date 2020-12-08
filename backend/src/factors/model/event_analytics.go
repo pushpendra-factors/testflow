@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +16,7 @@ import (
 
 const (
 	MetaEachEventCountMetrics = "EachEventCount"
+	MetaEventInfo             = "MetaEventInfo"
 	AllowedGoroutines         = 4
 )
 
@@ -115,6 +117,24 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 				result.Rows[i] = append(result.Rows[i], query.EventsWithProperties[0].Name)
 			}
 		}
+	} else if query.EventsCondition == EventCondEachGivenEvent {
+		// add event name header and fill rows
+		addEventNameIndexInResult(result)
+	} else {
+		// removing index from event name for old queries.
+		eventNameIndex := -1
+		for i, key := range result.Headers {
+			if key == AliasEventName {
+				eventNameIndex = i
+			}
+		}
+		if eventNameIndex != -1 {
+			for i, row := range result.Rows {
+				eventName := row[eventNameIndex].(string)
+				splitPos := strings.Index(eventName, "_")
+				result.Rows[i][eventNameIndex] = eventName[splitPos+1:]
+			}
+		}
 	}
 
 	addQueryToResultMeta(result, query)
@@ -134,6 +154,64 @@ func buildErrorResult(errMsg string) *QueryResult {
 	return errorResult
 }
 
+// updateEventNameInHeaderAndAddMeta makes header from 0_$session to $session
+// and adds event's index, name and headerIndex in meta
+func updateEventNameInHeaderAndAddMeta(result *QueryResult) {
+
+	var rows [][]interface{}
+	for i, key := range result.Headers {
+		if key != AliasDateTime && key != AliasEventIndex && key != AliasAggr {
+
+			splitPos := strings.Index(key, "_")
+			eventIndex, err := strconv.Atoi(key[0:splitPos])
+			eventName := key[splitPos+1:]
+			row := []interface{}{i, eventIndex, eventName}
+			rows = append(rows, row)
+			if err == nil {
+				result.Headers[i] = eventName
+			} else {
+				log.WithError(err).Error("failed to convert string to integer")
+			}
+		}
+	}
+	metaMetricsEventMeta := HeaderRows{MetaEventInfo, []string{"HeaderIndex", "EventIndex", "EventName"}, rows}
+	result.Meta.MetaMetrics = append(result.Meta.MetaMetrics, metaMetricsEventMeta)
+}
+
+// addEventNameIndexInResult adds event_index and fills up the rows accordingly
+func addEventNameIndexInResult(result *QueryResult) {
+
+	eventNameIndex := -1
+	for i, key := range result.Headers {
+		if key == AliasEventName {
+			eventNameIndex = i
+		}
+	}
+	for i, row := range result.Rows {
+		// modifying event_name value
+		eventName := row[eventNameIndex].(string)
+		splitPos := strings.Index(eventName, "_")
+		row[eventNameIndex] = eventName[splitPos+1:]
+
+		// adding event_index value
+		tempRow := []interface{}{0}
+		tempRow = append(tempRow, result.Rows[i]...)
+		result.Rows[i] = tempRow
+		indexStr := eventName[0:splitPos]
+		eventIndex, err := strconv.Atoi(indexStr)
+		if err == nil {
+			result.Rows[i][0] = eventIndex
+		} else {
+			log.WithError(err).Error("failed to convert string to integer")
+		}
+	}
+
+	// adding event_index column
+	newHeader := []string{AliasEventIndex}
+	newHeader = append(newHeader, result.Headers...)
+	result.Headers = newHeader
+}
+
 // transformResultsForEachEventQuery transforms QueryResult with new header as datetime and events
 func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*QueryResult, error) {
 
@@ -141,12 +219,18 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 	// adding  'event_name' with row values for standard transformation
 	if len(oldResult.Headers) == 2 {
 		if len(query.EventsWithProperties) > 0 {
+			tempHeader := []string{AliasEventName}
+			tempHeader = append(tempHeader, oldResult.Headers...)
+			oldResult.Headers = tempHeader
 			oldResult.Headers = append(oldResult.Headers, AliasEventName)
 			for i, _ := range oldResult.Rows {
-				oldResult.Rows[i] = append(oldResult.Rows[i], query.EventsWithProperties[0].Name)
+				tempRow := []interface{}{query.EventsWithProperties[0].Name}
+				tempRow = append(tempRow, oldResult.Rows[i])
+				oldResult.Rows[i] = tempRow
 			}
 		}
 	}
+
 	eventNameIndex := 0
 	dateIndex := 0
 	countIndex := 0
@@ -215,6 +299,8 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 	}
 
 	newResult := &QueryResult{Headers: newResultHeaders, Rows: newResultRows}
+
+	updateEventNameInHeaderAndAddMeta(newResult)
 
 	return newResult, nil
 }
@@ -634,7 +720,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 
 			eventSelect := commonSelect
 			if q.EventsCondition == EventCondEachGivenEvent {
-				eventNameSelect := "'" + ewp.Name + "'" + "::text" + " AS event_name "
+				eventNameSelect := "'" + strconv.Itoa(i) + "_" + ewp.Name + "'" + "::text" + " AS event_name "
 				eventSelect = joinWithComma(eventSelect, eventNameSelect)
 			}
 			if stepGroupSelect != "" {
@@ -1396,7 +1482,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64, q Query) (string
 	refStepName := ""
 	filters := make([]string, 0)
 	for i, ewp := range q.EventsWithProperties {
-		eventNameSelect := "'" + ewp.Name + "'" + "::text" + " AS event_name "
+		eventNameSelect := "'" + strconv.Itoa(i) + "_" + ewp.Name + "'" + "::text" + " AS event_name "
 		filterSelect := joinWithComma(filterSelect, eventNameSelect)
 		refStepName = fmt.Sprintf("step%d", i)
 		filters = append(filters, refStepName)
@@ -1686,7 +1772,7 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *Query,
 			&q.EventsWithProperties[i], q.GroupByProperties, i+1)
 
 		eventSelect := commonSelect
-		eventNameSelect := "'" + ewp.Name + "'" + "::text" + " AS event_name "
+		eventNameSelect := "'" + strconv.Itoa(i) + "_" + ewp.Name + "'" + "::text" + " AS event_name "
 		eventSelect = joinWithComma(eventSelect, eventNameSelect)
 		if stepGroupSelect != "" {
 			stepSelect = eventSelect + ", " + stepGroupSelect
@@ -1703,7 +1789,7 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *Query,
 		addJoinStmnt := "JOIN users ON events.user_id=users.id"
 		if groupByUserProperties && !hasWhereEntity(ewp, PropertyEntityUser) {
 			// If event has filter on user property, JOIN on user_properties is added in next step.
-			// Skip addding here to avoid duplication.
+			// Skip adding here to avoid duplication.
 			addJoinStmnt += " JOIN user_properties on events.user_properties_id=user_properties.id"
 		}
 		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,

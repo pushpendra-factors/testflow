@@ -874,16 +874,16 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 		result, errCode, _ := M.ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
-		assert.Equal(t, "event_name", result.Headers[0])
-		if result.Rows[0][0] == "s1" {
-			assert.Equal(t, int64(3), result.Rows[0][1])
+		assert.Equal(t, "event_index", result.Headers[0])
+		if result.Rows[0][1] == "s1" {
+			assert.Equal(t, int64(3), result.Rows[0][2])
 		} else {
-			assert.Equal(t, int64(2), result.Rows[0][1])
+			assert.Equal(t, int64(2), result.Rows[0][2])
 		}
-		if result.Rows[1][0] == "s1" {
-			assert.Equal(t, int64(3), result.Rows[1][1])
+		if result.Rows[1][1] == "s1" {
+			assert.Equal(t, int64(3), result.Rows[1][2])
 		} else {
-			assert.Equal(t, int64(2), result.Rows[1][1])
+			assert.Equal(t, int64(2), result.Rows[1][2])
 		}
 	})
 
