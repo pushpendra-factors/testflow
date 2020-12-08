@@ -5,7 +5,7 @@ import SingleEventMultipleBreakdown from './SingleEventMultipleBreakdown';
 import NoBreakdownCharts from './NoBreakdownCharts';
 
 function EventsAnalytics({
-  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper, unit, setwidgetModal, durationObj
+  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper, unit, setwidgetModal, durationObj, arrayMapper
 }) {
   let content = null;
 
@@ -68,6 +68,7 @@ function EventsAnalytics({
         page="totalEvents"
         chartType={chartType}
         title={title}
+        arrayMapper={arrayMapper}
       />
 
     );

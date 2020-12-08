@@ -26,8 +26,8 @@ function SparkLineChart({
           });
 
           total = resultState.data.metrics.rows.find(
-            (elem) => elem[0] === q
-          )[1];
+            (elem) => elem[0] === index
+          )[2];
           total =
             total % 1 !== 0
               ? parseFloat(total.toFixed(2))
@@ -62,8 +62,8 @@ function SparkLineChart({
     );
   } else {
     let total = resultState.data.metrics.rows.find(
-      (elem) => elem[0] === queries[0]
-    )[1];
+      (elem) => elem[0] === 0
+    )[2];
     total =
       total % 1 !== 0 ? parseFloat(total.toFixed(2)) : numberWithCommas(total);
 

@@ -6,9 +6,10 @@ import ResultTab from './ResultTab.js';
 import { SVG } from '../../../components/factorsComponents';
 import EventBreakdown from './EventBreakdown';
 import ResultsHeader from '../ResultsHeader';
+import { QUERY_TYPE_EVENT } from '../../../utils/constants';
 
 function EventsAnalytics({
-  queries, eventsMapper, reverseEventsMapper, breakdown, resultState, setDrawerVisible, runQuery, activeKey, breakdownType, handleBreakdownTypeChange, breakdownTypeData, queryType, requestQuery, setShowResult, querySaved, setQuerySaved, durationObj, handleDurationChange
+  queries, eventsMapper, reverseEventsMapper, breakdown, resultState, setDrawerVisible, runQuery, activeKey, breakdownType, handleBreakdownTypeChange, breakdownTypeData, queryType, requestQuery, setShowResult, querySaved, setQuerySaved, durationObj, handleDurationChange, arrayMapper
 }) {
   const handleTabChange = (tabKey) => {
     runQuery(tabKey);
@@ -31,6 +32,7 @@ function EventsAnalytics({
         queries={queries}
         durationObj={durationObj}
         handleDurationChange={handleDurationChange}
+        arrayMapper={arrayMapper}
       />
     );
   } else if (activeKey === '1' && breakdownType !== 'each') {
@@ -43,6 +45,7 @@ function EventsAnalytics({
         handleBreakdownTypeChange={handleBreakdownTypeChange}
         durationObj={durationObj}
         handleDurationChange={handleDurationChange}
+        arrayMapper={arrayMapper}
       />
     );
   }
@@ -65,6 +68,7 @@ function EventsAnalytics({
           queries={queries}
           durationObj={durationObj}
           handleDurationChange={handleDurationChange}
+          arrayMapper={arrayMapper}
         />
       ) : null
     },
@@ -92,6 +96,7 @@ function EventsAnalytics({
           queries={queries}
           durationObj={durationObj}
           handleDurationChange={handleDurationChange}
+          arrayMapper={arrayMapper}
         />
       ) : null
     },
@@ -113,6 +118,7 @@ function EventsAnalytics({
           queries={queries}
           durationObj={durationObj}
           handleDurationChange={handleDurationChange}
+          arrayMapper={arrayMapper}
         />
       ) : null
     }
@@ -128,7 +134,7 @@ function EventsAnalytics({
           setQuerySaved={setQuerySaved}
           activeKey={activeKey}
           breakdownType={breakdownType}
-          queryType="event"
+          queryType={QUERY_TYPE_EVENT}
         />
         <div className="py-4">
           <EventsInfo

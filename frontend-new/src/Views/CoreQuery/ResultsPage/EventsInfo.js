@@ -24,14 +24,14 @@ function EventsInfo() {
         {queries.map((q, index) => {
           if (index < queries.length - 1) {
             return (
-              <React.Fragment key={q}>
+              <React.Fragment key={index}>
                 <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
                 <span style={{ color: '#8692A3' }} className="text-xl font-normal">&nbsp;and then&nbsp;</span>
               </React.Fragment>
             );
           } else {
             return (
-              <React.Fragment key={q}>
+              <React.Fragment key={index}>
                 <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
               </React.Fragment>
             );

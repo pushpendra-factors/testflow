@@ -224,7 +224,6 @@ function QueryComposer({
   };
 
   const handleRunQuery = useCallback(() => {
-    console.log(queryType)
     if (queryType === QUERY_TYPE_EVENT) {
       runQuery('0', true);
     } else {

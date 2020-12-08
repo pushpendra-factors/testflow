@@ -101,6 +101,7 @@ function SaveQuery({
     try {
       setApisCalled(true);
       let query;
+      console.log(queryType)
       if (queryType === QUERY_TYPE_FUNNEL) {
         query = {
           ...requestQuery,

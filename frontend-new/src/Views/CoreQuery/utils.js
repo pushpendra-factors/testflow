@@ -217,9 +217,9 @@ export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
   });
   const metrics = eventData.metrics.rows.map((elem) => {
     const idx = userData.metrics.rows.findIndex((r) => r[0] === elem[0]);
-    if (!elem[1] || !userData.metrics.rows[idx][1]) return 0;
-    const eVal = elem[1] / userData.metrics.rows[idx][1];
-    return [elem[0], parseFloat(eVal.toFixed(2))];
+    if (!elem[2] || !userData.metrics.rows[idx][2]) return 0;
+    const eVal = elem[2] / userData.metrics.rows[idx][2];
+    return [elem[0], elem[1], parseFloat(eVal.toFixed(2))];
   });
   const result = {
     ...userData,
@@ -305,18 +305,19 @@ export const calculateActiveUsersData = (
 const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(1).map((e) => {
-      if (!e || !sessionData.rows[0][1]) return 0;
-      const eVal = (e / sessionData.rows[0][1]) * 100;
+      if (!e || !sessionData.rows[0][2]) return 0;
+      const eVal = (e / sessionData.rows[0][2]) * 100;
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [elem[0], ...eventVals];
   });
 
   const metrics = userData.metrics.rows.map((elem) => {
-    if (!elem[1] || !sessionData.rows[0][1]) return 0;
-    const eVal = (elem[1] / sessionData.rows[0][1]) * 100;
-    return [elem[0], parseFloat(eVal.toFixed(2))];
+    if (!elem[2] || !sessionData.rows[0][2]) return 0;
+    const eVal = (elem[2] / sessionData.rows[0][2]) * 100;
+    return [elem[0], elem[1], parseFloat(eVal.toFixed(2))];
   });
+
   const result = {
     ...userData,
     rows,
@@ -325,26 +326,27 @@ const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
       rows: metrics,
     },
   };
+
   return result;
 };
 
 const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
   const differentDates = new Set();
   userData.rows.forEach((ud) => {
-    differentDates.add(ud[0]);
+    differentDates.add(ud[1]);
   });
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(elem.length - 1).map((e) => {
-      if (!e || !sessionData.rows[0][1]) return e;
-      const eVal = (e / sessionData.rows[0][1]) * 100;
+      if (!e || !sessionData.rows[0][2]) return e;
+      const eVal = (e / sessionData.rows[0][2]) * 100;
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [...elem.slice(0, elem.length - 1), ...eventVals];
   });
 
   const metrics = userData.metrics.rows.map((elem) => {
-    if (!elem[elem.length - 1] || !sessionData.rows[0][1]) return 0;
-    const eVal = (elem[elem.length - 1] / sessionData.rows[0][1]) * 100;
+    if (!elem[elem.length - 1] || !sessionData.rows[0][2]) return 0;
+    const eVal = (elem[elem.length - 1] / sessionData.rows[0][2]) * 100;
     return [...elem.slice(0, elem.length - 1), parseFloat(eVal.toFixed(2))];
   });
   const result = {

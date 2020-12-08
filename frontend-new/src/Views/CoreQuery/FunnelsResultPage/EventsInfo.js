@@ -11,7 +11,7 @@ function EventsInfo({ queries, setDrawerVisible, queryType }) {
                 {queries.map((q, index) => {
                   if (index < queries.length - 1) {
                     return (
-                            <div className="flex items-center" key={q}>
+                            <div className="flex items-center" key={index}>
                                 <div style={{ backgroundColor: '#3E516C' }} className="text-white w-6 h-6 flex justify-center items-center mr-1 rounded-full font-semibold leading-5 text-xs">{charArr[index]}</div>
                                 <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
                                 <span style={{ color: '#8692A3' }} className="text-xl font-normal">&nbsp;and&nbsp;</span>
@@ -19,7 +19,7 @@ function EventsInfo({ queries, setDrawerVisible, queryType }) {
                     );
                   } else {
                     return (
-                            <div className="flex items-center" key={q}>
+                            <div className="flex items-center" key={index}>
                                 <div style={{ backgroundColor: '#3E516C' }} className="text-white w-6 h-6 flex justify-center items-center mr-1 rounded-full font-semibold leading-5 text-xs">{charArr[index]}</div>
                                 <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
                             </div>
@@ -48,14 +48,14 @@ function EventsInfo({ queries, setDrawerVisible, queryType }) {
                     {queries.map((q, index) => {
                       if (index < queries.length - 1) {
                         return (
-                                <React.Fragment key={q}>
+                                <React.Fragment key={index}>
                                     <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
                                     <span style={{ color: '#8692A3' }} className="text-xl font-normal">&nbsp;and then&nbsp;</span>
                                 </React.Fragment>
                         );
                       } else {
                         return (
-                                <React.Fragment key={q}>
+                                <React.Fragment key={index}>
                                     <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
                                 </React.Fragment>
                         );

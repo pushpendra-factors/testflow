@@ -4,7 +4,7 @@ import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 
 export const formatData = (data) => {
   const result = data.metrics.rows.map(d => {
-    const str = d.slice(1, d.length - 1).join(',');
+    const str = d.slice(2, d.length - 1).join(',');
     return {
       label: str,
       value: d[d.length - 1]
@@ -54,18 +54,18 @@ export const getDataInTableFormat = (data, columns, searchText, currentSorter) =
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
-export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hiddenProperties, frequency) => {
+export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hiddenProperties) => {
   const visibleLabels = visibleProperties.map(v => v.label).filter(l => hiddenProperties.indexOf(l) === -1);
   const resultInObjFormat = {};
   const result = [];
   data.rows.forEach(elem => {
-    const str = elem.slice(2, elem.length - 1).join(',');
+    const str = elem.slice(3, elem.length - 1).join(',');
     const val = elem[elem.length - 1];
     if (visibleLabels.indexOf(str) > -1) {
-      if (resultInObjFormat[elem[0]]) {
-        resultInObjFormat[elem[0]][str] = val;
+      if (resultInObjFormat[elem[1]]) {
+        resultInObjFormat[elem[1]][str] = val;
       } else {
-        resultInObjFormat[elem[0]] = {
+        resultInObjFormat[elem[1]] = {
           [str]: val
         };
       }
@@ -129,7 +129,7 @@ export const getDateBasedTableData = (labels, data, columns, searchText, current
     format = 'h A, MMM D'
   }
   const result = filteredLabels.map((elem, index) => {
-    const entries = data.rows.filter(d => d.slice(2, d.length - 1).join(',') === elem);
+    const entries = data.rows.filter(d => d.slice(3, d.length - 1).join(',') === elem);
     const obj = {
       index
     };
@@ -143,7 +143,7 @@ export const getDateBasedTableData = (labels, data, columns, searchText, current
       obj[c.title] = val.join(',');
     });
     entries.forEach(entry => {
-      obj[moment(entry[0]).format(format)] = entry[entry.length - 1];
+      obj[moment(entry[1]).format(format)] = entry[entry.length - 1];
     });
     return obj;
   });

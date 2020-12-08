@@ -7,7 +7,7 @@ function ChartLegends({
   return (
         <div className="flex flex-wrap items-center justify-center w-full">
             {events.map((event, index) => {
-              const eventObj = chartData.find(elem => elem.event === event);
+              const eventObj = chartData.find(elem => elem.eventIndex === index);
               const color = eventObj ? eventObj.color : null;
               if (!color) {
                 return null;

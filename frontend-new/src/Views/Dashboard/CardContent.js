@@ -38,10 +38,16 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
 
     const eventsMapper = {};
     const reverseEventsMapper = {};
+    const arrayMapper = [];
 
     events.forEach((q, index) => {
       eventsMapper[`${q.label}`] = `event${index + 1}`;
       reverseEventsMapper[`event${index + 1}`] = q.label;
+      arrayMapper.push({
+        eventName: q,
+        index,
+        mapper: `event${index + 1}`
+      });
     });
 
     let dashboardPresentation = 'pl';
@@ -81,6 +87,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           reverseEventsMapper={reverseEventsMapper}
           unit={unit}
           setwidgetModal={setwidgetModal}
+          arrayMapper={arrayMapper}
 				/>
       );
     }

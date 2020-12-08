@@ -39,21 +39,26 @@ function MultipleEventsWithBreakdown({
 
   const mapper = {};
   const reverseMapper = {};
+  const arrayMapper = [];
 
   const visibleLabels = visibleProperties.map((v) => `${v.event},${v.label}`);
 
   visibleLabels.forEach((q, index) => {
     mapper[`${q}`] = `event${index + 1}`;
     reverseMapper[`event${index + 1}`] = q;
+    arrayMapper.push({
+      eventName: q,
+      index,
+      mapper: `event${index + 1}`,
+    });
   });
 
   let chartContent = null;
 
   const lineChartData = formatDataInLineChartFormat(
     visibleProperties,
-    mapper,
+    arrayMapper,
     hiddenProperties,
-    durationObj.frequency
   );
   const appliedColors = generateColors(visibleProperties.length);
 
@@ -79,6 +84,7 @@ function MultipleEventsWithBreakdown({
           setHiddenEvents={setHiddenProperties}
           hiddenEvents={hiddenProperties}
           isDecimalAllowed={page === "activeUsers" || page === "frequency"}
+          arrayMapper={arrayMapper}
         />
       </div>
     );

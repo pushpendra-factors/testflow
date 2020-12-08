@@ -37,24 +37,24 @@ export const getDataInTableFormat = (data, events, breakdown, searchText, curren
 export const formatData = (data) => {
   const result = data.metrics.rows.map(elem => {
     return {
-      label: elem[1],
-      value: elem[2]
+      label: elem[2],
+      value: elem[3]
     };
   });
   return SortData(result, 'value', 'descend');
 };
 
-export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hiddenProperties, frequency) => {
+export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hiddenProperties) => {
   const visibleLabels = visibleProperties.map(v => v.label).filter(l => hiddenProperties.indexOf(l) === -1);
   const resultInObjFormat = {};
   const result = [];
   data.rows.forEach(elem => {
-    if (visibleLabels.indexOf(elem[2]) > -1) {
-      if (resultInObjFormat[elem[0]]) {
-        resultInObjFormat[elem[0]][elem[2]] = elem[3];
+    if (visibleLabels.indexOf(elem[3]) > -1) {
+      if (resultInObjFormat[elem[1]]) {
+        resultInObjFormat[elem[1]][elem[3]] = elem[4];
       } else {
-        resultInObjFormat[elem[0]] = {
-          [elem[2]]: elem[3]
+        resultInObjFormat[elem[1]] = {
+          [elem[3]]: elem[4]
         };
       }
     }
@@ -106,13 +106,13 @@ export const getDateBasedTableData = (labels, data, breakdown, searchText, curre
     format = 'h A, MMM D'
   }
   const result = filteredLabels.map((elem, index) => {
-    const entries = data.rows.filter(d => d[2] === elem);
+    const entries = data.rows.filter(d => d[3] === elem);
     const obj = {
       index,
       [breakdown[0]]: elem
     };
     entries.forEach(entry => {
-      obj[moment(entry[0]).format(format)] = entry[3];
+      obj[moment(entry[1]).format(format)] = entry[4];
     });
     return obj;
   });

@@ -18,23 +18,16 @@ function NoBreakdownCharts({
   chartType,
   isWidgetModal,
   durationObj,
+  arrayMapper,
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
 
   let chartsData = [];
   if (queries.length === 1) {
-    chartsData = formatSingleEventAnalyticsData(
-      resultState.data,
-      queries[0],
-      eventsMapper
-    );
+    chartsData = formatSingleEventAnalyticsData(resultState.data, arrayMapper);
   } else {
-    chartsData = formatMultiEventsAnalyticsData(
-      resultState.data,
-      queries,
-      eventsMapper
-    );
+    chartsData = formatMultiEventsAnalyticsData(resultState.data, arrayMapper);
   }
 
   if (!chartsData.length) {
@@ -42,6 +35,14 @@ function NoBreakdownCharts({
   }
 
   let chartContent = null;
+
+  const lineChartData = getDataInLineChartFormat(
+    chartsData,
+    queries,
+    eventsMapper,
+    hiddenEvents,
+    arrayMapper
+  );
 
   if (chartType === "sparklines") {
     chartContent = (
@@ -61,19 +62,14 @@ function NoBreakdownCharts({
       <div className="flex mt-8">
         <LineChart
           frequency={durationObj.frequency}
-          chartData={getDataInLineChartFormat(
-            chartsData,
-            queries,
-            eventsMapper,
-            hiddenEvents,
-            durationObj.frequency
-          )}
+          chartData={lineChartData}
           appliedColors={appliedColors}
           queries={queries}
           reverseEventsMapper={reverseEventsMapper}
           eventsMapper={eventsMapper}
           setHiddenEvents={setHiddenEvents}
           hiddenEvents={hiddenEvents}
+          arrayMapper={arrayMapper}
           isDecimalAllowed={page === "activeUsers" || page === "frequency"}
         />
       </div>

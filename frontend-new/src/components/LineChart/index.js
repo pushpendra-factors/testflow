@@ -6,7 +6,7 @@ import styles from './index.module.scss';
 import ChartLegends from './ChartLegends';
 
 function LineChart({
-  chartData, appliedColors, queries, reverseEventsMapper, eventsMapper, setHiddenEvents, hiddenEvents, isDecimalAllowed, frequency
+  chartData, appliedColors, queries, reverseEventsMapper, eventsMapper, setHiddenEvents, hiddenEvents, isDecimalAllowed, frequency, arrayMapper
 }) {
   const chartRef = useRef(null);
 
@@ -30,8 +30,9 @@ function LineChart({
 
   const colors = {};
 
-  queries.forEach((query, index) => {
-    colors[eventsMapper[query]] = appliedColors[index];
+  queries.forEach((_, index) => {
+    const key = arrayMapper.find(m=>m.index === index).mapper;
+    colors[key] = appliedColors[index];
   });
 
   const focusHoveredLines = useCallback((name) => {
@@ -168,11 +169,11 @@ function LineChart({
       <ChartLegends
         colors={colors}
         events={queries}
-        eventsMapper={eventsMapper}
         focusHoveredLines={focusHoveredLines}
         focusAllLines={focusAllLines}
         setHiddenEvents={setHiddenEvents}
         hiddenEvents={hiddenEvents}
+        arrayMapper={arrayMapper}
       />
     </div>
 

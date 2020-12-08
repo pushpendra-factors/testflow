@@ -23,16 +23,16 @@ export const formatData = (data, queries, colors) => {
   });
 
   const result = data.metrics.rows.map((d, index) => {
-    const str = d.slice(1, d.length - 1).join(',');
-    const queryIndex = queries.findIndex(q => q === d[0]);
+    const str = d.slice(2, d.length - 1).join(',');
+    const queryIndex = queries.findIndex((_, index) => index === d[0]);
     const dateRows = data.rows
       .filter(row => {
-        const rowStr = row.slice(2, row.length - 1).join(',');
-        return ((row[1] === d[0]) && rowStr === str);
+        const rowStr = row.slice(3, row.length - 1).join(',');
+        return ((row[0] === d[0]) && rowStr === str);
       })
       .map(row => {
         return {
-          date: row[0],
+          date: row[1],
           value: row[row.length - 1]
         };
       });
@@ -40,7 +40,8 @@ export const formatData = (data, queries, colors) => {
       label: str,
       value: d[d.length - 1],
       index,
-      event: d[0],
+      event: d[1],
+      eventIndex: d[0],
       color: colors[queryIndex],
       dateWise: dateRows
     };
@@ -48,8 +49,8 @@ export const formatData = (data, queries, colors) => {
 
   const sortedData = SortData(result, 'value', 'descend');
   const maxIndices = [];
-  queries.forEach(q => {
-    const idx = sortedData.findIndex(elem => elem.event === q);
+  queries.forEach((_, qIdx) => {
+    const idx = sortedData.findIndex(elem => elem.eventIndex === qIdx);
     if (idx > -1) {
       maxIndices.push(idx);
     }
@@ -67,14 +68,14 @@ export const formatData = (data, queries, colors) => {
 
 export const formatVisibleProperties = (data, queries) => {
   const vp = data.map(d => {
-    return { ...d, label: `${d.label}; [${d.event}]` };
+    return { ...d, label: `${d.label}; [${d.eventIndex}]` };
   });
   vp.sort((a, b) => {
     return parseInt(a.value) <= parseInt(b.value) ? 1 : -1;
   });
   vp.sort((a, b) => {
-    const idx1 = queries.findIndex(q => q === a.event);
-    const idx2 = queries.findIndex(q => q === b.event);
+    const idx1 = queries.findIndex((_, index) => index === a.eventIndex);
+    const idx2 = queries.findIndex((_, index) => index === b.eventIndex);
     return idx1 >= idx2 ? 1 : -1;
   });
   return vp;
@@ -114,16 +115,17 @@ export const getTableData = (data, breakdown, searchText, currentSorter) => {
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
-export const formatDataInLineChartFormat = (visibleProperties, mapper, hiddenProperties, frequency) => {
+export const formatDataInLineChartFormat = (visibleProperties, arrayMapper, hiddenProperties) => {
   const result = [];
   const format = 'YYYY-MM-DD HH-mm';
   const dates = visibleProperties[0].dateWise.map(elem => moment(elem.date).format(format));
   result.push(['x', ...dates]);
-  visibleProperties.forEach(v => {
+  visibleProperties.forEach((v, index) => {
     const label = `${v.event},${v.label}`;
     if (hiddenProperties.indexOf(label) === -1) {
       const values = v.dateWise.map(elem => elem.value);
-      result.push([mapper[label], ...values]);
+      const key = arrayMapper.find(m=>m.index === index).mapper;
+      result.push([key, ...values]);
     }
   });
   return result;
