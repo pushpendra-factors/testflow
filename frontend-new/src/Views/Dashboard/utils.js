@@ -18,7 +18,7 @@ export const getDataFromServer = (query, unitId, dashboardId, durationObj, refre
                 return {
                     ...elem,
                     fr: moment().startOf('week').utc().unix(),
-                    to: moment().utc().unix(),
+                    to: moment().subtract(1, 'day').endOf('day').utc().unix(),
                     gbt: elem.gbt ? durationObj.frequency : ''
                 };
             });

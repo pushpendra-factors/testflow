@@ -30,14 +30,6 @@ function WidgetCard({
           loading: true,
         });
 
-        if (
-          !refresh &&
-          ((durationObj.from && durationObj.to) ||
-            durationObj.frequency === "hour")
-        ) {
-          refresh = true;
-        }
-
         const res = await getDataFromServer(
           unit.query,
           unit.id,
