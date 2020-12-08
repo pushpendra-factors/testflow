@@ -14,6 +14,7 @@ export const getDataFromServer = (query, unitId, dashboardId, durationObj, refre
                 };
             });
         } else {
+            console.log(moment().subtract(1, 'day').endOf('day').utc().unix());
             queryGroup = queryGroup.map(elem => {
                 return {
                     ...elem,
@@ -40,7 +41,7 @@ export const getDataFromServer = (query, unitId, dashboardId, durationObj, refre
             funnelQuery = {
                 ...funnelQuery,
                 fr: moment().startOf('week').utc().unix(),
-                to: moment().utc().unix()
+                to: moment().subtract(1, 'day').endOf('day').utc().unix(),
             };
         }
         if (refresh) {
