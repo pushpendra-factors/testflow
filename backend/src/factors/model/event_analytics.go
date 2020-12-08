@@ -76,6 +76,8 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
+
+	fmt.Println("DEBUG QUERY ->>>>>>1>>>>>>>>>>>>>>>>>>\n" + U.DBDebugPreparedStatement(stmnt, params))
 	result, err := ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
@@ -224,7 +226,7 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 			oldResult.Headers = tempHeader
 			oldResult.Headers = append(oldResult.Headers, AliasEventName)
 			for i, _ := range oldResult.Rows {
-				tempRow := []interface{}{query.EventsWithProperties[0].Name}
+				tempRow := []interface{}{"0_" + query.EventsWithProperties[0].Name}
 				tempRow = append(tempRow, oldResult.Rows[i])
 				oldResult.Rows[i] = tempRow
 			}
@@ -250,7 +252,7 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 	for _, row := range oldResult.Rows {
 		eventName := ""
 		if row[eventNameIndex] == nil && len(query.EventsWithProperties) == 1 {
-			eventName = query.EventsWithProperties[0].Name
+			eventName = "0_" + query.EventsWithProperties[0].Name
 		} else {
 			eventName = row[eventNameIndex].(string)
 		}
@@ -278,7 +280,7 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 		dateTime := row[dateIndex].(time.Time).Unix()
 		eventName := ""
 		if row[eventNameIndex] == nil && len(query.EventsWithProperties) == 1 {
-			eventName = query.EventsWithProperties[0].Name
+			eventName = "0_" + query.EventsWithProperties[0].Name
 		} else {
 			eventName = row[eventNameIndex].(string)
 		}
