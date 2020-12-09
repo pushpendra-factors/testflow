@@ -91,6 +91,7 @@ function SingleEventMultipleBreakdown({
     chartContent = (
       <div className="flex mt-4">
         <LineChart
+          arrayMapper={arrayMapper}
           frequency={durationObj.frequency}
           chartData={lineChartData}
           appliedColors={appliedColors}
