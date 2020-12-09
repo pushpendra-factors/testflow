@@ -4,6 +4,7 @@ import { bindActionCreators } from "redux";
 import { connect, useSelector } from "react-redux";
 import FunnelsResultPage from "./FunnelsResultPage";
 import QueryComposer from "../../components/QueryComposer";
+import AttrQueryComposer from "../../components/AttrQueryComposer";
 import CoreQueryHome from "../CoreQueryHome";
 import { Drawer, Button } from "antd";
 import { SVG, Text } from "../../components/factorsComponents";
