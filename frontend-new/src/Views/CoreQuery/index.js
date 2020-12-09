@@ -24,7 +24,7 @@ import {
   getFunnelQuery,
   DefaultDateRangeFormat,
 } from "./utils";
-import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from "../../utils/constants";
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL, QUERY_TYPE_ATTRIBUTION } from "../../utils/constants";
 
 function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
