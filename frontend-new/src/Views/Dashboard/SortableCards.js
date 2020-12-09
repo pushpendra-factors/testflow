@@ -31,7 +31,7 @@ function SortableCards({
         updateDashboard(active_project.id, activeDashboard.id, {
           units_position: body,
         });
-      }, 1000);
+      }, 300);
     },
     [activeDashboard.id, active_project.id, dispatch]
   );
