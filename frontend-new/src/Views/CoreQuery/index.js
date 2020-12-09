@@ -427,6 +427,14 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   };
 
   const title = () => {
+    let queryTypeTitle;
+
+    if(queryType === QUERY_TYPE_FUNNEL) {queryTypeTitle = 'Find event funnel for'}
+
+    if(queryType === QUERY_TYPE_EVENT) {queryTypeTitle = 'Analyse Events'}
+
+    if(queryType === QUERY_TYPE_ATTRIBUTION) {queryTypeTitle = 'Multi Touch Attributions'}
+
     return (
       <div className={"flex justify-between items-center"}>
         <div className={"flex items-center"}>
@@ -444,9 +452,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
             weight={"bold"}
             extraClass={"ml-2 m-0"}
           >
-            {queryType === QUERY_TYPE_FUNNEL
-              ? "Find event funnel for"
-              : "Analyse Events"}
+            {queryTypeTitle}
           </Text>
         </div>
         <div className={"flex justify-end items-center"}>
@@ -518,6 +524,27 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     );
   }
 
+  const renderQueryComposer = () => {
+    if(queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
+      return (<QueryComposer
+          queries={queries}
+          runQuery={runQuery}
+          eventChange={queryChange}
+          queryType={queryType}
+          queryOptions={queryOptions}
+          setQueryOptions={setExtraOptions}
+          runFunnelQuery={runFunnelQuery}
+        />
+      )
+    }
+
+    if(queryType === QUERY_TYPE_ATTRIBUTION) {
+        return (<AttrQueryComposer />);
+    }
+    
+  } 
+
+
   return (
     <>
       <Drawer
@@ -530,15 +557,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         width={"600px"}
         className={"fa-drawer"}
       >
-        <QueryComposer
-          queries={queries}
-          runQuery={runQuery}
-          eventChange={queryChange}
-          queryType={queryType}
-          queryOptions={queryOptions}
-          setQueryOptions={setExtraOptions}
-          runFunnelQuery={runFunnelQuery}
-        />
+        {renderQueryComposer()}
+        
       </Drawer>
 
       {showResult ? (

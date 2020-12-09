@@ -14,7 +14,7 @@ import { INITIALIZE_GROUPBY } from '../../reducers/coreQuery/actions';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { deleteQuery } from '../../reducers/coreQuery/services';
 import { typeOf } from 'react-is';
-import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../utils/constants';
+import { QUERY_TYPE_ATTRIBUTION, QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../utils/constants';
 
 const coreQueryoptions = [
   {
@@ -171,6 +171,22 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
       return getFormattedRow(q);
     })
 
+  const setQueryTypeTab = (item) => {
+    setDrawerVisible(true);
+
+    if(item.title === 'Funnels') {
+      setQueryType(QUERY_TYPE_FUNNEL)
+    }
+
+    if(item.title === 'Events') {
+      setQueryType(QUERY_TYPE_EVENT)
+    }
+
+    if(item.title === 'Attributions') {
+      setQueryType(QUERY_TYPE_ATTRIBUTION);
+    }
+  }
+
   return (
     <>
       <ConfirmationModal
@@ -198,10 +214,7 @@ function CoreQuery({ setDrawerVisible, setQueryType, setQueries, setRowClicked, 
           {coreQueryoptions.map((item, index) => {
             return (
               <Col span={4} key={index}>
-                <div onClick={() => {
-                  setDrawerVisible(true);
-                  item.title === 'Funnels' ? setQueryType(QUERY_TYPE_FUNNEL) : setQueryType(QUERY_TYPE_EVENT);
-                }} className="fai--custom-card flex justify-center items-center flex-col ">
+                <div onClick={() => setQueryTypeTab(item)} className="fai--custom-card flex justify-center items-center flex-col ">
                   <div className={'fai--custom-card--icon'}><SVG name={item.icon} size={48} /> </div>
                   <div className="flex justify-start items-center flex-col before-hover">
                     <Text type={'title'} level={3} weight={'bold'} extraClass={'fai--custom-card--title'} >{item.title}</Text>
