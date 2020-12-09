@@ -476,7 +476,9 @@ func limitMultiGroupByPropertiesResult(result *QueryResult, groupByTimestamp boo
 // Converts DB results into plottable query results.
 func SanitizeQueryResult(result *QueryResult, query *Query) error {
 	if query.GetGroupByTimestamp() != "" {
-		return sanitizeGroupByTimestampResult(result, query)
+		if err := sanitizeGroupByTimestampResult(result, query); err != nil {
+			return err
+		}
 	}
 
 	// Replace group keys with real column names. should be last step.
