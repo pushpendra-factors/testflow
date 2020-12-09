@@ -128,7 +128,7 @@ export const getQuery = (
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_EVENT;
-  query.ty = parseInt(activeTab) === 1 ? "unique_users" : "events_occurrence";
+  query.ty = parseInt(activeTab) === 0 ? "events_occurrence" : "unique_users";
 
   const period = {};
   if (dateRange.from && dateRange.to) {
