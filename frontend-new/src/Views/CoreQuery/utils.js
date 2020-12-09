@@ -378,6 +378,19 @@ export const numberWithCommas = (x) => {
 };
 
 export const formatApiData = (data, metrics) => {
+  if (data.headers[0] !== "event_index") {
+    const order = data.meta.metrics[0].rows.map((elem) => elem[1]);
+    const rowData = data.rows;
+    for (let i = 0; i < rowData.length; i++) {
+      const originalOrder = rowData[i].slice(1);
+      const newOrder = [];
+      for (let j = 0; j < order.length; j++) {
+        const idx = order.indexOf(j);
+        newOrder.push(originalOrder[idx]);
+      }
+      rowData[i] = [rowData[i][0], ...newOrder];
+    }
+  }
   return { ...data, metrics };
 };
 

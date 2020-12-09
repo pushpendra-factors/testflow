@@ -4,8 +4,8 @@ import { SortData, getTitleWithSorter } from "../../../../utils/dataFormatter";
 export const getNoGroupingTableData = (
   data,
   currentSorter,
-  searchText,
-  reverseEventsMapper
+  reverseEventsMapper,
+  frequency
 ) => {
   const clonedData = data.map((elem) => {
     const element = { ...elem };
@@ -18,11 +18,16 @@ export const getNoGroupingTableData = (
     return element;
   });
 
+  let format = "MMM D, YYYY";
+  if (frequency === "hour") {
+    format = "h A, MMM D";
+  }
+
   const result = clonedData.map((elem, index) => {
     return {
       index,
       ...elem,
-      date: moment(elem.date).format("MMM D, YYYY"),
+      date: moment(elem.date).format(format),
     };
   });
 

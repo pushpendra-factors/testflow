@@ -471,7 +471,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     arrayMapper.push({
       eventName: q,
       index,
-      mapper: `event${index + 1}`
+      mapper: `event${index + 1}`,
     });
   });
 

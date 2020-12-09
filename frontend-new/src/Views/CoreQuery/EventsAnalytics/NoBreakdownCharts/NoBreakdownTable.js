@@ -18,7 +18,7 @@ function NoBreakdownTable({
 
   if (chartType === 'sparklines') {
     columns = getColumns(events, sorter, handleSorting);
-    tableData = getNoGroupingTableData(data, sorter, searchText, reverseEventsMapper);
+    tableData = getNoGroupingTableData(data, sorter, reverseEventsMapper, durationObj.frequency);
   } else {
     columns = getDateBasedColumns(data, sorter, handleSorting, durationObj.frequency);
     tableData = getNoGroupingTablularDatesBasedData(data, sorter, searchText, reverseEventsMapper, durationObj.frequency);
