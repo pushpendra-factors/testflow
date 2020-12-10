@@ -80,7 +80,9 @@ func addCreatedByNameInQueries(queries []Queries, projectID uint64) ([]Queries, 
 
 	agentUUIDs := make([]string, 0, 0)
 	for _, q := range queries {
-		agentUUIDs = append(agentUUIDs, q.CreatedBy)
+		if q.CreatedBy != "" {
+			agentUUIDs = append(agentUUIDs, q.CreatedBy)
+		}
 	}
 
 	agents, errCode := GetAgentsByUUIDs(agentUUIDs)
@@ -116,18 +118,32 @@ func addCreatedByNameInQuery(query Queries) (Queries, int) {
 	return query, http.StatusFound
 }
 
+// GetDashboardQueryWithQueryId Get query of type DashboardQuery.
 func GetDashboardQueryWithQueryId(projectID uint64, queryID uint64) (*Queries, int) {
-	return getQueryWithQueryId(projectID, queryID, QueryTypeDashboardQuery)
+	return getQueryWithQueryID(projectID, queryID, QueryTypeDashboardQuery)
 }
 
+// GetSavedQueryWithQueryId Get query of type SavedQuery.
 func GetSavedQueryWithQueryId(projectID uint64, queryID uint64) (*Queries, int) {
-	return getQueryWithQueryId(projectID, queryID, QueryTypeSavedQuery)
+	return getQueryWithQueryID(projectID, queryID, QueryTypeSavedQuery)
 }
 
-func getQueryWithQueryId(projectID uint64, queryID uint64, queryType int) (*Queries, int) {
+// GetQueryWithQueryId Get query by query id of any type.
+func GetQueryWithQueryId(projectID uint64, queryID uint64) (*Queries, int) {
+	return getQueryWithQueryID(projectID, queryID, 0)
+}
+
+func getQueryWithQueryID(projectID uint64, queryID uint64, queryType int) (*Queries, int) {
 	db := C.GetServices().Db
 	var query Queries
-	err := db.Table("queries").Where("project_id = ? AND id=? AND type=? AND is_deleted = ?", projectID, queryID, queryType, "false").Find(&query).Error
+	var err error
+	if queryType == 0 {
+		err = db.Table("queries").Where("project_id = ? AND id=? AND is_deleted = ?",
+			projectID, queryID, "false").Find(&query).Error
+	} else {
+		err = db.Table("queries").Where("project_id = ? AND id=? AND type=? AND is_deleted = ?",
+			projectID, queryID, queryType, "false").Find(&query).Error
+	}
 	if err != nil {
 		return &Queries{}, http.StatusNotFound
 	}
@@ -143,22 +159,6 @@ func getQueryWithQueryId(projectID uint64, queryID uint64, queryType int) (*Quer
 		return &q, http.StatusFound
 	}
 	return &query, http.StatusFound
-}
-
-func GetQueryForProjectByQueryId(projectID uint64, queryID uint64) (*Queries, int) {
-	db := C.GetServices().Db
-	var query Queries
-	err := db.Table("queries").Where("project_id = ? AND id=? AND is_deleted = ?", projectID, queryID, "false").Find(&query).Error
-	if err != nil {
-		return &Queries{}, http.StatusNotFound
-	}
-	q, errCode := addCreatedByNameInQuery(query)
-	if errCode != http.StatusFound {
-		log.WithField("project_id", projectID).Error("could not update created " +
-			"by name for queries")
-		return &query, http.StatusInternalServerError
-	}
-	return &q, http.StatusFound
 }
 
 // existsDashboardUnitForQueryID checks if dashboard unit exists for given queryID
@@ -231,24 +231,6 @@ func UpdateSavedQuery(projectID uint64, queryID uint64, query *Queries) (*Querie
 		return &Queries{}, http.StatusInternalServerError
 	}
 	return query, http.StatusAccepted
-}
-
-func GetQueryWithQueryId(projectID uint64, queryID uint64) (*Queries, int) {
-	db := C.GetServices().Db
-
-	var query Queries
-	err := db.Table("queries").Where("project_id = ? AND id=? AND type=? AND is_deleted = ?", projectID, queryID, QueryTypeSavedQuery, "false").Find(&query).Error
-
-	if err != nil {
-		return &Queries{}, http.StatusNotFound
-	}
-	q, errCode := addCreatedByNameInQuery(query)
-	if errCode != http.StatusFound {
-		log.WithField("project_id", projectID).Error("could not update created " +
-			"by name for queries")
-		return &query, http.StatusInternalServerError
-	}
-	return &q, http.StatusFound
 }
 
 func SearchQueriesWithProjectId(projectID uint64, searchString string) ([]Queries, int) {

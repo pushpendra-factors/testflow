@@ -189,7 +189,7 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 		dashboardUnit.QueryId = query.ID
 	} else {
 		// Todo (Anil) for new UI requests, fill up Query using queryId for backward compatibility
-		query, errCode := GetQueryForProjectByQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+		query, errCode := GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
 		// skip if error exists
 		if errCode == http.StatusFound {
 			queryJsonb, err := U.EncodeStructTypeToPostgresJsonb((*query).Query)
@@ -272,7 +272,7 @@ func GetDashboardUnitsForProjectID(projectID uint64) ([]DashboardUnit, int) {
 func fillQueryInDashboardUnits(units []DashboardUnit) []DashboardUnit {
 
 	for i, unit := range units {
-		query, errCode := GetQueryForProjectByQueryId(unit.ProjectID, unit.QueryId)
+		query, errCode := GetQueryWithQueryId(unit.ProjectID, unit.QueryId)
 		if errCode == http.StatusFound {
 			queryJsonb, err := U.EncodeStructTypeToPostgresJsonb((*query).Query)
 			if err == nil {
@@ -523,7 +523,7 @@ func CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int {
 func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 
-	savedQuery, errCode := GetDashboardQueryWithQueryId(projectID, dashboardUnit.QueryId)
+	savedQuery, errCode := GetQueryWithQueryId(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusFound {
 		errMsg := fmt.Sprintf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
