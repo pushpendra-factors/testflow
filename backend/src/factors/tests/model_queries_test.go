@@ -91,3 +91,48 @@ func TestModelQuery(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, 2, len(queries))
 }
+
+func TestDeleteQuery(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	dashboardQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
+		ProjectID: project.ID,
+		Type:      M.QueryTypeDashboardQuery,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, dashboardQuery)
+
+	savedQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
+		ProjectID: project.ID,
+		Type:      M.QueryTypeDashboardQuery,
+		CreatedBy: agent.UUID,
+		Title:     U.RandomString(5),
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, savedQuery)
+
+	// Delete dashboard query should not delete saved type query.
+	M.DeleteDashboardQuery(project.ID, savedQuery.ID)
+	query, errCode := M.GetQueryWithQueryId(project.ID, savedQuery.ID)
+	assert.NotNil(t, query)
+
+	// Delete saved query should not delete dashboard type query.
+	M.DeleteSavedQuery(project.ID, dashboardQuery.ID)
+	query, errCode = M.GetQueryWithQueryId(project.ID, dashboardQuery.ID)
+	assert.NotNil(t, query)
+
+	// Should delete this time.
+	M.DeleteSavedQuery(project.ID, savedQuery.ID)
+	query, errCode = M.GetQueryWithQueryId(project.ID, savedQuery.ID)
+	assert.Empty(t, query)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	// Should delete this time.
+	M.DeleteDashboardQuery(project.ID, dashboardQuery.ID)
+	query, errCode = M.GetQueryWithQueryId(project.ID, dashboardQuery.ID)
+	assert.Empty(t, query)
+	assert.Equal(t, http.StatusNotFound, errCode)
+}

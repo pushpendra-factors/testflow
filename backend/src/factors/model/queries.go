@@ -212,7 +212,8 @@ func deleteQuery(projectID uint64, queryID uint64, queryType int) (int, string) 
 	if queryID == 0 {
 		return http.StatusBadRequest, "Invalid query ID"
 	}
-	err := db.Model(&Queries{}).Where("id= ? AND project_id=? AND type=?", queryID, projectID, queryType).Update("is_deleted", true).Error
+	err := db.Model(&Queries{}).Where("id= ? AND project_id=? AND type=?", queryID, projectID, queryType).
+		Update(map[string]interface{}{"is_deleted": true}).Error
 	if err != nil {
 		return http.StatusInternalServerError, "Failed to delete saved query"
 	}
