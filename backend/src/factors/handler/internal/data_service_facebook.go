@@ -29,7 +29,7 @@ func DataServiceFacebookAddDocumentHandler(c *gin.Context) {
 
 	errCode := M.CreateFacebookDocument(facebookDocument.ProjectId, &facebookDocument)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest || errCode == http.StatusConflict {
-		c.AbortWithStatusJSON(http.StatusInternalServerError,
+		c.AbortWithStatusJSON(errCode,
 			gin.H{"error": "Failed to upsert facebook document."})
 		return
 	}

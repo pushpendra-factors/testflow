@@ -27,7 +27,7 @@ type FacebookDocument struct {
 }
 
 var facebookDocumentTypeAlias = map[string]int{
-	"ad_account":        0,
+	"ad_account":        7,
 	"campaign":          1,
 	"ad":                2,
 	"ad_set":            3,
@@ -93,14 +93,13 @@ func CreateFacebookDocument(projectId uint64, document *FacebookDocument) int {
 	err := db.Create(&document).Error
 	if err != nil {
 		if isDuplicateFacebookDocumentError(err) {
-			logCtx.WithError(err).WithField("id", document.ID).WithField("plateform", document.Platform).Error(
+			logCtx.WithError(err).WithField("id", document.ID).WithField("platform", document.Platform).Error(
 				"Failed to create an facebook doc. Duplicate.")
 			return http.StatusConflict
-
-			logCtx.WithError(err).WithField("id", document.ID).WithField("plateform", document.Platform).Error(
-				"Failed to create an facebook doc. Continued inserting other docs.")
-			return http.StatusInternalServerError
 		}
+		logCtx.WithError(err).WithField("id", document.ID).WithField("platform", document.Platform).Error(
+			"Failed to create an facebook doc. Continued inserting other docs.")
+		return http.StatusInternalServerError
 	}
 
 	return http.StatusCreated
@@ -274,7 +273,7 @@ func getFacebookMetricsQuery(query *ChannelQuery, withBreakdown bool) (string, i
 		CAColumnTotalCost, CAColumnUniqueClicks, CAColumnReach,
 		CAColumnFrequency, CAColumnInlinePostEngagement, CAColumnCostPerClick)
 
-	strmntWhere := "WHERE project_id= ? AND customer_ad_account_id = ? AND timestamp>? AND timestamp<? AND type=?"
+	strmntWhere := "WHERE project_id= ? AND customer_ad_account_id = ? AND timestamp>? AND timestamp<? AND type=? and platform!='facebook_all'"
 
 	strmntGroupBy := ""
 	if withBreakdown {
