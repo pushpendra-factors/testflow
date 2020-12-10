@@ -77,7 +77,6 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
-	fmt.Println("DEBUG QUERY ->>>>>>1>>>>>>>>>>>>>>>>>>\n" + U.DBDebugPreparedStatement(stmnt, params))
 	result, err := ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")

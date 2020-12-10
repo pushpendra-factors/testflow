@@ -119,18 +119,22 @@ func TestAttributionModel(t *testing.T) {
 	day := int64(86400)
 
 	// Creating 3 users
-	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{}, JoinTimestamp: timestamp})
+	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp})
 	assert.NotNil(t, user1)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{}, JoinTimestamp: timestamp})
+	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp})
 	assert.NotNil(t, user2)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{}, JoinTimestamp: timestamp})
+	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp})
 	assert.NotNil(t, user3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// Events with +1 Days
-	errCode = createEventWithSession(project.ID, "event1", user1.ID, timestamp+1*day, user1.PropertiesId, "111111")
+	errCode = createEventWithSession(project.ID, "event1", user1.ID,
+		timestamp+1*day, user1.PropertiesId, "111111")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	//Update user1 and user2 properties with latest campaign
@@ -141,6 +145,7 @@ func TestAttributionModel(t *testing.T) {
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
 			ConversionEvent:        M.QueryEventWithProperties{"event1", nil},
+			LookbackDays:           10,
 		}
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
@@ -156,6 +161,7 @@ func TestAttributionModel(t *testing.T) {
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
 			ConversionEvent:        M.QueryEventWithProperties{"event1", nil},
+			LookbackDays:           10,
 		}
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
@@ -165,10 +171,12 @@ func TestAttributionModel(t *testing.T) {
 	})
 
 	// Events with +5 Days
-	errCode = createEventWithSession(project.ID, "event1", user2.ID, timestamp+5*day, user2.PropertiesId, "222222")
+	errCode = createEventWithSession(project.ID, "event1",
+		user2.ID, timestamp+5*day, user2.PropertiesId, "222222")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	errCode = createEventWithSession(project.ID, "event1", user3.ID, timestamp+5*day, user3.PropertiesId, "333333")
+	errCode = createEventWithSession(project.ID, "event1",
+		user3.ID, timestamp+5*day, user3.PropertiesId, "333333")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryLastTouchCampaignNoLookbackDays", func(t *testing.T) {
@@ -178,11 +186,8 @@ func TestAttributionModel(t *testing.T) {
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_LAST_TOUCH,
 			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           10,
 		}
-
-		userProperty, err := M.GetQueryUserProperty(query)
-		assert.Nil(t, err)
-		assert.NotEqual(t, "", userProperty)
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
@@ -196,22 +201,6 @@ func TestAttributionModel(t *testing.T) {
 	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*day, user1.PropertiesId, "1234567")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	t.Run("TestLastTouchLinkedEventNoLookbackDays", func(t *testing.T) {
-		query := &M.AttributionQuery{
-			From:                   timestamp,
-			To:                     timestamp + 10*day,
-			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
-			AttributionMethodology: M.ATTRIBUTION_METHOD_LAST_TOUCH,
-			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
-			LinkedEvents:           []M.QueryEventWithProperties{{"event2", nil}},
-		}
-
-		userProperty, err := M.GetQueryUserProperty(query)
-		assert.Nil(t, err)
-		assert.NotEqual(t, "", userProperty)
-
-	})
-
 	t.Run("TestFirstTouchCampaignWithLookbackDays", func(t *testing.T) {
 		query := &M.AttributionQuery{
 			From:                   timestamp + 4*day,
@@ -219,12 +208,8 @@ func TestAttributionModel(t *testing.T) {
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
 			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           2,
+			LookbackDays:           20,
 		}
-
-		userProperty, err := M.GetQueryUserProperty(query)
-		assert.Nil(t, err)
-		assert.NotEqual(t, "", userProperty)
 
 		//Should only have user2 with no 0 linked event count
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
@@ -233,7 +218,7 @@ func TestAttributionModel(t *testing.T) {
 		assert.Equal(t, float64(1), getConversionEventCount(result, "222222"))
 		assert.Equal(t, float64(1), getConversionEventCount(result, "333333"))
 		// no hit for campaigns 1234567 or none
-		assert.Equal(t, float64(0), getConversionEventCount(result, "1234567"))
+		assert.Equal(t, int64(-1), getConversionEventCount(result, "1234567"))
 		assert.Equal(t, float64(0), getConversionEventCount(result, "none"))
 	})
 }
@@ -303,10 +288,6 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 		LookbackDays:           2,
 	}
 
-	userProperty, err := M.GetQueryUserProperty(query)
-	assert.Nil(t, err)
-	assert.NotEqual(t, "", userProperty)
-
 	//Should find withing lookback window
 	_, err = M.ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
@@ -357,10 +338,6 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		LookbackDays:           0,
 	}
 
-	userProperty, err := M.GetQueryUserProperty(query)
-	assert.Nil(t, err)
-	assert.NotEqual(t, "", userProperty)
-
 	//both user should be treated different
 	result, err := M.ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
@@ -383,7 +360,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		assert.Equal(t, http.StatusAccepted, status)
 		user2NewPropertiesId, status := M.UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
 		// Status should be not_modified as user1 and user2 belong to
-		// same customer_user and user_properites merged on first UpdateUserProperties.
+		// same customer_user and user_properties merged on first UpdateUserProperties.
 		assert.Equal(t, http.StatusNotModified, status)
 		/*
 			t+3day -> first time $initial_campaign set with event for user1 and user2
@@ -405,10 +382,8 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
 			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           1,
+			LookbackDays:           4,
 		}
-		//should get 1 unique user on 3 lookbackdays
-		query.LookbackDays = 3
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionEventCount(result, "12345"))
@@ -428,12 +403,16 @@ func TestAttributionMethodologies(t *testing.T) {
 	userSession[user1][camp1] = M.RangeTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
 	userSession[user1][camp2] = M.RangeTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
 	userSession[user1][camp3] = M.RangeTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
-
+	coalUserIdConversionTimestamp := make(map[string]int64)
+	coalUserIdConversionTimestamp[user1] = 150
+	lookbackDays := 1
 	type args struct {
-		method              string
-		conversionEvent     string
-		usersToBeAttributed []M.UserEventInfo
-		userInitialSession  map[string]map[string]M.RangeTimestamp
+		method                        string
+		conversionEvent               string
+		usersToBeAttributed           []M.UserEventInfo
+		userInitialSession            map[string]map[string]M.RangeTimestamp
+		coalUserIdConversionTimestamp map[string]int64
+		lookbackDays                  int
 	}
 	tests := []struct {
 		name                        string
@@ -449,6 +428,7 @@ func TestAttributionMethodologies(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
 			map[string][]string{user1: {camp1, camp2, camp3}},
 			map[string]map[string][]string{},
@@ -460,6 +440,7 @@ func TestAttributionMethodologies(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -471,14 +452,17 @@ func TestAttributionMethodologies(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
-			map[string][]string{user1: {camp2}},
+			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
 			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent, tt.args.usersToBeAttributed, tt.args.userInitialSession)
+			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent,
+				tt.args.usersToBeAttributed, tt.args.userInitialSession,
+				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -514,12 +498,16 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 	userSession[user1][camp1] = M.RangeTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
 	userSession[user1][camp2] = M.RangeTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
 	userSession[user1][camp3] = M.RangeTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
-
+	coalUserIdConversionTimestamp := make(map[string]int64)
+	coalUserIdConversionTimestamp[user1] = 150
+	lookbackDays := 1
 	type args struct {
-		method              string
-		conversionEvent     string
-		usersToBeAttributed []M.UserEventInfo
-		userInitialSession  map[string]map[string]M.RangeTimestamp
+		method                        string
+		conversionEvent               string
+		usersToBeAttributed           []M.UserEventInfo
+		userInitialSession            map[string]map[string]M.RangeTimestamp
+		coalUserIdConversionTimestamp map[string]int64
+		lookbackDays                  int
 	}
 	tests := []struct {
 		name                        string
@@ -534,6 +522,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
 			map[string][]string{user1: {camp0, camp1, camp2, camp3}},
 			map[string]map[string][]string{},
@@ -545,6 +534,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
 			map[string][]string{user1: {camp0}},
 			map[string]map[string][]string{},
@@ -556,8 +546,9 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
-			map[string][]string{user1: {camp2}},
+			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
 			false},
 
@@ -567,6 +558,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -578,14 +570,17 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
-			map[string][]string{user1: {camp2}},
+			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
 			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent, tt.args.usersToBeAttributed, tt.args.userInitialSession)
+			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent,
+				tt.args.usersToBeAttributed, tt.args.userInitialSession,
+				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -621,12 +616,16 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 	userSession[user1][camp2] = M.RangeTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
 	userSession[user1][camp3] = M.RangeTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
 	userSession[user1][camp4] = M.RangeTimestamp{MinTimestamp: 10, MaxTimestamp: 400}
-
+	coalUserIdConversionTimestamp := make(map[string]int64)
+	coalUserIdConversionTimestamp[user1] = 150
+	lookbackDays := 1
 	type args struct {
-		method              string
-		conversionEvent     string
-		usersToBeAttributed []M.UserEventInfo
-		userInitialSession  map[string]map[string]M.RangeTimestamp
+		method                        string
+		conversionEvent               string
+		usersToBeAttributed           []M.UserEventInfo
+		userInitialSession            map[string]map[string]M.RangeTimestamp
+		coalUserIdConversionTimestamp map[string]int64
+		lookbackDays                  int
 	}
 	tests := []struct {
 		name                        string
@@ -641,6 +640,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
 			map[string][]string{user1: {camp1, camp2, camp3, camp4}},
 			map[string]map[string][]string{},
@@ -652,6 +652,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
 			map[string][]string{user1: {camp4}},
 			map[string]map[string][]string{},
@@ -663,8 +664,9 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
-			map[string][]string{user1: {camp4}},
+			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
 			false},
 
@@ -674,6 +676,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -685,14 +688,17 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
+				coalUserIdConversionTimestamp, lookbackDays,
 			},
-			map[string][]string{user1: {camp2}},
+			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
 			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent, tt.args.usersToBeAttributed, tt.args.userInitialSession)
+			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent,
+				tt.args.usersToBeAttributed, tt.args.userInitialSession,
+				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return

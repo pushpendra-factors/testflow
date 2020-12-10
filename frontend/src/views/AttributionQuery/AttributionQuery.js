@@ -107,10 +107,13 @@ class AttributionQuery extends Component {
       resultMeta: null,
 
       conversionEvent: {name: '', properties: []},
+      conversionEventC: {name: '', properties: []},
       linkedEvents: [],
       lookbackDays: DEFAULT_LOOKBACK_DAYS,
       attributionMethodology: NONE_OPT,
+      attributionMethodologyC: "",
       attributionKey: NONE_OPT,
+      attributionKeyF: [],
 
       showDashboardsList: false,
       showAddToDashboardModal: false,
@@ -193,6 +196,11 @@ class AttributionQuery extends Component {
     let period = getQueryPeriod(this.state.duringDateRange[0]);
     query.from = period.from;
     query.to = period.to;
+
+    // additional inputs for support
+    query.ce_c = getEventWithProperties(this.state.conversionEventC);
+    query.attribution_key_f = this.state.attributionKeyF;
+    query.attribution_methodology_c = this.state.attributionMethodologyC;
 
     return query;
   }
