@@ -18,6 +18,11 @@ export const runQuery = (projectId, query_group, dashboard = { refresh: true }) 
   return post(null, url, { query_group });
 }
 
+export const runAttrQuery = (projectId) => {
+  const url = host + "projects/" + projectId + "/attribution/query";
+  return post(null, url, sampleReq);
+}
+
 export function fetchEventProperties(projectId, eventName) {
   const url = host + "projects/" + projectId + "/event_names/" + btoa(eventName) + "/properties";
   return get(null, url);
