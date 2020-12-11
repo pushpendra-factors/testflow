@@ -106,7 +106,7 @@ func TestDeleteQuery(t *testing.T) {
 
 	savedQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
 		ProjectID: project.ID,
-		Type:      M.QueryTypeDashboardQuery,
+		Type:      M.QueryTypeSavedQuery,
 		CreatedBy: agent.UUID,
 		Title:     U.RandomString(5),
 	})
@@ -117,12 +117,12 @@ func TestDeleteQuery(t *testing.T) {
 	// Delete dashboard query should not delete saved type query.
 	M.DeleteDashboardQuery(project.ID, savedQuery.ID)
 	query, errCode := M.GetQueryWithQueryId(project.ID, savedQuery.ID)
-	assert.NotNil(t, query)
+	assert.NotEmpty(t, query)
 
 	// Delete saved query should not delete dashboard type query.
 	M.DeleteSavedQuery(project.ID, dashboardQuery.ID)
 	query, errCode = M.GetQueryWithQueryId(project.ID, dashboardQuery.ID)
-	assert.NotNil(t, query)
+	assert.NotEmpty(t, query)
 
 	// Should delete this time.
 	M.DeleteSavedQuery(project.ID, savedQuery.ID)

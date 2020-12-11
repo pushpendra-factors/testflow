@@ -549,6 +549,74 @@ func TestDeleteDashboardUnit(t *testing.T) {
 	})
 }
 
+func TestDeleteDashboardUnitWithQuery(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	dashboardQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
+		ProjectID: project.ID,
+		Type:      M.QueryTypeDashboardQuery,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, dashboardQuery)
+
+	savedQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
+		ProjectID: project.ID,
+		Type:      M.QueryTypeSavedQuery,
+		CreatedBy: agent.UUID,
+		Title:     U.RandomString(5),
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, savedQuery)
+
+	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID,
+		&M.Dashboard{Name: U.RandomString(5), Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Dashboard unit with QueryTypeDashboardQuery.
+	dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID,
+		&M.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: M.PresentationLine,
+			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{json.RawMessage(`{}`)}},
+		M.DashboardUnitWithQueryID)
+	assert.NotEmpty(t, dashboardUnit)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+
+	// Deleting dashboard unit should delete the query of type QueryTypeDashboardQuery.
+	unitID := dashboardUnit.ID
+	errCode = M.DeleteDashboardUnit(project.ID, agent.UUID, dashboard.ID, dashboardUnit.ID)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	dashboardUnit, errCode = M.GetDashboardUnitByUnitID(project.ID, unitID)
+	assert.Empty(t, dashboardUnit)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	query, errCode := M.GetQueryWithQueryId(project.ID, dashboardQuery.ID)
+	assert.Empty(t, query)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	// Dashboard unit with QueryTypeSavedQuery.
+	dashboardUnit, errCode, errMsg = M.CreateDashboardUnit(project.ID, agent.UUID,
+		&M.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: M.PresentationLine,
+			QueryId: savedQuery.ID, Query: postgres.Jsonb{json.RawMessage(`{}`)}},
+		M.DashboardUnitWithQueryID)
+	assert.NotEmpty(t, dashboardUnit)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+
+	// Deleting dashboard unit should not delete the query of type QueryTypeSavedQuery.
+	unitID = dashboardUnit.ID
+	errCode = M.DeleteDashboardUnit(project.ID, agent.UUID, dashboard.ID, dashboardUnit.ID)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	dashboardUnit, errCode = M.GetDashboardUnitByUnitID(project.ID, unitID)
+	assert.Empty(t, dashboardUnit)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	query, errCode = M.GetQueryWithQueryId(project.ID, savedQuery.ID)
+	assert.NotEmpty(t, query)
+	assert.Equal(t, http.StatusFound, errCode)
+}
+
 func TestUpdateDashboardUnit(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)

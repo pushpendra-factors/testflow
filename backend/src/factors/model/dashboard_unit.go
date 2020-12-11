@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -320,6 +321,20 @@ func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, 
 	return cacheRedis.NewKey(projectID, prefix, suffix)
 }
 
+// GetDashboardUnitByUnitID To get a dashboard unit by project id and unit id.
+func GetDashboardUnitByUnitID(projectID, unitID uint64) (*DashboardUnit, int) {
+	db := C.GetServices().Db
+	var dashboardUnit DashboardUnit
+	if err := db.Model(&DashboardUnit{}).Where("project_id = ? AND id=?",
+		projectID, unitID).Find(&dashboardUnit).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+	return &dashboardUnit, http.StatusFound
+}
+
 func GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID uint64, types []string) ([]DashboardUnit, int) {
 	db := C.GetServices().Db
 
@@ -386,9 +401,13 @@ func DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardI
 }
 
 func deleteDashboardUnit(projectID uint64, dashboardID uint64, ID uint64) int {
-
 	db := C.GetServices().Db
-	var dashboardUnit DashboardUnit
+	// Required for getting query_id.
+	dashboardUnit, errCode := GetDashboardUnitByUnitID(projectID, ID)
+	if errCode != http.StatusFound {
+		return http.StatusInternalServerError
+	}
+
 	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?",
 		ID, projectID, dashboardID).Delete(&dashboardUnit).Error
 	if err != nil {
