@@ -14,7 +14,7 @@ import {
 function App({ isAgentLoggedIn }) {
   return (
     <div className="App">
-      <Router> 
+      <Router>
         <Switch>
           <Route exact path="/signup" name="login" component={SignUp} />
           <Route exact path="/activate" name="Activate" component={Activate} />

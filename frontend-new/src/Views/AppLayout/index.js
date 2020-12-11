@@ -55,16 +55,14 @@ function AppLayout({ fetchProjects }) {
         : <Layout>
           <Sidebar />
           <Layout className="fa-content-container">
-            <Content className="bg-white min-h-screen">
-              <Router>
+            <Content className="bg-white min-h-screen"> 
                 <Switch>
-                  <Route path="/components/" name="componentsLib" component={componentsLib} />
-                  <Route path="/settings/" component={ProjectSettings} />
+                  <Route exact path="/" name="Home" component={Dashboard} />
+                  <Route path="/components" name="componentsLib" component={componentsLib} />
+                  <Route path="/settings" component={ProjectSettings} />
                   <Route path="/core-analytics" name="Home" component={CoreQuery} /> 
                   <Route path="/factors" name="Factors" component={Factors} />
-                  <Route path="/" name="Home" component={Dashboard} />
-                </Switch>
-              </Router>
+                </Switch> 
             </Content>
           </Layout>
         </Layout>
