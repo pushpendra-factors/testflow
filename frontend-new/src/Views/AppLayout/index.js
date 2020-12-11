@@ -9,7 +9,7 @@ import componentsLib from '../../Views/componentsLib';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import {
-  HashRouter, Route, Switch, useHistory
+  BrowserRouter as Router, Route, Switch, useHistory
 } from 'react-router-dom';
 import { fetchProjects } from '../../reducers/agentActions';
 import { fetchQueries } from '../../reducers/coreQuery/services';
@@ -56,7 +56,7 @@ function AppLayout({ fetchProjects }) {
           <Sidebar />
           <Layout className="fa-content-container">
             <Content className="bg-white min-h-screen">
-              <HashRouter>
+              <Router>
                 <Switch>
                   <Route path="/components/" name="componentsLib" component={componentsLib} />
                   <Route path="/settings/" component={ProjectSettings} />
@@ -64,7 +64,7 @@ function AppLayout({ fetchProjects }) {
                   <Route path="/factors" name="Factors" component={Factors} />
                   <Route path="/" name="Home" component={Dashboard} />
                 </Switch>
-              </HashRouter>
+              </Router>
             </Content>
           </Layout>
         </Layout>
