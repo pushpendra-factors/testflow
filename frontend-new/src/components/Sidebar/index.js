@@ -39,9 +39,11 @@ function Sidebar(props) {
               return <div key={index}
               className={`flex justify-start items-center project-item ${props.active_project.id === project.id ? 'active' : null}`}
               onClick={() => {
-                setShowPopOver(false);
-                setchangeProjectModal(true);
-                setselectedProject(project);
+                if(props.active_project.id!==project.id){
+                  setShowPopOver(false);
+                  setchangeProjectModal(true);
+                  setselectedProject(project); 
+                }
               }}>
                 <Avatar size={28}/><Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 ml-2'}>{project.name}</Text>
               </div>;
