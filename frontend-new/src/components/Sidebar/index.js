@@ -129,7 +129,7 @@ function Sidebar(props) {
             <Row justify="center" align="middle" className=" w-full py-2">
               <NavLink activeClassName="active" to="/factors"><SVG name={'key'} size={24} color="white"/></NavLink>
             </Row>
-            <Row justify="center" align="middle" className=" w-full py-2">
+            {/* <Row justify="center" align="middle" className=" w-full py-2">
               <NavLink activeClassName="active" disabled exact to="/bug"><SVG name={'bug'} size={24} color="white"/></NavLink>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
@@ -137,7 +137,7 @@ function Sidebar(props) {
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <NavLink activeClassName="active" exact to="/components"><SVG name={'notify'} size={24} color="white"/></NavLink>
-            </Row>
+            </Row> */}
             <Row justify="center" align="middle" className=" w-full py-2">
               <NavLink activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
             </Row>
