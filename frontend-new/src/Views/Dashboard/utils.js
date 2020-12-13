@@ -1,53 +1,73 @@
-import moment from 'moment';
+import moment from "moment";
 import { runQuery, getFunnelData } from "../../reducers/coreQuery/services";
 
-export const getDataFromServer = (query, unitId, dashboardId, durationObj, refresh, activeProjectId) => {
-    if (query.query.query_group) {
-        let queryGroup = query.query.query_group;
-        if (durationObj.from && durationObj.to) {
-            queryGroup = queryGroup.map(elem => {
-                return {
-                    ...elem,
-                    fr: moment(durationObj.from).startOf('day').utc().unix(),
-                    to: moment(durationObj.to).endOf('day').utc().unix(),
-                    gbt: elem.gbt ? durationObj.frequency : ''
-                };
-            });
-        } else {
-            console.log(moment().subtract(1, 'day').endOf('day').utc().unix());
-            queryGroup = queryGroup.map(elem => {
-                return {
-                    ...elem,
-                    fr: moment().startOf('week').utc().unix(),
-                    to: moment().subtract(1, 'day').endOf('day').utc().unix(),
-                    gbt: elem.gbt ? durationObj.frequency : ''
-                };
-            });
-        }
-        if (refresh) {
-            return runQuery(activeProjectId, queryGroup);
-        } else {
-            return runQuery(activeProjectId, queryGroup, { refresh: false, unit_id: unitId, id: dashboardId });
-        }
+export const getDataFromServer = (
+  query,
+  unitId,
+  dashboardId,
+  durationObj,
+  refresh,
+  activeProjectId
+) => {
+  if (query.query.query_group) {
+    let queryGroup = query.query.query_group;
+    if (durationObj.from && durationObj.to) {
+      queryGroup = queryGroup.map((elem) => {
+        return {
+          ...elem,
+          fr: moment(durationObj.from).startOf("day").utc().unix(),
+          to: moment(durationObj.to).endOf("day").utc().unix(),
+          gbt: elem.gbt ? durationObj.frequency : "",
+        };
+      });
     } else {
-        let funnelQuery = query.query;
-        if (durationObj.from && durationObj.to) {
-            funnelQuery = {
-                ...funnelQuery,
-                fr: moment(durationObj.from).startOf('day').utc().unix(),
-                to: moment(durationObj.to).endOf('day').utc().unix()
-            };
-        } else {
-            funnelQuery = {
-                ...funnelQuery,
-                fr: moment().startOf('week').utc().unix(),
-                to: moment().subtract(1, 'day').endOf('day').utc().unix(),
-            };
-        }
-        if (refresh) {
-            return getFunnelData(activeProjectId, funnelQuery);
-        } else {
-            return getFunnelData(activeProjectId, funnelQuery, { refresh: false, unit_id: unitId, id: dashboardId });
-        }
+      queryGroup = queryGroup.map((elem) => {
+        return {
+          ...elem,
+          fr: moment().startOf("week").utc().unix(),
+          to:
+            moment().format("dddd") !== "Sunday"
+              ? moment().subtract(1, "day").endOf("day").utc().unix()
+              : moment().utc().unix(),
+          gbt: elem.gbt ? durationObj.frequency : "",
+        };
+      });
     }
-}
+    if (refresh) {
+      return runQuery(activeProjectId, queryGroup);
+    } else {
+      return runQuery(activeProjectId, queryGroup, {
+        refresh: false,
+        unit_id: unitId,
+        id: dashboardId,
+      });
+    }
+  } else {
+    let funnelQuery = query.query;
+    if (durationObj.from && durationObj.to) {
+      funnelQuery = {
+        ...funnelQuery,
+        fr: moment(durationObj.from).startOf("day").utc().unix(),
+        to: moment(durationObj.to).endOf("day").utc().unix(),
+      };
+    } else {
+      funnelQuery = {
+        ...funnelQuery,
+        fr: moment().startOf("week").utc().unix(),
+        to:
+          moment().format("dddd") !== "Sunday"
+            ? moment().subtract(1, "day").endOf("day").utc().unix()
+            : moment().utc().unix(),
+      };
+    }
+    if (refresh) {
+      return getFunnelData(activeProjectId, funnelQuery);
+    } else {
+      return getFunnelData(activeProjectId, funnelQuery, {
+        refresh: false,
+        unit_id: unitId,
+        id: dashboardId,
+      });
+    }
+  }
+};

@@ -86,7 +86,10 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
     period.to = moment(dateRange.to).endOf("day").utc().unix();
   } else {
     period.from = moment().startOf("week").utc().unix();
-    period.to = moment().subtract(1, "day").endOf("day").utc().unix();
+    period.to =
+      moment().format("dddd") !== "Sunday"
+        ? moment().subtract(1, "day").endOf("day").utc().unix()
+        : moment().utc().unix();
   }
 
   query.fr = period.from;
@@ -136,7 +139,10 @@ export const getQuery = (
     period.to = moment(dateRange.to).endOf("day").utc().unix();
   } else {
     period.from = moment().startOf("week").utc().unix();
-    period.to = moment().subtract(1, "day").endOf("day").utc().unix();
+    period.to =
+      moment().format("dddd") !== "Sunday"
+        ? moment().subtract(1, "day").endOf("day").utc().unix()
+        : moment().utc().unix();
   }
 
   query.fr = period.from;

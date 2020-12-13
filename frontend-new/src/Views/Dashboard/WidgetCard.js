@@ -3,6 +3,7 @@ import { Button, Dropdown, Menu } from "antd";
 import { Text, SVG } from "../../components/factorsComponents";
 import { RightOutlined, LeftOutlined, MoreOutlined } from "@ant-design/icons";
 import CardContent from "./CardContent";
+import moment from 'moment';
 import { useSelector } from "react-redux";
 import { initialState, formatApiData } from "../CoreQuery/utils";
 import { cardClassNames } from "../../reducers/dashboard/utils";
@@ -29,6 +30,10 @@ function WidgetCard({
           ...initialState,
           loading: true,
         });
+
+        if (moment().format("dddd") === "Sunday") {
+          refresh = true;
+        }
 
         const res = await getDataFromServer(
           unit.query,
