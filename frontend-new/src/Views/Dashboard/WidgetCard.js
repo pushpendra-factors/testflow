@@ -31,7 +31,7 @@ function WidgetCard({
           loading: true,
         });
 
-        if (moment().format("dddd") === "Sunday") {
+        if (moment().format("dddd") === "Sunday" || moment().format("dddd") === "Monday") {
           refresh = true;
         }
 
