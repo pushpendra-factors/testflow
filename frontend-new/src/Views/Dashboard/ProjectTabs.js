@@ -24,11 +24,14 @@ function ProjectTabs({
   const dispatch = useDispatch();
 
   const handleTabChange = useCallback((value) => {
+    if(parseInt(value) === activeDashboard.id) {
+      return false;
+    }
     dispatch({
       type: ACTIVE_DASHBOARD_CHANGE,
       payload: dashboards.data.find(d => d.id === parseInt(value))
     });
-  }, [dashboards, dispatch]);
+  }, [dashboards, dispatch, activeDashboard.id]);
 
   const fetchUnits = useCallback(() => {
     if (active_project.id && activeDashboard.id) {
