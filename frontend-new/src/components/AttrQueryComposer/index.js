@@ -2,12 +2,13 @@ import React, {useState, useEffect} from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import styles from './index.module.scss';
-import { SVG, Text } from 'factorsComponents';
+import { SVG, Text } from '../../components/factorsComponents';
 import ConversionGoalBlock from './ConversionGoalBlock';
 
 import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
+import { Button } from 'antd';
 
-const AttrQueryComposer = ({activeProject, fetchEventNames, userProperties}) => {
+const AttrQueryComposer = ({activeProject, fetchEventNames, userProperties, runAttributionQuery}) => {
 
     const [eventGoal, setEventGoal] = useState({
         label: 'Order Confirmed'
@@ -69,6 +70,7 @@ const AttrQueryComposer = ({activeProject, fetchEventNames, userProperties}) => 
                 <div className={styles.composer__section__content}>
                     <ConversionGoalBlock></ConversionGoalBlock>
                 </div>
+                <Button onClick={runAttributionQuery.bind(this, false)}>Run Query</Button>
             </div>
         </div>
     )

@@ -63,8 +63,8 @@ function ActiveUnitContent({
         durationObj={durationObj}
         handleDurationChange={handleDurationChange}
         resultState={[resultState]}
-		index={0}
-		arrayMapper={arrayMapper}
+        index={0}
+        arrayMapper={arrayMapper}
       />
     );
   }
