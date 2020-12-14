@@ -119,6 +119,7 @@ type Services struct {
 
 // Healthchecks.io ping IDs for monitoring. Can be used anywhere in code to report error on job.
 const (
+	// Cron ping IDs.
 	HealthcheckAddSessionPingID             = "8da15fff-15f0-4410-9efc-524f624fd388"
 	HealthcheckArchiveEventsPingID          = "b2d0f1df-901e-4113-bb45-eed95539790b"
 	HealthcheckBigqueryUploadPingID         = "03e0fba3-d660-4679-8595-29b6cd04e87c"
@@ -128,6 +129,11 @@ const (
 	HealthcheckMonitoringJobPingID          = "18db44be-c193-4f11-84e5-5ff144e272e9"
 	HealthcheckSalesforceEnrichPingID       = "e56175aa-3407-4595-bb94-d8325952b224"
 	HealthcheckYourstoryAddPropertiesPingID = "acf7faab-c56f-415e-aa10-ca2aa9246172"
+
+	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
+	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
+	HealthcheckDatabaseHealthPingID = "8464d06b-418b-42d2-9201-b01dc744d283"
+	HealthcheckSDKHealthPingID      = "bb2c4757-9fa4-48eb-bd08-42a16996a61b"
 )
 
 func (service *Services) GetPatternServerAddresses() []string {
