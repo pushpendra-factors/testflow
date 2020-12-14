@@ -31,15 +31,6 @@ function WidgetCard({
           loading: true,
         });
 
-        if (
-          (moment().format("dddd") === "Sunday" ||
-            moment().format("dddd") === "Monday") &&
-          !durationObj.from &&
-          !durationObj.to
-        ) {
-          refresh = true;
-        }
-
         if(durationObj.frequency === 'hour') {
           refresh = true;
         }
