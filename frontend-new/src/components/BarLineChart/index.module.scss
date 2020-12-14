@@ -1,0 +1,63 @@
+$fontFamily: "Work Sans", sans-serif;
+
+.bar {
+  fill: #4d7db4;
+}
+.line {
+  fill: none;
+  stroke: red;
+  stroke-width: 3;
+}
+.dot {
+  fill: red;
+  stroke: red;
+}
+.y1,
+.y2 {
+  path {
+    display: none;
+  }
+  :global(.tick line) {
+    display: none;
+  }
+  :global(.tick text) {
+    font-size: 12px;
+    line-height: 18px;
+    font-family: $fontFamily;
+  }
+}
+
+.y1 {
+  :global(.tick text) {
+    fill: #3e516c;
+  }
+}
+
+.y2 {
+  :global(.tick text) {
+    fill: #d4787d;
+  }
+}
+
+.xAxis {
+  path {
+    stroke: #b7bec8;
+    stroke-width: 1px;
+  }
+  :global(.tick line) {
+    display: none;
+  }
+  :global(.tick text) {
+    font-size: 14px;
+    line-height: 20px;
+    font-family: $fontFamily;
+    fill: #3e516c;
+  }
+}
+
+.yAxisLables {
+  font-size: 14px;
+  line-height: 20px;
+  font-family: $fontFamily;
+  fill: #8692A3;
+}

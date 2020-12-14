@@ -178,28 +178,17 @@ func existsDashboardUnitForQueryID(projectID uint64, queryID uint64) bool {
 	return true
 }
 
+// DeleteQuery To delete query of any type.
 func DeleteQuery(projectID uint64, queryID uint64) (int, string) {
-	db := C.GetServices().Db
-	if projectID == 0 {
-		return http.StatusBadRequest, "Invalid project ID"
-	}
-	if queryID == 0 {
-		return http.StatusBadRequest, "Invalid query ID"
-	}
-	if existsDashboardUnitForQueryID(projectID, queryID) {
-		return http.StatusBadRequest, "Query in use: One or more dashboard widgets exists for this query"
-	}
-	err := db.Model(&Queries{}).Where("id= ? AND project_id=?", queryID, projectID).Update("is_deleted", true).Error
-	if err != nil {
-		return http.StatusInternalServerError, "Failed to delete saved query"
-	}
-	return http.StatusAccepted, ""
+	return deleteQuery(projectID, queryID, 0)
 }
 
+// DeleteSavedQuery Deletes query of type QueryTypeSavedQuery.
 func DeleteSavedQuery(projectID uint64, queryID uint64) (int, string) {
 	return deleteQuery(projectID, queryID, QueryTypeSavedQuery)
 }
 
+// DeleteDashboardQuery Deletes query of type QueryTypeDashboardQuery.
 func DeleteDashboardQuery(projectID uint64, queryID uint64) (int, string) {
 	return deleteQuery(projectID, queryID, QueryTypeDashboardQuery)
 }
@@ -212,8 +201,19 @@ func deleteQuery(projectID uint64, queryID uint64, queryType int) (int, string) 
 	if queryID == 0 {
 		return http.StatusBadRequest, "Invalid query ID"
 	}
-	err := db.Model(&Queries{}).Where("id= ? AND project_id=? AND type=?", queryID, projectID, queryType).
-		Update(map[string]interface{}{"is_deleted": true}).Error
+	if existsDashboardUnitForQueryID(projectID, queryID) {
+		return http.StatusNotAcceptable, "Query in use: One or more dashboard widgets exists for this query"
+	}
+
+	var err error
+	if queryType == 0 {
+		// Delete any query irrespective of type.
+		err = db.Model(&Queries{}).Where("id= ? AND project_id=?", queryID, projectID).
+			Update(map[string]interface{}{"is_deleted": true}).Error
+	} else {
+		err = db.Model(&Queries{}).Where("id= ? AND project_id=? AND type=?", queryID, projectID, queryType).
+			Update(map[string]interface{}{"is_deleted": true}).Error
+	}
 	if err != nil {
 		return http.StatusInternalServerError, "Failed to delete saved query"
 	}

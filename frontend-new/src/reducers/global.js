@@ -5,7 +5,6 @@ import {
   SET_ACTIVE_PROJECT,
   CREATE_PROJECT_FULFILLED,
   FETCH_PROJECTS_REJECTED,
-  SHOW_ANALYTICS_RESULT,
 } from "./types";
 import { get, post, put } from "../utils/request";
 
@@ -19,7 +18,6 @@ const defaultState = {
   active_project: {},
   fetchingProjects: null,
   projectsError: null,
-  show_analytics_result: false,
   currentProjectSettings: {},
 };
 
@@ -83,12 +81,6 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         projectSettingsError: action.payload.err,
-      };
-    }
-    case SHOW_ANALYTICS_RESULT: {
-      return {
-        ...state,
-        show_analytics_result: action.payload,
       };
     }
     default:

@@ -92,7 +92,10 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
           breakdownType,
           appliedDateRange
         );
-        updateRequestQuery(query);
+        if (activeTab !== "2") {
+          updateRequestQuery(query);
+        }
+
         const res = await runQueryService(activeProjectId, query);
         if (res.status === 200 && !hasApiFailed(res)) {
           if (activeTab !== "2") {
@@ -411,7 +414,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
           ...initialState,
           data: SampleAttributionResponse,
         });
-      }, 2000);
+      }, 1000);
     },
     [dispatch]
   );
@@ -426,6 +429,12 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       setRowClicked(false);
     }
   }, [rowClicked, runFunnelQuery, runQuery]);
+
+  useEffect(() => {
+    return () => {
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
+    };
+  }, [dispatch]);
 
   const queryChange = (newEvent, index, changeType = "add") => {
     const queryupdated = [...queries];

@@ -109,20 +109,16 @@ function SaveQuery({
           to: moment().utc().unix(),
         };
       } else if(queryType === QUERY_TYPE_EVENT) {
-        if (activeKey === "0" || activeKey === "1") {
-          query = {
-            query_group: requestQuery.map((q) => {
-              return {
-                ...q,
-                fr: moment().startOf("week").utc().unix(),
-                to: moment().utc().unix(),
-                gbt: q.gbt ? "date" : "",
-              };
-            }),
-          };
-        } else {
-          return false;
-        }
+        query = {
+          query_group: requestQuery.map((q) => {
+            return {
+              ...q,
+              fr: moment().startOf("week").utc().unix(),
+              to: moment().utc().unix(),
+              gbt: q.gbt ? "date" : "",
+            };
+          }),
+        };
       }
       const type = addToDashboard ? 1 : 2;
       const res = await saveQuery(active_project.id, title, query, type);
