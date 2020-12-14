@@ -235,7 +235,7 @@ function QueryComposer({
     if (queryType === QUERY_TYPE_FUNNEL && queries.length < 1) { return null; }
     if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) { return null; } else {
       return (
-        <div className={styles.composer_footer}>
+        <div className={styles.composer_footer}> 
           <Popover
             className="fa-event-popover"
             trigger="click"

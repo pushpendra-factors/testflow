@@ -6,12 +6,14 @@ import Dashboard from "../Dashboard";
 import Factors from '../Factors';
 import ProjectSettings from '../Settings/ProjectSettings';
 import componentsLib from '../../Views/componentsLib';
-import { connect, useSelector, useDispatch } from "react-redux";
-import { bindActionCreators } from "redux";
-import { HashRouter, Route, Switch, useHistory } from "react-router-dom";
-import { fetchProjects } from "../../reducers/agentActions";
-import { fetchQueries } from "../../reducers/coreQuery/services";
-import { fetchDashboards } from "../../reducers/dashboard/services";
+import { connect, useSelector, useDispatch } from 'react-redux';
+import { bindActionCreators } from 'redux';
+import {
+  BrowserRouter as Router, Route, Switch, useHistory
+} from 'react-router-dom';
+import { fetchProjects } from '../../reducers/agentActions';
+import { fetchQueries } from '../../reducers/coreQuery/services';
+import { fetchDashboards } from '../../reducers/dashboard/services';
 
 function AppLayout({ fetchProjects }) {
   const [dataLoading, setDataLoading] = useState(true);
@@ -57,26 +59,18 @@ function AppLayout({ fetchProjects }) {
 
   return (
     <>
-      {dataLoading ? (
-        <Spin size={"large"} className={"fa-page-loader"} />
-      ) : (
-        <Layout>
-          {!show_analytics_result ? <Sidebar /> : null}
+      {dataLoading ? <Spin size={'large'} className={'fa-page-loader'} />
+        : (<Layout>
+           {!show_analytics_result ? <Sidebar /> : null}
           <Layout className={contentClassName}>
-            <Content className="bg-white min-h-screen">
-              <HashRouter>
+            <Content className="bg-white min-h-screen"> 
                 <Switch>
-                  <Route path="/components/" name="componentsLib" component={componentsLib} />
-                  <Route path="/settings/" component={ProjectSettings} />
-                  <Route
-                    path="/core-analytics"
-                    name="Home"
-                    component={CoreQuery}
-                  />
+                  <Route exact path="/" name="Home" component={Dashboard} />
+                  <Route path="/components" name="componentsLib" component={componentsLib} />
+                  <Route path="/settings" component={ProjectSettings} />
+                  <Route path="/core-analytics" name="Home" component={CoreQuery} /> 
                   <Route path="/factors" name="Factors" component={Factors} />
-                  <Route path="/" name="Home" component={Dashboard} />
-                </Switch>
-              </HashRouter>
+                </Switch> 
             </Content>
           </Layout>
         </Layout>

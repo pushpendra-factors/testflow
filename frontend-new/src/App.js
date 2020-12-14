@@ -8,13 +8,13 @@ import Activate from './Views/Pages/Activate';
 import FactorsInsights from './Views/Factors/FactorsInsights';
 import { connect } from 'react-redux';
 import {
-  HashRouter, Route, Switch, Redirect
+  BrowserRouter as Router, Route, Switch, Redirect
 } from 'react-router-dom';
 
 function App({ isAgentLoggedIn }) {
   return (
     <div className="App">
-      <HashRouter>
+      <Router>
         <Switch>
           <Route exact path="/signup" name="login" component={SignUp} />
           <Route exact path="/activate" name="Activate" component={Activate} />
@@ -24,7 +24,7 @@ function App({ isAgentLoggedIn }) {
           {isAgentLoggedIn ? <Route exact path="/factors/insights" name="login" component={FactorsInsights} /> : <Redirect to="/login" />}
           {isAgentLoggedIn ? <Route path="/" name="Home" component={AppLayout} /> : <Redirect to="/login" /> }
         </Switch>
-      </HashRouter>
+      </Router>
     </div>
   );
 }

@@ -11,25 +11,12 @@ import { SVG, Text } from "../../components/factorsComponents";
 import EventsAnalytics from "./EventsAnalytics";
 import { deleteGroupByForEvent } from "../../reducers/coreQuery/middleware";
 import {
-  runQuery as runQueryService,
-  getFunnelData,
+  initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, formatApiData, getQuery, initialState, getFunnelQuery, DefaultDateRangeFormat
+} from './utils';
+import {   runQuery as runQueryService,
+getFunnelData,
 } from "../../reducers/coreQuery/services";
-import {
-  initialResultState,
-  calculateFrequencyData,
-  calculateActiveUsersData,
-  hasApiFailed,
-  formatApiData,
-  getQuery,
-  initialState,
-  getFunnelQuery,
-  DefaultDateRangeFormat,
-} from "./utils";
-import {
-  QUERY_TYPE_EVENT,
-  QUERY_TYPE_FUNNEL,
-  QUERY_TYPE_ATTRIBUTION,
-} from "../../utils/constants";
+import {QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT, QUERY_TYPE_CAMPAIGN, QUERY_TYPE_ATTRIBUTION} from 'Utils/constants';
 import { SampleAttributionResponse } from "../../utils/SampleResponse";
 import AttributionsResult from "./AttributionsResult";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
@@ -466,40 +453,38 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     setQueryOptions(options);
   };
 
+const IconAndTextSwitchQueryType = (queryType) =>{
+    switch (queryType){
+      case QUERY_TYPE_EVENT: return{
+        text:'Analyse Events',
+        icon: 'funnels_cq'
+      };
+      case QUERY_TYPE_FUNNEL: return {
+        text:'Find event funnel for',
+        icon: 'events_dashboard_cq'
+      };
+      case QUERY_TYPE_CAMPAIGN: return {
+        text:'Campaign Analytics',
+        icon: 'funnels_cq'
+      };
+      case QUERY_TYPE_ATTRIBUTION: return {
+        text:'Attributions',
+        icon: 'funnels_cq'
+      };
+      default: return {
+        text:'Templates',
+        icon: 'funnels_cq'
+      };
+    }
+  }
+
   const title = () => {
-    let queryTypeTitle;
-
-    if (queryType === QUERY_TYPE_FUNNEL) {
-      queryTypeTitle = "Find event funnel for";
-    }
-
-    if (queryType === QUERY_TYPE_EVENT) {
-      queryTypeTitle = "Analyse Events";
-    }
-
-    if (queryType === QUERY_TYPE_ATTRIBUTION) {
-      queryTypeTitle = "Multi Touch Attributions";
-    }
-
+    const IconAndText = IconAndTextSwitchQueryType(queryType);
     return (
-      <div className={"flex justify-between items-center"}>
-        <div className={"flex items-center"}>
-          <SVG
-            name={
-              queryType === QUERY_TYPE_FUNNEL
-                ? "funnels_cq"
-                : "events_dashboard_cq"
-            }
-            size="24px"
-          ></SVG>
-          <Text
-            type={"title"}
-            level={4}
-            weight={"bold"}
-            extraClass={"ml-2 m-0"}
-          >
-            {queryTypeTitle}
-          </Text>
+      <div className={'flex justify-between items-center'}>
+        <div className={'flex items-center'}>
+          <SVG name={IconAndText.icon} size="24px"></SVG>
+          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{IconAndText.text}</Text>
         </div>
         <div className={"flex justify-end items-center"}>
           <Button size={"large"} type="text">

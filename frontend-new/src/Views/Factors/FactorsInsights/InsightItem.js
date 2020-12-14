@@ -21,6 +21,7 @@ const InsightItem = ({
         } else {
           insightKey = dataItem.factors_insights_key;
         } 
+        const factors_insights_text = `of which users who perform <a>${insightKey}</a> show  ${dataItem.factors_insights_multiplier}x goal completion`
  
         let insightLevel1Percentage = 100; 
         let insightLevel1Journey = 100; 
@@ -34,6 +35,7 @@ const InsightItem = ({
         }
 
 
+
         return (
                   <div key={index} className={'relative border-bottom--thin-2 fa-insight-item--container'}>
                       <Row gutter={[0, 0]} justify={'center'}>
@@ -44,7 +46,7 @@ const InsightItem = ({
                                   }
                               }}>
                                  {displayType && <Text type={'paragraph'} mini color={'grey'} weight={'bold'} extraClass={'uppercase fa-insights-box--type'} >{category}</Text>}
-                                  <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0 pr-2'} ><span dangerouslySetInnerHTML={{__html: dataItem.factors_insights_text}}/></Text>
+                                  <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0 pr-2'} ><span dangerouslySetInnerHTML={{__html:factors_insights_text}}/> </Text>
                                     {!_.isEmpty(dataItem.factors_higher_completion_text) && <Text type={'title'} level={6} color={'grey'} extraClass={'mt-4'} >{dataItem.factors_higher_completion_text}</Text>}
                                     {!_.isEmpty(dataItem.factors_lower_completion_text) && <Text type={'title'} level={6} color={'grey'} extraClass={'mt-2'} >{dataItem.factors_lower_completion_text}</Text>}
 

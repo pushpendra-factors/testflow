@@ -251,13 +251,19 @@ function CoreQuery({
           {coreQueryoptions.map((item, index) => {
             return (
               <Col span={4} key={index}>
-                <div
-                  onClick={() => setQueryTypeTab(item)}
-                  className="fai--custom-card flex justify-center items-center flex-col "
-                >
-                  <div className={"fai--custom-card--icon"}>
-                    <SVG name={item.icon} size={48} />{" "}
-                  </div>
+                <div onClick={() => {
+                  setDrawerVisible(true);
+                  switch(item.title){
+                    case 'Funnels' : setQueryType('funnel'); break;
+                    case 'Events' : setQueryType('event'); break;
+                    case 'Campaigns' : setQueryType('campaigns'); break;
+                    case 'Attributions' : setQueryType('attributions'); break;
+                    case 'Templates' : setQueryType('templates'); break;
+                    default: setQueryType('funnel'); break;
+                  }
+                  // item.title === 'Funnels' ? setQueryType('funnel') : setQueryType('event');
+                }} className="fai--custom-card flex justify-center items-center flex-col ">
+                  <div className={'fai--custom-card--icon'}><SVG name={item.icon} size={48} /> </div>
                   <div className="flex justify-start items-center flex-col before-hover">
                     <Text
                       type={"title"}

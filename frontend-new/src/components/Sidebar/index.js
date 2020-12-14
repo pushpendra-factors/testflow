@@ -39,9 +39,11 @@ function Sidebar(props) {
               return <div key={index}
               className={`flex justify-start items-center project-item ${props.active_project.id === project.id ? 'active' : null}`}
               onClick={() => {
-                setShowPopOver(false);
-                setchangeProjectModal(true);
-                setselectedProject(project);
+                if(props.active_project.id!==project.id){
+                  setShowPopOver(false);
+                  setchangeProjectModal(true);
+                  setselectedProject(project); 
+                }
               }}>
                 <Avatar size={28}/><Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 ml-2'}>{project.name}</Text>
               </div>;
@@ -127,7 +129,7 @@ function Sidebar(props) {
             <Row justify="center" align="middle" className=" w-full py-2">
               <NavLink activeClassName="active" to="/factors"><SVG name={'key'} size={24} color="white"/></NavLink>
             </Row>
-            <Row justify="center" align="middle" className=" w-full py-2">
+            {/* <Row justify="center" align="middle" className=" w-full py-2">
               <NavLink activeClassName="active" disabled exact to="/bug"><SVG name={'bug'} size={24} color="white"/></NavLink>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
@@ -135,7 +137,7 @@ function Sidebar(props) {
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <NavLink activeClassName="active" exact to="/components"><SVG name={'notify'} size={24} color="white"/></NavLink>
-            </Row>
+            </Row> */}
             <Row justify="center" align="middle" className=" w-full py-2">
               <NavLink activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
             </Row>
