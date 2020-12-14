@@ -14,10 +14,10 @@ const InsightHighlightItem = ({ data }) => {
                     <Col span={16}>
                         <div className={'relative border-left--thin-2 m-0 pl-16 py-2'}>
                             <div className={'w-full'}>
-                            <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{data.goal?.st_en}</Text>
+                            <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{_.isEmpty(data.goal?.st_en) ? 'All Visitors' : data.goal?.st_en }</Text>
                             <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
 
-                            <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'} >{data.overall_percentage_text}</Text>
+                            <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'} >{`${data.overall_percentage}% of all users have completed this goal`}</Text>
 
                             <Progress percent={data.overall_percentage} strokeColor={'#F9C06E'} className={'fa-progress'} showInfo={false} />
                             <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{data.goal?.en_en}</Text>

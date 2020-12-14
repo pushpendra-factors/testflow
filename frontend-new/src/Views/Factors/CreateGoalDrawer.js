@@ -5,10 +5,10 @@ import {
 import { SVG, Text } from 'factorsComponents'; 
 import GroupSelect from '../../components/QueryComposer/GroupSelect';
 import { fetchEventNames } from 'Reducers/coreQuery/middleware';
-import { fetchGoalInsights } from 'Reducers/factors';
+import { fetchGoalInsights, fetchFactorsModels } from 'Reducers/factors';
 import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom';
-
+import moment from 'moment';
  
 
 const title = (props) => {
@@ -38,6 +38,9 @@ const CreateGoalDrawer = (props) => {
   const [showDropDown2, setShowDropDown2] = useState(false);
   const [event2, setEvent2] = useState(null);
 
+  const [showDateTime, setShowDateTime] = useState(false);
+  const [dateTime, setDateTime] = useState(null);
+
   const onChangeGroupSelect1 = (grp, value) => {
     setShowDropDown(false);
     setEvent1(value[0]); 
@@ -46,12 +49,23 @@ const CreateGoalDrawer = (props) => {
     setShowDropDown2(false);
     setEvent2(value[0]); 
   }
+  const onChangeDateTime = (grp, value) => {
+    setShowDateTime(false);
+    console.log("onChangeDateTime", value);
+    setDateTime(value[0]); 
+  }
 
+  const readableTimstamp = (unixTime) => {
+    return moment.unix(unixTime).utc().format('MMM DD, YYYY');
+  }
+
+  const factorsModels = props.factors_models ? props.factors_models.map((item)=>{return [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`]}) : null;
 
   useEffect(()=>{
-    if(!props.GlobalEventNames){
+    if(!props.GlobalEventNames || !factorsModels){
       const getData = async () => {
         await props.fetchEventNames(props.activeProject.id);
+        await props.fetchFactorsModels(props.activeProject.id);
       };
       getData();  
     } 
@@ -60,9 +74,21 @@ const CreateGoalDrawer = (props) => {
     }  
   },[props.GlobalEventNames])
 
+const factorsData = {
+  "name": "123",
+  "rule": {
+      "st_en": "",
+      "en_en": "www.acme.com",
+      "vs": true,
+      "rule": {
+          "ft": []
+      }
+  }
+};
+
 const getInsights = (projectID, isJourney=false) =>{  
   const getData = async () => {
-    await props.fetchGoalInsights(projectID, isJourney); 
+    await props.fetchGoalInsights(projectID, isJourney, factorsData); 
   };
   getData();
   history.push('/factors/insights');
@@ -183,7 +209,25 @@ const getInsights = (projectID, isJourney=false) =>{
     <div className={'flex flex-col justify-center items-center'} style={{ height: '50px' }}> 
     </div>
         <div className={'flex justify-between items-center'}>
-            <Button size={'large'}><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
+
+          <div className={'relative'}>
+            {!showDateTime && <Button size={'large'} onClick={()=>setShowDateTime(true)}><SVG name={'calendar'} extraClass={'mr-1'} />{dateTime ? dateTime : 'Last Week'} </Button>}
+            {showDateTime && 
+            <GroupSelect 
+                    groupedProperties={factorsModels ? [
+                    {             
+                    label: 'MOST RECENT',
+                    icon: 'fav',
+                    values: factorsModels
+                    }
+                  ]:null}
+                  placeholder="Select Date Range "
+                  optionClick={(group, val) => onChangeDateTime(group, val)}
+                  onClickOutside={() => setShowDateTime(false)}
+                />  
+            }
+          </div>
+
             <Button type="primary" size={'large'} onClick={()=>getInsights(props.activeProject.id, eventCount===2?true:false )}>Find Insights</Button>
         </div>
 </div>
@@ -195,7 +239,8 @@ const getInsights = (projectID, isJourney=false) =>{
 const mapStateToProps = (state) => {
   return {
     activeProject: state.global.active_project, 
-    GlobalEventNames: state.coreQuery?.eventOptions[0]?.values, 
+    GlobalEventNames: state.coreQuery?.eventOptions[0]?.values,
+    factors_models: state.factors?.factors_models
   };
 };
-export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights})(CreateGoalDrawer);
+export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights, fetchFactorsModels})(CreateGoalDrawer);

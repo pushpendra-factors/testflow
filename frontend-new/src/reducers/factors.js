@@ -36,6 +36,12 @@
           case 'FETCH_GOAL_INSIGHTS_REJECTED': {
             return { ...state, error: action.payload };
           } 
+          case 'FETCH_FACTORS_MODELS_FULFILLED': {
+            return { ...state, factors_models: action.payload };
+          } 
+          case 'FETCH_FACTORS_MODELS_REJECTED': {
+            return { ...state, factors_models: action.payload };
+          } 
         }
         return state;
       }
@@ -86,16 +92,30 @@
       });
     }
   }
-  export function fetchGoalInsights(projectID, isJourney=false) {
+  export function fetchGoalInsights(projectID, isJourney=false, data) {
     return function(dispatch) {
       return new Promise((resolve,reject) => {
-        const insightsUrl = isJourney ? `/v1/factor?type=journey` : `/v1/factor`;
-        post(dispatch, host + "projects/"+projectID+ insightsUrl)
+        const insightsUrl = `/v1/factor?type=${isJourney ? 'journey' : 'singleevent'}&model_id=1604849531859`;
+        post(dispatch, host + "projects/"+projectID+ insightsUrl, data)
           .then((response)=>{        
             dispatch({type:"FETCH_GOAL_INSIGHTS_FULFILLED", payload: response.data});
             resolve(response)
           }).catch((err)=>{        
             dispatch({type:"FETCH_GOAL_INSIGHTS_REJECTED", payload: err});
+            reject(err);
+          });
+      });
+    }
+  }
+  export function fetchFactorsModels(projectID) {
+    return function(dispatch) {
+      return new Promise((resolve,reject) => {
+        get(dispatch, host + "projects/"+projectID+"/models")
+          .then((response)=>{        
+            dispatch({type:"FETCH_FACTORS_MODELS_FULFILLED", payload: response.data});
+            resolve(response)
+          }).catch((err)=>{        
+            dispatch({type:"FETCH_FACTORS_MODELS_REJECTED", payload: err});
             reject(err);
           });
       });
