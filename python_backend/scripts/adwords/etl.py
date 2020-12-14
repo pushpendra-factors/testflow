@@ -6,6 +6,7 @@ import scripts
 from lib.data_services.factors_data_service import FactorsDataService
 from lib.sns_notifier import SnsNotifier
 from lib.utils.time import TimeUtil
+from lib.utils.healthchecks import HealthchecksUtil
 from scripts.adwords import STATUS_FAILED, STATUS_SKIPPED, APP_NAME, etl_record_stats
 from scripts.adwords.etl_config import EtlConfig
 from scripts.adwords.etl_parser import EtlParser
@@ -16,6 +17,8 @@ from scripts.adwords.jobs.reports_fetch_job import ReportsFetch
 # from .etl_config import EtlConfig
 # from .etl_parser import EtlParser
 # from .jobs.reports_fetch import ReportsFetch
+
+HEALTHCHECKS_ADWORDS_SYNC_PING_ID = "188cbf7c-0ea1-414b-bf5c-eee47c12a0c8"
 
 def setup(argv):
     input_args, rem = EtlParser(argv[1::]).parse()
@@ -106,6 +109,12 @@ if __name__ == "__main__":
         "success": {"projects": next_sync_success},
         "requests": etl_record_stats,
     }
-    SnsNotifier.notify(scripts.adwords.CONFIG.ADWORDS_APP.env, APP_NAME, notify_payload)
+
+    if len(next_sync_failures) > 0:
+        HealthchecksUtil.ping_healthcheck(scripts.adwords.CONFIG.ADWORDS_APP.env, 
+            HEALTHCHECKS_ADWORDS_SYNC_PING_ID, notify_payload, endpoint="/fail")
+    else:    
+        HealthchecksUtil.ping_healthcheck(scripts.adwords.CONFIG.ADWORDS_APP.env, 
+            HEALTHCHECKS_ADWORDS_SYNC_PING_ID, notify_payload)
     log.warning("Successfully synced. End of adwords sync job.")
     sys.exit(0)

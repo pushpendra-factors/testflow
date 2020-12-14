@@ -30,9 +30,14 @@ def notify(env, source, message):
     if not response.ok: log.error("Failed to notify through sns.")
     return response
 
-def ping_healthcheck_success(healthcheck_id, message):
+def ping_healthcheck(env, healthcheck_id, message, endpoint=""):
+    if env != "production": 
+        log.warning("Skipped healthcheck ping for env %s payload %s", env, str(message))
+        return
+
     try:
-        requests.post("https://hc-ping.com/" + healthcheck_id, data=json.dumps(message, indent=1), timeout=10)
+        requests.post("https://hc-ping.com/" + healthcheck_id + endpoint,
+            data=json.dumps(message, indent=1), timeout=10)
     except requests.RequestException as e:
         # Log ping failure here...
         log.error("Ping failed to healthchecks.io: %s" % e)
@@ -481,8 +486,10 @@ if __name__ == "__main__":
         "failures": next_sync_failures, 
         "success": next_sync_success,
     }
-    notify(options.env, APP_NAME, notification_payload)
 
     log.warning("Successfully synced. End of hubspot sync job.")
-    ping_healthcheck_success(HEALTHCHECK_PING_ID, notification_payload)
+    if len(next_sync_failures) > 0:
+        ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
+    else:
+        ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload)    
     sys.exit(0)
