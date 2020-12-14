@@ -10,6 +10,7 @@ import {
   INITIALIZE_GROUPBY,
   DEL_GROUPBY_EVENT
 } from './actions';
+import { SHOW_ANALYTICS_RESULT } from '../types';
 
 const defaultState = {
   eventOptions: [],
@@ -18,7 +19,8 @@ const defaultState = {
   groupBy: {
     global: [],
     event: []
-  }
+  },
+  show_analytics_result: false,
 };
 
 export default function (state = defaultState, action) {
@@ -73,6 +75,12 @@ export default function (state = defaultState, action) {
       })
       groupByState.event = filteredEventGroups;
       return { ...state, groupBy: groupByState };
+    }
+    case SHOW_ANALYTICS_RESULT: {
+      return {
+        ...state,
+        show_analytics_result: action.payload,
+      };
     }
     default:
       return state;

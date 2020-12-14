@@ -19,9 +19,8 @@ function AppLayout({ fetchProjects }) {
   const history = useHistory();
   const agentState = useSelector((state) => state.agent);
   const isAgentLoggedIn = agentState.isLoggedIn;
-  const { active_project, show_analytics_result } = useSelector(
-    (state) => state.global
-  );
+  const { active_project } = useSelector((state) => state.global);
+  const { show_analytics_result } = useSelector((state) => state.coreQuery);
   const dispatch = useDispatch();
 
   const asyncCallOnLoad = useCallback(async () => {

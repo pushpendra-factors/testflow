@@ -6,7 +6,7 @@ function Header(props) {
   const { Header } = Layout;
 
   const { show_analytics_result } = useSelector(
-    (state) => state.global
+    (state) => state.coreQuery
   );
 
   let headerWidth = 'calc(100% - 64px)';
