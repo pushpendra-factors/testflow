@@ -15,9 +15,10 @@ import (
 )
 
 type SlowQueries struct {
-	Runtime float64 `json:"runtime"`
-	Query   string  `json:"query"`
-	Pid     int64   `json:"pid"`
+	Runtime  float64 `json:"runtime"`
+	Query    string  `json:"query"`
+	Pid      int64   `json:"pid"`
+	Username string  `json:"usename"`
 }
 
 func main() {
@@ -33,6 +34,13 @@ func main() {
 
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
+
+	slowQueriesThreshold := flag.Int("slow_queries_threshold", 50, "Threshold to report slow queries alert")
+	sdkQueueThreshold := flag.Int("sdk_queue_threshold", 10000, "Threshold to report sdk queue size")
+	integrationQueueThreshold := flag.Int("integration_queue_threshold", 1000, "Threshold to report integration queue size")
+	delayedTaskThreshold := flag.Int("delayed_task_threshold", 1000, "Threshold to report delayed task size")
+
+	killSlowQueries := flag.Bool("kill_slow_queries", false, "Kill slow queries. TO BE USED WITH CAUTION")
 
 	flag.Parse()
 	taskID := "monitoring_job"
@@ -68,14 +76,15 @@ func main() {
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
-	slowQueries := make([]SlowQueries, 0, 0)
+	sqlAdminSlowQueries := make([]SlowQueries, 0, 0)
+	factorsSlowQueries := make([]SlowQueries, 0, 0)
 
 	db := C.GetServices().Db
 	defer db.Close()
 
-	queryStr := `SELECT EXTRACT(epoch from (now() - query_start)) as runtime,query, pid FROM  pg_stat_activity` +
+	queryStr := `SELECT EXTRACT(epoch from (now() - query_start)) as runtime,query, pid, usename FROM  pg_stat_activity` +
 		` WHERE EXTRACT(epoch from (now() - query_start)) > 120 AND state = 'active' AND query NOT ILIKE '%pg_stat_activity%'` +
-		` ORDER BY runtime DESC LIMIT 10`
+		` ORDER BY runtime DESC`
 	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
 		log.WithError(err).Panic("Failed to get slow queries from pg_stat_activity")
@@ -87,8 +96,30 @@ func main() {
 			log.WithError(err).Panic("Failed to scan slow queries from db.")
 		}
 		if slowQuery.Query != "" {
-			slowQueries = append(slowQueries, slowQuery)
+			if slowQuery.Username == "cloudsqladmin" {
+				sqlAdminSlowQueries = append(sqlAdminSlowQueries, slowQuery)
+			} else {
+				factorsSlowQueries = append(factorsSlowQueries, slowQuery)
+			}
 		}
+	}
+
+	if *killSlowQueries && len(factorsSlowQueries) > 0 {
+		var killQuery string
+		for _, slowQuery := range factorsSlowQueries {
+			killQuery = killQuery + fmt.Sprintf("SELECT pg_cancel_backend(%d);", slowQuery.Pid)
+		}
+		_, err = db.Raw(killQuery).Rows()
+		if err != nil {
+			log.WithError(err).Panic("Failed to kill slow queries")
+		}
+		util.NotifyThroughSNS(taskID, *env, fmt.Sprintf("Killed %d slow queries. %v", len(factorsSlowQueries), factorsSlowQueries))
+		return
+	}
+
+	if len(factorsSlowQueries) > *slowQueriesThreshold {
+		C.PingHealthcheckForFailure(C.HealthcheckDatabaseHealthPingID,
+			fmt.Sprintf("Slow query count %d exceeds threshold of %d", len(factorsSlowQueries), *slowQueriesThreshold))
 	}
 
 	queueClient := C.GetServices().QueueClient
@@ -96,25 +127,40 @@ func main() {
 	if err != nil {
 		log.WithError(err).Panic("Failed to get delayed task count from redis")
 	}
+	if delayedTaskCount > *delayedTaskThreshold {
+		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
+			fmt.Sprintf("Delayed task count %d exceeds threshold of %d", delayedTaskCount, *delayedTaskThreshold))
+	}
 
 	sdkQueueLength, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueue)
 	if err != nil {
 		log.WithError(err).Panic("Failed to get sdk_request_queue length")
+	}
+	if sdkQueueLength > *sdkQueueThreshold {
+		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
+			fmt.Sprintf("SDK queue length %d exceeds threshold of %d", sdkQueueLength, *sdkQueueThreshold))
 	}
 
 	integrationQueueLength, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueue)
 	if err != nil {
 		log.WithError(err).Panic("Failed to get integration_request_queue length")
 	}
+	if integrationQueueLength > *integrationQueueThreshold {
+		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
+			fmt.Sprintf("Integration queue length %d exceeds threshold of %d", integrationQueueLength, *integrationQueueThreshold))
+	}
 
 	tableSizes := collectTableSizes()
 
 	slowQueriesStatus := map[string]interface{}{
-		"slowQueries":            slowQueries,
-		"delayedTaskCount":       delayedTaskCount,
-		"sdkQueueLength":         sdkQueueLength,
-		"integrationQueueLength": integrationQueueLength,
-		"tableSizes":             tableSizes,
+		"factorsSlowQueries":       factorsSlowQueries[:util.MinInt(5, len(factorsSlowQueries))],
+		"sqlAdminSlowQueries":      sqlAdminSlowQueries[:util.MinInt(5, len(sqlAdminSlowQueries))],
+		"factorsSlowQueriesCount":  len(factorsSlowQueries),
+		"sqlAdminSlowQueriesCount": len(sqlAdminSlowQueries),
+		"delayedTaskCount":         delayedTaskCount,
+		"sdkQueueLength":           sdkQueueLength,
+		"integrationQueueLength":   integrationQueueLength,
+		"tableSizes":               tableSizes,
 	}
 	C.PingHealthcheckForSuccess(healthcheckPingID, slowQueriesStatus)
 }
