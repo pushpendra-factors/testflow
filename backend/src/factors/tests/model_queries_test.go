@@ -136,3 +136,54 @@ func TestDeleteQuery(t *testing.T) {
 	assert.Empty(t, query)
 	assert.Equal(t, http.StatusNotFound, errCode)
 }
+
+func TestDeleteQueryWithDashboardUnit(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotEmpty(t, project, agent)
+
+	dashboardQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
+		ProjectID: project.ID,
+		Type:      M.QueryTypeDashboardQuery,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, dashboardQuery)
+
+	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID,
+		&M.Dashboard{Name: U.RandomString(5), Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Two Dashboard units with query type QueryTypeDashboardUnit.
+	dashboardUnit1, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID,
+		&M.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: M.PresentationLine,
+			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{json.RawMessage(`{}`)}},
+		M.DashboardUnitWithQueryID)
+	assert.NotEmpty(t, dashboardUnit1)
+
+	dashboardUnit2, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID,
+		&M.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: M.PresentationLine,
+			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{json.RawMessage(`{}`)}},
+		M.DashboardUnitWithQueryID)
+	assert.NotEmpty(t, dashboardUnit2)
+
+	// Should not allow direct delete since units exists.
+	errCode, errMsg = M.DeleteDashboardQuery(project.ID, dashboardQuery.ID)
+	assert.Equal(t, http.StatusNotAcceptable, errCode)
+	query, errCode := M.GetQueryWithQueryId(project.ID, dashboardQuery.ID)
+	assert.NotEmpty(t, query)
+
+	// On deleting one of the unit, should not delete the query.
+	errCode = M.DeleteDashboardUnit(project.ID, agent.UUID, dashboard.ID, dashboardUnit1.ID)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	query, errCode = M.GetQueryWithQueryId(project.ID, dashboardQuery.ID)
+	assert.NotEmpty(t, query)
+
+	// On deleting the other unit, it should now delete the undelying query.
+	errCode = M.DeleteDashboardUnit(project.ID, agent.UUID, dashboard.ID, dashboardUnit2.ID)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	query, errCode = M.GetQueryWithQueryId(project.ID, dashboardQuery.ID)
+	assert.Empty(t, query)
+	assert.Equal(t, http.StatusNotFound, errCode)
+}
