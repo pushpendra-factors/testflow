@@ -11,7 +11,8 @@ import {
   UNITS_ORDER_CHANGED,
   DASHBOARD_UNMOUNTED,
   WIDGET_DELETED,
-  DASHBOARD_UPDATED
+  DASHBOARD_UPDATED,
+  SET_ACTIVE_PROJECT
 } from '../types';
 import { getRearrangedData } from './utils';
 
@@ -87,6 +88,10 @@ export default function (state = defaultState, action) {
           ...state.dashboards,
           data: [...state.dashboards.data.slice(0, dashboardIndex), editedDashboard, ...state.dashboards.data.slice(dashboardIndex + 1)]
         }
+      }
+    case SET_ACTIVE_PROJECT:
+      return {
+        ...defaultState
       }
     default:
       return state;

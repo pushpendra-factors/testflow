@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect } from "react";
 import moment from "moment";
 import { bindActionCreators } from "redux";
-import { connect, useSelector } from "react-redux";
+import { connect, useSelector, useDispatch } from "react-redux";
 import FunnelsResultPage from "./FunnelsResultPage";
 import QueryComposer from "../../components/QueryComposer";
+import AttrQueryComposer from "../../components/AttrQueryComposer";
 import CoreQueryHome from "../CoreQueryHome";
 import { Drawer, Button } from "antd";
 import { SVG, Text } from "../../components/factorsComponents";
@@ -16,6 +17,9 @@ import {   runQuery as runQueryService,
 getFunnelData,
 } from "../../reducers/coreQuery/services";
 import {QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT, QUERY_TYPE_CAMPAIGN, QUERY_TYPE_ATTRIBUTION} from 'Utils/constants';
+import { SampleAttributionResponse } from "../../utils/SampleResponse";
+import AttributionsResult from "./AttributionsResult";
+import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 
 function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -26,6 +30,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
   const [resultState, setResultState] = useState(initialResultState);
   const [funnelResult, updateFunnelResult] = useState(initialState);
+  const [attributionResult, updateAttributionResult] = useState(initialState);
   const [requestQuery, updateRequestQuery] = useState(null);
   const [rowClicked, setRowClicked] = useState(false);
   const [querySaved, setQuerySaved] = useState(false);
@@ -56,6 +61,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     date_range: { ...DefaultDateRangeFormat },
   });
 
+  const dispatch = useDispatch();
   const groupBy = useSelector((state) => state.coreQuery.groupBy);
   const dateRange = queryOptions.date_range;
 
@@ -252,6 +258,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         });
         setBreakdownType("each");
         closeDrawer();
+        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         setShowResult(true);
       }
 
@@ -267,6 +274,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       callRunQueryApiService,
       updateAppliedBreakdown,
       appliedBreakdown,
+      dispatch,
     ]
   );
 
@@ -319,6 +327,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
           appliedDateRange = dateRange;
         }
         closeDrawer();
+        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         setShowResult(true);
         setQuerySaved(isQuerySaved);
         setAppliedQueries(queries.map((elem) => elem.label));
@@ -337,7 +346,14 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         updateFunnelResult({ ...initialState, error: true });
       }
     },
-    [queries, updateAppliedBreakdown, activeProject.id, groupBy, dateRange]
+    [
+      queries,
+      updateAppliedBreakdown,
+      activeProject.id,
+      groupBy,
+      dateRange,
+      dispatch,
+    ]
   );
 
   const handleDurationChange = useCallback(
@@ -378,6 +394,26 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       }
     },
     [queryType, runFunnelQuery, runQuery, querySaved, queryOptions.date_range]
+  );
+
+  const runAttributionQuery = useCallback(
+    (isQuerySaved) => {
+      closeDrawer();
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+      setShowResult(true);
+      setQuerySaved(isQuerySaved);
+      updateAttributionResult({
+        ...initialState,
+        loading: true,
+      });
+      setTimeout(() => {
+        updateAttributionResult({
+          ...initialState,
+          data: SampleAttributionResponse,
+        });
+      }, 2000);
+    },
+    [dispatch]
   );
 
   useEffect(() => {
@@ -519,6 +555,38 @@ const IconAndTextSwitchQueryType = (queryType) =>{
     );
   }
 
+  if (queryType === QUERY_TYPE_ATTRIBUTION) {
+    result = (
+      <AttributionsResult
+        setShowResult={setShowResult}
+        requestQuery={requestQuery}
+        querySaved={querySaved}
+        setQuerySaved={setQuerySaved}
+        resultState={attributionResult}
+      />
+    );
+  }
+
+  const renderQueryComposer = () => {
+    if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
+      return (
+        <QueryComposer
+          queries={queries}
+          runQuery={runQuery}
+          eventChange={queryChange}
+          queryType={queryType}
+          queryOptions={queryOptions}
+          setQueryOptions={setExtraOptions}
+          runFunnelQuery={runFunnelQuery}
+        />
+      );
+    }
+
+    if (queryType === QUERY_TYPE_ATTRIBUTION) {
+      return <AttrQueryComposer runAttributionQuery={runAttributionQuery} />;
+    }
+  };
+
   return (
     <>
       <Drawer
@@ -530,18 +598,8 @@ const IconAndTextSwitchQueryType = (queryType) =>{
         getContainer={false}
         width={"600px"}
         className={"fa-drawer"}
-      > 
-        {(queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) && 
-        <QueryComposer
-          queries={queries}
-          runQuery={runQuery}
-          eventChange={queryChange}
-          queryType={queryType}
-          queryOptions={queryOptions}
-          setQueryOptions={setExtraOptions}
-          runFunnelQuery={runFunnelQuery}
-        />
-        }
+      >
+        {renderQueryComposer()}
       </Drawer>
 
       {showResult ? (

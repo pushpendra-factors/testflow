@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Layout, Spin } from 'antd';
-import Sidebar from '../../components/Sidebar';
-import CoreQuery from '../CoreQuery';
-import Dashboard from '../Dashboard';
+import React, { useEffect, useState, useCallback } from "react";
+import { Layout, Spin } from "antd";
+import Sidebar from "../../components/Sidebar";
+import CoreQuery from "../CoreQuery";
+import Dashboard from "../Dashboard";
 import Factors from '../Factors';
 import ProjectSettings from '../Settings/ProjectSettings';
 import componentsLib from '../../Views/componentsLib';
@@ -19,9 +19,11 @@ function AppLayout({ fetchProjects }) {
   const [dataLoading, setDataLoading] = useState(true);
   const { Content } = Layout;
   const history = useHistory();
-  const agentState = useSelector(state => state.agent);
+  const agentState = useSelector((state) => state.agent);
   const isAgentLoggedIn = agentState.isLoggedIn;
-  const { active_project } = useSelector(state => state.global);
+  const { active_project, show_analytics_result } = useSelector(
+    (state) => state.global
+  );
   const dispatch = useDispatch();
 
   const asyncCallOnLoad = useCallback(async () => {
@@ -45,16 +47,22 @@ function AppLayout({ fetchProjects }) {
   }, [dispatch, active_project.id]);
 
   if (!isAgentLoggedIn) {
-    history.push('/login');
+    history.push("/login");
     return null;
+  }
+
+  let contentClassName = "fa-content-container";
+
+  if (show_analytics_result) {
+    contentClassName = "fa-content-container no-sidebar";
   }
 
   return (
     <>
       {dataLoading ? <Spin size={'large'} className={'fa-page-loader'} />
-        : <Layout>
-          <Sidebar />
-          <Layout className="fa-content-container">
+        : (<Layout>
+           {!show_analytics_result ? <Sidebar /> : null}
+          <Layout className={contentClassName}>
             <Content className="bg-white min-h-screen"> 
                 <Switch>
                   <Route exact path="/" name="Home" component={Dashboard} />
@@ -66,14 +74,18 @@ function AppLayout({ fetchProjects }) {
             </Content>
           </Layout>
         </Layout>
-      }
+      )}
     </>
   );
 }
 
-const mapDispatchToProps = dispatch => bindActionCreators({
-  fetchProjects,
-  fetchDashboards
-}, dispatch);
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      fetchProjects,
+      fetchDashboards,
+    },
+    dispatch
+  );
 
 export default connect(null, mapDispatchToProps)(AppLayout);
