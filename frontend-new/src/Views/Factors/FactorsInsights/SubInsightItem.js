@@ -65,6 +65,8 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
           } else {
             insightKeyLevel1 = SubInsightsData.factors_insights_key;
           }
+ 
+        const factors_insights_text = `and then <a>${insightKeyLevel1}</a> show  ${dataItem.factors_insights_multiplier}x goal completion`
 
           let insightKeyLevel2 = '';
           if (_.isEmpty(dataItem.factors_insights_key)) {
@@ -97,12 +99,12 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                       <Row gutter={[0, 0]} justify={'center'}>
                           <Col span={24}>
                               <div className={'relative border-left--thin-2 m-0 pl-10 py-6 cursor-pointer fa-insight-item'} onClick={() => {
-                                if(dataItem?.factors_sub_insights){
+                                if(dataItem?.factors_sub_insights && !_.isEmpty(dataItem?.factors_sub_insights)){
                                     SetSubLevel2Data(dataItem);
                                     SetSubLevel1Data(SubInsightsData); 
                                 }
                               }}>
-                                  <Text type={'title'} level={4} extraClass={'m-0'} > <span dangerouslySetInnerHTML={{__html: dataItem.factors_insights_text}}/> </Text>
+                                  <Text type={'title'} level={4} extraClass={'m-0'} > <span dangerouslySetInnerHTML={{__html: factors_insights_text}}/> </Text>
                                   <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
                                   {!_.isEmpty(dataItem.factors_higher_completion_text) && <Text type={'title'} level={6} color={'grey'} extraClass={'mt-2'} >{dataItem.factors_higher_completion_text}</Text>}
                                   {!_.isEmpty(dataItem.factors_lower_completion_text) && <Text type={'title'} level={6} color={'grey'} extraClass={'mt-2'} >{dataItem.factors_lower_completion_text}</Text>}
@@ -147,7 +149,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                               </div>
                           </Col>
                       </Row>
-                      {dataItem?.factors_sub_insights && <MoreInsightsLines onClick={() => SetSubLevel2Data(dataItem.factors_sub_insights)} insightCount={dataItem?.factors_sub_insights.length} /> }
+                      {!_.isEmpty(dataItem?.factors_sub_insights) && <MoreInsightsLines onClick={() => SetSubLevel2Data(dataItem.factors_sub_insights)} insightCount={dataItem?.factors_sub_insights.length} /> }
                   </div>
                   </Col>
               </Row>
@@ -165,8 +167,10 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                   </div>
               </Col>
           </Row>
+          {console.log("SubLevel2Data",SubLevel2Data)}
           <div className={'fa-modal-body--custom-scrollable fa-modal-body--custom-scrollable-1'}>
             {SubLevel2Data?.factors_sub_insights?.map((dataItem, index) => {
+              console.log("dataItem",dataItem);
               let insightKeyLevel1 = '';
               if (_.isEmpty(SubLevel1Data.factors_insights_key)) {
                 insightKeyLevel1 = `${SubLevel1Data.factors_insights_attribute[0].factors_attribute_key} = ${SubLevel1Data.factors_insights_attribute[0].factors_attribute_value}`;
