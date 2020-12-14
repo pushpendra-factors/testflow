@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { formatData } from "./utils";
-import DualAxesChart from "../../../components/DualAxesChart";
+import BarLineChart from "../../../components/BarLineChart";
 
 function AttributionsChart({ data }) {
   const [chartsData, setChartsData] = useState([]);
@@ -8,7 +8,6 @@ function AttributionsChart({ data }) {
 
   useEffect(() => {
     const formattedData = formatData(data);
-    console.log(formattedData);
     setChartsData(formattedData.slice(0, maxAllowedVisibleProperties));
   }, [data]);
 
@@ -18,7 +17,7 @@ function AttributionsChart({ data }) {
 
   return (
     <div className="attribution-results">
-      <DualAxesChart chartData={chartsData} />
+      <BarLineChart chartData={chartsData} />
     </div>
   );
 }
