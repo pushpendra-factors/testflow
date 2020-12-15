@@ -107,7 +107,7 @@ if __name__ == "__main__":
         "failures": next_sync_failures,
         "skipped": next_sync_skipped,
         "success": {"projects": next_sync_success},
-        "requests": etl_record_stats,
+        "requests": etl_record_stats.__dict__,
     }
 
     if len(next_sync_failures) > 0:
