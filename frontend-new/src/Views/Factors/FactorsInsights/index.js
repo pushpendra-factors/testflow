@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Tabs, Row, Col, Spin
 } from 'antd';
-import { Text } from 'factorsComponents';
-import { fetchGoalInsights } from 'Reducers/factors';
+import { Text } from 'factorsComponents'; 
 import { connect } from 'react-redux';
 import _ from 'lodash';
 import InsightHighlightItem from './InsightHighlightItem';
@@ -13,7 +12,7 @@ import HeaderContents from './HeaderContents';
 
 const { TabPane } = Tabs;
 
-const FactorsInsights = ({ fetchGoalInsights, activeProject, goal_insights }) => {
+const FactorsInsights = ({ activeProject, goal_insights }) => {
   const [showModal, SetShowModal] = useState(false);
   const [SubInsightsData, setSubInsightsData] = useState(null);
   const [ParentData, setParentData] = useState(null);
@@ -89,4 +88,4 @@ const mapStateToProps = (state) => {
     goal_insights: state.factors.goal_insights
   };
 };
-export default connect(mapStateToProps, { fetchGoalInsights })(FactorsInsights);
+export default connect(mapStateToProps)(FactorsInsights);

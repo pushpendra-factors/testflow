@@ -92,10 +92,10 @@
       });
     }
   }
-  export function fetchGoalInsights(projectID, isJourney=false, data) {
+  export function fetchGoalInsights(projectID, isJourney=false, data, modelId) {
     return function(dispatch) {
       return new Promise((resolve,reject) => {
-        const insightsUrl = `/v1/factor?type=${isJourney ? 'journey' : 'singleevent'}&model_id=1604849531859`;
+        const insightsUrl = `/v1/factor?type=${isJourney ? 'journey' : 'singleevent'}&model_id=${modelId}`;
         post(dispatch, host + "projects/"+projectID+ insightsUrl, data)
           .then((response)=>{        
             dispatch({type:"FETCH_GOAL_INSIGHTS_FULFILLED", payload: response.data});
