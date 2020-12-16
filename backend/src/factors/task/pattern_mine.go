@@ -35,10 +35,10 @@ import (
 const max_SEGMENTS = 25000
 const max_EVENT_NAMES = 250
 const top_K = 5
-const topK_patterns = 10
+const topK_patterns = 5
 const topKProperties = 5
 const keventsSpecial = 5
-const keventsURL = 100
+const keventsURL = 10
 const max_PATTERN_LENGTH = 3
 
 const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000 // 200MB
@@ -302,6 +302,8 @@ func genSegmentedCandidates(
 		}
 		candidateSegments[k] = cPatterns
 	}
+	mineLog.Info("Number of repeapted Events in genSegmentdCandidates : ", len(cyclicEvents))
+
 	return candidateSegments, nil
 }
 
@@ -381,13 +383,21 @@ func getUniqueCandidates(allCandidates []*P.Pattern) []*P.Pattern {
 func mineAndWriteLenOnePatterns(
 	eventNames []string, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
-	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool) (
+	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool, campaignEvents []string) (
 	[]*P.Pattern, int64, error) {
 	var lenOnePatterns []*P.Pattern
 	for _, eventName := range eventNames {
 		p, err := P.NewPattern([]string{eventName}, userAndEventsInfo)
 		if err != nil {
 			return []*P.Pattern{}, 0, fmt.Errorf("Pattern initialization failed")
+		}
+		lenOnePatterns = append(lenOnePatterns, p)
+	}
+
+	for _, eventName := range campaignEvents {
+		p, err := P.NewPattern([]string{eventName}, nil)
+		if err != nil {
+			return []*P.Pattern{}, 0, fmt.Errorf("campaign Pattern initialization failed")
 		}
 		lenOnePatterns = append(lenOnePatterns, p)
 	}
@@ -416,9 +426,20 @@ func mineAndWriteLenTwoPatterns(
 	if err != nil {
 		return []*P.Pattern{}, 0, err
 	}
-	countPatterns(filepath, lenTwoPatterns, numRoutines, countOccurence)
+	lenTwoPatternsMod := make([]*P.Pattern, 0)
+
+	//filter two $events
+	for _, v := range lenTwoPatterns {
+		if !(strings.HasPrefix(v.EventNames[0], "$") &&
+			strings.HasPrefix(v.EventNames[1], "$")) {
+
+			lenTwoPatternsMod = append(lenTwoPatternsMod, v)
+		}
+	}
+
+	countPatterns(filepath, lenTwoPatternsMod, numRoutines, countOccurence)
 	filteredLenTwoPatterns, patternsSize, err := filterAndCompressPatterns(
-		lenTwoPatterns, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
+		lenTwoPatternsMod, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
 	if err != nil {
 		return []*P.Pattern{}, 0, err
 	}
@@ -428,8 +449,8 @@ func mineAndWriteLenTwoPatterns(
 	return filteredLenTwoPatterns, patternsSize, nil
 }
 
-//GetGoalPatterns get all goalPatterns from DB
-func GetGoalPatterns(projectId uint64, filteredPatterns []*P.Pattern, eventNamesWithType map[string]string) ([]*P.Pattern, error) {
+//GetEncodedEventsPatterns get all goalPatterns from DB
+func GetEncodedEventsPatterns(projectId uint64, filteredPatterns []*P.Pattern, eventNamesWithType map[string]string, campEventsList []string) ([]*P.Pattern, error) {
 
 	goalPatternsFromDB, errCode := M.GetAllActiveFactorsGoals(projectId)
 
@@ -452,29 +473,34 @@ func GetGoalPatterns(projectId uint64, filteredPatterns []*P.Pattern, eventNames
 
 			}
 		}
+
 		return goalPatterns, nil
 	}
 
-	goalTopKPatterns := FilterTopKEventsOnTypes(filteredPatterns, eventNamesWithType, topK_patterns, keventsSpecial, keventsURL)
+	goalTopKPatterns := FilterTopKEventsOnTypes(filteredPatterns, eventNamesWithType, topK_patterns, keventsSpecial, keventsURL, campEventsList)
 	mineLog.Info(fmt.Sprintf("Mining goals from topk events"))
-	for _, v := range goalTopKPatterns {
-		mineLog.Info(fmt.Sprint("Goal event: ", v.String()))
+	for idx, v := range goalTopKPatterns {
+		mineLog.Info(fmt.Sprint("Goal event: ", idx, v.String()))
 	}
 
-	for _, valPat := range goalTopKPatterns {
-		tmpFactorsRule := M.FactorsGoalRule{EndEvent: valPat.String()}
-		goalID, httpStatusTrackedEvent := M.CreateFactorsTrackedEvent(projectId, valPat.String(), "")
-		if goalID == 0 {
-			mineLog.Error("Unable to create a trackedEvent ", httpStatusTrackedEvent, " ", goalID)
-			return nil, fmt.Errorf("unable to write tracked event to db")
-		}
-		mineLog.Info("trackedEvent in db  ", httpStatusTrackedEvent, " ", goalID)
+	for idx, valPat := range goalTopKPatterns {
+		//check if campaignEvent
+		if !U.IsCampaignEvent(valPat.String()) {
+			mineLog.Info(fmt.Sprint("Insering in DB Goal event: ", idx, valPat.String()))
+			tmpFactorsRule := M.FactorsGoalRule{EndEvent: valPat.String()}
+			goalID, httpStatusTrackedEvent := M.CreateFactorsTrackedEvent(projectId, valPat.String(), "")
+			if goalID == 0 {
+				mineLog.Error("Unable to create a trackedEvent ", httpStatusTrackedEvent, " ", goalID)
+				return nil, fmt.Errorf("unable to write tracked event to db")
+			}
+			mineLog.Info("trackedEvent in db  ", httpStatusTrackedEvent, " ", goalID)
 
-		_, httpstatus, err := M.CreateFactorsGoal(projectId, valPat.String(), tmpFactorsRule, "")
-		if httpstatus != http.StatusCreated {
-			mineLog.Error("Unable to write to db ", httpstatus, err)
-			return nil, fmt.Errorf("unable to write factors goal to db")
+			_, httpstatus, err := M.CreateFactorsGoal(projectId, valPat.String(), tmpFactorsRule, "")
+			if httpstatus != http.StatusCreated {
+				mineLog.Error("Unable to write to db ", httpstatus, " ", err)
+				return nil, fmt.Errorf("unable to write factors goal to db")
 
+			}
 		}
 	}
 
@@ -485,7 +511,7 @@ func GetGoalPatterns(projectId uint64, filteredPatterns []*P.Pattern, eventNames
 func mineAndWritePatterns(projectId uint64, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, eventNames []string,
 	numRoutines int, chunkDir string,
-	maxModelSize int64, countOccurence bool, eventNamesWithType map[string]string, repeatedEvents []string) error {
+	maxModelSize int64, countOccurence bool, eventNamesWithType map[string]string, repeatedEvents []string, campEventsList []string) error {
 	var filteredPatterns []*P.Pattern
 	var cumulativePatternsSize int64 = 0
 
@@ -494,14 +520,16 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 
 	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(
 		eventNames, filepath, userAndEventsInfo, numRoutines, chunkDir,
-		maxModelSize, cumulativePatternsSize, countOccurence)
+		maxModelSize, cumulativePatternsSize, countOccurence, campEventsList)
 	if err != nil {
 		return err
 	}
 	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
+	mineLog.Info("Number of Len One Patterns : ", len(filteredPatterns))
 
-	goalPatterns, err := GetGoalPatterns(projectId, filteredPatterns, eventNamesWithType)
+	goalPatterns, err := GetEncodedEventsPatterns(projectId, filteredPatterns, eventNamesWithType, campEventsList)
+	mineLog.Info("Number of Goal Patterns : ", len(goalPatterns))
 
 	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil
@@ -519,6 +547,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	}
 	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
+
 	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil
 	}
@@ -546,11 +575,13 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		if err != nil {
 			return err
 		}
+
 		cumulativePatternsSize += patternsSize
 		if err := writePatternsAsChunks(filteredPatterns, chunkDir); err != nil {
 			return err
 		}
 		printFilteredPatterns(filteredPatterns, patternLen)
+
 		if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 			return nil
 		}
@@ -807,13 +838,15 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 	return uploadedChunkIds, nil
 }
 
-func filterAndWriteFactorsProperties(tmpPath string, reader io.Reader, userPropMap, eventPropMap map[string]bool) error {
+func filterAndWriteFactorsProperties(tmpPath string, reader io.Reader, userPropMap, eventPropMap map[string]bool) ([]string, error) {
 	scanner := bufio.NewScanner(reader)
 	file, err := os.Create(tmpPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	log.Info("Create a temp file to save and read events")
+	campEventsMap := make(map[string]bool)
+	campEventsList := make([]string, 0)
 	defer file.Close()
 
 	w := bufio.NewWriter(file)
@@ -822,7 +855,7 @@ func filterAndWriteFactorsProperties(tmpPath string, reader io.Reader, userPropM
 		var eventDetails P.CounterEventFormat
 		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Error("Read failed")
-			return err
+			return nil, err
 		}
 
 		for uKey := range eventDetails.UserProperties {
@@ -841,19 +874,45 @@ func filterAndWriteFactorsProperties(tmpPath string, reader io.Reader, userPropM
 
 		if err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Error("Failed to marshal eventDetails")
-			return err
+			return nil, err
 		}
 
 		lineWrite := string(eventDetailsBytes)
 		if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
 			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-			return err
+			return nil, err
+		}
+
+		if strings.Compare(eventDetails.EventName, "$session") == 0 && eventDetails.EventProperties["$campaign"] != nil {
+			var campEvent P.CounterEventFormat
+			campEventId := eventDetails.EventProperties["$campaign"].(string)
+			cmpEvent := eventDetails.EventName + "[campaign:" + campEventId + "]"
+			campEvent.EventName = cmpEvent
+			campEventsMap[cmpEvent] = true
+			campEvent.EventProperties = nil
+			campEvent.UserProperties = nil
+			campEvent.UserId = eventDetails.UserId
+			campEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
+			campEvent.EventTimestamp = eventDetails.EventTimestamp
+			campEvent.EventCardinality = eventDetails.EventCardinality
+			eventDetailsBytes, _ := json.Marshal(campEvent)
+			lineWrite := string(eventDetailsBytes)
+
+			if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
+				peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+				return nil, err
+			}
+
 		}
 
 	}
 	w.Flush()
 
-	return nil
+	for key := range campEventsMap {
+		campEventsList = append(campEventsList, key)
+	}
+
+	return campEventsList, nil
 }
 
 func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64) ([]string, map[string]string, error) {
@@ -929,6 +988,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 		for _, Uprop := range U.DISABLED_FACTORS_USER_PROPERTIES {
 			delete(upFilteredMap, Uprop)
 		}
+		mineLog.Info("Number of User Properties: ", len(upFilteredMap))
 
 		for key := range upFilteredMap {
 			mineLog.Info("insert user property", key)
@@ -963,34 +1023,99 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 }
 
 func buildEventsFileOnProperties(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, projectId uint64,
-	modelId uint64, eReader io.Reader, userPropList, eventPropList map[string]bool) error {
+	modelId uint64, eReader io.Reader, userPropList, eventPropList map[string]bool) ([]string, error) {
 
 	var err error
 	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, modelId)
 	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
 	efPath := efTmpPath + "tmpEvents" + efTmpName
-	err = filterAndWriteFactorsProperties(efPath, eReader, userPropList, eventPropList)
+	eTmpReader, err := diskManager.Get(efTmpPath, efTmpName)
+	campEvents, err := filterAndWriteFactorsProperties(efPath, eTmpReader, userPropList, eventPropList)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
 			"eventFileName": efCloudName}).Error("Failed to filter disabled properties")
-		return err
+		return nil, err
 	}
 	r, err := os.Open(efPath)
 	err = diskManager.Create(efTmpPath, efTmpName, r)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efTmpPath,
 			"eventFileName": efTmpName}).Error("Failed to create event file on disk.")
-		return err
+		return nil, err
 	}
 	err = os.Remove(efPath)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efPath}).Error("Failed to remove file")
-		return err
+		return nil, err
 
 	}
 
-	return nil
+	return campEvents, nil
 
+}
+
+func filterCampaigns(tmpPath string, reader io.Reader) ([]string, error) {
+	scanner := bufio.NewScanner(reader)
+	file, err := os.Create(tmpPath)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("Create tmp file for campaign events", tmpPath)
+	log.Info("Create a temp file to save and read events")
+	defer file.Close()
+	campEventsMap := make(map[string]bool)
+	campEventsList := make([]string, 0)
+
+	w := bufio.NewWriter(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		var eventDetails P.CounterEventFormat
+		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Error("Read failed")
+			return nil, err
+		}
+
+		eventDetailsBytes, err := json.Marshal(eventDetails)
+		if err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Error("Failed to marshal eventDetails")
+			return nil, err
+		}
+		lineWrite := string(eventDetailsBytes)
+		if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
+			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+			return nil, err
+		}
+
+		if strings.Compare(eventDetails.EventName, "$session") == 0 && eventDetails.EventProperties["$campaign"] != nil {
+			var campEvent P.CounterEventFormat
+			campEventId := eventDetails.EventProperties["$campaign"].(string)
+			cmpEvent := eventDetails.EventName + "[campaign:" + campEventId + "]"
+			campEvent.EventName = cmpEvent
+			campEventsMap[cmpEvent] = true
+			campEvent.EventProperties = nil
+			campEvent.UserProperties = nil
+			campEvent.UserId = eventDetails.UserId
+			campEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
+			campEvent.EventTimestamp = eventDetails.EventTimestamp
+			campEvent.EventCardinality = eventDetails.EventCardinality
+			eventDetailsBytes, _ := json.Marshal(campEvent)
+			lineWrite := string(eventDetailsBytes)
+
+			if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
+				peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+				return nil, err
+			}
+
+		}
+
+	}
+	w.Flush()
+
+	for k := range campEventsMap {
+		campEventsList = append(campEventsList, k)
+	}
+
+	return campEventsList, nil
 }
 
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
@@ -1014,7 +1139,6 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 
 	tmpEventsFilepath := efTmpPath + efTmpName
 	mineLog.Info("Successfuly downloaded events file from cloud.")
-
 	eventNames, eventNamesWithType, err := GetEventNamesAndType(tmpEventsFilepath, projectId)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
@@ -1023,6 +1147,11 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 
 	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
 	userPropList, eventPropList := buildWhiteListProperties(projectId, allPropsMap, topKProperties)
+
+	mineLog.Info("Number of EventNames: ", len(eventNames))
+	mineLog.Info("Number of User Properties: ", len(userPropList))
+	mineLog.Info("Number of Event Properties: ", len(eventPropList))
+
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return "", 0, err
@@ -1032,8 +1161,6 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal events Info.")
 		return "", 0, err
 	}
-
-	repeatedEvents := GetAllRepeatedEvents(eventNames)
 
 	if len(userAndEventsInfoBytes) > 249900000 {
 		// Limit is 250MB
@@ -1050,13 +1177,18 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 	mineLog.Info("Successfully Built user and event properties info and written it to file.")
 
-	err = buildEventsFileOnProperties(diskManager, cloudManager, projectId,
+	campEventsList, err := buildEventsFileOnProperties(diskManager, cloudManager, projectId,
 		modelId, eReader, userPropList, eventPropList)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")
 		return "", 0, err
 	}
+	// campEventsList = nil
 	mineLog.Info("Successfully Built events data and written to file.")
+	mineLog.Info("Number of Campaign events:", len(campEventsList))
+	repeatedEvents := GetAllRepeatedEvents(eventNames, campEventsList)
+
+	mineLog.Info("Number of repeated Events: ", len(repeatedEvents))
 
 	// build histogram of all user properties.
 	mineLog.WithField("tmpEventsFilePath", tmpEventsFilepath).Info("Building all user properties histogram.")
@@ -1084,7 +1216,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.WithFields(log.Fields{"projectId": projectId, "tmpEventsFilepath": tmpEventsFilepath,
 		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
 	err = mineAndWritePatterns(projectId, tmpEventsFilepath,
-		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize, countOccurence, eventNamesWithType, repeatedEvents)
+		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize, countOccurence, eventNamesWithType, repeatedEvents, campEventsList)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		return "", 0, err
@@ -1167,7 +1299,7 @@ func OpenEventFileAndGetScanner(filePath string) (*bufio.Scanner, error) {
 	return scanner, nil
 }
 
-func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType map[string]string, k, keventsSpecial, keventsURL int) []*P.Pattern {
+func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType map[string]string, k, keventsSpecial, keventsURL int, campaignEvent []string) []*P.Pattern {
 
 	// take topK from different event types like uc,fe,$types,url etc..
 	allPatterns := make([]patternProperties, 0)
@@ -1199,6 +1331,10 @@ func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType m
 
 	allPatternsTopk := make([]*P.Pattern, 0)
 	exists := make(map[string]bool)
+
+	for _, v := range campaignEvent {
+		exists[v] = true
+	}
 	for _, pt := range allPatternsFiltered {
 		if exists[pt.pattern.EventNames[0]] == false {
 			allPatternsTopk = append(allPatternsTopk, pt.pattern)
@@ -1305,15 +1441,23 @@ func takeTopK(patterns []patternProperties, topKPatterns int) []patternPropertie
 }
 
 //GetAllCyclicEvents Filter all special events
-func GetAllRepeatedEvents(eventNames []string) []string {
+func GetAllRepeatedEvents(eventNames []string, campaignEvents []string) []string {
 
 	CyclicEvents := make([]string, 0)
+	eventSet := make(map[string]bool)
 	for _, v := range eventNames {
 
 		if strings.HasPrefix(v, "$") == true {
-			CyclicEvents = append(CyclicEvents, v)
+			if _, ok := eventSet[v]; !ok {
+				CyclicEvents = append(CyclicEvents, v)
+			}
 		}
 
+	}
+	for _, ce := range campaignEvents {
+		if _, ok := eventSet[ce]; !ok {
+			CyclicEvents = append(CyclicEvents, ce)
+		}
 	}
 
 	return CyclicEvents

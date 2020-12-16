@@ -296,9 +296,12 @@ func buildPropertiesHistogramTemplates(
 					eventPropertiesCTemplate = append(eventPropertiesCTemplate, cptu)
 				}
 			} else {
-				log.Error(fmt.Sprintf(
-					"Missing info for event %s in pattern %s. Not building event histogram templates.",
-					events[i], events))
+				//TODO(vinith) bandaid code need to be removed
+				if !isEncodedEvent(events[i]) {
+					log.Error(fmt.Sprintf(
+						"Missing info for event %s in pattern %s. Not building event histogram templates.",
+						events[i], events))
+				}
 				return &userPropertiesNTemplate, &userPropertiesCTemplate, nil, nil, nil
 			}
 		}
@@ -815,4 +818,8 @@ func (p *Pattern) String() string {
 
 func EventArrayToString(eventNames []string) string {
 	return strings.Join(eventNames, ",")
+}
+
+func isEncodedEvent(eventName string) bool {
+	return U.IsCampaignEvent(eventName)
 }
