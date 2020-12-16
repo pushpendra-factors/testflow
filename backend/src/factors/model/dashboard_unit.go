@@ -505,7 +505,8 @@ func CacheDashboardUnitsForProjects(stringProjectsIDs string, numRoutines int) {
 
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
-		logCtx.WithFields(log.Fields{"TimeTaken": timeTaken}).Infof("Time taken for caching %d dashboard units %s", unitsCount, timeTakenString)
+		logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
+			Infof("Time taken for caching %d dashboard units", unitsCount)
 	}
 	return
 }
@@ -642,7 +643,8 @@ func cacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload, wait
 
 	timeTaken := U.TimeNowUnix() - startTime
 	timeTakenString := U.SecondsToHMSString(timeTaken)
-	logCtx.WithField("TimeTaken", timeTakenString).Info("Done caching unit for range")
+	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
+		Info("Done caching unit for range")
 	SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to)
 }
 
