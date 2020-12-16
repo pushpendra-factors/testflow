@@ -40,6 +40,7 @@ const CreateGoalDrawer = (props) => {
 
   const [showDateTime, setShowDateTime] = useState(false);
   const [dateTime, setDateTime] = useState(null);
+  const [insightBtnLoading, setInsightBtnLoading] = useState(false);
 
   const onChangeGroupSelect1 = (grp, value) => {
     setShowDropDown(false);
@@ -74,25 +75,37 @@ const CreateGoalDrawer = (props) => {
     }  
   },[props.GlobalEventNames])
 
-const factorsData = {
-  "name": "123",
-  "rule": {
-      "st_en": "",
-      "en_en": "www.acme.com",
-      "vs": true,
-      "rule": {
-          "ft": []
+const factorsDataFormat = {
+  name: "123",
+  rule: {
+      st_en: "",
+      en_en: "www.acme.com",
+      vs: true,
+      rule: {
+          ft: []
       }
   }
 };
 
 const getInsights = (projectID, isJourney=false) =>{  
+  setInsightBtnLoading(true);
+  let factorsData = {
+    ...factorsDataFormat,
+    rule:{
+       ...factorsDataFormat.rule,
+       st_en: event2 ? event1 : null,
+       en_en: event2 ? event2 : event1
+
+    }
+    
+  } 
   const getData = async () => {
     await props.fetchGoalInsights(projectID, isJourney, factorsData); 
   };
-  getData();
-  history.push('/factors/insights');
-
+  getData().then(()=>{
+    setInsightBtnLoading(false);
+    history.push('/factors/insights'); 
+  });
 }
 
   return (
@@ -228,7 +241,7 @@ const getInsights = (projectID, isJourney=false) =>{
             }
           </div>
 
-            <Button type="primary" size={'large'} onClick={()=>getInsights(props.activeProject.id, eventCount===2?true:false )}>Find Insights</Button>
+            <Button type="primary" size={'large'} loading={insightBtnLoading} disabled={!event1} onClick={()=>getInsights(props.activeProject.id, eventCount===2?true:false )}>Find Insights</Button>
         </div>
 </div>
 

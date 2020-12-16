@@ -115,7 +115,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                     isJourney && <>
                                       <div className={'flex items-end'}>
                                         <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(ParentData.total_users_count)}</Text></a> </div>
-                                        <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{ParentData?.goal?.st_en}</Text></div>
+                                        <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{_.isEmpty(ParentData.goal?.st_en) ? 'All Visitors' : ParentData.goal?.st_en } </Text></div>
                                       </div>
                                       <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
                                     </>

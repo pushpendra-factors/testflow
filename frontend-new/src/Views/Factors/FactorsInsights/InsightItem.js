@@ -10,7 +10,7 @@ import { numberWithCommas } from 'Utils/dataFormatter';
 const InsightItem = ({
   data, category, showSubInsightsData, displayType = false
 }) => {
-  if (data) {
+  if (data) { 
     const isJourney = data?.type === 'journey' ? true : false; 
     return data.insights.map((dataItem, index) => {
       if (dataItem.factors_insights_type === category) {
@@ -41,7 +41,7 @@ const InsightItem = ({
                       <Row gutter={[0, 0]} justify={'center'}>
                           <Col span={16}>
                               <div className={'relative border-left--thin-2 m-0 pl-16 py-8 cursor-pointer fa-insight-item'} onClick={() => {
-                                  if(dataItem?.factors_sub_insights){
+                                  if(!_.isEmpty(dataItem?.factors_sub_insights)){
                                       showSubInsightsData(dataItem, data); 
                                   }
                               }}>
@@ -57,7 +57,7 @@ const InsightItem = ({
                                     isJourney && <>
                                         <div className={'flex items-end'}>
                                           <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(data.total_users_count)}</Text></a> </div>
-                                          <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{data?.goal?.st_en}</Text></div>
+                                          <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{_.isEmpty(data.goal?.st_en) ? 'All Visitors' : data.goal?.st_en }</Text></div>
                                         </div>
                                         <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} /> 
                                     </>
@@ -76,7 +76,7 @@ const InsightItem = ({
                                   <Progress percent={insightLevel1Percentage} strokeColor={'#F9C06E'} className={'fa-progress'} showInfo={false} />
                                   </div>
 
-                                  {dataItem?.factors_sub_insights?.length > 0 && <div className={'fa-insights-box--actions'}>
+                                  {!_.isEmpty(dataItem?.factors_sub_insights) && <div className={'fa-insights-box--actions'}>
                                     <Button type={'link'} size={'large'}>
                                         <SVG name={'corequery'} size={24} color={'grey'} />
                                     </Button>
@@ -93,7 +93,7 @@ const InsightItem = ({
                               </div>
                           </Col>
                       </Row>
-                      {dataItem?.factors_sub_insights && <MoreInsightsLines onClick={() => showSubInsightsData(dataItem.factors_sub_insights)} insightCount={dataItem?.factors_sub_insights.length} /> }
+                      {!_.isEmpty(dataItem?.factors_sub_insights) && <MoreInsightsLines onClick={() => showSubInsightsData(dataItem.factors_sub_insights)} insightCount={dataItem?.factors_sub_insights.length} /> }
                   </div>
         );
       }
