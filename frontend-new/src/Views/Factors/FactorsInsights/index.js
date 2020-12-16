@@ -18,12 +18,6 @@ const FactorsInsights = ({ fetchGoalInsights, activeProject, goal_insights }) =>
   const [SubInsightsData, setSubInsightsData] = useState(null);
   const [ParentData, setParentData] = useState(null);
 
-  useEffect(() => {
-    if (!goal_insights) {
-      fetchGoalInsights(activeProject.id);
-    }
-  }, [goal_insights]);
-
   const handleClose = () => {
     SetShowModal(false);
   };
