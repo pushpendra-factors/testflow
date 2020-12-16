@@ -6,12 +6,14 @@ https://golang.org/dl/go1.14.7.darwin-amd64.pkg - use this default installer for
 
 ## Postgresql Setup (Homebrew):
 ```
-brew install postgres
+brew install postgresql@9.6
 brew tap homebrew/services
-brew services start postgresql
-brew services stop postgresql
-brew services restart postgresql
+brew services start postgresql@9.6
+brew services stop postgresql@9.6
+brew services restart postgresql@9.6
 ```
+
+Check and add the path to $PATH `/usr/local/Cellar/postgresql@9.6/9.6.20/bin` for postgres binaries.
 
 ## Redis Setup (Homebrew):
 
