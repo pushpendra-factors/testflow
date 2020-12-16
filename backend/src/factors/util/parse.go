@@ -1,9 +1,10 @@
 package util
 
 import (
-	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 /**
@@ -28,4 +29,18 @@ func GetIntBoolMapFromStringList(intListSepByComma *string) map[uint64]bool {
 		}
 	}
 	return idToBoolMap
+}
+
+func GetInt64FromMapOfInterface(input map[string]interface{}, key string, defaultValue int64) int64 {
+	value, present := input[key]
+	if !present {
+		value = ""
+	}
+	valueString := value.(string)
+
+	result, err := strconv.ParseInt(valueString, 10, 64)
+	if err != nil {
+		result = defaultValue
+	}
+	return result
 }
