@@ -7,8 +7,8 @@ class HealthchecksUtil:
     @staticmethod
     def ping_healthcheck(env, healthcheck_id, message, endpoint=""):
         message = json.dumps(message, indent=1)
-        if env != "production": 
-            log.warning("Skipped healthcheck ping for env %s payload %s", env, message)
+        log.warning("Healthcheck ping for env %s payload %s", env, message)
+        if env != "production":
             return
 
         try:
