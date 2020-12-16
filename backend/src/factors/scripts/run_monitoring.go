@@ -15,10 +15,10 @@ import (
 )
 
 type SlowQueries struct {
-	Runtime  float64 `json:"runtime"`
-	Query    string  `json:"query"`
-	Pid      int64   `json:"pid"`
-	Username string  `json:"usename"`
+	Runtime float64 `json:"runtime"`
+	Query   string  `json:"query"`
+	Pid     int64   `json:"pid"`
+	Usename string  `json:"usename"`
 }
 
 func main() {
@@ -96,7 +96,7 @@ func main() {
 			log.WithError(err).Panic("Failed to scan slow queries from db.")
 		}
 		if slowQuery.Query != "" {
-			if slowQuery.Username == "cloudsqladmin" {
+			if slowQuery.Usename == "cloudsqladmin" {
 				sqlAdminSlowQueries = append(sqlAdminSlowQueries, slowQuery)
 			} else {
 				factorsSlowQueries = append(factorsSlowQueries, slowQuery)

@@ -109,6 +109,7 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 
 	// Checks new record or not.
 	if !eventName.CreatedAt.IsZero() {
+		logCtx.Error("createdAt is zero ", eventName)
 		return eventName, http.StatusConflict
 	} else if err := db.Create(eventName).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to create event_name.")
