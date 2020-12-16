@@ -51,9 +51,8 @@ const CreateGoalDrawer = (props) => {
     setEvent2(value[0]); 
   }
   const onChangeDateTime = (grp, value) => {
-    setShowDateTime(false);
-    console.log("onChangeDateTime", value);
-    setDateTime(value[0]); 
+    setShowDateTime(false); 
+    setDateTime(value); 
   }
 
   const readableTimstamp = (unixTime) => {
@@ -79,7 +78,7 @@ const factorsDataFormat = {
   name: "123",
   rule: {
       st_en: "",
-      en_en: "www.acme.com",
+      en_en: "",
       vs: true,
       rule: {
           ft: []
@@ -88,7 +87,15 @@ const factorsDataFormat = {
 };
 
 const getInsights = (projectID, isJourney=false) =>{  
-  setInsightBtnLoading(true);
+  setInsightBtnLoading(true); 
+  const calcModelId = props.factors_models.filter((item)=>{   
+    const generateStringArray = [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`]; 
+    if (_.isEqual(dateTime,generateStringArray)){  
+      return item
+    } 
+  });
+  // console.log("calcModelId",calcModelId[0].mid);
+  
   let factorsData = {
     ...factorsDataFormat,
     rule:{
@@ -96,11 +103,10 @@ const getInsights = (projectID, isJourney=false) =>{
        st_en: event2 ? event1 : null,
        en_en: event2 ? event2 : event1
 
-    }
-    
+    }  
   } 
   const getData = async () => {
-    await props.fetchGoalInsights(projectID, isJourney, factorsData); 
+    await props.fetchGoalInsights(projectID, isJourney, factorsData, calcModelId[0].mid); 
   };
   getData().then(()=>{
     setInsightBtnLoading(false);
@@ -224,7 +230,7 @@ const getInsights = (projectID, isJourney=false) =>{
         <div className={'flex justify-between items-center'}>
 
           <div className={'relative'}>
-            {!showDateTime && <Button size={'large'} onClick={()=>setShowDateTime(true)}><SVG name={'calendar'} extraClass={'mr-1'} />{dateTime ? dateTime : 'Last Week'} </Button>}
+            {!showDateTime && <Button size={'large'} onClick={()=>setShowDateTime(true)}><SVG name={'calendar'} extraClass={'mr-1'} />{dateTime ? dateTime : 'Select Date Range'} </Button>}
             {showDateTime && 
             <GroupSelect 
                     groupedProperties={factorsModels ? [
@@ -241,7 +247,7 @@ const getInsights = (projectID, isJourney=false) =>{
             }
           </div>
 
-            <Button type="primary" size={'large'} loading={insightBtnLoading} disabled={!event1} onClick={()=>getInsights(props.activeProject.id, eventCount===2?true:false )}>Find Insights</Button>
+            <Button type="primary" size={'large'} loading={insightBtnLoading} disabled={!(event1 && dateTime)} onClick={()=>getInsights(props.activeProject.id, eventCount===2?true:false )}>Find Insights</Button>
         </div>
 </div>
 

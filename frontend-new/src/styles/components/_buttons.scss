@@ -9,7 +9,11 @@
     border-color: #d9d9d9;
 
     background: $fa-color--white; 
-    color: $fa-color--mono-5; 
+    color: $fa-color--mono-5;
+    
+    &:disabled{
+        opacity: 0.5;  
+    }
 
     &.fa-button-ghost{
         background:transparent !important; 
@@ -56,8 +60,9 @@
     &.ant-btn-primary {
         color: $fa-color--white;
         background: $fa-color--brand-color;
-        border-color: $fa-color--brand-color;
+        border-color: $fa-color--brand-color; 
         &:focus, &:hover, &:active{
+            color: $fa-color--white;
             background: $fa-color--brand-7;
             border-color: $fa-color--brand-7; 
         }
