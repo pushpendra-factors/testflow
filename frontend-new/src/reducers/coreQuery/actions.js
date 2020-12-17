@@ -7,6 +7,12 @@ export const INITIALIZE_GROUPBY = 'INITIALIZE_GROUPBY';
 export const SET_GROUPBY = 'SET_GROUPBY';
 export const DEL_GROUPBY = 'DEL_GROUPBY';
 export const DEL_GROUPBY_EVENT = 'DEL_GROUPBY_EVENT';
+export const SET_EVENT_GOAL = 'SET_EVENT_GOAL';
+export const SET_TOUCHPOINTS = 'SET_TOUCHPOINTS';
+export const SET_ATTRIBUTION_MODEL = 'SET_ATTRIBUTION_MODEL';
+export const SET_ATTRIBUTION_WINDOW = 'SET_ATTRIBUTION_WINDOW';
+export const SET_ATTR_LINK_EVENTS = 'SET_ATTR_LINK_EVENTS';
+export const SET_ATTR_DATE_RANGE = 'SET_ATTR_DATE_RANGE';
 
 // Action creators
 export const fetchEventsAction = (events, status = 'started') => {
@@ -31,4 +37,28 @@ export const deleteGroupByEventAction = (ev, index) => {
 
 export const setGroupByAction = (type, groupBy, index) => {
   return { type: SET_GROUPBY, payload: groupBy, index: index, groupByType: type };
+}
+
+export const setEventGoalAction = (goal) => {
+  return { type: SET_EVENT_GOAL, payload: goal};
+}
+
+export const setMarketingTouchpointsAction = (touchpoints) => {
+  return { type: SET_TOUCHPOINTS, payload: touchpoints};
+}
+
+export const setAttributionModelsAction = (models) => {
+  return { type: SET_ATTRIBUTION_MODEL, payload: models};
+}
+
+export const setAttributionWindowAction = (window) => {
+  return { type: SET_ATTRIBUTION_WINDOW, payload: window};
+}
+
+export const setAttrLinkEventsAction = (linkedEvents) => {
+  return { type: SET_ATTR_LINK_EVENTS, payload: linkedEvents};
+}
+
+export const setAttrDateRangeAction = (dateRange) => {
+  return { type: SET_ATTR_DATE_RANGE, payload: dateRange};
 }

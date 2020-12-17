@@ -8,7 +8,12 @@ import {
   SET_GROUPBY,
   DEL_GROUPBY,
   INITIALIZE_GROUPBY,
-  DEL_GROUPBY_EVENT
+  DEL_GROUPBY_EVENT,
+  SET_TOUCHPOINTS,
+  SET_ATTRIBUTION_MODEL,
+  SET_ATTRIBUTION_WINDOW,
+  SET_ATTR_LINK_EVENTS,
+  SET_EVENT_GOAL
 } from './actions';
 import { SHOW_ANALYTICS_RESULT } from '../types';
 
@@ -28,6 +33,11 @@ const defaultState = {
     values: DEFAULT_TOUCHPOINTS.map(v => [v])
   }],
   show_analytics_result: false,
+  eventGoal: {},
+  touchpoint: '',
+  models: [],
+  window: null,
+  linkedEvents: []
 };
 
 export default function (state = defaultState, action) {
@@ -87,6 +97,36 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         show_analytics_result: action.payload,
+      };
+    }
+    case SET_EVENT_GOAL: {
+      return {
+        ...state,
+        eventGoal: action.payload,
+      };
+    }
+    case SET_TOUCHPOINTS: {
+      return {
+        ...state,
+        touchpoint: action.payload,
+      };
+    }
+    case SET_ATTRIBUTION_MODEL: {
+      return {
+        ...state,
+        models: action.payload,
+      };
+    }
+    case SET_ATTRIBUTION_WINDOW: {
+      return {
+        ...state,
+        window: action.payload,
+      };
+    }
+    case SET_ATTR_LINK_EVENTS: {
+      return {
+        ...state,
+        linkedEvents: action.payload,
       };
     }
     default:
