@@ -1,14 +1,16 @@
-import React, { useState, useCallback } from 'react';
-import {
-  getTableColumns, getTableData
-} from './utils';
-import DataTable from '../../../../components/DataTable';
+import React, { useState, useCallback } from "react";
+import { getTableColumns, getTableData } from "./utils";
+import DataTable from "../../../../components/DataTable";
 
 function EventBreakdownTable({
-  breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties
+  breakdown,
+  data,
+  visibleProperties,
+  setVisibleProperties,
+  maxAllowedVisibleProperties,
 }) {
   const [sorter, setSorter] = useState({});
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
 
   //   useEffect(() => {
   //     // reset sorter on change of chart type
@@ -31,27 +33,27 @@ function EventBreakdownTable({
     if (!selectedIncices.length) {
       return false;
     }
-    const newSelectedRows = selectedIncices.map(idx => {
-      return data.find(elem => elem.index === idx);
+    const newSelectedRows = selectedIncices.map((idx) => {
+      return data.find((elem) => elem.index === idx);
     });
     setVisibleProperties(newSelectedRows);
   };
 
-  const selectedRowKeys = visibleProperties.map(elem => elem.index);
+  const selectedRowKeys = visibleProperties.map((elem) => elem.index);
 
   const rowSelection = {
     selectedRowKeys,
-    onChange: onSelectionChange
+    onChange: onSelectionChange,
   };
 
   return (
-        <DataTable
-            tableData={tableData}
-            searchText={searchText}
-            setSearchText={setSearchText}
-            columns={columns}
-            rowSelection={rowSelection}
-        />
+    <DataTable
+      tableData={tableData}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      columns={columns}
+      rowSelection={rowSelection}
+    />
   );
 }
 
