@@ -847,6 +847,9 @@ func filterAndWriteFactorsProperties(tmpPath string, reader io.Reader, userPropM
 	campEventsList := make([]string, 0)
 	defer file.Close()
 
+	mineLog.Info("User Properties", userPropMap)
+	mineLog.Info("Event Properties", eventPropMap)
+
 	w := bufio.NewWriter(file)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -1148,6 +1151,9 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 
 	mineLog.Info("Number of EventNames: ", len(eventNames))
 	mineLog.Info("Number of User Properties: ", len(userPropList))
+	mineLog.Info("User Properties: ", userPropList)
+	mineLog.Info("Event Properties: ", eventPropList)
+
 	mineLog.Info("Number of Event Properties: ", len(eventPropList))
 
 	if err != nil {
