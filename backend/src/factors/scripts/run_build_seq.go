@@ -47,6 +47,9 @@ func main() {
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
 
 	flag.Parse()
 
@@ -80,6 +83,9 @@ func main() {
 		},
 		RedisHost: *redisHost,
 		RedisPort: *redisPort,
+		RedisHostPersistent:*redisHostPersistent,
+		RedisPortPersistent:*redisPortPersistent,
+
 	}
 
 	C.InitConf(config.Env)
@@ -102,6 +108,7 @@ func main() {
 	}
 
 	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	log.WithFields(log.Fields{
 		"Env":             *envFlag,

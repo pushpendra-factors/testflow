@@ -36,6 +36,10 @@ spec:
             - $(POSTGRES_DB)
             - --db_user
             - $(POSTGRES_USER)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
             - --db_pass
             - $(POSTGRES_PASSWORD)
             - --num_routines
@@ -53,6 +57,10 @@ spec:
                 name: config-bucket
             - configMapRef:
                 name: config-postgres
+            - configMapRef:
+                name: config-redis
+            - configMapRef:
+                name: config-persistent-redis
             - configMapRef:
                 name: config-buildseqjob
             - secretRef:
