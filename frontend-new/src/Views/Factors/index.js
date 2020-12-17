@@ -8,9 +8,11 @@ import { Text } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
 import ConfigureDP from './ConfigureDP';
 import CreateGoalDrawer from './CreateGoalDrawer';
-import { fetchFactorsGoals } from 'Reducers/factors';
+import { fetchFactorsGoals, fetchFactorsModels } from 'Reducers/factors';
 import { connect } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
+import { fetchEventNames } from 'Reducers/coreQuery/middleware'; 
+
 const columns = [
   {
     title: 'Saved Goals',
@@ -65,6 +67,8 @@ const Factors = ({
   , goals
   , agents
   , fetchProjectAgents
+  ,fetchEventNames
+  ,fetchFactorsModels
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [showConfigureDPModal, setConfigureDPModal] = useState(false);
@@ -75,10 +79,17 @@ const Factors = ({
     if (!goals || !agents) {
       const getData = async () => {
         await fetchProjectAgents(activeProject.id);
-        await fetchFactorsGoals(activeProject.id);
+        await fetchFactorsGoals(activeProject.id); 
       };
       getData();
     }
+    
+    const getData1 = async () => { 
+      await fetchEventNames(activeProject.id);
+      await fetchFactorsModels(activeProject.id); 
+    };
+    getData1();
+
     if (goals) {
       const formattedArray = [];
       goals.map((goal, index) => {
@@ -171,4 +182,4 @@ const mapStateToProps = (state) => {
     agents: state.agent.agents
   };
 };
-export default connect(mapStateToProps, { fetchFactorsGoals, fetchProjectAgents })(Factors);
+export default connect(mapStateToProps, { fetchFactorsGoals, fetchProjectAgents, fetchEventNames, fetchFactorsModels })(Factors);
