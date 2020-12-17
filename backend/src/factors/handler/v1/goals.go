@@ -35,8 +35,8 @@ func GetAllFactorsGoalsHandler(c *gin.Context) {
 }
 
 type CreateFactorsGoalParams struct {
-	Name string            `json:"name" binding:"required"`
-	Rule M.FactorsGoalRule `json:"rule" binding:"required"`
+	Name string            `json:"name"`
+	Rule M.FactorsGoalRule `json:"rule"`
 }
 
 func GetcreateFactorsGoalParams(c *gin.Context) (*CreateFactorsGoalParams, error) {

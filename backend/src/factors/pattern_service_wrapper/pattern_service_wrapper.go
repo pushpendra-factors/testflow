@@ -3,6 +3,7 @@ package pattern_service_wrapper
 
 import (
 	"encoding/json"
+	M "factors/model"
 	P "factors/pattern"
 	PC "factors/pattern_client"
 	U "factors/util"
@@ -493,7 +494,7 @@ func buildFunnelFormats(node *ItreeNode, countType string) (
 	funnelConstraints = append([]P.EventConstraints(nil), funnelConstraints...)
 	var baseFunnelEvents []string
 	var baseFunnelConstraints []P.EventConstraints
-	if node.NodeType == NODE_TYPE_SEQUENCE {
+	if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_CAMPAIGN {
 		pLen := len(funnelEvents)
 		if pLen == 2 {
 			if countType == P.COUNT_TYPE_PER_USER {
@@ -770,13 +771,19 @@ func buildBarGraphResult(node *ItreeNode, countType string) (*graphResult, error
 	return chart, nil
 }
 
-func shouldFilterResult(node *ItreeNode,
+func isLevel1Node(node *ItreeNode,
 	seenPropertyConstraints *map[string]bool,
 	seenEvents *map[string]bool) bool {
 	if len(node.Pattern.EventNames) == 1 || (node.NodeType == NODE_TYPE_SEQUENCE && len(node.Pattern.EventNames) == 2) {
 		// Ignore, AllActiveUsers results, since they are captured with session.
 		return true
 	}
+	return false
+}
+
+func shouldFilterResult(node *ItreeNode,
+	seenPropertyConstraints *map[string]bool,
+	seenEvents *map[string]bool) bool {
 	sessionIndex := 0
 	for i, e := range node.Pattern.EventNames {
 		if e == U.EVENT_NAME_SESSION {
@@ -787,7 +794,12 @@ func shouldFilterResult(node *ItreeNode,
 		// Session event occurring in between a pattern is non intuitive.
 		return true
 	}
+	return false
+}
 
+func isDuplicate(node *ItreeNode,
+	seenPropertyConstraints *map[string]bool,
+	seenEvents *map[string]bool) bool {
 	isDup := false
 	if node.NodeType == NODE_TYPE_SEQUENCE {
 		nodePLen := len(node.Pattern.EventNames)
@@ -846,7 +858,7 @@ func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode,
 		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY ||
 			node.NodeType == NODE_TYPE_USER_PROPERTY {
 			// Dedup results to show more novel results as user scrolls down.
-			if shouldFilterResult(node, &seenPropertyConstraints, &seenEvents) {
+			if isDuplicate(node, &seenPropertyConstraints, &seenEvents) || isLevel1Node(node, &seenPropertyConstraints, &seenEvents) || shouldFilterResult(node, &seenPropertyConstraints, &seenEvents) {
 				continue
 			}
 			if node.Fcr < MIN_FCR && node.Fcp < MIN_FCP {
@@ -861,7 +873,7 @@ func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode,
 				chart = c
 			}
 		} else if node.NodeType == NODE_TYPE_GRAPH_EVENT_PROPERTIES || node.NodeType == NODE_TYPE_GRAPH_USER_PROPERTIES {
-			if shouldFilterResult(node, &seenPropertyConstraints, &seenEvents) {
+			if isDuplicate(node, &seenPropertyConstraints, &seenEvents) || isLevel1Node(node, &seenPropertyConstraints, &seenEvents) || shouldFilterResult(node, &seenPropertyConstraints, &seenEvents) {
 				continue
 			}
 			if c, err := buildBarGraphResult(node, countType); err != nil {
@@ -939,4 +951,251 @@ func Factor(reqId string, projectId uint64, startEvent string,
 	}
 
 	return results, nil
+}
+
+// Factors Constants
+var CAMPAIGNTYPE string = "campaign"
+var ATTRIBUTETYPE string = "attribute"
+var JOURNEYTYPE string = "journey"
+
+// Factors object
+type Factors struct {
+	GoalRule          M.FactorsGoalRule  `json:"goal"`
+	Insights          []*FactorsInsights `json:"insights"`
+	GoalUserCount     float64            `json:"goal_user_count"`
+	TotalUsersCount   float64            `json:"total_users_count"`
+	OverallPercentage float64            `json:"overall_percentage"`
+	OverallMultiplier float64            `json:"overall_multiplier"`
+	Type              string             `json:"type"`
+}
+
+// FactorsAttributeTuple object
+type FactorsAttributeTuple struct {
+	FactorsAttributeKey        string  `json:"factors_attribute_key"`
+	FactorsAttributeValue      string  `json:"factors_attribute_value"`
+	FactorsAttributeUpperBound float64 `json:"factors_attribute_upper_bound"`
+	FactorsAttributeLowerBound float64 `json:"factors_attribute_lower_bound"`
+	FactorsAttributeEquality   bool    `json:"factors_attribute_equality"`
+}
+
+// FactorsInsights object
+type FactorsInsights struct {
+	FactorsInsightsAttribute      []FactorsAttributeTuple `json:"factors_insights_attribute"`
+	FactorsInsightsKey            string                  `json:"factors_insights_key"`
+	FactorsInsightsMultiplier     float64                 `json:"factors_insights_multiplier"`
+	FactorsInsightsPercentage     float64                 `json:"factors_insights_percentage"`
+	FactorsInsightsUsersCount     float64                 `json:"factors_insights_users_count"`
+	FactorsGoalUsersCount         float64                 `json:"factors_goal_users_count"`
+	FactorsMultiplierIncreaseFlag bool                    `json:"factors_multiplier_increase_flag"`
+	FactorsInsightsType           string                  `json:"factors_insights_type"`
+	FactorsSubInsights            []*FactorsInsights      `json:"factors_sub_insights"`
+}
+
+func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
+	countType string, pw PatternServiceWrapperInterface) ([]*FactorsInsights, float64, float64, float64) {
+	seenPropertyConstraints := make(map[string]bool)
+	seenEvents := make(map[string]bool)
+	var Level0GoalUsersCount float64
+	var Level0GoalPercentage float64
+	var Level0TotalUsers float64
+	type parentInsightsTuple struct {
+		parentIndex int
+		index       int
+		insights    FactorsInsights
+	}
+	indexLevelInsightsMap := make(map[int]FactorsInsights)
+	indexLevelInsightsMap[0] = FactorsInsights{
+		FactorsSubInsights: make([]*FactorsInsights, 0),
+	}
+	levelInsightsMap := make(map[int][]parentInsightsTuple)
+	indexLevelMap := make(map[int]int)
+	indexLevelMap[0] = 0
+	for _, node := range nodes {
+		indexLevelMap[node.Index] = indexLevelMap[node.ParentIndex] + 1
+	}
+	for _, node := range nodes {
+		// Dedup results to show more novel results as user scrolls down.
+		if shouldFilterResult(node, &seenPropertyConstraints, &seenEvents) {
+			continue
+		}
+		if node.Fcr < MIN_FCR && node.Fcp < MIN_FCP {
+			continue
+		}
+		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY || node.NodeType == NODE_TYPE_CAMPAIGN {
+			funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints := buildFunnelFormats(node, countType)
+			if c, err := buildFunnelGraphResult(reqId, node, funnelEvents, funnelConstraints,
+				baseFunnelEvents, baseFunnelConstraints, countType, pw); err != nil {
+				log.Error(err)
+				continue
+			} else {
+				var funnelResults funnelNodeResults
+				funnelResults = c.Datasets[0]["funnel_data"].(funnelNodeResults)
+				var baseFunnelResults funnelNodeResults
+				baseFunnelResults = c.Datasets[0]["base_funnel_data"].(funnelNodeResults)
+				var insights FactorsInsights
+				if node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY {
+					attributes := make([]FactorsAttributeTuple, 0)
+					for _, attribute := range funnelResults[len(funnelResults)-2].Constraints.EPNumericConstraints {
+						attributes = append(attributes, FactorsAttributeTuple{
+							FactorsAttributeKey:        attribute.PropertyName,
+							FactorsAttributeLowerBound: attribute.LowerBound,
+							FactorsAttributeUpperBound: attribute.UpperBound,
+							FactorsAttributeEquality:   attribute.IsEquality,
+						})
+					}
+					for _, attribute := range funnelResults[len(funnelResults)-2].Constraints.EPCategoricalConstraints {
+						attributes = append(attributes, FactorsAttributeTuple{
+							FactorsAttributeKey:   attribute.PropertyName,
+							FactorsAttributeValue: attribute.PropertyValue,
+						})
+					}
+					for _, attribute := range funnelResults[len(funnelResults)-2].Constraints.UPNumericConstraints {
+						attributes = append(attributes, FactorsAttributeTuple{
+							FactorsAttributeKey:        attribute.PropertyName,
+							FactorsAttributeLowerBound: attribute.LowerBound,
+							FactorsAttributeUpperBound: attribute.UpperBound,
+							FactorsAttributeEquality:   attribute.IsEquality,
+						})
+					}
+					for _, attribute := range funnelResults[len(funnelResults)-2].Constraints.UPCategoricalConstraints {
+						attributes = append(attributes, FactorsAttributeTuple{
+							FactorsAttributeKey:   attribute.PropertyName,
+							FactorsAttributeValue: attribute.PropertyValue,
+						})
+					}
+					insights.FactorsInsightsAttribute = attributes
+					insights.FactorsInsightsType = ATTRIBUTETYPE
+				}
+				if node.NodeType == NODE_TYPE_SEQUENCE {
+					insights.FactorsInsightsKey = funnelResults[len(funnelResults)-2].EventName
+					insights.FactorsInsightsType = JOURNEYTYPE
+				}
+				if node.NodeType == NODE_TYPE_CAMPAIGN {
+					insights.FactorsInsightsKey = P.ExtractCampaignName(funnelResults[len(funnelResults)-2].EventName)
+					insights.FactorsInsightsType = CAMPAIGNTYPE
+				}
+				insights.FactorsGoalUsersCount = funnelResults[len(funnelResults)-1].Data[0]
+				insights.FactorsInsightsUsersCount = funnelResults[len(funnelResults)-2].Data[0]
+				insights.FactorsInsightsPercentage = roundTo1Decimal(funnelResults[len(funnelResults)-2].ConversionPercent)
+				if funnelResults[len(funnelResults)-2].NodeType == "positive" {
+					insights.FactorsMultiplierIncreaseFlag = true
+					insights.FactorsInsightsMultiplier = roundTo1Decimal(funnelResults[len(funnelResults)-2].ConversionPercent / baseFunnelResults[len(baseFunnelResults)-2].ConversionPercent)
+				} else {
+					insights.FactorsMultiplierIncreaseFlag = false
+					insights.FactorsInsightsMultiplier = roundTo1Decimal(baseFunnelResults[len(baseFunnelResults)-2].ConversionPercent / funnelResults[len(funnelResults)-2].ConversionPercent)
+				}
+				insights.FactorsSubInsights = make([]*FactorsInsights, 0)
+				indexLevelInsightsMap[node.Index] = insights
+				levelInsightsMap[indexLevelMap[node.Index]] = append(levelInsightsMap[indexLevelMap[node.Index]], parentInsightsTuple{
+					parentIndex: node.ParentIndex,
+					index:       node.Index,
+					insights:    insights,
+				})
+				if indexLevelMap[node.Index] == 1 {
+					Level0GoalUsersCount = baseFunnelResults[len(baseFunnelResults)-1].Data[0]
+					Level0GoalPercentage = baseFunnelResults[len(baseFunnelResults)-2].ConversionPercent
+					Level0TotalUsers = baseFunnelResults[len(baseFunnelResults)-2].Data[0]
+				}
+			}
+		}
+
+	}
+	for i := 2; i >= 1; i-- {
+		for _, insight := range levelInsightsMap[i] {
+			parent := indexLevelInsightsMap[insight.parentIndex]
+			child := indexLevelInsightsMap[insight.index]
+			if parent.FactorsInsightsType == "" || isValidInsightTransition(parent.FactorsInsightsType, child.FactorsInsightsType) {
+				subInsights := parent.FactorsSubInsights
+				subInsights = append(subInsights, trimChildNode(parent.FactorsInsightsType, child.FactorsInsightsType, parent, child))
+				parent.FactorsSubInsights = subInsights
+				indexLevelInsightsMap[insight.parentIndex] = parent
+			}
+		}
+	}
+	return indexLevelInsightsMap[0].FactorsSubInsights, Level0GoalUsersCount, Level0GoalPercentage, Level0TotalUsers
+}
+
+func isValidInsightTransition(parentType string, childType string) bool {
+	if parentType == JOURNEYTYPE {
+		return true
+	}
+	if parentType == ATTRIBUTETYPE && childType == ATTRIBUTETYPE {
+		return true
+	}
+	if parentType == CAMPAIGNTYPE && childType == CAMPAIGNTYPE {
+		return true
+	}
+	return false
+}
+
+func trimChildNode(parentType string, childType string, parent FactorsInsights, child FactorsInsights) *FactorsInsights {
+	if parentType == ATTRIBUTETYPE && childType == ATTRIBUTETYPE {
+		attributes := make([]FactorsAttributeTuple, 0)
+		for _, childNodeAttribute := range child.FactorsInsightsAttribute {
+			match := false
+			for _, parentNodeAttribute := range parent.FactorsInsightsAttribute {
+				if parentNodeAttribute == childNodeAttribute {
+					match = true
+				}
+				if match == false {
+					attributes = append(attributes, childNodeAttribute)
+				}
+			}
+		}
+		child.FactorsInsightsAttribute = attributes
+	}
+	return &child
+}
+
+func roundTo1Decimal(value float64) float64 {
+	return math.Floor(value*10) / 10
+}
+
+func FactorV1(reqId string, projectId uint64, startEvent string,
+	startEventConstraints *P.EventConstraints, endEvent string,
+	endEventConstraints *P.EventConstraints, countType string,
+	pw PatternServiceWrapperInterface) (Factors, error) {
+
+	if countType != P.COUNT_TYPE_PER_OCCURRENCE && countType != P.COUNT_TYPE_PER_USER {
+		err := fmt.Errorf(fmt.Sprintf("Unknown count type: %s, for req: %s", countType, reqId))
+		log.Error(err)
+		return Factors{}, err
+	}
+	iPatternNodes := []*ItreeNode{}
+	iPatternNodesUnsorted := []*ItreeNode{}
+	if itree, err := BuildNewItreeV1(reqId, startEvent, startEventConstraints,
+		endEvent, endEventConstraints, pw, countType); err != nil {
+		log.Error(err)
+		return Factors{}, err
+	} else {
+		for _, node := range itree.Nodes {
+			if node.NodeType == NODE_TYPE_ROOT {
+
+				// Root node.
+				continue
+			}
+			iPatternNodes = append(iPatternNodes, node)
+			iPatternNodesUnsorted = append(iPatternNodesUnsorted, node)
+		}
+	}
+
+	// Rerank iPatternNodes in descending order of ranked scores.
+	sort.SliceStable(iPatternNodes,
+		func(i, j int) bool {
+			// InformationDrop * parentPatternFrequency is the ranking score for the node.
+			scoreI := iPatternNodes[i].InformationDrop * (iPatternNodes[i].Fpp - iPatternNodes[i].OtherFcp)
+			scoreJ := iPatternNodes[j].InformationDrop * (iPatternNodes[j].Fpp - iPatternNodes[j].OtherFcp)
+			return (scoreI > scoreJ)
+		})
+
+	v1FactorResult := Factors{}
+
+	insights, goalUsersCount, goalsUsersPercentage, totalUsersCount := buildFactorResultsFromPatternsV1(reqId, iPatternNodesUnsorted, countType, pw)
+	v1FactorResult.GoalUserCount = goalUsersCount
+	v1FactorResult.OverallPercentage = goalsUsersPercentage
+	v1FactorResult.OverallMultiplier = 1
+	v1FactorResult.TotalUsersCount = totalUsersCount
+	v1FactorResult.Insights = insights
+
+	return v1FactorResult, nil
 }
