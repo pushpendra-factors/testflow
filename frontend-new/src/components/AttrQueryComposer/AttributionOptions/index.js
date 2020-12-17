@@ -125,7 +125,7 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
     }
 
     const renderWindow = () => {
-        if(window !== undefined && window >= 0) {
+        if((window !== null && window !== undefined) && window >= 0) {
             return (<div className={styles.block__select_wrapper}>
                     <Button 
                         size={'large'} 

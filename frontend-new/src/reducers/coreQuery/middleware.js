@@ -2,7 +2,10 @@
 
 import { fetchEventsAction, fetchEventPropertiesAction, 
   fetchUserPropertiesAction, 
-  setGroupByAction, delGroupByAction, deleteGroupByEventAction} from './actions';
+  setGroupByAction, 
+  delGroupByAction, deleteGroupByEventAction, 
+  setEventGoalAction, setMarketingTouchpointsAction, 
+  setAttributionModelsAction, setAttributionWindowAction, setAttrLinkEventsAction} from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties } from './services';
 import { convertToEventOptions, convertPropsToOptions } from './utils';
 
@@ -71,3 +74,42 @@ export const deleteGroupByForEvent = (ev, index) => {
   }
 }
 
+export const setGoalEvent = (goalEvent) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setEventGoalAction(goalEvent)))
+    })
+  }
+}
+
+export const setTouchPoint = (touchpoint) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setMarketingTouchpointsAction(touchpoint)))
+    })
+  }
+}
+
+export const setModels = (models) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setAttributionModelsAction(models)))
+    })
+  }
+}
+
+export const setWindow = (window) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setAttributionWindowAction(window)))
+    })
+  }
+}
+
+export const setLinkedEvents = (linkedEvents) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setAttrLinkEventsAction(linkedEvents)))
+    })
+  }
+}

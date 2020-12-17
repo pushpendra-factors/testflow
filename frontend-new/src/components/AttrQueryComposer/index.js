@@ -5,7 +5,14 @@ import styles from './index.module.scss';
 import { SVG, Text } from '../../components/factorsComponents';
 import ConversionGoalBlock from './ConversionGoalBlock';
 
-import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
+import { fetchEventNames, 
+    getUserProperties, 
+    getEventProperties,
+    setGoalEvent, 
+    setTouchPoint, 
+    setModels, setWindow, 
+    setLinkedEvents
+ } from '../../reducers/coreQuery/middleware';
 import { Button, Popover } from 'antd';
 import MarkTouchpointBlock from './MarkTouchpointBlock';
 import AttributionOptions from './AttributionOptions';
@@ -14,16 +21,19 @@ import { QUERY_TYPE_EVENT } from '../../utils/constants';
 
 const AttrQueryComposer = ({activeProject, 
         fetchEventNames, getEventProperties, 
-        userProperties, eventProperties, runAttributionQuery}) => {
+        userProperties, eventProperties, 
+        runAttributionQuery, eventGoal, setGoalEvent, 
+        touchPoint, setTouchPoint, models, setModels,
+        window, setWindow, linkedEvents, setLinkedEvents
+    }) => {
 
     // <--- Things that go into reducer state; // Jitesh
-    const [eventGoal, setEventGoal] = useState({});
-    const [touchPoint, setTouchPoint] = useState('');
+    // const [touchPoint, setTouchPoint] = useState('');
 
-    const [models, setModels] = useState([]);
-    const [window, setWindow] = useState();
+    // const [models, setModels] = useState([]);
+    // const [window, setWindow] = useState();
 
-    const [linkedEvents, setLinkedEvents] = useState([]);
+    // const [linkedEvents, setLinkedEvents] = useState([]);
 
     // ---> 
 
@@ -55,7 +65,7 @@ const AttrQueryComposer = ({activeProject,
     }, [linkedEvents]);
 
     const goalChange = (eventGoal) => {
-        setEventGoal(eventGoal);
+        setGoalEvent(eventGoal);
     }
 
     const linkEventChange = (linkEvent, index) => {
@@ -69,7 +79,7 @@ const AttrQueryComposer = ({activeProject,
     }
 
     const goalDel = () => {
-        setEventGoal({});
+        setGoalEvent({});
     }
 
     const linkEventDel = (index) => {
@@ -215,13 +225,23 @@ const AttrQueryComposer = ({activeProject,
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
     userProperties: state.coreQuery.userProperties,
-    eventProperties: state.coreQuery.eventProperties
+    eventProperties: state.coreQuery.eventProperties,
+    eventGoal: state.coreQuery.eventGoal,
+    touchPoint: state.coreQuery.touchpoint,
+    models: state.coreQuery.models,
+    window: state.coreQuery.window,
+    linkedEvents: state.coreQuery.linkedEvents
 });
   
 const mapDispatchToProps = dispatch => bindActionCreators({
     fetchEventNames,
     getEventProperties,
-    getUserProperties
+    getUserProperties,
+    setGoalEvent,
+    setTouchPoint,
+    setModels,
+    setWindow,
+    setLinkedEvents
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(AttrQueryComposer);
