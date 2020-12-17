@@ -21,6 +21,9 @@ type FacebookDocument struct {
 	Type                int             `gorm:"primary_key:true;auto_increment:false" json:"-"`
 	Timestamp           int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
 	ID                  string          `gorm:"primary_key:true;auto_increment:false" json:"id"`
+	CampaignID          int64           `json:"-"`
+	AdSetID             int64           `json:"-"`
+	AdID                int64           `json:"-"`
 	Value               *postgres.Jsonb `json:"value"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
@@ -89,6 +92,15 @@ func CreateFacebookDocument(projectId uint64, document *FacebookDocument) int {
 	}
 	document.Type = docType
 
+	campaignIdValue, adSetId, adId, error := getFacebookHierarchyColumnsByType(docType, document.Value)
+	if error != nil {
+		logCtx.Error("Invalid docType alias.")
+		return http.StatusBadRequest
+	}
+	document.CampaignID = campaignIdValue
+	document.AdSetID = adSetId
+	document.AdID = adId
+
 	db := C.GetServices().Db
 	err := db.Create(&document).Error
 	if err != nil {
@@ -103,6 +115,33 @@ func CreateFacebookDocument(projectId uint64, document *FacebookDocument) int {
 	}
 
 	return http.StatusCreated
+}
+
+func getFacebookHierarchyColumnsByType(docType int, valueJson *postgres.Jsonb) (int64, int64, int64, error) {
+	if docType > len(adwordsDocumentTypeAlias) {
+		return 0, 0, 0, errors.New("invalid document type")
+	}
+
+	valueMap, err := U.DecodePostgresJsonb(valueJson)
+	if err != nil {
+		return 0, 0, 0, err
+	}
+
+	if len(*valueMap) == 0 {
+		return 0, 0, 0, errorEmptyAdwordsDocument
+	}
+	switch docType {
+	case 1:
+		return U.GetInt64FromMapOfInterface(*valueMap, "id", 0), 0, 0, nil
+	case 2:
+		return U.GetInt64FromMapOfInterface(*valueMap, "campaign_id", 0), U.GetInt64FromMapOfInterface(*valueMap, "adset_id", 0), U.GetInt64FromMapOfInterface(*valueMap, "id", 0), nil
+	case 3:
+		return U.GetInt64FromMapOfInterface(*valueMap, "campaign_id", 0), U.GetInt64FromMapOfInterface(*valueMap, "id", 0), 0, nil
+	case 4, 5, 6:
+		return U.GetInt64FromMapOfInterface(*valueMap, "campaign_id", 0), U.GetInt64FromMapOfInterface(*valueMap, "adset_id", 0), U.GetInt64FromMapOfInterface(*valueMap, "ad_id", 0), nil
+	default:
+		return 0, 0, 0, nil
+	}
 }
 
 type FacebookLastSyncInfo struct {

@@ -52,7 +52,7 @@
     
     //Default Button 
     &:focus, &:hover, &:active{ 
-        border-color: $fa-color--brand-7; 
+        border-color: $fa-color--mono-5; 
         color: $fa-color--mono-5;  
     }
     
@@ -89,8 +89,7 @@
         color: $fa-color--brand-6;
         background-color: $fa-color--mono-1;
         &:focus, &:hover, &:active{
-            background: $fa-color--white;
-            border-color: $fa-color--brand-6; 
+            border-color: $fa-color--brand-6 !important; 
         }
     }
 

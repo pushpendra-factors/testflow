@@ -9,10 +9,10 @@ import FilterBlock from '../../QueryComposer/FilterBlock';
 import { Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 
-const ConversionGoalBlock = ({
-    eventGoal, 
-    eventGoalChange, 
-    delEvent, 
+const LinkedEventsBlock = ({
+    linkEvent, 
+    linkEventChange, 
+    delLinkEvent, 
     eventNameOptions, 
     activeProject, 
     eventProperties,
@@ -28,11 +28,11 @@ const ConversionGoalBlock = ({
     });
     
     useEffect(() => {
-        if(!eventGoal || !eventGoal?.label?.length) {return};
+        if(!linkEvent || !linkEvent?.label?.length) {return};
         const assignFilterProps = Object.assign({}, filterProps);
     
-        if (eventProperties[eventGoal.label]) {
-          assignFilterProps.event = eventProperties[eventGoal.label];
+        if (eventProperties[linkEvent.label]) {
+          assignFilterProps.event = eventProperties[linkEvent.label];
         }
         assignFilterProps.user = userProperties;
         setFilterProperties(assignFilterProps);
@@ -43,18 +43,18 @@ const ConversionGoalBlock = ({
     }
 
     const addFilter = (val) => {
-        const updatedEvent = Object.assign({}, eventGoal);
+        const updatedEvent = Object.assign({}, linkEvent);
         const filt = updatedEvent.filters.filter(fil => JSON.stringify(fil) === JSON.stringify(val));
         if (filt && filt.length) return;
         updatedEvent.filters.push(val);
-        eventGoalChange(updatedEvent);
+        linkEventChange(updatedEvent);
     };
 
     const delFilter = (val) => {
-        const updatedEvent = Object.assign({}, eventGoal);
+        const updatedEvent = Object.assign({}, linkEvent);
         const filt = updatedEvent.filters.filter((v, i) => i !== val);
         updatedEvent.filters = filt;
-        eventGoalChange(updatedEvent);
+        linkEventChange(updatedEvent);
     };
 
     const closeFilter = () => {
@@ -62,7 +62,7 @@ const ConversionGoalBlock = ({
     };
 
     const deleteItem = () => {
-        delEvent();
+        delLinkEvent();
     };
 
     const addFilterBlock = () => {
@@ -73,7 +73,7 @@ const ConversionGoalBlock = ({
           return <FilterBlock
           filterProps={filterProps}
           activeProject={activeProject}
-          event={eventGoal}
+          event={linkEvent}
           insertFilter={addFilter}
           closeFilter={closeFilter}
           >
@@ -83,8 +83,8 @@ const ConversionGoalBlock = ({
 
     const eventFilters = () => {
         const filters = [];
-        if (eventGoal && eventGoal?.filters?.length) {
-            eventGoal.filters.forEach((filter, index) => {
+        if (linkEvent && linkEvent?.filters?.length) {
+            linkEvent.filters.forEach((filter, index) => {
             filters.push(
                         <div key={index} className={'fa--query_block--filters'}>
                             <FilterBlock index={index} filter={filter} deleteFilter={delFilter} insertFilter={addFilter} closeFilter={closeFilter}></FilterBlock>
@@ -103,10 +103,10 @@ const ConversionGoalBlock = ({
       };
 
     const onEventSelect = (val) => {
-        const currentEventGoal = Object.assign({}, eventGoal);
-        currentEventGoal.label = val;
-        currentEventGoal.filters = [];
-        eventGoalChange(currentEventGoal);
+        const currentLinkEvent = Object.assign({}, linkEvent);
+        currentLinkEvent.label = val;
+        currentLinkEvent.filters = [];
+        linkEventChange(currentLinkEvent);
         setSelectVisible(false);
     };
 
@@ -137,35 +137,33 @@ const ConversionGoalBlock = ({
         );
     };
 
-    const renderGoalBlockContent = () => {
+    const renderLinkEventBlockContent = () => {
         return (
-            <div className={`${styles.block__content}`}>
+            <div className={`${styles.block__content} mt-2`}>
                 {!selectVisible && <Button 
                     size={'large'} 
                     type="link" 
                     onClick={toggleEventSelect}>
                         <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
-                         {eventGoal && eventGoal.label} 
+                         {linkEvent && linkEvent.label} 
                 </Button> }
 
                 {selectEvents()}
-
-                <Text type={'paragraph'} color={`grey`} extraClass={`${styles.block__content__txt_muted}`}> as count of unique users </Text>
 
                 {additionalActions()}
             </div>
         )
     };
 
-    const renderGoalSelect = () => {
+    const renderLinkEventSelect = () => {
 
         return (
-            <div className={`${styles.block__content}`}>
+            <div className={`${styles.block__content} mt-2`}>
                     <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
                         <SVG name={'plus'} color={'purple'}></SVG>
                     </div>
                     
-                    {!selectVisible && <Button size={'large'} type="link" onClick={toggleEventSelect}>Add a goal event</Button>}
+                    {!selectVisible && <Button size={'large'} type="link" onClick={toggleEventSelect}>Add new</Button>}
                     
                     {selectEvents()}
             </div> 
@@ -174,7 +172,7 @@ const ConversionGoalBlock = ({
 
     return (
         <div className={styles.block}>
-            {eventGoal?.label?.length ? renderGoalBlockContent() : renderGoalSelect()}
+            {linkEvent?.label?.length ? renderLinkEventBlockContent() : renderLinkEventSelect()}
             {eventFilters()}
         </div>
     )
@@ -190,4 +188,4 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = dispatch => bindActionCreators({}, dispatch);
 
 
-export default connect(mapStateToProps, mapDispatchToProps)(ConversionGoalBlock);
+export default connect(mapStateToProps, mapDispatchToProps)(LinkedEventsBlock);

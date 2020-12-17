@@ -478,10 +478,7 @@ func GetEncodedEventsPatterns(projectId uint64, filteredPatterns []*P.Pattern, e
 	}
 
 	goalTopKPatterns := FilterTopKEventsOnTypes(filteredPatterns, eventNamesWithType, topK_patterns, keventsSpecial, keventsURL, campEventsList)
-	mineLog.Info(fmt.Sprintf("Mining goals from topk events"))
-	for idx, v := range goalTopKPatterns {
-		mineLog.Info(fmt.Sprint("Goal event: ", idx, v.String()))
-	}
+	mineLog.Info("Mining goals from topk events : ", len(goalTopKPatterns))
 
 	for idx, valPat := range goalTopKPatterns {
 		//check if campaignEvent
@@ -490,16 +487,13 @@ func GetEncodedEventsPatterns(projectId uint64, filteredPatterns []*P.Pattern, e
 			tmpFactorsRule := M.FactorsGoalRule{EndEvent: valPat.String()}
 			goalID, httpStatusTrackedEvent := M.CreateFactorsTrackedEvent(projectId, valPat.String(), "")
 			if goalID == 0 {
-				mineLog.Error("Unable to create a trackedEvent ", httpStatusTrackedEvent, " ", goalID)
-				return nil, fmt.Errorf("unable to write tracked event to db")
+				mineLog.Info("Unable to create a trackedEvent ", httpStatusTrackedEvent, " ", goalID)
 			}
-			mineLog.Info("trackedEvent in db  ", httpStatusTrackedEvent, " ", goalID)
+			mineLog.Info("trackedEvent in db  ", httpStatusTrackedEvent, " ", valPat.String(), " ", goalID)
 
 			_, httpstatus, err := M.CreateFactorsGoal(projectId, valPat.String(), tmpFactorsRule, "")
 			if httpstatus != http.StatusCreated {
-				mineLog.Error("Unable to write to db ", httpstatus, " ", err)
-				return nil, fmt.Errorf("unable to write factors goal to db")
-
+				mineLog.Info("Unable to create factors goal in db: ", httpstatus, " ", valPat.String(), " ", err)
 			}
 		}
 	}
@@ -529,7 +523,11 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	mineLog.Info("Number of Len One Patterns : ", len(filteredPatterns))
 
 	goalPatterns, err := GetEncodedEventsPatterns(projectId, filteredPatterns, eventNamesWithType, campEventsList)
-	mineLog.Info("Number of Goal Patterns : ", len(goalPatterns))
+	mineLog.Info("Number of Goal Patterns to use in factors: ", len(goalPatterns))
+
+	for _, v := range goalPatterns {
+		mineLog.Info("goal pattern for factor: ", v.EventNames[0])
+	}
 
 	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil

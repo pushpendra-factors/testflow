@@ -232,7 +232,7 @@ function QueryComposer({
   }, [runFunnelQuery, runQuery, queryType]);
 
   const footer = () => {
-    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 1) { return null; }
+    if (queryType === QUERY_TYPE_EVENT && queries.length < 1) { return null; }
     if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) { return null; } else {
       return (
         <div className={styles.composer_footer}> 
