@@ -4,13 +4,14 @@ import ResultsHeader from "../ResultsHeader";
 import Header from "../../AppLayout/Header";
 import { Spin } from "antd";
 import AttributionsChart from "./AttributionsChart";
+import GroupedAttributionsChart from "./GroupedAttributionsChart";
 
 function AttributionsResult({
   setShowResult,
   requestQuery,
   querySaved,
   setQuerySaved,
-  resultState
+  resultState,
 }) {
   let content = null;
 
@@ -30,14 +31,24 @@ function AttributionsResult({
     );
   }
 
-  if(resultState.data) {
+  if (resultState.data) {
     content = (
       <div className="mt-48 mb-8 fa-container">
-        <AttributionsChart
+        {/* <AttributionsChart
+          event='ViewGuidesWithinResources'
           data={resultState.data}
+          isWidgetModal={false}
+          attribution_method = "Last Touch"
+        /> */}
+        <GroupedAttributionsChart
+          event="$session"
+          data={resultState.data}
+          isWidgetModal={false}
+          attribution_method="First Touch"
+          attribution_method_compare="Last Touch"
         />
       </div>
-    )
+    );
   }
 
   return (
@@ -60,8 +71,10 @@ function AttributionsResult({
           </div>
           <div
             className="text-base font-medium pb-4"
-            style={{ color: "#8692A3" }}>
-            Leads count (as unique users) vs Opportunities (as sum of opportunity value) - Last Touch
+            style={{ color: "#8692A3" }}
+          >
+            Leads count (as unique users) vs Opportunities (as sum of
+            opportunity value) - Last Touch
           </div>
         </div>
 

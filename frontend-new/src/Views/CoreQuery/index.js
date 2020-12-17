@@ -30,7 +30,7 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
 } from "../../utils/constants";
-import { SampleAttributionResponse } from "../../utils/SampleResponse";
+import { SampleAttributionResponse, CompareAttributionResponse } from "../../utils/SampleResponse";
 import AttributionsResult from "./AttributionsResult";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 
@@ -425,7 +425,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       setTimeout(() => {
         updateAttributionResult({
           ...initialState,
-          data: SampleAttributionResponse,
+          data: CompareAttributionResponse,
         });
       }, 1000);
     },
