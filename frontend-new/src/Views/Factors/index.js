@@ -75,21 +75,20 @@ const Factors = ({
   const [showGoalDrawer, setGoalDrawer] = useState(false);
   const [dataSource, setdataSource] = useState(null);
 
-  useEffect(() => {
+  useEffect(() => { 
     if (!goals || !agents) {
       const getData = async () => {
         await fetchProjectAgents(activeProject.id);
         await fetchFactorsGoals(activeProject.id); 
       };
-      getData();
+      getData();  
     }
-    
     const getData1 = async () => { 
       await fetchEventNames(activeProject.id);
       await fetchFactorsModels(activeProject.id); 
     };
     getData1();
-
+    setdataSource(null);
     if (goals) {
       const formattedArray = [];
       goals.map((goal, index) => {
