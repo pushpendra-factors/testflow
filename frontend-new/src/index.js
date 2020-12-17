@@ -13,6 +13,7 @@ import App from './App';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage'; // defaults to localStorage for web
 import { PersistGate } from 'redux-persist/integration/react';
+import ErrorBoundary from './ErrorBoundary';
 
 const persistConfig = {
   key: 'root',
@@ -35,7 +36,9 @@ ReactDOM.render(
   <React.StrictMode>
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
-        <App />
+        <ErrorBoundary>
+            <App /> 
+        </ErrorBoundary>
       </PersistGate>
     </Provider>
   </React.StrictMode>,
