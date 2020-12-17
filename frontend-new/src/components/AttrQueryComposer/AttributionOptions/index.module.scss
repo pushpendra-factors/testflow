@@ -1,0 +1,29 @@
+.block {
+    margin-bottom: 24px;
+    
+    &__content {
+        display: flex;
+        justify-content: flex-start;
+        position: relative;
+
+        &__txt_muted {
+            display: flex;
+            align-items: center;
+            margin-left: 16px;
+        }
+
+        &__title_muted {
+            @extend .block__content__txt_muted;
+            margin-left: 0;
+        }
+    }
+
+    &__select_wrapper {
+        position: relative;
+        margin-top: 16px;
+
+        &__block {
+            display: flex;
+        }
+    }
+}

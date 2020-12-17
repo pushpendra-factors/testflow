@@ -12,6 +12,8 @@ import {
 } from './actions';
 import { SHOW_ANALYTICS_RESULT } from '../types';
 
+const DEFAULT_TOUCHPOINTS = ['Campaign', 'Source', 'AdGroup', 'Keyword']
+
 const defaultState = {
   eventOptions: [],
   eventProperties: {},
@@ -20,6 +22,11 @@ const defaultState = {
     global: [],
     event: []
   },
+  touchpointOptions: [{
+    label: 'Paid Marketing',
+    icon: 'fav',
+    values: DEFAULT_TOUCHPOINTS.map(v => [v])
+  }],
   show_analytics_result: false,
 };
 

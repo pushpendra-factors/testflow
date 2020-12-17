@@ -249,7 +249,7 @@ const getInsights = (projectID, isJourney=false) =>{
 
             <Button type="primary" size={'large'} loading={insightBtnLoading} disabled={!(event1 && dateTime)} onClick={()=>getInsights(props.activeProject.id, eventCount===2?true:false )}>Find Insights</Button>
         </div>
-</div>
+    </div>
 
       </Drawer>
   );
