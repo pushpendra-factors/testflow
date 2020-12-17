@@ -23,7 +23,7 @@ function GroupedBarChart({
   const yScale = d3.scaleLinear().domain([0, maxYPoint]);
   const tickValues = d3.axisLeft(yScale).scale().ticks(5);
 
-  const getPadding = () => {
+  const getPadding = useCallback(() => {
     if (tickValues[1] - tickValues[0] >= 10000) {
       return 120;
     }
@@ -34,7 +34,7 @@ function GroupedBarChart({
       return 60;
     }
     return 30;
-  };
+  }, [tickValues]);
 
   const drawChart = useCallback(() => {
     c3.generate({
@@ -192,7 +192,19 @@ function GroupedBarChart({
         },
       },
     });
-  }, [categories, chartData, tickValues, colors]);
+  }, [
+    categories,
+    chartData,
+    tickValues,
+    colors,
+    event,
+    getPadding,
+    method1,
+    method2,
+    responseHeaders,
+    responseRows,
+    visibleIndices,
+  ]);
 
   useEffect(() => {
     drawChart();
