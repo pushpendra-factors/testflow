@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Row, Avatar, Popover, Button, Modal, Col, notification
+  Layout, Row, Avatar, Popover, Button, Modal, Col, notification, Tooltip
 } from 'antd';
 import { NavLink, useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
@@ -121,13 +121,19 @@ function Sidebar(props) {
               <div className={'fa-aside--divider'} />
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
+              <Tooltip title="Dashboard" placement="right">
               <NavLink activeClassName="active" exact to="/"><SVG name={'home'} size={24} color="white"/></NavLink>
+              </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <NavLink activeClassName="active" exact to="/core-analytics"><SVG name={'corequery'} size={24} color="white"/></NavLink>
+              <Tooltip title="Analyse" placement="right">
+               <NavLink activeClassName="active" exact to="/core-analytics"><SVG name={'corequery'} size={24} color="white"/></NavLink>
+              </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <NavLink activeClassName="active" to="/explain"><SVG name={'key'} size={24} color="white"/></NavLink>
+              <Tooltip title="Explain" placement="right">
+                <NavLink activeClassName="active" to="/explain"><SVG name={'key'} size={24} color="white"/></NavLink> 
+              </Tooltip>
             </Row>
             {/* <Row justify="center" align="middle" className=" w-full py-2">
               <NavLink activeClassName="active" disabled exact to="/bug"><SVG name={'bug'} size={24} color="white"/></NavLink>
@@ -139,7 +145,9 @@ function Sidebar(props) {
               <NavLink activeClassName="active" exact to="/components"><SVG name={'notify'} size={24} color="white"/></NavLink>
             </Row> */}
             <Row justify="center" align="middle" className=" w-full py-2">
-              <NavLink activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
+              <Tooltip title="Settings" placement="right">
+                <NavLink activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
+              </Tooltip>
             </Row>
 
           </div>
