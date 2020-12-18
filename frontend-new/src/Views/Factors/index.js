@@ -125,7 +125,7 @@ const Factors = ({
                         <Row gutter={[24, 24]} className={'p-4'}>
                             <Col span={24}>
                                 <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'} >What’s being tracked?</Text>
-                                <Text type={'title'} level={7} extraClass={'m-0'} >Factors periodically track a pre-configured set of data points for faster and efficient retrieval of insights. </Text>
+                                <Text type={'title'} level={7} extraClass={'m-0'} >Explain periodically tracks a pre-configured set of data points for faster and efficient retrieval of insights. </Text>
                                 <Button className={'m-0 mt-4'} size={'large'} onClick={() => setConfigureDPModal(true)}>Configure Data Points</Button>
                             </Col>
                             <Col span={24}>
@@ -145,7 +145,7 @@ const Factors = ({
                     <Row gutter={[24, 24]} justify="center">
                         <Col span={20}>
                             <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text>
-                            <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically track website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
+                            <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically tracks website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
                         </Col>
                         <Col span={20}>
                             <Button size={'large'} type={'primary'} onClick={() => setGoalDrawer(true)}>Create a New Goal</Button>
