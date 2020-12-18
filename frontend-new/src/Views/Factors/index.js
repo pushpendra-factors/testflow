@@ -144,7 +144,7 @@ const Factors = ({
                 <Col span={16}>
                     <Row gutter={[24, 24]} justify="center">
                         <Col span={20}>
-                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Factors</Text>
+                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text>
                             <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically track website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
                         </Col>
                         <Col span={20}>

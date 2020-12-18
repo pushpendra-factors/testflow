@@ -35,7 +35,7 @@ function App({ isAgentLoggedIn, agent_details }) {
           <Route exact path="/setpassword" name="login" component={ResetPassword} />
           <Route exact path="/forgotpassword" name="login" component={ForgotPassword} />
           <Route exact path="/login" name="login" component={Login} />
-          {isAgentLoggedIn ? <Route exact path="/factors/insights" name="login" component={FactorsInsights} /> : <Redirect to="/login" />}
+          {isAgentLoggedIn ? <Route exact path="/explain/insights" name="login" component={FactorsInsights} /> : <Redirect to="/login" />}
           {isAgentLoggedIn ? <Route path="/" name="Home" component={AppLayout} /> : <Redirect to="/login" /> }
         </Switch>
       </Router>
