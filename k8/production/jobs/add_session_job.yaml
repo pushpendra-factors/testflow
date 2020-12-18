@@ -15,7 +15,7 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: job-pool-small
+            cloud.google.com/gke-nodepool: persistent-pool-highmem-16
           containers:
           - name: add-session-job
             image: us.gcr.io/factors-production/add-session-job:v0.98-2c51baf-880

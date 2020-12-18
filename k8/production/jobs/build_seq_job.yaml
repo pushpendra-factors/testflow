@@ -14,7 +14,7 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: job-pool
+            cloud.google.com/gke-nodepool: persistent-pool-highmem-16
           containers:
           - name: build-seq-job
             image: us.gcr.io/factors-production/build-seq-job:v1.8-577bcc3-706
