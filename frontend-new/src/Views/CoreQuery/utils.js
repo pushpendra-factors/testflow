@@ -488,20 +488,12 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
       filters: [],
     },
     touchpoint: requestQuery.attribution_key,
-    models: [
-      ATTRIBUTION_METHODOLOGY.find(
-        (m) => m.value === requestQuery.attribution_methodology
-      ).text,
-    ],
+    models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,
   };
 
   if (requestQuery.attribution_methodology_c) {
-    result.models.push(
-      ATTRIBUTION_METHODOLOGY.find(
-        (m) => m.value === requestQuery.attribution_methodology_c
-      ).text
-    );
+    result.models.push(requestQuery.attribution_methodology_c);
   }
 
   if (requestQuery.lfe && requestQuery.lfe.length) {
