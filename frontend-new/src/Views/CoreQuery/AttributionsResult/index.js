@@ -1,5 +1,9 @@
 import React from "react";
-import { QUERY_TYPE_ATTRIBUTION } from "../../../utils/constants";
+import {
+  QUERY_TYPE_ATTRIBUTION,
+  ATTRIBUTION_METHODOLOGY,
+} from "../../../utils/constants";
+import styles from "../FunnelsResultPage/index.module.scss";
 import ResultsHeader from "../ResultsHeader";
 import Header from "../../AppLayout/Header";
 import { Spin } from "antd";
@@ -12,8 +16,12 @@ function AttributionsResult({
   querySaved,
   setQuerySaved,
   resultState,
+  setDrawerVisible,
+  attributionsState,
 }) {
   let content = null;
+
+  const { eventGoal, touchpoint, models, linkedEvents } = attributionsState;
 
   if (resultState.loading) {
     content = (
@@ -34,19 +42,27 @@ function AttributionsResult({
   if (resultState.data) {
     content = (
       <div className="mt-48 mb-8 fa-container">
-        {/* <AttributionsChart
-          event='ViewGuidesWithinResources'
-          data={resultState.data}
-          isWidgetModal={false}
-          attribution_method = "Last Touch"
-        /> */}
-        <GroupedAttributionsChart
-          event="$session"
-          data={resultState.data}
-          isWidgetModal={false}
-          attribution_method="First Touch"
-          attribution_method_compare="Last Touch"
-        />
+        {models.length === 1 ? (
+          <AttributionsChart
+            event={eventGoal.label}
+            linkedEvents={linkedEvents}
+            touchpoint={touchpoint}
+            data={resultState.data}
+            isWidgetModal={false}
+            attribution_method={models[0]}
+          />
+        ) : null}
+        {models.length === 2 ? (
+          <GroupedAttributionsChart
+            event={eventGoal.label}
+            linkedEvents={linkedEvents}
+            touchpoint={touchpoint}
+            data={resultState.data}
+            isWidgetModal={false}
+            attribution_method={models[0]}
+            attribution_method_compare={models[1]}
+          />
+        ) : null}
       </div>
     );
   }
@@ -70,11 +86,11 @@ function AttributionsResult({
             Untitled Analysis
           </div>
           <div
-            className="text-base font-medium pb-4"
+            className={`text-base font-medium pb-1 cursor-pointer ${styles.eventsText}`}
             style={{ color: "#8692A3" }}
+            onClick={setDrawerVisible.bind(this, true)}
           >
-            Leads count (as unique users) vs Opportunities (as sum of
-            opportunity value) - Last Touch
+            {eventGoal.label} (unique users)
           </div>
         </div>
 

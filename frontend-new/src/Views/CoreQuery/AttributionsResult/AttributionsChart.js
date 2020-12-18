@@ -3,7 +3,14 @@ import { formatData } from "./utils";
 import BarLineChart from "../../../components/BarLineChart";
 import AttributionTable from "./AttributionTable";
 
-function AttributionsChart({ data, isWidgetModal, event, attribution_method }) {
+function AttributionsChart({
+  data,
+  isWidgetModal,
+  event,
+  attribution_method,
+  touchpoint,
+  linkedEvents,
+}) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
   const [visibleIndices, setVisibleIndices] = useState(
@@ -11,9 +18,9 @@ function AttributionsChart({ data, isWidgetModal, event, attribution_method }) {
   );
 
   useEffect(() => {
-    const formattedData = formatData(data, event, visibleIndices);
+    const formattedData = formatData(data, event, visibleIndices, touchpoint);
     setChartsData(formattedData);
-  }, [data, event, visibleIndices]);
+  }, [data, event, visibleIndices, touchpoint]);
 
   if (!chartsData.length) {
     return null;
@@ -24,6 +31,8 @@ function AttributionsChart({ data, isWidgetModal, event, attribution_method }) {
       <BarLineChart chartData={chartsData} />
       <div className="mt-8">
         <AttributionTable
+          linkedEvents={linkedEvents}
+          touchpoint={touchpoint}
           event={event}
           data={data}
           isWidgetModal={isWidgetModal}

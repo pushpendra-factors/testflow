@@ -20,17 +20,19 @@ import {
   initialState,
   getFunnelQuery,
   DefaultDateRangeFormat,
+  getAttributionQuery,
 } from "./utils";
 import {
   runQuery as runQueryService,
   getFunnelData,
+  getAttributionsData,
 } from "../../reducers/coreQuery/services";
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_ATTRIBUTION,
-} from "Utils/constants";
+} from "../../utils/constants";
 import {
   SampleAttributionResponse,
   CompareAttributionResponse,
@@ -77,9 +79,23 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     },
     date_range: { ...DefaultDateRangeFormat },
   });
+  const [attributionsState, setAttributionsState] = useState({
+    eventGoal: {},
+    touchpoint: "",
+    models: [],
+    linkedEvents: [],
+  });
 
   const dispatch = useDispatch();
-  const groupBy = useSelector((state) => state.coreQuery.groupBy);
+  const {
+    groupBy,
+    eventGoal,
+    touchpoint,
+    models,
+    window,
+    linkedEvents,
+  } = useSelector((state) => state.coreQuery);
+  
   const dateRange = queryOptions.date_range;
 
   const updateResultState = useCallback((activeTab, newState) => {
@@ -417,29 +433,55 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   );
 
   const runAttributionQuery = useCallback(
-    (isQuerySaved) => {
-      closeDrawer();
-      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-      setShowResult(true);
-      setQuerySaved(isQuerySaved);
-      updateAttributionResult({
-        ...initialState,
-        loading: true,
-      });
-      setTimeout(() => {
+    async (isQuerySaved) => {
+      try {
+        closeDrawer();
+        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+        setShowResult(true);
+        setQuerySaved(isQuerySaved);
         updateAttributionResult({
           ...initialState,
-          data: CompareAttributionResponse,
+          loading: true,
         });
-      }, 1000);
+        const query = getAttributionQuery(
+          eventGoal,
+          touchpoint,
+          models,
+          window,
+          linkedEvents
+        );
+        updateRequestQuery(query);
+        setAttributionsState({ eventGoal, touchpoint, models, linkedEvents });
+        const res = await getAttributionsData(activeProject.id, query);
+        updateAttributionResult({
+          ...initialState,
+          data: res.data,
+        });
+      } catch (err) {
+        console.log(err);
+        updateAttributionResult({
+          ...initialState,
+          error: true,
+        });
+      }
     },
-    [dispatch]
+    [
+      dispatch,
+      activeProject.id,
+      eventGoal,
+      linkedEvents,
+      models,
+      touchpoint,
+      window,
+    ]
   );
 
   useEffect(() => {
     if (rowClicked) {
       if (rowClicked === QUERY_TYPE_FUNNEL) {
         runFunnelQuery(true);
+      } else if(rowClicked === QUERY_TYPE_ATTRIBUTION) {
+        runAttributionQuery(true);
       } else {
         runQuery("0", true, true);
       }
@@ -601,6 +643,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         querySaved={querySaved}
         setQuerySaved={setQuerySaved}
         resultState={attributionResult}
+        setDrawerVisible={setDrawerVisible}
+        attributionsState={attributionsState}
       />
     );
   }
@@ -624,7 +668,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       return <AttrQueryComposer runAttributionQuery={runAttributionQuery} />;
     }
   };
-
+  
   return (
     <>
       <Drawer

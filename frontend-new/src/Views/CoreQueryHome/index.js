@@ -7,7 +7,10 @@ import Header from "../AppLayout/Header";
 import SearchBar from "../../components/SearchBar";
 import { useSelector, useDispatch } from "react-redux";
 import moment from "moment";
-import { getStateQueryFromRequestQuery } from "../CoreQuery/utils";
+import {
+  getStateQueryFromRequestQuery,
+  getAttributionStateFromRequestQuery,
+} from "../CoreQuery/utils";
 import { INITIALIZE_GROUPBY } from "../../reducers/coreQuery/actions";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { deleteQuery } from "../../reducers/coreQuery/services";
@@ -17,9 +20,12 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_CAMPAIGN,
-  QUERY_TYPE_TEMPLATE
+  QUERY_TYPE_TEMPLATE,
 } from "../../utils/constants";
-import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
+import {
+  SHOW_ANALYTICS_RESULT,
+  INITIALIZE_MTA_STATE,
+} from "../../reducers/types";
 
 const coreQueryoptions = [
   {
@@ -138,29 +144,52 @@ function CoreQuery({
     setQueryToState(getFormattedRow(row));
   }, []);
 
-  const setQueryToState = useCallback((record) => {
-    let equivalentQuery;
-    if (record.query.query_group) {
-      equivalentQuery = getStateQueryFromRequestQuery(
-        record.query.query_group[0]
-      );
-    } else {
-      equivalentQuery = getStateQueryFromRequestQuery(record.query);
-    }
-    dispatch({ type: INITIALIZE_GROUPBY, payload: equivalentQuery.breakdown });
-    setQueries(equivalentQuery.events);
-    setQueryType(equivalentQuery.queryType);
-    setQueryOptions((currData) => {
-      return {
-        ...currData,
-        groupBy: [
-          ...equivalentQuery.breakdown.global,
-          ...equivalentQuery.breakdown.event,
-        ],
-      };
-    });
-    setRowClicked(equivalentQuery.queryType);
-  }, []);
+  const updateEventFunnelsState = useCallback(
+    (equivalentQuery) => {
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: equivalentQuery.breakdown,
+      });
+      setQueries(equivalentQuery.events);
+      setQueryOptions((currData) => {
+        return {
+          ...currData,
+          groupBy: [
+            ...equivalentQuery.breakdown.global,
+            ...equivalentQuery.breakdown.event,
+          ],
+        };
+      });
+    },
+    [dispatch]
+  );
+
+  const setQueryToState = useCallback(
+    (record) => {
+      try {
+        let equivalentQuery;
+        if (record.query.query_group) {
+          equivalentQuery = getStateQueryFromRequestQuery(
+            record.query.query_group[0]
+          );
+          updateEventFunnelsState(equivalentQuery);
+        } else if (record.query.attribution_key) {
+          equivalentQuery = getAttributionStateFromRequestQuery(record.query);
+          const usefulQuery = { ...equivalentQuery };
+          delete usefulQuery.queryType;
+          dispatch({ type: INITIALIZE_MTA_STATE, payload: equivalentQuery });
+        } else {
+          equivalentQuery = getStateQueryFromRequestQuery(record.query);
+          updateEventFunnelsState(equivalentQuery);
+        }
+        setQueryType(equivalentQuery.queryType);
+        setRowClicked(equivalentQuery.queryType);
+      } catch (err) {
+        console.log(err);
+      }
+    },
+    [updateEventFunnelsState]
+  );
 
   const getMenu = (row) => {
     return (
@@ -261,8 +290,13 @@ function CoreQuery({
           {coreQueryoptions.map((item, index) => {
             return (
               <Col span={4} key={index}>
-                <div onClick={() => setQueryTypeTab(item)} className="fai--custom-card flex justify-center items-center flex-col ">
-                  <div className={'fai--custom-card--icon'}><SVG name={item.icon} size={48} /> </div>
+                <div
+                  onClick={() => setQueryTypeTab(item)}
+                  className="fai--custom-card flex justify-center items-center flex-col "
+                >
+                  <div className={"fai--custom-card--icon"}>
+                    <SVG name={item.icon} size={48} />{" "}
+                  </div>
                   <div className="flex justify-start items-center flex-col before-hover">
                     <Text
                       type={"title"}

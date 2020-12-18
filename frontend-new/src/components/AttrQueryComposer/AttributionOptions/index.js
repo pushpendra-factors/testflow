@@ -6,7 +6,7 @@ import { bindActionCreators } from 'redux';
 import GroupSelect from '../../QueryComposer/GroupSelect';
 
 import { Button } from 'antd';
-import { SVG, Text } from 'factorsComponents';
+import { SVG, Text } from '../../factorsComponents';
 import FaSelect from '../../FaSelect';
 
 const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
@@ -36,11 +36,11 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
     const selectModel = (index) => {
         if(selectVisibleModel[index]) {
             const opts = [
-                ['First Click'], 
-                ['Last Click'], 
-                ['Linear'], 
-                ['Position Based'], 
-                ['Time Decay']
+                ['First Touch'], 
+                ['Last Touch'], 
+                ['First Touch Non-Direct'], 
+                ['Last Touch Non-Direct'], 
+                ['Linear Touch']
             ];
             return (<FaSelect 
                     options={opts} 

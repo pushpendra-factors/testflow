@@ -11,6 +11,8 @@ function AttributionTable({
   maxAllowedVisibleProperties,
   attribution_method,
   attribution_method_compare,
+  touchpoint,
+  linkedEvents
 }) {
   const [searchText, setSearchText] = useState("");
   const [sorter, setSorter] = useState({});
@@ -21,9 +23,11 @@ function AttributionTable({
     sorter,
     handleSorting,
     attribution_method,
-    attribution_method_compare
+    attribution_method_compare,
+    touchpoint,
+    linkedEvents
   );
-  const tableData = getTableData(data, event, searchText, sorter, attribution_method_compare);
+  const tableData = getTableData(data, event, searchText, sorter, attribution_method_compare, touchpoint, linkedEvents);
 
   const onSelectionChange = (selectedIncices) => {
     if (selectedIncices.length > maxAllowedVisibleProperties) {
