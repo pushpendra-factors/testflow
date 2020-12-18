@@ -4,7 +4,7 @@ import SearchBar from '../../components/SearchBar';
 import {
   Row, Col, Table, Avatar, Button
 } from 'antd';
-import { Text } from 'factorsComponents';
+import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
 import ConfigureDP from './ConfigureDP';
 import CreateGoalDrawer from './CreateGoalDrawer';
@@ -134,7 +134,7 @@ const Factors = ({
                                   return (
                                     <div key={index} className={'flex justify-between items-center mt-2'}>
                                         <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{item.name}</Text>
-                                        <Button size={'small'} icon={<PlusOutlined />}></Button>
+                                        <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
                                     </div>
                                   );
                                 })}
@@ -144,7 +144,7 @@ const Factors = ({
                 <Col span={16}>
                     <Row gutter={[24, 24]} justify="center">
                         <Col span={20}>
-                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Factors</Text>
+                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text>
                             <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically track website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
                         </Col>
                         <Col span={20}>

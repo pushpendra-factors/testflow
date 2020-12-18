@@ -272,7 +272,7 @@ function CoreQuery({
         <Row gutter={[24, 24]} justify="center">
           <Col span={20}>
             <Text type={"title"} level={2} weight={"bold"} extraClass={"m-0"}>
-              Core Query
+              Analyse
             </Text>
             <Text
               type={"title"}

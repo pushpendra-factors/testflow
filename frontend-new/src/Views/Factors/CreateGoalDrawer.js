@@ -110,7 +110,7 @@ const getInsights = (projectID, isJourney=false) =>{
   };
   getData().then(()=>{
     setInsightBtnLoading(false);
-    history.push('/factors/insights'); 
+    history.push('/explain/insights'); 
   });
 }
 
