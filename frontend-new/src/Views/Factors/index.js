@@ -4,13 +4,15 @@ import SearchBar from '../../components/SearchBar';
 import {
   Row, Col, Table, Avatar, Button
 } from 'antd';
-import { Text } from 'factorsComponents';
+import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
 import ConfigureDP from './ConfigureDP';
 import CreateGoalDrawer from './CreateGoalDrawer';
-import { fetchFactorsGoals } from 'Reducers/factors';
+import { fetchFactorsGoals, fetchFactorsModels } from 'Reducers/factors';
 import { connect } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
+import { fetchEventNames } from 'Reducers/coreQuery/middleware'; 
+
 const columns = [
   {
     title: 'Saved Goals',
@@ -65,20 +67,28 @@ const Factors = ({
   , goals
   , agents
   , fetchProjectAgents
+  ,fetchEventNames
+  ,fetchFactorsModels
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [showConfigureDPModal, setConfigureDPModal] = useState(false);
   const [showGoalDrawer, setGoalDrawer] = useState(false);
   const [dataSource, setdataSource] = useState(null);
 
-  useEffect(() => {
+  useEffect(() => { 
     if (!goals || !agents) {
       const getData = async () => {
         await fetchProjectAgents(activeProject.id);
-        await fetchFactorsGoals(activeProject.id);
+        await fetchFactorsGoals(activeProject.id); 
       };
-      getData();
+      getData();  
     }
+    const getData1 = async () => { 
+      await fetchEventNames(activeProject.id);
+      await fetchFactorsModels(activeProject.id); 
+    };
+    getData1();
+    setdataSource(null);
     if (goals) {
       const formattedArray = [];
       goals.map((goal, index) => {
@@ -124,7 +134,7 @@ const Factors = ({
                                   return (
                                     <div key={index} className={'flex justify-between items-center mt-2'}>
                                         <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{item.name}</Text>
-                                        <Button size={'small'} icon={<PlusOutlined />}></Button>
+                                        <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
                                     </div>
                                   );
                                 })}
@@ -134,7 +144,7 @@ const Factors = ({
                 <Col span={16}>
                     <Row gutter={[24, 24]} justify="center">
                         <Col span={20}>
-                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Factors</Text>
+                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text>
                             <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically track website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
                         </Col>
                         <Col span={20}>
@@ -171,4 +181,4 @@ const mapStateToProps = (state) => {
     agents: state.agent.agents
   };
 };
-export default connect(mapStateToProps, { fetchFactorsGoals, fetchProjectAgents })(Factors);
+export default connect(mapStateToProps, { fetchFactorsGoals, fetchProjectAgents, fetchEventNames, fetchFactorsModels })(Factors);

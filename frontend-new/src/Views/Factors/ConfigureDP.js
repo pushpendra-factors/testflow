@@ -39,14 +39,12 @@ const ConfigureDP = (props) => {
 
   useEffect(() => {
     setActiveEventsTracked(0);
-    setActiveUserProperties(0);
-    if (!tracked_events || !tracked_user_property) {
+    setActiveUserProperties(0); 
       const getData = async () => {
         await fetchFactorsTrackedEvents(activeProject.id);
         await fetchFactorsTrackedUserProperties(activeProject.id);
       };
-      getData();
-    }
+      getData(); 
     if (tracked_events) {
       let activeEvents = 0;
       tracked_events.map((event) => {
@@ -66,7 +64,7 @@ const ConfigureDP = (props) => {
       });
       setActiveUserProperties(activeUserProperties);
     }
-  }, [tracked_events, tracked_user_property]);
+  }, [activeProject]);
 
   return (
     <Modal
@@ -142,7 +140,7 @@ const ConfigureDP = (props) => {
                                         </div>
                                     </div>
                                     <div>
-                                        <Button size={'small'} icon={<PlusOutlined />}></Button>
+                                        <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
                                     </div>
                                 </div>
                             </Col>
@@ -183,7 +181,7 @@ const ConfigureDP = (props) => {
                                         </div>
                                     </div>
                                     <div>
-                                        <Button size={'small'} icon={<PlusOutlined />}></Button>
+                                        <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
                                     </div>
                                 </div>
                             </Col>

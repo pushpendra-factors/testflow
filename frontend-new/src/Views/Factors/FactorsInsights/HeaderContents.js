@@ -32,7 +32,7 @@ function Header() {
                         <div>
                             <Link to="/"><SVG name={'brand'} color="#0B1E39" size={32} /></Link>
                         </div>
-                        <div style={{ color: '#0E2647', opacity: 0.56, fontSize: '14px' }} className="font-bold leading-5 ml-2">  <Link to="/factors" style={{ color: '#0E2647', fontSize: '14px' }} >Factors</Link> / New Goal</div>
+                        <div style={{ color: '#0E2647', opacity: 0.56, fontSize: '14px' }} className="font-bold leading-5 ml-2">  <Link to="/explain" style={{ color: '#0E2647', fontSize: '14px' }} >Factors</Link> / New Goal</div>
                     </div>
                 </div>
         </div>

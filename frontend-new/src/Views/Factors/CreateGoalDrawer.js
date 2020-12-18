@@ -8,6 +8,7 @@ import { fetchEventNames } from 'Reducers/coreQuery/middleware';
 import { fetchGoalInsights, fetchFactorsModels } from 'Reducers/factors';
 import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom';
+import _ from 'lodash';
 import moment from 'moment';
  
 
@@ -57,22 +58,21 @@ const CreateGoalDrawer = (props) => {
 
   const readableTimstamp = (unixTime) => {
     return moment.unix(unixTime).utc().format('MMM DD, YYYY');
-  }
-
-  const factorsModels = props.factors_models ? props.factors_models.map((item)=>{return [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`]}) : null;
-
-  useEffect(()=>{
-    if(!props.GlobalEventNames || !factorsModels){
-      const getData = async () => {
-        await props.fetchEventNames(props.activeProject.id);
-        await props.fetchFactorsModels(props.activeProject.id);
-      };
-      getData();  
-    } 
+  } 
+  const factorsModels = !_.isEmpty(props.factors_models) && _.isArray(props.factors_models) ? props.factors_models.map((item)=>{return [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`]}) : [];
+  
+  useEffect(()=>{ 
+    // if(!props.GlobalEventNames || !factorsModels){
+      //   const getData = async () => {
+        //     await props.fetchEventNames(props.activeProject.id);
+        //     await props.fetchFactorsModels(props.activeProject.id);
+        //   };
+        //   getData();    
+        // }
     if(props.GlobalEventNames){ 
       SetEventNames(props.GlobalEventNames); 
     }  
-  },[props.GlobalEventNames])
+  },[props.activeProject, props.GlobalEventNames, props.factors_models])
 
 const factorsDataFormat = {
   name: "123",
@@ -110,7 +110,7 @@ const getInsights = (projectID, isJourney=false) =>{
   };
   getData().then(()=>{
     setInsightBtnLoading(false);
-    history.push('/factors/insights'); 
+    history.push('/explain/insights'); 
   });
 }
 
@@ -191,7 +191,7 @@ const getInsights = (projectID, isJourney=false) =>{
                       
                       <div className={'flex items-center'}>
                         {event2 &&  <>
-                        <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'} style={{height:'24px', width: '24px'}}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{1}</Text> </div> 
+                        <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'} style={{height:'24px', width: '24px'}}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{2}</Text> </div> 
                         <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>And then</Text>
                         {/* <Text type={'title'} level={6} weight={'bold'} color={'black'} extraClass={'m-0 ml-2'}>performed</Text> */}
                         </>}
@@ -258,7 +258,7 @@ const mapStateToProps = (state) => {
   return {
     activeProject: state.global.active_project, 
     GlobalEventNames: state.coreQuery?.eventOptions[0]?.values,
-    factors_models: state.factors?.factors_models
+    factors_models: state.factors.factors_models
   };
 };
 export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights, fetchFactorsModels})(CreateGoalDrawer);

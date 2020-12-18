@@ -66,15 +66,15 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
             insightKeyLevel1 = SubInsightsData.factors_insights_key;
           }
  
-        const factors_insights_text = `and then <a>${insightKeyLevel1}</a> show  ${dataItem.factors_insights_multiplier}x goal completion`
-
+          
           let insightKeyLevel2 = '';
           if (_.isEmpty(dataItem.factors_insights_key)) {
             insightKeyLevel2 = `${dataItem.factors_insights_attribute[0].factors_attribute_key} = ${dataItem.factors_insights_attribute[0].factors_attribute_value}`;
           } else {
             insightKeyLevel2 = dataItem.factors_insights_key;
           }
- 
+          
+          const factors_insights_text = `and then <a>${insightKeyLevel2}</a> show  ${dataItem.factors_insights_multiplier}x goal completion`
 
           
           let insightLevel1Percentage = 100; 
