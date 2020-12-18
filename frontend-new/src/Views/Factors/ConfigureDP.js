@@ -140,7 +140,7 @@ const ConfigureDP = (props) => {
                                         </div>
                                     </div>
                                     <div>
-                                        <Button size={'small'} icon={<PlusOutlined />}></Button>
+                                        <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
                                     </div>
                                 </div>
                             </Col>
@@ -181,7 +181,7 @@ const ConfigureDP = (props) => {
                                         </div>
                                     </div>
                                     <div>
-                                        <Button size={'small'} icon={<PlusOutlined />}></Button>
+                                        <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
                                     </div>
                                 </div>
                             </Col>

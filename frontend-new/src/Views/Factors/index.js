@@ -4,7 +4,7 @@ import SearchBar from '../../components/SearchBar';
 import {
   Row, Col, Table, Avatar, Button
 } from 'antd';
-import { Text } from 'factorsComponents';
+import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
 import ConfigureDP from './ConfigureDP';
 import CreateGoalDrawer from './CreateGoalDrawer';
@@ -134,7 +134,7 @@ const Factors = ({
                                   return (
                                     <div key={index} className={'flex justify-between items-center mt-2'}>
                                         <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{item.name}</Text>
-                                        <Button size={'small'} icon={<PlusOutlined />}></Button>
+                                        <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
                                     </div>
                                   );
                                 })}
