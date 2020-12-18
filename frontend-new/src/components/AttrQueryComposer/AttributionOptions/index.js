@@ -6,7 +6,7 @@ import { bindActionCreators } from 'redux';
 import GroupSelect from '../../QueryComposer/GroupSelect';
 
 import { Button } from 'antd';
-import { SVG, Text } from 'factorsComponents';
+import { SVG, Text } from '../../factorsComponents';
 import FaSelect from '../../FaSelect';
 
 const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {

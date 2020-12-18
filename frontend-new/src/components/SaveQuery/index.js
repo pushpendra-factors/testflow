@@ -15,7 +15,7 @@ import { saveQuery } from "../../reducers/coreQuery/services";
 import { useSelector, useDispatch } from "react-redux";
 import { QUERY_CREATED } from "../../reducers/types";
 import { saveQueryToDashboard } from "../../reducers/dashboard/services";
-import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from "../../utils/constants";
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL, QUERY_TYPE_ATTRIBUTION } from "../../utils/constants";
 
 function SaveQuery({
   requestQuery,
@@ -101,8 +101,7 @@ function SaveQuery({
     try {
       setApisCalled(true);
       let query;
-      console.log(queryType)
-      if (queryType === QUERY_TYPE_FUNNEL) {
+      if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_ATTRIBUTION) {
         query = {
           ...requestQuery,
           fr: moment().startOf("week").utc().unix(),

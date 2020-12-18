@@ -9,6 +9,8 @@ function GroupedAttributionsChart({
   event,
   attribution_method,
   attribution_method_compare,
+  touchpoint,
+  linkedEvents
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -67,6 +69,8 @@ function GroupedAttributionsChart({
       />
       <div className="mt-8">
         <AttributionTable
+          touchpoint={touchpoint}
+          linkedEvents={linkedEvents}
           event={event}
           data={data}
           isWidgetModal={isWidgetModal}

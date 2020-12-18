@@ -1,6 +1,5 @@
 /* eslint-disable */
 
-
 import {
   FETCH_EVENTS,
   FETCH_EVENT_PROPERTIES,
@@ -13,11 +12,11 @@ import {
   SET_ATTRIBUTION_MODEL,
   SET_ATTRIBUTION_WINDOW,
   SET_ATTR_LINK_EVENTS,
-  SET_EVENT_GOAL
-} from './actions';
-import { SHOW_ANALYTICS_RESULT } from '../types';
+  SET_EVENT_GOAL,
+} from "./actions";
+import { SHOW_ANALYTICS_RESULT, INITIALIZE_MTA_STATE } from "../types";
 
-const DEFAULT_TOUCHPOINTS = ['Campaign', 'Source', 'AdGroup', 'Keyword']
+const DEFAULT_TOUCHPOINTS = ["Campaign", "Source", "AdGroup", "Keyword"];
 
 const defaultState = {
   eventOptions: [],
@@ -25,19 +24,27 @@ const defaultState = {
   userProperties: [],
   groupBy: {
     global: [],
-    event: []
+    event: [],
   },
-  touchpointOptions: [{
-    label: 'Paid Marketing',
-    icon: 'fav',
-    values: DEFAULT_TOUCHPOINTS.map(v => [v])
-  }],
+  touchpointOptions: [
+    {
+      label: "Paid Marketing",
+      icon: "fav",
+      values: DEFAULT_TOUCHPOINTS.map((v) => [v]),
+    },
+  ],
   show_analytics_result: false,
   eventGoal: {},
-  touchpoint: '',
+  touchpoint: "",
   models: [],
   window: null,
   linkedEvents: []
+  // linkedEvents: [
+  //   {
+  //     label: "ViewGuidesWithinResources",
+  //     filters: [],
+  //   },
+  // ],
 };
 
 export default function (state = defaultState, action) {
@@ -52,32 +59,41 @@ export default function (state = defaultState, action) {
       return { ...state, eventProperties: eventPropState };
     case INITIALIZE_GROUPBY: {
       return {
-        ...state, groupBy: action.payload
-      }
+        ...state,
+        groupBy: action.payload,
+      };
     }
     case DEL_GROUPBY: {
       let groupByState = Object.assign({}, state.groupBy);
       let gbp;
-      if(groupByState[action.groupByType] && groupByState[action.groupByType][action.index]) {
+      if (
+        groupByState[action.groupByType] &&
+        groupByState[action.groupByType][action.index]
+      ) {
         let groupTypeState = [...groupByState[action.groupByType]];
-        if(groupTypeState[action.index] === action.payload) {
+        if (groupTypeState[action.index] === action.payload) {
           groupTypeState.splice(action.index, 1);
           // groupTypeState.length -= 1;
         } else {
-          gbp = groupTypeState.findIndex(i => i === state.payload)
+          gbp = groupTypeState.findIndex((i) => i === state.payload);
           gbp && groupTypeState.splice(gbp, 1);
         }
         groupByState[action.groupByType] = groupTypeState;
-        
       }
       return { ...state, groupBy: groupByState };
     }
-      
+
     case SET_GROUPBY:
       let groupByState = Object.assign({}, state.groupBy);
-      if (groupByState[action.groupByType] && groupByState[action.groupByType][action.index]) {
+      if (
+        groupByState[action.groupByType] &&
+        groupByState[action.groupByType][action.index]
+      ) {
         groupByState[action.groupByType][action.index] = action.payload;
-      } else if (groupByState[action.groupByType] && action.index === groupByState[action.groupByType].length) {
+      } else if (
+        groupByState[action.groupByType] &&
+        action.index === groupByState[action.groupByType].length
+      ) {
         groupByState[action.groupByType].push(action.payload);
       }
       groupByState[action.groupByType].sort((a, b) => {
@@ -87,9 +103,12 @@ export default function (state = defaultState, action) {
     case DEL_GROUPBY_EVENT: {
       let groupByState = Object.assign({}, state.groupBy);
       let eventGroups = groupByState.event;
-      const filteredEventGroups = eventGroups.filter(gbp => {
-        return gbp.eventIndex !== action.index +1 && gbp.eventName !== action.payload.label
-      })
+      const filteredEventGroups = eventGroups.filter((gbp) => {
+        return (
+          gbp.eventIndex !== action.index + 1 &&
+          gbp.eventName !== action.payload.label
+        );
+      });
       groupByState.event = filteredEventGroups;
       return { ...state, groupBy: groupByState };
     }
@@ -129,14 +148,13 @@ export default function (state = defaultState, action) {
         linkedEvents: action.payload,
       };
     }
+    case INITIALIZE_MTA_STATE: {
+      return {
+        ...state,
+        ...action.payload,
+      };
+    }
     default:
       return state;
   }
 }
-
-
-
-
-
-
-
