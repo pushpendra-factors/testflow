@@ -1857,9 +1857,23 @@ func (it *Itree) buildChildNodeV1(reqId string,
 					"Unexpected length of 1 for pattern %s, nodeType %d, constraintToAdd %v, countType: %s",
 					childPattern.String(), nodeType, constraintToAdd, countType))
 			}
-			// frequency of child pattern is computed over allUserEvents after applying constraint.
-			allUConstraints := []P.EventConstraints{
-				*constraintToAdd,
+			allUConstraints := make([]P.EventConstraints, 2)
+			if len(parentConstraints[0].EPCategoricalConstraints) > 0 ||
+				len(parentConstraints[0].EPNumericConstraints) > 0 ||
+				len(parentConstraints[0].UPCategoricalConstraints) > 0 ||
+				len(parentConstraints[0].UPNumericConstraints) > 0 {
+				// frequency of child pattern is computed over allUserEvents after applying constraint.
+				allUConstraints = []P.EventConstraints{
+					*constraintToAdd,
+				}
+				allUConstraints[0].EPCategoricalConstraints = append(allUConstraints[0].EPCategoricalConstraints, parentConstraints[0].EPCategoricalConstraints...)
+				allUConstraints[0].EPNumericConstraints = append(allUConstraints[0].EPNumericConstraints, parentConstraints[0].EPNumericConstraints...)
+				allUConstraints[0].UPCategoricalConstraints = append(allUConstraints[0].UPCategoricalConstraints, parentConstraints[0].UPCategoricalConstraints...)
+				allUConstraints[0].UPNumericConstraints = append(allUConstraints[0].UPNumericConstraints, parentConstraints[0].UPNumericConstraints...)
+			} else {
+				allUConstraints = []P.EventConstraints{
+					*constraintToAdd,
+				}
 			}
 			c, _ := allActiveUsersPattern.GetPerUserCount(allUConstraints)
 			fcp = float64(c)
