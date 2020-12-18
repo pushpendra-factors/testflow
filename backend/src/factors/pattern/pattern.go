@@ -297,7 +297,7 @@ func buildPropertiesHistogramTemplates(
 				}
 			} else {
 				//TODO(vinith) bandaid code need to be removed
-				if !isEncodedEvent(events[i]) {
+				if !IsEncodedEvent(events[i]) {
 					log.Error(fmt.Sprintf(
 						"Missing info for event %s in pattern %s. Not building event histogram templates.",
 						events[i], events))
@@ -820,6 +820,12 @@ func EventArrayToString(eventNames []string) string {
 	return strings.Join(eventNames, ",")
 }
 
-func isEncodedEvent(eventName string) bool {
+func IsEncodedEvent(eventName string) bool {
 	return U.IsCampaignEvent(eventName)
+}
+
+func ExtractCampaignName(eventName string) string {
+	prefix := strings.Split(eventName, "$session[campaign:")
+	campaignName := strings.Split(prefix[1], "]")
+	return campaignName[0]
 }

@@ -1,5 +1,6 @@
 import React from "react";
 import { SortData, getTitleWithSorter } from "../../../utils/dataFormatter";
+import { ATTRIBUTION_METHODOLOGY } from "../../../utils/constants";
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;
@@ -11,16 +12,16 @@ export const getDifferentCampaingns = (data) => {
   return Array.from(differentCampaigns);
 };
 
-export const formatData = (data, event, visibleIndices) => {
+export const formatData = (data, event, visibleIndices, touchpoint) => {
   const { headers } = data.result;
-  const campaignIdx = headers.indexOf("Campaign");
+  const touchpointIdx = headers.indexOf(touchpoint);
   const costIdx = headers.indexOf("Cost Per Conversion");
   const userIdx = headers.indexOf(`${event} - Users`);
   const rows = data.result.rows.filter(
     (_, index) => visibleIndices.indexOf(index) > -1
   );
   const result = rows.map((row) => {
-    return [row[campaignIdx], row[costIdx], row[userIdx]];
+    return [row[touchpointIdx], row[costIdx], row[userIdx]];
   });
   return SortData(result, 2, "descend");
 };
@@ -57,12 +58,14 @@ export const getTableColumns = (
   currentSorter,
   handleSorting,
   attribution_method,
-  attribution_method_compare
+  attribution_method_compare,
+  touchpoint,
+  linkedEvents
 ) => {
   const result = [
     {
-      title: "Marketing Touchpoint",
-      dataIndex: "campaign",
+      title: touchpoint,
+      dataIndex: touchpoint,
     },
     {
       title: getTitleWithSorter(
@@ -104,7 +107,11 @@ export const getTableColumns = (
             <div className="flex flex-col items-center justify-ceneter">
               <div>Conversion</div>
               <div style={{ fontSize: "10px", color: "#8692A3" }}>
-                {attribution_method}
+                {
+                  ATTRIBUTION_METHODOLOGY.find(
+                    (m) => m.value === attribution_method
+                  ).text
+                }
               </div>
             </div>
           ),
@@ -116,7 +123,11 @@ export const getTableColumns = (
             <div className="flex flex-col items-center justify-ceneter">
               <div>Cost per Conversion</div>
               <div style={{ fontSize: "10px", color: "#8692A3" }}>
-                {attribution_method}
+                {
+                  ATTRIBUTION_METHODOLOGY.find(
+                    (m) => m.value === attribution_method
+                  ).text
+                }
               </div>
             </div>
           ),
@@ -132,7 +143,11 @@ export const getTableColumns = (
         <div className="flex flex-col items-center justify-ceneter">
           <div>Conversion</div>
           <div style={{ fontSize: "10px", color: "#8692A3" }}>
-            {attribution_method_compare}
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method_compare
+              ).text
+            }
           </div>
         </div>
       ),
@@ -144,7 +159,11 @@ export const getTableColumns = (
         <div className="flex flex-col items-center justify-ceneter">
           <div>Cost per Conversion</div>
           <div style={{ fontSize: "10px", color: "#8692A3" }}>
-            {attribution_method_compare}
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method_compare
+              ).text
+            }
           </div>
         </div>
       ),
@@ -152,7 +171,16 @@ export const getTableColumns = (
       className: "text-center",
     });
   }
-  return result;
+  let linkedEventsColumns = [];
+  if (linkedEvents.length) {
+    linkedEventsColumns = linkedEvents.map((le) => {
+      return {
+        title: `${le.label} - Users`,
+        dataIndex: le.label,
+      };
+    });
+  }
+  return [...result, ...linkedEventsColumns];
 };
 
 export const getTableData = (
@@ -160,10 +188,12 @@ export const getTableData = (
   event,
   searchText,
   currentSorter,
-  attribution_method_compare
+  attribution_method_compare,
+  touchpoint,
+  linkedEvents
 ) => {
   const { headers } = data.result;
-  const campaignIdx = headers.indexOf("Campaign");
+  const touchpointIdx = headers.indexOf(touchpoint);
   const impressionsIdx = headers.indexOf("Impressions");
   const clicksIdx = headers.indexOf("Clicks");
   const spendIdx = headers.indexOf("Spend");
@@ -174,9 +204,9 @@ export const getTableData = (
   const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
   const result = data.result.rows
     .map((row, index) => {
-      const resultantRow = {
+      let resultantRow = {
         index,
-        campaign: row[campaignIdx],
+        [touchpoint]: row[touchpointIdx],
         impressions: row[impressionsIdx],
         clicks: row[clicksIdx],
         spend: row[spendIdx],
@@ -184,17 +214,21 @@ export const getTableData = (
         conversion: row[userIdx],
         cost: row[costIdx],
       };
+      if (linkedEvents.length) {
+        linkedEvents.forEach((le) => {
+          const eventIdx = headers.indexOf(`${le.label} - Users`);
+          resultantRow[le.label] = row[eventIdx];
+        });
+      }
       if (attribution_method_compare) {
-        return {
-          ...resultantRow,
-          conversion_compare: row[compareUsersIdx],
-          cost_compare: row[compareCostIdx],
-        };
+        resultantRow["conversion_compare"] = row[compareUsersIdx];
+        resultantRow["cost_compare"] = row[compareCostIdx];
       }
       return resultantRow;
     })
     .filter(
-      (row) => row.campaign.toLowerCase().indexOf(searchText.toLowerCase()) > -1
+      (row) =>
+        row[touchpoint].toLowerCase().indexOf(searchText.toLowerCase()) > -1
     );
 
   if (!currentSorter) {

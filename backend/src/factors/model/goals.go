@@ -35,8 +35,6 @@ type FactorsGoalRule struct {
 	EndEvent   string            `json:"en_en"`
 	Rule       FactorsGoalFilter `json:"rule"`
 	Visited    bool              `json:"vs"`
-	StartTime  time.Time         `json:"st_time"`
-	EndTime    time.Time         `json:"en_time"`
 }
 
 // FactorsGoalFilter - rule object
@@ -48,10 +46,14 @@ type FactorsGoalFilter struct {
 	GlobalFilters      []KeyValueTuple `json:"ft"`
 }
 
-// KeyValueTuple - key value pair
+// KeyValueTuple - key value pair	
 type KeyValueTuple struct {
-	Key   string `json:"key"`
-	Value string `json:"vl"`
+	Key        string  `json:"key"`
+	Value      string  `json:"vl"`
+	Operator   bool    `json:"operator"`
+	LowerBound float64 `json:"lower_bound"`
+	UpperBound float64 `json:"upper_bound"`
+	Type       string  `json:"property_type"`
 }
 
 const error_duplicateFactorsGoalName string = "pq: duplicate key value violates unique constraint \"name_projectid_unique_idx\""

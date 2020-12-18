@@ -727,6 +727,7 @@ var WHITELIST_FACTORS_EVENT_PROPERTIES = [...]string{
 	EP_PAGE_SCROLL_PERCENT,
 	EP_REVENUE,
 	EP_COST,
+	EP_CAMPAIGN,
 }
 
 // DISABLED_FACTORS_EVENT_PROPERTIES Event properties disabled for the factors analysis.

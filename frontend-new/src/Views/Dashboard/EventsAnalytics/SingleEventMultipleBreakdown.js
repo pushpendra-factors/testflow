@@ -101,7 +101,6 @@ function SingleEventMultipleBreakdown({
           setHiddenEvents={setHiddenProperties}
           hiddenEvents={hiddenProperties}
           isDecimalAllowed={page === "activeUsers" || page === "frequency"}
-          arrayMapper={arrayMapper}
         />
       </div>
     );
