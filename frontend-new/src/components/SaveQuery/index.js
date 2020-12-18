@@ -101,10 +101,16 @@ function SaveQuery({
     try {
       setApisCalled(true);
       let query;
-      if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_ATTRIBUTION) {
+      if (queryType === QUERY_TYPE_FUNNEL) {
         query = {
           ...requestQuery,
           fr: moment().startOf("week").utc().unix(),
+          to: moment().utc().unix(),
+        };
+      } else if(queryType === QUERY_TYPE_ATTRIBUTION) {
+        query = {
+          ...requestQuery,
+          from: moment().startOf("week").utc().unix(),
           to: moment().utc().unix(),
         };
       } else if(queryType === QUERY_TYPE_EVENT) {

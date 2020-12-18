@@ -147,5 +147,5 @@ export const getAttributionsData = (
       "&dashboard_unit_id=" +
       dashboard.unit_id;
   }
-  return post(null, url, { query });
+  return post(null, `http://localhost:8000/query`, { query });
 };
