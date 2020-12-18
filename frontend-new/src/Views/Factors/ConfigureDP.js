@@ -39,14 +39,12 @@ const ConfigureDP = (props) => {
 
   useEffect(() => {
     setActiveEventsTracked(0);
-    setActiveUserProperties(0);
-    if (!tracked_events || !tracked_user_property) {
+    setActiveUserProperties(0); 
       const getData = async () => {
         await fetchFactorsTrackedEvents(activeProject.id);
         await fetchFactorsTrackedUserProperties(activeProject.id);
       };
-      getData();
-    }
+      getData(); 
     if (tracked_events) {
       let activeEvents = 0;
       tracked_events.map((event) => {
@@ -66,7 +64,7 @@ const ConfigureDP = (props) => {
       });
       setActiveUserProperties(activeUserProperties);
     }
-  }, [tracked_events, tracked_user_property]);
+  }, [activeProject]);
 
   return (
     <Modal
