@@ -1469,17 +1469,11 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 				continue
 			}
 			numVal++
-			var lastAttributeIndex int
-			if len(parentNode.PatternConstraints) == 1 {
-				lastAttributeIndex = 0
-			} else {
-				lastAttributeIndex = len(parentNode.PatternConstraints) - 2
-			}
 			constraintToAdd := P.EventConstraints{
-				EPNumericConstraints:     parentNode.PatternConstraints[lastAttributeIndex].EPNumericConstraints,
-				EPCategoricalConstraints: parentNode.PatternConstraints[lastAttributeIndex].EPCategoricalConstraints,
-				UPNumericConstraints:     parentNode.PatternConstraints[lastAttributeIndex].UPNumericConstraints,
-				UPCategoricalConstraints: parentNode.PatternConstraints[lastAttributeIndex].UPCategoricalConstraints,
+				EPNumericConstraints:     []P.NumericConstraint{},
+				EPCategoricalConstraints: []P.CategoricalConstraint{},
+				UPNumericConstraints:     []P.NumericConstraint{},
+				UPCategoricalConstraints: []P.CategoricalConstraint{},
 			}
 			categoricalConstraint := []P.CategoricalConstraint{
 				P.CategoricalConstraint{
@@ -1488,9 +1482,9 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 				},
 			}
 			if nodeType == NODE_TYPE_EVENT_PROPERTY {
-				constraintToAdd.EPCategoricalConstraints = append(constraintToAdd.EPCategoricalConstraints, categoricalConstraint...)
+				constraintToAdd.EPCategoricalConstraints = categoricalConstraint
 			} else if nodeType == NODE_TYPE_USER_PROPERTY {
-				constraintToAdd.UPCategoricalConstraints = append(constraintToAdd.UPCategoricalConstraints, categoricalConstraint...)
+				constraintToAdd.UPCategoricalConstraints = categoricalConstraint
 			}
 
 			if cNode, err := it.buildChildNodeV1(reqId,
