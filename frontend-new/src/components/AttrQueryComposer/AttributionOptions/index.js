@@ -57,7 +57,7 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
                     delOption={'Remove Comparision'}
                     optionClick={(val) => setModel(val[1], index)}
                     onClickOutside={() => toggleModelSelect(index)}
-                    delOptionClick={() => delModel(1)}
+                    delOptionClick={() => delModel(index)}
                     >
 
                     </FaSelect>)
@@ -125,9 +125,11 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
                         {renderModel(0)} 
 
                         {compareModelActive && 
-                            <Text type={'paragraph'} 
-                                color={`grey`} extraClass={`${styles.block__content__txt_muted}`}> 
-                                compared to </Text>
+                            <div className={`${styles.block__select_wrapper} mr-1`}>
+                                <Text type={'paragraph'} 
+                                    color={`grey`} extraClass={`${styles.block__content__txt_muted}`}> 
+                                    compared to </Text>
+                            </div>
                         }
 
                         {compareModelActive && renderModel(1)}
