@@ -12,7 +12,22 @@ import FaSelect from '../../FaSelect';
 const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
 
     const [selectVisibleModel, setSelectVisibleModel] = useState([false, false]);
-    const [selectVisibleWindow, setSelectVisibleWindow] = useState(false)
+    const [selectVisibleWindow, setSelectVisibleWindow] = useState(false);
+    const [compareModelActive, setCompareModelActive] =useState(false);
+
+    const modelOpts = [
+        ['First Touch', 'First_Touch'], 
+        ['Last Touch', 'Last_Touch'], 
+        ['First Touch Non-Direct', 'First_Touch_ND'],
+        ['Last Touch Non-Direct', 'Last_Touch_ND'],
+        ['Linear', 'Linear'],
+    ];
+
+    useEffect(() => {
+        if(models && models[1]) {
+            setCompareModelActive(true);
+        }
+    }, [models])
 
     const toggleModelSelect = (id) => {
         const selectState = [...selectVisibleModel];
@@ -31,23 +46,18 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
         const modelsState = models.filter((m, i) => i !== index);
         setModelOpt(modelsState);
         toggleModelSelect(index);
+        index === 1 && setCompareModelActive(false);
     }
 
     const selectModel = (index) => {
         if(selectVisibleModel[index]) {
-            const opts = [
-                ['First Click'], 
-                ['Last Click'], 
-                ['Linear'], 
-                ['Position Based'], 
-                ['Time Decay']
-            ];
+            
             return (<FaSelect 
-                    options={opts} 
+                    options={modelOpts} 
                     delOption={'Remove Comparision'}
-                    optionClick={(val) => setModel(val[0], index)}
+                    optionClick={(val) => setModel(val[1], index)}
                     onClickOutside={() => toggleModelSelect(index)}
-                    delOptionClick={() => delModel(0)}
+                    delOptionClick={() => delModel(1)}
                     >
 
                     </FaSelect>)
@@ -62,7 +72,9 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
                         type="link" 
                         onClick={() => toggleModelSelect(index)}>
                             <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
-                            {models[index]} 
+                            {
+                                modelOpts.filter((md) => md[1] === models[index])[0][0]
+                            } 
                     </Button>
 
                     {selectModel(index)}
@@ -72,9 +84,11 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
             return (
                 <div className={styles.block__select_wrapper}>
                     <div className={styles.block__select_wrapper__block}>
-                        <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
-                            <SVG name={'plus'} color={'purple'}></SVG>
-                        </div>
+                        {index < 1 &&
+                            <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
+                                <SVG name={'plus'} color={'purple'}></SVG>
+                            </div>
+                        }
                 
                         {!selectVisibleModel[index] && <Button size={'large'} type="link" onClick={() => toggleModelSelect(index)}>Add touchpoint</Button>}
 
@@ -83,6 +97,18 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
                 </div>
             )
         }
+    }
+
+    const addModelAction = () => {
+        return (
+            <div className={'fa--query_block--actions'}>
+                   <Button size={'large'} 
+                        type="text" onClick={
+                        () => setCompareModelActive(true)
+                        } className={'mr-1'}><SVG name="compare"></SVG>
+                    </Button>
+            </div>
+        )
     }
 
     const renderAttributionModel = () => {
@@ -96,13 +122,21 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
                     </Text>
 
                     <div className={`${styles.block__content}`}>
-                        {renderModel(0)}
+                        {renderModel(0)} 
+
+                        {compareModelActive && 
+                            <Text type={'paragraph'} 
+                                color={`grey`} extraClass={`${styles.block__content__txt_muted}`}> 
+                                compared to </Text>
+                        }
+
+                        {compareModelActive && renderModel(1)}
+
+                        {!compareModelActive && addModelAction()}
                     </div>
                 </div>
             
             )
-        
-        
     };
 
     const setWindow = (val) => {
@@ -131,7 +165,7 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
                         size={'large'} 
                         type="link" 
                         onClick={() => setSelectVisibleWindow(!selectVisibleWindow)}>
-                            <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
+                            <SVG name="clock" className={`mr-1`}></SVG>
                             {window} days 
                     </Button>
 
