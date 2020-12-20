@@ -16,6 +16,7 @@ import (
 func main() {
 	envFlag := flag.String("env", C.DEVELOPMENT, "Environment. Could be development|staging|production")
 	projectIDFlag := flag.String("project_id", "", "Comma separated project ids to run for. * to run for all")
+	excludeProjectIDFlag := flag.String("exclude_project_id", "", "Comma separated project ids to exclude for the run")
 	numRoutinesFlag := flag.Int("num_routines", 4, "Number of dashboard units to sync in parallel. Each dashboard unit runs 4 queries")
 	numRoutinesForWebAnalyticsFlag := flag.Int("num_routines_for_web_analytics", 1,
 		"No.of routines to use for web analytics dashboard caching.")
@@ -78,9 +79,10 @@ func main() {
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	logCtx = logCtx.WithFields(log.Fields{
-		"Env":         *envFlag,
-		"ProjectID":   *projectIDFlag,
-		"NumRoutines": *numRoutinesFlag,
+		"Env":              *envFlag,
+		"ProjectID":        *projectIDFlag,
+		"ExcludeProjectID": *excludeProjectIDFlag,
+		"NumRoutines":      *numRoutinesFlag,
 	})
 
 	var notifyMessage string
@@ -89,7 +91,7 @@ func main() {
 
 	if !*onlyWebAnalytics {
 		waitGroup.Add(1)
-		go cacheDashboardUnitsForProjects(*projectIDFlag, *numRoutinesFlag, &timeTaken, &waitGroup)
+		go cacheDashboardUnitsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesFlag, &timeTaken, &waitGroup)
 	}
 
 	waitGroup.Add(1)
@@ -98,15 +100,15 @@ func main() {
 	waitGroup.Wait()
 	timeTakenString, _ := timeTaken.Load("all")
 	timeTakenStringWeb, _ := timeTaken.Load("web")
-	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %+v. Time taken for web analytics: %+v",
-		*projectIDFlag, timeTakenString, timeTakenStringWeb)
+	notifyMessage = fmt.Sprintf("Caching successful for %s - %s projects. Time taken: %+v. Time taken for web analytics: %+v",
+		*projectIDFlag, *excludeProjectIDFlag, timeTakenString, timeTakenStringWeb)
 	C.PingHealthcheckForSuccess(healthcheckPingID, notifyMessage)
 }
 
-func cacheDashboardUnitsForProjects(projectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
+func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	startTime := util.TimeNowUnix()
-	M.CacheDashboardUnitsForProjects(projectIDs, numRoutines)
+	M.CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	timeTaken.Store("all", timeTakenString)
 }

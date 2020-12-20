@@ -482,18 +482,24 @@ func UpdateDashboardUnit(projectId uint64, agentUUID string,
 }
 
 // CacheDashboardUnitsForProjects Runs for all the projectIDs passed as comma separated.
-func CacheDashboardUnitsForProjects(stringProjectsIDs string, numRoutines int) {
+func CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int) {
 	logCtx := log.WithFields(log.Fields{
 		"Method": "CacheDashboardUnitsForProjects",
 	})
 
-	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(stringProjectsIDs, "")
+	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(
+		stringProjectsIDs, excludeProjectIDs)
 	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
 	if allProjects {
 		var errCode int
-		projectIDs, errCode = GetAllProjectIDs()
+		allProjectIDs, errCode := GetAllProjectIDs()
 		if errCode != http.StatusFound {
 			return
+		}
+		for _, projectID := range allProjectIDs {
+			if _, found := excludeProjectIDsMap[projectID]; !found {
+				projectIDs = append(projectIDs, projectID)
+			}
 		}
 	}
 
