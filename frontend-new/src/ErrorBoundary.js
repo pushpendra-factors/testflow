@@ -44,11 +44,11 @@ class ErrorBoundary extends React.Component {
          <div className={"fa-container mt-24 flex flex-col items-center"}> 
          <Lottie 
             options={defaultOptions}
-            height={400}
-            width={400}
+            height={200}
+            width={200}
             />
-        <Text type={'title'} align={'center'} level={2} weight={'bold'} extraClass={'ml-2 m-0'}>Oops! Something went wrong.</Text>
-        <Text type={'title'} align={'center'} level={4} weight={'thin'} extraClass={'ml-2 m-0'}>We're experiencing an internal server problem.</Text> 
+        <Text type={'title'} align={'center'} level={3} weight={'bold'} extraClass={'ml-2 m-0'}>Oops! Something went wrong.</Text>
+        <Text type={'title'} align={'center'} level={5} weight={'thin'} extraClass={'ml-2 m-0'}>We're experiencing an internal server problem.</Text> 
         <Button size={'large'} className={'mt-4'} onClick={this.reloadPage}>Try again!</Button>
         </div>
         </>
