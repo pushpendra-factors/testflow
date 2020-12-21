@@ -1,5 +1,5 @@
 import moment from "moment";
-import { runQuery, getFunnelData } from "../../reducers/coreQuery/services";
+import { runQuery, getFunnelData, getAttributionsData } from "../../reducers/coreQuery/services";
 
 export const getDataFromServer = (
   query,
@@ -37,6 +37,33 @@ export const getDataFromServer = (
       return runQuery(activeProjectId, queryGroup);
     } else {
       return runQuery(activeProjectId, queryGroup, {
+        refresh: false,
+        unit_id: unitId,
+        id: dashboardId,
+      });
+    }
+  } else if(query.query.attribution_key) {
+    let attributionQuery = query.query;
+    if (durationObj.from && durationObj.to) {
+      attributionQuery = {
+        ...attributionQuery,
+        from: moment(durationObj.from).startOf("day").utc().unix(),
+        to: moment(durationObj.to).endOf("day").utc().unix(),
+      };
+    } else {
+      attributionQuery = {
+        ...attributionQuery,
+        from: moment().startOf("week").utc().unix(),
+        to:
+          moment().format("dddd") !== "Sunday"
+            ? moment().subtract(1, "day").endOf("day").utc().unix()
+            : moment().utc().unix(),
+      };
+    }
+    if (refresh) {
+      return getAttributionsData(activeProjectId, attributionQuery);
+    } else {
+      return getAttributionsData(activeProjectId, attributionQuery, {
         refresh: false,
         unit_id: unitId,
         id: dashboardId,

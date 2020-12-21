@@ -7,7 +7,11 @@ import { useSelector } from "react-redux";
 import { initialState, formatApiData } from "../CoreQuery/utils";
 import { cardClassNames } from "../../reducers/dashboard/utils";
 import { getDataFromServer } from "./utils";
-import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from "../../utils/constants";
+import {
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_FUNNEL,
+  QUERY_TYPE_ATTRIBUTION,
+} from "../../utils/constants";
 
 function WidgetCard({
   unit,
@@ -30,7 +34,7 @@ function WidgetCard({
           loading: true,
         });
 
-        if(durationObj.frequency === 'hour') {
+        if (durationObj.frequency === "hour") {
           refresh = true;
         }
 
@@ -46,6 +50,8 @@ function WidgetCard({
 
         if (unit.query.query.query_group) {
           queryType = QUERY_TYPE_EVENT;
+        } else if (unit.query.query.attribution_key) {
+          queryType = QUERY_TYPE_ATTRIBUTION;
         } else {
           queryType = QUERY_TYPE_FUNNEL;
         }
@@ -56,6 +62,17 @@ function WidgetCard({
             resultantData = res.data;
           } else {
             resultantData = res.data.result;
+          }
+          setResultState({
+            ...initialState,
+            data: resultantData,
+          });
+        } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
+          let resultantData;
+          if (refresh) {
+            resultantData = res.data;
+          } else {
+            resultantData = res.data;
           }
           setResultState({
             ...initialState,

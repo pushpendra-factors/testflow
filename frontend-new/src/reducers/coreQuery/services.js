@@ -136,13 +136,13 @@ export const getAttributionsData = (
 ) => {
   let url;
   if (dashboard.refresh) {
-    url = host + "projects/" + projectId + "/query";
+    url = host + "projects/" + projectId + "/attribution/query";
   } else {
     url =
       host +
       "projects/" +
       projectId +
-      "/query?refresh=false&dashboard_id=" +
+      "/attribution/query?refresh=false&dashboard_id=" +
       dashboard.id +
       "&dashboard_unit_id=" +
       dashboard.unit_id;
