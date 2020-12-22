@@ -121,7 +121,25 @@ const Factors = ({
 
             <div className={'fa-container mt-24'}>
                 <Row gutter={[24, 24]}>
-                    <Col span={8} className={'border-right--thin-2'}>
+                   
+                <Col span={16}>
+                    <Row gutter={[24, 24]} justify="center">
+                        <Col span={20}>
+                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text>
+                            <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically tracks website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
+                        </Col>
+                        <Col span={20}>
+                            <Button size={'large'} type={'primary'} onClick={() => setGoalDrawer(true)}>Create a New Goal</Button>
+                            <a className={'ml-4'}>learn more</a>
+                        </Col>
+                    </Row>
+                    <Row gutter={[24, 24]} justify="center">
+                        <Col span={20}>
+                        <Table loading={loadingTable} className="ant-table--custom mt-8" columns={columns} dataSource={dataSource} pagination={false} />
+                        </Col>
+                    </Row>
+                </Col>
+                <Col span={8} className={'border-left--thin-2'}>
                         <Row gutter={[24, 24]} className={'p-4'}>
                             <Col span={24}>
                                 <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'} >What’s being tracked?</Text>
@@ -141,23 +159,6 @@ const Factors = ({
                             </Col>
                         </Row>
                     </Col>
-                <Col span={16}>
-                    <Row gutter={[24, 24]} justify="center">
-                        <Col span={20}>
-                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text>
-                            <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically tracks website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
-                        </Col>
-                        <Col span={20}>
-                            <Button size={'large'} type={'primary'} onClick={() => setGoalDrawer(true)}>Create a New Goal</Button>
-                            <a className={'ml-4'}>learn more</a>
-                        </Col>
-                    </Row>
-                    <Row gutter={[24, 24]} justify="center">
-                        <Col span={20}>
-                        <Table loading={loadingTable} className="ant-table--custom mt-8" columns={columns} dataSource={dataSource} pagination={false} />
-                        </Col>
-                    </Row>
-                </Col>
                 </Row>
             </div>
 
