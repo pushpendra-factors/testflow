@@ -34,8 +34,17 @@ function WidgetCard({
           loading: true,
         });
 
-        if (durationObj.frequency === "hour") {
-          refresh = true;
+        let queryType;
+
+        if (unit.query.query.query_group) {
+          queryType = QUERY_TYPE_EVENT;
+          if (durationObj.frequency === "hour") {
+            refresh = true;
+          }
+        } else if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_ATTRIBUTION) {
+          queryType = QUERY_TYPE_ATTRIBUTION;
+        } else {
+          queryType = QUERY_TYPE_FUNNEL;
         }
 
         const res = await getDataFromServer(
@@ -46,37 +55,16 @@ function WidgetCard({
           refresh,
           active_project.id
         );
-        let queryType;
-
-        if (unit.query.query.query_group) {
-          queryType = QUERY_TYPE_EVENT;
-        } else if (unit.query.query.attribution_key) {
-          queryType = QUERY_TYPE_ATTRIBUTION;
-        } else {
-          queryType = QUERY_TYPE_FUNNEL;
-        }
 
         if (queryType === QUERY_TYPE_FUNNEL) {
-          let resultantData;
-          if (refresh) {
-            resultantData = res.data;
-          } else {
-            resultantData = res.data.result;
-          }
           setResultState({
             ...initialState,
-            data: resultantData,
+            data: res.data.result,
           });
         } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
-          let resultantData;
-          if (refresh) {
-            resultantData = res.data;
-          } else {
-            resultantData = res.data;
-          }
           setResultState({
             ...initialState,
-            data: resultantData,
+            data: res.data,
           });
         } else {
           if (refresh) {

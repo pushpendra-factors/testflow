@@ -2,7 +2,6 @@ import moment from "moment";
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
-  ATTRIBUTION_METHODOLOGY,
   QUERY_TYPE_ATTRIBUTION,
 } from "../../utils/constants";
 
@@ -452,25 +451,31 @@ export const getAttributionQuery = (
   linkedEvents
 ) => {
   const query = {
-    cm: ["Impressions", "Clicks", "Spend"],
-    ce: {
-      na: eventGoal.label,
-      pr: [],
+    cl: QUERY_TYPE_ATTRIBUTION,
+    meta: {
+      metrics_breakdown: true,
     },
-    attribution_key: touchpoint,
-    attribution_methodology: models[0],
-    lbw: window,
-    from: moment().startOf("week").utc().unix(),
-    to:
-      moment().format("dddd") !== "Sunday"
-        ? moment().subtract(1, "day").endOf("day").utc().unix()
-        : moment().utc().unix(),
+    query: {
+      cm: ["Impressions", "Clicks", "Spend"],
+      ce: {
+        na: eventGoal.label,
+        pr: [],
+      },
+      attribution_key: touchpoint,
+      attribution_methodology: models[0],
+      lbw: window,
+      from: moment().startOf("week").utc().unix(),
+      to:
+        moment().format("dddd") !== "Sunday"
+          ? moment().subtract(1, "day").endOf("day").utc().unix()
+          : moment().utc().unix(),
+    },
   };
   if (models[1]) {
-    query.attribution_methodology_c = models[1];
+    query.query.attribution_methodology_c = models[1];
   }
   if (linkedEvents.length) {
-    query.lfe = linkedEvents.map((le) => {
+    query.query.lfe = linkedEvents.map((le) => {
       return {
         na: le.label,
         pr: [],

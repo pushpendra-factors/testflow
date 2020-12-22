@@ -33,10 +33,6 @@ import {
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_ATTRIBUTION,
 } from "../../utils/constants";
-import {
-  SampleAttributionResponse,
-  CompareAttributionResponse,
-} from "../../utils/SampleResponse";
 import AttributionsResult from "./AttributionsResult";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 
@@ -487,7 +483,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       }
       setRowClicked(false);
     }
-  }, [rowClicked, runFunnelQuery, runQuery]);
+  }, [rowClicked, runFunnelQuery, runQuery, runAttributionQuery]);
 
   useEffect(() => {
     return () => {

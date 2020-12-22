@@ -1,5 +1,8 @@
 import React, { useCallback } from "react";
-import { getStateQueryFromRequestQuery } from "../CoreQuery/utils";
+import {
+  getStateQueryFromRequestQuery,
+  getAttributionStateFromRequestQuery,
+} from "../CoreQuery/utils";
 import ResultTab from "../CoreQuery/EventsAnalytics/ResultTab.js";
 import ResultantChart from "../CoreQuery/FunnelsResultPage/ResultantChart";
 import { Text, SVG } from "../../components/factorsComponents";
@@ -7,7 +10,13 @@ import { Button, Divider, Spin } from "antd";
 import styles from "./index.module.scss";
 import FiltersInfo from "../CoreQuery/FiltersInfo";
 import { useHistory } from "react-router-dom";
-import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from "../../utils/constants";
+import {
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_FUNNEL,
+  QUERY_TYPE_ATTRIBUTION,
+} from "../../utils/constants";
+import AttributionsChart from "../CoreQuery/AttributionsResult/AttributionsChart";
+import GroupedAttributionsChart from "../CoreQuery/AttributionsResult/GroupedAttributionsChart";
 
 function ActiveUnitContent({
   unit,
@@ -23,30 +32,45 @@ function ActiveUnitContent({
     equivalentQuery = getStateQueryFromRequestQuery(
       unit.query.query.query_group[0]
     );
+  } else if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_ATTRIBUTION) {
+    equivalentQuery = getAttributionStateFromRequestQuery(unit.query.query.query);
   } else {
     equivalentQuery = getStateQueryFromRequestQuery(unit.query.query);
   }
 
-  const breakdown = [
-    ...equivalentQuery.breakdown.event,
-    ...equivalentQuery.breakdown.global,
-  ];
-  const events = [...equivalentQuery.events];
-  const queryType = equivalentQuery.queryType;
+  const { queryType } = equivalentQuery;
+  let breakdown,
+    events,
+    eventsMapper = {},
+    reverseEventsMapper = {},
+    arrayMapper = [],
+    attributionsState;
 
-  const eventsMapper = {};
-  const reverseEventsMapper = {};
-  const arrayMapper = [];
-
-  events.forEach((q, index) => {
-    eventsMapper[`${q.label}`] = `event${index + 1}`;
-    reverseEventsMapper[`event${index + 1}`] = q.label;
-    arrayMapper.push({
-      eventName: q,
-      index,
-      mapper: `event${index + 1}`,
+  if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
+    breakdown = [
+      ...equivalentQuery.breakdown.event,
+      ...equivalentQuery.breakdown.global,
+    ];
+    events = [...equivalentQuery.events];
+    events.forEach((q, index) => {
+      eventsMapper[`${q.label}`] = `event${index + 1}`;
+      reverseEventsMapper[`event${index + 1}`] = q.label;
+      arrayMapper.push({
+        eventName: q,
+        index,
+        mapper: `event${index + 1}`,
+      });
     });
-  });
+  }
+
+  if (queryType === QUERY_TYPE_ATTRIBUTION) {
+    attributionsState = {
+      eventGoal: equivalentQuery.eventGoal,
+      touchpoint: equivalentQuery.touchpoint,
+      models: equivalentQuery.models,
+      linkedEvents: equivalentQuery.linkedEvents,
+    };
+  }
 
   let content = null;
 
@@ -67,6 +91,52 @@ function ActiveUnitContent({
         arrayMapper={arrayMapper}
       />
     );
+  }
+
+  if (queryType === QUERY_TYPE_ATTRIBUTION) {
+    if (resultState.loading) {
+      content = (
+        <div className="flex justify-center items-center w-full h-64">
+          <Spin size="large" />
+        </div>
+      );
+    }
+
+    if (resultState.error) {
+      content = (
+        <div className="flex justify-center items-center w-full h-64">
+          Something went wrong!
+        </div>
+      );
+    }
+    if (resultState.data) {
+      const { eventGoal, touchpoint, models, linkedEvents } = attributionsState;
+      if (models.length === 1) {
+        content = (
+          <AttributionsChart
+            data={resultState.data}
+            isWidgetModal={true}
+            title={unit.title}
+            event={eventGoal.label}
+            linkedEvents={linkedEvents}
+            touchpoint={touchpoint}
+            attribution_method={models[0]}
+          />
+        );
+      } else if (models.length === 2) {
+        content = (
+          <GroupedAttributionsChart
+            event={eventGoal.label}
+            linkedEvents={linkedEvents}
+            touchpoint={touchpoint}
+            data={resultState.data}
+            isWidgetModal={true}
+            attribution_method={models[0]}
+            attribution_method_compare={models[1]}
+          />
+        );
+      }
+    }
   }
 
   if (queryType === QUERY_TYPE_FUNNEL) {
@@ -149,18 +219,20 @@ function ActiveUnitContent({
             </Button>
           </div>
         </div>
-        <div className="flex">
-          {equivalentQuery.events.map((event, index) => {
-            return (
-              <div key={index} className="flex items-center mr-1 mt-3">
-                <div className={styles.eventCharacter}>
-                  {String.fromCharCode(index + 65)}
+        {queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL ? (
+          <div className="flex">
+            {equivalentQuery.events.map((event, index) => {
+              return (
+                <div key={index} className="flex items-center mr-1 mt-3">
+                  <div className={styles.eventCharacter}>
+                    {String.fromCharCode(index + 65)}
+                  </div>
+                  <div className={styles.eventName}>{event.label}</div>
                 </div>
-                <div className={styles.eventName}>{event.label}</div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
       <Divider />
       {content}

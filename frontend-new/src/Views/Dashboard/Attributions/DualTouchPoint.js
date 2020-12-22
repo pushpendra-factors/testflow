@@ -12,6 +12,9 @@ function DualTouchPoint({
   touchpoint,
   linkedEvents,
   chartType,
+  unit,
+  resultState,
+  setwidgetModal
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);

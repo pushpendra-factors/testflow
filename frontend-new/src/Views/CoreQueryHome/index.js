@@ -173,8 +173,13 @@ function CoreQuery({
             record.query.query_group[0]
           );
           updateEventFunnelsState(equivalentQuery);
-        } else if (record.query.attribution_key) {
-          equivalentQuery = getAttributionStateFromRequestQuery(record.query);
+        } else if (
+          record.query.cl &&
+          record.query.cl === QUERY_TYPE_ATTRIBUTION
+        ) {
+          equivalentQuery = getAttributionStateFromRequestQuery(
+            record.query.query
+          );
           const usefulQuery = { ...equivalentQuery };
           delete usefulQuery.queryType;
           dispatch({ type: INITIALIZE_MTA_STATE, payload: equivalentQuery });
