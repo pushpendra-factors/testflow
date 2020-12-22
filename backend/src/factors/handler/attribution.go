@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -64,15 +66,13 @@ func AttributionHandler(c *gin.Context) {
 		}
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&requestPayload); err != nil {
-		logCtx.WithError(err).Error("query failed as JSON decode failed")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"Error": "Query failed. Json decode failed."})
+	hasFailed, errMsg, requestPayload := decodeAttributionPayload(r, logCtx)
+	if hasFailed {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"Error": errMsg})
 		return
 	}
 
-	// If refresh is passed, refresh only is Query.From is of todays beginning.
+	// If refresh is passed, refresh only is Query.From is of today's beginning.
 	if (dashboardIdParam != "" || unitIdParam != "") &&
 		!isHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
 
@@ -106,4 +106,32 @@ func AttributionHandler(c *gin.Context) {
 			requestPayload.Query.From, requestPayload.Query.To)
 	}
 	c.JSON(http.StatusOK, gin.H{"result": result, "cache": false, "refreshed_at": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
+}
+
+// decodeAttributionPayload decodes attribution requestPayload for 2 json formats to support old and new
+// request formats
+func decodeAttributionPayload(r *http.Request, logCtx *log.Entry) (bool, string, AttributionRequestPayload) {
+
+	var err error
+	var requestPayload AttributionRequestPayload
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		logCtx.WithError(err).Error("query failed due to Error while reading r.Body")
+		return true, "Error while reading r.Body", requestPayload
+	}
+	decoder1 := json.NewDecoder(bytes.NewReader(data))
+	decoder1.DisallowUnknownFields()
+	if err = decoder1.Decode(&requestPayload); err == nil {
+		return false, "", requestPayload
+	}
+
+	decoder2 := json.NewDecoder(bytes.NewReader(data))
+	decoder2.DisallowUnknownFields()
+	var requestPayloadUnit M.AttributionQueryUnit
+	if err = decoder2.Decode(&requestPayloadUnit); err == nil {
+		requestPayload.Query = requestPayloadUnit.Query
+		return false, "", requestPayload
+	}
+	logCtx.WithError(err).Error("query failed as JSON decode failed")
+	return true, "Query failed. Json decode failed", requestPayload
 }
