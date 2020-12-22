@@ -11,7 +11,9 @@ function SingleTouchPoint({
   touchpoint,
   linkedEvents,
   setwidgetModal,
-  chartType
+  chartType,
+  unit,
+  resultState
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);

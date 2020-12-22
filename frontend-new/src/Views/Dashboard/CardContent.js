@@ -39,8 +39,8 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       equivalentQuery = getStateQueryFromRequestQuery(
         unit.query.query.query_group[0]
       );
-    } else if (unit.query.query.attribution_key) {
-      equivalentQuery = getAttributionStateFromRequestQuery(unit.query.query);
+    } else if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_ATTRIBUTION) {
+      equivalentQuery = getAttributionStateFromRequestQuery(unit.query.query.query);
     } else {
       equivalentQuery = getStateQueryFromRequestQuery(unit.query.query);
     }

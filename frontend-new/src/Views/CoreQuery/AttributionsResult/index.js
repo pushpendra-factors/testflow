@@ -1,8 +1,5 @@
 import React from "react";
-import {
-  QUERY_TYPE_ATTRIBUTION,
-  ATTRIBUTION_METHODOLOGY,
-} from "../../../utils/constants";
+import { QUERY_TYPE_ATTRIBUTION } from "../../../utils/constants";
 import styles from "../FunnelsResultPage/index.module.scss";
 import ResultsHeader from "../ResultsHeader";
 import Header from "../../AppLayout/Header";
@@ -18,6 +15,7 @@ function AttributionsResult({
   resultState,
   setDrawerVisible,
   attributionsState,
+  title
 }) {
   let content = null;
 
@@ -83,7 +81,7 @@ function AttributionsResult({
             className="app-font-family text-3xl font-semibold"
             style={{ color: "#8692A3" }}
           >
-            Untitled Analysis
+            {title || 'Untitled Analysis'}
           </div>
           <div
             className={`text-base font-medium pb-1 cursor-pointer ${styles.eventsText}`}
@@ -93,14 +91,6 @@ function AttributionsResult({
             {eventGoal.label} (unique users)
           </div>
         </div>
-
-        {/* <div className="py-4">
-          <FiltersInfo
-            durationObj={durationObj}
-            handleDurationChange={handleDurationChange}
-            breakdown={breakdown}
-          />
-        </div> */}
       </Header>
       {content}
     </>

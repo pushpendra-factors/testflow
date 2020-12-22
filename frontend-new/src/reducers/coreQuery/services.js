@@ -131,7 +131,7 @@ export const fetchQueries = async (dispatch, projectId) => {
 
 export const getAttributionsData = (
   projectId,
-  query,
+  reqBody,
   dashboard = { refresh: true }
 ) => {
   let url;
@@ -147,5 +147,5 @@ export const getAttributionsData = (
       "&dashboard_unit_id=" +
       dashboard.unit_id;
   }
-  return post(null, url, { query });
+  return post(null, url, reqBody);
 };
