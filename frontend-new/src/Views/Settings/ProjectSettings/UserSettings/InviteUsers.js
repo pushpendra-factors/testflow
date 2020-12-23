@@ -21,10 +21,9 @@ function InviteUsers(props) {
     }).catch((err) => {
       console.log('invite error', err);
       form.resetFields();
-      seterrorInfo(err);
-      message.error('Oops! Something went wrong.');
+      seterrorInfo(err); 
     });
-  };
+  }; 
   const onChange = () => {
     seterrorInfo(null);
   };

@@ -42,6 +42,10 @@
           case 'FETCH_FACTORS_MODELS_REJECTED': {
             return { ...state, factors_models: action.payload };
           } 
+          case 'SAVE_GOAL_INSIGHT_RULES_FULFILLED': {
+            return { ...state, factors_insight_rules: action.payload };
+          } 
+          
         }
         return state;
       }
@@ -116,6 +120,27 @@
             resolve(response)
           }).catch((err)=>{        
             dispatch({type:"FETCH_FACTORS_MODELS_REJECTED", payload: err});
+            reject(err);
+          });
+      });
+    }
+  }
+
+export function saveGoalInsightRules(data) {
+    return function(dispatch) {
+      dispatch({type:"SAVE_GOAL_INSIGHT_RULES_FULFILLED", payload: data}); 
+    }
+}
+
+export function saveGoalInsights(projectID, data) {
+    return function(dispatch) {
+      return new Promise((resolve,reject) => { 
+        post(dispatch, host + "projects/"+projectID+`/v1/factor/goals`, data)
+          .then((response)=>{        
+            dispatch({type:"SAVE_GOAL_INSIGHTS_FULFILLED", payload: response.data});
+            resolve(response)
+          }).catch((err)=>{        
+            dispatch({type:"SAVE_GOAL_INSIGHTS_REJECTED", payload: err});
             reject(err);
           });
       });
