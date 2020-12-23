@@ -206,10 +206,12 @@ function AddDashboard({
         width={700}
         onCancel={handleCancel}
         onOk={handleOk}
-        className={'fa-modal--regular p-4'}
+        className={'fa-modal--regular p-4 fa-modal--slideInDown'}
         confirmLoading={apisCalled}
         closable={false}
         okText={getOkText()}
+        transitionName=""
+        maskTransitionName=""
       >
         <div className={'px-4'}>
           <Row>

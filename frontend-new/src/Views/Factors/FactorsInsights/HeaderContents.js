@@ -14,7 +14,7 @@ function Header({saveGoalInsights, activeProject, factors_insight_rules}) {
   const [isLoading, setisLoading] = useState(false);
   const [form] = Form.useForm();
 
-  const saveGoal = (payload) => { 
+  const saveGoal = (payload) => {   
     setshowSaveModal(false);
     setisLoading(true);
     if(factors_insight_rules){ 
@@ -86,7 +86,7 @@ function Header({saveGoalInsights, activeProject, factors_insight_rules}) {
         visible={showSaveModal}
         zIndex={1020}
         onCancel={()=>setshowSaveModal(false)}
-        className={'fa-modal--regular'}
+        className={'fa-modal--regular fa-modal--slideInDown'}
         footer={false} 
         centered={true}
         maskClosable={false}

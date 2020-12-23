@@ -193,7 +193,7 @@ function Sidebar(props) {
           setchangeProjectModal(false);
           setselectedProject(null);
         }}
-        className={'fa-modal--regular'}
+        className={'fa-modal--regular fa-modal--slideInDown'}
         okText={'Switch'}
         onOk={() => {
           setShowPopOver(false);
@@ -202,6 +202,8 @@ function Sidebar(props) {
           switchProject();
         }}
         centered={true}
+        transitionName=""
+        maskTransitionName=""
         >
           <div className={'p-4'}>
             <Row>

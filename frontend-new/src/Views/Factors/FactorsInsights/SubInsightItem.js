@@ -40,7 +40,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
     const isJourney = ParentData?.type === 'journey' ? true : false; 
     return (
           <Modal
-          className={'fa-modal--regular fa-modal-body--no-padding fa-modal-header--no-padding'}
+          className={'fa-modal--regular fa-modal--slideInDown fa-modal-body--no-padding fa-modal-header--no-padding'}
           visible={showModal}
           onOk={handleClose}
           title={ModalHeader(SubInsightsData,handleClose)}
@@ -54,6 +54,8 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
           }
           width={900}
           footer={null} 
+          transitionName=""
+          maskTransitionName=""
         >
         
         {!SubLevel2Data && <div className={'fa-modal-body--custom-scrollable'}>

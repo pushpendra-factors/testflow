@@ -32,10 +32,12 @@ function CreateNewProject(props) {
         visible={props.visible}
         onCancel={onReset}
         zIndex={1020}
-        className={'fa-modal--regular'}
+        className={'fa-modal--regular fa-modal--slideInDown'}
         footer={null}
         centered={true}
         afterClose={onReset}
+        transitionName=""
+        maskTransitionName=""
         >
           <div className={'p-4'}>
             <Row>
