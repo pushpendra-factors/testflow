@@ -1,5 +1,10 @@
 import moment from "moment";
-import { runQuery, getFunnelData, getAttributionsData } from "../../reducers/coreQuery/services";
+import {
+  runQuery,
+  getFunnelData,
+  getAttributionsData,
+} from "../../reducers/coreQuery/services";
+import { QUERY_TYPE_ATTRIBUTION } from "../../utils/constants";
 
 export const getDataFromServer = (
   query,
@@ -42,33 +47,35 @@ export const getDataFromServer = (
         id: dashboardId,
       });
     }
-  } else if(query.query.attribution_key) {
+  } else if (query.query.cl && query.query.cl === QUERY_TYPE_ATTRIBUTION) {
     let attributionQuery = query.query;
     if (durationObj.from && durationObj.to) {
       attributionQuery = {
         ...attributionQuery,
-        from: moment(durationObj.from).startOf("day").utc().unix(),
-        to: moment(durationObj.to).endOf("day").utc().unix(),
+        query: {
+          ...attributionQuery.query,
+          from: moment(durationObj.from).startOf("day").utc().unix(),
+          to: moment(durationObj.to).endOf("day").utc().unix(),
+        },
       };
     } else {
       attributionQuery = {
         ...attributionQuery,
-        from: moment().startOf("week").utc().unix(),
-        to:
-          moment().format("dddd") !== "Sunday"
-            ? moment().subtract(1, "day").endOf("day").utc().unix()
-            : moment().utc().unix(),
+        query: {
+          ...attributionQuery.query,
+          from: moment().startOf("week").utc().unix(),
+          to:
+            moment().format("dddd") !== "Sunday"
+              ? moment().subtract(1, "day").endOf("day").utc().unix()
+              : moment().utc().unix(),
+        },
       };
     }
-    if (refresh) {
-      return getAttributionsData(activeProjectId, attributionQuery);
-    } else {
-      return getAttributionsData(activeProjectId, attributionQuery, {
-        refresh: false,
-        unit_id: unitId,
-        id: dashboardId,
-      });
-    }
+    return getAttributionsData(activeProjectId, attributionQuery, {
+      refresh: false,
+      unit_id: unitId,
+      id: dashboardId,
+    });
   } else {
     let funnelQuery = query.query;
     if (durationObj.from && durationObj.to) {
@@ -87,14 +94,10 @@ export const getDataFromServer = (
             : moment().utc().unix(),
       };
     }
-    if (refresh) {
-      return getFunnelData(activeProjectId, funnelQuery);
-    } else {
-      return getFunnelData(activeProjectId, funnelQuery, {
-        refresh: false,
-        unit_id: unitId,
-        id: dashboardId,
-      });
-    }
+    return getFunnelData(activeProjectId, funnelQuery, {
+      refresh: false,
+      unit_id: unitId,
+      id: dashboardId,
+    });
   }
 };

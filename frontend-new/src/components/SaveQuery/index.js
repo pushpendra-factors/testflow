@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import moment from 'moment';
+import moment from "moment";
 import {
   Button,
   Modal,
@@ -15,7 +15,11 @@ import { saveQuery } from "../../reducers/coreQuery/services";
 import { useSelector, useDispatch } from "react-redux";
 import { QUERY_CREATED } from "../../reducers/types";
 import { saveQueryToDashboard } from "../../reducers/dashboard/services";
-import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL, QUERY_TYPE_ATTRIBUTION } from "../../utils/constants";
+import {
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_FUNNEL,
+  QUERY_TYPE_ATTRIBUTION,
+} from "../../utils/constants";
 
 function SaveQuery({
   requestQuery,
@@ -107,13 +111,16 @@ function SaveQuery({
           fr: moment().startOf("week").utc().unix(),
           to: moment().utc().unix(),
         };
-      } else if(queryType === QUERY_TYPE_ATTRIBUTION) {
+      } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
         query = {
           ...requestQuery,
-          from: moment().startOf("week").utc().unix(),
-          to: moment().utc().unix(),
+          query: {
+            ...requestQuery.query,
+            from: moment().startOf("week").utc().unix(),
+            to: moment().utc().unix(),
+          },
         };
-      } else if(queryType === QUERY_TYPE_EVENT) {
+      } else if (queryType === QUERY_TYPE_EVENT) {
         query = {
           query_group: requestQuery.map((q) => {
             return {
