@@ -42,6 +42,17 @@ const operatorMap = {
   ">=": "greaterThanOrEqual",
 };
 
+const reverseOperatorMap = {
+  equals: "=",
+  notEqual: "!=",
+  contains: "contains",
+  notContains: "not contains",
+  lesserThan: "<",
+  lesserThanOrEqual: "<=",
+  greaterThan: ">",
+  greaterThanOrEqual: ">=",
+};
+
 const getEventsWithProperties = (queries) => {
   const ewps = [];
   queries.forEach((ev) => {
@@ -443,6 +454,51 @@ export const DefaultDateRangeFormat = {
       : "date",
 };
 
+const getFilters = (filters) => {
+  const result = [];
+  filters.forEach((filter) => {
+    filter.values.forEach((value) => {
+      result.push({
+        en: filter.props[2],
+        lop: "OR",
+        op: operatorMap[filter.operator],
+        pr: filter.props[0],
+        ty: filter.props[1],
+        va: value,
+      });
+    });
+  });
+  return result;
+};
+
+const getFiltersState = (appliedFilter) => {
+  const diffProps = [];
+  appliedFilter.forEach((filter) => {
+    const doesExist = diffProps.findIndex(
+      (elem) => elem.op === filter.op && elem.pr === filter.pr
+    );
+    if (doesExist === -1) {
+      diffProps.push({
+        op: filter.op,
+        pr: filter.pr,
+      });
+    }
+  });
+
+  const result = diffProps.map((elem) => {
+    const propFilters = appliedFilter.filter(
+      (filter) => filter.pr === elem.pr && filter.op === elem.op
+    );
+    const values = propFilters.map((filter) => filter.va);
+    return {
+      values,
+      operator: reverseOperatorMap[elem.op],
+      props: [elem.pr, propFilters[0].ty, propFilters[0].en],
+    };
+  });
+  return result;
+};
+
 export const getAttributionQuery = (
   eventGoal,
   touchpoint,
@@ -450,6 +506,7 @@ export const getAttributionQuery = (
   window,
   linkedEvents
 ) => {
+  const eventFilters = getFilters(eventGoal.filters);
   const query = {
     cl: QUERY_TYPE_ATTRIBUTION,
     meta: {
@@ -459,7 +516,7 @@ export const getAttributionQuery = (
       cm: ["Impressions", "Clicks", "Spend"],
       ce: {
         na: eventGoal.label,
-        pr: [],
+        pr: eventFilters,
       },
       attribution_key: touchpoint,
       attribution_methodology: models[0],
@@ -476,9 +533,10 @@ export const getAttributionQuery = (
   }
   if (linkedEvents.length) {
     query.query.lfe = linkedEvents.map((le) => {
+      const linkedEventFilters = getFilters(le.filters);
       return {
         na: le.label,
-        pr: [],
+        pr: linkedEventFilters,
       };
     });
   }
@@ -490,7 +548,7 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
     queryType: QUERY_TYPE_ATTRIBUTION,
     eventGoal: {
       label: requestQuery.ce.na,
-      filters: [],
+      filters: getFiltersState(requestQuery.ce.pr),
     },
     touchpoint: requestQuery.attribution_key,
     models: [requestQuery.attribution_methodology],
@@ -505,7 +563,7 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
     result["linkedEvents"] = requestQuery.lfe.map((le) => {
       return {
         label: le.na,
-        filters: [],
+        filters: getFiltersState(le.pr),
       };
     });
   } else {
