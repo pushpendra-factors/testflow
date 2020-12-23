@@ -43,6 +43,17 @@ const SUB_ROUTE_SHOPIFY_INTEGRATION_SDK = "/shopify_sdk"
 
 const ADMIN_LOGIN_TOKEN_SEP = ":"
 
+// BlockRequestGracefully - Blocks HTTP requests from proceeding
+// further with StatusOK response, on mounted routes.
+func BlockRequestGracefully() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Sending empty JSON to avoid null object
+		// reference on client.
+		c.AbortWithStatusJSON(http.StatusOK, gin.H{})
+		return
+	}
+}
+
 // SetScopeProjectIdByToken - Request scope set by token on 'Authorization' header.
 func SetScopeProjectIdByToken() gin.HandlerFunc {
 	return func(c *gin.Context) {

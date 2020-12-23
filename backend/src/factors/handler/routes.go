@@ -176,11 +176,14 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 func InitIntRoutes(r *gin.Engine) {
 	intRouteGroup := r.Group(ROUTE_INTEGRATIONS_ROOT)
 
+	// Deprecated: /shopify routes are deprecated.
+	// blocked gracefully for existing projects.
 	intRouteGroup.POST("/shopify",
+		mid.BlockRequestGracefully(),
 		mid.SetScopeProjectIdByStoreAndSecret(),
 		IntShopifyHandler)
-
 	intRouteGroup.POST("/shopify_sdk",
+		mid.BlockRequestGracefully(),
 		mid.SetScopeProjectIdByToken(),
 		IntShopifySDKHandler)
 
