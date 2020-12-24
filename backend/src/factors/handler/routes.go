@@ -135,6 +135,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/v1/factors/goals/update", V1.UpdateFactorsGoalsHandler)
 	authRouteGroup.GET("/:project_id/v1/factors/goals/search", V1.SearchFactorsGoalHandler)
 	authRouteGroup.POST("/:project_id/v1/factor", V1.PostFactorsHandler)
+	authRouteGroup.GET("/:project_id/v1/factor", V1.GetFactorsHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

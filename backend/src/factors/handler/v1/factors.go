@@ -27,6 +27,7 @@ func PostFactorsHandler(c *gin.Context) {
 
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
+	patternMode := c.Query("pattern_mode")
 	var err error
 	if modelIdParam != "" {
 		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
@@ -50,6 +51,19 @@ func PostFactorsHandler(c *gin.Context) {
 		})
 		return
 	}
+	if patternMode == "AllPatterns" {
+		allEventPatterns := make([]string, 0)
+		allPatterns, _ := ps.GetAllPatterns("", params.Rule.StartEvent, params.Rule.EndEvent)
+		for _, eventPattern := range allPatterns {
+			pattern := ""
+			for _, eventName := range eventPattern.EventNames {
+				pattern = pattern + "," + eventName
+			}
+			allEventPatterns = append(allEventPatterns, pattern)
+		}
+		c.JSON(http.StatusOK, allEventPatterns)
+		return
+	}
 	startConstraints, endConstraints := parseConstraints(params.Rule.Rule)
 	if results, err := PW.FactorV1("",
 		projectId, params.Rule.StartEvent, startConstraints,
@@ -61,6 +75,55 @@ func PostFactorsHandler(c *gin.Context) {
 		results.Type = inputType
 		results.GoalRule = params.Rule
 		c.JSON(http.StatusOK, results)
+	}
+}
+
+func GetFactorsHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
+
+	modelId := uint64(0)
+	modelIdParam := c.Query("model_id")
+	patternMode := c.Query("pattern_mode")
+	var err error
+	if modelIdParam != "" {
+		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+	}
+	startEvent := c.Query("start_event")
+	endEvent := c.Query("end_event")
+
+	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
+	if err != nil {
+		logCtx.WithError(err).Error("Pattern Service initialization failed.")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  err.Error(),
+			"status": http.StatusBadRequest,
+		})
+		return
+	}
+	if patternMode == "AllPatterns" {
+		allEventPatterns := make([]string, 0)
+		allPatterns, _ := ps.GetAllPatterns("", startEvent, endEvent)
+		for _, eventPattern := range allPatterns {
+			pattern := ""
+			for _, eventName := range eventPattern.EventNames {
+				pattern = pattern + "," + eventName
+			}
+			allEventPatterns = append(allEventPatterns, pattern)
+		}
+		c.JSON(http.StatusOK, allEventPatterns)
+		return
 	}
 }
 
