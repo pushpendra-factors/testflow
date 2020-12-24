@@ -135,7 +135,7 @@ export function saveGoalInsightRules(data) {
 export function saveGoalInsights(projectID, data) {
     return function(dispatch) {
       return new Promise((resolve,reject) => { 
-        post(dispatch, host + "projects/"+projectID+`/v1/factor/goals`, data)
+        post(dispatch, host + "projects/"+projectID+`/v1/factors/goals`, data)
           .then((response)=>{        
             dispatch({type:"SAVE_GOAL_INSIGHTS_FULFILLED", payload: response.data});
             resolve(response)

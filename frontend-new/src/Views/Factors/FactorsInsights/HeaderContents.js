@@ -20,14 +20,15 @@ function Header({saveGoalInsights, activeProject, factors_insight_rules}) {
     if(factors_insight_rules){ 
       let factorsData = {
         ...factors_insight_rules, 
-        name: payload.name
+        name: payload.title
       } 
       saveGoalInsights(activeProject.id, factorsData).then(() => {
         setshowSaveModal(false);
         setisLoading(false);
-        message.success('Invitation sent successfully!');
+        message.success('Saved successfully!');
       }).catch((err) => {
-        console.log('invite error', err);
+        message.error('Oops! Something went wrong.');
+        console.log('Goal saving error:', err);
         form.resetFields();
         seterrorInfo(err);
         setisLoading(false); 
@@ -112,7 +113,7 @@ function Header({saveGoalInsights, activeProject, factors_insight_rules}) {
 
                 <Col span={24}>
                 <Text type={'title'} level={7} extraClass={'m-0'}>Title</Text>
-                  <Form.Item name="name" rules={[ { required: true}]} className={'m-0'} >
+                  <Form.Item name="title" rules={[{ required: true}]} className={'m-0'} >
                     <Input size="large" className={'fa-input w-full'} />
                   </Form.Item>
                 </Col> 
