@@ -95,7 +95,7 @@ func main() {
 	}
 
 	waitGroup.Add(1)
-	go cacheWebsiteAnalyticsForProjects(*projectIDFlag, *numRoutinesForWebAnalyticsFlag, &timeTaken, &waitGroup)
+	go cacheWebsiteAnalyticsForProjects(*projectIDFlag, *excludeProjectIDFlag, *numRoutinesForWebAnalyticsFlag, &timeTaken, &waitGroup)
 
 	waitGroup.Wait()
 	timeTakenString, _ := timeTaken.Load("all")
@@ -113,10 +113,10 @@ func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRou
 	timeTaken.Store("all", timeTakenString)
 }
 
-func cacheWebsiteAnalyticsForProjects(projectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
+func cacheWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	startTime := util.TimeNowUnix()
-	M.CacheWebsiteAnalyticsForProjects(projectIDs, numRoutines)
+	M.CacheWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs, numRoutines)
 	timeTakenStringWeb := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	timeTaken.Store("web", timeTakenStringWeb)
 }

@@ -1662,21 +1662,33 @@ func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
 }
 
 // CacheWebsiteAnalyticsForProjects Runs for all the projectIDs passed as comma separated.
-func CacheWebsiteAnalyticsForProjects(stringProjectsIDs string, numRoutines int) {
-	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(stringProjectsIDs, "")
-	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
+func CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int) {
+	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(stringProjectsIDs, excludeProjectIDs)
+	allWebAnalyticsProjectIDs, errCode := getWebAnalyticsEnabledProjectIDs()
+	if errCode != http.StatusFound {
+		return
+	}
+
+	var projectIDs []uint64
 	if allProjects {
-		var errCode int
-		projectIDs, errCode = getWebAnalyticsEnabledProjectIDs()
-		if errCode != http.StatusFound {
-			return
+		projectIDs = allWebAnalyticsProjectIDs
+	} else {
+		projectIDs = C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
+	}
+
+	// Add only those projects for which website analytics is enabled. Exclude marked ones.
+	var projectIDsToRun []uint64
+	for _, projectID := range projectIDs {
+		_, shouldExclude := excludeProjectIDsMap[projectID]
+		if U.Uint64ValueIn(projectID, allWebAnalyticsProjectIDs) && !shouldExclude {
+			projectIDsToRun = append(projectIDsToRun, projectID)
 		}
 	}
 
 	var waitGroup sync.WaitGroup
 	count := 0
 	waitGroup.Add(U.MinInt(len(projectIDs), numRoutines))
-	for _, projectID := range projectIDs {
+	for _, projectID := range projectIDsToRun {
 		count++
 		log.WithFields(log.Fields{"ProjectID": projectID}).Info("Starting web analytics dashboard caching")
 		go cacheWebsiteAnalyticsForProjectID(projectID, &waitGroup)
