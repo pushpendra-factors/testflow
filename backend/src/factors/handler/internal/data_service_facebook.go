@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	M "factors/model"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -38,6 +39,18 @@ func DataServiceFacebookAddDocumentHandler(c *gin.Context) {
 }
 
 func DataServiceFacebookGetLastSyncInfoHandler(c *gin.Context) {
-	lastSyncInfo, status := M.GetFacebookLastSyncInfo()
+	r := c.Request
+
+	var payload M.FacebookLastSyncInfoPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		log.WithError(err).Error("Failed to decode Json request on facebook upsert document handler.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Invalid request json."})
+		return
+	}
+	projectID, _ := strconv.ParseUint(payload.ProjectId, 10, 64)
+	lastSyncInfo, status := M.GetFacebookLastSyncInfo(projectID, payload.CustomerAdAccountId)
 	c.JSON(status, lastSyncInfo)
 }

@@ -714,7 +714,7 @@ func GetFacebookEnabledProjectSettings() ([]FacebookProjectSettings, int) {
 
 	facebookProjectSettings := make([]FacebookProjectSettings, 0, 0)
 
-	err := db.Table("project_settings").Where("int_facebook_user_id IS NOT NULL AND int_facebook_user_id != ''").Find(&facebookProjectSettings).Error
+	err := db.Table("project_settings").Where("int_facebook_access_token IS NOT NULL AND int_facebook_access_token != ''").Find(&facebookProjectSettings).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
 		return facebookProjectSettings, http.StatusInternalServerError

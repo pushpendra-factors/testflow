@@ -102,7 +102,11 @@ def get_facebook_int_settings():
 def get_last_sync_info(project_id, account_id):
     uri = "/data_service/facebook/documents/last_sync_info"
     url = options.data_service_host + uri
-    response = requests.get(url)
+    payload = {
+        'project_id': project_id,
+        "account_id" : account_id
+    }
+    response = requests.get(url, json=payload)
     all_info = response.json()
     sync_info_with_type = {}
     for info in all_info:
@@ -110,6 +114,10 @@ def get_last_sync_info(project_id, account_id):
         sync_info_with_type[info['type_alias']+info['platform']]= date.strftime("%Y-%m-%d")
     return sync_info_with_type
 
+def getNextDate(date):
+    newDate = datetime.strptime(date, '%Y-%m-%d') + timedelta(days=1)
+    return newDate.strftime('%Y-%m-%d')
+    
 def get_collections(facebook_int_setting, sync_info_with_type, date_stop):
     response = {}
     try:
@@ -129,7 +137,7 @@ def get_collections(facebook_int_setting, sync_info_with_type, date_stop):
                     facebook_int_setting[ACCESS_TOKEN], campaigns, 0, date_stop)
             else:
                 get_campaign_data(facebook_int_setting["project_id"],facebook_int_setting[FACEBOOK_AD_ACCOUNT],
-                    facebook_int_setting[ACCESS_TOKEN], campaigns, sync_info_with_type[CAMPAIGN_INSIGHTS+FACEBOOK_ALL], date_stop)
+                    facebook_int_setting[ACCESS_TOKEN], campaigns, getNextDate(sync_info_with_type[CAMPAIGN_INSIGHTS+FACEBOOK_ALL]), date_stop)
 
         adsets_url = "https://graph.facebook.com/v9.0/{}/adsets?access_token={}".format(
         facebook_int_setting[FACEBOOK_AD_ACCOUNT], facebook_int_setting[ACCESS_TOKEN])
@@ -141,7 +149,7 @@ def get_collections(facebook_int_setting, sync_info_with_type, date_stop):
                     facebook_int_setting[ACCESS_TOKEN], adsets, 0, date_stop)
             else:
                 get_adset_data(facebook_int_setting["project_id"],facebook_int_setting[FACEBOOK_AD_ACCOUNT],
-                    facebook_int_setting[ACCESS_TOKEN], adsets, sync_info_with_type[AD_SET_INSIGHTS+FACEBOOK_ALL], date_stop)
+                    facebook_int_setting[ACCESS_TOKEN], adsets, getNextDate(sync_info_with_type[AD_SET_INSIGHTS+FACEBOOK_ALL]), date_stop)
 
         ads_url = "https://graph.facebook.com/v9.0/{}/ads?access_token={}".format(
         facebook_int_setting[FACEBOOK_AD_ACCOUNT], facebook_int_setting[ACCESS_TOKEN])
@@ -153,7 +161,7 @@ def get_collections(facebook_int_setting, sync_info_with_type, date_stop):
                     facebook_int_setting[ACCESS_TOKEN], ads, 0, date_stop)
             else:
                 get_ad_data(facebook_int_setting["project_id"],facebook_int_setting[FACEBOOK_AD_ACCOUNT],
-                    facebook_int_setting[ACCESS_TOKEN], ads, sync_info_with_type[AD_INSIGHTS+FACEBOOK_ALL], date_stop)
+                    facebook_int_setting[ACCESS_TOKEN], ads, getNextDate(sync_info_with_type[AD_INSIGHTS+FACEBOOK_ALL]), date_stop)
     except Exception as e:
         response["status"] = "failed"
         response["msg"] = "Failed with exception "+str(e)
@@ -170,7 +178,7 @@ def get_ad_account_data(project_id, access_token, ad_account_id, date_stop):
         ad_account_id, fields_ad_account, access_token)
     response = requests.get(url)
     if not response.ok:
-        log.error("failed to get ad account data from facebook")
+        log.error(response.status_code, ": ", response.reason, "failed to get ad account data from facebook")
         return
     add_facebook_document(project_id, ad_account_id, AD_ACCOUNT,  ad_account_id, response.json(), timestamp, FACEBOOK_ALL)
     
@@ -283,8 +291,8 @@ def add_facebook_document(project_id, ad_account_id, doc_type, id, value, timest
     }
     response = requests.post(url, json=payload)
     if not response.ok:
-        log.error("Failed to add response %s to facebook warehouse: %d, %s", 
-            doc_type, response.status_code, response.json())
+        log.error("Failed to add response %s to facebook warehouse for project %s. StatusCode:  %d, %s", 
+            doc_type, project_id, response.status_code, response.json())
     
     return response
 

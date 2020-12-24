@@ -152,6 +152,10 @@ type FacebookLastSyncInfo struct {
 	DocumentTypeAlias   string `json:"type_alias"`
 	LastTimestamp       int64  `json:"last_timestamp"`
 }
+type FacebookLastSyncInfoPayload struct {
+	ProjectId           string `json:"project_id"`
+	CustomerAdAccountId string `json:"account_id"`
+}
 
 func getFacebookDocumentTypeAliasByType() map[int]string {
 	documentTypeMap := make(map[int]string, 0)
@@ -162,15 +166,16 @@ func getFacebookDocumentTypeAliasByType() map[int]string {
 	return documentTypeMap
 }
 
-func GetFacebookLastSyncInfo() ([]FacebookLastSyncInfo, int) {
+func GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]FacebookLastSyncInfo, int) {
 	db := C.GetServices().Db
 
 	facebookLastSyncInfos := make([]FacebookLastSyncInfo, 0, 0)
 
 	queryStr := "SELECT project_id, customer_ad_account_id, platform, type as document_type, max(timestamp) as last_timestamp" +
-		" " + "FROM facebook_documents GROUP BY project_id, customer_ad_account_id, platform, type "
+		" FROM facebook_documents WHERE project_id = ? AND customer_ad_account_id = ?" +
+		" GROUP BY project_id, customer_ad_account_id, platform, type "
 
-	rows, err := db.Raw(queryStr).Rows()
+	rows, err := db.Raw(queryStr, projectID, CustomerAdAccountID).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get last facebook documents by type for sync info.")
 		return facebookLastSyncInfos, http.StatusInternalServerError
