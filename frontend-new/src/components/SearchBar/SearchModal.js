@@ -31,12 +31,14 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
             visible={visible}
             width={700}
             title={null}
-            className={`fa-modal--regular ${styles.modal}`}
+            className={`fa-modal--regular ${styles.modal} fa-modal--slideInDown`}
             okText={'Save'}
             confirmLoading={false}
             closable={false}
             onCancel={handleClose}
             footer={false}
+            transitionName=""
+            maskTransitionName=""
         >
             <div className="search-bar">
                 <Input

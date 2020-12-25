@@ -16,14 +16,15 @@
 {
     position: absolute;
     top: 0px;
-    left: -7.9em;
+    left: -6.8em;
     height: 100%;
 }
 .fa-insights--tab
 {
     .ant-tabs-nav
     {
-        margin: 0px
+        margin: 0px;
+        padding-left: 21%;
     }
 }
 

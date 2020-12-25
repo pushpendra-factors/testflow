@@ -21,10 +21,9 @@ function InviteUsers(props) {
     }).catch((err) => {
       console.log('invite error', err);
       form.resetFields();
-      seterrorInfo(err);
-      message.error('Oops! Something went wrong.');
+      seterrorInfo(err); 
     });
-  };
+  }; 
   const onChange = () => {
     seterrorInfo(null);
   };
@@ -41,12 +40,14 @@ function InviteUsers(props) {
         visible={props.visible}
         zIndex={1020}
         onCancel={props.onCancel}
-        className={'fa-modal--regular'}
+        className={'fa-modal--regular fa-modal--slideInDown'}
         footer={false}
         confirmLoading={props.confirmLoading}
         centered={true}
         maskClosable={false}
         afterClose={onReset}
+        transitionName=""
+        maskTransitionName=""
       >
         <div className={'p-4'}>
           <Row className={'mb-6'}>

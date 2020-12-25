@@ -800,6 +800,15 @@ const CompareSVG = ({size= 24, extraClass, color}) => {
     </svg>
   )
 }
+const ProgressArrowSVG = ({size= 24, extraClass, color}) => {
+  return (
+    <svg width="8" height="30" className={extraClass}  viewBox="0 0 8 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M3.18198 13.5549L3.18198 0.761963L4.18198 0.761963L4.18198 13.5549L6.51041 11.2264C6.70567 11.0312 7.02225 11.0312 7.21751 11.2264C7.41278 11.4217 7.41278 11.7383 7.21752 11.9335L4.03553 15.1155C3.84027 15.3108 3.52369 15.3108 3.32843 15.1155L0.146447 11.9335C-0.0488151 11.7383 -0.0488151 11.4217 0.146447 11.2264C0.341709 11.0312 0.658292 11.0312 0.853554 11.2264L3.18198 13.5549Z" fill="#B7BEC8"/>
+      <circle cx="4" cy="25.6675" r="4" fill={color}/>
+    </svg>
+
+  )
+}
 
 export {
   BrandSVG,
@@ -863,5 +872,6 @@ export {
   CloseSVG,
   ExpandSVG,
   ClockSVG,
-  CompareSVG
+  CompareSVG,
+  ProgressArrowSVG
 };

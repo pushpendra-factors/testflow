@@ -255,10 +255,12 @@ function SaveQuery({
         title={null}
         onOk={handleSave}
         onCancel={handleSaveCancel}
-        className={"fa-modal--regular p-4"}
+        className={"fa-modal--regular p-4 fa-modal--slideInDown"}
         okText={"Save"}
         closable={false}
         confirmLoading={apisCalled}
+        transitionName=""
+        maskTransitionName=""
       >
         <div className="p-4">
           <Text extraClass="m-0" type={"title"} level={3} weight={"bold"}>

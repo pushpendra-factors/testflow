@@ -50,12 +50,14 @@ function EditPassword(props) {
         zIndex={1020}
         onCancel={onReset}
         afterClose={onModalCancel}
-        className={'fa-modal--regular'}
+        className={'fa-modal--regular fa-modal--slideInDown'}
         okText={'Update Password'}
         onOk={props.onOk}
         confirmLoading={props.confirmLoading}
         centered={true}
         footer={null}
+        transitionName=""
+        maskTransitionName=""
       >
         <div className={'p-4'}>
           <Form

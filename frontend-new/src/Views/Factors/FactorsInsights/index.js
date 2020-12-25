@@ -48,10 +48,7 @@ const FactorsInsights = ({ activeProject, goal_insights }) => {
                                     <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} displayType={true} category={'attribute'} />
                                     <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} displayType={true} category={'campaign'} />
                         </TabPane>
-                        <TabPane tab="Attributes" key="2">
-                            <div className={'w-full p-4 background-color--brand-color-1'}>
-                                    <Text type={'title'} level={7} weight={'regular'} align={'center'} extraClass={'m-0'} >Show insights with reference to <a>Attributes</a></Text>
-                            </div>
+                        <TabPane tab="Attributes" key="2"> 
                             <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} category={'attribute'} />
                         </TabPane>
                         <TabPane tab="Campaigns" key="3">
@@ -60,11 +57,8 @@ const FactorsInsights = ({ activeProject, goal_insights }) => {
                             </div>
                                     <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} category={'campaign'} />
                         </TabPane>
-                        <TabPane tab="Journeys" key="4">
-                             <div className={'w-full p-4 background-color--brand-color-1'}>
-                                    <Text type={'title'} level={7} weight={'regular'} align={'center'} extraClass={'m-0'} >Show insights with reference to <a>Journeys</a></Text>
-                             </div>
-                                <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} category={'journey'} />
+                        <TabPane tab="Journeys" key="4"> 
+                                  <InsightItem data={goal_insights} showSubInsightsData={showSubInsightsData} category={'journey'} />
                         </TabPane>
                     </Tabs>
                     </div>

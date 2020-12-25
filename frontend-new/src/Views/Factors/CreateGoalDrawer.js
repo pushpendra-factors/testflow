@@ -5,7 +5,7 @@ import {
 import { SVG, Text } from 'factorsComponents'; 
 import GroupSelect from '../../components/QueryComposer/GroupSelect';
 import { fetchEventNames } from 'Reducers/coreQuery/middleware';
-import { fetchGoalInsights, fetchFactorsModels } from 'Reducers/factors';
+import { fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules } from 'Reducers/factors';
 import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import _ from 'lodash';
@@ -109,6 +109,7 @@ const getInsights = (projectID, isJourney=false) =>{
     await props.fetchGoalInsights(projectID, isJourney, factorsData, calcModelId[0].mid); 
   };
   getData().then(()=>{
+    props.saveGoalInsightRules(factorsData);
     setInsightBtnLoading(false);
     history.push('/explain/insights'); 
   });
@@ -261,4 +262,4 @@ const mapStateToProps = (state) => {
     factors_models: state.factors.factors_models
   };
 };
-export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights, fetchFactorsModels})(CreateGoalDrawer);
+export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules})(CreateGoalDrawer);
