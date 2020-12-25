@@ -7,6 +7,11 @@ import _ from 'lodash';
 import MoreInsightsLines from './MoreInsightsLines';
 import { numberWithCommas } from 'Utils/dataFormatter';
 
+const ProgressColor = {
+  blue: '#4D7DB4',
+  yellow: '#F9C06E'
+}
+
 const InsightItem = ({
   data, category, showSubInsightsData, displayType = false
 }) => {
@@ -55,25 +60,38 @@ const InsightItem = ({
 
                                   {
                                     isJourney && <>
-                                        <div className={'flex items-end'}>
-                                          <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(data.total_users_count)}</Text></a> </div>
-                                          <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{_.isEmpty(data.goal?.st_en) ? 'All Visitors' : data.goal?.st_en }</Text></div>
+                                      <div className={'relative flex items-end'}>
+                                         <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
+                                          <div className={'flex-grow'}> 
+                                          <div className={'flex items-end'}>
+                                            <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(data.total_users_count)}</Text></a> </div>
+                                            <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{_.isEmpty(data.goal?.st_en) ? 'All Visitors' : data.goal?.st_en }</Text></div>
+                                          </div>
+                                          <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} /> 
                                         </div>
-                                        <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} /> 
+                                      </div>
                                     </>
                                   } 
-
-                                  <div className={'flex items-end'}>
-                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div>
-                                    <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKey}</Text></div>
+                                  <div className={'relative flex items-end'}>
+                                    <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
+                                     <div className={'flex-grow'}> 
+                                      <div className={'flex items-end'}>
+                                        <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div>
+                                        <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKey}</Text></div>
+                                      </div>
+                                      <Progress strokeWidth={10} percent={isJourney? insightLevel1Journey : 100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} /> 
+                                      </div>
                                   </div>
-                                  <Progress percent={isJourney? insightLevel1Journey : 100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
 
-                                  <div className={'flex items-end'}>
-                                    <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 mt-2 tracking-wider'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
-                                    <div className={'flex items-center ml-4 fa-insights-box--animate'}><SVG name={'arrowdown'} size={12} color={'grey'} /><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${data?.goal?.en_en} (${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
-                                  </div>
-                                  <Progress percent={insightLevel1Percentage} strokeColor={'#F9C06E'} className={'fa-progress'} showInfo={false} />
+                                  <div className={'relative flex items-end'}>
+                                    <SVG name={'ProgressArrow'} color={ProgressColor.yellow} extraClass={'mr-2 mb-1'} />
+                                     <div className={'flex-grow'}> 
+                                    <div className={'flex items-end'}>
+                                      <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 mt-2 tracking-wider'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
+                                      <div className={'flex items-center ml-4 fa-insights-box--animate'}><SVG name={'arrowdown'} size={12} color={'grey'} /><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${data?.goal?.en_en} (${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
+                                    </div>
+                                    <Progress strokeWidth={10} percent={insightLevel1Percentage} strokeColor={'#F9C06E'} className={'fa-progress'} showInfo={false} />
+                                    </div>
                                   </div>
 
                                   {!_.isEmpty(dataItem?.factors_sub_insights) && <div className={'fa-insights-box--actions'}>
@@ -81,7 +99,7 @@ const InsightItem = ({
                                         <SVG name={'corequery'} size={24} color={'grey'} />
                                     </Button>
                                   </div>
-                                  }
+                                  } 
 
                                   <div className={'fa-insights-box--spike'}>
                                       <div className={'flex justify-end items-center'}>
@@ -89,6 +107,8 @@ const InsightItem = ({
                                         {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
                                       </div>
                                   </div>
+
+                              </div>
 
                               </div>
                           </Col>
