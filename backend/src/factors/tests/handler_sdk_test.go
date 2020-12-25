@@ -627,6 +627,90 @@ func TestSDKTrackHandler(t *testing.T) {
 	})
 }
 
+func TestUserPropertiesLatestCampaign(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// Visit from campaign1.
+	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+	randomeEventName := RandomURL()
+	trackPayload := SDK.TrackPayload{
+		Name:      randomeEventName,
+		Timestamp: timestamp,
+		EventProperties: U.PropertiesMap{
+			"$qp_utm_campaign": "campaign1",
+		},
+	}
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.NotNil(t, response.EventId)
+	assert.NotNil(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+	user, errCode := M.GetUser(project.ID, response.UserId)
+	assert.Equal(t, http.StatusFound, errCode)
+	userPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	// Latest user properties state should contain latest campaign as "campaign1".
+	assert.Equal(t, "campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
+	userID := response.UserId
+
+	timestamp = timestamp + 1
+	trackPayload = SDK.TrackPayload{
+		Name:      U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp: timestamp,
+		UserId:    user.ID,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	_, errCode = M.GetEvent(project.ID, userID, response.EventId)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	assert.Equal(t, http.StatusOK, status)
+	user, errCode = M.GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, errCode)
+	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	// Latest user properties state should should be the same after form_submitted event.
+	assert.Equal(t, "campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
+
+	// Visit from campaign2.
+	timestamp = timestamp + 1
+	trackPayload = SDK.TrackPayload{
+		Name:      U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp: timestamp,
+		UserId:    user.ID,
+		EventProperties: U.PropertiesMap{
+			"$qp_utm_campaign": "campaign2",
+		},
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	_, errCode = M.GetEvent(project.ID, userID, response.EventId)
+	assert.Equal(t, http.StatusFound, errCode)
+	timestamp = timestamp + 1
+	trackPayload = SDK.TrackPayload{
+		Name:      U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp: timestamp,
+		UserId:    user.ID,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.NotNil(t, response.EventId)
+	assert.Empty(t, response.UserId)
+	_, errCode = M.GetEvent(project.ID, userID, response.EventId)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	assert.Equal(t, http.StatusOK, status)
+	user, errCode = M.GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, errCode)
+	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	// Latest user properties state should should be updated to
+	// campaign2 for the form_submitted event.
+	assert.Equal(t, "campaign2", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
+
+}
+
 func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 	project, user, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
