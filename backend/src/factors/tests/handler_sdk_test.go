@@ -652,6 +652,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	// Latest user properties state should contain latest campaign as "campaign1".
 	assert.Equal(t, "campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	userID := response.UserId
+	lastUserPropertiesID := user.PropertiesId
 
 	timestamp = timestamp + 1
 	trackPayload = SDK.TrackPayload{
@@ -665,9 +666,13 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	_, errCode = M.GetEvent(project.ID, userID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
 
-	assert.Equal(t, http.StatusOK, status)
+	event, errCode := M.GetEvent(project.ID, userID, response.EventId)
+	assert.Equal(t, http.StatusFound, errCode)
 	user, errCode = M.GetUser(project.ID, userID)
 	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, event.UserPropertiesId, user.PropertiesId)
+	// Should be the same user_properties state as there is no change.
+	assert.Equal(t, lastUserPropertiesID, user.PropertiesId)
 	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	// Latest user properties state should should be the same after form_submitted event.
@@ -697,18 +702,20 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 	assert.NotNil(t, response.EventId)
 	assert.Empty(t, response.UserId)
-	_, errCode = M.GetEvent(project.ID, userID, response.EventId)
+	event, errCode = M.GetEvent(project.ID, userID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
 
-	assert.Equal(t, http.StatusOK, status)
+	// New campaign should create new user_properties
+	// state and attach it to the event.
 	user, errCode = M.GetUser(project.ID, userID)
 	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotEqual(t, lastUserPropertiesID, user.PropertiesId)
+	assert.Equal(t, event.UserPropertiesId, user.PropertiesId)
 	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	// Latest user properties state should should be updated to
 	// campaign2 for the form_submitted event.
 	assert.Equal(t, "campaign2", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
-
 }
 
 func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
