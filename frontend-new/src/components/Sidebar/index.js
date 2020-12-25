@@ -121,17 +121,17 @@ function Sidebar(props) {
               <div className={'fa-aside--divider'} />
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <Tooltip title="Dashboard" placement="right">
+              <Tooltip title="Dashboard" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
               <NavLink activeClassName="active" exact to="/"><SVG name={'home'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <Tooltip title="Analyse" placement="right">
+              <Tooltip title="Analyse" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
                <NavLink activeClassName="active" exact to="/core-analytics"><SVG name={'corequery'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <Tooltip title="Explain" placement="right">
+              <Tooltip title="Explain" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
                 <NavLink activeClassName="active" to="/explain"><SVG name={'key'} size={24} color="white"/></NavLink> 
               </Tooltip>
             </Row>
@@ -145,7 +145,7 @@ function Sidebar(props) {
               <NavLink activeClassName="active" exact to="/components"><SVG name={'notify'} size={24} color="white"/></NavLink>
             </Row> */}
             <Row justify="center" align="middle" className=" w-full py-2">
-              <Tooltip title="Settings" placement="right">
+              <Tooltip title="Settings" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
                 <NavLink activeClassName="active" to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
@@ -193,7 +193,7 @@ function Sidebar(props) {
           setchangeProjectModal(false);
           setselectedProject(null);
         }}
-        className={'fa-modal--regular'}
+        className={'fa-modal--regular fa-modal--slideInDown'}
         okText={'Switch'}
         onOk={() => {
           setShowPopOver(false);
@@ -202,6 +202,8 @@ function Sidebar(props) {
           switchProject();
         }}
         centered={true}
+        transitionName=""
+        maskTransitionName=""
         >
           <div className={'p-4'}>
             <Row>

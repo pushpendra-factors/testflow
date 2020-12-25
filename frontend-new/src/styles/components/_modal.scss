@@ -39,7 +39,11 @@
         }
 }
 .fa-modal--regular
-{
+{ 
+    &.fa-modal--slideInDown{
+        animation-name: fa-fadeInDown; 
+        animation-duration: 0.2s; 
+    }
     .ant-modal-content{
         border-radius:12px;
     }
