@@ -17,7 +17,7 @@ const InsightHighlightItem = ({ data }) => {
                             <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{_.isEmpty(data.goal?.st_en) ? 'All Visitors' : data.goal?.st_en }</Text>
                             <Progress strokeWidth={12} percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
 
-                            <Text type={'title'} level={1} weight={'bold'} extraClass={'m-0 my-4'} >{`${data.overall_percentage}% of all users have completed this goal`}</Text>
+                            <Text type={'title'} level={1} weight={'bold'} extraClass={'m-0 my-4'} lineHeight={'small'}>{`${data.overall_percentage}% of all users have completed this goal`}</Text>
 
                             <Progress strokeWidth={12} percent={data.overall_percentage} strokeColor={'#F9C06E'} className={'fa-progress'} showInfo={false} />
                             <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0'} >{data.goal?.en_en}</Text>
