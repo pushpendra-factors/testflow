@@ -1,5 +1,5 @@
 import React from "react";
-import { SortData, getTitleWithSorter } from "../../../utils/dataFormatter";
+import { SortData, getTitleWithSorter, formatCount } from "../../../utils/dataFormatter";
 import { ATTRIBUTION_METHODOLOGY } from "../../../utils/constants";
 
 export const getDifferentCampaingns = (data) => {
@@ -207,12 +207,12 @@ export const getTableData = (
       let resultantRow = {
         index,
         [touchpoint]: row[touchpointIdx],
-        impressions: row[impressionsIdx],
-        clicks: row[clicksIdx],
-        spend: row[spendIdx],
-        visitors: row[visitorsIdx],
-        conversion: row[userIdx],
-        cost: row[costIdx],
+        impressions: formatCount(row[impressionsIdx], 1),
+        clicks: formatCount(row[clicksIdx], 1),
+        spend: formatCount(row[spendIdx], 1),
+        visitors: formatCount(row[visitorsIdx], 1),
+        conversion: formatCount(row[userIdx], 1),
+        cost: formatCount(row[costIdx], 1),
       };
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {

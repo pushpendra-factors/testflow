@@ -474,10 +474,10 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
 
   useEffect(() => {
     if (rowClicked) {
-      if (rowClicked === QUERY_TYPE_FUNNEL) {
+      if (rowClicked.queryType === QUERY_TYPE_FUNNEL) {
         runFunnelQuery(true);
-      } else if(rowClicked === QUERY_TYPE_ATTRIBUTION) {
-        runAttributionQuery(true);
+      } else if(rowClicked.queryType === QUERY_TYPE_ATTRIBUTION) {
+        runAttributionQuery(rowClicked.queryName);
       } else {
         runQuery("0", true, true);
       }

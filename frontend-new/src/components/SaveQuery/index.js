@@ -157,7 +157,7 @@ function SaveQuery({
         );
       }
       dispatch({ type: QUERY_CREATED, payload: res.data });
-      setQuerySaved(true);
+      setQuerySaved(title);
       setApisCalled(false);
       resetModalState();
     } catch (err) {
