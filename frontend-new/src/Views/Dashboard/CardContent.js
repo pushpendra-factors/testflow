@@ -122,7 +122,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
       content = (
-        <Attributions resultState={resultState} setwidgetModal={setwidgetModal} attributionsState={attributionsState} chartType={presentationObj[dashboardPresentation]} />
+        <Attributions title={unit.id} resultState={resultState} setwidgetModal={setwidgetModal} attributionsState={attributionsState} chartType={presentationObj[dashboardPresentation]} />
       );
     }
   }

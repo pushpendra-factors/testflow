@@ -12,8 +12,9 @@ function SingleTouchPoint({
   linkedEvents,
   setwidgetModal,
   chartType,
-  unit,
-  resultState
+  title,
+  resultState,
+  unit
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -35,7 +36,13 @@ function SingleTouchPoint({
   if (chartType === "barchart") {
     chartContent = (
       <div className="mt-4">
-        <BarLineChart chartData={chartsData} />
+        <BarLineChart
+          responseRows={data.result.rows}
+          responseHeaders={data.result.headers}
+          visibleIndices={visibleIndices}
+          title={title}
+          chartData={chartsData}
+        />
       </div>
     );
   } else {

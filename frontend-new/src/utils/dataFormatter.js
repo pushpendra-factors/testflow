@@ -132,3 +132,7 @@ export const generateColors = (requiredCumberOfColors) => {
   }
   return colors;
 };
+
+export const formatCount = (count, precision) => {
+  return count % 1 !== 0 ? count.toFixed(precision) : count;
+}
