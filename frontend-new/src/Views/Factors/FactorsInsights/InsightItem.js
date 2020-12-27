@@ -64,10 +64,10 @@ const InsightItem = ({
                                          <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                           <div className={'flex-grow'}> 
                                           <div className={'flex items-end'}>
-                                            <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(data.total_users_count)}</Text></a> </div>
-                                            <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{_.isEmpty(data.goal?.st_en) ? 'All Visitors' : data.goal?.st_en }</Text></div>
+                                            {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(data.total_users_count)}</Text></a> </div> */}
+                                            <div className={'flex items-center fa-insights-box--animate'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{_.isEmpty(data.goal?.st_en) ? 'All Visitors' : data.goal?.st_en }</Text></div>
                                           </div>
-                                          <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} /> 
+                                          <Progress percent={100} strokeColor={ProgressColor.blue} className={'fa-custom-stroke-bg fa-custom-progress-value'} showInfo={false} value={numberWithCommas(data.total_users_count)} /> 
                                         </div>
                                       </div>
                                     </>
@@ -76,10 +76,10 @@ const InsightItem = ({
                                     <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                      <div className={'flex-grow'}> 
                                       <div className={'flex items-end'}>
-                                        <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div>
-                                        <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKey}</Text></div>
+                                        {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div> */}
+                                        <div className={'flex items-center fa-insights-box--animate'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKey}</Text></div>
                                       </div>
-                                      <Progress strokeWidth={10} percent={isJourney? insightLevel1Journey : 100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} /> 
+                                      <Progress strokeWidth={10} percent={isJourney? insightLevel1Journey : 100} value={numberWithCommas(dataItem.factors_insights_users_count)}  strokeColor={ProgressColor.blue} className={'fa-custom-stroke-bg fa-custom-progress-value'} showInfo={false} /> 
                                       </div>
                                   </div>
 
@@ -87,10 +87,10 @@ const InsightItem = ({
                                     <SVG name={'ProgressArrow'} color={ProgressColor.yellow} extraClass={'mr-2 mb-1'} />
                                      <div className={'flex-grow'}> 
                                     <div className={'flex items-end'}>
-                                      <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 mt-2 tracking-wider'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
-                                      <div className={'flex items-center ml-4 fa-insights-box--animate'}><SVG name={'arrowdown'} size={12} color={'grey'} /><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${data?.goal?.en_en} (${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
+                                      {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 mt-2 tracking-wider'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div> */}
+                                      <div className={'flex items-center fa-insights-box--animate'}><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${data?.goal?.en_en} (${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
                                     </div>
-                                    <Progress strokeWidth={10} percent={insightLevel1Percentage} strokeColor={'#F9C06E'} className={'fa-progress'} showInfo={false} />
+                                    <Progress strokeWidth={10} percent={insightLevel1Percentage} strokeColor={ProgressColor.yellow} value={numberWithCommas(dataItem.factors_goal_users_count)} className={'fa-progress fa-custom-progress-value'} showInfo={false} />
                                     </div>
                                   </div>
 

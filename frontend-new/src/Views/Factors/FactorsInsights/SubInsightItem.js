@@ -123,10 +123,10 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                          <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                          <div className={'flex-grow'}> 
                                           <div className={'flex items-end'}>
-                                            <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(ParentData.total_users_count)}</Text></a> </div>
-                                            <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{_.isEmpty(ParentData.goal?.st_en) ? 'All Visitors' : ParentData.goal?.st_en } </Text></div>
+                                            {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(ParentData.total_users_count)}</Text></a> </div> */}
+                                            <div className={'flex items-center fa-insights-box--animate'}><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{_.isEmpty(ParentData.goal?.st_en) ? 'All Visitors' : ParentData.goal?.st_en } </Text></div>
                                           </div>
-                                          <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
+                                          <Progress strokeWidth={10} percent={100} strokeColor={ProgressColor.blue} className={'fa-custom-stroke-bg fa-custom-progress-value'} showInfo={false} value={numberWithCommas(ParentData.total_users_count)} />
                                         </div>
                                       </div>
                                     </>
@@ -136,10 +136,10 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                          <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                          <div className={'flex-grow'}> 
                                           <div className={'flex items-end'}>
-                                            <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(SubInsightsData.factors_insights_users_count)}</Text></a> </div>
-                                            <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel1}</Text></div>
+                                            {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(SubInsightsData.factors_insights_users_count)}</Text></a> </div> */}
+                                            <div className={'flex items-center fa-insights-box--animate'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel1}</Text></div>
                                           </div>
-                                          <Progress percent={insightLevel1Percentage} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
+                                          <Progress strokeWidth={10} percent={insightLevel1Percentage} strokeColor={ProgressColor.blue} className={'fa-custom-stroke-bg fa-custom-progress-value'} showInfo={false} value={numberWithCommas(SubInsightsData.factors_insights_users_count)} />
                                           </div>
                                     </div>
 
@@ -147,10 +147,10 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                          <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                          <div className={'flex-grow'}> 
                                             <div className={'flex items-end'}>
-                                              <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div>
-                                              <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel2}</Text></div>
+                                              {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div> */}
+                                              <div className={'flex items-center fa-insights-box--animate'}> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel2}</Text></div>
                                             </div>
-                                            <Progress percent={insightLevel2Percentage} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
+                                            <Progress strokeWidth={10} percent={insightLevel2Percentage} strokeColor={ProgressColor.blue} className={'fa-custom-stroke-bg fa-custom-progress-value'} showInfo={false} value={numberWithCommas(dataItem.factors_insights_users_count)} />
                                           </div>
                                     </div>
 
@@ -158,10 +158,10 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                          <SVG name={'ProgressArrow'} color={ProgressColor.yellow} extraClass={'mr-2 mb-1'} />
                                          <div className={'flex-grow'}> 
                                           <div className={'flex items-end'}>
-                                            <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 mt-2 tracking-wider'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
-                                            <div className={'flex items-center ml-4 fa-insights-box--animate'}><SVG name={'arrowdown'} size={12} color={'grey'} /><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
+                                            {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 mt-2 tracking-wider'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div> */}
+                                            <div className={'flex items-center fa-insights-box--animate'}><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${dataItem.factors_insights_percentage}% goal completion`}</Text></div>
                                           </div>
-                                          <Progress percent={insightLevel3Percentage} strokeColor={'#F9C06E'} className={'fa-progress'} showInfo={false} />
+                                          <Progress strokeWidth={10} percent={insightLevel3Percentage} strokeColor={ProgressColor.yellow} className={'fa-progress fa-custom-progress-value'} showInfo={false} value={numberWithCommas(dataItem.factors_goal_users_count)} />
                                           </div>
                                     </div>
 
@@ -239,10 +239,10 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                          <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                          <div className={'flex-grow'}>  
                                             <div className={'flex items-end'}>
-                                              <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(SubLevel1Data.factors_insights_users_count)}</Text></a> </div>
-                                              <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel1}</Text></div>
+                                              {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(SubLevel1Data.factors_insights_users_count)}</Text></a> </div> */}
+                                              <div className={'flex items-center fa-insights-box--animate'}>   <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel1}</Text></div>
                                             </div>
-                                            <Progress percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
+                                            <Progress strokeWidth={10} percent={100} strokeColor={ProgressColor.blue} className={'fa-custom-stroke-bg fa-custom-progress-value'} showInfo={false} value={numberWithCommas(SubLevel1Data.factors_insights_users_count)} />
                                           </div>
                                     </div>
 
@@ -250,10 +250,10 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                          <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                          <div className={'flex-grow'}>  
                                             <div className={'flex items-end'}>
-                                              <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(SubLevel2Data.factors_insights_users_count)}</Text></a> </div>
-                                              <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel2}</Text></div>
+                                              {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(SubLevel2Data.factors_insights_users_count)}</Text></a> </div> */}
+                                              <div className={'flex items-center ml-4 fa-insights-box--animate'}>   <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel2}</Text></div>
                                             </div>
-                                            <Progress percent={insightLevel2Percentage} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
+                                            <Progress strokeWidth={10} percent={insightLevel2Percentage} strokeColor={ProgressColor.blue} className={'fa-custom-stroke-bg fa-custom-progress-value'} showInfo={false} value={numberWithCommas(SubLevel2Data.factors_insights_users_count)} />
                                         </div>
                                     </div>
 
@@ -261,10 +261,10 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                          <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                          <div className={'flex-grow'}>   
                                             <div className={'flex items-end'}>
-                                              <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div>
-                                              <div className={'flex items-center ml-4 fa-insights-box--animate'}>  <SVG name={'arrowdown'} size={12} color={'grey'} /> <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel3}</Text></div>
+                                              {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}><a><Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 tracking-wider'} >{numberWithCommas(dataItem.factors_insights_users_count)}</Text></a> </div> */}
+                                              <div className={'flex items-center fa-insights-box--animate'}>   <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{insightKeyLevel3}</Text></div>
                                             </div>
-                                            <Progress percent={insightLevel3Percentage} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
+                                            <Progress strokeWidth={10} percent={insightLevel3Percentage} strokeColor={ProgressColor.blue} className={'fa-custom-stroke-bg fa-custom-progress-value'} showInfo={false} value={numberWithCommas(dataItem.factors_insights_users_count)} />
                                           </div>
                                     </div>
 
@@ -272,10 +272,10 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                          <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                          <div className={'flex-grow'}>   
                                             <div className={'flex items-end'}>
-                                              <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 mt-2 tracking-wider'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div>
-                                              <div className={'flex items-center ml-4 fa-insights-box--animate'}><SVG name={'arrowdown'} size={12} color={'grey'} /><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
+                                              {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 mt-2 tracking-wider'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div> */}
+                                              <div className={'flex items-center fa-insights-box--animate'}><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${dataItem.factors_insights_percentage}% goal completion`}</Text></div>
                                             </div>
-                                            <Progress percent={insightLevel4Percentage} strokeColor={'#F9C06E'} className={'fa-progress'} showInfo={false} />
+                                            <Progress strokeWidth={10} percent={insightLevel4Percentage} strokeColor={ProgressColor.yellow} className={'fa-progress fa-custom-progress-value'} showInfo={false} value={numberWithCommas(dataItem.factors_goal_users_count)} />
                                           </div>
                                       </div>
 

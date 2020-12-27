@@ -28,16 +28,16 @@
     }
 }
 
-.fa-insights-box--type
-{
-    position: absolute;
-    top: 1rem;
-    left:4rem;
-    font-size: 12px !important; 
-    transition: all 0.3s;
-    opacity: 0;
-    transform: translate3d(0, -10%, 0);
-}
+// .fa-insights-box--type
+// {
+//     position: absolute;
+//     top: 1rem;
+//     left:4rem;
+//     font-size: 12px !important; 
+//     transition: all 0.3s;
+//     opacity: 0;
+//     transform: translate3d(0, -10%, 0);
+// }
 
 .fa-insights-box--actions
 {
@@ -49,11 +49,11 @@
     transform: translate3d(0, -10%, 0);
 }
 
-.fa-insights-box--animate{
-    transition: all 0.3s; 
-    opacity: 0;
-    transform: translate3d(0, -10%, 0);
-}
+// .fa-insights-box--animate{
+//     transition: all 0.3s; 
+//     opacity: 0;
+//     transform: translate3d(0, -10%, 0);
+// }
 .fa-insights-box--fixed-count{ 
     span{
 
@@ -85,7 +85,7 @@
                 display: none;
             }
         }
-        .fa-insights-box--actions,.fa-insights-box--type,.fa-insights-box--animate
+        .fa-insights-box--actions
         {
             opacity: 1;
             transform: translate3d(0, 0, 0);
@@ -106,6 +106,7 @@
 }
 .fa-custom-stroke-bg
 {
+    position: relative;
     .ant-progress-inner
     {
         background-color: transparent !important;
@@ -118,11 +119,25 @@
 
         }
     }
+
+}
+.fa-custom-progress-value
+{ 
+
+        position: relative;
+        &::after{
+            position: absolute;
+            left: 102%;
+            top:0;
+            margin: auto 0;
+            content: attr(value);
+        } 
+
 }
 .fa-progress
 {
     .ant-progress-inner
     {
-        background-color: transparent !important;
+        // background-color: transparent !important;
     }
 }
