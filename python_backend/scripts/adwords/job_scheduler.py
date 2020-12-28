@@ -76,8 +76,8 @@ class JobScheduler:
             elif doc_type == "campaigns":
                 docs, req_count = GetCampaignsJob(self.next_info).start()
 
-            elif doc_type == "ads":
-                docs, req_count = GetAdsJob(self.next_info).start()
+            # elif doc_type == "ads":
+            #     docs, req_count = GetAdsJob(self.next_info).start()
 
             elif doc_type == "ad_groups":
                 docs, req_count = GetAdGroupsJob(self.next_info).start()

@@ -43,6 +43,7 @@ class MultipleRequestsFetchJob(BaseJob):
             offset += self.PAGE_SIZE
             selector['paging']['startIndex'] = str(offset)
             more_pages = (offset < int(total_no_of_entries))
+            rows.extend(current_rows)
             requests += 1
 
         return rows, requests
