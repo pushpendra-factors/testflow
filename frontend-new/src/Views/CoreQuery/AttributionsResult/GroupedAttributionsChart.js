@@ -41,7 +41,7 @@ function GroupedAttributionsChart({
     return data.result.rows
       .filter((_, index) => visibleIndices.indexOf(index) > -1)
       .map((row) => row[campaignIdx]);
-  }, [visibleIndices, data.result]);
+  }, [visibleIndices, data.result, touchpoint]);
 
   if (!chartsData.length) {
     return null;
