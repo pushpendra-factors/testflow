@@ -188,7 +188,10 @@ function CoreQuery({
           updateEventFunnelsState(equivalentQuery);
         }
         setQueryType(equivalentQuery.queryType);
-        setRowClicked(equivalentQuery.queryType);
+        setRowClicked({
+          queryType: equivalentQuery.queryType,
+          queryName: record.title,
+        });
       } catch (err) {
         console.log(err);
       }

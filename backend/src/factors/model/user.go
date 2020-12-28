@@ -381,6 +381,34 @@ func CreateOrGetUser(projectId uint64, custUserId string) (*User, int) {
 	return user, errCode
 }
 
+// GetAllUserIDByCustomerUserID returns all users with same customer_user_id
+func GetAllUserIDByCustomerUserID(projectID uint64, customerUserID string) ([]string, int) {
+	if projectID == 0 || customerUserID == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var users []User
+	if err := db.Table("users").Select("distinct(id)").Where("project_id = ? AND customer_user_id=?", projectID, customerUserID).Find(&users).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(users) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	var userIDs []string
+	for i := range users {
+		userIDs = append(userIDs, users[i].ID)
+	}
+
+	return userIDs, http.StatusFound
+}
+
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
 func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, requestTimestamp int64) (*User, int) {

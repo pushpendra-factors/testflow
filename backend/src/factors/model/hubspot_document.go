@@ -65,7 +65,7 @@ func isDuplicateHubspotDocumentError(err error) bool {
 	return err.Error() == error_DuplicateHubspotDocument
 }
 
-func getHubspotTypeByAlias(alias string) (int, error) {
+func GetHubspotTypeByAlias(alias string) (int, error) {
 	if alias == "" {
 		return 0, errors.New("empty document type alias")
 	}
@@ -384,7 +384,7 @@ func CreateHubspotDocument(projectId uint64, document *HubspotDocument) int {
 	}
 	document.ProjectId = projectId
 
-	documentType, err := getHubspotTypeByAlias(document.TypeAlias)
+	documentType, err := GetHubspotTypeByAlias(document.TypeAlias)
 	if err != nil {
 		logCtx.WithError(err).Error("Invalid type on create hubspot document.")
 		return http.StatusBadRequest

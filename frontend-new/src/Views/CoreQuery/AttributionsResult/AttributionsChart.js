@@ -28,7 +28,12 @@ function AttributionsChart({
 
   return (
     <div className="attribution-results">
-      <BarLineChart chartData={chartsData} />
+      <BarLineChart
+        responseRows={data.result.rows}
+        responseHeaders={data.result.headers}
+        chartData={chartsData}
+        visibleIndices={visibleIndices}
+      />
       <div className="mt-8">
         <AttributionTable
           linkedEvents={linkedEvents}

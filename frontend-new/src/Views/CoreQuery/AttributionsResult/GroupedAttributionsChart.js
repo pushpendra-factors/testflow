@@ -37,7 +37,7 @@ function GroupedAttributionsChart({
 
   const getCategories = useCallback(() => {
     const { headers } = data.result;
-    const campaignIdx = headers.indexOf("Campaign");
+    const campaignIdx = headers.indexOf(touchpoint);
     return data.result.rows
       .filter((_, index) => visibleIndices.indexOf(index) > -1)
       .map((row) => row[campaignIdx]);

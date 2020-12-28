@@ -81,7 +81,7 @@ function AttributionsResult({
             className="app-font-family text-3xl font-semibold"
             style={{ color: "#8692A3" }}
           >
-            {title || 'Untitled Analysis'}
+            {querySaved || 'Untitled Analysis'}
           </div>
           <div
             className={`text-base font-medium pb-1 cursor-pointer ${styles.eventsText}`}
