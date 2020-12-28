@@ -2514,6 +2514,51 @@ var doc = `{
                 }
             }
         },
+        "/{project_id}/v1/dashboards/{dashboard_id}/units/multi/{unit_ids}": {
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "DashboardUnit"
+                ],
+                "summary": "To delete multiple existing dashboard unit.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard ID",
+                        "name": "dashboard_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Dashboard Unit IDs",
+                        "name": "unit_ids",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "{\"message\": \"Successfully deleted.\"}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/{project_id}/v1/event_names": {
             "get": {
                 "consumes": [
@@ -3015,9 +3060,169 @@ var doc = `{
                     }
                 }
             }
+        },
+        "/{project_id}/v1/smart_event": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1ApiSmartEvent"
+                ],
+                "summary": "Get the list of existing smart event filters.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.APISmartEventFilterResponePayload"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1ApiSmartEvent"
+                ],
+                "summary": "To update an existing smart event filter.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter ID",
+                        "name": "filter_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Update filter",
+                        "name": "filter",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.APISmartEventFilterRequestPayload"
+                        }
+                    },
+                    {
+                        "enum": [
+                            "crm"
+                        ],
+                        "type": "string",
+                        "description": "Smart event type",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/handler.APISmartEventFilterResponePayload"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1ApiSmartEvent"
+                ],
+                "summary": "To create a new smart event filter.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "crm"
+                        ],
+                        "type": "string",
+                        "description": "Smart event type",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Create smart event filter",
+                        "name": "filter",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.APISmartEventFilterRequestPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.APISmartEventFilterResponePayload"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "handler.APISmartEventFilterRequestPayload": {
+            "type": "object",
+            "properties": {
+                "expr": {
+                    "type": "object",
+                    "$ref": "#/definitions/model.SmartCRMEventFilter"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.APISmartEventFilterResponePayload": {
+            "type": "object",
+            "properties": {
+                "expr": {
+                    "type": "object",
+                    "$ref": "#/definitions/model.SmartCRMEventFilter"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "handler.API_FilterRequestPayload": {
             "type": "object",
             "properties": {
@@ -3276,16 +3481,47 @@ var doc = `{
                 }
             }
         },
+        "model.AttributionKeyFilter": {
+            "type": "object",
+            "properties": {
+                "attribution_key": {
+                    "type": "string"
+                },
+                "op": {
+                    "description": "contains or notContains",
+                    "type": "string"
+                },
+                "va": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "model.AttributionQuery": {
             "type": "object",
             "properties": {
                 "attribution_key": {
                     "type": "string"
                 },
+                "attribution_key_f": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AttributionKeyFilter"
+                    }
+                },
                 "attribution_methodology": {
                     "type": "string"
                 },
+                "attribution_methodology_c": {
+                    "type": "string"
+                },
                 "ce": {
+                    "type": "object",
+                    "$ref": "#/definitions/model.QueryEventWithProperties"
+                },
+                "ce_c": {
                     "type": "object",
                     "$ref": "#/definitions/model.QueryEventWithProperties"
                 },
@@ -3309,6 +3545,34 @@ var doc = `{
                 },
                 "to": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.CRMFilterRule": {
+            "type": "object",
+            "properties": {
+                "gen": {
+                    "description": "previous or current",
+                    "type": "string",
+                    "enum": [
+                        "curr",
+                        "last"
+                    ]
+                },
+                "op": {
+                    "type": "string",
+                    "enum": [
+                        "EQUAL",
+                        "NOT EQUAL",
+                        "GREATER THAN",
+                        "LESS THAN",
+                        "CONTAINS",
+                        "NOT CONTAINS"
+                    ]
+                },
+                "value": {
+                    "description": "value_any or property value",
+                    "type": "object"
                 }
             }
         },
@@ -3517,17 +3781,11 @@ var doc = `{
                 "en_en": {
                     "type": "string"
                 },
-                "en_time": {
-                    "type": "string"
-                },
                 "rule": {
                     "type": "object",
                     "$ref": "#/definitions/model.FactorsGoalFilter"
                 },
                 "st_en": {
-                    "type": "string"
-                },
-                "st_time": {
                     "type": "string"
                 },
                 "vs": {
@@ -3573,7 +3831,7 @@ var doc = `{
                 "created_at": {
                     "type": "string"
                 },
-                "created_by": {
+                "created_by;default:null": {
                     "type": "string"
                 },
                 "id": {
@@ -3604,6 +3862,18 @@ var doc = `{
             "properties": {
                 "key": {
                     "type": "string"
+                },
+                "lower_bound": {
+                    "type": "number"
+                },
+                "operator": {
+                    "type": "boolean"
+                },
+                "property_type": {
+                    "type": "string"
+                },
+                "upper_bound": {
+                    "type": "number"
                 },
                 "vl": {
                     "type": "string"
@@ -3710,6 +3980,26 @@ var doc = `{
                 },
                 "updated_at": {
                     "type": "string"
+                }
+            }
+        },
+        "model.PropertyFilter": {
+            "type": "object",
+            "properties": {
+                "logical_op": {
+                    "type": "string",
+                    "enum": [
+                        "AND"
+                    ]
+                },
+                "property_name": {
+                    "type": "string"
+                },
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.CRMFilterRule"
+                    }
                 }
             }
         },
@@ -3876,6 +4166,57 @@ var doc = `{
                 },
                 "va": {
                     "type": "string"
+                }
+            }
+        },
+        "model.SmartCRMEventFilter": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "filters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.PropertyFilter"
+                    }
+                },
+                "logical_op": {
+                    "type": "string",
+                    "enum": [
+                        "AND"
+                    ]
+                },
+                "object_type": {
+                    "type": "string",
+                    "enum": [
+                        "salesforce[account",
+                        "contact",
+                        "lead]",
+                        "hubspot[contact]"
+                    ]
+                },
+                "property_evaluation_type": {
+                    "description": "any change or specific",
+                    "type": "string",
+                    "enum": [
+                        "specific",
+                        "any"
+                    ]
+                },
+                "source": {
+                    "type": "string",
+                    "enum": [
+                        "salesforce",
+                        "hubspot"
+                    ]
+                },
+                "timestamp_reference_field": {
+                    "type": "string",
+                    "enum": [
+                        "timestamp_in_track",
+                        " \u003cany property name\u003e"
+                    ]
                 }
             }
         },
@@ -4110,6 +4451,9 @@ var doc = `{
                 },
                 "project_id": {
                     "type": "integer"
+                },
+                "smart_event": {
+                    "type": "string"
                 },
                 "timestamp": {
                     "type": "integer"
@@ -4479,10 +4823,6 @@ var doc = `{
         },
         "v1.CreateFactorsGoalParams": {
             "type": "object",
-            "required": [
-                "name",
-                "rule"
-            ],
             "properties": {
                 "name": {
                     "type": "string"
@@ -4584,8 +4924,7 @@ var doc = `{
         "ApiKeyAuth": {
             "type": "apiKey",
             "name": "Authorization",
-            "in": "header",
-            "authorizationUrl": ""
+            "in": "header"
         }
     }
 }`

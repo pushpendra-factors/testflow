@@ -38,6 +38,7 @@ type TrackPayload struct {
 	Auto            bool            `json:"auto"`
 	ClientIP        string          `json:"client_ip"`
 	UserAgent       string          `json:"user_agent"`
+	SmartEventType  string          `json:"smart_event"`
 }
 
 type TrackResponse struct {
@@ -496,6 +497,9 @@ func Track(projectId uint64, request *TrackPayload,
 			eventName, eventNameErrCode = M.CreateOrGetAutoTrackedEventName(
 				&M.EventName{Name: request.Name, ProjectId: projectId})
 		}
+	} else if request.SmartEventType != "" {
+		request.Name = strings.TrimSuffix(request.Name, "/")
+		eventName, eventNameErrCode = M.GetSmartEventEventName(&M.EventName{Name: request.Name, ProjectId: projectId, Type: request.SmartEventType})
 	} else {
 		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(
 			&M.EventName{Name: request.Name, ProjectId: projectId})

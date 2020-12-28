@@ -88,6 +88,7 @@ var EP_FIRST_SEEN_TIME string = "$firstSeenTime"
 var EP_LAST_SEEN_TIME string = "$lastSeenTime"
 var EP_FIRST_SEEN_SINCE_USER_JOIN string = "$firstSeenSinceUserJoin"
 var EP_LAST_SEEN_SINCE_USER_JOIN string = "$lastSeenSinceUserJoin"
+var EP_CRM_REFERENCE_EVENT_ID string = "$crm_reference_event_id"
 
 var GENERIC_NUMERIC_EVENT_PROPERTIES = [...]string{
 	EP_FIRST_SEEN_OCCURRENCE_COUNT,
@@ -446,6 +447,13 @@ const QUERY_PARAM_UTM_PREFIX = QUERY_PARAM_PROPERTY_PREFIX + "utm_"
 const HUBSPOT_PROPERTY_PREFIX = "$hubspot_"
 const SALESFORCE_PROPERTY_PREFIX = "$salesforce_"
 
+const (
+	SMART_EVENT_SALESFORCE_PREV_PROPERTY = "$prev_salesforce_"
+	SMART_EVENT_SALESFORCE_CURR_PROPERTY = "$curr_salesforce_"
+	SMART_EVENT_HUBSPOT_PREV_PROPERTY    = "$prev_hubspot_"
+	SMART_EVENT_HUBSPOT_CURR_PROPERTY    = "$curr_hubspot_"
+)
+
 // Platforms
 const PLATFORM_WEB = "web"
 
@@ -679,6 +687,7 @@ var DISABLED_CORE_QUERY_USER_PROPERTIES = [...]string{
 	UP_MERGE_TIMESTAMP,
 	UP_INITIAL_PAGE_EVENT_ID,
 	UP_META_OBJECT_IDENTIFIER_KEY,
+	EP_CRM_REFERENCE_EVENT_ID,
 }
 
 // DISABLED_CORE_QUERY_EVENT_PROPERTIES Less important event properties in core query context.
@@ -983,6 +992,18 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 	return &validatedProperties
 }
 
+func isCRMSmartEventPropertyKey(key *string) bool {
+	if !strings.HasPrefix((*key), SMART_EVENT_SALESFORCE_PREV_PROPERTY) &&
+		!strings.HasPrefix((*key), SMART_EVENT_SALESFORCE_CURR_PROPERTY) &&
+		!strings.HasPrefix((*key), SMART_EVENT_HUBSPOT_PREV_PROPERTY) &&
+		!strings.HasPrefix((*key), SMART_EVENT_HUBSPOT_CURR_PROPERTY) &&
+		(*key) != EP_CRM_REFERENCE_EVENT_ID {
+		return false
+	}
+
+	return true
+}
+
 func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	validatedProperties := make(PropertiesMap)
 	for k, v := range *properties {
@@ -994,6 +1015,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 				!strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) &&
 				!strings.HasPrefix(k, HUBSPOT_PROPERTY_PREFIX) &&
 				!strings.HasPrefix(k, SALESFORCE_PROPERTY_PREFIX) &&
+				!isCRMSmartEventPropertyKey(&k) &&
 				!isSDKAllowedEventProperty(&k) {
 				propertyKey = fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)
 			} else {

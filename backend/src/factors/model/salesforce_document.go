@@ -10,6 +10,7 @@ import (
 
 	C "factors/config"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -25,6 +26,7 @@ type SalesforceDocument struct {
 	Value     *postgres.Jsonb  `json:"value"`
 	Synced    bool             `gorm:"default:false;not null" json:"synced"`
 	SyncID    string           `gorm:"default:null" json:"sync_id"`
+	UserID    string           `gorm:"default:null", json:"-"`
 	CreatedAt time.Time        `json:"created_at"`
 	UpdatedAt time.Time        `json:"updated_at"`
 }
@@ -369,7 +371,7 @@ func getSalesforceLastModifiedTimestamp(document *SalesforceDocument) (int64, er
 		return 0, errors.New("failed to get date")
 	}
 
-	return getSalesforceDocumentTimestamp(date)
+	return GetSalesforceDocumentTimestamp(date)
 }
 
 // GetSalesforceDocumentTimestampByAction returns created or last modified timestamp by SalesforceAction
@@ -397,10 +399,58 @@ func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument, action
 		return 0, errors.New("failed to get date")
 	}
 
-	return getSalesforceDocumentTimestamp(date)
+	return GetSalesforceDocumentTimestamp(date)
 }
 
-func getSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
+// GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID returns latest synced record by customer_user_id or user_id.
+func GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*SalesforceDocument, int) {
+	if projectID == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	if userID == "" || docType == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "customer_user_id": customerUserID, "doc_type": docType})
+
+	db := C.GetServices().Db
+
+	var whereStmn string
+	var whereParams []interface{}
+
+	if customerUserID != "" {
+		userIDs, status := GetAllUserIDByCustomerUserID(projectID, customerUserID)
+		if status == http.StatusFound {
+			whereStmn = "type = ? AND project_id=? AND user_id IN(?) AND synced = true"
+			whereParams = []interface{}{docType, projectID, userIDs}
+		} else {
+			logCtx.Error("Failed to GetAllUserIDByCustomerUserID.")
+		}
+	}
+
+	if customerUserID == "" || whereStmn == "" {
+		whereStmn = "type = ? AND synced = true AND project_id=? AND user_id = ? "
+		whereParams = []interface{}{docType, projectID, userID}
+	}
+
+	var document []SalesforceDocument
+
+	if err := db.Where(whereStmn, whereParams...).Order("timestamp DESC").First(&document).Error; err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			logCtx.WithError(err).Error("Failed to get latest salesforce document by userID.")
+			return nil, http.StatusInternalServerError
+		}
+		return nil, http.StatusNotFound
+	}
+	if len(document) != 1 {
+		return nil, http.StatusNotFound
+	}
+
+	return &document[0], http.StatusFound
+}
+
+func GetSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 	timestampStr, ok := timestamp.(string)
 	if !ok || timestampStr == "" {
 		return 0, errors.New("invalid timestamp")
@@ -415,13 +465,17 @@ func getSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 }
 
 // UpdateSalesforceDocumentAsSynced inserts syncID and updates the status of the document as synced
-func UpdateSalesforceDocumentAsSynced(projectID uint64, document *SalesforceDocument, syncID string) int {
+func UpdateSalesforceDocumentAsSynced(projectID uint64, document *SalesforceDocument, syncID, userID string) int {
 	logCtx := log.WithField("project_id", projectID).WithField("id", document.ID)
 
 	updates := make(map[string]interface{}, 0)
 	updates["synced"] = true
 	if syncID != "" {
 		updates["sync_id"] = syncID
+	}
+
+	if userID != "" {
+		updates["user_id"] = userID
 	}
 
 	db := C.GetServices().Db

@@ -1,20 +1,27 @@
 package tests
 
 import (
+	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
+	"factors/handler/helpers"
+	IntSalesforce "factors/integration/salesforce"
 	M "factors/model"
 	"factors/task/event_user_cache"
 	TaskSession "factors/task/session"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"net/http"
+	"net/http/httptest"
 	"sort"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -572,4 +579,1017 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	assert.Len(t, getEventNames2[U.MostRecent], 2)
 	assert.Equal(t, "$session", getEventNames2[U.MostRecent][0])
 	assert.Equal(t, "event2", getEventNames2[U.MostRecent][1])
+}
+
+func sendCreateSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *M.Agent, enPayload *map[string]interface{}) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+		return nil
+	}
+
+	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s", projectId, "crm")).
+		WithPostParams(enPayload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating request")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func sendGetSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+		return nil
+	}
+
+	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/v1/smart_event", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating request")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func sendUpdateSmartEventFilterReq(r *gin.Engine, projectID uint64, agent *M.Agent, enPayload *map[string]interface{}, filterID uint64) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+		return nil
+	}
+
+	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s&filter_id=%d", projectID, "crm", filterID)).
+		WithPostParams(enPayload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating request")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestSmartCRMFilterCreation(t *testing.T) {
+
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	// string comparision
+	stringComp := &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_email",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "test1@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "test@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	requestPayload := make(map[string]interface{})
+	requestPayload["name"] = "smartEventString"
+	requestPayload["expr"] = stringComp
+
+	w := sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+
+	var responsePayload H.APISmartEventFilterResponePayload
+	err = json.Unmarshal(jsonResponse, &responsePayload)
+	assert.Nil(t, err)
+	stringCompEventNameId := responsePayload.EventNameID
+	assert.NotEqual(t, 0, stringCompEventNameId)
+
+	// integer comparision
+	intComp := &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_count",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "5",
+						Operator:      M.COMPARE_GREATER_THAN,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "4",
+						Operator:      M.COMPARE_LESS_THAN,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	requestPayload = make(map[string]interface{})
+	requestPayload["name"] = "smartEventInt"
+	requestPayload["expr"] = intComp
+
+	w = sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	w = sendGetSmartEventFilterReq(r, project.ID, agent)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	var smartCRMEvents []H.APISmartEventFilterResponePayload
+	err = json.Unmarshal(jsonResponse, &smartCRMEvents)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(smartCRMEvents))
+
+	// string compare
+	currentProperties := make(map[string]interface{})
+	prevProperties := make(map[string]interface{})
+	currentProperties["$salesforce_contact_email"] = "test1@gmail.com"
+	prevProperties["$salesforce_contact_email"] = "test@gmail.com"
+
+	stringFilterIndex := 0
+	intFilterIndex := 1
+	if smartCRMEvents[1].EventName == "smartEventString" {
+		stringFilterIndex = 1
+		intFilterIndex = 0
+	}
+
+	smartEvent, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, smartCRMEvents[stringFilterIndex].EventName, "", "", 0, &currentProperties, &prevProperties, &(smartCRMEvents[stringFilterIndex].FilterExpr))
+	assert.Equal(t, true, ok)
+	assert.Equal(t, prevProperties, *rPrevProperties)
+	assert.NotNil(t, smartEvent)
+	assert.Equal(t, "smartEventString", smartEvent.Name)
+	assert.Contains(t, smartEvent.Properties, "$prev_salesforce_contact_email", "$curr_salesforce_contact_email")
+
+	// individual properties test
+	state := M.CRMFilterEvaluator(project.ID, &currentProperties, nil, &(smartCRMEvents[stringFilterIndex].FilterExpr), M.CompareStateCurr)
+	assert.Equal(t, true, state)
+	state = M.CRMFilterEvaluator(project.ID, nil, &prevProperties, &(smartCRMEvents[stringFilterIndex].FilterExpr), M.CompareStatePrev)
+	assert.Equal(t, true, state)
+
+	// int compare
+	currentProperties["$salesforce_contact_count"] = 6
+	prevProperties["$salesforce_contact_count"] = 3
+	smartEvent, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, smartCRMEvents[intFilterIndex].EventName, "", "", 0, &currentProperties, &prevProperties, &(smartCRMEvents[intFilterIndex].FilterExpr))
+	assert.Equal(t, true, ok)
+	assert.Equal(t, prevProperties, *rPrevProperties)
+	assert.Contains(t, smartEvent.Properties, "$prev_salesforce_contact_count", "$curr_salesforce_contact_count")
+
+	// overwrite filter exp
+	intComp = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_count",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "5",
+						Operator:      M.COMPARE_GREATER_THAN,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "4",
+						Operator:      M.COMPARE_GREATER_THAN,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	requestPayload = make(map[string]interface{})
+	requestPayload["name"] = "smartEventInt"
+	requestPayload["expr"] = intComp
+
+	w = sendUpdateSmartEventFilterReq(r, project.ID, agent, &requestPayload, smartCRMEvents[intFilterIndex].EventNameID)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	w = sendGetSmartEventFilterReq(r, project.ID, agent)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &smartCRMEvents)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(smartCRMEvents))
+
+	if smartCRMEvents[0].EventName == "smartEventInt" {
+		intFilterIndex = 0
+	} else {
+		intFilterIndex = 1
+	}
+
+	assert.Equal(t, intComp, &smartCRMEvents[intFilterIndex].FilterExpr)
+}
+
+func TestSmartCRMFilterStringCompare(t *testing.T) {
+
+	/* (current email == test1@gmail.com and prev email == test@gmail.com )
+	AND (current company == example2 AND  previous company == example) */
+	filter := &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_email",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "test1@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "test@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+			{
+				Name: "$salesforce_contact_company",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "example2",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "example1",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	currentProperties := make(map[string]interface{})
+	prevProperties := make(map[string]interface{})
+	currentProperties["$salesforce_contact_email"] = "test1@gmail.com"
+	prevProperties["$salesforce_contact_email"] = "test@gmail.com"
+	currentProperties["$salesforce_contact_company"] = "example2"
+	prevProperties["$salesforce_contact_company"] = "example1"
+	_, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, prevProperties, *rPrevProperties)
+
+	/* (current email == test1@gmail.com OR prev email == test@gmail.com )
+	AND (current company == example2 AND  previous company == example) */
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_email",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "test1@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "test@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_OR,
+			},
+			{
+				Name: "$salesforce_contact_company",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "example2",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "example1",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	currentProperties = make(map[string]interface{})
+	prevProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_email"] = "test1@gmail.com"
+	prevProperties["$salesforce_contact_email"] = "fail@gmail.com" // failed value
+	currentProperties["$salesforce_contact_company"] = "example2"
+	prevProperties["$salesforce_contact_company"] = "example1"
+	_, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, prevProperties, *rPrevProperties)
+
+	// individual test
+	// individual properties test
+	state := M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	assert.Equal(t, true, state)
+	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	assert.Equal(t, false, state)
+
+	/* Property OR operation
+	(current email == test1@gmail.com AND prev email == test@gmail.com )
+	OR (current company == example2 AND  previous company == example) */
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_email",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "test1@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "test@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+			{
+				Name: "$salesforce_contact_company",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "example2",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "example1",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_OR,
+		TimestampReferenceField: "time",
+	}
+
+	currentProperties = make(map[string]interface{})
+	prevProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_email"] = "test1@gmail.com"
+	prevProperties["$salesforce_contact_email"] = "fail@gmail.com" // failed value
+	currentProperties["$salesforce_contact_company"] = "example2"
+	prevProperties["$salesforce_contact_company"] = "example1"
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+
+	// individual test
+	// individual properties test
+	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	assert.Equal(t, true, state)
+	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	assert.Equal(t, true, state)
+
+	/*
+		FAIL TESTS
+	*/
+
+	/* (current email == test1@gmail.com and prev email == test@gmail.com )
+	AND (current company == example2 AND  previous company == example) */
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_email",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "test1@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "test@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+			{
+				Name: "$salesforce_contact_company",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "example2",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "example1",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	currentProperties = make(map[string]interface{})
+	prevProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_email"] = "test1@gmail.com"
+	prevProperties["$salesforce_contact_email"] = "test@gmail.com"
+	currentProperties["$salesforce_contact_company"] = "example1" // failed value
+	prevProperties["$salesforce_contact_company"] = "example1"
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, false, ok)
+
+	// individual test
+	// individual properties test
+	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	assert.Equal(t, false, state)
+	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	assert.Equal(t, true, state)
+
+	/* (current email == test1@gmail.com and prev email == test@gmail.com )
+	OR (current company == example2 AND  previous company == example) */
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_email",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "test1@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "test@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+			{
+				Name: "$salesforce_contact_company",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "example2",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "example1",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	currentProperties = make(map[string]interface{})
+	prevProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_email"] = "failed@gmail.com" //failed value
+	prevProperties["$salesforce_contact_email"] = "failed2@gmail.com"   //failed value
+	currentProperties["$salesforce_contact_company"] = "failed"         // failed value
+	prevProperties["$salesforce_contact_company"] = "failed"            //failed value
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, false, ok)
+
+	// individual test
+	// individual properties test
+	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	assert.Equal(t, false, state)
+	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	assert.Equal(t, false, state)
+
+	/* (current email == test1@gmail.com OR prev email == test@gmail.com )
+	OR (current company == example2 OR previous company == example) */
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_email",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "test1@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "test@gmail.com",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+			{
+				Name: "$salesforce_contact_company",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "example2",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "example1",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	currentProperties = make(map[string]interface{})
+	prevProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_email"] = "failed@gmail.com" //failed value
+	prevProperties["$salesforce_contact_email"] = "failed2@gmail.com"   //failed value
+	currentProperties["$salesforce_contact_company"] = "failed"         // failed value
+	prevProperties["$salesforce_contact_company"] = "failed"            //failed value
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, false, ok)
+
+	// individual test
+	// individual properties test
+	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	assert.Equal(t, false, state)
+	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	assert.Equal(t, false, state)
+
+}
+
+func TestSmartCRMFilterContains(t *testing.T) {
+	/* (current $description  contains "greetings" and prev $$description contains "greetings" ) */
+	filter := &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_description",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "greetings",
+						Operator:      M.COMPARE_CONTAINS,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "greetings",
+						Operator:      M.COMPARE_CONTAINS,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	currentProperties := make(map[string]interface{})
+	prevProperties := make(map[string]interface{})
+	currentProperties["$salesforce_contact_description"] = "greetings from example.com"
+	prevProperties["$salesforce_contact_description"] = "will be providing greetings"
+	_, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+
+	/* (current $description  not contains "greetings" and prev $$description not contains "greetings" ) */
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_description",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "greetings",
+						Operator:      M.COMPARE_NOT_CONTAINS,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "greetings",
+						Operator:      M.COMPARE_NOT_CONTAINS,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, false, ok)
+}
+
+func TestSmartCRMFilterInteger(t *testing.T) {
+
+	/* (current page_spent_time  > 5 and prev page_spent_time < 3 ) */
+	filter := &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_page_spent_time",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         5,
+						Operator:      M.COMPARE_GREATER_THAN,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         3,
+						Operator:      M.COMPARE_LESS_THAN,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	currentProperties := make(map[string]interface{})
+	prevProperties := make(map[string]interface{})
+	currentProperties["$salesforce_contact_page_spent_time"] = 7
+	prevProperties["$salesforce_contact_page_spent_time"] = 2
+	_, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+
+	// individual test
+	// individual properties test
+	state := M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	assert.Equal(t, true, state)
+	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	assert.Equal(t, true, state)
+
+	// Fail test
+	currentProperties["$salesforce_contact_page_spent_time"] = 3
+	prevProperties["$salesforce_contact_page_spent_time"] = 2
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, false, ok)
+
+	/* (current page_spent_time  == 5 and prev page_spent_time == 3 )
+	OR (current page_count == 10 AND  previous page_count == 7) */
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_page_spent_time",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         5,
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         3,
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+			{
+				Name: "$salesforce_contact_page_spent_count",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         10,
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         7,
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	currentProperties = make(map[string]interface{})
+	prevProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_page_spent_time"] = 5
+	prevProperties["$salesforce_contact_page_spent_time"] = 3
+	currentProperties["$salesforce_contact_page_spent_count"] = 10
+	prevProperties["$salesforce_contact_page_spent_count"] = 7
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+
+	// individual test
+	// individual properties test
+	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	assert.Equal(t, true, state)
+	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	assert.Equal(t, true, state)
+
+	/* (current page_spent_time  == 5 and prev page_spent_time == 3 )
+	OR (current page_count == 10 AND  previous page_count == 7) */
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_page_spent_time",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         5,
+						Operator:      M.COMPARE_GREATER_THAN,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         3,
+						Operator:      M.COMPARE_LESS_THAN,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+			{
+				Name: "$salesforce_contact_page_spent_count",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         10,
+						Operator:      M.COMPARE_LESS_THAN,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         7,
+						Operator:      M.COMPARE_GREATER_THAN,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	currentProperties = make(map[string]interface{})
+	prevProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_page_spent_time"] = 7
+	prevProperties["$salesforce_contact_page_spent_time"] = 2
+	currentProperties["$salesforce_contact_page_spent_count"] = 6
+	prevProperties["$salesforce_contact_page_spent_count"] = 8
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+
+	// individual test
+	// individual properties test
+	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	assert.Equal(t, true, state)
+	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	assert.Equal(t, true, state)
+}
+
+func TestSmartCRMFilterAnyChange(t *testing.T) {
+
+	/* any change in $page_spent_time */
+	filter := &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeAny,
+		Filters: []M.PropertyFilter{
+			{
+				Name:  "$salesforce_contact_page_spent_time",
+				Rules: []M.CRMFilterRule{},
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	currentProperties := make(map[string]interface{})
+	prevProperties := make(map[string]interface{})
+	currentProperties["$salesforce_contact_page_spent_time"] = 7
+	prevProperties["$salesforce_contact_page_spent_time"] = 2
+
+	smartEvent, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, prevProperties, *rPrevProperties)
+	assert.Contains(t, smartEvent.Properties, "$curr_salesforce_contact_page_spent_time")
+	assert.Contains(t, smartEvent.Properties, "$prev_salesforce_contact_page_spent_time")
+
+	ok = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	assert.Equal(t, true, ok)
+	// same value
+	prevProperties["$salesforce_contact_page_spent_time"] = 7
+	_, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, false, ok)
+	assert.Equal(t, prevProperties, *rPrevProperties)
+
+	/* any change in $page_spent_time OR $count */
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeAny,
+		Filters: []M.PropertyFilter{
+			{
+				Name:  "$salesforce_contact_page_spent_time",
+				Rules: []M.CRMFilterRule{},
+			},
+			{
+				Name:  "$salesforce_contact_count",
+				Rules: []M.CRMFilterRule{},
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_OR,
+		TimestampReferenceField: "time",
+	}
+
+	currentProperties = make(map[string]interface{})
+	prevProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_page_spent_time"] = 2
+	prevProperties["$salesforce_contact_page_spent_time"] = 10
+	currentProperties["$salesforce_contact_count"] = 2
+	prevProperties["$salesforce_contact_count"] = 2
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+
+	// fail on no change
+	currentProperties["$salesforce_contact_page_spent_time"] = 2
+	prevProperties["$salesforce_contact_page_spent_time"] = 2
+	currentProperties["$salesforce_contact_count"] = 2
+	prevProperties["$salesforce_contact_count"] = 2
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, false, ok)
+
+	/*
+		prev $page_spent_time equals anything and curr $page_spent_time = 10
+	*/
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeAny,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_page_spent_time",
+				Rules: []M.CRMFilterRule{
+					{
+						Operator:      M.COMPARE_EQUAL,
+						Value:         M.PROPERTY_VALUE_ANY,
+						PropertyState: M.PreviousState,
+					},
+					{
+						Operator:      M.COMPARE_EQUAL,
+						Value:         10,
+						PropertyState: M.CurrentState,
+					},
+				},
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	currentProperties["$salesforce_contact_page_spent_time"] = 10
+	prevProperties["$salesforce_contact_page_spent_time"] = 2
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+
+	// fail on same value
+	currentProperties["$salesforce_contact_page_spent_time"] = 10
+	prevProperties["$salesforce_contact_page_spent_time"] = 10
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, false, ok)
+
+	/*
+		prev $page_spent_time equals 10 and curr $page_spent_time equal anything
+	*/
+	filter = &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeAny,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_page_spent_time",
+				Rules: []M.CRMFilterRule{
+					{
+						Operator:      M.COMPARE_EQUAL,
+						Value:         M.PROPERTY_VALUE_ANY,
+						PropertyState: M.CurrentState,
+					},
+					{
+						Operator:      M.COMPARE_EQUAL,
+						Value:         10,
+						PropertyState: M.PreviousState,
+					},
+				},
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	currentProperties["$salesforce_contact_page_spent_time"] = 2
+	prevProperties["$salesforce_contact_page_spent_time"] = 10
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, true, ok)
+
+	// fail on same value
+	currentProperties["$salesforce_contact_page_spent_time"] = 10
+	prevProperties["$salesforce_contact_page_spent_time"] = 10
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
+	assert.Equal(t, false, ok)
+
 }

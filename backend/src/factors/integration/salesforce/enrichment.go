@@ -32,6 +32,9 @@ var possiblePhoneField = []string{
 	"personmobilephone",
 }
 
+// TODO(Maisa): Remove dryRun dependency instead of making false
+const dryRun = true
+
 var salesforceSyncOrderByType = [...]int{
 	M.SalesforceDocumentTypeContact,
 	M.SalesforceDocumentTypeAccount,
@@ -44,7 +47,7 @@ func getUserIDFromLastestProperties(properties []M.UserProperties) string {
 	return properties[latestIndex].UserId
 }
 
-func getSalesforceDocumentProperties(projectID uint64, document *M.SalesforceDocument) (map[string]interface{}, error) {
+func GetSalesforceDocumentProperties(projectID uint64, document *M.SalesforceDocument) (*map[string]interface{}, error) {
 	var properties map[string]interface{}
 	err := json.Unmarshal(document.Value.RawMessage, &properties)
 	if err != nil {
@@ -62,7 +65,7 @@ func getSalesforceDocumentProperties(projectID uint64, document *M.SalesforceDoc
 		}
 	}
 
-	return enrichedProperties, nil
+	return &enrichedProperties, nil
 }
 
 func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]interface{}, docType int) {
@@ -241,7 +244,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	return eventID, userID, nil
 }
 
-func enrichAccount(projectID uint64, document *M.SalesforceDocument) int {
+func enrichAccount(projectID uint64, document *M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -252,15 +255,15 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument) int {
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
 
-	properties, err := getSalesforceDocumentProperties(projectID, document)
+	properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
-		EventProperties: properties,
-		UserProperties:  properties,
+		EventProperties: *properties,
+		UserProperties:  *properties,
 	}
 
 	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
@@ -270,7 +273,7 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
 			UserId: userID, CustomerUserId: customerUserID}, false)
@@ -283,7 +286,12 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument) int {
 		logCtx.Error("Skipped user identification on salesforce account sync. No customer_user_id on properties.")
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID)
+	var prevProperties *map[string]interface{}
+	for _, smartEventName := range salesforceSmartEventNames {
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties)
+	}
+
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce account document as synced.")
 		return http.StatusInternalServerError
@@ -292,7 +300,30 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument) int {
 	return http.StatusOK
 }
 
-func enrichContact(projectID uint64, document *M.SalesforceDocument) int {
+type SalesforceSmartEventName struct {
+	EventName string
+	Filter    *M.SmartCRMEventFilter
+	Type      string
+}
+
+func getTimestampFromField(propertyName string, properties *map[string]interface{}) int64 {
+	if timestamp, exists := (*properties)[propertyName]; exists {
+		if unixTimestamp, ok := timestamp.(int64); ok {
+			return unixTimestamp
+		}
+
+		unixTimestamp, err := M.GetSalesforceDocumentTimestamp(timestamp)
+		if err != nil {
+			return 0
+		}
+
+		return unixTimestamp
+	}
+
+	return 0
+}
+
+func enrichContact(projectID uint64, document *M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -302,15 +333,15 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument) int {
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
-	properties, err := getSalesforceDocumentProperties(projectID, document)
+	properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
-		EventProperties: properties,
-		UserProperties:  properties,
+		EventProperties: *properties,
+		UserProperties:  *properties,
 	}
 
 	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
@@ -320,7 +351,7 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
 			UserId: userID, CustomerUserId: customerUserID}, false)
@@ -333,16 +364,139 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument) int {
 		logCtx.Error("Skipped user identification on salesforce contact sync. No customer_user_id on properties.")
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID)
+	var prevProperties *map[string]interface{}
+	for _, smartEventName := range salesforceSmartEventNames {
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties)
+	}
+
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
 	if errCode != http.StatusAccepted {
-		logCtx.Error("Failed to update salesforce account document as synced.")
+		logCtx.Error("Failed to update salesforce contact document as synced.")
 		return http.StatusInternalServerError
 	}
 
 	return http.StatusOK
 }
 
-func enrichOpportunities(projectID uint64, document *M.SalesforceDocument) int {
+/*
+ GetSmartEventPayload return smart event payload if the rule successfully gets passed.
+ WITHOUT PREVIOUS PROPERTY :- A query will be made for previous synced record which
+ will require userID or customerUserID and doctType
+ WITH PREVIOUS PROPERTY := userID, customerUserID and doctType won't be used
+*/
+func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID, userID string, docType int,
+	currentProperties, prevProperties *map[string]interface{}, filter *M.SmartCRMEventFilter) (*M.CRMSmartEvent, *map[string]interface{}, bool) {
+
+	var crmSmartEvent M.CRMSmartEvent
+	var validProperty bool
+	var newProperties map[string]interface{}
+
+	if projectID == 0 || eventName == "" || filter == nil || currentProperties == nil {
+		return nil, prevProperties, false
+	}
+
+	if prevProperties == nil && (docType == 0 || userID == "") {
+		return nil, prevProperties, false
+	}
+
+	if prevProperties != nil {
+		validProperty = M.CRMFilterEvaluator(projectID, currentProperties, prevProperties, filter, M.CompareStateBoth)
+	} else {
+		validProperty = M.CRMFilterEvaluator(projectID, currentProperties, nil, filter, M.CompareStateCurr)
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType})
+
+	if !validProperty {
+		return nil, prevProperties, false
+	}
+
+	if prevProperties == nil {
+		prevDoc, status := M.GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID, customerUserID, userID, docType)
+		if status != http.StatusFound {
+			return nil, prevProperties, false
+		}
+
+		var err error
+		prevProperties, err = GetSalesforceDocumentProperties(projectID, prevDoc)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to GetSalesforceDocumentProperties")
+			return nil, prevProperties, false
+		}
+
+		if !M.CRMFilterEvaluator(projectID, currentProperties, prevProperties,
+			filter, M.CompareStateBoth) {
+			return nil, prevProperties, false
+		}
+	}
+
+	crmSmartEvent.Name = eventName
+	M.FillSmartEventCRMProperties(&newProperties, currentProperties, prevProperties, filter)
+	crmSmartEvent.Properties = newProperties
+
+	return &crmSmartEvent, prevProperties, true
+}
+
+func addSmartEventReferenceMeta(properties *map[string]interface{}, eventID string) {
+	if eventID != "" {
+		(*properties)[U.EP_CRM_REFERENCE_EVENT_ID] = eventID
+	}
+
+}
+
+// TrackSalesforceSmartEvent valids current properties with CRM smart filter and creates a event
+func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *SalesforceSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}) *map[string]interface{} {
+	var valid bool
+	var smartEventPayload *M.CRMSmartEvent
+	if salesforceSmartEventName.EventName == "" || projectID == 0 || salesforceSmartEventName.Type == "" {
+		return prevProperties
+	}
+
+	if userID == "" || docType == 0 || currentProperties == nil || salesforceSmartEventName.Filter == nil {
+		return prevProperties
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType})
+	smartEventPayload, prevProperties, valid = GetSalesforceSmartEventPayload(projectID, salesforceSmartEventName.EventName, customerUserID,
+		userID, docType, currentProperties, prevProperties, salesforceSmartEventName.Filter)
+	if !valid {
+		return prevProperties
+	}
+
+	addSmartEventReferenceMeta(&smartEventPayload.Properties, eventID)
+
+	smartEventTrackPayload := &SDK.TrackPayload{
+		ProjectId:       projectID,
+		EventProperties: smartEventPayload.Properties,
+		Name:            smartEventPayload.Name,
+		SmartEventType:  salesforceSmartEventName.Type,
+	}
+
+	timestampReferenceField := salesforceSmartEventName.Filter.TimestampReferenceField
+	if timestampReferenceField != M.TimestampReferenceTypeTrack {
+		fieldTimestamp := getTimestampFromField(timestampReferenceField, currentProperties)
+		if fieldTimestamp == 0 {
+			logCtx.Errorf("Failed to get timestamp from reference field %s", timestampReferenceField)
+			return prevProperties
+		}
+		smartEventTrackPayload.Timestamp = fieldTimestamp
+	}
+
+	if !dryRun {
+		status, _ := SDK.Track(projectID, smartEventTrackPayload, true, SDK.SourceSalesforce)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.Error("Failed to create salesforce smart event")
+		}
+	} else {
+		logCtx.WithFields(log.Fields{"properties": smartEventPayload.Properties, "event_name": smartEventPayload.Name,
+			"filter_exp": *salesforceSmartEventName.Filter,
+			"timestamp":  smartEventTrackPayload.Timestamp}).Info("Dry run smart event creation.")
+	}
+
+	return prevProperties
+}
+
+func enrichOpportunities(projectID uint64, document *M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -352,19 +506,19 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument) int {
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
-	properties, err := getSalesforceDocumentProperties(projectID, document)
+	properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
-		EventProperties: properties,
-		UserProperties:  properties,
+		EventProperties: *properties,
+		UserProperties:  *properties,
 	}
 
 	var eventID string
-	customerUserID, userID := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, userID := getCustomerUserIDFromProperties(projectID, *properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		trackPayload.UserId = userID
 		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
@@ -384,7 +538,13 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument) int {
 		logCtx.Error("Skipped user identification on salesforce opportunity sync. No customer_user_id on properties.")
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID)
+	var prevProperties *map[string]interface{}
+	for _, smartEventName := range salesforceSmartEventNames {
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID,
+			document.Type, properties, prevProperties)
+	}
+
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce opportunity document as synced.")
 		return http.StatusInternalServerError
@@ -393,7 +553,7 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument) int {
 	return http.StatusOK
 }
 
-func enrichLeads(projectID uint64, document *M.SalesforceDocument) int {
+func enrichLeads(projectID uint64, document *M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
@@ -404,15 +564,15 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument) int {
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
 
-	properties, err := getSalesforceDocumentProperties(projectID, document)
+	properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
-		EventProperties: properties,
-		UserProperties:  properties,
+		EventProperties: *properties,
+		UserProperties:  *properties,
 	}
 
 	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
@@ -422,7 +582,7 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
 			UserId: userID, CustomerUserId: customerUserID}, false)
@@ -435,7 +595,12 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument) int {
 		logCtx.Error("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID)
+	var prevProperties *map[string]interface{}
+	for _, smartEventName := range salesforceSmartEventNames {
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties)
+	}
+
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce lead document as synced.")
 		return http.StatusInternalServerError
@@ -444,7 +609,7 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument) int {
 	return http.StatusOK
 }
 
-func enrichAll(projectID uint64, documents []M.SalesforceDocument) int {
+func enrichAll(projectID uint64, documents []M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 {
 		return http.StatusBadRequest
 	}
@@ -457,13 +622,13 @@ func enrichAll(projectID uint64, documents []M.SalesforceDocument) int {
 
 		switch documents[i].Type {
 		case M.SalesforceDocumentTypeAccount:
-			errCode = enrichAccount(projectID, &documents[i])
+			errCode = enrichAccount(projectID, &documents[i], salesforceSmartEventNames)
 		case M.SalesforceDocumentTypeContact:
-			errCode = enrichContact(projectID, &documents[i])
+			errCode = enrichContact(projectID, &documents[i], salesforceSmartEventNames)
 		case M.SalesforceDocumentTypeLead:
-			errCode = enrichLeads(projectID, &documents[i])
+			errCode = enrichLeads(projectID, &documents[i], salesforceSmartEventNames)
 		case M.SalesforceDocumentTypeOpportunity:
-			errCode = enrichOpportunities(projectID, &documents[i])
+			errCode = enrichOpportunities(projectID, &documents[i], salesforceSmartEventNames)
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
 			continue
@@ -482,6 +647,48 @@ func enrichAll(projectID uint64, documents []M.SalesforceDocument) int {
 	}
 
 	return http.StatusOK
+}
+
+// GetSalesforceSmartEventNames returns all the smart_event for salesforce by object_type
+func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmartEventName {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	eventNames, errCode := M.GetSmartEventFilterEventNames(projectID)
+	if errCode == http.StatusInternalServerError {
+		logCtx.Error("Error while GetSmartEventFilterEventNames")
+	}
+
+	salesforceSmartEventNames := make(map[string][]SalesforceSmartEventName)
+
+	if len(eventNames) == 0 {
+		return &salesforceSmartEventNames
+	}
+
+	for i := range eventNames {
+		if eventNames[i].Type != M.TYPE_CRM_SALESFORCE {
+			continue
+		}
+
+		var salesforceSmartEventName SalesforceSmartEventName
+		decFilterExp, err := M.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to decode smart event filter expression")
+			continue
+		}
+
+		salesforceSmartEventName.EventName = eventNames[i].Name
+		salesforceSmartEventName.Filter = decFilterExp
+		salesforceSmartEventName.Type = M.TYPE_CRM_SALESFORCE
+
+		if _, exists := salesforceSmartEventNames[decFilterExp.ObjectType]; !exists {
+			salesforceSmartEventNames[decFilterExp.ObjectType] = []SalesforceSmartEventName{}
+		}
+
+		salesforceSmartEventNames[decFilterExp.ObjectType] = append(salesforceSmartEventNames[decFilterExp.ObjectType], salesforceSmartEventName)
+	}
+
+	return &salesforceSmartEventNames
 }
 
 // GetSalesforceDocumentsByTypeForSync pulls salesforce documents which are not synced
@@ -517,8 +724,12 @@ func Enrich(projectID uint64) []Status {
 	}
 
 	allowedDocTypes := M.GetSalesforceDocumentTypeAlias(projectID)
+
+	salesforceSmartEventNames := GetSalesforceSmartEventNames(projectID)
+
 	for _, docType := range salesforceSyncOrderByType {
-		if _, exist := allowedDocTypes[M.GetSalesforceAliasByDocType(docType)]; !exist {
+		docTypeAlias := M.GetSalesforceAliasByDocType(docType)
+		if _, exist := allowedDocTypes[docTypeAlias]; !exist {
 			continue
 		}
 
@@ -535,10 +746,10 @@ func Enrich(projectID uint64) []Status {
 
 		status := Status{
 			ProjectID: projectID,
-			Type:      M.GetSalesforceAliasByDocType(docType),
+			Type:      docTypeAlias,
 		}
 
-		errCode = enrichAll(projectID, documents)
+		errCode = enrichAll(projectID, documents, (*salesforceSmartEventNames)[docTypeAlias])
 		if errCode == http.StatusOK {
 			status.Status = "success"
 		} else {

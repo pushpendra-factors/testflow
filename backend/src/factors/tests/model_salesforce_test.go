@@ -241,3 +241,426 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	assert.Equal(t, eventNameUpdate, result.Rows[1][0])
 	assert.Equal(t, "1234567890", result.Rows[1][1])
 }
+
+func TestSalesforceCRMSmartEvent(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	contactID := U.RandomLowerAphaNumString(5)
+	userID1 := U.RandomLowerAphaNumString(5)
+	userID2 := U.RandomLowerAphaNumString(5)
+	userID3 := U.RandomLowerAphaNumString(5)
+	cuid := U.RandomLowerAphaNumString(5)
+	_, status := M.CreateUser(&M.User{ProjectId: project.ID, ID: userID1, CustomerUserId: cuid})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = M.CreateUser(&M.User{ProjectId: project.ID, ID: userID2, CustomerUserId: cuid})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = M.CreateUser(&M.User{ProjectId: project.ID, ID: userID3, CustomerUserId: cuid})
+	assert.Equal(t, http.StatusCreated, status)
+
+	createdAt := time.Now().AddDate(0, 0, -11)
+	updatedDate := createdAt.AddDate(0, 0, -11)
+	propertyDay := "Sunday"
+	jsonData := fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(M.SalesforceDocumentTimeLayout), updatedDate.Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocument := &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	status = M.UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userID3)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	createdAt = time.Now().AddDate(0, 0, -11)
+	updatedDate = createdAt.AddDate(0, 0, -10)
+	propertyDay = "Monday"
+	jsonData = fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(M.SalesforceDocumentTimeLayout), updatedDate.Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocument = &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	status = M.UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userID1)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	createdAt = time.Now().AddDate(0, 0, -11)
+	updatedDate = createdAt.AddDate(0, 0, -9)
+	propertyDay = "Tuesday"
+	jsonData = fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(M.SalesforceDocumentTimeLayout), updatedDate.Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocument = &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	status = M.UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userID2)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	createdAt = time.Now().AddDate(0, 0, -11)
+	updatedDate = createdAt.AddDate(0, 0, -8)
+	propertyDay = "Wednesday"
+	jsonData = fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(M.SalesforceDocumentTimeLayout), updatedDate.Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocument = &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	prevDoc, status := M.GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(project.ID, cuid, userID3, salesforceDocument.Type)
+	assert.Equal(t, http.StatusFound, status)
+	prevProperties, err := IntSalesforce.GetSalesforceDocumentProperties(project.ID, prevDoc)
+	assert.Nil(t, err)
+	assert.Equal(t, "Tuesday", (*prevProperties)["$salesforce_contact_day"])
+
+	prevDoc, status = M.GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(project.ID, "", userID3, salesforceDocument.Type)
+	assert.Equal(t, http.StatusFound, status)
+	prevProperties, err = IntSalesforce.GetSalesforceDocumentProperties(project.ID, prevDoc)
+	assert.Nil(t, err)
+	assert.Equal(t, "Sunday", (*prevProperties)["$salesforce_contact_day"])
+
+	filter := M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_day",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "Saturday",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "Tuesday",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	currentProperties := make(map[string]interface{})
+	currentProperties["$salesforce_contact_day"] = "Saturday"
+	smartEvent, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "test", cuid, userID3, salesforceDocument.Type, &currentProperties, nil, &filter)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "test", smartEvent.Name)
+	assert.Equal(t, "Tuesday", smartEvent.Properties["$prev_salesforce_contact_day"])
+	assert.Equal(t, "Saturday", smartEvent.Properties["$curr_salesforce_contact_day"])
+
+	smartEvent, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "test", "", userID3, salesforceDocument.Type, &currentProperties, nil, &filter)
+	assert.Equal(t, false, ok)
+
+	filter = M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_day",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "Saturday",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "Sunday",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	smartEvent, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "test", "", userID3, salesforceDocument.Type, &currentProperties, nil, &filter)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "test", smartEvent.Name)
+	assert.Equal(t, "Sunday", smartEvent.Properties["$prev_salesforce_contact_day"])
+	assert.Equal(t, "Saturday", smartEvent.Properties["$curr_salesforce_contact_day"])
+}
+
+func TestSalesforceLastSyncedDocument(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	contactID1 := U.RandomLowerAphaNumString(5)
+	contactID2 := U.RandomLowerAphaNumString(5)
+	contactID3 := U.RandomLowerAphaNumString(5)
+	contactID4 := U.RandomLowerAphaNumString(5)
+	contactID5 := U.RandomLowerAphaNumString(5)
+	contactID6 := U.RandomLowerAphaNumString(5)
+
+	userID1 := U.RandomLowerAphaNumString(5)
+	userID2 := U.RandomLowerAphaNumString(5)
+	userID3 := U.RandomLowerAphaNumString(5)
+	userID4 := U.RandomLowerAphaNumString(5)
+	userID5 := U.RandomLowerAphaNumString(5)
+	userID6 := U.RandomLowerAphaNumString(5)
+	_, status := M.CreateUser(&M.User{ProjectId: project.ID, ID: userID1})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = M.CreateUser(&M.User{ProjectId: project.ID, ID: userID2})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = M.CreateUser(&M.User{ProjectId: project.ID, ID: userID3})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = M.CreateUser(&M.User{ProjectId: project.ID, ID: userID4})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = M.CreateUser(&M.User{ProjectId: project.ID, ID: userID5})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = M.CreateUser(&M.User{ProjectId: project.ID, ID: userID6})
+	assert.Equal(t, http.StatusCreated, status)
+
+	userIDs := []string{userID1, userID2, userID3, userID4, userID5, userID6}
+	contactIDs := []string{contactID1, contactID2, contactID3, contactID4, contactID5, contactID6}
+	characters := []string{"A", "B", "C", "D", "E", "F"}
+	days := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Friday", "Saturday"}
+	var createdAt time.Time
+	var updatedDate time.Time
+
+	/*
+		Summary Of synced test document
+		U1(day="Sunday", character="A", type = contact)  -> U1(day="Saturday", character="G", type = contact) -> U1(day="Friday", character="H", type = lead)
+		U2(day="Monday", character="B",type = contact)
+		U3(day="Tuesday", character="C",type = contact)
+		U4(day="Wednesday", character="D",type = contact)
+		U5(day="Friday", character="E",type = contact)
+		U6(day="Saturday", character="F",type = contact)
+	*/
+	for i := 0; i < 6; i++ {
+		createdAt = time.Now().AddDate(0, 0, -20+i)
+		updatedDate = createdAt.AddDate(0, 0, -20+i)
+		jsonData := fmt.Sprintf(`{"Id":"%s", "character":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactIDs[i], characters[i], days[i], createdAt.UTC().Format(M.SalesforceDocumentTimeLayout), updatedDate.Format(M.SalesforceDocumentTimeLayout))
+		salesforceDocument := &M.SalesforceDocument{
+			ProjectID: project.ID,
+			TypeAlias: M.SalesforceDocumentTypeNameContact,
+			Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+		}
+		status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+		assert.Equal(t, http.StatusCreated, status)
+		status = M.UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userIDs[i])
+		assert.Equal(t, http.StatusAccepted, status)
+	}
+
+	updatedDate = updatedDate.AddDate(0, 0, -1)
+	jsonData := fmt.Sprintf(`{"Id":"%s", "character":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID1, "G", "Saturday", createdAt.UTC().Format(M.SalesforceDocumentTimeLayout), updatedDate.Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocument := &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	status = M.UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userID1)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	updatedDate = updatedDate.AddDate(0, 0, -1)
+	leadID1 := U.RandomLowerAphaNumString(5)
+	jsonData = fmt.Sprintf(`{"Id":"%s", "character":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, leadID1, "H", "Friday", createdAt.UTC().Format(M.SalesforceDocumentTimeLayout), updatedDate.Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocument = &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameLead,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	status = M.UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocument, "", userID1)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	/*
+		Last synced document of U1 and type contact
+		U1(day="Saturday", character="G", type = contact)
+	*/
+	prevDoc, status := M.GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(project.ID, "", userID1, M.SalesforceDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	prevProperties, err := IntSalesforce.GetSalesforceDocumentProperties(project.ID, prevDoc)
+	assert.Nil(t, err)
+	assert.Equal(t, "G", (*prevProperties)["$salesforce_contact_character"])
+	assert.Equal(t, "Saturday", (*prevProperties)["$salesforce_contact_day"])
+
+	/*
+		filter1:
+		prev_salesforce_contact_character = "G" AND curr_salesforce_contact_character ="H"
+	*/
+	var filters []M.SmartCRMEventFilter
+	filter := M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_character",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "H",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "G",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	filters = append(filters, filter)
+	/*
+		filter2:
+		prev_salesforce_contact_character = "B" AND curr_salesforce_contact_character ="I"
+	*/
+	filter = M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_character",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "I",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "B",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	filters = append(filters, filter)
+
+	/*
+		filter3:
+		prev_salesforce_contact_day = "Sunday" AND curr_salesforce_contact_day ="Sunday"
+	*/
+	filter = M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_day",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "Sunday",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "Saturday",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+	filters = append(filters, filter)
+
+	/*
+		filter1(prev_salesforce_contact_character = "G" AND curr_salesforce_contact_character ="H")
+		for U1
+		New incoming record(salesforce_contact_character = "H")
+		Expected previous record U1(day="Sunday", character="G", type = contact)
+	*/
+	currentProperties := make(map[string]interface{})
+	currentProperties["$salesforce_contact_character"] = "H"
+	smartEvent, prevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter1", "", userID1, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[0])
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "filter1", smartEvent.Name)
+	assert.Equal(t, "G", smartEvent.Properties["$prev_salesforce_contact_character"])
+	assert.Equal(t, "H", smartEvent.Properties["$curr_salesforce_contact_character"])
+	//prev properties check
+	assert.Equal(t, "Saturday", (*prevProperties)["$salesforce_contact_day"])
+	assert.Equal(t, "G", (*prevProperties)["$salesforce_contact_character"])
+
+	//Fail Test
+	currentProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_character"] = "G"
+	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter1", "", userID1, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[0])
+	assert.Equal(t, false, ok)
+	// prev properties should be nil
+	assert.Nil(t, prevProperties)
+
+	/*
+		filter2(prev_salesforce_contact_character = "B" AND curr_salesforce_contact_character ="I")
+		for U2
+		New incoming record(salesforce_contact_character = "I")
+		Expected previous record U2(day="Monday", character="B",type = contact)
+	*/
+	currentProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_character"] = "I"
+	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter2", "", userID2, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[1])
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "filter2", smartEvent.Name)
+	assert.Equal(t, "B", smartEvent.Properties["$prev_salesforce_contact_character"])
+	assert.Equal(t, "I", smartEvent.Properties["$curr_salesforce_contact_character"])
+	// prev properties check
+	assert.Equal(t, "B", (*prevProperties)["$salesforce_contact_character"])
+	assert.Equal(t, "Monday", (*prevProperties)["$salesforce_contact_day"])
+
+	//Fail Test filter2
+	currentProperties["$salesforce_contact_character"] = "J"
+	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter2", "", userID2, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[1])
+	assert.Equal(t, false, ok)
+	// prev properties should be nil
+	assert.Nil(t, prevProperties)
+
+	/*
+		filter3(prev_salesforce_contact_day = "Sunday" AND curr_salesforce_contact_day ="Sunday")
+		for U1
+		New incoming record(salesforce_contact_day = "Sunday")
+		Expected previous record U1(day="Saturday", character="G", type = contact)
+	*/
+	currentProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_day"] = "Sunday"
+	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter3", "", userID1, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[2])
+	assert.Equal(t, true, ok)
+	assert.Equal(t, "filter3", smartEvent.Name)
+	assert.Equal(t, "Saturday", smartEvent.Properties["$prev_salesforce_contact_day"])
+	assert.Equal(t, "Sunday", smartEvent.Properties["$curr_salesforce_contact_day"])
+	//prev properties check
+	assert.Equal(t, "G", (*prevProperties)["$salesforce_contact_character"])
+	assert.Equal(t, "Saturday", (*prevProperties)["$salesforce_contact_day"])
+
+	//Fail Test filter2
+	currentProperties = make(map[string]interface{})
+	currentProperties["$salesforce_contact_day"] = "Monday"
+	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter2", "", userID1, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[2])
+	assert.Equal(t, false, ok)
+	// prev properties should be nil
+	assert.Nil(t, prevProperties)
+}

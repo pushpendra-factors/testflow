@@ -68,6 +68,8 @@ const TYPE_USER_CREATED_EVENT_NAME = "UC"
 const TYPE_AUTO_TRACKED_EVENT_NAME = "AT"
 const TYPE_FILTER_EVENT_NAME = "FE"
 const TYPE_INTERNAL_EVENT_NAME = "IE"
+const TYPE_CRM_SALESFORCE = "CS"
+const TYPE_CRM_HUBSPOT = "CH"
 const EVENT_NAME_REQUEST_TYPE_APPROX = "approx"
 const EVENT_NAME_REQUEST_TYPE_EXACT = "exact"
 
@@ -76,10 +78,108 @@ var ALLOWED_TYPES = [...]string{
 	TYPE_AUTO_TRACKED_EVENT_NAME,
 	TYPE_FILTER_EVENT_NAME,
 	TYPE_INTERNAL_EVENT_NAME,
+	TYPE_CRM_SALESFORCE,
+	TYPE_CRM_HUBSPOT,
 }
 
 const URI_PROPERTY_PREFIX = ":"
+const PROPERTY_VALUE_ANY = "value_any"
 const EVENT_NAMES_LIMIT = 5000
+
+// PropertyState holds string representing state of the property
+type PropertyState string
+
+// PropertyState represents the current or prevous state of property
+const (
+	CurrentState  PropertyState = "curr"
+	PreviousState PropertyState = "last"
+)
+
+// CRMFilterRule struct for filter rule
+type CRMFilterRule struct {
+	Operator      string        `json:"op" enums:"EQUAL,NOT EQUAL,GREATER THAN,LESS THAN,CONTAINS,NOT CONTAINS"`
+	PropertyState PropertyState `json:"gen" enums:"curr,last"` // previous or current
+	Value         interface{}   `json:"value"`                 // value_any or property value
+}
+
+// PropertyFilter struct hold name of the property and logical operations on rules provided
+type PropertyFilter struct {
+	Name      string          `json:"property_name"`
+	Rules     []CRMFilterRule `josn:"rules"`
+	LogicalOp string          `json:"logical_op" enums:"AND"`
+}
+
+// SmartCRMEventFilter struct is base for CRM smart event filter
+type SmartCRMEventFilter struct {
+	Source                  string           `json:"source" enums:"salesforce,hubspot"`
+	ObjectType              string           `json:"object_type" enums:"salesforce[account,contact,lead],hubspot[contact]"`
+	Description             string           `json:"description"`
+	FilterEvaluationType    string           `json:"property_evaluation_type" enums:"specific,any"` //any change or specific
+	Filters                 []PropertyFilter `json:"filters"`
+	TimestampReferenceField string           `json:"timestamp_reference_field" enums:"timestamp_in_track, <any property name>"`
+	LogicalOp               string           `json:"logical_op" enums:"AND"`
+}
+
+// list of comparision operators for CRM filter
+const (
+	COMPARE_EQUAL        = "EQUAL"
+	COMPARE_NOT_EQUAL    = "NOT EQUAL"
+	COMPARE_GREATER_THAN = "GREATER THAN"
+	COMPARE_LESS_THAN    = "LESS THAN"
+	COMPARE_CONTAINS     = "CONTAINS"
+	COMPARE_NOT_CONTAINS = "NOT CONTAINS"
+)
+
+// list of logical operators for CRM filter
+const (
+	LOGICAL_OP_OR  = "OR"
+	LOGICAL_OP_AND = "AND"
+)
+
+// comparisonOp is map of comparision operator  and its function
+var comparisonOp = map[string]func(interface{}, interface{}) bool{
+	COMPARE_EQUAL: func(rValue, pValue interface{}) bool {
+		if rValue == PROPERTY_VALUE_ANY { // should not be blank
+			return pValue != ""
+		}
+
+		return rValue == pValue
+	},
+	COMPARE_NOT_EQUAL: func(rValue, pValue interface{}) bool {
+		if rValue == PROPERTY_VALUE_ANY { // value not equal to anything
+			return pValue == ""
+		}
+
+		return rValue != pValue
+	},
+	COMPARE_GREATER_THAN: func(rValue, pValue interface{}) bool {
+		intRValue, _ := U.GetPropertyValueAsFloat64(rValue)
+		intpValue, _ := U.GetPropertyValueAsFloat64(pValue)
+		return intpValue > intRValue
+	},
+	COMPARE_LESS_THAN: func(rValue, pValue interface{}) bool {
+		intRValue, _ := U.GetPropertyValueAsFloat64(rValue)
+		intpValue, _ := U.GetPropertyValueAsFloat64(pValue)
+		return intpValue < intRValue
+	},
+	COMPARE_CONTAINS:     func(rValue, pValue interface{}) bool { return strings.Contains(pValue.(string), rValue.(string)) },
+	COMPARE_NOT_CONTAINS: func(rValue, pValue interface{}) bool { return !strings.Contains(pValue.(string), rValue.(string)) },
+}
+
+// FilterEvaluationTypeSpecific for specific change in property or any change property
+const (
+	FilterEvaluationTypeSpecific = "specific"
+	FilterEvaluationTypeAny      = "any"
+)
+
+// Support source for CRM smart event filter
+const (
+	SmartCRMEventSourceSalesforce = "salesforce"
+	SmartCRMEventSourceHubspot    = "hubspot"
+)
+
+// TimestampReferenceTypeTrack is the field to be used for smart event time
+const TimestampReferenceTypeTrack = "timestamp_in_track"
 
 // TODO: Make index name a constant and read it
 // error constants
@@ -144,6 +244,57 @@ func CreateOrGetFilterEventName(eventName *EventName) (*EventName, int) {
 	eventName.FilterExpr = filterExpr
 
 	return CreateOrGetEventName(eventName)
+}
+
+// CreateOrGetCRMSmartEventFilterEventName creates a new CRM smart event filter. Deleted event_name will be enabled if conflict found
+func CreateOrGetCRMSmartEventFilterEventName(projectID uint64, eventName *EventName, filterExpr *SmartCRMEventFilter) (*EventName, int) {
+	if !isValidSmartEventFilterExpr(filterExpr) || filterExpr == nil || eventName.Type != "" {
+		return nil, http.StatusBadRequest
+	}
+
+	enFilterExp, err := json.Marshal(filterExpr)
+	if err != nil {
+		log.WithError(err).Error("Failed to marshal filterExpr on CreateOrGetCRMSmartEventFilterEventName")
+		return nil, http.StatusInternalServerError
+	}
+
+	eventName.FilterExpr = string(enFilterExp)
+
+	eventName.Type = getCRMSmartEventNameType(filterExpr.Source)
+
+	_, status := CreateOrGetEventName(eventName)
+	if status == http.StatusConflict && eventName.Deleted == true {
+		eventName.ProjectId = 0
+		_, status = updateCRMSmartEventFilter(projectID, eventName.ID, eventName.Type, eventName, nil)
+	}
+
+	return eventName, status
+}
+
+func GetSmartEventEventName(eventName *EventName) (*EventName, int) {
+	return GetSmartEventEventNameByNameANDType(eventName.ProjectId, eventName.Name, eventName.Type)
+}
+
+func GetSmartEventEventNameByNameANDType(projectID uint64, name, typ string) (*EventName, int) {
+	if projectID == 0 || name == "" || typ == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var eventNames []EventName
+	if err := db.Where("project_id = ? AND type = ? AND name = ? and deleted = 'false'",
+		projectID, typ, name).Find(&eventNames).Error; err != nil {
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting filter_event_names")
+
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(eventNames) != 1 {
+		return nil, http.StatusInternalServerError
+	}
+
+	return &eventNames[0], http.StatusFound
 }
 
 func CreateOrGetSessionEventName(projectId uint64) (*EventName, int) {
@@ -679,6 +830,223 @@ func GetFilterEventNames(projectId uint64) ([]EventName, int) {
 	return eventNames, http.StatusFound
 }
 
+// GetSmartEventFilterEventNames returns a list of all smart events
+func GetSmartEventFilterEventNames(projectID uint64) ([]EventName, int) {
+	db := C.GetServices().Db
+
+	var eventNames []EventName
+	if err := db.Where("project_id = ? AND type IN(?) AND deleted = 'false'",
+		projectID, []string{TYPE_CRM_SALESFORCE, TYPE_CRM_HUBSPOT}).Find(&eventNames).Error; err != nil {
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting filter_event_names")
+
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(eventNames) == 0 {
+		return eventNames, http.StatusNotFound
+	}
+
+	return eventNames, http.StatusFound
+}
+
+// GetSmartEventFilterEventNameByID returns the smart event by event_name id
+func GetSmartEventFilterEventNameByID(projectID, id uint64) (*EventName, int) {
+	if id == 0 || projectID == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var eventName EventName
+	if err := db.Where("project_id = ? AND type IN(?) AND deleted = 'false' AND id = ?",
+		projectID, []string{TYPE_CRM_SALESFORCE, TYPE_CRM_HUBSPOT}, id).First(&eventName).Error; err != nil {
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting smart event filter_event_name")
+
+		return nil, http.StatusInternalServerError
+	}
+
+	return &eventName, http.StatusFound
+}
+
+// GetDecodedSmartEventFilterExp unmarhsal encoded CRM smart event filter exp to SmartCRMEventFilter struct
+func GetDecodedSmartEventFilterExp(enFilterExp string) (*SmartCRMEventFilter, error) {
+	if enFilterExp == "" {
+		return nil, errors.New("empty string")
+	}
+
+	var smartCRMEventFilter SmartCRMEventFilter
+	err := json.Unmarshal([]byte(enFilterExp), &smartCRMEventFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	return &smartCRMEventFilter, nil
+}
+
+// isRuleApplicable compare property based on rule provided
+func isRuleApplicable(properties *map[string]interface{}, propertyName string, rule *CRMFilterRule) bool {
+	if propertyValue, exists := (*properties)[propertyName]; exists {
+		if comparisonOp[rule.Operator](rule.Value, propertyValue) {
+			return true
+		}
+	} else {
+		if comparisonOp[rule.Operator](rule.Value, "") {
+			return true
+		}
+	}
+
+	return false
+}
+
+// CRMSmartEvent holds payload for creating smart event
+type CRMSmartEvent struct {
+	Name       string
+	Properties map[string]interface{}
+	Timestamp  uint64
+}
+
+func getPrevPropertyName(name string) string {
+	if name == "" {
+		return ""
+	}
+	return fmt.Sprintf("$prev_%s", strings.TrimPrefix(name, U.NAME_PREFIX))
+}
+
+func getCurrPropertyName(name string) string {
+	if name == "" {
+		return ""
+	}
+	return fmt.Sprintf("$curr_%s", strings.TrimPrefix(name, U.NAME_PREFIX))
+}
+
+// FillSmartEventCRMProperties fills all properties from CRM smart filter to new properties
+func FillSmartEventCRMProperties(newProperties, current, prev *map[string]interface{}, filter *SmartCRMEventFilter) {
+	if *newProperties == nil {
+		*newProperties = make(map[string]interface{})
+	}
+
+	for i := range filter.Filters {
+		if value, exists := (*current)[filter.Filters[i].Name]; exists {
+			(*newProperties)[getCurrPropertyName(filter.Filters[i].Name)] = value
+		}
+		if value, exists := (*prev)[filter.Filters[i].Name]; exists {
+			(*newProperties)[getPrevPropertyName(filter.Filters[i].Name)] = value
+		}
+	}
+}
+
+func validateMatch(anyCurrMatch, anyPrevMatch bool, compareMode string, ruleSkipable bool) bool {
+	switch compareMode {
+	case CompareStateBoth:
+		return (anyCurrMatch && anyPrevMatch) || (ruleSkipable && (anyCurrMatch || anyPrevMatch))
+	case CompareStateCurr:
+		return anyCurrMatch
+	case CompareStatePrev:
+		return anyPrevMatch
+	default:
+		return false
+	}
+}
+
+// compare modes for validating properties
+const (
+	CompareStateCurr = "curr"
+	CompareStatePrev = "prev"
+	CompareStateBoth = "both"
+)
+
+// CRMFilterEvaluator evaluates a CRM filter on the properties provided. Can work in current properties or current and previous property mode
+func CRMFilterEvaluator(projectID uint64, currProperty, prevProperty *map[string]interface{}, filter *SmartCRMEventFilter, compareState string) bool {
+	if filter == nil {
+		return false
+	}
+
+	if compareState == "" ||
+		(compareState == CompareStateCurr && currProperty == nil) ||
+		(compareState == CompareStatePrev && prevProperty == nil) ||
+		(compareState == CompareStateBoth && (currProperty == nil || prevProperty == nil)) {
+		return false
+	}
+
+	filterSkipable := filter.LogicalOp == LOGICAL_OP_OR
+
+	anyfilterTrue := false
+	for _, filterProperty := range filter.Filters { // a successfull completion of this loop implies a vaild AND or failed OR operation
+		ruleSkipable := filterProperty.LogicalOp == LOGICAL_OP_OR
+		var anyPrevMatch bool
+		var anyCurrMatch bool
+
+		// avoid same value in previous and current properties
+		if compareState == CompareStateBoth {
+			diffPropertyValue := (*currProperty)[filterProperty.Name] != (*prevProperty)[filterProperty.Name]
+			if !diffPropertyValue {
+				if !filterSkipable {
+					return false
+				}
+				continue
+			}
+
+			if filter.FilterEvaluationType == FilterEvaluationTypeAny {
+				if diffPropertyValue {
+					anyfilterTrue = true
+				} else {
+					if !filterSkipable {
+						return false
+					}
+				}
+				continue
+			}
+		}
+
+		// cannot compare if only one is provided, return true and switch to both mode
+		if (compareState == CompareStateCurr || compareState == CompareStatePrev) && filter.FilterEvaluationType == FilterEvaluationTypeAny {
+			return true
+		}
+
+		for _, rule := range filterProperty.Rules { // a successfull completion of this loop implies a vaild AND or failed OR operation
+
+			if (compareState == CompareStateCurr || compareState == CompareStateBoth) && rule.PropertyState == CurrentState {
+				if !isRuleApplicable(currProperty, filterProperty.Name, &rule) {
+					if !ruleSkipable && !filterSkipable {
+						return false
+					}
+				} else {
+					anyCurrMatch = true
+				}
+			}
+
+			if (compareState == CompareStatePrev || compareState == CompareStateBoth) && rule.PropertyState == PreviousState {
+				if !isRuleApplicable(prevProperty, filterProperty.Name, &rule) {
+					if !ruleSkipable && !filterSkipable {
+						return false
+					}
+				} else {
+					anyPrevMatch = true
+				}
+			}
+		}
+
+		if !filterSkipable {
+
+			// is it an OR operation ? either previous or current should have a match
+			if !validateMatch(anyCurrMatch, anyPrevMatch, compareState, ruleSkipable) {
+				return false
+			}
+
+		} else if validateMatch(anyCurrMatch, anyPrevMatch, compareState, ruleSkipable) {
+			return true
+		}
+	}
+
+	if !filterSkipable {
+		return true
+	} else if anyfilterTrue {
+		return true
+	}
+
+	return false
+}
+
 // returns list of EventNames objects for given names
 func GetEventNamesByNames(projectId uint64, names []string) ([]EventName, int) {
 
@@ -758,6 +1126,104 @@ func UpdateEventName(projectId uint64, id uint64,
 	return &updatedEventName, http.StatusAccepted
 }
 
+func updateCRMSmartEventFilter(projectID uint64, id uint64, nameType string, eventName *EventName, filterExpr *SmartCRMEventFilter) (*EventName, int) {
+
+	// Validation
+	if id == 0 || projectID == 0 || eventName.ProjectId != 0 ||
+		!isValidName(eventName.Name, eventName.Type) {
+
+		return nil, http.StatusBadRequest
+	}
+
+	// update not allowed for non CRM based smart event.
+	if nameType != TYPE_CRM_SALESFORCE && nameType != TYPE_CRM_HUBSPOT {
+		return nil, http.StatusBadRequest
+	}
+
+	if eventName.FilterExpr != "" {
+		return nil, http.StatusBadRequest
+	}
+
+	if filterExpr != nil && !isValidSmartEventFilterExpr(filterExpr) {
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	updateFields := map[string]interface{}{}
+	updateFields["name"] = eventName.Name
+
+	if eventName.Deleted == true {
+		updateFields["deleted"] = false
+	}
+
+	if filterExpr != nil {
+		prevEventName, status := GetSmartEventFilterEventNameByID(projectID, id)
+		if status != http.StatusFound {
+			return nil, http.StatusBadRequest
+		}
+
+		var existingFilterExp *SmartCRMEventFilter
+		var err error
+
+		existingFilterExp, err = GetDecodedSmartEventFilterExp(prevEventName.FilterExpr)
+		if err != nil {
+			log.WithError(err).Error("Failed to decode existing smart event Filter")
+			return nil, http.StatusInternalServerError
+		}
+
+		if existingFilterExp.Source != filterExpr.Source {
+			return nil, http.StatusBadRequest
+		}
+
+		enFilterExp, err := json.Marshal(filterExpr)
+		if err != nil {
+			log.WithError(err).Error("Failed to marshal new smart event Filter")
+			return nil, http.StatusInternalServerError
+		}
+
+		if string(enFilterExp) != prevEventName.FilterExpr {
+			updateFields["filter_expr"] = enFilterExp
+		}
+
+	}
+
+	var updatedEventName EventName
+	query := db.Model(&updatedEventName).Where(
+		"project_id = ? AND id = ? AND type = ?",
+		projectID, id, nameType).Updates(updateFields)
+
+	if err := query.Error; err != nil {
+		log.WithFields(log.Fields{"event_name": eventName,
+			"update_fields": updateFields,
+		}).WithError(err).Error("Failed updating smart event filter.")
+
+		return nil, http.StatusInternalServerError
+	}
+
+	if query.RowsAffected == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	return &updatedEventName, http.StatusAccepted
+}
+
+func getCRMSmartEventNameType(source string) string {
+	if source == SmartCRMEventSourceSalesforce {
+		return TYPE_CRM_SALESFORCE
+	}
+
+	if source == SmartCRMEventSourceHubspot {
+		return TYPE_CRM_HUBSPOT
+	}
+	return ""
+}
+
+func UpdateCRMSmartEventFilter(projectID uint64, id uint64, eventName *EventName, filterExpr *SmartCRMEventFilter) (*EventName, int) {
+	eventName.Type = getCRMSmartEventNameType(filterExpr.Source)
+
+	return updateCRMSmartEventFilter(projectID, id, eventName.Type, eventName, filterExpr)
+}
+
 func UpdateFilterEventName(projectId uint64, id uint64, eventName *EventName) (*EventName, int) {
 	return UpdateEventName(projectId, id, TYPE_FILTER_EVENT_NAME, eventName)
 }
@@ -820,6 +1286,108 @@ func getValidatedFilterExpr(filterExpr string) (string, bool) {
 	}
 
 	return fmt.Sprintf("%s%s", parsedURL.Host, path), true
+}
+
+func isValidSmartCRMFilterObjectType(smartCRMFilter *SmartCRMEventFilter) bool {
+	if smartCRMFilter.Source == SmartCRMEventSourceSalesforce {
+		typeInt := GetSalesforceDocTypeByAlias(smartCRMFilter.ObjectType)
+		if typeInt != 0 {
+			return true
+		}
+	}
+
+	if smartCRMFilter.Source == SmartCRMEventSourceHubspot {
+		_, err := GetHubspotTypeByAlias(smartCRMFilter.ObjectType)
+		if err == nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isValidSmartCRMFilterOperator(operator string) bool {
+	if _, exists := comparisonOp[operator]; !exists {
+		return false
+	}
+	return true
+}
+
+func isValidSmartCRMFilterLogicalOp(logicalOp string) bool {
+	if logicalOp != LOGICAL_OP_AND && logicalOp != LOGICAL_OP_OR {
+		return false
+	}
+	return true
+}
+
+// Validates smart event filter expression
+func isValidSmartEventFilterExpr(smartCRMFilter *SmartCRMEventFilter) bool {
+	if smartCRMFilter == nil {
+		return false
+	}
+
+	if smartCRMFilter.TimestampReferenceField == "" || smartCRMFilter.FilterEvaluationType != FilterEvaluationTypeSpecific && smartCRMFilter.FilterEvaluationType != FilterEvaluationTypeAny {
+		return false
+	}
+
+	if !isValidSmartCRMFilterObjectType(smartCRMFilter) {
+		return false
+	}
+
+	if len(smartCRMFilter.Filters) < 1 {
+		return false
+	}
+
+	for i := range smartCRMFilter.Filters {
+		if smartCRMFilter.Filters[i].Name == "" {
+			return false
+		}
+
+		if smartCRMFilter.FilterEvaluationType == FilterEvaluationTypeAny {
+			if len(smartCRMFilter.Filters[i].Rules) > 0 { // for any change, rules not required
+				return false
+			}
+			continue
+		}
+
+		if !isValidSmartCRMFilterLogicalOp(smartCRMFilter.Filters[i].LogicalOp) {
+			return false
+		}
+
+		if len(smartCRMFilter.Filters[i].Rules) < 2 { // avoid single rule filter, require prev and curr property rule
+			return false
+		}
+
+		var anyCurr bool
+		var anyPrev bool
+		for _, rule := range smartCRMFilter.Filters[i].Rules {
+			if !isValidSmartCRMFilterOperator(rule.Operator) {
+				return false
+			}
+
+			if rule.PropertyState == CurrentState {
+				anyCurr = true
+			}
+
+			if rule.PropertyState == PreviousState {
+				anyPrev = true
+			}
+
+			if rule.Value == "" {
+				return false
+			}
+
+			if rule.Value == PROPERTY_VALUE_ANY && rule.Operator != COMPARE_EQUAL && rule.Operator != COMPARE_NOT_EQUAL {
+				return false
+			}
+		}
+
+		if anyCurr == false || anyPrev == false {
+			return false
+		}
+	}
+
+	return true
 }
 
 // IsFilterMatch checks for exact match of filter and uri passed.

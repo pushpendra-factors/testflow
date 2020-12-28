@@ -20,6 +20,26 @@ definitions:
       project_id:
         type: integer
     type: object
+  handler.APISmartEventFilterRequestPayload:
+    properties:
+      expr:
+        $ref: '#/definitions/model.SmartCRMEventFilter'
+        type: object
+      name:
+        type: string
+    type: object
+  handler.APISmartEventFilterResponePayload:
+    properties:
+      expr:
+        $ref: '#/definitions/model.SmartCRMEventFilter'
+        type: object
+      id:
+        type: integer
+      name:
+        type: string
+      project_id:
+        type: integer
+    type: object
   handler.AdwordsRequestPayload:
     properties:
       project_id:
@@ -63,7 +83,8 @@ definitions:
   handler.DashboardUnitsWebAnalyticsQuery:
     properties:
       custom_group_units:
-        description: CustomGroupUnits - Customize query with group by properties and metrics.
+        description: CustomGroupUnits - Customize query with group by properties and
+          metrics.
         items:
           $ref: '#/definitions/handler.DashboardUnitWebAnalyticsCustomGroupQuery'
         type: array
@@ -167,13 +188,34 @@ definitions:
     required:
     - agent_uuid
     type: object
+  model.AttributionKeyFilter:
+    properties:
+      attribution_key:
+        type: string
+      op:
+        description: contains or notContains
+        type: string
+      va:
+        items:
+          type: string
+        type: array
+    type: object
   model.AttributionQuery:
     properties:
       attribution_key:
         type: string
+      attribution_key_f:
+        items:
+          $ref: '#/definitions/model.AttributionKeyFilter'
+        type: array
       attribution_methodology:
         type: string
+      attribution_methodology_c:
+        type: string
       ce:
+        $ref: '#/definitions/model.QueryEventWithProperties'
+        type: object
+      ce_c:
         $ref: '#/definitions/model.QueryEventWithProperties'
         type: object
       cm:
@@ -190,6 +232,27 @@ definitions:
         type: array
       to:
         type: integer
+    type: object
+  model.CRMFilterRule:
+    properties:
+      gen:
+        description: previous or current
+        enum:
+        - curr
+        - last
+        type: string
+      op:
+        enum:
+        - EQUAL
+        - NOT EQUAL
+        - GREATER THAN
+        - LESS THAN
+        - CONTAINS
+        - NOT CONTAINS
+        type: string
+      value:
+        description: value_any or property value
+        type: object
     type: object
   model.ChannelQuery:
     properties:
@@ -329,14 +392,10 @@ definitions:
     properties:
       en_en:
         type: string
-      en_time:
-        type: string
       rule:
         $ref: '#/definitions/model.FactorsGoalFilter'
         type: object
       st_en:
-        type: string
-      st_time:
         type: string
       vs:
         type: boolean
@@ -366,7 +425,7 @@ definitions:
     properties:
       created_at:
         type: string
-      created_by:
+      created_by;default:null:
         type: string
       id:
         type: integer
@@ -387,6 +446,14 @@ definitions:
     properties:
       key:
         type: string
+      lower_bound:
+        type: number
+      operator:
+        type: boolean
+      property_type:
+        type: string
+      upper_bound:
+        type: number
       vl:
         type: string
     type: object
@@ -466,6 +533,19 @@ definitions:
         type: boolean
       updated_at:
         type: string
+    type: object
+  model.PropertyFilter:
+    properties:
+      logical_op:
+        enum:
+        - AND
+        type: string
+      property_name:
+        type: string
+      rules:
+        items:
+          $ref: '#/definitions/model.CRMFilterRule'
+        type: array
     type: object
   model.Queries:
     properties:
@@ -579,6 +659,42 @@ definitions:
       va:
         type: string
     type: object
+  model.SmartCRMEventFilter:
+    properties:
+      description:
+        type: string
+      filters:
+        items:
+          $ref: '#/definitions/model.PropertyFilter'
+        type: array
+      logical_op:
+        enum:
+        - AND
+        type: string
+      object_type:
+        enum:
+        - salesforce[account
+        - contact
+        - lead]
+        - hubspot[contact]
+        type: string
+      property_evaluation_type:
+        description: any change or specific
+        enum:
+        - specific
+        - any
+        type: string
+      source:
+        enum:
+        - salesforce
+        - hubspot
+        type: string
+      timestamp_reference_field:
+        enum:
+        - timestamp_in_track
+        - ' <any property name>'
+        type: string
+    type: object
   model.UpdatableDashboard:
     properties:
       description:
@@ -617,7 +733,8 @@ definitions:
           project_id -> projects(id)
         type: integer
       properties:
-        description: Not part of table, but part of json. Stored in UserProperties table.
+        description: Not part of table, but part of json. Stored in UserProperties
+          table.
         type: string
       properties_id:
         type: string
@@ -741,6 +858,8 @@ definitions:
         type: object
       project_id:
         type: integer
+      smart_event:
+        type: string
       timestamp:
         type: integer
       user_agent:
@@ -991,9 +1110,6 @@ definitions:
       rule:
         $ref: '#/definitions/model.FactorsGoalRule'
         type: object
-    required:
-    - name
-    - rule
     type: object
   v1.CreateFactorsTrackedEventParams:
     properties:
@@ -1138,7 +1254,8 @@ paths:
       - application/json
       responses:
         "201":
-          description: '{"status": "success", "agents": agentInfoMap, "project_agent_mappings": projectAgentMappings}'
+          description: '{"status": "success", "agents": agentInfoMap, "project_agent_mappings":
+            projectAgentMappings}'
           schema:
             type: string
       summary: To invite an agent to the given project id.
@@ -1224,7 +1341,8 @@ paths:
       - application/json
       responses:
         "200":
-          description: '{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}'
+          description: '{"result": model.QueryResult, "cache": false, "refreshed_at":
+            timestamp}'
           schema:
             type: string
       summary: To run attribution query.
@@ -1288,7 +1406,8 @@ paths:
       - application/json
       responses:
         "200":
-          description: '{"result": model.ChannelQueryResult, "cache": false, "refreshed_at": timestamp}'
+          description: '{"result": model.ChannelQueryResult, "cache": false, "refreshed_at":
+            timestamp}'
           schema:
             type: string
       summary: To run a channel query.
@@ -1904,7 +2023,8 @@ paths:
       - application/json
       responses:
         "200":
-          description: '{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}'
+          description: '{"result": model.QueryResult, "cache": false, "refreshed_at":
+            timestamp}'
           schema:
             type: string
       summary: To run a particular query from core query or dashboards.
@@ -2147,6 +2267,36 @@ paths:
       tags:
       - Dashboard
       - V1Api
+  /{project_id}/v1/dashboards/{dashboard_id}/units/multi/{unit_ids}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: path
+        name: dashboard_id
+        required: true
+        type: integer
+      - description: Dashboard Unit IDs
+        in: path
+        name: unit_ids
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: '{"message": "Successfully deleted."}'
+          schema:
+            type: string
+      summary: To delete multiple existing dashboard unit.
+      tags:
+      - DashboardUnit
   /{project_id}/v1/dashboards/multi/{dashboard_ids}/units:
     post:
       consumes:
@@ -2538,12 +2688,99 @@ paths:
       - application/json
       responses:
         "200":
-          description: '{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}'
+          description: '{"result": model.QueryResult, "cache": false, "refreshed_at":
+            timestamp}'
           schema:
             type: string
       summary: To run events core query as a query group for user and event count.
       tags:
       - V1Api
+  /{project_id}/v1/smart_event:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.APISmartEventFilterResponePayload'
+            type: array
+      summary: Get the list of existing smart event filters.
+      tags:
+      - V1ApiSmartEvent
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Smart event type
+        enum:
+        - crm
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: Create smart event filter
+        in: body
+        name: filter
+        required: true
+        schema:
+          $ref: '#/definitions/handler.APISmartEventFilterRequestPayload'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.APISmartEventFilterResponePayload'
+      summary: To create a new smart event filter.
+      tags:
+      - V1ApiSmartEvent
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Filter ID
+        in: query
+        name: filter_id
+        required: true
+        type: integer
+      - description: Update filter
+        in: body
+        name: filter
+        required: true
+        schema:
+          $ref: '#/definitions/handler.APISmartEventFilterRequestPayload'
+      - description: Smart event type
+        enum:
+        - crm
+        in: query
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/handler.APISmartEventFilterResponePayload'
+      summary: To update an existing smart event filter.
+      tags:
+      - V1ApiSmartEvent
   /integrations/adwords/enable:
     post:
       consumes:
@@ -2629,7 +2866,8 @@ paths:
           description: redirectURL
           schema:
             type: string
-      summary: Handles the callback url from salesforce auth redirect url and requests access token.
+      summary: Handles the callback url from salesforce auth redirect url and requests
+        access token.
       tags:
       - Integrations
   /integrations/salesforce/enable:
@@ -3006,7 +3244,6 @@ paths:
       - SDK
 securityDefinitions:
   ApiKeyAuth:
-    authorizationUrl: ""
     in: header
     name: Authorization
     type: apiKey
