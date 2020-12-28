@@ -428,7 +428,7 @@ func mineAndWriteLenTwoPatterns(
 	}
 	lenTwoPatternsMod := make([]*P.Pattern, 0)
 
-	//filter two $events
+	// filter two $events
 	for _, v := range lenTwoPatterns {
 		if !(strings.HasPrefix(v.EventNames[0], "$") &&
 			strings.HasPrefix(v.EventNames[1], "$")) {
@@ -449,7 +449,7 @@ func mineAndWriteLenTwoPatterns(
 	return filteredLenTwoPatterns, patternsSize, nil
 }
 
-//GetEncodedEventsPatterns get all goalPatterns from DB
+// GetEncodedEventsPatterns get all goalPatterns from DB
 func GetEncodedEventsPatterns(projectId uint64, filteredPatterns []*P.Pattern, eventNamesWithType map[string]string, campEventsList []string) ([]*P.Pattern, error) {
 
 	goalPatternsFromDB, errCode := M.GetAllActiveFactorsGoals(projectId)
@@ -481,7 +481,7 @@ func GetEncodedEventsPatterns(projectId uint64, filteredPatterns []*P.Pattern, e
 	mineLog.Info("Mining goals from topk events : ", len(goalTopKPatterns))
 
 	for idx, valPat := range goalTopKPatterns {
-		//check if campaignEvent
+		// check if campaignEvent
 		if !U.IsCampaignEvent(valPat.String()) {
 			mineLog.Info(fmt.Sprint("Insering in DB Goal event: ", idx, valPat.String()))
 			tmpFactorsRule := M.FactorsGoalRule{EndEvent: valPat.String()}
@@ -836,7 +836,10 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 	return uploadedChunkIds, nil
 }
 
-func filterAndWriteFactorsProperties(tmpPath string, reader io.Reader, userPropMap, eventPropMap map[string]bool) ([]string, error) {
+func rewriteEventsFile(tmpPath string, reader io.Reader, userPropMap, eventPropMap map[string]bool) ([]string, error) {
+	// read events file , filter and create properties based on userProp and eventsProp
+	// create encoded events based on $session and campaign eventName
+
 	scanner := bufio.NewScanner(reader)
 	file, err := os.Create(tmpPath)
 	if err != nil {
@@ -980,12 +983,12 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 			upFilteredMap[u.Key] = true
 		}
 
-		//add keys based on WHITELIST_Properties
+		// add keys based on WHITELIST_Properties
 		for _, v := range U.WHITELIST_FACTORS_USER_PROPERTIES {
 			upFilteredMap[v] = true
 		}
 
-		//delete keys based on disabled_Properties
+		// delete keys based on disabled_Properties
 		for _, Uprop := range U.DISABLED_FACTORS_USER_PROPERTIES {
 			delete(upFilteredMap, Uprop)
 		}
@@ -1001,7 +1004,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 			}
 		}
 	}
-	//ep : event Properties : addkeys based on ranking , add based on whitelist properties
+	// ep : event Properties : addkeys based on ranking , add based on whitelist properties
 	// delete based on disables properties
 
 	epSortedList := U.RankByWordCount(eventPropertiesMap)
@@ -1031,7 +1034,7 @@ func buildEventsFileOnProperties(diskManager *serviceDisk.DiskDriver, cloudManag
 	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
 	efPath := efTmpPath + "tmpEvents" + efTmpName
 	eTmpReader, err := diskManager.Get(efTmpPath, efTmpName)
-	campEvents, err := filterAndWriteFactorsProperties(efPath, eTmpReader, userPropList, eventPropList)
+	campEvents, err := rewriteEventsFile(efPath, eTmpReader, userPropList, eventPropList)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
 			"eventFileName": efCloudName}).Error("Failed to filter disabled properties")
@@ -1053,70 +1056,6 @@ func buildEventsFileOnProperties(diskManager *serviceDisk.DiskDriver, cloudManag
 
 	return campEvents, nil
 
-}
-
-func filterCampaigns(tmpPath string, reader io.Reader) ([]string, error) {
-	scanner := bufio.NewScanner(reader)
-	file, err := os.Create(tmpPath)
-	if err != nil {
-		return nil, err
-	}
-	log.Info("Create tmp file for campaign events", tmpPath)
-	log.Info("Create a temp file to save and read events")
-	defer file.Close()
-	campEventsMap := make(map[string]bool)
-	campEventsList := make([]string, 0)
-
-	w := bufio.NewWriter(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		var eventDetails P.CounterEventFormat
-		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
-			log.WithFields(log.Fields{"line": line, "err": err}).Error("Read failed")
-			return nil, err
-		}
-
-		eventDetailsBytes, err := json.Marshal(eventDetails)
-		if err != nil {
-			log.WithFields(log.Fields{"line": line, "err": err}).Error("Failed to marshal eventDetails")
-			return nil, err
-		}
-		lineWrite := string(eventDetailsBytes)
-		if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-			return nil, err
-		}
-
-		if strings.Compare(eventDetails.EventName, "$session") == 0 && eventDetails.EventProperties["$campaign"] != nil {
-			var campEvent P.CounterEventFormat
-			campEventId := eventDetails.EventProperties["$campaign"].(string)
-			cmpEvent := eventDetails.EventName + "[campaign:" + campEventId + "]"
-			campEvent.EventName = cmpEvent
-			campEventsMap[cmpEvent] = true
-			campEvent.EventProperties = nil
-			campEvent.UserProperties = nil
-			campEvent.UserId = eventDetails.UserId
-			campEvent.UserJoinTimestamp = eventDetails.UserJoinTimestamp
-			campEvent.EventTimestamp = eventDetails.EventTimestamp
-			campEvent.EventCardinality = eventDetails.EventCardinality
-			eventDetailsBytes, _ := json.Marshal(campEvent)
-			lineWrite := string(eventDetailsBytes)
-
-			if _, err := file.WriteString(fmt.Sprintf("%s\n", lineWrite)); err != nil {
-				peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-				return nil, err
-			}
-
-		}
-
-	}
-	w.Flush()
-
-	for k := range campEventsMap {
-		campEventsList = append(campEventsList, k)
-	}
-
-	return campEventsList, nil
 }
 
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
@@ -1293,7 +1232,7 @@ func convert(eventNamesWithAggregation []M.EventNameWithAggregation) []M.EventNa
 	return eventNames
 }
 
-//OpenEventFileAndGetScanner open file to read events
+// OpenEventFileAndGetScanner open file to read events
 func OpenEventFileAndGetScanner(filePath string) (*bufio.Scanner, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -1432,7 +1371,7 @@ func takeTopKAllURL(allPatterns []patternProperties, topK int) []patternProperti
 }
 
 func takeTopK(patterns []patternProperties, topKPatterns int) []patternProperties {
-	//rewrite with heap. can hog the memory
+	// rewrite with heap. can hog the memory
 	if len(patterns) > 0 {
 		sort.Slice(patterns, func(i, j int) bool { return patterns[i].count > patterns[j].count })
 		if len(patterns) > topKPatterns {
@@ -1444,7 +1383,7 @@ func takeTopK(patterns []patternProperties, topKPatterns int) []patternPropertie
 	return patterns
 }
 
-//GetAllCyclicEvents Filter all special events
+// GetAllCyclicEvents Filter all special events
 func GetAllRepeatedEvents(eventNames []string, campaignEvents []string) []string {
 
 	CyclicEvents := make([]string, 0)
