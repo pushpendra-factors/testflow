@@ -302,7 +302,7 @@ func GetGCLIDBasedCampaignInfo(projectId uint64, from, to int64, adwordsAccountI
 		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
 	customerAccountIds := strings.Split(adwordsAccountIds, ",")
 	rows, err := db.Raw(performanceQuery, PropertyValueNone, PropertyValueNone, PropertyValueNone, PropertyValueNone,
-		PropertyValueNone, PropertyValueNone, projectId, customerAccountIds, ADWORDS_CLICK_REPORT_TYPE, U.GetDateOnlyFromTimestamp(from),
+		PropertyValueNone, PropertyValueNone, projectId, customerAccountIds, AdwordsClickReportType, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
