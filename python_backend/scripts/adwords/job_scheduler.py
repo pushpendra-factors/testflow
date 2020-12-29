@@ -104,7 +104,7 @@ class JobScheduler:
                 log.error("Invalid document to sync from adwords: %s", str(doc_type))
                 self.status["status"] = STATUS_FAILED
                 self.status["message"] = "Invalid document type " + str(doc_type)
-                return
+                return self.status
 
             etl_record_stats.update(self.project_id, doc_type, req_count)
 
