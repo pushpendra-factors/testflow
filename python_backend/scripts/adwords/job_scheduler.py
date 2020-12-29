@@ -76,8 +76,8 @@ class JobScheduler:
             elif doc_type == "campaigns":
                 docs, req_count = GetCampaignsJob(self.next_info).start()
 
-            elif doc_type == "ads":
-                docs, req_count = GetAdsJob(self.next_info).start()
+            # elif doc_type == "ads":
+            #     docs, req_count = GetAdsJob(self.next_info).start()
 
             elif doc_type == "ad_groups":
                 docs, req_count = GetAdGroupsJob(self.next_info).start()
@@ -104,7 +104,7 @@ class JobScheduler:
                 log.error("Invalid document to sync from adwords: %s", str(doc_type))
                 self.status["status"] = STATUS_FAILED
                 self.status["message"] = "Invalid document type " + str(doc_type)
-                return
+                return self.status
 
             etl_record_stats.update(self.project_id, doc_type, req_count)
 

@@ -106,7 +106,7 @@ function BarLineChart({
       tooltip.current.style("visibility", 'visible')
       .style("left", left + "px")
       .style("top", top - toolTipHeight + 5 + "px");
-  }, []);
+  }, [responseHeaders, responseRows, title, visibleIndices]);
 
   const hideTooltip = useCallback(() => {
     const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
@@ -281,7 +281,7 @@ function BarLineChart({
       .on("mouseout", () => {
         hideTooltip();
       });
-  }, [chartData]);
+  }, [chartData, hideTooltip, showTooltip, title]);
 
   useEffect(() => {
     drawChart();

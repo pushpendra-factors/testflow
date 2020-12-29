@@ -217,12 +217,12 @@ export const getTableData = (
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
           const eventIdx = headers.indexOf(`${le.label} - Users`);
-          resultantRow[le.label] = row[eventIdx];
+          resultantRow[le.label] = formatCount(row[eventIdx], 0);
         });
       }
       if (attribution_method_compare) {
         resultantRow["conversion_compare"] = row[compareUsersIdx];
-        resultantRow["cost_compare"] = row[compareCostIdx];
+        resultantRow["cost_compare"] = formatCount(row[compareCostIdx], 0);
       }
       return resultantRow;
     })
