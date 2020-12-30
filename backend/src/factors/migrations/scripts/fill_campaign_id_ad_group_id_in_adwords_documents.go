@@ -86,7 +86,7 @@ func main() {
 
 				updateAdGroupJob(projectID, customerAccountID, currentStartDateInt, currentEndDateInt, db)
 				updateCampaignJob(projectID, customerAccountID, currentStartDateInt, currentEndDateInt, db)
-				for currentDate := currentStartDate; currentEndDate.After(currentDate); currentDate = currentStartDate.AddDate(0, 0, 1) {
+				for currentDate := currentStartDate; currentEndDate.After(currentDate); currentDate = currentDate.AddDate(0, 0, 1) {
 					currentDateInt, _ := strconv.ParseInt(currentDate.Format(U.DATETIME_FORMAT_YYYYMMDD), 10, 64)
 					updateAdPerformanceReportWithCampaignID(projectID, customerAccountID, currentDateInt, db)
 				}
