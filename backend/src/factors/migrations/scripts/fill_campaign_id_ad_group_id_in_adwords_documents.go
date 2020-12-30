@@ -58,6 +58,7 @@ func main() {
 		log.Fatal("Failed to pull events. Init failed.")
 	}
 	db := C.GetServices().Db
+	db.LogMode(true)
 	defer db.Close()
 
 	projectIDToCustomerAccounts, err := getActiveProjectIDAndCustomerIDs()
