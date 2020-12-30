@@ -32,9 +32,13 @@ type AttributionQuery struct {
 }
 
 type AttributionKeyFilter struct {
-	AttributionKey string   `json:"attribution_key"`
-	Operator       string   `json:"op"` // contains or notContains
-	Values         []string `json:"va"`
+	AttributionKey string `json:"attribution_key"`
+	// Type: categorical or numerical
+	Type      string `json:"ty"`
+	Property  string `json:"pr"`
+	Operator  string `json:"op"`
+	Value     string `json:"va"`
+	LogicalOp string `json:"lop"`
 }
 
 type RangeTimestamp struct {
@@ -55,25 +59,25 @@ func (q *AttributionQueryUnit) SetQueryDateRange(from, to int64) {
 }
 
 const (
-	ATTRIBUTION_METHOD_FIRST_TOUCH            = "First_Touch"
-	ATTRIBUTION_METHOD_FIRST_TOUCH_NON_DIRECT = "First_Touch_ND"
-	ATTRIBUTION_METHOD_LAST_TOUCH             = "Last_Touch"
-	ATTRIBUTION_METHOD_LAST_TOUCH_NON_DIRECT  = "Last_Touch_ND"
-	ATTRIBUTION_METHOD_LINEAR                 = "Linear"
-	ATTRIBUTION_KEY_CAMPAIGN                  = "Campaign"
-	ATTRIBUTION_KEY_SOURCE                    = "Source"
-	ATTRIBUTION_KEY_ADGROUP                   = "AdGroup"
-	ATTRIBUTION_KEY_KEYWORD                   = "Keyword"
+	AttributionMethodFirstTouch          = "First_Touch"
+	AttributionMethodFirstTouchNonDirect = "First_Touch_ND"
+	AttributionMethodLastTouch           = "Last_Touch"
+	AttributionMethodLastTouchNonDirect  = "Last_Touch_ND"
+	AttributionMethodLinear              = "Linear"
+	AttributionKeyCampaign               = "Campaign"
+	AttributionKeySource                 = "Source"
+	AttributionKeyAdgroup                = "AdGroup"
+	AttributionKeyKeyword                = "Keyword"
 
-	ADWORDS_CLICK_REPORT_TYPE    = 4
-	ADWORDS_CAMPAIGN_REPORT_TYPE = 5
+	AdwordsClickReportType    = 4
+	AdwordsCampaignReportType = 5
 
-	SECS_IN_A_DAY        = int64(86400)
-	LOOKBACK_CAP_IN_DAYS = 180
-	USER_BATCH_SIZE      = 3000
+	SecsInADay        = int64(86400)
+	LookbackCapInDays = 180
+	UserBatchSize     = 3000
 )
 
-var ATTRIBUTION_FIXED_HEADERS = []string{"Impressions", "Clicks", "Spend", "Website Visitors"}
+var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "Website Visitors"}
 
 type AttributionData struct {
 	Name                        string
@@ -111,13 +115,13 @@ type CampaignInfo struct {
 
 // Maps the {attribution key} to the session properties field
 func getQuerySessionProperty(attributionKey string) (string, error) {
-	if attributionKey == ATTRIBUTION_KEY_CAMPAIGN {
+	if attributionKey == AttributionKeyCampaign {
 		return U.EP_CAMPAIGN, nil
-	} else if attributionKey == ATTRIBUTION_KEY_SOURCE {
+	} else if attributionKey == AttributionKeySource {
 		return U.EP_SOURCE, nil
-	} else if attributionKey == ATTRIBUTION_KEY_ADGROUP {
+	} else if attributionKey == AttributionKeyAdgroup {
 		return U.EP_ADGROUP, nil
-	} else if attributionKey == ATTRIBUTION_KEY_KEYWORD {
+	} else if attributionKey == AttributionKeyKeyword {
 		return U.EP_KEYWORD, nil
 	}
 	return "", errors.New("invalid query properties")
@@ -126,7 +130,7 @@ func getQuerySessionProperty(attributionKey string) (string, error) {
 // Adds common column names and linked events as header to the result rows.
 func addHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 	attributionKey := query.AttributionKey
-	result.Headers = append(append(result.Headers, attributionKey), ATTRIBUTION_FIXED_HEADERS...)
+	result.Headers = append(append(result.Headers, attributionKey), AttributionFixedHeaders...)
 	conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
 	costPerConversion := fmt.Sprintf("Cost Per Conversion")
 	conversionEventCompareUsers := fmt.Sprintf("Compare - Users")
@@ -140,23 +144,65 @@ func addHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 	}
 }
 
-func isValidAttributionKeyValue(attributionKeyType string, keyValue string, filters []AttributionKeyFilter) bool {
+func isValidAttributionKeyValueAND(attributionKeyType string, keyValue string, filters []AttributionKeyFilter) bool {
 
 	for _, filter := range filters {
-		// Currently only supporting matching key filters only
-		if filter.AttributionKey == attributionKeyType {
-			if filter.Operator == ContainsOpStr {
-				if !U.StringValueIn(keyValue, filter.Values) {
-					return false
-				}
-			} else if filter.Operator == NotContainsOpStr {
-				if U.StringValueIn(keyValue, filter.Values) {
-					return false
-				}
-			}
+		// supports AND and treats blank operator as AND
+		if filter.LogicalOp == "OR" {
+			continue
+		}
+		filterResult := applyOperator(attributionKeyType, keyValue, filter)
+		// AND is false for any false.
+		if !filterResult {
+			return false
 		}
 	}
 	return true
+}
+
+func isValidAttributionKeyValueOR(attributionKeyType string, keyValue string, filters []AttributionKeyFilter) bool {
+
+	for _, filter := range filters {
+		if filter.LogicalOp != "OR" {
+			continue
+		}
+		filterResult := applyOperator(attributionKeyType, keyValue, filter)
+		// OR is true for any true
+		if filterResult {
+			return true
+		}
+	}
+	return false
+}
+
+func applyOperator(attributionKeyType string, keyValue string, filter AttributionKeyFilter) bool {
+
+	filterResult := true
+	// Currently only supporting matching key filters
+	if filter.AttributionKey == attributionKeyType {
+		switch filter.Operator {
+		case EqualsOpStr:
+			if keyValue != filter.Value {
+				filterResult = false
+			}
+		case NotEqualOpStr:
+			if keyValue == filter.Value {
+				filterResult = false
+			}
+		case ContainsOpStr:
+			if !strings.Contains(keyValue, filter.Value) {
+				filterResult = false
+			}
+		case NotContainsOpStr:
+			if strings.Contains(keyValue, filter.Value) {
+				filterResult = false
+			}
+		default:
+			log.Error("invalid filter operation found: " + filter.Operator)
+			filterResult = false
+		}
+	}
+	return filterResult
 }
 
 /* Executes the Attribution using following steps:
@@ -195,7 +241,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true
-		attributionData, err = runAttributionForMethodologyComparison(projectID,
+		attributionData, err = RunAttributionForMethodologyComparison(projectID,
 			query.From, query.To,
 			query.ConversionEvent.Name,
 			query.ConversionEvent.Properties,
@@ -238,6 +284,13 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 				attributionData[key].ConversionEventCompareCount = 0
 			}
 		}
+		// filling any non-matched touch points
+		for missingKey, _ := range attributionCompareData {
+			if _, exists := attributionData[missingKey]; !exists {
+				attributionData[missingKey] = &AttributionData{}
+				attributionData[missingKey].ConversionEventCompareCount = attributionCompareData[missingKey].ConversionEventCount
+			}
+		}
 	} else {
 		// single event attribution
 		attributionData, err = runAttribution(projectID,
@@ -269,7 +322,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 	return result, nil
 }
 
-func runAttributionForMethodologyComparison(projectID uint64, from, to int64,
+func RunAttributionForMethodologyComparison(projectID uint64, from, to int64,
 	goalEventName string, goalEventProperties []QueryProperty, attributionMethodology,
 	attributionMethodologyCompare string, eventNameToIDList map[string][]interface{},
 	sessions map[string]map[string]RangeTimestamp, lookbackDays int) (map[string]*AttributionData, error) {
@@ -300,7 +353,8 @@ func runAttributionForMethodologyComparison(projectID uint64, from, to int64,
 	}
 
 	// attribution based on given attribution methodology
-	userConversionHit, _, err := ApplyAttribution(attributionMethodology, goalEventName, usersToBeAttributed, sessions, coalUserIdConversionTimestamp, 0)
+	userConversionHit, _, err := ApplyAttribution(attributionMethodology, goalEventName, usersToBeAttributed,
+		sessions, coalUserIdConversionTimestamp, lookbackDays)
 	if err != nil {
 		return nil, err
 	}
@@ -322,6 +376,13 @@ func runAttributionForMethodologyComparison(projectID uint64, from, to int64,
 			attributionData[key].ConversionEventCompareCount = attributionDataCompare[key].ConversionEventCount
 		} else {
 			attributionData[key].ConversionEventCompareCount = 0
+		}
+	}
+	// filling any non-matched touch points
+	for missingKey, _ := range attributionDataCompare {
+		if _, exists := attributionData[missingKey]; !exists {
+			attributionData[missingKey] = &AttributionData{}
+			attributionData[missingKey].ConversionEventCompareCount = attributionDataCompare[missingKey].ConversionEventCount
 		}
 	}
 
@@ -494,7 +555,7 @@ func addUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
 // getCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
 func getCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]UserInfo, error) {
 
-	userIDsInBatches := U.GetStringListAsBatch(userIDs, USER_BATCH_SIZE)
+	userIDsInBatches := U.GetStringListAsBatch(userIDs, UserBatchSize)
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	userIDToCoalUserIDMap := make(map[string]UserInfo)
@@ -572,7 +633,9 @@ func getAllTheSessions(projectId uint64, sessionEventNameId uint64,
 			continue
 		}
 		// apply filter at extracting session level itself
-		if !isValidAttributionKeyValue(query.AttributionKey, attributionId, query.AttributionKeyFilter) {
+		if !isValidAttributionKeyValueAND(query.AttributionKey,
+			attributionId, query.AttributionKeyFilter) && !isValidAttributionKeyValueOR(query.AttributionKey,
+			attributionId, query.AttributionKeyFilter) {
 			continue
 		}
 		if _, ok := userIdMap[userID]; !ok {
@@ -708,7 +771,7 @@ func getLinkedFunnelEventUsers(projectId uint64, from, to int64, linkedEvents []
 		}
 		var userIDList []string
 		userIDHitGoalEventTimestamp := make(map[string]int64)
-		userPropertiesIdsInBatches := U.GetStringListAsBatch(usersHitConversion, USER_BATCH_SIZE)
+		userPropertiesIdsInBatches := U.GetStringListAsBatch(usersHitConversion, UserBatchSize)
 		for _, users := range userPropertiesIdsInBatches {
 
 			// add user batching
@@ -790,7 +853,7 @@ func applyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo
 
 	var filteredUserIdList []string
 	userIdHitGoalEventTimestamp := make(map[string]bool)
-	userPropertiesIdsInBatches := U.GetStringListAsBatch(userPropertiesIds, USER_BATCH_SIZE)
+	userPropertiesIdsInBatches := U.GetStringListAsBatch(userPropertiesIds, UserBatchSize)
 	for _, users := range userPropertiesIdsInBatches {
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
@@ -917,9 +980,9 @@ func getConvertedUsers(projectID uint64, goalEventName string, goalEventProperti
 
 // getEffectiveFrom Returns the effective From timestamp considering lookback days
 func getEffectiveFrom(from int64, lookbackDays int) int64 {
-	lookbackDaysTimestamp := int64(lookbackDays) * SECS_IN_A_DAY
-	if LOOKBACK_CAP_IN_DAYS < lookbackDays {
-		lookbackDaysTimestamp = int64(LOOKBACK_CAP_IN_DAYS) * SECS_IN_A_DAY
+	lookbackDaysTimestamp := int64(lookbackDays) * SecsInADay
+	if LookbackCapInDays < lookbackDays {
+		lookbackDaysTimestamp = int64(LookbackCapInDays) * SecsInADay
 	}
 	validFrom := from - lookbackDaysTimestamp
 	return validFrom
@@ -992,7 +1055,7 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*Attr
 		"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents " +
 		"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by value->>'campaign_id', campaign_name"
-	rows, err := db.Raw(performanceQuery, projectId, customerAccountIds, ADWORDS_CAMPAIGN_REPORT_TYPE,
+	rows, err := db.Raw(performanceQuery, projectId, customerAccountIds, AdwordsCampaignReportType,
 		U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)).Rows()
 	if err != nil {

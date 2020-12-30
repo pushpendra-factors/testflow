@@ -97,8 +97,8 @@ func TestAttributionModel(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 	value := []byte(`{"cost": "0","clicks": "0","campaign_id":"123456","impressions": "0", "campaign_name": "test"}`)
 	document := &M.AdwordsDocument{
-		ProjectId:         project.ID,
-		CustomerAccountId: customerAccountId,
+		ProjectID:         project.ID,
+		CustomerAccountID: customerAccountId,
 		TypeAlias:         "campaign_performance_report",
 		Timestamp:         20200510,
 		Value:             &postgres.Jsonb{value},
@@ -109,9 +109,9 @@ func TestAttributionModel(t *testing.T) {
 
 	/*
 		timestamp(t)
-		t				user1 ->first session + event intial_campaign -> 123456
-		t+3day			user2 ->first session + event intial_campaign -> 54321
-		t+3day			user3 ->first session intial_campaign -> 54321
+		t				user1 ->first session + event initial_campaign -> 123456
+		t+3day			user2 ->first session + event initial_campaign -> 54321
+		t+3day			user3 ->first session initial_campaign -> 54321
 		t+5day			user1 ->session + event latest_campaign -> 1234567
 		t+5day			user2 ->session + event latest_campaign -> 123456
 	*/
@@ -142,32 +142,32 @@ func TestAttributionModel(t *testing.T) {
 		query := &M.AttributionQuery{
 			From:                   timestamp,
 			To:                     timestamp + 3*day,
-			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
-			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+			AttributionKey:         M.AttributionKeyCampaign,
+			AttributionMethodology: M.AttributionMethodFirstTouch,
 			ConversionEvent:        M.QueryEventWithProperties{"event1", nil},
 			LookbackDays:           10,
 		}
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionEventCount(result, "111111"))
-		assert.Equal(t, float64(0), getConversionEventCount(result, "none"))
+		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
 	})
 
 	t.Run("AttributionQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &M.AttributionQuery{
 			From:                   timestamp + 3*day,
 			To:                     timestamp + 3*day,
-			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
-			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+			AttributionKey:         M.AttributionKeyCampaign,
+			AttributionMethodology: M.AttributionMethodFirstTouch,
 			ConversionEvent:        M.QueryEventWithProperties{"event1", nil},
 			LookbackDays:           10,
 		}
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionEventCount(result, "111111"))
-		assert.Equal(t, float64(0), getConversionEventCount(result, "none"))
+		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
 	})
 
 	// Events with +5 Days
@@ -183,18 +183,18 @@ func TestAttributionModel(t *testing.T) {
 		query := &M.AttributionQuery{
 			From:                   timestamp,
 			To:                     timestamp + 4*day,
-			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
-			AttributionMethodology: M.ATTRIBUTION_METHOD_LAST_TOUCH,
+			AttributionKey:         M.AttributionKeyCampaign,
+			AttributionMethodology: M.AttributionMethodLastTouch,
 			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           10,
 		}
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionEventCount(result, "111111"))
-		assert.Equal(t, int64(-1), getConversionEventCount(result, "222222"))
-		assert.Equal(t, int64(-1), getConversionEventCount(result, "333333"))
-		assert.Equal(t, float64(0), getConversionEventCount(result, "none"))
+		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
+		assert.Equal(t, int64(-1), getConversionUserCount(result, "222222"))
+		assert.Equal(t, int64(-1), getConversionUserCount(result, "333333"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
 	})
 
 	// linked event for user1
@@ -205,8 +205,8 @@ func TestAttributionModel(t *testing.T) {
 		query := &M.AttributionQuery{
 			From:                   timestamp + 4*day,
 			To:                     timestamp + 10*day,
-			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
-			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+			AttributionKey:         M.AttributionKeyCampaign,
+			AttributionMethodology: M.AttributionMethodFirstTouch,
 			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           20,
 		}
@@ -214,16 +214,16 @@ func TestAttributionModel(t *testing.T) {
 		//Should only have user2 with no 0 linked event count
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionEventCount(result, "111111"))
-		assert.Equal(t, float64(1), getConversionEventCount(result, "222222"))
-		assert.Equal(t, float64(1), getConversionEventCount(result, "333333"))
+		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
+		assert.Equal(t, float64(1), getConversionUserCount(result, "222222"))
+		assert.Equal(t, float64(1), getConversionUserCount(result, "333333"))
 		// no hit for campaigns 1234567 or none
-		assert.Equal(t, int64(-1), getConversionEventCount(result, "1234567"))
-		assert.Equal(t, float64(0), getConversionEventCount(result, "none"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "1234567"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
 	})
 }
 
-func getConversionEventCount(result *M.QueryResult, key interface{}) interface{} {
+func getConversionUserCount(result *M.QueryResult, key interface{}) interface{} {
 	for _, row := range result.Rows {
 		if row[0] == key {
 			return row[5]
@@ -232,11 +232,10 @@ func getConversionEventCount(result *M.QueryResult, key interface{}) interface{}
 	return int64(-1)
 }
 
-func getLinkedEventCount(result *M.QueryResult, key interface{}) interface{} {
+func getCompareConversionUserCount(result *M.QueryResult, key interface{}) interface{} {
 	for _, row := range result.Rows {
 		if row[0] == key {
-			linkedData := row[6].([]interface{})
-			return linkedData[0]
+			return row[7]
 		}
 	}
 	return int64(-1)
@@ -282,13 +281,13 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	query := &M.AttributionQuery{
 		From:                   timestamp + 3*day,
 		To:                     timestamp + 10*day,
-		AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
-		AttributionMethodology: M.ATTRIBUTION_METHOD_LAST_TOUCH,
+		AttributionKey:         M.AttributionKeyCampaign,
+		AttributionMethodology: M.AttributionMethodLastTouch,
 		ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
 		LookbackDays:           2,
 	}
 
-	//Should find withing lookback window
+	// Should find within look back window
 	_, err = M.ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 
@@ -300,7 +299,7 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	query.From = timestamp + 5*day
 
-	//event beyond lookback window
+	// event beyond lookback window
 	_, err = M.ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 }
@@ -332,8 +331,8 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	query := &M.AttributionQuery{
 		From:                   timestamp - 86400,
 		To:                     timestamp + 2*86400,
-		AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
-		AttributionMethodology: M.ATTRIBUTION_METHOD_LAST_TOUCH,
+		AttributionKey:         M.AttributionKeyCampaign,
+		AttributionMethodology: M.AttributionMethodLastTouch,
 		ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
 		LookbackDays:           0,
 	}
@@ -341,7 +340,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	//both user should be treated different
 	result, err := M.ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(2), getConversionEventCount(result, "$none"))
+	assert.Equal(t, float64(2), getConversionUserCount(result, "$none"))
 
 	customerUserId := U.RandomLowerAphaNumString(15)
 	_, errCode = M.UpdateUser(project.ID, user1.ID, &M.User{CustomerUserId: customerUserId}, timestamp+86400)
@@ -349,13 +348,13 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	_, errCode = M.UpdateUser(project.ID, user2.ID, &M.User{CustomerUserId: customerUserId}, timestamp+86400)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	//both user should be treated same
+	// both user should be treated same
 	result, err = M.ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(1), getConversionEventCount(result, "$none"))
+	assert.Equal(t, float64(1), getConversionUserCount(result, "$none"))
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
-		//continuation to previous users
+		// continuation to previous users
 		user1NewPropertiesId, status := M.UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
 		assert.Equal(t, http.StatusAccepted, status)
 		user2NewPropertiesId, status := M.UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
@@ -375,18 +374,18 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		status = createEventWithSession(project.ID, "event1", user2.ID, timestamp+6*86400, user2NewPropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
 
-		//should return 0 attribution data in 1 lookbackdays
+		// should return 0 attribution data in 1 lookbackdays
 		query := &M.AttributionQuery{
 			From:                   timestamp + 4*86400,
 			To:                     timestamp + 7*86400,
-			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
-			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+			AttributionKey:         M.AttributionKeyCampaign,
+			AttributionMethodology: M.AttributionMethodFirstTouch,
 			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           4,
 		}
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionEventCount(result, "12345"))
+		assert.Equal(t, float64(1), getConversionUserCount(result, "12345"))
 	})
 }
 
@@ -424,7 +423,7 @@ func TestAttributionMethodologies(t *testing.T) {
 
 		// Test for LINEAR_TOUCH
 		{"linear_touch",
-			args{M.ATTRIBUTION_METHOD_LINEAR,
+			args{M.AttributionMethodLinear,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -436,7 +435,7 @@ func TestAttributionMethodologies(t *testing.T) {
 
 		// Test for FIRST_TOUCH
 		{"first_touch",
-			args{M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+			args{M.AttributionMethodFirstTouch,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -448,7 +447,7 @@ func TestAttributionMethodologies(t *testing.T) {
 
 		// Test for LAST_TOUCH
 		{"last_touch",
-			args{M.ATTRIBUTION_METHOD_LAST_TOUCH,
+			args{M.AttributionMethodLastTouch,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -467,7 +466,7 @@ func TestAttributionMethodologies(t *testing.T) {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if tt.args.method == M.ATTRIBUTION_METHOD_LINEAR {
+			if tt.args.method == M.AttributionMethodLinear {
 				for key, _ := range tt.wantUsersAttribution {
 					if len(got[key]) != len(tt.wantUsersAttribution[key]) {
 						t.Errorf("applyAttribution() Failed LINEAR TOUCH got = %v, want %v", len(got[key]), len(tt.wantUsersAttribution[key]))
@@ -518,7 +517,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 	}{
 		// Test for LINEAR_TOUCH
 		{"linear_touch",
-			args{M.ATTRIBUTION_METHOD_LINEAR,
+			args{M.AttributionMethodLinear,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -530,7 +529,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 
 		// Test for FIRST_TOUCH
 		{"first_touch",
-			args{M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+			args{M.AttributionMethodFirstTouch,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -542,7 +541,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 
 		// Test for LAST_TOUCH
 		{"last_touch",
-			args{M.ATTRIBUTION_METHOD_LAST_TOUCH,
+			args{M.AttributionMethodLastTouch,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -554,7 +553,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 
 		// Test for FIRST_TOUCH_ND
 		{"first_touch_nd",
-			args{M.ATTRIBUTION_METHOD_FIRST_TOUCH_NON_DIRECT,
+			args{M.AttributionMethodFirstTouchNonDirect,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -566,7 +565,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 
 		// Test for LAST_TOUCH_ND
 		{"last_touch_nd",
-			args{M.ATTRIBUTION_METHOD_LAST_TOUCH_NON_DIRECT,
+			args{M.AttributionMethodLastTouchNonDirect,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -585,7 +584,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if tt.args.method == M.ATTRIBUTION_METHOD_LINEAR {
+			if tt.args.method == M.AttributionMethodLinear {
 				for key, _ := range tt.wantUsersAttribution {
 					if len(got[key]) != len(tt.wantUsersAttribution[key]) {
 						t.Errorf("applyAttribution() Failed LINEAR TOUCH got = %v, want %v", len(got[key]), len(tt.wantUsersAttribution[key]))
@@ -636,7 +635,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 	}{
 		// Test for LINEAR_TOUCH
 		{"linear_touch",
-			args{M.ATTRIBUTION_METHOD_LINEAR,
+			args{M.AttributionMethodLinear,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -648,7 +647,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 
 		// Test for FIRST_TOUCH
 		{"first_touch",
-			args{M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+			args{M.AttributionMethodFirstTouch,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -660,7 +659,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 
 		// Test for LAST_TOUCH
 		{"last_touch",
-			args{M.ATTRIBUTION_METHOD_LAST_TOUCH,
+			args{M.AttributionMethodLastTouch,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -672,7 +671,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 
 		// Test for FIRST_TOUCH_ND
 		{"first_touch_nd",
-			args{M.ATTRIBUTION_METHOD_FIRST_TOUCH_NON_DIRECT,
+			args{M.AttributionMethodFirstTouchNonDirect,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -684,7 +683,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 
 		// Test for LAST_TOUCH_ND
 		{"last_touch_nd",
-			args{M.ATTRIBUTION_METHOD_LAST_TOUCH_NON_DIRECT,
+			args{M.AttributionMethodLastTouchNonDirect,
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
@@ -703,7 +702,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if tt.args.method == M.ATTRIBUTION_METHOD_LINEAR {
+			if tt.args.method == M.AttributionMethodLinear {
 				for key, _ := range tt.wantUsersAttribution {
 					if len(got[key]) != len(tt.wantUsersAttribution[key]) {
 						t.Errorf("applyAttribution() Failed LINEAR TOUCH got = %v, want %v", len(got[key]), len(tt.wantUsersAttribution[key]))

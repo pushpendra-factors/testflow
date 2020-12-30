@@ -258,8 +258,8 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	//For Channel query
 	value := []byte(`{"id": 2061667885,"clicks":989, "campaign_id": 12,"impressions":10, "end_date": "20371230", "start_date": "20190711", "conversions":111, "cost":42.94}`)
 	document := M.AdwordsDocument{
-		ProjectId:         project.ID,
-		CustomerAccountId: customerAccountId,
+		ProjectID:         project.ID,
+		CustomerAccountID: customerAccountId,
 		Type:              5,
 		Timestamp:         20191209,
 		ID:                "2061667885",

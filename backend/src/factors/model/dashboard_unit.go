@@ -638,6 +638,9 @@ func cacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload, wait
 	} else if baseQuery.GetClass() == QueryClassChannel {
 		channelQuery := baseQuery.(*ChannelQueryUnit)
 		result, errCode = ExecuteChannelQuery(projectID, channelQuery.Query)
+	} else if baseQuery.GetClass() == QueryClassChannelV1 {
+		groupQuery := baseQuery.(*ChannelGroupQueryV1)
+		result, errCode = RunChannelGroupQuery(projectID, groupQuery.Queries, "")
 	} else if baseQuery.GetClass() == QueryClassEvents {
 		groupQuery := baseQuery.(*QueryGroup)
 		result, errCode = RunEventsGroupQuery(groupQuery.Queries, projectID)

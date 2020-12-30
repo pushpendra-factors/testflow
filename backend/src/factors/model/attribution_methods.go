@@ -15,30 +15,30 @@ func ApplyAttribution(method string, conversionEvent string, usersToBeAttributed
 
 	usersAttribution := make(map[string][]string)
 	linkedEventUserCampaign := make(map[string]map[string][]string)
-	lookbackPeriod := int64(lookbackDays) * SECS_IN_A_DAY
+	lookbackPeriod := int64(lookbackDays) * SecsInADay
 	for _, val := range usersToBeAttributed {
 		userId := val.CoalUserID
 		eventName := val.EventName
 		conversionTime := coalUserIdConversionTimestamp[val.CoalUserID]
 		attributionKeys := []string{PropertyValueNone}
 		switch method {
-		case ATTRIBUTION_METHOD_FIRST_TOUCH:
+		case AttributionMethodFirstTouch:
 			attributionKeys = getFirstTouchId(userInitialSession[userId], conversionTime, lookbackPeriod)
 			break
 
-		case ATTRIBUTION_METHOD_LAST_TOUCH:
+		case AttributionMethodLastTouch:
 			attributionKeys = getLastTouchId(userInitialSession[userId], conversionTime, lookbackPeriod)
 			break
 
-		case ATTRIBUTION_METHOD_FIRST_TOUCH_NON_DIRECT:
+		case AttributionMethodFirstTouchNonDirect:
 			attributionKeys = getFirstTouchNDId(userInitialSession[userId], conversionTime, lookbackPeriod)
 			break
 
-		case ATTRIBUTION_METHOD_LAST_TOUCH_NON_DIRECT:
+		case AttributionMethodLastTouchNonDirect:
 			attributionKeys = getLastTouchNDId(userInitialSession[userId], conversionTime, lookbackPeriod)
 			break
 
-		case ATTRIBUTION_METHOD_LINEAR:
+		case AttributionMethodLinear:
 			attributionKeys = getLinearTouch(userInitialSession[userId], conversionTime, lookbackPeriod)
 			break
 

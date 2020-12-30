@@ -206,10 +206,12 @@ func compressPatterns(patterns []*P.Pattern, maxBytesSize int64) ([]*P.Pattern, 
 
 	var patternsTrim1Bytes int64 = 0
 	for _, pattern := range patterns {
-		(*pattern.PerUserEventCategoricalProperties).TrimByFmapSize(trimFraction)
-		(*pattern.PerUserUserCategoricalProperties).TrimByFmapSize(trimFraction)
-		(*pattern.PerOccurrenceEventCategoricalProperties).TrimByFmapSize(trimFraction)
-		(*pattern.PerOccurrenceUserCategoricalProperties).TrimByFmapSize(trimFraction)
+		if pattern.PerOccurrenceEventCategoricalProperties != nil && pattern.PerUserEventCategoricalProperties != nil {
+			(*pattern.PerUserEventCategoricalProperties).TrimByFmapSize(trimFraction)
+			(*pattern.PerUserUserCategoricalProperties).TrimByFmapSize(trimFraction)
+			(*pattern.PerOccurrenceEventCategoricalProperties).TrimByFmapSize(trimFraction)
+			(*pattern.PerOccurrenceUserCategoricalProperties).TrimByFmapSize(trimFraction)
+		}
 		b, err := json.Marshal(pattern)
 		if err != nil {
 			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
@@ -233,10 +235,12 @@ func compressPatterns(patterns []*P.Pattern, maxBytesSize int64) ([]*P.Pattern, 
 	trimFraction = float64(maxBytesSize) * TRIM_MULTIPLIER / float64(patternsTrim1Bytes)
 	var patternsTrim2Bytes int64 = 0.0
 	for _, pattern := range patterns {
-		(*pattern.PerUserEventNumericProperties).TrimByBinSize(trimFraction)
-		(*pattern.PerUserUserNumericProperties).TrimByBinSize(trimFraction)
-		(*pattern.PerOccurrenceEventNumericProperties).TrimByBinSize(trimFraction)
-		(*pattern.PerOccurrenceUserNumericProperties).TrimByBinSize(trimFraction)
+		if pattern.PerOccurrenceEventNumericProperties != nil && pattern.PerUserEventNumericProperties != nil {
+			(*pattern.PerUserEventNumericProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerUserUserNumericProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerOccurrenceEventNumericProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerOccurrenceUserNumericProperties).TrimByBinSize(trimFraction)
+		}
 		b, err := json.Marshal(pattern)
 		if err != nil {
 			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
@@ -260,10 +264,12 @@ func compressPatterns(patterns []*P.Pattern, maxBytesSize int64) ([]*P.Pattern, 
 	trimFraction = float64(maxBytesSize) * TRIM_MULTIPLIER / float64(patternsTrim2Bytes)
 	var patternsTrim3Bytes int64 = 0
 	for _, pattern := range patterns {
-		(*pattern.PerUserEventCategoricalProperties).TrimByBinSize(trimFraction)
-		(*pattern.PerUserUserCategoricalProperties).TrimByBinSize(trimFraction)
-		(*pattern.PerOccurrenceEventCategoricalProperties).TrimByBinSize(trimFraction)
-		(*pattern.PerOccurrenceUserCategoricalProperties).TrimByBinSize(trimFraction)
+		if pattern.PerOccurrenceEventCategoricalProperties != nil && pattern.PerUserUserCategoricalProperties != nil {
+			(*pattern.PerUserEventCategoricalProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerUserUserCategoricalProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerOccurrenceEventCategoricalProperties).TrimByBinSize(trimFraction)
+			(*pattern.PerOccurrenceUserCategoricalProperties).TrimByBinSize(trimFraction)
+		}
 		b, err := json.Marshal(pattern)
 		if err != nil {
 			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
@@ -889,7 +895,10 @@ func rewriteEventsFile(tmpPath string, reader io.Reader, userPropMap, eventPropM
 
 		if strings.Compare(eventDetails.EventName, "$session") == 0 && eventDetails.EventProperties["$campaign"] != nil {
 			var campEvent P.CounterEventFormat
-			campEventId := eventDetails.EventProperties["$campaign"].(string)
+			campEventId, ok := eventDetails.EventProperties["$campaign"].(string)
+			if ok == false {
+				mineLog.Info("Error in converting string : ", eventDetails.EventProperties["$campaign"])
+			}
 			cmpEvent := eventDetails.EventName + "[campaign:" + campEventId + "]"
 			campEvent.EventName = cmpEvent
 			campEventsMap[cmpEvent] = true

@@ -89,6 +89,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/factor", FactorHandler)
 	authRouteGroup.POST("/:project_id/query", QueryHandler)
 	authRouteGroup.POST("/:project_id/channels/query", ChannelQueryHandler)
+
 	authRouteGroup.GET("/:project_id/channels/filter_values", GetChannelFilterValuesHandler)
 	authRouteGroup.GET("/:project_id/reports", GetReportsHandler)
 	authRouteGroup.GET("/:project_id/reports/:report_id", GetReportHandler)
@@ -100,6 +101,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", CreateDashboardUnitsForMultipleQueriesHandler)
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids", DeleteMultiDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", DeleteDashboardHandler)
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/channels/config", V1.GetChannelConfigHandler)
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/channels/filter_values", V1.GetChannelFilterValuesHandler)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/channels/query", V1.ExecuteChannelQueryHandler)
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", CreateSmartEventFilterHandler)
 	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event", UpdateSmartEventFilterHandler)
