@@ -153,6 +153,7 @@ const (
 	QueryClassInsights    = "insights"
 	QueryClassFunnel      = "funnel"
 	QueryClassChannel     = "channel"
+	QueryClassChannelV1   = "channel_v1"
 	QueryClassAttribution = "attribution"
 	QueryClassWeb         = "web"
 
@@ -1106,6 +1107,7 @@ func isValidFunnelQuery(query *Query) bool {
 	return len(query.EventsWithProperties) <= 4
 }
 
+// NOTE: TODO to differnt to queryGroup
 func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery, error) {
 	var baseQuery BaseQuery
 	var err error
@@ -1120,6 +1122,10 @@ func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery
 		baseQuery = &query
 	case QueryClassChannel:
 		var query ChannelQueryUnit
+		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+		baseQuery = &query
+	case QueryClassChannelV1:
+		var query ChannelGroupQueryV1
 		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
 		baseQuery = &query
 	case QueryClassEvents:

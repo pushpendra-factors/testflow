@@ -888,6 +888,98 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 	}
 }
 
+func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	// _, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "$session"})
+	// assert.Equal(t, http.StatusCreated, errCode)
+
+	customerAccountID := U.RandomLowerAphaNumString(5)
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountID,
+	})
+
+	dashboardName := U.RandomString(5)
+	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: dashboardName, Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, dashboardName, dashboard.Name)
+
+	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
+
+	dashboardQueriesStr := []string{
+		`{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 20200401, "to": 20200402 }], "cl": "channel_v1" }`,
+	}
+	queryClass := M.QueryClassChannelV1
+	for _, queryString := range dashboardQueriesStr {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := M.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{
+			DashboardId:  dashboard.ID,
+			Title:        U.RandomString(5),
+			Query:        queryJSON,
+			Presentation: M.PresentationCard,
+		}, M.DashboardUnitForNoQueryID)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit)
+
+		dashboardUnitQueriesMap[dashboardUnit.ID] = make(map[string]interface{})
+		dashboardUnitQueriesMap[dashboardUnit.ID]["class"] = queryClass
+		dashboardUnitQueriesMap[dashboardUnit.ID]["queries"] = baseQuery
+	}
+
+	updatedUnitsCount := M.CacheDashboardUnitsForProjectID(project.ID, 1)
+	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
+
+	for key, rangeFunction := range U.QueryDateRangePresets {
+		if key == "TODAY" {
+			fmt.Println("RUNNING FOR TODAY")
+		}
+		from, to := rangeFunction()
+		for unitID, queryMap := range dashboardUnitQueriesMap {
+			queryClass := queryMap["class"].(string)
+			queries := queryMap["queries"].(M.BaseQuery)
+			queries.SetQueryDateRange(from, to)
+			// Refresh is sent as false. Must return all presets range from cache.
+			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false)
+			assert.NotNil(t, w)
+			assert.Equal(t, http.StatusOK, w.Code)
+
+			var result map[string]interface{}
+			json.Unmarshal([]byte(w.Body.String()), &result)
+			// Cache must be true in response.
+			assert.True(t, result["cache"].(bool))
+
+			// Refresh is sent as true. Still must return from cache for all presets except for todays.
+			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, true)
+			assert.NotNil(t, w)
+			assert.Equal(t, http.StatusOK, w.Code)
+			result = nil
+			json.Unmarshal([]byte(w.Body.String()), &result)
+
+			if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+				// Today's preset. Must not be from cache.
+				assert.False(t, result["cache"].(bool))
+
+				// If queried again with refresh as false, should return from cache.
+				w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false)
+				result = nil
+				json.Unmarshal([]byte(w.Body.String()), &result)
+				assert.True(t, result["cache"].(bool))
+			} else {
+				// Cache must be true in response.
+				assert.True(t, result["cache"].(bool))
+			}
+		}
+	}
+}
+
 func sendAttributionQueryReq(r *gin.Engine, projectID uint64, agent *M.Agent, dashboardID, unitID uint64, query M.AttributionQuery, refresh bool) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -935,6 +1027,10 @@ func sendAnalyticsQueryReq(r *gin.Engine, queryClass string, projectID uint64, a
 		queryURL = "channels/query"
 		query := baseQuery.(*M.ChannelQueryUnit)
 		queryPayload = query.Query
+	} else if queryClass == M.QueryClassChannelV1 {
+		queryURL = "v1/channels/query"
+		query := baseQuery.(*M.ChannelGroupQueryV1)
+		queryPayload = query
 	} else if queryClass == M.QueryClassEvents {
 		queryURL = "v1/query"
 		query := baseQuery.(*M.QueryGroup)

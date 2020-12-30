@@ -97,8 +97,8 @@ func TestAttributionModel(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 	value := []byte(`{"cost": "0","clicks": "0","campaign_id":"123456","impressions": "0", "campaign_name": "test"}`)
 	document := &M.AdwordsDocument{
-		ProjectId:         project.ID,
-		CustomerAccountId: customerAccountId,
+		ProjectID:         project.ID,
+		CustomerAccountID: customerAccountId,
 		TypeAlias:         "campaign_performance_report",
 		Timestamp:         20200510,
 		Value:             &postgres.Jsonb{value},
