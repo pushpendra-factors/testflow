@@ -235,6 +235,13 @@ upload-cleanup-eventuser-cache: export IMAGE_NAME=cleanup-eventuser-cache-job
 upload-cleanup-eventuser-cache: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/cleanup-eventuser-cache-job:$(TAG)
 
+pack-adwords-migration-job: 
+	docker build -t us.gcr.io/factors-$(ENV)/adwords-migration-job:$(TAG) -f Dockerfile.adwords_migration_job .
+
+upload-adwords-migration-job: export IMAGE_NAME=adwords-migration-job
+upload-adwords-migration-job: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/adwords-migration-job:$(TAG)
+
 notify-deployment:
 	$(GOPATH)/src/factors/scripts/notify_deployment.sh
 
