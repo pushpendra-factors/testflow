@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"factors/handler/helpers"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
@@ -67,10 +66,6 @@ func CreateFactorsTrackedUserPropertyHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"projectId": projectID,
 	})
-	if !helpers.IsAdmin(projectID, loggedInAgentUUID) {
-		c.AbortWithStatus(http.StatusForbidden)
-		return
-	}
 	params, err := getcreateFactorsTrackedUserPropertyParams(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -124,7 +119,6 @@ func getRemoveFactorsTrackedUserPropertyParams(c *gin.Context) (*RemoveFactorsTr
 // @Success 200 {string} json "{"id": uint64, "status": string}"
 // @Router /{project_id}/v1/factors/tracked_user_property/remove [DELETE]
 func RemoveFactorsTrackedUserPropertyHandler(c *gin.Context) {
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -133,10 +127,6 @@ func RemoveFactorsTrackedUserPropertyHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"projectId": projectID,
 	})
-	if !helpers.IsAdmin(projectID, loggedInAgentUUID) {
-		c.AbortWithStatus(http.StatusForbidden)
-		return
-	}
 	params, err := getRemoveFactorsTrackedUserPropertyParams(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)

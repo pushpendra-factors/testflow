@@ -1199,6 +1199,27 @@ func BuildNewItreeV1(reqId,
 	endTime := time.Now().Unix()
 	log.WithFields(log.Fields{
 		"time_taken": endTime - startTime}).Error("GetAllPatterns Time taken.")
+	log.WithFields(log.Fields{
+		"total_patterns": len(candidatePatterns)}).Info("explain_debug")
+	var len1PatternCount, len2PatternCount, len3PatternCount int
+	for _, pattern := range candidatePatterns {
+		if len(pattern.EventNames) == 1 {
+			len1PatternCount++
+		}
+		if len(pattern.EventNames) == 2 {
+			len2PatternCount++
+		}
+		if len(pattern.EventNames) == 3 {
+			len3PatternCount++
+		}
+	}
+	log.WithFields(log.Fields{
+		"len1_patterns": len1PatternCount}).Info("explain_debug")
+	log.WithFields(log.Fields{
+		"len2_patterns": len2PatternCount}).Info("explain_debug")
+	log.WithFields(log.Fields{
+		"len3_patterns": len3PatternCount}).Info("explain_debug")
+
 	if err != nil {
 		return nil, err
 	}
@@ -1322,7 +1343,6 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 		// No properties.
 		return []*ItreeNode{}, nil
 	}
-
 	var eventInfo *P.PropertiesInfo
 	var eventName string
 	if pLen == 1 {
@@ -1382,12 +1402,12 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	pLen = len(parentPattern.EventNames)
 	MAX_NUM_PROPERTIES_EVALUATED := 100
 	if eventInfo != nil && pLen > 1 {
-		childNodes = append(childNodes, it.buildNumericalPropertyChildNodes(reqId,
+		childNodes = append(childNodes, it.buildNumericalPropertyChildNodesV1(reqId,
 			eventInfo.NumericPropertyKeys, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)...)
 	}
 	if userInfo != nil && (pLen > 1 || countType == P.COUNT_TYPE_PER_USER) {
-		childNodes = append(childNodes, it.buildNumericalPropertyChildNodes(reqId,
+		childNodes = append(childNodes, it.buildNumericalPropertyChildNodesV1(reqId,
 			userInfo.NumericPropertyKeys, NODE_TYPE_USER_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)...)
 	}
@@ -1552,6 +1572,10 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 			}*/
 		}
 	}
+	log.WithFields(log.Fields{
+		"properties_categorical_count": len(categoricalPropertyKeyValues)}).Info("explain_debug")
+	log.WithFields(log.Fields{
+		"properties_categorical_filtered_count": len(propertyChildNodes)}).Info("explain_debug")
 	return propertyChildNodes
 }
 
@@ -1599,11 +1623,13 @@ func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 		//	"Parent not frequent enough")
 		return childNodes, nil
 	}
+	subPattersnCount := 0
+	filteredPatternsCount := 0
 	for _, p := range candidatePattens {
 		if !isChildSequence(parentNode.Pattern.EventNames, p.EventNames) || P.IsEncodedEvent(p.EventNames[len(p.EventNames)-2]) {
 			continue
 		}
-
+		subPattersnCount++
 		if cNode, err := it.buildChildNodeV1(reqId,
 			p, nil, NODE_TYPE_SEQUENCE,
 			parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp, countType); err != nil {
@@ -1613,9 +1639,14 @@ func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 			if cNode == nil {
 				continue
 			}
+			filteredPatternsCount++
 			childNodes = append(childNodes, cNode)
 		}
 	}
+	log.WithFields(log.Fields{
+		"matching_sequence_child_nodes": subPattersnCount}).Info("explain_debug")
+	log.WithFields(log.Fields{
+		"filtered_sequence_child_nodes": filteredPatternsCount}).Info("explain_debug")
 	// Sort in decreasing order of infoDrop.
 	sort.SliceStable(childNodes,
 		func(i, j int) bool {
@@ -1683,11 +1714,13 @@ func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 		//	"Parent not frequent enough")
 		return childNodes, nil
 	}
+	subPattersnCount := 0
+	filteredPatternsCount := 0
 	for _, p := range candidatePattens {
 		if !isChildSequence(parentNode.Pattern.EventNames, p.EventNames) || !P.IsEncodedEvent(p.EventNames[len(p.EventNames)-2]) {
 			continue
 		}
-
+		subPattersnCount++
 		if cNode, err := it.buildChildNodeV1(reqId,
 			p, nil, NODE_TYPE_CAMPAIGN,
 			parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp, countType); err != nil {
@@ -1697,9 +1730,14 @@ func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 			if cNode == nil {
 				continue
 			}
+			filteredPatternsCount++
 			childNodes = append(childNodes, cNode)
 		}
 	}
+	log.WithFields(log.Fields{
+		"matching_campaign_child_nodes": subPattersnCount}).Info("explain_debug")
+	log.WithFields(log.Fields{
+		"filtered_campaign_child_nodes": filteredPatternsCount}).Info("explain_debug")
 	// Sort in decreasing order of infoDrop.
 	sort.SliceStable(childNodes,
 		func(i, j int) bool {
@@ -1943,4 +1981,135 @@ func (it *Itree) buildChildNodeV1(reqId string,
 	//	"fcr": fcr, "fcp": fcp, "fpr": fpr, "fpp": fpp, "OverallInfo": overallInfo, "infoDrop": infoDrop}).Debug(
 	//	"Built candidate child node.")
 	return &node, nil
+}
+
+func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
+	numericPropertyKeys map[string]bool, nodeType int, maxNumProperties int,
+	parentNode *ItreeNode, patternWrapper PatternServiceWrapperInterface,
+	allActiveUsersPattern *P.Pattern, pLen int, fpr float64, fpp float64,
+	countType string) []*ItreeNode {
+
+	parentPattern := parentNode.Pattern
+	propertyChildNodes := []*ItreeNode{}
+	numP := 0
+	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
+	for propertyName, _ := range numericPropertyKeys {
+		if numP > maxNumProperties {
+			break
+		}
+		if _, found := (*seenProperties)[propertyName]; found {
+			continue
+		}
+		if nodeType == NODE_TYPE_EVENT_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
+			continue
+		}
+		if nodeType == NODE_TYPE_USER_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
+			continue
+		}
+		numP++
+		binRanges := [][2]float64{}
+		isPredefined := false
+		if nodeType == NODE_TYPE_EVENT_PROPERTY {
+			if countType == P.COUNT_TYPE_PER_USER {
+				binRanges, isPredefined = parentPattern.GetPerUserEventPropertyRanges(pLen-2, propertyName)
+			} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
+				binRanges, isPredefined = parentPattern.GetPerOccurrenceEventPropertyRanges(pLen-2, propertyName)
+			}
+		} else if nodeType == NODE_TYPE_USER_PROPERTY {
+			if countType == P.COUNT_TYPE_PER_USER {
+				binRanges, isPredefined = parentPattern.GetPerUserUserPropertyRanges(pLen-2, propertyName)
+			} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
+				binRanges, isPredefined = parentPattern.GetPerOccurrenceUserPropertyRanges(pLen-2, propertyName)
+			}
+		}
+
+		for _, pRange := range binRanges {
+			minValue := pRange[0]
+			maxValue := pRange[1]
+			// Try three combinations of constraints. v < min, min < v < max, v > max
+			constraint1ToAdd := P.EventConstraints{
+				EPNumericConstraints:     []P.NumericConstraint{},
+				EPCategoricalConstraints: []P.CategoricalConstraint{},
+				UPNumericConstraints:     []P.NumericConstraint{},
+				UPCategoricalConstraints: []P.CategoricalConstraint{},
+			}
+			if !isPredefined {
+				// Show only interval constraint for predefined bin ranges.
+				lesserThanConstraint := []P.NumericConstraint{
+					P.NumericConstraint{
+						PropertyName: propertyName,
+						LowerBound:   -math.MaxFloat64,
+						UpperBound:   minValue,
+					},
+				}
+				if nodeType == NODE_TYPE_EVENT_PROPERTY {
+					constraint1ToAdd.EPNumericConstraints = lesserThanConstraint
+				} else if nodeType == NODE_TYPE_USER_PROPERTY {
+					constraint1ToAdd.UPNumericConstraints = lesserThanConstraint
+				}
+			}
+
+			constraint2ToAdd := P.EventConstraints{
+				EPNumericConstraints:     []P.NumericConstraint{},
+				EPCategoricalConstraints: []P.CategoricalConstraint{},
+				UPNumericConstraints:     []P.NumericConstraint{},
+				UPCategoricalConstraints: []P.CategoricalConstraint{},
+			}
+			intervalConstraint := []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: propertyName,
+					LowerBound:   minValue,
+					UpperBound:   maxValue,
+				},
+			}
+			if nodeType == NODE_TYPE_EVENT_PROPERTY {
+				constraint2ToAdd.EPNumericConstraints = intervalConstraint
+			} else if nodeType == NODE_TYPE_USER_PROPERTY {
+				constraint2ToAdd.UPNumericConstraints = intervalConstraint
+			}
+
+			constraint3ToAdd := P.EventConstraints{
+				EPNumericConstraints:     []P.NumericConstraint{},
+				EPCategoricalConstraints: []P.CategoricalConstraint{},
+				UPNumericConstraints:     []P.NumericConstraint{},
+				UPCategoricalConstraints: []P.CategoricalConstraint{},
+			}
+			if !isPredefined {
+				greaterThanConstraint := []P.NumericConstraint{
+					P.NumericConstraint{
+						PropertyName: propertyName,
+						LowerBound:   maxValue,
+						UpperBound:   math.MaxFloat64,
+					},
+				}
+				if nodeType == NODE_TYPE_EVENT_PROPERTY {
+					constraint3ToAdd.EPNumericConstraints = greaterThanConstraint
+				} else if nodeType == NODE_TYPE_USER_PROPERTY {
+					constraint3ToAdd.UPNumericConstraints = greaterThanConstraint
+				}
+			}
+
+			for _, constraintToAdd := range []P.EventConstraints{
+				constraint1ToAdd, constraint2ToAdd, constraint3ToAdd} {
+				if cNode, err := it.buildChildNodeV1(reqId,
+					parentPattern, &constraintToAdd, nodeType,
+					parentNode.Index, patternWrapper, allActiveUsersPattern,
+					fpr, fpp, countType); err != nil {
+					log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
+					continue
+				} else {
+					if cNode == nil {
+						continue
+					}
+					propertyChildNodes = append(propertyChildNodes, cNode)
+				}
+			}
+		}
+	}
+	log.WithFields(log.Fields{
+		"properties_numerical_count": len(numericPropertyKeys)}).Info("explain_debug")
+	log.WithFields(log.Fields{
+		"properties_numerical_filtered_count": len(propertyChildNodes)}).Info("explain_debug")
+	return propertyChildNodes
+
 }

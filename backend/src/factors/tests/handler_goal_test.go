@@ -194,7 +194,6 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	H.InitAppRoutes(r)
 	projectId, agent := createProjectAgentEvents(r)
 
-	// Non admins
 	request := V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal1"
 	request.Rule = M.FactorsGoalRule{}
@@ -205,9 +204,6 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	var globalFilters []M.KeyValueTuple
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
 	request.Rule.Rule.GlobalFilters = globalFilters
-	w := sendCreateFactorsGoalRequest(r, request, agent, projectId)
-	assert.Equal(t, http.StatusForbidden, w.Code)
-	_ = M.EditProjectAgentMapping(projectId, agent.UUID, M.ADMIN)
 
 	// Happy path
 	request = V1.CreateFactorsGoalParams{}
@@ -220,7 +216,7 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
 	request.Rule.Rule.GlobalFilters = globalFilters
-	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
+	w := sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusCreated, w.Code)
 	var obj successObject
 	jsonResponse, _ := ioutil.ReadAll(w.Body)

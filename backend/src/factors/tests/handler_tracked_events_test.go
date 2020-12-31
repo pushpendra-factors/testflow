@@ -148,15 +148,11 @@ func TestCreateFactorsTrackedEvent(t *testing.T) {
 	// Non Admin
 	request := V1.CreateFactorsTrackedEventParams{}
 	request.EventName = "event1"
-	w := sendCreateFactorsTrackedEvent(r, request, agent, projectId)
-	assert.Equal(t, http.StatusForbidden, w.Code)
-
-	_ = M.EditProjectAgentMapping(projectId, agent.UUID, M.ADMIN)
 
 	// Happy path
 	request = V1.CreateFactorsTrackedEventParams{}
 	request.EventName = "event1"
-	w = sendCreateFactorsTrackedEvent(r, request, agent, projectId)
+	w := sendCreateFactorsTrackedEvent(r, request, agent, projectId)
 	assert.Equal(t, http.StatusCreated, w.Code)
 	var obj successObject
 	jsonResponse, _ := ioutil.ReadAll(w.Body)

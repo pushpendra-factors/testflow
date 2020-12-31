@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"factors/handler/helpers"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
@@ -65,10 +64,6 @@ func CreateFactorsGoalsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	if !helpers.IsAdmin(projectID, loggedInAgentUUID) {
-		c.AbortWithStatus(http.StatusForbidden)
-		return
-	}
 	params, err := GetcreateFactorsGoalParams(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -115,14 +110,9 @@ func getUpdateFactorsGoalParams(c *gin.Context) (*UpdateFactorsGoalParams, error
 // @Success 200 {string} json "{"id": uint64, "status": string}"
 // @Router /{project_id}/v1/factors/goals/update [PUT]
 func UpdateFactorsGoalsHandler(c *gin.Context) {
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-	if !helpers.IsAdmin(projectID, loggedInAgentUUID) {
-		c.AbortWithStatus(http.StatusForbidden)
 		return
 	}
 	logCtx := log.WithFields(log.Fields{
@@ -177,7 +167,6 @@ func getRemoveFactorsGoalParams(c *gin.Context) (*RemoveFactorsGoalParams, error
 // @Success 200 {string} json "{"id": uint64, "status": string}"
 // @Router /{project_id}/v1/factors/goals/remove [DELETE]
 func RemoveFactorsGoalsHandler(c *gin.Context) {
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -186,10 +175,6 @@ func RemoveFactorsGoalsHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"projectId": projectID,
 	})
-	if !helpers.IsAdmin(projectID, loggedInAgentUUID) {
-		c.AbortWithStatus(http.StatusForbidden)
-		return
-	}
 	params, err := getRemoveFactorsGoalParams(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
