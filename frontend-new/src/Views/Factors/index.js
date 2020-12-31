@@ -8,23 +8,30 @@ import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
 import ConfigureDP from './ConfigureDP';
 import CreateGoalDrawer from './CreateGoalDrawer';
-import { fetchFactorsGoals, fetchFactorsModels } from 'Reducers/factors';
+import { fetchFactorsGoals, fetchFactorsModels, fetchGoalInsights, saveGoalInsightRules } from 'Reducers/factors';
 import { connect } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
 import { fetchEventNames } from 'Reducers/coreQuery/middleware'; 
+import _, { isEmpty } from 'lodash'; 
+import { useHistory } from 'react-router-dom';
 
 const columns = [
   {
     title: 'Saved Goals',
     dataIndex: 'title',
-    key: 'title'
+    key: 'title',
+    render: (text) => <Text type={'title'} level={6} extraClass={'cursor-pointer m-0'} >{text}</Text>
   },
   {
     title: 'Created By',
     dataIndex: 'author',
     key: 'author',
     render: (text) => <div className="flex items-center">
-        <Avatar src="assets/avatar/avatar.png" className={'mr-2'} />&nbsp; {text} </div>
+      {text === "System Generated" ? <Text type={'title'} level={7} color={'grey'} extraClass={'cursor-pointer m-0'} >{`System Generated`}</Text> : <>
+        <Avatar src="assets/avatar/avatar.png" className={'mr-2'} /><Text type={'title'} level={6} extraClass={'cursor-pointer m-0 ml-2'} >{text}</Text>
+        </>
+      }
+        </div>
   }
 ];
 
@@ -69,21 +76,21 @@ const Factors = ({
   , fetchProjectAgents
   ,fetchEventNames
   ,fetchFactorsModels
+  , fetchGoalInsights
+  ,factors_models 
+  ,saveGoalInsightRules
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [showConfigureDPModal, setConfigureDPModal] = useState(false);
   const [showGoalDrawer, setGoalDrawer] = useState(false);
   const [dataSource, setdataSource] = useState(null);
+  const history = useHistory();
+ 
 
-  useEffect(() => { 
-    if (!goals || !agents) {
-      const getData = async () => {
-        await fetchProjectAgents(activeProject.id);
-        await fetchFactorsGoals(activeProject.id); 
-      };
-      getData();  
-    }
+  useEffect(() => {  
     const getData1 = async () => { 
+      await fetchProjectAgents(activeProject.id);
+      await fetchFactorsGoals(activeProject.id); 
       await fetchEventNames(activeProject.id);
       await fetchFactorsModels(activeProject.id); 
     };
@@ -101,15 +108,36 @@ const Factors = ({
         formattedArray.push({
           key: index,
           title: goal.name,
-          author: createdUser
+          author: createdUser ? createdUser : 'System Generated',
+          rule: goal.rule,
+          project_id: goal.project_id
         });
         setdataSource(formattedArray);
       });
       SetLoadingTable(false);
     }
-  }, [activeProject, goals, agents]);
+  }, [activeProject]);
+
   const handleCancel = () => {
     setConfigureDPModal(false);
+  };
+
+  const getInsights = (project_id, rule, name) => {
+
+    SetLoadingTable(true);
+    const isJourney = !_.isEmpty(rule?.rule?.st_en); 
+    const ruleData = {
+      name: name,
+      rule: rule
+    }
+    const getData = async () => {
+      await fetchGoalInsights(project_id, isJourney, ruleData, factors_models[0].mid); 
+    };
+    getData().then(()=>{  
+      saveGoalInsightRules(ruleData);  
+      history.push('/explain/insights');   
+      SetLoadingTable(false)
+    });
   };
   return (
     <>
@@ -135,7 +163,15 @@ const Factors = ({
                     </Row>
                     <Row gutter={[24, 24]} justify="center">
                         <Col span={20}>
-                        <Table loading={loadingTable} className="ant-table--custom mt-8" columns={columns} dataSource={dataSource} pagination={false} />
+                        <Table loading={loadingTable} className="ant-table--custom mt-8" columns={columns} dataSource={dataSource} pagination={false} 
+                          onRow={(record, rowIndex) => {
+                            return {
+                              onClick: event => {
+                                getInsights(record.project_id,record.rule, record.title) 
+                              }, // click row 
+                            };
+                        }}
+                        />
                         </Col>
                     </Row>
                 </Col>
@@ -146,7 +182,7 @@ const Factors = ({
                                 <Text type={'title'} level={7} extraClass={'m-0'} >Explain periodically tracks a pre-configured set of data points for faster and efficient retrieval of insights. </Text>
                                 <Button className={'m-0 mt-4'} size={'large'} onClick={() => setConfigureDPModal(true)}>Configure Data Points</Button>
                             </Col>
-                            <Col span={24}>
+                            {/* <Col span={24}>
                                 <Text type={'title'} level={7} weight={'bold'} extraClass={'mt-8'} >Suggestions based on your activity</Text>
                                 {suggestionList.map((item, index) => {
                                   return (
@@ -156,7 +192,7 @@ const Factors = ({
                                     </div>
                                   );
                                 })}
-                            </Col>
+                            </Col> */}
                         </Row>
                     </Col>
                 </Row>
@@ -179,7 +215,8 @@ const mapStateToProps = (state) => {
   return {
     activeProject: state.global.active_project,
     goals: state.factors.goals,
-    agents: state.agent.agents
+    agents: state.agent.agents,
+    factors_models: state.factors.factors_models,
   };
 };
-export default connect(mapStateToProps, { fetchFactorsGoals, fetchProjectAgents, fetchEventNames, fetchFactorsModels })(Factors);
+export default connect(mapStateToProps, { fetchFactorsGoals, fetchProjectAgents, saveGoalInsightRules, fetchGoalInsights, fetchEventNames, fetchFactorsModels })(Factors);

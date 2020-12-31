@@ -9,6 +9,7 @@ import InsightHighlightItem from './InsightHighlightItem';
 import SubInsightItem from './SubInsightItem';
 import InsightItem from './InsightItem';
 import HeaderContents from './HeaderContents';
+import SubHeaderContents from './SubHeaderContents';
 
 const { TabPane } = Tabs;
 
@@ -33,6 +34,11 @@ const FactorsInsights = ({ activeProject, goal_insights }) => {
             <HeaderContents />
 
            <div className={'fa-container mt-24'}>
+                <Row gutter={[24, 24]}>
+                    <Col span={24}>
+                        <SubHeaderContents />
+                     </Col>
+                </Row>
                 <Row gutter={[24, 24]}>
                     <Col span={24}>
                         <InsightHighlightItem data={goal_insights} />

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Drawer, Button, Row, Col, Select
+  Drawer, Button, Row, Col, Select, message
 } from 'antd';
 import { SVG, Text } from 'factorsComponents'; 
 import GroupSelect from '../../components/QueryComposer/GroupSelect';
@@ -8,7 +8,7 @@ import { fetchEventNames } from 'Reducers/coreQuery/middleware';
 import { fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules } from 'Reducers/factors';
 import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom';
-import _ from 'lodash';
+import _, { isEmpty } from 'lodash';
 import moment from 'moment';
  
 
@@ -29,6 +29,8 @@ const title = (props) => {
 const CreateGoalDrawer = (props) => {
   const history = useHistory();
   const { Option } = Select;
+
+  const [TrackedEventNames, SetTrackedEventNames] = useState([]);
 
   const [EventNames, SetEventNames] = useState([]);
   const [eventCount, SetEventCount] = useState(1);
@@ -69,13 +71,20 @@ const CreateGoalDrawer = (props) => {
         //   };
         //   getData();    
         // }
-    if(props.GlobalEventNames){ 
-      SetEventNames(props.GlobalEventNames); 
+    // if(props.GlobalEventNames){ 
+    //   SetEventNames(props.GlobalEventNames);
+    
+    // }  
+    if(props.tracked_events){
+      const fromatterTrackedEvents = props.tracked_events.map((item)=>{
+        return [item.name]
+      });
+      SetTrackedEventNames(fromatterTrackedEvents);
     }  
-  },[props.activeProject, props.GlobalEventNames, props.factors_models])
+  },[props.activeProject, props.tracked_events, props.factors_models, props.goal_insights])
 
 const factorsDataFormat = {
-  name: "123",
+  name: "",
   rule: {
       st_en: "",
       en_en: "",
@@ -109,12 +118,17 @@ const getInsights = (projectID, isJourney=false) =>{
     await props.fetchGoalInsights(projectID, isJourney, factorsData, calcModelId[0].mid); 
   };
   getData().then(()=>{
-    props.saveGoalInsightRules(factorsData);
+    props.saveGoalInsightRules(factorsData); 
     setInsightBtnLoading(false);
-    history.push('/explain/insights'); 
+    history.push('/explain/insights');  
+    // if(_.isEmpty(props.goal_insights.insights)){
+    //   message.error("Oops! no data");
+    // }
+    // else{
+    //   history.push('/explain/insights');  
+    // }
   });
-}
-
+} 
   return (
         <Drawer
         title={title(props)}
@@ -161,11 +175,11 @@ const getInsights = (projectID, isJourney=false) =>{
                           {!showDropDown && !event1 && <Button onClick={()=>setShowDropDown(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>{eventCount === 2 ? 'Add First event': 'Add an event'}</Button> }
                           { showDropDown && <>
                             <GroupSelect 
-                              groupedProperties={EventNames ? [
+                              groupedProperties={TrackedEventNames ? [
                                 {             
                                 label: 'MOST RECENT',
                                 icon: 'fav',
-                                values: EventNames
+                                values: TrackedEventNames
                                 }
                               ]:null}
                               placeholder="Select Events"
@@ -201,11 +215,11 @@ const getInsights = (projectID, isJourney=false) =>{
                           { showDropDown2 && <>
 
                             <GroupSelect 
-                               groupedProperties={EventNames ? [
+                               groupedProperties={TrackedEventNames ? [
                                 {             
                                 label: 'MOST RECENT',
                                 icon: 'fav',
-                                values: EventNames
+                                values: TrackedEventNames
                                 }
                               ]:null}
                               placeholder="Select Events"
@@ -259,7 +273,9 @@ const mapStateToProps = (state) => {
   return {
     activeProject: state.global.active_project, 
     GlobalEventNames: state.coreQuery?.eventOptions[0]?.values,
-    factors_models: state.factors.factors_models
+    factors_models: state.factors.factors_models,
+    goal_insights: state.factors.goal_insights,
+    tracked_events: state.factors.tracked_events
   };
 };
 export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules})(CreateGoalDrawer);
