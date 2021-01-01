@@ -1309,6 +1309,8 @@ func BuildNewItreeV1(reqId,
 	endTime = time.Now().Unix()
 	log.WithFields(log.Fields{
 		"time_taken": endTime - startTime}).Error("Building Tree Time taken.")
+	log.WithFields(log.Fields{
+		"missing_pattern_count": missingPatternCount}).Info("explain_debug")
 
 	//log.WithFields(log.Fields{"itree": itree}).Info("Returning Itree.")
 	return &itree, nil
@@ -1463,6 +1465,7 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 	countType string) []*ItreeNode {
 	propertyChildNodes := []*ItreeNode{}
 	numP := 0
+	keyValuePairsEvaluated := 0
 	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
 	for propertyName, seenValues := range categoricalPropertyKeyValues {
 		if numP > maxNumProperties {
@@ -1489,6 +1492,7 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 				continue
 			}
 			numVal++
+			keyValuePairsEvaluated++
 			constraintToAdd := P.EventConstraints{
 				EPNumericConstraints:     []P.NumericConstraint{},
 				EPCategoricalConstraints: []P.CategoricalConstraint{},
@@ -1573,7 +1577,7 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 		}
 	}
 	log.WithFields(log.Fields{
-		"properties_categorical_count": len(categoricalPropertyKeyValues)}).Info("explain_debug")
+		"properties_categorical_count": keyValuePairsEvaluated}).Info("explain_debug")
 	log.WithFields(log.Fields{
 		"properties_categorical_filtered_count": len(propertyChildNodes)}).Info("explain_debug")
 	return propertyChildNodes
@@ -1761,6 +1765,8 @@ func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 	return addedChildNodes, nil
 }
 
+var missingPatternCount int
+
 func (it *Itree) buildChildNodeV1(reqId string,
 	childPattern *P.Pattern, constraintToAdd *P.EventConstraints,
 	nodeType int, parentIndex int,
@@ -1922,6 +1928,7 @@ func (it *Itree) buildChildNodeV1(reqId string,
 		//log.WithFields(log.Fields{"Child": childPattern.String(),
 		//	"constraintToAdd": constraintToAdd, "parentConstraints": parentConstraints,
 		//	"fcp": fcp, "fcr": fcr}).Debug("Child not frequent enough")
+		missingPatternCount++
 		return nil, nil
 	}
 	// Expected.
@@ -1932,6 +1939,7 @@ func (it *Itree) buildChildNodeV1(reqId string,
 	if fpp < fpr || fcp < fcr || fpp < fcp || fpr < fcr {
 		log.WithFields(log.Fields{"Child": childPattern.String(), "constraints": childPatternConstraints,
 			"fpp": fpp, "fpr": fpr, "fcp": fcp, "fcr": fcr}).Debug("Inconsistent frequencies. Ignoring")
+		missingPatternCount++
 		return nil, nil
 	}
 	p := fcr / fcp
@@ -1992,6 +2000,7 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 	parentPattern := parentNode.Pattern
 	propertyChildNodes := []*ItreeNode{}
 	numP := 0
+	keyValuePairsEvaluated := 0
 	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
 	for propertyName, _ := range numericPropertyKeys {
 		if numP > maxNumProperties {
@@ -2091,6 +2100,7 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 
 			for _, constraintToAdd := range []P.EventConstraints{
 				constraint1ToAdd, constraint2ToAdd, constraint3ToAdd} {
+				keyValuePairsEvaluated++
 				if cNode, err := it.buildChildNodeV1(reqId,
 					parentPattern, &constraintToAdd, nodeType,
 					parentNode.Index, patternWrapper, allActiveUsersPattern,
@@ -2107,7 +2117,7 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 		}
 	}
 	log.WithFields(log.Fields{
-		"properties_numerical_count": len(numericPropertyKeys)}).Info("explain_debug")
+		"properties_numerical_count": keyValuePairsEvaluated}).Info("explain_debug")
 	log.WithFields(log.Fields{
 		"properties_numerical_filtered_count": len(propertyChildNodes)}).Info("explain_debug")
 	return propertyChildNodes
