@@ -16,7 +16,7 @@ function DualTouchPoint({
   resultState,
   setwidgetModal
 }) {
-  const maxAllowedVisibleProperties = 5;
+  const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
   const [chartsData, setChartsData] = useState([]);
   const [visibleIndices, setVisibleIndices] = useState(
     Array.from(Array(maxAllowedVisibleProperties).keys())

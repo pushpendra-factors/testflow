@@ -1,24 +1,38 @@
-import React from "react";
-import { QUERY_TYPE_ATTRIBUTION } from "../../../utils/constants";
+import React, { useState, useEffect } from "react";
+import {
+  QUERY_TYPE_CAMPAIGN,
+  CHART_TYPE_SPARKLINES,
+  CHART_TYPE_LINECHART,
+  CHART_TYPE_BARCHART,
+} from "../../../utils/constants";
 import styles from "../FunnelsResultPage/index.module.scss";
 import ResultsHeader from "../ResultsHeader";
 import Header from "../../AppLayout/Header";
 import { Spin } from "antd";
-import AttributionsChart from "./AttributionsChart";
-import GroupedAttributionsChart from "./GroupedAttributionsChart";
+import NoBreakdownCharts from "./NoBreakdownCharts";
+import BreakdownCharts from "./BreakdownCharts";
 
-function AttributionsResult({
+function CampaignAnalytics({
   setShowResult,
   requestQuery,
   querySaved,
   setQuerySaved,
   resultState,
   setDrawerVisible,
-  attributionsState,
+  arrayMapper,
+  breakdown,
 }) {
-  let content = null;
+  const [chartType, setChartType] = useState(null);
 
-  const { eventGoal, touchpoint, models, linkedEvents } = attributionsState;
+  useEffect(() => {
+    if (breakdown.length) {
+      setChartType(CHART_TYPE_BARCHART);
+    } else {
+      setChartType(CHART_TYPE_SPARKLINES);
+    }
+  }, [breakdown]);
+
+  let content = null;
 
   if (resultState.loading) {
     content = (
@@ -37,31 +51,30 @@ function AttributionsResult({
   }
 
   if (resultState.data) {
-    content = (
-      <div className="mt-48 mb-8 fa-container">
-        {models.length === 1 ? (
-          <AttributionsChart
-            event={eventGoal.label}
-            linkedEvents={linkedEvents}
-            touchpoint={touchpoint}
+    if (breakdown.length) {
+      content = (
+        <div className="mt-48 mb-8 fa-container">
+          <BreakdownCharts
+            arrayMapper={arrayMapper}
+            chartType={chartType}
+            data={resultState.data}
+            breakdown={breakdown}
+            isWidgetModal={false}
+          />
+        </div>
+      );
+    } else {
+      content = (
+        <div className="mt-48 mb-8 fa-container">
+          <NoBreakdownCharts
+            arrayMapper={arrayMapper}
+            chartType={chartType}
             data={resultState.data}
             isWidgetModal={false}
-            attribution_method={models[0]}
           />
-        ) : null}
-        {models.length === 2 ? (
-          <GroupedAttributionsChart
-            event={eventGoal.label}
-            linkedEvents={linkedEvents}
-            touchpoint={touchpoint}
-            data={resultState.data}
-            isWidgetModal={false}
-            attribution_method={models[0]}
-            attribution_method_compare={models[1]}
-          />
-        ) : null}
-      </div>
-    );
+        </div>
+      );
+    }
   }
 
   return (
@@ -72,7 +85,7 @@ function AttributionsResult({
           requestQuery={requestQuery}
           querySaved={querySaved}
           setQuerySaved={setQuerySaved}
-          queryType={QUERY_TYPE_ATTRIBUTION}
+          queryType={QUERY_TYPE_CAMPAIGN}
         />
 
         <div className="pt-4">
@@ -80,14 +93,14 @@ function AttributionsResult({
             className="app-font-family text-3xl font-semibold"
             style={{ color: "#8692A3" }}
           >
-            {querySaved || 'Untitled Analysis'}
+            {querySaved || "Untitled Report"}
           </div>
           <div
             className={`text-base font-medium pb-1 cursor-pointer ${styles.eventsText}`}
             style={{ color: "#8692A3" }}
             onClick={setDrawerVisible.bind(this, true)}
           >
-            {eventGoal.label} (unique users)
+            bannat
           </div>
         </div>
       </Header>
@@ -96,4 +109,4 @@ function AttributionsResult({
   );
 }
 
-export default AttributionsResult;
+export default CampaignAnalytics;
