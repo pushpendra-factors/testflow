@@ -5,11 +5,16 @@ import SparkChart from "../../../../components/SparkLineChart/Chart";
 import { generateColors } from "../../../../utils/dataFormatter";
 import LineChart from "../../../../components/LineChart";
 import NoBreakdownTable from "./NoBreakdownTable";
-import {
-  CHART_TYPE_SPARKLINES,
-} from "../../../../utils/constants";
+import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";
+import ChartTypeDropdown from "../../../../components/ChartTypeDropdown";
 
-function NoBreakdownCharts({ chartType, data, arrayMapper, isWidgetModal }) {
+function NoBreakdownCharts({
+  chartType,
+  data,
+  arrayMapper,
+  isWidgetModal,
+  setChartType,
+}) {
   const [chartsData, setChartsData] = useState([]);
 
   useEffect(() => {
@@ -35,10 +40,36 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, isWidgetModal }) {
     </div>
   );
 
+  const menuItems = [
+    {
+      key: "sparklines",
+      onClick: setChartType,
+      name: "Sparkline",
+    },
+    {
+      key: "linechart",
+      onClick: setChartType,
+      name: "Line Chart",
+    },
+  ];
+
+  const typeDropdown = (
+    <div className="flex items-center w-full mt-4 justify-end">
+      <ChartTypeDropdown
+        chartType={chartType}
+        menuItems={menuItems}
+        onClick={(item) => {
+          setChartType(item.key);
+        }}
+      />
+    </div>
+  );
+
   if (chartType === CHART_TYPE_SPARKLINES) {
     if (chartsData.length === 1) {
       return (
         <>
+          {typeDropdown}
           <div className="flex items-center flex-wrap mt-4 justify-center">
             <div className="w-1/4">
               <ChartHeader
@@ -66,6 +97,7 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, isWidgetModal }) {
       const appliedColors = generateColors(chartsData.length);
       return (
         <>
+          {typeDropdown}
           <div className="flex items-center flex-wrap mt-4 justify-center">
             {chartsData.map((chartData, index) => {
               return (
@@ -103,6 +135,7 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, isWidgetModal }) {
     const appliedColors = generateColors(chartsData.length);
     return (
       <>
+        {typeDropdown}
         <div className="w-full flex items-center mt-4 justify-center">
           <LineChart
             frequency="date"

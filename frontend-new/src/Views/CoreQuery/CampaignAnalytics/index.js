@@ -53,11 +53,12 @@ function CampaignAnalytics({
   if (resultState.data) {
     if (breakdown.length) {
       content = (
-        <div className="mt-48 mb-8 fa-container">
+        <div className="mt-40 mb-8 fa-container">
           <BreakdownCharts
             arrayMapper={arrayMapper}
             chartType={chartType}
             data={resultState.data}
+            setChartType={setChartType}
             breakdown={breakdown}
             isWidgetModal={false}
           />
@@ -65,11 +66,12 @@ function CampaignAnalytics({
       );
     } else {
       content = (
-        <div className="mt-48 mb-8 fa-container">
+        <div className="mt-40 mb-8 fa-container">
           <NoBreakdownCharts
             arrayMapper={arrayMapper}
             chartType={chartType}
             data={resultState.data}
+            setChartType={setChartType}
             isWidgetModal={false}
           />
         </div>

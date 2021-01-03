@@ -98,8 +98,6 @@ function BreakdownCharts({
       </>
     );
   }
-
-  return <div>bannat</div>;
 }
 
 export default BreakdownCharts;
