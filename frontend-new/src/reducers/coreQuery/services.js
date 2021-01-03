@@ -149,3 +149,11 @@ export const getAttributionsData = (
   }
   return post(null, url, reqBody);
 };
+
+export const getCampaignsData = (
+  projectId,
+  reqBody,
+  dashboard = { refresh: true }
+) => {
+  return post(null, `http://localhost:8000/campaigns-query`, reqBody);
+};
