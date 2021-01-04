@@ -357,6 +357,47 @@ user_segments:
             www.g2.com: 0.075
             Others: 0.06
             Direct: 0.145
+    event_decorators:
+      www.acme.com:
+        $campaign:
+          Traditional_media: 0.35
+          Seasonal_push: 0.25
+          Brand_launch: 0.02
+          Product_launch: 0.03
+          Contest_marketing: 0.15
+          Brand_awareness: 0.10
+          Email_marketing: 0.10
+          Rebranding_campaign: 0.05
+      Schedule A Demo Form:
+        $campaign:
+          Traditional_media: 0.15
+          Seasonal_push: 0.10
+          Brand_launch: 0.02
+          Product_launch: 0.03
+          Contest_marketing: 0.35
+          Brand_awareness: 0.10
+          Email_marketing: 0.25
+          Rebranding_campaign: 0.05
+      Discovery Call Booked:
+        $campaign:
+          Traditional_media: 0.10
+          Seasonal_push: 0.25
+          Brand_launch: 0.02
+          Product_launch: 0.03
+          Contest_marketing: 0.15
+          Brand_awareness: 0.35
+          Email_marketing: 0.10
+          Rebranding_campaign: 0.05
+      Opportunity Created:
+        $campaign:
+          Traditional_media: 0.15
+          Seasonal_push: 0.10
+          Brand_launch: 0.02
+          Product_launch: 0.25
+          Contest_marketing: 0.35
+          Brand_awareness: 0.03
+          Email_marketing: 0.10
+          Rebranding_campaign: 0.05
     user_attributes:
       default:  
         -
