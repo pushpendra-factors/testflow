@@ -35,7 +35,11 @@ const ConfigureDP = (props) => {
     activeProject, fetchFactorsTrackedEvents, tracked_events, fetchFactorsTrackedUserProperties, tracked_user_property
   } = props;
   const [activeEventsTracked, setActiveEventsTracked] = useState(0);
+  const [InQueueEventsEvents, setInQueueEventsEvents] = useState(0);
   const [activeUserProperties, setActiveUserProperties] = useState(0);
+  const [InQueueUserProperties, setInQueueUserProperties] = useState(0);
+
+  const [showInfo, setshowInfo] = useState(true);
 
   useEffect(() => {
     setActiveEventsTracked(0);
@@ -47,22 +51,32 @@ const ConfigureDP = (props) => {
       getData(); 
     if (tracked_events) {
       let activeEvents = 0;
+      let inQueueEvents = 0;
       tracked_events.map((event) => {
-        if (event.is_active) {
+        if (event.is_active == true && event.last_tracked_at == "0001-01-01T00:00:00Z" ) {
           activeEvents = activeEvents + 1;
+        }
+        if(event.is_active == true && event.last_tracked_at !== "0001-01-01T00:00:00Z"){
+          inQueueEvents = inQueueEvents+1;
         }
       });
       setActiveEventsTracked(activeEvents);
+      setInQueueEventsEvents(inQueueEvents);
     };
 
     if (tracked_user_property) {
       let activeUserProperties = 0;
+      let inQueueUserProperties = 0;
       tracked_user_property.map((event) => {
-        if (event.is_active) {
+        if (event.is_active == true && event.last_tracked_at == "0001-01-01T00:00:00Z" ) {
           activeUserProperties = activeUserProperties + 1;
+        }
+        if(event.is_active == true && event.last_tracked_at !== "0001-01-01T00:00:00Z"){
+          inQueueUserProperties = inQueueUserProperties+1;
         }
       });
       setActiveUserProperties(activeUserProperties);
+      setInQueueUserProperties(inQueueUserProperties);
     }
   }, [activeProject]);
 
@@ -96,7 +110,7 @@ const ConfigureDP = (props) => {
             <Col span={20}>
                 <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0 mt-8'} >What’s being tracked?</Text>
             </Col>
-            <Col span={20}>
+        {showInfo && <Col span={20}>
                 <div className={'border--thin-2 py-8 px-8 background-color--brand-color-1 border-radius--sm'}>
                 <div className={'px-4'}>
                     <ul style={{ listStyle: 'disc' }}>
@@ -107,12 +121,12 @@ const ConfigureDP = (props) => {
                     </ul>
                 </div>
                 <div className={'flex items-center mt-6'}>
-                <Button size={'large'} type={'primary'}>Got it</Button>
+                <Button size={'large'} type={'primary'} onClick={()=>setshowInfo(false)}>Got it</Button>
                 <Button ghost size={'large'} className={'ml-4'}>learn more</Button>
 
                 </div>
                 </div>
-            </Col>
+            </Col> }
             <Col span={20}>
                 <Row gutter={[24, 24]} justify={'center'}>
 
@@ -125,7 +139,7 @@ const ConfigureDP = (props) => {
                                 </div>
                             </Col>
                             <Col span={24}>
-                                <Progress percent={60} strokeColor={'#ACA4DE'} success={{ percent: 30, strokeColor: '#5949BC' }} showInfo={false} />
+                                <Progress percent={(activeEventsTracked*2) + (InQueueEventsEvents*2)} strokeColor={'#ACA4DE'} success={{ percent: activeEventsTracked*2, strokeColor: '#5949BC' }} showInfo={false} />
                             </Col>
                             <Col span={24}>
                                 <div className={'flex w-full justify-between items-center border-bottom--thin-2 pb-4'}>
@@ -135,7 +149,7 @@ const ConfigureDP = (props) => {
                                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Tracked</Text>
                                         </div>
                                         <div className={'flex flex-col ml-6'}>
-                                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >{tracked_events && `${tracked_events.length - activeEventsTracked}`}</Text>
+                                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >{InQueueEventsEvents}</Text>
                                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >In Queue</Text>
                                         </div>
                                     </div>
@@ -147,8 +161,9 @@ const ConfigureDP = (props) => {
                             <Col span={24}>
                             {tracked_events && tracked_events.map((event, index) => {
                               return (
-                                    <div key={index} className={'flex justify-between items-center mt-2'}>
-                                        <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{event.name}</Text>
+                                    <div key={index} className={'flex items-center mt-2'}>
+                                        <SVG size={16} name={'MouseClick'} color={'purple'} className={'mr-1'} />
+                                        <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0 ml-2'} >{event.name}</Text>
                                     </div>
                               );
                             })}
@@ -166,7 +181,7 @@ const ConfigureDP = (props) => {
                                 </div>
                             </Col>
                             <Col span={24}>
-                                <Progress percent={25} strokeColor={'#ACA4DE'} success={{ percent: 20, strokeColor: '#5949BC' }} showInfo={false} />
+                                <Progress percent={(InQueueUserProperties*2)+ (activeUserProperties*2)} strokeColor={'#ACA4DE'} success={{ percent: activeUserProperties*2, strokeColor: '#5949BC' }} showInfo={false} />
                             </Col>
                             <Col span={24}>
                                 <div className={'flex w-full justify-between items-center border-bottom--thin-2 pb-4'}>
@@ -176,7 +191,7 @@ const ConfigureDP = (props) => {
                                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Tracked</Text>
                                         </div>
                                         <div className={'flex flex-col ml-6'}>
-                                        <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >{tracked_user_property && `${tracked_user_property.length - activeUserProperties}`}</Text>
+                                        <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >{InQueueUserProperties}</Text>
                                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >In Queue</Text>
                                         </div>
                                     </div>
@@ -188,8 +203,9 @@ const ConfigureDP = (props) => {
                             <Col span={24}>
                             {tracked_user_property && tracked_user_property.map((event, index) => {
                               return (
-                                      <div key={index} className={'flex justify-between items-center mt-2'}>
-                                          <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{event.user_property_name}</Text>
+                                      <div key={index} className={'flex items-center mt-2'}>
+                                          <SVG size={16} name={'MouseClick'} color={'purple'} className={'mr-1'} />
+                                          <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0 ml-2'} >{event.user_property_name}</Text>
                                       </div>
                               );
                             })}

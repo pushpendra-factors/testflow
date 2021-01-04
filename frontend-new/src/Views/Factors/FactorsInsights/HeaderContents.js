@@ -27,7 +27,8 @@ function Header({saveGoalInsights, activeProject, factors_insight_rules}) {
         setisLoading(false);
         message.success('Saved successfully!');
       }).catch((err) => {
-        message.error('Oops! Something went wrong.');
+        const saveGoalErr = err?.data?.error ? err.data.error : `Oops! Something went wrong.`
+        message.error(saveGoalErr);
         console.log('Goal saving error:', err);
         form.resetFields();
         seterrorInfo(err);
