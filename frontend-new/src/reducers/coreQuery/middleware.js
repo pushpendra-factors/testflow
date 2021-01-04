@@ -1,13 +1,16 @@
 /* eslint-disable */
 
-import { fetchEventsAction, fetchEventPropertiesAction, 
-  fetchUserPropertiesAction, 
-  setGroupByAction, 
+import { 
+  fetchEventsAction, fetchEventPropertiesAction, 
+  fetchUserPropertiesAction, setGroupByAction, 
   delGroupByAction, deleteGroupByEventAction, 
   setEventGoalAction, setMarketingTouchpointsAction, 
-  setAttributionModelsAction, setAttributionWindowAction, setAttrLinkEventsAction} from './actions';
-import { getEventNames, fetchEventProperties, fetchUserProperties } from './services';
-import { convertToEventOptions, convertPropsToOptions } from './utils';
+  setAttributionModelsAction, setAttributionWindowAction, 
+  setAttrLinkEventsAction, setCampChannelAction, 
+  setMeasuresAction, getCampaignConfigAction
+} from './actions';
+import { getEventNames, fetchEventProperties, fetchUserProperties, fetchCampaignConfig } from './services';
+import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
 
 export const fetchEventNames = (projectId) => {
   return (dispatch) => {
@@ -110,6 +113,35 @@ export const setLinkedEvents = (linkedEvents) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setAttrLinkEventsAction(linkedEvents)))
+    })
+  }
+}
+
+export const setCampChannel = (channel) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setCampChannelAction(channel)))
+    })
+  }
+}
+
+export const setCampMeasures = (measures) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setMeasuresAction(measures)))
+    })
+  }
+}
+
+export const getCampaignConfigData = (projectId, channel) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchCampaignConfig(projectId, channel).then(res => {
+          const payload = convertCampaignConfig(res.data.result);
+          resolve(dispatch(getCampaignConfigAction(payload)));
+        }).catch((err) => {
+          console.log(err);
+        });
     })
   }
 }

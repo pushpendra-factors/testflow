@@ -13,6 +13,11 @@ export const SET_ATTRIBUTION_MODEL = 'SET_ATTRIBUTION_MODEL';
 export const SET_ATTRIBUTION_WINDOW = 'SET_ATTRIBUTION_WINDOW';
 export const SET_ATTR_LINK_EVENTS = 'SET_ATTR_LINK_EVENTS';
 export const SET_ATTR_DATE_RANGE = 'SET_ATTR_DATE_RANGE';
+export const FETCH_CAMP_CONFIG = 'FETCH_CAMP_CONFIG';
+export const SET_CAMP_CHANNEL = 'SET_CAMP_CHANNEL';
+export const SET_CAMP_MEASURES = 'SET_CAMP_MEASURES';
+export const SET_CAMP_FILTERS = 'SET_CAMP_FILTERS';
+export const SET_CAMP_GROUBY = 'SET_CAMP_GROUBY';
 
 // Action creators
 export const fetchEventsAction = (events, status = 'started') => {
@@ -62,3 +67,25 @@ export const setAttrLinkEventsAction = (linkedEvents) => {
 export const setAttrDateRangeAction = (dateRange) => {
   return { type: SET_ATTR_DATE_RANGE, payload: dateRange};
 }
+
+export const getCampaignConfigAction = (config) => {
+  return { type: FETCH_CAMP_CONFIG, payload: config};
+}
+
+export const setCampChannelAction = (channel) => {
+  return { type: SET_CAMP_CHANNEL, payload: channel};
+}
+
+export const setMeasuresAction = (measures) => {
+  return { type: SET_CAMP_MEASURES, payload: measures};
+}
+
+export const setCampFiltersAction = (filters) => {
+  return { type: SET_CAMP_FILTERS, payload: filters};
+}
+
+export const setCampGroupByAction = (groupBy) => {
+  return { type: SET_CAMP_GROUBY, payload: groupBy};
+}
+
+
