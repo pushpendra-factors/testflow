@@ -23,3 +23,31 @@ export const convertPropsToOptions = (props) => {
   })
   return options;
 }
+
+const convertToChannelOptions = (objects) => {
+  const opts = [];
+  objects.forEach((obj, i) => {
+    let lbl = obj.name.replace('_', ' ');
+    const vals = obj.properties.map(v => [v.name, v.type])
+    
+    opts.push({
+      label: lbl,
+      icon: 'fav',
+      values: vals
+    });
+  })
+  return opts;
+}
+
+export const convertCampaignConfig = (data) => {
+    const confg = {
+      metrics: [],
+      properties: []
+    };
+
+
+    confg.metrics = data.select_metrics;
+    confg.properties = convertToChannelOptions(data.object_and_properties);
+
+    return confg;
+ }

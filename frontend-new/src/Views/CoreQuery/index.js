@@ -5,6 +5,7 @@ import { connect, useSelector, useDispatch } from "react-redux";
 import FunnelsResultPage from "./FunnelsResultPage";
 import QueryComposer from "../../components/QueryComposer";
 import AttrQueryComposer from "../../components/AttrQueryComposer";
+import CampQueryComposer from "../../components/CampQueryComposer";
 import CoreQueryHome from "../CoreQueryHome";
 import { Drawer, Button } from "antd";
 import { SVG, Text } from "../../components/factorsComponents";
@@ -746,7 +747,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     }
 
     if (queryType === QUERY_TYPE_CAMPAIGN) {
-      return <CampaignsQueryComposer runCampaignsQuery={runCampaignsQuery} />;
+      return <CampQueryComposer ></CampQueryComposer>
     }
   };
 

@@ -1,0 +1,32 @@
+.btnContainer {
+    display: flex;
+    justify-content: center;
+    padding: 8px 12px;
+    border: 1px solid #B7BEC8;
+    box-sizing: border-box;
+    border-radius: 8px;
+    margin-right: 8px;
+
+    .label {
+        font-size: 14px;
+        color: #3E516C;
+    }
+
+    .icon {
+        margin-right: 8px;
+    }
+
+}
+
+.btnContainer:hover {
+    cursor: pointer;
+}
+
+.active {
+    cursor: default;
+    background: #EEEDF8;
+
+    .label {
+        color: #5949BC;
+    }
+}

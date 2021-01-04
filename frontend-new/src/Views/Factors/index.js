@@ -7,10 +7,10 @@ import {
 import { Text, SVG } from 'factorsComponents'; 
 import ConfigureDP from './ConfigureDP';
 import CreateGoalDrawer from './CreateGoalDrawer';
-import { fetchFactorsGoals, fetchFactorsModels, fetchGoalInsights, saveGoalInsightRules } from 'Reducers/factors';
+import { fetchFactorsGoals, fetchFactorsModels, fetchGoalInsights, saveGoalInsightRules, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
+import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
 import { connect } from 'react-redux';
-import { fetchProjectAgents } from 'Reducers/agentActions';
-import { fetchEventNames } from 'Reducers/coreQuery/middleware'; 
+import { fetchProjectAgents } from 'Reducers/agentActions';  
 import _, { isEmpty } from 'lodash'; 
 import { useHistory } from 'react-router-dom';
 import SavedGoals from './SavedGoals';
@@ -47,7 +47,10 @@ const Factors = ({
   , fetchProjectAgents
   ,fetchEventNames
   ,fetchFactorsModels
-  , fetchGoalInsights 
+  , fetchGoalInsights
+  , fetchFactorsTrackedEvents
+  , fetchFactorsTrackedUserProperties 
+  , getUserProperties
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [fetchingIngishts, SetfetchingIngishts] = useState(false);
@@ -63,6 +66,9 @@ const Factors = ({
       await fetchFactorsGoals(activeProject.id); 
       await fetchEventNames(activeProject.id);
       await fetchFactorsModels(activeProject.id); 
+      await fetchFactorsTrackedEvents(activeProject.id);
+      await fetchFactorsTrackedUserProperties(activeProject.id); 
+      await getUserProperties(activeProject.id, 'events'); 
     };
     getData1(); 
   }, [activeProject]);
@@ -149,4 +155,4 @@ const mapStateToProps = (state) => {
     factors_models: state.factors.factors_models,
   };
 };
-export default connect(mapStateToProps, { fetchFactorsGoals, fetchProjectAgents, saveGoalInsightRules, fetchGoalInsights, fetchEventNames, fetchFactorsModels })(Factors);
+export default connect(mapStateToProps, { fetchFactorsGoals, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, fetchProjectAgents, saveGoalInsightRules, fetchGoalInsights, fetchFactorsModels , fetchEventNames, getUserProperties})(Factors);

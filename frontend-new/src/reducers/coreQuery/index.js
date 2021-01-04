@@ -13,6 +13,9 @@ import {
   SET_ATTRIBUTION_WINDOW,
   SET_ATTR_LINK_EVENTS,
   SET_EVENT_GOAL,
+  SET_CAMP_CHANNEL,
+  SET_CAMP_MEASURES,
+  FETCH_CAMP_CONFIG
 } from "./actions";
 import { SHOW_ANALYTICS_RESULT, INITIALIZE_MTA_STATE } from "../types";
 
@@ -38,13 +41,15 @@ const defaultState = {
   touchpoint: "",
   models: [],
   window: null,
-  linkedEvents: []
-  // linkedEvents: [
-  //   {
-  //     label: "ViewGuidesWithinResources",
-  //     filters: [],
-  //   },
-  // ],
+  linkedEvents: [],
+  campaign_config: {
+    metrics: [],
+    properties: []
+  },
+  camp_channels: 'google_ads',
+  camp_measures: [],
+  camp_filters: [],
+  camp_groupBy: []
 };
 
 export default function (state = defaultState, action) {
@@ -154,6 +159,25 @@ export default function (state = defaultState, action) {
         ...action.payload,
       };
     }
+    case SET_CAMP_CHANNEL: {
+      return {
+        ...state, 
+        camp_channels: action.payload
+      }
+    }
+    case SET_CAMP_MEASURES: {
+      return {
+        ...state, 
+        camp_measures: action.payload
+      }
+    }
+    case FETCH_CAMP_CONFIG: {
+      return {
+        ...state,
+        campaign_config: action.payload
+      }
+    }
+
     default:
       return state;
   }

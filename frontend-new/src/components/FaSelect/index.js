@@ -13,7 +13,7 @@ const FaSelect = ({ options, delOption,
                 <div key={index} className={`fa-select-group-select--options`}
                     onClick={() => optionClick(op)} >
                     {op[1] && <SVG name={op[1]} extraClass={'self-center'}></SVG>}
-                    <span className={'ml-1'}>{op[0]}</span>
+                    <span className={`ml-1 ${styles.optText}`}>{op[0]}</span>
                 </div>
             )
         })

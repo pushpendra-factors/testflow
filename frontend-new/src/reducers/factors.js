@@ -45,6 +45,18 @@
           case 'SAVE_GOAL_INSIGHT_RULES_FULFILLED': {
             return { ...state, factors_insight_rules: action.payload };
           } 
+          case 'ADD_EVENTS_FULFILLED': {
+            return { ...state };
+          } 
+          case 'ADD_EVENTS_REJECTED': {
+            return { ...state, error: action.payload };
+          } 
+          case 'ADD_USER_PROPERTY_FULFILLED': {
+            return { ...state };
+          } 
+          case 'ADD_USER_PROPERTY_REJECTED': {
+            return { ...state, error: action.payload };
+          } 
           
         }
         return state;
@@ -141,6 +153,35 @@ export function saveGoalInsights(projectID, data) {
             resolve(response)
           }).catch((err)=>{        
             dispatch({type:"SAVE_GOAL_INSIGHTS_REJECTED", payload: err});
+            reject(err);
+          });
+      });
+    }
+  }
+
+export function addEventToTracked(projectID, data) {
+    return function(dispatch) {
+      return new Promise((resolve,reject) => { 
+        post(dispatch, host + "projects/"+projectID+`/v1/factors/tracked_event`, data)
+          .then((response)=>{        
+            dispatch({type:"ADD_EVENTS_FULFILLED", payload: response.data});
+            resolve(response)
+          }).catch((err)=>{        
+            dispatch({type:"ADD_EVENTS_REJECTED", payload: err});
+            reject(err);
+          });
+      });
+    }
+  }
+export function addUserPropertyToTracked(projectID, data) {
+    return function(dispatch) {
+      return new Promise((resolve,reject) => { 
+        post(dispatch, host + "projects/"+projectID+`/v1/factors/tracked_user_property`, data)
+          .then((response)=>{        
+            dispatch({type:"ADD_USER_PROPERTY_FULFILLED", payload: response.data});
+            resolve(response)
+          }).catch((err)=>{        
+            dispatch({type:"ADD_USER_PROPERTY_REJECTED", payload: err});
             reject(err);
           });
       });

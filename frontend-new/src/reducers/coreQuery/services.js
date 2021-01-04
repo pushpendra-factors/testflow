@@ -150,6 +150,11 @@ export const getAttributionsData = (
   return post(null, url, reqBody);
 };
 
+export const fetchCampaignConfig = (projectId, channel) => {
+  const url = host + "projects/" + projectId + "/v1/channels/config?channel="+channel;
+  return get(null, url);
+};
+
 export const getCampaignsData = (
   projectId,
   reqBody,

@@ -5,7 +5,7 @@ import { SVG } from 'factorsComponents';
 
 function GroupSelect({
   groupedProperties, placeholder,
-  optionClick, onClickOutside
+  optionClick, onClickOutside, extraClass
 }) {
   const [groupCollapseState, setGroupCollapseState] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,7 +76,7 @@ function GroupSelect({
 
   return (
     <>
-        <div className={`${styles.dropdown__filter_select} ml-4 fa-select fa-select--group-select`}>
+        <div className={`${styles.dropdown__filter_select} ml-4 fa-select fa-select--group-select ${extraClass}`}>
           <Input
             className={styles.dropdown__filter_select__input}
             placeholder={placeholder}
