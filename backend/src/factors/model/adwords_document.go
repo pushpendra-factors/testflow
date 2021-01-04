@@ -155,6 +155,11 @@ func GetAdwordsDateOnlyTimestamp(unixTimestamp int64) string {
 	return time.Unix(unixTimestamp, 0).UTC().Format("20060102")
 }
 
+func getAdwordsDateOnlyTimestampInInt64(unixTimestamp int64) int64 {
+	value, _ := strconv.ParseInt(time.Unix(unixTimestamp, 0).UTC().Format("20060102"), 10, 64)
+	return value
+}
+
 func getAdwordsIDAndHeirarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (string, int64, int64, int64, int64, error) {
 	if docType > len(AdwordsDocumentTypeAlias) {
 		return "", 0, 0, 0, 0, errors.New("invalid document type")
@@ -515,6 +520,8 @@ func getAdwordsDocumentTypeForFilterKeyV1(filterObject string) (int, error) {
 // ExecuteAdwordsChannelQueryV1 - @TODO Kark v1.
 // Job represents the meta data associated with particular object type. Reports represent data with metrics and few filters.
 func ExecuteAdwordsChannelQueryV1(projectID uint64, query *ChannelQueryV1, reqID string) ([]string, [][]interface{}, error) {
+	query.From = getAdwordsDateOnlyTimestampInInt64(query.From)
+	query.To = getAdwordsDateOnlyTimestampInInt64(query.To)
 	logCtx := log.WithField("req_id", reqID)
 	logCtx.Info("query", query)
 	projectSetting, errCode := GetProjectSetting(projectID)

@@ -912,7 +912,7 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 	dashboardUnitQueriesMap := make(map[uint64]map[string]interface{})
 
 	dashboardQueriesStr := []string{
-		`{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 20200401, "to": 20200402 }], "cl": "channel_v1" }`,
+		`{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 1585679400, "to": 1585765800 }], "cl": "channel_v1" }`,
 	}
 	queryClass := M.QueryClassChannelV1
 	for _, queryString := range dashboardQueriesStr {
