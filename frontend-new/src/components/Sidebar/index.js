@@ -13,6 +13,9 @@ import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons'
 import CreateNewProject from './CreateNewProject';
 import _ from 'lodash';
 
+
+// const ColorCollection = ['#4C9FC8','#4CBCBD', '#86D3A3', '#F9C06E', '#E89E7B', '#9982B5'];
+
 function Sidebar(props) {
   const { Sider } = Layout;
 
@@ -45,7 +48,8 @@ function Sidebar(props) {
                   setselectedProject(project); 
                 }
               }}>
-                <Avatar size={28}/><Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 ml-2'}>{project.name}</Text>
+                <Avatar size={28} style={{ color: '#fff', backgroundColor: '#52BE95', fontSize: '14px', textTransform: 'uppercase', fontWeight:'400' }}>{`${project?.name?.charAt(0)}`}</Avatar>
+                <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 ml-2'}>{project.name}</Text>
               </div>;
             })}
 
@@ -63,7 +67,9 @@ function Sidebar(props) {
                 setShowPopOver(false);
                 showUserSettingsModal();
               }}>
-                <Avatar src="assets/avatar/avatar.png" size={28}/><Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
+                <Avatar size={28}style={{ color: '#f56a00', backgroundColor: '#fde3cf', fontSize: '12px' }}
+                  >{`${props.currentAgent?.first_name?.charAt(0)}${props.currentAgent?.last_name?.charAt(0)}`}</Avatar>
+                <Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
           </div>
           <Button size={'large'} type={'text'}
           onClick={() => {
@@ -163,13 +169,8 @@ function Sidebar(props) {
                 setsearchProjectName('');
                 setShowPopOver(true);
               }}
-                trigger="click">
-                  <Avatar
-                    //  icon={<BankOutlined />} 
-                    shape={'square'} 
-                     src="assets/avatar/company-logo.png"
-                    className={'flex justify-center flex-col items-center fa-aside--avatar'}
-                  />
+                trigger="click"> 
+                  <Avatar shape={'square'}  className={'flex justify-center flex-col items-center fa-aside--avatar'} style={{ color: '#fff', backgroundColor: '#52BE95', fontSize: '16px', textTransform: 'uppercase', fontWeight:'400' }}>{`${props.active_project?.name?.charAt(0)}`}</Avatar>
               </Popover>
             </Row>
           </div>
@@ -223,7 +224,8 @@ function Sidebar(props) {
 const mapStateToProps = (state) => {
   return {
     projects: state.agent.projects,
-    active_project: state.global.active_project
+    active_project: state.global.active_project,
+    currentAgent: state.agent.agent_details
   };
 };
 export default connect(mapStateToProps, { setActiveProject, signout })(Sidebar);

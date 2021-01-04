@@ -47,7 +47,8 @@ function ViewBasicSettings({
         <Row className={'mt-2'}>
           <Col>
             { dataLoading ? <Skeleton.Avatar active={true} size={104} shape={'square'} />
-              : <Avatar size={104} shape={'square'} src="assets/avatar/company-logo.png"  />
+              :  <Avatar size={104} shape={'square'} style={{ color: '#fff', backgroundColor: '#52BE95', fontSize: '42px', textTransform: 'uppercase', fontWeight:'400' }}>{`${activeProject?.name?.charAt(0)}`}</Avatar>
+
             }
             <Text type={'paragraph'} mini extraClass={'m-0 mt-1'} color={'grey'} >A logo helps personalise your Project</Text>
           </Col>
