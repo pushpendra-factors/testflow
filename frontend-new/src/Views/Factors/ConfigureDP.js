@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Modal, Button, Progress
+  Row, Col, Modal, Button, Progress, message
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
-import { fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
+import { PlusOutlined, SlackOutlined } from '@ant-design/icons'; 
 import { connect } from 'react-redux';
+import GroupSelect from '../../components/QueryComposer/GroupSelect';
+import {addEventToTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties} from 'Reducers/factors' 
 
 // const suggestionList = [
 //   {
@@ -32,23 +33,25 @@ import { connect } from 'react-redux';
 
 const ConfigureDP = (props) => {
   const {
-    activeProject, fetchFactorsTrackedEvents, tracked_events, fetchFactorsTrackedUserProperties, tracked_user_property
+    activeProject, tracked_events, tracked_user_property, userProperties, events, addEventToTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties
   } = props;
   const [activeEventsTracked, setActiveEventsTracked] = useState(0);
   const [InQueueEventsEvents, setInQueueEventsEvents] = useState(0);
   const [activeUserProperties, setActiveUserProperties] = useState(0);
   const [InQueueUserProperties, setInQueueUserProperties] = useState(0);
 
+
+  const [showDropDown, setShowDropDown] = useState(false);
+  const [showDropDown1, setShowDropDown1] = useState(false);
+
+
   const [showInfo, setshowInfo] = useState(true);
 
   useEffect(() => {
     setActiveEventsTracked(0);
+    setInQueueEventsEvents(0);
     setActiveUserProperties(0); 
-      const getData = async () => {
-        await fetchFactorsTrackedEvents(activeProject.id);
-        await fetchFactorsTrackedUserProperties(activeProject.id);
-      };
-      getData(); 
+    setInQueueUserProperties(0);  
     if (tracked_events) {
       let activeEvents = 0;
       let inQueueEvents = 0;
@@ -78,7 +81,39 @@ const ConfigureDP = (props) => {
       setActiveUserProperties(activeUserProperties);
       setInQueueUserProperties(inQueueUserProperties);
     }
-  }, [activeProject]);
+  }, [activeProject, tracked_events, tracked_user_property]);
+
+
+  const onChangeEventDD = (grp, value) => {
+    setShowDropDown(false);  
+    const EventData = {
+      "event_name": `${value[0]}`
+    }
+    addEventToTracked(activeProject.id, EventData).then(()=>{
+      message.success('Event added successfully!')
+      fetchFactorsTrackedEvents(activeProject.id);
+    }).catch((err) => {
+      message.error('Oops! Something went wrong.');
+      console.log('CDP - addEventToTracked failed-->', err);
+    });
+    
+  }
+  
+  const onChangeUserPropertiesDD = (grp, value) => {
+    setShowDropDown1(false); 
+    console.log("onChangeUserPropertiesDD",grp, value)
+    const UserPropertyData = {
+      "user_property_name": `${value[0]}`
+    }
+    addUserPropertyToTracked(activeProject.id, UserPropertyData).then(()=>{
+      message.success('User Property added successfully!')
+      fetchFactorsTrackedUserProperties(activeProject.id);
+    }).catch((err) => {
+      message.error('Oops! Something went wrong.');
+      console.log('CDP - addUserPropertyToTracked failed-->', err);
+    });
+
+  }
 
   return (
     <Modal
@@ -153,8 +188,18 @@ const ConfigureDP = (props) => {
                                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >In Queue</Text>
                                         </div>
                                     </div>
-                                    <div>
-                                        <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
+                                    <div className={'relative'}>
+                                        { ! showDropDown && <Button onClick={() => setShowDropDown(true)} size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>}
+                                        { showDropDown && <>
+                                          <GroupSelect 
+                                            extraClass={'right-0'}
+                                            groupedProperties={ events ? events : null}
+                                            placeholder="Select Events"
+                                            optionClick={(group, val) => onChangeEventDD(group, val)}
+                                            onClickOutside={() => setShowDropDown(false)}
+                                            /> 
+                                          </>
+                                          }
                                     </div>
                                 </div>
                             </Col>
@@ -195,8 +240,24 @@ const ConfigureDP = (props) => {
                                             <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >In Queue</Text>
                                         </div>
                                     </div>
-                                    <div>
-                                        <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
+                                    <div> 
+                                        { ! showDropDown1 && <Button onClick={() => setShowDropDown1(true)} size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>}
+                                        { showDropDown1 && <>
+                                          <GroupSelect 
+                                            extraClass={'right-0'}
+                                            groupedProperties={ userProperties ? [
+                                              {             
+                                              label: 'User Properties',
+                                              icon: 'fav',
+                                              values: userProperties
+                                              }
+                                            ]:null}
+                                            placeholder="Select User Properties"
+                                            optionClick={(group, val) => onChangeUserPropertiesDD(group, val)}
+                                            onClickOutside={() => setShowDropDown1(false)}
+                                            /> 
+                                          </>
+                                          }
                                     </div>
                                 </div>
                             </Col>
@@ -228,8 +289,10 @@ const mapStateToProps = (state) => {
   return {
     activeProject: state.global.active_project,
     tracked_events: state.factors.tracked_events,
-    tracked_user_property: state.factors.tracked_user_property
+    tracked_user_property: state.factors.tracked_user_property,
+    userProperties: state.coreQuery.userProperties,
+    events: state.coreQuery.eventOptions
   };
 };
 
-export default connect(mapStateToProps, { fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties })(ConfigureDP);
+export default connect(mapStateToProps, {addEventToTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties})(ConfigureDP);
