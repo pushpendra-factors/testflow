@@ -145,18 +145,13 @@ func TestCreateTrackedUserProperty(t *testing.T) {
 	projectId, agent := createProjectAgentEventsFactorsTrackedEvents(r)
 	C.GetConfig().ActiveFactorsTrackedUserPropertiesLimit = 50
 
-	// Non Admin
 	request := V1.CreateTrackeduserPropertyParams{}
 	request.UserPropertyName = "up1"
-	w := sendCreateTrackedUserProperty(r, request, agent, projectId)
-	assert.Equal(t, http.StatusForbidden, w.Code)
-
-	_ = M.EditProjectAgentMapping(projectId, agent.UUID, M.ADMIN)
 
 	// Happy path
 	request = V1.CreateTrackeduserPropertyParams{}
 	request.UserPropertyName = "up1"
-	w = sendCreateTrackedUserProperty(r, request, agent, projectId)
+	w := sendCreateTrackedUserProperty(r, request, agent, projectId)
 	assert.Equal(t, http.StatusCreated, w.Code)
 	var obj successObject
 	jsonResponse, _ := ioutil.ReadAll(w.Body)

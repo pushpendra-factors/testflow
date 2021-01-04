@@ -16,7 +16,7 @@
 {
     position: absolute;
     top: 0px;
-    left: -6.8em;
+    left: -5em;
     height: 100%;
 }
 .fa-insights--tab
@@ -139,5 +139,34 @@
     .ant-progress-inner
     {
         // background-color: transparent !important;
+    }
+}
+
+
+.progressArrow--extraline{
+    position: relative;
+    &::after{
+        content: "";
+        border-left: 1px solid #B7BEC8;
+        height: 140%;
+        width: 5px;
+        position: absolute; 
+        left: -17px;
+        top: 0;
+
+    }
+}
+
+.fa-custom-badge
+{
+    .ant-badge-count
+    {
+        border-radius: 10px;
+        padding: 1px 6px;
+        height: auto;
+        background-color: $fa-color--mono-5;
+        font-size: 14px;
+        font-weight: bold;
+
     }
 }

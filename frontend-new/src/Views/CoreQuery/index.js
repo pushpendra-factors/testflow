@@ -26,6 +26,7 @@ import {
   runQuery as runQueryService,
   getFunnelData,
   getAttributionsData,
+  getCampaignsData,
 } from "../../reducers/coreQuery/services";
 import {
   QUERY_TYPE_FUNNEL,
@@ -35,6 +36,9 @@ import {
 } from "../../utils/constants";
 import AttributionsResult from "./AttributionsResult";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
+import CampaignsQueryComposer from "../../components/CampaignsQueryComposer";
+import CampaignAnalytics from "./CampaignAnalytics";
+import { CampaignAnalytics1 } from "../../utils/SampleResponse";
 
 function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -43,9 +47,13 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [showResult, setShowResult] = useState(false);
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
+  const [appliedCampaignsBreakdown, setAppliedCampaignsBreakdown] = useState(
+    []
+  );
   const [resultState, setResultState] = useState(initialResultState);
   const [funnelResult, updateFunnelResult] = useState(initialState);
   const [attributionResult, updateAttributionResult] = useState(initialState);
+  const [campaignsResult, updateCampaignsResult] = useState(initialState);
   const [requestQuery, updateRequestQuery] = useState(null);
   const [rowClicked, setRowClicked] = useState(false);
   const [querySaved, setQuerySaved] = useState(false);
@@ -91,7 +99,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     window,
     linkedEvents,
   } = useSelector((state) => state.coreQuery);
-  
+
   const dateRange = queryOptions.date_range;
 
   const updateResultState = useCallback((activeTab, newState) => {
@@ -472,18 +480,63 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     ]
   );
 
+  const runCampaignsQuery = useCallback(
+    async (isQuerySaved) => {
+      try {
+        closeDrawer();
+        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+        setShowResult(true);
+        setQuerySaved(isQuerySaved);
+        const campaignsBreakdown = [];
+        // const campaignsBreakdown = [
+        //   {
+        //     name: "campaign",
+        //     property: "id",
+        //   },
+        // ];
+        setAppliedCampaignsBreakdown(campaignsBreakdown);
+        updateCampaignsResult({
+          ...initialState,
+          loading: true,
+        });
+        const query = { breakdown: !!campaignsBreakdown.length };
+        updateRequestQuery(query);
+        // const res = await getCampaignsData(activeProject.id, query);
+        updateCampaignsResult({
+          ...initialState,
+          data: CampaignAnalytics1,
+        });
+      } catch (err) {
+        console.log(err);
+        updateCampaignsResult({
+          ...initialState,
+          error: true,
+        });
+      }
+    },
+    [dispatch, activeProject.id]
+  );
+
   useEffect(() => {
     if (rowClicked) {
       if (rowClicked.queryType === QUERY_TYPE_FUNNEL) {
         runFunnelQuery(true);
-      } else if(rowClicked.queryType === QUERY_TYPE_ATTRIBUTION) {
+      } else if (rowClicked.queryType === QUERY_TYPE_ATTRIBUTION) {
         runAttributionQuery(rowClicked.queryName);
+      } else if (rowClicked.queryType === QUERY_TYPE_CAMPAIGN) {
+        runCampaignsQuery(rowClicked.queryName);
       } else {
         runQuery("0", true, true);
       }
       setRowClicked(false);
     }
-  }, [rowClicked, runFunnelQuery, runQuery, runAttributionQuery]);
+  }, [
+    rowClicked,
+    runFunnelQuery,
+    runQuery,
+    runAttributionQuery,
+    runCampaignsQuery,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -574,9 +627,9 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     );
   };
 
-  const eventsMapper = {};
-  const reverseEventsMapper = {};
-  const arrayMapper = [];
+  let eventsMapper = {};
+  let reverseEventsMapper = {};
+  let arrayMapper = [];
 
   appliedQueries.forEach((q, index) => {
     eventsMapper[`${q}`] = `event${index + 1}`;
@@ -645,6 +698,34 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     );
   }
 
+  if (queryType === QUERY_TYPE_CAMPAIGN) {
+    arrayMapper = [
+      {
+        eventName: "impressions",
+        index: 0,
+        mapper: "event1",
+      },
+      {
+        eventName: "clicks",
+        index: 1,
+        mapper: "event2",
+      },
+    ];
+    result = (
+      <CampaignAnalytics
+        setShowResult={setShowResult}
+        requestQuery={requestQuery}
+        querySaved={querySaved}
+        setQuerySaved={setQuerySaved}
+        resultState={campaignsResult}
+        setDrawerVisible={setDrawerVisible}
+        arrayMapper={arrayMapper}
+        breakdown={appliedCampaignsBreakdown}
+        // attributionsState={attributionsState}
+      />
+    );
+  }
+
   const renderQueryComposer = () => {
     if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
       return (
@@ -663,8 +744,12 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
       return <AttrQueryComposer runAttributionQuery={runAttributionQuery} />;
     }
+
+    if (queryType === QUERY_TYPE_CAMPAIGN) {
+      return <CampaignsQueryComposer runCampaignsQuery={runCampaignsQuery} />;
+    }
   };
-  
+
   return (
     <>
       <Drawer

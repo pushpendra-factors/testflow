@@ -2,7 +2,7 @@ import React from "react";
 import SingleTouchPoint from "./SingleTouchPoint";
 import DualTouchPoint from "./DualTouchPoint";
 
-function Attributions({ chartType, attributionsState, resultState, setwidgetModal, title }) {
+function Attributions({ chartType, attributionsState, resultState, setwidgetModal, title, unit }) {
   const { eventGoal, touchpoint, models, linkedEvents } = attributionsState;
 
   if (models.length === 1) {
@@ -17,6 +17,7 @@ function Attributions({ chartType, attributionsState, resultState, setwidgetModa
 				chartType={chartType}
         setwidgetModal={setwidgetModal}
         title={title}
+        unit={unit}
       />
     );
   }
@@ -34,6 +35,7 @@ function Attributions({ chartType, attributionsState, resultState, setwidgetModa
 				setwidgetModal={setwidgetModal}
         chartType={chartType}
         title={title}
+        unit={unit}
       />
     );
   }

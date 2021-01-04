@@ -1687,7 +1687,7 @@ func CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs strin
 
 	var waitGroup sync.WaitGroup
 	count := 0
-	waitGroup.Add(U.MinInt(len(projectIDs), numRoutines))
+	waitGroup.Add(U.MinInt(len(projectIDsToRun), numRoutines))
 	for _, projectID := range projectIDsToRun {
 		count++
 		log.WithFields(log.Fields{"ProjectID": projectID}).Info("Starting web analytics dashboard caching")
@@ -1695,7 +1695,7 @@ func CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs strin
 
 		if count%numRoutines == 0 {
 			waitGroup.Wait()
-			waitGroup.Add(U.MinInt(len(projectIDs)-count, numRoutines))
+			waitGroup.Add(U.MinInt(len(projectIDsToRun)-count, numRoutines))
 		}
 	}
 	waitGroup.Wait()

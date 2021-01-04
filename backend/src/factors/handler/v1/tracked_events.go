@@ -7,8 +7,6 @@ import (
 
 	M "factors/model"
 
-	"factors/handler/helpers"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -69,10 +67,6 @@ func CreateFactorsTrackedEventsHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"projectId": projectID,
 	})
-	if !helpers.IsAdmin(projectID, loggedInAgentUUID) {
-		c.AbortWithStatus(http.StatusForbidden)
-		return
-	}
 	params, err := getcreateFactorsTrackedEventParams(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -126,7 +120,6 @@ func getRemoveFactorsTrackedEventParams(c *gin.Context) (*RemoveFactorsTrackedEv
 // @Success 200 {string} json "{"id": uint64, "status": string}"
 // @Router /{project_id}/v1/factors/tracked_event/remove [DELETE]
 func RemoveFactorsTrackedEventsHandler(c *gin.Context) {
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -135,10 +128,6 @@ func RemoveFactorsTrackedEventsHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"projectId": projectID,
 	})
-	if !helpers.IsAdmin(projectID, loggedInAgentUUID) {
-		c.AbortWithStatus(http.StatusForbidden)
-		return
-	}
 	params, err := getRemoveFactorsTrackedEventParams(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)

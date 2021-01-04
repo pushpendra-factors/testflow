@@ -1,30 +1,63 @@
-import React, { useState, useCallback } from 'react';
-import DataTable from '../../../../components/DataTable';
+import React, { useState, useCallback } from "react";
+import DataTable from "../../../../components/DataTable";
 import {
-  getNoGroupingTableData, getColumns, getDateBasedColumns, getNoGroupingTablularDatesBasedData
-} from './utils';
+  getNoGroupingTableData,
+  getColumns,
+  getDateBasedColumns,
+  getNoGroupingTablularDatesBasedData,
+} from "./utils";
+import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";
 
 function NoBreakdownTable({
-  data, events, reverseEventsMapper, chartType, setHiddenEvents, hiddenEvents, isWidgetModal, durationObj
+  data,
+  events,
+  reverseEventsMapper,
+  chartType,
+  setHiddenEvents,
+  hiddenEvents,
+  isWidgetModal,
+  durationObj,
 }) {
   const [sorter, setSorter] = useState({});
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
   }, []);
 
-  let columns; let tableData; let rowSelection = null; let onSelectionChange; let selectedRowKeys;
+  let columns;
+  let tableData;
+  let rowSelection = null;
+  let onSelectionChange;
+  let selectedRowKeys;
 
-  if (chartType === 'sparklines') {
+  if (chartType === CHART_TYPE_SPARKLINES) {
     columns = getColumns(events, sorter, handleSorting);
-    tableData = getNoGroupingTableData(data, sorter, reverseEventsMapper, durationObj.frequency);
+    tableData = getNoGroupingTableData(
+      data,
+      sorter,
+      reverseEventsMapper,
+      durationObj.frequency
+    );
   } else {
-    columns = getDateBasedColumns(data, sorter, handleSorting, durationObj.frequency);
-    tableData = getNoGroupingTablularDatesBasedData(data, sorter, searchText, reverseEventsMapper, durationObj.frequency);
+    columns = getDateBasedColumns(
+      data,
+      sorter,
+      handleSorting,
+      durationObj.frequency
+    );
+    tableData = getNoGroupingTablularDatesBasedData(
+      data,
+      sorter,
+      searchText,
+      reverseEventsMapper,
+      durationObj.frequency
+    );
 
     onSelectionChange = (_, selectedRows) => {
-      const skippedEvents = events.filter(event => selectedRows.findIndex(r => r.event === event) === -1);
+      const skippedEvents = events.filter(
+        (event) => selectedRows.findIndex((r) => r.event === event) === -1
+      );
       if (skippedEvents.length === events.length) {
         return false;
       }
@@ -41,7 +74,7 @@ function NoBreakdownTable({
 
     rowSelection = {
       selectedRowKeys,
-      onChange: onSelectionChange
+      onChange: onSelectionChange,
     };
   }
 

@@ -113,7 +113,7 @@ function Header({saveGoalInsights, activeProject, factors_insight_rules}) {
 
                 <Col span={24}>
                 <Text type={'title'} level={7} extraClass={'m-0'}>Title</Text>
-                  <Form.Item name="title" rules={[{ required: true}]} className={'m-0'} >
+                  <Form.Item name="title" rules={[{ required: true, message: 'Please enter the title'}]} className={'m-0'} >
                     <Input size="large" className={'fa-input w-full'} />
                   </Form.Item>
                 </Col> 

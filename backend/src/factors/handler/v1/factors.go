@@ -64,6 +64,11 @@ func PostFactorsHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, allEventPatterns)
 		return
 	}
+	if patternMode == "AllProperties" {
+		allProperties := ps.GetUserAndEventsInfo()
+		c.JSON(http.StatusOK, allProperties)
+		return
+	}
 	startConstraints, endConstraints := parseConstraints(params.Rule.Rule)
 	if results, err := PW.FactorV1("",
 		projectId, params.Rule.StartEvent, startConstraints,
@@ -123,6 +128,11 @@ func GetFactorsHandler(c *gin.Context) {
 			allEventPatterns = append(allEventPatterns, pattern)
 		}
 		c.JSON(http.StatusOK, allEventPatterns)
+		return
+	}
+	if patternMode == "AllProperties" {
+		allProperties := ps.GetUserAndEventsInfo()
+		c.JSON(http.StatusOK, allProperties)
 		return
 	}
 }
