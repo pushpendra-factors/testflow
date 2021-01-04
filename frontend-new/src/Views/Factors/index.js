@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
 import {
-  Row, Col, Table, Avatar, Button
+  Row, Col, Button, Spin
 } from 'antd';
-import { Text, SVG } from 'factorsComponents';
-import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
+import { Text, SVG } from 'factorsComponents'; 
 import ConfigureDP from './ConfigureDP';
 import CreateGoalDrawer from './CreateGoalDrawer';
 import { fetchFactorsGoals, fetchFactorsModels, fetchGoalInsights, saveGoalInsightRules } from 'Reducers/factors';
@@ -14,36 +13,8 @@ import { fetchProjectAgents } from 'Reducers/agentActions';
 import { fetchEventNames } from 'Reducers/coreQuery/middleware'; 
 import _, { isEmpty } from 'lodash'; 
 import { useHistory } from 'react-router-dom';
-
-const columns = [
-  {
-    title: 'Saved Goals',
-    dataIndex: 'title',
-    key: 'title',
-    render: (text) => <Text type={'title'} level={6} extraClass={'cursor-pointer m-0'} >{text}</Text>
-  },
-  {
-    title: 'Created By',
-    dataIndex: 'author',
-    key: 'author',
-    render: (text) => <div className="flex items-center">
-      {text === "System Generated" ? <Text type={'title'} level={7} color={'grey'} extraClass={'cursor-pointer m-0'} >{`System Generated`}</Text> : <>
-        <Avatar src="assets/avatar/avatar.png" className={'mr-2'} /><Text type={'title'} level={6} extraClass={'cursor-pointer m-0 ml-2'} >{text}</Text>
-        </>
-      }
-        </div>
-  }
-];
-
-// const data = [
-//   {
-//     key: '1',
-//     type: <SVG name={'events_cq'} size={24} />,
-//     title: 'Monthly User signups from Google Campaigns',
-//     author: 'Vishnu Baliga',
-//     date: 'Jan 10, 2020'
-//   },
-// ];
+import SavedGoals from './SavedGoals';
+ 
 
 const suggestionList = [
   {
@@ -76,11 +47,10 @@ const Factors = ({
   , fetchProjectAgents
   ,fetchEventNames
   ,fetchFactorsModels
-  , fetchGoalInsights
-  ,factors_models 
-  ,saveGoalInsightRules
+  , fetchGoalInsights 
 }) => {
   const [loadingTable, SetLoadingTable] = useState(true);
+  const [fetchingIngishts, SetfetchingIngishts] = useState(false);
   const [showConfigureDPModal, setConfigureDPModal] = useState(false);
   const [showGoalDrawer, setGoalDrawer] = useState(false);
   const [dataSource, setdataSource] = useState(null);
@@ -94,119 +64,79 @@ const Factors = ({
       await fetchEventNames(activeProject.id);
       await fetchFactorsModels(activeProject.id); 
     };
-    getData1();
-    setdataSource(null);
-    if (goals) {
-      const formattedArray = [];
-      goals.map((goal, index) => {
-        let createdUser = '';
-        agents.map((agent) => {
-          if (agent.uuid === goal.created_by) {
-            createdUser = `${agent.first_name} ${agent.last_name}`;
-          }
-        });
-        formattedArray.push({
-          key: index,
-          title: goal.name,
-          author: createdUser ? createdUser : 'System Generated',
-          rule: goal.rule,
-          project_id: goal.project_id
-        });
-        setdataSource(formattedArray);
-      });
-      SetLoadingTable(false);
-    }
+    getData1(); 
   }, [activeProject]);
 
   const handleCancel = () => {
     setConfigureDPModal(false);
   };
 
-  const getInsights = (project_id, rule, name) => {
-
-    SetLoadingTable(true);
-    const isJourney = !_.isEmpty(rule?.rule?.st_en); 
-    const ruleData = {
-      name: name,
-      rule: rule
-    }
-    const getData = async () => {
-      await fetchGoalInsights(project_id, isJourney, ruleData, factors_models[0].mid); 
-    };
-    getData().then(()=>{  
-      saveGoalInsightRules(ruleData);  
-      history.push('/explain/insights');   
-      SetLoadingTable(false)
-    });
-  };
+ 
   return (
     <>
-         <Header>
-                <div className="w-full h-full py-4 flex flex-col justify-center items-center">
-                    <SearchBar />
-                </div>
-            </Header>
+    {fetchingIngishts ? <Spin size={'large'} className={'fa-page-loader'} /> : 
+    <>
+        <Header>
+              <div className="w-full h-full py-4 flex flex-col justify-center items-center">
+                  <SearchBar />
+              </div>
+          </Header>
 
-            <div className={'fa-container mt-24'}>
-                <Row gutter={[24, 24]}>
-                   
-                <Col span={16}>
-                    <Row gutter={[24, 24]} justify="center">
-                        <Col span={20}>
-                            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text>
-                            <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically tracks website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
-                        </Col>
-                        <Col span={20}>
-                            <Button size={'large'} type={'primary'} onClick={() => setGoalDrawer(true)}>Create a New Goal</Button>
-                            <a className={'ml-4'}>learn more</a>
-                        </Col>
-                    </Row>
-                    <Row gutter={[24, 24]} justify="center">
-                        <Col span={20}>
-                        <Table loading={loadingTable} className="ant-table--custom mt-8" columns={columns} dataSource={dataSource} pagination={false} 
-                          onRow={(record, rowIndex) => {
-                            return {
-                              onClick: event => {
-                                getInsights(record.project_id,record.rule, record.title) 
-                              }, // click row 
-                            };
-                        }}
-                        />
-                        </Col>
-                    </Row>
-                </Col>
-                <Col span={8} className={'border-left--thin-2'}>
-                        <Row gutter={[24, 24]} className={'p-4'}>
-                            <Col span={24}>
-                                <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'} >What’s being tracked?</Text>
-                                <Text type={'title'} level={7} extraClass={'m-0'} >Explain periodically tracks a pre-configured set of data points for faster and efficient retrieval of insights. </Text>
-                                <Button className={'m-0 mt-4'} size={'large'} onClick={() => setConfigureDPModal(true)}>Configure Data Points</Button>
-                            </Col>
-                            {/* <Col span={24}>
-                                <Text type={'title'} level={7} weight={'bold'} extraClass={'mt-8'} >Suggestions based on your activity</Text>
-                                {suggestionList.map((item, index) => {
-                                  return (
-                                    <div key={index} className={'flex justify-between items-center mt-2'}>
-                                        <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{item.name}</Text>
-                                        <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
-                                    </div>
-                                  );
-                                })}
-                            </Col> */}
-                        </Row>
-                    </Col>
-                </Row>
-            </div>
+          <div className={'fa-container mt-24'}>
+              <Row gutter={[24, 24]}>
+                  
+              <Col span={16}>
+                  <Row gutter={[24, 24]} justify="center">
+                      <Col span={20}>
+                          <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text>
+                          <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically tracks website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
+                      </Col>
+                      <Col span={20}>
+                          <Button size={'large'} type={'primary'} onClick={() => setGoalDrawer(true)}>Create a New Goal</Button>
+                          <a className={'ml-4'}>learn more</a>
+                      </Col>
+                  </Row> 
+                  <Row gutter={[24, 24]} justify="center">
+                      <Col span={20}> 
+                      <SavedGoals SetfetchingIngishts={SetfetchingIngishts} />
+                      </Col>
+                  </Row>
+              </Col>
+              <Col span={8} className={'border-left--thin-2'}>
+                      <Row gutter={[24, 24]} className={'p-4'}>
+                          <Col span={24}>
+                              <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'} >What’s being tracked?</Text>
+                              <Text type={'title'} level={7} extraClass={'m-0'} >Explain periodically tracks a pre-configured set of data points for faster and efficient retrieval of insights. </Text>
+                              <Button className={'m-0 mt-4'} size={'large'} onClick={() => setConfigureDPModal(true)}>Configure Data Points</Button>
+                          </Col>
+                          {/* <Col span={24}>
+                              <Text type={'title'} level={7} weight={'bold'} extraClass={'mt-8'} >Suggestions based on your activity</Text>
+                              {suggestionList.map((item, index) => {
+                                return (
+                                  <div key={index} className={'flex justify-between items-center mt-2'}>
+                                      <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0'} ><SlackOutlined className={'mr-1'} />{item.name}</Text>
+                                      <Button size={'small'} type="text"><SVG name="plus" color={'grey'} /></Button>
+                                  </div>
+                                );
+                              })}
+                          </Col> */}
+                      </Row>
+                  </Col>
+              </Row>
+          </div>
 
-            <ConfigureDP
-            visible={showConfigureDPModal}
-            handleCancel={handleCancel}
-            />
+          <ConfigureDP
+          visible={showConfigureDPModal}
+          handleCancel={handleCancel}
+          />
 
-            <CreateGoalDrawer
-                visible={showGoalDrawer}
-                onClose={() => setGoalDrawer(false)}
-            />
+          <CreateGoalDrawer
+              visible={showGoalDrawer}
+              onClose={() => setGoalDrawer(false)}
+          />
+
+    </>
+    }
 
     </>
   );
