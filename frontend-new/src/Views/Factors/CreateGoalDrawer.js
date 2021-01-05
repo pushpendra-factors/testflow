@@ -113,21 +113,20 @@ const getInsights = (projectID, isJourney=false) =>{
        en_en: event2 ? event2 : event1
 
     }  
-  } 
-  const getData = async () => {
-    await props.fetchGoalInsights(projectID, isJourney, factorsData, calcModelId[0].mid); 
-  };
-  getData().then(()=>{
-    props.saveGoalInsightRules(factorsData); 
-    setInsightBtnLoading(false);
-    history.push('/explain/insights');  
-    // if(_.isEmpty(props.goal_insights.insights)){
-    //   message.error("Oops! no data");
-    // }
-    // else{
-    //   history.push('/explain/insights');  
-    // }
-  });
+  }  
+  
+  props.fetchGoalInsights(projectID, isJourney, factorsData, calcModelId[0].mid).then((data)=>{
+    console.log("fetchGoalInsights then",data);
+      props.saveGoalInsightRules(factorsData); 
+      setInsightBtnLoading(false);
+      history.push('/explain/insights');
+    }).catch((err)=>{
+      console.log("fetchGoalInsights catch",err);
+      const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`;
+      message.error(ErrMsg);
+      setInsightBtnLoading(false);
+  }); 
+
 } 
   return (
         <Drawer
