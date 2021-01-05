@@ -209,7 +209,7 @@ const ConfigureDP = (props) => {
                         <Row gutter={[24, 12]} justify={'center'}>
                             <Col span={24}>
                                 <div className={'flex items-center mt-6'}>
-                                    <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >Events</Text><Text type={'title'} level={4} color={'grey'} extraClass={'m-0 ml-2'} >{tracked_events && `(${tracked_events.length})`}</Text>
+                                    <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >Events</Text><Text type={'title'} level={4} color={'grey'} extraClass={'m-0 ml-2'} >{`(${activeEventsTracked+InQueueEventsEvents})`}</Text>
                                 </div>
                             </Col>
                             <Col span={24}>
@@ -267,7 +267,7 @@ const ConfigureDP = (props) => {
                         <Row gutter={[24, 12]} justify={'center'}>
                             <Col span={24}>
                                 <div className={'flex items-center mt-6'}>
-                                    <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >User Properties</Text><Text type={'title'} level={4} color={'grey'} extraClass={'m-0 ml-2'} >{tracked_user_property && `(${tracked_user_property.length})`}</Text>
+                                    <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >User Properties</Text><Text type={'title'} level={4} color={'grey'} extraClass={'m-0 ml-2'} >{`(${activeUserProperties + InQueueUserProperties})`}</Text>
                                 </div>
                             </Col>
                             <Col span={24}>
