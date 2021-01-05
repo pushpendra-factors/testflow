@@ -175,7 +175,6 @@ func getAdwordsIDAndHeirarchyColumnsByType(docType int, valueJSON *postgres.Json
 	}
 
 	idFieldName := getAdwordsIDFieldNameByType(docType)
-	value1, value2, value3, value4 := getAdwordsHierarchyColumnsByType(valueMap, docType)
 	id, exists := (*valueMap)[idFieldName]
 	if !exists {
 		return "", 0, 0, 0, 0, fmt.Errorf("id field %s does not exist on doc of type %v", idFieldName, docType)
@@ -184,11 +183,12 @@ func getAdwordsIDAndHeirarchyColumnsByType(docType int, valueJSON *postgres.Json
 	if id == nil {
 		return "", 0, 0, 0, 0, fmt.Errorf("id field %s has empty value on doc of type %v", idFieldName, docType)
 	}
-
 	idStr, err := U.GetValueAsString(id)
 	if err != nil {
 		return "", 0, 0, 0, 0, err
 	}
+
+	value1, value2, value3, value4 := getAdwordsHierarchyColumnsByType(valueMap, docType)
 
 	// ID as string always.
 	return idStr, value1, value2, value3, value4, nil

@@ -21,7 +21,7 @@ class FactorsDataService:
         response = requests.post(url, json=payload)
         if not response.ok:
             log.error("Failed updating adwords integration with response : %d, %s",
-                      response.status_code, response.json())
+                      response.status_code, response.text)
             return
 
         return response
@@ -34,7 +34,7 @@ class FactorsDataService:
         response = requests.post(url, json=payload)
         if not response.ok:
             log.error("Failed getting adwords integration with response : %d, %s",
-                      response.status_code, response.json())
+                      response.status_code, response.text)
             return
         return response
 
@@ -45,7 +45,7 @@ class FactorsDataService:
         response = requests.get(url)
         if not response.ok:
             log.error("Failed to get sync data: %d, %s",
-                      response.status_code, response.json())
+                      response.status_code, response.text)
 
         log.warning("Got adwords last sync info.")
         return response.json()
@@ -65,7 +65,7 @@ class FactorsDataService:
         response = requests.post(url, json=payload)
         if not response.ok:
             log.error("Failed to add response %s to adwords warehouse: %d, %s",
-                      doc_type, response.status_code, response.json())
+                      doc_type, response.status_code, response.text)
 
         return response
 
