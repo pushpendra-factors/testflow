@@ -1,6 +1,6 @@
 /* eslint-disable */
 
-  import { get, post, put } from '../utils/request';
+  import { get, post, del } from '../utils/request';
   var host = BUILD_CONFIG.backend_host;
       host = (host[host.length - 1] === '/') ? host : host + '/';
 
@@ -51,12 +51,24 @@
           case 'ADD_EVENTS_REJECTED': {
             return { ...state, error: action.payload };
           } 
+          case 'DEL_EVENTS_FULFILLED': {
+            return { ...state };
+          } 
+          case 'DEL_EVENTS_REJECTED': {
+            return { ...state, error: action.payload };
+          } 
           case 'ADD_USER_PROPERTY_FULFILLED': {
             return { ...state };
           } 
           case 'ADD_USER_PROPERTY_REJECTED': {
             return { ...state, error: action.payload };
+          }
+          case 'DEL_USER_PROPERTY_FULFILLED': {
+            return { ...state };
           } 
+          case 'DEL_USER_PROPERTY_REJECTED': {
+            return { ...state, error: action.payload };
+          }
           
         }
         return state;
@@ -182,6 +194,36 @@ export function addUserPropertyToTracked(projectID, data) {
             resolve(response)
           }).catch((err)=>{        
             dispatch({type:"ADD_USER_PROPERTY_REJECTED", payload: err});
+            reject(err);
+          });
+      });
+    }
+  }
+
+
+export function delEventTracked(projectID, data) { 
+    return function(dispatch) {
+      return new Promise((resolve,reject) => { 
+        del(dispatch, host + "projects/"+projectID+`/v1/factors/tracked_event/remove`, data)
+          .then((response)=>{        
+            dispatch({type:"DEL_EVENTS_FULFILLED", payload: response.data});
+            resolve(response)
+          }).catch((err)=>{        
+            dispatch({type:"DEL_EVENTS_REJECTED", payload: err});
+            reject(err);
+          });
+      });
+    }
+  }
+export function delUserPropertyTracked(projectID, data) { 
+    return function(dispatch) {
+      return new Promise((resolve,reject) => { 
+        del(dispatch, host + "projects/"+projectID+`/v1/factors/tracked_user_property/remove`, data)
+          .then((response)=>{        
+            dispatch({type:"DEL_USER_PROPERTY_FULFILLED", payload: response.data});
+            resolve(response)
+          }).catch((err)=>{        
+            dispatch({type:"DEL_USER_PROPERTY_REJECTED", payload: err});
             reject(err);
           });
       });

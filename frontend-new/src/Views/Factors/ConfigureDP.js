@@ -6,7 +6,9 @@ import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons'; 
 import { connect } from 'react-redux';
 import GroupSelect from '../../components/QueryComposer/GroupSelect';
-import {addEventToTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties} from 'Reducers/factors' 
+import {addEventToTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties, delEventTracked, delUserPropertyTracked} from 'Reducers/factors' 
+import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+const { confirm } = Modal;
 
 // const suggestionList = [
 //   {
@@ -33,7 +35,7 @@ import {addEventToTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, 
 
 const ConfigureDP = (props) => {
   const {
-    activeProject, tracked_events, tracked_user_property, userProperties, events, addEventToTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties
+    activeProject, tracked_events, tracked_user_property, userProperties, events, addEventToTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties,  delEventTracked, delUserPropertyTracked
   } = props;
   const [activeEventsTracked, setActiveEventsTracked] = useState(0);
   const [InQueueEventsEvents, setInQueueEventsEvents] = useState(0);
@@ -94,15 +96,13 @@ const ConfigureDP = (props) => {
       fetchFactorsTrackedEvents(activeProject.id);
     }).catch((err) => {
       const ErrMsg = err?.data.error ? err.data.error : `Oops! Something went wrong!`
-      message.error(ErrMsg);
-      console.log('CDP - addEventToTracked failed-->', err);
+      message.error(ErrMsg); 
     });
     
   }
   
   const onChangeUserPropertiesDD = (grp, value) => {
-    setShowDropDown1(false); 
-    console.log("onChangeUserPropertiesDD",grp, value)
+    setShowDropDown1(false);  
     const UserPropertyData = {
       "user_property_name": `${value[0]}`
     }
@@ -111,10 +111,47 @@ const ConfigureDP = (props) => {
       fetchFactorsTrackedUserProperties(activeProject.id);
     }).catch((err) => {
       const ErrMsg = err?.data.error ? err.data.error : `Oops! Something went wrong!`
-      message.error(ErrMsg);
-      console.log('CDP - addUserPropertyToTracked failed-->', err);
+      message.error(ErrMsg); 
     });
 
+  }
+
+  const DeleteEvent = (id) => { 
+    confirm({
+      title: 'Do you want to remove this Event?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Please confirm to proceed',
+      okText: 'Yes',
+      zIndex: '1020',
+      onOk() { 
+        delEventTracked(activeProject.id, { "id": id }).then(() => {
+          message.success('Event removed!');
+          fetchFactorsTrackedEvents(activeProject.id);
+        }).catch((err) => { 
+          const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`
+          message.error(ErrMsg);
+        });
+      }
+    });
+  }
+
+  const DeleteUserProperty = (id) => { 
+    confirm({
+      title: 'Do you want to remove this User property?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Please confirm to proceed',
+      okText: 'Yes',
+      zIndex: '1020',
+      onOk() {  
+        delUserPropertyTracked(activeProject.id, { "id": id }).then(() => {
+          message.success('User property removed!');
+          fetchFactorsTrackedUserProperties(activeProject.id);
+        }).catch((err) => {
+          const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`
+          message.error(ErrMsg);
+        });
+      }
+    });
   }
 
   return (
@@ -207,12 +244,18 @@ const ConfigureDP = (props) => {
                             </Col>
                             <Col span={24}>
                             {tracked_events && tracked_events.map((event, index) => {
-                              return (
-                                    <div key={index} className={'flex items-center mt-2'}>
-                                        <SVG size={16} name={'MouseClick'} color={'purple'} className={'mr-1'} />
-                                        <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0 ml-2'} >{event.name}</Text>
-                                    </div>
-                              );
+                              if(event.is_active){
+                                return (
+                                      <div key={index} className={'flex items-center justify-between px-4 py-2 fa-cdp--item'}>
+                                          <div className={'flex items-center'}>
+                                            <SVG size={16} name={'MouseClick'} color={'purple'} className={'mr-1'} />
+                                            <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0 ml-2'} >{event.name}</Text> 
+                                          </div>
+                                          <Button onClick={()=>DeleteEvent(event.id) }className={'fa-cdp--action fa-button-ghost'} size={'small'} type="text"><SVG name="delete" color={'grey'} /></Button>
+                                      </div>
+                                ); 
+                              }
+                              else return null
                             })}
                             </Col>
                         </Row>
@@ -265,12 +308,18 @@ const ConfigureDP = (props) => {
                             </Col>
                             <Col span={24}>
                             {tracked_user_property && tracked_user_property.map((event, index) => {
-                              return (
-                                      <div key={index} className={'flex items-center mt-2'}>
-                                          <SVG size={16} name={'MouseClick'} color={'purple'} className={'mr-1'} />
-                                          <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0 ml-2'} >{event.user_property_name}</Text>
-                                      </div>
-                              );
+                              if(event.is_active){
+                                return (
+                                      <div key={index} className={'flex items-center justify-between px-4 py-2 fa-cdp--item'}>
+                                        <div className={'flex items-center'}>
+                                            <SVG size={16} name={'user'} color={'purple'} className={'mr-1'} />
+                                            <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0 ml-2'} >{event.user_property_name}</Text>
+                                        </div>
+                                        <Button onClick={()=>DeleteUserProperty(event.id)} className={'fa-cdp--action fa-button-ghost'} size={'small'} type="text"><SVG name="delete" color={'grey'} /></Button>
+                                    </div>
+                                );
+                              }
+                              else return null
                             })}
                             </Col>
                         </Row>
@@ -297,4 +346,4 @@ const mapStateToProps = (state) => {
   };
 };
 
-export default connect(mapStateToProps, {addEventToTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties})(ConfigureDP);
+export default connect(mapStateToProps, {addEventToTracked, delEventTracked, delUserPropertyTracked, addUserPropertyToTracked, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties})(ConfigureDP);
