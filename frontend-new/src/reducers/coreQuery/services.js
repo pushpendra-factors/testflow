@@ -147,7 +147,7 @@ export const getAttributionsData = (
       "&dashboard_unit_id=" +
       dashboard.unit_id;
   }
-  return post(null, url, reqBody);
+  return post(null, `http://localhost:8000/query`, reqBody);
 };
 
 export const fetchCampaignConfig = (projectId, channel) => {

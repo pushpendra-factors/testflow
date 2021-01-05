@@ -28,8 +28,8 @@ function ViewUserDetails({
         </Row>
         <Row className={'mt-2'}>
           <Col>
-            {dataLoading ? <Skeleton.Avatar active={true} size={104} shape={'square'} />
-              : <Avatar size={104} src="assets/avatar/avatar.png" />
+            {dataLoading ? <Skeleton.Avatar active={true} size={104} shape={'square'}  />
+              : <Avatar size={104} style={{ color: '#f56a00', backgroundColor: '#fde3cf', fontSize: '42px', textTransform: 'uppercase', fontWeight:'400' }}>{`${agent?.first_name?.charAt(0)}${agent?.last_name?.charAt(0)}`}</Avatar>
             }
             <Text type={'paragraph'} mini extraClass={'m-0 mt-1'} color={'grey'} >A photo helps personalise your account</Text>
           </Col>

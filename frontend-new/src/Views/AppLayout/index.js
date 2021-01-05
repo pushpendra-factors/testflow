@@ -1,19 +1,27 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { Layout, Spin } from "antd";
 import Sidebar from "../../components/Sidebar";
-import CoreQuery from "../CoreQuery";
-import Dashboard from "../Dashboard";
-import Factors from '../Factors';
-import ProjectSettings from '../Settings/ProjectSettings';
-import componentsLib from '../../Views/componentsLib';
-import { connect, useSelector, useDispatch } from 'react-redux';
-import { bindActionCreators } from 'redux';
+// import CoreQuery from "../CoreQuery";
+// import Dashboard from "../Dashboard";
+// import Factors from "../Factors";
+import ProjectSettings from "../Settings/ProjectSettings";
+import componentsLib from "../../Views/componentsLib";
+import { connect, useSelector, useDispatch } from "react-redux";
+import { bindActionCreators } from "redux";
 import {
-  BrowserRouter as Router, Route, Switch, useHistory
-} from 'react-router-dom';
-import { fetchProjects } from '../../reducers/agentActions';
-import { fetchQueries } from '../../reducers/coreQuery/services';
-import { fetchDashboards } from '../../reducers/dashboard/services';
+  BrowserRouter as Router,
+  Route,
+  Switch,
+  useHistory,
+} from "react-router-dom";
+import { fetchProjects } from "../../reducers/agentActions";
+import { fetchQueries } from "../../reducers/coreQuery/services";
+import { fetchDashboards } from "../../reducers/dashboard/services";
+import PageSuspenseLoader from "../../components/SuspenseLoaders/PageSuspenseLoader";
+
+const CoreQuery = lazy(() => import("../CoreQuery"));
+const Dashboard = lazy(() => import("../Dashboard"));
+const Factors = lazy(() => import("../Factors"));
 
 function AppLayout({ fetchProjects }) {
   const [dataLoading, setDataLoading] = useState(true);
@@ -58,18 +66,30 @@ function AppLayout({ fetchProjects }) {
 
   return (
     <>
-      {dataLoading ? <Spin size={'large'} className={'fa-page-loader'} />
-        : (<Layout>
-           {!show_analytics_result ? <Sidebar /> : null}
+      {dataLoading ? (
+        <Spin size={"large"} className={"fa-page-loader"} />
+      ) : (
+        <Layout>
+          {!show_analytics_result ? <Sidebar /> : null}
           <Layout className={contentClassName}>
-            <Content className="bg-white min-h-screen"> 
+            <Content className="bg-white min-h-screen">
+              <Suspense fallback={<PageSuspenseLoader />}>
                 <Switch>
                   <Route exact path="/" name="Home" component={Dashboard} />
-                  <Route path="/components" name="componentsLib" component={componentsLib} />
+                  <Route
+                    path="/components"
+                    name="componentsLib"
+                    component={componentsLib}
+                  />
                   <Route path="/settings" component={ProjectSettings} />
-                  <Route path="/core-analytics" name="Home" component={CoreQuery} /> 
+                  <Route
+                    path="/core-analytics"
+                    name="Home"
+                    component={CoreQuery}
+                  />
                   <Route path="/explain" name="Factors" component={Factors} />
-                </Switch> 
+                </Switch>
+              </Suspense>
             </Content>
           </Layout>
         </Layout>

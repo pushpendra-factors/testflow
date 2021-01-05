@@ -93,7 +93,8 @@ const ConfigureDP = (props) => {
       message.success('Event added successfully!')
       fetchFactorsTrackedEvents(activeProject.id);
     }).catch((err) => {
-      message.error('Oops! Something went wrong.');
+      const ErrMsg = err?.data.error ? err.data.error : `Oops! Something went wrong!`
+      message.error(ErrMsg);
       console.log('CDP - addEventToTracked failed-->', err);
     });
     
@@ -109,7 +110,8 @@ const ConfigureDP = (props) => {
       message.success('User Property added successfully!')
       fetchFactorsTrackedUserProperties(activeProject.id);
     }).catch((err) => {
-      message.error('Oops! Something went wrong.');
+      const ErrMsg = err?.data.error ? err.data.error : `Oops! Something went wrong!`
+      message.error(ErrMsg);
       console.log('CDP - addUserPropertyToTracked failed-->', err);
     });
 
