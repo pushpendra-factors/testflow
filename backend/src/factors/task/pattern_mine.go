@@ -11,6 +11,7 @@ import (
 	"factors/pattern_server/store"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
+	"factors/util"
 	U "factors/util"
 	"fmt"
 	"io"
@@ -436,9 +437,8 @@ func mineAndWriteLenTwoPatterns(
 
 	// filter two $events
 	for _, v := range lenTwoPatterns {
-		if !(strings.HasPrefix(v.EventNames[0], "$") &&
+		if util.IsCampaignEvent(v.EventNames[0]) || util.IsCampaignEvent(v.EventNames[1]) || !(strings.HasPrefix(v.EventNames[0], "$") &&
 			strings.HasPrefix(v.EventNames[1], "$")) {
-
 			lenTwoPatternsMod = append(lenTwoPatternsMod, v)
 		}
 	}
@@ -449,6 +449,7 @@ func mineAndWriteLenTwoPatterns(
 	if err != nil {
 		return []*P.Pattern{}, 0, err
 	}
+
 	if err := writePatternsAsChunks(filteredLenTwoPatterns, chunkDir); err != nil {
 		return []*P.Pattern{}, 0, err
 	}
@@ -476,6 +477,13 @@ func GetEncodedEventsPatterns(projectId uint64, filteredPatterns []*P.Pattern, e
 			if valPattern, ok := tmpPatterns[p.Name]; ok {
 				goalPatterns = append(goalPatterns, valPattern)
 				mineLog.Info(fmt.Sprint("Goal event from db ", valPattern.String()))
+
+			}
+		}
+		for _, p := range campEventsList {
+			if valPattern, ok := tmpPatterns[p]; ok {
+				goalPatterns = append(goalPatterns, valPattern)
+				mineLog.Info(fmt.Sprint("Goal event from campaign ", valPattern.String()))
 
 			}
 		}
@@ -579,13 +587,11 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		if err != nil {
 			return err
 		}
-
 		cumulativePatternsSize += patternsSize
 		if err := writePatternsAsChunks(filteredPatterns, chunkDir); err != nil {
 			return err
 		}
 		printFilteredPatterns(filteredPatterns, patternLen)
-
 		if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 			return nil
 		}
@@ -1272,6 +1278,7 @@ func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType m
 	ieTopk := takeTopKIE(allPatterns, k)
 	specialTopK := takeTopKspecialEvents(allPatterns, keventsSpecial)
 	URLTopK := takeTopKAllURL(allPatterns, keventsURL)
+	campaignEvents := takeCampaignEvents(allPatterns, campaignEvent)
 
 	allPatternsFiltered := make([]patternProperties, 0)
 
@@ -1280,13 +1287,11 @@ func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType m
 	allPatternsFiltered = append(allPatternsFiltered, ieTopk...)
 	allPatternsFiltered = append(allPatternsFiltered, specialTopK...)
 	allPatternsFiltered = append(allPatternsFiltered, URLTopK...)
+	allPatternsFiltered = append(allPatternsFiltered, campaignEvents...)
 
 	allPatternsTopk := make([]*P.Pattern, 0)
 	exists := make(map[string]bool)
 
-	for _, v := range campaignEvent {
-		exists[v] = true
-	}
 	for _, pt := range allPatternsFiltered {
 		if exists[pt.pattern.EventNames[0]] == false {
 			allPatternsTopk = append(allPatternsTopk, pt.pattern)
@@ -1361,6 +1366,24 @@ func takeTopKspecialEvents(allPatterns []patternProperties, topK int) []patternP
 	}
 	return allPatternsType
 
+}
+
+func takeCampaignEvents(allPatterns []patternProperties, campaignEvents []string) []patternProperties {
+
+	allPatternsType := make([]patternProperties, 0)
+
+	exists := make(map[string]bool)
+
+	for _, v := range campaignEvents {
+		exists[v] = true
+	}
+	for _, pt := range allPatterns {
+
+		if exists[pt.pattern.EventNames[0]] == true {
+			allPatternsType = append(allPatternsType, pt)
+		}
+	}
+	return allPatternsType
 }
 
 func takeTopKAllURL(allPatterns []patternProperties, topK int) []patternProperties {
