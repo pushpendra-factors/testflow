@@ -20,11 +20,10 @@ import (
 	"cloud.google.com/go/storage"
 )
 
-var endpoint *string
-var authToken *string
 var bulkLoadUrl string
 var getUserIdUrl string
-var clientUserIdToUserIdMap map[string]string = make(map[string]string)
+var clientUserIdToUserIdMap_staging map[string]string = make(map[string]string)
+var clientUserIdToUserIdMap_prod map[string]string = make(map[string]string)
 
 func ExtractEventData(data string) interface{} {
 	split := strings.Split(data, "|")
@@ -37,7 +36,7 @@ func ExtractEventData(data string) interface{} {
 	return op
 }
 
-func IngestData(obj interface{}) {
+func IngestData(obj interface{}, endpoint *string, authToken *string) {
 	reqBody, _ := json.Marshal(obj)
 	url := fmt.Sprintf("%s%s", *endpoint, bulkLoadUrl)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBody))
@@ -54,8 +53,15 @@ func IngestData(obj interface{}) {
 	Log.Debug.Printf("%v", resp)
 }
 
-func getUserId(clientUserId string, eventTimestamp int64) (string, error) {
-	userId, found := clientUserIdToUserIdMap[clientUserId]
+func getUserId(clientUserId string, eventTimestamp int64, endpoint *string, authToken *string, env string) (string, error) {
+	var userId string
+	var found bool
+	if env == "staging" {
+		userId, found = clientUserIdToUserIdMap_staging[clientUserId]
+	}
+	if env == "prod" {
+		userId, found = clientUserIdToUserIdMap_prod[clientUserId]
+	}
 	if !found {
 		// Create a user.
 		userRequestMap := make(map[string]interface{})
@@ -86,7 +92,12 @@ func getUserId(clientUserId string, eventTimestamp int64) (string, error) {
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
 		userId = jsonResponseMap["user_id"].(string)
-		clientUserIdToUserIdMap[clientUserId] = userId
+		if env == "staging" {
+			clientUserIdToUserIdMap_staging[clientUserId] = userId
+		}
+		if env == "prod" {
+			clientUserIdToUserIdMap_prod[clientUserId] = userId
+		}
 	}
 	return userId, nil
 }
@@ -107,16 +118,6 @@ func main() {
 	} else {
 		date, _ = time.Parse(constants.TIMEFORMAT, *seedDate)
 	}
-	hr, _, _ := date.Clock()
-	if hr%2 != 0 {
-		fmt.Println("PROD")
-		endpoint = endpoint_prod
-		authToken = authToken_prod
-	} else {
-		fmt.Println("STAGING")
-		endpoint = endpoint_staging
-		authToken = authToken_staging
-	}
 	filePattern := fmt.Sprintf("%v_%v_%v_%v",
 		date.Year(),
 		date.Month(),
@@ -130,7 +131,8 @@ func main() {
 	//GET these variables from Config
 	maxBatchSize := 1000
 	counter := 0
-	var events []operations.EventOutput
+	var events_staging []operations.EventOutput
+	var events_prod []operations.EventOutput
 
 	bulkLoadUrl = "/sdk/event/track/bulk"
 	getUserIdUrl = "/sdk/user/identify"
@@ -190,23 +192,33 @@ func main() {
 			s := scanner.Text()
 			op := ExtractEventData(s).(operations.EventOutput)
 			if op.UserId != "" {
-				op.UserId, _ = getUserId(op.UserId, (int64)(op.Timestamp))
-				events = append(events, op)
+				op.UserId, _ = getUserId(op.UserId, (int64)(op.Timestamp), endpoint_staging, authToken_staging, "staging")
+				events_staging = append(events_staging, op)
+				op.UserId, _ = getUserId(op.UserId, (int64)(op.Timestamp), endpoint_prod, authToken_prod, "prod")
+				events_prod = append(events_prod, op)
 			}
 			counter++
 
 			if counter == maxBatchSize {
-				Log.Debug.Printf("Processing %v records", len(events))
-				IngestData(events)
+				Log.Debug.Printf("Processing %v records", len(events_staging))
+				IngestData(events_staging, endpoint_staging, authToken_staging)
 				counter = 0
-				events = nil
+				events_staging = nil
+				Log.Debug.Printf("Processing %v records", len(events_prod))
+				IngestData(events_prod, endpoint_prod, authToken_prod)
+				counter = 0
+				events_prod = nil
 			}
 		}
 		if counter != 0 {
-			Log.Debug.Printf("Processing %v records", len(events))
-			IngestData(events)
+			Log.Debug.Printf("Processing %v records", len(events_staging))
+			IngestData(events_staging, endpoint_staging, authToken_staging)
 			counter = 0
-			events = nil
+			events_staging = nil
+			Log.Debug.Printf("Processing %v records", len(events_prod))
+			IngestData(events_prod, endpoint_prod, authToken_prod)
+			counter = 0
+			events_prod = nil
 		}
 		Log.Debug.Printf("Done !!! Processing contents of File: %s", element)
 		if *env != "development" {
