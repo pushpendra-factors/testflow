@@ -9,16 +9,20 @@ import {
   DEFAULT_DATE_RANGE,
 } from '../DateRangeSelector/utils';
 
-import { fetchEventPropertyValues, fetchUserPropertyValues } from '../../../reducers/coreQuery/services';
+import { fetchEventPropertyValues, fetchUserPropertyValues, 
+  fetchChannelObjPropertyValues } from '../../../reducers/coreQuery/services';
 
 export default function FilterBlock({ 
   index, 
   blockType = 'event', 
+  filterType = 'analytics',
+  typeProps,
   filterProps, 
   activeProject,
   event, 
   filter, 
   delIcon = 'remove',
+  propsConstants = ['user', 'event'],
   extraClass,
   delBtnClass,
   deleteFilter, 
@@ -43,38 +47,51 @@ export default function FilterBlock({
     values: 'Choose values'
   };
 
-  const filterDropDownOptions = {
-    props: [
-      {
-        label: 'User Properties',
-        icon: 'userplus',
-        
-      },
-      {
-        label: 'Event Properties',
-        icon: 'mouseclick',
-      }
-    ],
-    operator: {
-      "categorical": [
-        '=',
-        '!=',
-        'contains',
-        'not contains'
+  const [filterDropDownOptions, setFiltDD] = useState({
+      props: [
+        {
+          label: 'User Properties',
+          icon: 'userplus',
+          
+        },
+        {
+          label: 'Event Properties',
+          icon: 'mouseclick',
+        }
       ],
-      "numerical": [
-        '=',
-        '!=',
-        '<',
-        '<=',
-        '>',
-        '>='
-      ],
-      "datetime": [
-        '='
-      ]
-  },
-  };
+      operator: {
+        "categorical": [
+          '=',
+          '!=',
+          'contains',
+          'not contains'
+        ],
+        "numerical": [
+          '=',
+          '!=',
+          '<',
+          '<=',
+          '>',
+          '>='
+        ],
+        "datetime": [
+          '='
+        ]
+    },
+  });
+
+  useEffect(() => {
+    if(filterType === 'channel') {
+      const filterDD = Object.assign({}, filterDropDownOptions);
+      const propState = [];
+      Object.keys(filterProps).forEach((k, i) => {
+        propState.push({label: k, icon: 'fav'});
+      })
+      filterDD.props = propState;
+      setFiltDD(filterDD);
+    }
+
+  }, [filterProps])
 
   const parseDateRangeFilter = (fr, to) => {
     return (moment(fr).format('MMM DD, YYYY') + ' - ' +
@@ -153,12 +170,32 @@ export default function FilterBlock({
         ddValues[newFilterState.props[0]] = res.data;
         setDropDownValues(ddValues);
       })
-    } else {
+    } else if(newFilterState.props[2] === 'event') {
       fetchEventPropertyValues(activeProject.id, event.label, newFilterState.props[0]).then(res => {
         const ddValues = Object.assign({}, dropDownValues);
         ddValues[newFilterState.props[0]] = res.data;
         setDropDownValues(ddValues);
       })
+    } else {
+      if(filterType === 'channel') {
+        fetchChannelObjPropertyValues(activeProject.id, typeProps.channel, 
+          newFilterState.props[2], newFilterState.props[0]).then(res => {
+            // const result = {
+            //   "filter_values": [
+            //       "Recurrer_Global_AU_New",
+            //       "Worldpay_APAC_New",
+            //       "Reocurring_NA_New",
+            //       "UK_Industry Specific",
+            //       "Hong_Kong_Payment_Gateway",
+            //       "Accounting_German_EnglishAds"
+            //   ]
+            // }
+            
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[newFilterState.props[0]] = res?.result?.filter_values;
+            setDropDownValues(ddValues);
+        });
+      }
     }
     }
 
@@ -220,7 +257,13 @@ export default function FilterBlock({
     const renderOptions = [];
     switch (filterTypeState) {
       case 'props':
-        const groupOpts = blockType === 'event'? options : [options[0]];
+        let groupOpts;
+        if(blockType === 'event')  {
+          groupOpts = options 
+        } else {
+          groupOpts = filterType === 'analytics'? [options[0]] : options;
+        }
+        
         groupOpts.forEach((group, grpIndex) => {
           const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
           renderOptions.push(
@@ -238,11 +281,11 @@ export default function FilterBlock({
             { collState
               ? (() => {
                 const valuesOptions = [];
-                filterProps[['user', 'event'][grpIndex]].forEach((val) => {
+                filterProps[propsConstants[grpIndex]].forEach((val) => {
                   if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                     valuesOptions.push(
                       <div className={`fa-select-group-select--options`}
-                            onClick={() => optionClick([...val, ['user', 'event'][grpIndex]])} >
+                            onClick={() => optionClick([...val, propsConstants[grpIndex]])} >
                           {searchTerm.length > 0 && <SVG name={group.icon} extraClass={'self-center'}></SVG>}
                           <span className={'ml-1'}>{val[0]}</span>
                       </div>
@@ -423,11 +466,14 @@ export default function FilterBlock({
 
   return (
     <div className={styles.filter_block}>
-      <Button size={'small'} 
-      type="text" 
-      onClick={delFilter}
-      className={`${styles.filter_block__remove} mr-1 ${delBtnClass}`}>
-        <SVG name={delIcon}></SVG></Button>
+      {
+        filter && 
+          <Button size={'small'} 
+        type="text" 
+        onClick={delFilter}
+        className={`${styles.filter_block__remove} mr-1 ${delBtnClass}`}>
+          <SVG name={delIcon}></SVG></Button>
+      }
       {  
           blockType === 'event' 
           && <span className={`${styles.filter_block__prefix} ml-10`}>{index >=1 ? 'and' : 'where'}</span> 

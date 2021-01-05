@@ -56,7 +56,7 @@ const MeasuresBlock = ({measures, onMeasureSelect, measures_metrics}) => {
 
     const renderMeasureBlockContent = (measure, index) => {
         return (
-            <div className={`${styles.block__content}`}>
+            <div key={index} className={`${styles.block__content}`}>
                 {!selectVisible[index] && <Button 
                     size={'large'} 
                     type="link" 
@@ -73,7 +73,7 @@ const MeasuresBlock = ({measures, onMeasureSelect, measures_metrics}) => {
 
     const renderMeasureSelect = (index) => {
         return (
-            <div className={`${styles.block__content}`}>
+            <div key={index} className={`${styles.block__content}`}>
                     <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
                         <SVG name={'plus'} color={'purple'}></SVG>
                     </div>

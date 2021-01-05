@@ -63,6 +63,17 @@ export function fetchEventPropertyValues(projectId, eventName, propertyName) {
   return get(null, url);
 }
 
+export const fetchChannelObjPropertyValues = (projectId, channel="all_channels", filterObj, property) => {
+  const url =
+    host +
+    "projects/" + projectId + 
+    "/v1/channels/filter_values?channel=" + channel + 
+    "&filter_object=" + filterObj + 
+    "&filter_property=" + property;
+
+  return get(null, url);
+}
+
 export function fetchUserPropertyValues(projectId, propertyName) {
   const url =
     host +

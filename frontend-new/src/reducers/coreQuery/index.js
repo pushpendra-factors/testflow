@@ -15,6 +15,7 @@ import {
   SET_EVENT_GOAL,
   SET_CAMP_CHANNEL,
   SET_CAMP_MEASURES,
+  SET_CAMP_FILTERS,
   FETCH_CAMP_CONFIG
 } from "./actions";
 import { SHOW_ANALYTICS_RESULT, INITIALIZE_MTA_STATE } from "../types";
@@ -175,6 +176,12 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         campaign_config: action.payload
+      }
+    }
+    case SET_CAMP_FILTERS: {
+      return {
+        ...state,
+        camp_filters: action.payload
       }
     }
 

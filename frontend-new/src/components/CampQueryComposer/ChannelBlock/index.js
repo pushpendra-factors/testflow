@@ -12,8 +12,9 @@ const channels = [
 
 const ChannelBlock = ({channel, onChannelSelect}) => {
     return (<div className={styles.block}>
-        {channels.map((ch) => {
+        {channels.map((ch, i) => {
             return <FaToggleBtn 
+                key={i}
                 label={ch.label} 
                 icon={ch.icon}
                 state={ch.value === channel}
