@@ -62,5 +62,5 @@ function request(dispatch, method, url, headers, data) {
   
   export function put(dispatch, url, data, headers = {}) { return request(dispatch,'PUT', url, headers, data); }
   
-  export function del(dispatch, url, headers = {}) { return request(dispatch,'DELETE', url, headers); }
+  export function del(dispatch, url, data, headers = {}) { return request(dispatch,'DELETE', url, headers, data); }
   

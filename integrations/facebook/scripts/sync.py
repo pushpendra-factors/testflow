@@ -173,12 +173,14 @@ def get_collections(facebook_int_setting, sync_info_with_type, date_stop):
 def get_ad_account_data(project_id, access_token, ad_account_id, date_stop):
     timestamp = int(datetime.timestamp(date_stop))
     fields_ad_account = ["id", "balance", "name","partner", "spend_cap"]
-    
     url = "https://graph.facebook.com/v9.0/{}?fields={}&&access_token={}".format(
         ad_account_id, fields_ad_account, access_token)
     response = requests.get(url)
     if not response.ok:
-        log.error(response.status_code, ": ", response.reason, "failed to get ad account data from facebook")
+        json_response = response.json()
+        s = json.dumps(json_response)
+        error_string = "errMSg: Failed to get ad_account data for project = {}. Error : {}".format(project_id, s)
+        log.error(error_string)
         return
     add_facebook_document(project_id, ad_account_id, AD_ACCOUNT,  ad_account_id, response.json(), timestamp, FACEBOOK_ALL)
     

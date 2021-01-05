@@ -4,48 +4,61 @@ package operations
 This file contains all core operations for probablity based event generation
 */
 
-import(
-	"data_simulator/utils"
-	"time"
-	"data_simulator/registration"
+import (
 	"data_simulator/config"
-	"sync"
+	"data_simulator/constants"
 	Log "data_simulator/logger"
+	"data_simulator/registration"
+	"data_simulator/utils"
 	"math/rand"
 	"strconv"
-	"data_simulator/constants"
+	"sync"
+	"time"
 )
 
 var userAttributeMutex = &sync.Mutex{}
 
-func OperateV2(env string){
+func OperateV2(env string) {
+	rand.Seed(time.Now().UTC().UnixNano())
 	//Declaring WaitGroup for SegmentLevel and newUser Concurrency
 	var segmentWg sync.WaitGroup
 	var newUserWg sync.WaitGroup
 	var globalTimerWg sync.WaitGroup
 	/*Calculating USERNAME indexing across segments
 	Ex: Segment1 has 10 users and Segment2 has 5 users
-	Segment1 will have users named U1,U2...U10 and 
+	Segment1 will have users named U1,U2...U10 and
 	Segment2 will have U11... U15
 	New seeded users will have name from U16*/
-	existingUsers := LoadExistingUsers(env) //thread safe 
-	// assuming the runs will be one per hour. 
+	existingUsers := LoadExistingUsers(env) //thread safe
+	// assuming the runs will be one per hour.
 	var userCounter int = 1
 	userIndex := make(map[string]int) // thread safe
 	for item, element := range config.ConfigV2.User_segments {
 		userIndex[item] = userCounter
-		userCounter = userCounter + element.Number_of_users 
+		var rand_number_of_users_from_range int
+		if string(element.Start_Time.Weekday()) == "Saturday" || string(element.Start_Time.Weekday()) == "Sunday" {
+			rand_number_of_users_from_range = int(element.Number_of_users/4) + rand.Intn(int(element.Number_of_users/2))
+		} else {
+			rand_number_of_users_from_range = int(element.Number_of_users/2) + rand.Intn(int(element.Number_of_users/2))
+		}
+		if element.Start_Time.Day() < 7 {
+			rand_number_of_users_from_range = rand_number_of_users_from_range + int(element.Number_of_users/10) + rand.Intn(int(element.Number_of_users/10))
+		}
+		if element.Start_Time.Day() > 25 {
+			rand_number_of_users_from_range = rand_number_of_users_from_range - int(element.Number_of_users/10) - rand.Intn(int(element.Number_of_users/10))
+		}
+		userCounter = userCounter + rand_number_of_users_from_range
 	}
 	Log.Debug.Printf("UserIndex Map %v", userIndex)
 	/* Pre-Computing the following probablityRangeMaps per segment
-		1. Activity
-		2. Event
-		3. Event Correlation
-		4. New User seed probablity
+	1. Activity
+	2. Event
+	3. Event Correlation
+	4. New User seed probablity
 	*/
 	var probMap ProbMap
 
-	probMap.yesOrNoProbMap = YesOrNoProbablityMap{ 
+	probMap.yesOrNoProbMap = YesOrNoProbablityMap{
 		ComputeYesOrNoProbablityMap(config.ConfigV2.New_user_probablity, "NewUser"),
 		ComputeYesOrNoProbablityMap(config.ConfigV2.Custom_event_attribute_probablity, "Custom-Event"),
 		ComputeYesOrNoProbablityMap(config.ConfigV2.Custom_user_attribute_probablity, "Custom-User"),
@@ -63,21 +76,21 @@ func OperateV2(env string){
 		probMap.segmentProbMap[item] = temp
 	}
 	Log.Debug.Printf("RangeMaps %v", probMap)
-	
+
 	// Generate events per USER SEGMENT
 	// segmentStatus variable is used to check if all the segments are done executing
 	segmentStatus := make(map[string]bool)
-	for item,element := range config.ConfigV2.User_segments {
+	for item, element := range config.ConfigV2.User_segments {
 		segmentWg.Add(1)
 		segmentStatus[item] = false
 		go OperateOnSegment(
-			&segmentWg, 
+			&segmentWg,
 			probMap,
-			item, 
-			element, 
-			probMap.segmentProbMap[item], 
-			userIndex[item], 
-			userIndex[item] + element.Number_of_users -1, 
+			item,
+			element,
+			probMap.segmentProbMap[item],
+			userIndex[item],
+			userIndex[item]+element.Number_of_users-1,
 			segmentStatus,
 			existingUsers)
 	}
@@ -87,7 +100,7 @@ func OperateV2(env string){
 	allSegmentsDone := false
 	//newUserSegmentStatus is used to check if the new users seeded into the system are done executing
 	newUserSegmentStatus := make(map[string]bool)
-	
+
 	// Seeding new users based on the seed probablity till the pre-defined segments executes
 	i := userCounter
 	globalTimer = false
@@ -96,16 +109,16 @@ func OperateV2(env string){
 	for (allSegmentsDone == false && IsRealTime() == true) || (IsRealTime() == true && globalTimer == false) {
 
 		WaitIfRealTime(config.ConfigV2.New_user_poll_time)
-		if(SeedUserOrNot(probMap) == true) {
-			
+		if SeedUserOrNot(probMap) == true {
+
 			seg := GetRandomSegment()
-			end := i+config.ConfigV2.Per_tick_new_user_seed_count-1
-			Log.Debug.Printf("Getting User %v - %v to the system with Segment %s", i ,end, seg)
+			end := i + config.ConfigV2.Per_tick_new_user_seed_count - 1
+			Log.Debug.Printf("Getting User %v - %v to the system with Segment %s", i, end, seg)
 			newUserWg.Add(1)
 			go OperateOnSegment(
 				&newUserWg,
 				probMap,
-				seg,config.ConfigV2.User_segments[seg],
+				seg, config.ConfigV2.User_segments[seg],
 				probMap.segmentProbMap[seg],
 				i,
 				end,
@@ -113,7 +126,7 @@ func OperateV2(env string){
 				existingUsers)
 			i = end + 1
 			allSegmentsDone = IsAllSegmentsDone(segmentStatus)
-				
+
 		}
 	}
 	segmentWg.Wait()
@@ -124,32 +137,32 @@ func OperateV2(env string){
 	Log.Debug.Printf("Global Timer - Exit !!!")
 	Log.Debug.Printf("Main - Done !!!")
 	Log.Debug.Printf("Starting Upload to Cloud storage")
-	if(env != "development"){
+	if env != "development" {
 		UploadData()
 	}
 }
 
-func OperateOnSegment(segmentWg *sync.WaitGroup, probMap ProbMap, 
-	segmentName string, segment config.UserSegmentV2, 
-	segmentProbMap SegmentProbMap, userRangeStart int, 
+func OperateOnSegment(segmentWg *sync.WaitGroup, probMap ProbMap,
+	segmentName string, segment config.UserSegmentV2,
+	segmentProbMap SegmentProbMap, userRangeStart int,
 	userRangeEnd int, segmentStatus map[string]bool,
-	existingUsers map[string]map[string]string){
+	existingUsers map[string]map[string]string) {
 
 	defer segmentWg.Done()
 	var wg sync.WaitGroup
 	var userAttributes map[string]string
 	var userId string
-	Log.Debug.Printf("Main: Operating on %s with User Range %v - %v", segmentName , userRangeStart ,userRangeEnd)
+	Log.Debug.Printf("Main: Operating on %s with User Range %v - %v", segmentName, userRangeStart, userRangeEnd)
 	//Generating events per user in the segment
-	for i := userRangeStart; i<= userRangeEnd; i++ {
+	for i := userRangeStart; i <= userRangeEnd; i++ {
 		wg.Add(1)
 		userAttributeMutex.Lock()
 		userFound := false
-		if(BringExistingUserOrNot(probMap)){
+		if BringExistingUserOrNot(probMap) {
 			noOfpeekInUserAttributeMap := 0
 			for noOfpeekInUserAttributeMap < 5 {
 				userId, userAttributes = PickFromExistingUsers(existingUsers)
-				if(userId != "" && !UserAlreadyExists(userId, segmentProbMap.UserToUserAttributeMap)){
+				if userId != "" && !UserAlreadyExists(userId, segmentProbMap.UserToUserAttributeMap) {
 					userFound = true
 					break
 				}
@@ -158,8 +171,8 @@ func OperateOnSegment(segmentWg *sync.WaitGroup, probMap ProbMap,
 			Log.Debug.Printf("Getting user %s back to system", userId)
 			segmentProbMap.UserToUserAttributeMap[userId] = userAttributes
 		}
-		if(userFound == false){
-			userId = config.ConfigV2.User_id_prefix+strconv.Itoa(i)
+		if userFound == false {
+			userId = config.ConfigV2.User_id_prefix + strconv.Itoa(i)
 			segmentProbMap.UserToUserAttributeMap[userId] = make(map[string]string)
 			segmentProbMap.UserToUserAttributeMap[userId] = GetUserAttributes(probMap, segmentProbMap, segment)
 			segmentProbMap.UserToUserAttributeMap[userId]["UserId"] = userId
@@ -170,32 +183,31 @@ func OperateOnSegment(segmentWg *sync.WaitGroup, probMap ProbMap,
 			&wg,
 			probMap,
 			segment,
-			config.ConfigV2.Activity_time_in_seconds, 
+			config.ConfigV2.Activity_time_in_seconds,
 			userId,
 			segmentProbMap)
 	}
-	
-	Log.Debug.Printf("Main: Waiting for %s to finish for user Range %v - %v", segmentName , userRangeStart , userRangeEnd)
+
+	Log.Debug.Printf("Main: Waiting for %s to finish for user Range %v - %v", segmentName, userRangeStart, userRangeEnd)
 	wg.Wait()
 	segmentStatus[segmentName] = true
-	Log.Debug.Printf("Main: %s Completed for user Range %v - %v", segmentName, userRangeStart ,userRangeEnd)
+	Log.Debug.Printf("Main: %s Completed for user Range %v - %v", segmentName, userRangeStart, userRangeEnd)
 }
 
-func GenerateEvents(wg *sync.WaitGroup,probMap ProbMap, segmentConfig config.UserSegmentV2, totalActivityDuration int, userId string, segmentProbMap SegmentProbMap) {
-	
+func GenerateEvents(wg *sync.WaitGroup, probMap ProbMap, segmentConfig config.UserSegmentV2, totalActivityDuration int, userId string, segmentProbMap SegmentProbMap) {
+
 	defer wg.Done()
-	rand.Seed(time.Now().UTC().UnixNano())
 	var lastKnownGoodState string
 	var realTimeWait int
 	var decorators map[string]string
-	
+
 	// Setting attributes in output
 	userAttributes := SetUserAttributes(segmentProbMap, segmentConfig, userId)
 
 	Log.Debug.Printf("Starting %s for duration %v", userId, totalActivityDuration)
 	i := 0
-    for i < totalActivityDuration {
-		
+	for i < totalActivityDuration {
+
 		activity := GetRandomActivity(segmentProbMap)
 		// TODO: Janani Have enums for these
 		if activity == constants.DOSOMETHING {
@@ -207,10 +219,10 @@ func GenerateEvents(wg *sync.WaitGroup,probMap ProbMap, segmentConfig config.Use
 					&lastKnownGoodState,
 					segmentProbMap, userAttributes, segmentConfig)
 
-					decorators = GetEventDecorators(event, segmentProbMap)
-				if(utils.Contains(segmentConfig.Event_probablity_map.Correlation_matrix.Exit_events,event)){
+				decorators = GetEventDecorators(event, segmentProbMap)
+				if utils.Contains(segmentConfig.Event_probablity_map.Correlation_matrix.Exit_events, event) {
 					Log.Debug.Printf("User %s Exit events: %s", userId, event)
-					break;
+					break
 				}
 			}
 
@@ -221,16 +233,16 @@ func GenerateEvents(wg *sync.WaitGroup,probMap ProbMap, segmentConfig config.Use
 			registration.WriterInstance.WriteOutput(op)
 			i = i + counter
 			WaitIfRealTime(realTimeWait)
-			
+
 		}
-		if(activity == constants.EXIT){
+		if activity == constants.EXIT {
 			Log.Debug.Printf("Exit %s", userId)
-			break;
-		}	
+			break
+		}
 	}
-    Log.Debug.Printf("Done %s", userId)
+	Log.Debug.Printf("Done %s", userId)
 }
 
-func UploadData(){
+func UploadData() {
 	utils.CopyFilesToCloud(constants.LOCALOUTPUTFOLDER, constants.UNPROCESSEDFILESCLOUD, constants.BUCKETNAME, true)
 }

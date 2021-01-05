@@ -24,7 +24,7 @@ function UserSettings({
 
   const confirmRemove = (uuid) => {
     confirm({
-      title: 'Do you Want to remove this user?',
+      title: 'Do you want to remove this user?',
       icon: <ExclamationCircleOutlined />,
       content: 'Please confirm to proceed',
       okText: 'Yes',
