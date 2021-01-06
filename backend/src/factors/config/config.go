@@ -455,6 +455,11 @@ func InitMetricsExporter(env, appName, projectID, projectLocation string) {
 	services.MetricsExporter = metrics.InitMetrics(env, appName, projectID, projectLocation)
 }
 
+// InitSmartEventMode initializes smart event mode
+func InitSmartEventMode(mode bool) {
+	configuration.DryRunCRMSmartEvent = mode
+}
+
 // InitSentryLogging Adds sentry hook to capture error logs.
 func InitSentryLogging(sentryDSN, appName string) {
 	// Log as JSON instead of the default ASCII formatter.

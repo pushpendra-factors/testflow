@@ -32,7 +32,7 @@ func main() {
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
-	dryRunSmartEvent := flag.Bool("dry_run_smart_event", true, "Dry run mode for smart event creation")
+	dryRunSmartEvent := flag.Bool("dry_run_smart_event", false, "Dry run mode for smart event creation")
 
 	flag.Parse()
 
@@ -79,6 +79,7 @@ func main() {
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
+	C.InitSmartEventMode(config.DryRunCRMSmartEvent)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	hubspotEnabledProjectSettings, errCode := M.GetAllHubspotProjectSettings()
