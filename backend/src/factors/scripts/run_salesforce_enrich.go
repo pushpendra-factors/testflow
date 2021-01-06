@@ -5,6 +5,7 @@ import (
 	H "factors/handler"
 	IntSalesforce "factors/integration/salesforce"
 	M "factors/model"
+	U "factors/util"
 	"flag"
 	"fmt"
 	"net/http"
@@ -42,6 +43,7 @@ func main() {
 
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
+	dryRunSmartEvent := flag.Bool("dry_run_smart_event", true, "Dry run mode for smart event creation")
 
 	flag.Parse()
 	taskID := "Task#SalesforceEnrich"
@@ -76,6 +78,7 @@ func main() {
 		RedisPort:           *redisPort,
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *redisPortPersistent,
+		DryRunCRMSmartEvent: *dryRunSmartEvent,
 	}
 
 	C.InitConf(config.Env)
@@ -111,7 +114,7 @@ func main() {
 
 		objectStatus := IntSalesforce.SyncDocuments(projectSettings, syncInfo.LastSyncInfo[pid], accessToken)
 		for i := range objectStatus {
-			if objectStatus[i].Status != "Success" {
+			if objectStatus[i].Status != U.CRM_SYNC_STATUS_SUCCESS {
 				syncStatus.Failures = append(syncStatus.Failures, objectStatus[i])
 			} else {
 				syncStatus.Success = append(syncStatus.Success, objectStatus[i])

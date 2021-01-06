@@ -99,6 +99,7 @@ type Configuration struct {
 	ActiveFactorsGoalsLimit                 int
 	ActiveFactorsTrackedEventsLimit         int
 	ActiveFactorsTrackedUserPropertiesLimit int
+	DryRunCRMSmartEvent                     bool
 }
 
 type Services struct {
@@ -729,6 +730,11 @@ func GetSalesforceAppSecret() string {
 
 func GetFactorsSenderEmail() string {
 	return configuration.EmailSender
+}
+
+// IsDryRunCRMSmartEvent checks if dry run flag is set
+func IsDryRunCRMSmartEvent() bool {
+	return configuration.DryRunCRMSmartEvent
 }
 
 func GetCookieDomian() string {

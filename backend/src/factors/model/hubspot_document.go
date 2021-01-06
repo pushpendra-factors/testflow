@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 
@@ -25,6 +26,7 @@ type HubspotDocument struct {
 	Value     *postgres.Jsonb `json:"value"`
 	Synced    bool            `gorm:"default:false;not null" json:"synced"`
 	SyncId    string          `gorm:"default:null" json:"sync_id"`
+	UserId    string          `gorm:"default:null" json:"user_id"`
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`
 }
@@ -592,7 +594,7 @@ func GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string,
 	return &documents[0], http.StatusFound
 }
 
-func UpdateHubspotDocumentAsSynced(projectId uint64, id string, syncId string) int {
+func UpdateHubspotDocumentAsSynced(projectId uint64, id string, syncId string, timestamp int64, action int, userID string) int {
 	logCtx := log.WithField("project_id", projectId).WithField("id", id)
 
 	updates := make(map[string]interface{}, 0)
@@ -601,13 +603,66 @@ func UpdateHubspotDocumentAsSynced(projectId uint64, id string, syncId string) i
 		updates["sync_id"] = syncId
 	}
 
+	if userID != "" {
+		updates["user_id"] = userID
+	}
+
 	db := C.GetServices().Db
-	err := db.Model(&HubspotDocument{}).Where("project_id = ? AND id = ?",
-		projectId, id).Updates(updates).Error
+	err := db.Model(&HubspotDocument{}).Where("project_id = ? AND id = ? AND timestamp= ? AND action = ?",
+		projectId, id, timestamp, action).Updates(updates).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update hubspot document as synced.")
 		return http.StatusInternalServerError
 	}
 
 	return http.StatusAccepted
+}
+
+// GetLastSyncedHubspotDocumentByCustomerUserIDORUserID returns latest synced record by customer_user_id or user_id.
+func GetLastSyncedHubspotDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*HubspotDocument, int) {
+	if projectID == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	if userID == "" || docType == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "customer_user_id": customerUserID, "doc_type": docType})
+
+	db := C.GetServices().Db
+
+	var whereStmn string
+	var whereParams []interface{}
+
+	if customerUserID != "" {
+		userIDs, status := GetAllUserIDByCustomerUserID(projectID, customerUserID)
+		if status == http.StatusFound {
+			whereStmn = "type = ? AND project_id=? AND user_id IN(?) AND synced = true"
+			whereParams = []interface{}{docType, projectID, userIDs}
+		} else {
+			logCtx.Error("Failed to GetAllUserIDByCustomerUserID.")
+		}
+	}
+
+	if customerUserID == "" || whereStmn == "" {
+		whereStmn = "type = ? AND synced = true AND project_id=? AND user_id = ? "
+		whereParams = []interface{}{docType, projectID, userID}
+	}
+
+	var document []HubspotDocument
+
+	if err := db.Where(whereStmn, whereParams...).Order("timestamp DESC").First(&document).Error; err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			logCtx.WithError(err).Error("Failed to get latest hubspot document by userID.")
+			return nil, http.StatusInternalServerError
+		}
+		return nil, http.StatusNotFound
+	}
+
+	if len(document) != 1 {
+		return nil, http.StatusNotFound
+	}
+
+	return &document[0], http.StatusFound
 }

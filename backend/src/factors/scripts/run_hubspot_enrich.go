@@ -32,6 +32,8 @@ func main() {
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
+	dryRunSmartEvent := flag.Bool("dry_run_smart_event", true, "Dry run mode for smart event creation")
+
 	flag.Parse()
 
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -60,6 +62,7 @@ func main() {
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *redisPortPersistent,
 		SentryDSN:           *sentryDSN,
+		DryRunCRMSmartEvent: *dryRunSmartEvent,
 	}
 
 	C.InitConf(config.Env)
