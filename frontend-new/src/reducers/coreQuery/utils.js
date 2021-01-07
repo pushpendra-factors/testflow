@@ -32,7 +32,7 @@ const convertToChannelOptions = (objects) => {
     
     opts.push({
       label: lbl,
-      icon: 'fav',
+      icon: obj.name,
       values: vals
     });
   })

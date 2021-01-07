@@ -102,7 +102,7 @@ function CampaignAnalytics({
             style={{ color: "#8692A3" }}
             onClick={setDrawerVisible.bind(this, true)}
           >
-            bannat
+            impressions
           </div>
         </div>
       </Header>

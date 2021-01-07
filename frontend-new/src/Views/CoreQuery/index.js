@@ -22,6 +22,7 @@ import {
   getFunnelQuery,
   DefaultDateRangeFormat,
   getAttributionQuery,
+  getCampaignsQuery,
 } from "./utils";
 import {
   runQuery as runQueryService,
@@ -90,6 +91,13 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     linkedEvents: [],
   });
 
+  const [campaignState, setCampaignState] = useState({
+    channel: "",
+    select_metrics: [],
+    filters: [],
+    group_by: [],
+  });
+
   const dispatch = useDispatch();
   const {
     groupBy,
@@ -98,6 +106,10 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     models,
     window,
     linkedEvents,
+    camp_channels,
+    camp_measures,
+    camp_filters,
+    camp_groupBy,
   } = useSelector((state) => state.coreQuery);
 
   const dateRange = queryOptions.date_range;
@@ -481,30 +493,36 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   );
 
   const runCampaignsQuery = useCallback(
-    async (isQuerySaved) => {
+    async (isQuerySaved, appliedDateRange) => {
       try {
+        if (!appliedDateRange) {
+          appliedDateRange = dateRange;
+        }
         closeDrawer();
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         setShowResult(true);
         setQuerySaved(isQuerySaved);
-        const campaignsBreakdown = [];
-        // const campaignsBreakdown = [
-        //   {
-        //     name: "campaign",
-        //     property: "id",
-        //   },
-        // ];
-        setAppliedCampaignsBreakdown(campaignsBreakdown);
         updateCampaignsResult({
           ...initialState,
           loading: true,
         });
-        const query = { breakdown: !!campaignsBreakdown.length };
+        const query = getCampaignsQuery(
+          camp_channels,
+          camp_measures,
+          camp_filters,
+          camp_groupBy
+        );
+        setCampaignState({
+          channel: query.query_group[0].channel,
+          filters: query.query_group[0].filters,
+          select_metrics: query.query_group[0].select_metrics,
+          group_by: query.query_group[0].group_by,
+        });
         updateRequestQuery(query);
-        // const res = await getCampaignsData(activeProject.id, query);
+        const res = await getCampaignsData(activeProject.id, query);
         updateCampaignsResult({
           ...initialState,
-          data: CampaignAnalytics1,
+          data: res.data.result,
         });
       } catch (err) {
         console.log(err);
@@ -514,7 +532,14 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         });
       }
     },
-    [dispatch, activeProject.id]
+    [
+      dispatch,
+      activeProject.id,
+      camp_measures,
+      camp_filters,
+      camp_groupBy,
+      camp_channels,
+    ]
   );
 
   useEffect(() => {
@@ -699,18 +724,13 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   }
 
   if (queryType === QUERY_TYPE_CAMPAIGN) {
-    arrayMapper = [
-      {
-        eventName: "impressions",
-        index: 0,
-        mapper: "event1",
-      },
-      {
-        eventName: "clicks",
-        index: 1,
-        mapper: "event2",
-      },
-    ];
+    arrayMapper = campaignState.select_metrics.map((metric, index) => {
+      return {
+        eventName: metric,
+        index,
+        mapper: `event${index + 1}`,
+      };
+    });
     result = (
       <CampaignAnalytics
         setShowResult={setShowResult}
@@ -746,7 +766,11 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     }
 
     if (queryType === QUERY_TYPE_CAMPAIGN) {
-      return <CampQueryComposer ></CampQueryComposer>
+      return (
+        <CampQueryComposer
+          handleRunQuery={runCampaignsQuery}
+        ></CampQueryComposer>
+      );
     }
   };
 
