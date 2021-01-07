@@ -85,7 +85,7 @@ export default function FilterBlock({
       const filterDD = Object.assign({}, filterDropDownOptions);
       const propState = [];
       Object.keys(filterProps).forEach((k, i) => {
-        propState.push({label: k, icon: 'fav'});
+        propState.push({label: k, icon: k.replace(' ', '_')});
       })
       filterDD.props = propState;
       setFiltDD(filterDD);
