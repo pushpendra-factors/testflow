@@ -99,6 +99,7 @@ type Configuration struct {
 	ActiveFactorsGoalsLimit                 int
 	ActiveFactorsTrackedEventsLimit         int
 	ActiveFactorsTrackedUserPropertiesLimit int
+	DryRunCRMSmartEvent                     bool
 }
 
 type Services struct {
@@ -454,6 +455,11 @@ func InitMetricsExporter(env, appName, projectID, projectLocation string) {
 	services.MetricsExporter = metrics.InitMetrics(env, appName, projectID, projectLocation)
 }
 
+// InitSmartEventMode initializes smart event mode
+func InitSmartEventMode(mode bool) {
+	configuration.DryRunCRMSmartEvent = mode
+}
+
 // InitSentryLogging Adds sentry hook to capture error logs.
 func InitSentryLogging(sentryDSN, appName string) {
 	// Log as JSON instead of the default ASCII formatter.
@@ -729,6 +735,11 @@ func GetSalesforceAppSecret() string {
 
 func GetFactorsSenderEmail() string {
 	return configuration.EmailSender
+}
+
+// IsDryRunCRMSmartEvent checks if dry run flag is set
+func IsDryRunCRMSmartEvent() bool {
+	return configuration.DryRunCRMSmartEvent
 }
 
 func GetCookieDomian() string {

@@ -12,10 +12,7 @@ function GroupSelect({
 
   useEffect(() => {
     const groupColState = Object.assign({}, groupCollapseState);
-    groupedProperties.forEach((grp, index) => {
-      groupColState[index] = true;
-    });
-
+    groupColState[0] = true;
     setGroupCollapseState(groupColState);
   }, [groupedProperties]);
 
@@ -38,7 +35,7 @@ function GroupSelect({
     options.forEach((group, grpIndex) => {
       const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
       renderGroupedOptions.push(
-            <div className={`fa-select-group-select--content`}>
+            <div key={grpIndex} className={`fa-select-group-select--content`}>
               {!searchTerm.length && <div className={'fa-select-group-select--option-group'}
                 onClick={() => collapseGroup(grpIndex)}
               >
@@ -52,10 +49,10 @@ function GroupSelect({
                 { collState
                   ? (() => {
                     const valuesOptions = [];
-                    group.values.forEach((val) => {
+                    group.values.forEach((val, i) => {
                       if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                         valuesOptions.push(
-                          <div className={`fa-select-group-select--options`}
+                          <div key={i} className={`fa-select-group-select--options`}
                             onClick={() => optionClick(group.label, val)} >
                               {searchTerm.length > 0 && <SVG name={group.icon} extraClass={'self-center'}></SVG>}
                               <span className={'ml-1'}>{val[0]}</span>

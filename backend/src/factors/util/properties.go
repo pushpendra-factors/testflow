@@ -110,6 +110,15 @@ var PROPERTIES_TYPE_DATE_TIME = [...]string{
 	UP_JOIN_TIME,
 }
 
+// Generic hubspot properties
+const CRM_HUBSPOT_DEALSTAGE = "$hubspot_deal_dealstage"
+
+// status for sync job
+const (
+	CRM_SYNC_STATUS_SUCCESS  = "success"
+	CRM_SYNC_STATUS_FAILURES = "failures_seen"
+)
+
 // Event Properites
 var EP_INTERNAL_IP string = "$ip"
 var EP_SKIP_SESSION string = "$skip_session"

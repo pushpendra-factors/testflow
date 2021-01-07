@@ -27,16 +27,6 @@ const AttrQueryComposer = ({activeProject,
         window, setWindow, linkedEvents, setLinkedEvents
     }) => {
 
-    // <--- Things that go into reducer state; // Jitesh
-    // const [touchPoint, setTouchPoint] = useState('');
-
-    // const [models, setModels] = useState([]);
-    // const [window, setWindow] = useState();
-
-    // const [linkedEvents, setLinkedEvents] = useState([]);
-
-    // ---> 
-
     const [linkEvExpansion, setLinkEvExpansion] = useState(false);
 
     useEffect(() => {

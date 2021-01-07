@@ -11,6 +11,7 @@ import (
 
 	C "factors/config"
 	M "factors/model"
+	U "factors/util"
 
 	"github.com/jinzhu/now"
 	log "github.com/sirupsen/logrus"
@@ -333,9 +334,9 @@ func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int6
 				objectStatus.Message = err.Error()
 			}
 
-			objectStatus.Status = "Has failures"
+			objectStatus.Status = U.CRM_SYNC_STATUS_FAILURES
 		} else {
-			objectStatus.Status = "Success"
+			objectStatus.Status = U.CRM_SYNC_STATUS_SUCCESS
 		}
 
 		objectStatus.SyncAll = syncAll

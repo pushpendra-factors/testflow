@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -105,9 +106,9 @@ func getUserId(clientUserId string, eventTimestamp int64, endpoint *string, auth
 func main() {
 	env := flag.String("env", "development", "")
 	seedDate := flag.String("seed_date", "", "")
-	endpoint_prod := flag.String("endpoint_prod", "", "")
+	endpoint_prod := flag.String("endpoint_prod", "http://factors-dev.com:8085", "")
 	authToken_prod := flag.String("projectkey_prod", "", "")
-	endpoint_staging := flag.String("endpoint_staging", "", "")
+	endpoint_staging := flag.String("endpoint_staging", "http://factors-dev.com:8085", "")
 	authToken_staging := flag.String("projectkey_staging", "", "")
 	dataConfig := flag.String("config", "", "")
 	flag.Parse()
@@ -191,6 +192,7 @@ func main() {
 		for scanner.Scan() {
 			s := scanner.Text()
 			op := ExtractEventData(s).(operations.EventOutput)
+			op = trimUrlParams(op)
 			if op.UserId != "" {
 				op.UserId, _ = getUserId(op.UserId, (int64)(op.Timestamp), endpoint_staging, authToken_staging, "staging")
 				events_staging = append(events_staging, op)
@@ -230,4 +232,18 @@ func main() {
 	if *env != "development" {
 		utils.CopyFilesToCloud(constants.LOCALOUTPUTFOLDER, constants.UNPROCESSEDFILESCLOUD, constants.BUCKETNAME, true)
 	}
+}
+
+func trimUrlParams(op operations.EventOutput) operations.EventOutput {
+	var event string
+	if !(strings.HasPrefix(op.Event, "http") || strings.HasPrefix(op.Event, "https")) {
+		event = "http://" + op.Event
+	}
+	_, err := url.ParseRequestURI(event)
+	if err != nil {
+		return op
+	}
+	u, _ := url.Parse(event)
+	op.Event = u.Host + u.Path
+	return op
 }

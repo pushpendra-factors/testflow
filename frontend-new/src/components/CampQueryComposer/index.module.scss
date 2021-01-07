@@ -20,3 +20,28 @@
     }
 
 }
+
+.block {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.filterDelBtn {
+    left: auto;
+    right: 0;
+}
+
+.gbpRemove {
+    position: absolute;
+    @extend .filterDelBtn;
+}
+
+.groupItem {
+    position: relative;
+}
+
+.filterSelect {
+    left: 0;
+    
+}

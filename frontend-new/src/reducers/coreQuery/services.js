@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import { get, getHostUrl, post, del } from "../../utils/request";
 import {
   QUERIES_LOADING,
@@ -34,11 +32,6 @@ export const runQuery = (
   return post(null, url, { query_group });
 };
 
-export const runAttrQuery = (projectId) => {
-  const url = host + "projects/" + projectId + "/attribution/query";
-  return post(null, url, sampleReq);
-};
-
 export function fetchEventProperties(projectId, eventName) {
   const url =
     host +
@@ -60,6 +53,17 @@ export function fetchEventPropertyValues(projectId, eventName, propertyName) {
     "/properties/" +
     propertyName +
     "/values";
+  return get(null, url);
+}
+
+export const fetchChannelObjPropertyValues = (projectId, channel="all_channels", filterObj, property) => {
+  const url =
+    host +
+    "projects/" + projectId + 
+    "/v1/channels/filter_values?channel=" + channel + 
+    "&filter_object=" + filterObj + 
+    "&filter_property=" + property;
+
   return get(null, url);
 }
 
@@ -147,7 +151,7 @@ export const getAttributionsData = (
       "&dashboard_unit_id=" +
       dashboard.unit_id;
   }
-  return post(null, `http://localhost:8000/query`, reqBody);
+  return post(null, url, reqBody);
 };
 
 export const fetchCampaignConfig = (projectId, channel) => {

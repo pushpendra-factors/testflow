@@ -15,7 +15,9 @@ import {
   SET_EVENT_GOAL,
   SET_CAMP_CHANNEL,
   SET_CAMP_MEASURES,
-  FETCH_CAMP_CONFIG
+  SET_CAMP_FILTERS,
+  FETCH_CAMP_CONFIG,
+  SET_CAMP_GROUBY
 } from "./actions";
 import { SHOW_ANALYTICS_RESULT, INITIALIZE_MTA_STATE } from "../types";
 
@@ -49,7 +51,12 @@ const defaultState = {
   camp_channels: 'google_ads',
   camp_measures: [],
   camp_filters: [],
-  camp_groupBy: []
+  camp_groupBy: [],
+  camp_dateRange: {
+      from: new Date(),
+      to: new Date(),
+      dateStr: ''
+  }
 };
 
 export default function (state = defaultState, action) {
@@ -175,6 +182,18 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         campaign_config: action.payload
+      }
+    }
+    case SET_CAMP_FILTERS: {
+      return {
+        ...state,
+        camp_filters: action.payload
+      }
+    }
+    case SET_CAMP_GROUBY: {
+      return {
+        ...state,
+        camp_groupBy: action.payload
       }
     }
 
