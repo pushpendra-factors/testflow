@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import { get, getHostUrl, post, del } from "../../utils/request";
 import {
   QUERIES_LOADING,
@@ -32,11 +30,6 @@ export const runQuery = (
       dashboard.unit_id;
   }
   return post(null, url, { query_group });
-};
-
-export const runAttrQuery = (projectId) => {
-  const url = host + "projects/" + projectId + "/attribution/query";
-  return post(null, url, sampleReq);
 };
 
 export function fetchEventProperties(projectId, eventName) {
