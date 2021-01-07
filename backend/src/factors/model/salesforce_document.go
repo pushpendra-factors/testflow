@@ -26,7 +26,7 @@ type SalesforceDocument struct {
 	Value     *postgres.Jsonb  `json:"value"`
 	Synced    bool             `gorm:"default:false;not null" json:"synced"`
 	SyncID    string           `gorm:"default:null" json:"sync_id"`
-	UserID    string           `gorm:"default:null", json:"-"`
+	UserID    string           `gorm:"default:null" json:"user_id"`
 	CreatedAt time.Time        `json:"created_at"`
 	UpdatedAt time.Time        `json:"updated_at"`
 }
@@ -450,6 +450,7 @@ func GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID uint64, c
 	return &document[0], http.StatusFound
 }
 
+// GetSalesforceDocumentTimestamp return unix timestamp for salesforce formated timestamp
 func GetSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 	timestampStr, ok := timestamp.(string)
 	if !ok || timestampStr == "" {

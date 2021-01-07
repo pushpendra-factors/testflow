@@ -1296,8 +1296,7 @@ func isValidSmartCRMFilterObjectType(smartCRMFilter *SmartCRMEventFilter) bool {
 	}
 
 	if smartCRMFilter.Source == SmartCRMEventSourceHubspot {
-		_, err := GetHubspotTypeByAlias(smartCRMFilter.ObjectType)
-		if err == nil {
+		if smartCRMFilter.ObjectType == HubspotDocumentTypeNameContact || smartCRMFilter.ObjectType == HubspotDocumentTypeNameDeal {
 			return true
 		}
 	}
@@ -1459,6 +1458,13 @@ func getHighDefinitionFilter(filters []*FilterInfo) *FilterInfo {
 	}
 
 	return highScoredFilter
+}
+
+// AddSmartEventReferenceMeta adds reference_id and meta for debuging purpose
+func AddSmartEventReferenceMeta(properties *map[string]interface{}, eventID string) {
+	if eventID != "" {
+		(*properties)[U.EP_CRM_REFERENCE_EVENT_ID] = eventID
+	}
 }
 
 // matchEventNameWithFilters match uri by passing through filters.

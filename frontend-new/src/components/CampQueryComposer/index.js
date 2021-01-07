@@ -7,11 +7,14 @@ import { Button, Popover } from 'antd';
 
 import ChannelBlock from './ChannelBlock';
 
-import {getCampaignConfigData, setCampChannel,
-    setCampMeasures, setCampFilters
+import GroupSelect from "../QueryComposer/GroupSelect";
 
+import { getDateRange, readableDateRange } from '../QueryComposer/DateRangeSelector/utils';
+import DateRangeSelector from '../QueryComposer/DateRangeSelector';
+
+import {getCampaignConfigData, setCampChannel,
+    setCampMeasures, setCampFilters, setCampGroupBy
 } from 'Reducers/coreQuery/middleware';
-import {fetchCampaignConfig} from 'Reducers/coreQuery/services';
 import MeasuresBlock from './MeasuresBlock';
 import FilterBlock from '../QueryComposer/FilterBlock';
 
@@ -19,21 +22,31 @@ const CampQueryComposer = ({activeProject, channel,
     getCampaignConfigData, 
     setCampChannel, measures,
     setCampMeasures, campaign_config,
-    handleRunQuery, filters,
-    setCampFilters
+    filters, setCampFilters,
+    groupBy, setCampGroupBy,
+    handleRunQuery, dateRange
 }) => {
 
     const [filterProps, setFilterProperties] = useState({});
-
+    const [groupByProps, setGroupByProps] = useState([]);
     const [filterDD, setFilterDD] = useState(false);
+    const [groupByDD, setGroupByDD] = useState([false]);
+    const [dateRangePopover, setDateRangePopover] = useState(false);
 
     useEffect(() => {
         if(campaign_config.properties) {
             const props = {};
+            const groupProps = [];
             campaign_config.properties.forEach((prop, i) => {
                 props[prop.label] = prop.values;
-            })
+                groupProps.push({
+                    label: prop.label,
+                    icon: prop.icon,
+                    values: prop.values
+                });
+            });
             setFilterProperties(props);
+            setGroupByProps(groupProps);
         }
     }, [campaign_config])
 
@@ -89,6 +102,8 @@ const CampQueryComposer = ({activeProject, channel,
         setCampFilters(fltrs);
     }
 
+    
+
     const renderFilterBlock = () => {
         if(filterProps) {
             const filtrs = [];
@@ -136,12 +151,95 @@ const CampQueryComposer = ({activeProject, channel,
                     </div>
                 )
             }
-
-            
             
             return (<div className={styles.block}>{filtrs}</div>);
         }
         
+    }
+
+    const triggerGroupDD = (index) => {
+        const grpDD = [...groupByDD];
+        grpDD[index] = !grpDD[index];
+        setGroupByDD(grpDD);
+    }
+
+    const renderGroupByBlock = () => {
+        const groupByComponents = [];
+        groupBy.forEach((gbp, index) => {
+            groupByComponents.push(renderGroupBy(index));
+        });
+        groupByComponents.push(renderGroupBy(groupByComponents.length, true));
+        return (<div className={styles.block}>
+            {groupByComponents}
+        </div>)
+    }
+
+    const onGroupBySet = (gbp, index) => {
+        const newGroupByState = [...groupBy];
+        const gbpState = {};
+        gbpState.prop_category = gbp[0];
+        gbpState.property = gbp[1][0];
+        gbpState.prop_type = gbp[1][1];
+        if(newGroupByState[index]) {
+            newGroupByState[index] = gbpState;
+        } else {
+            newGroupByState.push(gbpState);
+        }
+        setCampGroupBy(newGroupByState);
+        triggerGroupDD(index);
+    }
+
+    const delGbpOption = (index) => {
+        const newGroupByState = [...groupBy.filter((gb,i) => i !== index)];
+        setCampGroupBy(newGroupByState);
+    }
+
+    const renderGroupBy = (index, init = false) => {
+        return (<div key={0} className={` ${styles.groupItem} flex justify-start items-center mt-4`} >
+          {!groupByDD[index] &&
+            <>
+
+            {init === false? <Button size={'large'}
+                    type="text"
+                    onClick={() => delGbpOption(index)}
+                    className={`${styles.gbpRemove}`}>
+                    <SVG name="trash"></SVG></Button> : null}
+            
+            {init === true &&     
+                <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
+                    <SVG name={'plus'} color={'purple'}></SVG>
+                </div>
+            }
+
+            <Button size={'large'} type="link" onClick={() => triggerGroupDD(index)}>
+                {init === true ? 
+                    <>Select user property </>: 
+                    <><SVG name={groupBy[index].prop_category}></SVG>
+                    <span className={`ml-2`}>
+                        {groupBy[index]?.property}
+                    </span></>
+                } 
+            </Button>
+            
+            </>
+
+            }
+          {groupByDD[index]
+            ? (<GroupSelect groupedProperties={groupByProps}
+              placeholder="Select Property"
+              optionClick={(group, val) => onGroupBySet([group, val], index)}
+              onClickOutside={() => triggerGroupDD(index)}
+              >
+                </GroupSelect>
+            )
+    
+            : null
+          }
+        </div>);
+      };
+
+    const setDateRange = (selectedRange) => {
+        console.log(selectedRange);
     }
 
     const footer = () => {
@@ -151,8 +249,15 @@ const CampQueryComposer = ({activeProject, channel,
                 className="fa-event-popover"
                 trigger="click"
                 visible={false}
+                content={
+                    <DateRangeSelector
+                        ranges={getDateRange(dateRange)}
+                        pickerVisible={dateRangePopover} setDates={setDateRange} 
+                        closeDatePicker={() => setDateRangePopover(false)}
+                    />
+                }
               >
-                <Button size={'large'}><SVG name={'calendar'} extraClass={'mr-1'} /> This Month </Button>
+                <Button size={'large'} onClick={() => setDateRangePopover(true)}><SVG name={'calendar'} extraClass={'mr-1'} /> This Month </Button>
               </Popover>
               <Button size={'large'} type="primary" onClick={handleRunQuery}>Run Query</Button>
             </div>
@@ -193,6 +298,19 @@ const CampQueryComposer = ({activeProject, channel,
                 null
             }
 
+            
+            {   channel && measures && measures.length? 
+                    <div className={`${styles.composer__section} fa--query_block`}>
+                        <div className={styles.composer__section__title}>
+                            <Text type={'title'} level={7} weight={'bold'}>Group By</Text>
+                        </div>
+                        <div className={styles.composer__section__content}>
+                            {renderGroupByBlock()}
+                        </div>
+                    </div>
+                :
+                null
+            }
 
             { channel && measures && measures.length? footer() : null}
         </div>
@@ -205,14 +323,17 @@ const mapStateToProps = (state) => ({
     campaign_config: state.coreQuery.campaign_config,
     measures: state.coreQuery.camp_measures,
     filters: state.coreQuery.camp_filters,
-    channel: state.coreQuery.camp_channels
+    channel: state.coreQuery.camp_channels,
+    groupBy: state.coreQuery.camp_groupBy,
+    dateRange: state.coreQuery.camp_dateRange
 });
   
 const mapDispatchToProps = dispatch => bindActionCreators({
     setCampChannel,
     setCampMeasures,
     setCampFilters,
-    getCampaignConfigData
+    getCampaignConfigData,
+    setCampGroupBy
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(CampQueryComposer);

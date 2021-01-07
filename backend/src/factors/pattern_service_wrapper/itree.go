@@ -87,8 +87,8 @@ type KLDistanceUnitInfo struct {
 	Fcr           float64
 }
 
-const MAX_SEQUENCE_CHILD_NODES = 5
-const MAX_PROPERTY_CHILD_NODES = 5
+const MAX_SEQUENCE_CHILD_NODES = 50
+const MAX_PROPERTY_CHILD_NODES = 50
 const MAX_NODES_TO_EVALUATE = 150
 
 const NODE_TYPE_ROOT = 0

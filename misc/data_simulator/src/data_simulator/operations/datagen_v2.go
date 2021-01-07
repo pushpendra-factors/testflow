@@ -10,16 +10,13 @@ import (
 	Log "data_simulator/logger"
 	"data_simulator/registration"
 	"data_simulator/utils"
-	"math/rand"
 	"strconv"
 	"sync"
-	"time"
 )
 
 var userAttributeMutex = &sync.Mutex{}
 
 func OperateV2(env string) {
-	rand.Seed(time.Now().UTC().UnixNano())
 	//Declaring WaitGroup for SegmentLevel and newUser Concurrency
 	var segmentWg sync.WaitGroup
 	var newUserWg sync.WaitGroup
@@ -35,19 +32,7 @@ func OperateV2(env string) {
 	userIndex := make(map[string]int) // thread safe
 	for item, element := range config.ConfigV2.User_segments {
 		userIndex[item] = userCounter
-		var rand_number_of_users_from_range int
-		if string(element.Start_Time.Weekday()) == "Saturday" || string(element.Start_Time.Weekday()) == "Sunday" {
-			rand_number_of_users_from_range = int(element.Number_of_users/4) + rand.Intn(int(element.Number_of_users/2))
-		} else {
-			rand_number_of_users_from_range = int(element.Number_of_users/2) + rand.Intn(int(element.Number_of_users/2))
-		}
-		if element.Start_Time.Day() < 7 {
-			rand_number_of_users_from_range = rand_number_of_users_from_range + int(element.Number_of_users/10) + rand.Intn(int(element.Number_of_users/10))
-		}
-		if element.Start_Time.Day() > 25 {
-			rand_number_of_users_from_range = rand_number_of_users_from_range - int(element.Number_of_users/10) - rand.Intn(int(element.Number_of_users/10))
-		}
-		userCounter = userCounter + rand_number_of_users_from_range
+		userCounter = userCounter + element.Number_of_users
 	}
 	Log.Debug.Printf("UserIndex Map %v", userIndex)
 	/* Pre-Computing the following probablityRangeMaps per segment

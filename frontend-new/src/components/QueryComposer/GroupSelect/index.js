@@ -12,10 +12,7 @@ function GroupSelect({
 
   useEffect(() => {
     const groupColState = Object.assign({}, groupCollapseState);
-    groupedProperties.forEach((grp, index) => {
-      groupColState[index] = true;
-    });
-
+    groupColState[0] = true;
     setGroupCollapseState(groupColState);
   }, [groupedProperties]);
 

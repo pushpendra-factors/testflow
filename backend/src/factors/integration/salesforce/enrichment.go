@@ -32,9 +32,6 @@ var possiblePhoneField = []string{
 	"personmobilephone",
 }
 
-// TODO(Maisa): Remove dryRun dependency instead of making false
-const dryRun = true
-
 var salesforceSyncOrderByType = [...]int{
 	M.SalesforceDocumentTypeContact,
 	M.SalesforceDocumentTypeAccount,
@@ -47,6 +44,7 @@ func getUserIDFromLastestProperties(properties []M.UserProperties) string {
 	return properties[latestIndex].UserId
 }
 
+// GetSalesforceDocumentProperties return map of enriched properties
 func GetSalesforceDocumentProperties(projectID uint64, document *M.SalesforceDocument) (*map[string]interface{}, error) {
 	var properties map[string]interface{}
 	err := json.Unmarshal(document.Value.RawMessage, &properties)
@@ -300,6 +298,7 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument, salesforceS
 	return http.StatusOK
 }
 
+// SalesforceSmartEventName struct for holding event_name and filter expression
 type SalesforceSmartEventName struct {
 	EventName string
 	Filter    *M.SmartCRMEventFilter
@@ -379,10 +378,10 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument, salesforceS
 }
 
 /*
- GetSmartEventPayload return smart event payload if the rule successfully gets passed.
- WITHOUT PREVIOUS PROPERTY :- A query will be made for previous synced record which
- will require userID or customerUserID and doctType
- WITH PREVIOUS PROPERTY := userID, customerUserID and doctType won't be used
+GetSalesforceSmartEventPayload return smart event payload if the rule successfully gets passed.
+WITHOUT PREVIOUS PROPERTY :- A query will be made for previous synced record which
+will require userID or customerUserID and doctType
+WITH PREVIOUS PROPERTY := userID, customerUserID and doctType won't be used
 */
 func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID, userID string, docType int,
 	currentProperties, prevProperties *map[string]interface{}, filter *M.SmartCRMEventFilter) (*M.CRMSmartEvent, *map[string]interface{}, bool) {
@@ -437,13 +436,6 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 	return &crmSmartEvent, prevProperties, true
 }
 
-func addSmartEventReferenceMeta(properties *map[string]interface{}, eventID string) {
-	if eventID != "" {
-		(*properties)[U.EP_CRM_REFERENCE_EVENT_ID] = eventID
-	}
-
-}
-
 // TrackSalesforceSmartEvent valids current properties with CRM smart filter and creates a event
 func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *SalesforceSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}) *map[string]interface{} {
 	var valid bool
@@ -463,7 +455,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 		return prevProperties
 	}
 
-	addSmartEventReferenceMeta(&smartEventPayload.Properties, eventID)
+	M.AddSmartEventReferenceMeta(&smartEventPayload.Properties, eventID)
 
 	smartEventTrackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
@@ -482,7 +474,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 		smartEventTrackPayload.Timestamp = fieldTimestamp
 	}
 
-	if !dryRun {
+	if !C.IsDryRunCRMSmartEvent() {
 		status, _ := SDK.Track(projectID, smartEventTrackPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.Error("Failed to create salesforce smart event")
@@ -751,9 +743,9 @@ func Enrich(projectID uint64) []Status {
 
 		errCode = enrichAll(projectID, documents, (*salesforceSmartEventNames)[docTypeAlias])
 		if errCode == http.StatusOK {
-			status.Status = "success"
+			status.Status = U.CRM_SYNC_STATUS_SUCCESS
 		} else {
-			status.Status = "failures_seen"
+			status.Status = U.CRM_SYNC_STATUS_FAILURES
 		}
 		statusByProjectAndType = append(statusByProjectAndType, status)
 	}

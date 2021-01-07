@@ -658,7 +658,7 @@ func getResultFromReports(query *ChannelQueryV1, projectID uint64, from, to int6
 	}
 
 	selectQuery += joinWithComma(groupByKeysWithoutTimestamp...)
-	selectQuery = appendSelectTimestampIfRequired(selectQuery, query.GetGroupByTimestamp(), query.Timezone)
+	selectQuery = appendSelectTimestampIfRequiredForAdwords(selectQuery, query.GetGroupByTimestamp(), query.Timezone)
 	selectMetrics, selectQuery := appendSelectMetrics(selectQuery, query.SelectMetrics)
 	selectQuery = "SELECT " + selectQuery
 
@@ -799,7 +799,7 @@ func getCTEAndParamsForReportComplexStrategy(query *ChannelQueryV1, projectID ui
 	}
 
 	selectQuery += joinWithComma(groupByKeysWithoutTimestamp...)
-	selectQuery = appendSelectTimestampIfRequired(selectQuery, query.GetGroupByTimestamp(), query.Timezone)
+	selectQuery = appendSelectTimestampIfRequiredForAdwords(selectQuery, query.GetGroupByTimestamp(), query.Timezone)
 
 	for _, selectMetric := range query.SelectMetrics {
 		selectMetrics = append(selectMetrics, adwordsRequestPropertiesToSQLproperty[selectMetric])
@@ -858,6 +858,39 @@ func appendSelectMetrics(selectQuery string, selectMetrics []string) ([]string, 
 		selectQuery = joinWithComma(selectQuery, value)
 	}
 	return selectMetrics, selectQuery
+}
+
+func appendSelectTimestampIfRequiredForAdwords(stmnt string, groupByTimestamp string, timezone string) string {
+	if groupByTimestamp == "" {
+		return stmnt
+	}
+
+	return joinWithComma(stmnt, fmt.Sprintf("%s as %s",
+		getSelectTimestampByTypeForAdwords(groupByTimestamp, timezone), AliasDateTime))
+}
+
+func getSelectTimestampByTypeForAdwords(timestampType, timezone string) string {
+	var selectTz string
+
+	if timezone == "" {
+		selectTz = DefaultTimezone
+	} else {
+		selectTz = timezone
+	}
+
+	var selectStr string
+	if timestampType == GroupByTimestampHour {
+		selectStr = fmt.Sprintf("date_trunc('hour', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+	} else if timestampType == GroupByTimestampWeek {
+		selectStr = fmt.Sprintf("date_trunc('week', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+	} else if timestampType == GroupByTimestampMonth {
+		selectStr = fmt.Sprintf("date_trunc('month', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+	} else {
+		// defaults to GroupByTimestampDate.
+		selectStr = fmt.Sprintf("date_trunc('day', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+	}
+
+	return selectStr
 }
 
 // @Kark TODO v1
