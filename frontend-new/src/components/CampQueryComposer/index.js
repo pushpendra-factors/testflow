@@ -259,7 +259,7 @@ const CampQueryComposer = ({activeProject, channel,
               >
                 <Button size={'large'} onClick={() => setDateRangePopover(true)}><SVG name={'calendar'} extraClass={'mr-1'} /> This Month </Button>
               </Popover>
-              <Button size={'large'} type="primary" onClick={handleRunQuery}>Run Query</Button>
+              <Button size={'large'} type="primary" onClick={handleRunQuery.bind(this, false)}>Run Query</Button>
             </div>
           );
         
