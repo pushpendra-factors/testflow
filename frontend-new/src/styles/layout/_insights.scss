@@ -4,6 +4,14 @@
     position: absolute;
     top: 25px;
     right: 97.5%;
+    transition: all 0.3s;
+    .fa-insights-box--label
+    {
+        font-size: 10px;
+        margin-top: -5px; 
+        transition: all 0.3s;
+        opacity: 0;
+    }
 }
 
 .fa-sub-insights-box--spike
@@ -63,7 +71,18 @@
 .fa-insight-item--container
 {
     &:hover{
-        box-shadow: 0 10px 10px -10px $fa-color--mono-2;  
+        box-shadow: 0 10px 10px -10px $fa-color--mono-2;
+        .fa-insights-box--spike
+        { 
+            .fa-insights-box--multiplier
+            {
+                color: rgba($fa-color--mono-6,1);
+            }
+            .fa-insights-box--label
+            {
+                opacity: 1;
+            }
+        }
     }
 
 }

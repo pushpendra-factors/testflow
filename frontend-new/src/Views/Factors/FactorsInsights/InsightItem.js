@@ -6,6 +6,7 @@ import { Text, SVG } from 'factorsComponents';
 import _ from 'lodash';
 import MoreInsightsLines from './MoreInsightsLines';
 import { numberWithCommas } from 'Utils/dataFormatter';
+import {generateInsightKey} from './Utils';
 
 const ProgressColor = {
   blue: '#4D7DB4',
@@ -16,23 +17,19 @@ const InsightItem = ({
   data, category, showSubInsightsData, displayType = false
 }) => {
   if (data) { 
-    console.log('insights-data--->',data);
+    // console.log('insights-data--->',data);
     const isJourney = data?.type === 'journey' ? true : false; 
     return data.insights.map((dataItem, index) => {
       if (dataItem.factors_insights_type === category) {
 
-        let insightKey = '';
-        if (_.isEmpty(dataItem.factors_insights_key)) {
-          insightKey = `${dataItem.factors_insights_attribute[0].factors_attribute_key} = ${dataItem.factors_insights_attribute[0].factors_attribute_value}`;
-        } else {
-          insightKey = dataItem.factors_insights_key;
-        } 
-         let factors_insights_text = `of which users who perform <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}x goal completion`
+        let insightKey = generateInsightKey(dataItem);
+        
+         let factors_insights_text = `of which users who perform <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}% goal completion`
          if(dataItem.factors_insights_type=='attribute'){
-           factors_insights_text = `Users with <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}x goal completion` 
+           factors_insights_text = `Users with <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}% goal completion` 
           }
           if(dataItem.factors_insights_type=='campaign'){
-            factors_insights_text = `of which users from <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}x goal completion` 
+            factors_insights_text = `of which users from <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}% goal completion` 
           }
 
         
@@ -112,9 +109,12 @@ const InsightItem = ({
 
                                   <div className={'fa-insights-box--spike'}>
                                       <div className={'flex justify-end items-center'}>
-                                        <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 mr-4'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
+                                        <div className={'flex flex-col items-end mr-4'}>
+                                          <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 fa-insights-box--multiplier'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
+                                          <Text type={'title'} color={'grey'} level={7} extraClass={'m-0 fa-insights-box--label'} >{`Impact`}</Text> 
+                                        </div>
                                         {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
-                                      </div>
+                                      </div> 
                                   </div>
 
                               </div>
