@@ -8,7 +8,7 @@ import {
   setAttributionModelsAction, setAttributionWindowAction, 
   setAttrLinkEventsAction, setCampChannelAction, 
   setMeasuresAction, getCampaignConfigAction, 
-  setCampFiltersAction
+  setCampFiltersAction, setCampGroupByAction
 } from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties, fetchCampaignConfig } from './services';
 import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
@@ -138,6 +138,14 @@ export const setCampFilters = (filters) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setCampFiltersAction(filters)))
+    })
+  }
+}
+
+export const setCampGroupBy = (groupBy) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setCampGroupByAction(groupBy)))
     })
   }
 }

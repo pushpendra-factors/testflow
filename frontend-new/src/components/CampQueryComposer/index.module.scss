@@ -32,6 +32,15 @@
     right: 0;
 }
 
+.gbpRemove {
+    position: absolute;
+    @extend .filterDelBtn;
+}
+
+.groupItem {
+    position: relative;
+}
+
 .filterSelect {
     left: 0;
     
