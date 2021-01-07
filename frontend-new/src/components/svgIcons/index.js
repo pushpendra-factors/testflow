@@ -400,16 +400,16 @@ const TrashSVG = ({ size = 24, color, extraClass }) => {
   );
 };
 const TimesSVG = ({ size = 24, color, extraClass }) => {
-  return (
-    <svg width={size} height={size} className={extraClass} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g clipPath="url(#clip0)">
-        <path fillRule="evenodd" clipRule="evenodd" d="M24.4853 8.73369C25.006 8.21299 25.006 7.36877 24.4853 6.84807C23.9646 6.32737 23.1204 6.32737 22.5997 6.84807L16 13.4477L9.40034 6.84807C8.87964 6.32737 8.03542 6.32737 7.51472 6.84807C6.99402 7.36877 6.99402 8.21299 7.51472 8.73369L14.1144 15.3334L7.51472 21.933C6.99402 22.4537 6.99402 23.2979 7.51472 23.8186C8.03542 24.3393 8.87964 24.3393 9.40034 23.8186L16 17.219L22.5997 23.8186C23.1204 24.3393 23.9646 24.3393 24.4853 23.8186C25.006 23.2979 25.006 22.4537 24.4853 21.933L17.8856 15.3334L24.4853 8.73369Z" fill="#8692A3" />
-      </g>
-      <defs>
-        <clipPath id="clip0">
-          <rect width={size} height={size} className={extraClass} fill="white" />
-        </clipPath>
-      </defs>
+  return ( 
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g clip-path="url(#clip0)">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M18.364 6.55015C18.7545 6.15962 18.7545 5.52646 18.364 5.13593C17.9734 4.74541 17.3403 4.74541 16.9497 5.13593L12 10.0857L7.05025 5.13593C6.65973 4.74541 6.02656 4.74541 5.63604 5.13593C5.24552 5.52646 5.24552 6.15962 5.63604 6.55015L10.5858 11.4999L5.63604 16.4496C5.24552 16.8402 5.24551 17.4733 5.63604 17.8639C6.02656 18.2544 6.65973 18.2544 7.05025 17.8639L12 12.9141L16.9497 17.8639C17.3403 18.2544 17.9734 18.2544 18.364 17.8639C18.7545 17.4733 18.7545 16.8402 18.364 16.4496L13.4142 11.4999L18.364 6.55015Z" fill="#8692A3"/>
+    </g>
+    <defs>
+    <clipPath id="clip0">
+    <rect width="24" height="24" fill="white"/>
+    </clipPath>
+    </defs>
     </svg>
 
   );
