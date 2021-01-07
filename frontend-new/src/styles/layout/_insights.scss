@@ -145,16 +145,16 @@
 
 .progressArrow--extraline{
     position: relative;
-    &::after{
-        content: "";
-        border-left: 1px solid #B7BEC8;
-        height: 170%;
-        width: 5px;
-        position: absolute; 
-        left: -17px;
-        top: 0;
+    // &::after{
+    //     content: "";
+    //     border-left: 1px solid #B7BEC8;
+    //     height: 170%;
+    //     width: 5px;
+    //     position: absolute; 
+    //     left: -17px;
+    //     top: 0;
 
-    }
+    // }
 }
 
 .fa-custom-badge
