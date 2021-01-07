@@ -976,7 +976,7 @@ type FactorsAttributeTuple struct {
 	FactorsAttributeUpperBound float64 `json:"factors_attribute_upper_bound"`
 	FactorsAttributeLowerBound float64 `json:"factors_attribute_lower_bound"`
 	FactorsAttributeEquality   bool    `json:"factors_attribute_equality"`
-	FactorsAttributeUseBound   string  `json:"factors_attribute_use_bound`
+	FactorsAttributeUseBound   string  `json:"factors_attribute_use_bound"`
 }
 
 // FactorsInsights object
