@@ -67,6 +67,7 @@ type NumericConstraint struct {
 	LowerBound   float64
 	UpperBound   float64
 	IsEquality   bool
+	UseBound     string
 }
 type CategoricalConstraint struct {
 	PropertyName  string

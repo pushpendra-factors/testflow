@@ -2069,6 +2069,7 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 						PropertyName: propertyName,
 						LowerBound:   -math.MaxFloat64,
 						UpperBound:   minValue,
+						UseBound:     "OnlyUpper",
 					},
 				}
 				if nodeType == NODE_TYPE_EVENT_PROPERTY {
@@ -2089,6 +2090,7 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 					PropertyName: propertyName,
 					LowerBound:   minValue,
 					UpperBound:   maxValue,
+					UseBound:     "Both",
 				},
 			}
 			if nodeType == NODE_TYPE_EVENT_PROPERTY {
@@ -2109,6 +2111,7 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 						PropertyName: propertyName,
 						LowerBound:   maxValue,
 						UpperBound:   math.MaxFloat64,
+						UseBound:     "OnlyLower",
 					},
 				}
 				if nodeType == NODE_TYPE_EVENT_PROPERTY {

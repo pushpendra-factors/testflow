@@ -976,6 +976,7 @@ type FactorsAttributeTuple struct {
 	FactorsAttributeUpperBound float64 `json:"factors_attribute_upper_bound"`
 	FactorsAttributeLowerBound float64 `json:"factors_attribute_lower_bound"`
 	FactorsAttributeEquality   bool    `json:"factors_attribute_equality"`
+	FactorsAttributeUseBound   string  `json:"factors_attribute_use_bound`
 }
 
 // FactorsInsights object
@@ -1041,6 +1042,7 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 							FactorsAttributeLowerBound: attribute.LowerBound,
 							FactorsAttributeUpperBound: attribute.UpperBound,
 							FactorsAttributeEquality:   attribute.IsEquality,
+							FactorsAttributeUseBound:   attribute.UseBound,
 						})
 					}
 					for _, attribute := range funnelResults[len(funnelResults)-2].Constraints.EPCategoricalConstraints {
@@ -1055,6 +1057,7 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 							FactorsAttributeLowerBound: attribute.LowerBound,
 							FactorsAttributeUpperBound: attribute.UpperBound,
 							FactorsAttributeEquality:   attribute.IsEquality,
+							FactorsAttributeUseBound:   attribute.UseBound,
 						})
 					}
 					for _, attribute := range funnelResults[len(funnelResults)-2].Constraints.UPCategoricalConstraints {
