@@ -192,9 +192,9 @@ export default function FilterBlock({
             // }
             
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[newFilterState.props[0]] = res?.result?.filter_values;
+            ddValues[newFilterState.props[0]] = res?.data?.result?.filter_values;
             setDropDownValues(ddValues);
-        });
+        }).catch(err => console.log(err));
       }
     }
     }
@@ -468,7 +468,7 @@ export default function FilterBlock({
     <div className={styles.filter_block}>
       {
         filter && 
-          <Button size={'small'} 
+          <Button size={'large'} 
         type="text" 
         onClick={delFilter}
         className={`${styles.filter_block__remove} mr-1 ${delBtnClass}`}>
