@@ -1,5 +1,5 @@
 import moment from "moment";
-import { getTitleWithSorter, SortData } from "../../../../utils/dataFormatter";
+import { getTitleWithSorter, SortData, numberWithCommas } from "../../../../utils/dataFormatter";
 
 export const formatData = (data, arrayMapper) => {
   const result = [];
@@ -12,7 +12,7 @@ export const formatData = (data, arrayMapper) => {
     if (
       dateTimeEventIndex > -1 &&
       eventIndex > -1 &&
-      data.result_group[1].rows[eventIndex]
+      data.result_group[1].rows[0][eventIndex]
     ) {
       result.push({
         index: elem.index,
@@ -24,7 +24,7 @@ export const formatData = (data, arrayMapper) => {
             [elem.mapper]: row[dateTimeEventIndex],
           };
         }),
-        total: data.result_group[1].rows[eventIndex],
+        total: data.result_group[1].rows[0][eventIndex],
       });
     }
   });
@@ -76,7 +76,7 @@ export const getTableData = (chartsData, frequency, currentSorter) => {
     const colVals = {};
     columns.forEach((col, index) => {
       const mapper = chartsData[index].mapper;
-      colVals[col] = chartsData[index].dataOverTime[dateIndex][mapper];
+      colVals[col] = numberWithCommas(chartsData[index].dataOverTime[dateIndex][mapper]);
     });
     return {
       index: dateIndex,
