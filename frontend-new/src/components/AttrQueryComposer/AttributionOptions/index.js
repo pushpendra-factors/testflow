@@ -90,7 +90,7 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
                             </div>
                         }
                 
-                        {!selectVisibleModel[index] && <Button size={'large'} type="link" onClick={() => toggleModelSelect(index)}>Add touchpoint</Button>}
+                        {!selectVisibleModel[index] && <Button size={'large'} type="link" onClick={() => toggleModelSelect(index)}>Add Model</Button>}
 
                         {selectModel(index)} 
                     </div>
