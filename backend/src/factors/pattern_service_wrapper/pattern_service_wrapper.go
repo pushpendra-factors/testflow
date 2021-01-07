@@ -1140,9 +1140,9 @@ func trimChildNode(parentType string, childType string, parent FactorsInsights, 
 				if parentNodeAttribute == childNodeAttribute {
 					match = true
 				}
-				if match == false {
-					attributes = append(attributes, childNodeAttribute)
-				}
+			}
+			if match == false {
+				attributes = append(attributes, childNodeAttribute)
 			}
 		}
 		child.FactorsInsightsAttribute = attributes
