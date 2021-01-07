@@ -7,20 +7,17 @@ import { Text, SVG } from 'factorsComponents';
 import _ from 'lodash';
 import MoreInsightsLines from './MoreInsightsLines';
 import { numberWithCommas } from 'Utils/dataFormatter';
+import {generateInsightKey} from './Utils';
 
 const ProgressColor = {
   blue: '#4D7DB4',
   yellow: '#F9C06E'
 }
 
-const ModalHeader = (SubInsightsData,handleClose) => { 
-    let insightKey = '';
-          if (_.isEmpty(SubInsightsData.factors_insights_key)) {
-            insightKey = `${SubInsightsData.factors_insights_attribute[0].factors_attribute_key} = ${SubInsightsData.factors_insights_attribute[0].factors_attribute_value}`;
-          } else {
-            insightKey = SubInsightsData.factors_insights_key;
-          }
 
+
+const ModalHeader = (SubInsightsData,handleClose) => { 
+    let insightKey = generateInsightKey(SubInsightsData);
     return (
       <div className={'flex justify-between items-center px-4 py-3'}>
         <div className={'flex flex-col'}> 
@@ -65,22 +62,10 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
         {!SubLevel2Data && <div className={'fa-modal-body--custom-scrollable'}>
          { SubInsightsData.factors_sub_insights.map((dataItem, index) => {
 
-          let insightKeyLevel1 = '';
-          if (_.isEmpty(SubInsightsData.factors_insights_key)) {
-            insightKeyLevel1 = `${SubInsightsData.factors_insights_attribute[0].factors_attribute_key} = ${SubInsightsData.factors_insights_attribute[0].factors_attribute_value}`;
-          } else {
-            insightKeyLevel1 = SubInsightsData.factors_insights_key;
-          }
- 
+          let insightKeyLevel1 = generateInsightKey(SubInsightsData);
+          let insightKeyLevel2 = generateInsightKey(dataItem);
           
-          let insightKeyLevel2 = '';
-          if (_.isEmpty(dataItem.factors_insights_key)) {
-            insightKeyLevel2 = `${dataItem.factors_insights_attribute[0].factors_attribute_key} = ${dataItem.factors_insights_attribute[0].factors_attribute_value}`;
-          } else {
-            insightKeyLevel2 = dataItem.factors_insights_key;
-          }
-          
-          const factors_insights_text = `and then <a>${insightKeyLevel2}</a> show  ${dataItem.factors_insights_multiplier}x goal completion`
+          const factors_insights_text = `and then <a>${insightKeyLevel2}</a> show  ${dataItem.factors_insights_multiplier}% goal completion`
 
           
           let insightLevel1Percentage = 100; 
@@ -192,31 +177,13 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                       <Button className={'fa-button-ghost'} type={'text'} onClick={() => { SetSubLevel2Data(false); }}><SVG name={'doubleArrowLeft'} size={16} color={"#8692A3"} extraClass={'mr-2'}/> Back</Button>
                   </div>
               </Col>
-          </Row>
-          {console.log("SubLevel2Data",SubLevel2Data)}
+          </Row> 
           <div className={'fa-modal-body--custom-scrollable fa-modal-body--custom-scrollable-1'}>
-            {SubLevel2Data?.factors_sub_insights?.map((dataItem, index) => {
-              console.log("dataItem",dataItem);
-              let insightKeyLevel1 = '';
-              if (_.isEmpty(SubLevel1Data.factors_insights_key)) {
-                insightKeyLevel1 = `${SubLevel1Data.factors_insights_attribute[0].factors_attribute_key} = ${SubLevel1Data.factors_insights_attribute[0].factors_attribute_value}`;
-              } else {
-                insightKeyLevel1 = SubLevel1Data.factors_insights_key;
-              }
+            {SubLevel2Data?.factors_sub_insights?.map((dataItem, index) => { 
 
-              let insightKeyLevel2 = '';
-              if (_.isEmpty(SubLevel2Data.factors_insights_key)) {
-                insightKeyLevel2 = `${SubLevel2Data.factors_insights_attribute[0].factors_attribute_key} = ${SubLevel2Data.factors_insights_attribute[0].factors_attribute_value}`;
-              } else {
-                insightKeyLevel2 = SubLevel2Data.factors_insights_key;
-              }
-
-              let insightKeyLevel3 = '';
-              if (_.isEmpty(dataItem.factors_insights_key)) {
-                insightKeyLevel3 = `${dataItem.factors_insights_attribute[0].factors_attribute_key} = ${dataItem.factors_insights_attribute[0].factors_attribute_value}`;
-              } else {
-                insightKeyLevel3 = dataItem.factors_insights_key;
-              }
+              let insightKeyLevel1 = generateInsightKey(SubLevel1Data); 
+              let insightKeyLevel2 = generateInsightKey(SubLevel2Data);  
+              let insightKeyLevel3 = generateInsightKey(dataItem);   
 
               const insightLevel2Percentage = (SubLevel2Data.factors_insights_users_count / SubLevel1Data.factors_insights_users_count) * 100;
               const insightLevel3Percentage = (dataItem.factors_insights_users_count / SubLevel1Data.factors_insights_users_count) * 100;
