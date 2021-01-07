@@ -1400,14 +1400,18 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	MAX_CAT_PROPERTIES_EVALUATED := 100
 	MAX_CAT_VALUES_EVALUATED := 100
 
-	debugKey := fmt.Sprintf("itree_attribute_totaleventCategorical_level%v", level)
-	debugCounts[debugKey] = debugCounts[debugKey] + len(eventInfo.CategoricalPropertyKeyValues)
-	debugKey = fmt.Sprintf("itree_attribute_totaleventNumerical_level%v", level)
-	debugCounts[debugKey] = debugCounts[debugKey] + len(eventInfo.NumericPropertyKeys)
-	debugKey = fmt.Sprintf("itree_attribute_totaluserCategorical_level%v", level)
-	debugCounts[debugKey] = debugCounts[debugKey] + len(userInfo.CategoricalPropertyKeyValues)
-	debugKey = fmt.Sprintf("itree_attribute_totaluserNumerical_level%v", level)
-	debugCounts[debugKey] = debugCounts[debugKey] + len(userInfo.NumericPropertyKeys)
+	if eventInfo != nil {
+		debugKey := fmt.Sprintf("itree_attribute_totaleventCategorical_level%v", level)
+		debugCounts[debugKey] = debugCounts[debugKey] + len(eventInfo.CategoricalPropertyKeyValues)
+		debugKey = fmt.Sprintf("itree_attribute_totaleventNumerical_level%v", level)
+		debugCounts[debugKey] = debugCounts[debugKey] + len(eventInfo.NumericPropertyKeys)
+	}
+	if userInfo != nil {
+		debugKey := fmt.Sprintf("itree_attribute_totaluserCategorical_level%v", level)
+		debugCounts[debugKey] = debugCounts[debugKey] + len(userInfo.CategoricalPropertyKeyValues)
+		debugKey = fmt.Sprintf("itree_attribute_totaluserNumerical_level%v", level)
+		debugCounts[debugKey] = debugCounts[debugKey] + len(userInfo.NumericPropertyKeys)
+	}
 	if eventInfo != nil && pLen > 1 {
 		child := it.buildCategoricalPropertyChildNodesV1(reqId,
 			eventInfo.CategoricalPropertyKeyValues, NODE_TYPE_EVENT_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
@@ -1421,7 +1425,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 		child := it.buildCategoricalPropertyChildNodesV1(reqId,
 			userInfo.CategoricalPropertyKeyValues, NODE_TYPE_USER_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
 			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
-		debugKey = fmt.Sprintf("itree_attribute_totaluserCategorical_filtered_level%v", level)
+		debugKey := fmt.Sprintf("itree_attribute_totaluserCategorical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
 		childNodes = append(childNodes, child...)
 	}
@@ -1433,7 +1437,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 		child := it.buildNumericalPropertyChildNodesV1(reqId,
 			eventInfo.NumericPropertyKeys, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
-		debugKey = fmt.Sprintf("itree_attribute_totaleventNumerical_filtered_level%v", level)
+		debugKey := fmt.Sprintf("itree_attribute_totaleventNumerical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
 		childNodes = append(childNodes, child...)
 	}
@@ -1441,7 +1445,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 		child := it.buildNumericalPropertyChildNodesV1(reqId,
 			userInfo.NumericPropertyKeys, NODE_TYPE_USER_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
-		debugKey = fmt.Sprintf("itree_attribute_totaluserNumerical_filtered_level%v", level)
+		debugKey := fmt.Sprintf("itree_attribute_totaluserNumerical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
 		childNodes = append(childNodes, child...)
 	}
@@ -1460,7 +1464,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 
 	for _, cNode := range childNodes {
 		if cNode.InformationDrop <= 0.0 {
-			debugKey = fmt.Sprintf("filterreason:itree_attribute_informationdrop_level%v", level)
+			debugKey := fmt.Sprintf("filterreason:itree_attribute_informationdrop_level%v", level)
 			debugCounts[debugKey] = debugCounts[debugKey] + 1
 			continue
 		}
