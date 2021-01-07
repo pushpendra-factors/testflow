@@ -11,11 +11,12 @@ const ProgressColor = {
   blue: '#4D7DB4',
   yellow: '#F9C06E'
 }
-
+ 
 const InsightItem = ({
   data, category, showSubInsightsData, displayType = false
 }) => {
   if (data) { 
+    console.log('insights-data--->',data);
     const isJourney = data?.type === 'journey' ? true : false; 
     return data.insights.map((dataItem, index) => {
       if (dataItem.factors_insights_type === category) {
@@ -26,8 +27,16 @@ const InsightItem = ({
         } else {
           insightKey = dataItem.factors_insights_key;
         } 
-        const factors_insights_text = `of which users who perform <a>${insightKey}</a> show  ${dataItem.factors_insights_multiplier}x goal completion`
- 
+         let factors_insights_text = `of which users who perform <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}x goal completion`
+         if(dataItem.factors_insights_type=='attribute'){
+           factors_insights_text = `Users with <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}x goal completion` 
+          }
+          if(dataItem.factors_insights_type=='campaign'){
+            factors_insights_text = `of which users from <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}x goal completion` 
+          }
+
+        
+
         let insightLevel1Percentage = 100; 
         let insightLevel1Journey = 100; 
 

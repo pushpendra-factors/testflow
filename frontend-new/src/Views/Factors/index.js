@@ -13,8 +13,7 @@ import { connect } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';  
 import _, { isEmpty } from 'lodash'; 
 import { useHistory } from 'react-router-dom';
-import SavedGoals from './SavedGoals';
- 
+import SavedGoals from './SavedGoals'; 
 
 const suggestionList = [
   {
@@ -76,8 +75,7 @@ const Factors = ({
   const handleCancel = () => {
     setConfigureDPModal(false);
   };
-
- 
+  
   return (
     <>
     {fetchingIngishts ? <Spin size={'large'} className={'fa-page-loader'} /> : 
@@ -115,6 +113,7 @@ const Factors = ({
                               <Text type={'title'} level={7} extraClass={'m-0'} >Explain periodically tracks a pre-configured set of data points for faster and efficient retrieval of insights. </Text>
                               <Button className={'m-0 mt-4'} size={'large'} onClick={() => setConfigureDPModal(true)}>Configure Data Points</Button>
                           </Col>
+
                           {/* <Col span={24}>
                               <Text type={'title'} level={7} weight={'bold'} extraClass={'mt-8'} >Suggestions based on your activity</Text>
                               {suggestionList.map((item, index) => {
@@ -130,6 +129,9 @@ const Factors = ({
                   </Col>
               </Row>
           </div>
+
+           
+
 
           <ConfigureDP
           visible={showConfigureDPModal}

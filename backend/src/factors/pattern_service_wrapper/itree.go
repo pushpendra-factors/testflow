@@ -1178,6 +1178,8 @@ func BuildNewItree(reqId,
 	return &itree, nil
 }
 
+var debugCounts map[string]int
+
 func BuildNewItreeV1(reqId,
 	startEvent string, startEventConstraints *P.EventConstraints,
 	endEvent string, endEventConstraints *P.EventConstraints,
@@ -1186,6 +1188,7 @@ func BuildNewItreeV1(reqId,
 		return nil, fmt.Errorf("Missing end event")
 	}
 
+	debugCounts = make(map[string]int)
 	itreeNodes := []*ItreeNode{}
 	itree := Itree{
 		Nodes:    itreeNodes,
@@ -1200,7 +1203,9 @@ func BuildNewItreeV1(reqId,
 	log.WithFields(log.Fields{
 		"time_taken": endTime - startTime}).Error("GetAllPatterns Time taken.")
 	log.WithFields(log.Fields{
-		"total_patterns": len(candidatePatterns)}).Info("explain_debug")
+		"time_taken": endTime - startTime}).Error("explain_debug_GetAllPatterns")
+	debugCounts["total_patterns"] = len(candidatePatterns)
+
 	var len1PatternCount, len2PatternCount, len3PatternCount int
 	for _, pattern := range candidatePatterns {
 		if len(pattern.EventNames) == 1 {
@@ -1213,12 +1218,9 @@ func BuildNewItreeV1(reqId,
 			len3PatternCount++
 		}
 	}
-	log.WithFields(log.Fields{
-		"len1_patterns": len1PatternCount}).Info("explain_debug")
-	log.WithFields(log.Fields{
-		"len2_patterns": len2PatternCount}).Info("explain_debug")
-	log.WithFields(log.Fields{
-		"len3_patterns": len3PatternCount}).Info("explain_debug")
+	debugCounts["len1_patterns"] = len1PatternCount
+	debugCounts["len2_patterns"] = len2PatternCount
+	debugCounts["len3_patterns"] = len3PatternCount
 
 	if err != nil {
 		return nil, err
@@ -1262,15 +1264,23 @@ func BuildNewItreeV1(reqId,
 	queue = append(queue, &LevelItreeNodeTuple{node: rootNode, level: 0})
 	numNodesEvaluated := 0
 
+	startTime = time.Now().Unix()
+	userAndEventsInfo := patternWrapper.GetUserAndEventsInfo()
+	endTime = time.Now().Unix()
+	log.WithFields(log.Fields{
+		"time_taken": endTime - startTime}).Error("explain_debug_GetUserAndEventInfo")
+
 	for len(queue) > 0 && numNodesEvaluated < MAX_NODES_TO_EVALUATE {
 		numNodesEvaluated++
 		parentNode := queue[0]
 		if parentNode.node.NodeType != NODE_TYPE_CAMPAIGN {
 			if attributeChildNodes, err := itree.buildAndAddPropertyChildNodesV1(reqId,
-				parentNode.node, allActiveUsersPattern, patternWrapper, countType); err != nil {
+				parentNode.node, allActiveUsersPattern, patternWrapper, countType, userAndEventsInfo, parentNode.level); err != nil {
 				log.Errorf(fmt.Sprintf("%s", err))
 				return nil, err
 			} else {
+				debugKey := fmt.Sprintf("itree_attribute_count_level%v", parentNode.level)
+				debugCounts[debugKey] = debugCounts[debugKey] + len(attributeChildNodes)
 				for _, childNode := range attributeChildNodes {
 					if parentNode.level <= 1 {
 						queue = append(queue, &LevelItreeNodeTuple{node: childNode, level: parentNode.level + 1})
@@ -1284,6 +1294,8 @@ func BuildNewItreeV1(reqId,
 				candidatePatterns, patternWrapper, allActiveUsersPattern, countType); err != nil {
 				return nil, err
 			} else {
+				debugKey := fmt.Sprintf("itree_sequence_count_level%v", parentNode.level)
+				debugCounts[debugKey] = debugCounts[debugKey] + len(sequenceChildNodes)
 				for _, childNode := range sequenceChildNodes {
 					if parentNode.level <= 1 {
 						queue = append(queue, &LevelItreeNodeTuple{node: childNode, level: parentNode.level + 1})
@@ -1297,6 +1309,8 @@ func BuildNewItreeV1(reqId,
 				candidatePatterns, patternWrapper, allActiveUsersPattern, countType); err != nil {
 				return nil, err
 			} else {
+				debugKey := fmt.Sprintf("itree_campaign_count_level%v", parentNode.level)
+				debugCounts[debugKey] = debugCounts[debugKey] + len(sequenceChildNodes)
 				for _, childNode := range sequenceChildNodes {
 					if parentNode.level <= 1 {
 						queue = append(queue, &LevelItreeNodeTuple{node: childNode, level: parentNode.level + 1})
@@ -1310,15 +1324,14 @@ func BuildNewItreeV1(reqId,
 	log.WithFields(log.Fields{
 		"time_taken": endTime - startTime}).Error("Building Tree Time taken.")
 	log.WithFields(log.Fields{
-		"missing_pattern_count": missingPatternCount}).Info("explain_debug")
-
+		"debug_counts": debugCounts}).Error("explain_debug")
 	//log.WithFields(log.Fields{"itree": itree}).Info("Returning Itree.")
 	return &itree, nil
 }
 
 func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	parentNode *ItreeNode, allActiveUsersPattern *P.Pattern,
-	patternWrapper PatternServiceWrapperInterface, countType string) ([]*ItreeNode, error) {
+	patternWrapper PatternServiceWrapperInterface, countType string, userAndEventsInfo *P.UserAndEventsInfo, level int) ([]*ItreeNode, error) {
 	// The top child nodes are obtained by adding constraints on the (N-1) event
 	// of parent pattern.
 	// i.e If parrent pattern is A -> B -> C -> Y with
@@ -1331,7 +1344,6 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	parentConstraints := parentNode.PatternConstraints
 	var fpr, fpp float64
 	pLen := len(parentPattern.EventNames)
-	userAndEventsInfo := patternWrapper.GetUserAndEventsInfo()
 	if userAndEventsInfo == nil {
 		// No event properties available.
 		return []*ItreeNode{}, nil
@@ -1388,30 +1400,50 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	MAX_CAT_PROPERTIES_EVALUATED := 100
 	MAX_CAT_VALUES_EVALUATED := 100
 
+	debugKey := fmt.Sprintf("itree_attribute_totaleventCategorical_level%v", level)
+	debugCounts[debugKey] = debugCounts[debugKey] + len(eventInfo.CategoricalPropertyKeyValues)
+	debugKey = fmt.Sprintf("itree_attribute_totaleventNumerical_level%v", level)
+	debugCounts[debugKey] = debugCounts[debugKey] + len(eventInfo.NumericPropertyKeys)
+	debugKey = fmt.Sprintf("itree_attribute_totaluserCategorical_level%v", level)
+	debugCounts[debugKey] = debugCounts[debugKey] + len(userInfo.CategoricalPropertyKeyValues)
+	debugKey = fmt.Sprintf("itree_attribute_totaluserNumerical_level%v", level)
+	debugCounts[debugKey] = debugCounts[debugKey] + len(userInfo.NumericPropertyKeys)
 	if eventInfo != nil && pLen > 1 {
-		childNodes = append(childNodes, it.buildCategoricalPropertyChildNodesV1(reqId,
+		child := it.buildCategoricalPropertyChildNodesV1(reqId,
 			eventInfo.CategoricalPropertyKeyValues, NODE_TYPE_EVENT_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
-			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)...)
+			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
+		debugKey := fmt.Sprintf("itree_attribute_totaleventCategorical_filtered_level%v", level)
+		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
+		childNodes = append(childNodes, child...)
 	}
 
 	if userInfo != nil && (pLen > 1 || countType == P.COUNT_TYPE_PER_USER) {
-		childNodes = append(childNodes, it.buildCategoricalPropertyChildNodesV1(reqId,
+		child := it.buildCategoricalPropertyChildNodesV1(reqId,
 			userInfo.CategoricalPropertyKeyValues, NODE_TYPE_USER_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
-			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)...)
+			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
+		debugKey = fmt.Sprintf("itree_attribute_totaluserCategorical_filtered_level%v", level)
+		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
+		childNodes = append(childNodes, child...)
 	}
 
 	// Add children by splitting on constraints on categorical properties.
 	pLen = len(parentPattern.EventNames)
 	MAX_NUM_PROPERTIES_EVALUATED := 100
 	if eventInfo != nil && pLen > 1 {
-		childNodes = append(childNodes, it.buildNumericalPropertyChildNodesV1(reqId,
+		child := it.buildNumericalPropertyChildNodesV1(reqId,
 			eventInfo.NumericPropertyKeys, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
-			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)...)
+			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
+		debugKey = fmt.Sprintf("itree_attribute_totaleventNumerical_filtered_level%v", level)
+		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
+		childNodes = append(childNodes, child...)
 	}
 	if userInfo != nil && (pLen > 1 || countType == P.COUNT_TYPE_PER_USER) {
-		childNodes = append(childNodes, it.buildNumericalPropertyChildNodesV1(reqId,
+		child := it.buildNumericalPropertyChildNodesV1(reqId,
 			userInfo.NumericPropertyKeys, NODE_TYPE_USER_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
-			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)...)
+			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
+		debugKey = fmt.Sprintf("itree_attribute_totaluserNumerical_filtered_level%v", level)
+		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
+		childNodes = append(childNodes, child...)
 	}
 
 	// Sort in decreasing order of infoDrop.
@@ -1428,6 +1460,8 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 
 	for _, cNode := range childNodes {
 		if cNode.InformationDrop <= 0.0 {
+			debugKey = fmt.Sprintf("filterreason:itree_attribute_informationdrop_level%v", level)
+			debugCounts[debugKey] = debugCounts[debugKey] + 1
 			continue
 		}
 		// Dedup repeated constraints on different values.
@@ -1465,7 +1499,6 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 	countType string) []*ItreeNode {
 	propertyChildNodes := []*ItreeNode{}
 	numP := 0
-	keyValuePairsEvaluated := 0
 	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
 	for propertyName, seenValues := range categoricalPropertyKeyValues {
 		if numP > maxNumProperties {
@@ -1492,7 +1525,6 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 				continue
 			}
 			numVal++
-			keyValuePairsEvaluated++
 			constraintToAdd := P.EventConstraints{
 				EPNumericConstraints:     []P.NumericConstraint{},
 				EPCategoricalConstraints: []P.CategoricalConstraint{},
@@ -1576,10 +1608,6 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 			}*/
 		}
 	}
-	log.WithFields(log.Fields{
-		"properties_categorical_count": keyValuePairsEvaluated}).Info("explain_debug")
-	log.WithFields(log.Fields{
-		"properties_categorical_filtered_count": len(propertyChildNodes)}).Info("explain_debug")
 	return propertyChildNodes
 }
 
@@ -1627,13 +1655,10 @@ func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 		//	"Parent not frequent enough")
 		return childNodes, nil
 	}
-	subPattersnCount := 0
-	filteredPatternsCount := 0
 	for _, p := range candidatePattens {
 		if !isChildSequence(parentNode.Pattern.EventNames, p.EventNames) || P.IsEncodedEvent(p.EventNames[len(p.EventNames)-2]) {
 			continue
 		}
-		subPattersnCount++
 		if cNode, err := it.buildChildNodeV1(reqId,
 			p, nil, NODE_TYPE_SEQUENCE,
 			parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp, countType); err != nil {
@@ -1643,14 +1668,9 @@ func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 			if cNode == nil {
 				continue
 			}
-			filteredPatternsCount++
 			childNodes = append(childNodes, cNode)
 		}
 	}
-	log.WithFields(log.Fields{
-		"matching_sequence_child_nodes": subPattersnCount}).Info("explain_debug")
-	log.WithFields(log.Fields{
-		"filtered_sequence_child_nodes": filteredPatternsCount}).Info("explain_debug")
 	// Sort in decreasing order of infoDrop.
 	sort.SliceStable(childNodes,
 		func(i, j int) bool {
@@ -1764,8 +1784,6 @@ func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 
 	return addedChildNodes, nil
 }
-
-var missingPatternCount int
 
 func (it *Itree) buildChildNodeV1(reqId string,
 	childPattern *P.Pattern, constraintToAdd *P.EventConstraints,
@@ -1928,7 +1946,6 @@ func (it *Itree) buildChildNodeV1(reqId string,
 		//log.WithFields(log.Fields{"Child": childPattern.String(),
 		//	"constraintToAdd": constraintToAdd, "parentConstraints": parentConstraints,
 		//	"fcp": fcp, "fcr": fcr}).Debug("Child not frequent enough")
-		missingPatternCount++
 		return nil, nil
 	}
 	// Expected.
@@ -1939,7 +1956,6 @@ func (it *Itree) buildChildNodeV1(reqId string,
 	if fpp < fpr || fcp < fcr || fpp < fcp || fpr < fcr {
 		log.WithFields(log.Fields{"Child": childPattern.String(), "constraints": childPatternConstraints,
 			"fpp": fpp, "fpr": fpr, "fcp": fcp, "fcr": fcr}).Debug("Inconsistent frequencies. Ignoring")
-		missingPatternCount++
 		return nil, nil
 	}
 	p := fcr / fcp
@@ -2116,10 +2132,6 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 			}
 		}
 	}
-	log.WithFields(log.Fields{
-		"properties_numerical_count": keyValuePairsEvaluated}).Info("explain_debug")
-	log.WithFields(log.Fields{
-		"properties_numerical_filtered_count": len(propertyChildNodes)}).Info("explain_debug")
 	return propertyChildNodes
 
 }

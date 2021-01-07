@@ -45,6 +45,9 @@
           case 'SAVE_GOAL_INSIGHT_RULES_FULFILLED': {
             return { ...state, factors_insight_rules: action.payload };
           } 
+          case 'SAVE_GOAL_INSIGHT_MODEL_FULFILLED': {
+            return { ...state, factors_insight_model: action.payload };
+          } 
           case 'ADD_EVENTS_FULFILLED': {
             return { ...state };
           } 
@@ -153,6 +156,11 @@
 export function saveGoalInsightRules(data) {
     return function(dispatch) {
       dispatch({type:"SAVE_GOAL_INSIGHT_RULES_FULFILLED", payload: data}); 
+    }
+}
+export function saveGoalInsightModel(data) {
+    return function(dispatch) {
+      dispatch({type:"SAVE_GOAL_INSIGHT_MODEL_FULFILLED", payload: data}); 
     }
 }
 
