@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { formatData, formatDataInLineChartFormat } from "./utils";
 import ChartHeader from "../../../../components/SparkLineChart/ChartHeader";
 import SparkChart from "../../../../components/SparkLineChart/Chart";
-import { generateColors } from "../../../../utils/dataFormatter";
+import { generateColors, numberWithCommas } from "../../../../utils/dataFormatter";
 import LineChart from "../../../../components/LineChart";
 import NoBreakdownTable from "./NoBreakdownTable";
 import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";
@@ -75,7 +75,7 @@ function NoBreakdownCharts({
               <ChartHeader
                 bgColor="#4D7DB4"
                 query={chartsData[0].name}
-                total={chartsData[0].total}
+                total={numberWithCommas(chartsData[0].total)}
               />
             </div>
             <div className="w-3/4">
@@ -108,7 +108,7 @@ function NoBreakdownCharts({
                 >
                   <div className="flex flex-col">
                     <ChartHeader
-                      total={chartData.total}
+                      total={numberWithCommas(chartData.total)}
                       query={chartData.name}
                       bgColor={appliedColors[index]}
                     />

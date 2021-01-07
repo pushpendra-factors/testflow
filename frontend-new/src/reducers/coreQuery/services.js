@@ -164,5 +164,18 @@ export const getCampaignsData = (
   reqBody,
   dashboard = { refresh: true }
 ) => {
-  return post(null, `http://localhost:8000/campaigns-query`, reqBody);
+  let url;
+  if (dashboard.refresh) {
+    url = host + "projects/" + projectId + "/v1/channels/query";
+  } else {
+    url =
+      host +
+      "projects/" +
+      projectId +
+      "/v1/channels/query?refresh=false&dashboard_id=" +
+      dashboard.id +
+      "&dashboard_unit_id=" +
+      dashboard.unit_id;
+  }
+  return post(null, url, reqBody);
 };

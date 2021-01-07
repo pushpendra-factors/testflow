@@ -571,3 +571,30 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
   }
   return result;
 };
+
+export const getCampaignsQuery = (
+  channel,
+  select_metrics,
+  filters,
+  group_by,
+  dateRange = {}
+) => {
+  const query = {
+    channel,
+    select_metrics,
+    group_by,
+    filters,
+    gbt: dateRange.frequency || "date",
+  };
+  if (dateRange.from && dateRange.to) {
+    query.fr = moment(dateRange.from).startOf("day").utc().unix();
+    query.to = moment(dateRange.to).endOf("day").utc().unix();
+  } else {
+    query.fr = moment().startOf("week").utc().unix();
+    query.to =
+      moment().format("dddd") !== "Sunday"
+        ? moment().subtract(1, "day").endOf("day").utc().unix()
+        : moment().utc().unix();
+  }
+  return { query_group: [query, { ...query, gbt: "" }], cl: "channel_v1" };
+};
