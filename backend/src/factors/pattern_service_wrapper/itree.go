@@ -1264,21 +1264,26 @@ func BuildNewItreeV1(reqId,
 	queue = append(queue, &LevelItreeNodeTuple{node: rootNode, level: 0})
 	numNodesEvaluated := 0
 
-	startTime = time.Now().Unix()
+	startDateTime := time.Now()
 	userAndEventsInfo := patternWrapper.GetUserAndEventsInfo()
-	endTime = time.Now().Unix()
+	endDateTime := time.Now()
 	log.WithFields(log.Fields{
-		"time_taken": endTime - startTime}).Error("explain_debug_GetUserAndEventInfo")
+		"time_taken": endDateTime.Sub(startDateTime).Nanoseconds()}).Error("explain_debug_GetUserAndEventInfo")
 
+	var campaignNodesDuration, campaignNodesCount, sequenceNodesDuration, sequenceNodesCount, attributeNodesDuration, attributeNodesCount int
 	for len(queue) > 0 && numNodesEvaluated < MAX_NODES_TO_EVALUATE {
 		numNodesEvaluated++
 		parentNode := queue[0]
 		if parentNode.node.NodeType != NODE_TYPE_CAMPAIGN {
+			startDateTime := time.Now()
 			if attributeChildNodes, err := itree.buildAndAddPropertyChildNodesV1(reqId,
 				parentNode.node, allActiveUsersPattern, patternWrapper, countType, userAndEventsInfo, parentNode.level); err != nil {
 				log.Errorf(fmt.Sprintf("%s", err))
 				return nil, err
 			} else {
+				endDateTime := time.Now()
+				attributeNodesCount++
+				attributeNodesDuration += int(endDateTime.Sub(startDateTime).Milliseconds())
 				debugKey := fmt.Sprintf("itree_attribute_count_level%v", parentNode.level)
 				debugCounts[debugKey] = debugCounts[debugKey] + len(attributeChildNodes)
 				for _, childNode := range attributeChildNodes {
@@ -1290,10 +1295,14 @@ func BuildNewItreeV1(reqId,
 		}
 
 		if parentNode.node.NodeType == NODE_TYPE_SEQUENCE || parentNode.node.NodeType == NODE_TYPE_ROOT {
+			startDateTime := time.Now()
 			if sequenceChildNodes, err := itree.buildAndAddSequenceChildNodesV1(reqId, parentNode.node,
 				candidatePatterns, patternWrapper, allActiveUsersPattern, countType); err != nil {
 				return nil, err
 			} else {
+				endDateTime := time.Now()
+				sequenceNodesCount++
+				sequenceNodesDuration += int(endDateTime.Sub(startDateTime).Milliseconds())
 				debugKey := fmt.Sprintf("itree_sequence_count_level%v", parentNode.level)
 				debugCounts[debugKey] = debugCounts[debugKey] + len(sequenceChildNodes)
 				for _, childNode := range sequenceChildNodes {
@@ -1305,10 +1314,14 @@ func BuildNewItreeV1(reqId,
 		}
 
 		if parentNode.node.NodeType == NODE_TYPE_CAMPAIGN || parentNode.node.NodeType == NODE_TYPE_ROOT {
+			startDateTime := time.Now()
 			if sequenceChildNodes, err := itree.buildAndAddCampaignChildNodesV1(reqId, parentNode.node,
 				candidatePatterns, patternWrapper, allActiveUsersPattern, countType); err != nil {
 				return nil, err
 			} else {
+				endDateTime := time.Now()
+				campaignNodesCount++
+				campaignNodesDuration += int(endDateTime.Sub(startDateTime).Milliseconds())
 				debugKey := fmt.Sprintf("itree_campaign_count_level%v", parentNode.level)
 				debugCounts[debugKey] = debugCounts[debugKey] + len(sequenceChildNodes)
 				for _, childNode := range sequenceChildNodes {
@@ -1322,7 +1335,13 @@ func BuildNewItreeV1(reqId,
 	}
 	endTime = time.Now().Unix()
 	log.WithFields(log.Fields{
-		"time_taken": endTime - startTime}).Error("Building Tree Time taken.")
+		"time_taken": endTime - startTime}).Error("explain_debug_Building Tree Time taken")
+	log.WithFields(log.Fields{
+		"time_taken": sequenceNodesDuration, "count": sequenceNodesCount}).Error("explain_debug_sequence")
+	log.WithFields(log.Fields{
+		"time_taken": campaignNodesDuration, "count": campaignNodesCount}).Error("explain_debug_campaign")
+	log.WithFields(log.Fields{
+		"time_taken": attributeNodesDuration, "count": attributeNodesCount}).Error("explain_debug_attribute")
 	log.WithFields(log.Fields{
 		"debug_counts": debugCounts}).Error("explain_debug")
 	//log.WithFields(log.Fields{"itree": itree}).Info("Returning Itree.")
