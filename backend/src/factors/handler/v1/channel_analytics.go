@@ -78,7 +78,7 @@ func GetChannelFilterValuesHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusFound, gin.H{"result": channelFilterValues})
+	c.JSON(http.StatusOK, gin.H{"result": channelFilterValues})
 }
 
 // ChannelQueryHandler godoc
