@@ -4,6 +4,7 @@ import styles from "../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index
 import { checkForWindowSizeChange } from "../../Views/CoreQuery/FunnelsResultPage/utils";
 import { getMaxYpoint } from "./utils";
 import ChartLegends from "./ChartLegends";
+import { numberWithCommas } from "../../utils/dataFormatter";
 
 function BarChart({ chartData, queries, title = "chart" }) {
   const tooltip = useRef(null);
@@ -51,7 +52,7 @@ function BarChart({ chartData, queries, title = "chart" }) {
         `
                   <div>${getLabel(d.label)}</div>
                   <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${
-                    d.value
+                    numberWithCommas(d.value)
                   }</span></div>
                 `
       )
@@ -87,7 +88,7 @@ function BarChart({ chartData, queries, title = "chart" }) {
       top: 10,
       right: 0,
       bottom: 30,
-      left: 50,
+      left: 60,
     };
     const width = +svg.attr("width") - margin.left - margin.right;
     const height = +svg.attr("height") - margin.top - margin.bottom;

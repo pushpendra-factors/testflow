@@ -3,6 +3,7 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
 
 export const labelsObj = {
@@ -582,19 +583,46 @@ export const getCampaignsQuery = (
   const query = {
     channel,
     select_metrics,
-    group_by,
+    group_by: group_by.map((elem) => {
+      return {
+        name: elem.prop_category,
+        property: elem.property,
+      };
+    }),
     filters,
     gbt: dateRange.frequency || "date",
   };
-  if (dateRange.from && dateRange.to) {
-    query.fr = moment(dateRange.from).startOf("day").utc().unix();
-    query.to = moment(dateRange.to).endOf("day").utc().unix();
-  } else {
-    query.fr = moment().startOf("week").utc().unix();
-    query.to =
-      moment().format("dddd") !== "Sunday"
-        ? moment().subtract(1, "day").endOf("day").utc().unix()
-        : moment().utc().unix();
-  }
-  return { query_group: [query, { ...query, gbt: "" }], cl: "channel_v1" };
+  // if (dateRange.from && dateRange.to) {
+  //   query.fr = moment(dateRange.from).startOf("day").utc().unix();
+  //   query.to = moment(dateRange.to).endOf("day").utc().unix();
+  // } else {
+  //   query.fr = moment().startOf("week").utc().unix();
+  //   query.to =
+  //     moment().format("dddd") !== "Sunday"
+  //       ? moment().subtract(1, "day").endOf("day").utc().unix()
+  //       : moment().utc().unix();
+  // }
+  query.fr = 1601510400;
+  query.to = 1604188799;
+  return {
+    query_group: [query, { ...query, gbt: "" }],
+    cl: QUERY_TYPE_CAMPAIGN,
+  };
+};
+
+export const getCampaignStateFromRequestQuery = (requestQuery) => {
+  console.log(requestQuery);
+  const result = {
+    queryType: QUERY_TYPE_CAMPAIGN,
+    camp_channels: requestQuery.channel,
+    camp_measures: requestQuery.select_metrics,
+    camp_groupBy: requestQuery.group_by.map((gb) => {
+      return {
+        prop_category: gb.name,
+        property: gb.property,
+      };
+    }),
+  };
+
+  return result;
 };

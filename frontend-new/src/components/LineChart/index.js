@@ -4,6 +4,7 @@ import * as d3 from "d3";
 import moment from "moment";
 import styles from "./index.module.scss";
 import ChartLegends from "./ChartLegends";
+import { numberWithCommas } from "../../utils/dataFormatter";
 
 function LineChart({
   chartData,
@@ -18,6 +19,9 @@ function LineChart({
   const chartRef = useRef(null);
 
   const xAxisValues = chartData.find((elem) => elem[0] === "x").slice(1);
+  xAxisValues.sort(function (left, right) {
+    return moment.utc(left).diff(moment.utc(right));
+  });
 
   let xAxisCount = Math.ceil(xAxisValues.length / 2);
 
@@ -85,7 +89,7 @@ function LineChart({
         height: 300,
       },
       padding: {
-        left: 50,
+        left: 60,
         bottom: 24,
         right: 10,
       },
@@ -166,9 +170,9 @@ function LineChart({
                       <div class="mr-1" style="background-color:${
                         colors[data.name]
                       };width:16px;height:16px;border-radius:8px"></div>
-                      <div style="color:#0E2647;font-size:18px;line-height:24px">${
+                      <div style="color:#0E2647;font-size:18px;line-height:24px">${numberWithCommas(
                         data.value
-                      }</div>
+                      )}</div>
                   </div>
               </div>
             `;

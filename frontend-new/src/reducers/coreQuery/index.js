@@ -17,9 +17,13 @@ import {
   SET_CAMP_MEASURES,
   SET_CAMP_FILTERS,
   FETCH_CAMP_CONFIG,
-  SET_CAMP_GROUBY
+  SET_CAMP_GROUBY,
 } from "./actions";
-import { SHOW_ANALYTICS_RESULT, INITIALIZE_MTA_STATE } from "../types";
+import {
+  SHOW_ANALYTICS_RESULT,
+  INITIALIZE_MTA_STATE,
+  INITIALIZE_CAMPAIGN_STATE,
+} from "../types";
 
 const DEFAULT_TOUCHPOINTS = ["Campaign", "Source", "AdGroup", "Keyword"];
 
@@ -46,17 +50,17 @@ const defaultState = {
   linkedEvents: [],
   campaign_config: {
     metrics: [],
-    properties: []
+    properties: [],
   },
-  camp_channels: 'google_ads',
+  camp_channels: "google_ads",
   camp_measures: [],
   camp_filters: [],
   camp_groupBy: [],
   camp_dateRange: {
-      from: new Date(),
-      to: new Date(),
-      dateStr: ''
-  }
+    from: new Date(),
+    to: new Date(),
+    dateStr: "",
+  },
 };
 
 export default function (state = defaultState, action) {
@@ -166,35 +170,41 @@ export default function (state = defaultState, action) {
         ...action.payload,
       };
     }
+    case INITIALIZE_CAMPAIGN_STATE: {
+      return {
+        ...state,
+        ...action.payload,
+      };
+    }
     case SET_CAMP_CHANNEL: {
       return {
-        ...state, 
-        camp_channels: action.payload
-      }
+        ...state,
+        camp_channels: action.payload,
+      };
     }
     case SET_CAMP_MEASURES: {
       return {
-        ...state, 
-        camp_measures: action.payload
-      }
+        ...state,
+        camp_measures: action.payload,
+      };
     }
     case FETCH_CAMP_CONFIG: {
       return {
         ...state,
-        campaign_config: action.payload
-      }
+        campaign_config: action.payload,
+      };
     }
     case SET_CAMP_FILTERS: {
       return {
         ...state,
-        camp_filters: action.payload
-      }
+        camp_filters: action.payload,
+      };
     }
     case SET_CAMP_GROUBY: {
       return {
         ...state,
-        camp_groupBy: action.payload
-      }
+        camp_groupBy: action.payload,
+      };
     }
 
     default:
