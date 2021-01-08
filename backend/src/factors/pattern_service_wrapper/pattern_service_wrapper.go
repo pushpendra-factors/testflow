@@ -1176,20 +1176,22 @@ func roundTo1Decimal(value float64) float64 {
 func FactorV1(reqId string, projectId uint64, startEvent string,
 	startEventConstraints *P.EventConstraints, endEvent string,
 	endEventConstraints *P.EventConstraints, countType string,
-	pw PatternServiceWrapperInterface) (Factors, error) {
+	pw PatternServiceWrapperInterface, debugKey string, debugParams map[string]string) (Factors, error, interface{}) {
 
 	if countType != P.COUNT_TYPE_PER_OCCURRENCE && countType != P.COUNT_TYPE_PER_USER {
 		err := fmt.Errorf(fmt.Sprintf("Unknown count type: %s, for req: %s", countType, reqId))
 		log.Error(err)
-		return Factors{}, err
+		return Factors{}, err, nil
 	}
 	iPatternNodes := []*ItreeNode{}
 	iPatternNodesUnsorted := []*ItreeNode{}
-	if itree, err := BuildNewItreeV1(reqId, startEvent, startEventConstraints,
-		endEvent, endEventConstraints, pw, countType); err != nil {
+	var debugData interface{}
+	if itree, err, debugInfo := BuildNewItreeV1(reqId, startEvent, startEventConstraints,
+		endEvent, endEventConstraints, pw, countType, debugKey, debugParams); err != nil {
 		log.Error(err)
-		return Factors{}, err
+		return Factors{}, err, nil
 	} else {
+		debugData = debugInfo
 		for _, node := range itree.Nodes {
 			if node.NodeType == NODE_TYPE_ROOT {
 
@@ -1222,5 +1224,5 @@ func FactorV1(reqId string, projectId uint64, startEvent string,
 	endDateTime := time.Now()
 	log.WithFields(log.Fields{
 		"time_taken": endDateTime.Sub(startDateTime).Milliseconds()}).Error("explain_debug_buildResults")
-	return v1FactorResult, nil
+	return v1FactorResult, nil, debugData
 }

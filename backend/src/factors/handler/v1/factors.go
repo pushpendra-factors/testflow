@@ -28,6 +28,8 @@ func PostFactorsHandler(c *gin.Context) {
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
 	patternMode := c.Query("pattern_mode")
+	propertyName := c.Query("debug_property_name")
+	propertyValue := c.Query("debug_property_value")
 	var err error
 	if modelIdParam != "" {
 		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
@@ -69,17 +71,25 @@ func PostFactorsHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, allProperties)
 		return
 	}
+	debugParams := make(map[string]string)
+	debugParams["PropertyName"] = propertyName
+	debugParams["PropertyValue"] = propertyValue
 	startConstraints, endConstraints := parseConstraints(params.Rule.Rule)
-	if results, err := PW.FactorV1("",
+	if results, err, debugData := PW.FactorV1("",
 		projectId, params.Rule.StartEvent, startConstraints,
-		params.Rule.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps); err != nil {
+		params.Rule.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, patternMode, debugParams); err != nil {
 		logCtx.WithError(err).Error("Factors failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	} else {
+		if patternMode != "" {
+			c.JSON(http.StatusOK, debugData)
+		}
 		results.Type = inputType
 		results.GoalRule = params.Rule
 		c.JSON(http.StatusOK, results)
+		return
+
 	}
 }
 
