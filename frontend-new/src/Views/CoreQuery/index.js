@@ -48,9 +48,6 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [showResult, setShowResult] = useState(false);
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
-  const [appliedCampaignsBreakdown, setAppliedCampaignsBreakdown] = useState(
-    []
-  );
   const [resultState, setResultState] = useState(initialResultState);
   const [funnelResult, updateFunnelResult] = useState(initialState);
   const [attributionResult, updateAttributionResult] = useState(initialState);
@@ -740,7 +737,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         resultState={campaignsResult}
         setDrawerVisible={setDrawerVisible}
         arrayMapper={arrayMapper}
-        breakdown={appliedCampaignsBreakdown}
+        campaignState={campaignState}
         // attributionsState={attributionsState}
       />
     );

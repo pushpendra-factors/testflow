@@ -19,6 +19,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
 
 function SaveQuery({
@@ -131,6 +132,18 @@ function SaveQuery({
             };
           }),
         };
+      } else if (queryType === QUERY_TYPE_CAMPAIGN) {
+        query = {
+          ...requestQuery,
+          query_group: requestQuery.query_group.map((q) => {
+            return {
+              ...q,
+              fr: moment().startOf("week").utc().unix(),
+              to: moment().utc().unix(),
+              gbt: q.gbt ? "date" : "",
+            };
+          }),
+        };
       }
       const type = addToDashboard ? 1 : 2;
       const res = await saveQuery(active_project.id, title, query, type);
@@ -197,6 +210,13 @@ function SaveQuery({
     if (queryType === QUERY_TYPE_EVENT) {
       secondOption = <Radio value="pl">Display Line Chart</Radio>;
       if (!requestQuery[0].gbp.length) {
+        firstOption = <Radio value="pc">Display Spark Line Chart</Radio>;
+      }
+    }
+
+    if(queryType === QUERY_TYPE_CAMPAIGN) {
+      secondOption = <Radio value="pl">Display Line Chart</Radio>;
+      if (!requestQuery.query_group[0].group_by.length) {
         firstOption = <Radio value="pc">Display Spark Line Chart</Radio>;
       }
     }
