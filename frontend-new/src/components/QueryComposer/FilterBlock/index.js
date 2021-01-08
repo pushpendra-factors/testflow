@@ -179,19 +179,10 @@ export default function FilterBlock({
     } else {
       if(filterType === 'channel') {
         fetchChannelObjPropertyValues(activeProject.id, typeProps.channel, 
-          newFilterState.props[2], newFilterState.props[0]).then(res => {
-            // const result = {
-            //   "filter_values": [
-            //       "Recurrer_Global_AU_New",
-            //       "Worldpay_APAC_New",
-            //       "Reocurring_NA_New",
-            //       "UK_Industry Specific",
-            //       "Hong_Kong_Payment_Gateway",
-            //       "Accounting_German_EnglishAds"
-            //   ]
-            // }
-            
+          newFilterState.props[2].replace(" ", "_"), newFilterState.props[0]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
+            // [DANGER] remove this console.log Only for testing pupose
+            console.log(res);
             ddValues[newFilterState.props[0]] = res?.data?.result?.filter_values;
             setDropDownValues(ddValues);
         }).catch(err => console.log(err));
@@ -324,7 +315,7 @@ export default function FilterBlock({
 
           if (options[newFilterState.props[0]] && options[newFilterState.props[0]].length) {
             options[newFilterState.props[0]].forEach(opt => {
-              if (opt.toLowerCase().includes(searchTerm.toLowerCase())) {
+              if (opt?.toLowerCase()?.includes(searchTerm.toLowerCase())) {
                 renderOptions.push(<span className={styles.filter_block__filter_select__option}
                   onClick={() => optionClick(opt)} >
                   {opt}
