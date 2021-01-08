@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -479,6 +480,12 @@ func buildFunnelData(reqId string,
 	funnelData[funnelLength-2].ConversionPercent = funnelConversionPercent
 	return funnelData
 }
+func getCountConstraints(constraint P.EventConstraints) int {
+	return len(constraint.EPCategoricalConstraints) +
+		len(constraint.EPNumericConstraints) +
+		len(constraint.UPCategoricalConstraints) +
+		len(constraint.UPNumericConstraints)
+}
 
 func buildFunnelFormats(node *ItreeNode, countType string) (
 	[]string, []P.EventConstraints, []string, []P.EventConstraints) {
@@ -524,12 +531,21 @@ func buildFunnelFormats(node *ItreeNode, countType string) (
 		pLen := len(funnelEvents)
 		if pLen == 1 {
 			if countType == P.COUNT_TYPE_PER_USER {
-				// Prepend AllActiveUsers to the begining.
-				// When length 1, the added constraint is collapsed on endEvent and needs to
-				// be removed from endEvent and moved to AllActiveUsers.
-				funnelEvents = append([]string{U.SEN_ALL_ACTIVE_USERS}, funnelEvents...)
-				funnelConstraints = append([]P.EventConstraints{node.AddedConstraint}, funnelConstraints...)
-				pLen++
+				allConstraintsCount := getCountConstraints(funnelConstraints[0])
+				if allConstraintsCount > 1 {
+					funnelEvents = append([]string{U.SEN_ALL_ACTIVE_USERS}, funnelEvents...)
+					var baseNodeConstraint P.EventConstraints
+					deepCopy(&funnelConstraints[0], &baseNodeConstraint)
+					funnelConstraints = append([]P.EventConstraints{baseNodeConstraint}, funnelConstraints...)
+					pLen++
+				} else {
+					// Prepend AllActiveUsers to the begining.
+					// When length 1, the added constraint is collapsed on endEvent and needs to
+					// be removed from endEvent and moved to AllActiveUsers.
+					funnelEvents = append([]string{U.SEN_ALL_ACTIVE_USERS}, funnelEvents...)
+					funnelConstraints = append([]P.EventConstraints{node.AddedConstraint}, funnelConstraints...)
+					pLen++
+				}
 			} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
 				// Prepend AllEvents  at the begining for readability.
 				funnelEvents = append([]string{U.SEN_ALL_EVENTS}, funnelEvents...)
@@ -1137,6 +1153,9 @@ func trimChildNode(parentType string, childType string, parent FactorsInsights, 
 		for _, childNodeAttribute := range child.FactorsInsightsAttribute {
 			match := false
 			for _, parentNodeAttribute := range parent.FactorsInsightsAttribute {
+				if parentNodeAttribute.FactorsAttributeKey == "" {
+					continue
+				}
 				if parentNodeAttribute == childNodeAttribute {
 					match = true
 				}
@@ -1193,12 +1212,15 @@ func FactorV1(reqId string, projectId uint64, startEvent string,
 
 	v1FactorResult := Factors{}
 
+	startDateTime := time.Now()
 	insights, goalUsersCount, goalsUsersPercentage, totalUsersCount := buildFactorResultsFromPatternsV1(reqId, iPatternNodesUnsorted, countType, pw)
 	v1FactorResult.GoalUserCount = goalUsersCount
 	v1FactorResult.OverallPercentage = goalsUsersPercentage
 	v1FactorResult.OverallMultiplier = 1
 	v1FactorResult.TotalUsersCount = totalUsersCount
 	v1FactorResult.Insights = insights
-
+	endDateTime := time.Now()
+	log.WithFields(log.Fields{
+		"time_taken": endDateTime.Sub(startDateTime).Milliseconds()}).Error("explain_debug_buildResults")
 	return v1FactorResult, nil
 }
