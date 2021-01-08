@@ -163,41 +163,37 @@ export default function FilterBlock({
   };
 
   useEffect(() => {
-    if(newFilterState.props[1] === 'categorical' && !dropDownValues[newFilterState.props[0]]) {
+    if(newFilterState.props[1] === 'categorical') {
       if(newFilterState.props[2] === 'user') {
-      fetchUserPropertyValues(activeProject.id, newFilterState.props[0]).then(res => {
-        const ddValues = Object.assign({}, dropDownValues);
-        ddValues[newFilterState.props[0]] = res.data;
-        setDropDownValues(ddValues);
-      })
+        if(!dropDownValues[newFilterState.props[0]]) {
+          fetchUserPropertyValues(activeProject.id, newFilterState.props[0]).then(res => {
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[newFilterState.props[0]] = res.data;
+            setDropDownValues(ddValues);
+          })
+        }
     } else if(newFilterState.props[2] === 'event') {
-      fetchEventPropertyValues(activeProject.id, event.label, newFilterState.props[0]).then(res => {
-        const ddValues = Object.assign({}, dropDownValues);
-        ddValues[newFilterState.props[0]] = res.data;
-        setDropDownValues(ddValues);
-      })
+      if(!dropDownValues[newFilterState.props[0]]) {
+        fetchEventPropertyValues(activeProject.id, event.label, newFilterState.props[0]).then(res => {
+          const ddValues = Object.assign({}, dropDownValues);
+          ddValues[newFilterState.props[0]] = res.data;
+          setDropDownValues(ddValues);
+        })
+      }
     } else {
       if(filterType === 'channel') {
         fetchChannelObjPropertyValues(activeProject.id, typeProps.channel, 
-          newFilterState.props[2], newFilterState.props[0]).then(res => {
-            // const result = {
-            //   "filter_values": [
-            //       "Recurrer_Global_AU_New",
-            //       "Worldpay_APAC_New",
-            //       "Reocurring_NA_New",
-            //       "UK_Industry Specific",
-            //       "Hong_Kong_Payment_Gateway",
-            //       "Accounting_German_EnglishAds"
-            //   ]
-            // }
-            
+          newFilterState.props[2].replace(" ", "_"), newFilterState.props[0]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
+            // [DANGER] remove this console.log Only for testing pupose
+            console.log(res);
             ddValues[newFilterState.props[0]] = res?.data?.result?.filter_values;
             setDropDownValues(ddValues);
         }).catch(err => console.log(err));
       }
     }
-    }
+  }
+    
 
   }, [newFilterState])
 
@@ -273,7 +269,7 @@ export default function FilterBlock({
             >
               <div>
                 <SVG name={group.icon} extraClass={'self-center'}></SVG>
-                <Text type={'title'} extraClass={'ml-1'} weight={'bold'}>{group.label}</Text>
+                <Text type={'title'} extraClass={'ml-1 capitalize'} weight={'bold'}>{group.label}</Text>
               </div>
               <SVG name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
             </div>}
@@ -284,9 +280,13 @@ export default function FilterBlock({
                 filterProps[propsConstants[grpIndex]].forEach((val) => {
                   if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                     valuesOptions.push(
-                      <div className={`fa-select-group-select--options`}
+                      <div title={val[0]} className={`fa-select-group-select--options`}
                             onClick={() => optionClick([...val, propsConstants[grpIndex]])} >
-                          {searchTerm.length > 0 && <SVG name={group.icon} extraClass={'self-center'}></SVG>}
+                          {searchTerm.length > 0 &&
+                           <div>
+                            <SVG name={group.icon} extraClass={'self-center'}></SVG>
+                           </div>
+                          }
                           <span className={'ml-1'}>{val[0]}</span>
                       </div>
                     );
@@ -324,7 +324,7 @@ export default function FilterBlock({
 
           if (options[newFilterState.props[0]] && options[newFilterState.props[0]].length) {
             options[newFilterState.props[0]].forEach(opt => {
-              if (opt.toLowerCase().includes(searchTerm.toLowerCase())) {
+              if (opt?.toLowerCase()?.includes(searchTerm.toLowerCase())) {
                 renderOptions.push(<span className={styles.filter_block__filter_select__option}
                   onClick={() => optionClick(opt)} >
                   {opt}
@@ -365,11 +365,11 @@ export default function FilterBlock({
   const renderTags = () => {
     const tags = [];
     const tagClass = styles.filter_block__filter_select__tag;
-    newFilterState.props
+    newFilterState.props?.length
       ? tags.push(<span className={tagClass}>
         {newFilterState.props[0]}
       </span>) : (() => {})();
-    newFilterState.operator
+    newFilterState.operator?.length
       ? tags.push(<span className={tagClass}>
         {newFilterState.operator}
       </span>) : (() => {})();
@@ -394,7 +394,7 @@ export default function FilterBlock({
           {parsedDatetimeValue}
         </span>);
       }
-      else {
+      else if (newFilterState.props[1] === 'numerical') {
         tags.push(<span className={tagClass}>
           {newFilterState.values}
         </span>);
@@ -402,7 +402,7 @@ export default function FilterBlock({
     } 
 
     if (tags.length < 1) {
-      tags.push(<SVG name="search" />);
+      tags.push(<SVG name={"search"} />);
     }
     return tags;
   };

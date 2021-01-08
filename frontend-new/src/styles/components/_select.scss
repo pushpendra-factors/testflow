@@ -46,6 +46,13 @@
             &:hover{
                 background-color: rgba($fa-color--brand-1, 1);
             }
+
+            span {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                word-wrap: normal;
+                max-height: 22px;
+            }
         }
 
         .fa-select-group-select--content

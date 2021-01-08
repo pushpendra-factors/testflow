@@ -135,9 +135,9 @@ function QueryBlock({
   const additionalActions = () => {
     return (
             <div className={'fa--query_block--actions'}>
-              <Button size={'large'} type="text" onClick={addGroupBy} className={'mr-1'}><SVG name="groupby"></SVG></Button>
-               <Button size={'large'} type="text" onClick={addFilter} className={'mr-1'}><SVG name="filter"></SVG></Button>
-               <Button size={'large'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
+              <Button type="text" onClick={addGroupBy} className={'mr-1'}><SVG size={20} name="groupby"></SVG></Button>
+               <Button type="text" onClick={addFilter} className={'mr-1'}><SVG size={20} name="filter"></SVG></Button>
+               <Button type="text" onClick={deleteItem}><SVG size={20} name="trash"></SVG></Button>
             </div>
     );
   };

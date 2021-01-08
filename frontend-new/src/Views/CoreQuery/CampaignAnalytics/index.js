@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import moment from "moment";
 import {
   QUERY_TYPE_CAMPAIGN,
   CHART_TYPE_SPARKLINES,
@@ -20,8 +21,9 @@ function CampaignAnalytics({
   resultState,
   setDrawerVisible,
   arrayMapper,
-  breakdown,
+  campaignState,
 }) {
+  const { group_by: breakdown } = campaignState;
   const [chartType, setChartType] = useState(null);
 
   useEffect(() => {
@@ -95,14 +97,14 @@ function CampaignAnalytics({
             className="app-font-family text-3xl font-semibold"
             style={{ color: "#8692A3" }}
           >
-            {querySaved || "Untitled Report"}
+            {querySaved || `Untitled Analysis ${moment().format("DD/MM/YYYY")}`}
           </div>
           <div
             className={`text-base font-medium pb-1 cursor-pointer ${styles.eventsText}`}
-            style={{ color: "#8692A3" }}
+            style={{ color: "#3E516C" }}
             onClick={setDrawerVisible.bind(this, true)}
           >
-            impressions
+            {arrayMapper.map((elem) => elem.eventName).join(", ")}
           </div>
         </div>
       </Header>

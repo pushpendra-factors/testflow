@@ -8,9 +8,7 @@ import {
 export const getBreakdownIndices = (data, breakdown) => {
   const result = breakdown.map((elem) => {
     const str = elem.name + "_" + elem.property;
-    return data.result.result_group[1].headers.findIndex(
-      (elem) => elem === str
-    );
+    return data.result_group[1].headers.findIndex((elem) => elem === str);
   });
   return result;
 };
@@ -18,9 +16,7 @@ export const getBreakdownIndices = (data, breakdown) => {
 export const getDateBreakdownIndices = (data, breakdown) => {
   const result = breakdown.map((elem) => {
     const str = elem.name + "_" + elem.property;
-    return data.result.result_group[0].headers.findIndex(
-      (elem) => elem === str
-    );
+    return data.result_group[0].headers.findIndex((elem) => elem === str);
   });
   return result;
 };
@@ -33,13 +29,13 @@ export const formatData = (data, arrayMapper, breakdown, currentEventIndex) => {
     const currEventName = arrayMapper.find(
       (elem) => elem.index === currentEventIndex
     ).eventName;
-    const currDataIndex = data.result.result_group[1].headers.findIndex(
+    const currDataIndex = data.result_group[1].headers.findIndex(
       (elem) => elem === currEventName
     );
     let result = [];
-    // const dateRows = [...data.result.result_group[0].rows];
+    // const dateRows = [...data.result_group[0].rows];
     if (currDataIndex > -1) {
-      data.result.result_group[1].rows.forEach((elem, index) => {
+      data.result_group[1].rows.forEach((elem, index) => {
         const label = [];
         breakdownIndices.forEach((b) => {
           if (b > -1) {
@@ -92,7 +88,6 @@ export const formatData = (data, arrayMapper, breakdown, currentEventIndex) => {
 export const getTableColumns = (
   data,
   breakdown,
-  currentEventIndex,
   arrayMapper,
   currentSorter,
   handleSorting
@@ -100,22 +95,22 @@ export const getTableColumns = (
   const breakdownIndices = getBreakdownIndices(data, breakdown);
   const breakdownCols = breakdownIndices.map((b) => {
     return {
-      title: data.result.result_group[1].headers[b],
-      dataIndex: data.result.result_group[1].headers[b],
+      title: data.result_group[1].headers[b],
+      dataIndex: data.result_group[1].headers[b],
     };
   });
-  const eventName = arrayMapper.find((elem) => elem.index === currentEventIndex)
-    .eventName;
-  const eventCol = {
-    title: getTitleWithSorter(
-      eventName,
-      eventName,
-      currentSorter,
-      handleSorting
-    ),
-    dataIndex: eventName,
-  };
-  return [...breakdownCols, eventCol];
+  const eventCols = arrayMapper.map((elem) => {
+    return {
+      title: getTitleWithSorter(
+        elem.eventName,
+        elem.eventName,
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: elem.eventName,
+    };
+  });
+  return [...breakdownCols, ...eventCols];
 };
 
 export const getTableData = (
@@ -129,19 +124,23 @@ export const getTableData = (
   const currEventName = arrayMapper.find(
     (elem) => elem.index === currentEventIndex
   ).eventName;
-  const currDataIndex = data.result.result_group[1].headers.findIndex(
-    (elem) => elem === currEventName
-  );
-  const result = data.result.result_group[1].rows.map((d, index) => {
+  const result = data.result_group[1].rows.map((d, index) => {
     const breakdownVals = {};
     breakdownIndices.forEach((b) => {
-      const dataIndex = data.result.result_group[1].headers[b];
+      const dataIndex = data.result_group[1].headers[b];
       breakdownVals[dataIndex] = d[b];
+    });
+    const eventVals = {};
+    arrayMapper.forEach((elem) => {
+      const currDataIndex = data.result_group[1].headers.findIndex(
+        (header) => header === elem.eventName
+      );
+      eventVals[elem.eventName] = d[currDataIndex];
     });
     return {
       ...breakdownVals,
       index,
-      [currEventName]: d[currDataIndex],
+      ...eventVals,
     };
   });
   if (!currentSorter.key) {
@@ -161,20 +160,20 @@ export const formatDataInLineChartFormat = (
   const currEventName = arrayMapper.find(
     (elem) => elem.index === currentEventIndex
   ).eventName;
-  const currDataIndex = data.result.result_group[0].headers.findIndex(
+  const currDataIndex = data.result_group[0].headers.findIndex(
     (elem) => elem === currEventName
   );
   const format = "YYYY-MM-DD HH-mm";
   let dates = new Set();
-  const dateTimeIndex = data.result.result_group[0].headers.indexOf("datetime");
-  data.result.result_group[0].rows.forEach((row) => {
+  const dateTimeIndex = data.result_group[0].headers.indexOf("datetime");
+  data.result_group[0].rows.forEach((row) => {
     dates.add(moment(row[dateTimeIndex]).format(format));
   });
   dates = Array.from(dates);
   const xDates = ["x", ...dates];
   const result = visibleProperties.map((v) => {
     const dateBreakdownIndices = getDateBreakdownIndices(data, breakdown);
-    const breakdownRows = data.result.result_group[0].rows.filter((row) => {
+    const breakdownRows = data.result_group[0].rows.filter((row) => {
       const dateLabel = [];
       dateBreakdownIndices.forEach((b) => {
         if (b > -1) {
