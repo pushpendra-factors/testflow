@@ -1183,9 +1183,9 @@ var debugCounts map[string]int
 func BuildNewItreeV1(reqId,
 	startEvent string, startEventConstraints *P.EventConstraints,
 	endEvent string, endEventConstraints *P.EventConstraints,
-	patternWrapper PatternServiceWrapperInterface, countType string) (*Itree, error) {
+	patternWrapper PatternServiceWrapperInterface, countType string, debugKey string, debugParams map[string]string) (*Itree, error, interface{}) {
 	if endEvent == "" {
-		return nil, fmt.Errorf("Missing end event")
+		return nil, fmt.Errorf("Missing end event"), nil
 	}
 
 	debugCounts = make(map[string]int)
@@ -1223,11 +1223,11 @@ func BuildNewItreeV1(reqId,
 	debugCounts["len3_patterns"] = len3PatternCount
 
 	if err != nil {
-		return nil, err
+		return nil, err, nil
 	}
 	allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
 	if allActiveUsersPattern == nil {
-		return nil, fmt.Errorf("All active users pattern not found")
+		return nil, fmt.Errorf("All active users pattern not found"), nil
 	}
 
 	for _, p := range candidatePatterns {
@@ -1237,14 +1237,14 @@ func BuildNewItreeV1(reqId,
 				pLen, startEventConstraints, endEventConstraints), countType); count > 0 {
 				rootNodePattern = p
 			} else if err != nil {
-				return nil, err
+				return nil, err, nil
 			}
 		}
 	}
 
 	startTime = time.Now().Unix()
 	if rootNodePattern == nil {
-		return nil, fmt.Errorf("Root node not found or frequency 0")
+		return nil, fmt.Errorf("Root node not found or frequency 0"), nil
 	}
 
 	type LevelItreeNodeTuple struct {
@@ -1257,7 +1257,7 @@ func BuildNewItreeV1(reqId,
 		reqId, rootNodePattern, startEventConstraints,
 		endEventConstraints, patternWrapper, countType)
 	if err != nil {
-		return nil, err
+		return nil, err, nil
 	}
 
 	itree.addNode(rootNode)
@@ -1270,17 +1270,21 @@ func BuildNewItreeV1(reqId,
 	log.WithFields(log.Fields{
 		"time_taken": endDateTime.Sub(startDateTime).Nanoseconds()}).Error("explain_debug_GetUserAndEventInfo")
 
+	var debugData interface{}
 	var campaignNodesDuration, campaignNodesCount, sequenceNodesDuration, sequenceNodesCount, attributeNodesDuration, attributeNodesCount int
 	for len(queue) > 0 && numNodesEvaluated < MAX_NODES_TO_EVALUATE {
 		numNodesEvaluated++
 		parentNode := queue[0]
 		if parentNode.node.NodeType != NODE_TYPE_CAMPAIGN {
 			startDateTime := time.Now()
-			if attributeChildNodes, err := itree.buildAndAddPropertyChildNodesV1(reqId,
-				parentNode.node, allActiveUsersPattern, patternWrapper, countType, userAndEventsInfo, parentNode.level); err != nil {
+			if attributeChildNodes, err, debugInfo := itree.buildAndAddPropertyChildNodesV1(reqId,
+				parentNode.node, allActiveUsersPattern, patternWrapper, countType, userAndEventsInfo, parentNode.level, debugKey, debugParams["PropertyName"], debugParams["PropertyValue"]); err != nil {
 				log.Errorf(fmt.Sprintf("%s", err))
-				return nil, err
+				return nil, err, nil
 			} else {
+				if debugInfo != nil {
+					debugData = debugInfo
+				}
 				endDateTime := time.Now()
 				attributeNodesCount++
 				attributeNodesDuration += int(endDateTime.Sub(startDateTime).Milliseconds())
@@ -1298,7 +1302,7 @@ func BuildNewItreeV1(reqId,
 			startDateTime := time.Now()
 			if sequenceChildNodes, err := itree.buildAndAddSequenceChildNodesV1(reqId, parentNode.node,
 				candidatePatterns, patternWrapper, allActiveUsersPattern, countType); err != nil {
-				return nil, err
+				return nil, err, nil
 			} else {
 				endDateTime := time.Now()
 				sequenceNodesCount++
@@ -1317,7 +1321,7 @@ func BuildNewItreeV1(reqId,
 			startDateTime := time.Now()
 			if sequenceChildNodes, err := itree.buildAndAddCampaignChildNodesV1(reqId, parentNode.node,
 				candidatePatterns, patternWrapper, allActiveUsersPattern, countType); err != nil {
-				return nil, err
+				return nil, nil, err
 			} else {
 				endDateTime := time.Now()
 				campaignNodesCount++
@@ -1345,12 +1349,28 @@ func BuildNewItreeV1(reqId,
 	log.WithFields(log.Fields{
 		"debug_counts": debugCounts}).Error("explain_debug")
 	//log.WithFields(log.Fields{"itree": itree}).Info("Returning Itree.")
-	return &itree, nil
+	return &itree, nil, debugData
 }
 
+func extractProperty(constraint P.EventConstraints) map[string]string {
+	properties := make(map[string]string)
+	for _, property := range constraint.EPNumericConstraints {
+		properties[property.PropertyName] = ""
+	}
+	for _, property := range constraint.EPCategoricalConstraints {
+		properties[property.PropertyName] = property.PropertyValue
+	}
+	for _, property := range constraint.UPNumericConstraints {
+		properties[property.PropertyName] = ""
+	}
+	for _, property := range constraint.UPCategoricalConstraints {
+		properties[property.PropertyName] = property.PropertyValue
+	}
+	return properties
+}
 func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	parentNode *ItreeNode, allActiveUsersPattern *P.Pattern,
-	patternWrapper PatternServiceWrapperInterface, countType string, userAndEventsInfo *P.UserAndEventsInfo, level int) ([]*ItreeNode, error) {
+	patternWrapper PatternServiceWrapperInterface, countType string, userAndEventsInfo *P.UserAndEventsInfo, level int, debugKey string, debugPropertyName string, debugPropertyValue string) ([]*ItreeNode, error, interface{}) {
 	// The top child nodes are obtained by adding constraints on the (N-1) event
 	// of parent pattern.
 	// i.e If parrent pattern is A -> B -> C -> Y with
@@ -1361,20 +1381,21 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	// taking Y (with constraint if any) as the classification label.
 	parentPattern := parentNode.Pattern
 	parentConstraints := parentNode.PatternConstraints
+	baseProperty := extractProperty(parentConstraints[len(parentConstraints)-1])
 	var fpr, fpp float64
 	pLen := len(parentPattern.EventNames)
 	if userAndEventsInfo == nil {
 		// No event properties available.
-		return []*ItreeNode{}, nil
+		return []*ItreeNode{}, nil, nil
 	}
 	if userAndEventsInfo.EventPropertiesInfoMap == nil {
 		// No event properties available.
-		return []*ItreeNode{}, nil
+		return []*ItreeNode{}, nil, nil
 	}
 	userInfo := userAndEventsInfo.UserPropertiesInfo
 	if userInfo == nil {
 		// No properties.
-		return []*ItreeNode{}, nil
+		return []*ItreeNode{}, nil, nil
 	}
 	var eventInfo *P.PropertiesInfo
 	var eventName string
@@ -1397,13 +1418,13 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 		}
 		c, ok := patternWrapper.GetCount(reqId, parentPattern.EventNames[:pLen-1], subConstraints, countType)
 		if !ok {
-			return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for pattern sequence %s", parentPattern.String()))
+			return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for pattern sequence %s", parentPattern.String())), nil
 		}
 		fpp = float64(c)
 	}
 	count, err := parentPattern.GetCount(parentConstraints, countType)
 	if err != nil {
-		return nil, err
+		return nil, err, nil
 	}
 	fpr = float64(count)
 
@@ -1411,7 +1432,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	if fpp <= 0.0 || fpr <= 0.0 {
 		//log.WithFields(log.Fields{"Parent": parentPattern.String(), "parentConstraints": parentConstraints,
 		//	"fpr": fpr, "fpp": fpp}).Debug("Parent not frequent enough")
-		return childNodes, nil
+		return childNodes, nil, nil
 	}
 
 	// Add children by splitting on constraints on categorical properties.
@@ -1431,12 +1452,20 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 		debugKey = fmt.Sprintf("itree_attribute_totaluserNumerical_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(userInfo.NumericPropertyKeys)
 	}
+	debugData := make(map[string][][]P.EventConstraints)
+	debugData["UPCat"] = make([][]P.EventConstraints, 0)
+	debugData["EPCat"] = make([][]P.EventConstraints, 0)
+	debugData["UPNum"] = make([][]P.EventConstraints, 0)
+	debugData["EPNum"] = make([][]P.EventConstraints, 0)
 	if eventInfo != nil && pLen > 1 {
 		child := it.buildCategoricalPropertyChildNodesV1(reqId,
 			eventInfo.CategoricalPropertyKeyValues, NODE_TYPE_EVENT_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
 			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
 		debugKey := fmt.Sprintf("itree_attribute_totaleventCategorical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
+		for _, node := range child {
+			debugData["EPCat"] = append(debugData["EPCat"], node.PatternConstraints)
+		}
 		childNodes = append(childNodes, child...)
 	}
 
@@ -1446,6 +1475,9 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
 		debugKey := fmt.Sprintf("itree_attribute_totaluserCategorical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
+		for _, node := range child {
+			debugData["UPCat"] = append(debugData["UPCat"], node.PatternConstraints)
+		}
 		childNodes = append(childNodes, child...)
 	}
 
@@ -1458,6 +1490,9 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
 		debugKey := fmt.Sprintf("itree_attribute_totaleventNumerical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
+		for _, node := range child {
+			debugData["EPNum"] = append(debugData["EPNum"], node.PatternConstraints)
+		}
 		childNodes = append(childNodes, child...)
 	}
 	if userInfo != nil && (pLen > 1 || countType == P.COUNT_TYPE_PER_USER) {
@@ -1466,6 +1501,9 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
 		debugKey := fmt.Sprintf("itree_attribute_totaluserNumerical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
+		for _, node := range child {
+			debugData["UPNum"] = append(debugData["UPNum"], node.PatternConstraints)
+		}
 		childNodes = append(childNodes, child...)
 	}
 
@@ -1511,7 +1549,21 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 			break
 		}
 	}
-	return addedChildNodes, nil
+	if debugKey == "Level0Attribute" {
+		if level == 0 {
+			return addedChildNodes, nil, debugData
+		}
+	}
+	if debugKey == "Level1Attribute" {
+		if level == 1 {
+			for property, value := range baseProperty {
+				if property == debugPropertyName && (value == debugPropertyValue || value == "") {
+					return addedChildNodes, nil, debugData
+				}
+			}
+		}
+	}
+	return addedChildNodes, nil, nil
 }
 
 func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
@@ -2151,6 +2203,9 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 					continue
 				} else {
 					if cNode == nil {
+						continue
+					}
+					if len(extractProperty(cNode.AddedConstraint)) <= 0 {
 						continue
 					}
 					propertyChildNodes = append(propertyChildNodes, cNode)
