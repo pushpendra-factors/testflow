@@ -52,9 +52,13 @@ function GroupSelect({
                     group.values.forEach((val, i) => {
                       if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                         valuesOptions.push(
-                          <div key={i} className={`fa-select-group-select--options`}
+                          <div key={i} title={val[0]} className={`fa-select-group-select--options`}
                             onClick={() => optionClick(group.label, val)} >
-                              {searchTerm.length > 0 && <SVG name={group.icon} extraClass={'self-center'}></SVG>}
+                              {searchTerm.length > 0 && 
+                              <div>
+                                <SVG name={group.icon} extraClass={'self-center'}></SVG>
+                              </div>
+                              }
                               <span className={'ml-1'}>{val[0]}</span>
                           </div>
                         );
