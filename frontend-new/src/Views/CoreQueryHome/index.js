@@ -10,6 +10,7 @@ import moment from "moment";
 import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
+  getCampaignStateFromRequestQuery,
 } from "../CoreQuery/utils";
 import { INITIALIZE_GROUPBY } from "../../reducers/coreQuery/actions";
 import ConfirmationModal from "../../components/ConfirmationModal";
@@ -25,6 +26,7 @@ import {
 import {
   SHOW_ANALYTICS_RESULT,
   INITIALIZE_MTA_STATE,
+  INITIALIZE_CAMPAIGN_STATE,
 } from "../../reducers/types";
 
 const coreQueryoptions = [
@@ -169,10 +171,19 @@ function CoreQuery({
       try {
         let equivalentQuery;
         if (record.query.query_group) {
-          equivalentQuery = getStateQueryFromRequestQuery(
-            record.query.query_group[0]
-          );
-          updateEventFunnelsState(equivalentQuery);
+          if (record.query.cl && record.query.cl === QUERY_TYPE_CAMPAIGN) {
+            equivalentQuery = getCampaignStateFromRequestQuery(
+              record.query.query_group[0]
+            );
+            const usefulQuery = { ...equivalentQuery };
+            delete usefulQuery.queryType;
+            dispatch({ type: INITIALIZE_CAMPAIGN_STATE, payload: usefulQuery });
+          } else {
+            equivalentQuery = getStateQueryFromRequestQuery(
+              record.query.query_group[0]
+            );
+            updateEventFunnelsState(equivalentQuery);
+          }
         } else if (
           record.query.cl &&
           record.query.cl === QUERY_TYPE_ATTRIBUTION
@@ -182,7 +193,7 @@ function CoreQuery({
           );
           const usefulQuery = { ...equivalentQuery };
           delete usefulQuery.queryType;
-          dispatch({ type: INITIALIZE_MTA_STATE, payload: equivalentQuery });
+          dispatch({ type: INITIALIZE_MTA_STATE, payload: usefulQuery });
         } else {
           equivalentQuery = getStateQueryFromRequestQuery(record.query);
           updateEventFunnelsState(equivalentQuery);
