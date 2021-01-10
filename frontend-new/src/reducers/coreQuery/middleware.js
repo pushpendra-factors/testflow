@@ -1,5 +1,6 @@
 /* eslint-disable */
 
+import { dispatch } from 'd3';
 import { 
   fetchEventsAction, fetchEventPropertiesAction, 
   fetchUserPropertiesAction, setGroupByAction, 
@@ -8,7 +9,7 @@ import {
   setAttributionModelsAction, setAttributionWindowAction, 
   setAttrLinkEventsAction, setCampChannelAction, 
   setMeasuresAction, getCampaignConfigAction, 
-  setCampFiltersAction, setCampGroupByAction
+  setCampFiltersAction, setCampGroupByAction, setAttrDateRangeAction, setCampDateRangeAction
 } from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties, fetchCampaignConfig } from './services';
 import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
@@ -89,7 +90,15 @@ export const setGoalEvent = (goalEvent) => {
 export const setTouchPoint = (touchpoint) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
-      resolve(dispatch(setMarketingTouchpointsAction(touchpoint)))
+      resolve(dispatch(setMarketingTouchpointsAction(touchpoint)));
+    })
+  }
+}
+
+export const setAttrDateRange = (dateRange) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setAttrDateRangeAction(dateRange)));
     })
   }
 }
@@ -146,6 +155,14 @@ export const setCampGroupBy = (groupBy) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setCampGroupByAction(groupBy)))
+    })
+  }
+}
+
+export const setCampDateRange = (dateRange) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setCampDateRangeAction(dateRange)));
     })
   }
 }

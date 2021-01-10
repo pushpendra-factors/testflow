@@ -150,7 +150,7 @@ const dateData = {
 
     console.log('datePickerType',datePickerType);
   return (
-          <div className="mt-10 fa-custom-datepicker">
+          <div className="fa-custom-datepicker">
               {<>
                 <Dropdown overlayClassName={'fa-custom-datepicker--dropdown'} overlay={menu} placement={placement} trigger={!showDatePicker ? ['click'] : []} >
 

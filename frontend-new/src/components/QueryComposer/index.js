@@ -14,6 +14,8 @@ import GroupBlock from './GroupBlock';
 import DateRangeSelector from './DateRangeSelector';
 import {QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT} from '../../utils/constants';
 
+import FaDatepicker from '../../components/FaDatepicker';
+
 import {
   DEFAULT_DATE_RANGE,
   displayRange
@@ -205,17 +207,19 @@ function QueryComposer({
 
   const setDateRange = (dates) => {
     const queryOptionsState = Object.assign({}, queryOptions);
-    if (dates && dates.selected) {
-      queryOptionsState.date_range.from = dates.selected.startDate;
-      queryOptionsState.date_range.to = dates.selected.endDate;
-      if(moment(dates.selected.endDate).diff(dates.selected.startDate, 'hours') <= 24) {
+    if (dates && dates.startDate && dates.endDate) {
+      if(Array.isArray(dates.startDate)) {
+        queryOptionsState.date_range.from = dates.startDate[0];
+      } else {
+        queryOptionsState.date_range.from = dates.startDate;
+      }
+      if(moment(dates.endDate).diff(dates.startDate, 'hours') <= 24) {
         queryOptionsState.date_range.frequency = 'hour';
       } else {
         queryOptionsState.date_range.frequency = 'date';
       }
       setQueryOptions(queryOptionsState);
     }
-    setDateRangeVisibile(false);
   };
 
   const convertToDateRange = () => {
@@ -236,20 +240,9 @@ function QueryComposer({
     if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) { return null; } else {
       return (
         <div className={styles.composer_footer}> 
-          <Popover
-            className="fa-event-popover"
-            trigger="click"
-            visible={dateRangeOpen}
-            content={
-            <DateRangeSelector
-                ranges={getDateRange()}
-                pickerVisible={dateRangeOpen} setDates={setDateRange} 
-                closeDatePicker={() => setDateRangeVisibile(false)}
-              />}
-            onVisibleChange={(visible) => setDateRangeVisibile(visible)}
-          >
-            <Button size={'large'}><SVG name={'calendar'} extraClass={'mr-1'} /> {calendarLabel} </Button>
-          </Popover>
+          <FaDatepicker customPicker presetRange 
+                monthPicker quarterPicker 
+                placement="topRight"  onSelect={setDateRange} />
           <Button size={'large'}type="primary" onClick={handleRunQuery}>Run Query</Button>
         </div>
       );

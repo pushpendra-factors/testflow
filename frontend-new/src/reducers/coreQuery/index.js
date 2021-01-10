@@ -18,6 +18,8 @@ import {
   SET_CAMP_FILTERS,
   FETCH_CAMP_CONFIG,
   SET_CAMP_GROUBY,
+  SET_ATTR_DATE_RANGE,
+  SET_CAMP_DATE_RANGE,
 } from "./actions";
 import {
   SHOW_ANALYTICS_RESULT,
@@ -45,6 +47,11 @@ const defaultState = {
   show_analytics_result: false,
   eventGoal: {},
   touchpoint: "",
+  attr_dateRange: {
+    from: new Date(),
+    to: new Date(),
+    dateStr: ""
+  },
   models: [],
   window: null,
   linkedEvents: [],
@@ -146,6 +153,12 @@ export default function (state = defaultState, action) {
         touchpoint: action.payload,
       };
     }
+    case SET_ATTR_DATE_RANGE: {
+      return {
+        ...state,
+        attr_dateRange: action.payload
+      }
+    }
     case SET_ATTRIBUTION_MODEL: {
       return {
         ...state,
@@ -206,7 +219,12 @@ export default function (state = defaultState, action) {
         camp_groupBy: action.payload,
       };
     }
-
+    case SET_CAMP_DATE_RANGE: {
+      return {
+        ...state,
+        camp_dateRange: action.payload
+      }
+    }
     default:
       return state;
   }

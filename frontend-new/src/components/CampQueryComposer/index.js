@@ -9,14 +9,14 @@ import ChannelBlock from './ChannelBlock';
 
 import GroupSelect from "../QueryComposer/GroupSelect";
 
-import { getDateRange, readableDateRange } from '../QueryComposer/DateRangeSelector/utils';
-import DateRangeSelector from '../QueryComposer/DateRangeSelector';
-
 import {getCampaignConfigData, setCampChannel,
-    setCampMeasures, setCampFilters, setCampGroupBy
+    setCampMeasures, setCampFilters, setCampGroupBy,
+    setCampDateRange
 } from 'Reducers/coreQuery/middleware';
 import MeasuresBlock from './MeasuresBlock';
 import FilterBlock from '../QueryComposer/FilterBlock';
+
+import FaDatepicker from '../../components/FaDatepicker';
 
 const CampQueryComposer = ({activeProject, channel, 
     getCampaignConfigData, 
@@ -24,7 +24,8 @@ const CampQueryComposer = ({activeProject, channel,
     setCampMeasures, campaign_config,
     filters, setCampFilters,
     groupBy, setCampGroupBy,
-    handleRunQuery, dateRange
+    handleRunQuery, dateRange,
+    setCampDateRange
 }) => {
 
     const [filterProps, setFilterProperties] = useState({});
@@ -238,27 +239,27 @@ const CampQueryComposer = ({activeProject, channel,
         </div>);
       };
 
-    const setDateRange = (selectedRange) => {
-        console.log(selectedRange);
+      const setDateRange = (ranges) => {
+        const dtRange = Object.assign({}, dateRange);
+        if(ranges && ranges.startDate && ranges.endDate) {
+            if(Array.isArray(ranges.startDate)) {
+                dtRange.from = ranges.startDate[0]
+            } else {
+                dtRange.from = ranges.startDate;
+            }
+
+            dtRange.to = ranges.endDate;
+        }
+
+        setCampDateRange(dtRange);
     }
 
     const footer = () => {
           return (
             <div className={`${styles.composer__footer} fa--query_block`}>
-              <Popover
-                className="fa-event-popover"
-                trigger="click"
-                visible={false}
-                content={
-                    <DateRangeSelector
-                        ranges={getDateRange(dateRange)}
-                        pickerVisible={dateRangePopover} setDates={setDateRange} 
-                        closeDatePicker={() => setDateRangePopover(false)}
-                    />
-                }
-              >
-                <Button size={'large'} onClick={() => setDateRangePopover(true)}><SVG name={'calendar'} extraClass={'mr-1'} /> This Month </Button>
-              </Popover>
+              <FaDatepicker customPicker presetRange 
+                monthPicker quarterPicker 
+                placement="topRight"  onSelect={setDateRange} />
               <Button size={'large'} type="primary" onClick={handleRunQuery.bind(this, false)}>Run Query</Button>
             </div>
           );
@@ -333,7 +334,8 @@ const mapDispatchToProps = dispatch => bindActionCreators({
     setCampMeasures,
     setCampFilters,
     getCampaignConfigData,
-    setCampGroupBy
+    setCampGroupBy,
+    setCampDateRange
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(CampQueryComposer);
