@@ -22,6 +22,7 @@ import {
 } from './DateRangeSelector/utils';
 
 import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
+import FaSelect from '../FaSelect';
 
 const { Option } = Select;
 
@@ -133,6 +134,7 @@ function QueryComposer({
                 </span>
                 <Text type={'title'} level={7} extraClass={'m-0 mr-2 inline'}>Analyse events in the</Text>
                 <div>
+                  {/* <FaSelect optionClick={(op) => setEventSequence(op[2])} options={[['Same sequence', '' , 'same_sequence'], ['Exact sequence', '', 'exact_sequence']]}></FaSelect> */}
                   <Select
                     style={{ width: 170 }}
                     value="same_sequence" onChange={setEventSequence}
