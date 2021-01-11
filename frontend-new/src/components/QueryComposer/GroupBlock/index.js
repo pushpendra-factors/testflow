@@ -87,12 +87,12 @@ function GroupBlock({
         className={`${styles.group_block__remove} mr-2ß`}>
           <SVG name="remove"></SVG></Button>
 
-        <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" />} {opt.property ? opt.property : 'Select user property'}</Button>
+        <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {opt.property ? opt.property : 'Select user property'}</Button>
         </>
         }
         {isDDVisible[index]
           ? (<GroupSelect groupedProperties={filterOptions}
-            placeholder="Select Property"
+            placeholder="Add new"
             optionClick={(group, val) => onChange([group, val], index)}
             onClickOutside={() => triggerDropDown(index, true)}
 
@@ -111,7 +111,7 @@ function GroupBlock({
     <div className={'flex flex-col justify-start'}>
 
       <div className={`${styles.group_block__event} flex justify-start items-center`}>
-        <div className={'fa--query_block--add-event inactive flex justify-center items-center mr-2'}><SVG name={'groupby'} size={36} color={'purple'}/></div>
+        <div className={'fa--query_block--add-event inactive flex justify-center items-center mr-2'}><SVG name={'groupby'} size={24} color={'purple'}/></div>
         <Text type={'title'} level={6} weight={'thin'} extraClass={'m-0'}>Group By</Text>
       </div>
 

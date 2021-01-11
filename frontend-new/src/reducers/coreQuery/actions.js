@@ -18,6 +18,7 @@ export const SET_CAMP_CHANNEL = 'SET_CAMP_CHANNEL';
 export const SET_CAMP_MEASURES = 'SET_CAMP_MEASURES';
 export const SET_CAMP_FILTERS = 'SET_CAMP_FILTERS';
 export const SET_CAMP_GROUBY = 'SET_CAMP_GROUBY';
+export const SET_CAMP_DATE_RANGE = 'SET_CAMP_DATE_RANGE';
 
 // Action creators
 export const fetchEventsAction = (events, status = 'started') => {
@@ -86,6 +87,10 @@ export const setCampFiltersAction = (filters) => {
 
 export const setCampGroupByAction = (groupBy) => {
   return { type: SET_CAMP_GROUBY, payload: groupBy};
+}
+
+export const setCampDateRangeAction = (dateRange) => {
+  return { type: SET_CAMP_DATE_RANGE, payload: dateRange};
 }
 
 

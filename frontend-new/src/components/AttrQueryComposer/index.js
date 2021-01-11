@@ -5,13 +5,15 @@ import styles from './index.module.scss';
 import { SVG, Text } from '../../components/factorsComponents';
 import ConversionGoalBlock from './ConversionGoalBlock';
 
+import FaDatepicker from '../../components/FaDatepicker';
+
 import { fetchEventNames, 
     getUserProperties, 
     getEventProperties,
     setGoalEvent, 
     setTouchPoint, 
     setModels, setWindow, 
-    setLinkedEvents
+    setLinkedEvents, setAttrDateRange
  } from '../../reducers/coreQuery/middleware';
 import { Button, Popover } from 'antd';
 import MarkTouchpointBlock from './MarkTouchpointBlock';
@@ -24,7 +26,8 @@ const AttrQueryComposer = ({activeProject,
         userProperties, eventProperties, 
         runAttributionQuery, eventGoal, setGoalEvent, 
         touchPoint, setTouchPoint, models, setModels,
-        window, setWindow, linkedEvents, setLinkedEvents
+        window, setWindow, linkedEvents, setLinkedEvents,
+        setAttrDateRange, dateRange
     }) => {
 
     const [linkEvExpansion, setLinkEvExpansion] = useState(false);
@@ -142,18 +145,30 @@ const AttrQueryComposer = ({activeProject,
         runAttributionQuery(false)
     };
 
+    const setDateRange = (ranges) => {
+        const dtRange = Object.assign({}, dateRange);
+        if(ranges && ranges.startDate && ranges.endDate) {
+            if(Array.isArray(ranges.startDate)) {
+                dtRange.from = ranges.startDate[0]
+            } else {
+                dtRange.from = ranges.startDate;
+            }
+
+            dtRange.to = ranges.endDate;
+        }
+
+        setAttrDateRange(dtRange);
+    }
+
     const footer = () => {
         if (!eventGoal || !eventGoal?.label?.length) { return null; }
         
           return (
             <div className={`${styles.composer__footer} fa--query_block`}>
-              <Popover
-                className="fa-event-popover"
-                trigger="click"
-                visible={false}
-              >
-                <Button size={'large'}><SVG name={'calendar'} extraClass={'mr-1'} /> This Month </Button>
-              </Popover>
+              <FaDatepicker customPicker presetRange 
+                monthPicker quarterPicker 
+                placement="topRight"  onSelect={setDateRange} />
+
               <Button size={'large'} type="primary" onClick={handleRunQuery}>Analyse</Button>
             </div>
           );
@@ -220,7 +235,8 @@ const mapStateToProps = (state) => ({
     touchPoint: state.coreQuery.touchpoint,
     models: state.coreQuery.models,
     window: state.coreQuery.window,
-    linkedEvents: state.coreQuery.linkedEvents
+    linkedEvents: state.coreQuery.linkedEvents,
+    dateRange: state.coreQuery.attr_dateRange
 });
   
 const mapDispatchToProps = dispatch => bindActionCreators({
@@ -229,6 +245,7 @@ const mapDispatchToProps = dispatch => bindActionCreators({
     getUserProperties,
     setGoalEvent,
     setTouchPoint,
+    setAttrDateRange,
     setModels,
     setWindow,
     setLinkedEvents
