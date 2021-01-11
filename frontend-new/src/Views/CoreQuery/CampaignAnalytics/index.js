@@ -3,7 +3,6 @@ import moment from "moment";
 import {
   QUERY_TYPE_CAMPAIGN,
   CHART_TYPE_SPARKLINES,
-  CHART_TYPE_LINECHART,
   CHART_TYPE_BARCHART,
 } from "../../../utils/constants";
 import styles from "../FunnelsResultPage/index.module.scss";

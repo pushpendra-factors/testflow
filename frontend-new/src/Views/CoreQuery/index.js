@@ -39,7 +39,6 @@ import {
 import AttributionsResult from "./AttributionsResult";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 import CampaignAnalytics from "./CampaignAnalytics";
-import { CampaignAnalytics1 } from "../../utils/SampleResponse";
 
 function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -536,6 +535,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       camp_filters,
       camp_groupBy,
       camp_channels,
+      dateRange
     ]
   );
 
