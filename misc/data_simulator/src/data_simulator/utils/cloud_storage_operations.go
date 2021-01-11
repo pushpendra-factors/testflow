@@ -4,51 +4,105 @@ package utils
 This file contains utils for cloud storage operations
 */
 
-import(
+import (
 	"cloud.google.com/go/storage"
-	"os"
 	"context"
 	Log "data_simulator/logger"
 	"fmt"
-	"io"
 	"google.golang.org/api/iterator"
+	"io"
+	"os"
 )
 
-func CopyFilesToCloud(folderPath string, bucketPath string, bucketName string, deleteSource bool){
+func DoesFileExistInCloud(bucketPath string, bucketName string, fileName string) bool {
 	_context := context.Background()
 	_storageClient, _err := storage.NewClient(_context)
+
 	if _err != nil {
-    	Log.Debug.Printf("%v", _err)
+		Log.Debug.Printf("%v", _err)
 	}
-    _bucket := _storageClient.Bucket(bucketName)
-	files := GetAllFiles(folderPath, "")
-    for _, element := range files {
-        _file, _err := os.Open(element)
-        if _err != nil {
-            Log.Error.Fatal("os.Open: %v", _err)
-        }
-        defer _file.Close()
-        _storageWriter := _bucket.Object(fmt.Sprintf("%v/%v",bucketPath, element)).NewWriter(_context)
-        if _, _err = io.Copy(_storageWriter, _file); _err != nil {
-            Log.Error.Fatal(_err)
-        }
-        if _err := _storageWriter.Close(); _err != nil {
-			Log.Error.Fatal(_err)
+	_bucket := _storageClient.Bucket(bucketName)
+
+	it := _bucket.Objects(_context, &storage.Query{
+		Prefix:    fmt.Sprintf("%s/%s", bucketPath, fileName),
+		Delimiter: "/"})
+
+	for {
+		attrs, err := it.Next()
+		if err == iterator.Done {
+			break
 		}
-		if(deleteSource == true){
-			os.Remove(element)
+		if err != nil {
+			fmt.Errorf("%v", err)
 		}
-    }
+		if attrs.Name == fileName {
+			return true
+		}
+	}
+	return false
 }
 
-func MoveFilesInCloud(sourcePath string, destPath string, bucketName string){
+func CreateFileInCloud(bucketPath string, bucketName string, fileName string) bool {
+	_context := context.Background()
+	_storageClient, _err := storage.NewClient(_context)
+	if _err != nil {
+		Log.Debug.Printf("%v", _err)
+		return false
+	}
+	_bucket := _storageClient.Bucket(bucketName)
+	_file, _err := os.Create(fileName)
+	if _err != nil {
+		Log.Error.Fatal("os.Open: %v", _err)
+		return false
+	}
+	defer _file.Close()
+	_storageWriter := _bucket.Object(fmt.Sprintf("%v/%v", bucketPath, fileName)).NewWriter(_context)
+	if _, _err = io.Copy(_storageWriter, _file); _err != nil {
+		Log.Error.Fatal(_err)
+		return false
+	}
+	if _err := _storageWriter.Close(); _err != nil {
+		Log.Error.Fatal(_err)
+		return false
+	}
+	return true
+}
+
+func CopyFilesToCloud(folderPath string, bucketPath string, bucketName string, deleteSource bool) {
+	_context := context.Background()
+	_storageClient, _err := storage.NewClient(_context)
+	if _err != nil {
+		Log.Debug.Printf("%v", _err)
+	}
+	_bucket := _storageClient.Bucket(bucketName)
+	files := GetAllFiles(folderPath, "")
+	for _, element := range files {
+		_file, _err := os.Open(element)
+		if _err != nil {
+			Log.Error.Fatal("os.Open: %v", _err)
+		}
+		defer _file.Close()
+		_storageWriter := _bucket.Object(fmt.Sprintf("%v/%v", bucketPath, element)).NewWriter(_context)
+		if _, _err = io.Copy(_storageWriter, _file); _err != nil {
+			Log.Error.Fatal(_err)
+		}
+		if _err := _storageWriter.Close(); _err != nil {
+			Log.Error.Fatal(_err)
+		}
+		if deleteSource == true {
+			os.Remove(element)
+		}
+	}
+}
+
+func MoveFilesInCloud(sourcePath string, destPath string, bucketName string) {
 
 	_context := context.Background()
 	_storageClient, _err := storage.NewClient(_context)
 	if _err != nil {
-    	Log.Debug.Printf("%v", _err)
+		Log.Debug.Printf("%v", _err)
 	}
-    _bucket := _storageClient.Bucket(bucketName)
+	_bucket := _storageClient.Bucket(bucketName)
 	_destinationObject := _bucket.Object(destPath)
 	_sourceObject := _bucket.Object(sourcePath)
 
@@ -60,15 +114,15 @@ func MoveFilesInCloud(sourcePath string, destPath string, bucketName string){
 	}
 }
 
-func ListAllCloudFiles(path string, bucketName string, filePrefix string) []string{
+func ListAllCloudFiles(path string, bucketName string, filePrefix string) []string {
 	_context := context.Background()
 	_storageClient, _err := storage.NewClient(_context)
 
 	if _err != nil {
-    	Log.Debug.Printf("%v", _err)
+		Log.Debug.Printf("%v", _err)
 	}
 	_bucket := _storageClient.Bucket(bucketName)
-	
+
 	it := _bucket.Objects(_context, &storage.Query{
 		Prefix:    fmt.Sprintf("%s/%s", path, filePrefix),
 		Delimiter: "/"})
@@ -77,10 +131,10 @@ func ListAllCloudFiles(path string, bucketName string, filePrefix string) []stri
 	for {
 		attrs, err := it.Next()
 		if err == iterator.Done {
-				break
+			break
 		}
 		if err != nil {
-				fmt.Errorf("%v", err)
+			fmt.Errorf("%v", err)
 		}
 		_storageFileNames = append(_storageFileNames, attrs.Name)
 	}
