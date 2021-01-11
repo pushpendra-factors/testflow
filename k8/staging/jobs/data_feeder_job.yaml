@@ -35,13 +35,13 @@ spec:
             - $(ACME_STAGING_DEMO_KEY)
             - --projectkey_prod
             - $(SAAS_DEMO_PROD_KEY)
-            - -- project_id_prod
+            - --project_id_prod
             - $(PROJECT_ID_PROD)
-            - -- adwords_customer_id_prod
+            - --adwords_customer_id_prod
             - $(ADWORDS_CUSTOMER_ID_PROD)
-            - -- project_id_stage
+            - --project_id_stage
             - $(PROJECT_ID_STAGE)
-            - -- adwords_customer_id_stage
+            - --adwords_customer_id_stage
             - $(ADWORDS_CUSTOMER_ID_STAGE)
             envFrom:
             - configMapRef:
