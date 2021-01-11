@@ -68,7 +68,7 @@
         // display: none;
     }
 }
-.fa-insight-item--container
+.fa-insight-item--container, .fa-insight-item--sub-container 
 {
     &:hover{
         box-shadow: 0 10px 10px -10px $fa-color--mono-2;
