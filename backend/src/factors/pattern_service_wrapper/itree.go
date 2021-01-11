@@ -1291,14 +1291,14 @@ func BuildNewItreeV1(reqId,
 				debugKey := fmt.Sprintf("itree_attribute_count_level%v", parentNode.level)
 				debugCounts[debugKey] = debugCounts[debugKey] + len(attributeChildNodes)
 				for _, childNode := range attributeChildNodes {
-					if parentNode.level <= 1 {
+					if parentNode.level < 1 {
 						queue = append(queue, &LevelItreeNodeTuple{node: childNode, level: parentNode.level + 1})
 					}
 				}
 			}
 		}
 
-		if parentNode.node.NodeType == NODE_TYPE_SEQUENCE || parentNode.node.NodeType == NODE_TYPE_ROOT {
+		if parentNode.node.NodeType == NODE_TYPE_SEQUENCE || parentNode.node.NodeType == NODE_TYPE_ROOT || parentNode.node.NodeType == NODE_TYPE_CAMPAIGN {
 			startDateTime := time.Now()
 			if sequenceChildNodes, err := itree.buildAndAddSequenceChildNodesV1(reqId, parentNode.node,
 				candidatePatterns, patternWrapper, allActiveUsersPattern, countType); err != nil {
@@ -1310,7 +1310,7 @@ func BuildNewItreeV1(reqId,
 				debugKey := fmt.Sprintf("itree_sequence_count_level%v", parentNode.level)
 				debugCounts[debugKey] = debugCounts[debugKey] + len(sequenceChildNodes)
 				for _, childNode := range sequenceChildNodes {
-					if parentNode.level <= 1 {
+					if parentNode.level < 1 {
 						queue = append(queue, &LevelItreeNodeTuple{node: childNode, level: parentNode.level + 1})
 					}
 				}
@@ -1329,7 +1329,7 @@ func BuildNewItreeV1(reqId,
 				debugKey := fmt.Sprintf("itree_campaign_count_level%v", parentNode.level)
 				debugCounts[debugKey] = debugCounts[debugKey] + len(sequenceChildNodes)
 				for _, childNode := range sequenceChildNodes {
-					if parentNode.level <= 1 {
+					if parentNode.level < 1 {
 						queue = append(queue, &LevelItreeNodeTuple{node: childNode, level: parentNode.level + 1})
 					}
 				}
@@ -2091,7 +2091,6 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 	parentPattern := parentNode.Pattern
 	propertyChildNodes := []*ItreeNode{}
 	numP := 0
-	keyValuePairsEvaluated := 0
 	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
 	for propertyName, _ := range numericPropertyKeys {
 		if numP > maxNumProperties {
@@ -2193,8 +2192,7 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 			}
 
 			for _, constraintToAdd := range []P.EventConstraints{
-				constraint1ToAdd, constraint2ToAdd, constraint3ToAdd} {
-				keyValuePairsEvaluated++
+				constraint2ToAdd} {
 				if cNode, err := it.buildChildNodeV1(reqId,
 					parentPattern, &constraintToAdd, nodeType,
 					parentNode.Index, patternWrapper, allActiveUsersPattern,
