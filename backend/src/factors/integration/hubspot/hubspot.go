@@ -545,67 +545,66 @@ func syncCompany(projectID uint64, document *M.HubspotDocument) int {
 
 	if len(company.ContactIds) == 0 {
 		logCtx.Error("Skipped company sync. No contacts associated to company.")
-		return http.StatusOK
-	}
-
-	contactIds := make([]string, 0, 0)
-	for i := range company.ContactIds {
-		contactIds = append(contactIds,
-			strconv.FormatInt(company.ContactIds[i], 10))
-	}
-
-	contactDocuments, errCode := M.GetHubspotDocumentByTypeAndActions(projectID,
-		contactIds, M.HubspotDocumentTypeContact, []int{M.HubspotDocumentActionCreated})
-	if errCode == http.StatusInternalServerError {
-		logCtx.Error("Failed to get hubspot documents by type and action on sync company.")
-		return errCode
-	}
-
-	// build user properties from properties.
-	// make sure company name exist.
-	userProperties := make(map[string]interface{}, 0)
-	for key, value := range company.Properties {
-		// add company name to user default property.
-		if key == "name" {
-			userProperties[U.UP_COMPANY] = value.Value
+	} else {
+		contactIds := make([]string, 0, 0)
+		for i := range company.ContactIds {
+			contactIds = append(contactIds,
+				strconv.FormatInt(company.ContactIds[i], 10))
 		}
 
-		propertyKey := getPropertyKeyByType(M.HubspotDocumentTypeNameCompany, key)
-		userProperties[propertyKey] = value.Value
-	}
+		contactDocuments, errCode := M.GetHubspotDocumentByTypeAndActions(projectID,
+			contactIds, M.HubspotDocumentTypeContact, []int{M.HubspotDocumentActionCreated})
+		if errCode == http.StatusInternalServerError {
+			logCtx.Error("Failed to get hubspot documents by type and action on sync company.")
+			return errCode
+		}
 
-	userPropertiesJsonb, err := U.EncodeToPostgresJsonb(&userProperties)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to marshal company properties to Jsonb.")
-		return http.StatusInternalServerError
-	}
+		// build user properties from properties.
+		// make sure company name exist.
+		userProperties := make(map[string]interface{}, 0)
+		for key, value := range company.Properties {
+			// add company name to user default property.
+			if key == "name" {
+				userProperties[U.UP_COMPANY] = value.Value
+			}
 
-	// update $hubspot_company_name and other company
-	// properties on each associated contact user.
-	isContactsUpdateFailed := false
-	for _, contactDocument := range contactDocuments {
-		if contactDocument.SyncId != "" {
-			contactSyncEvent, errCode := M.GetEventById(projectID,
-				contactDocument.SyncId)
-			if errCode == http.StatusFound {
-				_, errCode := M.UpdateUserProperties(projectID,
-					contactSyncEvent.UserId, userPropertiesJsonb, time.Now().Unix())
-				if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
-					logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
-						"Failed to update user properites with company properties.")
-					isContactsUpdateFailed = true
+			propertyKey := getPropertyKeyByType(M.HubspotDocumentTypeNameCompany, key)
+			userProperties[propertyKey] = value.Value
+		}
+
+		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(&userProperties)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to marshal company properties to Jsonb.")
+			return http.StatusInternalServerError
+		}
+
+		// update $hubspot_company_name and other company
+		// properties on each associated contact user.
+		isContactsUpdateFailed := false
+		for _, contactDocument := range contactDocuments {
+			if contactDocument.SyncId != "" {
+				contactSyncEvent, errCode := M.GetEventById(projectID,
+					contactDocument.SyncId)
+				if errCode == http.StatusFound {
+					_, errCode := M.UpdateUserProperties(projectID,
+						contactSyncEvent.UserId, userPropertiesJsonb, time.Now().Unix())
+					if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
+						logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
+							"Failed to update user properites with company properties.")
+						isContactsUpdateFailed = true
+					}
 				}
 			}
 		}
-	}
 
-	if isContactsUpdateFailed {
-		logCtx.Error("Failed to update some hubspot company properties on user properties.")
-		return http.StatusInternalServerError
+		if isContactsUpdateFailed {
+			logCtx.Error("Failed to update some hubspot company properties on user properties.")
+			return http.StatusInternalServerError
+		}
 	}
 
 	// No sync_id as no event or user or one user property created.
-	errCode = M.UpdateHubspotDocumentAsSynced(projectID, document.ID, "", document.Timestamp, document.Action, "")
+	errCode := M.UpdateHubspotDocumentAsSynced(projectID, document.ID, "", document.Timestamp, document.Action, "")
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot deal document as synced.")
 		return http.StatusInternalServerError
@@ -663,56 +662,58 @@ func syncDeal(projectID uint64, document *M.HubspotDocument, hubspotSmartEventNa
 	}
 
 	userID := getDealUserID(projectID, &deal)
+
+	eventID := ""
 	if userID == "" {
 		logCtx.Error("Skipped deal sync. No user associated to hubspot deal.")
-		return http.StatusOK
+	} else {
+		trackPayload := &SDK.TrackPayload{
+			Name:            U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
+			ProjectId:       projectID,
+			UserId:          userID,
+			EventProperties: *properties,
+			UserProperties:  *properties,
+			Timestamp:       getEventTimestamp(document.Timestamp),
+		}
+
+		// Track deal stage change only if, deal with same id and
+		// same stage, not synced before.
+		dealID := strconv.FormatInt(deal.DealId, 10)
+		if dealID == "" {
+			logCtx.Error("Invalid deal_id on conversion. Failed to sync deal.")
+			return http.StatusInternalServerError
+		}
+
+		_, errCode := M.GetSyncedHubspotDealDocumentByIdAndStage(projectID,
+			dealID, dealStage.(string))
+		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+			logCtx.Error("Failed to get synced deal document by stage on sync_deal")
+			return http.StatusInternalServerError
+		}
+
+		// skip sync as deal stage is synced already.
+		if errCode == http.StatusFound {
+			return http.StatusOK
+		}
+
+		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
+		if status != http.StatusOK && status != http.StatusFound &&
+			status != http.StatusNotModified {
+
+			logCtx.WithField("status", status).Error(
+				"Failed to track hubspot contact deal stage change event.")
+			return http.StatusInternalServerError
+		}
+
+		eventID = response.EventId
+		var prevProperties *map[string]interface{}
+		for i := range hubspotSmartEventNames {
+			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, "", userID, document.Type, properties, prevProperties)
+		}
 	}
 
-	trackPayload := &SDK.TrackPayload{
-		Name:            U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
-		ProjectId:       projectID,
-		UserId:          userID,
-		EventProperties: *properties,
-		UserProperties:  *properties,
-		Timestamp:       getEventTimestamp(document.Timestamp),
-	}
-
-	// Track deal stage change only if, deal with same id and
-	// same stage, not synced before.
-	dealID := strconv.FormatInt(deal.DealId, 10)
-	if dealID == "" {
-		logCtx.Error("Invalid deal_id on conversion. Failed to sync deal.")
-		return http.StatusInternalServerError
-	}
-
-	_, errCode := M.GetSyncedHubspotDealDocumentByIdAndStage(projectID,
-		dealID, dealStage.(string))
-	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-		logCtx.Error("Failed to get synced deal document by stage on sync_deal")
-		return http.StatusInternalServerError
-	}
-
-	// skip sync as deal stage is synced already.
-	if errCode == http.StatusFound {
-		return http.StatusOK
-	}
-
-	status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
-	if status != http.StatusOK && status != http.StatusFound &&
-		status != http.StatusNotModified {
-
-		logCtx.WithField("status", status).Error(
-			"Failed to track hubspot contact deal stage change event.")
-		return http.StatusInternalServerError
-	}
-
-	var prevProperties *map[string]interface{}
-	for i := range hubspotSmartEventNames {
-		prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, "", userID, document.Type, properties, prevProperties)
-	}
-
-	errCode = M.UpdateHubspotDocumentAsSynced(projectID,
-		document.ID, response.EventId, document.Timestamp, document.Action, userID)
+	errCode := M.UpdateHubspotDocumentAsSynced(projectID,
+		document.ID, eventID, document.Timestamp, document.Action, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update hubspot deal document as synced.")
 		return http.StatusInternalServerError

@@ -22,7 +22,6 @@ import {
 } from './DateRangeSelector/utils';
 
 import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
-import FaSelect from '../FaSelect';
 
 const { Option } = Select;
 
@@ -215,6 +214,7 @@ function QueryComposer({
       } else {
         queryOptionsState.date_range.from = dates.startDate;
       }
+      queryOptionsState.date_range.to = dates.endDate;
       if(moment(dates.endDate).diff(dates.startDate, 'hours') <= 24) {
         queryOptionsState.date_range.frequency = 'hour';
       } else {

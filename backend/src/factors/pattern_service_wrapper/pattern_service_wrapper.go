@@ -1101,7 +1101,7 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 					insights.FactorsInsightsMultiplier = roundTo1Decimal(funnelResults[len(funnelResults)-2].ConversionPercent / baseFunnelResults[len(baseFunnelResults)-2].ConversionPercent)
 				} else {
 					insights.FactorsMultiplierIncreaseFlag = false
-					insights.FactorsInsightsMultiplier = roundTo1Decimal(baseFunnelResults[len(baseFunnelResults)-2].ConversionPercent / funnelResults[len(funnelResults)-2].ConversionPercent)
+					insights.FactorsInsightsMultiplier = roundTo1Decimal(funnelResults[len(funnelResults)-2].ConversionPercent / baseFunnelResults[len(baseFunnelResults)-2].ConversionPercent)
 				}
 				insights.FactorsSubInsights = make([]*FactorsInsights, 0)
 				indexLevelInsightsMap[node.Index] = insights
@@ -1141,7 +1141,7 @@ func isValidInsightTransition(parentType string, childType string) bool {
 	if parentType == ATTRIBUTETYPE && childType == ATTRIBUTETYPE {
 		return true
 	}
-	if parentType == CAMPAIGNTYPE && childType == CAMPAIGNTYPE {
+	if (parentType == CAMPAIGNTYPE && childType == CAMPAIGNTYPE) || parentType == CAMPAIGNTYPE && childType == JOURNEYTYPE {
 		return true
 	}
 	return false

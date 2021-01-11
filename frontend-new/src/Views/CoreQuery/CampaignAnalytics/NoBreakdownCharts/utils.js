@@ -122,8 +122,7 @@ export const getDateBaseTableColumns = (
 };
 
 export const getDateBasedTableData = (chartsData, frequency, currentSorter) => {
-	console.log(chartsData);
-  let format = "MMM D";
+	let format = "MMM D";
   if (frequency === "hour") {
     format = "h A, MMM D";
   }

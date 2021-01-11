@@ -15,6 +15,7 @@ function LineChart({
   isDecimalAllowed,
   frequency,
   arrayMapper,
+  cardSize = 1,
 }) {
   const chartRef = useRef(null);
 
@@ -27,6 +28,9 @@ function LineChart({
 
   if (xAxisCount > 10) {
     xAxisCount = 10;
+    if (!cardSize) {
+      xAxisCount = 5;
+    }
   }
 
   const modVal = Math.ceil(xAxisValues.length / xAxisCount);
@@ -89,7 +93,7 @@ function LineChart({
         height: 300,
       },
       padding: {
-        left: 60,
+        left: 30,
         bottom: 24,
         right: 10,
       },

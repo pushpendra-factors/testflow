@@ -23,6 +23,8 @@ spec:
             args:
             - --env
             - $(ENV)
+            - --seed_date
+            - $(SEED_DATE)
             - --config
             - $(CONFIG)
             - --endpoint_staging
@@ -31,8 +33,16 @@ spec:
             - $(ENDPOINT_PROD)
             - --projectkey_staging
             - $(ACME_STAGING_DEMO_KEY)
-             - --projectkey_prod
+            - --projectkey_prod
             - $(SAAS_DEMO_PROD_KEY)
+            - --project_id_prod
+            - $(PROJECT_ID_PROD)
+            - --adwords_customer_id_prod
+            - $(ADWORDS_CUSTOMER_ID_PROD)
+            - --project_id_stage
+            - $(PROJECT_ID_STAGE)
+            - --adwords_customer_id_stage
+            - $(ADWORDS_CUSTOMER_ID_STAGE)
             envFrom:
             - configMapRef:
                 name: config-env

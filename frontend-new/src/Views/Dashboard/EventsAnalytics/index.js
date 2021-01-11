@@ -69,6 +69,7 @@ function EventsAnalytics({
         chartType={chartType}
         title={title}
         arrayMapper={arrayMapper}
+        unit={unit}
       />
 
     );

@@ -18,6 +18,7 @@ function NoBreakdownCharts({
   chartType,
   durationObj,
   arrayMapper,
+  unit,
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
@@ -42,7 +43,9 @@ function NoBreakdownCharts({
           frequency={durationObj.frequency}
           queries={queries}
           chartsData={chartsData}
-          parentClass="flex items-center flex-wrap mt-4 justify-center"
+          parentClass={`flex items-center flex-wrap justify-center ${
+            !unit.cardSize ? "mt-8 flex-col" : "mt-4"
+          }`}
           appliedColors={appliedColors}
           eventsMapper={eventsMapper}
           page={page}
@@ -85,6 +88,7 @@ function NoBreakdownCharts({
           hiddenEvents={hiddenEvents}
           isDecimalAllowed={page === "activeUsers" || page === "frequency"}
           arrayMapper={arrayMapper}
+          cardSize={unit.cardSize}
         />
       </div>
     );

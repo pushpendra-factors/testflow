@@ -102,6 +102,7 @@ function SingleEventSingleBreakdown({
           hiddenEvents={hiddenProperties}
           isDecimalAllowed={page === "activeUsers" || page === "frequency"}
           arrayMapper={arrayMapper}
+          cardSize={unit.cardSize}
         />
       </div>
     );

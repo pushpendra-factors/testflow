@@ -357,22 +357,22 @@ user_segments:
             Logout: 0.2109
         seed_events:
           Subscribe to Newsletter Form: 0.0001
-          www.acme.com: 0.6
+          www.acme.com: 0.4
           www.acme.com/company: 0.02
           www.acme.com/customers: 0.005
           www.acme.com/integrations: 0.006
           www.acme.com/investors: 0.004
-          www.acme.com/pricing: 0.09
-          www.acme.com/product: 0.05
+          www.acme.com/pricing: 0.05
+          www.acme.com/product: 0.03
           www.acme.com/product/analytics: 0.0199
           www.acme.com/product/collaboration: 0.02
           www.acme.com/product/unified-dashboard: 0.003
           www.acme.com/resources: 0.02
           www.acme.com/schedule-a-demo: 0.002
           www.acme.com/solutions: 0.05
-          www.acme.com?utm_campaign=TRUE: 0.017
-          www.acme.com/pricing?utm_campaign=TRUE: 0.021
-          www.acme.com/product?utm_campaign=TRUE: 0.033
+          www.acme.com?utm_campaign=TRUE: 0.217
+          www.acme.com/pricing?utm_campaign=TRUE: 0.061
+          www.acme.com/product?utm_campaign=TRUE: 0.053
           www.acme.com/solutions?utm_campaign=TRUE: 0.017
           www.acme.com/schedule-a-demo?utm_campaign=TRUE: 0.022
         exit_events: [Logout]
