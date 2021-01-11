@@ -214,7 +214,7 @@ const CampQueryComposer = ({activeProject, channel,
 
             <Button size={'large'} type="link" onClick={() => triggerGroupDD(index)}>
                 {init === true ? 
-                    <>Select user property </>: 
+                    <>Add new </>: 
                     <><SVG name={groupBy[index].prop_category}></SVG>
                     <span className={`ml-2`}>
                         {groupBy[index]?.property}
