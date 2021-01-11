@@ -2,7 +2,7 @@ import React, { useRef, useCallback, useEffect } from "react";
 import * as d3 from "d3";
 import styles from "../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index.module.scss";
 import { checkForWindowSizeChange } from "../../Views/CoreQuery/FunnelsResultPage/utils";
-import { getMaxYpoint } from "./utils";
+import { getMaxYpoint, getBarChartLeftMargin } from "./utils";
 import ChartLegends from "./ChartLegends";
 import { numberWithCommas } from "../../utils/dataFormatter";
 
@@ -10,12 +10,17 @@ function BarChart({ chartData, queries, title = "chart" }) {
   const tooltip = useRef(null);
   const chartRef = useRef(null);
 
-  const getLabel = (str) => {
+  const getLabel = (str, position = "tick") => {
     let label = str.split(";")[0];
     label = label
       .split(",")
       .filter((elem) => elem)
       .join(",");
+
+    const tickLength = 20;
+    if (label.length > tickLength && position === "tick") {
+      return label.substr(0, tickLength) + "...";
+    }
     return label;
   };
 
@@ -50,10 +55,10 @@ function BarChart({ chartData, queries, title = "chart" }) {
     tooltip.current
       .html(
         `
-                  <div>${getLabel(d.label)}</div>
-                  <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${
-                    numberWithCommas(d.value)
-                  }</span></div>
+                  <div>${getLabel(d.label, "tooltip")}</div>
+                  <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${numberWithCommas(
+                    d.value
+                  )}</span></div>
                 `
       )
       .style("opacity", 1)
@@ -88,7 +93,7 @@ function BarChart({ chartData, queries, title = "chart" }) {
       top: 10,
       right: 0,
       bottom: 30,
-      left: 60,
+      left: getBarChartLeftMargin(max),
     };
     const width = +svg.attr("width") - margin.left - margin.right;
     const height = +svg.attr("height") - margin.top - margin.bottom;
