@@ -181,9 +181,6 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	intRouteGroup.POST("/segment_platform",
 		mid.SetScopeProjectPrivateTokenUsingBasicAuth(), IntSegmentPlatformHandler)
 
-	adwordsRouteGroup := r.Group(ROUTE_SDK_ADWORDS_ROOT)
-	adwordsRouteGroup.POST("/adwords/documents/add",
-		IH.DataServiceAdwordsAddDocumentHandler)
 }
 
 func InitIntRoutes(r *gin.Engine) {
