@@ -170,6 +170,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	sdkRouteGroup.POST("/event/update_properties", SDKUpdateEventPropertiesHandler)
 	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)
 	sdkRouteGroup.POST("/user/add_properties", SDKAddUserPropertiesHandler)
+	sdkRouteGroup.POST("/adwords/documents/add", IH.DataServiceAdwordsAddDocumentHandler)
 
 	ampSdkRouteGroup := r.Group(ROUTE_SDK_AMP_ROOT)
 	ampSdkRouteGroup.POST("/event/track", SDKAMPTrackHandler)
