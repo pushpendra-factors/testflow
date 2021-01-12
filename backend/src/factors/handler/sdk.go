@@ -338,7 +338,18 @@ https://app.factors.ai/sdk/amp/event/track?token=${token}&title=${title}&referre
 func SDKAMPTrackHandler(c *gin.Context) {
 	metrics.Increment(metrics.IncrSDKRequestOverallCount)
 	metrics.Increment(metrics.IncrSDKRequestTypeAMPTrack)
-	token := c.Query("token")
+
+	TOKEN := "token"
+	CLIENT_ID := "client_id"
+	SOURCE_URL := "source_url"
+	REFERRER := "referrer"
+	TITLE := "title"
+	PAGE_LOAD_TIME_IN_MS := "page_load_time_in_ms"
+	SCREEN_HEIGHT := "screen_height"
+	SCREEN_WIDTH := "screen_width"
+	EVENT_NAME := "event_name"
+	trackedProperties := make(map[string]bool)
+	token := c.Query(TOKEN)
 	token = strings.TrimSpace(token)
 	if token == "" {
 		c.AbortWithStatusJSON(http.StatusUnauthorized,
@@ -346,7 +357,8 @@ func SDKAMPTrackHandler(c *gin.Context) {
 		return
 	}
 
-	logCtx := log.WithField("token", token)
+	trackedProperties[TOKEN] = true
+	logCtx := log.WithField(TOKEN, token)
 
 	settings, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(token)
 	if errCode != http.StatusFound {
@@ -360,7 +372,7 @@ func SDKAMPTrackHandler(c *gin.Context) {
 		return
 	}
 
-	ampClientId := c.Query("client_id")
+	ampClientId := c.Query(CLIENT_ID)
 	ampClientId = strings.TrimSpace(ampClientId)
 	if ampClientId == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest,
@@ -368,42 +380,55 @@ func SDKAMPTrackHandler(c *gin.Context) {
 		return
 	}
 
-	logCtx = logCtx.WithField("client_id", ampClientId)
+	trackedProperties[CLIENT_ID] = true
+	logCtx = logCtx.WithField(CLIENT_ID, ampClientId)
 
-	sourceURL := c.Query("source_url")
+	sourceURL := c.Query(SOURCE_URL)
 	sourceURL = strings.TrimSpace(sourceURL)
+	if sourceURL == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			&SDK.Response{Error: "Track failed. Invalid source_url."})
+		return
+	}
+	trackedProperties[SOURCE_URL] = true
 
-	paramReferrerURL := c.Query("referrer")
+	paramReferrerURL := c.Query(REFERRER)
 	paramReferrerURL = strings.TrimSpace(paramReferrerURL)
+	trackedProperties[REFERRER] = true
 
-	pageTitle := c.Query("title")
+	pageTitle := c.Query(TITLE)
+	trackedProperties[TITLE] = true
 
 	var pageLoadTimeInSecs float64
-	paramPageLoadTime := c.Query("page_load_time_in_ms")
+	paramPageLoadTime := c.Query(PAGE_LOAD_TIME_IN_MS)
 	paramPageLoadTime = strings.TrimSpace(paramPageLoadTime)
 	pageLoadTimeInMs, err := strconv.ParseFloat(paramPageLoadTime, 64)
+	trackedProperties[PAGE_LOAD_TIME_IN_MS] = true
 	if paramPageLoadTime != "" && err != nil {
-		logCtx.WithError(err).WithField("page_load_time_in_ms", paramPageLoadTime).Error(
+		logCtx.WithError(err).WithField(PAGE_LOAD_TIME_IN_MS, paramPageLoadTime).Error(
 			"Failed to convert page_load_time to number on amp sdk track")
 	}
 	if pageLoadTimeInMs > 0 {
 		pageLoadTimeInSecs = pageLoadTimeInMs / 1000
 	}
 
-	paramScreenHeight := c.Query("screen_height")
+	paramScreenHeight := c.Query(SCREEN_HEIGHT)
 	screenHeight, err := strconv.ParseFloat(paramScreenHeight, 64)
+	trackedProperties[SCREEN_HEIGHT] = true
 	if paramScreenHeight != "" && err != nil {
-		logCtx.WithError(err).WithField("screen_height", paramScreenHeight).Error(
+		logCtx.WithError(err).WithField(SCREEN_HEIGHT, paramScreenHeight).Error(
 			"Failed to convert screen_height to number on amp sdk track")
 	}
 
-	paramScreenWidth := c.Query("screen_width")
+	paramScreenWidth := c.Query(SCREEN_WIDTH)
 	screenWidth, err := strconv.ParseFloat(paramScreenWidth, 64)
+	trackedProperties[SCREEN_WIDTH] = true
 	if paramScreenWidth != "" && err != nil {
-		logCtx.WithError(err).WithField("screen_width", paramScreenWidth).Error(
+		logCtx.WithError(err).WithField(SCREEN_WIDTH, paramScreenWidth).Error(
 			"Failed to convert screen_width to number on amp sdk track")
 	}
 
+	queryParams := c.Request.URL.Query()
 	payload := &SDK.AMPTrackPayload{
 		ClientID:           ampClientId,
 		SourceURL:          sourceURL,
@@ -417,7 +442,18 @@ func SDKAMPTrackHandler(c *gin.Context) {
 		UserAgent: c.Request.UserAgent(),
 		ClientIP:  c.ClientIP(),
 	}
+	customProperties := make(map[string]interface{})
 
+	for k, v := range queryParams {
+		if k == EVENT_NAME {
+			payload.EventName = v[0]
+		} else {
+			if !trackedProperties[k] {
+				customProperties[k] = v[0]
+			}
+		}
+	}
+	payload.CustomProperties = customProperties
 	c.JSON(SDK.AMPTrackWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens()))
 }
 

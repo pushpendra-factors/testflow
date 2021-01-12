@@ -26,6 +26,7 @@ import {
   INITIALIZE_MTA_STATE,
   INITIALIZE_CAMPAIGN_STATE,
 } from "../types";
+import { DefaultDateRangeFormat } from "../../Views/CoreQuery/utils";
 
 const DEFAULT_TOUCHPOINTS = ["Campaign", "Source", "AdGroup", "Keyword"];
 
@@ -48,8 +49,7 @@ const defaultState = {
   eventGoal: {},
   touchpoint: "",
   attr_dateRange: {
-    from: new Date(),
-    to: new Date(),
+    ...DefaultDateRangeFormat,
     dateStr: ""
   },
   models: [],
@@ -64,8 +64,7 @@ const defaultState = {
   camp_filters: [],
   camp_groupBy: [],
   camp_dateRange: {
-    from: new Date(),
-    to: new Date(),
+    ...DefaultDateRangeFormat,
     dateStr: "",
   },
 };

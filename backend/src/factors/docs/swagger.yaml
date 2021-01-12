@@ -192,13 +192,17 @@ definitions:
     properties:
       attribution_key:
         type: string
+      lop:
+        type: string
       op:
-        description: contains or notContains
+        type: string
+      pr:
+        type: string
+      ty:
+        description: 'Type: categorical or numerical'
         type: string
       va:
-        items:
-          type: string
-        type: array
+        type: string
     type: object
   model.AttributionQuery:
     properties:
@@ -254,6 +258,15 @@ definitions:
         description: value_any or property value
         type: object
     type: object
+  model.ChannelGroupQueryV1:
+    properties:
+      cl:
+        type: string
+      query_group:
+        items:
+          $ref: '#/definitions/model.ChannelQueryV1'
+        type: array
+    type: object
   model.ChannelQuery:
     properties:
       breakdown:
@@ -274,6 +287,31 @@ definitions:
         type: string
       to:
         description: unix timestamp
+        type: integer
+    type: object
+  model.ChannelQueryV1:
+    properties:
+      channel:
+        type: string
+      filters:
+        items:
+          $ref: '#/definitions/model.FilterV1'
+        type: array
+      fr:
+        type: integer
+      gbt:
+        type: object
+      group_by:
+        items:
+          $ref: '#/definitions/model.GroupBy'
+        type: array
+      select_metrics:
+        items:
+          type: string
+        type: array
+      time_zone:
+        type: string
+      to:
         type: integer
     type: object
   model.Dashboard:
@@ -440,6 +478,26 @@ definitions:
       updated_at:
         type: string
       user_property_name:
+        type: string
+    type: object
+  model.FilterV1:
+    properties:
+      condition:
+        type: string
+      logical_operator:
+        type: string
+      name:
+        type: string
+      property:
+        type: string
+      value:
+        type: string
+    type: object
+  model.GroupBy:
+    properties:
+      name:
+        type: string
+      property:
         type: string
     type: object
   model.KeyValueTuple:
@@ -2241,6 +2299,103 @@ paths:
       tags:
       - V1Api
       - ProjectAdmin
+  /{project_id}/v1/channels/config:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Channel
+        in: query
+        name: channel
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"result": model.ChannelConfigResult'
+          schema:
+            type: string
+      summary: To get config for the required channel.
+      tags:
+      - ChannelQuery
+      - CoreQuery
+  /{project_id}/v1/channels/filter_values:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Channel
+        in: query
+        name: channel
+        required: true
+        type: string
+      - description: campaign
+        in: query
+        name: filter_object
+        required: true
+        type: string
+      - description: name
+        in: query
+        name: filter_property
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"result": model.ChannelFilterValues}'
+          schema:
+            type: string
+      summary: To filter on values for channel query.
+      tags:
+      - ChannelQuery
+      - CoreQuery
+  /{project_id}/v1/channels/query:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Dashboard ID
+        in: query
+        name: dashboard_id
+        type: integer
+      - description: Dashboard Unit ID
+        in: query
+        name: dashboard_unit_id
+        type: integer
+      - description: Query payload
+        in: body
+        name: query
+        required: true
+        schema:
+          $ref: '#/definitions/model.ChannelGroupQueryV1'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{result:M.ChannelResultGroupV1}'
+          schema:
+            type: string
+      summary: To run a channel query.
+      tags:
+      - ChannelQuery
+      - CoreQuery
   /{project_id}/v1/dashboards/{dashboard_id}:
     delete:
       consumes:

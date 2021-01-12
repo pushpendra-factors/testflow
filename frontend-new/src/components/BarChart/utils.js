@@ -20,15 +20,8 @@ export const getMaxYpoint = (maxVal) => {
 
 export const getBarChartLeftMargin = (maxVal) => {
   const margin = maxVal.toString().length * 10;
-  if (margin >= 50 && margin <= 70) {
-    return 50;
-  } else if (margin >= 80 && margin <= 100) {
-    return 70;
-  } else if (margin >= 110 && margin <= 130) {
-    return 90;
-  } else if (margin >= 140) {
-    return 110;
-  } else {
-    return margin;
+  if (margin >= 50) {
+    return margin - ((margin - 50) / 10) * 4;
   }
+  return margin;
 };

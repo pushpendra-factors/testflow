@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -23,15 +24,35 @@ type AdwordsDocument struct {
 	Type              int             `gorm:"primary_key:true;auto_increment:false" json:"-"`
 	Timestamp         int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
 	ID                string          `gorm:"primary_key:true;auto_increment:false" json:"id"`
+	CampaignID        int64           `json:"-"`
+	AdGroupID         int64           `json:"-"`
+	AdID              int64           `json:"-"`
+	KeywordID         int64           `json:"-"`
 	Value             *postgres.Jsonb `json:"value"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
-const campaignPerformanceReport = "campaign_performance_report"
-const adGroupPerformanceReport = "ad_group_performance_report"
-const adPerformanceReport = "ad_performance_report"
-const keywordPerformanceReport = "keyword_performance_report"
+const (
+	campaignPerformanceReport = "campaign_performance_report"
+	adGroupPerformanceReport  = "ad_group_performance_report"
+	adPerformanceReport       = "ad_performance_report"
+	keywordPerformanceReport  = "keyword_performance_report"
+	keywords                  = "keyword"
+	adwordsCampaign           = "campaign"
+	adwordsAdGroup            = "ad_group"
+	adwordsAd                 = "ad"
+	adwordsKeyword            = "keyword"
+)
+
+var selectableMetricsForAdwords = []string{"conversion"}
+var objectsForAdwords = []string{keywords}
+
+var keywordsPropertyToRelated = map[string]PropertiesAndRelated{}
+
+var mapOfObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
+	keywords: {"id": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical}},
+}
 
 // AdwordsDocumentTypeAlias ...
 var AdwordsDocumentTypeAlias = map[string]int{
@@ -50,7 +71,8 @@ var AdwordsDocumentTypeAlias = map[string]int{
 var objectAndPropertyToValueInReportsMapping = map[string]string{
 	"campaign:id": "campaign_id",
 	"ad_group:id": "ad_group_id",
-	"ad:id":       "id",
+	"ad:id":       "ad_id",
+	"keyword:id":  "keyword_id",
 }
 
 var objectToValueInJobsMapping = map[string]string{
@@ -69,7 +91,7 @@ var mapOfTypeToJobCTEAlias = map[string]string{
 var adwordsMetricsToAggregatesInReportsMapping = map[string]string{
 	"impressions": "SUM((value->>'impressions')::float)",
 	"clicks":      "SUM((value->>'clicks')::float)",
-	"spend":       "SUM((value->>'cost')::float)",
+	"spend":       "SUM((value->>'cost')::float)/1000000",
 	// "cost_per_click": "average_cost",
 	"conversion": "SUM((value->>'conversions')::float",
 	// "conversion_rate": "conversion_rate"
@@ -227,9 +249,10 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 	adwordsDoc.ID = adwordsDocID
 
 	db := C.GetServices().Db
+	// TODO: Use gorm.Create method, instead of INSERT query string.
 	queryStr := "INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,campaign_id,ad_group_id,ad_id,keyword_id,value,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	rows, err := db.Raw(queryStr, adwordsDoc.ProjectID, adwordsDoc.CustomerAccountID,
-		adwordsDoc.Type, adwordsDoc.Timestamp, adwordsDoc.ID, campaignIDValue, adGroupIDValue, adIDValue, keywordIDValue, adwordsDoc.Value, time.Now().UTC(), time.Now().UTC()).Rows()
+		adwordsDoc.Type, adwordsDoc.Timestamp, adwordsDoc.ID, campaignIDValue, adGroupIDValue, adIDValue, keywordIDValue, adwordsDoc.Value, gorm.NowFunc(), gorm.NowFunc()).Rows()
 	if err != nil {
 		if isDuplicateAdwordsDocumentError(err) {
 			logCtx.WithError(err).WithField("id", adwordsDoc.ID).Error(
@@ -421,9 +444,37 @@ func GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountI
 	return gclIDBasedCampaign, nil
 }
 
+// @TODO Kark v1
+func buildAdwordsChannelConfig() *ChannelConfigResult {
+	properties := buildProperties(allChannelsPropertyToRelated)
+	adwordsObjectsAndProperties := buildObjectAndPropertiesForAdwords(objectsForAdwords)
+	commonObjectsAndProperties := buildObjectsAndProperties(properties, objectsForAllChannels)
+	selectMetrics := append(selectableMetricsForAllChannels, selectableMetricsForAdwords...)
+	objectsAndProperties := append(adwordsObjectsAndProperties, commonObjectsAndProperties...)
+	return &ChannelConfigResult{
+		SelectMetrics:        selectMetrics,
+		ObjectsAndProperties: objectsAndProperties,
+	}
+}
+
+func buildObjectAndPropertiesForAdwords(objects []string) []ObjectAndProperties {
+	objectsAndProperties := make([]ObjectAndProperties, 0, 0)
+	for _, currentObject := range objects {
+		propertiesAndRelated, isPresent := mapOfObjectsToPropertiesAndRelated[currentObject]
+		var currentProperties []Property
+		if isPresent {
+			currentProperties = buildProperties(propertiesAndRelated)
+		} else {
+			currentProperties = buildProperties(allChannelsPropertyToRelated)
+		}
+		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
+	}
+	return objectsAndProperties
+}
+
 // GetAdwordsFilterValues - @TODO Kark v1
 func GetAdwordsFilterValues(projectID uint64, filterObject string, filterProperty string, reqID string) ([]interface{}, int) {
-	docType, property, errCode := getAdwordsDocumentTpeAndPropertyKeyForFilter(filterObject, filterProperty)
+	docType, property, errCode := getAdwordsDocumentTypeAndPropertyKeyForFilter(filterObject, filterProperty)
 
 	if errCode != http.StatusFound {
 		return []interface{}{}, errCode
@@ -439,7 +490,7 @@ func GetAdwordsFilterValues(projectID uint64, filterObject string, filterPropert
 
 // GetAdwordsSQLQueryAndParametersForFilterValues - @TODO Kark v1
 func GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, filterObject string, filterProperty string) (string, []interface{}, int) {
-	docType, property, errCode := getAdwordsDocumentTpeAndPropertyKeyForFilter(filterObject, filterProperty)
+	docType, property, errCode := getAdwordsDocumentTypeAndPropertyKeyForFilter(filterObject, filterProperty)
 	if errCode != http.StatusFound {
 		return "", []interface{}{}, errCode
 	}
@@ -455,12 +506,8 @@ func GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, filterObje
 }
 
 // @TODO Kark v1
-func getAdwordsDocumentTpeAndPropertyKeyForFilter(filterObject string, filterProperty string) (int, string, int) {
-	docType, err := getAdwordsDocumentTypeForFilterKeyV1(filterObject)
-
-	if err != nil {
-		return 0, "", http.StatusInternalServerError
-	}
+func getAdwordsDocumentTypeAndPropertyKeyForFilter(filterObject string, filterProperty string) (int, string, int) {
+	docType := getAdwordsDocumentTypeForFilterKeyV1(filterObject)
 
 	property, err := getAdwordsFilterPropertyKeyByTypeV1(filterObject, filterProperty)
 	if err != nil {
@@ -496,25 +543,21 @@ func getAdwordsFilterValuesByType(projectID uint64, docType int, property string
 }
 
 // @TODO Kark v1
-func getAdwordsDocumentTypeForFilterKeyV1(filterObject string) (int, error) {
+func getAdwordsDocumentTypeForFilterKeyV1(filterObject string) int {
 	var docType int
 
 	switch filterObject {
-	case CAFilterCampaign:
-		docType = AdwordsDocumentTypeAlias[CAFilterCampaign+"s"]
-	case CAFilterAdGroup:
-		docType = AdwordsDocumentTypeAlias[CAFilterAdGroup+"s"]
-	case CAFilterAd:
-		docType = AdwordsDocumentTypeAlias[CAFilterAd+"s"]
-		// case CAFilterKeyword:
-		// 	docType = AdwordsDocumentTypeAlias[keywordPerformanceReport]
+	case adwordsCampaign:
+		docType = AdwordsDocumentTypeAlias[adwordsCampaign+"s"]
+	case adwordsAdGroup:
+		docType = AdwordsDocumentTypeAlias[adwordsAdGroup+"s"]
+	case adwordsAd:
+		docType = AdwordsDocumentTypeAlias[adwordsAd+"s"]
+	case CAFilterKeyword:
+		docType = AdwordsDocumentTypeAlias[keywordPerformanceReport]
 	}
 
-	if docType == 0 {
-		return docType, errors.New("no adwords document type for filter")
-	}
-
-	return docType, nil
+	return docType
 }
 
 // ExecuteAdwordsChannelQueryV1 - @TODO Kark v1.
@@ -547,6 +590,7 @@ func buildAndExecuteAdwordsSimpleQueryV1(query *ChannelQueryV1, projectID uint64
 		campaignIDs, adGroupIDs, reqID)
 }
 
+// Validation issue needed. Not both ad_id , keyword_id at same time.
 // @TODO Kark v1
 func getIDsFromJob(query *ChannelQueryV1, projectID uint64, adwordsAccountIDs string, reqID string) ([]int, []int) {
 	campaignsFilters, adGroupFilters, _ := splitFiltersByObjectType(query)
@@ -617,6 +661,12 @@ func getLowestHierarchyLevel(query *ChannelQueryV1) (string, error) {
 	for _, objectName := range objectNames {
 		if objectName == "ad" {
 			return "ad", nil
+		}
+	}
+
+	for _, objectName := range objectNames {
+		if objectName == keywords {
+			return "keyword", nil
 		}
 	}
 
@@ -716,7 +766,7 @@ func buildAndExecuteAdwordsComplexQueryV1(query *ChannelQueryV1, projectID uint6
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
 
 	reportCTE, reportCTEAlias, reportSelectMetrics, reportCTEJoinFields, reportParams := getCTEAndParamsForReportComplexStrategy(query, projectID, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel])
-	jobsCTE, jobsCTEAliases, jobCTEJoinFields, jobsParams := getCTEAndParamsForJobsComplexStrategy(query, projectID, customerAccountID)
+	jobsCTE, jobsCTEAliases, jobCTEJoinFields, jobsParams := getCTEAndParamsForAdwordsJobsComplexStrategy(query, projectID, customerAccountID)
 
 	completeWithClause := reportCTE
 	params := make([]interface{}, 0, 0)
@@ -813,13 +863,13 @@ func getCTEAndParamsForReportComplexStrategy(query *ChannelQueryV1, projectID ui
 }
 
 // @Kark TODO v1
-func getCTEAndParamsForJobsComplexStrategy(query *ChannelQueryV1, projectID uint64, customerAccountID string) ([]string, []string, []string, []interface{}) {
+func getCTEAndParamsForAdwordsJobsComplexStrategy(query *ChannelQueryV1, projectID uint64, customerAccountID string) ([]string, []string, []string, []interface{}) {
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 
 	campaignsFilters, adGroupFilters, _ := splitFiltersByObjectType(query)
 	campaignsGroupBy, adGroupsGroupBy, _ := splitGroupByByObjectType(query)
-	campaignJobCTE, campaignCTEAliasName, campaignJoinField, campaignParams := getCTEAndParamsForJob(query, projectID, customerAccountIDs, "campaign", campaignsFilters, campaignsGroupBy)
-	adGroupJobCTE, adGroupCTEAliasName, adGroupJoinField, adGroupParams := getCTEAndParamsForJob(query, projectID, customerAccountIDs, "ad_group", adGroupFilters, adGroupsGroupBy)
+	campaignJobCTE, campaignCTEAliasName, campaignJoinField, campaignParams := getCTEAndParamsForJob(query, projectID, customerAccountIDs, adwordsCampaign, campaignsFilters, campaignsGroupBy)
+	adGroupJobCTE, adGroupCTEAliasName, adGroupJoinField, adGroupParams := getCTEAndParamsForJob(query, projectID, customerAccountIDs, adwordsAdGroup, adGroupFilters, adGroupsGroupBy)
 	resultParams := append(make([]interface{}, 0, 0), campaignParams...)
 	resultParams = append(resultParams, adGroupParams...)
 	return U.AppendNonNullValues(campaignJobCTE, adGroupJobCTE), U.AppendNonNullValues(campaignCTEAliasName, adGroupCTEAliasName), U.AppendNonNullValues(campaignJoinField, adGroupJoinField), resultParams
@@ -830,7 +880,9 @@ func getCTEAndParamsForJob(query *ChannelQueryV1, projectID uint64, customerAcco
 	if len(groupBy) < 1 {
 		return "", "", "", make([]interface{}, 0, 0)
 	}
-	docType := AdwordsDocumentTypeAlias[objectType+"s"]
+
+	docType := getAdwordsDocumentTypeForFilterKeyV1(objectType)
+
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, query.From, query.To}
 	aliasName := mapOfTypeToJobCTEAlias[objectType]
 	withClause := aliasName + " as ("
@@ -948,11 +1000,11 @@ func splitFiltersByObjectType(query *ChannelQueryV1) ([]FilterV1, []FilterV1, []
 
 	for _, filter := range query.Filters {
 		switch filter.Object {
-		case "campaign":
+		case adwordsCampaign:
 			campaignsFilters = append(campaignsFilters, filter)
-		case "ad_groups":
+		case adwordsAdGroup:
 			adGroupFilters = append(adGroupFilters, filter)
-		case "ad":
+		case adwordsAd:
 			adFilters = append(adFilters, filter)
 		}
 	}
@@ -967,11 +1019,11 @@ func splitGroupByByObjectType(query *ChannelQueryV1) ([]GroupBy, []GroupBy, []Gr
 
 	for _, filter := range query.GroupBy {
 		switch filter.Object {
-		case "campaign":
+		case adwordsCampaign:
 			campaignsGroupBys = append(campaignsGroupBys, filter)
-		case "ad_groups":
+		case adwordsAdGroup:
 			adGroupGroupBys = append(adGroupGroupBys, filter)
-		case "ad":
+		case adwordsAd:
 			adGroupBys = append(adGroupBys, filter)
 		}
 	}
@@ -1028,7 +1080,7 @@ func ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([
 	}
 	if len(resultRows) == 0 {
 		log.Error("Aggregate query returned zero rows.")
-		return nil, nil, errors.New("no rows returned")
+		return nil, make([][]interface{}, 0, 0), errors.New("no rows returned")
 	}
 	return columns, resultRows, nil
 }

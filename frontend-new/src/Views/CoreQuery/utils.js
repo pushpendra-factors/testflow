@@ -505,7 +505,8 @@ export const getAttributionQuery = (
   touchpoint,
   models,
   window,
-  linkedEvents
+  linkedEvents,
+  dateRange = {}
 ) => {
   const eventFilters = getFilters(eventGoal.filters);
   const query = {
@@ -522,13 +523,18 @@ export const getAttributionQuery = (
       attribution_key: touchpoint,
       attribution_methodology: models[0],
       lbw: window,
-      from: moment().startOf("week").utc().unix(),
-      to:
-        moment().format("dddd") !== "Sunday"
-          ? moment().subtract(1, "day").endOf("day").utc().unix()
-          : moment().utc().unix(),
     },
   };
+  if (dateRange.from && dateRange.to) {
+    query.query.from = moment(dateRange.from).startOf("day").utc().unix();
+    query.query.to = moment(dateRange.to).endOf("day").utc().unix();
+  } else {
+    query.query.from = moment().startOf("week").utc().unix();
+    query.query.to =
+      moment().format("dddd") !== "Sunday"
+        ? moment().subtract(1, "day").endOf("day").utc().unix()
+        : moment().utc().unix();
+  }
   if (models[1]) {
     query.query.attribution_methodology_c = models[1];
   }
@@ -590,20 +596,18 @@ export const getCampaignsQuery = (
       };
     }),
     filters,
-    gbt: dateRange.frequency || "date",
+    gbt: "date",
   };
-  // if (dateRange.from && dateRange.to) {
-  //   query.fr = moment(dateRange.from).startOf("day").utc().unix();
-  //   query.to = moment(dateRange.to).endOf("day").utc().unix();
-  // } else {
-  //   query.fr = moment().startOf("week").utc().unix();
-  //   query.to =
-  //     moment().format("dddd") !== "Sunday"
-  //       ? moment().subtract(1, "day").endOf("day").utc().unix()
-  //       : moment().utc().unix();
-  // }
-  query.fr = 1601510400;
-  query.to = 1604188799;
+  if (dateRange.from && dateRange.to) {
+    query.fr = moment(dateRange.from).startOf("day").utc().unix();
+    query.to = moment(dateRange.to).endOf("day").utc().unix();
+  } else {
+    query.fr = moment().startOf("week").utc().unix();
+    query.to =
+      moment().format("dddd") !== "Sunday"
+        ? moment().subtract(1, "day").endOf("day").utc().unix()
+        : moment().utc().unix();
+  }
   return {
     query_group: [query, { ...query, gbt: "" }],
     cl: QUERY_TYPE_CAMPAIGN,
@@ -611,7 +615,6 @@ export const getCampaignsQuery = (
 };
 
 export const getCampaignStateFromRequestQuery = (requestQuery) => {
-  console.log(requestQuery);
   const result = {
     queryType: QUERY_TYPE_CAMPAIGN,
     camp_channels: requestQuery.channel,

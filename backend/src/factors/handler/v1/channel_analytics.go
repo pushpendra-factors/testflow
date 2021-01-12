@@ -23,7 +23,7 @@ const ChannelFilterPropertyParamKey = "filter_property"
 // @Produce json
 // @Param project_id path integer true "Project ID"
 // @Param channel query string true "Channel"
-// @Success 200 {string} json "{"result": model.ChannelConfigResult, "refreshed_at": timestamp}"
+// @Success 200 {string} json "{"result": model.ChannelConfigResult"
 // @Router /{project_id}/v1/channels/config [get]
 func GetChannelConfigHandler(c *gin.Context) {
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
@@ -53,7 +53,7 @@ func GetChannelConfigHandler(c *gin.Context) {
 // @Param channel query string true "Channel"
 // @Param filter_object query string true "campaign"
 // @Param filter_property query string true "name"
-// @Success 200 {string} json "{"result": model.ChannelFilterValues, "refreshed_at": timestamp}"
+// @Success 200 {string} json "{"result": model.ChannelFilterValues}"
 // @Router /{project_id}/v1/channels/filter_values [get]
 func GetChannelFilterValuesHandler(c *gin.Context) {
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
@@ -89,8 +89,8 @@ func GetChannelFilterValuesHandler(c *gin.Context) {
 // @Param project_id path integer true "Project ID"
 // @Param dashboard_id query integer false "Dashboard ID"
 // @Param dashboard_unit_id query integer false "Dashboard Unit ID"
-// @Param query body model.ChannelQueryGroupV1 true "Query payload"
-// @Success 200 {string} json "{result:M.ChannelResultGroupV1"
+// @Param query body model.ChannelGroupQueryV1 true "Query payload"
+// @Success 200 {string} json "{result:M.ChannelResultGroupV1}"
 // @Router /{project_id}/v1/channels/query [post]
 func ExecuteChannelQueryHandler(c *gin.Context) {
 	r := c.Request

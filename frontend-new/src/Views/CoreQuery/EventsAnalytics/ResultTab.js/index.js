@@ -199,8 +199,8 @@ function ResultTab({
 
   return (
     <div className="total-events w-full">
-      <div className="flex items-center justify-between">
-        {durationContent}
+      <div className="flex items-center justify-end">
+        {/* {durationContent} */}
         <div className="flex items-center justify-end">
           {breakdownTypeContent}
           <ChartTypeDropdown

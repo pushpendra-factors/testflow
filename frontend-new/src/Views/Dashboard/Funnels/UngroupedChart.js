@@ -25,6 +25,7 @@ function UngroupedChart({
         <Chart
           title={title}
           chartData={chartData}
+          cardSize={unit.cardSize}
         />
       </div>
     );

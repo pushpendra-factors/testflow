@@ -7,7 +7,7 @@ import {
   generateColors,
 } from "../../../../utils/dataFormatter";
 
-function Chart({ chartData, title = "chart" }) {
+function Chart({ chartData, title = "chart", cardSize = 1 }) {
   const chartRef = useRef(null);
   const tooltip = useRef(null);
   const appliedColors = generateColors(chartData.length);
@@ -101,7 +101,11 @@ function Chart({ chartData, title = "chart" }) {
       .selectAll("g.tick")
       .nodes();
     const topGridLine = yGridLines[yGridLines.length - 1];
+    const secondLastGridLine = yGridLines[yGridLines.length - 2];
     const top = topGridLine.getBoundingClientRect().y;
+    const height =
+      secondLastGridLine.getBoundingClientRect().y -
+      topGridLine.getBoundingClientRect().y;
     const scrollTop =
       window.pageYOffset !== undefined
         ? window.pageYOffset
@@ -112,6 +116,7 @@ function Chart({ chartData, title = "chart" }) {
           ).scrollTop;
     const conversionText = document.getElementById(`conversionText-${title}`);
     conversionText.style.left = `${lastBarPosition.x}px`;
+    conversionText.style.height = `${height}px`;
     conversionText.style.width = `${lastBarPosition.width}px`;
     conversionText.style.top = `${top + scrollTop}px`;
   }, [title]);
@@ -224,11 +229,11 @@ function Chart({ chartData, title = "chart" }) {
       })
 
       .attr("y", function (d) {
-        return yScale(d.value) < 225 ? yScale(d.value) + 20 : 225;
+        return yScale(d.value) < 200 ? yScale(d.value) + 20 : 220;
       })
       .attr("class", "font-bold")
       .attr("fill", function (d) {
-        return yScale(d.value) < 225 ? "white" : "black";
+        return yScale(d.value) < 200 ? "white" : "black";
       })
       .attr("text-anchor", "middle");
 
@@ -315,40 +320,53 @@ function Chart({ chartData, title = "chart" }) {
     <div id={`${title}-ungroupedChart`} className="ungrouped-chart">
       <div
         id={`conversionText-${title}`}
-        className="absolute flex justify-end pr-1"
+        className="absolute flex items-center justify-end pr-1"
       >
         <div className={styles.conversionText}>
           <div className="font-semibold flex justify-end">
             {chartData[chartData.length - 1].value}%
           </div>
-          <div className="font-normal">Conversion</div>
+          {cardSize ? <div className="font-normal">Conversion</div> : null}
         </div>
       </div>
 
       {percentChanges.map((change, index) => {
         return (
           <div
-            className={`absolute flex flex-col items-center ${styles.changePercents}`}
+            className={`absolute flex justify-center items-center ${styles.changePercents}`}
             id={`${title}-change${index}`}
             key={index}
           >
-            <div className="flex justify-center">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 18 18"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M2.64045 1.27306C2.37516 0.788663 1.76742 0.61104 1.28302 0.876329C0.798626 1.14162 0.621004 1.74936 0.886293 2.23376L5.29748 10.2882C5.55527 10.7589 6.13864 10.9422 6.6193 10.7036L9.91856 9.06529L13.0943 14.1005L11.318 15.1145C10.9341 15.3337 11.0026 15.9067 11.4273 16.0292L15.4142 17.1791C15.6796 17.2556 15.9567 17.1025 16.0332 16.8372L17.2161 12.736C17.3405 12.3047 16.8776 11.9407 16.4878 12.1632L14.8329 13.108L11.1285 7.23455C10.8548 6.80069 10.2973 6.64423 9.83789 6.87235L6.59021 8.48501L2.64045 1.27306Z"
-                  fill="#8692A3"
-                />
-              </svg>
+            <div className="flex items-center justify-center mr-1">
+              {cardSize ? (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <g clip-path="url(#clip0)">
+                    <path
+                      d="M13.8306 19.0713C14.3815 19.0713 14.8281 18.6247 14.8281 18.0737C14.8281 17.5232 14.3822 17.0768 13.8316 17.0762L8.34395 17.0702L19.0708 6.34337C19.4613 5.95285 19.4613 5.31968 19.0708 4.92916C18.6802 4.53863 18.0471 4.53863 17.6565 4.92916L6.92974 15.656V10.1683C6.92974 9.6146 6.47931 9.16632 5.92565 9.16828C5.37474 9.17022 4.92863 9.61737 4.92863 10.1683L4.92862 18.0713C4.92863 18.6236 5.37634 19.0713 5.92863 19.0713L13.8306 19.0713Z"
+                      fill="#8692A3"
+                    />
+                  </g>
+                  <defs>
+                    <clipPath id="clip0">
+                      <rect width="24" height="24" fill="white" />
+                    </clipPath>
+                  </defs>
+                </svg>
+              ) : null}
             </div>
-            <div className="flex justify-center">{change}%</div>
+            <div
+              className={`leading-4 flex justify-center ${
+                !cardSize ? "text-xs" : ""
+              }`}
+            >
+              {change}%
+            </div>
           </div>
         );
       })}

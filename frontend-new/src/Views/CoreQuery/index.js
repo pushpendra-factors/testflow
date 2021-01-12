@@ -106,6 +106,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     camp_measures,
     camp_filters,
     camp_groupBy,
+    camp_dateRange,
+    attr_dateRange
   } = useSelector((state) => state.coreQuery);
 
   const dateRange = queryOptions.date_range;
@@ -460,7 +462,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
           touchpoint,
           models,
           window,
-          linkedEvents
+          linkedEvents,
+          attr_dateRange
         );
         updateRequestQuery(query);
         setAttributionsState({ eventGoal, touchpoint, models, linkedEvents });
@@ -485,15 +488,13 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       models,
       touchpoint,
       window,
+      attr_dateRange
     ]
   );
 
   const runCampaignsQuery = useCallback(
-    async (isQuerySaved, appliedDateRange) => {
+    async (isQuerySaved) => {
       try {
-        if (!appliedDateRange) {
-          appliedDateRange = dateRange;
-        }
         closeDrawer();
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         setShowResult(true);
@@ -506,7 +507,8 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
           camp_channels,
           camp_measures,
           camp_filters,
-          camp_groupBy
+          camp_groupBy,
+          camp_dateRange
         );
         setCampaignState({
           channel: query.query_group[0].channel,
@@ -535,7 +537,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       camp_filters,
       camp_groupBy,
       camp_channels,
-      dateRange
+      camp_dateRange
     ]
   );
 
