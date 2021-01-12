@@ -20,14 +20,21 @@
 #     notify-deployment:
 #         $(GOPATH)/src/factors/scripts/notify_deployment.sh
 
-if [[ "${ENV}" != "production" ]]; then
-    exit
-elif [[ "${IMAGE_NAME}" == "" || ${CHANNEL_TOKEN} == "" ]]; then
-    echo "ERROR: Value for IMAGE_NAME or CHANNEL_TOKEN can not be empty."
+if [[ "${ENV}" == "staging" ]]; then
+    CHANNEL_TOKEN="TUD3M48AV/B01J5U9TT2P/TdUBfGLSD3OVUdxA25l7s5Bh"
+    PROJECT_ID="factors-staging"
+else if [[ "${ENV}" == "production" ]]; then
+    CHANNEL_TOKEN="TUD3M48AV/B01AH1YR5JP/9UXlvfv511KdEI5mOsQkMWYi"
+    PROJECT_ID="factors-production"
+else
+    echo "ERROR: Invalid environment ${ENV}."
     exit -1
 fi
 
-PROJECT_ID="factors-production"
+if [[ "${IMAGE_NAME}" == "" || ${CHANNEL_TOKEN} == "" ]]; then
+    echo "ERROR: Value for IMAGE_NAME or CHANNEL_TOKEN can not be empty."
+    exit -1
+fi
 
 echo "Pulling all tags from repository ..."
 all_image_tags=`gcloud container images list-tags us.gcr.io/${PROJECT_ID}/${IMAGE_NAME}`
@@ -77,12 +84,17 @@ if [[ "${lines_to_delete}" != "" ]]; then
 fi
 
 deployer_email=`gcloud config list account --format "value(core.account)" 2> /dev/null`
+branch_name=`git branch --show-current`
 
 # TODO(prateek): Make alert more rich in terms of tagging and blocks.
 echo "Sending alert on slack"
 payload="-------------------------------------------------------------
-*Deployment initiated for ${IMAGE_NAME}. By ${deployer_email}*.
-${highlights}"
+*Deployment initiated for ${IMAGE_NAME}. By ${deployer_email} from branch '${branch_name}'*."
+
+# If production, add commit hightlights for the deployment.
+if [[ "${ENV}" == "production" ]]; then
+    payload=`echo "${payload}\n${highlights}"`
+fi
 
 # Escape double quotes from payload.
 payload=`echo "${payload}" | sed 's/"/\\\"/g'`
