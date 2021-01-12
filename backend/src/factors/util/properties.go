@@ -789,7 +789,11 @@ var ITREE_PROPERTIES_TO_IGNORE = map[string]bool{
 	UP_JOIN_TIME:       true,
 	"_$joinTime":       true,
 	// Old incorrect property.
-	"$session": true,
+	"$session":              true,
+	UP_BROWSER_WITH_VERSION: true,
+	UP_USER_AGENT:           true,
+	UP_BROWSER:              true,
+	EP_IS_PAGE_VIEW:         true,
 
 	UP_INITIAL_PAGE_DOMAIN:  true,
 	UP_INITIAL_PAGE_URL:     true,
@@ -798,7 +802,8 @@ var ITREE_PROPERTIES_TO_IGNORE = map[string]bool{
 	EP_PAGE_URL:             true,
 	EP_PAGE_RAW_URL:         true,
 	EP_PAGE_TITLE:           true,
-
+	EP_DAY_OF_WEEK:          true,
+	EP_HOUR_OF_DAY:          true,
 	// Temporary fix.
 	EP_REFERRER:                    true,
 	EP_REFERRER_URL:                true,
