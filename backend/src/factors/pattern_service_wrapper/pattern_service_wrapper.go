@@ -535,15 +535,15 @@ func buildFunnelFormats(node *ItreeNode, countType string) (
 				if allConstraintsCount > 1 {
 					funnelEvents = append([]string{U.SEN_ALL_ACTIVE_USERS}, funnelEvents...)
 					var baseNodeConstraint P.EventConstraints
-					deepCopy(&funnelConstraints[0], &baseNodeConstraint)
-					funnelConstraints = append([]P.EventConstraints{baseNodeConstraint}, funnelConstraints...)
+					funnelConstraints = append(funnelConstraints, baseNodeConstraint)
 					pLen++
 				} else {
 					// Prepend AllActiveUsers to the begining.
 					// When length 1, the added constraint is collapsed on endEvent and needs to
 					// be removed from endEvent and moved to AllActiveUsers.
 					funnelEvents = append([]string{U.SEN_ALL_ACTIVE_USERS}, funnelEvents...)
-					funnelConstraints = append([]P.EventConstraints{node.AddedConstraint}, funnelConstraints...)
+					var baseNodeConstraint P.EventConstraints
+					funnelConstraints = append(funnelConstraints, baseNodeConstraint)
 					pLen++
 				}
 			} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
@@ -1123,6 +1123,14 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 		for _, insight := range levelInsightsMap[i] {
 			parent := indexLevelInsightsMap[insight.parentIndex]
 			child := indexLevelInsightsMap[insight.index]
+			if i > 1 {
+				if child.FactorsInsightsPercentage > parent.FactorsInsightsPercentage {
+					child.FactorsMultiplierIncreaseFlag = true
+				} else {
+					child.FactorsMultiplierIncreaseFlag = false
+				}
+				child.FactorsInsightsMultiplier = roundTo1Decimal(child.FactorsInsightsPercentage / parent.FactorsInsightsPercentage)
+			}
 			if parent.FactorsInsightsType == "" || isValidInsightTransition(parent.FactorsInsightsType, child.FactorsInsightsType) {
 				subInsights := parent.FactorsSubInsights
 				subInsights = append(subInsights, trimChildNode(parent.FactorsInsightsType, child.FactorsInsightsType, parent, child))
