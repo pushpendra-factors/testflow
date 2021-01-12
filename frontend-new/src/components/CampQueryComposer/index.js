@@ -241,14 +241,14 @@ const CampQueryComposer = ({activeProject, channel,
 
       const setDateRange = (ranges) => {
         const dtRange = Object.assign({}, dateRange);
-        if(ranges && ranges.startDate && ranges.endDate) {
+        if(ranges && ranges.startDate) {
             if(Array.isArray(ranges.startDate)) {
                 dtRange.from = ranges.startDate[0]
+                dtRange.to = ranges.startDate[1];
             } else {
                 dtRange.from = ranges.startDate;
+                dtRange.to = ranges.endDate;
             }
-
-            dtRange.to = ranges.endDate;
         }
 
         setCampDateRange(dtRange);
