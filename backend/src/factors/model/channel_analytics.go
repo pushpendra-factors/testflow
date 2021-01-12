@@ -186,19 +186,15 @@ var CAFilters = []string{
 	CAFilterAdset,
 }
 
-var selectableMetricsForAllChannels = []string{"impressions", "clicks", "spend", "cost_per_click"}
-var selectableMetricsForAdwords = []string{"conversion", "conversion_rate"}
-
-var objectsForAllChannels = []string{"campaign", "ad_group", "ad"}
-var objectsForAdwords = []string{"keywords"}
+// TODO: Move and fetch it from respective channels - allChannels, adwords etc.. because this is error prone.
+var selectableMetricsForAllChannels = []string{"impressions", "clicks", "spend"}
+var objectsForAllChannels = []string{CAFilterCampaign, CAFilterAdGroup}
 
 // PropertiesAndRelated - TODO Kark v1
 type PropertiesAndRelated struct {
 	typeOfProperty string // can be categorical or numerical
 }
 
-// Should we add the metrics to this as well?
-// Second, this is not presentAsHash. So re-evaluate and think.
 var allChannelsPropertyToRelated = map[string]PropertiesAndRelated{
 	"name": PropertiesAndRelated{
 		typeOfProperty: U.PropertyTypeCategorical,
@@ -268,43 +264,13 @@ func isValidChannel(channel string) bool {
 
 // @TODO Kark v1
 func buildAllChannelConfig() *ChannelConfigResult {
-	objectsAndProperties := buildCommonObjectsAndProperties()
-
-	return &ChannelConfigResult{
-		SelectMetrics:        selectableMetricsForAllChannels,
-		ObjectsAndProperties: objectsAndProperties,
-	}
-}
-
-// @TODO Kark v1
-func buildFbChannelConfig() *ChannelConfigResult {
-	objectsAndProperties := buildCommonObjectsAndProperties()
-
-	return &ChannelConfigResult{
-		SelectMetrics:        selectableMetricsForAllChannels,
-		ObjectsAndProperties: objectsAndProperties,
-	}
-}
-
-// @TODO Kark v1
-func buildAdwordsChannelConfig() *ChannelConfigResult {
-	commonObjectsAndProperties := buildCommonObjectsAndProperties()
-
-	properties := buildProperties()
-	objectsAndPropertiesForAdwords := buildObjectsAndProperties(properties, objectsForAdwords)
-	allObjectsAndProperties := append(commonObjectsAndProperties, objectsAndPropertiesForAdwords...)
-	selectMetrics := append(selectableMetricsForAllChannels, selectableMetricsForAdwords...)
-	return &ChannelConfigResult{
-		SelectMetrics:        selectMetrics,
-		ObjectsAndProperties: allObjectsAndProperties,
-	}
-}
-
-// @TODO Kark v1
-func buildCommonObjectsAndProperties() []ObjectAndProperties {
-	properties := buildProperties()
+	properties := buildProperties(allChannelsPropertyToRelated)
 	objectsAndProperties := buildObjectsAndProperties(properties, objectsForAllChannels)
-	return objectsAndProperties
+
+	return &ChannelConfigResult{
+		SelectMetrics:        selectableMetricsForAllChannels,
+		ObjectsAndProperties: objectsAndProperties,
+	}
 }
 
 // @TODO Kark v1
@@ -320,10 +286,9 @@ func buildObjectsAndProperties(properties []Property, filterObjectNames []string
 }
 
 // @TODO Kark v1
-// Currently its common for AllChannels and Individual Channels.
-func buildProperties() []Property {
+func buildProperties(propertiesAndRelated map[string]PropertiesAndRelated) []Property {
 	var properties []Property
-	for propertyName, propertyRelated := range allChannelsPropertyToRelated {
+	for propertyName, propertyRelated := range propertiesAndRelated {
 		var property Property
 		property.Name = propertyName
 		property.Type = propertyRelated.typeOfProperty
@@ -415,6 +380,7 @@ func runSingleChannelQuery(projectID uint64, query ChannelQueryV1, resultHolder 
 // TODO error handling.
 func ExecuteChannelQueryV1(projectID uint64, query *ChannelQueryV1, reqID string) (*ChannelQueryResultV1, int) {
 	queryResult := &ChannelQueryResultV1{}
+	status := http.StatusOK
 	if !(isValidChannel(query.Channel)) {
 		return queryResult, http.StatusBadRequest
 	}
@@ -426,12 +392,14 @@ func ExecuteChannelQueryV1(projectID uint64, query *ChannelQueryV1, reqID string
 	// 	result = ExecuteFacebookChannelQueryV1()
 	case CAChannelGoogleAds:
 		columns := buildColumns(query)
-		_, resultMetrics, _ := ExecuteAdwordsChannelQueryV1(projectID, query, reqID)
+		_, resultMetrics, err := ExecuteAdwordsChannelQueryV1(projectID, query, reqID)
 		queryResult.Headers = columns
 		queryResult.Rows = resultMetrics
+		if err != nil {
+			status = http.StatusBadRequest
+		}
 	}
-
-	return queryResult, http.StatusOK
+	return queryResult, status
 }
 
 // GetChannelFilterValues - @Kark TODO v0
