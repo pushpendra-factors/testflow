@@ -10,11 +10,18 @@ import (
 	"data_simulator/utils"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"strings"
 
 	"cloud.google.com/go/storage"
 )
+
+func Hash(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
+}
 
 func ExtractUserData(data string) (string, map[string]string) {
 	split := strings.Split(data, " ")

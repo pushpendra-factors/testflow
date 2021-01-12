@@ -30,7 +30,7 @@ func DataServiceAdwordsAddDocumentHandler(c *gin.Context) {
 
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode,
-			gin.H{"error": "Falied creating adwords document."})
+			gin.H{"error": "Failed creating adwords document."})
 		return
 	}
 

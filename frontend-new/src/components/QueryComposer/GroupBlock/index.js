@@ -59,7 +59,7 @@ function GroupBlock({
   const renderInitGroupSelect = (index) => {
     return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
       {!isDDVisible[index] &&
-        <Button size={'large'} type="link" onClick={() => triggerDropDown(index)}><SVG name="plus" /> Select user property</Button> }
+        <Button size={'large'} type="link" onClick={() => triggerDropDown(index)}><SVG name="plus" extraClass={`mr-2`} /> Add new </Button> }
       {isDDVisible[index]
         ? (<GroupSelect groupedProperties={filterOptions}
           placeholder="Select Property"
@@ -81,7 +81,7 @@ function GroupBlock({
     return (groupByState.global.map((opt, index) => (
       <div key={index} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
         {!isDDVisible[index] && <>
-        <Button size={'small'}
+        <Button size={'large'}
         type="text"
         onClick={() => delOption(index)}
         className={`${styles.group_block__remove} mr-2ß`}>

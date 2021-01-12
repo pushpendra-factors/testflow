@@ -24,12 +24,12 @@ const InsightItem = ({
 
         let insightKey = generateInsightKey(dataItem);
         
-         let factors_insights_text = `of which users who perform <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}% goal completion`
+         let factors_insights_text = `of which users who perform <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion`
          if(dataItem.factors_insights_type=='attribute'){
-           factors_insights_text = `Users with <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}% goal completion` 
+           factors_insights_text = `Users with <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion` 
           }
           if(dataItem.factors_insights_type=='campaign'){
-            factors_insights_text = `of which users from <a>${insightKey}</a> show ${dataItem.factors_insights_multiplier}% goal completion` 
+            factors_insights_text = `of which users from <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion` 
           }
 
         
@@ -110,7 +110,7 @@ const InsightItem = ({
                                   <div className={'fa-insights-box--spike'}>
                                       <div className={'flex justify-end items-center'}>
                                         <div className={'flex flex-col items-end mr-4'}>
-                                          <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 fa-insights-box--multiplier'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
+                                          <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 fa-insights-box--multiplier pt-2'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
                                           <Text type={'title'} color={'grey'} level={7} extraClass={'m-0 fa-insights-box--label'} >{`Impact`}</Text> 
                                         </div>
                                         {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}

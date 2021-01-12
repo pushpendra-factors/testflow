@@ -22,7 +22,6 @@ import {
 } from './DateRangeSelector/utils';
 
 import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
-import FaSelect from '../FaSelect';
 
 const { Option } = Select;
 

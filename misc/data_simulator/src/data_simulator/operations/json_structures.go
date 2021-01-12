@@ -12,3 +12,12 @@ type EventOutput struct {
 	UserAttributes  map[string]interface{} `json:"user_properties"`
 	EventAttributes map[string]interface{} `json:"event_properties"`
 }
+
+type AdwordsDocument struct {
+	ProjectID         uint64            `json:"project_id"`
+	CustomerAccountID string            `json:"customer_acc_id"`
+	TypeAlias         string            `json:"type_alias"`
+	Timestamp         int64             `json:"timestamp"`
+	ID                string            `json:"id"`
+	Value             map[string]string `json:"value"`
+}
