@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -248,9 +249,10 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 	adwordsDoc.ID = adwordsDocID
 
 	db := C.GetServices().Db
+	// TODO: Use gorm.Create method, instead of INSERT query string.
 	queryStr := "INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,campaign_id,ad_group_id,ad_id,keyword_id,value,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	rows, err := db.Raw(queryStr, adwordsDoc.ProjectID, adwordsDoc.CustomerAccountID,
-		adwordsDoc.Type, adwordsDoc.Timestamp, adwordsDoc.ID, campaignIDValue, adGroupIDValue, adIDValue, keywordIDValue, adwordsDoc.Value, time.Now().UTC(), time.Now().UTC()).Rows()
+		adwordsDoc.Type, adwordsDoc.Timestamp, adwordsDoc.ID, campaignIDValue, adGroupIDValue, adIDValue, keywordIDValue, adwordsDoc.Value, gorm.NowFunc(), gorm.NowFunc()).Rows()
 	if err != nil {
 		if isDuplicateAdwordsDocumentError(err) {
 			logCtx.WithError(err).WithField("id", adwordsDoc.ID).Error(
