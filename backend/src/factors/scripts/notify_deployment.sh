@@ -23,7 +23,7 @@
 if [[ "${ENV}" == "staging" ]]; then
     CHANNEL_TOKEN="TUD3M48AV/B01J5U9TT2P/TdUBfGLSD3OVUdxA25l7s5Bh"
     PROJECT_ID="factors-staging"
-else if [[ "${ENV}" == "production" ]]; then
+elif [[ "${ENV}" == "production" ]]; then
     CHANNEL_TOKEN="TUD3M48AV/B01AH1YR5JP/9UXlvfv511KdEI5mOsQkMWYi"
     PROJECT_ID="factors-production"
 else

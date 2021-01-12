@@ -152,7 +152,7 @@ func main() {
 
 	bulk_load_url := flag.String("bulk_load_url", "/sdk/event/track/bulk", "")
 	get_user_id_url := flag.String("get_user_id_url", "/sdk/user/identify", "")
-	adwords_add_doc_url := flag.String("adwords_add_doc_url", "/data_service/adwords/documents/add", "")
+	adwords_add_doc_url := flag.String("adwords_add_doc_url", "/sdk/adwords/documents/add", "")
 	bulkLoadUrl = *(bulk_load_url)
 	getUserIdUrl = *(get_user_id_url)
 	adwordsAddDocUrl = *(adwords_add_doc_url)
@@ -200,7 +200,7 @@ func main() {
 	var events_prod []operations.EventOutput
 
 	// processing events data
-	// ProcessEventsFiles(env, dataConfig, endpoint_staging, authToken_staging, events_staging, endpoint_prod, authToken_prod, events_prod)
+	ProcessEventsFiles(env, dataConfig, endpoint_staging, authToken_staging, events_staging, endpoint_prod, authToken_prod, events_prod)
 
 	// processing adwords data
 	ProcessAdwordsDataFromEventsFiles(executionDate, env, dataConfig, endpoint_staging, authToken_staging, events_staging, endpoint_prod, authToken_prod, events_prod)
