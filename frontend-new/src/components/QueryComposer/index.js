@@ -211,11 +211,12 @@ function QueryComposer({
     if (dates && dates.startDate && dates.endDate) {
       if(Array.isArray(dates.startDate)) {
         queryOptionsState.date_range.from = dates.startDate[0];
+        queryOptionsState.date_range.to = dates.startDate[1];
       } else {
         queryOptionsState.date_range.from = dates.startDate;
+        queryOptionsState.date_range.to = dates.endDate;
       }
-      queryOptionsState.date_range.to = dates.endDate;
-      if(moment(dates.endDate).diff(dates.startDate, 'hours') <= 24) {
+      if(moment(queryOptionsState.date_range.to).diff(queryOptionsState.date_range.from, 'hours') <= 24) {
         queryOptionsState.date_range.frequency = 'hour';
       } else {
         queryOptionsState.date_range.frequency = 'date';
