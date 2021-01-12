@@ -18,6 +18,9 @@ export const numberWithCommas = (x) => {
 };
 
 export const calculatePercentage = (numerator, denominator, precision = 1) => {
+  if (!denominator) {
+    return 0;
+  }
   const result = (numerator / denominator) * 100;
   return result % 1 !== 0 ? result.toFixed(precision) : result;
 };
@@ -135,4 +138,4 @@ export const generateColors = (requiredCumberOfColors) => {
 
 export const formatCount = (count, precision) => {
   return count % 1 !== 0 ? count.toFixed(precision) : count;
-}
+};

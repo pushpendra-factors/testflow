@@ -7,7 +7,8 @@ import BasicSettings from './BasicSettings';
 import SDKSettings from './SDKSettings';
 import UserSettings from './UserSettings';
 import IntegrationSettings from './IntegrationSettings';
-// import { fetchProjectAgents } from 'Reducers/agentActions';
+import Events from './Events';
+import { fetchSmartEvents } from 'Reducers/events';
 import { connect } from 'react-redux';
 
 const MenuTabs = {
@@ -15,10 +16,11 @@ const MenuTabs = {
   SDK: 'Javascript SDK',
   Users: 'Users',
   Integrations: 'Integrations',
-  EventAlias: 'Event Alias'
+  EventAlias: 'Event Alias',
+  Events:'Events'
 };
 
-function ProjectSettings({ activeProject }) {
+function ProjectSettings({ activeProject, fetchSmartEvents }) {
   const [selectedMenu, setSelectedMenu] = useState(MenuTabs.generalSettings);
   // const [editPasswordModal, setPasswordModal] = useState(false);
   // const [editDetailsModal, setDetailsModal] = useState(false);
@@ -26,8 +28,8 @@ function ProjectSettings({ activeProject }) {
 
   const handleClick = (e) => {
     setSelectedMenu(e.key);
-    if (e.key === MenuTabs.Users) {
-      // fetchProjectAgents(activeProjectID);
+    if (e.key === MenuTabs.Events) {
+      fetchSmartEvents(activeProject.id);
     }
   };
 
@@ -62,6 +64,7 @@ function ProjectSettings({ activeProject }) {
               <Menu.Item key={MenuTabs.SDK}>{MenuTabs.SDK}</Menu.Item>
               <Menu.Item key={MenuTabs.Users}>{MenuTabs.Users}</Menu.Item>
               <Menu.Item key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item>
+              <Menu.Item key={MenuTabs.Events}>{MenuTabs.Events}</Menu.Item>
             </Menu>
 
           </Col>
@@ -70,6 +73,7 @@ function ProjectSettings({ activeProject }) {
             {selectedMenu === MenuTabs.SDK && <SDKSettings /> }
             {selectedMenu === MenuTabs.Users && <UserSettings /> }
             {selectedMenu === MenuTabs.Integrations && <IntegrationSettings /> }
+            {selectedMenu === MenuTabs.Events && <Events /> }
           </Col>
         </Row>
       </div>
@@ -83,4 +87,4 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project
 });
 
-export default connect(mapStateToProps)(ProjectSettings);
+export default connect(mapStateToProps, {fetchSmartEvents})(ProjectSettings);
