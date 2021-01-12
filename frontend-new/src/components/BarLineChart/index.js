@@ -76,11 +76,11 @@ function BarLineChart({
           <div style="font-weight: 600;font-size: 10px;line-height: 16px;color: #8692A3;">CONVERSIONS</div>
           <div style="font-weight: 600;font-size: 12px;line-height: 16px;" class="mt-2 flex justify-between">
             <div style="color: #4D7DB4">OPPORTUNITIES</div>
-            <div style="color: #3E516C;">${formatCount(d[1], 1)}</div>
+            <div style="color: #3E516C;">${formatCount(d[2], 1)}</div>
           </div>
           <div style="font-weight: 600;font-size: 12px;line-height: 16px;" class="mt-2 flex justify-between">
             <div style="color: #D4787D">COST PER CONVERSION</div>
-            <div style="color: #3E516C;">${formatCount(d[2], 1)}</div>
+            <div style="color: #3E516C;">${formatCount(d[1], 1)}</div>
           </div>
         </div>
         <div style="font-size: 12px;line-height: 18px;color: #3E516C;">

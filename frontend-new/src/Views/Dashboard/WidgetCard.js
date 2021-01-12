@@ -11,6 +11,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
 
 function WidgetCard({
@@ -37,11 +38,18 @@ function WidgetCard({
         let queryType;
 
         if (unit.query.query.query_group) {
-          queryType = QUERY_TYPE_EVENT;
+          if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_CAMPAIGN) {
+            queryType = QUERY_TYPE_CAMPAIGN;
+          } else {
+            queryType = QUERY_TYPE_EVENT;
+          }
           if (durationObj.frequency === "hour") {
             refresh = true;
           }
-        } else if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_ATTRIBUTION) {
+        } else if (
+          unit.query.query.cl &&
+          unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
+        ) {
           queryType = QUERY_TYPE_ATTRIBUTION;
         } else {
           queryType = QUERY_TYPE_FUNNEL;
@@ -65,6 +73,11 @@ function WidgetCard({
           setResultState({
             ...initialState,
             data: res.data,
+          });
+        } else if(queryType === QUERY_TYPE_CAMPAIGN) {
+          setResultState({
+            ...initialState,
+            data: res.data.result,
           });
         } else {
           if (refresh) {

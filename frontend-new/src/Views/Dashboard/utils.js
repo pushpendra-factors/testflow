@@ -3,8 +3,12 @@ import {
   runQuery,
   getFunnelData,
   getAttributionsData,
+  getCampaignsData,
 } from "../../reducers/coreQuery/services";
-import { QUERY_TYPE_ATTRIBUTION } from "../../utils/constants";
+import {
+  QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_CAMPAIGN,
+} from "../../utils/constants";
 
 export const getDataFromServer = (
   query,
@@ -15,6 +19,8 @@ export const getDataFromServer = (
   activeProjectId
 ) => {
   if (query.query.query_group) {
+    const isCampaignQuery =
+      query.query.cl && query.query.cl === QUERY_TYPE_CAMPAIGN;
     let queryGroup = query.query.query_group;
     if (durationObj.from && durationObj.to) {
       queryGroup = queryGroup.map((elem) => {
@@ -22,7 +28,11 @@ export const getDataFromServer = (
           ...elem,
           fr: moment(durationObj.from).startOf("day").utc().unix(),
           to: moment(durationObj.to).endOf("day").utc().unix(),
-          gbt: elem.gbt ? durationObj.frequency : "",
+          gbt: elem.gbt
+            ? isCampaignQuery
+              ? "date"
+              : durationObj.frequency
+            : "",
         };
       });
     } else {
@@ -34,18 +44,41 @@ export const getDataFromServer = (
             moment().format("dddd") !== "Sunday"
               ? moment().subtract(1, "day").endOf("day").utc().unix()
               : moment().utc().unix(),
-          gbt: elem.gbt ? durationObj.frequency : "",
+          gbt: elem.gbt
+            ? isCampaignQuery
+              ? "date"
+              : durationObj.frequency
+            : "",
         };
       });
     }
-    if (refresh) {
-      return runQuery(activeProjectId, queryGroup);
+    if (isCampaignQuery) {
+      if (refresh) {
+        return getCampaignsData(activeProjectId, {
+          query_group: queryGroup,
+          cl: QUERY_TYPE_CAMPAIGN,
+        });
+      } else {
+        return getCampaignsData(
+          activeProjectId,
+          { query_group: queryGroup, cl: QUERY_TYPE_CAMPAIGN },
+          {
+            refresh,
+            unit_id: unitId,
+            id: dashboardId,
+          }
+        );
+      }
     } else {
-      return runQuery(activeProjectId, queryGroup, {
-        refresh: false,
-        unit_id: unitId,
-        id: dashboardId,
-      });
+      if (refresh) {
+        return runQuery(activeProjectId, queryGroup);
+      } else {
+        return runQuery(activeProjectId, queryGroup, {
+          refresh,
+          unit_id: unitId,
+          id: dashboardId,
+        });
+      }
     }
   } else if (query.query.cl && query.query.cl === QUERY_TYPE_ATTRIBUTION) {
     let attributionQuery = query.query;

@@ -28,9 +28,10 @@ function LineChart({
 
   if (xAxisCount > 10) {
     xAxisCount = 10;
-    if (!cardSize) {
-      xAxisCount = 5;
-    }
+  }
+
+  if (!cardSize && xAxisCount > 5) {
+    xAxisCount = 5;
   }
 
   const modVal = Math.ceil(xAxisValues.length / xAxisCount);

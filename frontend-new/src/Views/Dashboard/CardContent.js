@@ -4,6 +4,7 @@ import {
   getStateQueryFromRequestQuery,
   presentationObj,
   getAttributionStateFromRequestQuery,
+  getCampaignStateFromRequestQuery,
 } from "../CoreQuery/utils";
 import EventsAnalytics from "./EventsAnalytics";
 import Funnels from "./Funnels";
@@ -11,8 +12,10 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
   QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
 import Attributions from "./Attributions";
+import CampaignAnalytics from "./CampaignAnalytics";
 
 function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
   let content = null;
@@ -36,9 +39,17 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
   if (resultState.data) {
     let equivalentQuery;
     if (unit.query.query.query_group) {
-      equivalentQuery = getStateQueryFromRequestQuery(
-        unit.query.query.query_group[0]
-      );
+      const isCampaignQuery =
+        unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_CAMPAIGN;
+      if (isCampaignQuery) {
+        equivalentQuery = getCampaignStateFromRequestQuery(
+          unit.query.query.query_group[0]
+        );
+      } else {
+        equivalentQuery = getStateQueryFromRequestQuery(
+          unit.query.query.query_group[0]
+        );
+      }
     } else if (
       unit.query.query.cl &&
       unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
@@ -55,7 +66,9 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       eventsMapper = {},
       reverseEventsMapper = {},
       arrayMapper = [],
-      attributionsState;
+      attributionsState,
+      campaignState;
+
     const { queryType } = equivalentQuery;
     if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
       breakdown = [
@@ -81,6 +94,22 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
         models: equivalentQuery.models,
         linkedEvents: equivalentQuery.linkedEvents,
       };
+    }
+
+    if (queryType === QUERY_TYPE_CAMPAIGN) {
+      campaignState = {
+        channel: unit.query.query.query_group[0].channel,
+        filters: unit.query.query.query_group[0].filters,
+        select_metrics: unit.query.query.query_group[0].select_metrics,
+        group_by: unit.query.query.query_group[0].group_by,
+      };
+      arrayMapper = campaignState.select_metrics.map((metric, index) => {
+        return {
+          eventName: metric,
+          index,
+          mapper: `event${index + 1}`,
+        };
+      });
     }
 
     let dashboardPresentation = "pl";
@@ -134,6 +163,20 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           setwidgetModal={setwidgetModal}
           attributionsState={attributionsState}
           chartType={presentationObj[dashboardPresentation]}
+        />
+      );
+    }
+
+    if (queryType === QUERY_TYPE_CAMPAIGN) {
+      content = (
+        <CampaignAnalytics
+          unit={unit}
+          title={unit.id}
+          resultState={resultState}
+          setwidgetModal={setwidgetModal}
+          campaignState={campaignState}
+          chartType={presentationObj[dashboardPresentation]}
+          arrayMapper={arrayMapper}
         />
       );
     }

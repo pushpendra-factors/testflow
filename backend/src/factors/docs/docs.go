@@ -2371,6 +2371,151 @@ var doc = `{
                 }
             }
         },
+        "/{project_id}/v1/channels/config": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ChannelQuery",
+                    "CoreQuery"
+                ],
+                "summary": "To get config for the required channel.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel",
+                        "name": "channel",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"result\": model.ChannelConfigResult",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/v1/channels/filter_values": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ChannelQuery",
+                    "CoreQuery"
+                ],
+                "summary": "To filter on values for channel query.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel",
+                        "name": "channel",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "campaign",
+                        "name": "filter_object",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "name",
+                        "name": "filter_property",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"result\": model.ChannelFilterValues}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/v1/channels/query": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ChannelQuery",
+                    "CoreQuery"
+                ],
+                "summary": "To run a channel query.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard ID",
+                        "name": "dashboard_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Dashboard Unit ID",
+                        "name": "dashboard_unit_id",
+                        "in": "query"
+                    },
+                    {
+                        "description": "Query payload",
+                        "name": "query",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ChannelGroupQueryV1"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{result:M.ChannelResultGroupV1}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/{project_id}/v1/dashboards/multi/{dashboard_ids}/units": {
             "post": {
                 "consumes": [
@@ -3487,15 +3632,21 @@ var doc = `{
                 "attribution_key": {
                     "type": "string"
                 },
+                "lop": {
+                    "type": "string"
+                },
                 "op": {
-                    "description": "contains or notContains",
+                    "type": "string"
+                },
+                "pr": {
+                    "type": "string"
+                },
+                "ty": {
+                    "description": "Type: categorical or numerical",
                     "type": "string"
                 },
                 "va": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                    "type": "string"
                 }
             }
         },
@@ -3576,6 +3727,20 @@ var doc = `{
                 }
             }
         },
+        "model.ChannelGroupQueryV1": {
+            "type": "object",
+            "properties": {
+                "cl": {
+                    "type": "string"
+                },
+                "query_group": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ChannelQueryV1"
+                    }
+                }
+            }
+        },
         "model.ChannelQuery": {
             "type": "object",
             "properties": {
@@ -3604,6 +3769,44 @@ var doc = `{
                 },
                 "to": {
                     "description": "unix timestamp",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ChannelQueryV1": {
+            "type": "object",
+            "properties": {
+                "channel": {
+                    "type": "string"
+                },
+                "filters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.FilterV1"
+                    }
+                },
+                "fr": {
+                    "type": "integer"
+                },
+                "gbt": {
+                    "type": "object"
+                },
+                "group_by": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.GroupBy"
+                    }
+                },
+                "select_metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "time_zone": {
+                    "type": "string"
+                },
+                "to": {
                     "type": "integer"
                 }
             }
@@ -3853,6 +4056,37 @@ var doc = `{
                     "type": "string"
                 },
                 "user_property_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.FilterV1": {
+            "type": "object",
+            "properties": {
+                "condition": {
+                    "type": "string"
+                },
+                "logical_operator": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "property": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.GroupBy": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "property": {
                     "type": "string"
                 }
             }
