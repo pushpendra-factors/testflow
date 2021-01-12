@@ -14,7 +14,7 @@ func GetCampaignPerfReportAdwordsDoc(yesterday time.Time, projectIDStage uint64,
 	values := map[string]string{}
 
 	min := 1.2
-	budgetPerClick := 10
+	budgetPerClick := 1000000 // with conversionFactor of 100k
 	probability := min + rand.Float64()
 	// 1.5 is upper limit
 	for probability > 1.5 {
@@ -22,7 +22,7 @@ func GetCampaignPerfReportAdwordsDoc(yesterday time.Time, projectIDStage uint64,
 	}
 	impressionsP := rand.Intn(5) + 8
 	campaignId := strconv.Itoa(int(Hash(campaignName)))
-	cost := strconv.Itoa(int(probability*float64(budgetPerClick)) * totalEvents)
+	cost := strconv.FormatInt(int64(probability*float64(budgetPerClick)*float64(totalEvents)), 10)
 	clicks := strconv.Itoa(int(probability * float64(totalEvents)))
 	impressions := strconv.Itoa(totalEvents * impressionsP)
 
