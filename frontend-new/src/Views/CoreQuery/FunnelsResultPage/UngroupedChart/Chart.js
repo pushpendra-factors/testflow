@@ -101,7 +101,11 @@ function Chart({ chartData, title = "chart", cardSize = 1 }) {
       .selectAll("g.tick")
       .nodes();
     const topGridLine = yGridLines[yGridLines.length - 1];
+    const secondLastGridLine = yGridLines[yGridLines.length - 2];
     const top = topGridLine.getBoundingClientRect().y;
+    const height =
+      secondLastGridLine.getBoundingClientRect().y -
+      topGridLine.getBoundingClientRect().y;
     const scrollTop =
       window.pageYOffset !== undefined
         ? window.pageYOffset
@@ -112,6 +116,7 @@ function Chart({ chartData, title = "chart", cardSize = 1 }) {
           ).scrollTop;
     const conversionText = document.getElementById(`conversionText-${title}`);
     conversionText.style.left = `${lastBarPosition.x}px`;
+    conversionText.style.height = `${height}px`;
     conversionText.style.width = `${lastBarPosition.width}px`;
     conversionText.style.top = `${top + scrollTop}px`;
   }, [title]);
@@ -224,11 +229,11 @@ function Chart({ chartData, title = "chart", cardSize = 1 }) {
       })
 
       .attr("y", function (d) {
-        return yScale(d.value) < 225 ? yScale(d.value) + 20 : 225;
+        return yScale(d.value) < 200 ? yScale(d.value) + 20 : 220;
       })
       .attr("class", "font-bold")
       .attr("fill", function (d) {
-        return yScale(d.value) < 225 ? "white" : "black";
+        return yScale(d.value) < 200 ? "white" : "black";
       })
       .attr("text-anchor", "middle");
 
@@ -315,13 +320,13 @@ function Chart({ chartData, title = "chart", cardSize = 1 }) {
     <div id={`${title}-ungroupedChart`} className="ungrouped-chart">
       <div
         id={`conversionText-${title}`}
-        className="absolute flex justify-end pr-1"
+        className="absolute flex items-center justify-end pr-1"
       >
         <div className={styles.conversionText}>
           <div className="font-semibold flex justify-end">
             {chartData[chartData.length - 1].value}%
           </div>
-          <div className="font-normal">Conversion</div>
+          {cardSize ? <div className="font-normal">Conversion</div> : null}
         </div>
       </div>
 
@@ -333,27 +338,35 @@ function Chart({ chartData, title = "chart", cardSize = 1 }) {
             key={index}
           >
             <div className="flex items-center justify-center mr-1">
-              {cardSize ? <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <g clip-path="url(#clip0)">
-                  <path
-                    d="M13.8306 19.0713C14.3815 19.0713 14.8281 18.6247 14.8281 18.0737C14.8281 17.5232 14.3822 17.0768 13.8316 17.0762L8.34395 17.0702L19.0708 6.34337C19.4613 5.95285 19.4613 5.31968 19.0708 4.92916C18.6802 4.53863 18.0471 4.53863 17.6565 4.92916L6.92974 15.656V10.1683C6.92974 9.6146 6.47931 9.16632 5.92565 9.16828C5.37474 9.17022 4.92863 9.61737 4.92863 10.1683L4.92862 18.0713C4.92863 18.6236 5.37634 19.0713 5.92863 19.0713L13.8306 19.0713Z"
-                    fill="#8692A3"
-                  />
-                </g>
-                <defs>
-                  <clipPath id="clip0">
-                    <rect width="24" height="24" fill="white" />
-                  </clipPath>
-                </defs>
-              </svg> : null}
+              {cardSize ? (
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <g clip-path="url(#clip0)">
+                    <path
+                      d="M13.8306 19.0713C14.3815 19.0713 14.8281 18.6247 14.8281 18.0737C14.8281 17.5232 14.3822 17.0768 13.8316 17.0762L8.34395 17.0702L19.0708 6.34337C19.4613 5.95285 19.4613 5.31968 19.0708 4.92916C18.6802 4.53863 18.0471 4.53863 17.6565 4.92916L6.92974 15.656V10.1683C6.92974 9.6146 6.47931 9.16632 5.92565 9.16828C5.37474 9.17022 4.92863 9.61737 4.92863 10.1683L4.92862 18.0713C4.92863 18.6236 5.37634 19.0713 5.92863 19.0713L13.8306 19.0713Z"
+                      fill="#8692A3"
+                    />
+                  </g>
+                  <defs>
+                    <clipPath id="clip0">
+                      <rect width="24" height="24" fill="white" />
+                    </clipPath>
+                  </defs>
+                </svg>
+              ) : null}
             </div>
-            <div className={`leading-4 flex justify-center ${!cardSize ? 'text-xs': '' }`}>{change}%</div>
+            <div
+              className={`leading-4 flex justify-center ${
+                !cardSize ? "text-xs" : ""
+              }`}
+            >
+              {change}%
+            </div>
           </div>
         );
       })}
