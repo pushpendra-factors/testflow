@@ -48,8 +48,8 @@ function EventBreakdown({
 
   return (
     <div className="total-events w-full">
-      <div className="flex items-center justify-between">
-        {durationContent}
+      <div className="flex items-center justify-end">
+        {/* {durationContent} */}
         <div className="flex justify-end">
           <div className="px-4">
             <BreakdownType
