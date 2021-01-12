@@ -719,7 +719,7 @@ func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 			if numVal > maxNumValues {
 				break
 			}
-			if value == "" {
+			if value == "" || value == "None" {
 				continue
 			}
 			numVal++
