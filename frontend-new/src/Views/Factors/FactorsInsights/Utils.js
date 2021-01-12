@@ -11,7 +11,7 @@ export const generateInsightKey = data =>{
           attributeBoundKey = `>= ${data?.factors_insights_attribute[0]?.factors_attribute_lower_bound}`
         } 
         if(data?.factors_insights_attribute[0]?.factors_attribute_use_bound=='Both'){
-          attributeBoundKey = `<= ${data?.factors_insights_attribute[0]?.factors_attribute_upper_bound} and >= ${data?.factors_insights_attribute[0]?.factors_attribute_lower_bound}`
+          attributeBoundKey = `>= ${data?.factors_insights_attribute[0]?.factors_attribute_lower_bound} and <= ${data?.factors_insights_attribute[0]?.factors_attribute_upper_bound}`
         }
         attributeValue = attributeBoundKey;
       }
