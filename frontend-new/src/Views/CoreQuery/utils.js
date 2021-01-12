@@ -505,7 +505,8 @@ export const getAttributionQuery = (
   touchpoint,
   models,
   window,
-  linkedEvents
+  linkedEvents,
+  dateRange = {}
 ) => {
   const eventFilters = getFilters(eventGoal.filters);
   const query = {
@@ -522,13 +523,18 @@ export const getAttributionQuery = (
       attribution_key: touchpoint,
       attribution_methodology: models[0],
       lbw: window,
-      from: moment().startOf("week").utc().unix(),
-      to:
-        moment().format("dddd") !== "Sunday"
-          ? moment().subtract(1, "day").endOf("day").utc().unix()
-          : moment().utc().unix(),
     },
   };
+  if (dateRange.from && dateRange.to) {
+    query.query.from = moment(dateRange.from).startOf("day").utc().unix();
+    query.query.to = moment(dateRange.to).endOf("day").utc().unix();
+  } else {
+    query.query.from = moment().startOf("week").utc().unix();
+    query.query.to =
+      moment().format("dddd") !== "Sunday"
+        ? moment().subtract(1, "day").endOf("day").utc().unix()
+        : moment().utc().unix();
+  }
   if (models[1]) {
     query.query.attribution_methodology_c = models[1];
   }

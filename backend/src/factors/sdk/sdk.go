@@ -1434,13 +1434,15 @@ func UpdateEventProperties(projectId uint64,
 }
 
 type AMPTrackPayload struct {
-	ClientID           string  `json:"client_id"` // amp user_id
-	SourceURL          string  `json:"source_url"`
-	Title              string  `json:"title"`
-	Referrer           string  `json:"referrer"`
-	ScreenHeight       float64 `json:"screen_height"`
-	ScreenWidth        float64 `json:"screen_width"`
-	PageLoadTimeInSecs float64 `json:"page_load_time_in_secs"`
+	ClientID           string                 `json:"client_id"` // amp user_id
+	SourceURL          string                 `json:"source_url"`
+	Title              string                 `json:"title"`
+	Referrer           string                 `json:"referrer"`
+	ScreenHeight       float64                `json:"screen_height"`
+	ScreenWidth        float64                `json:"screen_width"`
+	PageLoadTimeInSecs float64                `json:"page_load_time_in_secs"`
+	EventName          string                 `json:"event_name"`
+	CustomProperties   map[string]interface{} `json:"-"`
 
 	// internal
 	Timestamp int64  `json:"timestamp"`
@@ -1526,7 +1528,6 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 	if errCode != http.StatusFound {
 		return http.StatusUnauthorized, &Response{Error: "Invalid token"}
 	}
-
 	logCtx := log.WithField("project_id", project.ID)
 
 	var isNewUser bool
@@ -1565,11 +1566,21 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 	eventProperties[U.EP_PAGE_RAW_URL] = reqPayload.SourceURL
 	eventProperties[U.EP_PAGE_URL] = pageURL
 	eventProperties[U.EP_PAGE_DOMAIN] = parsedSourceURL.Host
-	eventProperties[U.EP_PAGE_TITLE] = reqPayload.Title
-	eventProperties[U.EP_REFERRER] = referrerRawURL
-	eventProperties[U.EP_REFERRER_URL] = referrerURL
-	eventProperties[U.EP_REFERRER_DOMAIN] = referrerDomain
+	if reqPayload.Title != "" {
+		eventProperties[U.EP_PAGE_TITLE] = reqPayload.Title
+	}
+
+	if referrerRawURL != "" {
+		eventProperties[U.EP_REFERRER] = referrerRawURL
+		eventProperties[U.EP_REFERRER_URL] = referrerURL
+		eventProperties[U.EP_REFERRER_DOMAIN] = referrerDomain
+	}
+
 	U.FillPropertiesFromURL(&eventProperties, parsedSourceURL)
+
+	for k, v := range reqPayload.CustomProperties {
+		eventProperties[k] = v
+	}
 
 	if reqPayload.PageLoadTimeInSecs > 0 {
 		eventProperties[U.EP_PAGE_LOAD_TIME] = reqPayload.PageLoadTimeInSecs
@@ -1598,7 +1609,9 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		UserAgent:       reqPayload.UserAgent,
 		Timestamp:       reqPayload.Timestamp,
 	}
-
+	if reqPayload.EventName != "" {
+		trackPayload.Name = reqPayload.EventName
+	}
 	errCode, trackResponse := Track(project.ID, &trackPayload, false, SourceAMPSDK)
 	if trackResponse.EventId != "" {
 		cacheErrCode := SetCacheAMPSDKEventIDByPageURL(project.ID, user.ID,
@@ -1690,7 +1703,6 @@ func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 
 		return http.StatusOK, &Response{Message: "Tracked event successfully"}
 	}
-
 	return AMPTrackByToken(token, reqPayload)
 }
 
