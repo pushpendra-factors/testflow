@@ -106,8 +106,9 @@
 }
 
 .ant-btn-lg {
+    max-width: 300px;
     span {
-        max-width: 300px;
+        max-width: 250px;
         text-overflow: ellipsis;
         overflow: clip;
     }

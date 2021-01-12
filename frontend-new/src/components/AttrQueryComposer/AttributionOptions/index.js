@@ -50,7 +50,20 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
     }
 
     const selectModel = (index) => {
-        if(selectVisibleModel[index]) {
+        if(!selectVisibleModel[index]) return null;
+
+        if(index === 0){
+            
+            return (<FaSelect 
+                    options={modelOpts}
+                    optionClick={(val) => setModel(val[1], index)}
+                    onClickOutside={() => toggleModelSelect(index)}
+                    >
+
+                    </FaSelect>)
+        }
+        
+        if(index === 1){
             
             return (<FaSelect 
                     options={modelOpts} 

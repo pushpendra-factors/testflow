@@ -5,6 +5,7 @@ import BarChart from "../../../../components/BarChart";
 import BreakdownTable from "./BreakdownTable";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
+import ChartTypeDropdown from "../../../../components/ChartTypeDropdown";
 
 function BreakdownCharts({
   arrayMapper,
@@ -12,6 +13,7 @@ function BreakdownCharts({
   breakdown,
   data,
   isWidgetModal,
+  setChartType,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [currentEventIndex, setCurrentEventIndex] = useState(0);
@@ -37,6 +39,19 @@ function BreakdownCharts({
     );
   }
 
+  const menuItems = [
+    {
+      key: "barchart",
+      onClick: setChartType,
+      name: "Bar Chart",
+    },
+    {
+      key: "linechart",
+      onClick: setChartType,
+      name: "Line Chart",
+    },
+  ];
+
   const table = (
     <div className="mt-16">
       <BreakdownTable
@@ -54,9 +69,22 @@ function BreakdownCharts({
     </div>
   );
 
+  const typeDropdown = (
+    <div className="flex items-center w-full mt-4 justify-end">
+      <ChartTypeDropdown
+        chartType={chartType}
+        menuItems={menuItems}
+        onClick={(item) => {
+          setChartType(item.key);
+        }}
+      />
+    </div>
+  );
+
   if (chartType === CHART_TYPE_BARCHART) {
     return (
       <>
+        {typeDropdown}
         <div className="flex items-center flex-wrap mt-4 justify-center">
           <BarChart chartData={visibleProperties} />
         </div>
@@ -82,6 +110,7 @@ function BreakdownCharts({
     const appliedColors = generateColors(visibleProperties.length);
     return (
       <>
+        {typeDropdown}
         <div className="flex items-center flex-wrap mt-4 justify-center">
           <LineChart
             frequency="date"

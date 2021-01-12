@@ -10,7 +10,8 @@ import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import _, { isEmpty } from 'lodash';
 import moment from 'moment';
- 
+import FilterBlock from '../../components/QueryComposer/FilterBlock';
+
 
 const title = (props) => {
   return (
@@ -45,6 +46,12 @@ const CreateGoalDrawer = (props) => {
   const [dateTime, setDateTime] = useState(null);
   const [insightBtnLoading, setInsightBtnLoading] = useState(false);
 
+  const [filters, setfilters] = useState([]);
+  const [filterProps, setFilterProperties] = useState({
+    user: []
+});
+const [filterDD, setFilterDD] = useState(false);
+
   const onChangeGroupSelect1 = (grp, value) => {
     setShowDropDown(false);
     setEvent1(value[0]); 
@@ -63,6 +70,7 @@ const CreateGoalDrawer = (props) => {
   } 
   const factorsModels = !_.isEmpty(props.factors_models) && _.isArray(props.factors_models) ? props.factors_models.map((item)=>{return [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`]}) : [];
   
+
   useEffect(()=>{ 
     // if(!props.GlobalEventNames || !factorsModels){
       //   const getData = async () => {
@@ -129,6 +137,74 @@ const getInsights = (projectID, isJourney=false) =>{
   }); 
 
 } 
+
+
+const delFilter = (index) => {
+  // const fltrs = filters.filter((v, i) => i !== index);
+  // setCampFilters(fltrs);
+  console.log('delFilter', index);
+}
+
+
+
+
+const renderFilterBlock = () => {
+  if(filterProps) {
+      const filtrs = [];
+
+      filters.forEach((filt, id) => {
+          filtrs.push(
+              <div key={id} className={id !== 0? `mt-4` : null}>
+                  <FilterBlock activeProject={activeProject} 
+                      index={id}
+                      blockType={'global'} 
+                      // filterType={'channel'} 
+                      filter={filt}
+                      // extraClass={styles.filterSelect}
+                      // delBtnClass={styles.filterDelBtn}
+                      delIcon={`trash`}
+                      deleteFilter={delFilter}
+                      // typeProps={{channel: channel}} 
+                      filterProps={filterProps}
+                      propsConstants={Object.keys(filterProps)}
+                  ></FilterBlock>
+              </div>
+          )
+      })
+
+      // if(filterDD) {
+      //     filtrs.push(  
+      //         <div key={filtrs.length} className={`mt-4`}>
+      //             <FilterBlock activeProject={activeProject} 
+      //                 blockType={'global'} filterType={'channel'} 
+      //                 // extraClass={styles.filterSelect}
+      //                 // delBtnClass={styles.filterDelBtn}
+      //                 typeProps={{channel: channel}} filterProps={filterProps}
+      //                 propsConstants={Object.keys(filterProps)}
+      //                 insertFilter={addFilter}
+      //                 closeFilter={closeFilter}
+      //             ></FilterBlock>
+      //         </div>
+      //     )
+      // } else {
+      //     filtrs.push(
+      //         <div key={filtrs.length} className={`flex mt-4`}>
+      //             <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
+      //                 <SVG name={'plus'} color={'purple'}></SVG>
+      //             </div>
+
+      //             <Button size={'large'} type="link" onClick={() => setFilterDD(true)}>Add new</Button>
+      //         </div>
+      //     )
+      // }
+      
+      return (<div>{filtrs}</div>);
+  }
+  
+}
+
+
+
   return (
         <Drawer
         title={title(props)}
@@ -240,6 +316,12 @@ const getInsights = (projectID, isJourney=false) =>{
           </Row>
           } 
 
+
+          <div>
+            {/* Akhil please have a look! */}
+          {/* {renderFilterBlock()} */}
+          </div>
+
     <div className={'flex flex-col justify-center items-center'} style={{ height: '50px' }}> 
     </div>
         <div className={'flex justify-between items-center'}>
@@ -263,7 +345,7 @@ const getInsights = (projectID, isJourney=false) =>{
           </div> 
             <Button type="primary" size={'large'} loading={insightBtnLoading} disabled={!(event1 && dateTime)} onClick={()=>getInsights(props.activeProject.id, eventCount===2?true:false )}>Find Insights</Button>
         </div>
-</div>
+</div> 
 
       </Drawer>
   );

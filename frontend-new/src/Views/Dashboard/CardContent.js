@@ -39,8 +39,13 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       equivalentQuery = getStateQueryFromRequestQuery(
         unit.query.query.query_group[0]
       );
-    } else if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_ATTRIBUTION) {
-      equivalentQuery = getAttributionStateFromRequestQuery(unit.query.query.query);
+    } else if (
+      unit.query.query.cl &&
+      unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
+    ) {
+      equivalentQuery = getAttributionStateFromRequestQuery(
+        unit.query.query.query
+      );
     } else {
       equivalentQuery = getStateQueryFromRequestQuery(unit.query.query);
     }
@@ -62,7 +67,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
         eventsMapper[`${q.label}`] = `event${index + 1}`;
         reverseEventsMapper[`event${index + 1}`] = q.label;
         arrayMapper.push({
-          eventName: q,
+          eventName: q.label,
           index,
           mapper: `event${index + 1}`,
         });
@@ -122,7 +127,14 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
       content = (
-        <Attributions unit={unit} title={unit.id} resultState={resultState} setwidgetModal={setwidgetModal} attributionsState={attributionsState} chartType={presentationObj[dashboardPresentation]} />
+        <Attributions
+          unit={unit}
+          title={unit.id}
+          resultState={resultState}
+          setwidgetModal={setwidgetModal}
+          attributionsState={attributionsState}
+          chartType={presentationObj[dashboardPresentation]}
+        />
       );
     }
   }

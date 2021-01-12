@@ -19,6 +19,7 @@ const ROUTE_PROJECTS_ROOT = "/projects"
 const ROUTE_PROJECTS_ROOT_V1 = "v1/projects"
 const ROUTE_INTEGRATIONS_ROOT = "/integrations"
 const ROUTE_DATA_SERVICE_ROOT = "/data_service"
+const ROUTE_SDK_ADWORDS_ROOT = "/adwords_sdk_service"
 const ROUTE_VERSION_V1 = "/v1"
 
 func InitAppRoutes(r *gin.Engine) {
@@ -169,6 +170,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	sdkRouteGroup.POST("/event/update_properties", SDKUpdateEventPropertiesHandler)
 	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)
 	sdkRouteGroup.POST("/user/add_properties", SDKAddUserPropertiesHandler)
+	sdkRouteGroup.POST("/adwords/documents/add", IH.DataServiceAdwordsAddDocumentHandler)
 
 	ampSdkRouteGroup := r.Group(ROUTE_SDK_AMP_ROOT)
 	ampSdkRouteGroup.POST("/event/track", SDKAMPTrackHandler)
@@ -179,6 +181,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	intRouteGroup.POST("/segment", mid.SetScopeProjectPrivateToken(), IntSegmentHandler)
 	intRouteGroup.POST("/segment_platform",
 		mid.SetScopeProjectPrivateTokenUsingBasicAuth(), IntSegmentPlatformHandler)
+
 }
 
 func InitIntRoutes(r *gin.Engine) {

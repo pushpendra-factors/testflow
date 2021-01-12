@@ -10,7 +10,7 @@ const FaSelect = ({ options, delOption,
     const renderOptions = () => {
         const rendOpts = options.map((op, index) => {
             return (
-                <div key={index} className={`fa-select-group-select--options`}
+                <div key={index} title={op[0]} className={`fa-select-group-select--options`}
                     onClick={() => optionClick(op)} >
                     {op[1] && <SVG name={op[1]} extraClass={'self-center'}></SVG>}
                     <span className={`ml-1 ${styles.optText}`}>{op[0]}</span>

@@ -9,6 +9,7 @@ import {
   INITIALIZE_GROUPBY,
   DEL_GROUPBY_EVENT,
   SET_TOUCHPOINTS,
+  SET_ATTR_DATE_RANGE,
   SET_ATTRIBUTION_MODEL,
   SET_ATTRIBUTION_WINDOW,
   SET_ATTR_LINK_EVENTS,
@@ -17,9 +18,14 @@ import {
   SET_CAMP_MEASURES,
   SET_CAMP_FILTERS,
   FETCH_CAMP_CONFIG,
-  SET_CAMP_GROUBY
+  SET_CAMP_GROUBY,
+  SET_CAMP_DATE_RANGE,
 } from "./actions";
-import { SHOW_ANALYTICS_RESULT, INITIALIZE_MTA_STATE } from "../types";
+import {
+  SHOW_ANALYTICS_RESULT,
+  INITIALIZE_MTA_STATE,
+  INITIALIZE_CAMPAIGN_STATE,
+} from "../types";
 
 const DEFAULT_TOUCHPOINTS = ["Campaign", "Source", "AdGroup", "Keyword"];
 
@@ -41,22 +47,27 @@ const defaultState = {
   show_analytics_result: false,
   eventGoal: {},
   touchpoint: "",
+  attr_dateRange: {
+    from: new Date(),
+    to: new Date(),
+    dateStr: ""
+  },
   models: [],
   window: null,
   linkedEvents: [],
   campaign_config: {
     metrics: [],
-    properties: []
+    properties: [],
   },
-  camp_channels: 'google_ads',
+  camp_channels: "google_ads",
   camp_measures: [],
   camp_filters: [],
   camp_groupBy: [],
   camp_dateRange: {
-      from: new Date(),
-      to: new Date(),
-      dateStr: ''
-  }
+    from: new Date(),
+    to: new Date(),
+    dateStr: "",
+  },
 };
 
 export default function (state = defaultState, action) {
@@ -142,6 +153,12 @@ export default function (state = defaultState, action) {
         touchpoint: action.payload,
       };
     }
+    case SET_ATTR_DATE_RANGE: {
+      return {
+        ...state,
+        attr_dateRange: action.payload
+      }
+    }
     case SET_ATTRIBUTION_MODEL: {
       return {
         ...state,
@@ -166,37 +183,48 @@ export default function (state = defaultState, action) {
         ...action.payload,
       };
     }
+    case INITIALIZE_CAMPAIGN_STATE: {
+      return {
+        ...state,
+        ...action.payload,
+      };
+    }
     case SET_CAMP_CHANNEL: {
       return {
-        ...state, 
-        camp_channels: action.payload
-      }
+        ...state,
+        camp_channels: action.payload,
+      };
     }
     case SET_CAMP_MEASURES: {
       return {
-        ...state, 
-        camp_measures: action.payload
-      }
+        ...state,
+        camp_measures: action.payload,
+      };
     }
     case FETCH_CAMP_CONFIG: {
       return {
         ...state,
-        campaign_config: action.payload
-      }
+        campaign_config: action.payload,
+      };
     }
     case SET_CAMP_FILTERS: {
       return {
         ...state,
-        camp_filters: action.payload
-      }
+        camp_filters: action.payload,
+      };
     }
     case SET_CAMP_GROUBY: {
       return {
         ...state,
-        camp_groupBy: action.payload
+        camp_groupBy: action.payload,
+      };
+    }
+    case SET_CAMP_DATE_RANGE: {
+      return {
+        ...state,
+        camp_dateRange: action.payload
       }
     }
-
     default:
       return state;
   }

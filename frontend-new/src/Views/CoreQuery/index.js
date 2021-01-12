@@ -39,7 +39,6 @@ import {
 import AttributionsResult from "./AttributionsResult";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 import CampaignAnalytics from "./CampaignAnalytics";
-import { CampaignAnalytics1 } from "../../utils/SampleResponse";
 
 function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -48,9 +47,6 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [showResult, setShowResult] = useState(false);
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
-  const [appliedCampaignsBreakdown, setAppliedCampaignsBreakdown] = useState(
-    []
-  );
   const [resultState, setResultState] = useState(initialResultState);
   const [funnelResult, updateFunnelResult] = useState(initialState);
   const [attributionResult, updateAttributionResult] = useState(initialState);
@@ -539,6 +535,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       camp_filters,
       camp_groupBy,
       camp_channels,
+      dateRange
     ]
   );
 
@@ -740,7 +737,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         resultState={campaignsResult}
         setDrawerVisible={setDrawerVisible}
         arrayMapper={arrayMapper}
-        breakdown={appliedCampaignsBreakdown}
+        campaignState={campaignState}
         // attributionsState={attributionsState}
       />
     );

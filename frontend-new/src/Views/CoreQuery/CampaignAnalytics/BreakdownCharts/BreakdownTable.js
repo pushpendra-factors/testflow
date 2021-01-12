@@ -24,11 +24,10 @@ function BreakdownTable({
     setSorter(sorter);
   }, []);
 
-  if (chartType === CHART_TYPE_BARCHART) {
+  if (true) {
     columns = getTableColumns(
       responseData,
       breakdown,
-      currentEventIndex,
       arrayMapper,
       sorter,
       handleSorting
