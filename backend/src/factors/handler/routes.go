@@ -170,6 +170,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	sdkRouteGroup.POST("/event/update_properties", SDKUpdateEventPropertiesHandler)
 	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)
 	sdkRouteGroup.POST("/user/add_properties", SDKAddUserPropertiesHandler)
+	sdkRouteGroup.POST("/adwords/documents/add", IH.DataServiceAdwordsAddDocumentHandler)
 
 	ampSdkRouteGroup := r.Group(ROUTE_SDK_AMP_ROOT)
 	ampSdkRouteGroup.POST("/event/track", SDKAMPTrackHandler)
@@ -181,9 +182,6 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	intRouteGroup.POST("/segment_platform",
 		mid.SetScopeProjectPrivateTokenUsingBasicAuth(), IntSegmentPlatformHandler)
 
-	adwordsRouteGroup := r.Group(ROUTE_SDK_ADWORDS_ROOT)
-	adwordsRouteGroup.POST("/adwords/documents/add",
-		IH.DataServiceAdwordsAddDocumentHandler)
 }
 
 func InitIntRoutes(r *gin.Engine) {

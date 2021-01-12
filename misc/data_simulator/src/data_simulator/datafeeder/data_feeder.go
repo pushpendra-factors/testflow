@@ -30,7 +30,7 @@ var campaignCounterSTAGE = make(map[string]int)
 
 var bulkLoadUrl = "/sdk/event/track/bulk"
 var getUserIdUrl = "/sdk/user/identify"
-var adwordsAddDocUrl = "/adwords_sdk_service/adwords/documents/add"
+var adwordsAddDocUrl = "/data_service/adwords/documents/add"
 var projectIDStage = uint64(0)
 var adwordsCustomerAccountIDStage = ""
 var projectIDProd = uint64(0)
@@ -47,12 +47,10 @@ func ExtractEventData(data string) interface{} {
 	return op
 }
 
-func IngestAdwordsData(projectId uint64, customerAccountId string, campaignCounter map[string]int,
-	endpoint *string, authToken *string) {
-
+func IngestAdwordsData(yesterday time.Time, projectId uint64, customerAccountId string, campaignCounter map[string]int, endpoint *string, authToken *string) {
 	for campaignName, eventCount := range campaignCounter {
 
-		adwordsDoc := operations.GetCampaignPerfReportAdwordsDoc(projectId,
+		adwordsDoc := operations.GetCampaignPerfReportAdwordsDoc(yesterday, projectId,
 			customerAccountId, campaignName, eventCount)
 
 		reqBody, _ := json.Marshal(adwordsDoc)
@@ -139,6 +137,7 @@ func getUserId(clientUserId string, eventTimestamp int64, endpoint *string, auth
 }
 
 func main() {
+
 	env := flag.String("env", "development", "")
 	seedDate := flag.String("seed_date", "", "")
 	endpoint_prod := flag.String("endpoint_prod", "http://factors-dev.com:8085", "")
@@ -153,7 +152,7 @@ func main() {
 
 	bulk_load_url := flag.String("bulk_load_url", "/sdk/event/track/bulk", "")
 	get_user_id_url := flag.String("get_user_id_url", "/sdk/user/identify", "")
-	adwords_add_doc_url := flag.String("adwords_add_doc_url", "/adwords_sdk_service/adwords/documents/add", "")
+	adwords_add_doc_url := flag.String("adwords_add_doc_url", "/data_service/adwords/documents/add", "")
 	bulkLoadUrl = *(bulk_load_url)
 	getUserIdUrl = *(get_user_id_url)
 	adwordsAddDocUrl = *(adwords_add_doc_url)
@@ -201,7 +200,7 @@ func main() {
 	var events_prod []operations.EventOutput
 
 	// processing events data
-	ProcessEventsFiles(env, dataConfig, endpoint_staging, authToken_staging, events_staging, endpoint_prod, authToken_prod, events_prod)
+	// ProcessEventsFiles(env, dataConfig, endpoint_staging, authToken_staging, events_staging, endpoint_prod, authToken_prod, events_prod)
 
 	// processing adwords data
 	ProcessAdwordsDataFromEventsFiles(executionDate, env, dataConfig, endpoint_staging, authToken_staging, events_staging, endpoint_prod, authToken_prod, events_prod)
@@ -442,8 +441,8 @@ func ProcessAdwordsDataFromEventsFiles(eventsExecutionDate time.Time, env *strin
 	}
 
 	// run adwords ingestion
-	IngestAdwordsData(projectIDStage, adwordsCustomerAccountIDStage, campaignCounterSTAGE, endpoint_staging, authToken_staging)
-	IngestAdwordsData(projectIDProd, adwordsCustomerAccountIDProd, campaignCounterPROD, endpoint_prod, authToken_prod)
+	IngestAdwordsData(workingDateYesterday, projectIDStage, adwordsCustomerAccountIDStage, campaignCounterSTAGE, endpoint_staging, authToken_staging)
+	IngestAdwordsData(workingDateYesterday, projectIDProd, adwordsCustomerAccountIDProd, campaignCounterPROD, endpoint_prod, authToken_prod)
 
 	// create marker file for today's run
 	if *env == "development" {

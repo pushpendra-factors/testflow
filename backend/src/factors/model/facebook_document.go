@@ -172,6 +172,17 @@ func getFacebookDocumentTypeAliasByType() map[int]string {
 	return documentTypeMap
 }
 
+// @TODO Kark v1
+func buildFbChannelConfig() *ChannelConfigResult {
+	properties := buildProperties(allChannelsPropertyToRelated)
+	objectsAndProperties := buildObjectsAndProperties(properties, objectsForAllChannels)
+
+	return &ChannelConfigResult{
+		SelectMetrics:        selectableMetricsForAllChannels,
+		ObjectsAndProperties: objectsAndProperties,
+	}
+}
+
 // GetFacebookFilterValues - @TODO Kark v1
 func GetFacebookFilterValues(projectID uint64, filterObject string, filterProperty string, reqID string) ([]interface{}, int) {
 	docType, property, errCode := getFacebookDocumentTypeAndPropertyKeyForFilter(filterObject, filterProperty)

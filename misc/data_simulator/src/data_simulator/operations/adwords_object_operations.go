@@ -9,8 +9,7 @@ import (
 const campaignPerformanceReportTypeAlias = "campaign_performance_report"
 const campaignPerformanceReportType = 5
 
-func GetCampaignPerfReportAdwordsDoc(projectIDStage uint64, adwordsCustomerAccountIDStage,
-	campaignName string, totalEvents int) AdwordsDocument {
+func GetCampaignPerfReportAdwordsDoc(yesterday time.Time, projectIDStage uint64, adwordsCustomerAccountIDStage, campaignName string, totalEvents int) AdwordsDocument {
 
 	values := map[string]string{}
 
@@ -71,13 +70,13 @@ func GetCampaignPerfReportAdwordsDoc(projectIDStage uint64, adwordsCustomerAccou
 	values["impression_assisted_conversions"] = "0"
 	values["active_view_measurable_impressions"] = "0"
 
-	dateYesterday := time.Now().AddDate(0, 0, -1)
-
 	adwordsDoc := AdwordsDocument{}
 	adwordsDoc.ProjectID = projectIDStage
 	adwordsDoc.CustomerAccountID = adwordsCustomerAccountIDStage
 	adwordsDoc.TypeAlias = campaignPerformanceReportTypeAlias // Type = 5
-	adwordsDoc.Timestamp = dateYesterday.Unix()
+	timeStr := yesterday.Format("20060102")
+	intDate64, _ := strconv.ParseInt(timeStr, 10, 64)
+	adwordsDoc.Timestamp = intDate64
 	adwordsDoc.ID = campaignId
 	adwordsDoc.Value = values
 

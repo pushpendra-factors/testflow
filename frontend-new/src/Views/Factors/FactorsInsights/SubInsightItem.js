@@ -65,7 +65,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
           let insightKeyLevel1 = generateInsightKey(SubInsightsData);
           let insightKeyLevel2 = generateInsightKey(dataItem);
           
-          const factors_insights_text = `and then <a>${insightKeyLevel2}</a> show  ${dataItem.factors_insights_multiplier}% goal completion`
+          const factors_insights_text = `and then <a>${insightKeyLevel2}</a> show  ${dataItem.factors_insights_percentage}% goal completion`
 
           
           let insightLevel1Percentage = 100; 
@@ -86,7 +86,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
           return (
               <Row key={index} gutter={[0, 0]} justify={'center'}>
               <Col span={22}>
-                <div className={'relative border-bottom--thin-2 fa-insight-item--sub-container px-4'}>
+                <div className={'relative border-bottom--thin-2 fa-insight-item--sub-container pr-8 pl-16'}>
                       <Row gutter={[0, 0]} justify={'center'}>
                           <Col span={24}>
                               <div className={'relative border-left--thin-2 m-0 pl-10 py-6 cursor-pointer fa-insight-item'} onClick={() => {
@@ -96,11 +96,11 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                 }
                               }}>
                                   <Text type={'title'} level={4} extraClass={'m-0'} > <span dangerouslySetInnerHTML={{__html: factors_insights_text}}/> </Text>
-                                  <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
+                                  {/* <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${dataItem.factors_insights_multiplier}x`}</Text> */}
                                   {!_.isEmpty(dataItem.factors_higher_completion_text) && <Text type={'title'} level={6} color={'grey'} extraClass={'mt-2'} >{dataItem.factors_higher_completion_text}</Text>}
                                   {!_.isEmpty(dataItem.factors_lower_completion_text) && <Text type={'title'} level={6} color={'grey'} extraClass={'mt-2'} >{dataItem.factors_lower_completion_text}</Text>}
 
-                                <div className={'mt-8 w-9/12'}>
+                                <div className={'mt-4 w-9/12'}>
                                   
                                   {
                                     isJourney && <>
@@ -150,13 +150,19 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                           </div>
                                     </div>
 
-                                </div>
+                                </div> 
 
-                                  <div className={'fa-sub-insights-box--spike'}>
+                                  <div className={'fa-insights-box--spike'}>
                                       <div className={'flex justify-end items-center'}>
-                                          {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
-                                      </div>
+                                        <div className={'flex flex-col items-end mr-2'}>
+                                          <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 fa-insights-box--multiplier pt-2'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
+                                          <Text type={'title'} color={'grey'} level={7} extraClass={'m-0 fa-insights-box--label'} >{`Impact`}</Text> 
+                                        </div>
+                                        {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
+                                      </div> 
                                   </div>
+
+
                               </div>
                           </Col>
                       </Row>
@@ -197,9 +203,9 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                               <Col span={24}>
                                   <div className={'relative border-left--thin-2 m-0 pl-10 py-6 fa-insight-item'}>
                                       <Text type={'title'} level={4} extraClass={'m-0'} > <span dangerouslySetInnerHTML={{__html: `and then <a>${insightKeyLevel2}</a> ${dataItem.factors_insights_text}` }}/>  </Text>
-                                      <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
+                                      {/* <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${dataItem.factors_insights_multiplier}x`}</Text> */}
 
-                                      <div className={'mt-8 w-9/12'}>
+                                      <div className={'mt-4 w-9/12'}>
 
 
                                       <div className={'relative flex items-end'}>
@@ -247,12 +253,18 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                       </div>
 
                                     </div>
+ 
 
-                                      <div className={'fa-sub-insights-box--spike'}>
-                                          <div className={'flex justify-end items-center'}>
-                                              {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
-                                          </div>
-                                      </div>
+                                      <div className={'fa-insights-box--spike'}>
+                                      <div className={'flex justify-end items-center'}>
+                                        <div className={'flex flex-col items-end mr-2'}>
+                                          <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 fa-insights-box--multiplier pt-2'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
+                                          <Text type={'title'} color={'grey'} level={7} extraClass={'m-0 fa-insights-box--label'} >{`Impact`}</Text> 
+                                        </div>
+                                        {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
+                                      </div> 
+                                  </div>
+
                                   </div>
                               </Col>
                           </Row>
