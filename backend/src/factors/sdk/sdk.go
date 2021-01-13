@@ -1442,7 +1442,7 @@ type AMPTrackPayload struct {
 	ScreenWidth        float64                `json:"screen_width"`
 	PageLoadTimeInSecs float64                `json:"page_load_time_in_secs"`
 	EventName          string                 `json:"event_name"`
-	CustomProperties   map[string]interface{} `json:"-"`
+	CustomProperties   map[string]interface{} `json:"custom_properties"`
 
 	// internal
 	Timestamp int64  `json:"timestamp"`
@@ -1609,9 +1609,12 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		UserAgent:       reqPayload.UserAgent,
 		Timestamp:       reqPayload.Timestamp,
 	}
+
+	// Support for custom event_name.
 	if reqPayload.EventName != "" {
 		trackPayload.Name = reqPayload.EventName
 	}
+
 	errCode, trackResponse := Track(project.ID, &trackPayload, false, SourceAMPSDK)
 	if trackResponse.EventId != "" {
 		cacheErrCode := SetCacheAMPSDKEventIDByPageURL(project.ID, user.ID,

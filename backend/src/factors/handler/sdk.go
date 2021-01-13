@@ -339,6 +339,7 @@ func SDKAMPTrackHandler(c *gin.Context) {
 	metrics.Increment(metrics.IncrSDKRequestOverallCount)
 	metrics.Increment(metrics.IncrSDKRequestTypeAMPTrack)
 
+	// List of known query parameters.
 	TOKEN := "token"
 	CLIENT_ID := "client_id"
 	SOURCE_URL := "source_url"
@@ -348,6 +349,7 @@ func SDKAMPTrackHandler(c *gin.Context) {
 	SCREEN_HEIGHT := "screen_height"
 	SCREEN_WIDTH := "screen_width"
 	EVENT_NAME := "event_name"
+
 	trackedProperties := make(map[string]bool)
 	token := c.Query(TOKEN)
 	token = strings.TrimSpace(token)
