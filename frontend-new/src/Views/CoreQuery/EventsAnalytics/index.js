@@ -2,7 +2,7 @@ import React from 'react';
 import Header from '../../AppLayout/Header';
 import EventsInfo from '../FunnelsResultPage/EventsInfo';
 import ContentTabs from '../../../components/ContentTabs';
-import ResultTab from './ResultTab.js';
+import ResultTab from './ResultTab/index.js';
 import { SVG } from '../../../components/factorsComponents';
 import EventBreakdown from './EventBreakdown';
 import ResultsHeader from '../ResultsHeader';
