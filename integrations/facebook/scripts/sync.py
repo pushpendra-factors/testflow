@@ -94,11 +94,15 @@ def record_metric(metric_type, metric_name, metric_value=0):
         log.error('Failed to record metric %s. Error: %s', metric_name, response.text)
 
 def get_time_ranges_list(date_start):
-    date_object = datetime.strptime(date_start, "%Y-%m-%d").date()
-    days = (datetime.now().date() - date_object).days
-    if days > 60:
+    if date_start == 0:
         date_object = datetime.now().date() - timedelta(days=60)
         days = 60
+    else:
+        date_object = datetime.strptime(str(date_start), "%Y-%m-%d").date()
+        days = (datetime.now().date() - date_object).days
+        if days > 60:
+            date_object = datetime.now().date() - timedelta(days=60)
+            days = 60
 
     time_ranges = []
 
@@ -135,21 +139,21 @@ def get_last_sync_info(project_id, account_id):
     return sync_info_with_type
 
 def get_and_insert_metadata(facebook_int_setting):
-    res = {}
+    status = ''
     errMsgs = []
     # campaign metadata
     fields_campaign = ['id', 'name', 'account_id', 'buying_type','effective_status','spend_cap','start_time','stop_time']
     response = get_and_insert_paginated_metadata(facebook_int_setting, CAMPAIGN, fields_campaign, 'stop_time')
     if response['status'] == 'failed':
-        res['status'] = 'failed'
+        status = 'failed'
         errMsgs.append(response['errMsg'])
     # adset metadata
     fields_adset = ['id', 'account_id','campaign_id','configured_status', 'daily_budget', 'effective_status','end_time','name','start_time','stop_time']
     response = get_and_insert_paginated_metadata(facebook_int_setting, AD_SET, fields_adset, 'end_time')
     if response['status'] == 'failed':
-        res['status'] = 'failed'
+        status = 'failed'
         errMsgs.append(response['errMsg'])
-    if res['status'] == 'failed':
+    if status == 'failed':
         return {'status': 'failed', 'errMsg': errMsgs}
     return {'status': 'success'}
 
@@ -166,10 +170,9 @@ def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields, da
     for data in response.json()[DATA]:
         timestamp = int(''.join(data[date_stop_field].split('T')[0].split('-')))
         add_document_response = add_facebook_document(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type, data['id'], data, timestamp, FACEBOOK)
-    
     # paging
     if 'paging' not in response.json():
-        return
+        return {'status': 'success'}
     while 'next' in response.json()['paging']:
         url = response.json()['paging']['next']
         response = requests.get(url)
@@ -183,7 +186,7 @@ def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields, da
     return {'status': 'success'}
 
 def get_collections(facebook_int_setting, sync_info_with_type):
-    response = {}
+    response = {'status': ''}
     status = ''
     errMsgs = []
     try:
@@ -239,21 +242,21 @@ def get_campaign_insights(project_id, ad_account_id, access_token, date_start):
     fields = ['account_currency', 'ad_id','ad_name','adset_name','campaign_name','adset_id','campaign_id','clicks','conversions',
     'cost_per_conversion','cost_per_ad_click','date_start', 'cpc', 'cpm','cpp','ctr',
     'date_stop','frequency','impressions','inline_post_engagement','social_spend', 'spend','unique_clicks','reach']
-    fetch_and_insert_insights(project_id, ad_account_id, access_token, CAMPAIGN_INSIGHTS, fields, date_start)
+    return fetch_and_insert_insights(project_id, ad_account_id, access_token, CAMPAIGN_INSIGHTS, fields, date_start)
 
 def get_adset_insights(project_id, ad_account_id, access_token, date_start):
 
     fields = ['account_currency', 'ad_id','ad_name','adset_name','campaign_name','adset_id','campaign_id','clicks','conversions',
     'cost_per_conversion','cost_per_ad_click','cpc', 'cpm','cpp','ctr',
     'date_start','date_stop','frequency','impressions','inline_post_engagement','social_spend', 'spend','unique_clicks','reach']
-    fetch_and_insert_insights(project_id, ad_account_id, access_token, AD_SET_INSIGHTS, fields, date_start)
+    return fetch_and_insert_insights(project_id, ad_account_id, access_token, AD_SET_INSIGHTS, fields, date_start)
 
 def get_ad_insights(project_id, ad_account_id, access_token, date_start):
 
     fields = ['account_currency', 'ad_id','ad_name','adset_name','campaign_name','adset_id','campaign_id','clicks','conversions',
     'cost_per_conversion','cost_per_ad_click','cpc', 'cpm','cpp','ctr',
     'date_start','date_stop','frequency','impressions','inline_post_engagement','social_spend', 'spend','unique_clicks','reach']
-    fetch_and_insert_insights(project_id, ad_account_id, access_token, AD_INSIGHTS, fields, date_start)
+    return fetch_and_insert_insights(project_id, ad_account_id, access_token, AD_INSIGHTS, fields, date_start)
 
 def fetch_and_insert_insights(project_id, ad_account_id, access_token, doc_type, fields_insight, date_start):
     time_ranges = get_time_ranges_list(date_start)
@@ -273,7 +276,7 @@ def fetch_and_insert_insights(project_id, ad_account_id, access_token, doc_type,
 
     # paging
     if 'paging' not in breakdown_response.json():
-        return
+        return {'status': 'success'}
     while 'next' in breakdown_response.json()['paging']:
         url = breakdown_response.json()['paging']['next']
         breakdown_response = requests.get(url)
