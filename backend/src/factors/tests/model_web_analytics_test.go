@@ -53,7 +53,7 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 1)
 	assert.Nil(t, err)
 
 	queryResult, errCode := M.ExecuteWebAnalyticsQueries(
@@ -155,7 +155,7 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 1)
 	assert.Nil(t, err)
 
 	unitID := U.GetUUID()
@@ -210,7 +210,7 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 1)
 	assert.Nil(t, err)
 
 	queryResult, errCode = M.ExecuteWebAnalyticsQueries(

@@ -31,7 +31,7 @@ with session - where session_id not null, select user_id, max(timestamp) - for s
 event of user, with session, so same session could be continued based on conditions.
 */
 func getNextSessionInfoFromDB(projectId uint64, withSession bool, sessionEventNameId uint64,
-	maxLookbackTimestamp int64) ([]NextSessionInfo, int) {
+	maxLookbackTimestamp, hardLimitTimestamp int64) ([]NextSessionInfo, int) {
 
 	var nextSessionInfoList []NextSessionInfo
 
@@ -55,6 +55,10 @@ func getNextSessionInfoFromDB(projectId uint64, withSession bool, sessionEventNa
 		query = query.Where("timestamp > ?", maxLookbackTimestamp)
 	}
 
+	if hardLimitTimestamp > 0 {
+		query = query.Where("timestamp <= ?", hardLimitTimestamp)
+	}
+
 	err := query.Find(&nextSessionInfoList).Error
 	if err != nil {
 		log.WithError(err).Errorf("Failed to get next session info with session %s.", sessionExistStr)
@@ -74,7 +78,7 @@ Users with session already (within max_lookback, if given) will have a start_tim
 Users without session already (within max_lookback, if given) will have a start_timestamp of first event.
 */
 func getNextSessionInfo(projectId, sessionEventNameId uint64,
-	maxLookbackTimestamp int64) ([]NextSessionInfo, int) {
+	maxLookbackTimestamp, hardLimitTimestamp int64) ([]NextSessionInfo, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"max_lookback_timestamp": maxLookbackTimestamp})
@@ -83,7 +87,7 @@ func getNextSessionInfo(projectId, sessionEventNameId uint64,
 
 	// new users.
 	nextSessionInfoList, status := getNextSessionInfoFromDB(projectId, false,
-		sessionEventNameId, maxLookbackTimestamp)
+		sessionEventNameId, maxLookbackTimestamp, hardLimitTimestamp)
 	if status != http.StatusFound {
 		return nextSessionInfoList, status
 	}
@@ -95,7 +99,7 @@ func getNextSessionInfo(projectId, sessionEventNameId uint64,
 	}
 
 	oldUsersNextSessionInfo, status := getNextSessionInfoFromDB(projectId, true,
-		sessionEventNameId, maxLookbackTimestamp)
+		sessionEventNameId, maxLookbackTimestamp, hardLimitTimestamp)
 	if status == http.StatusInternalServerError {
 		return nextSessionInfoList, status
 	}
@@ -147,7 +151,7 @@ func getAllEventsAsUserEventsMap(projectId, sessionEventNameId uint64,
 
 	queryStartTime := U.TimeNowUnix()
 	db := C.GetServices().Db
-	// Ordered by timestamp, created_at to fix the order for events with same 
+	// Ordered by timestamp, created_at to fix the order for events with same
 	// timestamp, as event timestamp is in seconds. This fixes the invalid first
 	// event used for enrichment.
 	if err := db.Order("timestamp, created_at ASC").
@@ -184,13 +188,14 @@ func getAllEventsAsUserEventsMap(projectId, sessionEventNameId uint64,
 }
 
 // addSessionByProjectId - Adds session to all users of project.
-func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
+func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, hardLimitTimestamp,
 	bufferTimeBeforeSessionCreateInSecs int64) (*Status, int) {
 
 	status := &Status{}
 
 	logCtx := log.WithField("project_id", projectId).
 		WithField("max_lookback", maxLookbackTimestamp).
+		WithField("hard_limit_timestamp", hardLimitTimestamp).
 		WithField("buffer_time_in_mins", bufferTimeBeforeSessionCreateInSecs)
 
 	logCtx.Info("Adding session for project.")
@@ -202,7 +207,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 	}
 
 	nextSessionInfoList, errCode := getNextSessionInfo(projectId,
-		sessionEventName.ID, maxLookbackTimestamp)
+		sessionEventName.ID, maxLookbackTimestamp, hardLimitTimestamp)
 	if errCode == http.StatusNotFound {
 		logCtx.Info("No new events without session to process. Empty next session info.")
 		return status, http.StatusNotModified
@@ -229,6 +234,10 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 		WithField("user_id", minNextSessionUserId)
 
 	eventsDownloadEndTimestamp := U.TimeNowUnix() - bufferTimeBeforeSessionCreateInSecs
+	if hardLimitTimestamp > 0 {
+		eventsDownloadEndTimestamp = hardLimitTimestamp
+	}
+
 	eventsDownloadIntervalInMins := (eventsDownloadEndTimestamp - minNextSessionStartTimestamp) / 60
 	if eventsDownloadIntervalInMins <= 0 {
 		return status, http.StatusOK
@@ -336,7 +345,7 @@ type Status struct {
 	NoOfUserPropertiesUpdates int `json:"no_of_user_properties_updates"`
 }
 
-func addSessionWorker(projectId uint64, maxLookbackTimestamp,
+func addSessionWorker(projectId uint64, maxLookbackTimestamp, hardLimitTimestamp,
 	bufferTimeBeforeSessionCreateInSecs int64, statusMap *map[uint64]Status,
 	hasFailures *bool, wg *sync.WaitGroup, statusLock *sync.Mutex) {
 
@@ -345,7 +354,7 @@ func addSessionWorker(projectId uint64, maxLookbackTimestamp,
 	logCtx := log.WithField("project_id", projectId)
 
 	startTimestamp := U.TimeNowUnix()
-	status, errCode := addSessionByProjectId(projectId, maxLookbackTimestamp,
+	status, errCode := addSessionByProjectId(projectId, maxLookbackTimestamp, hardLimitTimestamp,
 		bufferTimeBeforeSessionCreateInSecs)
 	logCtx = logCtx.WithField("time_taken_in_secs", U.TimeNowUnix()-startTimestamp).
 		WithField("status", status)
@@ -375,9 +384,8 @@ func addSessionWorker(projectId uint64, maxLookbackTimestamp,
 	setStatus(projectId, statusMap, status, hasFailures, false, statusLock)
 }
 
-func AddSession(projectIds []uint64, maxLookbackTimestamp,
-	bufferTimeBeforeSessionCreateInMins int64,
-	numRoutines int) (map[uint64]Status, error) {
+func AddSession(projectIds []uint64, maxLookbackTimestamp, hardLimitTimestamp,
+	bufferTimeBeforeSessionCreateInMins int64, numRoutines int) (map[uint64]Status, error) {
 
 	hasFailures := false
 	statusMap := make(map[uint64]Status, 0)
@@ -408,7 +416,7 @@ func AddSession(projectIds []uint64, maxLookbackTimestamp,
 		wg.Add(len(chunkProjectIds[ci]))
 		for pi := range chunkProjectIds[ci] {
 			go addSessionWorker(chunkProjectIds[ci][pi], maxLookbackTimestamp,
-				bufferTimeBeforeSessionCreateInSecs,
+				hardLimitTimestamp, bufferTimeBeforeSessionCreateInSecs,
 				&statusMap, &hasFailures, &wg, &statusLock)
 		}
 		wg.Wait()

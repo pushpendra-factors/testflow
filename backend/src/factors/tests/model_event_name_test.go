@@ -554,7 +554,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 		})
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 1)
 	assert.Nil(t, err)
 
 	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1

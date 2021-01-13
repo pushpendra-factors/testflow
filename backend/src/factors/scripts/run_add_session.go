@@ -33,6 +33,7 @@ func main() {
 	disabledProjectIds := flag.String("disabled_project_ids", "", "Disallowed projects to create sessions offline.")
 	numRoutines := flag.Int("num_routines", 1, "Number of routines to use.")
 	maxLookbackHours := flag.Int64("max_lookback_hours", 0, "Max lookback hours to look for session existence.")
+	hardLimitTimestamp := flag.Int64("hard_limit_timestamp", 0, "Hard limit all query to the given timestamp.")
 	bufferTimeBeforeCreateSessionInMins := flag.Int64("buffer_time_in_mins", 30, "Buffer time to wait before processing an event for session.")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
@@ -95,12 +96,16 @@ func main() {
 		os.Exit(0)
 	}
 
+	if *hardLimitTimestamp > 0 && *maxLookbackHours == 0 {
+		log.Fatal("hard_limit_timestamp is not allowed without max_lookback_hours.")
+	}
+
 	var maxLookbackTimestamp int64
 	if *maxLookbackHours > 0 {
 		maxLookbackTimestamp = util.UnixTimeBeforeDuration(time.Hour * time.Duration(*maxLookbackHours))
 	}
 
-	statusMap, err := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
+	statusMap, err := session.AddSession(allowedProjectIds, maxLookbackTimestamp, *hardLimitTimestamp,
 		*bufferTimeBeforeCreateSessionInMins, *numRoutines)
 
 	modifiedStatusMap := make(map[uint64]session.Status, 0)
