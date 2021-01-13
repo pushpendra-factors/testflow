@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -325,6 +326,13 @@ func GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]Fa
 	return facebookLastSyncInfos, http.StatusOK
 }
 
+// format yyyymmdd
+func changeUnixTimestampToDate(timestamp int64) int64 {
+	time := time.Unix(timestamp, 0)
+	date, _ := strconv.ParseInt(time.Format("20060102"), 10, 64)
+	return date
+}
+
 // ExecuteFacebookChannelQuery - @TODO Kark v0
 func ExecuteFacebookChannelQuery(projectID uint64, query *ChannelQuery) (*ChannelQueryResult, int) {
 	logCtx := log.WithField("project_id", projectID).WithField("query", query)
@@ -343,6 +351,9 @@ func ExecuteFacebookChannelQuery(projectID uint64, query *ChannelQuery) (*Channe
 		logCtx.Error("Execute facebook channel query failed. No customer account id.")
 		return nil, http.StatusInternalServerError
 	}
+
+	query.From = changeUnixTimestampToDate(query.From)
+	query.To = changeUnixTimestampToDate(query.To)
 	queryResult := &ChannelQueryResult{}
 	result, err := getFacebookChannelResult(projectID, projectSetting.IntFacebookAdAccount, query)
 	if err != nil {
@@ -441,7 +452,7 @@ func getFacebookMetricsQuery(query *ChannelQuery, withBreakdown bool) (string, i
 		CAColumnTotalCost, CAColumnUniqueClicks, CAColumnReach,
 		CAColumnFrequency, CAColumnInlinePostEngagement, CAColumnCostPerClick)
 
-	strmntWhere := "WHERE project_id= ? AND customer_ad_account_id = ? AND timestamp>? AND timestamp<? AND type=? and platform!='facebook_all'"
+	strmntWhere := "WHERE project_id= ? AND customer_ad_account_id = ? AND timestamp BETWEEN ? AND ? AND type=? and platform!='facebook_all'"
 
 	strmntGroupBy := ""
 	if withBreakdown {
