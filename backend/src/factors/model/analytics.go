@@ -208,8 +208,8 @@ var queryOps = map[string]string{
 	LesserThanOpStr:         "<",
 	GreaterThanOrEqualOpStr: ">=",
 	LesserThanOrEqualOpStr:  "<=",
-	ContainsOpStr:           "LIKE",
-	NotContainsOpStr:        "NOT LIKE",
+	ContainsOpStr:           "ILIKE",
+	NotContainsOpStr:        "NOT ILIKE",
 }
 
 const (

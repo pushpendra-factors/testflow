@@ -1,12 +1,20 @@
 package model
 
 import (
+	"errors"
+	C "factors/config"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
+
+const innerJoinClause = " INNER JOIN "
+
+const channeAnalyticsLimit = " LIMIT 2500 "
 
 // ChannelFilterValues - @TODO Kark v1
 type ChannelFilterValues struct {
@@ -379,26 +387,34 @@ func runSingleChannelQuery(projectID uint64, query ChannelQueryV1, resultHolder 
 // ExecuteChannelQueryV1 - @Kark TODO v1
 // TODO error handling.
 func ExecuteChannelQueryV1(projectID uint64, query *ChannelQueryV1, reqID string) (*ChannelQueryResultV1, int) {
+	logCtx := log.WithField("req_id", reqID)
 	queryResult := &ChannelQueryResultV1{}
+	var resultMetrics [][]interface{}
 	status := http.StatusOK
+	var err error
 	if !(isValidChannel(query.Channel)) {
 		return queryResult, http.StatusBadRequest
 	}
-
+	columns := buildColumns(query)
 	switch query.Channel {
 	// case CAAllChannelAds:
 	// 	result = ExecuteAllChannelsQueryV1()
-	// case CAChannelFacebookAds:
-	// 	result = ExecuteFacebookChannelQueryV1()
-	case CAChannelGoogleAds:
-		columns := buildColumns(query)
-		_, resultMetrics, err := ExecuteAdwordsChannelQueryV1(projectID, query, reqID)
-		queryResult.Headers = columns
-		queryResult.Rows = resultMetrics
+	case CAChannelFacebookAds:
+		_, resultMetrics, err = ExecuteFacebookChannelQueryV1(projectID, query, reqID)
 		if err != nil {
+			logCtx.Error("Failed in channel analytics with following error: ", err)
+			status = http.StatusBadRequest
+		}
+	case CAChannelGoogleAds:
+		_, resultMetrics, err = ExecuteAdwordsChannelQueryV1(projectID, query, reqID)
+		if err != nil {
+			logCtx.Error("Failed in channel analytics with following error: ", err)
 			status = http.StatusBadRequest
 		}
 	}
+	queryResult.Headers = columns
+	queryResult.Rows = resultMetrics
+
 	return queryResult, status
 }
 
@@ -448,15 +464,6 @@ func ExecuteChannelQuery(projectID uint64, query *ChannelQuery) (*ChannelQueryRe
 	return nil, http.StatusBadRequest
 }
 
-// Convert2DArrayTo1DArray ...
-func Convert2DArrayTo1DArray(inputArray [][]interface{}) []interface{} {
-	result := make([]interface{}, 0, 0)
-	for _, row := range inputArray {
-		result = append(result, row...)
-	}
-	return result
-}
-
 func buildColumns(query *ChannelQueryV1) []string {
 	result := make([]string, 0, 0)
 	for _, groupBy := range query.GroupBy {
@@ -471,4 +478,92 @@ func buildColumns(query *ChannelQueryV1) []string {
 		result = append(result, selectMetrics)
 	}
 	return result
+}
+
+// Common Methods for facebook and adwords starts here.
+
+// Convert2DArrayTo1DArray ...
+// @Kark TODO v1
+func Convert2DArrayTo1DArray(inputArray [][]interface{}) []interface{} {
+	result := make([]interface{}, 0, 0)
+	for _, row := range inputArray {
+		result = append(result, row...)
+	}
+	return result
+}
+
+// @Kark TODO v1
+func hasAllIDsOnlyInGroupBy(query *ChannelQueryV1) bool {
+	for _, groupBy := range query.GroupBy {
+		if !(strings.Contains(groupBy.Property, "id") || strings.Contains(groupBy.Property, "ID")) {
+			return false
+		}
+	}
+	return true
+}
+
+// @Kark TODO v1
+func appendSelectTimestampIfRequiredForChannels(stmnt string, groupByTimestamp string, timezone string) string {
+	if groupByTimestamp == "" {
+		return stmnt
+	}
+
+	return joinWithComma(stmnt, fmt.Sprintf("%s as %s",
+		getSelectTimestampByTypeForChannels(groupByTimestamp, timezone), AliasDateTime))
+}
+
+// @Kark TODO v1
+func getSelectTimestampByTypeForChannels(timestampType, timezone string) string {
+	var selectTz string
+
+	if timezone == "" {
+		selectTz = DefaultTimezone
+	} else {
+		selectTz = timezone
+	}
+
+	var selectStr string
+	if timestampType == GroupByTimestampHour {
+		selectStr = fmt.Sprintf("date_trunc('hour', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+	} else if timestampType == GroupByTimestampWeek {
+		selectStr = fmt.Sprintf("date_trunc('week', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+	} else if timestampType == GroupByTimestampMonth {
+		selectStr = fmt.Sprintf("date_trunc('month', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+	} else {
+		// defaults to GroupByTimestampDate.
+		selectStr = fmt.Sprintf("date_trunc('day', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+	}
+
+	return selectStr
+}
+
+// @Kark TODO v1
+func getOrderByClause(selectMetrics []string) string {
+	selectMetricsWithDesc := make([]string, 0, 0)
+	for _, selectMetric := range selectMetrics {
+		selectMetricsWithDesc = append(selectMetricsWithDesc, selectMetric+" DESC")
+	}
+	return joinWithComma(selectMetricsWithDesc...)
+}
+
+// ExecuteSQL - @Kark TODO v1
+func ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error) {
+	db := C.GetServices().Db
+	rows, err := db.Raw(sqlStatement, params...).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return nil, nil, err
+	}
+
+	defer rows.Close()
+	columns, resultRows, err := U.DBReadRows(rows)
+
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(resultRows) == 0 {
+		log.Error("Aggregate query returned zero rows.")
+		return nil, make([][]interface{}, 0, 0), errors.New("no rows returned")
+	}
+	return columns, resultRows, nil
 }

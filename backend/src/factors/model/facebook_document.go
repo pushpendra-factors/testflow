@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -31,6 +32,12 @@ type FacebookDocument struct {
 	UpdatedAt           time.Time       `json:"updated_at"`
 }
 
+const (
+	facebookCampaign = "campaign"
+	facebookAdSet    = "ad_set"
+	facebookAd       = "ad"
+)
+
 var facebookDocumentTypeAlias = map[string]int{
 	"ad_account":        7,
 	"campaign":          1,
@@ -41,12 +48,65 @@ var facebookDocumentTypeAlias = map[string]int{
 	"ad_set_insights":   6,
 }
 
+var objectAndPropertyToValueInFacebookReportsMapping = map[string]string{
+	"campaign:id": "campaign_id",
+	"ad_set:id":   "ad_set_id",
+	"ad:id":       "id",
+}
+
+var objectToValueInFacebookJobsMapping = map[string]string{
+	"campaign:name": "name",
+	"ad_set:name":   "name",
+	"campaign:id":   "campaign_id",
+	"ad_set:id":     "ad_set_id",
+	"ad:id":         "ad_id",
+}
+
+var mapOfTypeToFacebookJobCTEAlias = map[string]string{
+	"ad_set":   "ad_set_cte",
+	"campaign": "campaign_cte",
+}
+
+// TODO check
+var facebookMetricsToAggregatesInReportsMapping = map[string]string{
+	"impressions": "SUM((value->>'impressions')::float)",
+	"clicks":      "SUM((value->>'clicks')::float)",
+	"spend":       "SUM((value->>'spend')::float)",
+	// "cost_per_click": "average_cost",
+	// "conversion_rate": "conversion_rate"
+}
+
+var facebookMetricsToOperation = map[string]string{
+	"impressions": "sum",
+	"clicks":      "sum",
+	"spend":       "sum",
+	"conversions": "sum",
+}
+
+var facebookRequestPropertiesToSQLproperty = map[string]string{
+	"name":        "name",
+	"id":          "id",
+	"impressions": "impressions",
+	"clicks":      "clicks",
+	"spend":       "spend",
+	"conversion":  "conversions",
+	"campaign":    "campaign",
+	"ad_group":    "ad_set",
+	"ad":          "ad",
+}
+
 const platform = "platform"
+
+var errorEmptyFacebookDocument = errors.New("empty facebook document")
 
 const errorDuplicateFacebookDocument = "pq: duplicate key value violates unique constraint \"facebook_documents_pkey\""
 
 const facebookFilterQueryStr = "SELECT DISTINCT(value->>?) as filter_value FROM facebook_documents WHERE project_id = ? AND" +
 	" " + "customer_ad_account_id = ? AND type = ? LIMIT 5000"
+
+const fromFacebooksDocument = " FROM facebook_documents "
+
+const staticWhereStatementForFacebook = "WHERE project_id = ? AND customer_ad_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 
 func isDuplicateFacebookDocumentError(err error) bool {
 	return err.Error() == errorDuplicateFacebookDocument
@@ -124,7 +184,7 @@ func CreateFacebookDocument(projectID uint64, document *FacebookDocument) int {
 }
 
 func getFacebookHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (int64, int64, int64, error) {
-	if docType > len(AdwordsDocumentTypeAlias) {
+	if docType > len(facebookDocumentTypeAlias) {
 		return 0, 0, 0, errors.New("invalid document type")
 	}
 
@@ -134,7 +194,7 @@ func getFacebookHierarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (
 	}
 
 	if len(*valueMap) == 0 {
-		return 0, 0, 0, errorEmptyAdwordsDocument
+		return 0, 0, 0, errorEmptyFacebookDocument
 	}
 	switch docType {
 	case 1:
@@ -159,6 +219,8 @@ type FacebookLastSyncInfo struct {
 	DocumentTypeAlias   string `json:"type_alias"`
 	LastTimestamp       int64  `json:"last_timestamp"`
 }
+
+// FacebookLastSyncInfoPayload ...
 type FacebookLastSyncInfoPayload struct {
 	ProjectId           string `json:"project_id"`
 	CustomerAdAccountId string `json:"account_id"`
@@ -185,13 +247,21 @@ func buildFbChannelConfig() *ChannelConfigResult {
 }
 
 // GetFacebookFilterValues - @TODO Kark v1
-func GetFacebookFilterValues(projectID uint64, filterObject string, filterProperty string, reqID string) ([]interface{}, int) {
-	docType, property, errCode := getFacebookDocumentTypeAndPropertyKeyForFilter(filterObject, filterProperty)
-	if errCode != http.StatusFound {
-		return []interface{}{}, errCode
+func GetFacebookFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
+	logCtx := log.WithField("req_id", reqID)
+	facebookInternalFilterObject, isPresent := facebookRequestPropertiesToSQLproperty[requestFilterObject]
+	if !isPresent {
+		logCtx.Error("Invalid facebook filter object.")
+		return make([]interface{}, 0, 0), http.StatusBadRequest
 	}
+	facebookInternalFilterProperty, isPresent := facebookRequestPropertiesToSQLproperty[requestFilterProperty]
+	if !isPresent {
+		logCtx.Error("Invalid facebook filter property.")
+		return make([]interface{}, 0, 0), http.StatusBadRequest
+	}
+	docType := facebookDocumentTypeAlias[facebookInternalFilterObject]
 
-	filterValues, errCode := getFacebookFilterValuesByType(projectID, docType, property, reqID)
+	filterValues, errCode := getFacebookFilterValuesByType(projectID, docType, facebookInternalFilterProperty, reqID)
 	if errCode != http.StatusFound {
 		return []interface{}{}, http.StatusInternalServerError
 	}
@@ -200,68 +270,31 @@ func GetFacebookFilterValues(projectID uint64, filterObject string, filterProper
 }
 
 // GetFacebookSQLQueryAndParametersForFilterValues - @TODO Kark v1
-func GetFacebookSQLQueryAndParametersForFilterValues(projectID uint64, filterObject string, filterProperty string) (string, []interface{}, int) {
-	docType, property, errCode := getFacebookDocumentTypeAndPropertyKeyForFilter(filterObject, filterProperty)
-	if errCode != http.StatusFound {
-		return "", []interface{}{}, errCode
+func GetFacebookSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string) (string, []interface{}, int) {
+	facebookInternalFilterObject, isPresent := facebookRequestPropertiesToSQLproperty[requestFilterObject]
+	if !isPresent {
+		return "", make([]interface{}, 0, 0), http.StatusBadRequest
 	}
+	facebookInternalFilterProperty, isPresent := facebookRequestPropertiesToSQLproperty[requestFilterProperty]
+	if !isPresent {
+		return "", make([]interface{}, 0, 0), http.StatusBadRequest
+	}
+	docType := facebookDocumentTypeAlias[facebookInternalFilterObject]
 
 	projectSetting, errCode := GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return "", []interface{}{}, http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
-	params := []interface{}{property, projectID, customerAccountID, docType}
+	params := []interface{}{facebookInternalFilterProperty, projectID, customerAccountID, docType}
 
 	return "(" + facebookFilterQueryStr + ")", params, http.StatusFound
 }
 
 // @TODO Kark v1
-func getFacebookDocumentTypeAndPropertyKeyForFilter(filterObject string, filterProperty string) (int, string, int) {
-	docType, err := getFacebookDocumentTypeForFilterKey(filterObject)
-
-	if err != nil {
-		return 0, "", http.StatusInternalServerError
-	}
-
-	property, err := getFacebookFilterPropertyKeyByType(filterObject, filterProperty)
-	if err != nil {
-		return 0, "", http.StatusBadRequest
-	}
-
-	return docType, property, http.StatusFound
-}
-
-// @TODO Kark v1
-// TODO IMP (impl as part of other PR) - Mapping of adGroup to adSet.
-func getFacebookDocumentTypeForFilterKey(filterObject string) (int, error) {
-	var docType int = -1
-
-	switch filterObject {
-	case CAFilterCampaign:
-		docType = facebookDocumentTypeAlias["campaign"]
-	case CAFilterAdGroup:
-		docType = facebookDocumentTypeAlias["ad_set"]
-	case CAFilterAd:
-		docType = facebookDocumentTypeAlias["ad"]
-	}
-
-	if docType == -1 {
-		return docType, errors.New("no adwords document type for filter")
-	}
-
-	return docType, nil
-}
-
-var facebookRequestPropertiesToSQLProperty = map[string]string{
-	"name": "name",
-	"id":   "id",
-}
-
-// @TODO Kark v1
 // TODO: Check the value of filterObject. It should be adset
 func getFacebookFilterPropertyKeyByType(filterObject string, filterProperty string) (string, error) {
-	property, isPropertyPresent := facebookRequestPropertiesToSQLProperty[filterProperty]
+	property, isPropertyPresent := facebookRequestPropertiesToSQLproperty[filterProperty]
 
 	if !isPropertyPresent {
 		return "", errors.New("no filter key found for document type")
@@ -271,17 +304,519 @@ func getFacebookFilterPropertyKeyByType(filterObject string, filterProperty stri
 
 // @TODO Kark v1
 func getFacebookFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
+	logCtx := log.WithField("req_id", reqID)
 	projectSetting, errCode := GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
+		logCtx.Error("Failed to fetch Project Setting in facebook filter values.")
 		return []interface{}{}, http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
 
-	logCtx := log.WithField("project_id", projectID).WithField("doc_type", docType).WithField("req_id", reqID)
+	logCtx = log.WithField("project_id", projectID).WithField("doc_type", docType).WithField("req_id", reqID)
 	params := []interface{}{property, projectID, customerAccountID, docType}
-	_, resultRows, _ := ExecuteSQL(adwordsFilterQueryStr, params, logCtx)
+	_, resultRows, _ := ExecuteSQL(facebookFilterQueryStr, params, logCtx)
 
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
+}
+
+// ExecuteFacebookChannelQueryV1 - @Kark TODO v1
+// In this flow, Job represents the meta data associated with particular object type. Reports represent data with metrics and few filters.
+// TODO - Duplicate code/flow in facebook and adwords.
+func ExecuteFacebookChannelQueryV1(projectID uint64, query *ChannelQueryV1, reqID string) ([]string, [][]interface{}, error) {
+	query.From = getAdwordsDateOnlyTimestampInInt64(query.From)
+	query.To = getAdwordsDateOnlyTimestampInInt64(query.To)
+	var err error
+	logCtx := log.WithField("req_id", reqID)
+	logCtx.Info("query", query)
+	projectSetting, errCode := GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return nil, nil, nil
+	}
+	customerAccountID := projectSetting.IntFacebookAdAccount
+
+	*query, err = convertFromRequestToFacebookSpecificRepresentation(*query)
+	if err != nil {
+		logCtx.Warn("Request failed in validation: ", err)
+		return nil, make([][]interface{}, 0, 0), err
+	}
+	if hasAllIDsOnlyInGroupBy(query) {
+		return buildAndExecuteFacebookSimpleQueryV1(query, projectID, customerAccountID, reqID)
+	}
+	return buildAndExecuteFacebookComplexQueryV1(query, projectID, customerAccountID, reqID)
+}
+
+// @Kark TODO v1
+// Currently, this relies on assumption of Object across different filterObjects. Change when we need robust.
+func convertFromRequestToFacebookSpecificRepresentation(query ChannelQueryV1) (ChannelQueryV1, error) {
+	var err1, err2, err3 error
+	query.SelectMetrics, err1 = getFacebookSpecificMetrics(query.SelectMetrics)
+	query.Filters, err2 = getFacebookSpecificFilters(query.Filters)
+	query.GroupBy, err3 = getFacebookSpecificGroupBy(query.GroupBy)
+	if err1 != nil {
+		return query, err1
+	}
+	if err2 != nil {
+		return query, err2
+	}
+	if err3 != nil {
+		return query, err3
+	}
+	return query, nil
+}
+
+// @Kark TODO v1
+func getFacebookSpecificMetrics(requestSelectMetrics []string) ([]string, error) {
+	resultMetrics := make([]string, 0, 0)
+	for _, requestMetric := range requestSelectMetrics {
+		metric, isPresent := facebookRequestPropertiesToSQLproperty[requestMetric]
+		if !isPresent {
+			return make([]string, 0, 0), errors.New("Invalid metric found for document type")
+		}
+		resultMetrics = append(resultMetrics, metric)
+	}
+	return resultMetrics, nil
+}
+
+// @Kark TODO v1
+func getFacebookSpecificFilters(requestFilters []FilterV1) ([]FilterV1, error) {
+	for index, requestFilter := range requestFilters {
+		filterObject, isPresent := facebookRequestPropertiesToSQLproperty[requestFilter.Object]
+		if !isPresent {
+			return make([]FilterV1, 0, 0), errors.New("Invalid filter key found for document type")
+		}
+		(&requestFilters[index]).Object = filterObject
+	}
+	return requestFilters, nil
+}
+
+// @Kark TODO v1
+func getFacebookSpecificGroupBy(requestGroupBys []GroupBy) ([]GroupBy, error) {
+	for index, requestGroupBy := range requestGroupBys {
+		groupByObject, isPresent := facebookRequestPropertiesToSQLproperty[requestGroupBy.Object]
+		if !isPresent {
+			return make([]GroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
+		}
+		(&requestGroupBys[index]).Object = groupByObject
+	}
+	return requestGroupBys, nil
+}
+
+// @Kark TODO v1
+// TODO Error add
+func buildAndExecuteFacebookSimpleQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, reqID string) ([]string, [][]interface{}, error) {
+	campaignIDs, adSetIDs := getIDsFromFacebookJob(query, projectID, customerAccountID, reqID)
+	lowestHierarchyLevel, _ := getLowestHierarchyLevelForFacebook(query)
+	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
+
+	return getResultFromFacebookReports(query, projectID, query.From, query.To, customerAccountID, facebookDocumentTypeAlias[lowestHierarchyReportLevel],
+		campaignIDs, adSetIDs, reqID)
+}
+
+// @TODO Kark v1
+func getIDsFromFacebookJob(query *ChannelQueryV1, projectID uint64, facebookAccountIDs string, reqID string) ([]int, []int) {
+	campaignsFilters, adSetFilters, _ := splitFiltersByObjectTypeForFacebook(query)
+
+	campaignIDs, _ := getIDsByPropertyOnFacebookJob(projectID, query.From, query.To, facebookAccountIDs, facebookDocumentTypeAlias["campaign"], campaignsFilters, reqID)
+	adSetIDs, _ := getIDsByPropertyOnFacebookJob(projectID, query.From, query.To, facebookAccountIDs, facebookDocumentTypeAlias["ad_set"], adSetFilters, reqID)
+	// adIDs := getAdIDsByPropertyOnJob(adFilters)
+	return campaignIDs, adSetIDs
+}
+
+// @TODO Kark v1
+func getIDsByPropertyOnFacebookJob(projectID uint64, from, to int64, facebookAccountIDs string, type1 int, filters []FilterV1, reqID string) ([]int, error) {
+	logCtx := log.WithField("req_id", reqID)
+	db := C.GetServices().Db
+	if len(filters) == 0 {
+		return []int{}, nil
+	}
+	sqlParams := make([]interface{}, 0)
+	customerAccountIDs := strings.Split(facebookAccountIDs, ",")
+
+	selectStatement := "SELECT value->'id'" + fromFacebooksDocument
+	groupByStatement := "GROUP BY value->'id'"
+
+	sqlParams = append(sqlParams, projectID, customerAccountIDs, type1, from, to)
+	filterPropertiesStatement, filterPropertiesParams := getFilterPropertiesForFacebookJobStatementAndParams(filters)
+	completeFiltersStatement := staticWhereStatementForFacebook
+	if len(filterPropertiesStatement) != 0 {
+		completeFiltersStatement += "AND " + filterPropertiesStatement + " "
+		sqlParams = append(sqlParams, filterPropertiesParams...)
+	}
+
+	resultSQLStatement := selectStatement + completeFiltersStatement + groupByStatement + ";"
+
+	rows, err := db.Raw(resultSQLStatement, sqlParams...).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return nil, err
+	}
+	defer rows.Close()
+	ids := make([]int, 0, 0)
+	for rows.Next() {
+		var id int
+		if err = rows.Scan(&id); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed")
+			continue
+		}
+		ids = append(ids, id)
+	}
+
+	return ids, nil
+}
+
+// @TODO Kark v1
+// Complexity consideration - Having at max of 20 filters and 20 group by should be fine.
+// change algo/strategy the filters and group by goes beyond 100.
+func getLowestHierarchyLevelForFacebook(query *ChannelQueryV1) (string, error) {
+	// Fetch the propertyNames
+	var objectNames []string
+	for _, filter := range query.Filters {
+		objectNames = append(objectNames, filter.Object)
+	}
+
+	for _, groupBy := range query.GroupBy {
+		objectNames = append(objectNames, groupBy.Object)
+	}
+
+	// Check if present
+	for _, objectName := range objectNames {
+		if objectName == "ad" {
+			return "ad", nil
+		}
+	}
+
+	for _, objectName := range objectNames {
+		if objectName == "ad_set" {
+			return "ad_set", nil
+		}
+	}
+
+	for _, objectName := range objectNames {
+		if objectName == "campaign" {
+			return "campaign", nil
+		}
+	}
+	return "campaign", nil
+}
+
+// @TODO Kark v1
+// TODO Map of request params to proper fields in documents.
+func getResultFromFacebookReports(query *ChannelQueryV1, projectID uint64, from, to int64, facebookAccountIDs string,
+	docType int, campaignIDs []int, adSetIDs []int, reqID string) ([]string, [][]interface{}, error) {
+
+	logCtx := log.WithField("req_id", reqID)
+	customerAccountIDs := strings.Split(facebookAccountIDs, ",")
+	selectQuery := ""
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	groupByStatement := ""
+	groupByKeysWithoutTimestamp := make([]string, 0, 0)
+
+	for _, groupBy := range query.GroupBy {
+		key := groupBy.Object + ":" + groupBy.Property
+		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, objectAndPropertyToValueInFacebookReportsMapping[key])
+	}
+
+	if isGroupByTimestamp {
+		groupByStatement = joinWithComma(append(groupByKeysWithoutTimestamp, AliasDateTime)...)
+	} else {
+		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
+	}
+
+	selectQuery += joinWithComma(groupByKeysWithoutTimestamp...)
+	selectQuery = appendSelectTimestampIfRequiredForChannels(selectQuery, query.GetGroupByTimestamp(), query.Timezone)
+	selectMetrics, selectQuery := appendSelectMetricsForFacebook(selectQuery, query.SelectMetrics)
+	selectQuery = "SELECT " + selectQuery
+
+	orderByQuery := "ORDER BY " + getOrderByClause(selectMetrics)
+
+	whereConditionForIDs := ""
+	if len(campaignIDs) != 0 {
+		campaignString := ""
+		for _, campaignID := range campaignIDs {
+			campaignString += strconv.Itoa(campaignID) + ","
+		}
+		campaignString = campaignString[:len(campaignString)-1]
+		whereConditionForIDs += "AND campaign_id IN " + "(" + campaignString + ") "
+	}
+	if len(adSetIDs) != 0 {
+		adSetString := ""
+		for _, adSetID := range adSetIDs {
+			adSetString += strconv.Itoa(adSetID) + ","
+		}
+		adSetString = adSetString[:len(adSetString)-1]
+		whereConditionForIDs += "AND adset_id IN " + "(" + adSetString + ") "
+	}
+
+	resultSQLStatement := selectQuery + fromFacebooksDocument + staticWhereStatementForFacebook + whereConditionForIDs
+	if len(groupByStatement) != 0 {
+		resultSQLStatement += "GROUP BY " + groupByStatement
+	}
+	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
+	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
+	return ExecuteSQL(resultSQLStatement, staticWhereParams, logCtx)
+}
+
+/*
+TODO Add the query
+*/
+// @Kark TODO v1
+func buildAndExecuteFacebookComplexQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, reqID string) ([]string, [][]interface{}, error) {
+	logCtx := log.WithField("xreq_id", reqID)
+	selectQuery := "SELECT "
+	selectMetrics := make([]string, 0, 0)
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	groupByStatement := ""
+	groupByKeysWithoutTimestamp := make([]string, 0, 0)
+	lowestHierarchyLevel, _ := getLowestHierarchyLevelForFacebook(query)
+	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
+
+	reportCTE, reportCTEAlias, reportSelectMetrics, reportCTEJoinFields, reportParams := getCTEAndParamsForFacebookReportComplexStrategy(query, projectID, customerAccountID, facebookDocumentTypeAlias[lowestHierarchyReportLevel])
+	jobsCTE, jobsCTEAliases, jobCTEJoinFields, jobsParams := getCTEAndParamsForFacebookJobsComplexStrategy(query, projectID, customerAccountID)
+
+	completeWithClause := reportCTE
+	params := make([]interface{}, 0, 0)
+	params = append(params, reportParams...)
+
+	params = append(params, jobsParams...)
+	for _, jobCTE := range jobsCTE {
+		completeWithClause += jobCTE
+	}
+	completeWithClause = completeWithClause[:len(completeWithClause)-2]
+
+	for _, groupBy := range query.GroupBy {
+		key := groupBy.Object + ":" + groupBy.Property
+		value := mapOfTypeToFacebookJobCTEAlias[groupBy.Object] + "." + objectToValueInFacebookJobsMapping[key]
+		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, value)
+	}
+
+	if isGroupByTimestamp {
+		groupByStatement = joinWithComma(append(groupByKeysWithoutTimestamp, AliasDateTime)...)
+	} else {
+		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
+	}
+
+	selectKeys := groupByKeysWithoutTimestamp
+	if isGroupByTimestamp {
+		selectKeys = append(selectKeys, reportCTEAlias+"."+AliasDateTime)
+	}
+
+	for _, selectMetric := range reportSelectMetrics {
+		value := fmt.Sprintf("%s(%s.%s)", facebookMetricsToOperation[selectMetric], reportCTEAlias, selectMetric)
+		selectMetrics = append(selectMetrics, value)
+	}
+	selectQuery += joinWithComma(append(selectKeys, selectMetrics...)...)
+	orderByQuery := "ORDER BY " + getOrderByClause(selectMetrics)
+
+	completeInnerJoin := " from " + reportCTEAlias + " "
+	for index, jobsCTEAlias := range jobsCTEAliases {
+		completeInnerJoin += innerJoinClause + jobsCTEAlias + " ON " + reportCTEAlias + "." + reportCTEJoinFields[index] + " = " + jobsCTEAlias + "." + jobCTEJoinFields[index] + " AND "
+	}
+	completeInnerJoin = completeInnerJoin[:len(completeInnerJoin)-4] + " "
+
+	resultSQLStatement := completeWithClause + selectQuery + completeInnerJoin
+
+	if len(groupByStatement) != 0 {
+		resultSQLStatement += "GROUP BY " + groupByStatement
+	}
+	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
+	return ExecuteSQL(resultSQLStatement, params, logCtx)
+}
+
+// TODO handle duplicates of groupBy - edge case
+// @Kark TODO v1
+func getCTEAndParamsForFacebookReportComplexStrategy(query *ChannelQueryV1, projectID uint64,
+	customerAccountID string, docType int) (string, string, []string, []string, []interface{}) {
+	cteAlias := "reports_cte"
+	customerAccountIDs := strings.Split(customerAccountID, ",")
+	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, query.From, query.To}
+	selectQuery := "WITH " + cteAlias + " as (SELECT "
+	cteJoinFields := []string{}
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	groupByKeysWithoutTimestamp := make([]string, 0, 0)
+	groupByStatement := ""
+	uniqueGroupByObjects := make(map[string]struct{})
+	for _, groupBy := range query.GroupBy {
+		uniqueGroupByObjects[groupBy.Object] = struct{}{}
+	}
+
+	for key := range uniqueGroupByObjects {
+		key := key + ":id"
+		value := objectAndPropertyToValueInFacebookReportsMapping[key]
+		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, value)
+		cteJoinFields = append(cteJoinFields, value)
+	}
+
+	if isGroupByTimestamp {
+		groupByStatement = joinWithComma(append(groupByKeysWithoutTimestamp, AliasDateTime)...)
+	} else {
+		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
+	}
+
+	selectQuery += joinWithComma(groupByKeysWithoutTimestamp...)
+	selectQuery = appendSelectTimestampIfRequiredForChannels(selectQuery, query.GetGroupByTimestamp(), query.Timezone)
+
+	for _, selectMetric := range query.SelectMetrics {
+		currentSelectQuery := facebookMetricsToAggregatesInReportsMapping[selectMetric] + " as " + selectMetric
+		selectQuery = joinWithComma(selectQuery, currentSelectQuery)
+	}
+
+	resultSQLStatement := selectQuery + fromFacebooksDocument + staticWhereStatementForFacebook + " GROUP BY " + groupByStatement + " ), "
+
+	return resultSQLStatement, cteAlias, query.SelectMetrics, cteJoinFields, staticWhereParams
+}
+
+// @Kark TODO v1
+func getCTEAndParamsForFacebookJobsComplexStrategy(query *ChannelQueryV1, projectID uint64, customerAccountID string) ([]string, []string, []string, []interface{}) {
+	customerAccountIDs := strings.Split(customerAccountID, ",")
+
+	campaignsFilters, adSetFilters, _ := splitFiltersByObjectTypeForFacebook(query)
+	campaignsGroupBy, adSetsGroupBy, _ := splitGroupByByObjectTypeForFacebook(query)
+	campaignJobCTE, campaignCTEAliasName, campaignJoinField, campaignParams := getCTEAndParamsForFacebookJob(query, projectID, customerAccountIDs, "campaign", campaignsFilters, campaignsGroupBy)
+	adSetJobCTE, adSetCTEAliasName, adSetJoinField, adSetParams := getCTEAndParamsForFacebookJob(query, projectID, customerAccountIDs, "ad_set", adSetFilters, adSetsGroupBy)
+	resultParams := append(make([]interface{}, 0, 0), campaignParams...)
+	resultParams = append(resultParams, adSetParams...)
+	return U.AppendNonNullValues(campaignJobCTE, adSetJobCTE), U.AppendNonNullValues(campaignCTEAliasName, adSetCTEAliasName), U.AppendNonNullValues(campaignJoinField, adSetJoinField), resultParams
+}
+
+// @Kark TODO v1
+func getCTEAndParamsForFacebookJob(query *ChannelQueryV1, projectID uint64, customerAccountIDs []string, objectType string, filters []FilterV1, groupBy []GroupBy) (string, string, string, []interface{}) {
+	if len(groupBy) < 1 {
+		return "", "", "", make([]interface{}, 0, 0)
+	}
+	docType := facebookDocumentTypeAlias[objectType]
+	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, query.From, query.To}
+	aliasName := mapOfTypeToFacebookJobCTEAlias[objectType]
+	withClause := aliasName + " as ("
+
+	objectID := objectToValueInFacebookJobsMapping[objectType+":"+"id"]
+
+	table1SQL, table1Alias, table1ColumnName, table1Params := getIDAndMaxTimeSQLAndParamsForFacebook(query, staticWhereParams, objectType, filters)
+	table2SQL, table2Alias, table2ColumnName, table2Params := getCompleteRowSQLAndParamsForFacebookJob(query, staticWhereParams, objectType, filters)
+	cteJoinField := objectID
+	groupByQuery := getSelectPropertiesExceptIDsForFacebookJob(groupBy)
+	selectQuery := "SELECT " + table1Alias + "." + objectID + " as " + objectID + ", " + groupByQuery
+
+	resultStatement := withClause + selectQuery + " from " + table1SQL + innerJoinClause + table2SQL + " ON " + table1Alias + "." + table1ColumnName + " = " + table2Alias + "." + table2ColumnName + " ), "
+	resultParams := append(make([]interface{}, 0, 0), table1Params...)
+	resultParams = append(resultParams, table2Params...)
+	return resultStatement, aliasName, cteJoinField, resultParams
+}
+
+// @Kark TODO v1
+func appendSelectMetricsForFacebook(selectQuery string, selectMetrics []string) ([]string, string) {
+	selectKeys := make([]string, 0, 0)
+	for _, key := range selectMetrics {
+		value := facebookMetricsToAggregatesInReportsMapping[key]
+		selectKeys = append(selectKeys, value)
+		selectQuery = joinWithComma(selectQuery, value)
+	}
+	return selectKeys, selectQuery
+}
+
+// @Kark TODO v1
+func getSelectPropertiesExceptIDsForFacebookJob(groupBys []GroupBy) string {
+	groupByQuery := ""
+	for _, groupBy := range groupBys {
+		key := groupBy.Object + ":" + groupBy.Property
+		if groupBy.Property != "id" {
+			groupByQuery += "value->>'" + objectToValueInFacebookJobsMapping[key] + "' as " + objectToValueInFacebookJobsMapping[key] + ", "
+		}
+	}
+	return groupByQuery[:len(groupByQuery)-2]
+}
+
+// @Kark TODO v1
+func getIDAndMaxTimeSQLAndParamsForFacebook(query *ChannelQueryV1, staticWhereParams []interface{}, objectType string, filters []FilterV1) (string, string, string, []interface{}) {
+	aliasName := "distinct_id"
+	idColumnName := objectType + "_id"
+	selectStatement := "(SELECT " + idColumnName + " , max(timestamp)" + fromFacebooksDocument
+	groupByStatement := "GROUP BY " + idColumnName + ") "
+	sqlParams := staticWhereParams
+	filterPropertiesStatement, filterParams := getFilterPropertiesForFacebookJobStatementAndParams(filters)
+	completeFiltersStatement := staticWhereStatementForFacebook
+	if len(filterPropertiesStatement) != 0 {
+		completeFiltersStatement += "AND " + filterPropertiesStatement + " "
+		sqlParams = append(sqlParams, filterParams...)
+	}
+	resultStatement := selectStatement + completeFiltersStatement + groupByStatement + "as " + aliasName
+	return resultStatement, aliasName, idColumnName, sqlParams
+}
+
+// @Kark TODO v1
+func getCompleteRowSQLAndParamsForFacebookJob(query *ChannelQueryV1, staticWhereParams []interface{}, objectType string, filters []FilterV1) (string, string, string, []interface{}) {
+	aliasName := "JobRecords"
+	idColumnName := objectType + "_id"
+	selectStatement := "(SELECT * FROM facebook_documents "
+	resultStatement := selectStatement + staticWhereStatementForFacebook + ") as " + aliasName
+	return resultStatement, aliasName, idColumnName, staticWhereParams
+}
+
+// @Kark TODO v1
+func splitFiltersByObjectTypeForFacebook(query *ChannelQueryV1) ([]FilterV1, []FilterV1, []FilterV1) {
+	campaignsFilters := make([]FilterV1, 0, 0)
+	adSetFilters := make([]FilterV1, 0, 0)
+	adFilters := make([]FilterV1, 0, 0)
+
+	for _, filter := range query.Filters {
+		switch filter.Object {
+		case "campaign":
+			campaignsFilters = append(campaignsFilters, filter)
+		case "ad_set":
+			adSetFilters = append(adSetFilters, filter)
+		case "ad":
+			adFilters = append(adFilters, filter)
+		}
+	}
+	return campaignsFilters, adSetFilters, adFilters
+}
+
+// @Kark TODO v1
+func splitGroupByByObjectTypeForFacebook(query *ChannelQueryV1) ([]GroupBy, []GroupBy, []GroupBy) {
+	campaignsGroupBys := make([]GroupBy, 0, 0)
+	adSetGroupBys := make([]GroupBy, 0, 0)
+	adSetBys := make([]GroupBy, 0, 0)
+
+	for _, filter := range query.GroupBy {
+		switch filter.Object {
+		case "campaign":
+			campaignsGroupBys = append(campaignsGroupBys, filter)
+		case "ad_set":
+			adSetGroupBys = append(adSetGroupBys, filter)
+		case "ad":
+			adSetBys = append(adSetBys, filter)
+		}
+	}
+	return campaignsGroupBys, adSetGroupBys, adSetBys
+}
+
+// @Kark TODO v1
+// TODO Check if we have none operator
+// TODO add support for indexed columns campaign_ids, ad_set_ids ... Hence not moving to common place
+func getFilterPropertiesForFacebookJobStatementAndParams(filters []FilterV1) (string, []interface{}) {
+	resultStatement := ""
+	params := make([]interface{}, 0, 0)
+	var filterValue string
+	for index, filter := range filters {
+		currentFilterStatement := ""
+		if filter.LogicalOp == "" {
+			filter.LogicalOp = "AND"
+		}
+		filterOperator := getOp(filter.Condition)
+		if filter.Condition == ContainsOpStr || filter.Condition == NotContainsOpStr {
+			filterValue = fmt.Sprintf("%%%s%%", filter.Value)
+		} else {
+			filterValue = filter.Value
+		}
+		currentFilterStatement = fmt.Sprintf("value->>? %s ?", filterOperator)
+		params = append(params, filter.Property, filterValue)
+
+		if index == 0 {
+			resultStatement = currentFilterStatement
+		} else {
+			resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
+		}
+	}
+	return resultStatement, params
 }
 
 // GetFacebookLastSyncInfo ...
@@ -499,7 +1034,7 @@ func getFacebookChannelResult(projectID uint64, customerAccountID string, query 
 	}
 
 	if len(resultRows) > 1 {
-		log.Error("Aggregate query returned more than one row on get adwords metric kvs.")
+		log.Error("Aggregate query returned more than one row on get facebook metric kvs.")
 	}
 
 	metricKvs := make(map[string]interface{})
