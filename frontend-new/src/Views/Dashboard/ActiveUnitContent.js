@@ -3,7 +3,7 @@ import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
 } from "../CoreQuery/utils";
-import ResultTab from "../CoreQuery/EventsAnalytics/ResultTab.js";
+import ResultTab from "../CoreQuery/EventsAnalytics/ResultTab";
 import ResultantChart from "../CoreQuery/FunnelsResultPage/ResultantChart";
 import { Text, SVG } from "../../components/factorsComponents";
 import { Button, Divider, Spin } from "antd";
