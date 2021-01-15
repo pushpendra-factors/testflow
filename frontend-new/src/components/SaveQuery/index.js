@@ -32,7 +32,7 @@ function SaveQuery({
   breakdownType,
   queryType,
 }) {
-  const [title, setTitle] = useState("jk_tab_test_1");
+  const [title, setTitle] = useState("");
   const [addToDashboard, setAddToDashboard] = useState(false);
   const [selectedDashboards, setSelectedDashboards] = useState([]);
   const [dashboardPresentation, setDashboardPresentation] = useState("pt");
