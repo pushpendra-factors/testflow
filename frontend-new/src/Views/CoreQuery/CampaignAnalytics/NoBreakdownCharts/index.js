@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import { formatData, formatDataInLineChartFormat } from "./utils";
 import ChartHeader from "../../../../components/SparkLineChart/ChartHeader";
 import SparkChart from "../../../../components/SparkLineChart/Chart";
-import { generateColors, numberWithCommas } from "../../../../utils/dataFormatter";
+import {
+  generateColors,
+  numberWithCommas,
+} from "../../../../utils/dataFormatter";
 import LineChart from "../../../../components/LineChart";
 import NoBreakdownTable from "./NoBreakdownTable";
 import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";

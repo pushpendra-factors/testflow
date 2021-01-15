@@ -14,9 +14,11 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
 import AttributionsChart from "../CoreQuery/AttributionsResult/AttributionsChart";
 import GroupedAttributionsChart from "../CoreQuery/AttributionsResult/GroupedAttributionsChart";
+import CampaignAnalytics from "../CoreQuery/CampaignAnalytics";
 
 function ActiveUnitContent({
   unit,
@@ -29,9 +31,16 @@ function ActiveUnitContent({
 
   let equivalentQuery;
   if (unit.query.query.query_group) {
-    equivalentQuery = getStateQueryFromRequestQuery(
-      unit.query.query.query_group[0]
-    );
+    if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_CAMPAIGN) {
+      equivalentQuery = {
+        ...unit.query.query.query_group[0],
+        queryType: QUERY_TYPE_CAMPAIGN,
+      };
+    } else {
+      equivalentQuery = getStateQueryFromRequestQuery(
+        unit.query.query.query_group[0]
+      );
+    }
   } else if (
     unit.query.query.cl &&
     unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
@@ -68,6 +77,16 @@ function ActiveUnitContent({
     });
   }
 
+  if (queryType === QUERY_TYPE_CAMPAIGN) {
+    arrayMapper = equivalentQuery.select_metrics.map((metric, index) => {
+      return {
+        eventName: metric,
+        index,
+        mapper: `event${index + 1}`,
+      };
+    });
+  }
+
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
     attributionsState = {
       eventGoal: equivalentQuery.eventGoal,
@@ -94,6 +113,7 @@ function ActiveUnitContent({
         resultState={[resultState]}
         index={0}
         arrayMapper={arrayMapper}
+        title={`modal${unit.id}`}
       />
     );
   }
@@ -187,6 +207,19 @@ function ActiveUnitContent({
         />
         {subcontent}
       </>
+    );
+  }
+
+  if (queryType === QUERY_TYPE_CAMPAIGN) {
+    content = (
+      <CampaignAnalytics
+        resultState={resultState}
+        arrayMapper={arrayMapper}
+        campaignState={equivalentQuery}
+        isWidgetModal={true}
+        title={`modal${unit.id}`}
+        setDrawerVisible={() => {}}
+      />
     );
   }
 

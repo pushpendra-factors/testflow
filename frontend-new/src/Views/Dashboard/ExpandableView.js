@@ -14,6 +14,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
+  QUERY_TYPE_CAMPAIGN
 } from "../../utils/constants";
 
 function ExpandableView({

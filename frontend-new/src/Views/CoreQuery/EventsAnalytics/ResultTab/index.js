@@ -22,6 +22,7 @@ function ResultTab({
   handleDurationChange,
   isWidgetModal = false,
   arrayMapper,
+  title="chart"
 }) {
   const [chartType, setChartType] = useState("");
 
@@ -126,6 +127,7 @@ function ResultTab({
           chartType={chartType}
           setChartType={setChartType}
           isWidgetModal={isWidgetModal}
+          title={title}
         />
       );
     }
@@ -155,6 +157,7 @@ function ResultTab({
           chartType={chartType}
           setChartType={setChartType}
           isWidgetModal={isWidgetModal}
+          title={title}
         />
       );
     }
@@ -171,6 +174,7 @@ function ResultTab({
           chartType={chartType}
           setChartType={setChartType}
           isWidgetModal={isWidgetModal}
+          title={title}
         />
       );
     }

@@ -117,7 +117,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaign
       getCampaignConfigData(activeProject.id, 'all_ads');
     }
     
-  }, [activeProject])
+  }, [activeProject, getCampaignConfigData])
 
   const updateResultState = useCallback((activeTab, newState) => {
     const idx = parseInt(activeTab);
@@ -181,7 +181,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaign
         return null;
       }
     },
-    [updateResultState, groupBy, queries, breakdownType]
+    [updateResultState, groupBy, queries]
   );
 
   const runQuery = useCallback(

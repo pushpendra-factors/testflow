@@ -21,6 +21,8 @@ function CampaignAnalytics({
   setDrawerVisible,
   arrayMapper,
   campaignState,
+  title = "chart",
+  isWidgetModal,
 }) {
   const { group_by: breakdown } = campaignState;
   const [chartType, setChartType] = useState(null);
@@ -37,7 +39,7 @@ function CampaignAnalytics({
 
   if (resultState.loading) {
     content = (
-      <div className="mt-48 flex justify-center items-center w-full h-64">
+      <div className={`${isWidgetModal ? 'mt-8' : 'mt-48'} flex justify-center items-center w-full h-64`}>
         <Spin size="large" />
       </div>
     );
@@ -45,68 +47,76 @@ function CampaignAnalytics({
 
   if (resultState.error) {
     content = (
-      <div className="mt-48 flex justify-center items-center w-full h-64">
+      <div className={`${isWidgetModal ? 'mt-8' : 'mt-48'} flex justify-center items-center w-full h-64`}>
         Something went wrong!
       </div>
     );
   }
 
+  let chart = null;
+
+  if (breakdown.length) {
+    chart = (
+      <BreakdownCharts
+        arrayMapper={arrayMapper}
+        chartType={chartType}
+        data={resultState.data}
+        setChartType={setChartType}
+        breakdown={breakdown}
+        isWidgetModal={isWidgetModal}
+        title={title}
+      />
+    );
+  } else {
+    chart = (
+      <NoBreakdownCharts
+        arrayMapper={arrayMapper}
+        chartType={chartType}
+        data={resultState.data}
+        setChartType={setChartType}
+        isWidgetModal={isWidgetModal}
+      />
+    );
+  }
+
   if (resultState.data) {
-    if (breakdown.length) {
-      content = (
-        <div className="mt-40 mb-8 fa-container">
-          <BreakdownCharts
-            arrayMapper={arrayMapper}
-            chartType={chartType}
-            data={resultState.data}
-            setChartType={setChartType}
-            breakdown={breakdown}
-            isWidgetModal={false}
-          />
-        </div>
-      );
-    } else {
-      content = (
-        <div className="mt-40 mb-8 fa-container">
-          <NoBreakdownCharts
-            arrayMapper={arrayMapper}
-            chartType={chartType}
-            data={resultState.data}
-            setChartType={setChartType}
-            isWidgetModal={false}
-          />
-        </div>
-      );
-    }
+    content = (
+      <div className={`${isWidgetModal ? "mt-8" : "mt-40 fa-container"} mb-8`}>
+        {chart}
+      </div>
+    );
   }
 
   return (
     <>
-      <Header>
-        <ResultsHeader
-          setShowResult={setShowResult}
-          requestQuery={requestQuery}
-          querySaved={querySaved}
-          setQuerySaved={setQuerySaved}
-          queryType={QUERY_TYPE_CAMPAIGN}
-        />
+      {!isWidgetModal ? (
+        <Header>
+          <ResultsHeader
+            setShowResult={setShowResult}
+            requestQuery={requestQuery}
+            querySaved={querySaved}
+            setQuerySaved={setQuerySaved}
+            queryType={QUERY_TYPE_CAMPAIGN}
+          />
 
-        <div className="pt-4">
-          <div
-            className="app-font-family text-3xl font-semibold"
-            style={{ color: "#8692A3" }}
-          >
-            {querySaved || `Untitled Analysis ${moment().format("DD/MM/YYYY")}`}
+          <div className="pt-4">
+            <div
+              className="app-font-family text-3xl font-semibold"
+              style={{ color: "#8692A3" }}
+            >
+              {querySaved ||
+                `Untitled Analysis ${moment().format("DD/MM/YYYY")}`}
+            </div>
+            <div
+              className={`text-base font-medium pb-1 cursor-pointer ${styles.eventsText}`}
+              style={{ color: "#3E516C" }}
+              onClick={setDrawerVisible.bind(this, true)}
+            >
+              {arrayMapper.map((elem) => elem.eventName).join(", ")}
+            </div>
           </div>
-          <div
-            className={`text-base font-medium pb-1 cursor-pointer ${styles.eventsText}`}
-            style={{ color: "#3E516C" }}
-            onClick={setDrawerVisible.bind(this, true)}
-          >
-            {arrayMapper.map((elem) => elem.eventName).join(", ")}
-          </div>
-        </div>
-      </Header>
+        </Header>
+      ) : null}
       {content}
     </>
   );

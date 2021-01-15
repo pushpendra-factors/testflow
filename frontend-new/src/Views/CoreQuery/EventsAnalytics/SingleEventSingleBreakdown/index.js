@@ -13,6 +13,7 @@ function SingleEventSingleBreakdown({
   chartType,
   isWidgetModal,
   durationObj,
+  title
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -62,7 +63,7 @@ function SingleEventSingleBreakdown({
   if (chartType === "barchart") {
     chartContent = (
       <div className="flex mt-8 w-full">
-        <BarChart chartData={visibleProperties} />
+        <BarChart title={title} chartData={visibleProperties} />
       </div>
     );
   } else {
