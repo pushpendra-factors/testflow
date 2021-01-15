@@ -9,7 +9,7 @@ import {
   setAttributionModelsAction, setAttributionWindowAction, 
   setAttrLinkEventsAction, setCampChannelAction, 
   setMeasuresAction, getCampaignConfigAction, 
-  setCampFiltersAction, setCampGroupByAction, setAttrDateRangeAction, setCampDateRangeAction
+  setCampFiltersAction, setCampGroupByAction, setAttrDateRangeAction, setCampDateRangeAction, setDefaultStateAction
 } from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties, fetchCampaignConfig } from './services';
 import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
@@ -176,6 +176,16 @@ export const getCampaignConfigData = (projectId, channel) => {
         }).catch((err) => {
           console.log(err);
         });
+    })
+  }
+}
+
+export const resetState = () => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      setDefaultStateAction();
+    }).catch((err) => {
+      console.log(err);
     })
   }
 }
