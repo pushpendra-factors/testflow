@@ -14,6 +14,7 @@ function BreakdownCharts({
   data,
   isWidgetModal,
   setChartType,
+  title,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [currentEventIndex, setCurrentEventIndex] = useState(0);
@@ -86,7 +87,7 @@ function BreakdownCharts({
       <>
         {typeDropdown}
         <div className="flex items-center flex-wrap mt-4 justify-center">
-          <BarChart chartData={visibleProperties} />
+          <BarChart title={title} chartData={visibleProperties} />
         </div>
         {table}
       </>

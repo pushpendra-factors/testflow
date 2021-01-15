@@ -446,7 +446,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
 };
 
 export const DefaultDateRangeFormat = {
-  from: moment().startOf('week'),
+  from: moment().startOf("week"),
   to: moment(),
   frequency:
     moment().format("dddd") === "Sunday" || moment().format("dddd") === "Monday"
@@ -460,41 +460,13 @@ const getFilters = (filters) => {
     filter.values.forEach((value, index) => {
       result.push({
         en: filter.props[2],
-        lop: !index ? 'AND' : 'OR',
+        lop: !index ? "AND" : "OR",
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
         va: value,
       });
     });
-  });
-  return result;
-};
-
-const getFiltersState = (appliedFilter) => {
-  const diffProps = [];
-  appliedFilter.forEach((filter) => {
-    const doesExist = diffProps.findIndex(
-      (elem) => elem.op === filter.op && elem.pr === filter.pr
-    );
-    if (doesExist === -1) {
-      diffProps.push({
-        op: filter.op,
-        pr: filter.pr,
-      });
-    }
-  });
-
-  const result = diffProps.map((elem) => {
-    const propFilters = appliedFilter.filter(
-      (filter) => filter.pr === elem.pr && filter.op === elem.op
-    );
-    const values = propFilters.map((filter) => filter.va);
-    return {
-      values,
-      operator: reverseOperatorMap[elem.op],
-      props: [elem.pr, propFilters[0].ty, propFilters[0].en],
-    };
   });
   return result;
 };
@@ -550,11 +522,23 @@ export const getAttributionQuery = (
 };
 
 export const getAttributionStateFromRequestQuery = (requestQuery) => {
+  const filters = [];
+  requestQuery.ce.pr.forEach((pr) => {
+    if (pr.lop === "AND") {
+      filters.push({
+        operator: reverseOperatorMap[pr.op],
+        props: [pr.pr, pr.ty, pr.en],
+        values: [pr.va],
+      });
+    } else {
+      filters[filters.length - 1].values.push(pr.va);
+    }
+  });
   const result = {
     queryType: QUERY_TYPE_ATTRIBUTION,
     eventGoal: {
       label: requestQuery.ce.na,
-      filters: getFiltersState(requestQuery.ce.pr),
+      filters,
     },
     touchpoint: requestQuery.attribution_key,
     models: [requestQuery.attribution_methodology],
@@ -567,9 +551,21 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
 
   if (requestQuery.lfe && requestQuery.lfe.length) {
     result["linkedEvents"] = requestQuery.lfe.map((le) => {
+      const linkedFilters = [];
+      le.pr.forEach((pr) => {
+        if (pr.lop === "AND") {
+          linkedFilters.push({
+            operator: reverseOperatorMap[pr.op],
+            props: [pr.pr, pr.ty, pr.en],
+            values: [pr.va],
+          });
+        } else {
+          linkedFilters[linkedFilters.length - 1].values.push(pr.va);
+        }
+      });
       return {
         label: le.na,
-        filters: getFiltersState(le.pr),
+        filters: linkedFilters,
       };
     });
   } else {
@@ -636,21 +632,23 @@ export const getSessionsQuery = (query) => {
       ty: "unique_users",
     };
   });
-  const session = [{
-    cl: "events",
-    ec: "each_given_event",
-    ewp: [
-      {
-        na: "$session",
-        pr: [],
-      },
-    ],
-    fr: moment().startOf("week").utc().unix(),
-    to: moment().utc().unix(),
-    gbt: "",
-    ty: "unique_users",
-    tz: "Asia/Kolkata",
-  }];
+  const session = [
+    {
+      cl: "events",
+      ec: "each_given_event",
+      ewp: [
+        {
+          na: "$session",
+          pr: [],
+        },
+      ],
+      fr: moment().startOf("week").utc().unix(),
+      to: moment().utc().unix(),
+      gbt: "",
+      ty: "unique_users",
+      tz: "Asia/Kolkata",
+    },
+  ];
   return [...user, ...session];
 };
 

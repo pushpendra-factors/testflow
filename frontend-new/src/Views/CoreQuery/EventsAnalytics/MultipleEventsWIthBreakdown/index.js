@@ -17,6 +17,7 @@ function MultipleEventsWithBreakdown({
   chartType,
   isWidgetModal,
   durationObj,
+  title
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -68,6 +69,7 @@ function MultipleEventsWithBreakdown({
         <BarChart
           chartData={formatVisibleProperties(visibleProperties, queries)}
           queries={queries}
+          title={title}
         />
       </div>
     );

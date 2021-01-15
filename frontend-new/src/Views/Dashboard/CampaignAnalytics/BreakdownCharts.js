@@ -18,6 +18,7 @@ function BreakdownCharts({
   breakdown,
   data,
   isWidgetModal,
+  title
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [currentEventIndex, setCurrentEventIndex] = useState(0);
@@ -46,7 +47,7 @@ function BreakdownCharts({
   if (chartType === CHART_TYPE_BARCHART) {
     return (
       <div className="flex items-center flex-wrap mt-4 justify-center">
-        <BarChart chartData={visibleProperties} />
+        <BarChart title={title} chartData={visibleProperties} />
       </div>
     );
   } else if (chartType === CHART_TYPE_LINECHART) {
