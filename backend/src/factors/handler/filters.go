@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	C "factors/config"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
@@ -108,6 +109,11 @@ func CreateSmartEventFilterHandler(c *gin.Context) {
 	eventType := c.Query("type")
 	if eventType != "crm" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid parameter"})
+		return
+	}
+
+	if !C.IsAllowedSmartEventRuleCreation() {
+		c.JSON(http.StatusOK, gin.H{})
 		return
 	}
 

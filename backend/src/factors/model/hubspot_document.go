@@ -195,7 +195,8 @@ func GetHubspotDocumentByTypeAndActions(projectId uint64, ids []string,
 	return documents, http.StatusFound
 }
 
-func readHubspotTimestamp(value interface{}) (int64, error) {
+// ReadHubspotTimestamp returns timestamp in int64 format. Warning - documents use milliseconds
+func ReadHubspotTimestamp(value interface{}) (int64, error) {
 	switch value.(type) {
 	case float64:
 		return int64(uint64(value.(float64))), nil
@@ -222,7 +223,7 @@ func getTimestampFromPropertiesByKey(propertiesMap map[string]interface{}, key s
 		return 0, errors.New("timestamp key not exist on property map")
 	}
 
-	timestamp, err := readHubspotTimestamp(timestampValue)
+	timestamp, err := ReadHubspotTimestamp(timestampValue)
 	if err != nil || timestamp == 0 {
 		return 0, errors.New("failed to read hubspot timestamp value")
 	}
@@ -270,7 +271,7 @@ func getHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 			hsCreateDateMap := hsCreateDate.(map[string]interface{})
 			createdAtValue, exists := hsCreateDateMap["value"]
 			if exists && createdAtValue != nil {
-				createdAt, err := readHubspotTimestamp(createdAtValue)
+				createdAt, err := ReadHubspotTimestamp(createdAtValue)
 				if err != nil || createdAt == 0 {
 					return 0, errorFailedToGetCreatedAtFromHubspotDocument
 				}
@@ -302,7 +303,7 @@ func getHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 		return 0, errorFailedToGetCreatedAtFromHubspotDocument
 	}
 
-	createdAt, err := readHubspotTimestamp(createdAtInt)
+	createdAt, err := ReadHubspotTimestamp(createdAtInt)
 	if err != nil || createdAt == 0 {
 		return 0, errorFailedToGetCreatedAtFromHubspotDocument
 	}
@@ -345,7 +346,7 @@ func getHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
 		}
 
-		updatedAt, err := readHubspotTimestamp(value)
+		updatedAt, err := ReadHubspotTimestamp(value)
 		if err != nil || updatedAt == 0 {
 			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
 		}
@@ -366,7 +367,7 @@ func getHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error
 			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
 		}
 
-		updatedAt, err := readHubspotTimestamp(updatedAtInt)
+		updatedAt, err := ReadHubspotTimestamp(updatedAtInt)
 		if err != nil || updatedAt == 0 {
 			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
 		}

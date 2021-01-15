@@ -242,19 +242,16 @@ func GetHubspotSmartEventPayload(projectID uint64, eventName, customerUserID, us
 	return &crmSmartEvent, prevProperties, true
 }
 
-func getTimestampFromField(propertyName string, properties *map[string]interface{}) int64 {
+func getTimestampFromField(propertyName string, properties *map[string]interface{}) (int64, error) {
 	if timestamp, exists := (*properties)[propertyName]; exists {
-
-		if unixTimestamp, ok := timestamp.(int64); ok {
-			return getEventTimestamp(unixTimestamp)
-		}
+		return M.ReadHubspotTimestamp(timestamp)
 	}
 
-	return 0
+	return 0, errors.New("field doest not exist")
 }
 
 // TrackHubspotSmartEvent valids hubspot current properties with CRM smart filter and creates a event
-func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}) *map[string]interface{} {
+func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}, recordTimestamp int64) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *M.CRMSmartEvent
 	if hubspotSmartEventName.EventName == "" || projectID == 0 || hubspotSmartEventName.Type == "" {
@@ -282,13 +279,17 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 	}
 
 	timestampReferenceField := hubspotSmartEventName.Filter.TimestampReferenceField
-	if timestampReferenceField != M.TimestampReferenceTypeTrack {
-		fieldTimestamp := getTimestampFromField(timestampReferenceField, currentProperties)
-		if fieldTimestamp == 0 {
-			logCtx.Errorf("Failed to get timestamp from reference field %s", timestampReferenceField)
-			return prevProperties
+	if timestampReferenceField == M.TimestampReferenceTypeTrack {
+		smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp)
+	} else {
+		fieldTimestamp, err := getTimestampFromField(timestampReferenceField, currentProperties)
+		if err != nil {
+			logCtx.WithField("timestamp_refrence_field", timestampReferenceField).
+				WithError(err).Errorf("Failed to get timestamp from reference field")
+			smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp) // use record timestamp if custom timestamp not available
+		} else {
+			smartEventTrackPayload.Timestamp = getEventTimestamp(fieldTimestamp)
 		}
-		smartEventTrackPayload.Timestamp = fieldTimestamp
 	}
 
 	if !C.IsDryRunCRMSmartEvent() {
@@ -298,8 +299,8 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 		}
 	} else {
 		logCtx.WithFields(log.Fields{"properties": smartEventPayload.Properties, "event_name": smartEventPayload.Name,
-			"filter_exp": *hubspotSmartEventName.Filter,
-			"timestamp":  smartEventTrackPayload.Timestamp}).Info("Dry run smart event creation.")
+			"filter_exp":            *hubspotSmartEventName.Filter,
+			"smart_event_timestamp": smartEventTrackPayload.Timestamp}).Info("Dry run smart event creation.")
 	}
 
 	return prevProperties
@@ -384,7 +385,7 @@ func syncContact(projectID uint64, document *M.HubspotDocument, hubspotSmartEven
 
 	var prevProperties *map[string]interface{}
 	for i := range hubspotSmartEventNames {
-		prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, customerUserID, userID, document.Type, properties, prevProperties)
+		prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, customerUserID, userID, document.Type, properties, prevProperties, document.Timestamp)
 	}
 
 	// Mark as synced, if customer_user_id not present or present and identified.
@@ -708,7 +709,7 @@ func syncDeal(projectID uint64, document *M.HubspotDocument, hubspotSmartEventNa
 		eventID = response.EventId
 		var prevProperties *map[string]interface{}
 		for i := range hubspotSmartEventNames {
-			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, "", userID, document.Type, properties, prevProperties)
+			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, "", userID, document.Type, properties, prevProperties, document.Timestamp)
 		}
 	}
 
