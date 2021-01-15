@@ -20,6 +20,7 @@ import {
   FETCH_CAMP_CONFIG,
   SET_CAMP_GROUBY,
   SET_CAMP_DATE_RANGE,
+  SET_DEFAULT_STATE
 } from "./actions";
 import {
   SHOW_ANALYTICS_RESULT,
@@ -222,6 +223,11 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         camp_dateRange: action.payload
+      }
+    }
+    case SET_DEFAULT_STATE: {
+      return {
+        ...defaultState
       }
     }
     default:

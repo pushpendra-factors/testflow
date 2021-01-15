@@ -78,6 +78,7 @@ func main() {
 		50, "Active Tracked events limit per project")
 	factorsActiveTrackedUserPropertiesLimit := flag.Int("active_tracked_user_properties_limit",
 		50, "Active Tracked user properties limit per project")
+	allowSmartEventRuleCreation := flag.Bool("allow_smart_event_rule_creation", false, "Should allow smart event rule creation")
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -121,6 +122,7 @@ func main() {
 		ActiveFactorsGoalsLimit:                 *factorsActiveGoalsLimit,
 		ActiveFactorsTrackedEventsLimit:         *factorsActiveTrackedEventsLimit,
 		ActiveFactorsTrackedUserPropertiesLimit: *factorsActiveTrackedUserPropertiesLimit,
+		AllowSmartEventRuleCreation:             *allowSmartEventRuleCreation,
 	}
 
 	// Initialize configs and connections.

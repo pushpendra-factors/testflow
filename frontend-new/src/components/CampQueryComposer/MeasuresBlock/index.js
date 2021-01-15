@@ -7,7 +7,7 @@ import { Button } from 'antd';
 
 const MeasuresBlock = ({measures, onMeasureSelect, measures_metrics}) => {
 
-    const [selectVisible, setSelectVisible] = useState([]);
+    const [selectVisible, setSelectVisible] = useState([false]);
 
     const deleteItem = (index) => {
         const measureStates = [...measures.filter((m,i) => i!==index)];

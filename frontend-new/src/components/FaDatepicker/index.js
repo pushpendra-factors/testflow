@@ -4,6 +4,10 @@ import { DatePicker, Menu, Dropdown, Button } from 'antd';
 import moment from 'moment';
 const { RangePicker } = DatePicker;
 
+import {getFirstDayOfLastWeek, getLastDayOfLastWeek, 
+    getFirstDayOfLastMonth, getLastDayOfLastMonth
+} from './utils';
+
 
 const FaDatepicker = ({ placement,
     onSelect, customPicker, presetRange,
@@ -63,6 +67,28 @@ const FaDatepicker = ({ placement,
             onSelect(newDateDataMonth);
             // setdateString('++Month'); 
         }
+        else if (datePickerType === 'quarter') {
+            if(endDate.isAfter(moment())) {
+                const endDateMonth = moment();
+                let newDateDataMonth = {
+                    ...dateData,
+                    startDate,
+                    endDate: endDateMonth
+                }
+
+                onSelect(newDateDataMonth);
+            } else {
+
+                let newDateDataMonth = {
+                    ...dateData,
+                    startDate,
+                    endDate
+                }
+
+                onSelect(newDateDataMonth);
+                
+            }
+        }
         else{ 
             onSelect(newDateData); 
         }  
@@ -91,6 +117,17 @@ const FaDatepicker = ({ placement,
             setdateString('This Week');
             onSelect(newDateData);
         }
+        if (type == 'last_week') {
+            let startDate = moment(getFirstDayOfLastWeek()).startOf('day').toDate();
+            let endDate = moment(getLastDayOfLastWeek()).endOf('day').toDate();
+            let newDateData = {
+                ...dateData,
+                startDate,
+                endDate
+            }
+            setdateString('Last Week');
+            onSelect(newDateData);
+        }
         if (type == 'this_month') {
             let startDate = moment().startOf('month');
             let endDate = moment();
@@ -100,6 +137,17 @@ const FaDatepicker = ({ placement,
                 endDate
             }
             setdateString('This Month');
+            onSelect(newDateData);
+        }
+        if (type == 'last_month') {
+            let startDate = moment(getFirstDayOfLastMonth()).startOf('day').toDate();
+            let endDate = moment(getLastDayOfLastMonth()).endOf('day').toDate();
+            let newDateData = {
+                ...dateData,
+                startDate,
+                endDate
+            }
+            setdateString('Last Month');
             onSelect(newDateData);
         }
     }
@@ -123,8 +171,18 @@ const FaDatepicker = ({ placement,
                 </a>
                 </Menu.Item>
                 <Menu.Item>
+                    <a target="_blank" onClick={() => returnPreSetDate('last_week')}>
+                        Last Week
+                </a>
+                </Menu.Item>
+                <Menu.Item>
                     <a target="_blank" onClick={() => returnPreSetDate('this_month')}>
                         This Month
+                </a>
+                </Menu.Item>
+                <Menu.Item>
+                    <a target="_blank" onClick={() => returnPreSetDate('last_month')}>
+                        Last Month
                 </a>
                 </Menu.Item>
                 <Menu.Divider />

@@ -284,9 +284,12 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument, salesforceS
 		logCtx.Error("Skipped user identification on salesforce account sync. No customer_user_id on properties.")
 	}
 
+	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
+	lastModifiedTimestamp, _ := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentUpdated)
+
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties)
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties, lastModifiedTimestamp)
 	}
 
 	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
@@ -305,21 +308,21 @@ type SalesforceSmartEventName struct {
 	Type      string
 }
 
-func getTimestampFromField(propertyName string, properties *map[string]interface{}) int64 {
+func getTimestampFromField(propertyName string, properties *map[string]interface{}) (int64, error) {
 	if timestamp, exists := (*properties)[propertyName]; exists {
 		if unixTimestamp, ok := timestamp.(int64); ok {
-			return unixTimestamp
+			return unixTimestamp, nil
 		}
 
 		unixTimestamp, err := M.GetSalesforceDocumentTimestamp(timestamp)
 		if err != nil {
-			return 0
+			return 0, err
 		}
 
-		return unixTimestamp
+		return unixTimestamp, nil
 	}
 
-	return 0
+	return 0, errors.New("field missing")
 }
 
 func enrichContact(projectID uint64, document *M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
@@ -363,9 +366,12 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument, salesforceS
 		logCtx.Error("Skipped user identification on salesforce contact sync. No customer_user_id on properties.")
 	}
 
+	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
+	lastModifiedTimestamp, _ := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentUpdated)
+
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties)
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties, lastModifiedTimestamp)
 	}
 
 	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
@@ -437,7 +443,7 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 }
 
 // TrackSalesforceSmartEvent valids current properties with CRM smart filter and creates a event
-func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *SalesforceSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}) *map[string]interface{} {
+func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *SalesforceSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *M.CRMSmartEvent
 	if salesforceSmartEventName.EventName == "" || projectID == 0 || salesforceSmartEventName.Type == "" {
@@ -465,13 +471,19 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 	}
 
 	timestampReferenceField := salesforceSmartEventName.Filter.TimestampReferenceField
-	if timestampReferenceField != M.TimestampReferenceTypeTrack {
-		fieldTimestamp := getTimestampFromField(timestampReferenceField, currentProperties)
-		if fieldTimestamp == 0 {
-			logCtx.Errorf("Failed to get timestamp from reference field %s", timestampReferenceField)
-			return prevProperties
+	if timestampReferenceField == M.TimestampReferenceTypeTrack {
+		smartEventTrackPayload.Timestamp = lastModifiedTimestamp
+
+	} else {
+		fieldTimestamp, err := getTimestampFromField(timestampReferenceField, currentProperties)
+		if err == nil {
+			smartEventTrackPayload.Timestamp = fieldTimestamp
+		} else {
+			logCtx.WithField("timestamp_reference_field", timestampReferenceField).
+				WithError(err).Error("Failed to get timestamp from reference field")
+			smartEventTrackPayload.Timestamp = lastModifiedTimestamp
+
 		}
-		smartEventTrackPayload.Timestamp = fieldTimestamp
 	}
 
 	if !C.IsDryRunCRMSmartEvent() {
@@ -481,8 +493,8 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 		}
 	} else {
 		logCtx.WithFields(log.Fields{"properties": smartEventPayload.Properties, "event_name": smartEventPayload.Name,
-			"filter_exp": *salesforceSmartEventName.Filter,
-			"timestamp":  smartEventTrackPayload.Timestamp}).Info("Dry run smart event creation.")
+			"filter_exp":            *salesforceSmartEventName.Filter,
+			"smart_event_timestamp": smartEventTrackPayload.Timestamp}).Info("Dry run smart event creation.")
 	}
 
 	return prevProperties
@@ -530,10 +542,13 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument, sales
 		logCtx.Error("Skipped user identification on salesforce opportunity sync. No customer_user_id on properties.")
 	}
 
+	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
+	lastModifiedTimestamp, _ := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentUpdated)
+
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID,
-			document.Type, properties, prevProperties)
+			document.Type, properties, prevProperties, lastModifiedTimestamp)
 	}
 
 	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
@@ -587,9 +602,12 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument, salesforceSma
 		logCtx.Error("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
 	}
 
+	// ALways us lastmodified timestamp for updated properties, error handling already done during event creation
+	lastModifiedTimestamp, _ := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentUpdated)
+
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
-		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties)
+		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties, lastModifiedTimestamp)
 	}
 
 	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)

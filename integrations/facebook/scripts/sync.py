@@ -143,13 +143,13 @@ def get_and_insert_metadata(facebook_int_setting):
     errMsgs = []
     # campaign metadata
     fields_campaign = ['id', 'name', 'account_id', 'buying_type','effective_status','spend_cap','start_time','stop_time']
-    response = get_and_insert_paginated_metadata(facebook_int_setting, CAMPAIGN, fields_campaign, 'stop_time')
+    response = get_and_insert_paginated_metadata(facebook_int_setting, CAMPAIGN, fields_campaign)
     if response['status'] == 'failed':
         status = 'failed'
         errMsgs.append(response['errMsg'])
     # adset metadata
     fields_adset = ['id', 'account_id','campaign_id','configured_status', 'daily_budget', 'effective_status','end_time','name','start_time','stop_time']
-    response = get_and_insert_paginated_metadata(facebook_int_setting, AD_SET, fields_adset, 'end_time')
+    response = get_and_insert_paginated_metadata(facebook_int_setting, AD_SET, fields_adset)
     if response['status'] == 'failed':
         status = 'failed'
         errMsgs.append(response['errMsg'])
@@ -158,7 +158,7 @@ def get_and_insert_metadata(facebook_int_setting):
     return {'status': 'success'}
 
 
-def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields, date_stop_field):
+def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields):
     url = 'https://graph.facebook.com/v9.0/{}/{}s?fields={}&&access_token={}&limit=1000'.format(
     facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type_map[doc_type], fields, facebook_int_setting[ACCESS_TOKEN])
     response = requests.get(url)
@@ -166,9 +166,8 @@ def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields, da
         errString = 'Failed to get {}s metadata from facebook. StatusCode: %d. Error: %s'.format(doc_type, response.status_code, response.text)
         log.error(errString)
         return {'status': 'failed', 'errMsg': errString}
-    
     for data in response.json()[DATA]:
-        timestamp = int(''.join(data[date_stop_field].split('T')[0].split('-')))
+        timestamp = int(datetime.now().strftime('%Y%m%d'))
         add_document_response = add_facebook_document(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type, data['id'], data, timestamp, FACEBOOK)
     # paging
     if 'paging' not in response.json():
@@ -181,7 +180,7 @@ def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields, da
             log.error(errString)
             return {'status': 'failed', 'errMsg': errString}
         for data in response.json()[DATA]:
-            timestamp = int(''.join(data[date_stop_field].split('T')[0].split('-')))
+            timestamp = int(datetime.now().strftime('%Y%m%d'))
             add_document_response = add_facebook_document(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type, data['id'], data, timestamp, FACEBOOK)
     return {'status': 'success'}
 

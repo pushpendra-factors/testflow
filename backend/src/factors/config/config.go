@@ -100,6 +100,7 @@ type Configuration struct {
 	ActiveFactorsTrackedEventsLimit         int
 	ActiveFactorsTrackedUserPropertiesLimit int
 	DryRunCRMSmartEvent                     bool
+	AllowSmartEventRuleCreation             bool
 }
 
 type Services struct {
@@ -773,6 +774,10 @@ func GetFactorsTrackedUserPropertiesLimit() int {
 
 func GetFactorsGoalsLimit() int {
 	return configuration.ActiveFactorsGoalsLimit
+}
+
+func IsAllowedSmartEventRuleCreation() bool {
+	return configuration.AllowSmartEventRuleCreation
 }
 
 func ExtractProjectIdDateFromConfig(config string) map[uint64]time.Time {

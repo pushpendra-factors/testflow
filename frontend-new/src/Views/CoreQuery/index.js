@@ -10,7 +10,7 @@ import CoreQueryHome from "../CoreQueryHome";
 import { Drawer, Button } from "antd";
 import { SVG, Text } from "../../components/factorsComponents";
 import EventsAnalytics from "./EventsAnalytics";
-import { deleteGroupByForEvent } from "../../reducers/coreQuery/middleware";
+import { deleteGroupByForEvent, getCampaignConfigData } from "../../reducers/coreQuery/middleware";
 import {
   initialResultState,
   calculateFrequencyData,
@@ -40,7 +40,7 @@ import AttributionsResult from "./AttributionsResult";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 import CampaignAnalytics from "./CampaignAnalytics";
 
-function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
+function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaignConfigData }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
   const [activeKey, setActiveKey] = useState("0");
@@ -111,6 +111,13 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   } = useSelector((state) => state.coreQuery);
 
   const dateRange = queryOptions.date_range;
+
+  useEffect(() => {
+    if(activeProject && activeProject.id) {
+      getCampaignConfigData(activeProject.id, 'all_ads');
+    }
+    
+  }, [activeProject])
 
   const updateResultState = useCallback((activeTab, newState) => {
     const idx = parseInt(activeTab);
@@ -843,6 +850,7 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       deleteGroupByForEvent,
+      getCampaignConfigData
     },
     dispatch
   );
