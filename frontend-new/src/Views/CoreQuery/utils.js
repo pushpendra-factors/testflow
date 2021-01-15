@@ -457,10 +457,10 @@ export const DefaultDateRangeFormat = {
 const getFilters = (filters) => {
   const result = [];
   filters.forEach((filter) => {
-    filter.values.forEach((value) => {
+    filter.values.forEach((value, index) => {
       result.push({
         en: filter.props[2],
-        lop: "OR",
+        lop: !index ? 'AND' : 'OR',
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
@@ -629,8 +629,14 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
   return result;
 };
 
-export const getSessionsQuery = () => {
-  return {
+export const getSessionsQuery = (query) => {
+  const user = query.query_group.map((elem) => {
+    return {
+      ...elem,
+      ty: "unique_users",
+    };
+  });
+  const session = [{
     cl: "events",
     ec: "each_given_event",
     ewp: [
@@ -644,7 +650,8 @@ export const getSessionsQuery = () => {
     gbt: "",
     ty: "unique_users",
     tz: "Asia/Kolkata",
-  };
+  }];
+  return [...user, ...session];
 };
 
 export const getFrequencyQuery = (query) => {

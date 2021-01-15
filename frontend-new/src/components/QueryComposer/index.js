@@ -1,34 +1,34 @@
-/* eslint-disable */
-import React, { useState, useEffect, useCallback } from 'react';
-import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
-import {
-  Button, Collapse, Select, Popover
-} from 'antd';
-import moment from 'moment';
-import { SVG, Text } from '../factorsComponents';
-import styles from './index.module.scss';
-import QueryBlock from './QueryBlock';
-import SeqSelector from './AnalysisSeqSelector';
-import GroupBlock from './GroupBlock';
-import DateRangeSelector from './DateRangeSelector';
-import {QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT} from '../../utils/constants';
+import React, { useState, useEffect, useCallback } from "react";
+import { connect } from "react-redux";
+import { bindActionCreators } from "redux";
+import { Button, Collapse, Select, Popover } from "antd";
+import moment from "moment";
+import { SVG, Text } from "../factorsComponents";
+import styles from "./index.module.scss";
+import QueryBlock from "./QueryBlock";
+import SeqSelector from "./AnalysisSeqSelector";
+import GroupBlock from "./GroupBlock";
+import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from "../../utils/constants";
 
-import FaDatepicker from '../../components/FaDatepicker';
+import FaDatepicker from "../../components/FaDatepicker";
+
+import { DEFAULT_DATE_RANGE, displayRange } from "./DateRangeSelector/utils";
 
 import {
-  DEFAULT_DATE_RANGE,
-  displayRange
-} from './DateRangeSelector/utils';
-
-import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
+  fetchEventNames,
+  getUserProperties,
+  getEventProperties,
+} from "../../reducers/coreQuery/middleware";
 
 const { Option } = Select;
 
 const { Panel } = Collapse;
 
 function QueryComposer({
-  queries, runQuery, eventChange, queryType,
+  queries,
+  runQuery,
+  eventChange,
+  queryType,
   fetchEventNames,
   getUserProperties,
   getEventProperties,
@@ -36,11 +36,10 @@ function QueryComposer({
   eventProperties,
   queryOptions,
   setQueryOptions,
-  runFunnelQuery
+  runFunnelQuery,
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
-  const [dateRangeOpen, setDateRangeVisibile] = useState(false);
-  const [calendarLabel, setCalendarLabel] = useState('Pick Dates');
+  const [calendarLabel, setCalendarLabel] = useState("Pick Dates");
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -50,7 +49,7 @@ function QueryComposer({
   }, [activeProject, fetchEventNames]);
 
   useEffect(() => {
-    queries.forEach(ev => {
+    queries.forEach((ev) => {
       if (!eventProperties[ev.label]) {
         getEventProperties(activeProject.id, ev.label);
       }
@@ -67,7 +66,8 @@ function QueryComposer({
     queries.forEach((event, index) => {
       blockList.push(
         <div key={index} className={styles.composer_body__query_block}>
-          <QueryBlock index={index + 1}
+          <QueryBlock
+            index={index + 1}
             queryType={queryType}
             event={event}
             queries={queries}
@@ -79,9 +79,12 @@ function QueryComposer({
 
     if (queries.length < 6) {
       blockList.push(
-        <div key={'init'} className={styles.composer_body__query_block}>
-          <QueryBlock queryType={queryType} index={queries.length + 1}
-            queries={queries} eventChange={eventChange}
+        <div key={"init"} className={styles.composer_body__query_block}>
+          <QueryBlock
+            queryType={queryType}
+            index={queries.length + 1}
+            queries={queries}
+            eventChange={eventChange}
             groupBy={queryOptions.groupBy}
           ></QueryBlock>
         </div>
@@ -92,15 +95,16 @@ function QueryComposer({
   };
 
   const groupByBlock = () => {
-    if (queryType === QUERY_TYPE_EVENT && queries.length < 1) { return null; }
-    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) { return null; }
+    if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+      return null;
+    }
+    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+      return null;
+    }
 
     return (
-      <div key={0} className={'fa--query_block bordered '}>
-        <GroupBlock
-          queryType={queryType}
-          events={queries}>
-        </GroupBlock>
+      <div key={0} className={"fa--query_block bordered "}>
+        <GroupBlock queryType={queryType} events={queries}></GroupBlock>
       </div>
     );
   };
@@ -120,24 +124,41 @@ function QueryComposer({
   const moreOptionsBlock = () => {
     if (queries.length >= 2) {
       return (
-        <div className={' fa--query_block bordered '}>
-          <Collapse bordered={false} expandIcon={() => { }} expandIconPosition={'right'}>
-            <Panel header={<div className={'flex justify-between items-center'}>
-              <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 mb-2 inline'}>More options</Text>
-              <SVG name="plus" color={'grey'} />
-            </div>
-            }>
-              <div className={'flex justify-start items-center'}>
-                <span className={'mr-2'}>
-                  <SVG name="sortdown" size={16} color={'purple'}></SVG>
+        <div className={" fa--query_block bordered "}>
+          <Collapse
+            bordered={false}
+            expandIcon={() => {}}
+            expandIconPosition={"right"}
+          >
+            <Panel
+              header={
+                <div className={"flex justify-between items-center"}>
+                  <Text
+                    type={"title"}
+                    level={6}
+                    weight={"bold"}
+                    extraClass={"m-0 mb-2 inline"}
+                  >
+                    More options
+                  </Text>
+                  <SVG name="plus" color={"grey"} />
+                </div>
+              }
+            >
+              <div className={"flex justify-start items-center"}>
+                <span className={"mr-2"}>
+                  <SVG name="sortdown" size={16} color={"purple"}></SVG>
                 </span>
-                <Text type={'title'} level={7} extraClass={'m-0 mr-2 inline'}>Analyse events in the</Text>
+                <Text type={"title"} level={7} extraClass={"m-0 mr-2 inline"}>
+                  Analyse events in the
+                </Text>
                 <div>
                   {/* <FaSelect optionClick={(op) => setEventSequence(op[2])} options={[['Same sequence', '' , 'same_sequence'], ['Exact sequence', '', 'exact_sequence']]}></FaSelect> */}
                   <Select
                     style={{ width: 170 }}
-                    value="same_sequence" onChange={setEventSequence}
-                    className={'no-ant-border'}
+                    value="same_sequence"
+                    onChange={setEventSequence}
+                    className={"no-ant-border"}
                   >
                     <Option value="same_sequence"> Same Sequence</Option>
                     <Option value="exact_sequence"> Exact Sequence</Option>
@@ -145,16 +166,20 @@ function QueryComposer({
                 </div>
               </div>
 
-              <div className={'flex flex-col justify-start items-start mt-4'}>
-                <div className={'flex justify-start items-center'}>
-                  <span className={'mr-2'}>
-                    <SVG name="sortdown" size={16} color={'purple'}></SVG>
+              <div className={"flex flex-col justify-start items-start mt-4"}>
+                <div className={"flex justify-start items-center"}>
+                  <span className={"mr-2"}>
+                    <SVG name="sortdown" size={16} color={"purple"}></SVG>
                   </span>
-                  <Text type={'title'} level={7} extraClass={'m-0 mr-2 inline'}>In Session Analytics</Text>
+                  <Text type={"title"} level={7} extraClass={"m-0 mr-2 inline"}>
+                    In Session Analytics
+                  </Text>
                 </div>
 
-                <div className={'flex justify-start items-center mt-2'}>
-                  <div className={styles.composer_body__session_analytics__options}>
+                <div className={"flex justify-start items-center mt-2"}>
+                  <div
+                    className={styles.composer_body__session_analytics__options}
+                  >
                     <Popover
                       className="fa-event-popover"
                       content={
@@ -166,19 +191,30 @@ function QueryComposer({
                       }
                       trigger="click"
                       visible={analyticsSeqOpen}
-                      onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
+                      onVisibleChange={(visible) =>
+                        setAnalyticsSeqVisible(visible)
+                      }
                     >
-                      <Button Button type="link" className={'ml-4'} size={'small'}>
+                      <Button
+                        Button
+                        type="link"
+                        className={"ml-4"}
+                        size={"small"}
+                      >
                         Between &nbsp;
-                                            {queryOptions.session_analytics_seq.start}
-                                            &nbsp;
-                                                to
-                                                &nbsp;
-                                            {queryOptions.session_analytics_seq.end}
+                        {queryOptions.session_analytics_seq.start}
+                        &nbsp; to &nbsp;
+                        {queryOptions.session_analytics_seq.end}
                       </Button>
                     </Popover>
-                    <Text type={'paragraph'} mini weight={'thin'} extraClass={'m-0 ml-2 inline'}>happened in the same session</Text>
-
+                    <Text
+                      type={"paragraph"}
+                      mini
+                      weight={"thin"}
+                      extraClass={"m-0 ml-2 inline"}
+                    >
+                      happened in the same session
+                    </Text>
                   </div>
                 </div>
               </div>
@@ -190,7 +226,7 @@ function QueryComposer({
   };
 
   const getDateRange = () => {
-    const ranges = [{...DEFAULT_DATE_RANGE}];
+    const ranges = [{ ...DEFAULT_DATE_RANGE }];
     const queryOptionsState = Object.assign({}, queryOptions);
 
     if (
@@ -209,17 +245,22 @@ function QueryComposer({
   const setDateRange = (dates) => {
     const queryOptionsState = Object.assign({}, queryOptions);
     if (dates && dates.startDate && dates.endDate) {
-      if(Array.isArray(dates.startDate)) {
+      if (Array.isArray(dates.startDate)) {
         queryOptionsState.date_range.from = dates.startDate[0];
         queryOptionsState.date_range.to = dates.startDate[1];
       } else {
         queryOptionsState.date_range.from = dates.startDate;
         queryOptionsState.date_range.to = dates.endDate;
       }
-      if(moment(queryOptionsState.date_range.to).diff(queryOptionsState.date_range.from, 'hours') <= 24) {
-        queryOptionsState.date_range.frequency = 'hour';
+      if (
+        moment(queryOptionsState.date_range.to).diff(
+          queryOptionsState.date_range.from,
+          "hours"
+        ) <= 24
+      ) {
+        queryOptionsState.date_range.frequency = "hour";
       } else {
-        queryOptionsState.date_range.frequency = 'date';
+        queryOptionsState.date_range.frequency = "date";
       }
       setQueryOptions(queryOptionsState);
     }
@@ -232,28 +273,36 @@ function QueryComposer({
 
   const handleRunQuery = useCallback(() => {
     if (queryType === QUERY_TYPE_EVENT) {
-      runQuery('0', true);
+      runQuery(true, false, null);
     } else {
       runFunnelQuery();
     }
   }, [runFunnelQuery, runQuery, queryType]);
 
   const footer = () => {
-    if (queryType === QUERY_TYPE_EVENT && queries.length < 1) { return null; }
-    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) { return null; } else {
+    if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+      return null;
+    }
+    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+      return null;
+    } else {
       return (
-        <div className={styles.composer_footer}> 
-          <FaDatepicker customPicker presetRange 
-                monthPicker quarterPicker 
-                placement="topRight"
-                range={
-                  {
-                    startDate: queryOptions.date_range.from,
-                    endDate: queryOptions.date_range.to
-                  }
-                }
-                onSelect={setDateRange} />
-          <Button size={'large'}type="primary" onClick={handleRunQuery}>Run Query</Button>
+        <div className={styles.composer_footer}>
+          <FaDatepicker
+            customPicker
+            presetRange
+            monthPicker
+            quarterPicker
+            placement="topRight"
+            range={{
+              startDate: queryOptions.date_range.from,
+              endDate: queryOptions.date_range.to,
+            }}
+            onSelect={setDateRange}
+          />
+          <Button size={"large"} type="primary" onClick={handleRunQuery}>
+            Run Query
+          </Button>
         </div>
       );
     }
@@ -271,13 +320,17 @@ function QueryComposer({
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
-  eventProperties: state.coreQuery.eventProperties
+  eventProperties: state.coreQuery.eventProperties,
 });
 
-const mapDispatchToProps = dispatch => bindActionCreators({
-  fetchEventNames,
-  getEventProperties,
-  getUserProperties
-}, dispatch);
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      fetchEventNames,
+      getEventProperties,
+      getUserProperties,
+    },
+    dispatch
+  );
 
 export default connect(mapStateToProps, mapDispatchToProps)(QueryComposer);

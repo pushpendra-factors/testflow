@@ -32,8 +32,13 @@ function ActiveUnitContent({
     equivalentQuery = getStateQueryFromRequestQuery(
       unit.query.query.query_group[0]
     );
-  } else if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_ATTRIBUTION) {
-    equivalentQuery = getAttributionStateFromRequestQuery(unit.query.query.query);
+  } else if (
+    unit.query.query.cl &&
+    unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
+  ) {
+    equivalentQuery = getAttributionStateFromRequestQuery(
+      unit.query.query.query
+    );
   } else {
     equivalentQuery = getStateQueryFromRequestQuery(unit.query.query);
   }
@@ -188,7 +193,10 @@ function ActiveUnitContent({
   const handleEditQuery = useCallback(() => {
     history.push({
       pathname: "/core-analytics",
-      state: { query: unit.query, global_search: true },
+      state: {
+        query: { ...unit.query, settings: unit.settings },
+        global_search: true,
+      },
     });
   }, [history, unit]);
 

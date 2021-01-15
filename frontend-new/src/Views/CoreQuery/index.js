@@ -43,7 +43,7 @@ import CampaignAnalytics from "./CampaignAnalytics";
 function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
-  const [activeKey, setActiveKey] = useState("1");
+  const [activeKey, setActiveKey] = useState("0");
   const [showResult, setShowResult] = useState(false);
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
@@ -107,7 +107,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
     camp_filters,
     camp_groupBy,
     camp_dateRange,
-    attr_dateRange
+    attr_dateRange,
   } = useSelector((state) => state.coreQuery);
 
   const dateRange = queryOptions.date_range;
@@ -136,7 +136,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
           activeTab,
           groupBy,
           queries,
-          breakdownType,
+          'each',
           appliedDateRange
         );
         if (activeTab !== "2") {
@@ -178,35 +178,50 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   );
 
   const runQuery = useCallback(
-    async (
-      activeTab,
-      refresh = false,
-      isQuerySaved = false,
-      appliedDateRange
-    ) => {
+    async (refresh, isQuerySaved, appliedDateRange, activeTab) => {
       if (!appliedDateRange) {
         appliedDateRange = dateRange;
       }
-      setActiveKey(activeTab);
-      setBreakdownType("each");
-
-      if (!refresh) {
+      if (!activeTab) {
+        activeTab = activeKey;
+      }
+      if (refresh) {
+        updateResultState("0", initialState);
+        updateResultState("1", initialState);
+        updateResultState("2", initialState);
+        updateResultState("3", initialState);
+        setAppliedQueries(queries.map((elem) => elem.label));
+        setQuerySaved(isQuerySaved);
+        updateAppliedBreakdown();
+        setBreakdownTypeData({
+          loading: false,
+          error: false,
+          all: null,
+          any: null,
+        });
+        setBreakdownType("each");
+        closeDrawer();
+        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+        setShowResult(true);
+      } else {
         if (resultState[parseInt(activeTab)].data) {
           return false;
         }
+      }
 
-        if (activeTab === "2") {
-          updateResultState(activeTab, {
-            loading: true,
-            error: false,
-            data: null,
-          });
+      updateResultState(activeTab, {
+        loading: true,
+        error: false,
+        data: null,
+      });
 
+      if (parseInt(activeTab) === 2) {
+        try {
           let activeUsersData = null;
           let userData = null;
           let sessionData = null;
 
-          if (resultState[1].data) {
+          if (!refresh && resultState[1].data) {
             const res = await callRunQueryApiService(
               activeProject.id,
               "2",
@@ -244,27 +259,45 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
               appliedBreakdown
             );
           }
+
           updateResultState(activeTab, {
             loading: false,
             error: false,
             data: activeUsersData,
           });
-          return false;
+        } catch (err) {
+          console.log(err);
+          console.log(err.response);
+          updateResultState(activeKey, {
+            loading: false,
+            error: true,
+            data: null,
+          });
         }
-
-        if (activeTab === "3") {
+      } else if (parseInt(activeTab) === 3) {
+        try {
           let frequencyData = null;
           let userData = null;
-          const eventData = resultState[0].data;
+          let eventData = null;
+          if (!refresh && resultState[0].data) {
+            eventData = resultState[0].data;
+          } else {
+            const res = await callRunQueryApiService(
+              activeProject.id,
+              "0",
+              appliedDateRange
+            );
+            if (res) {
+              eventData = formatApiData(
+                res.result_group[0],
+                res.result_group[1]
+              );
+            }
+          }
 
-          if (resultState[1].data) {
+          if (!refresh && resultState[1].data) {
             userData = resultState[1].data;
           } else {
-            updateResultState(activeTab, {
-              loading: true,
-              error: false,
-              data: null,
-            });
             const res = await callRunQueryApiService(
               activeProject.id,
               "1",
@@ -291,32 +324,22 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
             error: false,
             data: frequencyData,
           });
-          return false;
+        } catch (err) {
+          console.log(err);
+          console.log(err.response);
+          updateResultState(activeKey, {
+            loading: false,
+            error: true,
+            data: null,
+          });
         }
       } else {
-        updateResultState("1", initialState);
-        updateResultState("2", initialState);
-        updateResultState("3", initialState);
-        setAppliedQueries(queries.map((elem) => elem.label));
-        setQuerySaved(isQuerySaved);
-        updateAppliedBreakdown();
-        setBreakdownTypeData({
-          loading: false,
-          error: false,
-          all: null,
-          any: null,
-        });
-        setBreakdownType("each");
-        closeDrawer();
-        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-        setShowResult(true);
+        callRunQueryApiService(activeProject.id, activeTab, appliedDateRange);
       }
-
-      updateResultState(activeTab, { loading: true, error: false, data: null });
-      callRunQueryApiService(activeProject.id, activeTab, appliedDateRange);
     },
     [
       activeProject,
+      activeKey,
       dateRange,
       resultState,
       queries,
@@ -439,7 +462,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
         if (queryType === QUERY_TYPE_FUNNEL) {
           runFunnelQuery(querySaved, appliedDateRange);
         } else {
-          runQuery("0", true, querySaved, appliedDateRange);
+          runQuery(true, querySaved, appliedDateRange);
         }
       }
     },
@@ -488,7 +511,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       models,
       touchpoint,
       window,
-      attr_dateRange
+      attr_dateRange,
     ]
   );
 
@@ -537,7 +560,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       camp_filters,
       camp_groupBy,
       camp_channels,
-      camp_dateRange
+      camp_dateRange,
     ]
   );
 
@@ -550,9 +573,14 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       } else if (rowClicked.queryType === QUERY_TYPE_CAMPAIGN) {
         runCampaignsQuery(rowClicked.queryName);
       } else {
-        runQuery("0", true, true);
+        if(rowClicked.settings) {
+          runQuery(true, rowClicked.queryName, null, rowClicked.settings.activeKey);
+        } else {
+          runQuery(true, rowClicked.queryName);
+        }
+        
       }
-      setRowClicked(rowClicked.queryName);
+      setRowClicked(false);
     }
   }, [
     rowClicked,
@@ -686,6 +714,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       durationObj={queryOptions.date_range}
       handleDurationChange={handleDurationChange}
       arrayMapper={arrayMapper}
+      setActiveKey={setActiveKey}
     />
   );
 
@@ -756,6 +785,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
           queryOptions={queryOptions}
           setQueryOptions={setExtraOptions}
           runFunnelQuery={runFunnelQuery}
+          activeKey={activeKey}
         />
       );
     }
@@ -798,6 +828,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
           setQueryOptions={setExtraOptions}
           setRowClicked={setRowClicked}
           location={location}
+          setActiveKey={setActiveKey}
         />
       )}
     </>

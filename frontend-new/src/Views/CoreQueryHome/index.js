@@ -15,7 +15,6 @@ import {
 import { INITIALIZE_GROUPBY } from "../../reducers/coreQuery/actions";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import { deleteQuery } from "../../reducers/coreQuery/services";
-import { typeOf } from "react-is";
 import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_EVENT,
@@ -90,6 +89,7 @@ const columns = [
 function CoreQuery({
   setDrawerVisible,
   setQueryType,
+  setActiveKey,
   setQueries,
   setRowClicked,
   setQueryOptions,
@@ -202,7 +202,11 @@ function CoreQuery({
         setRowClicked({
           queryType: equivalentQuery.queryType,
           queryName: record.title,
+          settings: record.settings,
         });
+        if(record.settings && record.settings.activeKey) {
+          setActiveKey(record.settings.activeKey);
+        }
       } catch (err) {
         console.log(err);
       }

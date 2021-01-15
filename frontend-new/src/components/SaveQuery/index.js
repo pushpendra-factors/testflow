@@ -134,7 +134,7 @@ function SaveQuery({
           }),
         };
         if (parseInt(activeKey) === 2) {
-          query.query_group = [...query.query_group, getSessionsQuery()];
+          query.query_group = getSessionsQuery(query);
         }
         if (parseInt(activeKey) === 3) {
           query.query_group = getFrequencyQuery(query);
