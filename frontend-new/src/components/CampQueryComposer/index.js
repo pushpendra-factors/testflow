@@ -54,7 +54,7 @@ const CampQueryComposer = ({activeProject, channel,
     useEffect(()=>{
         if(activeProject && activeProject.id && channel) {
             getCampaignConfigData(activeProject.id, channel);
-            setMeasuresToState([]);
+            // setMeasuresToState([]);
         }
     }, [activeProject, channel])
 

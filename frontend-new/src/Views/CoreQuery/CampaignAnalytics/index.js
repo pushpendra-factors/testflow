@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import {useDispatch} from 'react-redux';
 import moment from "moment";
 import {
   QUERY_TYPE_CAMPAIGN,
@@ -11,6 +12,8 @@ import Header from "../../AppLayout/Header";
 import { Spin } from "antd";
 import NoBreakdownCharts from "./NoBreakdownCharts";
 import BreakdownCharts from "./BreakdownCharts";
+import { setCampMeasures } from "../../../reducers/coreQuery/middleware";
+import {SET_CAMP_MEASURES} from '../../../reducers/coreQuery/actions';
 
 function CampaignAnalytics({
   setShowResult,
@@ -24,6 +27,13 @@ function CampaignAnalytics({
 }) {
   const { group_by: breakdown } = campaignState;
   const [chartType, setChartType] = useState(null);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    return () => {
+      dispatch({type: SET_CAMP_MEASURES, payload: []})
+    }
+  }, [dispatch]);
 
   useEffect(() => {
     if (breakdown.length) {
