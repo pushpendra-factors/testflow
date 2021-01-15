@@ -544,7 +544,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
   useEffect(() => {
     if (rowClicked) {
       if (rowClicked.queryType === QUERY_TYPE_FUNNEL) {
-        runFunnelQuery(true);
+        runFunnelQuery(rowClicked.queryName);
       } else if (rowClicked.queryType === QUERY_TYPE_ATTRIBUTION) {
         runAttributionQuery(rowClicked.queryName);
       } else if (rowClicked.queryType === QUERY_TYPE_CAMPAIGN) {
@@ -552,7 +552,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location }) {
       } else {
         runQuery("0", true, true);
       }
-      setRowClicked(false);
+      setRowClicked(rowClicked.queryName);
     }
   }, [
     rowClicked,

@@ -4,7 +4,13 @@ import { Text, SVG } from "../../components/factorsComponents";
 import { RightOutlined, LeftOutlined, MoreOutlined } from "@ant-design/icons";
 import CardContent from "./CardContent";
 import { useSelector } from "react-redux";
-import { initialState, formatApiData } from "../CoreQuery/utils";
+import {
+  initialState,
+  formatApiData,
+  calculateActiveUsersData,
+  calculateFrequencyData,
+  getStateQueryFromRequestQuery,
+} from "../CoreQuery/utils";
 import { cardClassNames } from "../../reducers/dashboard/utils";
 import { getDataFromServer } from "./utils";
 import {
@@ -38,7 +44,10 @@ function WidgetCard({
         let queryType;
 
         if (unit.query.query.query_group) {
-          if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_CAMPAIGN) {
+          if (
+            unit.query.query.cl &&
+            unit.query.query.cl === QUERY_TYPE_CAMPAIGN
+          ) {
             queryType = QUERY_TYPE_CAMPAIGN;
           } else {
             queryType = QUERY_TYPE_EVENT;
@@ -54,7 +63,6 @@ function WidgetCard({
         } else {
           queryType = QUERY_TYPE_FUNNEL;
         }
-
         const res = await getDataFromServer(
           unit.query,
           unit.id,
@@ -74,27 +82,60 @@ function WidgetCard({
             ...initialState,
             data: res.data,
           });
-        } else if(queryType === QUERY_TYPE_CAMPAIGN) {
+        } else if (queryType === QUERY_TYPE_CAMPAIGN) {
           setResultState({
             ...initialState,
             data: res.data.result,
           });
         } else {
+          let result_group;
           if (refresh) {
+            result_group = res.data.result_group;
+          } else {
+            result_group = res.data.result.result_group;
+          }
+          const equivalentQuery = getStateQueryFromRequestQuery(
+            unit.query.query.query_group[0]
+          );
+          const appliedBreakdown = [
+            ...equivalentQuery.breakdown.event,
+            ...equivalentQuery.breakdown.global,
+          ];
+          
+          if (
+            unit.settings.activeKey &&
+            parseInt(unit.settings.activeKey) === 2
+          ) {
+            const userData = formatApiData(result_group[0], result_group[1]);
+            const sessionsData = result_group[2];
+            const activeUsersData = calculateActiveUsersData(
+              userData,
+              sessionsData,
+              appliedBreakdown
+            );
             setResultState({
               ...initialState,
-              data: formatApiData(
-                res.data.result_group[0],
-                res.data.result_group[1]
-              ),
+              data: activeUsersData,
+            });
+          } else if (
+            unit.settings.activeKey &&
+            parseInt(unit.settings.activeKey) === 3
+          ) {
+            const eventsData = formatApiData(result_group[0], result_group[1]);
+            const userData = formatApiData(result_group[2], result_group[3]);
+            const frequencyData = calculateFrequencyData(
+              eventsData,
+              userData,
+              appliedBreakdown
+            );
+            setResultState({
+              ...initialState,
+              data: frequencyData,
             });
           } else {
             setResultState({
               ...initialState,
-              data: formatApiData(
-                res.data.result.result_group[0],
-                res.data.result.result_group[1]
-              ),
+              data: formatApiData(result_group[0], result_group[1]),
             });
           }
           setRefreshClicked(false);
@@ -113,6 +154,7 @@ function WidgetCard({
       unit.query,
       unit.id,
       unit.dashboard_id,
+      unit.settings,
       durationObj,
       setRefreshClicked,
     ]

@@ -59,29 +59,16 @@ const getEventsWithProperties = (queries) => {
   queries.forEach((ev) => {
     const filterProps = [];
     ev.filters.forEach((fil) => {
-      let vals;
-      if (Array.isArray(fil.values)) {
-        fil.values.forEach((val, index) => {
-          filterProps.push({
-            en: fil.props[2],
-            lop: "OR",
-            op: operatorMap[fil.operator],
-            pr: fil.props[0],
-            ty: fil.props[1],
-            va: val,
-          });
-        });
-      } else {
-        vals = fil.values;
+      fil.values.forEach((val, index) => {
         filterProps.push({
           en: fil.props[2],
-          lop: "AND",
+          lop: !index ? "AND" : "OR",
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: vals,
+          va: val,
         });
-      }
+      });
     });
     ewps.push({
       na: ev.label,
@@ -418,9 +405,21 @@ export const formatApiData = (data, metrics) => {
 
 export const getStateQueryFromRequestQuery = (requestQuery) => {
   const events = requestQuery.ewp.map((e) => {
+    const filters = [];
+    e.pr.forEach((pr) => {
+      if (pr.lop === "AND") {
+        filters.push({
+          operator: reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.en],
+          values: [pr.va],
+        });
+      } else {
+        filters[filters.length - 1].values.push(pr.va);
+      }
+    });
     return {
       label: e.na,
-      filters: [],
+      filters,
     };
   });
   const queryType = requestQuery.cl;
@@ -628,4 +627,38 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
   };
 
   return result;
+};
+
+export const getSessionsQuery = () => {
+  return {
+    cl: "events",
+    ec: "each_given_event",
+    ewp: [
+      {
+        na: "$session",
+        pr: [],
+      },
+    ],
+    fr: moment().startOf("week").utc().unix(),
+    to: moment().utc().unix(),
+    gbt: "",
+    ty: "unique_users",
+    tz: "Asia/Kolkata",
+  };
+};
+
+export const getFrequencyQuery = (query) => {
+  const event = query.query_group.map((elem) => {
+    return {
+      ...elem,
+      ty: "events_occurrence",
+    };
+  });
+  const user = query.query_group.map((elem) => {
+    return {
+      ...elem,
+      ty: "unique_users",
+    };
+  });
+  return [...event, ...user];
 };

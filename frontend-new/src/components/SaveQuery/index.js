@@ -21,6 +21,7 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
+import { getSessionsQuery, getFrequencyQuery } from "../../Views/CoreQuery/utils";
 
 function SaveQuery({
   requestQuery,
@@ -31,7 +32,7 @@ function SaveQuery({
   breakdownType,
   queryType,
 }) {
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState("jk_tab_test_1");
   const [addToDashboard, setAddToDashboard] = useState(false);
   const [selectedDashboards, setSelectedDashboards] = useState([]);
   const [dashboardPresentation, setDashboardPresentation] = useState("pt");
@@ -132,6 +133,12 @@ function SaveQuery({
             };
           }),
         };
+        if (parseInt(activeKey) === 2) {
+          query.query_group = [...query.query_group, getSessionsQuery()];
+        }
+        if (parseInt(activeKey) === 3) {
+          query.query_group = getFrequencyQuery(query);
+        }
       } else if (queryType === QUERY_TYPE_CAMPAIGN) {
         query = {
           ...requestQuery,
@@ -154,7 +161,7 @@ function SaveQuery({
         if (activeKey) {
           settings.activeKey = activeKey;
         }
-        if (breakdownType) {
+        if (breakdownType !== "each") {
           settings.breakdownType = breakdownType;
         }
         const reqBody = {
@@ -214,7 +221,7 @@ function SaveQuery({
       }
     }
 
-    if(queryType === QUERY_TYPE_CAMPAIGN) {
+    if (queryType === QUERY_TYPE_CAMPAIGN) {
       secondOption = <Radio value="pl">Display Line Chart</Radio>;
       if (!requestQuery.query_group[0].group_by.length) {
         firstOption = <Radio value="pc">Display Spark Line Chart</Radio>;
