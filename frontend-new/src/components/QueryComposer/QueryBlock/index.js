@@ -102,6 +102,20 @@ function QueryBlock({
     if (isFilterDDVisible) {
       return <FilterBlock
       filterProps={filterProps}
+      // Baliga!!
+      //  operatorProps={{
+      //   "categorical": [
+      //     '=',
+      //   ],
+      //   "numerical": [
+      //     '=',
+      //     '<=',
+      //     '>='
+      //   ],
+      //   "datetime": [
+      //     '='
+      //   ]
+      // }}
       activeProject={activeProject}
       event={event}
       insertFilter={insertFilters}

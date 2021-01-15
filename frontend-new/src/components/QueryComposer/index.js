@@ -245,7 +245,14 @@ function QueryComposer({
         <div className={styles.composer_footer}> 
           <FaDatepicker customPicker presetRange 
                 monthPicker quarterPicker 
-                placement="topRight"  onSelect={setDateRange} />
+                placement="topRight"
+                range={
+                  {
+                    startDate: queryOptions.date_range.from,
+                    endDate: queryOptions.date_range.to
+                  }
+                }
+                onSelect={setDateRange} />
           <Button size={'large'}type="primary" onClick={handleRunQuery}>Run Query</Button>
         </div>
       );

@@ -9,6 +9,26 @@ import {
   DEFAULT_DATE_RANGE,
 } from '../DateRangeSelector/utils';
 
+const defaultOpProps = {
+  "categorical": [
+    '=',
+    '!=',
+    'contains',
+    'not contains'
+  ],
+  "numerical": [
+    '=',
+    '!=',
+    '<',
+    '<=',
+    '>',
+    '>='
+  ],
+  "datetime": [
+    '='
+  ]
+};
+
 import { fetchEventPropertyValues, fetchUserPropertyValues, 
   fetchChannelObjPropertyValues } from '../../../reducers/coreQuery/services';
 
@@ -19,6 +39,7 @@ export default function FilterBlock({
   typeProps,
   filterProps, 
   activeProject,
+  operatorProps = defaultOpProps,
   event, 
   filter, 
   delIcon = 'remove',
@@ -59,25 +80,7 @@ export default function FilterBlock({
           icon: 'mouseclick',
         }
       ],
-      operator: {
-        "categorical": [
-          '=',
-          '!=',
-          'contains',
-          'not contains'
-        ],
-        "numerical": [
-          '=',
-          '!=',
-          '<',
-          '<=',
-          '>',
-          '>='
-        ],
-        "datetime": [
-          '='
-        ]
-    },
+      operator: operatorProps,
   });
 
   useEffect(() => {

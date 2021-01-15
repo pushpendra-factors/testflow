@@ -166,6 +166,12 @@ const AttrQueryComposer = ({activeProject,
             <div className={`${styles.composer__footer} fa--query_block`}>
               <FaDatepicker customPicker presetRange 
                 monthPicker quarterPicker 
+                range={
+                    {
+                      startDate: dateRange.from,
+                      endDate: dateRange.to
+                    }
+                }
                 placement="topRight"  onSelect={setDateRange} />
 
               <Button size={'large'} type="primary" onClick={handleRunQuery}>Analyse</Button>
