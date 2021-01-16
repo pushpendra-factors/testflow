@@ -667,3 +667,21 @@ export const getFrequencyQuery = (query) => {
   });
   return [...event, ...user];
 };
+
+export const getTotalEventsQuery = (query) => {
+  return query.query_group.map((group) => {
+    return {
+      ...group,
+      ty: "events_occurrence",
+    };
+  });
+};
+
+export const getTotalUsersQuery = (query) => {
+  return query.query_group.map((group) => {
+    return {
+      ...group,
+      ty: "unique_users",
+    };
+  });
+};

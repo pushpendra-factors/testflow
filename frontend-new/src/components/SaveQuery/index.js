@@ -21,7 +21,7 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
-import { getSessionsQuery, getFrequencyQuery } from "../../Views/CoreQuery/utils";
+import { getSessionsQuery, getFrequencyQuery, getTotalEventsQuery, getTotalUsersQuery } from "../../Views/CoreQuery/utils";
 
 function SaveQuery({
   requestQuery,
@@ -133,6 +133,12 @@ function SaveQuery({
             };
           }),
         };
+        if(parseInt(activeKey) === 0) {
+          query.query_group = getTotalEventsQuery(query);
+        }
+        if(parseInt(activeKey) === 1) {
+          query.query_group = getTotalUsersQuery(query);
+        }
         if (parseInt(activeKey) === 2) {
           query.query_group = getSessionsQuery(query);
         }
