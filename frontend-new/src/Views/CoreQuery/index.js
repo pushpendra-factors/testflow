@@ -373,7 +373,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaign
             return { ...currState, loading: true };
           });
           const query = getQuery("1", groupBy, queries, key, dateRange);
-          updateRequestQuery(query);
+          // updateRequestQuery(query);
           const res = await runQueryService(activeProject.id, query);
           if (res.status === 200 && !hasApiFailed(res)) {
             setBreakdownTypeData((currState) => {
