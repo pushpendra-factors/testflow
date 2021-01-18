@@ -813,6 +813,30 @@ func (p *Pattern) GetPerOccurrenceUserPropertyRanges(
 	return p.PerOccurrenceUserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName)), false
 }
 
+func (p *Pattern) GetPerUserEventPropertyValues(
+	eventIndex int, propertyName string) []string {
+	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
+	return p.PerUserEventCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
+}
+
+func (p *Pattern) GetPerUserUserPropertyValues(
+	eventIndex int, propertyName string) []string {
+	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
+	return p.PerUserUserCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
+}
+
+func (p *Pattern) GetPerOccurrenceEventPropertyValues(
+	eventIndex int, propertyName string) []string {
+	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
+	return p.PerOccurrenceEventCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
+}
+
+func (p *Pattern) GetPerOccurrenceUserPropertyValues(
+	eventIndex int, propertyName string) []string {
+	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
+	return p.PerOccurrenceUserCategoricalProperties.GetBinValues(PatternPropertyKey(eventIndex, propertyName))
+}
+
 func (p *Pattern) String() string {
 	return EventArrayToString(p.EventNames)
 }
