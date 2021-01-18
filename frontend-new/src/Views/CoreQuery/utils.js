@@ -446,15 +446,15 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
 };
 
 export const DefaultDateRangeFormat = {
-  from: moment().startOf("week"),
-  to:
-    moment().format("dddd") === "Sunday"
-      ? moment()
-      : moment().subtract(1, "day"),
-  frequency:
+  from:
     moment().format("dddd") === "Sunday" || moment().format("dddd") === "Monday"
-      ? "hour"
-      : "date",
+      ? moment().subtract(3, "days").startOf("week")
+      : moment().startOf("week"),
+  to:
+    moment().format("dddd") === "Sunday" || moment().format("dddd") === "Monday"
+      ? moment().subtract(3, "days").endOf("week")
+      : moment().subtract(1, "day"),
+  frequency: "date",
 };
 
 const getFilters = (filters) => {
@@ -584,6 +584,20 @@ export const getCampaignsQuery = (
   group_by,
   dateRange = {}
 ) => {
+  const appliedFilters = [];
+
+  filters.forEach((filter) => {
+    filter.values.forEach((value, index) => {
+      appliedFilters.push({
+        name: filter.props[2],
+        property: filter.props[0],
+        condition: operatorMap[filter.operator],
+        logical_operator: !index ? "AND" : "OR",
+        value,
+      });
+    });
+  });
+
   const query = {
     channel,
     select_metrics,
@@ -593,7 +607,7 @@ export const getCampaignsQuery = (
         property: elem.property,
       };
     }),
-    filters,
+    filters: appliedFilters,
     gbt: "date",
   };
   if (dateRange.from && dateRange.to) {
@@ -613,10 +627,23 @@ export const getCampaignsQuery = (
 };
 
 export const getCampaignStateFromRequestQuery = (requestQuery) => {
+  const camp_filters = [];
+  requestQuery.filters.forEach((filter) => {
+    if (filter.logical_operator === "AND") {
+      camp_filters.push({
+        operator: reverseOperatorMap[filter.condition],
+        props: [filter.property, "", filter.name],
+        values: [filter.value],
+      });
+    } else {
+      camp_filters[camp_filters.length - 1].values.push(filter.value);
+    }
+  });
   const result = {
     queryType: QUERY_TYPE_CAMPAIGN,
     camp_channels: requestQuery.channel,
     camp_measures: requestQuery.select_metrics,
+    camp_filters,
     camp_groupBy: requestQuery.group_by.map((gb) => {
       return {
         prop_category: gb.name,
