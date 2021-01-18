@@ -1131,6 +1131,7 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 				subInsights = append(subInsights, trimChildNode(parent.FactorsInsightsType, child.FactorsInsightsType, parent, child))
 				parent.FactorsSubInsights = subInsights
 				indexLevelInsightsMap[insight.parentIndex] = parent
+				fmt.Println(child)
 			}
 		}
 	}
