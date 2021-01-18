@@ -46,7 +46,7 @@ type FactorsGoalFilter struct {
 	GlobalFilters      []KeyValueTuple `json:"ft"`
 }
 
-// KeyValueTuple - key value pair	
+// KeyValueTuple - key value pair
 type KeyValueTuple struct {
 	Key        string  `json:"key"`
 	Value      string  `json:"vl"`

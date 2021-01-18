@@ -39,11 +39,12 @@ func PostFactorsHandler(c *gin.Context) {
 		}
 	}
 	inputType := c.Query("type")
-	params, err := GetcreateFactorsGoalParams(c)
+	ipParams, err := GetcreateFactorsGoalParams(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+	params := MapRule(ipParams.Rule)
 	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
 	if err != nil {
 		logCtx.WithError(err).Error("Pattern Service initialization failed.")
@@ -55,7 +56,7 @@ func PostFactorsHandler(c *gin.Context) {
 	}
 	if patternMode == "AllPatterns" {
 		allEventPatterns := make([]string, 0)
-		allPatterns, _ := ps.GetAllPatterns("", params.Rule.StartEvent, params.Rule.EndEvent)
+		allPatterns, _ := ps.GetAllPatterns("", params.StartEvent, params.EndEvent)
 		for _, eventPattern := range allPatterns {
 			pattern := ""
 			for _, eventName := range eventPattern.EventNames {
@@ -74,10 +75,10 @@ func PostFactorsHandler(c *gin.Context) {
 	debugParams := make(map[string]string)
 	debugParams["PropertyName"] = propertyName
 	debugParams["PropertyValue"] = propertyValue
-	startConstraints, endConstraints := parseConstraints(params.Rule.Rule)
+	startConstraints, endConstraints := parseConstraints(params.Rule)
 	if results, err, debugData := PW.FactorV1("",
-		projectId, params.Rule.StartEvent, startConstraints,
-		params.Rule.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, patternMode, debugParams); err != nil {
+		projectId, params.StartEvent, startConstraints,
+		params.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, patternMode, debugParams); err != nil {
 		logCtx.WithError(err).Error("Factors failed.")
 		if err.Error() == "Root node not found or frequency 0" {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
@@ -89,7 +90,7 @@ func PostFactorsHandler(c *gin.Context) {
 			c.JSON(http.StatusOK, debugData)
 		}
 		results.Type = inputType
-		results.GoalRule = params.Rule
+		results.GoalRule = params
 		c.JSON(http.StatusOK, results)
 		return
 

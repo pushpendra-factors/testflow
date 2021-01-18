@@ -196,26 +196,28 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 
 	request := V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal1"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event1"
-	request.Rule.EndEvent = "event2"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule := M.FactorsGoalRule{}
+	rule.StartEvent = "event1"
+	rule.EndEvent = "event2"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	var globalFilters []M.KeyValueTuple
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 
 	// Happy path
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal1"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event1"
-	request.Rule.EndEvent = "event2"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event1"
+	rule.EndEvent = "event2"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w := sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusCreated, w.Code)
 	var obj successObject
@@ -226,15 +228,15 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// Duplicate rule
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal2"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event1"
-	request.Rule.EndEvent = "event2"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event1"
+	rule.EndEvent = "event2"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	var err errorObject
@@ -245,15 +247,15 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// Duplicate name
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal1"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event1"
-	request.Rule.EndEvent = "event2"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event1"
+	rule.EndEvent = "event2"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv2"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	fmt.Println(w.Body)
@@ -264,15 +266,15 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// non existing end event
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal4"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event1"
-	request.Rule.EndEvent = "event_2"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event1"
+	rule.EndEvent = "event_2"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv3"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -282,15 +284,15 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// non existing start event
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal5"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event_1"
-	request.Rule.EndEvent = "event2"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event_1"
+	rule.EndEvent = "event2"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -300,15 +302,15 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// start event not tracked
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal6"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event3"
-	request.Rule.EndEvent = "event2"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event3"
+	rule.EndEvent = "event2"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -319,15 +321,15 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal7"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event1"
-	request.Rule.EndEvent = "event3"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event1"
+	rule.EndEvent = "event3"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -337,15 +339,15 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// user property not exist
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal8"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event1"
-	request.Rule.EndEvent = "event2"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event1"
+	rule.EndEvent = "event2"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up3", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -355,15 +357,15 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// user property not tracked
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal9"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event1"
-	request.Rule.EndEvent = "event2"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event1"
+	rule.EndEvent = "event2"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up2", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -402,13 +404,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// Happy path
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal10"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.EndEvent = "event1"
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.EndEvent = "event1"
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusCreated, w.Code)
 	obj = successObject{}
@@ -434,11 +436,11 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// Happy path
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal11"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event1"
-	request.Rule.EndEvent = "event2"
-	request.Rule.Visited = true
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event1"
+	rule.EndEvent = "event2"
+	rule.Visited = true
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
 	var stuserpr []M.KeyValueTuple
@@ -449,11 +451,12 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	steventpr = append(steventpr, M.KeyValueTuple{Key: "ep1", Value: "uv1"})
 	var eneventpr []M.KeyValueTuple
 	eneventpr = append(eneventpr, M.KeyValueTuple{Key: "ep2", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-	request.Rule.Rule.StartEnUserFitler = stuserpr
-	request.Rule.Rule.EndEnUserFitler = enuserpr
-	request.Rule.Rule.StartEnEventFitler = steventpr
-	request.Rule.Rule.EndEnEventFitler = eneventpr
+	rule.Rule.GlobalFilters = globalFilters
+	rule.Rule.StartEnUserFitler = stuserpr
+	rule.Rule.EndEnUserFitler = enuserpr
+	rule.Rule.StartEnEventFitler = steventpr
+	rule.Rule.EndEnEventFitler = eneventpr
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	fmt.Println(w)
 	assert.Equal(t, http.StatusCreated, w.Code)
@@ -507,13 +510,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	C.GetConfig().ActiveFactorsGoalsLimit = 0
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal12"
-	request.Rule = M.FactorsGoalRule{}
-	request.Rule.StartEvent = "event2"
-	request.Rule.Rule = M.FactorsGoalFilter{}
+	rule = M.FactorsGoalRule{}
+	rule.StartEvent = "event2"
+	rule.Rule = M.FactorsGoalFilter{}
 	globalFilters = nil
 	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up2", Value: "uv1"})
-	request.Rule.Rule.GlobalFilters = globalFilters
-
+	rule.Rule.GlobalFilters = globalFilters
+	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)

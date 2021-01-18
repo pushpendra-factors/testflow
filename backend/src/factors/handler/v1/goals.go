@@ -1,12 +1,17 @@
 package v1
 
 import (
+	"encoding/json"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
+	"fmt"
+	"math"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,12 +35,26 @@ func GetAllFactorsGoalsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+	for index, goal := range goals {
+		var ipRule M.FactorsGoalRule
+		json.Unmarshal((goal.Rule).RawMessage, &ipRule)
+		opRule := ReverseMapRule(ipRule)
+		ruleJSON, _ := json.Marshal(opRule)
+		ruleJsonb := postgres.Jsonb{ruleJSON}
+		goals[index].Rule = ruleJsonb
+	}
 	c.JSON(http.StatusOK, goals)
 }
 
+type CreateGoalInputParams struct {
+	StartEvent    M.QueryEventWithProperties `json:"st_en"`
+	EndEvent      M.QueryEventWithProperties `json:"en_en"`
+	GlobalFilters []M.QueryProperty          `json:"gpr"`
+}
+
 type CreateFactorsGoalParams struct {
-	Name string            `json:"name"`
-	Rule M.FactorsGoalRule `json:"rule"`
+	Name string                `json:"name"`
+	Rule CreateGoalInputParams `json:"rule"`
 }
 
 func GetcreateFactorsGoalParams(c *gin.Context) (*CreateFactorsGoalParams, error) {
@@ -69,7 +88,7 @@ func CreateFactorsGoalsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	id, errCode, errMsg := M.CreateFactorsGoal(projectID, params.Name, params.Rule, loggedInAgentUUID)
+	id, errCode, errMsg := M.CreateFactorsGoal(projectID, params.Name, MapRule(params.Rule), loggedInAgentUUID)
 	if errCode != http.StatusCreated {
 		if errMsg != "" {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": errMsg})
@@ -84,10 +103,74 @@ func CreateFactorsGoalsHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
+func MapRule(ip CreateGoalInputParams) M.FactorsGoalRule {
+	op := M.FactorsGoalRule{}
+	op.StartEvent = ip.StartEvent.Name
+	op.EndEvent = ip.EndEvent.Name
+	op.Rule = M.FactorsGoalFilter{}
+	if len(ip.StartEvent.Properties) > 0 || len(ip.EndEvent.Properties) > 0 || len(ip.GlobalFilters) > 0 {
+		op.Rule.StartEnEventFitler = make([]M.KeyValueTuple, 0)
+		op.Rule.EndEnEventFitler = make([]M.KeyValueTuple, 0)
+		op.Rule.StartEnUserFitler = make([]M.KeyValueTuple, 0)
+		op.Rule.EndEnUserFitler = make([]M.KeyValueTuple, 0)
+		op.Rule.GlobalFilters = make([]M.KeyValueTuple, 0)
+	}
+	for _, property := range ip.StartEvent.Properties {
+		if property.Entity == "user" {
+			op.Rule.StartEnUserFitler = append(op.Rule.StartEnUserFitler, mapProperty(property))
+		}
+		if property.Entity == "event" {
+			op.Rule.StartEnEventFitler = append(op.Rule.StartEnEventFitler, mapProperty(property))
+		}
+	}
+	for _, property := range ip.EndEvent.Properties {
+		if property.Entity == "user" {
+			op.Rule.EndEnUserFitler = append(op.Rule.EndEnUserFitler, mapProperty(property))
+		}
+		if property.Entity == "event" {
+			op.Rule.EndEnEventFitler = append(op.Rule.EndEnEventFitler, mapProperty(property))
+		}
+	}
+	for _, property := range ip.GlobalFilters {
+		op.Rule.GlobalFilters = append(op.Rule.GlobalFilters, mapProperty(property))
+	}
+	return op
+}
+
+func mapProperty(pr M.QueryProperty) M.KeyValueTuple {
+	value := M.KeyValueTuple{}
+
+	value.Key = pr.Property
+	value.Type = pr.Type
+	value.Value = pr.Value
+	if pr.Type == "numerical" {
+		numValue, _ := strconv.ParseFloat(pr.Value, 32)
+		if pr.Operator == "equals" {
+			value.Operator = true
+			value.LowerBound = numValue
+			value.UpperBound = numValue
+		} else {
+			value.Operator = false
+			if pr.Operator == "greaterThan" {
+				value.LowerBound = numValue
+				value.UpperBound = math.MaxFloat64
+			}
+			if pr.Operator == "lesserThan" {
+				value.LowerBound = -math.MaxFloat64
+				value.UpperBound = numValue
+			}
+		}
+	}
+	if pr.Type == "categorical" {
+		value.Value = pr.Value
+	}
+	return value
+}
+
 type UpdateFactorsGoalParams struct {
-	ID   int64             `json:"id" binding:"required"`
-	Name string            `json:"name" binding:"required"`
-	Rule M.FactorsGoalRule `json:"rule" binding:"required"`
+	ID   int64                 `json:"id" binding:"required"`
+	Name string                `json:"name" binding:"required"`
+	Rule CreateGoalInputParams `json:"rule" binding:"required"`
 }
 
 func getUpdateFactorsGoalParams(c *gin.Context) (*UpdateFactorsGoalParams, error) {
@@ -123,7 +206,7 @@ func UpdateFactorsGoalsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	id, errCode := M.UpdateFactorsGoal(params.ID, params.Name, params.Rule, projectID)
+	id, errCode := M.UpdateFactorsGoal(params.ID, params.Name, MapRule(params.Rule), projectID)
 	if errCode != http.StatusOK {
 		logCtx.Errorln("Updating FactorsGoal failed")
 		if errCode == http.StatusFound {
@@ -239,5 +322,58 @@ func SearchFactorsGoalHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+	for index, goal := range goals {
+		var ipRule M.FactorsGoalRule
+		json.Unmarshal((goal.Rule).RawMessage, &ipRule)
+		opRule := ReverseMapRule(ipRule)
+		ruleJSON, _ := json.Marshal(opRule)
+		ruleJsonb := postgres.Jsonb{ruleJSON}
+		goals[index].Rule = ruleJsonb
+	}
 	c.JSON(http.StatusOK, goals)
+}
+
+func ReverseMapRule(ip M.FactorsGoalRule) CreateGoalInputParams {
+	op := CreateGoalInputParams{}
+	op.StartEvent = M.QueryEventWithProperties{}
+	op.EndEvent = M.QueryEventWithProperties{}
+	op.StartEvent.Name = ip.StartEvent
+	op.EndEvent.Name = ip.EndEvent
+	for _, filter := range ip.Rule.StartEnEventFitler {
+		op.StartEvent.Properties = append(op.StartEvent.Properties, ReverseMapProperty(filter, "event"))
+	}
+	for _, filter := range ip.Rule.EndEnEventFitler {
+		op.EndEvent.Properties = append(op.EndEvent.Properties, ReverseMapProperty(filter, "event"))
+	}
+	for _, filter := range ip.Rule.StartEnUserFitler {
+		op.StartEvent.Properties = append(op.StartEvent.Properties, ReverseMapProperty(filter, "user"))
+	}
+	for _, filter := range ip.Rule.EndEnUserFitler {
+		op.EndEvent.Properties = append(op.EndEvent.Properties, ReverseMapProperty(filter, "user"))
+	}
+	for _, filter := range ip.Rule.GlobalFilters {
+		op.GlobalFilters = append(op.GlobalFilters, ReverseMapProperty(filter, "user"))
+	}
+	return op
+}
+
+func ReverseMapProperty(ip M.KeyValueTuple, entity string) M.QueryProperty {
+	op := M.QueryProperty{}
+	op.Entity = entity
+	op.Type = ip.Type
+	op.Property = ip.Key
+	op.Value = ip.Value
+	if ip.Type == "categorical" {
+		op.Value = ip.Value
+	}
+	if ip.Type == "numerical" {
+		if ip.LowerBound != -math.MaxFloat64 {
+			op.Value = fmt.Sprintf("%f", ip.LowerBound)
+			op.Operator = "lowerThan"
+		} else {
+			op.Value = fmt.Sprintf("%f", ip.UpperBound)
+			op.Operator = "greaterThan"
+		}
+	}
+	return op
 }
