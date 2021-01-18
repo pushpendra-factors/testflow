@@ -1125,7 +1125,11 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 			} else {
 				child.FactorsMultiplierIncreaseFlag = false
 			}
-			child.FactorsInsightsMultiplier = roundTo1Decimal(child.FactorsInsightsPercentage / parent.FactorsInsightsPercentage)
+			if parent.FactorsInsightsPercentage != 0 {
+				child.FactorsInsightsMultiplier = roundTo1Decimal(child.FactorsInsightsPercentage / parent.FactorsInsightsPercentage)
+			} else {
+				child.FactorsInsightsMultiplier = roundTo1Decimal(child.FactorsInsightsPercentage / 0.01)
+			}
 			if parent.FactorsInsightsType == "" || isValidInsightTransition(parent.FactorsInsightsType, child.FactorsInsightsType) {
 				subInsights := parent.FactorsSubInsights
 				subInsights = append(subInsights, trimChildNode(parent.FactorsInsightsType, child.FactorsInsightsType, parent, child))
