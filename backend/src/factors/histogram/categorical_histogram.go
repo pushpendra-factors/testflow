@@ -579,3 +579,27 @@ func (h *CategoricalHistogramStruct) TrimByBinSize(trimFraction float64) error {
 	h.trim()
 	return nil
 }
+
+func (h *CategoricalHistogramStruct) GetBinValues(key string) []string {
+	ranges := make([]string, 0)
+	dim := -1
+	for i := 0; i < h.Dimension; i++ {
+		if (*h.Template)[i].Name == key {
+			dim = i
+			break
+		}
+	}
+	if dim < 0 {
+		return ranges
+	}
+	valueCountMap := make(map[string]uint64)
+	for _, bin := range h.Bins {
+		for value, count := range bin.FrequencyMaps[dim].Fmap {
+			valueCountMap[value] += count
+		}
+	}
+	for value, _ := range valueCountMap {
+		ranges = append(ranges, value)
+	}
+	return ranges
+}

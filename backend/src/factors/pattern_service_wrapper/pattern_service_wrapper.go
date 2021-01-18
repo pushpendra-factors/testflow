@@ -1096,13 +1096,6 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 				insights.FactorsGoalUsersCount = funnelResults[len(funnelResults)-1].Data[0]
 				insights.FactorsInsightsUsersCount = funnelResults[len(funnelResults)-2].Data[0]
 				insights.FactorsInsightsPercentage = roundTo1Decimal(funnelResults[len(funnelResults)-2].ConversionPercent)
-				if funnelResults[len(funnelResults)-2].NodeType == "positive" {
-					insights.FactorsMultiplierIncreaseFlag = true
-					insights.FactorsInsightsMultiplier = roundTo1Decimal(funnelResults[len(funnelResults)-2].ConversionPercent / baseFunnelResults[len(baseFunnelResults)-2].ConversionPercent)
-				} else {
-					insights.FactorsMultiplierIncreaseFlag = false
-					insights.FactorsInsightsMultiplier = roundTo1Decimal(funnelResults[len(funnelResults)-2].ConversionPercent / baseFunnelResults[len(baseFunnelResults)-2].ConversionPercent)
-				}
 				insights.FactorsSubInsights = make([]*FactorsInsights, 0)
 				indexLevelInsightsMap[node.Index] = insights
 				levelInsightsMap[indexLevelMap[node.Index]] = append(levelInsightsMap[indexLevelMap[node.Index]], parentInsightsTuple{
@@ -1119,18 +1112,20 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 		}
 
 	}
+	indexLevelInsightsMap[0] = FactorsInsights{
+		FactorsSubInsights:        make([]*FactorsInsights, 0),
+		FactorsInsightsPercentage: Level0GoalPercentage,
+	}
 	for i := 2; i >= 1; i-- {
 		for _, insight := range levelInsightsMap[i] {
 			parent := indexLevelInsightsMap[insight.parentIndex]
 			child := indexLevelInsightsMap[insight.index]
-			if i > 1 {
-				if child.FactorsInsightsPercentage > parent.FactorsInsightsPercentage {
-					child.FactorsMultiplierIncreaseFlag = true
-				} else {
-					child.FactorsMultiplierIncreaseFlag = false
-				}
-				child.FactorsInsightsMultiplier = roundTo1Decimal(child.FactorsInsightsPercentage / parent.FactorsInsightsPercentage)
+			if child.FactorsInsightsPercentage > parent.FactorsInsightsPercentage {
+				child.FactorsMultiplierIncreaseFlag = true
+			} else {
+				child.FactorsMultiplierIncreaseFlag = false
 			}
+			child.FactorsInsightsMultiplier = roundTo1Decimal(child.FactorsInsightsPercentage / parent.FactorsInsightsPercentage)
 			if parent.FactorsInsightsType == "" || isValidInsightTransition(parent.FactorsInsightsType, child.FactorsInsightsType) {
 				subInsights := parent.FactorsSubInsights
 				subInsights = append(subInsights, trimChildNode(parent.FactorsInsightsType, child.FactorsInsightsType, parent, child))
@@ -1139,7 +1134,7 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 			}
 		}
 	}
-	return indexLevelInsightsMap[0].FactorsSubInsights, Level0GoalUsersCount, Level0GoalPercentage, Level0TotalUsers
+	return indexLevelInsightsMap[0].FactorsSubInsights, Level0GoalUsersCount, roundTo1Decimal(Level0GoalPercentage), Level0TotalUsers
 }
 
 func isValidInsightTransition(parentType string, childType string) bool {
