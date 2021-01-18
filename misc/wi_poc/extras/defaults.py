@@ -1,0 +1,7 @@
+EVENTS_OCCURRENCE_QUERY_TYPE = 'events_occurrence'
+UNIQUE_USERS_QUERY_TYPE = 'unique_users'
+DEFAULT_QUERIES_FILE_NAME = "queries.json"
+DEFAULT_CLOUD_PATH = "/usr/local/var/factors/cloud_storage/"
+DEFAULT_MODEL_ID = "1604020686857"
+DEFAULT_PROJECT_ID = "11"
+DEFAULT_WEEK_NUM = 1
