@@ -447,7 +447,10 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
 
 export const DefaultDateRangeFormat = {
   from: moment().startOf("week"),
-  to: moment(),
+  to:
+    moment().format("dddd") === "Sunday"
+      ? moment()
+      : moment().subtract(1, "day"),
   frequency:
     moment().format("dddd") === "Sunday" || moment().format("dddd") === "Monday"
       ? "hour"
