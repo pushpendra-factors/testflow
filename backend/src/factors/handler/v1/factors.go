@@ -80,7 +80,7 @@ func PostFactorsHandler(c *gin.Context) {
 		params.Rule.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, patternMode, debugParams); err != nil {
 		logCtx.WithError(err).Error("Factors failed.")
 		if err.Error() == "Root node not found or frequency 0" {
-			c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "No Insights Found"})
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No Insights Found"})
 		}
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
