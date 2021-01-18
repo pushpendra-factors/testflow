@@ -246,7 +246,6 @@ function CoreQuery({
   }, [location.state, setQueryToState]);
 
   const data = queriesState.data
-    .filter((q) => parseInt(q.type) === 2)
     .map((q) => {
       return getFormattedRow(q);
     });
