@@ -4,13 +4,14 @@ import {
 } from 'antd';
 import { SVG, Text } from 'factorsComponents'; 
 import GroupSelect from '../../components/QueryComposer/GroupSelect';
-import { fetchEventNames } from 'Reducers/coreQuery/middleware';
+import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
 import { fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel } from 'Reducers/factors';
 import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import _, { isEmpty } from 'lodash';
 import moment from 'moment';
 import FilterBlock from '../../components/QueryComposer/FilterBlock';
+import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
 
 
 const title = (props) => {
@@ -41,6 +42,10 @@ const CreateGoalDrawer = (props) => {
   
   const [showDropDown2, setShowDropDown2] = useState(false);
   const [event2, setEvent2] = useState(null);
+  
+  const [showFtDropDown, setshowFtDropDown] = useState(false);
+  const [globalFilter, setglobalFilter] = useState([]);
+  const [filterLoader, setfilterLoader] = useState(false);
 
   const [showDateTime, setShowDateTime] = useState(false);
   const [dateTime, setDateTime] = useState(null);
@@ -52,10 +57,59 @@ const CreateGoalDrawer = (props) => {
 });
 const [filterDD, setFilterDD] = useState(false);
 
+
+const operatorMap = {
+  "=": "equals",
+  "!=": "notEqual",
+  contains: "contains",
+  "not contains": "notContains",
+  "<": "lesserThan",
+  "<=": "lesserThanOrEqual",
+  ">": "greaterThan",
+  ">=": "greaterThanOrEqual",
+};
+
+const getFilters = (filters) => {
+  const result = [];
+  filters.forEach((filter) => {
+    filter.values.forEach((value) => {
+      result.push({
+        en: filter.props[2],
+        lop: "OR",
+        op: operatorMap[filter.operator],
+        pr: filter.props[0],
+        ty: filter.props[1],
+        va: value,
+      });
+    });
+  });
+  return result;
+};
+
   const onChangeGroupSelect1 = (grp, value) => {
-    setShowDropDown(false);
+    setShowDropDown(false); 
     setEvent1(value[0]); 
   }
+  // const onChangeFilter = (grp, value) => {
+  //   setshowFtDropDown(false)
+  //   console.log('onChangeFilter',value)
+  //   setfilterLoader(true);
+  //   fetchUserPropertyValues(props.activeProject.id,value[0]).then(res => {
+  //     setglobalFilter([ ...globalFilter , 
+  //       {
+  //         "key": value[0],
+  //         "vl": res.data
+  //       }
+  //   ]); 
+  //   console.log('fetchUserPropertyValues',res);
+  //   setfilterLoader(false);
+  //   });
+  //   // setEvent1(value[0]); 
+  // }
+  const removeFilter = (index) => {
+    const fltrs = globalFilter.filter((v, i) => i !== index);
+    setglobalFilter(fltrs);
+  }  
   const onChangeGroupSelect2 = (grp, value) => {
     setShowDropDown2(false);
     setEvent2(value[0]); 
@@ -82,7 +136,13 @@ const [filterDD, setFilterDD] = useState(false);
     // if(props.GlobalEventNames){ 
     //   SetEventNames(props.GlobalEventNames);
     
-    // }  
+    // }
+    if(props.factors_models){ 
+      setDateTime(factorsModels[0]);
+    }
+    if(props.activeProject && props.activeProject.id) {
+      props.getUserProperties(props.activeProject.id, 'channel')
+    }
     if(props.tracked_events){
       const fromatterTrackedEvents = props.tracked_events.map((item)=>{
         return [item.name]
@@ -91,19 +151,61 @@ const [filterDD, setFilterDD] = useState(false);
     }  
   },[props.activeProject, props.tracked_events, props.factors_models, props.goal_insights])
 
-const factorsDataFormat = {
-  name: "",
-  rule: {
-      st_en: "",
-      en_en: "",
-      vs: true,
-      rule: {
-          ft: []
+  useEffect(() => {
+    const assignFilterProps = Object.assign({}, filterProps);
+    assignFilterProps.user = props.userProperties;
+    let  catAndNumericalProps = [];
+
+    props.userProperties.map((item)=>{ 
+      if(item[1]=='categorical' || item[1]=='numerical'){ 
+        catAndNumericalProps.push(item); 
       }
+    }); 
+    assignFilterProps.user = catAndNumericalProps;
+    setFilterProperties(assignFilterProps);
+
+  }, [props.userProperties]);
+
+
+const factorsDataFormatNew = {
+  "name": "",
+  "rule": {
+      "st_en": {
+          "na": "",
+          "pr": [
+              // {
+              //     "en": "user",
+              //     "lop": "",
+              //     "op": "equals",
+              //     "pr": "$user_id12",
+              //     "ty": "categorical",
+              //     "va": "1"
+              // }
+          ]
+      },
+      "en_en": {
+          "na": "",
+          "pr": []
+      },
+      "gpr" :[],
+      "vs": true
   }
 };
 
-const getInsights = (projectID, isJourney=false) =>{  
+
+// const factorsDataFormat = {
+//   name: "",
+//   rule: {
+//       st_en: "",
+//       en_en: "",
+//       vs: true,
+//       rule: {
+//           ft: []
+//       }
+//   }
+// };
+
+const getInsights = (projectID, isJourney=false) =>{ 
   setInsightBtnLoading(true); 
   const calcModelId = props.factors_models.filter((item)=>{   
     const generateStringArray = [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`]; 
@@ -112,19 +214,26 @@ const getInsights = (projectID, isJourney=false) =>{
     } 
   });
   // console.log("calcModelId",calcModelId[0].mid);
-  
+  let gprData =  getFilters(filters);
   let factorsData = {
-    ...factorsDataFormat,
+    ...factorsDataFormatNew,
     rule:{
-       ...factorsDataFormat.rule,
-       st_en: event2 ? event1 : null,
-       en_en: event2 ? event2 : event1
-
+       ...factorsDataFormatNew.rule,
+       st_en: {
+         na: event2 ? event1 : null,
+         pr: [] 
+        },
+        en_en: {
+          na: event2 ? event2 : event1,
+          pr: []  
+        },
+        gpr:gprData,
+       
     }  
   }  
   
   props.fetchGoalInsights(projectID, isJourney, factorsData, calcModelId[0].mid).then((data)=>{
-    console.log("fetchGoalInsights then",data);
+    // console.log("fetchGoalInsights then",data);
       props.saveGoalInsightRules(factorsData); 
       props.saveGoalInsightModel(dateTime); 
       setInsightBtnLoading(false);
@@ -139,13 +248,23 @@ const getInsights = (projectID, isJourney=false) =>{
 } 
 
 
+
 const delFilter = (index) => {
-  // const fltrs = filters.filter((v, i) => i !== index);
-  // setCampFilters(fltrs);
-  console.log('delFilter', index);
+  const fltrs = filters.filter((v, i) => i !== index);
+  setfilters(fltrs);
+} 
+
+
+const addFilter = (val) => {
+  // console.log("add filter", val);
+  const filterState = [...filters];
+  filterState.push(val);
+  setfilters(filterState);
 }
 
-
+const closeFilter = () => {
+  setFilterDD(false);
+}
 
 
 const renderFilterBlock = () => {
@@ -154,14 +273,14 @@ const renderFilterBlock = () => {
 
       filters.forEach((filt, id) => {
           filtrs.push(
-              <div key={id} className={id !== 0? `mt-4` : null}>
-                  <FilterBlock activeProject={activeProject} 
+              <div key={id} className={id !== 0? `mt-4 relative` : null}>
+                  <FilterBlock activeProject={props.activeProject} 
                       index={id}
                       blockType={'global'} 
                       // filterType={'channel'} 
                       filter={filt}
-                      // extraClass={styles.filterSelect}
-                      // delBtnClass={styles.filterDelBtn}
+                      extraClass={'filter-block--row'}
+                      delBtnClass={'filter-block--delete'}
                       delIcon={`trash`}
                       deleteFilter={delFilter}
                       // typeProps={{channel: channel}} 
@@ -172,38 +291,47 @@ const renderFilterBlock = () => {
           )
       })
 
-      // if(filterDD) {
-      //     filtrs.push(  
-      //         <div key={filtrs.length} className={`mt-4`}>
-      //             <FilterBlock activeProject={activeProject} 
-      //                 blockType={'global'} filterType={'channel'} 
-      //                 // extraClass={styles.filterSelect}
-      //                 // delBtnClass={styles.filterDelBtn}
-      //                 typeProps={{channel: channel}} filterProps={filterProps}
-      //                 propsConstants={Object.keys(filterProps)}
-      //                 insertFilter={addFilter}
-      //                 closeFilter={closeFilter}
-      //             ></FilterBlock>
-      //         </div>
-      //     )
-      // } else {
-      //     filtrs.push(
-      //         <div key={filtrs.length} className={`flex mt-4`}>
-      //             <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
-      //                 <SVG name={'plus'} color={'purple'}></SVG>
-      //             </div>
-
-      //             <Button size={'large'} type="link" onClick={() => setFilterDD(true)}>Add new</Button>
-      //         </div>
-      //     )
-      // }
+      if(filterDD) {
+          filtrs.push(  
+              <div key={filtrs.length} className={`mt-4 relative`}>
+                  <FilterBlock activeProject={props.activeProject} 
+                      blockType={'global'} 
+                      // extraClass={styles.filterSelect}
+                      delBtnClass={'filter-block--delete'}
+                      // typeProps={{channel: channel}} 
+                      filterProps={filterProps}
+                      propsConstants={Object.keys(filterProps)}
+                      insertFilter={addFilter}
+                      closeFilter={closeFilter} 
+                      operatorProps={{
+                        "categorical": [
+                          '=',
+                        ],
+                        "numerical": [
+                          '=',
+                          '<=',
+                          '>='
+                        ],
+                        "datetime": [
+                          '='
+                        ]
+                      }}
+                      
+                  ></FilterBlock>
+              </div>
+          )
+      } else {
+          filtrs.push(
+              <div key={filtrs.length} className={`flex relative justify-start`}> 
+                  <Button size={'large'} loading={filterLoader} type={'text'} onClick={() => setFilterDD(true)} className={'mt-2'}><SVG name={'plus'} extraClass={'mr-1'} />{'Add Filter'} </Button>
+              </div>
+          )
+      }
       
-      return (<div>{filtrs}</div>);
+      return (<div className={`mt-4 relative`}>{filtrs}</div>);
   }
   
 }
-
-
 
   return (
         <Drawer
@@ -245,7 +373,7 @@ const renderFilterBlock = () => {
                       <div className={'flex items-center'}>
                         {event1 &&  <>
                         <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'} style={{height:'24px', width: '24px'}}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{1}</Text> </div> 
-                        <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>Users who</Text> 
+                        <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>Users who perform</Text> 
                         </>}
                         <div className='relative' style={{height: '42px'}}>
                           {!showDropDown && !event1 && <Button onClick={()=>setShowDropDown(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>{eventCount === 2 ? 'Add First event': 'Add an event'}</Button> }
@@ -317,10 +445,41 @@ const renderFilterBlock = () => {
           } 
 
 
-          <div>
-            {/* Akhil please have a look! */}
-          {/* {renderFilterBlock()} */}
+          <div className={' mt-12 border-top--thin'}> 
+            <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 mt-4'}>Filter by</Text> 
+            {renderFilterBlock()}
           </div>
+
+          {/* <div className={' mt-5 border-top--thin'}>
+
+
+        <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 mt-4'}>Filter by</Text>
+
+          {globalFilter && globalFilter.map((item,index)=>{
+            return <div className={'flex justify-between items-center mt-2'} key={index}>
+              <Button type={'link'} size={'large'}>{item.key}</Button>
+              <Button size={'small'} className={'fa-button-ghost'} onClick={()=>removeFilter(index)}><SVG name={'trash'} size={16}  extraClass={'m-0'} /></Button> 
+            </div>
+          })}
+
+          <div className={'relative w-full'}>
+          {!showFtDropDown && <Button size={'large'} loading={filterLoader} type={'text'} onClick={()=>setshowFtDropDown(true)} className={'mt-4'}><SVG name={'plus'} extraClass={'mr-1'} />{'Add Filter'} </Button>}
+            {showFtDropDown &&  
+                         <GroupSelect 
+                              groupedProperties={props.userProperties ? [
+                                {             
+                                label: 'MOST RECENT',
+                                icon: 'fav',
+                                values: props.userProperties
+                                }
+                              ]:null}
+                              placeholder="Select Events"
+                              optionClick={(group, val) => onChangeFilter(group, val)}
+                              onClickOutside={() => setshowFtDropDown(false)}
+                              />  
+            }  
+          </div>
+          </div> */}
 
     <div className={'flex flex-col justify-center items-center'} style={{ height: '50px' }}> 
     </div>
@@ -354,10 +513,13 @@ const renderFilterBlock = () => {
 const mapStateToProps = (state) => {
   return {
     activeProject: state.global.active_project, 
+    userProperties: state.coreQuery.userProperties,
     GlobalEventNames: state.coreQuery?.eventOptions[0]?.values,
+    userProperties: state.coreQuery.userProperties,
     factors_models: state.factors.factors_models,
     goal_insights: state.factors.goal_insights,
     tracked_events: state.factors.tracked_events
   };
 };
-export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel})(CreateGoalDrawer);
+export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights, 
+  fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel, getUserProperties, fetchUserPropertyValues})(CreateGoalDrawer);

@@ -225,7 +225,7 @@ function ActiveUnitContent({
 
   const handleEditQuery = useCallback(() => {
     history.push({
-      pathname: "/core-analytics",
+      pathname: "/analyse",
       state: {
         query: { ...unit.query, settings: unit.settings },
         global_search: true,

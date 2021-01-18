@@ -210,3 +210,13 @@
         } 
     }
 }
+
+.filter-block--row{
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: space-between;
+}
+.filter-block--delete{
+left:auto !important;
+right:0 !important;
+}

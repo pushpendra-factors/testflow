@@ -87,7 +87,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
                         <div className={'p-4'}><span className="font-bold">No Matches.</span> <span style={{ color: '#0E2647' }}>What kind of analysis are you looking for?</span></div>
                         <div className="flex px-4 py-2">
                             <div className="w-1/2 pr-1">
-                                <div onClick={() => history.push('/core-analytics')} className={`flex flex-col cursor-pointer py-6 px-4 justify-center rounded ${styles.boxStyles}`}>
+                                <div onClick={() => history.push('/analyse')} className={`flex flex-col cursor-pointer py-6 px-4 justify-center rounded ${styles.boxStyles}`}>
                                     <div className="flex justify-center items-center">
                                         <SVG name={'corequery_colored'} />
                                     </div>
@@ -98,7 +98,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
                                 </div>
                             </div>
                             <div className="w-1/2 pl-1">
-                                <div onClick={() => history.push('/factors')} className={`flex flex-col cursor-pointer py-6 px-4 justify-center rounded ${styles.boxStyles}`}>
+                                <div onClick={() => history.push('/explain')} className={`flex flex-col cursor-pointer py-6 px-4 justify-center rounded ${styles.boxStyles}`}>
                                     <div className="flex justify-center items-center">
                                         <SVG name={'factors_colored'} />
                                     </div>

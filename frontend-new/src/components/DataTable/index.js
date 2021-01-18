@@ -18,7 +18,7 @@ function DataTable({
 
   let isDashboardWidget = !isWidgetModal;
 
-  if (history.location.pathname === '/core-analytics') {
+  if (history.location.pathname === '/analyse') {
     isDashboardWidget = false;
   }
 

@@ -65,7 +65,7 @@ function ResultsHeader({
               className="font-bold leading-5"
             >
               {" "}
-              / Query / {saveText}
+              / Reports / {saveText}
             </div>
           </div>
         </div>

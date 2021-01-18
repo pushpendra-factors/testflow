@@ -20,11 +20,11 @@ function SearchBar({ setQueryToState }) {
   }, []);
 
   const handleQueryClick = useCallback((query) => {
-    if (history.location.pathname === '/core-analytics') {
+    if (history.location.pathname === '/analyse') {
       setQueryToState(query);
     } else {
       history.push({
-        pathname: '/core-analytics',
+        pathname: '/analyse',
         state: { query, global_search: true }
       });
     }

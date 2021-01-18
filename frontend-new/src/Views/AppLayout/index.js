@@ -83,7 +83,7 @@ function AppLayout({ fetchProjects }) {
                   />
                   <Route path="/settings" component={ProjectSettings} />
                   <Route
-                    path="/core-analytics"
+                    path="/analyse"
                     name="Home"
                     component={CoreQuery}
                   />

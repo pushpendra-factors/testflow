@@ -48,12 +48,12 @@ function Header({factors_insight_rules, factors_models, fetchGoalInsights, activ
                     <Text type={'title'} level={2} color={'grey'} weight={'bold'} color={'grey-3'} extraClass={'m-0 '}>{_.isEmpty(factors_insight_rules.name) ? 'Untitled Name' : factors_insight_rules.name }</Text>
                     <div className="flex items-center">
                         <Badge count={'Goal'} className={'fa-custom-badge'} />
-                        {factors_insight_rules.rule.st_en ? <>
-                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0 ml-2'}>{factors_insight_rules.rule.st_en}</Text> 
+                        {factors_insight_rules.rule?.st_en?.na ? <>
+                            <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0 ml-2'}>{factors_insight_rules?.rule?.st_en?.na}</Text> 
                             <Text type={'title'} level={4} color={'grey'} extraClass={'m-0 ml-2'}>and</Text>
                         </> : null}
-                        <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0 ml-2'}>{factors_insight_rules.rule.en_en}</Text>
-                        {!_.isEmpty(factors_insight_rules?.rule?.rule?.ft) ? <>
+                        <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0 ml-2'}>{factors_insight_rules?.rule?.en_en?.na}</Text>
+                        {!_.isEmpty(factors_insight_rules?.rule?.gpr) ? <>
                             <Text type={'title'} level={4} color={'grey'} extraClass={'m-0 ml-2'}>where</Text>
                             <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0 ml-2'}>Untitled</Text>
                         </> : null

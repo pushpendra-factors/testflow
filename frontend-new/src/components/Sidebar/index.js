@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Row, Avatar, Popover, Button, Modal, Col, notification, Tooltip
+  Layout, Row, Avatar, Popover, Button, Modal, Col, notification, Tooltip, Tag
 } from 'antd';
 import { NavLink, useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
@@ -120,8 +120,9 @@ function Sidebar(props) {
 
         <div className={'flex flex-col h-full justify-between items-center w-full'}>
           <div className={'flex flex-col justify-start items-center w-full '}>
-            <Row justify="center" align="middle" className=" w-full py-5">
+            <Row justify="center" align="middle" className=" w-full py-5 relative">
               <NavLink className="active fa-brand-logo" exact to="/"><SVG name={'brand'} size={40} color="white"/></NavLink>
+              <Tag color="gold" className={'fa-tag--beta'}>BETA</Tag>
             </Row>
             <Row justify="center" align="middle" className=" w-full pb-2">
               <div className={'fa-aside--divider'} />
@@ -133,7 +134,7 @@ function Sidebar(props) {
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <Tooltip title="Analyse" placement="right" overlayStyle={{paddingLeft:'12px'}} arrowPointAtCenter={true} mouseEnterDelay={0.3}>
-               <NavLink activeClassName="active" exact to="/core-analytics"><SVG name={'corequery'} size={24} color="white"/></NavLink>
+               <NavLink activeClassName="active" exact to="/analyse"><SVG name={'corequery'} size={24} color="white"/></NavLink>
               </Tooltip>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
