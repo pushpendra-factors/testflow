@@ -114,7 +114,7 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		// for data consistency: single event result has no event_name column, appending here
 		if len(query.EventsWithProperties) == 1 {
 			result.Headers = append(result.Headers, AliasEventName)
-			for i, _ := range result.Rows {
+			for i := range result.Rows {
 				result.Rows[i] = append(result.Rows[i], query.EventsWithProperties[0].Name)
 			}
 		}
@@ -224,7 +224,7 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 			tempHeader = append(tempHeader, oldResult.Headers...)
 			oldResult.Headers = tempHeader
 			oldResult.Headers = append(oldResult.Headers, AliasEventName)
-			for i, _ := range oldResult.Rows {
+			for i := range oldResult.Rows {
 				tempRow := []interface{}{"0_" + query.EventsWithProperties[0].Name}
 				tempRow = append(tempRow, oldResult.Rows[i])
 				oldResult.Rows[i] = tempRow
@@ -265,7 +265,7 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 
 	// skipping 0 as it is index is for 'datetime' header
 	headerIndex := 1
-	for name, _ := range eventsHeaderIndexMap {
+	for name := range eventsHeaderIndexMap {
 		newResultHeaders = append(newResultHeaders, name)
 		eventsHeaderIndexMap[name] = headerIndex
 		headerIndex++
@@ -703,7 +703,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 	}
 
 	if len(q.GroupByProperties) > 0 && commonOrderBy == "" {
-		// Using first occurred event_properites after distinct on user_id.
+		// Using first occurred event_properties after distinct on user_id.
 		commonOrderBy = "coal_user_id%s, events.timestamp ASC"
 	}
 
@@ -753,7 +753,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 		addJoinStmnt := "JOIN users ON events.user_id=users.id"
 		if groupByUserProperties && !hasWhereEntity(ewp, PropertyEntityUser) {
 			// If event has filter on user property, JOIN on user_properties is added in next step.
-			// Skip addding here to avoid duplication.
+			// Skip adding here to avoid duplication.
 			addJoinStmnt += " JOIN user_properties on events.user_properties_id=user_properties.id"
 		}
 		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
@@ -1035,7 +1035,7 @@ func buildUniqueUsersWithEachGivenEventsQuery(projectID uint64, query Query) (st
 	}
 
 	qStmnt := ""
-	qParams := make([]interface{}, 0, 0)
+	qParams := make([]interface{}, 0)
 
 	steps, stepsToKeysMap := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 	totalGroupKeys := 0
@@ -1200,7 +1200,7 @@ func buildUniqueUsersWithAllGivenEventsQuery(projectID uint64, query Query) (str
 	}
 
 	qStmnt := ""
-	qParams := make([]interface{}, 0, 0)
+	qParams := make([]interface{}, 0)
 
 	steps, _ := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 
@@ -1331,7 +1331,7 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64, query Query) (str
 	}
 
 	qStmnt := ""
-	qParams := make([]interface{}, 0, 0)
+	qParams := make([]interface{}, 0)
 
 	steps, _ := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 
@@ -1402,7 +1402,7 @@ func buildUniqueUsersSingleEventQuery(projectID uint64, query Query) (string, []
 	}
 
 	qStmnt := ""
-	qParams := make([]interface{}, 0, 0)
+	qParams := make([]interface{}, 0)
 
 	steps, _ := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, steps[0])
@@ -1473,7 +1473,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64, q Query) (string
 	}
 
 	qStmnt := ""
-	qParams := make([]interface{}, 0, 0)
+	qParams := make([]interface{}, 0)
 
 	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
 	egSelect, egParams, egKeys := buildGroupKeys(eventGroupProps)

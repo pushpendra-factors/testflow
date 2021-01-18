@@ -437,7 +437,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		addJoinStatement := "JOIN users ON events.user_id=users.id"
 		if groupByUserProperties && !hasWhereEntity(q.EventsWithProperties[i], PropertyEntityUser) {
 			// If event has filter on user property, JOIN on user_properties is added in next step.
-			// Skip addding here to avoid duplication.
+			// Skip adding here to avoid duplication.
 			addJoinStatement += " JOIN user_properties on events.user_properties_id=user_properties.id"
 		}
 		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
@@ -488,7 +488,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	var stepsJoinStmnt string
 	for i, fs := range funnelSteps {
 		if i > 0 {
-			// builds "LEFT JOIN step2 on step0_users.coal_user_id=step_0_step_1_useres.coal_user_id"
+			// builds "LEFT JOIN step2 on step0_users.coal_user_id=step_0_step_1_users.coal_user_id"
 			stepsJoinStmnt = appendStatement(stepsJoinStmnt,
 				fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id=%s.coal_user_id", fs, funnelSteps[i-1], fs))
 		}
@@ -498,10 +498,10 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	userGroupProps = removeEventSpecificUserGroupBys(userGroupProps)
 	ugSelect, ugParams, _ := buildGroupKeys(userGroupProps)
 
-	properitesJoinStmnt := ""
+	propertiesJoinStmnt := ""
 	if hasGroupEntity(q.GroupByProperties, PropertyEntityUser) {
-		properitesJoinStmnt = fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id", funnelSteps[0])
-		properitesJoinStmnt = properitesJoinStmnt + " " + "LEFT JOIN user_properties on users.properties_id=user_properties.id"
+		propertiesJoinStmnt = fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id", funnelSteps[0])
+		propertiesJoinStmnt = propertiesJoinStmnt + " " + "LEFT JOIN user_properties on users.properties_id=user_properties.id"
 	}
 
 	stepFunnelName := "funnel"
@@ -515,7 +515,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	}
 
 	funnelStmnt := "SELECT" + " " + stepFunnelSelect + " " + "FROM" + " " + funnelSteps[0] +
-		" " + properitesJoinStmnt + " " + stepsJoinStmnt
+		" " + propertiesJoinStmnt + " " + stepsJoinStmnt
 	qStmnt = joinWithComma(qStmnt, as(stepFunnelName, funnelStmnt))
 	qParams = append(qParams, ugParams...)
 

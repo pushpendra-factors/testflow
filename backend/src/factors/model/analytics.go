@@ -307,7 +307,7 @@ func buildWhereFromProperties(properties []QueryProperty) (rStmnt string, rParam
 
 	groupedProperties := make(map[string][]QueryProperty)
 	for _, p := range properties {
-		// Use Entity.Property as key to distinquish same property filter on user and event entity.
+		// Use Entity.Property as key to distinguish same property filter on user and event entity.
 		propertyKey := p.Entity + "." + p.Property
 		groupedProperties[propertyKey] = append(groupedProperties[propertyKey], p)
 	}
@@ -480,7 +480,7 @@ func getNoneHandledGroupBySelect(groupProp QueryGroupByProperty, groupKey string
 func buildGroupKeys(groupProps []QueryGroupByProperty) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
 
-	groupSelectParams = make([]interface{}, 0, 0)
+	groupSelectParams = make([]interface{}, 0)
 
 	for i, v := range groupProps {
 		// Order of group is preserved as received.
@@ -803,7 +803,7 @@ func appendSelectTimestampIfRequired(stmnt string, groupByTimestamp string, time
 
 func appendGroupByTimestampIfRequired(qStmnt string, isRequired bool, groupKeys ...string) string {
 	// Added groups with timestamp.
-	groups := make([]string, 0, 0)
+	groups := make([]string, 0)
 	if isRequired {
 		groups = append(groups, AliasDateTime)
 	}
@@ -852,9 +852,9 @@ func isEventLevelGroupBy(groupBy QueryGroupByProperty) bool {
 func translateGroupKeysIntoColumnNames(result *QueryResult,
 	groupProps []QueryGroupByProperty) error {
 
-	rcols := make([]string, 0, 0)
+	rcols := make([]string, 0)
 
-	indexLookup := make(map[int]QueryGroupByProperty, 0)
+	indexLookup := make(map[int]QueryGroupByProperty)
 	for _, v := range groupProps {
 		indexLookup[v.Index] = v
 	}
@@ -1104,10 +1104,10 @@ func addQueryToResultMeta(result *QueryResult, query Query) {
 }
 
 func isValidFunnelQuery(query *Query) bool {
-	return len(query.EventsWithProperties) <= 4
+	return len(query.EventsWithProperties) <= 6
 }
 
-// NOTE: TODO to differnt to queryGroup
+// NOTE: TODO to different to queryGroup
 func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery, error) {
 	var baseQuery BaseQuery
 	var err error
