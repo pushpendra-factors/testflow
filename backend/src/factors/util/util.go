@@ -1,6 +1,9 @@
 package util
 
 import (
+	"crypto/sha1"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -304,6 +307,11 @@ func GetBeginningOfDayTimestampZ(timestamp int64, timezoneString TimeZoneString)
 	location, _ := time.LoadLocation(string(timezoneString))
 	t := time.Unix(timestamp, 0).In(location)
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
+}
+
+// IsStartOfTodaysRange Checks if the from value is start of todays range.
+func IsStartOfTodaysRange(from int64, timezoneString TimeZoneString) bool {
+	return from == GetBeginningOfDayTimestampZ(TimeNowUnix(), TimeZoneStringIST)
 }
 
 // GetEndOfDayTimestampZ Get's end of the day timestamp in given timezone.
@@ -697,6 +705,23 @@ func RankByWordCount(wordFrequencies map[string]int) PairList {
 	}
 	sort.Sort(sort.Reverse(pl))
 	return pl
+}
+
+// GenerateHash To generate hash value for given byte array.
+func GenerateHash(bytes []byte) string {
+	hasher := sha1.New()
+	hasher.Write(bytes)
+	sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+	return sha
+}
+
+// GenerateHashStringForStruct Marshals the passed struct and generates a unique hash string.
+func GenerateHashStringForStruct(queryPayload interface{}) (string, error) {
+	queryCacheBytes, err := json.Marshal(queryPayload)
+	if err != nil {
+		return "", err
+	}
+	return GenerateHash(queryCacheBytes), nil
 }
 
 type Pair struct {

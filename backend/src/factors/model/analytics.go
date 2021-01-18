@@ -3,13 +3,15 @@ package model
 import (
 	"encoding/json"
 	"errors"
-	C "factors/config"
-	U "factors/util"
 	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+
+	cacheRedis "factors/cache/redis"
+	C "factors/config"
+	U "factors/util"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 
@@ -49,6 +51,11 @@ type BaseQuery interface {
 	GetClass() string
 	GetQueryDateRange() (int64, int64)
 	SetQueryDateRange(from, to int64)
+
+	// Query cache related helper methods.
+	GetQueryCacheHashString() (string, error)
+	GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error)
+	GetQueryCacheExpiry() float64
 }
 
 type QueryGroup struct {
@@ -75,6 +82,37 @@ func (q *QueryGroup) SetQueryDateRange(from, to int64) {
 	for i := 0; i < len(q.Queries); i++ {
 		q.Queries[i].From, q.Queries[i].To = from, to
 	}
+}
+
+func (q *QueryGroup) GetQueryCacheHashString() (string, error) {
+	queryMap, err := U.EncodeStructTypeToMap(q)
+	if err != nil {
+		return "", err
+	}
+	queries := queryMap["query_group"].([]interface{})
+	for _, query := range queries {
+		delete(query.(map[string]interface{}), "fr")
+		delete(query.(map[string]interface{}), "to")
+	}
+
+	queryHash, err := U.GenerateHashStringForStruct(queryMap)
+	if err != nil {
+		return "", err
+	}
+	return queryHash, nil
+}
+
+func (q *QueryGroup) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+	hashString, err := q.GetQueryCacheHashString()
+	if err != nil {
+		return nil, err
+	}
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.Queries[0].From, q.Queries[0].To)
+	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+}
+
+func (q *QueryGroup) GetQueryCacheExpiry() float64 {
+	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To)
 }
 
 type Query struct {
@@ -117,6 +155,34 @@ func (q *Query) SetQueryDateRange(from, to int64) {
 	q.From, q.To = from, to
 }
 
+func (q *Query) GetQueryCacheHashString() (string, error) {
+	queryMap, err := U.EncodeStructTypeToMap(q)
+	if err != nil {
+		return "", err
+	}
+	delete(queryMap, "fr")
+	delete(queryMap, "to")
+
+	queryHash, err := U.GenerateHashStringForStruct(queryMap)
+	if err != nil {
+		return "", err
+	}
+	return queryHash, nil
+}
+
+func (q *Query) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+	hashString, err := q.GetQueryCacheHashString()
+	if err != nil {
+		return nil, err
+	}
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.From, q.To)
+	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+}
+
+func (q *Query) GetQueryCacheExpiry() float64 {
+	return getQueryCacheResultExpiry(q.From, q.To)
+}
+
 type QueryResult struct {
 	Headers []string        `json:"headers"`
 	Rows    [][]interface{} `json:"rows"`
@@ -137,6 +203,12 @@ type DateTimePropertyValue struct {
 	From           int64 `json:"fr"`
 	To             int64 `json:"to"`
 	OverridePeriod bool  `json:"ovp"`
+}
+
+// QueryCacheResult Container to save query cache result along with timestamp.
+type QueryCacheResult struct {
+	Result      interface{}
+	RefreshedAt int64
 }
 
 const (
@@ -225,6 +297,25 @@ var groupByTimestampTypes = []string{
 	GroupByTimestampWeek,
 	GroupByTimestampMonth,
 }
+
+// Query cache related contants.
+const (
+	QueryCacheInProgressPlaceholder string = "QUERY_CACHE_IN_PROGRESS"
+
+	DateRangePreset2MinLabel      string = "2MIN"
+	DateRangePreset30MinLabel     string = "30MIN"
+	DateRangePreset2MinInSeconds  int64  = 2 * 60
+	DateRangePreset30MinInSeconds int64  = 30 * 60
+
+	QueryCachePlaceholderExpirySeconds     float64 = 2 * 60 * 60       // 2 Hours.
+	QueryCacheImmutableResultExpirySeconds float64 = 30 * 24 * 60 * 60 // 30 Days.
+	QueryCacheMutableResultExpirySeconds   float64 = 10 * 60           // 10 Minutes.
+
+	QueryCacheRequestSleepHeader       string = "QuerySleepSeconds"
+	QueryCacheResponseFromCacheHeader  string = "Fromcache"
+	QueryCacheResponseCacheRefreshedAt string = "Refreshedat"
+	QueryCacheRedisKeyPrefix           string = "query:cache"
+)
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
 const UserPropertyGroupByPresent string = "$present"
@@ -989,6 +1080,105 @@ func IsValidQuery(query *Query) (bool, string) {
 	return true, ""
 }
 
+func getQueryCacheRedisKeySuffix(hashString string, from, to int64) string {
+	if to-from == DateRangePreset2MinInSeconds {
+		return fmt.Sprintf("%s:%s", hashString, DateRangePreset2MinLabel)
+	} else if to-from == DateRangePreset30MinInSeconds {
+		return fmt.Sprintf("%s:%s", hashString, DateRangePreset30MinLabel)
+	} else if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
+		return fmt.Sprintf("%s:from:%d", hashString, from)
+	}
+	return fmt.Sprintf("%s:from:%d:to:%d", hashString, from, to)
+}
+
+func getQueryCacheResultExpiry(from, to int64) float64 {
+	if to-from == DateRangePreset2MinInSeconds || to-from == DateRangePreset30MinInSeconds ||
+		U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
+		return QueryCacheMutableResultExpirySeconds
+	}
+	return QueryCacheImmutableResultExpirySeconds
+}
+
+// GetQueryResultFromCache To get value from cache for a particular query payload.
+// resultContainer to be passed by reference.
+func GetQueryResultFromCache(projectID uint64, query BaseQuery, resultContainer interface{}) (QueryCacheResult, int) {
+	logCtx := log.WithFields(log.Fields{
+		"ProjectID": projectID,
+	})
+
+	var queryResult QueryCacheResult
+	cacheKey, err := query.GetQueryCacheRedisKey(projectID)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache key")
+		return queryResult, http.StatusInternalServerError
+	}
+
+	// Using persistent redis for this.
+	value, exists, err := cacheRedis.GetIfExistsPersistent(cacheKey)
+	if err != nil {
+		logCtx.WithError(err).Error("Error getting value from redis")
+		return queryResult, http.StatusInternalServerError
+	}
+	if !exists {
+		return queryResult, http.StatusNotFound
+	} else if value == QueryCacheInProgressPlaceholder {
+		return queryResult, http.StatusAccepted
+	}
+
+	err = json.Unmarshal([]byte(value), &queryResult)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to unmarshal cache result to result container")
+		return queryResult, http.StatusInternalServerError
+	}
+
+	err = json.Unmarshal([]byte(value), resultContainer)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to unmarshal cache result to result container")
+		return queryResult, http.StatusInternalServerError
+	}
+
+	return queryResult, http.StatusFound
+}
+
+// SetQueryCachePlaceholder To set a placeholder temporarily to indicate that query is already running.
+func SetQueryCachePlaceholder(projectID uint64, query BaseQuery) {
+	cacheKey, err := query.GetQueryCacheRedisKey(projectID)
+	if err != nil {
+		return
+	}
+
+	cacheRedis.SetPersistent(cacheKey, QueryCacheInProgressPlaceholder, QueryCachePlaceholderExpirySeconds)
+}
+
+// SetQueryCacheResult Sets the query cache result key in redis.
+func SetQueryCacheResult(projectID uint64, query BaseQuery, queryResult interface{}) {
+	cacheKey, err := query.GetQueryCacheRedisKey(projectID)
+	if err != nil {
+		return
+	}
+
+	queryCache := QueryCacheResult{
+		Result:      queryResult,
+		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+	}
+
+	queryResultString, err := json.Marshal(queryCache)
+	if err != nil {
+		return
+	}
+	cacheRedis.SetPersistent(cacheKey, string(queryResultString), query.GetQueryCacheExpiry())
+}
+
+// DeleteQueryCacheKey Delete a query cache key on error.
+func DeleteQueryCacheKey(projectID uint64, query BaseQuery) {
+	cacheKey, err := query.GetQueryCacheRedisKey(projectID)
+	if err != nil {
+		return
+	}
+
+	cacheRedis.DelPersistent(cacheKey)
+}
+
 func validateQueryProps(query *Query) (string, bool) {
 	if len(query.EventsWithProperties) == 0 {
 		return "No events to process", true
@@ -1130,6 +1320,10 @@ func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery
 		baseQuery = &query
 	case QueryClassEvents:
 		var query QueryGroup
+		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+		baseQuery = &query
+	case QueryClassWeb:
+		var query DashboardUnitsWebAnalyticsQuery
 		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
 		baseQuery = &query
 	default:

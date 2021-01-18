@@ -136,6 +136,21 @@ func EncodeStructTypeToPostgresJsonb(structType interface{}) (*postgres.Jsonb, e
 	return &postgres.Jsonb{sourceJsonBytes}, nil
 }
 
+// EncodeStructTypeToMap Converts a struct to map[string]interface{}.
+// Order of keys remains consistent https://stackoverflow.com/a/18668885/2341189.
+func EncodeStructTypeToMap(structType interface{}) (map[string]interface{}, error) {
+	encodedMap := make(map[string]interface{})
+	jsonValue, err := json.Marshal(structType)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(jsonValue, &encodedMap)
+	if err != nil {
+		return nil, err
+	}
+	return encodedMap, nil
+}
+
 // DecodePostgresJsonbToStructType Decodes a postgres.Jsonb object to given type.
 func DecodePostgresJsonbToStructType(sourceJsonb *postgres.Jsonb, destStruct interface{}) error {
 	if IsEmptyPostgresJsonb(sourceJsonb) {

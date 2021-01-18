@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	H "factors/handler/helpers"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
@@ -83,7 +84,9 @@ func EventsQueryHandler(c *gin.Context) {
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
-	if dashboardIdParam != "" || unitIdParam != "" {
+
+	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
+	if isDashboardQueryRequest {
 		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -97,33 +100,38 @@ func EventsQueryHandler(c *gin.Context) {
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
-	if (dashboardIdParam != "" || unitIdParam != "") && !isHardRefreshForToday(commonQueryFrom, hardRefresh) {
-		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
-		if errCode == http.StatusFound && cacheResult != nil {
-			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true, "refreshed_at": cacheResult.RefreshedAt})
+	if isDashboardQueryRequest && !H.IsHardRefreshForToday(commonQueryFrom, hardRefresh) {
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
+		if shouldReturn {
+			c.AbortWithStatusJSON(resCode, resMsg)
 			return
-		}
-		if errCode == http.StatusBadRequest {
-			c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
-			return
-		}
-		if errCode != http.StatusNotFound {
-			logCtx.WithFields(log.Fields{"project_id": projectId,
-				"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
-			}).WithError(errMsg).Error("Failed to get GetCacheResultByDashboardIdAndUnitId from cache.")
 		}
 	}
+
+	var cacheResult M.ResultGroup
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest)
+	if shouldReturn {
+		c.AbortWithStatusJSON(resCode, resMsg)
+		return
+	}
+
+	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
+	M.SetQueryCachePlaceholder(projectId, &requestPayload)
+	H.SleepIfHeaderSet(c)
 
 	resultGroup, errCode := M.RunEventsGroupQuery(requestPayload.Queries, projectId)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "group query failed to run"})
+		M.DeleteQueryCacheKey(projectId, &requestPayload)
 		return
 	}
+	M.SetQueryCacheResult(projectId, &requestPayload, resultGroup)
 
 	// if it is a dashboard query, cache it
-	if dashboardId != 0 && unitId != 0 {
+	if isDashboardQueryRequest {
 		M.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
-		c.JSON(http.StatusOK, gin.H{"result": resultGroup, "cache": false, "refreshed_at": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
+		c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{
+			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 		return
 	}
 	c.JSON(http.StatusOK, resultGroup)
@@ -167,7 +175,9 @@ func QueryHandler(c *gin.Context) {
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
-	if dashboardIdParam != "" || unitIdParam != "" {
+
+	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
+	if isDashboardQueryRequest {
 		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -189,44 +199,45 @@ func QueryHandler(c *gin.Context) {
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
-	if (dashboardIdParam != "" || unitIdParam != "") && !isHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
-		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
-		if errCode == http.StatusFound && cacheResult != nil {
-			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true, "refreshed_at": cacheResult.RefreshedAt})
+	if isDashboardQueryRequest && !H.IsHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
+			projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+		if shouldReturn {
+			c.AbortWithStatusJSON(resCode, resMsg)
 			return
-		}
-		if errCode == http.StatusBadRequest {
-			c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
-			return
-		}
-		if errCode != http.StatusNotFound {
-			logCtx.WithFields(log.Fields{"project_id": projectId,
-				"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
-			}).WithError(errMsg).Error("Failed to get GetCacheResultByDashboardIdAndUnitId from cache.")
 		}
 	}
 
-	for index, _ := range requestPayload.Query.GroupByProperties {
+	for index := range requestPayload.Query.GroupByProperties {
 		if requestPayload.Query.GroupByProperties[index].Type == U.PropertyTypeDateTime &&
 			requestPayload.Query.GroupByProperties[index].Granularity == "" {
 			requestPayload.Query.GroupByProperties[index].Granularity = U.DateTimeBreakdownDailyGranularity
 		}
 	}
+
+	var cacheResult M.QueryResult
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest)
+	if shouldReturn {
+		c.AbortWithStatusJSON(resCode, resMsg)
+		return
+	}
+
+	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
+	M.SetQueryCachePlaceholder(projectId, &requestPayload.Query)
+	H.SleepIfHeaderSet(c)
+
 	result, errCode, errMsg := M.Analyze(projectId, requestPayload.Query)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+		M.DeleteQueryCacheKey(projectId, &requestPayload.Query)
 		return
 	}
+	M.SetQueryCacheResult(projectId, &requestPayload.Query, result)
 
-	if dashboardId != 0 && unitId != 0 {
+	if isDashboardQueryRequest {
 		M.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
-		c.JSON(http.StatusOK, gin.H{"result": result, "cache": false, "refreshed_at": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
+		c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 		return
 	}
-
 	c.JSON(http.StatusOK, result)
-}
-
-func isHardRefreshForToday(from int64, hardRefresh bool) bool {
-	return from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) && hardRefresh
 }

@@ -318,7 +318,7 @@ func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) (
 func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, from, to int64) (*cacheRedis.Key, error) {
 	prefix := "dashboard:query"
 	var suffix string
-	if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
 		// Query for today's dashboard. Use to as 'now'.
 		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:now", dashboardID, unitID, from)
 	} else {
@@ -655,10 +655,13 @@ func cacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload, wait
 	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
 		Info("Done caching unit for range")
 	SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to)
+
+	// Set in query cache result as well in case someone runs the same query from query handler.
+	SetQueryCacheResult(projectID, baseQuery, result)
 }
 
 func isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, unitID uint64, from, to int64) bool {
-	if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
 		// If from time is of today's beginning, refresh today's everytime a request is received.
 		return false
 	}

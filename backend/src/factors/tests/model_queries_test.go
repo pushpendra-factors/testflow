@@ -99,6 +99,7 @@ func TestDeleteQuery(t *testing.T) {
 	dashboardQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
 		ProjectID: project.ID,
 		Type:      M.QueryTypeDashboardQuery,
+		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
 	})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
@@ -109,6 +110,7 @@ func TestDeleteQuery(t *testing.T) {
 		Type:      M.QueryTypeSavedQuery,
 		CreatedBy: agent.UUID,
 		Title:     U.RandomString(5),
+		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
 	})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
@@ -145,6 +147,7 @@ func TestDeleteQueryWithDashboardUnit(t *testing.T) {
 	dashboardQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
 		ProjectID: project.ID,
 		Type:      M.QueryTypeDashboardQuery,
+		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
 	})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)

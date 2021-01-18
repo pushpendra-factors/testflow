@@ -2,14 +2,16 @@ package handler
 
 import (
 	"encoding/json"
+	H "factors/handler/helpers"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -524,26 +526,6 @@ func DeleteMultiDashboardUnitHandler(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully deleted."})
 }
 
-type DashboardUnitWebAnalyticsQueryName struct {
-	UnitID    uint64 `json:"unit_id"`
-	QueryName string `json:"query_name"`
-}
-
-type DashboardUnitWebAnalyticsCustomGroupQuery struct {
-	UnitID            uint64   `json:"unit_id"`
-	Metrics           []string `json:"metrics"`
-	GroupByProperties []string `json:"gbp"`
-}
-
-type DashboardUnitsWebAnalyticsQuery struct {
-	// Units - Supports redundant metric keys with different unit_ids.
-	Units []DashboardUnitWebAnalyticsQueryName `json:"units"`
-	// CustomGroupUnits - Customize query with group by properties and metrics.
-	CustomGroupUnits []DashboardUnitWebAnalyticsCustomGroupQuery `json:"custom_group_units"`
-	From             int64                                       `json:"from"`
-	To               int64                                       `json:"to"`
-}
-
 // DashboardUnitsWebAnalyticsQueryHandler godoc
 // @Summary To fetch result for website analytics dashboard queries.
 // @Tags DashboardUnit
@@ -565,7 +547,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 	}
 	logCtx = logCtx.WithField("project_id", projectId)
 
-	var requestPayload DashboardUnitsWebAnalyticsQuery
+	var requestPayload M.DashboardUnitsWebAnalyticsQuery
 	var queryResult *M.WebAnalyticsQueryResult
 	var fromCache, hardRefresh bool
 	var lastRefreshedAt int64
@@ -594,7 +576,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 
 	cacheResult, errCode := M.GetCacheResultForWebAnalyticsDashboard(projectId, dashboardId,
 		requestPayload.From, requestPayload.To)
-	if errCode == http.StatusFound && !isHardRefreshForToday(requestPayload.From, hardRefresh) {
+	if errCode == http.StatusFound && !H.IsHardRefreshForToday(requestPayload.From, hardRefresh) {
 		queryResult = cacheResult.Result
 		fromCache = true
 		lastRefreshedAt = cacheResult.RefreshedAt
@@ -602,6 +584,17 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		// build WebAnalyticsQuery based on query names from DashboardUnitsWebAnalyticsQuery
 		// response map[query_name]result = Pass it to ExecuteWebAnalyticsQueries.
 		// build map[unit_id]result and respond.
+
+		var cacheResult M.WebAnalyticsQueryResult
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, true)
+		if shouldReturn {
+			c.AbortWithStatusJSON(resCode, resMsg)
+			return
+		}
+
+		// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
+		M.SetQueryCachePlaceholder(projectId, &requestPayload)
+		H.SleepIfHeaderSet(c)
 
 		queryNames := make([]string, 0, len(requestPayload.Units))
 		for _, unit := range requestPayload.Units {
@@ -633,8 +626,10 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 
 			c.AbortWithStatusJSON(http.StatusInternalServerError,
 				gin.H{"error": "Web analytics query failed. Execution failed."})
+			M.DeleteQueryCacheKey(projectId, &requestPayload)
 			return
 		}
+		M.SetQueryCacheResult(projectId, &requestPayload, queryResult)
 
 		M.SetCacheResultForWebAnalyticsDashboard(queryResult, projectId,
 			dashboardId, requestPayload.From, requestPayload.To)
@@ -657,6 +652,6 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"result": queryResultsByUnitMap,
-		"cache": fromCache, "refreshed_at": lastRefreshedAt})
+	c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{
+		Result: queryResultsByUnitMap, Cache: fromCache, RefreshedAt: lastRefreshedAt})
 }

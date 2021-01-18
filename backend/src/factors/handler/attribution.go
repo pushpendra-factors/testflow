@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	H "factors/handler/helpers"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
@@ -53,7 +54,9 @@ func AttributionHandler(c *gin.Context) {
 	if refreshParam != "" {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
-	if dashboardIdParam != "" || unitIdParam != "" {
+
+	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
+	if isDashboardQueryRequest {
 		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -73,39 +76,44 @@ func AttributionHandler(c *gin.Context) {
 	}
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
-	if (dashboardIdParam != "" || unitIdParam != "") &&
-		!isHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
-
-		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId,
-			unitId, requestPayload.Query.From, requestPayload.Query.To)
-		if errCode == http.StatusFound && cacheResult != nil {
-			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true,
-				"refreshed_at": cacheResult.RefreshedAt})
+	if isDashboardQueryRequest && !H.IsHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
+			projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+		if shouldReturn {
+			c.AbortWithStatusJSON(resCode, resMsg)
 			return
-		}
-		if errCode == http.StatusBadRequest {
-			c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
-			return
-		}
-		if errCode != http.StatusNotFound {
-			logCtx.WithFields(log.Fields{"project_id": projectId,
-				"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
-			}).WithError(errMsg).Error("failed to get Dashboard Cached Result for Attribution query")
 		}
 	}
+
+	var cacheResult M.QueryResult
+	attributionQueryUnitPayload := M.AttributionQueryUnit{
+		Class: M.QueryClassAttribution,
+		Query: requestPayload.Query,
+	}
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest)
+	if shouldReturn {
+		c.AbortWithStatusJSON(resCode, resMsg)
+		return
+	}
+
+	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
+	M.SetQueryCachePlaceholder(projectId, &attributionQueryUnitPayload)
+	H.SleepIfHeaderSet(c)
 
 	result, err := M.ExecuteAttributionQuery(projectId, requestPayload.Query)
 	if err != nil {
 		logCtx.WithError(err).Error("query execution failed")
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Query execution failed"})
+		M.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
 		return
 	}
+	M.SetQueryCacheResult(projectId, &attributionQueryUnitPayload, result)
 
-	if dashboardId != 0 && unitId != 0 {
+	if isDashboardQueryRequest {
 		M.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
 			requestPayload.Query.From, requestPayload.Query.To)
 	}
-	c.JSON(http.StatusOK, gin.H{"result": result, "cache": false, "refreshed_at": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
+	c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 }
 
 // decodeAttributionPayload decodes attribution requestPayload for 2 json formats to support old and new

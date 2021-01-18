@@ -1,13 +1,16 @@
 package tests
 
 import (
+	"encoding/json"
 	M "factors/model"
 	TaskSession "factors/task/session"
 	U "factors/util"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 
 	H "factors/handler"
@@ -2192,6 +2195,137 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 		assert.Equal(t, int64(2), result.Rows[1][1])
 		assert.Equal(t, int64(1), result.Rows[2][1])
 	})
+}
+
+func TestBaseQueryHashStringConsistency(t *testing.T) {
+	var queriesStr = map[string]string{
+		M.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
+		M.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		M.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
+		M.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
+		M.QueryClassEvents:      `{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"$session","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]},{"na":"MagazineViews","pr":[{"en":"event","pr":"$source","op":"equals","va":"google","ty":"categorical","lop":"AND"},{"en":"user","pr":"$country","op":"equals","va":"India","ty":"categorical","lop":"AND"}]}],"gbp":[{"pr":"$browser","en":"event","pty":"categorical","ena":"$session","eni":1},{"pr":"$campaign","en":"event","pty":"categorical","ena":"MagazineViews","eni":2}],"gbt":"","tz":"Asia/Calcutta"}]}`,
+		M.QueryClassChannelV1:   `{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 1585679400, "to": 1585765800 }], "cl": "channel_v1" }`,
+		M.QueryClassWeb:         `{"units":[{"unit_id":194,"query_name":"bounce_rate"},{"unit_id":195,"query_name":"unique_users"},{"unit_id":196,"query_name":"avg_session_duration"},{"unit_id":197,"query_name":"avg_pages_per_session"},{"unit_id":200,"query_name":"sessions"},{"unit_id":201,"query_name":"total_page_view"},{"unit_id":199,"query_name":"traffic_channel_report"},{"unit_id":198,"query_name":"top_pages_report"}],"custom_group_units":[],"from":1609612200,"to":1610044199}`,
+	}
+	for queryClass, queryString := range queriesStr {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := M.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		queryHashString, err := baseQuery.GetQueryCacheHashString()
+		assert.Nil(t, err)
+		for i := 0; i < 50; i++ {
+			// Query hash should be consistent and same every time.
+			tempQueryHashString, err := baseQuery.GetQueryCacheHashString()
+			assert.Nil(t, err)
+			assert.Equal(t, queryHashString, tempQueryHashString)
+		}
+
+		for rangeString, rangeFunction := range U.QueryDateRangePresets {
+			from, to := rangeFunction()
+			baseQuery.SetQueryDateRange(from, to)
+			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)
+
+			tempQueryHashString, err := baseQuery.GetQueryCacheHashString()
+			assert.Nil(t, err, assertMsg)
+			assert.Equal(t, queryHashString, tempQueryHashString, assertMsg)
+		}
+	}
+}
+
+func TestQueryCaching(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	_, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "$session"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	customerAccountID := U.RandomLowerAphaNumString(5)
+	M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountID,
+	})
+
+	errCode = M.CreateWebAnalyticsDefaultDashboardWithUnits(project.ID, agent.UUID)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	var queriesStr = map[string]string{
+		M.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
+		M.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+		M.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
+		M.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
+		M.QueryClassEvents:      `{"query_group":[{"cl":"events","ty":"unique_users","ec":"each_given_event","fr":1583001000,"to":1585679399,"ewp":[{"na":"MagazineViews","pr":[]}],"gbp":[],"gbt":"","tz":"Asia/Calcutta"}]}`,
+		M.QueryClassChannelV1:   `{ "query_group":[{ "channel": "google_ads", "select_metrics": ["impressions"], "filters": [], "group_by": [], "gbt": "hour", "fr": 1585679400, "to": 1585765800 }], "cl": "channel_v1" }`,
+		M.QueryClassWeb:         `{"units":[{"unit_id":194,"query_name":"bounce_rate"},{"unit_id":195,"query_name":"unique_users"},{"unit_id":196,"query_name":"avg_session_duration"},{"unit_id":197,"query_name":"avg_pages_per_session"},{"unit_id":200,"query_name":"sessions"},{"unit_id":201,"query_name":"total_page_view"},{"unit_id":199,"query_name":"traffic_channel_report"},{"unit_id":198,"query_name":"top_pages_report"}],"custom_group_units":[],"from":1609612200,"to":1610044199}`,
+	}
+
+	var waitGroup sync.WaitGroup
+	for queryClass, queryString := range queriesStr {
+		var dashboardID, unitID uint64
+		if queryClass == M.QueryClassWeb {
+			dashboardID, _, _ = M.GetWebAnalyticsQueriesFromDashboardUnits(project.ID)
+		}
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := M.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		waitGroup.Add(1)
+		go sendAnalyticsQueryFromRoutine(r, queryClass, project.ID, agent, dashboardID, unitID, baseQuery, false, false, 1, &waitGroup)
+
+		// Another immediate query. Should return from cache after polling.
+		time.Sleep(10 * time.Millisecond)
+		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboardID, unitID, baseQuery, false, false)
+		assert.NotEmpty(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+		if queryClass != M.QueryClassWeb {
+			// For website analytics, it returns from Dashboard cache.
+			assert.Equal(t, "true", w.HeaderMap.Get(M.QueryCacheResponseFromCacheHeader), w.Body.String())
+		}
+	}
+}
+
+func TestQueryCachingFailedCondition(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	var waitGroup sync.WaitGroup
+	var badQueriesStr = map[string]string{
+		// Bad query type for insights and funnel query.
+		M.QueryClassInsights: `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrences", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
+		M.QueryClassFunnel:   `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_userss", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
+
+		// Attribution and channel query should fail as no customer account id is created for project in test.
+		M.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
+		M.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
+	}
+
+	for queryClass, queryString := range badQueriesStr {
+		queryJSON := postgres.Jsonb{json.RawMessage(queryString)}
+		baseQuery, err := M.DecodeQueryForClass(queryJSON, queryClass)
+		assert.Nil(t, err)
+
+		waitGroup.Add(1)
+		go sendAnalyticsQueryFromRoutine(r, queryClass, project.ID, agent, 0, 0, baseQuery, false, false, 1, &waitGroup)
+
+		// First query should will fail because of wrong query class. This query should return error after polling.
+		time.Sleep(10 * time.Millisecond)
+		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, 0, 0, baseQuery, false, false)
+		assert.NotEmpty(t, w)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Equal(t, "{\"error\":\"Failed executing query\"}", w.Body.String())
+	}
+}
+
+func sendAnalyticsQueryFromRoutine(r *gin.Engine, queryClass string, projectID uint64, agent *M.Agent, dashboardID,
+	unitID uint64, baseQuery M.BaseQuery, refresh bool, withDashboardParams bool, queryWaitSeconds int, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	sendAnalyticsQueryReqWithHeader(r, queryClass, projectID, agent, dashboardID, unitID,
+		baseQuery, false, false, map[string]string{M.QueryCacheRequestSleepHeader: fmt.Sprint(queryWaitSeconds)})
 }
 
 func validateNumericalBucketRanges(t *testing.T, result *M.QueryResult, numPropertyRangeStart,

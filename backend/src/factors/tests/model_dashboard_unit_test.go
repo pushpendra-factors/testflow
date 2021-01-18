@@ -556,6 +556,7 @@ func TestDeleteDashboardUnitWithQuery(t *testing.T) {
 	dashboardQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
 		ProjectID: project.ID,
 		Type:      M.QueryTypeDashboardQuery,
+		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
 	})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
@@ -566,6 +567,7 @@ func TestDeleteDashboardUnitWithQuery(t *testing.T) {
 		Type:      M.QueryTypeSavedQuery,
 		CreatedBy: agent.UUID,
 		Title:     U.RandomString(5),
+		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
 	})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
@@ -755,15 +757,16 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	updatedUnitsCount := M.CacheDashboardUnitsForProjectID(project.ID, 1)
 	assert.Equal(t, 4, updatedUnitsCount)
 
-	for _, rangeFunction := range U.QueryDateRangePresets {
+	for rangeString, rangeFunction := range U.QueryDateRangePresets {
 		from, to := rangeFunction()
 		for unitID, queryMap := range dashboardUnitQueriesMap {
 			queryClass := queryMap["class"].(string)
 			query := queryMap["query"].(M.BaseQuery)
+			assertMsg := fmt.Sprintf("Failed for class:%s:range:%s", queryClass, rangeString)
 
 			query.SetQueryDateRange(from, to)
 			// Refresh is sent as false. Must return all presets range from cache.
-			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, query, false)
+			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, query, false, true)
 			assert.NotNil(t, w)
 			assert.Equal(t, http.StatusOK, w.Code)
 
@@ -773,18 +776,25 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 			assert.True(t, result["cache"].(bool))
 
 			// Refresh is sent as true. Still must return from cache for all presets except for todays.
-			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, query, true)
+			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, query, true, true)
 			assert.NotNil(t, w)
 			assert.Equal(t, http.StatusOK, w.Code)
 			result = nil
 			json.Unmarshal([]byte(w.Body.String()), &result)
 
-			if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
-				// Today's preset. Must not be from cache.
-				assert.False(t, result["cache"].(bool))
+			// Send same query as core query without sending dashboardID and unitID.
+			// Since cached from dashboard caching, it should also be available with direct query.
+			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, 0, 0, query, false, false)
+			assert.NotEmpty(t, w)
+			assert.Equal(t, http.StatusOK, w.Code)
+			if queryClass != M.QueryClassWeb {
+				// For website analytics, it returns from Dashboard cache.
+				assert.Equal(t, "true", w.HeaderMap.Get(M.QueryCacheResponseFromCacheHeader), assertMsg)
+			}
 
+			if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
 				// If queried again with refresh as false, should return from cache.
-				w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, query, false)
+				w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, query, false, true)
 				result = nil
 				json.Unmarshal([]byte(w.Body.String()), &result)
 				assert.True(t, result["cache"].(bool))
@@ -855,7 +865,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 			queries := queryMap["queries"].(M.BaseQuery)
 			queries.SetQueryDateRange(from, to)
 			// Refresh is sent as false. Must return all presets range from cache.
-			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false)
+			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false, true)
 			assert.NotNil(t, w)
 			assert.Equal(t, http.StatusOK, w.Code)
 
@@ -865,18 +875,15 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 			assert.True(t, result["cache"].(bool))
 
 			// Refresh is sent as true. Still must return from cache for all presets except for todays.
-			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, true)
+			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, true, true)
 			assert.NotNil(t, w)
 			assert.Equal(t, http.StatusOK, w.Code)
 			result = nil
 			json.Unmarshal([]byte(w.Body.String()), &result)
 
 			if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
-				// Today's preset. Must not be from cache.
-				assert.False(t, result["cache"].(bool))
-
 				// If queried again with refresh as false, should return from cache.
-				w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false)
+				w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false, true)
 				result = nil
 				json.Unmarshal([]byte(w.Body.String()), &result)
 				assert.True(t, result["cache"].(bool))
@@ -947,7 +954,7 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 			queries := queryMap["queries"].(M.BaseQuery)
 			queries.SetQueryDateRange(from, to)
 			// Refresh is sent as false. Must return all presets range from cache.
-			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false)
+			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false, true)
 			assert.NotNil(t, w)
 			assert.Equal(t, http.StatusOK, w.Code)
 
@@ -957,18 +964,15 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 			assert.True(t, result["cache"].(bool))
 
 			// Refresh is sent as true. Still must return from cache for all presets except for todays.
-			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, true)
+			w = sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, true, true)
 			assert.NotNil(t, w)
 			assert.Equal(t, http.StatusOK, w.Code)
 			result = nil
 			json.Unmarshal([]byte(w.Body.String()), &result)
 
 			if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
-				// Today's preset. Must not be from cache.
-				assert.False(t, result["cache"].(bool))
-
 				// If queried again with refresh as false, should return from cache.
-				w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false)
+				w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, queries, false, true)
 				result = nil
 				json.Unmarshal([]byte(w.Body.String()), &result)
 				assert.True(t, result["cache"].(bool))
@@ -1009,12 +1013,52 @@ func sendAttributionQueryReq(r *gin.Engine, projectID uint64, agent *M.Agent, da
 }
 
 func sendAnalyticsQueryReq(r *gin.Engine, queryClass string, projectID uint64, agent *M.Agent, dashboardID,
-	unitID uint64, baseQuery M.BaseQuery, refresh bool) *httptest.ResponseRecorder {
+	unitID uint64, baseQuery M.BaseQuery, refresh bool, withDashboardParams bool) *httptest.ResponseRecorder {
+	return sendAnalyticsQueryReqWithHeader(r, queryClass, projectID, agent, dashboardID, unitID,
+		baseQuery, refresh, withDashboardParams, map[string]string{})
+}
+
+func sendAnalyticsQueryReqWithHeader(r *gin.Engine, queryClass string, projectID uint64, agent *M.Agent, dashboardID,
+	unitID uint64, baseQuery M.BaseQuery, refresh bool, withDashboardParams bool, headers map[string]string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
+	queryURL, queryPayload := getAnalyticsQueryUrlAandPayload(queryClass, baseQuery)
+	var requestURL string
+	if queryClass == M.QueryClassWeb {
+		requestURL = fmt.Sprintf("/projects/%d/dashboard/%d/units/query/web_analytics?refresh=%v", projectID, dashboardID, refresh)
+	} else if withDashboardParams {
+		requestURL = fmt.Sprintf("/projects/%d/%s?dashboard_id=%d&dashboard_unit_id=%d&refresh=%v",
+			projectID, queryURL, dashboardID, unitID, refresh)
+	} else {
+		requestURL = fmt.Sprintf("/projects/%d/%s?refresh=%v",
+			projectID, queryURL, refresh)
+	}
+	rb := U.NewRequestBuilder(http.MethodPost, requestURL).
+		WithPostParams(queryPayload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	for k, v := range headers {
+		rb = rb.WithHeader(k, v)
+	}
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating create dashboard_unit req.")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func getAnalyticsQueryUrlAandPayload(queryClass string, baseQuery M.BaseQuery) (string, interface{}) {
 	var queryURL string
 	var queryPayload interface{}
 	if queryClass == M.QueryClassFunnel || queryClass == M.QueryClassInsights {
@@ -1035,6 +1079,9 @@ func sendAnalyticsQueryReq(r *gin.Engine, queryClass string, projectID uint64, a
 		queryURL = "v1/query"
 		query := baseQuery.(*M.QueryGroup)
 		queryPayload = query
+	} else if queryClass == M.QueryClassWeb {
+		query := baseQuery.(*M.DashboardUnitsWebAnalyticsQuery)
+		queryPayload = query
 	} else {
 		queryURL = "attribution/query"
 		query := baseQuery.(*M.AttributionQueryUnit)
@@ -1042,22 +1089,5 @@ func sendAnalyticsQueryReq(r *gin.Engine, queryClass string, projectID uint64, a
 			Query: query.Query,
 		}
 	}
-
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf(
-		"/projects/%d/%s?dashboard_id=%d&dashboard_unit_id=%d&refresh=%v", projectID, queryURL, dashboardID, unitID, refresh)).
-		WithPostParams(queryPayload).
-		WithCookie(&http.Cookie{
-			Name:   C.GetFactorsCookieName(),
-			Value:  cookieData,
-			MaxAge: 1000,
-		})
-
-	req, err := rb.Build()
-	if err != nil {
-		log.WithError(err).Error("Error creating create dashboard_unit req.")
-	}
-
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	return w
+	return queryURL, queryPayload
 }

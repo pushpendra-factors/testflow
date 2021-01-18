@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
@@ -110,6 +111,35 @@ func (q *ChannelQueryUnit) SetQueryDateRange(from, to int64) {
 	q.Query.From, q.Query.To = from, to
 }
 
+func (q *ChannelQueryUnit) GetQueryCacheHashString() (string, error) {
+	queryMap, err := U.EncodeStructTypeToMap(q)
+	if err != nil {
+		return "", err
+	}
+	delete(queryMap, "meta")
+	delete(queryMap["query"].(map[string]interface{}), "from")
+	delete(queryMap["query"].(map[string]interface{}), "to")
+
+	queryHash, err := U.GenerateHashStringForStruct(queryMap)
+	if err != nil {
+		return "", err
+	}
+	return queryHash, nil
+}
+
+func (q *ChannelQueryUnit) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+	hashString, err := q.GetQueryCacheHashString()
+	if err != nil {
+		return nil, err
+	}
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To)
+	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+}
+
+func (q *ChannelQueryUnit) GetQueryCacheExpiry() float64 {
+	return getQueryCacheResultExpiry(q.Query.From, q.Query.To)
+}
+
 // ChannelGroupQueryV1 - @TODO Kark v1
 type ChannelGroupQueryV1 struct {
 	Class   string           `json:"cl"`
@@ -136,6 +166,37 @@ func (q *ChannelGroupQueryV1) SetQueryDateRange(from, to int64) {
 	for i := 0; i < len(q.Queries); i++ {
 		q.Queries[i].From, q.Queries[i].To = from, to
 	}
+}
+
+func (q *ChannelGroupQueryV1) GetQueryCacheHashString() (string, error) {
+	queryMap, err := U.EncodeStructTypeToMap(q)
+	if err != nil {
+		return "", err
+	}
+	queries := queryMap["query_group"].([]interface{})
+	for _, query := range queries {
+		delete(query.(map[string]interface{}), "fr")
+		delete(query.(map[string]interface{}), "to")
+	}
+
+	queryHash, err := U.GenerateHashStringForStruct(queryMap)
+	if err != nil {
+		return "", err
+	}
+	return queryHash, nil
+}
+
+func (q *ChannelGroupQueryV1) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+	hashString, err := q.GetQueryCacheHashString()
+	if err != nil {
+		return nil, err
+	}
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.Queries[0].From, q.Queries[0].To)
+	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+}
+
+func (q *ChannelGroupQueryV1) GetQueryCacheExpiry() float64 {
+	return getQueryCacheResultExpiry(q.Queries[0].From, q.Queries[0].To)
 }
 
 func (query *ChannelQueryV1) GetGroupByTimestamp() string {

@@ -2,13 +2,15 @@ package model
 
 import (
 	"errors"
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sort"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type AttributionQueryUnit struct {
@@ -56,6 +58,35 @@ func (q *AttributionQueryUnit) GetQueryDateRange() (from, to int64) {
 
 func (q *AttributionQueryUnit) SetQueryDateRange(from, to int64) {
 	q.Query.From, q.Query.To = from, to
+}
+
+func (q *AttributionQueryUnit) GetQueryCacheHashString() (string, error) {
+	queryMap, err := U.EncodeStructTypeToMap(q)
+	if err != nil {
+		return "", err
+	}
+	delete(queryMap, "meta")
+	delete(queryMap["query"].(map[string]interface{}), "from")
+	delete(queryMap["query"].(map[string]interface{}), "to")
+
+	queryHash, err := U.GenerateHashStringForStruct(queryMap)
+	if err != nil {
+		return "", err
+	}
+	return queryHash, nil
+}
+
+func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+	hashString, err := q.GetQueryCacheHashString()
+	if err != nil {
+		return nil, err
+	}
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To)
+	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+}
+
+func (q *AttributionQueryUnit) GetQueryCacheExpiry() float64 {
+	return getQueryCacheResultExpiry(q.Query.From, q.Query.To)
 }
 
 const (

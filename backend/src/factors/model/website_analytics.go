@@ -62,6 +62,70 @@ type NamedQueryUnit struct {
 	QueryName string `json:"qname"`
 }
 
+type DashboardUnitWebAnalyticsQueryName struct {
+	UnitID    uint64 `json:"unit_id"`
+	QueryName string `json:"query_name"`
+}
+
+type DashboardUnitWebAnalyticsCustomGroupQuery struct {
+	UnitID            uint64   `json:"unit_id"`
+	Metrics           []string `json:"metrics"`
+	GroupByProperties []string `json:"gbp"`
+}
+
+type DashboardUnitsWebAnalyticsQuery struct {
+	Class string `json:"cl"`
+	// Units - Supports redundant metric keys with different unit_ids.
+	Units []DashboardUnitWebAnalyticsQueryName `json:"units"`
+	// CustomGroupUnits - Customize query with group by properties and metrics.
+	CustomGroupUnits []DashboardUnitWebAnalyticsCustomGroupQuery `json:"custom_group_units"`
+	From             int64                                       `json:"from"`
+	To               int64                                       `json:"to"`
+}
+
+func (q *DashboardUnitsWebAnalyticsQuery) GetClass() string {
+	if q.Class == "" {
+		q.Class = QueryClassWeb
+	}
+	return q.Class
+}
+
+func (q *DashboardUnitsWebAnalyticsQuery) GetQueryDateRange() (from, to int64) {
+	return q.From, q.To
+}
+
+func (q *DashboardUnitsWebAnalyticsQuery) SetQueryDateRange(from, to int64) {
+	q.From, q.To = from, to
+}
+
+func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheHashString() (string, error) {
+	queryMap, err := U.EncodeStructTypeToMap(q)
+	if err != nil {
+		return "", err
+	}
+	delete(queryMap, "from")
+	delete(queryMap, "to")
+
+	queryHash, err := U.GenerateHashStringForStruct(queryMap)
+	if err != nil {
+		return "", err
+	}
+	return queryHash, nil
+}
+
+func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheRedisKey(projectID uint64) (*cacheRedis.Key, error) {
+	hashString, err := q.GetQueryCacheHashString()
+	if err != nil {
+		return nil, err
+	}
+	suffix := getQueryCacheRedisKeySuffix(hashString, q.From, q.To)
+	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+}
+
+func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheExpiry() float64 {
+	return getQueryCacheResultExpiry(q.From, q.To)
+}
+
 const QueryTypeNamed = "named_query"
 const QueryTypeWebAnalyticsCustomGroupQuery = "wa_custom_group_query"
 
@@ -227,9 +291,9 @@ func getWebAnalyticsEnabledProjectIDs() ([]uint64, int) {
 	return projectIDs, http.StatusFound
 }
 
-func getWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *WebAnalyticsQueries, int) {
+func GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *WebAnalyticsQueries, int) {
 	logCtx := log.WithFields(log.Fields{
-		"Method":    "getWebAnalyticsQueriesFromDashboardUnits",
+		"Method":    "GetWebAnalyticsQueriesFromDashboardUnits",
 		"ProjectID": projectID,
 	})
 
@@ -330,7 +394,7 @@ func getWebAnalyticsQueryResultCacheKey(projectID, dashboardID uint64,
 
 	prefix := "dashboard:query:web"
 	var suffix string
-	if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
 		// Query for today's dashboard. Use to as 'now'.
 		suffix = fmt.Sprintf("did:%d:from:%d:to:now", dashboardID, from)
 	} else {
@@ -340,7 +404,7 @@ func getWebAnalyticsQueryResultCacheKey(projectID, dashboardID uint64,
 }
 
 func isWebAnalyticsDashboardAlreadyCached(projectID, dashboardID uint64, from, to int64) bool {
-	if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
 		// If from time is of today's beginning, refresh today's everytime a request is received.
 		return false
 	}
@@ -1525,7 +1589,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 func cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 
-	dashboardID, webAnalyticsQueries, errCode := getWebAnalyticsQueriesFromDashboardUnits(projectID)
+	dashboardID, webAnalyticsQueries, errCode := GetWebAnalyticsQueriesFromDashboardUnits(projectID)
 	if errCode != http.StatusFound {
 		errMsg := fmt.Sprintf("Failed to get web analytics queries for project %d", projectID)
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
