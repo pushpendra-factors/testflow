@@ -848,7 +848,7 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 	return uploadedChunkIds, nil
 }
 
-func rewriteEventsFile(tmpPath string, reader io.Reader, userPropMap, eventPropMap map[string]bool) ([]string, error) {
+func rewriteEventsFile(tmpPath string, reader io.Reader, userPropMap, eventPropMap map[string]bool, campaignLimitCount int) ([]string, error) {
 	// read events file , filter and create properties based on userProp and eventsProp
 	// create encoded events based on $session and campaign eventName
 
@@ -858,7 +858,7 @@ func rewriteEventsFile(tmpPath string, reader io.Reader, userPropMap, eventPropM
 		return nil, err
 	}
 	log.Info("Create a temp file to save and read events")
-	campEventsMap := make(map[string]bool)
+	campEventsMap := make(map[string]int)
 	campEventsList := make([]string, 0)
 	defer file.Close()
 
@@ -907,7 +907,7 @@ func rewriteEventsFile(tmpPath string, reader io.Reader, userPropMap, eventPropM
 			}
 			cmpEvent := eventDetails.EventName + "[campaign:" + campEventId + "]"
 			campEvent.EventName = cmpEvent
-			campEventsMap[cmpEvent] = true
+			campEventsMap[cmpEvent] = campEventsMap[cmpEvent] + 1
 			campEvent.EventProperties = nil
 			campEvent.UserProperties = nil
 			campEvent.UserId = eventDetails.UserId
@@ -927,8 +927,21 @@ func rewriteEventsFile(tmpPath string, reader io.Reader, userPropMap, eventPropM
 	}
 	w.Flush()
 
-	for key := range campEventsMap {
-		campEventsList = append(campEventsList, key)
+	campaignListWithCounts := U.RankByWordCount(campEventsMap)
+	if campaignLimitCount > 0 && len(campaignListWithCounts) > campaignLimitCount {
+		for key, val := range campaignListWithCounts {
+			mineLog.Info("campaign Event : ", key, val.Key, val.Value)
+			campEventsList = append(campEventsList, val.Key)
+			if key >= campaignLimitCount-1 {
+				break
+			}
+		}
+	} else {
+		for key, val := range campaignListWithCounts {
+			mineLog.Info("campaign Event : ", key, val.Key, val.Value)
+			campEventsList = append(campEventsList, val.Key)
+		}
+
 	}
 
 	return campEventsList, nil
@@ -1042,14 +1055,14 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 }
 
 func buildEventsFileOnProperties(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, projectId uint64,
-	modelId uint64, eReader io.Reader, userPropList, eventPropList map[string]bool) ([]string, error) {
+	modelId uint64, eReader io.Reader, userPropList, eventPropList map[string]bool, campaignLimitCount int) ([]string, error) {
 
 	var err error
 	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, modelId)
 	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
 	efPath := efTmpPath + "tmpEvents" + efTmpName
 	eTmpReader, err := diskManager.Get(efTmpPath, efTmpName)
-	campEvents, err := rewriteEventsFile(efPath, eTmpReader, userPropList, eventPropList)
+	campEvents, err := rewriteEventsFile(efPath, eTmpReader, userPropList, eventPropList, campaignLimitCount)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
 			"eventFileName": efCloudName}).Error("Failed to filter disabled properties")
@@ -1076,7 +1089,7 @@ func buildEventsFileOnProperties(diskManager *serviceDisk.DiskDriver, cloudManag
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
-	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64, countOccurence bool) (string, int, error) {
+	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64, countOccurence bool, campaignLimitCount int) (string, int, error) {
 
 	var err error
 
@@ -1136,7 +1149,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.Info("Successfully Built user and event properties info and written it to file.")
 
 	campEventsList, err := buildEventsFileOnProperties(diskManager, cloudManager, projectId,
-		modelId, eReader, userPropList, eventPropList)
+		modelId, eReader, userPropList, eventPropList, campaignLimitCount)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")
 		return "", 0, err

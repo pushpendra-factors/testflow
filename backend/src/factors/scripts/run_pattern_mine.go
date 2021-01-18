@@ -41,6 +41,7 @@ func main() {
 	numActiveFactorsGoalsLimit := flag.Int("goals_limit", 50, "Max number of goals model")
 	numActiveFactorsTrackedEventsLimit := flag.Int("max_tracked_events", 50, "Max number of Tracked Events")
 	numActiveFactorsTrackedUserPropertiesLimit := flag.Int("max_user_properties", 50, "Max numbr of Tracked user properties")
+	numCampaignsLimit := flag.Int("max_campaigns_limit", -1, "Max number of campaigns")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -129,7 +130,7 @@ func main() {
 	// modelType, startTime, endTime is part of update meta.
 	// kept null on run script.
 	_, _, err = T.PatternMine(db, etcdClient, &cloudManager, diskManager,
-		*bucketName, *numRoutinesFlag, *projectIdFlag, *modelIdFlag, "", 0, 0, *maxModelSizeFlag, *shouldCountOccurence)
+		*bucketName, *numRoutinesFlag, *projectIdFlag, *modelIdFlag, "", 0, 0, *maxModelSizeFlag, *shouldCountOccurence, *numCampaignsLimit)
 	if err != nil {
 		log.WithError(err).Fatal("Pattern mining failed")
 	}

@@ -38,6 +38,7 @@ func main() {
 	numActiveFactorsGoalsLimit := flag.Int("goals_limit", 50, "Max number of goals model")
 	numActiveFactorsTrackedEventsLimit := flag.Int("max_tracked_events", 50, "Max number of Tracked Events")
 	numActiveFactorsTrackedUserPropertiesLimit := flag.Int("max_user_properties", 50, "Max numbr of Tracked user properties")
+	numCampaignsLimit := flag.Int("max_campaigns_limit", -1, "Max number of campaigns")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -49,7 +50,6 @@ func main() {
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-
 
 	flag.Parse()
 
@@ -81,11 +81,10 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost: *redisHost,
-		RedisPort: *redisPort,
-		RedisHostPersistent:*redisHostPersistent,
-		RedisPortPersistent:*redisPortPersistent,
-
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
 	}
 
 	C.InitConf(config.Env)
@@ -155,5 +154,5 @@ func main() {
 
 	_ = T.BuildSequential(*envFlag, db, &cloudManager, etcdClient, diskManager,
 		*bucketName, *numRoutinesFlag, projectIdsToRun, projectIdsToSkip, *maxModelSizeFlag,
-		*modelType, *lookBackPeriodInDays, *noOfDaysToBuild, *shouldCountOccurence)
+		*modelType, *lookBackPeriodInDays, *noOfDaysToBuild, *shouldCountOccurence, *numCampaignsLimit)
 }
