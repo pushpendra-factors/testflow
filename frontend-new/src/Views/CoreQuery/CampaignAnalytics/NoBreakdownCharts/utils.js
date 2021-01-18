@@ -12,6 +12,7 @@ export const formatData = (data, arrayMapper) => {
     if (
       dateTimeEventIndex > -1 &&
       eventIndex > -1 &&
+      data.result_group[1].rows.length &&
       data.result_group[1].rows[0][eventIndex]
     ) {
       result.push({
@@ -76,7 +77,7 @@ export const getTableData = (chartsData, frequency, currentSorter) => {
     const colVals = {};
     columns.forEach((col, index) => {
       const mapper = chartsData[index].mapper;
-      colVals[col] = chartsData[index].dataOverTime[dateIndex][mapper]
+      colVals[col] = chartsData[index].dataOverTime[dateIndex][mapper];
     });
     return {
       index: dateIndex,
@@ -114,7 +115,7 @@ export const getDateBaseTableColumns = (
     {
       title: "Measures",
       dataIndex: "measures",
-      fixed: 'left',
+      fixed: "left",
       width: 150,
     },
     ...dateColumns,
@@ -122,7 +123,7 @@ export const getDateBaseTableColumns = (
 };
 
 export const getDateBasedTableData = (chartsData, frequency, currentSorter) => {
-	let format = "MMM D";
+  let format = "MMM D";
   if (frequency === "hour") {
     format = "h A, MMM D";
   }
@@ -132,7 +133,7 @@ export const getDateBasedTableData = (chartsData, frequency, currentSorter) => {
       dateVals[moment(d.date).format(format)] = d[elem.mapper];
     });
     return {
-			index: elem.index,
+      index: elem.index,
       measures: elem.name,
       ...dateVals,
     };
