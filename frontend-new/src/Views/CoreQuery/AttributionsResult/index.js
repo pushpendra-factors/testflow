@@ -44,7 +44,11 @@ function AttributionsResult({
             event={eventGoal.label}
             linkedEvents={linkedEvents}
             touchpoint={touchpoint}
-            data={resultState.data}
+            data={
+              resultState.data.result
+                ? resultState.data.result
+                : resultState.data
+            }
             isWidgetModal={false}
             attribution_method={models[0]}
           />
@@ -54,7 +58,11 @@ function AttributionsResult({
             event={eventGoal.label}
             linkedEvents={linkedEvents}
             touchpoint={touchpoint}
-            data={resultState.data}
+            data={
+              resultState.data.result
+                ? resultState.data.result
+                : resultState.data
+            }
             isWidgetModal={false}
             attribution_method={models[0]}
             attribution_method_compare={models[1]}
@@ -80,7 +88,7 @@ function AttributionsResult({
             className="app-font-family text-3xl font-semibold"
             style={{ color: "#8692A3" }}
           >
-            {querySaved || 'Untitled Analysis'}
+            {querySaved || "Untitled Analysis"}
           </div>
           <div
             className={`text-base font-medium pb-1 cursor-pointer ${styles.eventsText}`}
