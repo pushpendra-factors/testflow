@@ -7,50 +7,53 @@ import {
   generateColors,
 } from "../../../../utils/dataFormatter";
 
-function Chart({ chartData, title = "chart", cardSize = 1 }) {
+function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper }) {
   const chartRef = useRef(null);
   const tooltip = useRef(null);
   const appliedColors = generateColors(chartData.length);
 
-  const showTooltip = useCallback((d, i) => {
-    const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
-    nodes.forEach((node, index) => {
-      if (index !== i) {
-        d3.select(node).attr("class", "bar opaque");
+  const showTooltip = useCallback(
+    (d, i) => {
+      const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
+      nodes.forEach((node, index) => {
+        if (index !== i) {
+          d3.select(node).attr("class", "bar opaque");
+        }
+      });
+
+      const nodePosition = d3.select(nodes[i]).node().getBoundingClientRect();
+      let left = nodePosition.x + nodePosition.width / 2;
+
+      // if user is hovering over the last bar
+      if (left + 200 >= document.documentElement.clientWidth) {
+        left = nodePosition.x + nodePosition.width / 2 - 200;
       }
-    });
 
-    const nodePosition = d3.select(nodes[i]).node().getBoundingClientRect();
-    let left = nodePosition.x + nodePosition.width / 2;
+      const scrollTop =
+        window.pageYOffset !== undefined
+          ? window.pageYOffset
+          : (
+              document.documentElement ||
+              document.body.parentNode ||
+              document.body
+            ).scrollTop;
+      const top = nodePosition.y + scrollTop;
+      const toolTipHeight = d3.select(".toolTip").node().getBoundingClientRect()
+        .height;
 
-    // if user is hovering over the last bar
-    if (left + 200 >= document.documentElement.clientWidth) {
-      left = nodePosition.x + nodePosition.width / 2 - 200;
-    }
-
-    const scrollTop =
-      window.pageYOffset !== undefined
-        ? window.pageYOffset
-        : (
-            document.documentElement ||
-            document.body.parentNode ||
-            document.body
-          ).scrollTop;
-    const top = nodePosition.y + scrollTop;
-    const toolTipHeight = d3.select(".toolTip").node().getBoundingClientRect()
-      .height;
-
-    tooltip.current
-      .html(
-        `
-              <div>${d.event}</div>
+      tooltip.current
+        .html(
+          `
+              <div>${arrayMapper[i].eventName}</div>
               <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${d.netCount}</span> (${d.value}%)</div>
             `
-      )
-      .style("opacity", 1)
-      .style("left", left + "px")
-      .style("top", top - toolTipHeight + 5 + "px");
-  }, []);
+        )
+        .style("opacity", 1)
+        .style("left", left + "px")
+        .style("top", top - toolTipHeight + 5 + "px");
+    },
+    [arrayMapper]
+  );
 
   const hideTooltip = useCallback(() => {
     const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
@@ -176,7 +179,11 @@ function Chart({ chartData, title = "chart", cardSize = 1 }) {
     g.append("g")
       .attr("class", "axis axis--x")
       .attr("transform", `translate(0,${height})`)
-      .call(d3.axisBottom(xScale));
+      .call(
+        d3.axisBottom(xScale).tickFormat((d, i) => {
+          return arrayMapper[i].eventName;
+        })
+      );
 
     g.append("g")
       .attr("class", "axis axis--y")
@@ -286,7 +293,7 @@ function Chart({ chartData, title = "chart", cardSize = 1 }) {
           return `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4} ${x1},${y1}`;
         }
       });
-  }, [chartData, showTooltip, hideTooltip, appliedColors, title]);
+  }, [chartData, showTooltip, hideTooltip, appliedColors, title, arrayMapper]);
 
   const displayChart = useCallback(() => {
     drawChart();
@@ -346,7 +353,7 @@ function Chart({ chartData, title = "chart", cardSize = 1 }) {
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  <g clip-path="url(#clip0)">
+                  <g clipPath="url(#clip0)">
                     <path
                       d="M13.8306 19.0713C14.3815 19.0713 14.8281 18.6247 14.8281 18.0737C14.8281 17.5232 14.3822 17.0768 13.8316 17.0762L8.34395 17.0702L19.0708 6.34337C19.4613 5.95285 19.4613 5.31968 19.0708 4.92916C18.6802 4.53863 18.0471 4.53863 17.6565 4.92916L6.92974 15.656V10.1683C6.92974 9.6146 6.47931 9.16632 5.92565 9.16828C5.37474 9.17022 4.92863 9.61737 4.92863 10.1683L4.92862 18.0713C4.92863 18.6236 5.37634 19.0713 5.92863 19.0713L13.8306 19.0713Z"
                       fill="#8692A3"

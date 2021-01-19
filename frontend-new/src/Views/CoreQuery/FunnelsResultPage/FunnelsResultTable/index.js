@@ -4,7 +4,7 @@ import { generateTableColumns, generateTableData } from '../utils';
 import DataTable from '../../../../components/DataTable';
 
 function FunnelsResultTable({
-  chartData, breakdown, setGroups, queries, groups, maxAllowedVisibleProperties, eventsMapper, isWidgetModal
+  chartData, breakdown, setGroups, queries, groups, maxAllowedVisibleProperties, isWidgetModal, arrayMapper
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -13,8 +13,8 @@ function FunnelsResultTable({
     setSorter(sorter);
   }, []);
 
-  const columns = generateTableColumns(breakdown, queries, eventsMapper, sorter, handleSorting);
-  const tableData = generateTableData(chartData, breakdown, queries, groups, eventsMapper, sorter, searchText);
+  const columns = generateTableColumns(breakdown, queries, sorter, handleSorting, arrayMapper);
+  const tableData = generateTableData(chartData, breakdown, queries, groups, arrayMapper, sorter, searchText);
 
   const onSelectionChange = (selectedRowKeys) => {
     if (!selectedRowKeys.length || selectedRowKeys.length > maxAllowedVisibleProperties) {

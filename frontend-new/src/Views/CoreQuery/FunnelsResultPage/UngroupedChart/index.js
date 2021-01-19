@@ -5,14 +5,14 @@ import Chart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
 
 function UngroupedChart({
-  resultState, queries, eventsMapper, isWidgetModal
+  resultState, queries, isWidgetModal, arrayMapper
 }) {
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    const formattedData = generateUngroupedChartsData(resultState.data, queries);
+    const formattedData = generateUngroupedChartsData(resultState.data, arrayMapper);
     setChartData(formattedData);
-  }, [queries, resultState.data]);
+  }, [arrayMapper, resultState.data]);
 
   if (!chartData.length) {
     return null;
@@ -22,6 +22,7 @@ function UngroupedChart({
     <>
       <Chart
         chartData={chartData}
+        arrayMapper={arrayMapper}
       />
 
       <div className="mt-8">
@@ -31,7 +32,7 @@ function UngroupedChart({
           breakdown={[]}
           queries={queries}
           groups={[]}
-          eventsMapper={eventsMapper}
+          arrayMapper={arrayMapper}
         />
       </div>
     </>

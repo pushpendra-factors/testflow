@@ -128,10 +128,9 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
           title={unit.id}
-          eventsMapper={eventsMapper}
-          reverseEventsMapper={reverseEventsMapper}
           unit={unit}
           setwidgetModal={setwidgetModal}
+          arrayMapper={arrayMapper}
         />
       );
     }

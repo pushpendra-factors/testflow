@@ -70,7 +70,7 @@ function ActiveUnitContent({
       eventsMapper[`${q.label}`] = `event${index + 1}`;
       reverseEventsMapper[`event${index + 1}`] = q.label;
       arrayMapper.push({
-        eventName: q,
+        eventName: q.label,
         index,
         mapper: `event${index + 1}`,
       });
@@ -194,6 +194,7 @@ function ActiveUnitContent({
           durationObj={durationObj}
           handleDurationChange={handleDurationChange}
           resultState={resultState}
+          arrayMapper={arrayMapper}
         />
       );
     }

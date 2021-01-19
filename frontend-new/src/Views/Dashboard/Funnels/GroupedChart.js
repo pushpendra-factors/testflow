@@ -4,7 +4,7 @@ import Chart from '../../CoreQuery/FunnelsResultPage/GroupedChart/Chart';
 import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
 
 function GroupedChart({
-  resultState, queries, eventsMapper, reverseEventsMapper, title, breakdown, chartType, unit, setwidgetModal
+  resultState, queries, arrayMapper, title, breakdown, chartType, unit, setwidgetModal
 }) {
   const [groups, setGroups] = useState([]);
   const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
@@ -18,8 +18,8 @@ function GroupedChart({
     return null;
   }
 
-  const chartData = generateGroupedChartsData(resultState.data, queries, groups, eventsMapper);
-  const eventsData = generateEventsData(resultState.data, queries, eventsMapper);
+  const chartData = generateGroupedChartsData(resultState.data, queries, groups, arrayMapper);
+  const eventsData = generateEventsData(resultState.data, queries, arrayMapper);
 
   let chartContent = null;
 
@@ -30,9 +30,8 @@ function GroupedChart({
           chartData={chartData}
           groups={groups.filter(elem => elem.is_visible)}
           eventsData={eventsData}
-          eventsMapper={eventsMapper}
-          reverseEventsMapper={reverseEventsMapper}
           title={title}
+          arrayMapper={arrayMapper}
         />
       </div>
     );
@@ -45,7 +44,7 @@ function GroupedChart({
           groups={groups}
           setGroups={setGroups}
           chartData={eventsData}
-          eventsMapper={eventsMapper}
+          arrayMapper={arrayMapper}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
         />
       </div>

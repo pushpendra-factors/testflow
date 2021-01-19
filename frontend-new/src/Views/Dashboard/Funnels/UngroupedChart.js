@@ -1,17 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import { generateUngroupedChartsData } from '../../CoreQuery/FunnelsResultPage/utils';
-import Chart from '../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart';
-import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
+import React, { useEffect, useState } from "react";
+import { generateUngroupedChartsData } from "../../CoreQuery/FunnelsResultPage/utils";
+import Chart from "../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart";
+import FunnelsResultTable from "../../CoreQuery/FunnelsResultPage/FunnelsResultTable";
 
 function UngroupedChart({
-  resultState, queries, title, chartType, eventsMapper, setwidgetModal, unit
+  resultState,
+  queries,
+  title,
+  chartType,
+  setwidgetModal,
+  unit,
+  arrayMapper,
 }) {
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    const formattedData = generateUngroupedChartsData(resultState.data, queries);
+    const formattedData = generateUngroupedChartsData(
+      resultState.data,
+      arrayMapper
+    );
     setChartData(formattedData);
-  }, [queries, resultState.data]);
+  }, [arrayMapper, resultState.data]);
 
   if (!chartData.length) {
     return null;
@@ -19,13 +28,14 @@ function UngroupedChart({
 
   let chartContent = null;
 
-  if (chartType === 'barchart') {
+  if (chartType === "barchart") {
     chartContent = (
       <div className="mt-4">
         <Chart
           title={title}
           chartData={chartData}
           cardSize={unit.cardSize}
+          arrayMapper={arrayMapper}
         />
       </div>
     );
@@ -37,7 +47,7 @@ function UngroupedChart({
           breakdown={[]}
           queries={queries}
           groups={[]}
-          eventsMapper={eventsMapper}
+          arrayMapper={arrayMapper}
         />
       </div>
     );
@@ -45,10 +55,16 @@ function UngroupedChart({
 
   let tableContent = null;
 
-  if (chartType === 'table') {
+  if (chartType === "table") {
     tableContent = (
-      <div onClick={() => setwidgetModal({ unit, data: resultState.data })} style={{ color: '#5949BC' }} className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center">Show More &rarr;</div>
-    )
+      <div
+        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        style={{ color: "#5949BC" }}
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+      >
+        Show More &rarr;
+      </div>
+    );
   }
 
   return (
