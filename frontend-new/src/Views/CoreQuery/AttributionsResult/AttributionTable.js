@@ -25,7 +25,8 @@ function AttributionTable({
     attribution_method,
     attribution_method_compare,
     touchpoint,
-    linkedEvents
+    linkedEvents,
+    event
   );
   const tableData = getTableData(data, event, searchText, sorter, attribution_method_compare, touchpoint, linkedEvents);
 

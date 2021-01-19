@@ -57,7 +57,6 @@ function GroupedChart({
           arrayMapper={arrayMapper}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
           isWidgetModal={isWidgetModal}
-          arrayMapper={arrayMapper}
         />
       </div>
     </>
