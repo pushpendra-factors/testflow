@@ -40,12 +40,12 @@ function DualTouchPoint({
   ]);
 
   const getCategories = useCallback(() => {
-    const { headers } = data.result;
+    const { headers } = data;
     const campaignIdx = headers.indexOf("Campaign");
-    return data.result.rows
+    return data.rows
       .filter((_, index) => visibleIndices.indexOf(index) > -1)
       .map((row) => row[campaignIdx]);
-  }, [visibleIndices, data.result]);
+  }, [visibleIndices, data]);
 
   if (!chartsData.length) {
     return null;
@@ -67,8 +67,8 @@ function DualTouchPoint({
           categories={getCategories()}
           chartData={chartsData}
           visibleIndices={visibleIndices}
-          responseRows={data.result.rows}
-          responseHeaders={data.result.headers}
+          responseRows={data.rows}
+          responseHeaders={data.headers}
           method1={attribution_method}
           method2={attribution_method_compare}
           event={event}

@@ -13,11 +13,11 @@ export const getDifferentCampaingns = (data) => {
 };
 
 export const formatData = (data, event, visibleIndices, touchpoint) => {
-  const { headers } = data.result;
+  const { headers } = data;
   const touchpointIdx = headers.indexOf(touchpoint);
   const costIdx = headers.indexOf("Cost Per Conversion");
   const userIdx = headers.indexOf(`${event} - Users`);
-  const rows = data.result.rows.filter(
+  const rows = data.rows.filter(
     (_, index) => visibleIndices.indexOf(index) > -1
   );
   const result = rows.map((row) => {
@@ -33,13 +33,13 @@ export const formatGroupedData = (
   attribution_method,
   attribution_method_compare
 ) => {
-  const { headers } = data.result;
+  const { headers } = data;
   const userIdx = headers.indexOf(`${event} - Users`);
   const compareUsersIdx = headers.indexOf(`Compare - Users`);
   // const campaignIdx = headers.indexOf("Campaign");
   // const costIdx = headers.indexOf("Cost Per Conversion");
   // const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
-  let rows = data.result.rows.filter(
+  let rows = data.rows.filter(
     (_, index) => visibleIndices.indexOf(index) > -1
   );
   rows = SortData(rows, userIdx, "descend");
@@ -192,7 +192,7 @@ export const getTableData = (
   touchpoint,
   linkedEvents
 ) => {
-  const { headers } = data.result;
+  const { headers } = data;
   const touchpointIdx = headers.indexOf(touchpoint);
   const impressionsIdx = headers.indexOf("Impressions");
   const clicksIdx = headers.indexOf("Clicks");
@@ -202,7 +202,7 @@ export const getTableData = (
   const userIdx = headers.indexOf(`${event} - Users`);
   const compareUsersIdx = headers.indexOf(`Compare - Users`);
   const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
-  const result = data.result.rows
+  const result = data.rows
     .map((row, index) => {
       let resultantRow = {
         index,

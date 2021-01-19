@@ -36,12 +36,12 @@ function GroupedAttributionsChart({
   ]);
 
   const getCategories = useCallback(() => {
-    const { headers } = data.result;
+    const { headers } = data;
     const campaignIdx = headers.indexOf(touchpoint);
-    return data.result.rows
+    return data.rows
       .filter((_, index) => visibleIndices.indexOf(index) > -1)
       .map((row) => row[campaignIdx]);
-  }, [visibleIndices, data.result, touchpoint]);
+  }, [visibleIndices, data, touchpoint]);
 
   if (!chartsData.length) {
     return null;
@@ -61,8 +61,8 @@ function GroupedAttributionsChart({
         categories={getCategories()}
         chartData={chartsData}
         visibleIndices={visibleIndices}
-        responseRows={data.result.rows}
-        responseHeaders={data.result.headers}
+        responseRows={data.rows}
+        responseHeaders={data.headers}
         method1={attribution_method}
         method2={attribution_method_compare}
         event={event}
