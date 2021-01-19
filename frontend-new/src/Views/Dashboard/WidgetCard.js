@@ -18,6 +18,7 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_WEB,
 } from "../../utils/constants";
 
 function WidgetCard({
@@ -60,6 +61,11 @@ function WidgetCard({
           unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
         ) {
           queryType = QUERY_TYPE_ATTRIBUTION;
+        } else if (
+          unit.query.query.cl &&
+          unit.query.query.cl === QUERY_TYPE_WEB
+        ) {
+          queryType = QUERY_TYPE_WEB;
         } else {
           queryType = QUERY_TYPE_FUNNEL;
         }
@@ -80,7 +86,7 @@ function WidgetCard({
         } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
           setResultState({
             ...initialState,
-            data: res.data,
+            data: res.data.result,
           });
         } else if (queryType === QUERY_TYPE_CAMPAIGN) {
           setResultState({
