@@ -11,9 +11,8 @@ function GroupedChart({
   resultState,
   queries,
   breakdown,
-  eventsMapper,
-  reverseEventsMapper,
   isWidgetModal,
+  arrayMapper,
 }) {
   const [groups, setGroups] = useState([]);
   const maxAllowedVisibleProperties = 5;
@@ -24,7 +23,7 @@ function GroupedChart({
       maxAllowedVisibleProperties
     );
     setGroups(formattedGroups);
-  }, [queries, resultState.data]);
+  }, [resultState.data]);
 
   if (!groups.length) {
     return null;
@@ -34,13 +33,9 @@ function GroupedChart({
     resultState.data,
     queries,
     groups,
-    eventsMapper
+    arrayMapper
   );
-  const eventsData = generateEventsData(
-    resultState.data,
-    queries,
-    eventsMapper
-  );
+  const eventsData = generateEventsData(resultState.data, queries, arrayMapper);
 
   return (
     <>
@@ -49,8 +44,7 @@ function GroupedChart({
         chartData={chartData}
         groups={groups.filter((elem) => elem.is_visible)}
         eventsData={eventsData}
-        eventsMapper={eventsMapper}
-        reverseEventsMapper={reverseEventsMapper}
+        arrayMapper={arrayMapper}
       />
 
       <div className="mt-8">
@@ -60,9 +54,10 @@ function GroupedChart({
           groups={groups}
           setGroups={setGroups}
           chartData={eventsData}
-          eventsMapper={eventsMapper}
+          arrayMapper={arrayMapper}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
           isWidgetModal={isWidgetModal}
+          arrayMapper={arrayMapper}
         />
       </div>
     </>

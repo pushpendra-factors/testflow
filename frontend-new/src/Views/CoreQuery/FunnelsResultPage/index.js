@@ -1,14 +1,24 @@
-import React from 'react';
-import Header from '../../AppLayout/Header';
-import ResultsHeader from '../ResultsHeader';
-import EventsInfo from './EventsInfo';
-import { Spin } from 'antd';
-import ResultantChart from './ResultantChart';
-import FiltersInfo from '../FiltersInfo';
-import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
+import React from "react";
+import Header from "../../AppLayout/Header";
+import ResultsHeader from "../ResultsHeader";
+import EventsInfo from "./EventsInfo";
+import { Spin } from "antd";
+import ResultantChart from "./ResultantChart";
+import FiltersInfo from "../FiltersInfo";
+import { QUERY_TYPE_FUNNEL } from "../../../utils/constants";
 
 function FunnelsResultPage({
-  queries, setDrawerVisible, resultState, breakdown, eventsMapper, reverseEventsMapper, requestQuery, setShowResult, querySaved, setQuerySaved, handleDurationChange, durationObj
+  queries,
+  setDrawerVisible,
+  resultState,
+  breakdown,
+  requestQuery,
+  setShowResult,
+  querySaved,
+  setQuerySaved,
+  handleDurationChange,
+  durationObj,
+  arrayMapper,
 }) {
   let content = null;
 
@@ -36,12 +46,11 @@ function FunnelsResultPage({
           setDrawerVisible={setDrawerVisible}
           resultState={resultState}
           breakdown={breakdown}
-          eventsMapper={eventsMapper}
-          reverseEventsMapper={reverseEventsMapper}
           requestQuery={requestQuery}
           setShowResult={setShowResult}
           querySaved={querySaved}
           setQuerySaved={setQuerySaved}
+          arrayMapper={arrayMapper}
         />
       </div>
     );

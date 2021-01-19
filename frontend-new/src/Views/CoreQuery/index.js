@@ -10,7 +10,10 @@ import CoreQueryHome from "../CoreQueryHome";
 import { Drawer, Button } from "antd";
 import { SVG, Text } from "../../components/factorsComponents";
 import EventsAnalytics from "./EventsAnalytics";
-import { deleteGroupByForEvent, getCampaignConfigData } from "../../reducers/coreQuery/middleware";
+import {
+  deleteGroupByForEvent,
+  getCampaignConfigData,
+} from "../../reducers/coreQuery/middleware";
 import {
   initialResultState,
   calculateFrequencyData,
@@ -40,7 +43,12 @@ import AttributionsResult from "./AttributionsResult";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 import CampaignAnalytics from "./CampaignAnalytics";
 
-function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaignConfigData }) {
+function CoreQuery({
+  activeProject,
+  deleteGroupByForEvent,
+  location,
+  getCampaignConfigData,
+}) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
   const [activeKey, setActiveKey] = useState("0");
@@ -113,11 +121,10 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaign
   const dateRange = queryOptions.date_range;
 
   useEffect(() => {
-    if(activeProject && activeProject.id) {
-      getCampaignConfigData(activeProject.id, 'all_ads');
+    if (activeProject && activeProject.id) {
+      getCampaignConfigData(activeProject.id, "all_ads");
     }
-    
-  }, [activeProject, getCampaignConfigData])
+  }, [activeProject, getCampaignConfigData]);
 
   const updateResultState = useCallback((activeTab, newState) => {
     const idx = parseInt(activeTab);
@@ -143,7 +150,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaign
           activeTab,
           groupBy,
           queries,
-          'each',
+          "each",
           appliedDateRange
         );
         if (activeTab !== "2") {
@@ -580,12 +587,16 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaign
       } else if (rowClicked.queryType === QUERY_TYPE_CAMPAIGN) {
         runCampaignsQuery(rowClicked.queryName);
       } else {
-        if(rowClicked.settings) {
-          runQuery(true, rowClicked.queryName, null, rowClicked.settings.activeKey);
+        if (rowClicked.settings) {
+          runQuery(
+            true,
+            rowClicked.queryName,
+            null,
+            rowClicked.settings.activeKey
+          );
         } else {
           runQuery(true, rowClicked.queryName);
         }
-        
       }
       setRowClicked(false);
     }
@@ -730,8 +741,6 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaign
       <FunnelsResultPage
         setDrawerVisible={setDrawerVisible}
         queries={appliedQueries}
-        eventsMapper={eventsMapper}
-        reverseEventsMapper={reverseEventsMapper}
         resultState={funnelResult}
         breakdown={appliedBreakdown}
         requestQuery={requestQuery}
@@ -740,6 +749,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaign
         setQuerySaved={setQuerySaved}
         durationObj={queryOptions.date_range}
         handleDurationChange={handleDurationChange}
+        arrayMapper={arrayMapper}
       />
     );
   }
@@ -850,7 +860,7 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       deleteGroupByForEvent,
-      getCampaignConfigData
+      getCampaignConfigData,
     },
     dispatch
   );

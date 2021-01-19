@@ -3,7 +3,7 @@ import UngroupedChart from './UngroupedChart';
 import GroupedChart from './GroupedChart';
 
 function Funnels({
-  breakdown, resultState, events, chartType, title, eventsMapper, reverseEventsMapper, unit, setwidgetModal
+  breakdown, resultState, events, chartType, title, unit, setwidgetModal, arrayMapper
 }) {
 
   if (!breakdown.length) {
@@ -11,11 +11,11 @@ function Funnels({
       <UngroupedChart
         resultState={resultState}
         queries={events}
-        eventsMapper={eventsMapper}
         title={title}
         chartType={chartType}
         setwidgetModal={setwidgetModal}
         unit={unit}
+        arrayMapper={arrayMapper}
       />
     );
   } else {
@@ -24,12 +24,11 @@ function Funnels({
         queries={events}
         resultState={resultState}
         breakdown={breakdown}
-        eventsMapper={eventsMapper}
-        reverseEventsMapper={reverseEventsMapper}
         chartType={chartType}
         unit={unit}
         title={title}
         setwidgetModal={setwidgetModal}
+        arrayMapper={arrayMapper}
       />
     );
   }

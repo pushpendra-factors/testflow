@@ -13,10 +13,9 @@ function Chart({
     eventsData,
     groups,
     chartData,
-    eventsMapper,
-    reverseEventsMapper,
     title = "chart",
     isWidgetModal,
+    arrayMapper
 }) {
     const appliedColors = generateColors(chartData.length);
     const chartColors = {};
@@ -360,7 +359,7 @@ function Chart({
             .insert("div", ".chart")
             .attr("class", "legend flex flex-wrap justify-center items-center")
             .selectAll("span")
-            .data(Object.values(eventsMapper))
+            .data(Object.values(arrayMapper.map(elem=>elem.mapper)))
             .enter()
             .append("span")
             .attr("data-id", function (id) {
@@ -370,7 +369,7 @@ function Chart({
                 return `<div class="flex items-center cursor-pointer"><div style="background-color: ${chart.color(
                     id
                 )};width:16px;height:16px;border-radius:8px"></div>
-        <div class="px-2">${reverseEventsMapper[id]}</div></div>`;
+        <div class="px-2">${arrayMapper.find(elem=>elem.mapper === id).eventName}</div></div>`;
             })
             // .each(function (id) {
             //   d3.select(this).style('background-color', chart.color(id));
