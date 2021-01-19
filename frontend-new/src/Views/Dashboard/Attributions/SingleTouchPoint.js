@@ -37,8 +37,8 @@ function SingleTouchPoint({
     chartContent = (
       <div className="mt-4">
         <BarLineChart
-          responseRows={data.result.rows}
-          responseHeaders={data.result.headers}
+          responseRows={data.rows}
+          responseHeaders={data.headers}
           visibleIndices={visibleIndices}
           title={title}
           chartData={chartsData}

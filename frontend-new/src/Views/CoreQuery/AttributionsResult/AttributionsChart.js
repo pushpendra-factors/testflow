@@ -29,8 +29,8 @@ function AttributionsChart({
   return (
     <div className="attribution-results">
       <BarLineChart
-        responseRows={data.result.rows}
-        responseHeaders={data.result.headers}
+        responseRows={data.rows}
+        responseHeaders={data.headers}
         chartData={chartsData}
         visibleIndices={visibleIndices}
       />
