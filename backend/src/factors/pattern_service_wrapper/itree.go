@@ -1829,6 +1829,9 @@ func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 		if !isChildSequence(parentNode.Pattern.EventNames, p.EventNames) || !P.IsEncodedEvent(p.EventNames[len(p.EventNames)-2]) {
 			continue
 		}
+		if P.ExtractCampaignName(p.EventNames[len(p.EventNames)-2]) == "" {
+			continue
+		}
 		subPattersnCount++
 		if cNode, err := it.buildChildNodeV1(reqId,
 			p, nil, NODE_TYPE_CAMPAIGN,
