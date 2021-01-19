@@ -550,7 +550,7 @@ function CoreQuery({ activeProject, deleteGroupByForEvent, location, getCampaign
         const res = await getCampaignsData(activeProject.id, query);
         updateCampaignsResult({
           ...initialState,
-          data: res.data.result,
+          data: res.data,
         });
       } catch (err) {
         console.log(err);
