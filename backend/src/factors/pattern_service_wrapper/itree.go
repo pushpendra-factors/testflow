@@ -2118,6 +2118,9 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 		if nodeType == NODE_TYPE_USER_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
 			continue
 		}
+		if U.ShouldIgnoreItreeNumericalProperty(propertyName) {
+			continue
+		}
 		numP++
 		binRanges := [][2]float64{}
 		isPredefined := false

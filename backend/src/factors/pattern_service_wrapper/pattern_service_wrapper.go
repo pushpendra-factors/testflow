@@ -1038,6 +1038,9 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 		if node.Fcr < MIN_FCR && node.Fcp < MIN_FCP {
 			continue
 		}
+		if node.NodeType == NODE_TYPE_EVENT_PROPERTY && indexLevelMap[node.Index] == 1 {
+			continue
+		}
 		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY || node.NodeType == NODE_TYPE_CAMPAIGN {
 			funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints := buildFunnelFormats(node, countType)
 			if c, err := buildFunnelGraphResult(reqId, node, funnelEvents, funnelConstraints,
