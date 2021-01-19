@@ -829,6 +829,11 @@ var ITREE_PROPERTIES_TO_IGNORE = map[string]bool{
 	UP_TOTAL_SPENT_TIME: true,
 }
 
+var ITREE_NUMERICAL_PROPERTIES_TO_IGNORE = map[string]bool{
+	"$campaign":         true,
+	"$initial_campaign": true,
+}
+
 // USER_PROPERTIES_MERGE_TYPE_INITIAL Properties for which preference will be given to first occurrence while merging.
 // For rest all properties, latest user values will prevail on conflict.
 var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
@@ -1535,6 +1540,14 @@ func ShouldIgnoreItreeProperty(propertyName string) bool {
 	}
 
 	return IsInternalEventProperty(&propertyName) || IsInternalUserProperty(&propertyName)
+}
+
+// ShouldIgnoreItreeProperty Checks if property is to be ignored for building ITree.
+func ShouldIgnoreItreeNumericalProperty(propertyName string) bool {
+	if _, found := ITREE_NUMERICAL_PROPERTIES_TO_IGNORE[propertyName]; found {
+		return true
+	}
+	return false
 }
 
 func SetDefaultValuesToEventProperties(eventProperties *PropertiesMap) {
