@@ -60,7 +60,8 @@ export const getTableColumns = (
   attribution_method,
   attribution_method_compare,
   touchpoint,
-  linkedEvents
+  linkedEvents,
+  event
 ) => {
   const result = [
     {
@@ -99,7 +100,7 @@ export const getTableColumns = (
       dataIndex: "visitors",
     },
     {
-      title: "Opportunities (as unique users)",
+      title: event,
       className: "tableParentHeader",
       children: [
         {
