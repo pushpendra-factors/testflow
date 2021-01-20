@@ -486,7 +486,7 @@ func SanitizeQueryResult(result *QueryResult, query *Query) error {
 		return err
 	}
 
-	if hasNumericalGroupBy(query.GroupByProperties) {
+	if isGroupByTypeWithBuckets(query.GroupByProperties) {
 		sanitizeNumericalBucketRanges(result, query)
 	}
 	return nil
@@ -822,7 +822,7 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 
 	termStmnt = as(unionStepName, termStmnt)
 	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
-	if hasNumericalGroupBy(query.GroupByProperties) {
+	if isGroupByTypeWithBuckets(query.GroupByProperties) {
 		eventName := ""
 		if query.EventsCondition == EventCondEachGivenEvent {
 			eventName = AliasEventName
@@ -906,7 +906,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q Query) (string, [
 		return "", nil, errors.New("invalid no.of events for single event query")
 	}
 
-	if hasGroupEntity(q.GroupByProperties, PropertyEntityUser) || hasNumericalGroupBy(q.GroupByProperties) {
+	if hasGroupEntity(q.GroupByProperties, PropertyEntityUser) || isGroupByTypeWithBuckets(q.GroupByProperties) {
 		// Using any given event query, which handles groups already.
 		return buildEventsOccurrenceWithGivenEventQuery(projectId, q)
 	}
@@ -1542,7 +1542,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64, q Query) (string
 	if isGroupByTimestamp {
 		aggregateSelect = aggregateSelect + AliasDateTime + ", "
 	}
-	if hasNumericalGroupBy(q.GroupByProperties) {
+	if isGroupByTypeWithBuckets(q.GroupByProperties) {
 		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(
 			&qStmnt, q.GroupByProperties, withUsersStepName, eventNameSelect, isGroupByTimestamp, "event_user_id")
 		aggregateGroupBys = append(aggregateGroupBys, eventNameSelect)
@@ -1869,7 +1869,7 @@ func addEventCountAggregationQuery(query *Query, qStmnt *string, qParams *[]inte
 
 	termStmnt = as(unionStepName, termStmnt)
 	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
-	if hasNumericalGroupBy(query.GroupByProperties) {
+	if isGroupByTypeWithBuckets(query.GroupByProperties) {
 		eventName := AliasEventName
 		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
 			&termStmnt, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_id")

@@ -31,10 +31,11 @@ type QueryProperty struct {
 
 type QueryGroupByProperty struct {
 	// Entity: user or event.
-	Entity   string `json:"en"`
-	Property string `json:"pr"`
-	Index    int    `json:"in"`
-	Type     string `json:"pty"` // Property type categorical / numerical.
+	Entity      string `json:"en"`
+	Property    string `json:"pr"`
+	Index       int    `json:"in"`
+	Type        string `json:"pty"`  // Property type categorical / numerical.
+	GroupByType string `json:"gbty"` // With buckets or raw.
 	// group by specific event name.
 	EventName      string `json:"ena"`
 	EventNameIndex int    `json:"eni"`
@@ -258,6 +259,9 @@ const (
 	NumericalGroupBySeparator     = " - "
 	NumericalLowerBoundPercentile = 0.02
 	NumericalUpperBoundPercentile = 0.98
+
+	GroupByTypeWithBuckets = "with_buckets"
+	GroupByTypeRawValues   = "raw_values"
 )
 
 const (
@@ -589,10 +593,13 @@ func buildGroupKeys(groupProps []QueryGroupByProperty) (groupSelect string,
 	return groupSelect, groupSelectParams, groupKeys
 }
 
-func hasNumericalGroupBy(groupProps []QueryGroupByProperty) bool {
+func isGroupByTypeWithBuckets(groupProps []QueryGroupByProperty) bool {
 	for _, groupByProp := range groupProps {
 		if groupByProp.Type == U.PropertyTypeNumerical {
-			return true
+			if groupByProp.GroupByType == "" || groupByProp.GroupByType == GroupByTypeWithBuckets {
+				// Empty condition for backward compatibility as existing queries will not have GroupByType.
+				return true
+			}
 		}
 	}
 	return false
@@ -1259,7 +1266,7 @@ func sanitizeNumericalBucketRanges(result *QueryResult, query *Query) {
 
 	sanitizedProperties := make(map[string]bool)
 	for _, gbp := range query.GroupByProperties {
-		if gbp.Type == U.PropertyTypeNumerical {
+		if isGroupByTypeWithBuckets([]QueryGroupByProperty{gbp}) {
 			if _, sanitizedAlready := sanitizedProperties[gbp.Property]; sanitizedAlready {
 				continue
 			}

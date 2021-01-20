@@ -1987,7 +1987,7 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 			assert.Equal(t, http.StatusOK, w.Code)
 		}
 
-		query := M.Query{
+		query1 := M.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
 			EventsWithProperties: []M.QueryEventWithProperties{
@@ -2006,9 +2006,62 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 			Type:            M.QueryTypeEventsOccurrence,
 			EventsCondition: M.EventCondAllGivenEvent,
 		}
-		result, errCode, _ := M.Analyze(project.ID, query)
+
+		// Query with key GroupByType as with_buckets.
+		query2 := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: eventName1,
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					Entity:      M.PropertyEntityEvent,
+					Property:    "$page_load_time",
+					Type:        U.PropertyTypeNumerical,
+					GroupByType: M.GroupByTypeWithBuckets,
+				},
+			},
+			Class:           M.QueryClassInsights,
+			Type:            M.QueryTypeEventsOccurrence,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		// Query with key GroupByType as raw_values.
+		query3 := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: eventName1,
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					Entity:      M.PropertyEntityEvent,
+					Property:    "$page_load_time",
+					Type:        U.PropertyTypeNumerical,
+					GroupByType: M.GroupByTypeRawValues,
+				},
+			},
+			Class:           M.QueryClassInsights,
+			Type:            M.QueryTypeEventsOccurrence,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+		result, errCode, _ := M.Analyze(project.ID, query1)
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 0)
+
+		result, errCode, _ = M.Analyze(project.ID, query2)
+		assert.Equal(t, http.StatusOK, errCode)
+		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 0)
+
+		// Query 3 with raw values. Should have 100 rows for each $page_load_time value.
+		result, errCode, _ = M.Analyze(project.ID, query3)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, 100, len(result.Rows))
 
 		/*
 			New event with $page_load_time = 0
@@ -2024,13 +2077,16 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		result, errCode, _ = M.Analyze(project.ID, query)
+		result, errCode, _ = M.Analyze(project.ID, query1)
+		validateNumericalBucketRanges(t, result, 0, numPropertyRangeEnd, 0)
+
+		result, errCode, _ = M.Analyze(project.ID, query2)
 		validateNumericalBucketRanges(t, result, 0, numPropertyRangeEnd, 0)
 
 		// Using group by numerical property.
-		query.GroupByProperties[0].Entity = M.PropertyEntityUser
-		query.GroupByProperties[0].Property = "numerical_property"
-		result, errCode, _ = M.Analyze(project.ID, query)
+		query1.GroupByProperties[0].Entity = M.PropertyEntityUser
+		query1.GroupByProperties[0].Property = "numerical_property"
+		result, errCode, _ = M.Analyze(project.ID, query1)
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 1)
 	})

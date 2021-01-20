@@ -507,9 +507,9 @@ class Query extends Component {
         cGroupBy.pr = groupBy.name;
         cGroupBy.en = groupBy.type;
         cGroupBy.pty = groupBy.ptype;
-        if (groupBy.ptype == TYPE_NUMERICAL && groupBy.method == NUMERICAL_GROUP_BY_RAW) {
-          // If numerical type property by group by raw is selected, send as categorical.
-          cGroupBy.pty = TYPE_CATEGORICAL;
+        if (groupBy.ptype == TYPE_NUMERICAL) {
+          // If numerical type property set group by type indicating raw or with buckets.
+          cGroupBy.gbty = groupBy.method;
         }
 
         // add group by event name.

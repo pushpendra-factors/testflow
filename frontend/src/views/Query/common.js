@@ -21,11 +21,11 @@ export const PROPERTY_LOGICAL_OP_OPTS = {
   'OR': 'or',
 };
 
-export const NUMERICAL_GROUP_BY_BUCKETED = 'bucketed';
-export const NUMERICAL_GROUP_BY_RAW = 'raw';
+export const NUMERICAL_GROUP_BY_BUCKETED = 'with_buckets';
+export const NUMERICAL_GROUP_BY_RAW = 'raw_values';
 export const NUMERICAL_GROUP_BY_METHODS = {
-  'bucketed': 'with buckets',
-  'raw': 'raw values'
+  'with_buckets': 'with buckets',
+  'raw_values': 'raw values'
 };
 
 export const DASHBOARD_TYPE_WEB_ANALYTICS = "Website Analytics";
