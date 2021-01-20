@@ -24,12 +24,12 @@ const InsightItem = ({
 
         let insightKey = generateInsightKey(dataItem);
         
-         let factors_insights_text = `of which users who perform <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion`
+         let factors_insights_text = `Users who visit <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion`
          if(dataItem.factors_insights_type=='attribute'){
            factors_insights_text = `Users with <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion` 
           }
           if(dataItem.factors_insights_type=='campaign'){
-            factors_insights_text = `of which users from <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion` 
+            factors_insights_text = `Users from <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion` 
           }
 
         
