@@ -41,3 +41,27 @@
     }
 }
 
+.grpProps {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    margin-left: 8px;
+    font-size: 14px;
+    color: #8692A3;
+
+    &__select {
+        display: flex;
+        margin-left: 8px;
+
+        &__opt {
+            color: #5949BC;
+            text-transform: capitalize;
+        }
+
+        &__opt:hover {
+            cursor: pointer;
+        }
+
+    }
+}
+

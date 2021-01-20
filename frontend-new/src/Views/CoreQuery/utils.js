@@ -117,21 +117,30 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
   query.gbp = appliedGroupBy.map((opt) => {
     if (opt.eventIndex) {
-      return {
+      const appGbp = {
         pr: opt.property,
         en: opt.prop_category,
         pty: opt.prop_type,
         ena: opt.eventName,
         eni: opt.eventIndex,
       };
+
     } else {
-      return {
+      const appGbp = {
         pr: opt.property,
         en: opt.prop_category,
         pty: opt.prop_type,
         ena: opt.eventName,
       };
+      
     }
+    if (opt.prop_type === "datetime") {
+      opt.gbty ? appGbp['grn'] = opt.grn: "day";
+    }
+    if (opt.prop_type === "numerical") {
+      opt.gbty ? appGbp['gbty'] = opt.gbty: '';
+    }
+    return appGbp;
   });
   query.ec = "any_given_event";
   query.tz = "Asia/Kolkata";
@@ -197,7 +206,10 @@ export const getQuery = (
         };
       }
       if (opt.prop_type === "datetime") {
-        gbpReq["grn"] = "day";
+        opt.gbty ? gbpReq['grn'] = opt.grn: "day";
+      }
+      if (opt.prop_type === "numerical") {
+        opt.gbty ? gbpReq['gbty'] = opt.gbty: '';
       }
 
       return gbpReq;

@@ -8,6 +8,7 @@ import { Button } from 'antd';
 import GroupSelect from '../GroupSelect';
 
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
+import FaSelect from '../../FaSelect';
 
 function GroupBlock({
   groupByState,
@@ -17,6 +18,7 @@ function GroupBlock({
 }) {
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
+  const [propSelVis, setSelVis] = useState([false]);
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'User Properties',
@@ -34,6 +36,20 @@ function GroupBlock({
   const delOption = (index) => {
     delGroupBy('global', groupByState.global[index], index);
   };
+
+  const onGrpPropChange = (val, index) => {
+    const newGroupByState = Object.assign({}, groupByState.global[index]);
+    if(newGroupByState.prop_type === 'numerical') {
+      newGroupByState.gbty = val;
+    }
+    if(newGroupByState.prop_type === 'datetime') {
+      newGroupByState.grn = val;
+    }
+    setGroupBy('global', newGroupByState, index);
+    const ddVis = [...propSelVis];
+    ddVis[index] = false;
+    setSelVis(ddVis);
+  }
 
   const onChange = (value, index) => {
     const newGroupByState = Object.assign({}, groupByState.global[index]);
@@ -76,6 +92,56 @@ function GroupBlock({
     </div>);
   };
 
+  const renderGroupPropertyOptions = (opt, index) => {
+    if(!opt || opt.prop_type === 'categorical') return;
+
+    const propOpts = {
+      'numerical': [
+          ['original values', null, 'raw_values'], 
+          ['bucketed values', null, 'with_buckets']],
+      'datetime': [
+        ['hourly', null, 'hour'],
+        ['daily', null, 'day'],
+        ['week', null, 'week'],
+      ]
+    }
+
+    const getProp = (opt) => {
+      if(opt.prop_type === 'numerical') {
+        const propSel = propOpts['numerical'].filter((v) => v[2] === opt.gbty);
+        return propSel[0]? propSel[0][0] : 'Select options';
+      }
+      if(opt.prop_type === 'datetime') return opt.grn? opt.grn : 'Select options';
+    }
+
+    const setProp = (opt, i = index) => {
+      onGrpPropChange(opt[2], i);
+      selectVisToggle()
+    }
+
+    const selectVisToggle = (i = index) => {
+      const visState = [...propSelVis];
+      visState[i] = !visState[i];
+      setSelVis(visState);
+    }
+
+    return (<div className={styles.grpProps}>
+      show as <div className={styles.grpProps__select}>
+          <span className={styles.grpProps__select__opt} 
+            onClick={() => selectVisToggle()}> 
+            { getProp(opt)}  
+          </span>
+          {propSelVis[index] && 
+            <FaSelect options={propOpts[opt.prop_type]}
+              optionClick={setProp}
+              onClickOutside={() => selectVisToggle()}
+            
+            ></FaSelect> 
+          }
+        </div>
+    </div>);
+  }
+
   const renderExistingBreakdowns = () => {
     if (groupByState.global.length < 1) return;
     return (groupByState.global.map((opt, index) => (
@@ -88,6 +154,7 @@ function GroupBlock({
           <SVG name="remove"></SVG></Button>
 
         <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {opt.property ? opt.property : 'Select user property'}</Button>
+        {renderGroupPropertyOptions(opt, index)}
         </>
         }
         {isDDVisible[index]
