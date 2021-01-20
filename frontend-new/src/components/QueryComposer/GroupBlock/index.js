@@ -111,7 +111,10 @@ function GroupBlock({
         const propSel = propOpts['numerical'].filter((v) => v[2] === opt.gbty);
         return propSel[0]? propSel[0][0] : 'Select options';
       }
-      if(opt.prop_type === 'datetime') return opt.grn? opt.grn : 'Select options';
+      if(opt.prop_type === 'datetime') {
+        const propSel = propOpts['datetime'].filter((v) => v[2] === opt.grn);
+        return propSel[0]? propSel[0][0] : 'Select options';
+      } 
     }
 
     const setProp = (opt, i = index) => {

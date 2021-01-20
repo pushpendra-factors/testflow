@@ -131,7 +131,8 @@ function QueryBlock({
   };
 
   const pushGroupBy = (groupState, index) => {
-    const ind = index || groupBy.length;
+    let ind;
+    index >= 0 ? ind = index : ind = groupBy.length;
     setGroupBy('event', groupState, ind);
   };
 
