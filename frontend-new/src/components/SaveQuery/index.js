@@ -21,7 +21,12 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
-import { getSessionsQuery, getFrequencyQuery, getTotalEventsQuery, getTotalUsersQuery } from "../../Views/CoreQuery/utils";
+import {
+  getSessionsQuery,
+  getFrequencyQuery,
+  getTotalEventsQuery,
+  getTotalUsersQuery,
+} from "../../Views/CoreQuery/utils";
 
 function SaveQuery({
   requestQuery,
@@ -133,10 +138,10 @@ function SaveQuery({
             };
           }),
         };
-        if(parseInt(activeKey) === 0) {
+        if (parseInt(activeKey) === 0) {
           query.query_group = getTotalEventsQuery(query);
         }
-        if(parseInt(activeKey) === 1) {
+        if (parseInt(activeKey) === 1) {
           query.query_group = getTotalUsersQuery(query);
         }
         if (parseInt(activeKey) === 2) {
@@ -217,7 +222,13 @@ function SaveQuery({
   if (addToDashboard) {
     dashboardHelpText = "This widget will appear on the following dashboards:";
 
-    let firstOption = <Radio value="pb">Display Bar Chart</Radio>;
+    let firstOption = (
+      <Radio value="pb">
+        {queryType === QUERY_TYPE_FUNNEL
+          ? "Display Funnel Chart"
+          : "Display Bar Chart"}
+      </Radio>
+    );
     let secondOption = null;
 
     if (queryType === QUERY_TYPE_EVENT) {
