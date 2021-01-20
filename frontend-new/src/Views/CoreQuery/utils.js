@@ -58,17 +58,30 @@ const getEventsWithProperties = (queries) => {
   const ewps = [];
   queries.forEach((ev) => {
     const filterProps = [];
-    ev.filters.forEach((fil) => {
-      fil.values.forEach((val, index) => {
+    ev.filters.forEach((fil) => { 
+      if(Array.isArray(fil.values)) {
+        fil.values.forEach((val, index) => {
+          filterProps.push({
+            en: fil.props[2],
+            lop: !index ? "AND" : "OR",
+            op: operatorMap[fil.operator],
+            pr: fil.props[0],
+            ty: fil.props[1],
+            va: val,
+          });
+        });
+
+      } else {
         filterProps.push({
           en: fil.props[2],
-          lop: !index ? "AND" : "OR",
+          lop: "AND",
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
-          va: val,
+          va: fil.values,
         });
-      });
+      }
+      
     });
     ewps.push({
       na: ev.label,

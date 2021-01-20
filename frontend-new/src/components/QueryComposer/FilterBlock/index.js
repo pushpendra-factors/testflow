@@ -122,6 +122,7 @@ export default function FilterBlock({
     if (!userInput.currentTarget.value.length) {
       if (userInput.keyCode === 8 || userInput.keyCode === 46) {
         removeFilter();
+        return;
       }
       
     } else if (filterTypeState === 'values' 
@@ -134,6 +135,14 @@ export default function FilterBlock({
         closeFilter();
     }
     setSearchTerm(userInput.currentTarget.value);
+
+    if((newFilterState.operator === 'contains' || newFilterState.operator === 'not contains') && filterTypeState === 'values') {
+      const newFilter = Object.assign({}, newFilterState);
+      newFilter[filterTypeState][0] ? newFilter[filterTypeState][0] =  newFilter[filterTypeState][0] + userInput.currentTarget.value : newFilter[filterTypeState][0] =  userInput.currentTarget.value;
+      setNewFilterState(newFilter);
+      setSearchTerm('');
+    }
+    
   };
 
   const removeFilter = () => {
@@ -188,8 +197,6 @@ export default function FilterBlock({
         fetchChannelObjPropertyValues(activeProject.id, typeProps.channel, 
           newFilterState.props[2].replace(" ", "_"), newFilterState.props[0]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            // [DANGER] remove this console.log Only for testing pupose
-            console.log(res);
             ddValues[newFilterState.props[0]] = res?.data?.result?.filter_values;
             setDropDownValues(ddValues);
         }).catch(err => console.log(err));
