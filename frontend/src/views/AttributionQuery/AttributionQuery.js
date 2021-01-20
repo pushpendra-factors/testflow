@@ -217,10 +217,10 @@ class AttributionQuery extends Component {
     runAttributionQuery(this.props.currentProjectId, query)
       .then(r => {
         this.setState({
-          result: r.data.result,
-          resultMeta: r.data.result.meta,
+          result: r.data,
+          resultMeta: r.data.meta,
           isResultLoading: false, isPresentationLoading: false,
-          resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data.result)
+          resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data)
         });
       })
       .catch(err => {

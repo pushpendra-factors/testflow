@@ -113,7 +113,7 @@ func AttributionHandler(c *gin.Context) {
 		M.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
 			requestPayload.Query.From, requestPayload.Query.To)
 	}
-	c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
+	c.JSON(http.StatusOK, result)
 }
 
 // decodeAttributionPayload decodes attribution requestPayload for 2 json formats to support old and new
