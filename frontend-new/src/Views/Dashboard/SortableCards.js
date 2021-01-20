@@ -27,7 +27,7 @@ function SortableCards({
   const onDrop = useCallback(
     async (newState) => {
       const body = getRequestForNewState(newState);
-      dispatch({ type: UNITS_ORDER_CHANGED, payload: newState });
+      dispatch({ type: UNITS_ORDER_CHANGED, payload: newState, units_position: body });
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         updateDashboard(active_project.id, activeDashboard.id, {
