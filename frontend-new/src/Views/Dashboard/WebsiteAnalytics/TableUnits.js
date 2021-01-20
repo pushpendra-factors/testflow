@@ -10,9 +10,7 @@ function TableUnits({ tableUnits, data }) {
           return (
             <div
               key={unit.id}
-              className={`${unit.title.split(" ").join("-")} ${
-                unit.className
-              } py-4 px-2 flex widget-card-top-div`}
+              className={`py-4 px-2 flex widget-card-top-div w-full`}
             >
               <div
                 id={`card-${unit.id}`}
