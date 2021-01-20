@@ -135,10 +135,10 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
       
     }
     if (opt.prop_type === "datetime") {
-      opt.gbty ? appGbp['grn'] = opt.grn: "day";
+      opt.gbty ? appGbp['grn'] = opt.grn: appGbp['grn'] = "day";
     }
     if (opt.prop_type === "numerical") {
-      opt.gbty ? appGbp['gbty'] = opt.gbty: '';
+      opt.gbty ? appGbp['gbty'] = opt.gbty: appGbp['gbty'] = '';
     }
     return appGbp;
   });
@@ -206,12 +206,12 @@ export const getQuery = (
         };
       }
       if (opt.prop_type === "datetime") {
-        opt.gbty ? gbpReq['grn'] = opt.grn: "day";
+        opt.gbty ? gbpReq['grn'] = opt.grn: gbpReq['grn'] = "day";
       }
       if (opt.prop_type === "numerical") {
-        opt.gbty ? gbpReq['gbty'] = opt.gbty: '';
+        opt.gbty ? gbpReq['gbty'] = opt.gbty:   gbpReq['gbty'] = '';
       }
-
+      console.log(gbpReq);
       return gbpReq;
     });
   }
