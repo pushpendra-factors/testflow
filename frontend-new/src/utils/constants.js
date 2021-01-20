@@ -3,6 +3,8 @@ export const QUERY_TYPE_EVENT = "events";
 export const QUERY_TYPE_ATTRIBUTION = "attribution";
 export const QUERY_TYPE_CAMPAIGN = "channel_v1";
 export const QUERY_TYPE_TEMPLATE = "templates";
+export const QUERY_TYPE_WEB = "web";
+export const NAMED_QUERY = "named_query"
 
 export const ATTRIBUTION_METHODOLOGY = [
   {
