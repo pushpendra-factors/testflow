@@ -5,6 +5,8 @@ import { useSelector, useDispatch } from "react-redux";
 import { UNITS_ORDER_CHANGED } from "../../reducers/types";
 import { updateDashboard } from "../../reducers/dashboard/services";
 import { getRequestForNewState } from "../../reducers/dashboard/utils";
+import { QUERY_TYPE_WEB } from "../../utils/constants";
+import WebsiteAnalytics from "./WebsiteAnalytics";
 
 function SortableCards({
   setwidgetModal,
@@ -37,31 +39,58 @@ function SortableCards({
   );
 
   const activeUnits = activeDashboardUnits.data.filter(
-    (elem) => savedQueries.findIndex((sq) => sq.id === elem.query_id) > -1
+    (elem) =>
+      savedQueries.findIndex(
+        (sq) => sq.id === elem.query_id && sq.query.cl !== QUERY_TYPE_WEB
+      ) > -1
+  );
+
+  const webAnalyticsUnits = activeDashboardUnits.data.filter(
+    (elem) =>
+      savedQueries.findIndex(
+        (sq) => sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_WEB
+      ) > -1
   );
 
   return (
-    <ReactSortable
-      className="flex flex-wrap"
-      list={activeUnits}
-      setList={onDrop}
-    >
-      {activeUnits.map((item) => {
-        const savedQuery = savedQueries.find((sq) => sq.id === item.query_id);
-        return (
-          <WidgetCard
-            durationObj={durationObj}
-            key={item.id}
-            unit={{ ...item, query: savedQuery }}
-            onDrop={onDrop}
-            setwidgetModal={setwidgetModal}
-            showDeleteWidgetModal={showDeleteWidgetModal}
-            refreshClicked={refreshClicked}
-            setRefreshClicked={setRefreshClicked}
-          />
-        );
-      })}
-    </ReactSortable>
+    <>
+      {activeUnits.length ? (
+        <ReactSortable
+          className="flex flex-wrap"
+          list={activeUnits}
+          setList={onDrop}
+        >
+          {activeUnits.map((item) => {
+            const savedQuery = savedQueries.find(
+              (sq) => sq.id === item.query_id
+            );
+            return (
+              <WidgetCard
+                durationObj={durationObj}
+                key={item.id}
+                unit={{ ...item, query: savedQuery }}
+                onDrop={onDrop}
+                setwidgetModal={setwidgetModal}
+                showDeleteWidgetModal={showDeleteWidgetModal}
+                refreshClicked={refreshClicked}
+                setRefreshClicked={setRefreshClicked}
+              />
+            );
+          })}
+        </ReactSortable>
+      ) : null}
+      {webAnalyticsUnits.length ? (
+        <WebsiteAnalytics
+          durationObj={durationObj}
+          webAnalyticsUnits={webAnalyticsUnits}
+          savedQueries={savedQueries}
+          setwidgetModal={setwidgetModal}
+          showDeleteWidgetModal={showDeleteWidgetModal}
+          refreshClicked={refreshClicked}
+          setRefreshClicked={setRefreshClicked}
+        />
+      ) : null}
+    </>
   );
 }
 
