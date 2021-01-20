@@ -220,11 +220,11 @@ const getInsights = (projectID, isJourney=false) =>{
     rule:{
        ...factorsDataFormatNew.rule,
        st_en: {
-         na: event2 ? event1 : null,
+         na: eventCount===2 ? (event2 ? event1 : null) :null, 
          pr: [] 
         },
         en_en: {
-          na: event2 ? event2 : event1,
+          na: eventCount===2 ? (event2 ? event2 : event1) : event1,
           pr: []  
         },
         gpr:gprData,
