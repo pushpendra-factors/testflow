@@ -18,26 +18,29 @@ function WebsiteAnalytics({
 }) {
   const { active_project } = useSelector((state) => state.global);
   const [resultState, setResultState] = useState(initialState);
-  const fetchData = useCallback(async (refresh = false) => {
-    try {
-      const reqBody = getWebAnalyticsRequestBody(
-        webAnalyticsUnits,
-        durationObj
-      );
-      setResultState({ ...initialState, loading: true });
-      const dashboardId = webAnalyticsUnits[0].dashboard_id;
-      const response = await getWebAnalyticsData(
-        active_project.id,
-        reqBody,
-        dashboardId,
-        refresh
-      );
-      setResultState({ ...initialState, data: response.data.result });
-    } catch (err) {
-      console.log(err);
-      setResultState({ ...initialState, error: true });
-    }
-  }, []);
+  const fetchData = useCallback(
+    async (refresh = false) => {
+      try {
+        const reqBody = getWebAnalyticsRequestBody(
+          webAnalyticsUnits,
+          durationObj
+        );
+        setResultState({ ...initialState, loading: true });
+        const dashboardId = webAnalyticsUnits[0].dashboard_id;
+        const response = await getWebAnalyticsData(
+          active_project.id,
+          reqBody,
+          dashboardId,
+          refresh
+        );
+        setResultState({ ...initialState, data: response.data.result });
+      } catch (err) {
+        console.log(err);
+        setResultState({ ...initialState, error: true });
+      }
+    },
+    [active_project.id, durationObj, webAnalyticsUnits]
+  );
 
   useEffect(() => {
     fetchData();

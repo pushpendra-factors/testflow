@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, SVG } from "../../../components/factorsComponents";
+import { Text } from "../../../components/factorsComponents";
 import WebsiteAnalyticsTable from "./WebsiteAnalyticsTable";
 
 function TableUnits({ tableUnits, data }) {
