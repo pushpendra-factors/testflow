@@ -57,6 +57,13 @@ function GroupBlock({
     newGroupByState.eventName = '$present';
     newGroupByState.property = value[1][0];
     newGroupByState.prop_type = value[1][1];
+    if(newGroupByState.prop_type === 'numerical') {
+      newGroupByState.gbty = 'raw_values';
+    }
+    if(newGroupByState.prop_type === 'datetime') {
+      newGroupByState.grn = 'day';
+    }
+    
     setGroupBy('global', newGroupByState, index);
     const ddVis = [...isDDVisible];
     ddVis[index] = false;
@@ -100,9 +107,10 @@ function GroupBlock({
           ['original values', null, 'raw_values'], 
           ['bucketed values', null, 'with_buckets']],
       'datetime': [
-        ['hourly', null, 'hour'],
-        ['daily', null, 'day'],
+        ['hour', null, 'hour'],
+        ['date', null, 'day'],
         ['week', null, 'week'],
+        ['month', null, 'month']
       ]
     }
 

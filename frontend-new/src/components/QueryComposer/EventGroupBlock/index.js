@@ -55,6 +55,13 @@ const EventGroupBlock = ({
     newGroupByState.prop_type = val[1];
     newGroupByState.eventIndex = eventIndex;
 
+    if(newGroupByState.prop_type === 'numerical') {
+      newGroupByState.gbty = 'raw_values';
+    }
+    if(newGroupByState.prop_type === 'datetime') {
+      newGroupByState.grn = 'day';
+    }
+
     setGroupState(newGroupByState);
     closeDropDown();
   };
@@ -79,9 +86,10 @@ const EventGroupBlock = ({
           ['original values', null, 'raw_values'], 
           ['bucketed values', null, 'with_buckets']],
       'datetime': [
-        ['hourly', null, 'hour'],
-        ['daily', null, 'day'],
+        ['hour', null, 'hour'],
+        ['date', null, 'day'],
         ['week', null, 'week'],
+        ['month', null, 'month'],
       ]
     }
 
