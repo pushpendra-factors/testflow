@@ -102,7 +102,7 @@ var errorEmptyFacebookDocument = errors.New("empty facebook document")
 const errorDuplicateFacebookDocument = "pq: duplicate key value violates unique constraint \"facebook_documents_pkey\""
 
 const facebookFilterQueryStr = "SELECT DISTINCT(value->>?) as filter_value FROM facebook_documents WHERE project_id = ? AND" +
-	" " + "customer_ad_account_id = ? AND type = ? LIMIT 5000"
+	" " + "customer_ad_account_id = ? AND type = ? AND value->>? IS NOT NULL LIMIT 5000"
 
 const fromFacebooksDocument = " FROM facebook_documents "
 
@@ -286,7 +286,7 @@ func GetFacebookSQLQueryAndParametersForFilterValues(projectID uint64, requestFi
 		return "", []interface{}{}, http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
-	params := []interface{}{facebookInternalFilterProperty, projectID, customerAccountID, docType}
+	params := []interface{}{facebookInternalFilterProperty, projectID, customerAccountID, docType, facebookInternalFilterProperty}
 
 	return "(" + facebookFilterQueryStr + ")", params, http.StatusFound
 }

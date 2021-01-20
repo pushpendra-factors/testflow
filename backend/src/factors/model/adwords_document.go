@@ -92,7 +92,7 @@ var adwordsMetricsToAggregatesInReportsMapping = map[string]string{
 	"clicks":      "SUM((value->>'clicks')::float)",
 	"cost":        "SUM((value->>'cost')::float)/1000000",
 	// "cost_per_click": "average_cost",
-	"conversion": "SUM((value->>'conversions')::float",
+	"conversions": "SUM((value->>'conversions')::float)",
 	// "conversion_rate": "conversion_rate"
 }
 
@@ -121,7 +121,7 @@ const filterValueAll = "all"
 
 var errorEmptyAdwordsDocument = errors.New("empty adwords document")
 
-const adwordsFilterQueryStr = "SELECT DISTINCT(value->>?) as filter_value FROM adwords_documents WHERE project_id = ? AND" + " " + "customer_account_id = ? AND type = ? LIMIT 5000"
+const adwordsFilterQueryStr = "SELECT DISTINCT(value->>?) as filter_value FROM adwords_documents WHERE project_id = ? AND" + " " + "customer_account_id = ? AND type = ? AND value->>? IS NOT NULL LIMIT 5000"
 
 const staticWhereStatementForAdwords = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 
@@ -514,7 +514,7 @@ func GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, requestFil
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 
-	params := []interface{}{adwordsInternalFilterProperty, projectID, customerAccountID, docType}
+	params := []interface{}{adwordsInternalFilterProperty, projectID, customerAccountID, docType, adwordsInternalFilterProperty}
 	return "(" + adwordsFilterQueryStr + ")", params, http.StatusFound
 }
 
@@ -628,7 +628,6 @@ func getAdwordsSpecificFilters(requestFilters []FilterV1) ([]FilterV1, error) {
 func getAdwordsSpecificGroupBy(requestGroupBys []GroupBy) ([]GroupBy, error) {
 	for index, requestGroupBy := range requestGroupBys {
 		groupByObject, isPresent := adwordsRequestPropertiesToSQLproperty[requestGroupBy.Object]
-		log.Warn("k1", requestGroupBy.Object, " ", isPresent)
 		if !isPresent {
 			return make([]GroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
 		}
@@ -754,7 +753,6 @@ func getResultFromAdwordsReports(query *ChannelQueryV1, projectID uint64, from, 
 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
-		log.Warn("k1 group", key)
 		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, objectAndPropertyToValueInAdwordsReportsMapping[key])
 	}
 

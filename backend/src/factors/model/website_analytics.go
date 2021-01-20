@@ -131,7 +131,6 @@ const QueryTypeWebAnalyticsCustomGroupQuery = "wa_custom_group_query"
 
 const DefaultDashboardWebsiteAnalytics = "Website Analytics"
 const topPageReportLimit = 50
-const defaultPrecision = 1
 const customGroupResultLimit = 200
 
 // Named queries for website analytics.
@@ -984,7 +983,7 @@ func getTopPagesReportAsWebAnalyticsResult(
 		var fmtAvgPageSpentTimeOfPage string
 		if aggr.NoOfPageViews > 0 {
 			avgPageSpentTimeOfPage, err := U.FloatRoundOffWithPrecision(
-				aggr.TotalSpentTime/float64(aggr.NoOfPageViews), defaultPrecision)
+				aggr.TotalSpentTime/float64(aggr.NoOfPageViews), U.DefaultPrecision)
 			if err != nil {
 				log.WithError(err).
 					WithFields(log.Fields{"total_page_spent_time": aggr.TotalSpentTime,
@@ -1041,7 +1040,7 @@ func getTrafficChannelReport(webAggr *WebAnalyticsAggregate) GenericQueryResult 
 
 		if aggr.NoOfSessions > 0 {
 			avgSessionDurationInSecs, err = U.FloatRoundOffWithPrecision(
-				aggr.SessionDuration/float64(aggr.NoOfSessions), defaultPrecision)
+				aggr.SessionDuration/float64(aggr.NoOfSessions), U.DefaultPrecision)
 			if err != nil {
 				log.WithError(err).
 					WithFields(log.Fields{"total_session_duration": aggr.SessionDuration,
@@ -1136,7 +1135,7 @@ func getFormattedPercentage(value float64) string {
 		return fmt.Sprintf("%0.2f%%", value)
 	}
 
-	return fmt.Sprintf("%0.*f%%", defaultPrecision, value)
+	return fmt.Sprintf("%0.*f%%", U.DefaultPrecision, value)
 }
 
 func getWebAnalyticsQueryResultByName(webAggrState *WebAnalyticsAggregate) (
@@ -1172,7 +1171,7 @@ func getWebAnalyticsQueryResultByName(webAggrState *WebAnalyticsAggregate) (
 		QueryNameAvgSessionDuration, GetFormattedTime(avgSessionDuration))
 
 	precisionedAvgPagesPerSession, _ :=
-		U.FloatRoundOffWithPrecision(avgPagesPerSession, defaultPrecision)
+		U.FloatRoundOffWithPrecision(avgPagesPerSession, U.DefaultPrecision)
 	fillValueAsWebAnalyticsResult(queryResultByName,
 		QueryNameAvgPagesPerSession, precisionedAvgPagesPerSession)
 
