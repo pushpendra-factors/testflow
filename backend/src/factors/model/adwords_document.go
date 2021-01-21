@@ -42,6 +42,7 @@ const (
 	adwordsAdGroup            = "ad_group"
 	adwordsAd                 = "ad"
 	adwordsKeyword            = "keyword"
+	adwordsStringColumn       = "adwords"
 )
 
 var selectableMetricsForAdwords = []string{"conversion"}
@@ -103,7 +104,7 @@ var adwordsMetricsToOperation = map[string]string{
 	"conversions": "sum",
 }
 
-var adwordsRequestPropertiesToSQLproperty = map[string]string{
+var adwordsExternalRepresentationToInternalRepresentation = map[string]string{
 	"name":        "name",
 	"id":          "id",
 	"impressions": "impressions",
@@ -114,6 +115,13 @@ var adwordsRequestPropertiesToSQLproperty = map[string]string{
 	"ad_group":    "ad_group",
 	"ad":          "ad",
 	"keyword":     "keyword",
+}
+
+var adwordsInternalRepresentationToExternalRepresentation = map[string]string{
+	"impressions": "impressions",
+	"clicks":      "clicks",
+	"cost":        "spend",
+	"conversions": "conversion",
 }
 
 const errorDuplicateAdwordsDocument = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
@@ -473,19 +481,10 @@ func buildObjectAndPropertiesForAdwords(objects []string) []ObjectAndProperties 
 
 // GetAdwordsFilterValues - @TODO Kark v1
 func GetAdwordsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
-	logCtx := log.WithField("req_id", reqID)
-	adwordsInternalFilterObject, isPresent := adwordsRequestPropertiesToSQLproperty[requestFilterObject]
-	if !isPresent {
-		logCtx.Error("Invalid adwords filter object.")
+	adwordsInternalFilterProperty, docType, err := getFilterRelatedInformationForAdwords(requestFilterObject, requestFilterProperty)
+	if err != http.StatusOK {
 		return make([]interface{}, 0, 0), http.StatusBadRequest
 	}
-	adwordsInternalFilterProperty, isPresent := adwordsRequestPropertiesToSQLproperty[requestFilterProperty]
-	if !isPresent {
-		logCtx.Error("Invalid adwords filter property.")
-		return make([]interface{}, 0, 0), http.StatusBadRequest
-	}
-	docType := getAdwordsDocumentTypeForFilterKeyV1(adwordsInternalFilterObject)
-
 	filterValues, errCode := getAdwordsFilterValuesByType(projectID, docType, adwordsInternalFilterProperty, reqID)
 	if errCode != http.StatusFound {
 		return []interface{}{}, http.StatusInternalServerError
@@ -497,17 +496,10 @@ func GetAdwordsFilterValues(projectID uint64, requestFilterObject string, reques
 // GetAdwordsSQLQueryAndParametersForFilterValues - @TODO Kark v1
 // Currently, properties in object dont vary with Object.
 func GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string) (string, []interface{}, int) {
-	adwordsInternalFilterObject, isPresent := adwordsRequestPropertiesToSQLproperty[requestFilterObject]
-	if !isPresent {
+	adwordsInternalFilterProperty, docType, err := getFilterRelatedInformationForAdwords(requestFilterObject, requestFilterProperty)
+	if err != http.StatusOK {
 		return "", make([]interface{}, 0, 0), http.StatusBadRequest
 	}
-	adwordsInternalFilterProperty, isPresent := adwordsRequestPropertiesToSQLproperty[requestFilterProperty]
-	if !isPresent {
-		return "", make([]interface{}, 0, 0), http.StatusBadRequest
-	}
-
-	docType := getAdwordsDocumentTypeForFilterKeyV1(adwordsInternalFilterObject)
-
 	projectSetting, errCode := GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return "", []interface{}{}, http.StatusInternalServerError
@@ -516,6 +508,22 @@ func GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, requestFil
 
 	params := []interface{}{adwordsInternalFilterProperty, projectID, customerAccountID, docType, adwordsInternalFilterProperty}
 	return "(" + adwordsFilterQueryStr + ")", params, http.StatusFound
+}
+
+func getFilterRelatedInformationForAdwords(requestFilterObject string, requestFilterProperty string) (string, int, int) {
+	adwordsInternalFilterObject, isPresent := adwordsExternalRepresentationToInternalRepresentation[requestFilterObject]
+	if !isPresent {
+		log.Error("Invalid adwords filter object.")
+		return "", 0, http.StatusBadRequest
+	}
+	adwordsInternalFilterProperty, isPresent := adwordsExternalRepresentationToInternalRepresentation[requestFilterProperty]
+	if !isPresent {
+		log.Error("Invalid adwords filter property.")
+		return "", 0, http.StatusBadRequest
+	}
+	docType := getAdwordsDocumentTypeForFilterKeyV1(adwordsInternalFilterObject)
+
+	return adwordsInternalFilterProperty, docType, http.StatusOK
 }
 
 // @TODO Kark v1
@@ -557,27 +565,56 @@ func getAdwordsDocumentTypeForFilterKeyV1(filterObject string) int {
 
 // ExecuteAdwordsChannelQueryV1 - @TODO Kark v1.
 // Job represents the meta data associated with particular object type. Reports represent data with metrics and few filters.
+// TODO - Duplicate code/flow in facebook and adwords.
 func ExecuteAdwordsChannelQueryV1(projectID uint64, query *ChannelQueryV1, reqID string) ([]string, [][]interface{}, error) {
+	fetchSource := false
+	logCtx := log.WithField("xreq_id", reqID)
+	sql, params, _, err := GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
+	if err != nil {
+		return make([]string, 0, 0), make([][]interface{}, 0, 0), err
+	}
+	_, resultMetrics, err := ExecuteSQL(sql, params, logCtx)
+	columns := buildColumns(query, fetchSource)
+	return columns, resultMetrics, err
+}
+
+// GetSQLQueryAndParametersForAdwordsQueryV1 ...
+func GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, error) {
+	var selectMetrics []string
+	var sql string
+	var params []interface{}
+	query, customerAccountID, err := transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
+	if err != nil {
+		return "", make([]interface{}, 0, 0), make([]string, 0, 0), err
+	}
+	if hasAllIDsOnlyInGroupBy(query) {
+		sql, params, selectMetrics, err = buildAdwordsSimpleQueryV1(query, projectID, *customerAccountID, reqID, fetchSource)
+		if err != nil {
+			return "", make([]interface{}, 0, 0), make([]string, 0, 0), err
+		}
+		return sql, params, selectMetrics, nil
+	}
+	sql, params, selectMetrics = buildAdwordsComplexQueryV1(query, projectID, *customerAccountID, fetchSource)
+	return sql, params, selectMetrics, nil
+}
+
+func transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID uint64, query ChannelQueryV1, reqID string) (*ChannelQueryV1, *string, error) {
 	query.From = getAdwordsDateOnlyTimestampInInt64(query.From)
 	query.To = getAdwordsDateOnlyTimestampInInt64(query.To)
 	logCtx := log.WithField("req_id", reqID)
-	logCtx.Info("query", query)
 	var err error
 	projectSetting, errCode := GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		return nil, nil, nil
+		return &ChannelQueryV1{}, nil, errors.New("Project setting not found")
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 
-	*query, err = convertFromRequestToAdwordsSpecificRepresentation(*query)
+	query, err = convertFromRequestToAdwordsSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)
-		return nil, make([][]interface{}, 0, 0), err
+		return &ChannelQueryV1{}, nil, err
 	}
-	if hasAllIDsOnlyInGroupBy(query) {
-		return buildAndExecuteAdwordsSimpleQueryV1(query, projectID, *customerAccountID, reqID)
-	}
-	return buildAndExecuteAdwordsComplexQueryV1(query, projectID, *customerAccountID, reqID)
+	return &query, customerAccountID, nil
 }
 
 // @Kark TODO v1
@@ -603,7 +640,7 @@ func convertFromRequestToAdwordsSpecificRepresentation(query ChannelQueryV1) (Ch
 func getAdwordsSpecificMetrics(requestSelectMetrics []string) ([]string, error) {
 	resultMetrics := make([]string, 0, 0)
 	for _, requestMetric := range requestSelectMetrics {
-		metric, isPresent := adwordsRequestPropertiesToSQLproperty[requestMetric]
+		metric, isPresent := adwordsExternalRepresentationToInternalRepresentation[requestMetric]
 		if !isPresent {
 			return make([]string, 0, 0), errors.New("Invalid metric key found for document type")
 		}
@@ -615,7 +652,7 @@ func getAdwordsSpecificMetrics(requestSelectMetrics []string) ([]string, error) 
 // @Kark TODO v1
 func getAdwordsSpecificFilters(requestFilters []FilterV1) ([]FilterV1, error) {
 	for index, requestFilter := range requestFilters {
-		filterObject, isPresent := adwordsRequestPropertiesToSQLproperty[requestFilter.Object]
+		filterObject, isPresent := adwordsExternalRepresentationToInternalRepresentation[requestFilter.Object]
 		if !isPresent {
 			return make([]FilterV1, 0, 0), errors.New("Invalid filter key found for document type")
 		}
@@ -627,7 +664,7 @@ func getAdwordsSpecificFilters(requestFilters []FilterV1) ([]FilterV1, error) {
 // @Kark TODO v1
 func getAdwordsSpecificGroupBy(requestGroupBys []GroupBy) ([]GroupBy, error) {
 	for index, requestGroupBy := range requestGroupBys {
-		groupByObject, isPresent := adwordsRequestPropertiesToSQLproperty[requestGroupBy.Object]
+		groupByObject, isPresent := adwordsExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
 			return make([]GroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
 		}
@@ -636,25 +673,33 @@ func getAdwordsSpecificGroupBy(requestGroupBys []GroupBy) ([]GroupBy, error) {
 	return requestGroupBys, nil
 }
 
-// @Kark TODO v1
-// TODO Error add
-func buildAndExecuteAdwordsSimpleQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, reqID string) ([]string, [][]interface{}, error) {
-	campaignIDs, adGroupIDs := getIDsFromAdwordsJob(query, projectID, customerAccountID, reqID)
-	lowestHierarchyLevel, _ := getLowestHierarchyLevelForAdwords(query)
+func buildAdwordsSimpleQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, error) {
+	campaignIDs, adGroupIDs, err := getIDsFromAdwordsJob(query, projectID, customerAccountID, reqID)
+	if err != nil {
+		return "", make([]interface{}, 0), make([]string, 0), err
+	}
+	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
-
-	return getResultFromAdwordsReports(query, projectID, query.From, query.To, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel],
-		campaignIDs, adGroupIDs, reqID)
+	sql, params, selectMetrics := getSQLAndParamsFromAdwordsReports(query, projectID, query.From, query.To, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel],
+		campaignIDs, adGroupIDs, reqID, fetchSource)
+	return sql, params, selectMetrics, nil
 }
 
 // Validation issue needed. Not both ad_id , keyword_id at same time.
 // @TODO Kark v1
-func getIDsFromAdwordsJob(query *ChannelQueryV1, projectID uint64, adwordsAccountIDs string, reqID string) ([]int, []int) {
+func getIDsFromAdwordsJob(query *ChannelQueryV1, projectID uint64, adwordsAccountIDs string, reqID string) ([]int, []int, error) {
+	var err error
 	campaignsFilters, adGroupFilters, _ := splitFiltersByObjectTypeForAdwords(query)
-	campaignIDs, _ := getIDsByPropertyOnAdwordsJob(projectID, query.From, query.To, adwordsAccountIDs, AdwordsDocumentTypeAlias["campaigns"], campaignsFilters, reqID)
-	adGroupIDs, _ := getIDsByPropertyOnAdwordsJob(projectID, query.From, query.To, adwordsAccountIDs, AdwordsDocumentTypeAlias["ad_groups"], adGroupFilters, reqID)
+	campaignIDs, err := getIDsByPropertyOnAdwordsJob(projectID, query.From, query.To, adwordsAccountIDs, AdwordsDocumentTypeAlias["campaigns"], campaignsFilters, reqID)
+	if err != nil {
+		return make([]int, 0), make([]int, 0), err
+	}
+	adGroupIDs, err := getIDsByPropertyOnAdwordsJob(projectID, query.From, query.To, adwordsAccountIDs, AdwordsDocumentTypeAlias["ad_groups"], adGroupFilters, reqID)
+	if err != nil {
+		return make([]int, 0), make([]int, 0), err
+	}
 	// adIDs := getAdIDsByPropertyOnJob(adFilters)
-	return campaignIDs, adGroupIDs
+	return campaignIDs, adGroupIDs, nil
 }
 
 // @TODO Kark v1
@@ -702,7 +747,7 @@ func getIDsByPropertyOnAdwordsJob(projectID uint64, from, to int64, adwordsAccou
 // @TODO Kark v1
 // Complexity consideration - Having at max of 20 filters and 20 group by should be fine.
 // change algo/strategy the filters and group by goes beyond 100.
-func getLowestHierarchyLevelForAdwords(query *ChannelQueryV1) (string, error) {
+func getLowestHierarchyLevelForAdwords(query *ChannelQueryV1) string {
 	// Fetch the propertyNames
 	var objectNames []string
 	for _, filter := range query.Filters {
@@ -715,41 +760,46 @@ func getLowestHierarchyLevelForAdwords(query *ChannelQueryV1) (string, error) {
 
 	// Check if present
 	for _, objectName := range objectNames {
-		if objectName == "ad" {
-			return "ad", nil
+		if objectName == adwordsAd {
+			return adwordsAd
 		}
 	}
 
 	for _, objectName := range objectNames {
 		if objectName == adwordsKeyword {
-			return "keyword", nil
+			return adwordsKeyword
 		}
 	}
 
 	for _, objectName := range objectNames {
-		if objectName == "ad_group" {
-			return "ad_group", nil
+		if objectName == adwordsAdGroup {
+			return adwordsAdGroup
 		}
 	}
 
 	for _, objectName := range objectNames {
-		if objectName == "campaign" {
-			return "campaign", nil
+		if objectName == adwordsCampaign {
+			return adwordsCampaign
 		}
 	}
-	return "campaign", nil
+	return adwordsCampaign
 }
 
-// @TODO Kark v1
-// TODO Map of request params to proper fields in documents.
-func getResultFromAdwordsReports(query *ChannelQueryV1, projectID uint64, from, to int64, adwordsAccountIDs string,
-	docType int, campaignIDs []int, adGroupIDs []int, reqID string) ([]string, [][]interface{}, error) {
-	logCtx := log.WithField("req_id", reqID)
+/*
+SELECT campaign_id, date_trunc('day', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE 'UTC') as datetime,
+SUM((value->>'impressions')::float) as impressions FROM adwords_documents WHERE project_id = '8' AND customer_account_id IN ( '3543296298' )
+AND type = '5' AND timestamp between '20200331' AND '20200401' GROUP BY campaign_id, datetime ORDER BY impressions DESC LIMIT 2500 ;
+*/
+func getSQLAndParamsFromAdwordsReports(query *ChannelQueryV1, projectID uint64, from, to int64, adwordsAccountIDs string,
+	docType int, campaignIDs []int, adGroupIDs []int, reqID string, fetchSource bool) (string, []interface{}, []string) {
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
-	selectQuery := ""
+	selectQuery := "SELECT "
+	selectMetrics := make([]string, 0, 0)
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	groupByStatement := ""
 	groupByKeysWithoutTimestamp := make([]string, 0, 0)
+	selectKeys := make([]string, 0, 0)
+	responseSelectMetrics := make([]string, 0, 0)
 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
@@ -762,12 +812,25 @@ func getResultFromAdwordsReports(query *ChannelQueryV1, projectID uint64, from, 
 		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
 	}
 
-	selectQuery += joinWithComma(groupByKeysWithoutTimestamp...)
-	selectQuery = appendSelectTimestampIfRequiredForChannels(selectQuery, query.GetGroupByTimestamp(), query.Timezone)
-	selectMetrics, selectQuery := appendSelectMetricsForAdwords(selectQuery, query.SelectMetrics)
-	selectQuery = "SELECT " + selectQuery
+	if fetchSource {
+		selectKeys = append(selectKeys, fmt.Sprintf("'%s' as %s", adwordsStringColumn, source))
+	}
+	selectKeys = append(selectKeys, groupByKeysWithoutTimestamp...)
+	if isGroupByTimestamp {
+		selectKeys = append(selectKeys, fmt.Sprintf("%s as %s",
+			getSelectTimestampByTypeForChannels(query.GetGroupByTimestamp(), query.Timezone), AliasDateTime))
+	}
 
-	orderByQuery := "ORDER BY " + getOrderByClause(selectMetrics)
+	for _, selectMetric := range query.SelectMetrics {
+		value := fmt.Sprintf("%s as %s", adwordsMetricsToAggregatesInReportsMapping[selectMetric], adwordsInternalRepresentationToExternalRepresentation[selectMetric])
+		selectMetrics = append(selectMetrics, value)
+
+		value = adwordsInternalRepresentationToExternalRepresentation[selectMetric]
+		responseSelectMetrics = append(responseSelectMetrics, value)
+	}
+
+	selectQuery += joinWithComma(append(selectKeys, selectMetrics...)...)
+	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
 
 	whereConditionForIDs := ""
 	if len(campaignIDs) != 0 {
@@ -793,7 +856,7 @@ func getResultFromAdwordsReports(query *ChannelQueryV1, projectID uint64, from, 
 	}
 	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
-	return ExecuteSQL(resultSQLStatement, staticWhereParams, logCtx)
+	return resultSQLStatement, staticWhereParams, responseSelectMetrics
 }
 
 /*
@@ -810,15 +873,16 @@ SELECT CampaignCTE.name, sum(reportsCTE.impressions) from reportsCTE
 INNER JOIN CampaignCTE ON reportsCTE.campaign_id = CampaignCTE.campaign_id  GROUP BY CampaignCTE.name;
 */
 // @Kark TODO v1
-func buildAndExecuteAdwordsComplexQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, reqID string) ([]string, [][]interface{}, error) {
-	logCtx := log.WithField("xreq_id", reqID)
+func buildAdwordsComplexQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string) {
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	groupByStatement := ""
 	groupByKeysWithoutTimestamp := make([]string, 0, 0)
-	lowestHierarchyLevel, _ := getLowestHierarchyLevelForAdwords(query)
+	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
+	selectKeys := make([]string, 0, 0)
+	responseSelectMetrics := make([]string, 0, 0)
 
 	reportCTE, reportCTEAlias, reportSelectMetrics, reportCTEJoinFields, reportParams := getCTEAndParamsForAdwordsReportComplexStrategy(query, projectID, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel])
 	jobsCTE, jobsCTEAliases, jobCTEJoinFields, jobsParams := getCTEAndParamsForAdwordsJobsComplexStrategy(query, projectID, customerAccountID)
@@ -831,7 +895,7 @@ func buildAndExecuteAdwordsComplexQueryV1(query *ChannelQueryV1, projectID uint6
 	for _, jobCTE := range jobsCTE {
 		completeWithClause += jobCTE
 	}
-	completeWithClause = completeWithClause[:len(completeWithClause)-2]
+	completeWithClause = completeWithClause[:len(completeWithClause)-2] + " "
 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
@@ -845,17 +909,23 @@ func buildAndExecuteAdwordsComplexQueryV1(query *ChannelQueryV1, projectID uint6
 		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
 	}
 
-	selectKeys := groupByKeysWithoutTimestamp
+	if fetchSource {
+		selectKeys = append(selectKeys, fmt.Sprintf("'%s' as %s", adwordsStringColumn, source))
+	}
+	selectKeys = append(selectKeys, groupByKeysWithoutTimestamp...)
 	if isGroupByTimestamp {
 		selectKeys = append(selectKeys, reportCTEAlias+"."+AliasDateTime)
 	}
 
 	for _, selectMetric := range reportSelectMetrics {
-		value := fmt.Sprintf("%s(%s.%s)", adwordsMetricsToOperation[selectMetric], reportCTEAlias, selectMetric)
+		value := fmt.Sprintf("%s(%s.%s) as %s", adwordsMetricsToOperation[selectMetric], reportCTEAlias, selectMetric, adwordsInternalRepresentationToExternalRepresentation[selectMetric])
 		selectMetrics = append(selectMetrics, value)
+
+		value = adwordsInternalRepresentationToExternalRepresentation[selectMetric]
+		responseSelectMetrics = append(responseSelectMetrics, value)
 	}
 	selectQuery += joinWithComma(append(selectKeys, selectMetrics...)...)
-	orderByQuery := "ORDER BY " + getOrderByClause(selectMetrics)
+	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
 
 	completeInnerJoin := " from " + reportCTEAlias + " "
 	for index, jobsCTEAlias := range jobsCTEAliases {
@@ -869,7 +939,7 @@ func buildAndExecuteAdwordsComplexQueryV1(query *ChannelQueryV1, projectID uint6
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
 	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
-	return ExecuteSQL(resultSQLStatement, params, logCtx)
+	return resultSQLStatement, params, responseSelectMetrics
 }
 
 // TODO handle duplicates of groupBy - edge case
@@ -948,7 +1018,8 @@ func getCTEAndParamsForAdwordsJob(query *ChannelQueryV1, projectID uint64, custo
 	groupByQuery := getSelectPropertiesExceptIDsForAdwordsJob(groupBy)
 	selectQuery := "SELECT " + table1Alias + "." + objectID + " as " + objectID + ", " + groupByQuery
 
-	resultStatement := withClause + selectQuery + " from " + table1SQL + innerJoinClause + table2SQL + " ON " + table1Alias + "." + table1ColumnName + " = " + table2Alias + "." + table2ColumnName + " ), "
+	resultStatement := fmt.Sprintf("%s %s FROM %s INNER JOIN %s ON %s.%s = %s.%s AND %s.%s = %s.%s), ", withClause, selectQuery, table1SQL, table2SQL,
+		table1Alias, table1ColumnName, table2Alias, table2ColumnName, table1Alias, "timestamp", table2Alias, "timestamp")
 	resultParams := append(make([]interface{}, 0, 0), table1Params...)
 	resultParams = append(resultParams, table2Params...)
 	return resultStatement, aliasName, cteJoinField, resultParams
@@ -981,7 +1052,7 @@ func getSelectPropertiesExceptIDsForAdwordsJob(groupBys []GroupBy) string {
 func getIDAndMaxTimeSQLAndParamsForAdwords(query *ChannelQueryV1, staticWhereParams []interface{}, objectType string, filters []FilterV1) (string, string, string, []interface{}) {
 	aliasName := "distinct_id"
 	idColumnName := objectType + "_id"
-	selectStatement := "(SELECT " + idColumnName + " , max(timestamp)" + fromAdwordsDocument
+	selectStatement := "(SELECT " + idColumnName + " , max(timestamp) as timestamp" + fromAdwordsDocument
 	groupByStatement := "GROUP BY " + idColumnName + ") "
 	sqlParams := staticWhereParams
 	filterPropertiesStatement, filterParams := getFilterPropertiesForAdwordsJobStatementAndParams(filters)

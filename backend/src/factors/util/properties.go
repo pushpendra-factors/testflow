@@ -1623,8 +1623,9 @@ func SanitizePropertiesJsonb(propertiesJsonb *postgres.Jsonb) *postgres.Jsonb {
 }
 
 type CountTimestampTuple struct {
-	LastSeenTimestamp int64 `json:"lst"`
-	Count             int64 `json:"cnt"`
+	LastSeenTimestamp int64  `json:"lst"`
+	Count             int64  `json:"cnt"`
+	Type              string `json:"type"`
 }
 
 type CachePropertyWithTimestamp struct {
@@ -1654,6 +1655,7 @@ type NameCountTimestampCategory struct {
 // No filtering is done in this method
 func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimestampCategory {
 
+	smartEventNames := make([]NameCountTimestampCategory, 0)
 	sorted := make([]NameCountTimestampCategory, 0)
 	trimmed := make([]NameCountTimestampCategory, 0)
 	currentDate := time.Now().UTC()
@@ -1666,6 +1668,10 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 		hoursBeforeLastSeen := currentDate.Sub(time.Unix(details.Timestamp, 0)).Hours()
 		if hoursBeforeLastSeen <= float64(24) {
 			details.GroupName = MostRecent
+			if details.Category == SmartEvent {
+				smartEventNames = append(smartEventNames, details)
+				continue
+			}
 			sorted = append(sorted, details)
 		} else {
 			details.GroupName = FrequentlySeen
@@ -1673,6 +1679,7 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 		}
 	}
 
+	sorted = append(smartEventNames, sorted...)
 	for _, data := range trimmed {
 		sorted = append(sorted, data)
 	}

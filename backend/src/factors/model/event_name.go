@@ -72,6 +72,7 @@ const TYPE_CRM_SALESFORCE = "CS"
 const TYPE_CRM_HUBSPOT = "CH"
 const EVENT_NAME_REQUEST_TYPE_APPROX = "approx"
 const EVENT_NAME_REQUEST_TYPE_EXACT = "exact"
+const EVENT_NAME_TYPE_SMART_EVENT = "SE"
 
 var ALLOWED_TYPES = [...]string{
 	TYPE_USER_CREATED_EVENT_NAME,
@@ -456,6 +457,11 @@ func GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId uint64, event_na
 	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s", date, event_name))
 }
 
+func GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId uint64, event_name string, date string) (*cacheRedis.Key, error) {
+	prefix := "EN:SE"
+	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s", date, event_name))
+}
+
 func GetValuesByEventPropertyCacheKey(projectId uint64, event_name string, property_name string, value string, date string) (*cacheRedis.Key, error) {
 	prefix := "EN:PV"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, event_name, property_name), fmt.Sprintf("%s:%s", date, value))
@@ -680,13 +686,18 @@ func aggregateEventsAcrossDate(events []CacheEventNamesWithTimestamp) []U.NameCo
 			if eventsAggregatedInt.LastSeenTimestamp < eventDetails.LastSeenTimestamp {
 				eventsAggregatedInt.LastSeenTimestamp = eventDetails.LastSeenTimestamp
 			}
+
+			if eventDetails.Type == EVENT_NAME_TYPE_SMART_EVENT {
+				eventsAggregatedInt.Type = U.SmartEvent
+			}
+
 			eventsAggregated[eventNameSuffixTrim] = eventsAggregatedInt
 		}
 	}
 	eventsAggregatedSlice := make([]U.NameCountTimestampCategory, 0)
 	for k, v := range eventsAggregated {
 		eventsAggregatedSlice = append(eventsAggregatedSlice, U.NameCountTimestampCategory{
-			k, v.Count, v.LastSeenTimestamp, "", ""})
+			k, v.Count, v.LastSeenTimestamp, v.Type, ""})
 	}
 	return eventsAggregatedSlice
 }
@@ -752,10 +763,22 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 	return cacheEventNames, nil
 }
 
+func isCachePrefixTypeSmartEvent(prefix string) bool {
+	prefixes := strings.SplitN(prefix, ":", 2)
+	if len(prefixes) == 2 && prefixes[1] == EVENT_NAME_TYPE_SMART_EVENT {
+		return true
+	}
+	return false
+}
+
 func GetCacheEventObject(events []*cacheRedis.Key, eventCounts []string) CacheEventNamesWithTimestamp {
 	eventNames := make(map[string]U.CountTimestampTuple)
 	for index, eventCount := range eventCounts {
 		key, value := ExtractKeyDateCountFromCacheKey(eventCount, events[index].Suffix)
+		if isCachePrefixTypeSmartEvent(events[index].Prefix) {
+			value.Type = EVENT_NAME_TYPE_SMART_EVENT
+		}
+
 		eventNames[key] = value
 	}
 	cacheEventNames := CacheEventNamesWithTimestamp{
@@ -804,11 +827,13 @@ func GetCachePropertyObject(properties []*cacheRedis.Key, propertyCounts []strin
 }
 func ExtractKeyDateCountFromCacheKey(keyCount string, cacheKey string) (string, U.CountTimestampTuple) {
 	dateKey := strings.SplitN(cacheKey, ":", 2)
+
 	keyDate, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateKey[0])
 	KeyCountNum, _ := strconv.Atoi(keyCount)
 	return dateKey[1], U.CountTimestampTuple{
 		LastSeenTimestamp: keyDate.Unix(),
-		Count:             int64(KeyCountNum)}
+		Count:             int64(KeyCountNum),
+	}
 }
 
 func GetFilterEventNames(projectId uint64) ([]EventName, int) {
@@ -953,6 +978,10 @@ const (
 	CompareStatePrev = "prev"
 	CompareStateBoth = "both"
 )
+
+func IsEventNameTypeSmartEvent(eventType string) bool {
+	return eventType == TYPE_CRM_HUBSPOT || eventType == TYPE_CRM_SALESFORCE
+}
 
 // CRMFilterEvaluator evaluates a CRM filter on the properties provided. Can work in current properties or current and previous property mode
 func CRMFilterEvaluator(projectID uint64, currProperty, prevProperty *map[string]interface{}, filter *SmartCRMEventFilter, compareState string) bool {

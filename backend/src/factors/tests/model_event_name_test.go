@@ -1593,3 +1593,78 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	assert.Equal(t, false, ok)
 
 }
+
+func TestPrioritizeSmartEventNames(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	filter := &M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeAny,
+		Filters: []M.PropertyFilter{
+			{
+				Name:  "page_spent_time",
+				Rules: []M.CRMFilterRule{},
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	//Smart event names
+	smartEventNames := make([]M.EventName, 0)
+	for i := 0; i < 5; i++ {
+		filter.Filters[0].Name = fmt.Sprintf("property %d", i)
+		eventName, status := M.CreateOrGetCRMSmartEventFilterEventName(project.ID, &M.EventName{ProjectId: project.ID, Name: fmt.Sprintf("Smart Event Name %d", i)}, filter)
+		assert.Equal(t, http.StatusCreated, status)
+		smartEventNames = append(smartEventNames, *eventName)
+	}
+
+	// Normal event names
+	eventNames := make([]M.EventName, 0)
+	for i := 0; i < 5; i++ {
+		eventName, status := M.CreateOrGetEventName(&M.EventName{ProjectId: project.ID, Name: fmt.Sprintf("Event Name %d", i), Type: M.TYPE_USER_CREATED_EVENT_NAME})
+		assert.Equal(t, http.StatusCreated, status)
+		eventNames = append(eventNames, *eventName)
+	}
+
+	user, status := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, status)
+
+	// creating multiple normal events
+	for i := 0; i < 100; i++ {
+		_, status := M.CreateEvent(&M.Event{
+			EventNameId: eventNames[i%5].ID,
+			ProjectId:   project.ID,
+			UserId:      user.ID,
+			Timestamp:   U.TimeNowUnix(),
+		})
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	// creating less smart events
+	for i := 0; i < 10; i++ {
+		_, status := M.CreateEvent(&M.Event{
+			EventNameId: smartEventNames[i%5].ID,
+			ProjectId:   project.ID,
+			UserId:      user.ID,
+			Timestamp:   U.TimeNowUnix(),
+		})
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
+	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
+
+	getEventNames, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
+	assert.Equal(t, nil, err)
+	responseSmartEventNames := getEventNames[U.MostRecent][:5]
+	//check top 5 are smart event names
+	for i := 1; i < 5; i++ {
+		assert.Contains(t, responseSmartEventNames, fmt.Sprintf("Smart Event Name %d", i))
+	}
+
+}

@@ -116,8 +116,9 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
   query.gbp = appliedGroupBy.map((opt) => {
+    let appGbp = {};
     if (opt.eventIndex) {
-      const appGbp = {
+      appGbp = {
         pr: opt.property,
         en: opt.prop_category,
         pty: opt.prop_type,
@@ -126,7 +127,7 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
       };
 
     } else {
-      const appGbp = {
+      appGbp = {
         pr: opt.property,
         en: opt.prop_category,
         pty: opt.prop_type,
