@@ -44,8 +44,8 @@ const ProgressColor = {
                                 <div className={'flex justify-between items-end flex-col h-full py-2'}>
                                     <Text type={'title'} level={5} color={'blue'} weight={'bold'} extraClass={'m-0 tracking-wider'} >{numberWithCommas(data.total_users_count)}</Text>
                                     <div className={'flex flex-col items-end justify-center '}>
-                                        <Text type={'title'} level={4} color={'grey'} weight={'bold'} extraClass={'m-0'} >{`${data.overall_multiplier}x`}</Text>
-                                        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Impact</Text>
+                                        {/* <Text type={'title'} level={4} color={'grey'} weight={'bold'} extraClass={'m-0'} >{`${data.overall_multiplier}x`}</Text> */}
+                                        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Baseline</Text>
                                     </div>
                                     <Text type={'title'} level={5} color={'yellow'} weight={'bold'} extraClass={'m-0 tracking-wider'} >{numberWithCommas(data.goal_user_count)}</Text>
                                 </div>

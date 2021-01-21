@@ -12,7 +12,7 @@ import _, { isEmpty } from 'lodash';
 import moment from 'moment';
 import FilterBlock from '../../components/QueryComposer/FilterBlock';
 import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
-
+import EventFilterBy from './DrawerUtil/EventFilterBy';
 
 const title = (props) => {
   return (
@@ -50,6 +50,11 @@ const CreateGoalDrawer = (props) => {
   const [showDateTime, setShowDateTime] = useState(false);
   const [dateTime, setDateTime] = useState(null);
   const [insightBtnLoading, setInsightBtnLoading] = useState(false);
+
+  const [filtersEvent1, setfiltersEvent1] = useState([]);
+  const [showEventFilter1DD, setEventFilter1DD] = useState(false);
+  const [filtersEvent2, setfiltersEvent2] = useState([]);
+  const [showEventFilter2DD, setEventFilter2DD] = useState(false);
 
   const [filters, setfilters] = useState([]);
   const [filterProps, setFilterProperties] = useState({
@@ -215,17 +220,19 @@ const getInsights = (projectID, isJourney=false) =>{
   });
   // console.log("calcModelId",calcModelId[0].mid);
   let gprData =  getFilters(filters);
+  let event1pr =  getFilters(filtersEvent1);
+  let event2pr =  getFilters(filtersEvent2);
   let factorsData = {
     ...factorsDataFormatNew,
     rule:{
        ...factorsDataFormatNew.rule,
        st_en: {
-         na: event2 ? event1 : null,
-         pr: [] 
+         na: eventCount===2 ? (event2 ? event1 : null) :null, 
+         pr: eventCount===2 ? (event2pr ? event1pr : null) :null,  
         },
         en_en: {
-          na: event2 ? event2 : event1,
-          pr: []  
+          na: eventCount===2 ? (event2 ? event2 : event1) : event1,
+          pr: eventCount===2 ? (event2pr ? event2pr : event1pr) : event1pr, 
         },
         gpr:gprData,
        
@@ -245,8 +252,7 @@ const getInsights = (projectID, isJourney=false) =>{
       setInsightBtnLoading(false);
   }); 
 
-} 
-
+}  
 
 
 const delFilter = (index) => {
@@ -370,34 +376,41 @@ const renderFilterBlock = () => {
               <Col span={24}>
                 <div  className={'mt-4'}> 
                       
-                      <div className={'flex items-center'}>
-                        {event1 &&  <>
-                        <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'} style={{height:'24px', width: '24px'}}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{1}</Text> </div> 
-                        <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>Users who perform</Text> 
-                        </>}
-                        <div className='relative' style={{height: '42px'}}>
-                          {!showDropDown && !event1 && <Button onClick={()=>setShowDropDown(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>{eventCount === 2 ? 'Add First event': 'Add an event'}</Button> }
-                          { showDropDown && <>
-                            <GroupSelect 
-                              groupedProperties={TrackedEventNames ? [
-                                {             
-                                label: 'MOST RECENT',
-                                icon: 'fav',
-                                values: TrackedEventNames
+                      <div className={'flex flex-col'}>
+                      
+                      <div className={'flex items-center justify-between'}>
+                        <div className={'flex items-center'}> 
+                            {event1 &&  <>
+                            <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'} style={{height:'24px', width: '24px'}}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{1}</Text> </div> 
+                            <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>Users who perform</Text> 
+                            </>}
+                            <div className='relative' style={{height: '42px'}}>
+                              {!showDropDown && !event1 && <Button onClick={()=>setShowDropDown(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>{eventCount === 2 ? 'Add First event': 'Add an event'}</Button> }
+                              { showDropDown && <>
+                                <GroupSelect 
+                                  groupedProperties={TrackedEventNames ? [
+                                    {             
+                                    label: 'MOST RECENT',
+                                    icon: 'fav',
+                                    values: TrackedEventNames
+                                    }
+                                  ]:null}
+                                  placeholder="Select Events"
+                                  optionClick={(group, val) => onChangeGroupSelect1(group, val)}
+                                  onClickOutside={() => setShowDropDown(false)}
+                                  /> 
+                                </>
                                 }
-                              ]:null}
-                              placeholder="Select Events"
-                              optionClick={(group, val) => onChangeGroupSelect1(group, val)}
-                              onClickOutside={() => setShowDropDown(false)}
-                              /> 
-                            </>
-                            }
 
-                            {event1 && !showDropDown  && <Button type={'link'} size={'large'} style={{maxWidth: '220px',textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} className={'ml-2'} ellipsis onClick={()=>{
-                              setShowDropDown(true); 
-                              }} >{event1}</Button> 
-                            } 
-                        </div> 
+                                {event1 && !showDropDown  && <Button type={'link'} size={'large'} style={{maxWidth: '220px',textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} className={'ml-2'} ellipsis onClick={()=>{
+                                  setShowDropDown(true); 
+                                  }} >{event1}</Button> 
+                                } 
+                            </div>  
+                        </div>
+                        {event1 &&  <Button size={'large'} type={'text'} onClick={() => setEventFilter1DD(true)} className={'m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button> }
+                      </div>
+                        <EventFilterBy setfiltersParent={setfiltersEvent1} showEventFilterDD={showEventFilter1DD} setEventFilterDD={setEventFilter1DD} />  
                       </div>
                 </div>
               </Col>
@@ -408,7 +421,11 @@ const renderFilterBlock = () => {
               <Col span={24}>
                 <div  className={'mt-4'}> 
                       
-                      <div className={'flex items-center'}>
+                <div className={'flex flex-col'}>
+                      
+                      <div className={'flex items-center justify-between'}>
+                        <div className={'flex items-center'}> 
+
                         {event2 &&  <>
                         <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'} style={{height:'24px', width: '24px'}}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{2}</Text> </div> 
                         <Text type={'title'} level={6} weight={'regular'} color={'grey'} extraClass={'m-0'}>And then</Text>
@@ -436,8 +453,13 @@ const renderFilterBlock = () => {
                             {event2 && !showDropDown2  && <Button type={'link'} size={'large'} style={{maxWidth: '220px',textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} className={'ml-2'} ellipsis onClick={()=>{
                               setShowDropDown2(true); 
                               }} >{event2}</Button> 
-                            } 
-                        </div> 
+                            }
+                        </div>  
+                      </div> 
+                        {event2 &&  <Button size={'large'} type={'text'} onClick={() => setEventFilter2DD(true)} className={'m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button> }
+                      </div> 
+                          <EventFilterBy setfiltersParent={setfiltersEvent2} showEventFilterDD={showEventFilter2DD} setEventFilterDD={setEventFilter2DD} />  
+                            {/* {event2 && <EventFilterBy setfiltersParent={setfiltersEvent2} /> } */}
                       </div>
                 </div>
               </Col>
