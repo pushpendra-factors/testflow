@@ -23,12 +23,12 @@ const ProgressColor = {
                             <div className={'relative flex items-end'}>
                                     <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                      <div className={'flex-grow'}> 
-                                    <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-2'} >{_.isEmpty(data.goal?.st_en) ? 'All Visitors' : data.goal?.st_en }</Text>
+                                    <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-2'} >{_.isEmpty(data.goal?.st_en) ? 'All Users' : data.goal?.st_en }</Text>
                                     <Progress strokeWidth={12} percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
                                     </div>
                                 </div>
                             
-                            <Text type={'title'} level={1} weight={'bold'} extraClass={'m-0 ml-5 my-4 progressArrow--extraline'} lineHeight={'small'}>{`${data.overall_percentage}% of all users have completed this goal`}</Text>
+                            <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0 ml-5 my-4 progressArrow--extraline'} lineHeight={'small'}>{`${data.overall_percentage}% of all users have completed this goal`}</Text>
 
                             <div className={'relative flex items-end'}>
                                     <SVG name={'ProgressArrow'} color={ProgressColor.yellow} extraClass={'mr-2 mb-1'} />
