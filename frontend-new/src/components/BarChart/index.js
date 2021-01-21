@@ -5,6 +5,7 @@ import { checkForWindowSizeChange } from "../../Views/CoreQuery/FunnelsResultPag
 import { getMaxYpoint, getBarChartLeftMargin } from "./utils";
 import ChartLegends from "./ChartLegends";
 import { numberWithCommas } from "../../utils/dataFormatter";
+import { BARCHART_TICK_LENGTH } from "../../utils/constants";
 
 function BarChart({ chartData, queries, title = "chart" }) {
   const tooltip = useRef(null);
@@ -17,7 +18,7 @@ function BarChart({ chartData, queries, title = "chart" }) {
       .filter((elem) => elem)
       .join(",");
 
-    const tickLength = 20;
+    const tickLength = BARCHART_TICK_LENGTH;
     if (label.length > tickLength && position === "tick") {
       return label.substr(0, tickLength) + "...";
     }
