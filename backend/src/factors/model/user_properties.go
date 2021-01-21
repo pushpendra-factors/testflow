@@ -172,7 +172,7 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 			categoryMap,
 			U.CountTimestampTuple{
 				int64(propertyValue.LastSeen),
-				propertyValue.Count}}
+				propertyValue.Count, ""}}
 		var PropertyValues U.CachePropertyValueWithTimestamp
 		PropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
 		if category == U.PropertyTypeCategorical {
@@ -183,8 +183,8 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 			for _, value := range values {
 				if value.Value != "" {
 					PropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
-						int64(value.LastSeen),
-						value.Count}
+						LastSeenTimestamp: int64(value.LastSeen),
+						Count:             value.Count}
 				}
 			}
 			enPropertyValuesCache, err := json.Marshal(PropertyValues)

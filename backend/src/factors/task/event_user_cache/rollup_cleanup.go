@@ -169,7 +169,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 	}
 
 	var isCurrentDay bool
-	for i := 0	; i <= *rollupLookback; i++ {
+	for i := 0; i <= *rollupLookback; i++ {
 		if i == 0 {
 			isCurrentDay = true
 		} else {
@@ -210,6 +210,18 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 				log.WithError(err).Error("Error Getting keys")
 			}
 
+			// Smart Events
+			smartEventsInCacheKey, err := M.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(eventKey.ProjectID, "*", date)
+			if err != nil {
+				log.WithError(err).Error("Error Getting cache keys")
+			}
+			smartEventKeys, smarEventCounts, err := getAllKeys(smartEventsInCacheKey)
+			if err != nil {
+				log.WithError(err).Error("Error Getting keys")
+			}
+
+			eventKeys = append(eventKeys, smartEventKeys...)
+			eventCounts = append(eventCounts, smarEventCounts...)
 			if len(eventKeys) > 0 {
 				cacheEventObject := M.GetCacheEventObject(eventKeys, eventCounts)
 				eventNamesKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(eventKey.ProjectID, date)

@@ -22,7 +22,6 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
   }, []);
 
   const data = queriesState.data
-    .filter(q => parseInt(q.type) === 2)
     .filter(q => q.title.toLowerCase().includes(searchValue.toLowerCase()));
 
   return (
