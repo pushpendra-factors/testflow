@@ -47,14 +47,15 @@ func TestMain(m *testing.M) {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
-		GeolocationFile:     *geoLocFilePath,
-		DeviceDetectorPath:  *deviceDetectorPath,
-		APIDomain:           *apiDomain,
-		APPDomain:           *appDomain,
+		RedisHost:                   *redisHost,
+		RedisPort:                   *redisPort,
+		RedisHostPersistent:         *redisHostPersistent,
+		RedisPortPersistent:         *redisPortPersistent,
+		GeolocationFile:             *geoLocFilePath,
+		DeviceDetectorPath:          *deviceDetectorPath,
+		APIDomain:                   *apiDomain,
+		APPDomain:                   *appDomain,
+		AllowSmartEventRuleCreation: true,
 	}
 
 	// Setup.

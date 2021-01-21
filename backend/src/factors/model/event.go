@@ -158,7 +158,13 @@ func addEventDetailsToCache(projectId uint64, event *Event, isUpdateEventPropert
 	currentTime := U.TimeNow()
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 
-	eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId, eventName, currentTimeDatePart)
+	var eventNamesKey *cacheRedis.Key
+	if IsEventNameTypeSmartEvent(eventNameDetails.Type) {
+		eventNamesKey, err = GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId, eventName, currentTimeDatePart)
+	} else {
+		eventNamesKey, err = GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId, eventName, currentTimeDatePart)
+	}
+
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key - events")
 		return

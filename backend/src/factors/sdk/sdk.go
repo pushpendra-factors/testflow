@@ -304,7 +304,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 		}
 
 		for item, element := range events {
-			eventNames.EventNames[element.Name] = U.CountTimestampTuple{int64(element.LastSeen), element.Count}
+			eventNames.EventNames[element.Name] = U.CountTimestampTuple{LastSeenTimestamp: int64(element.LastSeen), Count: element.Count}
 			if item == eventsLimit {
 				break
 			}
@@ -377,8 +377,8 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 						category,
 						categoryMap, // Setting precomputed ones to empty
 						U.CountTimestampTuple{
-							int64(property.LastSeen),
-							property.Count}}
+							LastSeenTimestamp: int64(property.LastSeen),
+							Count:             property.Count}}
 
 					var eventPropertyValues U.CachePropertyValueWithTimestamp
 					eventPropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
@@ -388,8 +388,8 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 						for _, value := range values {
 							if value.Value != "" {
 								eventPropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
-									int64(value.LastSeen),
-									value.Count}
+									LastSeenTimestamp: int64(value.LastSeen),
+									Count:             value.Count}
 							}
 						}
 						enEventPropertyValuesCache, err := json.Marshal(eventPropertyValues)
