@@ -87,6 +87,8 @@ const CampQueryComposer = ({activeProject, channel,
 
     const addFilter = (val) => {
         const fltrs = [...filters];
+        const value = Object.assign({}, val);
+        val.props[2] = val.props[2].replace(' ', '_');
         const filt = fltrs.filter(fil => JSON.stringify(fil) === JSON.stringify(val));
         if (filt && filt.length) return;
         fltrs.push(val);
@@ -178,7 +180,7 @@ const CampQueryComposer = ({activeProject, channel,
     const onGroupBySet = (gbp, index) => {
         const newGroupByState = [...groupBy];
         const gbpState = {};
-        gbpState.prop_category = gbp[0];
+        gbpState.prop_category = gbp[0].replace(' ', '_');
         gbpState.property = gbp[1][0];
         gbpState.prop_type = gbp[1][1];
         if(newGroupByState[index]) {

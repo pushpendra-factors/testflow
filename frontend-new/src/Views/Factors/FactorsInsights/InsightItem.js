@@ -24,12 +24,12 @@ const InsightItem = ({
 
         let insightKey = generateInsightKey(dataItem);
         
-         let factors_insights_text = `Users who visit <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion`
+         let factors_insights_text = `Users who visit <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% conversion`
          if(dataItem.factors_insights_type=='attribute'){
-           factors_insights_text = `Users with <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion` 
+           factors_insights_text = `Users with <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% conversion` 
           }
           if(dataItem.factors_insights_type=='campaign'){
-            factors_insights_text = `Users from <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% goal completion` 
+            factors_insights_text = `Users from <a>${insightKey}</a> show ${dataItem.factors_insights_percentage}% conversion` 
           }
 
         
@@ -93,25 +93,25 @@ const InsightItem = ({
                                     <SVG name={'ProgressArrow'} color={ProgressColor.yellow} extraClass={'mr-2 mb-1'} />
                                      <div className={'flex-grow'}> 
                                     <div className={'flex items-end'}>
-                                      {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 mt-2 tracking-wider'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% goal completion)`}</Text></span></div> */}
-                                      <div className={'flex items-center fa-insights-box--animate'}><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${data?.goal?.en_en} (${dataItem.factors_insights_percentage}% goal completion)`}</Text></div>
+                                      {/* <div className={'flex items-center ml-4 fa-insights-box--fixed-count'}> <Text type={'title'} weight={'regular'} level={7} extraClass={'m-0 mt-2 tracking-wider'} >{`${numberWithCommas(dataItem.factors_goal_users_count)}`}</Text><span><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 mt-2 ml-1'} >{`(${dataItem.factors_insights_percentage}% conversion)`}</Text></span></div> */}
+                                      <div className={'flex items-center fa-insights-box--animate'}><Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-1'} >{`${data?.goal?.en_en} (${dataItem.factors_insights_percentage}% conversion)`}</Text></div>
                                     </div>
                                     <Progress strokeWidth={10} percent={insightLevel1Percentage} strokeColor={ProgressColor.yellow} value={numberWithCommas(dataItem.factors_goal_users_count)} className={'fa-progress fa-custom-progress-value'} showInfo={false} />
                                     </div>
                                   </div>
 
-                                  {!_.isEmpty(dataItem?.factors_sub_insights) && <div className={'fa-insights-box--actions'}>
+                                  {/* {!_.isEmpty(dataItem?.factors_sub_insights) && <div className={'fa-insights-box--actions'}>
                                     <Button type={'link'} size={'large'}>
                                         <SVG name={'corequery'} size={24} color={'grey'} />
                                     </Button>
                                   </div>
-                                  } 
+                                  }  */}
 
                                   <div className={'fa-insights-box--spike'}>
                                       <div className={'flex justify-end items-center'}>
                                         <div className={'flex flex-col items-end mr-4'}>
                                           <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 fa-insights-box--multiplier pt-2'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
-                                          <Text type={'title'} color={'grey'} level={7} extraClass={'m-0 fa-insights-box--label'} >{`Impact`}</Text> 
+                                          <Text type={'title'} color={'grey'} level={7} extraClass={'m-0 fa-insights-box--label'} >{dataItem.factors_multiplier_increase_flag ? `Lift`: `Drop`}</Text> 
                                         </div>
                                         {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
                                       </div> 

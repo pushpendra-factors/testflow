@@ -23,12 +23,12 @@ const ProgressColor = {
                             <div className={'relative flex items-end'}>
                                     <SVG name={'ProgressArrow'} color={ProgressColor.blue} extraClass={'mr-2 mb-1'} />
                                      <div className={'flex-grow'}> 
-                                    <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-2'} >{_.isEmpty(data.goal?.st_en) ? 'All Visitors' : data.goal?.st_en }</Text>
+                                    <Text type={'title'} weight={'thin'} level={7} extraClass={'m-0 ml-2'} >{_.isEmpty(data.goal?.st_en) ? 'All Users' : data.goal?.st_en }</Text>
                                     <Progress strokeWidth={12} percent={100} strokeColor={'#5949BC'} className={'fa-custom-stroke-bg'} showInfo={false} />
                                     </div>
                                 </div>
                             
-                            <Text type={'title'} level={1} weight={'bold'} extraClass={'m-0 ml-5 my-4 progressArrow--extraline'} lineHeight={'small'}>{`${data.overall_percentage}% of all users have completed this goal`}</Text>
+                            <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0 ml-5 my-4 progressArrow--extraline'} lineHeight={'small'}>{`${data.overall_percentage}% of all users have completed this goal`}</Text>
 
                             <div className={'relative flex items-end'}>
                                     <SVG name={'ProgressArrow'} color={ProgressColor.yellow} extraClass={'mr-2 mb-1'} />
@@ -44,8 +44,8 @@ const ProgressColor = {
                                 <div className={'flex justify-between items-end flex-col h-full py-2'}>
                                     <Text type={'title'} level={5} color={'blue'} weight={'bold'} extraClass={'m-0 tracking-wider'} >{numberWithCommas(data.total_users_count)}</Text>
                                     <div className={'flex flex-col items-end justify-center '}>
-                                        <Text type={'title'} level={4} color={'grey'} weight={'bold'} extraClass={'m-0'} >{`${data.overall_multiplier}x`}</Text>
-                                        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Impact</Text>
+                                        {/* <Text type={'title'} level={4} color={'grey'} weight={'bold'} extraClass={'m-0'} >{`${data.overall_multiplier}x`}</Text> */}
+                                        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Baseline</Text>
                                     </div>
                                     <Text type={'title'} level={5} color={'yellow'} weight={'bold'} extraClass={'m-0 tracking-wider'} >{numberWithCommas(data.goal_user_count)}</Text>
                                 </div>
