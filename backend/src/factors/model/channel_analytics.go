@@ -13,9 +13,36 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const innerJoinClause = " INNER JOIN "
-
-const channeAnalyticsLimit = " LIMIT 2500 "
+const (
+	CAColumnImpressions          = "impressions"
+	CAColumnClicks               = "clicks"
+	CAColumnTotalCost            = "total_cost"
+	CAColumnConversions          = "conversions"
+	CAColumnAllConversions       = "all_conversions"
+	CAColumnCostPerClick         = "cost_per_click"
+	CAColumnConversionRate       = "conversion_rate"
+	CAColumnCostPerConversion    = "cost_per_conversion"
+	CAColumnFrequency            = "frequency"
+	CAColumnReach                = "reach"
+	CAColumnInlinePostEngagement = "inline_post_engagement"
+	CAColumnUniqueClicks         = "unique_clicks"
+	CAColumnName                 = "name"
+	CAColumnPlatform             = "platform"
+	CAFilterCampaign             = "campaign"
+	CAFilterAdGroup              = "ad_group"
+	CAFilterAd                   = "ad"
+	CAFilterKeyword              = "keyword"
+	CAFilterQuery                = "query"
+	CAFilterAdset                = "adset"
+	CAChannelGoogleAds           = "google_ads"
+	CAChannelFacebookAds         = "facebook_ads"
+	CAAllChannelAds              = "all_ads"
+	CAColumnValueAll             = "all"
+	CAChannelGroupKey            = "group_key"
+	innerJoinClause              = " INNER JOIN "
+	channeAnalyticsLimit         = " LIMIT 2500 "
+	source                       = "source"
+)
 
 // ChannelFilterValues - @TODO Kark v1
 type ChannelFilterValues struct {
@@ -206,44 +233,18 @@ func (query *ChannelQueryV1) GetGroupByTimestamp() string {
 	return query.GroupByTimestamp.(string)
 }
 
-const CAChannelGoogleAds = "google_ads"
-const CAChannelFacebookAds = "facebook_ads"
-const CAAllChannelAds = "all_ads"
-const CAChannelGroupKey = "group_key"
-
 var CAChannels = []string{
 	CAChannelGoogleAds,
 	CAChannelFacebookAds,
 	CAAllChannelAds,
 }
 
-const CAColumnValueAll = "all"
-
-const (
-	CAColumnImpressions          = "impressions"
-	CAColumnClicks               = "clicks"
-	CAColumnTotalCost            = "total_cost"
-	CAColumnConversions          = "conversions"
-	CAColumnAllConversions       = "all_conversions"
-	CAColumnCostPerClick         = "cost_per_click"
-	CAColumnConversionRate       = "conversion_rate"
-	CAColumnCostPerConversion    = "cost_per_conversion"
-	CAColumnFrequency            = "frequency"
-	CAColumnReach                = "reach"
-	CAColumnInlinePostEngagement = "inline_post_engagement"
-	CAColumnUniqueClicks         = "unique_clicks"
-	CAColumnName                 = "name"
-	CAColumnPlatform             = "platform"
-)
-
-const (
-	CAFilterCampaign = "campaign"
-	CAFilterAdGroup  = "ad_group"
-	CAFilterAd       = "ad"
-	CAFilterKeyword  = "keyword"
-	CAFilterQuery    = "query"
-	CAFilterAdset    = "adset"
-)
+var channelMetricsToOperation = map[string]string{
+	"impressions": "sum",
+	"clicks":      "sum",
+	"spend":       "sum",
+	"conversion":  "sum",
+}
 
 // CAFilters ...
 var CAFilters = []string{
@@ -438,8 +439,6 @@ func RunChannelGroupQuery(projectID uint64, queries []ChannelQueryV1, reqID stri
 // @Kark TODO v1
 // TODO Handling errorcase.
 func runSingleChannelQuery(projectID uint64, query ChannelQueryV1, resultHolder *ChannelResultGroupV1, index int, waitGroup *sync.WaitGroup, reqID string) {
-	logCtx := log.WithField("xreq_id", reqID)
-	logCtx.Info(query)
 	defer waitGroup.Done()
 	result, _ := ExecuteChannelQueryV1(projectID, &query, reqID)
 	(*resultHolder).Results[index] = *result
@@ -450,34 +449,79 @@ func runSingleChannelQuery(projectID uint64, query ChannelQueryV1, resultHolder 
 func ExecuteChannelQueryV1(projectID uint64, query *ChannelQueryV1, reqID string) (*ChannelQueryResultV1, int) {
 	logCtx := log.WithField("req_id", reqID)
 	queryResult := &ChannelQueryResultV1{}
+	var columns []string
 	var resultMetrics [][]interface{}
 	status := http.StatusOK
 	var err error
 	if !(isValidChannel(query.Channel)) {
 		return queryResult, http.StatusBadRequest
 	}
-	columns := buildColumns(query)
 	switch query.Channel {
-	// case CAAllChannelAds:
-	// 	result = ExecuteAllChannelsQueryV1()
+	case CAAllChannelAds:
+		columns, resultMetrics, err = executeAllChannelsQueryV1(projectID, query, reqID)
 	case CAChannelFacebookAds:
-		_, resultMetrics, err = ExecuteFacebookChannelQueryV1(projectID, query, reqID)
-		if err != nil {
-			logCtx.Error("Failed in channel analytics with following error: ", err)
-			status = http.StatusBadRequest
-		}
+		columns, resultMetrics, err = ExecuteFacebookChannelQueryV1(projectID, query, reqID)
 	case CAChannelGoogleAds:
-		_, resultMetrics, err = ExecuteAdwordsChannelQueryV1(projectID, query, reqID)
-		if err != nil {
-			logCtx.Error("Failed in channel analytics with following error: ", err)
-			status = http.StatusBadRequest
-		}
+		columns, resultMetrics, err = ExecuteAdwordsChannelQueryV1(projectID, query, reqID)
+	}
+	if err != nil {
+		logCtx.Warn(query)
+		logCtx.WithError(err).Error("Failed in channel analytics with following error: ")
+		status = http.StatusBadRequest
 	}
 	resultMetrics = U.ConvertInternalToExternal(resultMetrics)
 	queryResult.Headers = columns
 	queryResult.Rows = resultMetrics
 
 	return queryResult, status
+}
+
+// This function relies on all the columns in all tables to be in same order.
+// Case 1: When there is no breakdown, there is just metrics being recalculated.
+// Case 2: When there is breakdown by date, there is regrouping by date.
+// Case 3: When there is breakdown by source and group.property, there is no requirement of regrouping in all channel.
+func executeAllChannelsQueryV1(projectID uint64, query *ChannelQueryV1, reqID string) ([]string, [][]interface{}, error) {
+	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	fetchSource := true
+	var unionQuery string
+	var unionParams []interface{}
+	var selectMetrics, columns []string
+	adwordsSQL, adwordsParams, adwordsMetrics, adwordsErr := GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
+	facebookSQL, facebookParams, _, facebookErr := GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
+
+	if adwordsErr != nil {
+		return make([]string, 0, 0), [][]interface{}{}, adwordsErr
+	}
+	if facebookErr != nil {
+		return make([]string, 0, 0), [][]interface{}{}, facebookErr
+	}
+
+	adwordsSQL = fmt.Sprintf("( %s )", adwordsSQL[:len(adwordsSQL)-2])
+	facebookSQL = fmt.Sprintf("( %s )", facebookSQL[:len(facebookSQL)-2])
+	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
+		for _, metric := range adwordsMetrics {
+			value := fmt.Sprintf("%s(%s) as %s", adwordsMetricsToOperation[metric], metric, metric)
+			selectMetrics = append(selectMetrics, value)
+		}
+		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, channeAnalyticsLimit)
+		unionParams = append(adwordsParams, facebookParams...)
+		columns = buildColumns(query, false)
+	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
+		selectMetrics = append(selectMetrics, AliasDateTime)
+		for _, metric := range adwordsMetrics {
+			value := fmt.Sprintf("%s(%s) as %s", adwordsMetricsToOperation[metric], metric, metric)
+			selectMetrics = append(selectMetrics, value)
+		}
+		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads GROUP BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, AliasDateTime, channeAnalyticsLimit)
+		unionParams = append(adwordsParams, facebookParams...)
+		columns = buildColumns(query, false)
+	} else {
+		unionQuery = fmt.Sprintf("SELECT * FROM ( %s UNION %s ) all_ads LIMIT 5000;", adwordsSQL, facebookSQL)
+		unionParams = append(adwordsParams, facebookParams...)
+		columns = buildColumns(query, true)
+	}
+	_, resultMetrics, err := ExecuteSQL(unionQuery, unionParams, logCtx)
+	return columns, resultMetrics, err
 }
 
 // GetChannelFilterValues - @Kark TODO v0
@@ -526,8 +570,11 @@ func ExecuteChannelQuery(projectID uint64, query *ChannelQuery) (*ChannelQueryRe
 	return nil, http.StatusBadRequest
 }
 
-func buildColumns(query *ChannelQueryV1) []string {
+func buildColumns(query *ChannelQueryV1, fetchSource bool) []string {
 	result := make([]string, 0, 0)
+	if fetchSource {
+		result = append(result, source)
+	}
 	for _, groupBy := range query.GroupBy {
 		result = append(result, groupBy.Object+"_"+groupBy.Property)
 	}
