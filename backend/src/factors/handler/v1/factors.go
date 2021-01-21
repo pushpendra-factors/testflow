@@ -6,6 +6,7 @@ import (
 	P "factors/pattern"
 	PW "factors/pattern_service_wrapper"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -58,7 +59,7 @@ func PostFactorsHandler(c *gin.Context) {
 		allEventPatterns := make([]string, 0)
 		allPatterns, _ := ps.GetAllPatterns("", params.StartEvent, params.EndEvent)
 		for _, eventPattern := range allPatterns {
-			pattern := ""
+			pattern := fmt.Sprintf("%v", eventPattern.PerUserCount)
 			for _, eventName := range eventPattern.EventNames {
 				pattern = pattern + "," + eventName
 			}
