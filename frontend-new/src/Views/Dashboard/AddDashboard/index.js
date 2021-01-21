@@ -154,8 +154,32 @@ function AddDashboard({
           -1
       );
       if (newAddedUnits.length) {
-        //delete all units and add them back along with the newly added widgets
-        const deletedUnits = [...activeDashboardUnits.data];
+        const reqBody = newAddedUnits.map((unit) => {
+          const settings = {};
+          if (unit.query.query_group) {
+            settings.chart = "pl";
+          } else {
+            settings.chart = "pb";
+          }
+          return {
+            settings,
+            title: unit.title,
+            description: unit.description,
+            query_id: unit.query_id,
+          };
+        });
+        await assignUnitsToDashboard(
+          active_project.id,
+          editDashboard.id,
+          reqBody
+        );
+      }
+      const deletedUnits = activeDashboardUnits.data.filter(
+        (elem) =>
+          selectedQueries.findIndex((query) => query.id === elem.id) === -1
+      );
+      if (deletedUnits.length) {
+        //just delete the deleted widgets
         const deletePromises = deletedUnits.map((q) => {
           return DeleteUnitFromDashboard(
             active_project.id,
@@ -164,31 +188,9 @@ function AddDashboard({
           );
         });
         await Promise.all(deletePromises);
-        const reqBody = getUnitsAssignRequestBody();
-        await assignUnitsToDashboard(
-          active_project.id,
-          editDashboard.id,
-          reqBody
-        );
-      } else {
-        const deletedUnits = activeDashboardUnits.data.filter(
-          (elem) =>
-            selectedQueries.findIndex((query) => query.id === elem.id) === -1
-        );
-        if (deletedUnits.length) {
-          //just delete the deleted widgets
-          const deletePromises = deletedUnits.map((q) => {
-            return DeleteUnitFromDashboard(
-              active_project.id,
-              editDashboard.id,
-              q.id
-            );
-          });
-          await Promise.all(deletePromises);
-          deletedUnits.forEach((unit) => {
-            dispatch({ type: WIDGET_DELETED, payload: unit.id });
-          });
-        }
+        deletedUnits.forEach((unit) => {
+          dispatch({ type: WIDGET_DELETED, payload: unit.id });
+        });
       }
       await updateDashboard(active_project.id, editDashboard.id, {
         name: title,
