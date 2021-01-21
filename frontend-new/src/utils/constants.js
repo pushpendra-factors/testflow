@@ -33,3 +33,4 @@ export const CHART_TYPE_SPARKLINES = "sparklines";
 export const CHART_TYPE_BARCHART = "barchart";
 export const CHART_TYPE_LINECHART = "linechart";
 export const CHART_TYPE_TABLE = "table";
+export const BARCHART_TICK_LENGTH = 20;
