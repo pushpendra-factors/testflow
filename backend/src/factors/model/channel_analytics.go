@@ -473,6 +473,7 @@ func ExecuteChannelQueryV1(projectID uint64, query *ChannelQueryV1, reqID string
 			status = http.StatusBadRequest
 		}
 	}
+	resultMetrics = U.ConvertInternalToExternal(resultMetrics)
 	queryResult.Headers = columns
 	queryResult.Rows = resultMetrics
 

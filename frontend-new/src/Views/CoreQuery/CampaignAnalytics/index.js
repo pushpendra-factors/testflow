@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {useDispatch} from 'react-redux';
+import { useDispatch } from "react-redux";
 import moment from "moment";
 import {
   QUERY_TYPE_CAMPAIGN,
@@ -12,8 +12,7 @@ import Header from "../../AppLayout/Header";
 import { Spin } from "antd";
 import NoBreakdownCharts from "./NoBreakdownCharts";
 import BreakdownCharts from "./BreakdownCharts";
-import { setCampMeasures } from "../../../reducers/coreQuery/middleware";
-import {SET_CAMP_MEASURES} from '../../../reducers/coreQuery/actions';
+import { SET_CAMP_MEASURES } from "../../../reducers/coreQuery/actions";
 
 function CampaignAnalytics({
   setShowResult,
@@ -33,8 +32,8 @@ function CampaignAnalytics({
 
   useEffect(() => {
     return () => {
-      dispatch({type: SET_CAMP_MEASURES, payload: []})
-    }
+      dispatch({ type: SET_CAMP_MEASURES, payload: [] });
+    };
   }, [dispatch]);
 
   useEffect(() => {
@@ -49,7 +48,11 @@ function CampaignAnalytics({
 
   if (resultState.loading) {
     content = (
-      <div className={`${isWidgetModal ? 'mt-8' : 'mt-48'} flex justify-center items-center w-full h-64`}>
+      <div
+        className={`${
+          isWidgetModal ? "mt-8" : "mt-48"
+        } flex justify-center items-center w-full h-64`}
+      >
         <Spin size="large" />
       </div>
     );
@@ -57,7 +60,11 @@ function CampaignAnalytics({
 
   if (resultState.error) {
     content = (
-      <div className={`${isWidgetModal ? 'mt-8' : 'mt-48'} flex justify-center items-center w-full h-64`}>
+      <div
+        className={`${
+          isWidgetModal ? "mt-8" : "mt-48"
+        } flex justify-center items-center w-full h-64`}
+      >
         Something went wrong!
       </div>
     );

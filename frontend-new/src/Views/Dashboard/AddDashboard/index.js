@@ -1,30 +1,43 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from "react";
+import { Row, Col, Tabs, Modal, notification } from "antd";
+import { useSelector, useDispatch } from "react-redux";
+import AddDashboardTab from "./AddDashboardTab";
+import AddWidgetsTab from "./AddWidgetsTab";
+import { Text } from "../../../components/factorsComponents";
 import {
-  Row, Col, Tabs, Modal, notification
-} from 'antd';
-import { useSelector, useDispatch } from 'react-redux';
-import AddDashboardTab from './AddDashboardTab';
-import AddWidgetsTab from './AddWidgetsTab';
-import { Text } from '../../../components/factorsComponents';
-import { createDashboard, assignUnitsToDashboard, deleteDashboard, DeleteUnitFromDashboard, updateDashboard, fetchActiveDashboardUnits } from '../../../reducers/dashboard/services';
-import { DASHBOARD_CREATED, DASHBOARD_DELETED, WIDGET_DELETED, DASHBOARD_UPDATED } from '../../../reducers/types';
-import styles from './index.module.scss';
-import ConfirmationModal from '../../../components/ConfirmationModal';
+  createDashboard,
+  assignUnitsToDashboard,
+  deleteDashboard,
+  DeleteUnitFromDashboard,
+  updateDashboard,
+  fetchActiveDashboardUnits,
+} from "../../../reducers/dashboard/services";
+import {
+  DASHBOARD_CREATED,
+  DASHBOARD_DELETED,
+  WIDGET_DELETED,
+  DASHBOARD_UPDATED,
+} from "../../../reducers/types";
+import styles from "./index.module.scss";
+import ConfirmationModal from "../../../components/ConfirmationModal";
 
 function AddDashboard({
-  addDashboardModal, setaddDashboardModal, editDashboard, setEditDashboard
+  addDashboardModal,
+  setaddDashboardModal,
+  editDashboard,
+  setEditDashboard,
 }) {
-  const [activeKey, setActiveKey] = useState('1');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [dashboardType, setDashboardType] = useState('pr');
+  const [activeKey, setActiveKey] = useState("1");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [dashboardType, setDashboardType] = useState("pr");
   const [apisCalled, setApisCalled] = useState(false);
   const [selectedQueries, setSelectedQueries] = useState([]);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const [deleteModal, showDeleteModal] = useState(false);
-  const { data: queries } = useSelector(state => state.queries);
-  const { active_project } = useSelector(state => state.global);
-  const { activeDashboardUnits } = useSelector(state => state.dashboard);
+  const { data: queries } = useSelector((state) => state.queries);
+  const { active_project } = useSelector((state) => state.global);
+  const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
 
   const { TabPane } = Tabs;
@@ -39,10 +52,10 @@ function AddDashboard({
   }, [editDashboard, activeDashboardUnits.data]);
 
   const resetState = useCallback(() => {
-    setActiveKey('1');
-    setTitle('');
-    setDescription('');
-    setDashboardType('pr');
+    setActiveKey("1");
+    setTitle("");
+    setDescription("");
+    setDashboardType("pr");
     setApisCalled(false);
     setSelectedQueries([]);
     setEditDashboard(null);
@@ -70,34 +83,34 @@ function AddDashboard({
   }, [resetState, apisCalled]);
 
   const handleTabChange = useCallback(() => {
-    if (activeKey === '2') {
-      setActiveKey('1');
+    if (activeKey === "2") {
+      setActiveKey("1");
     } else {
       if (!title.trim().length) {
         notification.error({
-          message: 'Incorrect Input!',
-          description: 'Please Enter dashboard title',
-          duration: 5
+          message: "Incorrect Input!",
+          description: "Please Enter dashboard title",
+          duration: 5,
         });
         return false;
       }
-      setActiveKey('2');
+      setActiveKey("2");
     }
   }, [activeKey, title]);
 
   const getUnitsAssignRequestBody = useCallback(() => {
-    const reqBody = selectedQueries.map(sq => {
+    const reqBody = selectedQueries.map((sq) => {
       const settings = {};
       if (sq.query.query_group) {
-        settings.chart = 'pl';
+        settings.chart = "pl";
       } else {
-        settings.chart = 'pb';
+        settings.chart = "pb";
       }
       return {
         settings,
         title: sq.title,
         description: sq.description,
-        query_id: sq.query_id
+        query_id: sq.query_id,
       };
     });
     return reqBody;
@@ -106,7 +119,11 @@ function AddDashboard({
   const createNewDashboard = useCallback(async () => {
     try {
       setApisCalled(true);
-      const res = await createDashboard(active_project.id, { name: title, description, type: dashboardType });
+      const res = await createDashboard(active_project.id, {
+        name: title,
+        description,
+        type: dashboardType,
+      });
       if (selectedQueries.length) {
         const reqBody = getUnitsAssignRequestBody();
         await assignUnitsToDashboard(active_project.id, res.data.id, reqBody);
@@ -117,39 +134,83 @@ function AddDashboard({
       console.log(err.response);
       setApisCalled(false);
     }
-  }, [active_project.id, dashboardType, description, dispatch, resetState, selectedQueries, title, getUnitsAssignRequestBody]);
+  }, [
+    active_project.id,
+    dashboardType,
+    description,
+    dispatch,
+    resetState,
+    selectedQueries,
+    title,
+    getUnitsAssignRequestBody,
+  ]);
 
   const editExistingDashboard = useCallback(async () => {
     try {
       setApisCalled(true);
-      const newAddedUnits = selectedQueries.filter(elem => activeDashboardUnits.data.findIndex(unit => unit.id === elem.id) === -1);
+      const newAddedUnits = selectedQueries.filter(
+        (elem) =>
+          activeDashboardUnits.data.findIndex((unit) => unit.id === elem.id) ===
+          -1
+      );
       if (newAddedUnits.length) {
         //delete all units and add them back along with the newly added widgets
         const deletedUnits = [...activeDashboardUnits.data];
-        const deletePromises = deletedUnits.map(q => {
-          return DeleteUnitFromDashboard(active_project.id, editDashboard.id, q.id)
+        const deletePromises = deletedUnits.map((q) => {
+          return DeleteUnitFromDashboard(
+            active_project.id,
+            editDashboard.id,
+            q.id
+          );
         });
         await Promise.all(deletePromises);
         const reqBody = getUnitsAssignRequestBody();
-        await assignUnitsToDashboard(active_project.id, editDashboard.id, reqBody);
+        await assignUnitsToDashboard(
+          active_project.id,
+          editDashboard.id,
+          reqBody
+        );
       } else {
-        const deletedUnits = activeDashboardUnits.data.filter(elem => selectedQueries.findIndex(query => query.id === elem.id) === -1);
+        const deletedUnits = activeDashboardUnits.data.filter(
+          (elem) =>
+            selectedQueries.findIndex((query) => query.id === elem.id) === -1
+        );
         if (deletedUnits.length) {
           //just delete the deleted widgets
-          const deletePromises = deletedUnits.map(q => {
-            return DeleteUnitFromDashboard(active_project.id, editDashboard.id, q.id)
+          const deletePromises = deletedUnits.map((q) => {
+            return DeleteUnitFromDashboard(
+              active_project.id,
+              editDashboard.id,
+              q.id
+            );
           });
           await Promise.all(deletePromises);
-          deletedUnits.forEach(unit => {
+          deletedUnits.forEach((unit) => {
             dispatch({ type: WIDGET_DELETED, payload: unit.id });
-          })
+          });
         }
       }
-      await updateDashboard(active_project.id, editDashboard.id, { name: title, description, type: dashboardType });
-      dispatch({ type: DASHBOARD_UPDATED, payload: { name: title, description, id: editDashboard.id, type: dashboardType } })
+      await updateDashboard(active_project.id, editDashboard.id, {
+        name: title,
+        description,
+        type: dashboardType,
+      });
+      dispatch({
+        type: DASHBOARD_UPDATED,
+        payload: {
+          name: title,
+          description,
+          id: editDashboard.id,
+          type: dashboardType,
+        },
+      });
 
       if (newAddedUnits.length) {
-        fetchActiveDashboardUnits(dispatch, active_project.id, editDashboard.id);
+        fetchActiveDashboardUnits(
+          dispatch,
+          active_project.id,
+          editDashboard.id
+        );
       }
 
       setApisCalled(false);
@@ -158,10 +219,21 @@ function AddDashboard({
       console.log(err);
       setApisCalled(false);
     }
-  }, [activeDashboardUnits, dashboardType, selectedQueries, active_project.id, description, dispatch, editDashboard, getUnitsAssignRequestBody, resetState, title]);
+  }, [
+    activeDashboardUnits,
+    dashboardType,
+    selectedQueries,
+    active_project.id,
+    description,
+    dispatch,
+    editDashboard,
+    getUnitsAssignRequestBody,
+    resetState,
+    title,
+  ]);
 
   const handleOk = useCallback(async () => {
-    if (activeKey === '2') {
+    if (activeKey === "2") {
       if (!editDashboard) {
         createNewDashboard();
       } else {
@@ -170,27 +242,33 @@ function AddDashboard({
     } else {
       if (!title.trim().length) {
         notification.error({
-          message: 'Incorrect Input!',
-          description: 'Please Enter dashboard title',
-          duration: 5
+          message: "Incorrect Input!",
+          description: "Please Enter dashboard title",
+          duration: 5,
         });
         return false;
       }
-      setActiveKey('2');
+      setActiveKey("2");
     }
-  }, [activeKey, title, createNewDashboard, editDashboard, editExistingDashboard]);
+  }, [
+    activeKey,
+    title,
+    createNewDashboard,
+    editDashboard,
+    editExistingDashboard,
+  ]);
 
   const getOkText = useCallback(() => {
-    if (activeKey === '1') {
-      return 'Next';
+    if (activeKey === "1") {
+      return "Next";
     } else {
       if (editDashboard) {
-        return 'Update Dashboard';
+        return "Update Dashboard";
       } else {
         if (selectedQueries.length) {
-          return 'Create Dashboard';
+          return "Create Dashboard";
         } else {
-          return 'I\'ll add them later';
+          return "I'll add them later";
         }
       }
     }
@@ -206,22 +284,34 @@ function AddDashboard({
         width={700}
         onCancel={handleCancel}
         onOk={handleOk}
-        className={'fa-modal--regular p-4 fa-modal--slideInDown'}
+        className={"fa-modal--regular p-4 fa-modal--slideInDown"}
         confirmLoading={apisCalled}
         closable={false}
         okText={getOkText()}
         transitionName=""
         maskTransitionName=""
       >
-        <div className={'px-4'}>
+        <div className={"px-4"}>
           <Row>
             <Col span={24}>
-              <Text type={'title'} level={4} weight={'bold'} size={'grey'} extraClass={'m-0'}>New Dashboard</Text>
+              <Text
+                type={"title"}
+                level={4}
+                weight={"bold"}
+                size={"grey"}
+                extraClass={"m-0"}
+              >
+                New Dashboard
+              </Text>
             </Col>
           </Row>
           <Row>
             <Col span={24}>
-              <Tabs onChange={handleTabChange} activeKey={activeKey} className={'fa-tabs'}>
+              <Tabs
+                onChange={handleTabChange}
+                activeKey={activeKey}
+                className={"fa-tabs"}
+              >
                 <TabPane className={styles.tabContent} tab="Setup" key="1">
                   <AddDashboardTab
                     title={title}
@@ -251,7 +341,7 @@ function AddDashboard({
         confirmationText="Are you sure you want to delete this Dashboard?"
         onOk={confirmDelete}
         onCancel={showDeleteModal.bind(this, false)}
-        title="Delete Dashboard"
+        title={`Delete Dashboard - ${editDashboard ? editDashboard.name : ""}`}
         okText="Confirm"
         cancelText="Cancel"
         confirmLoading={deleteApiCalled}

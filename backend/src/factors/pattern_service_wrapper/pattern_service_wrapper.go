@@ -1042,78 +1042,71 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 			continue
 		}
 		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY || node.NodeType == NODE_TYPE_CAMPAIGN {
-			funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints := buildFunnelFormats(node, countType)
-			if c, err := buildFunnelGraphResult(reqId, node, funnelEvents, funnelConstraints,
-				baseFunnelEvents, baseFunnelConstraints, countType, pw); err != nil {
-				log.Error(err)
-				continue
-			} else {
-				var funnelResults funnelNodeResults
-				funnelResults = c.Datasets[0]["funnel_data"].(funnelNodeResults)
-				var baseFunnelResults funnelNodeResults
-				baseFunnelResults = c.Datasets[0]["base_funnel_data"].(funnelNodeResults)
-				var insights FactorsInsights
-				if node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY {
-					attributes := make([]FactorsAttributeTuple, 0)
-					for _, attribute := range funnelResults[len(funnelResults)-2].Constraints.EPNumericConstraints {
-						attributes = append(attributes, FactorsAttributeTuple{
-							FactorsAttributeKey:        attribute.PropertyName,
-							FactorsAttributeLowerBound: attribute.LowerBound,
-							FactorsAttributeUpperBound: attribute.UpperBound,
-							FactorsAttributeEquality:   attribute.IsEquality,
-							FactorsAttributeUseBound:   attribute.UseBound,
-						})
-					}
-					for _, attribute := range funnelResults[len(funnelResults)-2].Constraints.EPCategoricalConstraints {
-						attributes = append(attributes, FactorsAttributeTuple{
-							FactorsAttributeKey:   attribute.PropertyName,
-							FactorsAttributeValue: attribute.PropertyValue,
-						})
-					}
-					for _, attribute := range funnelResults[len(funnelResults)-2].Constraints.UPNumericConstraints {
-						attributes = append(attributes, FactorsAttributeTuple{
-							FactorsAttributeKey:        attribute.PropertyName,
-							FactorsAttributeLowerBound: attribute.LowerBound,
-							FactorsAttributeUpperBound: attribute.UpperBound,
-							FactorsAttributeEquality:   attribute.IsEquality,
-							FactorsAttributeUseBound:   attribute.UseBound,
-						})
-					}
-					for _, attribute := range funnelResults[len(funnelResults)-2].Constraints.UPCategoricalConstraints {
-						attributes = append(attributes, FactorsAttributeTuple{
-							FactorsAttributeKey:   attribute.PropertyName,
-							FactorsAttributeValue: attribute.PropertyValue,
-						})
-					}
-					insights.FactorsInsightsAttribute = attributes
-					insights.FactorsInsightsType = ATTRIBUTETYPE
+			PLen := len(node.Pattern.EventNames)
+			var insights FactorsInsights
+			if node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY {
+				attributes := make([]FactorsAttributeTuple, 0)
+				for _, attribute := range node.AddedConstraint.EPNumericConstraints {
+					attributes = append(attributes, FactorsAttributeTuple{
+						FactorsAttributeKey:        attribute.PropertyName,
+						FactorsAttributeLowerBound: attribute.LowerBound,
+						FactorsAttributeUpperBound: attribute.UpperBound,
+						FactorsAttributeEquality:   attribute.IsEquality,
+						FactorsAttributeUseBound:   attribute.UseBound,
+					})
 				}
-				if node.NodeType == NODE_TYPE_SEQUENCE {
-					insights.FactorsInsightsKey = funnelResults[len(funnelResults)-2].EventName
-					insights.FactorsInsightsType = JOURNEYTYPE
+				for _, attribute := range node.AddedConstraint.EPCategoricalConstraints {
+					attributes = append(attributes, FactorsAttributeTuple{
+						FactorsAttributeKey:   attribute.PropertyName,
+						FactorsAttributeValue: attribute.PropertyValue,
+					})
 				}
-				if node.NodeType == NODE_TYPE_CAMPAIGN {
-					insights.FactorsInsightsKey = P.ExtractCampaignName(funnelResults[len(funnelResults)-2].EventName)
-					insights.FactorsInsightsType = CAMPAIGNTYPE
+				for _, attribute := range node.AddedConstraint.UPNumericConstraints {
+					attributes = append(attributes, FactorsAttributeTuple{
+						FactorsAttributeKey:        attribute.PropertyName,
+						FactorsAttributeLowerBound: attribute.LowerBound,
+						FactorsAttributeUpperBound: attribute.UpperBound,
+						FactorsAttributeEquality:   attribute.IsEquality,
+						FactorsAttributeUseBound:   attribute.UseBound,
+					})
 				}
-				insights.FactorsGoalUsersCount = funnelResults[len(funnelResults)-1].Data[0]
-				insights.FactorsInsightsUsersCount = funnelResults[len(funnelResults)-2].Data[0]
-				insights.FactorsInsightsPercentage = roundTo1Decimal(funnelResults[len(funnelResults)-2].ConversionPercent)
-				insights.FactorsSubInsights = make([]*FactorsInsights, 0)
-				indexLevelInsightsMap[node.Index] = insights
-				levelInsightsMap[indexLevelMap[node.Index]] = append(levelInsightsMap[indexLevelMap[node.Index]], parentInsightsTuple{
-					parentIndex: node.ParentIndex,
-					index:       node.Index,
-					insights:    insights,
-				})
-				if indexLevelMap[node.Index] == 1 {
-					Level0GoalUsersCount = baseFunnelResults[len(baseFunnelResults)-1].Data[0]
-					Level0GoalPercentage = baseFunnelResults[len(baseFunnelResults)-2].ConversionPercent
-					Level0TotalUsers = baseFunnelResults[len(baseFunnelResults)-2].Data[0]
+				for _, attribute := range node.AddedConstraint.UPCategoricalConstraints {
+					attributes = append(attributes, FactorsAttributeTuple{
+						FactorsAttributeKey:   attribute.PropertyName,
+						FactorsAttributeValue: attribute.PropertyValue,
+					})
 				}
+				insights.FactorsInsightsAttribute = attributes
+				insights.FactorsInsightsType = ATTRIBUTETYPE
+			}
+			if node.NodeType == NODE_TYPE_SEQUENCE {
+				insights.FactorsInsightsKey = node.Pattern.EventNames[PLen-2]
+				insights.FactorsInsightsType = JOURNEYTYPE
+			}
+			if node.NodeType == NODE_TYPE_CAMPAIGN {
+				insights.FactorsInsightsKey = P.ExtractCampaignName(node.Pattern.EventNames[PLen-2])
+				insights.FactorsInsightsType = CAMPAIGNTYPE
+			}
+			insights.FactorsGoalUsersCount = node.Fcr
+			insights.FactorsInsightsUsersCount = node.Fcp
+			if node.Fcp > 0 {
+				insights.FactorsInsightsPercentage = roundTo1Decimal(node.Fcr * 100 / node.Fcp)
+			}
+			insights.FactorsSubInsights = make([]*FactorsInsights, 0)
+			indexLevelInsightsMap[node.Index] = insights
+			levelInsightsMap[indexLevelMap[node.Index]] = append(levelInsightsMap[indexLevelMap[node.Index]], parentInsightsTuple{
+				parentIndex: node.ParentIndex,
+				index:       node.Index,
+				insights:    insights,
+			})
+			if indexLevelMap[node.Index] == 1 {
+				Level0GoalUsersCount = node.Fpr
+				if node.Fpp > 0 {
+					Level0GoalPercentage = roundTo1Decimal(node.Fpr * 100 / node.Fpp)
+				}
+				Level0TotalUsers = node.Fpp
 			}
 		}
-
 	}
 	indexLevelInsightsMap[0] = FactorsInsights{
 		FactorsSubInsights:        make([]*FactorsInsights, 0),

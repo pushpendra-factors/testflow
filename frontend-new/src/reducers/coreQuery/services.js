@@ -56,16 +56,24 @@ export function fetchEventPropertyValues(projectId, eventName, propertyName) {
   return get(null, url);
 }
 
-export const fetchChannelObjPropertyValues = (projectId, channel="all_channels", filterObj, property) => {
+export const fetchChannelObjPropertyValues = (
+  projectId,
+  channel = "all_channels",
+  filterObj,
+  property
+) => {
   const url =
     host +
-    "projects/" + projectId + 
-    "/v1/channels/filter_values?channel=" + channel + 
-    "&filter_object=" + filterObj + 
+    "projects/" + projectId +
+    "/v1/channels/filter_values?channel=" + channel +
+    "&filter_object=" + filterObj +
     "&filter_property=" + property;
-
+  // const url =
+  //   filterObj === "campaign"
+  //     ? `http://localhost:8000/getChannelFilters`
+  //     : `http://localhost:8000/adGroupFilters`;
   return get(null, url);
-}
+};
 
 export function fetchUserPropertyValues(projectId, propertyName) {
   const url =
@@ -155,7 +163,8 @@ export const getAttributionsData = (
 };
 
 export const fetchCampaignConfig = (projectId, channel) => {
-  const url = host + "projects/" + projectId + "/v1/channels/config?channel="+channel;
+  const url =
+    host + "projects/" + projectId + "/v1/channels/config?channel=" + channel;
   return get(null, url);
 };
 
@@ -177,5 +186,15 @@ export const getCampaignsData = (
       "&dashboard_unit_id=" +
       dashboard.unit_id;
   }
+  return post(null, url, reqBody);
+};
+
+export const getWebAnalyticsData = (
+  projectId,
+  reqBody,
+  dashboardId,
+  refresh
+) => {
+  const url = `${host}projects/${projectId}/dashboard/${dashboardId}/units/query/web_analytics?refresh=${refresh}`;
   return post(null, url, reqBody);
 };

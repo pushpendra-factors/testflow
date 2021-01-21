@@ -8,6 +8,7 @@ import {
 import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
+  NAMED_QUERY,
 } from "../../utils/constants";
 
 export const getDataFromServer = (
@@ -133,4 +134,43 @@ export const getDataFromServer = (
       id: dashboardId,
     });
   }
+};
+
+export const getWebAnalyticsRequestBody = (units, durationObj) => {
+  const query = {};
+  const namedUnits = units.filter((unit) => unit.query.type === NAMED_QUERY);
+  const customGroupUnits = units.filter(
+    (unit) => unit.query.type !== NAMED_QUERY
+  );
+
+  query.units = namedUnits.map((unit) => {
+    return {
+      query_name: unit.query.qname,
+      unit_id: unit.id,
+    };
+  });
+
+  query.custom_group_units = customGroupUnits.map((unit) => {
+    const usefulQuery = { ...unit.query };
+    delete usefulQuery.type;
+    delete usefulQuery.cl;
+    return {
+      unit_id: unit.id,
+      ...usefulQuery,
+    };
+  });
+
+  if (durationObj.from && durationObj.to) {
+    query.from = moment(durationObj.from).startOf("day").utc().unix();
+    query.to = moment(durationObj.to).endOf("day").utc().unix();
+  } else {
+    query.from = moment().startOf("week").utc().unix();
+    query.to =
+      moment().format("dddd") !== "Sunday"
+        ? moment().subtract(1, "day").endOf("day").utc().unix()
+        : moment().utc().unix();
+  }
+  // query.from = 1601490600;
+  // query.to = 1604168999;
+  return query;
 };
