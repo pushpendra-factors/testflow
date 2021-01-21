@@ -43,7 +43,7 @@ export const getRearrangedData = (units, dashboard) => {
       };
     });
     result2 = SortData(result2, 'position', 'ascend');
-    result = [...result1, ...result2];
+    result = [...result2, ...result1];
   }
   return result;
 };
