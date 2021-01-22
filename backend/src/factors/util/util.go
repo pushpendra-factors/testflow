@@ -43,7 +43,7 @@ var QueryDateRangePresets = map[string]func() (int64, int64){
 // Group Names
 var MostRecent string = "MOST RECENT"
 var FrequentlySeen string = "FREQUENTLY SEEN"
-var SmartEvent string = "SMART EVENT"
+var SmartEvent string = "SMART EVENTS"
 
 func RandomString(n int) string {
 	rand.Seed(time.Now().UnixNano())
