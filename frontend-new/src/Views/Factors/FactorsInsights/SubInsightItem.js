@@ -16,7 +16,7 @@ const ProgressColor = {
 
 
 
-const ModalHeader = (SubInsightsData,handleClose) => { 
+const ModalHeader = (SubInsightsData,handleClose) => {  
     let insightKey = generateInsightKey(SubInsightsData);
     return (
       <div className={'flex justify-between items-center px-4 py-3'}>
@@ -25,7 +25,7 @@ const ModalHeader = (SubInsightsData,handleClose) => {
          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{insightKey}</Text>
         </div>
         <div className={'flex justify-end items-center'}>
-          <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${SubInsightsData.factors_insights_multiplier}x`}</Text>
+          <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${SubInsightsData.factors_insights_percentage}%`}</Text>
           {SubInsightsData.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={24} /> : <SVG name={'spikedown'} size={24} />}
           <Button size={'large'} type="text" className={'ml-2'} onClick={handleClose}><SVG name="times"></SVG></Button>
         </div>
@@ -268,7 +268,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                   </div>
                               </Col>
                           </Row>
-                          {dataItem?.factors_sub_insights && <MoreInsightsLines insightCount={dataItem?.factors_sub_insights.length} /> }
+                          {!_.isEmpty(dataItem?.factors_sub_insights) && <MoreInsightsLines insightCount={dataItem?.factors_sub_insights.length} /> }
                         </div>
                       </Col>
                   </Row>
