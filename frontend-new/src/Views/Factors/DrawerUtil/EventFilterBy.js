@@ -2,16 +2,14 @@ import React, { useEffect, useState } from 'react';
 import {
   Drawer, Button, Row, Col, Select, message
 } from 'antd';
-import { SVG, Text } from 'factorsComponents'; 
-// import GroupSelect from '../../../components/QueryComposer/GroupSelect';
-import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
+import { SVG, Text } from 'factorsComponents';  
+import { fetchEventNames, getUserProperties, getEventProperties } from 'Reducers/coreQuery/middleware';
 import { fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel } from 'Reducers/factors';
 import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom'; 
 import moment from 'moment'; 
 import FilterBlock from '../../../components/QueryComposer/FilterBlock';
-import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
-
+import { fetchUserPropertyValues } from 'Reducers/coreQuery/services'; 
 
 const EventFilterBy = (props) => { 
   const [TrackedEventNames, SetTrackedEventNames] = useState([]); 
@@ -49,6 +47,12 @@ const EventFilterBy = (props) => {
     assignFilterProps.user = props.userProperties;
     let  catAndNumericalProps = [];
 
+    // console.log('eventProperties-->>',props.eventProperties);
+    // console.log('event-->>',props.eventProperties, props.event);
+    // if (props.event && props.eventProperties[props.event]) {
+    //   assignFilterProps.event = props.eventProperties[props.event];
+    // }
+
     props.userProperties.map((item)=>{ 
       if(item[1]=='categorical' || item[1]=='numerical'){ 
         catAndNumericalProps.push(item); 
@@ -57,7 +61,7 @@ const EventFilterBy = (props) => {
     assignFilterProps.user = catAndNumericalProps;
     setFilterProperties(assignFilterProps);
 
-  }, [props.userProperties]);
+  }, [props.userProperties, props.eventProperties]);
 
  
 
@@ -81,8 +85,8 @@ const closeFilter = () => {
 }
  
 
-
 const renderFilterBlock = () => {
+  // console.log("filterProps final--->", filterProps);
   if(filterProps) {
       const filtrs = [];
 
@@ -164,8 +168,9 @@ const mapStateToProps = (state) => {
     userProperties: state.coreQuery.userProperties,
     factors_models: state.factors.factors_models,
     goal_insights: state.factors.goal_insights,
-    tracked_events: state.factors.tracked_events
+    tracked_events: state.factors.tracked_events,
+    eventProperties: state.coreQuery.eventProperties,
   };
 };
 export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights, 
-  fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel, getUserProperties, fetchUserPropertyValues})(EventFilterBy);
+  fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel, getUserProperties, fetchUserPropertyValues, getEventProperties})(EventFilterBy);
