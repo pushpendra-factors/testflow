@@ -5,6 +5,7 @@ import {
   SortData,
   getTitleWithSorter,
 } from "../../../utils/dataFormatter";
+import { valueMapper } from "../../../utils/constants";
 
 const windowSize = {
   w: window.outerWidth,
@@ -27,12 +28,15 @@ export const generateGroupedChartsData = (
   });
   const firstEventIdx = response.headers.findIndex((elem) => elem === "step_0");
   response.rows.forEach((elem) => {
-    const breakdownName = elem.slice(0, firstEventIdx).join(",");
+    const row = elem.map(item=>{
+      return valueMapper[item] || item;
+    });
+    const breakdownName = row.slice(0, firstEventIdx).join(",");
     const isVisible = groups.filter(
-      (g) => g.name === breakdownName && g.is_visible
+      (g) => g.is_visible && g.name === breakdownName
     ).length;
     if (isVisible) {
-      const netCounts = elem.filter((elem) => typeof elem === "number");
+      const netCounts = row.filter((row) => typeof row === "number");
       netCounts.forEach((n, idx) => {
         result[idx].push(calculatePercentage(n, netCounts[0]));
       });
@@ -48,9 +52,10 @@ export const generateGroups = (response, maxAllowedVisibleProperties) => {
   const firstEventIdx = response.headers.findIndex((elem) => elem === "step_0");
   const result = response.rows.map((elem, index) => {
     const netCounts = elem.filter((elem) => typeof elem === "number");
+    const name = elem.slice(0, firstEventIdx).join(",");
     return {
       index,
-      name: elem.slice(0, firstEventIdx).join(","),
+      name: valueMapper[name] || name,
       conversion_rate:
         calculatePercentage(netCounts[netCounts.length - 1], netCounts[0]) +
         "%",
@@ -142,7 +147,7 @@ export const generateTableData = (
       });
       return {
         index,
-        name: group,
+        name: valueMapper[group] || group,
         conversion:
           calculatePercentage(
             data[data.length - 1].data[group],
