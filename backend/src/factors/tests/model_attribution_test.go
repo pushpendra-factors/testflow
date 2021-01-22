@@ -101,7 +101,7 @@ func TestAttributionModel(t *testing.T) {
 		CustomerAccountID: customerAccountId,
 		TypeAlias:         "campaign_performance_report",
 		Timestamp:         20200510,
-		Value:             &postgres.Jsonb{value},
+		Value:             &postgres.Jsonb{RawMessage: value},
 	}
 
 	status := M.CreateAdwordsDocument(document)
@@ -160,7 +160,7 @@ func TestAttributionModel(t *testing.T) {
 			To:                     timestamp + 3*day,
 			AttributionKey:         M.AttributionKeyCampaign,
 			AttributionMethodology: M.AttributionMethodFirstTouch,
-			ConversionEvent:        M.QueryEventWithProperties{"event1", nil},
+			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           10,
 		}
 
@@ -223,6 +223,157 @@ func TestAttributionModel(t *testing.T) {
 	})
 }
 
+func TestAttributionEngagementModel(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	customerAccountId := U.RandomLowerAphaNumString(5)
+
+	// Should return error for non adwords customer account id
+	result, err := M.ExecuteAttributionQuery(project.ID, &M.AttributionQuery{})
+	assert.Nil(t, result)
+	assert.NotNil(t, err)
+
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountId,
+	})
+
+	assert.Equal(t, http.StatusAccepted, errCode)
+	value := []byte(`{"cost": "0","clicks": "0","campaign_id":"123456","impressions": "0", "campaign_name": "test"}`)
+	document := &M.AdwordsDocument{
+		ProjectID:         project.ID,
+		CustomerAccountID: customerAccountId,
+		TypeAlias:         "campaign_performance_report",
+		Timestamp:         20200510,
+		Value:             &postgres.Jsonb{RawMessage: value},
+	}
+
+	status := M.CreateAdwordsDocument(document)
+	assert.Equal(t, http.StatusCreated, status)
+
+	/*
+		timestamp(t)
+		t				user1 ->first session + event initial_campaign -> 123456
+		t+3day			user2 ->first session + event initial_campaign -> 54321
+		t+3day			user3 ->first session initial_campaign -> 54321
+		t+5day			user1 ->session + event latest_campaign -> 1234567
+		t+5day			user2 ->session + event latest_campaign -> 123456
+	*/
+	timestamp := int64(1589068800)
+	day := int64(86400)
+
+	// Creating 3 users
+	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp})
+	assert.NotNil(t, user1)
+	assert.Equal(t, http.StatusCreated, errCode)
+	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp})
+	assert.NotNil(t, user2)
+	assert.Equal(t, http.StatusCreated, errCode)
+	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+		JoinTimestamp: timestamp})
+	assert.NotNil(t, user3)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Events with +1 Days
+	errCode = createEventWithSession(project.ID, "event1", user1.ID,
+		timestamp+1*day, user1.PropertiesId, "111111")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	//Update user1 and user2 properties with latest campaign
+	t.Run("TestAttributionEngagementQueryFirstTouchWithinTimestampRangeNoLookBack", func(t *testing.T) {
+		query := &M.AttributionQuery{
+			From:                   timestamp,
+			To:                     timestamp + 3*day,
+			AttributionKey:         M.AttributionKeyCampaign,
+			AttributionMethodology: M.AttributionMethodFirstTouch,
+			ConversionEvent:        M.QueryEventWithProperties{"event1", nil},
+			LookbackDays:           10,
+			QueryType:              M.AttributionQueryTypeEngagementBased,
+		}
+
+		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+	})
+
+	t.Run("TestAttributionEngagementQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
+		query := &M.AttributionQuery{
+			From:                   timestamp + 3*day,
+			To:                     timestamp + 3*day,
+			AttributionKey:         M.AttributionKeyCampaign,
+			AttributionMethodology: M.AttributionMethodFirstTouch,
+			ConversionEvent:        M.QueryEventWithProperties{"event1", nil},
+			LookbackDays:           10,
+			QueryType:              M.AttributionQueryTypeEngagementBased,
+		}
+
+		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+	})
+
+	// Events with +5 Days
+	errCode = createEventWithSession(project.ID, "event1",
+		user2.ID, timestamp+5*day, user2.PropertiesId, "222222")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = createEventWithSession(project.ID, "event1",
+		user3.ID, timestamp+5*day, user3.PropertiesId, "333333")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("TestAttributionEngagementQueryLastTouchCampaignNoLookbackDays", func(t *testing.T) {
+		query := &M.AttributionQuery{
+			From:                   timestamp,
+			To:                     timestamp + 4*day,
+			AttributionKey:         M.AttributionKeyCampaign,
+			AttributionMethodology: M.AttributionMethodLastTouch,
+			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           10,
+			QueryType:              M.AttributionQueryTypeEngagementBased,
+		}
+
+		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
+		assert.Equal(t, float64(1), getConversionUserCount(result, "222222"))
+		assert.Equal(t, float64(1), getConversionUserCount(result, "333333"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+	})
+
+	// linked event for user1
+	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*day, user1.PropertiesId, "1234567")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("TestEngagementFirstTouchCampaignWithLookbackDays", func(t *testing.T) {
+		query := &M.AttributionQuery{
+			From:                   timestamp + 4*day,
+			To:                     timestamp + 10*day,
+			AttributionKey:         M.AttributionKeyCampaign,
+			AttributionMethodology: M.AttributionMethodFirstTouch,
+			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           20,
+			QueryType:              M.AttributionQueryTypeEngagementBased,
+		}
+
+		//Should only have user2 with no 0 linked event count
+		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
+		assert.Equal(t, float64(1), getConversionUserCount(result, "222222"))
+		assert.Equal(t, float64(1), getConversionUserCount(result, "333333"))
+		// no hit for campaigns 1234567 or none
+		assert.Equal(t, float64(0), getConversionUserCount(result, "1234567"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+	})
+}
+
 func getConversionUserCount(result *M.QueryResult, key interface{}) interface{} {
 	for _, row := range result.Rows {
 		if row[0] == key {
@@ -262,7 +413,7 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	user1Properties := make(map[string]interface{})
 	user1Properties[U.UP_LATEST_CAMPAIGN] = 123456
 	user1PropertiesBytes, _ := json.Marshal(user1Properties)
-	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{user1PropertiesBytes},
+	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{RawMessage: user1PropertiesBytes},
 		JoinTimestamp: timestamp})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user1)
@@ -374,7 +525,6 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		status = createEventWithSession(project.ID, "event1", user2.ID, timestamp+6*86400, user2NewPropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
 
-		// should return 0 attribution data in 1 lookbackdays
 		query := &M.AttributionQuery{
 			From:                   timestamp + 4*86400,
 			To:                     timestamp + 7*86400,
@@ -386,6 +536,85 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(result, "12345"))
+	})
+}
+
+func TestAttributionEngagementWithUserIdentification(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	customerAccountId := U.RandomLowerAphaNumString(5)
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountId,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user1.ID)
+
+	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user2.ID)
+
+	timestamp := int64(1589068800)
+	errCode = createEventWithSession(project.ID, "event1", user1.ID, timestamp, user1.PropertiesId, "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = createEventWithSession(project.ID, "event1", user2.ID, timestamp, user2.PropertiesId, "")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	query := &M.AttributionQuery{
+		From:                   timestamp - 86400,
+		To:                     timestamp + 2*86400,
+		AttributionKey:         M.AttributionKeyCampaign,
+		AttributionMethodology: M.AttributionMethodLastTouch,
+		ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
+		LookbackDays:           0,
+		QueryType:              M.AttributionQueryTypeEngagementBased,
+	}
+
+	//both user should be treated different
+	result, err := M.ExecuteAttributionQuery(project.ID, query)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), getConversionUserCount(result, "$none"))
+
+	customerUserId1 := U.RandomLowerAphaNumString(15)
+	customerUserId2 := U.RandomLowerAphaNumString(15)
+	_, errCode = M.UpdateUser(project.ID, user1.ID, &M.User{CustomerUserId: customerUserId1}, timestamp+86400)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	_, errCode = M.UpdateUser(project.ID, user2.ID, &M.User{CustomerUserId: customerUserId2}, timestamp+86400)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// both user should be treated same
+	result, err = M.ExecuteAttributionQuery(project.ID, query)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), getConversionUserCount(result, "$none"))
+
+	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
+		// continuation to previous users
+		user1NewPropertiesId, status := M.UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		assert.Equal(t, http.StatusAccepted, status)
+		user2NewPropertiesId, status := M.UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		assert.Equal(t, http.StatusAccepted, status)
+
+		// 3 days is out of query window, but should be considered as it falls under Engagement window
+		status = createEventWithSession(project.ID, "eventNewX", user1.ID, timestamp+9*86400, user1NewPropertiesId, "12345")
+		assert.Equal(t, http.StatusCreated, status)
+		status = createEventWithSession(project.ID, "eventNewX", user2.ID, timestamp+9*86400, user2NewPropertiesId, "12345")
+		assert.Equal(t, http.StatusCreated, status)
+
+		query := &M.AttributionQuery{
+			From:                   timestamp + 4*86400,
+			To:                     timestamp + 7*86400,
+			AttributionKey:         M.AttributionKeyCampaign,
+			AttributionMethodology: M.AttributionMethodLastTouch,
+			ConversionEvent:        M.QueryEventWithProperties{Name: "eventNewX"},
+			LookbackDays:           4,
+			QueryType:              M.AttributionQueryTypeEngagementBased,
+		}
+		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(2), getConversionUserCount(result, "12345"))
 	})
 }
 
