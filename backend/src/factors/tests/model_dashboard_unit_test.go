@@ -509,6 +509,13 @@ func TestDeleteDashboardUnit(t *testing.T) {
 		// delete should not affect postions other unit type.
 		assert.Contains(t, currentPosition, M.GetUnitType(M.PresentationCard))
 		assert.Equal(t, currentPosition[M.GetUnitType(M.PresentationCard)][unit2.ID], 0)
+
+		// Unit must have got soft deleted.
+		var deletedUnit M.DashboardUnit
+		db := C.GetServices().Db
+		err = db.Model(M.DashboardUnit{}).Where("project_id = ? AND id = ?", unit.ProjectID, unit.ID).Find(&deletedUnit).Error
+		assert.Nil(t, err)
+		assert.Equal(t, true, deletedUnit.IsDeleted)
 	})
 
 	t.Run("DeleteDashboardUnit:Invalid", func(t *testing.T) {

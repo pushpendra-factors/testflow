@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
 	M "factors/model"
 	U "factors/util"
@@ -351,4 +352,54 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &decResult)
 	assert.Nil(t, err)
 	assert.Equal(t, true, decResult.Cache)
+}
+
+func TestDeleteDashboard(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	dashboardQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
+		ProjectID: project.ID,
+		Type:      M.QueryTypeDashboardQuery,
+		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, dashboardQuery)
+
+	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID,
+		&M.Dashboard{Name: U.RandomString(5), Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID,
+		&M.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: M.PresentationLine,
+			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{json.RawMessage(`{}`)}},
+		M.DashboardUnitWithQueryID)
+	assert.NotEmpty(t, dashboardUnit)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+
+	report, errCode := M.CreateReport(&M.Report{DashboardID: dashboard.ID, ProjectID: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, report)
+
+	// Delete a dashboard having units with queries and reports. All should get marked deleted.
+	errCode = M.DeleteDashboard(project.ID, agent.UUID, dashboard.ID)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	var deletedQuery M.Queries
+	var deletedUnit M.DashboardUnit
+	var deletedReport M.DBReport
+
+	db := C.GetServices().Db
+	err = db.Model(M.Queries{}).Where("project_id = ? AND id = ?", dashboardQuery.ProjectID, dashboardQuery.ID).Find(&deletedQuery).Error
+	assert.Nil(t, err)
+	assert.True(t, deletedQuery.IsDeleted)
+	err = db.Model(M.DashboardUnit{}).Where("project_id = ? AND id = ?", dashboardUnit.ProjectID, dashboardUnit.ID).Find(&deletedUnit).Error
+	assert.Nil(t, err)
+	assert.True(t, deletedUnit.IsDeleted)
+	err = db.Model(M.Report{}).Where("project_id = ? AND id = ?", report.ProjectID, report.ID).Find(&deletedReport).Error
+	assert.Nil(t, err)
+	assert.True(t, deletedReport.IsDeleted)
 }

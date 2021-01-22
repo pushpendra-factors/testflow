@@ -24,6 +24,7 @@ type DashboardUnit struct {
 	Title        string    `gorm:"not null" json:"title"`
 	Description  string    `json:"description"`
 	Presentation string    `gorm:"type:varchar(5);not null" json:"presentation"`
+	IsDeleted    bool      `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 	// TODO (Anil) remove this field once we move to saved queries
@@ -264,7 +265,8 @@ func GetDashboardUnitsForProjectID(projectID uint64) ([]DashboardUnit, int) {
 	if projectID == 0 {
 		log.Errorf("Invalid project id %d", projectID)
 		return dashboardUnits, http.StatusBadRequest
-	} else if err := db.Where("project_id = ?", projectID).Find(&dashboardUnits).Error; err != nil {
+	} else if err := db.Where("project_id = ? AND is_deleted = ?", projectID, false).
+		Find(&dashboardUnits).Error; err != nil {
 		log.WithError(err).Errorf("Failed to get dashboard units for projectID %d", projectID)
 		return dashboardUnits, http.StatusInternalServerError
 	}
@@ -303,8 +305,8 @@ func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) (
 		return nil, http.StatusForbidden
 	}
 
-	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ?",
-		projectId, dashboardId).Find(&dashboardUnits).Error
+	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ? AND is_deleted = ?",
+		projectId, dashboardId, false).Find(&dashboardUnits).Error
 	if err != nil {
 		log.WithField("project_id", projectId).WithError(err).Error("Failed to get dashboard units.")
 		return dashboardUnits, http.StatusInternalServerError
@@ -331,8 +333,8 @@ func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, 
 func GetDashboardUnitByUnitID(projectID, unitID uint64) (*DashboardUnit, int) {
 	db := C.GetServices().Db
 	var dashboardUnit DashboardUnit
-	if err := db.Model(&DashboardUnit{}).Where("project_id = ? AND id=?",
-		projectID, unitID).Find(&dashboardUnit).Error; err != nil {
+	if err := db.Model(&DashboardUnit{}).Where("project_id = ? AND id=? AND is_deleted = ?",
+		projectID, unitID, false).Find(&dashboardUnit).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -350,8 +352,8 @@ func GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID u
 		return dashboardUnits, http.StatusBadRequest
 	}
 
-	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ? ",
-		projectID, dashboardID).Where("presentation IN (?)", types).Find(&dashboardUnits).Error
+	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ? AND is_deleted = ? ",
+		projectID, dashboardID, false).Where("presentation IN (?)", types).Find(&dashboardUnits).Error
 	if err != nil {
 		log.WithField("project_id", projectID).WithError(err).Error("Failed to get dashboard units.")
 		return dashboardUnits, http.StatusInternalServerError
@@ -414,15 +416,15 @@ func deleteDashboardUnit(projectID uint64, dashboardID uint64, ID uint64) int {
 		return http.StatusInternalServerError
 	}
 
-	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?",
-		ID, projectID, dashboardID).Delete(&dashboardUnit).Error
+	err := db.Model(&DashboardUnit{}).Where("id = ? AND project_id = ? AND dashboard_id = ?",
+		ID, projectID, dashboardID).Update(map[string]interface{}{"is_deleted": true}).Error
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectID, "dashboard_id": dashboardID,
 			"unit_id": ID}).WithError(err).Error("Failed to delete dashboard unit.")
 		return http.StatusInternalServerError
 	}
 
-	// removing dashboard saved query
+	// Removing dashboard saved query.
 	errCode, errMsg := DeleteDashboardQuery(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusAccepted {
 		log.WithFields(log.Fields{"project_id": projectID, "unitId": ID}).Error(errMsg)
@@ -461,16 +463,16 @@ func UpdateDashboardUnit(projectId uint64, agentUUID string,
 		return nil, http.StatusBadRequest
 	}
 	var updatedDashboardUnitFields DashboardUnit
-	err := db.Model(&updatedDashboardUnitFields).Where("id = ? AND project_id = ? AND dashboard_id = ?",
-		id, projectId, dashboardId).Update(updateFields).Error
+	err := db.Model(&updatedDashboardUnitFields).Where("id = ? AND project_id = ? AND dashboard_id = ? AND is_deleted = ?",
+		id, projectId, dashboardId, false).Update(updateFields).Error
 	if err != nil {
 		logCtx.WithError(err).Error("updatedDashboardUnitFields failed at UpdateDashboardUnit in dashboard_unit.go")
 		return nil, http.StatusInternalServerError
 	}
 	// update query table
 	var dashboardUnit DashboardUnit
-	err = db.Model(&DashboardUnit{}).Where("id = ? AND project_id = ? AND dashboard_id = ?",
-		id, projectId, dashboardId).Find(&dashboardUnit).Error
+	err = db.Model(&DashboardUnit{}).Where("id = ? AND project_id = ? AND dashboard_id = ? AND is_deleted = ?",
+		id, projectId, dashboardId, false).Find(&dashboardUnit).Error
 	_, errCode := UpdateSavedQuery(projectId, dashboardUnit.QueryId, &Queries{Title: unit.Title, Type: QueryTypeDashboardQuery})
 	if errCode != http.StatusAccepted {
 		logCtx.WithError(err).Error("updatedDashboardUnitFields failed at UpdateSavedQuery in queries.go")
