@@ -28,6 +28,7 @@ type Dashboard struct {
 	Description   string          `json:"description"`
 	Type          string          `gorm:"type:varchar(5);not null" json:"type"`
 	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
+	IsDeleted     bool            `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt     time.Time       `json:"created_at"`
 	UpdatedAt     time.Time       `json:"updated_at"`
 }
@@ -103,8 +104,8 @@ func GetDashboards(projectId uint64, agentUUID string) ([]Dashboard, int) {
 		return dashboards, http.StatusBadRequest
 	}
 
-	err := db.Order("created_at ASC").Where("project_id = ? AND (type = ? OR agent_uuid = ?)",
-		projectId, DashboardTypeProjectVisible, agentUUID).Find(&dashboards).Error
+	err := db.Order("created_at ASC").Where("project_id = ? AND (type = ? OR agent_uuid = ?) AND is_deleted = ?",
+		projectId, DashboardTypeProjectVisible, agentUUID, false).Find(&dashboards).Error
 	if err != nil {
 		log.WithField("project_id", projectId).WithError(err).Error("Failed to get dashboards.")
 		return dashboards, http.StatusInternalServerError
@@ -124,8 +125,8 @@ func GetDashboard(projectId uint64, agentUUID string, id uint64) (*Dashboard, in
 		return nil, http.StatusBadRequest
 	}
 
-	if err := db.Where("project_id = ? AND id = ? AND (type = ? OR agent_uuid = ?)", projectId, id,
-		DashboardTypeProjectVisible, agentUUID).First(&dashboard).Error; err != nil {
+	if err := db.Where("project_id = ? AND id = ? AND (type = ? OR agent_uuid = ?) AND is_deleted = ?", projectId, id,
+		DashboardTypeProjectVisible, agentUUID, false).First(&dashboard).Error; err != nil {
 		logCtx.WithError(err).WithField("dashboardID", id).Error(
 			"Getting dashboard failed in GetDashboard")
 		if gorm.IsRecordNotFoundError(err) {
@@ -323,7 +324,8 @@ func UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *U
 		return http.StatusBadRequest
 	}
 
-	err := db.Model(&Dashboard{}).Where("project_id = ? AND id = ?", projectId, id).Update(updateFields).Error
+	err := db.Model(&Dashboard{}).Where("project_id = ? AND id = ? AND is_deleted = ?", projectId, id, false).
+		Update(updateFields).Error
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectId, "id": id,
 			"update": updateFields}).WithError(err).Error("Failed to update dashboard.")
@@ -333,6 +335,7 @@ func UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *U
 	return http.StatusAccepted
 }
 
+// DeleteDashboard To delete a dashboard by id.
 func DeleteDashboard(projectID uint64, agentUUID string, dashboardID uint64) int {
 	db := C.GetServices().Db
 
@@ -354,7 +357,7 @@ func DeleteDashboard(projectID uint64, agentUUID string, dashboardID uint64) int
 		return http.StatusBadRequest
 	}
 
-	// delete dashboard units for the the given dashboard first
+	// Delete dashboard units for the the given dashboard first.
 	for _, dashboardUnit := range dashboardUnits {
 		errCode := deleteDashboardUnit(projectID, dashboardID, dashboardUnit.ID)
 		if errCode != http.StatusAccepted {
@@ -364,10 +367,16 @@ func DeleteDashboard(projectID uint64, agentUUID string, dashboardID uint64) int
 		}
 	}
 
-	// delete the dashboard itself
-	var dashboardDeleted Dashboard
-	err := db.Where("id = ? AND project_id = ?",
-		dashboardID, projectID).Delete(&dashboardDeleted).Error
+	// Removing any reports attached with this dashboard id.
+	errCode = DeleteReportByDashboardID(projectID, dashboardID)
+	if errCode != http.StatusAccepted {
+		log.WithFields(log.Fields{"project_id": projectID, "dashboard_id": dashboardID}).
+			Error("failed to report for dashboard")
+	}
+
+	// Delete the dashboard itself.
+	err := db.Model(&Dashboard{}).Where("id= ? AND project_id=?", dashboardID, projectID).
+		Update(map[string]interface{}{"is_deleted": true}).Error
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectID, "dashboard_id": dashboardID}).
 			WithError(err).Error("Failed to delete dashboard.")

@@ -5,6 +5,7 @@ import * as d3 from "d3";
 import { getMaxYpoint } from "../BarChart/utils";
 import ChartLegends from "./ChartLegends";
 import { formatCount } from "../../utils/dataFormatter";
+import { BARCHART_TICK_LENGTH } from "../../utils/constants";
 
 function BarLineChart({
   chartData,
@@ -139,7 +140,7 @@ function BarLineChart({
       .select(chartRef.current)
       .node()
       .getBoundingClientRect().width;
-    const margin = { top: 20, right: 70, bottom: 40, left: 70 };
+    const margin = { top: 20, right: 70, bottom: 40, left: 80 };
     const svg = d3
       .select(chartRef.current)
       .append("svg")
@@ -172,7 +173,12 @@ function BarLineChart({
     g.append("g")
       .attr("class", `axis axis--x ${styles.xAxis}`)
       .attr("transform", "translate(0," + height + ")")
-      .call(d3.axisBottom(xScale));
+      .call(d3.axisBottom(xScale).tickFormat(label=>{
+        if (label.length > BARCHART_TICK_LENGTH) {
+          return label.substr(0, BARCHART_TICK_LENGTH) + "...";
+        }
+        return label;
+      }));
 
     // axis-y
     g.append("g")

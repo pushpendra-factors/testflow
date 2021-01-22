@@ -468,6 +468,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 		EventProperties: smartEventPayload.Properties,
 		Name:            smartEventPayload.Name,
 		SmartEventType:  salesforceSmartEventName.Type,
+		UserId:          userID,
 	}
 
 	timestampReferenceField := salesforceSmartEventName.Filter.TimestampReferenceField

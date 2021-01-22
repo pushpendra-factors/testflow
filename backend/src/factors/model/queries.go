@@ -166,7 +166,8 @@ func existsDashboardUnitForQueryID(projectID uint64, queryID uint64) bool {
 	db := C.GetServices().Db
 
 	var dashboardUnits []DashboardUnit
-	if err := db.Where("project_id = ? AND query_id = ?", projectID, queryID).Find(&dashboardUnits).Error; err != nil {
+	if err := db.Where("project_id = ? AND query_id = ? AND is_deleted = ?", projectID, queryID, false).
+		Find(&dashboardUnits).Error; err != nil {
 		log.WithError(err).Errorf("Failed to get dashboard units for projectID %d", projectID)
 		// in case of failure allow delete
 		return false

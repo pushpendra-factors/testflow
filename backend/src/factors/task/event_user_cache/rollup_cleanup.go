@@ -169,7 +169,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 	}
 
 	var isCurrentDay bool
-	for i := 1; i <= *rollupLookback; i++ {
+	for i := 0; i <= *rollupLookback; i++ {
 		if i == 0 {
 			isCurrentDay = true
 		} else {

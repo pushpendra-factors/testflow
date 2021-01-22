@@ -24,6 +24,7 @@ type DBReport struct {
 	DashboardID   uint64
 	DashboardName string
 	CreatedAt     time.Time
+	IsDeleted     bool `gorm:"not null;default:false"`
 	Type          string
 	StartTime     int64
 	EndTime       int64
@@ -182,6 +183,17 @@ func CreateReport(report *Report) (*Report, int) {
 	return createdReport, http.StatusCreated
 }
 
+// DeleteReportByDashboardID Delete a report used in a particular dashboard.
+func DeleteReportByDashboardID(projectID, dashboardID uint64) int {
+	db := C.GetServices().Db
+
+	if err := db.Model(&DBReport{}).Where("dashboard_id = ? AND project_id = ?", dashboardID, projectID).
+		Update(map[string]interface{}{"is_deleted": true}).Error; err != nil {
+		return http.StatusInternalServerError
+	}
+	return http.StatusAccepted
+}
+
 func GetReportByID(id uint64) (*Report, int) {
 	if id == 0 {
 		log.Error("GetReportByID Failed. ID not provided.")
@@ -191,7 +203,7 @@ func GetReportByID(id uint64) (*Report, int) {
 	db := C.GetServices().Db
 	dbReport := DBReport{}
 
-	if err := db.Limit(1).Where("id = ?", id).Find(&dbReport).Error; err != nil {
+	if err := db.Limit(1).Where("id = ? AND is_deleted = ?", id, false).Find(&dbReport).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -219,7 +231,8 @@ func GetReportsByProjectID(projectID uint64) ([]*Report, int) {
 
 	dbReports := make([]*DBReport, 0, 0)
 
-	if err := db.Limit(10).Where("project_id = ?", projectID).Find(&dbReports).Error; err != nil {
+	if err := db.Limit(10).Where("project_id = ? AND is_deleted = ?", projectID, false).
+		Find(&dbReports).Error; err != nil {
 		return nil, http.StatusInternalServerError
 	}
 
@@ -275,8 +288,8 @@ func GetValidReportsListAgentHasAccessTo(projectID uint64,
 	dbReportDecs := make([]*ReportDescription, 0, 0)
 
 	db := C.GetServices().Db
-	if err := db.Order("end_time DESC").Limit(100).Where("project_id = ?",
-		projectID).Where("dashboard_id IN (?)", dashboardIDs).Where("invalid = ?",
+	if err := db.Order("end_time DESC").Limit(100).Where("project_id = ? AND is_deleted = ?",
+		projectID, false).Where("dashboard_id IN (?)", dashboardIDs).Where("invalid = ?",
 		false).Find(&dbReportDecs).Error; err != nil {
 
 		return nil, http.StatusInternalServerError
