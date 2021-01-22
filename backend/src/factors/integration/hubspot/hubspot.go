@@ -276,6 +276,7 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 		EventProperties: smartEventPayload.Properties,
 		Name:            smartEventPayload.Name,
 		SmartEventType:  hubspotSmartEventName.Type,
+		UserId:          userID,
 	}
 
 	timestampReferenceField := hubspotSmartEventName.Filter.TimestampReferenceField

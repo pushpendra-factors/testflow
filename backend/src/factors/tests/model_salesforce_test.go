@@ -2,14 +2,17 @@ package tests
 
 import (
 	"encoding/json"
+	H "factors/handler"
 	IntSalesforce "factors/integration/salesforce"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
@@ -663,4 +666,126 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	assert.Equal(t, false, ok)
 	// prev properties should be nil
 	assert.Nil(t, prevProperties)
+}
+
+func TestSameUserSmartEvent(t *testing.T) {
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	filter := M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "$salesforce_contact_character",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         "I",
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         "B",
+						Operator:      M.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: M.TimestampReferenceTypeTrack,
+	}
+
+	smartEventName := "Event 1"
+	requestPayload := make(map[string]interface{})
+	requestPayload["name"] = smartEventName
+	requestPayload["expr"] = filter
+
+	w := sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	var responsePayload H.APISmartEventFilterResponePayload
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &responsePayload)
+	assert.Nil(t, err)
+	stringCompEventNameId := responsePayload.EventNameID
+	assert.NotEqual(t, 0, stringCompEventNameId)
+
+	contactID := U.RandomLowerAphaNumString(5)
+	name := U.RandomLowerAphaNumString(5)
+
+	createdDate := time.Now()
+
+	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s","character":"B"}`, contactID, name, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), createdDate.UTC().Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocumentPrev := &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status := M.CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
+	assert.Equal(t, http.StatusCreated, status)
+
+	userID1 := U.RandomLowerAphaNumString(5)
+	_, status = M.CreateUser(&M.User{ProjectId: project.ID, ID: userID1})
+	assert.Equal(t, http.StatusCreated, status)
+	eventID1 := U.RandomLowerAphaNumString(10)
+	M.UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocumentPrev, eventID1, userID1)
+
+	currentProperties := make(map[string]interface{})
+	currentProperties["$salesforce_contact_character"] = "I"
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s","character":"%s"}`, contactID, name, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), createdDate.AddDate(0, 0, 1).UTC().Format(M.SalesforceDocumentTimeLayout), currentProperties["$salesforce_contact_character"])
+	currentSalesforceDocument := &M.SalesforceDocument{
+		ProjectID: project.ID,
+		Type:      M.SalesforceDocumentTypeContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	salesforceSmartEventName := &IntSalesforce.SalesforceSmartEventName{
+		EventName: smartEventName,
+		Filter:    &filter,
+		Type:      M.TYPE_CRM_SALESFORCE,
+	}
+
+	eventName1 := "ev1"
+	eventName, status := M.CreateOrGetEventName(&M.EventName{ProjectId: project.ID, Name: eventName1, Type: M.TYPE_USER_CREATED_EVENT_NAME})
+	assert.Equal(t, http.StatusCreated, status)
+	_, errCode := M.CreateEvent(&M.Event{
+		ProjectId:   project.ID,
+		EventNameId: eventName.ID,
+		UserId:      userID1,
+		Timestamp:   createdDate.Unix(),
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	eventID2 := U.RandomLowerAphaNumString(10)
+	IntSalesforce.TrackSalesforceSmartEvent(project.ID, salesforceSmartEventName, eventID2, "", userID1, currentSalesforceDocument.Type, &currentProperties, nil, createdDate.AddDate(0, 0, 2).Unix())
+
+	query := M.Query{
+		From: createdDate.Unix(),
+		To:   createdDate.AddDate(0, 0, 5).Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       eventName1,
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       smartEventName,
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class: M.QueryClassFunnel,
+
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ := M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotNil(t, result)
+	assert.Equal(t, int64(1), result.Rows[0][0])
+	assert.Equal(t, int64(1), result.Rows[0][1])
 }
