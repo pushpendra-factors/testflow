@@ -559,23 +559,21 @@ func addUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
 	for position, linkedEvent := range linkedEvents {
 		linkedEventToPositionMap[linkedEvent.Name] = position
 	}
-	// creating an empty linked events row
-	emptyLinkedEventRow := make([]float64, 0)
-	for i := 0; i < len(linkedEvents); i++ {
-		emptyLinkedEventRow = append(emptyLinkedEventRow, 0.0)
-	}
 	// fill up all the linked events count with 0 value
-	for key := range attributionData {
-		attributionData[key].LinkedEventsCount = emptyLinkedEventRow
+	for _, attributionRow := range attributionData {
+		if attributionRow != nil {
+			for len(attributionRow.LinkedEventsCount) < len(linkedEvents) {
+				attributionRow.LinkedEventsCount = append(attributionRow.LinkedEventsCount, 0.0)
+			}
+		}
 	}
 	// update linked up events with event hit count
 	for linkedEventName, userIdAttributionIdMap := range linkedUserAttributionData {
 		for _, attributionKeys := range userIdAttributionIdMap {
 			weight := 1 / float64(len(attributionKeys))
 			for _, key := range attributionKeys {
-				attributionRow := attributionData[key]
-				if attributionRow != nil {
-					attributionRow.LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += weight
+				if attributionData[key] != nil {
+					attributionData[key].LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += weight
 				}
 			}
 		}
@@ -1080,7 +1078,8 @@ func addWebsiteVisitorsInfo(from int64, to int64, attributionData map[string]*At
 					attributionData[attributionId] = &AttributionData{}
 					if linkedEventsCount > 0 {
 						// init the linked events with 0.0 value
-						attributionData[attributionId].LinkedEventsCount = emptyLinkedEventRow
+						tempRow := emptyLinkedEventRow
+						attributionData[attributionId].LinkedEventsCount = tempRow
 					}
 				}
 				if _, ok := userIdAttributionIdVisit[getKey(userId, attributionId)]; ok {
