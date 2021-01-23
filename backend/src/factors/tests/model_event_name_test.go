@@ -658,7 +658,6 @@ func sendUpdateSmartEventFilterReq(r *gin.Engine, projectID uint64, agent *M.Age
 }
 
 func TestSmartCRMFilterCreation(t *testing.T) {
-
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -673,7 +672,7 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_email",
+				Name: "email",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -715,7 +714,7 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_count",
+				Name: "count",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -753,8 +752,8 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	// string compare
 	currentProperties := make(map[string]interface{})
 	prevProperties := make(map[string]interface{})
-	currentProperties["$salesforce_contact_email"] = "test1@gmail.com"
-	prevProperties["$salesforce_contact_email"] = "test@gmail.com"
+	currentProperties["email"] = "test1@gmail.com"
+	prevProperties["email"] = "test@gmail.com"
 
 	stringFilterIndex := 0
 	intFilterIndex := 1
@@ -777,8 +776,8 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	assert.Equal(t, true, state)
 
 	// int compare
-	currentProperties["$salesforce_contact_count"] = 6
-	prevProperties["$salesforce_contact_count"] = 3
+	currentProperties["count"] = 6
+	prevProperties["count"] = 3
 	smartEvent, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, smartCRMEvents[intFilterIndex].EventName, "", "", 0, &currentProperties, &prevProperties, &(smartCRMEvents[intFilterIndex].FilterExpr))
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
@@ -792,7 +791,7 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_count",
+				Name: "count",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -845,7 +844,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_email",
+				Name: "email",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -861,7 +860,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 				LogicalOp: M.LOGICAL_OP_AND,
 			},
 			{
-				Name: "$salesforce_contact_company",
+				Name: "company",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -883,10 +882,10 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	currentProperties := make(map[string]interface{})
 	prevProperties := make(map[string]interface{})
-	currentProperties["$salesforce_contact_email"] = "test1@gmail.com"
-	prevProperties["$salesforce_contact_email"] = "test@gmail.com"
-	currentProperties["$salesforce_contact_company"] = "example2"
-	prevProperties["$salesforce_contact_company"] = "example1"
+	currentProperties["email"] = "test1@gmail.com"
+	prevProperties["email"] = "test@gmail.com"
+	currentProperties["company"] = "example2"
+	prevProperties["company"] = "example1"
 	_, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
@@ -900,7 +899,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_email",
+				Name: "email",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -916,7 +915,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 				LogicalOp: M.LOGICAL_OP_OR,
 			},
 			{
-				Name: "$salesforce_contact_company",
+				Name: "company",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -937,10 +936,10 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 	}
 	currentProperties = make(map[string]interface{})
 	prevProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_email"] = "test1@gmail.com"
-	prevProperties["$salesforce_contact_email"] = "fail@gmail.com" // failed value
-	currentProperties["$salesforce_contact_company"] = "example2"
-	prevProperties["$salesforce_contact_company"] = "example1"
+	currentProperties["email"] = "test1@gmail.com"
+	prevProperties["email"] = "fail@gmail.com" // failed value
+	currentProperties["company"] = "example2"
+	prevProperties["company"] = "example1"
 	_, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
@@ -962,7 +961,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_email",
+				Name: "email",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -978,7 +977,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 				LogicalOp: M.LOGICAL_OP_AND,
 			},
 			{
-				Name: "$salesforce_contact_company",
+				Name: "company",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1000,10 +999,10 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	currentProperties = make(map[string]interface{})
 	prevProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_email"] = "test1@gmail.com"
-	prevProperties["$salesforce_contact_email"] = "fail@gmail.com" // failed value
-	currentProperties["$salesforce_contact_company"] = "example2"
-	prevProperties["$salesforce_contact_company"] = "example1"
+	currentProperties["email"] = "test1@gmail.com"
+	prevProperties["email"] = "fail@gmail.com" // failed value
+	currentProperties["company"] = "example2"
+	prevProperties["company"] = "example1"
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 
@@ -1027,7 +1026,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_email",
+				Name: "email",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1043,7 +1042,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 				LogicalOp: M.LOGICAL_OP_AND,
 			},
 			{
-				Name: "$salesforce_contact_company",
+				Name: "company",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1064,10 +1063,10 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 	}
 	currentProperties = make(map[string]interface{})
 	prevProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_email"] = "test1@gmail.com"
-	prevProperties["$salesforce_contact_email"] = "test@gmail.com"
-	currentProperties["$salesforce_contact_company"] = "example1" // failed value
-	prevProperties["$salesforce_contact_company"] = "example1"
+	currentProperties["email"] = "test1@gmail.com"
+	prevProperties["email"] = "test@gmail.com"
+	currentProperties["company"] = "example1" // failed value
+	prevProperties["company"] = "example1"
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, false, ok)
 
@@ -1087,7 +1086,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_email",
+				Name: "email",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1103,7 +1102,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 				LogicalOp: M.LOGICAL_OP_AND,
 			},
 			{
-				Name: "$salesforce_contact_company",
+				Name: "company",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1124,10 +1123,10 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 	}
 	currentProperties = make(map[string]interface{})
 	prevProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_email"] = "failed@gmail.com" //failed value
-	prevProperties["$salesforce_contact_email"] = "failed2@gmail.com"   //failed value
-	currentProperties["$salesforce_contact_company"] = "failed"         // failed value
-	prevProperties["$salesforce_contact_company"] = "failed"            //failed value
+	currentProperties["email"] = "failed@gmail.com" //failed value
+	prevProperties["email"] = "failed2@gmail.com"   //failed value
+	currentProperties["company"] = "failed"         // failed value
+	prevProperties["company"] = "failed"            //failed value
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, false, ok)
 
@@ -1147,7 +1146,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_email",
+				Name: "email",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1163,7 +1162,7 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 				LogicalOp: M.LOGICAL_OP_AND,
 			},
 			{
-				Name: "$salesforce_contact_company",
+				Name: "company",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1184,10 +1183,10 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 	}
 	currentProperties = make(map[string]interface{})
 	prevProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_email"] = "failed@gmail.com" //failed value
-	prevProperties["$salesforce_contact_email"] = "failed2@gmail.com"   //failed value
-	currentProperties["$salesforce_contact_company"] = "failed"         // failed value
-	prevProperties["$salesforce_contact_company"] = "failed"            //failed value
+	currentProperties["email"] = "failed@gmail.com" //failed value
+	prevProperties["email"] = "failed2@gmail.com"   //failed value
+	currentProperties["company"] = "failed"         // failed value
+	prevProperties["company"] = "failed"            //failed value
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, false, ok)
 
@@ -1209,7 +1208,7 @@ func TestSmartCRMFilterContains(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_description",
+				Name: "description",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1231,8 +1230,8 @@ func TestSmartCRMFilterContains(t *testing.T) {
 
 	currentProperties := make(map[string]interface{})
 	prevProperties := make(map[string]interface{})
-	currentProperties["$salesforce_contact_description"] = "greetings from example.com"
-	prevProperties["$salesforce_contact_description"] = "will be providing greetings"
+	currentProperties["description"] = "greetings from example.com"
+	prevProperties["description"] = "will be providing greetings"
 	_, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 
@@ -1244,7 +1243,7 @@ func TestSmartCRMFilterContains(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_description",
+				Name: "description",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1278,7 +1277,7 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_page_spent_time",
+				Name: "page_spent_time",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1299,8 +1298,8 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 	}
 	currentProperties := make(map[string]interface{})
 	prevProperties := make(map[string]interface{})
-	currentProperties["$salesforce_contact_page_spent_time"] = 7
-	prevProperties["$salesforce_contact_page_spent_time"] = 2
+	currentProperties["page_spent_time"] = 7
+	prevProperties["page_spent_time"] = 2
 	_, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 
@@ -1312,8 +1311,8 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 	assert.Equal(t, true, state)
 
 	// Fail test
-	currentProperties["$salesforce_contact_page_spent_time"] = 3
-	prevProperties["$salesforce_contact_page_spent_time"] = 2
+	currentProperties["page_spent_time"] = 3
+	prevProperties["page_spent_time"] = 2
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, false, ok)
 
@@ -1326,7 +1325,7 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_page_spent_time",
+				Name: "page_spent_time",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1342,7 +1341,7 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 				LogicalOp: M.LOGICAL_OP_AND,
 			},
 			{
-				Name: "$salesforce_contact_page_spent_count",
+				Name: "page_spent_count",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1363,10 +1362,10 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 	}
 	currentProperties = make(map[string]interface{})
 	prevProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_page_spent_time"] = 5
-	prevProperties["$salesforce_contact_page_spent_time"] = 3
-	currentProperties["$salesforce_contact_page_spent_count"] = 10
-	prevProperties["$salesforce_contact_page_spent_count"] = 7
+	currentProperties["page_spent_time"] = 5
+	prevProperties["page_spent_time"] = 3
+	currentProperties["page_spent_count"] = 10
+	prevProperties["page_spent_count"] = 7
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 
@@ -1386,7 +1385,7 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_page_spent_time",
+				Name: "page_spent_time",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1402,7 +1401,7 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 				LogicalOp: M.LOGICAL_OP_AND,
 			},
 			{
-				Name: "$salesforce_contact_page_spent_count",
+				Name: "page_spent_count",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -1423,10 +1422,10 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 	}
 	currentProperties = make(map[string]interface{})
 	prevProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_page_spent_time"] = 7
-	prevProperties["$salesforce_contact_page_spent_time"] = 2
-	currentProperties["$salesforce_contact_page_spent_count"] = 6
-	prevProperties["$salesforce_contact_page_spent_count"] = 8
+	currentProperties["page_spent_time"] = 7
+	prevProperties["page_spent_time"] = 2
+	currentProperties["page_spent_count"] = 6
+	prevProperties["page_spent_count"] = 8
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 
@@ -1448,7 +1447,7 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeAny,
 		Filters: []M.PropertyFilter{
 			{
-				Name:  "$salesforce_contact_page_spent_time",
+				Name:  "page_spent_time",
 				Rules: []M.CRMFilterRule{},
 			},
 		},
@@ -1458,8 +1457,8 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 
 	currentProperties := make(map[string]interface{})
 	prevProperties := make(map[string]interface{})
-	currentProperties["$salesforce_contact_page_spent_time"] = 7
-	prevProperties["$salesforce_contact_page_spent_time"] = 2
+	currentProperties["page_spent_time"] = 7
+	prevProperties["page_spent_time"] = 2
 
 	smartEvent, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
@@ -1470,7 +1469,7 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	ok = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
 	assert.Equal(t, true, ok)
 	// same value
-	prevProperties["$salesforce_contact_page_spent_time"] = 7
+	prevProperties["page_spent_time"] = 7
 	_, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, false, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
@@ -1483,11 +1482,11 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeAny,
 		Filters: []M.PropertyFilter{
 			{
-				Name:  "$salesforce_contact_page_spent_time",
+				Name:  "page_spent_time",
 				Rules: []M.CRMFilterRule{},
 			},
 			{
-				Name:  "$salesforce_contact_count",
+				Name:  "count",
 				Rules: []M.CRMFilterRule{},
 			},
 		},
@@ -1497,18 +1496,18 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 
 	currentProperties = make(map[string]interface{})
 	prevProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_page_spent_time"] = 2
-	prevProperties["$salesforce_contact_page_spent_time"] = 10
-	currentProperties["$salesforce_contact_count"] = 2
-	prevProperties["$salesforce_contact_count"] = 2
+	currentProperties["page_spent_time"] = 2
+	prevProperties["page_spent_time"] = 10
+	currentProperties["count"] = 2
+	prevProperties["count"] = 2
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 
 	// fail on no change
-	currentProperties["$salesforce_contact_page_spent_time"] = 2
-	prevProperties["$salesforce_contact_page_spent_time"] = 2
-	currentProperties["$salesforce_contact_count"] = 2
-	prevProperties["$salesforce_contact_count"] = 2
+	currentProperties["page_spent_time"] = 2
+	prevProperties["page_spent_time"] = 2
+	currentProperties["count"] = 2
+	prevProperties["count"] = 2
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, false, ok)
 
@@ -1522,7 +1521,7 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeAny,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_page_spent_time",
+				Name: "page_spent_time",
 				Rules: []M.CRMFilterRule{
 					{
 						Operator:      M.COMPARE_EQUAL,
@@ -1541,14 +1540,14 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 		TimestampReferenceField: "time",
 	}
 
-	currentProperties["$salesforce_contact_page_spent_time"] = 10
-	prevProperties["$salesforce_contact_page_spent_time"] = 2
+	currentProperties["page_spent_time"] = 10
+	prevProperties["page_spent_time"] = 2
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 
 	// fail on same value
-	currentProperties["$salesforce_contact_page_spent_time"] = 10
-	prevProperties["$salesforce_contact_page_spent_time"] = 10
+	currentProperties["page_spent_time"] = 10
+	prevProperties["page_spent_time"] = 10
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, false, ok)
 
@@ -1562,7 +1561,7 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeAny,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_page_spent_time",
+				Name: "page_spent_time",
 				Rules: []M.CRMFilterRule{
 					{
 						Operator:      M.COMPARE_EQUAL,
@@ -1581,14 +1580,14 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 		TimestampReferenceField: "time",
 	}
 
-	currentProperties["$salesforce_contact_page_spent_time"] = 2
-	prevProperties["$salesforce_contact_page_spent_time"] = 10
+	currentProperties["page_spent_time"] = 2
+	prevProperties["page_spent_time"] = 10
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 
 	// fail on same value
-	currentProperties["$salesforce_contact_page_spent_time"] = 10
-	prevProperties["$salesforce_contact_page_spent_time"] = 10
+	currentProperties["page_spent_time"] = 10
+	prevProperties["page_spent_time"] = 10
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, false, ok)
 
@@ -1661,7 +1660,7 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 
 	getEventNames, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)
-	responseSmartEventNames := getEventNames[U.MostRecent][:5]
+	responseSmartEventNames := getEventNames[U.SmartEvent][:5]
 	//check top 5 are smart event names
 	for i := 1; i < 5; i++ {
 		assert.Contains(t, responseSmartEventNames, fmt.Sprintf("Smart Event Name %d", i))

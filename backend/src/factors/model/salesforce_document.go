@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	C "factors/config"
@@ -353,6 +354,83 @@ func CreateSalesforceDocumentByAction(projectID uint64, document *SalesforceDocu
 	}
 
 	return http.StatusOK
+}
+
+func GetCRMEnrichPropertyKeyByType(source, typ, key string) string {
+	return U.NAME_PREFIX + getCRMPropertyKeyByType(source, typ, key)
+}
+
+func getCRMPropertyKeyByType(source, objectType, key string) string {
+	return fmt.Sprintf("%s_%s_%s", source, objectType, strings.ToLower(key))
+}
+
+func getSalesforceDocumentPropertiesByCategory(salesforceDocument []SalesforceDocument) ([]string, []string) {
+
+	categoricalProperties := make(map[string]bool)
+	dateTimeProperties := make(map[string]bool)
+
+	var categoricalPropertiesArray []string
+	var dateTimePropertiesArray []string
+
+	for i := range salesforceDocument {
+
+		var docProperties map[string]interface{}
+		err := json.Unmarshal((salesforceDocument[i].Value).RawMessage, &docProperties)
+		if err != nil {
+			log.WithError(err).Error("Failed to unmarshal salesforce document on getSalesforceDocumentPropertiesByCategory")
+			continue
+		}
+
+		for key, value := range docProperties {
+			if _, err := GetSalesforceDocumentTimestamp(value); err == nil || strings.Contains(key, "date") {
+				dateTimeProperties[key] = true
+			} else {
+				categoricalProperties[key] = true
+			}
+		}
+
+	}
+
+	for pName := range categoricalProperties {
+		categoricalPropertiesArray = append(categoricalPropertiesArray, pName)
+	}
+
+	for pName := range dateTimeProperties {
+		dateTimePropertiesArray = append(dateTimePropertiesArray, pName)
+	}
+
+	return categoricalPropertiesArray, dateTimePropertiesArray
+}
+
+// GetSalesforceObjectPropertiesName returns object property names by type
+func GetSalesforceObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string) {
+	if ProjectID == 0 || objectType == "" {
+		return nil, nil
+	}
+
+	docType := GetSalesforceDocTypeByAlias(objectType)
+	if docType == 0 {
+		return nil, nil
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
+	lbTimestamp := U.UnixTimeBeforeDuration(48 * time.Hour)
+
+	var salesforceDocument []SalesforceDocument
+	db := C.GetServices().Db
+	err := db.Model(&SalesforceDocument{}).Where("project_id = ? AND type = ? AND action = ? AND timestamp > ?",
+		ProjectID, docType, 2, lbTimestamp).Order("timestamp desc").Limit(1000).Find(&salesforceDocument).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get salesforce documents for GetSalesforceObjectPropertiesName.")
+		return nil, nil
+	}
+
+	if len(salesforceDocument) < 1 {
+		logCtx.Error("No documents returned.")
+		return nil, nil
+	}
+
+	return getSalesforceDocumentPropertiesByCategory(salesforceDocument)
 }
 
 func getSalesforceLastModifiedTimestamp(document *SalesforceDocument) (int64, error) {
