@@ -382,7 +382,7 @@ func getSalesforceDocumentPropertiesByCategory(salesforceDocument []SalesforceDo
 		}
 
 		for key, value := range docProperties {
-			if _, err := GetSalesforceDocumentTimestamp(value); err == nil || strings.Contains(key, "date") {
+			if _, err := GetSalesforceDocumentTimestamp(value); err == nil || strings.Contains(strings.ToLower(key), "date") {
 				dateTimeProperties[key] = true
 			} else {
 				categoricalProperties[key] = true
