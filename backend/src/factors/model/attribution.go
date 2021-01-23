@@ -354,11 +354,11 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 		return nil, err
 	}
 
-	addWebsiteVisitorsInfo(effectiveFrom, effectiveTo, attributionData, sessions)
+	addWebsiteVisitorsInfo(effectiveFrom, effectiveTo, attributionData, sessions, len(query.LinkedEvents))
 
 	// 5. Add the performance information
 	currency, err := AddPerformanceReportInfo(projectID, attributionData, query.From, query.To,
-		*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey, len(query.LinkedEvents))
+		*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey)
 	if err != nil {
 		return nil, err
 	}
@@ -499,7 +499,7 @@ func getRowsByMaps(attributionData map[string]*AttributionData,
 	nonMatchingRow := []interface{}{"none", 0, 0, float64(0), int64(0), float64(0), float64(0),
 		float64(0), float64(0)}
 	for i := 0; i < len(linkedEvents); i++ {
-		nonMatchingRow = append(nonMatchingRow, float64(0))
+		nonMatchingRow = append(nonMatchingRow, []interface{}{0.0})
 	}
 	for key, data := range attributionData {
 		attributionIdName := data.Name
@@ -526,8 +526,6 @@ func getRowsByMaps(attributionData map[string]*AttributionData,
 			}
 			row = append(row, getInterfaceListFromFloat64(data.LinkedEventsCount)...)
 			rows = append(rows, row)
-		} else {
-			updateNonMatchingRow(&nonMatchingRow, data, linkedEvents)
 		}
 	}
 	rows = append(rows, nonMatchingRow)
@@ -536,23 +534,6 @@ func getRowsByMaps(attributionData map[string]*AttributionData,
 		return rows[i][5].(float64) > rows[j][5].(float64)
 	})
 	return rows
-}
-
-func updateNonMatchingRow(nonMatchingRow *[]interface{}, data *AttributionData,
-	linkedEvents []QueryEventWithProperties) {
-	(*nonMatchingRow)[1] = (*nonMatchingRow)[1].(int) + data.Impressions
-	(*nonMatchingRow)[2] = (*nonMatchingRow)[2].(int) + data.Clicks
-	(*nonMatchingRow)[3] = (*nonMatchingRow)[3].(float64) + data.Spend
-	(*nonMatchingRow)[4] = (*nonMatchingRow)[4].(int64) + data.WebsiteVisitors
-	(*nonMatchingRow)[5] = (*nonMatchingRow)[5].(float64) + data.ConversionEventCount
-	(*nonMatchingRow)[6] = (*nonMatchingRow)[6].(float64) + 0.0
-	(*nonMatchingRow)[7] = (*nonMatchingRow)[7].(float64) + 0.0
-	(*nonMatchingRow)[8] = (*nonMatchingRow)[8].(float64) + 0.0
-	for index := 0; index < len(linkedEvents); index++ {
-		if index < len(data.LinkedEventsCount) {
-			(*nonMatchingRow)[5+index+1] = (*nonMatchingRow)[5+index+1].(float64) + data.LinkedEventsCount[index]
-		}
-	}
 }
 
 // Groups all unique users by attributionId and adds it to attributionData
@@ -578,13 +559,14 @@ func addUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
 	for position, linkedEvent := range linkedEvents {
 		linkedEventToPositionMap[linkedEvent.Name] = position
 	}
+	// creating an empty linked events row
+	emptyLinkedEventRow := make([]float64, 0)
+	for i := 0; i < len(linkedEvents); i++ {
+		emptyLinkedEventRow = append(emptyLinkedEventRow, 0.0)
+	}
 	// fill up all the linked events count with 0 value
-	for _, attributionRow := range attributionData {
-		if attributionRow != nil {
-			for len(attributionRow.LinkedEventsCount) < len(linkedEvents) {
-				attributionRow.LinkedEventsCount = append(attributionRow.LinkedEventsCount, 0.0)
-			}
-		}
+	for key := range attributionData {
+		attributionData[key].LinkedEventsCount = emptyLinkedEventRow
 	}
 	// update linked up events with event hit count
 	for linkedEventName, userIdAttributionIdMap := range linkedUserAttributionData {
@@ -1080,7 +1062,12 @@ func updateSessionsMapWithCoalesceID(attributedSessionsByUserId map[string]map[s
 
 // Maps the count distinct users session to campaign id and adds it to attributionData
 func addWebsiteVisitorsInfo(from int64, to int64, attributionData map[string]*AttributionData,
-	attributedSessionsByUserId map[string]map[string]RangeTimestamp) {
+	attributedSessionsByUserId map[string]map[string]RangeTimestamp, linkedEventsCount int) {
+	// creating an empty linked events row
+	emptyLinkedEventRow := make([]float64, 0)
+	for i := 0; i < linkedEventsCount; i++ {
+		emptyLinkedEventRow = append(emptyLinkedEventRow, 0.0)
+	}
 
 	userIdAttributionIdVisit := make(map[string]bool)
 	for userId, attributionIdMap := range attributedSessionsByUserId {
@@ -1091,6 +1078,10 @@ func addWebsiteVisitorsInfo(from int64, to int64, attributionData map[string]*At
 
 				if _, ok := attributionData[attributionId]; !ok {
 					attributionData[attributionId] = &AttributionData{}
+					if linkedEventsCount > 0 {
+						// init the linked events with 0.0 value
+						attributionData[attributionId].LinkedEventsCount = emptyLinkedEventRow
+					}
 				}
 				if _, ok := userIdAttributionIdVisit[getKey(userId, attributionId)]; ok {
 					continue
@@ -1110,15 +1101,9 @@ func getKey(id1 string, id2 string) string {
 // Adds channel data to attributionData based on attribution id. Key id with no matching channel
 // data is left with empty name parameter
 func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*AttributionData,
-	from, to int64, customerAccountId string, attributionKey string, linkedEventsCount int) (string, error) {
+	from, to int64, customerAccountId string, attributionKey string) (string, error) {
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId, "Range": fmt.Sprintf("%d - %d", from, to)})
-	// creating an empty linked events row
-	emptyLinkedEventRow := make([]float64, 0)
-	for i := 0; i < linkedEventsCount; i++ {
-		emptyLinkedEventRow = append(emptyLinkedEventRow, 0.0)
-
-	}
 
 	customerAccountIds := strings.Split(customerAccountId, ",")
 
@@ -1157,24 +1142,17 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*Attr
 			logCtx.WithError(err).Error("SQL Parse failed")
 			continue
 		}
-		keyExists := false
 		matchingId := ""
 		if _, keyIdFound := attributionData[keyId]; keyIdFound {
 			matchingId = keyId
-			keyExists = true
 		} else if _, keyNameFound := attributionData[keyName]; keyNameFound {
 			matchingId = keyName
-			keyExists = true
 		}
 		if matchingId != "" {
 			attributionData[matchingId].Name = keyName
 			attributionData[matchingId].Impressions = int(impressions)
 			attributionData[matchingId].Clicks = int(clicks)
 			attributionData[matchingId].Spend = spend
-			// add empty row for linked funnel events if new key is added
-			if !keyExists {
-				attributionData[matchingId].LinkedEventsCount = emptyLinkedEventRow
-			}
 		}
 	}
 
