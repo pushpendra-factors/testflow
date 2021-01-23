@@ -51,11 +51,14 @@ export const generateGroups = (response, maxAllowedVisibleProperties) => {
   }
   const firstEventIdx = response.headers.findIndex((elem) => elem === "step_0");
   const result = response.rows.map((elem, index) => {
-    const netCounts = elem.filter((elem) => typeof elem === "number");
-    const name = elem.slice(0, firstEventIdx).join(",");
+    const row = elem.map(item=>{
+      return valueMapper[item] || item;
+    })
+    const netCounts = row.filter((row) => typeof row === "number");
+    const name = row.slice(0, firstEventIdx).join(",");
     return {
       index,
-      name: valueMapper[name] || name,
+      name,
       conversion_rate:
         calculatePercentage(netCounts[netCounts.length - 1], netCounts[0]) +
         "%",
@@ -136,7 +139,8 @@ export const generateTableData = (
       .filter(
         (elem) => elem.toLowerCase().indexOf(searchText.toLowerCase()) > -1
       );
-    const result = appliedGroups.map((group, index) => {
+    const result = appliedGroups.map((grp, index) => {
+      const group = grp.replaceAll("Overall", "$no_group");
       const eventsData = {};
       data.forEach((d, idx) => {
         eventsData[`${d.name}-${idx}`] =
@@ -147,7 +151,7 @@ export const generateTableData = (
       });
       return {
         index,
-        name: valueMapper[group] || group,
+        name: grp,
         conversion:
           calculatePercentage(
             data[data.length - 1].data[group],
