@@ -4,18 +4,21 @@ import {
 } from 'antd';
 import { Text } from 'factorsComponents'; 
 import { connect } from 'react-redux'; 
-import {saveSmartEvents, fetchSmartEvents} from 'Reducers/events';
+import {saveSmartEvents, fetchSmartEvents, fetchObjectPropertiesbySource} from 'Reducers/events';
 import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware'; 
+import _ from 'lodash';
+const { TabPane } = Tabs; 
+const { Option, OptGroup } = Select;
 
-const { TabPane } = Tabs;
-const { Option } = Select;
-
-function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm, saveSmartEvents, activeProject, events}) { 
+function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, fetchObjectPropertiesbySource, setShowSmartEventForm, saveSmartEvents, activeProject, events}) { 
     
     const [loading, setLoading] = useState(false); 
     const [errorInfo, seterrorInfo] = useState(null);
     const [dataObjectSource, setDataObjectSource] = useState(null);
+    const [dataObject, setDataObject] = useState(null);
+    const [dataObjectProperty, setDataObjectProperty] = useState('');
     const [timestampReferenceOthers, setTimestampReferenceOthers] = useState(false);
+    const [objPropertiesSourceArr, setobjPropertiesSourceArr] = useState(null);
     
     const [form] = Form.useForm();
      
@@ -59,11 +62,11 @@ function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm,
                 property_evaluation_type: data.property_evaluation_type,
                 source: data.source,
                 object_type: data.object_type,
-                timestamp_reference_field: data.timestamp_reference_field,
+                timestamp_reference_field: data.timestamp_reference_field === 'other' ?  data.datetime_objProperty : data.timestamp_reference_field,
                 filters: [
                     {
                       "logical_op": "AND",
-                      "property_name": data.property_name[0],
+                      "property_name": data.property_name,
                       "rules": data.property_evaluation_type == 'any' ? [] : [
                         {
                           "gen": "curr",
@@ -76,9 +79,7 @@ function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm,
 
             }
 
-        }
-        // console.log('fome-data',data);
-        // console.log('Final data',finalData);
+        } 
         saveSmartEvents(activeProject.id,finalData).then((data)=>{ 
             message.success('Smart Event Added!');
             fetchSmartEvents(activeProject.id);
@@ -101,7 +102,29 @@ function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm,
           }
       }
 
-      const dataObjectConstants =  dataObjectSource === 'hubspot' ? ['contact'] : ['account', 'contact', 'lead'] 
+      const dataObjectConstants =  dataObjectSource === 'hubspot' ? ['contact', 'deal'] : ['account', 'contact', 'lead'] 
+
+
+      const onSelectDataObjectChange = (value) =>{ 
+        setDataObjectProperty('');
+        setDataObject(value);
+      }
+      const onSelectObjectProperty =(value) =>{  
+        setDataObjectProperty(value)
+      }
+ 
+
+      useEffect(()=>{ 
+        setLoading(true); 
+        fetchObjectPropertiesbySource(activeProject.id,dataObjectSource, dataObject).then((data)=>{ 
+            setLoading(false); 
+        }).catch((err)=>{    
+        const ErrMsg = err?.data?.error ? err.data.error : `Oops! Something went wrong!`;
+        message.error(ErrMsg); 
+        setLoading(false);  
+        });
+      },[dataObjectSource,dataObject ])
+
   return (
     <>
      
@@ -113,10 +136,10 @@ function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm,
                         onFinish={onFinish}
                         className={'w-full'}
                         onChange={onChange}
+                        loading={true}
                           initialValues = {{ 
                             event_type: 'crm', 
                             property_evaluation_type: 'any',
-                            timestamp_reference_field:'timestamp_in_track',
                           }}
                         >
                             <Row>
@@ -171,7 +194,7 @@ function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm,
 
                             <Row className={'mt-8'}>
                                 <Col span={18}>
-                                    <div className={'border-top--thin pt-10 mt-10'}>
+                                    <div className={'border-top--thin pt-5 mt-5'}>
                                         <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Event Rule</Text> 
 
                                     </div>
@@ -198,10 +221,10 @@ function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm,
                                     <Text type={'title'} level={7} extraClass={'m-0'}>Select data Object</Text>
                                     <Form.Item
                                     name="object_type"
-                                    className={'m-0'}
+                                    className={'m-0'} 
                                     rules={[{ required: true, message: 'Please select a data object.' }]}
                                     >
-                                    <Select className={'fa-select w-full'} placeholder={'Select data Object'} size={'large'}>
+                                    <Select onChange={(value)=>{onSelectDataObjectChange(value)}} className={'fa-select w-full'} placeholder={'Select data Object'} size={'large'}>
                                         {
                                         dataObjectConstants?.map((item)=>{ 
                                             return <Option key={item} value={item}>{item}</Option>  
@@ -225,6 +248,7 @@ function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm,
                                     </Form.Item>
                                 </Col>
                             </Row>
+                            {dataObject && <>
                             <Row className={'mt-8'}>
                                 <Col span={18}>
                                     <Text type={'title'} level={7} extraClass={'m-0'}>Select object property</Text>
@@ -233,25 +257,49 @@ function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm,
                                     className={'m-0'}
                                     rules={[{ required: true, message: 'Please select an object property.' }]}
                                     >
-                                    <Select className={'fa-select w-full'} placeholder={'Select object property'} size={'large'}>
-                                        {events[0]?.values.map((item)=>{
-                                            return <Option  key={item} value={item}>{item}</Option> 
-                                        })} 
+                                    <Select value={dataObjectProperty} onChange={(value)=>{onSelectObjectProperty(value)}} className={'fa-select w-full'} placeholder={'Select object property'} size={'large'}>
+                                        {/* {events[0]?.values.map((item)=>{ 
+                                            if(dataObjectSource == 'salesforce'){
+                                                if(item[0].includes(`$sf_${dataObject}`)) {
+                                                    return <Option  key={item} value={item}>{item}</Option>  
+                                                } 
+                                            }
+                                            if(dataObjectSource == 'hubspot'){
+                                                if(item[0].includes(`$hubspot_${dataObject}`)) {
+                                                    return <Option  key={item} value={item}>{item}</Option>  
+                                                } 
+                                            }
+                                        })}   */}
+
+{
+                                            Object.keys(objPropertiesSource)?.map((key) =>   {
+                                                if(!_.isEmpty(objPropertiesSource[key])){
+                                                    return <OptGroup label={key}>
+                                                        {objPropertiesSource[key]?.sort().map((item,index)=>{
+                                                        return <Option value={item}>{item}</Option>
+                                                        })} 
+                                                        </OptGroup> 
+                                                } 
+                                            })}
+
                                     </Select>
                                     </Form.Item>
                                 </Col>
                             </Row>
+                            </>
+                            }
 
                             <Row className={'mt-8'}>
                                 <Col span={18}> 
                                     <Text type={'title'} level={7} extraClass={'m-0'}>Select time of event</Text>
-                                    <Form.Item
+                                    <Form.Item 
                                     name="timestamp_reference_field"
                                     className={'m-0'} 
+                                    rules={[{ required: true }]}
                                     > 
                                                 <Radio.Group onChange={(value)=>settimestampReference(value)}>
                                                     <Radio value={'timestamp_in_track'}>Factors recieved time</Radio>
-                                                    <Radio value={'other'} disabled>Select an object property</Radio> 
+                                                    <Radio value={'other'}>Select an object property</Radio> 
                                                 </Radio.Group> 
                                     </Form.Item>
                                 </Col>
@@ -261,12 +309,25 @@ function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm,
                             <Row className={'mt-0'}>
                                 <Col span={18}> 
                                     <Form.Item
-                                    name="event_type1"
+                                    name="datetime_objProperty"
                                     className={'m-0'} 
+                                    rules={[{ required: true, message: 'Please select a date type property.' }]}
                                     >
-                                    <Select className={'fa-select w-full'} placeholder={'List all the date type proprties  '} size={'large'}>
-                                        <Option value="hubspot">Life cycle stage</Option> 
-                                        <Option value="salesforce">Life cycle stage 1</Option> 
+                                    <Select className={'fa-select w-full mt-2'} placeholder={'List all the date type proprties  '} size={'large'}>
+                                        {
+                                            Object.keys(objPropertiesSource)?.map((key) =>   {
+                                                if(key === 'datetime'){
+                                                    if(!_.isEmpty(objPropertiesSource[key])){
+                                                        return <OptGroup label={key}>
+                                                            {objPropertiesSource[key]?.sort().map((item,index)=>{
+                                                            return <Option value={item}>{item}</Option>
+                                                            })} 
+                                                        </OptGroup>  
+                                                    }
+                                                }
+                                            
+                                            })}
+
                                     </Select>
                                     </Form.Item>
                                 </Col>
@@ -285,8 +346,9 @@ function SmartEventsForm({smart_events, fetchSmartEvents, setShowSmartEventForm,
 
 const mapStateToProps = (state) => ({
     smart_events: state.events.smart_events,
+    objPropertiesSource: state.events.objPropertiesSource,
     activeProject: state.global.active_project, 
     events: state.coreQuery.eventOptions
   });
 
-  export default connect(mapStateToProps, {saveSmartEvents, fetchSmartEvents, fetchEventNames})(SmartEventsForm); 
+  export default connect(mapStateToProps, {saveSmartEvents, fetchSmartEvents, fetchEventNames, fetchObjectPropertiesbySource})(SmartEventsForm); 
