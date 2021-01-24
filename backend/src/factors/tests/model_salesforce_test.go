@@ -317,15 +317,15 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 
 	prevDoc, status := M.GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(project.ID, cuid, userID3, salesforceDocument.Type)
 	assert.Equal(t, http.StatusFound, status)
-	prevProperties, err := IntSalesforce.GetSalesforceDocumentProperties(project.ID, prevDoc)
+	_, prevProperties, err := IntSalesforce.GetSalesforceDocumentProperties(project.ID, prevDoc)
 	assert.Nil(t, err)
-	assert.Equal(t, "Tuesday", (*prevProperties)["$salesforce_contact_day"])
+	assert.Equal(t, "Tuesday", (*prevProperties)["day"])
 
 	prevDoc, status = M.GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(project.ID, "", userID3, salesforceDocument.Type)
 	assert.Equal(t, http.StatusFound, status)
-	prevProperties, err = IntSalesforce.GetSalesforceDocumentProperties(project.ID, prevDoc)
+	_, prevProperties, err = IntSalesforce.GetSalesforceDocumentProperties(project.ID, prevDoc)
 	assert.Nil(t, err)
-	assert.Equal(t, "Sunday", (*prevProperties)["$salesforce_contact_day"])
+	assert.Equal(t, "Sunday", (*prevProperties)["day"])
 
 	filter := M.SmartCRMEventFilter{
 		Source:               M.SmartCRMEventSourceSalesforce,
@@ -334,7 +334,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_day",
+				Name: "day",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -355,7 +355,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	}
 
 	currentProperties := make(map[string]interface{})
-	currentProperties["$salesforce_contact_day"] = "Saturday"
+	currentProperties["day"] = "Saturday"
 	smartEvent, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "test", cuid, userID3, salesforceDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "test", smartEvent.Name)
@@ -372,7 +372,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_day",
+				Name: "day",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -491,10 +491,10 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	*/
 	prevDoc, status := M.GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(project.ID, "", userID1, M.SalesforceDocumentTypeContact)
 	assert.Equal(t, http.StatusFound, status)
-	prevProperties, err := IntSalesforce.GetSalesforceDocumentProperties(project.ID, prevDoc)
+	_, prevProperties, err := IntSalesforce.GetSalesforceDocumentProperties(project.ID, prevDoc)
 	assert.Nil(t, err)
-	assert.Equal(t, "G", (*prevProperties)["$salesforce_contact_character"])
-	assert.Equal(t, "Saturday", (*prevProperties)["$salesforce_contact_day"])
+	assert.Equal(t, "G", (*prevProperties)["character"])
+	assert.Equal(t, "Saturday", (*prevProperties)["day"])
 
 	/*
 		filter1:
@@ -508,7 +508,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_character",
+				Name: "character",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -540,7 +540,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_character",
+				Name: "character",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -572,7 +572,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_day",
+				Name: "day",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -600,19 +600,19 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 		Expected previous record U1(day="Sunday", character="G", type = contact)
 	*/
 	currentProperties := make(map[string]interface{})
-	currentProperties["$salesforce_contact_character"] = "H"
+	currentProperties["character"] = "H"
 	smartEvent, prevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter1", "", userID1, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[0])
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "filter1", smartEvent.Name)
 	assert.Equal(t, "G", smartEvent.Properties["$prev_salesforce_contact_character"])
 	assert.Equal(t, "H", smartEvent.Properties["$curr_salesforce_contact_character"])
 	//prev properties check
-	assert.Equal(t, "Saturday", (*prevProperties)["$salesforce_contact_day"])
-	assert.Equal(t, "G", (*prevProperties)["$salesforce_contact_character"])
+	assert.Equal(t, "Saturday", (*prevProperties)["day"])
+	assert.Equal(t, "G", (*prevProperties)["character"])
 
 	//Fail Test
 	currentProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_character"] = "G"
+	currentProperties["character"] = "G"
 	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter1", "", userID1, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[0])
 	assert.Equal(t, false, ok)
 	// prev properties should be nil
@@ -625,18 +625,18 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 		Expected previous record U2(day="Monday", character="B",type = contact)
 	*/
 	currentProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_character"] = "I"
+	currentProperties["character"] = "I"
 	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter2", "", userID2, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[1])
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "filter2", smartEvent.Name)
 	assert.Equal(t, "B", smartEvent.Properties["$prev_salesforce_contact_character"])
 	assert.Equal(t, "I", smartEvent.Properties["$curr_salesforce_contact_character"])
 	// prev properties check
-	assert.Equal(t, "B", (*prevProperties)["$salesforce_contact_character"])
-	assert.Equal(t, "Monday", (*prevProperties)["$salesforce_contact_day"])
+	assert.Equal(t, "B", (*prevProperties)["character"])
+	assert.Equal(t, "Monday", (*prevProperties)["day"])
 
 	//Fail Test filter2
-	currentProperties["$salesforce_contact_character"] = "J"
+	currentProperties["character"] = "J"
 	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter2", "", userID2, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[1])
 	assert.Equal(t, false, ok)
 	// prev properties should be nil
@@ -649,19 +649,19 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 		Expected previous record U1(day="Saturday", character="G", type = contact)
 	*/
 	currentProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_day"] = "Sunday"
+	currentProperties["day"] = "Sunday"
 	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter3", "", userID1, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[2])
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "filter3", smartEvent.Name)
 	assert.Equal(t, "Saturday", smartEvent.Properties["$prev_salesforce_contact_day"])
 	assert.Equal(t, "Sunday", smartEvent.Properties["$curr_salesforce_contact_day"])
 	//prev properties check
-	assert.Equal(t, "G", (*prevProperties)["$salesforce_contact_character"])
-	assert.Equal(t, "Saturday", (*prevProperties)["$salesforce_contact_day"])
+	assert.Equal(t, "G", (*prevProperties)["character"])
+	assert.Equal(t, "Saturday", (*prevProperties)["day"])
 
 	//Fail Test filter2
 	currentProperties = make(map[string]interface{})
-	currentProperties["$salesforce_contact_day"] = "Monday"
+	currentProperties["day"] = "Monday"
 	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter2", "", userID1, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[2])
 	assert.Equal(t, false, ok)
 	// prev properties should be nil
@@ -682,7 +682,7 @@ func TestSameUserSmartEvent(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$salesforce_contact_character",
+				Name: "character",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -737,7 +737,7 @@ func TestSameUserSmartEvent(t *testing.T) {
 	M.UpdateSalesforceDocumentAsSynced(project.ID, salesforceDocumentPrev, eventID1, userID1)
 
 	currentProperties := make(map[string]interface{})
-	currentProperties["$salesforce_contact_character"] = "I"
+	currentProperties["character"] = "I"
 	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s","character":"%s"}`, contactID, name, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), createdDate.AddDate(0, 0, 1).UTC().Format(M.SalesforceDocumentTimeLayout), currentProperties["$salesforce_contact_character"])
 	currentSalesforceDocument := &M.SalesforceDocument{
 		ProjectID: project.ID,

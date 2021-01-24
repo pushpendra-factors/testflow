@@ -51,6 +51,17 @@ definitions:
         $ref: '#/definitions/model.AttributionQuery'
         type: object
     type: object
+  handler.CRMResponsePayload:
+    properties:
+      categorical:
+        items:
+          type: string
+        type: array
+      datetime:
+        items:
+          type: string
+        type: array
+    type: object
   handler.DashboardRequestPayload:
     properties:
       description:
@@ -2396,6 +2407,36 @@ paths:
       tags:
       - ChannelQuery
       - CoreQuery
+  /{project_id}/v1/crm/{crm_source}/{object_type}/properties:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Source
+        in: path
+        name: crm_source
+        required: true
+        type: string
+      - description: Object type
+        in: path
+        name: object_type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.CRMResponsePayload'
+      summary: To get crm object properties by source.
+      tags:
+      - V1ApiSmartEvent
   /{project_id}/v1/dashboards/{dashboard_id}:
     delete:
       consumes:

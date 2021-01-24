@@ -929,18 +929,18 @@ type CRMSmartEvent struct {
 	Timestamp  uint64
 }
 
-func getPrevPropertyName(name string) string {
-	if name == "" {
+func getPrevPropertyName(pName, source, objectType string) string {
+	if pName == "" {
 		return ""
 	}
-	return fmt.Sprintf("$prev_%s", strings.TrimPrefix(name, U.NAME_PREFIX))
+	return fmt.Sprintf("%sprev_%s", U.NAME_PREFIX, getCRMPropertyKeyByType(source, objectType, pName))
 }
 
-func getCurrPropertyName(name string) string {
-	if name == "" {
+func getCurrPropertyName(pName, source, objectType string) string {
+	if pName == "" {
 		return ""
 	}
-	return fmt.Sprintf("$curr_%s", strings.TrimPrefix(name, U.NAME_PREFIX))
+	return fmt.Sprintf("%scurr_%s", U.NAME_PREFIX, getCRMPropertyKeyByType(source, objectType, pName))
 }
 
 // FillSmartEventCRMProperties fills all properties from CRM smart filter to new properties
@@ -951,10 +951,10 @@ func FillSmartEventCRMProperties(newProperties, current, prev *map[string]interf
 
 	for i := range filter.Filters {
 		if value, exists := (*current)[filter.Filters[i].Name]; exists {
-			(*newProperties)[getCurrPropertyName(filter.Filters[i].Name)] = value
+			(*newProperties)[getCurrPropertyName(filter.Filters[i].Name, filter.Source, filter.ObjectType)] = value
 		}
 		if value, exists := (*prev)[filter.Filters[i].Name]; exists {
-			(*newProperties)[getPrevPropertyName(filter.Filters[i].Name)] = value
+			(*newProperties)[getPrevPropertyName(filter.Filters[i].Name, filter.Source, filter.ObjectType)] = value
 		}
 	}
 }
