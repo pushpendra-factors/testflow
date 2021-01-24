@@ -3,7 +3,6 @@ package hubspot
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -78,24 +77,30 @@ var syncOrderByType = [...]int{
 	M.HubspotDocumentTypeDeal,
 }
 
-func getContactProperties(document *M.HubspotDocument) (*map[string]interface{}, error) {
+func getContactProperties(document *M.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 
 	if document.Type != M.HubspotDocumentTypeContact {
-		return nil, errors.New("invalid type")
+		return nil, nil, errors.New("invalid type")
 	}
 
 	var contact Contact
 	err := json.Unmarshal((document.Value).RawMessage, &contact)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
+	enrichedProperties := make(map[string]interface{}, 0)
 	properties := make(map[string]interface{}, 0)
 
 	for ipi := range contact.IdentityProfiles {
 		for idi := range contact.IdentityProfiles[ipi].Identities {
-			key := getPropertyKeyByType(M.HubspotDocumentTypeNameContact,
-				contact.IdentityProfiles[ipi].Identities[idi].Type)
+			key := contact.IdentityProfiles[ipi].Identities[idi].Type
+			enkey := M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceHubspot, M.HubspotDocumentTypeNameContact,
+				key)
+			if _, exists := enrichedProperties[enkey]; !exists {
+				enrichedProperties[enkey] = contact.IdentityProfiles[ipi].Identities[idi].Value
+			}
+
 			if _, exists := properties[key]; !exists {
 				properties[key] = contact.IdentityProfiles[ipi].Identities[idi].Value
 			}
@@ -103,22 +108,25 @@ func getContactProperties(document *M.HubspotDocument) (*map[string]interface{},
 	}
 
 	for pkey, pvalue := range contact.Properties {
-		key := getPropertyKeyByType(M.HubspotDocumentTypeNameContact, pkey)
+		key := M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceHubspot, M.HubspotDocumentTypeNameContact, pkey)
 
 		// give precedence to identity profiles, do not
 		// overwrite same key from form.
-		if _, exists := properties[key]; exists {
-			continue
+		if _, exists := enrichedProperties[key]; !exists {
+			enrichedProperties[key] = pvalue.Value
 		}
-		properties[key] = pvalue.Value
+
+		if _, exists := properties[pkey]; !exists {
+			properties[pkey] = pvalue.Value
+		}
 	}
 
-	return &properties, nil
+	return &enrichedProperties, &properties, nil
 }
 
 func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}) string {
 	// identify using email if exist on properties.
-	emailInt, emailExists := properties[getPropertyKeyByType(
+	emailInt, emailExists := properties[M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceHubspot,
 		M.HubspotDocumentTypeNameContact, "email")]
 	if emailExists || emailInt != nil {
 		email, ok := emailInt.(string)
@@ -128,7 +136,7 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 	}
 
 	// identify using phone if exist on properties.
-	phoneInt, phoneExists := properties[getPropertyKeyByType(
+	phoneInt, phoneExists := properties[M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceHubspot,
 		M.HubspotDocumentTypeNameContact, "phone")]
 	if phoneExists || phoneInt != nil {
 		phone := U.GetPropertyValueAsString(phoneInt)
@@ -163,10 +171,6 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 	}
 
 	return ""
-}
-
-func getPropertyKeyByType(typ, key string) string {
-	return fmt.Sprintf("$hubspot_%s_%s", typ, strings.ToLower(key))
 }
 
 func getEventTimestamp(timestamp int64) int64 {
@@ -218,10 +222,10 @@ func GetHubspotSmartEventPayload(projectID uint64, eventName, customerUserID, us
 
 		var err error
 		if docType == M.HubspotDocumentTypeContact {
-			prevProperties, err = getContactProperties(prevDoc)
+			_, prevProperties, err = getContactProperties(prevDoc)
 		}
 		if docType == M.HubspotDocumentTypeDeal {
-			prevProperties, err = getDealProperties(prevDoc)
+			_, prevProperties, err = getDealProperties(prevDoc)
 		}
 
 		if err != nil {
@@ -311,13 +315,13 @@ func syncContact(projectID uint64, document *M.HubspotDocument, hubspotSmartEven
 	logCtx := log.WithField("project_id",
 		projectID).WithField("document_id", document.ID)
 
-	properties, err := getContactProperties(document)
+	enProperties, properties, err := getContactProperties(document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properites from hubspot contact.")
 		return http.StatusInternalServerError
 	}
 
-	leadGUID, exists := (*properties)[M.UserPropertyHubspotContactLeadGUID]
+	leadGUID, exists := (*enProperties)[M.UserPropertyHubspotContactLeadGUID]
 	if !exists {
 		logCtx.Error("Missing lead_guid on hubspot contact properties. Sync failed.")
 		return http.StatusInternalServerError
@@ -325,8 +329,8 @@ func syncContact(projectID uint64, document *M.HubspotDocument, hubspotSmartEven
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
-		EventProperties: *properties,
-		UserProperties:  *properties,
+		EventProperties: *enProperties,
+		UserProperties:  *enProperties,
 		Timestamp:       getEventTimestamp(document.Timestamp),
 	}
 
@@ -570,7 +574,7 @@ func syncCompany(projectID uint64, document *M.HubspotDocument) int {
 				userProperties[U.UP_COMPANY] = value.Value
 			}
 
-			propertyKey := getPropertyKeyByType(M.HubspotDocumentTypeNameCompany, key)
+			propertyKey := M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceHubspot, M.HubspotDocumentTypeNameCompany, key)
 			userProperties[propertyKey] = value.Value
 		}
 
@@ -615,25 +619,27 @@ func syncCompany(projectID uint64, document *M.HubspotDocument) int {
 	return http.StatusOK
 }
 
-func getDealProperties(document *M.HubspotDocument) (*map[string]interface{}, error) {
+func getDealProperties(document *M.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 
 	if document.Type != M.HubspotDocumentTypeDeal {
-		return nil, errors.New("invalid type")
+		return nil, nil, errors.New("invalid type")
 	}
 
 	var deal Deal
 	err := json.Unmarshal((document.Value).RawMessage, &deal)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	properties := make(map[string]interface{}, 0)
+	enProperties := make(map[string]interface{}, 0)
+	properties := make(map[string]interface{})
 	for k, v := range deal.Properties {
-		key := getPropertyKeyByType(M.HubspotDocumentTypeNameDeal, k)
-		properties[key] = v.Value
+		key := M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceHubspot, M.HubspotDocumentTypeNameDeal, k)
+		enProperties[key] = v.Value
+		properties[k] = v.Value
 	}
 
-	return &properties, nil
+	return &enProperties, &properties, nil
 }
 
 func syncDeal(projectID uint64, document *M.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
@@ -651,13 +657,13 @@ func syncDeal(projectID uint64, document *M.HubspotDocument, hubspotSmartEventNa
 		return http.StatusInternalServerError
 	}
 
-	properties, err := getDealProperties(document)
+	enProperties, properties, err := getDealProperties(document)
 	if err != nil {
 		logCtx.Error("Failed to get hubspot deal document properties")
 		return http.StatusInternalServerError
 	}
 
-	dealStage, exists := (*properties)[U.CRM_HUBSPOT_DEALSTAGE]
+	dealStage, exists := (*enProperties)[U.CRM_HUBSPOT_DEALSTAGE]
 	if !exists || dealStage == nil {
 		logCtx.Error("No deal stage property found on hubspot deal.")
 		return http.StatusInternalServerError
@@ -673,8 +679,8 @@ func syncDeal(projectID uint64, document *M.HubspotDocument, hubspotSmartEventNa
 			Name:            U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
 			ProjectId:       projectID,
 			UserId:          userID,
-			EventProperties: *properties,
-			UserProperties:  *properties,
+			EventProperties: *enProperties,
+			UserProperties:  *enProperties,
 			Timestamp:       getEventTimestamp(document.Timestamp),
 		}
 
