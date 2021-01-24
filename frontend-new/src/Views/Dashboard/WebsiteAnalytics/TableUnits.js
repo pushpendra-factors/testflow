@@ -1,8 +1,8 @@
 import React from "react";
-import { Text } from "../../../components/factorsComponents";
+import { Text, SVG } from "../../../components/factorsComponents";
 import WebsiteAnalyticsTable from "./WebsiteAnalyticsTable";
 
-function TableUnits({ tableUnits, data }) {
+function TableUnits({ tableUnits, data, setwidgetModal, resultState }) {
   return (
     <>
       {tableUnits.map((unit) => {
@@ -26,9 +26,9 @@ function TableUnits({ tableUnits, data }) {
                       <div className="flex flex-col">
                         <div
                           className="flex cursor-pointer items-center"
-                          // onClick={() =>
-                          //   setwidgetModal({ unit, data: resultState.data })
-                          // }
+                          onClick={() =>
+                            setwidgetModal({ unit, data: resultState.data })
+                          }
                         >
                           <Text
                             ellipsis
@@ -39,7 +39,7 @@ function TableUnits({ tableUnits, data }) {
                           >
                             {unit.title}
                           </Text>
-                          {/* <SVG color="#8692A3" size={20} name="expand" /> */}
+                          <SVG color="#8692A3" size={20} name="expand" />
                         </div>
                         <div>
                           <Text

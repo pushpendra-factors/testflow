@@ -15,10 +15,12 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_WEB,
 } from "../../utils/constants";
 import AttributionsChart from "../CoreQuery/AttributionsResult/AttributionsChart";
 import GroupedAttributionsChart from "../CoreQuery/AttributionsResult/GroupedAttributionsChart";
 import CampaignAnalytics from "../CoreQuery/CampaignAnalytics";
+import WebsiteAnalyticsTable from "./WebsiteAnalytics/WebsiteAnalyticsTable";
 
 function ActiveUnitContent({
   unit,
@@ -30,26 +32,34 @@ function ActiveUnitContent({
   const history = useHistory();
 
   let equivalentQuery;
-  if (unit.query.query.query_group) {
-    if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_CAMPAIGN) {
-      equivalentQuery = {
-        ...unit.query.query.query_group[0],
-        queryType: QUERY_TYPE_CAMPAIGN,
-      };
-    } else {
-      equivalentQuery = getStateQueryFromRequestQuery(
-        unit.query.query.query_group[0]
+  if (unit.query.query) {
+    if (unit.query.query.query_group) {
+      if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_CAMPAIGN) {
+        equivalentQuery = {
+          ...unit.query.query.query_group[0],
+          queryType: QUERY_TYPE_CAMPAIGN,
+        };
+      } else {
+        equivalentQuery = getStateQueryFromRequestQuery(
+          unit.query.query.query_group[0]
+        );
+      }
+    } else if (
+      unit.query.query.cl &&
+      unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
+    ) {
+      equivalentQuery = getAttributionStateFromRequestQuery(
+        unit.query.query.query
       );
+    } else {
+      equivalentQuery = getStateQueryFromRequestQuery(unit.query.query);
     }
-  } else if (
-    unit.query.query.cl &&
-    unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
-  ) {
-    equivalentQuery = getAttributionStateFromRequestQuery(
-      unit.query.query.query
-    );
   } else {
-    equivalentQuery = getStateQueryFromRequestQuery(unit.query.query);
+    if (unit.query.cl && unit.query.cl === QUERY_TYPE_WEB) {
+      equivalentQuery = {
+        queryType: QUERY_TYPE_WEB,
+      };
+    }
   }
 
   const { queryType } = equivalentQuery;
@@ -224,6 +234,15 @@ function ActiveUnitContent({
     );
   }
 
+  if (queryType === QUERY_TYPE_WEB) {
+    content = (
+      <WebsiteAnalyticsTable
+        tableData={resultState.data[unit.id]}
+        isWidgetModal={true}
+      />
+    );
+  }
+
   const handleEditQuery = useCallback(() => {
     history.push({
       pathname: "/analyse",
@@ -242,14 +261,16 @@ function ActiveUnitContent({
             {unit.title}
           </Text>
           <div className="flex items-center">
-            <Button
-              onClick={handleEditQuery}
-              style={{ display: "flex" }}
-              className="flex items-center mr-2"
-              size="small"
-            >
-              Edit Query
-            </Button>
+            {queryType !== QUERY_TYPE_WEB ? (
+              <Button
+                onClick={handleEditQuery}
+                style={{ display: "flex" }}
+                className="flex items-center mr-2"
+                size="small"
+              >
+                Edit Query
+              </Button>
+            ) : null}
             <Button
               style={{ display: "flex" }}
               className="flex items-center"
