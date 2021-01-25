@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: persistent-pool-standard
   name: monitoring-job
 spec:
   schedule: "*/15 * * * *" # every 15 minutes

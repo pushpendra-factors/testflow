@@ -5,6 +5,7 @@ metadata:
     layer: patternserver
     env: production
     project: factors-production
+    nodePool: default-pool
   name: patternserver
   namespace: default
 spec:

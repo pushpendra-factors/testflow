@@ -5,6 +5,7 @@ metadata:
     layer: sdk-request-worker
     env: production
     project: factors-production
+    nodePool: persistent-pool-standard
   name: sdk-request-worker
   namespace: default
 spec:

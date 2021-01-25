@@ -5,6 +5,7 @@ metadata:
     layer: queue-redis
     env: staging
     project: factors-staging
+    nodePool: factors-staging-node-pool
   name: queue-redis
   namespace: default
 spec:

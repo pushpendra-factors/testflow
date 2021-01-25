@@ -5,6 +5,7 @@ metadata:
     layer: sdkserver
     env: staging
     project: factors-staging
+    nodePool: factors-staging-node-pool
   name: sdkserver
   namespace: default
 spec:

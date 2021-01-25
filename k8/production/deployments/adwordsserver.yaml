@@ -5,6 +5,7 @@ metadata:
     layer: adwordsserver
     env: production
     project: factors-production
+    nodePool: default-pool
   name: adwordsserver
   namespace: default
 spec:

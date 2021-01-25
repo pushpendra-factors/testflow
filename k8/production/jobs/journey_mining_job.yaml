@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: persistent-pool-highmem-16
   name: journey-mining-job
 spec:
   schedule: "1 2 3 4 5" # In UTC

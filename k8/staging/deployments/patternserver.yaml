@@ -5,6 +5,7 @@ metadata:
     layer: patternserver
     env: staging
     project: factors-staging
+    nodePool: factors-staging-node-pool
   name: patternserver
   namespace: default
 spec:

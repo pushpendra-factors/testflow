@@ -5,6 +5,7 @@ metadata:
     layer: integration-request-worker
     env: production
     project: factors-production
+    nodePool: persistent-pool-standard
   name: integration-request-worker
   namespace: default
 spec:

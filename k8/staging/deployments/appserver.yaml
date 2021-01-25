@@ -5,6 +5,7 @@ metadata:
     layer: appserver
     env: staging
     project: factors-staging
+    nodePool: factors-staging-node-pool
   name: appserver
   namespace: default
 spec:

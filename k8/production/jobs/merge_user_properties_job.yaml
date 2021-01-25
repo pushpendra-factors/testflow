@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: persistent-pool-standard
   name: merge-user-properties-job
 spec:
   schedule: "1 2 3 4 5" # Random one time schedule to avoid running periodically.
