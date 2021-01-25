@@ -5,6 +5,7 @@ metadata:
     layer: redis
     env: production
     project: factors-production
+    nodePool: persistent-pool-highmem
   name: redis
   namespace: default
 spec:

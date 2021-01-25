@@ -9,11 +9,7 @@ import CardUnit from "./CardUnit";
 
 function WebsiteAnalytics({
   webAnalyticsUnits,
-  savedQueries,
   setwidgetModal,
-  showDeleteWidgetModal,
-  refreshClicked,
-  setRefreshClicked,
   durationObj,
 }) {
   const { active_project } = useSelector((state) => state.global);
@@ -73,10 +69,10 @@ function WebsiteAnalytics({
     return (
       <>
         {cardUnits.length ? (
-          <CardUnit cardUnits={cardUnits} data={resultState.data} />
+          <CardUnit resultState={resultState} setwidgetModal={setwidgetModal} cardUnits={cardUnits} data={resultState.data} />
         ) : null}
         {tableUnits.length ? (
-          <TableUnits tableUnits={tableUnits} data={resultState.data} />
+          <TableUnits resultState={resultState} setwidgetModal={setwidgetModal} tableUnits={tableUnits} data={resultState.data} />
         ) : null}
       </>
     );

@@ -5,6 +5,7 @@ metadata:
     layer: persistent-redis
     env: staging
     project: factors-staging
+    nodePool: factors-staging-node-pool
   name: persistent-redis
   namespace: default
 spec:

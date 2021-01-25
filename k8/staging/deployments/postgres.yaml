@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   labels:
     layer: postgres
+    nodePool: factors-staging-node-pool
   name: postgres
   namespace: default
 spec:

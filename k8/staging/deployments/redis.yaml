@@ -5,6 +5,7 @@ metadata:
     layer: redis
     env: staging
     project: factors-staging
+    nodePool: factors-staging-node-pool
   name: redis
   namespace: default
 spec:

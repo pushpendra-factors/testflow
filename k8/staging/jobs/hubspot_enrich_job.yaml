@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: factors-staging-node-pool
   name: hubspot-enrich-job
 spec:
   schedule: "0 21 * * *" # In UTC

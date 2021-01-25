@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: factors-staging-node-pool
   name: adhoc-archive-events-job
 spec:
   schedule: "1 2 3 4 5" # In UTC. Random time to avoid running periodically.

@@ -5,6 +5,7 @@ metadata:
     app: website
     env: production
     project: factors-production
+    nodePool: default-pool
   name: website
   namespace: default
 spec:

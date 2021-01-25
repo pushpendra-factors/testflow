@@ -83,11 +83,7 @@ function SortableCards({
         <WebsiteAnalytics
           durationObj={durationObj}
           webAnalyticsUnits={webAnalyticsUnits}
-          savedQueries={savedQueries}
           setwidgetModal={setwidgetModal}
-          showDeleteWidgetModal={showDeleteWidgetModal}
-          refreshClicked={refreshClicked}
-          setRefreshClicked={setRefreshClicked}
         />
       ) : null}
     </>

@@ -5,6 +5,7 @@ metadata:
     app: frontend
     env: production
     project: factors-production
+    nodePool: default-pool
   name: frontend
   namespace: default
 spec:
