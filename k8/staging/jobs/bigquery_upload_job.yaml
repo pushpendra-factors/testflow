@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: factors-staging-node-pool
   name: bigquery-upload-job
 spec:
   schedule: "30 03 * * *" # In UTC

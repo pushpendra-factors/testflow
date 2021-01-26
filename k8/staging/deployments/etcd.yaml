@@ -3,6 +3,7 @@ kind: Deployment
 metadata:
   labels:
     layer: deployment
+    nodePool: factors-staging-node-pool
   name: etcd
   namespace: default
 spec:

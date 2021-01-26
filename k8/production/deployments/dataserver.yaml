@@ -5,6 +5,7 @@ metadata:
     layer: dataserver
     env: production
     project: factors-production
+    nodePool: persistent-pool-standard
   name: dataserver
   namespace: default
 spec:

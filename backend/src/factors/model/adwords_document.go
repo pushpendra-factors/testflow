@@ -537,7 +537,7 @@ func getAdwordsFilterValuesByType(projectID uint64, docType int, property string
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 
 	logCtx = log.WithField("project_id", projectID).WithField("doc_type", docType).WithField("req_id", reqID)
-	params := []interface{}{property, projectID, customerAccountID, docType}
+	params := []interface{}{property, projectID, customerAccountID, docType, property}
 	_, resultRows, _ := ExecuteSQL(adwordsFilterQueryStr, params, logCtx)
 
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound

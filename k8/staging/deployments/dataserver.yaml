@@ -5,6 +5,7 @@ metadata:
     layer: dataserver
     env: staging
     project: factors-staging
+    nodePool: factors-staging-node-pool
   name: dataserver
   namespace: default
 spec:

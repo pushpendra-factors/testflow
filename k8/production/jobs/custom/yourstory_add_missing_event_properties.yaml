@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: persistent-pool-highmem-16
   name: yourstory-add-properties-job
 spec:
   schedule: "0 * * * *" # every 1 hour

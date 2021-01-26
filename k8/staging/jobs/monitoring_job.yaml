@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: factors-staging-node-pool
   name: monitoring-job
 spec:
   schedule: "*/15 * * * *" # every 15 minutes

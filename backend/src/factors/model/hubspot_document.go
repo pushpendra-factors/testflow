@@ -679,12 +679,12 @@ func GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]stri
 	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
-	lbTimestamp := U.UnixTimeBeforeDuration(48 * time.Hour) //last 48 hours
+	lookbackTimestampInMilliseconds := U.UnixTimeBeforeDuration(48*time.Hour) * 1000 //last 48 hours
 
 	var hubspotDocuments []HubspotDocument
 	db := C.GetServices().Db
 	err = db.Model(&HubspotDocument{}).Where("project_id = ? AND type = ? AND action= ? AND timestamp > ?",
-		ProjectID, docType, 2, lbTimestamp).Order("timestamp desc").Limit(1000).Find(&hubspotDocuments).Error
+		ProjectID, docType, 2, lookbackTimestampInMilliseconds).Order("timestamp desc").Limit(1000).Find(&hubspotDocuments).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get hubspot documents for GetHubspotObjectProperties")
 		return nil, nil

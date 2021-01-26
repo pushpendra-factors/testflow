@@ -1,6 +1,8 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
+  labels:
+    nodePool: default-pool
   name: etcd
 spec:
   selector:
