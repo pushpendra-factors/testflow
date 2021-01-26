@@ -1,4 +1,4 @@
-export const getWebAnalyticsTableData = (tableData) => {
+export const getWebAnalyticsTableData = (tableData, searchText) => {
   const { headers, rows } = tableData;
   const columns = headers.map((header) => {
     return {
@@ -7,7 +7,21 @@ export const getWebAnalyticsTableData = (tableData) => {
     };
   });
 
-  const data = rows.map((row, idx) => {
+  const filteredRows = rows.filter((row) => {
+    let isSearchTextAvailable = false;
+    row.forEach((elem) => {
+      try {
+        if (elem.toString().toLowerCase().includes(searchText.toLowerCase())) {
+          isSearchTextAvailable = true;
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    });
+    return isSearchTextAvailable;
+  });
+
+  const data = filteredRows.map((row, idx) => {
     const rowData = {};
     row.forEach((elem, index) => {
       rowData[headers[index]] = elem;
