@@ -239,6 +239,7 @@ function ActiveUnitContent({
       <WebsiteAnalyticsTable
         tableData={resultState.data[unit.id]}
         isWidgetModal={true}
+        modalTitle={unit.title}
       />
     );
   }

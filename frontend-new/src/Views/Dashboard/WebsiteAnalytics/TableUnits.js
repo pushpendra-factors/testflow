@@ -60,7 +60,7 @@ function TableUnits({ tableUnits, data, setwidgetModal, resultState }) {
                       </div> */}
                     </div>
                     <div className="mt-4">
-											<WebsiteAnalyticsTable unit={unit} tableData={data[unit.id]} />
+											<WebsiteAnalyticsTable title={unit.title} tableData={data[unit.id]} />
 										</div>
                   </div>
                 </div>

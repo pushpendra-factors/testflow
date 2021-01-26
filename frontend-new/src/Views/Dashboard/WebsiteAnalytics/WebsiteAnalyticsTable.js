@@ -2,10 +2,23 @@ import React, { useState } from "react";
 import { getWebAnalyticsTableData } from "./utils";
 import DataTable from "../../../components/DataTable";
 
-function WebsiteAnalyticsTable({ unit, tableData, isWidgetModal = false }) {
+function WebsiteAnalyticsTable({
+  tableData,
+  isWidgetModal = false,
+  modalTitle = null,
+}) {
   const [searchText, setSearchText] = useState("");
 
-  const { columns, data } = getWebAnalyticsTableData(tableData);
+  const { columns, data } = getWebAnalyticsTableData(tableData, searchText);
+
+  const getCSVData = () => {
+    return {
+      fileName: `${modalTitle}.csv`,
+      data: data.map(({ index, ...rest }) => {
+        return rest;
+      }),
+    };
+  };
 
   return (
     <DataTable
@@ -15,6 +28,7 @@ function WebsiteAnalyticsTable({ unit, tableData, isWidgetModal = false }) {
       setSearchText={setSearchText}
       columns={columns}
       scroll={{ x: 250 }}
+      getCSVData={getCSVData}
     />
   );
 }
