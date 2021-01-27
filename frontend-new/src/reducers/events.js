@@ -16,6 +16,12 @@ var host = BUILD_CONFIG.backend_host;
           case 'FETCH_SMART_EVENTS_REJECTED': {
             return { ...state, error: action.payload };
           } 
+          case 'FETCH_OBJECTPROPERTIESBYSOURCE_FULFILLED': {
+            return { ...state, objPropertiesSource: action.payload };
+          } 
+          case 'FETCH_OBJECTPROPERTIESBYSOURCE_REJECTED': {
+            return { ...state, error: action.payload };
+          } 
           case 'SAVE_SMART_EVENTS_FULFILLED': {
             return { ...state };
           } 
@@ -44,17 +50,32 @@ export function fetchSmartEvents(projectID) {
 } 
 
 export function saveSmartEvents(projectID,data) {
+  return function(dispatch) {
+    return new Promise((resolve,reject) => {
+      post(dispatch, host + "projects/"+projectID+'/v1/smart_event?type=crm',data)
+      .then((response)=>{        
+        dispatch({type:"SAVE_SMART_EVENTS_FULFILLED", payload: response.data});
+        resolve(response)
+      }).catch((err)=>{        
+        dispatch({type:"SAVE_SMART_EVENTS_REJECTED", payload: err});
+        reject(err);
+      });
+    });
+  }
+}
+
+export function fetchObjectPropertiesbySource(projectID,source,dataObj) {
         return function(dispatch) {
           return new Promise((resolve,reject) => {
-            post(dispatch, host + "projects/"+projectID+'/v1/smart_event?type=crm',data)
+            get(dispatch, host + "projects/"+projectID+'/v1/crm/'+source+'/'+dataObj+'/properties')
               .then((response)=>{        
-                dispatch({type:"SAVE_SMART_EVENTS_FULFILLED", payload: response.data});
+                dispatch({type:"FETCH_OBJECTPROPERTIESBYSOURCE_FULFILLED", payload: response.data});
                 resolve(response)
               }).catch((err)=>{        
-                dispatch({type:"SAVE_SMART_EVENTS_REJECTED", payload: err});
+                dispatch({type:"FETCH_OBJECTPROPERTIESBYSOURCE_REJECTED", payload: err});
                 reject(err);
               });
           });
-      }
-}
+        }
+} 
     

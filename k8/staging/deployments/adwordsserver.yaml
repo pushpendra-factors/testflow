@@ -5,6 +5,7 @@ metadata:
     layer: adwordsserver
     env: staging
     project: factors-staging
+    nodePool: factors-staging-node-pool
   name: adwordsserver
   namespace: default
 spec:

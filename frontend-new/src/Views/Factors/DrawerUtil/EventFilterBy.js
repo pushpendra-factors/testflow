@@ -2,16 +2,14 @@ import React, { useEffect, useState } from 'react';
 import {
   Drawer, Button, Row, Col, Select, message
 } from 'antd';
-import { SVG, Text } from 'factorsComponents'; 
-// import GroupSelect from '../../../components/QueryComposer/GroupSelect';
-import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
+import { SVG, Text } from 'factorsComponents';  
+import { fetchEventNames, getUserProperties, getEventProperties } from 'Reducers/coreQuery/middleware';
 import { fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel } from 'Reducers/factors';
 import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom'; 
 import moment from 'moment'; 
 import FilterBlock from '../../../components/QueryComposer/FilterBlock';
-import { fetchUserPropertyValues } from 'Reducers/coreQuery/services';
-
+import { fetchUserPropertyValues } from 'Reducers/coreQuery/services'; 
 
 const EventFilterBy = (props) => { 
   const [TrackedEventNames, SetTrackedEventNames] = useState([]); 
@@ -20,7 +18,7 @@ const EventFilterBy = (props) => {
   const [filterProps, setFilterProperties] = useState({
     user: [],
     event: []
-});
+}); 
 // const [filterDD, setFilterDD] = useState(false);
 
  
@@ -43,11 +41,24 @@ const EventFilterBy = (props) => {
     }  
   },[props.activeProject, props.tracked_events, props.factors_models, props.goal_insights])
 
+  useEffect(()=>{
+    if (!props.eventProperties[props.event]) {
+      props.getEventProperties(props.activeProject.id, props.event);
+    }
+    setfilters([]);
+  },[props.event])
+
   useEffect(() => {
     const assignFilterProps = Object.assign({}, filterProps);
     // console.log("assignFilterProps---->",assignFilterProps);
     assignFilterProps.user = props.userProperties;
     let  catAndNumericalProps = [];
+
+    // console.log('eventProperties-->>',props.eventProperties);
+    // console.log('event props-->>',props.eventProperties, props.event);
+    if (props.event && props.eventProperties[props.event]) {
+      assignFilterProps.event = props.eventProperties[props.event];
+    }
 
     props.userProperties.map((item)=>{ 
       if(item[1]=='categorical' || item[1]=='numerical'){ 
@@ -57,7 +68,7 @@ const EventFilterBy = (props) => {
     assignFilterProps.user = catAndNumericalProps;
     setFilterProperties(assignFilterProps);
 
-  }, [props.userProperties]);
+  }, [props.userProperties, props.eventProperties]);
 
  
 
@@ -81,8 +92,8 @@ const closeFilter = () => {
 }
  
 
-
 const renderFilterBlock = () => {
+  // console.log("filterProps final--->", filterProps);
   if(filterProps) {
       const filtrs = [];
 
@@ -91,13 +102,14 @@ const renderFilterBlock = () => {
               <div key={id} className={`mt-0 relative flex flex-grow w-full`}>
                   <FilterBlock activeProject={props.activeProject} 
                       index={id}
-                      blockType={'global'} 
+                      blockType={'event'} 
                       // filterType={'channel'} 
                       filter={filt}
                       extraClass={'filter-block--row'}
                       delBtnClass={'filter-block--delete--mini'}
                       delIcon={`times`}
                       deleteFilter={delFilter}
+                      event={{label: props.event}}
                       // typeProps={{channel: channel}} 
                       filterProps={filterProps}
                       propsConstants={Object.keys(filterProps)}
@@ -110,7 +122,7 @@ const renderFilterBlock = () => {
           filtrs.push(  
               <div key={filtrs.length} className={`mt-0 relative flex flex-grow w-full`}>
                   <FilterBlock activeProject={props.activeProject} 
-                      blockType={'global'} 
+                      blockType={'event'} 
                       // extraClass={styles.filterSelect}
                       extraClass={'filter-block--row'}
                       delBtnClass={'filter-block--delete--mini'}
@@ -119,6 +131,7 @@ const renderFilterBlock = () => {
                       propsConstants={Object.keys(filterProps)}
                       insertFilter={addFilter}
                       closeFilter={closeFilter} 
+                      event={{label: props.event}}
                       operatorProps={{
                         "categorical": [
                           '=',
@@ -164,8 +177,9 @@ const mapStateToProps = (state) => {
     userProperties: state.coreQuery.userProperties,
     factors_models: state.factors.factors_models,
     goal_insights: state.factors.goal_insights,
-    tracked_events: state.factors.tracked_events
+    tracked_events: state.factors.tracked_events,
+    eventProperties: state.coreQuery.eventProperties,
   };
 };
 export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights, 
-  fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel, getUserProperties, fetchUserPropertyValues})(EventFilterBy);
+  fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel, getUserProperties, fetchUserPropertyValues, getEventProperties})(EventFilterBy);

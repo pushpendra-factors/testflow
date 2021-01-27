@@ -5,6 +5,7 @@ metadata:
     layer: sdk-request-worker
     env: staging
     project: factors-staging
+    nodePool: factors-staging-node-pool
   name: sdk-request-worker
   namespace: default
 spec:

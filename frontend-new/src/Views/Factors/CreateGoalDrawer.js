@@ -4,7 +4,7 @@ import {
 } from 'antd';
 import { SVG, Text } from 'factorsComponents'; 
 import GroupSelect from '../../components/QueryComposer/GroupSelect';
-import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
+import { fetchEventNames, getUserProperties, getEventProperties } from 'Reducers/coreQuery/middleware'; 
 import { fetchGoalInsights, fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel } from 'Reducers/factors';
 import {connect} from 'react-redux';
 import { useHistory } from 'react-router-dom';
@@ -77,10 +77,10 @@ const operatorMap = {
 const getFilters = (filters) => {
   const result = [];
   filters.forEach((filter) => {
-    filter.values.forEach((value) => {
+    filter.values.forEach((value, index) => {
       result.push({
         en: filter.props[2],
-        lop: "OR",
+        lop: !index ? "AND" : "OR",
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
@@ -93,6 +93,8 @@ const getFilters = (filters) => {
 
   const onChangeGroupSelect1 = (grp, value) => {
     setShowDropDown(false); 
+    // console.log("value-->",value);
+    // console.log("event value-->",value);
     setEvent1(value[0]); 
   }
   // const onChangeFilter = (grp, value) => {
@@ -129,6 +131,12 @@ const getFilters = (filters) => {
   } 
   const factorsModels = !_.isEmpty(props.factors_models) && _.isArray(props.factors_models) ? props.factors_models.map((item)=>{return [`[${item.mt}] ${readableTimstamp(item.st)} - ${readableTimstamp(item.et)}`]}) : [];
   
+  // useEffect(()=>{ 
+  //   console.log('event-->>',event1);
+  //   if(event1){
+  //     props.getEventProperties(props.activeProject.id,event1)
+  //   }
+  // },[event1]); 
 
   useEffect(()=>{ 
     // if(!props.GlobalEventNames || !factorsModels){
@@ -410,7 +418,7 @@ const renderFilterBlock = () => {
                         </div>
                         {event1 &&  <Button size={'large'} type={'text'} onClick={() => setEventFilter1DD(true)} className={'m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button> }
                       </div>
-                        <EventFilterBy setfiltersParent={setfiltersEvent1} showEventFilterDD={showEventFilter1DD} setEventFilterDD={setEventFilter1DD} />  
+                        <EventFilterBy event={event1} setfiltersParent={setfiltersEvent1} showEventFilterDD={showEventFilter1DD} setEventFilterDD={setEventFilter1DD} />  
                       </div>
                 </div>
               </Col>
@@ -458,7 +466,7 @@ const renderFilterBlock = () => {
                       </div> 
                         {event2 &&  <Button size={'large'} type={'text'} onClick={() => setEventFilter2DD(true)} className={'m-0'}><SVG name={'filter'} extraClass={'m-0'} /></Button> }
                       </div> 
-                          <EventFilterBy setfiltersParent={setfiltersEvent2} showEventFilterDD={showEventFilter2DD} setEventFilterDD={setEventFilter2DD} />  
+                          <EventFilterBy event={event2} setfiltersParent={setfiltersEvent2} showEventFilterDD={showEventFilter2DD} setEventFilterDD={setEventFilter2DD} />  
                             {/* {event2 && <EventFilterBy setfiltersParent={setfiltersEvent2} /> } */}
                       </div>
                 </div>
@@ -467,10 +475,10 @@ const renderFilterBlock = () => {
           } 
 
 
-          <div className={' mt-12 border-top--thin'}> 
+          {/* <div className={' mt-12 border-top--thin'}> 
             <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 mt-4'}>Filter by</Text> 
             {renderFilterBlock()}
-          </div>
+          </div> */}
 
           {/* <div className={' mt-5 border-top--thin'}>
 
@@ -503,7 +511,7 @@ const renderFilterBlock = () => {
           </div>
           </div> */}
 
-    <div className={'flex flex-col justify-center items-center'} style={{ height: '50px' }}> 
+    <div className={'flex flex-col justify-center items-center'} style={{ height: '150px' }}> 
     </div>
         <div className={'flex justify-between items-center'}>
 
@@ -544,4 +552,4 @@ const mapStateToProps = (state) => {
   };
 };
 export default connect(mapStateToProps, {fetchEventNames, fetchGoalInsights, 
-  fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel, getUserProperties, fetchUserPropertyValues})(CreateGoalDrawer);
+  fetchFactorsModels, saveGoalInsightRules, saveGoalInsightModel, getUserProperties, fetchUserPropertyValues, getEventProperties})(CreateGoalDrawer);

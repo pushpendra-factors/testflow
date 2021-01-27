@@ -31,6 +31,7 @@ type AttributionQuery struct {
 	LookbackDays                  int                        `json:"lbw"`
 	From                          int64                      `json:"from"`
 	To                            int64                      `json:"to"`
+	QueryType                     string                     `json:"query_type"`
 }
 
 type AttributionKeyFilter struct {
@@ -100,8 +101,10 @@ const (
 	AttributionKeyAdgroup                = "AdGroup"
 	AttributionKeyKeyword                = "Keyword"
 
-	AdwordsClickReportType    = 4
-	AdwordsCampaignReportType = 5
+	AttributionQueryTypeConversionBased = "ConversionBased"
+	AttributionQueryTypeEngagementBased = "EngagementBased"
+
+	AdwordsClickReportType = 4
 
 	SecsInADay        = int64(86400)
 	LookbackCapInDays = 180
@@ -246,6 +249,10 @@ func applyOperator(attributionKeyType string, keyValue string, filter Attributio
 */
 func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryResult, error) {
 
+	// for existing queries and backward support
+	if query.QueryType == "" {
+		query.QueryType = AttributionQueryTypeConversionBased
+	}
 	projectSetting, errCode := GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return nil, errors.New("failed to get project Settings")
@@ -261,6 +268,9 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 	// 1. Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
 	_sessions, sessionUsers, err := getAllTheSessions(projectID, sessionEventNameID, query,
 		*projectSetting.IntAdwordsCustomerAccountId)
+	if err != nil {
+		return nil, err
+	}
 	usersInfo, err := getCoalesceIDFromUserIDs(sessionUsers, projectID)
 	if err != nil {
 		return nil, err
@@ -268,12 +278,19 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 	sessions := updateSessionsMapWithCoalesceID(_sessions, usersInfo)
 
 	isCompare := false
+	effectiveFrom := query.From
+	effectiveTo := query.To
+	// extend the campaign window for engagement based attribution
+	if query.QueryType == AttributionQueryTypeEngagementBased {
+		effectiveFrom = query.From
+		effectiveTo = lookbackAdjustedTo(query.To, query.LookbackDays)
+	}
 	var attributionData map[string]*AttributionData
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true
 		attributionData, err = RunAttributionForMethodologyComparison(projectID,
-			query.From, query.To,
+			effectiveFrom, effectiveTo,
 			query.ConversionEvent.Name,
 			query.ConversionEvent.Properties,
 			query.AttributionMethodology,
@@ -284,7 +301,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 		// Two events comparison
 		isCompare = true
 		attributionData, err = runAttribution(projectID,
-			query.From, query.To,
+			effectiveFrom, effectiveTo,
 			query.ConversionEvent.Name,
 			query.ConversionEvent.Properties,
 			query.LinkedEvents,
@@ -296,7 +313,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 		}
 
 		attributionCompareData, err := runAttribution(projectID,
-			query.From, query.To,
+			effectiveFrom, effectiveTo,
 			query.ConversionEventCompare.Name, // run for ConversionEventCompare
 			query.ConversionEventCompare.Properties,
 			query.LinkedEvents,
@@ -308,7 +325,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 		}
 
 		// merge compare data into attributionData
-		for key, _ := range attributionData {
+		for key := range attributionData {
 			if _, exists := attributionCompareData[key]; exists {
 				attributionData[key].ConversionEventCompareCount = attributionCompareData[key].ConversionEventCount
 			} else {
@@ -316,7 +333,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 			}
 		}
 		// filling any non-matched touch points
-		for missingKey, _ := range attributionCompareData {
+		for missingKey := range attributionCompareData {
 			if _, exists := attributionData[missingKey]; !exists {
 				attributionData[missingKey] = &AttributionData{}
 				attributionData[missingKey].ConversionEventCompareCount = attributionCompareData[missingKey].ConversionEventCount
@@ -325,7 +342,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 	} else {
 		// single event attribution
 		attributionData, err = runAttribution(projectID,
-			query.From, query.To,
+			effectiveFrom, effectiveTo,
 			query.ConversionEvent.Name,
 			query.ConversionEvent.Properties,
 			query.LinkedEvents,
@@ -337,11 +354,11 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 		return nil, err
 	}
 
-	addWebsiteVisitorsInfo(query.From, query.To, attributionData, sessions)
+	addWebsiteVisitorsInfo(effectiveFrom, effectiveTo, attributionData, sessions, len(query.LinkedEvents))
 
 	// 5. Add the performance information
 	currency, err := AddPerformanceReportInfo(projectID, attributionData, query.From, query.To,
-		*projectSetting.IntAdwordsCustomerAccountId)
+		*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey)
 	if err != nil {
 		return nil, err
 	}
@@ -372,7 +389,7 @@ func RunAttributionForMethodologyComparison(projectID uint64, from, to int64,
 
 	// Add users who hit conversion event
 	var usersToBeAttributed []UserEventInfo
-	for key, _ := range coalescedIDToInfoConverted {
+	for key := range coalescedIDToInfoConverted {
 		usersToBeAttributed = append(usersToBeAttributed, UserEventInfo{key,
 			goalEventName})
 	}
@@ -402,7 +419,7 @@ func RunAttributionForMethodologyComparison(projectID uint64, from, to int64,
 	attributionDataCompare := addUpConversionEventCount(userConversionCompareHit)
 
 	// merge compare data into attributionData
-	for key, _ := range attributionData {
+	for key := range attributionData {
 		if _, exists := attributionDataCompare[key]; exists {
 			attributionData[key].ConversionEventCompareCount = attributionDataCompare[key].ConversionEventCount
 		} else {
@@ -410,7 +427,7 @@ func RunAttributionForMethodologyComparison(projectID uint64, from, to int64,
 		}
 	}
 	// filling any non-matched touch points
-	for missingKey, _ := range attributionDataCompare {
+	for missingKey := range attributionDataCompare {
 		if _, exists := attributionData[missingKey]; !exists {
 			attributionData[missingKey] = &AttributionData{}
 			attributionData[missingKey].ConversionEventCompareCount = attributionDataCompare[missingKey].ConversionEventCount
@@ -482,7 +499,7 @@ func getRowsByMaps(attributionData map[string]*AttributionData,
 	nonMatchingRow := []interface{}{"none", 0, 0, float64(0), int64(0), float64(0), float64(0),
 		float64(0), float64(0)}
 	for i := 0; i < len(linkedEvents); i++ {
-		nonMatchingRow = append(nonMatchingRow, float64(0))
+		nonMatchingRow = append(nonMatchingRow, []interface{}{0.0})
 	}
 	for key, data := range attributionData {
 		attributionIdName := data.Name
@@ -509,8 +526,6 @@ func getRowsByMaps(attributionData map[string]*AttributionData,
 			}
 			row = append(row, getInterfaceListFromFloat64(data.LinkedEventsCount)...)
 			rows = append(rows, row)
-		} else {
-			updateNonMatchingRow(&nonMatchingRow, data, linkedEvents)
 		}
 	}
 	rows = append(rows, nonMatchingRow)
@@ -519,23 +534,6 @@ func getRowsByMaps(attributionData map[string]*AttributionData,
 		return rows[i][5].(float64) > rows[j][5].(float64)
 	})
 	return rows
-}
-
-func updateNonMatchingRow(nonMatchingRow *[]interface{}, data *AttributionData,
-	linkedEvents []QueryEventWithProperties) {
-	(*nonMatchingRow)[1] = (*nonMatchingRow)[1].(int) + data.Impressions
-	(*nonMatchingRow)[2] = (*nonMatchingRow)[2].(int) + data.Clicks
-	(*nonMatchingRow)[3] = (*nonMatchingRow)[3].(float64) + data.Spend
-	(*nonMatchingRow)[4] = (*nonMatchingRow)[4].(int64) + data.WebsiteVisitors
-	(*nonMatchingRow)[5] = (*nonMatchingRow)[5].(float64) + data.ConversionEventCount
-	(*nonMatchingRow)[6] = (*nonMatchingRow)[6].(float64) + 0.0
-	(*nonMatchingRow)[7] = (*nonMatchingRow)[7].(float64) + 0.0
-	(*nonMatchingRow)[8] = (*nonMatchingRow)[8].(float64) + 0.0
-	for index := 0; index < len(linkedEvents); index++ {
-		if index < len(data.LinkedEventsCount) {
-			(*nonMatchingRow)[5+index+1] = (*nonMatchingRow)[5+index+1].(float64) + data.LinkedEventsCount[index]
-		}
-	}
 }
 
 // Groups all unique users by attributionId and adds it to attributionData
@@ -574,9 +572,8 @@ func addUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
 		for _, attributionKeys := range userIdAttributionIdMap {
 			weight := 1 / float64(len(attributionKeys))
 			for _, key := range attributionKeys {
-				attributionRow := attributionData[key]
-				if attributionRow != nil {
-					attributionRow.LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += weight
+				if attributionData[key] != nil {
+					attributionData[key].LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += weight
 				}
 			}
 		}
@@ -623,7 +620,14 @@ func getAllTheSessions(projectId uint64, sessionEventNameId uint64,
 
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
-	gclIDBasedCampaign, err := GetGCLIDBasedCampaignInfo(projectId, query.From, query.To, adwordsAccountId)
+	effectiveFrom := query.From
+	effectiveTo := query.To
+	// extend the campaign window for engagement based attribution
+	if query.QueryType == AttributionQueryTypeEngagementBased {
+		effectiveFrom = lookbackAdjustedFrom(query.From, query.LookbackDays)
+		effectiveTo = lookbackAdjustedTo(query.To, query.LookbackDays)
+	}
+	gclIDBasedCampaign, err := GetGCLIDBasedCampaignInfo(projectId, effectiveFrom, effectiveTo, adwordsAccountId)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -636,7 +640,6 @@ func getAllTheSessions(projectId uint64, sessionEventNameId uint64,
 	attributedSessionsByUserId := make(map[string]map[string]RangeTimestamp)
 	userIdMap := make(map[string]bool)
 	var userIdsWithSession []string
-	from := getEffectiveFrom(query.From, query.LookbackDays)
 
 	caseSelectStmt := "CASE WHEN sessions.properties->>? IS NULL THEN ? " +
 		" WHEN sessions.properties->>? = '' THEN ? ELSE sessions.properties->>? END"
@@ -647,7 +650,7 @@ func getAllTheSessions(projectId uint64, sessionEventNameId uint64,
 	var qParams []interface{}
 	qParams = append(qParams, attributionEventKey, PropertyValueNone, attributionEventKey, PropertyValueNone,
 		attributionEventKey, U.EP_GCLID, PropertyValueNone, U.EP_GCLID, PropertyValueNone, U.EP_GCLID, projectId,
-		sessionEventNameId, from, query.To)
+		sessionEventNameId, effectiveFrom, effectiveTo)
 	rows, err := db.Raw(queryUserSessionTimeRange, qParams...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -1009,14 +1012,24 @@ func getConvertedUsers(projectID uint64, goalEventName string, goalEventProperti
 	return filteredUserIdToUserIDInfo, filteredCoalIDToUserIDInfo, coalUserIdConversionTimestamp, nil
 }
 
-// getEffectiveFrom Returns the effective From timestamp considering lookback days
-func getEffectiveFrom(from int64, lookbackDays int) int64 {
+// lookbackAdjustedFrom Returns the effective From timestamp considering lookback days
+func lookbackAdjustedFrom(from int64, lookbackDays int) int64 {
 	lookbackDaysTimestamp := int64(lookbackDays) * SecsInADay
 	if LookbackCapInDays < lookbackDays {
 		lookbackDaysTimestamp = int64(LookbackCapInDays) * SecsInADay
 	}
 	validFrom := from - lookbackDaysTimestamp
 	return validFrom
+}
+
+// lookbackAdjustedTo Returns the effective To timestamp considering lookback days
+func lookbackAdjustedTo(to int64, lookbackDays int) int64 {
+	lookbackDaysTimestamp := int64(lookbackDays) * SecsInADay
+	if LookbackCapInDays < lookbackDays {
+		lookbackDaysTimestamp = int64(LookbackCapInDays) * SecsInADay
+	}
+	validTo := to + lookbackDaysTimestamp
+	return validTo
 }
 
 // updateSessionsMapWithCoalesceID Clones a new map replacing userId by coalUserId.
@@ -1047,7 +1060,12 @@ func updateSessionsMapWithCoalesceID(attributedSessionsByUserId map[string]map[s
 
 // Maps the count distinct users session to campaign id and adds it to attributionData
 func addWebsiteVisitorsInfo(from int64, to int64, attributionData map[string]*AttributionData,
-	attributedSessionsByUserId map[string]map[string]RangeTimestamp) {
+	attributedSessionsByUserId map[string]map[string]RangeTimestamp, linkedEventsCount int) {
+	// creating an empty linked events row
+	emptyLinkedEventRow := make([]float64, 0)
+	for i := 0; i < linkedEventsCount; i++ {
+		emptyLinkedEventRow = append(emptyLinkedEventRow, 0.0)
+	}
 
 	userIdAttributionIdVisit := make(map[string]bool)
 	for userId, attributionIdMap := range attributedSessionsByUserId {
@@ -1058,6 +1076,11 @@ func addWebsiteVisitorsInfo(from int64, to int64, attributionData map[string]*At
 
 				if _, ok := attributionData[attributionId]; !ok {
 					attributionData[attributionId] = &AttributionData{}
+					if linkedEventsCount > 0 {
+						// init the linked events with 0.0 value
+						tempRow := emptyLinkedEventRow
+						attributionData[attributionId].LinkedEventsCount = tempRow
+					}
 				}
 				if _, ok := userIdAttributionIdVisit[getKey(userId, attributionId)]; ok {
 					continue
@@ -1074,19 +1097,33 @@ func getKey(id1 string, id2 string) string {
 	return id1 + "|_|" + id2
 }
 
-// Adds channel data to attributionData based on campaign id. Campaign id with no matching channel data is left with empty name parameter
+// Adds channel data to attributionData based on attribution id. Key id with no matching channel
+// data is left with empty name parameter
 func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*AttributionData,
-	from, to int64, customerAccountId string) (string, error) {
+	from, to int64, customerAccountId string, attributionKey string) (string, error) {
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId, "Range": fmt.Sprintf("%d - %d", from, to)})
 
 	customerAccountIds := strings.Split(customerAccountId, ",")
+
+	reportType := AdwordsDocumentTypeAlias[campaignPerformanceReport] // 5
 	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
 		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
 		"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents " +
 		"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by value->>'campaign_id', campaign_name"
-	rows, err := db.Raw(performanceQuery, projectId, customerAccountIds, AdwordsCampaignReportType,
+
+	// AdGroup report for AttributionKey as AdGroup
+	if attributionKey == AttributionKeyAdgroup {
+		reportType = AdwordsDocumentTypeAlias[adGroupPerformanceReport] // 10
+		performanceQuery = "SELECT value->>'ad_group_id' AS ad_group_id,  value->>'ad_group_name' AS ad_group_name, " +
+			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
+			"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents " +
+			"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
+			"group by value->>'ad_group_id', ad_group_name"
+	}
+
+	rows, err := db.Raw(performanceQuery, projectId, customerAccountIds, reportType,
 		U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)).Rows()
 	if err != nil {
@@ -1095,23 +1132,23 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*Attr
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var campaignName string
-		var campaignId string
+		var keyName string
+		var keyId string
 		var impressions float64
 		var clicks float64
 		var spend float64
-		if err = rows.Scan(&campaignId, &campaignName, &impressions, &clicks, &spend); err != nil {
+		if err = rows.Scan(&keyId, &keyName, &impressions, &clicks, &spend); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed")
 			continue
 		}
 		matchingId := ""
-		if _, campaignIdFound := attributionData[campaignId]; campaignIdFound {
-			matchingId = campaignId
-		} else if _, campaignNameFound := attributionData[campaignName]; campaignNameFound {
-			matchingId = campaignName
+		if _, keyIdFound := attributionData[keyId]; keyIdFound {
+			matchingId = keyId
+		} else if _, keyNameFound := attributionData[keyName]; keyNameFound {
+			matchingId = keyName
 		}
 		if matchingId != "" {
-			attributionData[matchingId].Name = campaignName
+			attributionData[matchingId].Name = keyName
 			attributionData[matchingId].Impressions = int(impressions)
 			attributionData[matchingId].Clicks = int(clicks)
 			attributionData[matchingId].Spend = spend

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -593,6 +594,108 @@ func GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string,
 	}
 
 	return &documents[0], http.StatusFound
+}
+
+// HubspotProperty only holds the value for hubspot document properties
+type HubspotProperty struct {
+	Value string `json:"value"`
+}
+
+// HubspotDocumentProperties only holds the properties object of the doucment
+type HubspotDocumentProperties struct {
+	Properties map[string]HubspotProperty `json:"properties"`
+}
+
+func getHubspotDocumentPropertiesNameByType(hubspotDocuments []HubspotDocument) ([]string, []string) {
+	dateTimeProperties := make(map[string]interface{})
+	categoricalProperties := make(map[string]interface{})
+	currentTimestamp := U.TimeNowUnix() * 1000
+
+	for i := range hubspotDocuments {
+		var docProperties HubspotDocumentProperties
+		err := json.Unmarshal((hubspotDocuments[i].Value).RawMessage, &docProperties)
+		if err != nil {
+			log.WithError(err).Error("Failed to unmarshal hubspot document on GetHubspotObjectProperties")
+			continue
+		}
+
+		for key, value := range docProperties.Properties {
+			valueStr := U.GetPropertyValueAsString(value.Value)
+			if valueStr == "" {
+				continue
+			}
+
+			if U.IsPropertyNameContainsDateOrTime(key) {
+				_, isNumber := U.ConvertDateTimeValueToNumber(value)
+				if isNumber {
+					dateTimeProperties[key] = true
+					continue
+				}
+			}
+
+			if len(valueStr) == 13 { // milliseconds format
+				timestamp, err := strconv.ParseUint(valueStr, 10, 64)
+				if err == nil && timestamp >= 0 && int64(timestamp) <= currentTimestamp {
+					// if for some document it was passed as categorical then its not a timestamp.
+					if _, exists := categoricalProperties[key]; !exists {
+						dateTimeProperties[key] = true
+					}
+					continue
+				}
+			}
+
+			// delete from datetime if already exist in it.
+			if _, exists := dateTimeProperties[key]; exists {
+				delete(dateTimeProperties, key)
+			}
+
+			categoricalProperties[key] = true
+
+		}
+	}
+
+	var categoricalPropertiesArray []string
+	var dateTimePropertiesArray []string
+	for pName := range categoricalProperties {
+		categoricalPropertiesArray = append(categoricalPropertiesArray, pName)
+	}
+
+	for pName := range dateTimeProperties {
+		dateTimePropertiesArray = append(dateTimePropertiesArray, pName)
+	}
+
+	return categoricalPropertiesArray, dateTimePropertiesArray
+}
+
+// GetHubspotObjectPropertiesName returns property names by type
+func GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string) {
+	if ProjectID == 0 || objectType == "" {
+		return nil, nil
+	}
+
+	docType, err := GetHubspotTypeByAlias(objectType)
+	if err != nil {
+		return nil, nil
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
+	lookbackTimestampInMilliseconds := U.UnixTimeBeforeDuration(48*time.Hour) * 1000 //last 48 hours
+
+	var hubspotDocuments []HubspotDocument
+	db := C.GetServices().Db
+	err = db.Model(&HubspotDocument{}).Where("project_id = ? AND type = ? AND action= ? AND timestamp > ?",
+		ProjectID, docType, 2, lookbackTimestampInMilliseconds).Order("timestamp desc").Limit(1000).Find(&hubspotDocuments).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot documents for GetHubspotObjectProperties")
+		return nil, nil
+	}
+
+	if len(hubspotDocuments) < 1 {
+		logCtx.Error("No documents returned.")
+		return nil, nil
+	}
+
+	return getHubspotDocumentPropertiesNameByType(hubspotDocuments)
 }
 
 func UpdateHubspotDocumentAsSynced(projectId uint64, id string, syncId string, timestamp int64, action int, userID string) int {

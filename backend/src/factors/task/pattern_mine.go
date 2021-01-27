@@ -11,7 +11,6 @@ import (
 	"factors/pattern_server/store"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
-	"factors/util"
 	U "factors/util"
 	"fmt"
 	"io"
@@ -433,19 +432,10 @@ func mineAndWriteLenTwoPatterns(
 	if err != nil {
 		return []*P.Pattern{}, 0, err
 	}
-	lenTwoPatternsMod := make([]*P.Pattern, 0)
 
-	// filter two $events
-	for _, v := range lenTwoPatterns {
-		if util.IsCampaignEvent(v.EventNames[0]) || util.IsCampaignEvent(v.EventNames[1]) || !(strings.HasPrefix(v.EventNames[0], "$") &&
-			strings.HasPrefix(v.EventNames[1], "$")) {
-			lenTwoPatternsMod = append(lenTwoPatternsMod, v)
-		}
-	}
-
-	countPatterns(filepath, lenTwoPatternsMod, numRoutines, countOccurence)
+	countPatterns(filepath, lenTwoPatterns, numRoutines, countOccurence)
 	filteredLenTwoPatterns, patternsSize, err := filterAndCompressPatterns(
-		lenTwoPatternsMod, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
+		lenTwoPatterns, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
 	if err != nil {
 		return []*P.Pattern{}, 0, err
 	}
@@ -1160,6 +1150,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	repeatedEvents := GetAllRepeatedEvents(eventNames, campEventsList)
 
 	mineLog.Info("Number of repeated Events: ", len(repeatedEvents))
+	mineLog.Info("Repeated Events", repeatedEvents)
 
 	// build histogram of all user properties.
 	mineLog.WithField("tmpEventsFilePath", tmpEventsFilepath).Info("Building all user properties histogram.")

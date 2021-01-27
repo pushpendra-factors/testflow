@@ -5,6 +5,7 @@ metadata:
     layer: queue-redis
     env: production
     project: factors-production
+    nodePool: persistent-pool-highmem
   name: queue-redis
   namespace: default
 spec:

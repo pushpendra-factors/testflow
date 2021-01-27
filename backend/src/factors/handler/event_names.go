@@ -61,6 +61,9 @@ func GetEventNamesHandler(c *gin.Context) {
 	}
 
 	eventNameStrings := make([]string, 0)
+	if len(eventNames[U.SmartEvent]) > 0 {
+		eventNameStrings = append(eventNameStrings, eventNames[U.SmartEvent]...)
+	}
 	if len(eventNames[U.MostRecent]) > 0 {
 		eventNameStrings = append(eventNameStrings, eventNames[U.MostRecent]...)
 	}

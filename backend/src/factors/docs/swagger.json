@@ -2500,6 +2500,51 @@
                 }
             }
         },
+        "/{project_id}/v1/crm/{crm_source}/{object_type}/properties": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1ApiSmartEvent"
+                ],
+                "summary": "To get crm object properties by source.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Source",
+                        "name": "crm_source",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Object type",
+                        "name": "object_type",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.CRMResponsePayload"
+                        }
+                    }
+                }
+            }
+        },
         "/{project_id}/v1/dashboards/multi/{dashboard_ids}/units": {
             "post": {
                 "consumes": [
@@ -3397,6 +3442,23 @@
                 "query": {
                     "type": "object",
                     "$ref": "#/definitions/model.AttributionQuery"
+                }
+            }
+        },
+        "handler.CRMResponsePayload": {
+            "type": "object",
+            "properties": {
+                "categorical": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "datetime": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

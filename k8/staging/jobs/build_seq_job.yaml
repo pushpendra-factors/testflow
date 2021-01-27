@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: factors-staging-node-pool
   name: build-seq-job
 spec:
   schedule: "0 15 * * *" # In UTC

@@ -91,7 +91,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
 		Filters: []M.PropertyFilter{
 			{
-				Name: "$hubspot_contact_lifecyclestage",
+				Name: "lifecyclestage",
 				Rules: []M.CRMFilterRule{
 					{
 						PropertyState: M.CurrentState,
@@ -112,7 +112,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	}
 
 	currentProperties := make(map[string]interface{})
-	currentProperties["$hubspot_contact_lifecyclestage"] = "opportunity"
+	currentProperties["lifecyclestage"] = "opportunity"
 	smartEvent, _, ok := IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID3, hubspotDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "test", smartEvent.Name)
@@ -135,7 +135,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, status)
 
 	currentProperties = make(map[string]interface{})
-	currentProperties["$hubspot_contact_lifecyclestage"] = "opportunity"
+	currentProperties["lifecyclestage"] = "opportunity"
 	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID1, hubspotDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, false, ok)
 
@@ -155,7 +155,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, status)
 
 	currentProperties = make(map[string]interface{})
-	currentProperties["$hubspot_contact_lifecyclestage"] = "opportunity"
+	currentProperties["lifecyclestage"] = "opportunity"
 	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID1, hubspotDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, true, ok)
 }

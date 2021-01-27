@@ -1666,17 +1666,19 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 
 	for _, details := range data {
 		hoursBeforeLastSeen := currentDate.Sub(time.Unix(details.Timestamp, 0)).Hours()
-		if hoursBeforeLastSeen <= float64(24) {
-			details.GroupName = MostRecent
-			if details.Category == SmartEvent {
-				smartEventNames = append(smartEventNames, details)
-				continue
-			}
-			sorted = append(sorted, details)
+		if details.Category == SmartEvent {
+			details.GroupName = SmartEvent
+			smartEventNames = append(smartEventNames, details)
 		} else {
-			details.GroupName = FrequentlySeen
-			trimmed = append(trimmed, details)
+			if hoursBeforeLastSeen <= float64(24) {
+				details.GroupName = MostRecent
+				sorted = append(sorted, details)
+			} else {
+				details.GroupName = FrequentlySeen
+				trimmed = append(trimmed, details)
+			}
 		}
+
 	}
 
 	sorted = append(smartEventNames, sorted...)

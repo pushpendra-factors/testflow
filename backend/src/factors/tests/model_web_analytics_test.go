@@ -114,7 +114,7 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 	// Total exits should be 1.
 	assert.Equal(t, float64(1), queryResult.CustomGroupQueryResult[unitID].Rows[0][2])
 	// Exit percentage should be 100%.
-	assert.Equal(t, "100.0%", queryResult.CustomGroupQueryResult[unitID].Rows[0][3])
+	assert.Equal(t, "100.000%", queryResult.CustomGroupQueryResult[unitID].Rows[0][3])
 }
 
 func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
@@ -187,9 +187,9 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 
 	assert.Equal(t, 2, len(queryResult.CustomGroupQueryResult[unitID].Rows))
 	// Latest page_url and author of session should only be counted.
-	assert.Equal(t, pageURL1, queryResult.CustomGroupQueryResult[unitID].Rows[0][0])  // Group: $page_url.
-	assert.Equal(t, "author2", queryResult.CustomGroupQueryResult[unitID].Rows[0][1]) // Group: authorName.
-	assert.Equal(t, "100.0%", queryResult.CustomGroupQueryResult[unitID].Rows[0][2])  // Exit percentage.
+	assert.Equal(t, pageURL1, queryResult.CustomGroupQueryResult[unitID].Rows[0][0])   // Group: $page_url.
+	assert.Equal(t, "author2", queryResult.CustomGroupQueryResult[unitID].Rows[0][1])  // Group: authorName.
+	assert.Equal(t, "100.000%", queryResult.CustomGroupQueryResult[unitID].Rows[0][2]) // Exit percentage.
 
 	assert.Equal(t, pageURL, queryResult.CustomGroupQueryResult[unitID].Rows[1][0])   // Group: $page_url.
 	assert.Equal(t, "author1", queryResult.CustomGroupQueryResult[unitID].Rows[1][1]) // Group: authorName.
@@ -243,11 +243,11 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 	assert.Equal(t, 2, len(queryResult.CustomGroupQueryResult[unitID].Rows))
 	assert.Equal(t, pageURL1, queryResult.CustomGroupQueryResult[unitID].Rows[1][0])  // Group: $page_url.
 	assert.Equal(t, "author2", queryResult.CustomGroupQueryResult[unitID].Rows[1][1]) // Group: authorName.
-	assert.Equal(t, "50.0%", queryResult.CustomGroupQueryResult[unitID].Rows[1][3])   // Exit percentage.
+	assert.Equal(t, "50.000%", queryResult.CustomGroupQueryResult[unitID].Rows[1][3]) // Exit percentage.
 
 	assert.Equal(t, pageURL, queryResult.CustomGroupQueryResult[unitID].Rows[0][0])   // Group: $page_url.
 	assert.Equal(t, "author1", queryResult.CustomGroupQueryResult[unitID].Rows[0][1]) // Group: authorName.
-	assert.Equal(t, "50.0%", queryResult.CustomGroupQueryResult[unitID].Rows[0][3])   // Exit percentage.
+	assert.Equal(t, "50.000%", queryResult.CustomGroupQueryResult[unitID].Rows[0][3]) // Exit percentage.
 }
 
 func TestWebAnalyticsGetFormattedTime(t *testing.T) {

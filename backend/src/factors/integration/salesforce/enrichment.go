@@ -6,7 +6,6 @@ import (
 	M "factors/model"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	C "factors/config"
@@ -45,25 +44,30 @@ func getUserIDFromLastestProperties(properties []M.UserProperties) string {
 }
 
 // GetSalesforceDocumentProperties return map of enriched properties
-func GetSalesforceDocumentProperties(projectID uint64, document *M.SalesforceDocument) (*map[string]interface{}, error) {
-	var properties map[string]interface{}
-	err := json.Unmarshal(document.Value.RawMessage, &properties)
+func GetSalesforceDocumentProperties(projectID uint64, document *M.SalesforceDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+	var enProperties map[string]interface{}
+	err := json.Unmarshal(document.Value.RawMessage, &enProperties)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	filterPropertyFieldsByProjectID(projectID, &properties, document.Type)
+	filterPropertyFieldsByProjectID(projectID, &enProperties, document.Type)
 
 	enrichedProperties := make(map[string]interface{})
+	properties := make(map[string]interface{})
 
-	for key, value := range properties {
-		enKey := getPropertyKeyByType(M.GetSalesforceAliasByDocType(document.Type), key)
-		if _, exists := properties[enKey]; !exists {
+	for key, value := range enProperties {
+		enKey := M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceSalesforce, M.GetSalesforceAliasByDocType(document.Type), key)
+		if _, exists := enProperties[enKey]; !exists {
 			enrichedProperties[enKey] = value
+		}
+
+		if _, exists := properties[key]; !exists {
+			properties[key] = value
 		}
 	}
 
-	return &enrichedProperties, nil
+	return &enrichedProperties, &properties, nil
 }
 
 func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]interface{}, docType int) {
@@ -115,7 +119,7 @@ func getSalesforceAccountID(document *M.SalesforceDocument) (string, error) {
 func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}, docTypeAlias string) (string, string) {
 
 	for _, phoneField := range possiblePhoneField {
-		if phoneNo, ok := properties[getPropertyKeyByType(docTypeAlias, phoneField)]; ok {
+		if phoneNo, ok := properties[M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceSalesforce, docTypeAlias, phoneField)]; ok {
 			phoneStr, err := U.GetValueAsString(phoneNo)
 			if err != nil || phoneStr == "" {
 				continue
@@ -132,7 +136,7 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 	}
 
 	for _, emailField := range possibleEmailField {
-		if email, ok := properties[getPropertyKeyByType(docTypeAlias, emailField)].(string); ok && email != "" {
+		if email, ok := properties[M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceSalesforce, docTypeAlias, emailField)].(string); ok && email != "" {
 			existingEmail, errCode := M.GetExistingCustomerUserID(projectID, []string{email})
 			if errCode == http.StatusFound {
 				return email, existingEmail[email]
@@ -143,10 +147,6 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 	}
 
 	return "", ""
-}
-
-func getPropertyKeyByType(typ, key string) string {
-	return fmt.Sprintf("$%s_%s_%s", SDK.SourceSalesforce, typ, strings.ToLower(key))
 }
 
 /*
@@ -253,15 +253,15 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument, salesforceS
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
 
-	properties, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
-		EventProperties: *properties,
-		UserProperties:  *properties,
+		EventProperties: *enProperties,
+		UserProperties:  *enProperties,
 	}
 
 	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
@@ -271,7 +271,7 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument, salesforceS
 		return http.StatusInternalServerError
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
 			UserId: userID, CustomerUserId: customerUserID}, false)
@@ -335,15 +335,15 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument, salesforceS
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
-	properties, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
-		EventProperties: *properties,
-		UserProperties:  *properties,
+		EventProperties: *enProperties,
+		UserProperties:  *enProperties,
 	}
 
 	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
@@ -353,7 +353,7 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument, salesforceS
 		return http.StatusInternalServerError
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
 			UserId: userID, CustomerUserId: customerUserID}, false)
@@ -423,7 +423,7 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 		}
 
 		var err error
-		prevProperties, err = GetSalesforceDocumentProperties(projectID, prevDoc)
+		_, prevProperties, err = GetSalesforceDocumentProperties(projectID, prevDoc)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to GetSalesforceDocumentProperties")
 			return nil, prevProperties, false
@@ -511,19 +511,19 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument, sales
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
-	properties, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
-		EventProperties: *properties,
-		UserProperties:  *properties,
+		EventProperties: *enProperties,
+		UserProperties:  *enProperties,
 	}
 
 	var eventID string
-	customerUserID, userID := getCustomerUserIDFromProperties(projectID, *properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, userID := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		trackPayload.UserId = userID
 		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
@@ -572,15 +572,15 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument, salesforceSma
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
 
-	properties, err := GetSalesforceDocumentProperties(projectID, document)
+	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
-		EventProperties: *properties,
-		UserProperties:  *properties,
+		EventProperties: *enProperties,
+		UserProperties:  *enProperties,
 	}
 
 	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
@@ -590,7 +590,7 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument, salesforceSma
 		return http.StatusInternalServerError
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
 			UserId: userID, CustomerUserId: customerUserID}, false)

@@ -64,10 +64,14 @@ export const fetchChannelObjPropertyValues = (
 ) => {
   const url =
     host +
-    "projects/" + projectId +
-    "/v1/channels/filter_values?channel=" + channel +
-    "&filter_object=" + filterObj +
-    "&filter_property=" + property;
+    "projects/" +
+    projectId +
+    "/v1/channels/filter_values?channel=" +
+    channel +
+    "&filter_object=" +
+    filterObj +
+    "&filter_property=" +
+    property;
   // const url =
   //   filterObj === "campaign"
   //     ? `http://localhost:8000/getChannelFilters`

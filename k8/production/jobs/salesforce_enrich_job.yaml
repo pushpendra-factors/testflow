@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: default-pool
   name: salesforce-enrich-job
 spec:
   schedule: "0 20 * * *" # In UTC

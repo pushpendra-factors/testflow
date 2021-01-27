@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: factors-staging-node-pool
   name: dashboard-caching-job
 spec:
   schedule: "0 1/6 * * *" # In UTC. Every 6 hours.

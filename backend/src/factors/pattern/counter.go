@@ -429,7 +429,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern, shouldCountOccur
 		eventCardinality := eventDetails.EventCardinality
 
 		numEventsProcessed += 1
-		if math.Mod(float64(numEventsProcessed), 10000.0) == 0.0 {
+		if math.Mod(float64(numEventsProcessed), 100000.0) == 0.0 {
 			log.Info(fmt.Sprintf("Processed %d events", numEventsProcessed))
 		}
 

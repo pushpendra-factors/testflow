@@ -4,7 +4,7 @@ export const QUERY_TYPE_ATTRIBUTION = "attribution";
 export const QUERY_TYPE_CAMPAIGN = "channel_v1";
 export const QUERY_TYPE_TEMPLATE = "templates";
 export const QUERY_TYPE_WEB = "web";
-export const NAMED_QUERY = "named_query"
+export const NAMED_QUERY = "named_query";
 
 export const ATTRIBUTION_METHODOLOGY = [
   {
@@ -36,8 +36,12 @@ export const CHART_TYPE_TABLE = "table";
 export const BARCHART_TICK_LENGTH = 20;
 
 export const EVENT_BREADCRUMB = {
-  [QUERY_TYPE_EVENT]: 'Events',
-  [QUERY_TYPE_FUNNEL]: 'Funnel',
-  [QUERY_TYPE_ATTRIBUTION]: 'Attributions',
-  [QUERY_TYPE_CAMPAIGN]: 'Campaigns'
-}
+  [QUERY_TYPE_EVENT]: "Events",
+  [QUERY_TYPE_FUNNEL]: "Funnel",
+  [QUERY_TYPE_ATTRIBUTION]: "Attributions",
+  [QUERY_TYPE_CAMPAIGN]: "Campaigns",
+};
+
+export const valueMapper = {
+  $no_group: "Overall",
+};

@@ -1,6 +1,8 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
+  labels:
+    nodePool: factors-staging-node-pool
   name: data-generator-job
 spec:
   schedule: "0 */1 * * *" # every 1 hr

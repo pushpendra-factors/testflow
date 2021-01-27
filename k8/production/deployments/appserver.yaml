@@ -5,6 +5,7 @@ metadata:
     layer: appserver
     env: production
     project: factors-production
+    nodePool: default-pool
   name: appserver
   namespace: default
 spec:
