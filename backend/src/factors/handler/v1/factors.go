@@ -55,6 +55,7 @@ func PostFactorsHandler(c *gin.Context) {
 		})
 		return
 	}
+	startConstraints, endConstraints := parseConstraints(params.Rule)
 	if patternMode == "AllPatterns" {
 		allEventPatterns := make([]string, 0)
 		allPatterns, _ := ps.GetAllPatterns("", params.StartEvent, params.EndEvent)
@@ -68,10 +69,29 @@ func PostFactorsHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, allEventPatterns)
 		return
 	}
+	if patternMode == "GetCount" {
+		var count uint
+		if params.StartEvent == "" {
+			count, _ = ps.GetPerUserCount("", []string{params.EndEvent}, []P.EventConstraints{*endConstraints})
+		} else {
+			count, _ = ps.GetPerUserCount("", []string{params.StartEvent, params.EndEvent}, []P.EventConstraints{*startConstraints, *endConstraints})
+		}
+		c.JSON(http.StatusOK, count)
+		return
+	}
+	if patternMode == "AllProperties" {
+		var patternHistogram *P.Pattern
+		if params.StartEvent == "" {
+			patternHistogram = ps.GetPattern("", []string{params.EndEvent})
+		} else {
+			patternHistogram = ps.GetPattern("", []string{params.StartEvent, params.EndEvent})
+		}
+		c.JSON(http.StatusOK, patternHistogram)
+		return
+	}
 	debugParams := make(map[string]string)
 	debugParams["PropertyName"] = propertyName
 	debugParams["PropertyValue"] = propertyValue
-	startConstraints, endConstraints := parseConstraints(params.Rule)
 	if results, err, debugData := PW.FactorV1("",
 		projectId, params.StartEvent, startConstraints,
 		params.EndEvent, endConstraints, P.COUNT_TYPE_PER_USER, ps, patternMode, debugParams); err != nil {
