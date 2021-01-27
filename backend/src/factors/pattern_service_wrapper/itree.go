@@ -691,7 +691,7 @@ func getPropertyNamesMapFromConstraints(
 }
 
 func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
-	categoricalPropertyKeyValues map[string]map[string]bool,
+	categoricalPropertyKeyValues []string,
 	nodeType int, maxNumProperties int, maxNumValues int,
 	parentNode *ItreeNode, patternWrapper PatternServiceWrapperInterface,
 	allActiveUsersPattern *P.Pattern, pLen int, fpr float64, fpp float64,
@@ -699,7 +699,7 @@ func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 	propertyChildNodes := []*ItreeNode{}
 	numP := 0
 	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
-	for propertyName, seenValues := range categoricalPropertyKeyValues {
+	for _, propertyName := range categoricalPropertyKeyValues {
 		if numP > maxNumProperties {
 			break
 		}
@@ -714,9 +714,16 @@ func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 		}
 		numP++
 		numVal := 0
+		attributeIndex := int(0)
+		if pLen == 1 {
+			attributeIndex = 0
+		} else {
+			attributeIndex = pLen - 2
+		}
 		// Compute KL Distance of child vs parent.
+		seenValues := parentNode.Pattern.GetPerUserUserPropertyValues(attributeIndex, propertyName)
 		klDistanceUnits := []KLDistanceUnitInfo{}
-		for value, _ := range seenValues {
+		for _, value := range seenValues {
 			if numVal > maxNumValues {
 				break
 			}
@@ -811,17 +818,18 @@ func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 }
 
 func (it *Itree) buildNumericalPropertyChildNodes(reqId string,
-	numericPropertyKeys map[string]bool, nodeType int, maxNumProperties int,
+	numericPropertyKeys []string, nodeType int, maxNumProperties int,
 	parentNode *ItreeNode, patternWrapper PatternServiceWrapperInterface,
 	allActiveUsersPattern *P.Pattern, pLen int, fpr float64, fpp float64,
 	countType string) []*ItreeNode {
+
 	return []*ItreeNode{}
 	/*
 		parentPattern := parentNode.Pattern
 		propertyChildNodes := []*ItreeNode{}
 		numP := 0
 		seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
-		for propertyName, _ := range numericPropertyKeys {
+		for _, propertyName := range numericPropertyKeys {
 			if numP > maxNumProperties {
 				break
 			}
@@ -953,22 +961,9 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 	parentConstraints := parentNode.PatternConstraints
 	var fpr, fpp float64
 	pLen := len(parentPattern.EventNames)
-	userAndEventsInfo := patternWrapper.GetUserAndEventsInfo()
-	if userAndEventsInfo == nil {
-		// No event properties available.
-		return []*ItreeNode{}, nil
-	}
-	if userAndEventsInfo.EventPropertiesInfoMap == nil {
-		// No event properties available.
-		return []*ItreeNode{}, nil
-	}
-	userInfo := userAndEventsInfo.UserPropertiesInfo
-	if userInfo == nil {
-		// No properties.
-		return []*ItreeNode{}, nil
-	}
 
-	var eventInfo *P.PropertiesInfo
+	userCatProperties, userNumProperties, eventCatProperties, eventNumProperties := extractProperties(parentNode)
+
 	var eventName string
 	if pLen == 1 {
 		if countType == P.COUNT_TYPE_PER_USER {
@@ -980,7 +975,6 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 		}
 	} else {
 		eventName = parentPattern.EventNames[pLen-2]
-		eventInfo, _ = (*userAndEventsInfo.EventPropertiesInfoMap)[eventName]
 		var subConstraints []P.EventConstraints
 		if parentConstraints == nil {
 			subConstraints = nil
@@ -1026,29 +1020,29 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 	MAX_CAT_PROPERTIES_EVALUATED := 100
 	MAX_CAT_VALUES_EVALUATED := 100
 
-	if eventInfo != nil && pLen > 1 {
+	if pLen > 1 {
 		childNodes = append(childNodes, it.buildCategoricalPropertyChildNodes(reqId,
-			eventInfo.CategoricalPropertyKeyValues, NODE_TYPE_EVENT_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
+			eventCatProperties, NODE_TYPE_EVENT_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
 			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)...)
 	}
 
-	if userInfo != nil && (pLen > 1 || countType == P.COUNT_TYPE_PER_USER) {
+	if pLen > 1 || countType == P.COUNT_TYPE_PER_USER {
 		childNodes = append(childNodes, it.buildCategoricalPropertyChildNodes(reqId,
-			userInfo.CategoricalPropertyKeyValues, NODE_TYPE_USER_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
+			userCatProperties, NODE_TYPE_USER_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
 			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)...)
 	}
 
 	// Add children by splitting on constraints on categorical properties.
 	pLen = len(parentPattern.EventNames)
 	MAX_NUM_PROPERTIES_EVALUATED := 100
-	if eventInfo != nil && pLen > 1 {
+	if pLen > 1 {
 		childNodes = append(childNodes, it.buildNumericalPropertyChildNodes(reqId,
-			eventInfo.NumericPropertyKeys, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
+			eventNumProperties, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)...)
 	}
-	if userInfo != nil && (pLen > 1 || countType == P.COUNT_TYPE_PER_USER) {
+	if pLen > 1 || countType == P.COUNT_TYPE_PER_USER {
 		childNodes = append(childNodes, it.buildNumericalPropertyChildNodes(reqId,
-			userInfo.NumericPropertyKeys, NODE_TYPE_USER_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
+			userNumProperties, NODE_TYPE_USER_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)...)
 	}
 

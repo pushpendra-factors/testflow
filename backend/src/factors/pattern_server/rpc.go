@@ -5,11 +5,11 @@ import (
 	"errors"
 	client "factors/pattern_client"
 	store "factors/pattern_server/store"
-	U "factors/util"
 	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	E "github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -71,12 +71,16 @@ func (ps *PatternServer) GetAllPatterns(
 		"ee (optional)": args.EndEvent,
 	}).Debugln("RPC Fetching patterns")
 
+	startTime := time.Now()
 	chunkIds, found := ps.GetProjectModelChunks(args.ProjectId, modelId)
 	if !found {
 		err := E.Wrap(errors.New("ProjectModelChunks Not Found"), fmt.Sprintf("GetAllPatterns failed to fetch ProjectModelChunks, ProjectID: %d, ModelID: %d", args.ProjectId, modelId))
 		result.Error = err
 		return err
 	}
+	endTime := time.Now()
+	log.WithFields(log.Fields{
+		"time_taken": endTime.Sub(startTime).Milliseconds()}).Info("debug_time_GetProjectModelChunks")
 
 	chunksToServe := make([]string, 0, 0)
 	for _, chunkId := range chunkIds {
@@ -96,6 +100,7 @@ func (ps *PatternServer) GetAllPatterns(
 
 	// fetch in go routines to optimize
 	for _, chunkId := range chunksToServe {
+		startTime := time.Now()
 		patternsWithMeta, err := ps.store.GetPatternsWithMeta(args.ProjectId, modelId, chunkId)
 		if err != nil {
 			log.WithError(err).WithFields(log.Fields{
@@ -105,8 +110,15 @@ func (ps *PatternServer) GetAllPatterns(
 			}).Error("Failed To get chunk patterns")
 			continue
 		}
+		endTime := time.Now()
+		log.WithFields(log.Fields{
+			"time_taken": endTime.Sub(startTime).Milliseconds()}).Info("debug_time_GetPatternsWithMeta")
 		if filterPatterns == nil {
+			startTime := time.Now()
 			rawPatterns := store.GetAllRawPatterns(patternsWithMeta)
+			endTime := time.Now()
+			log.WithFields(log.Fields{
+				"time_taken": endTime.Sub(startTime).Milliseconds()}).Info("debug_time_GetAllRawPatterns")
 			patternsToReturn = append(patternsToReturn, rawPatterns...)
 		} else {
 			for _, pwm := range patternsWithMeta {
@@ -198,121 +210,6 @@ func (ps *PatternServer) GetPatterns(
 	return nil
 }
 
-func (ps *PatternServer) GetSeenEventProperties(
-	r *http.Request, args *client.GetSeenEventPropertiesRequest,
-	result *client.GetSeenEvenPropertiesResponse) error {
-
-	if args == nil || args.ProjectId == 0 || args.EventName == "" {
-		err := E.Wrap(errors.New("MissingParams"), "GetSeenEventProperties Missing Param")
-		result.Error = err
-		return err
-	}
-
-	modelId := args.ModelId
-
-	if modelId == 0 {
-		latestInterval, err := ps.GetProjectModelLatestInterval(args.ProjectId)
-		if err != nil {
-			result.Error = err
-			return err
-		}
-		modelId = latestInterval.ModelId
-	}
-
-	if !ps.IsProjectModelServable(args.ProjectId, modelId) {
-		result.Ignored = true
-		return nil
-	}
-
-	userAndEventsInfo, err := ps.GetModelEventInfo(args.ProjectId, modelId)
-	if err != nil {
-		result.Error = err
-		return err
-	}
-	numericalProperties := []string{}
-	categoricalProperties := []string{}
-
-	if args.ModelId == modelId && userAndEventsInfo.ModelVersion >= 2.0 {
-		// Supported only in these versions. Is sent only if modelId is explicitly stated.
-		for _, dnp := range U.GENERIC_NUMERIC_EVENT_PROPERTIES {
-			numericalProperties = append(numericalProperties, dnp)
-		}
-	}
-
-	if eventInfo, exists := (*userAndEventsInfo.EventPropertiesInfoMap)[args.EventName]; exists {
-		for nprop := range eventInfo.NumericPropertyKeys {
-			numericalProperties = append(numericalProperties, nprop)
-		}
-		for cprop := range eventInfo.CategoricalPropertyKeyValues {
-			categoricalProperties = append(categoricalProperties, cprop)
-		}
-	}
-
-	resp := make(map[string][]string)
-	resp["numerical"] = numericalProperties
-	resp["categorical"] = categoricalProperties
-	result.ProjectId = args.ProjectId
-	result.ModelId = modelId
-	result.EventProperties = resp
-	return nil
-}
-
-func (ps *PatternServer) GetSeenEventPropertyValues(
-	r *http.Request, args *client.GetSeenEventPropertyValuesRequest,
-	result *client.GetSeenEventPropertyValuesResponse) error {
-
-	if args == nil || args.ProjectId == 0 || args.EventName == "" || args.PropertyName == "" {
-		err := E.Wrap(errors.New("MissingParams"), "GetSeenEventPropertyValues Missing Param")
-		result.Error = err
-		return err
-	}
-
-	modelId := args.ModelId
-	if modelId == 0 {
-		latestInterval, err := ps.GetProjectModelLatestInterval(args.ProjectId)
-		if err != nil {
-			result.Error = err
-			return err
-		}
-		modelId = latestInterval.ModelId
-	}
-
-	if !ps.IsProjectModelServable(args.ProjectId, modelId) {
-		result.Ignored = true
-		return nil
-	}
-
-	userAndEventsInfoMap, err := ps.GetModelEventInfo(args.ProjectId, modelId)
-	if err != nil {
-		result.Error = err
-		return err
-	}
-
-	eventInfo, exists := (*userAndEventsInfoMap.EventPropertiesInfoMap)[args.EventName]
-	if !exists {
-		err := E.Wrap(errors.New("EventInfo NotFound"), fmt.Sprintf("ProjectId: %d, ModelId: %d, Eventname: %s", args.ProjectId, modelId, args.EventName))
-		result.Error = err
-		return err
-	}
-
-	propValuesMap, exists := eventInfo.CategoricalPropertyKeyValues[args.PropertyName]
-	if !exists {
-		err := fmt.Errorf("PropertyValues not found for EventName: %s, PropertyName: %s", args.EventName, args.PropertyName)
-		result.Error = err
-		return err
-	}
-
-	propValues := []string{}
-
-	for value := range propValuesMap {
-		propValues = append(propValues, value)
-	}
-	result.ProjectId = args.ProjectId
-	result.ModelId = modelId
-	result.PropertyValues = propValues
-	return nil
-}
-
 func (ps *PatternServer) GetProjectModelsIntervals(
 	r *http.Request, args *client.GetProjectModelIntervalsRequest,
 	result *client.GetProjectModelIntervalsResponse) error {
@@ -346,157 +243,6 @@ type GetCountOfPatternResponse struct {
 }
 
 func (ps *PatternServer) GetCountOfPattern(r *http.Request, args *GetCountOfPatternRequest, result *GetCountOfPatternResponse) error {
-	return nil
-}
-
-func (ps *PatternServer) GetSeenUserProperties(
-	r *http.Request, args *client.GetSeenUserPropertiesRequest,
-	result *client.GetSeenUserPropertiesResponse) error {
-
-	if args == nil || args.ProjectId == 0 {
-		err := E.Wrap(errors.New("MissingParams"), "GetSeenUserProperties Missing Param")
-		result.Error = err
-		return err
-	}
-	modelId := args.ModelId
-
-	if modelId == 0 {
-		latestInterval, err := ps.GetProjectModelLatestInterval(args.ProjectId)
-		if err != nil {
-			result.Error = err
-			return err
-		}
-		modelId = latestInterval.ModelId
-	}
-
-	if !ps.IsProjectModelServable(args.ProjectId, modelId) {
-		result.Ignored = true
-		return nil
-	}
-
-	userAndEventsInfo, err := ps.GetModelEventInfo(args.ProjectId, modelId)
-	if err != nil {
-		result.Error = err
-		return err
-	}
-	numericalProperties := []string{}
-	categoricalProperties := []string{}
-
-	if args.ModelId == modelId && userAndEventsInfo.ModelVersion >= 2.0 {
-		// Supported only in these versions. Is sent only if modelId is explicitly stated.
-		for _, dnp := range U.GENERIC_NUMERIC_USER_PROPERTIES {
-			numericalProperties = append(numericalProperties, dnp)
-		}
-	}
-
-	if userAndEventsInfo.UserPropertiesInfo != nil {
-		for nprop := range userAndEventsInfo.UserPropertiesInfo.NumericPropertyKeys {
-			numericalProperties = append(numericalProperties, nprop)
-		}
-		for cprop := range userAndEventsInfo.UserPropertiesInfo.CategoricalPropertyKeyValues {
-			categoricalProperties = append(categoricalProperties, cprop)
-		}
-	}
-
-	props := make(map[string][]string)
-	props["numerical"] = numericalProperties
-	props["categorical"] = categoricalProperties
-
-	result.ProjectId = args.ProjectId
-	result.ModelId = modelId
-	result.UserProperties = props
-	return nil
-}
-
-func (ps *PatternServer) GetSeenUserPropertyValues(
-	r *http.Request, args *client.GetSeenUserPropertyValuesRequest,
-	result *client.GetSeenUserPropertyValuesResponse) error {
-	if args == nil || args.ProjectId == 0 || args.PropertyName == "" {
-		err := E.Wrap(errors.New("MissingParams"), "GetSeenUserPropertyValues Missing Param")
-		result.Error = err
-		return err
-	}
-
-	modelId := args.ModelId
-	if modelId == 0 {
-		latestInterval, err := ps.GetProjectModelLatestInterval(args.ProjectId)
-		if err != nil {
-			result.Error = err
-			return err
-		}
-		modelId = latestInterval.ModelId
-	}
-
-	if !ps.IsProjectModelServable(args.ProjectId, modelId) {
-		result.Ignored = true
-		return nil
-	}
-
-	userAndEventsInfoMap, err := ps.GetModelEventInfo(args.ProjectId, modelId)
-	if err != nil {
-		result.Error = err
-		return err
-	}
-
-	if userAndEventsInfoMap.UserPropertiesInfo == nil {
-		err := E.Wrap(errors.New("UserPropertiesInfo NotFound"), fmt.Sprintf("ProjectId: %d, ModelId: %d", args.ProjectId, modelId))
-		result.Error = err
-		return err
-	}
-
-	propValuesMap, ok := userAndEventsInfoMap.UserPropertiesInfo.CategoricalPropertyKeyValues[args.PropertyName]
-	if !ok {
-		err := E.Wrap(errors.New("UserPropertiesValue NotFound"), fmt.Sprintf("ProjectId: %d, ModelId: %d, PropertyName: %s", args.ProjectId, modelId, args.PropertyName))
-		result.Error = err
-		return err
-	}
-
-	values := make([]string, 0, 0)
-	for k := range propValuesMap {
-		values = append(values, k)
-	}
-
-	result.ProjectId = args.ProjectId
-	result.ModelId = modelId
-	result.PropertyValues = values
-	return nil
-}
-
-func (ps *PatternServer) GetUserAndEventsInfo(
-	r *http.Request, args *client.GetUserAndEventsInfoRequest,
-	result *client.GetUserAndEventsInfoResponse) error {
-
-	if args == nil || args.ProjectId == 0 {
-		err := E.Wrap(errors.New("MissingParams"), "GetUserAndEventsInfo missing param projectID")
-		result.Error = err
-		return err
-	}
-
-	modelId := args.ModelId
-
-	if modelId == 0 {
-		latestInterval, err := ps.GetProjectModelLatestInterval(args.ProjectId)
-		if err != nil {
-			result.Error = err
-			return err
-		}
-		modelId = latestInterval.ModelId
-	}
-
-	if !ps.IsProjectModelServable(args.ProjectId, modelId) {
-		result.Ignored = true
-		return nil
-	}
-
-	userAndEventsInfo, err := ps.GetModelEventInfo(args.ProjectId, modelId)
-	if err != nil {
-		err = E.Wrap(errors.New("GetUserAndEventsInfo GetModelEventInfo NotFound"), fmt.Sprintf("ProjectId: %d, ModelId: %d", args.ProjectId, modelId))
-		result.Error = err
-		return err
-	}
-	result.ProjectId = args.ProjectId
-	result.ModelId = modelId
-	result.UserAndEventsInfo = userAndEventsInfo
 	return nil
 }
 
