@@ -42,6 +42,7 @@ import {
 import AttributionsResult from "./AttributionsResult";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 import CampaignAnalytics from "./CampaignAnalytics";
+import AnalysisResultsPage from "./AnalysisResultsPage";
 
 function CoreQuery({
   activeProject,
@@ -55,10 +56,10 @@ function CoreQuery({
   const [showResult, setShowResult] = useState(false);
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
-  const [resultState, setResultState] = useState(initialResultState);
-  const [funnelResult, updateFunnelResult] = useState(initialState);
-  const [attributionResult, updateAttributionResult] = useState(initialState);
-  const [campaignsResult, updateCampaignsResult] = useState(initialState);
+  const [resultState, setResultState] = useState(initialState);
+  // const [funnelResult, updateFunnelResult] = useState(initialState);
+  // const [attributionResult, updateAttributionResult] = useState(initialState);
+  // const [campaignsResult, updateCampaignsResult] = useState(initialState);
   const [requestQuery, updateRequestQuery] = useState(null);
   const [rowClicked, setRowClicked] = useState(false);
   const [querySaved, setQuerySaved] = useState(false);
@@ -126,16 +127,8 @@ function CoreQuery({
     }
   }, [activeProject, getCampaignConfigData]);
 
-  const updateResultState = useCallback((activeTab, newState) => {
-    const idx = parseInt(activeTab);
-    setResultState((currState) => {
-      return currState.map((elem, index) => {
-        if (index === idx) {
-          return newState;
-        }
-        return elem;
-      });
-    });
+  const updateResultState = useCallback((newState) => {
+    setResultState(newState);
   }, []);
 
   const updateAppliedBreakdown = useCallback(() => {
@@ -419,18 +412,18 @@ function CoreQuery({
         setQuerySaved(isQuerySaved);
         setAppliedQueries(queries.map((elem) => elem.label));
         updateAppliedBreakdown();
-        updateFunnelResult({ ...initialState, loading: true });
+        updateResultState({ ...initialState, loading: true });
         const query = getFunnelQuery(groupBy, queries, appliedDateRange);
         updateRequestQuery(query);
         const res = await getFunnelData(activeProject.id, query);
         if (res.status === 200) {
-          updateFunnelResult({ ...initialState, data: res.data });
+          updateResultState({ ...initialState, data: res.data });
         } else {
-          updateFunnelResult({ ...initialState, error: true });
+          updateResultState({ ...initialState, error: true });
         }
       } catch (err) {
         console.log(err);
-        updateFunnelResult({ ...initialState, error: true });
+        updateResultState({ ...initialState, error: true });
       }
     },
     [
@@ -440,6 +433,7 @@ function CoreQuery({
       groupBy,
       dateRange,
       dispatch,
+      updateResultState,
     ]
   );
 
@@ -490,7 +484,7 @@ function CoreQuery({
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         setShowResult(true);
         setQuerySaved(isQuerySaved);
-        updateAttributionResult({
+        updateResultState({
           ...initialState,
           loading: true,
         });
@@ -505,13 +499,13 @@ function CoreQuery({
         updateRequestQuery(query);
         setAttributionsState({ eventGoal, touchpoint, models, linkedEvents });
         const res = await getAttributionsData(activeProject.id, query);
-        updateAttributionResult({
+        updateResultState({
           ...initialState,
           data: res.data,
         });
       } catch (err) {
         console.log(err);
-        updateAttributionResult({
+        updateResultState({
           ...initialState,
           error: true,
         });
@@ -526,6 +520,7 @@ function CoreQuery({
       touchpoint,
       window,
       attr_dateRange,
+      updateResultState,
     ]
   );
 
@@ -536,7 +531,7 @@ function CoreQuery({
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         setShowResult(true);
         setQuerySaved(isQuerySaved);
-        updateCampaignsResult({
+        updateResultState({
           ...initialState,
           loading: true,
         });
@@ -555,13 +550,13 @@ function CoreQuery({
         });
         updateRequestQuery(query);
         const res = await getCampaignsData(activeProject.id, query);
-        updateCampaignsResult({
+        updateResultState({
           ...initialState,
           data: res.data.result ? res.data.result : res.data,
         });
       } catch (err) {
         console.log(err);
-        updateCampaignsResult({
+        updateResultState({
           ...initialState,
           error: true,
         });
@@ -575,6 +570,7 @@ function CoreQuery({
       camp_groupBy,
       camp_channels,
       camp_dateRange,
+      updateResultState,
     ]
   );
 
@@ -711,85 +707,87 @@ function CoreQuery({
     });
   });
 
-  let result = (
-    <EventsAnalytics
-      queries={appliedQueries}
-      eventsMapper={eventsMapper}
-      reverseEventsMapper={reverseEventsMapper}
-      breakdown={appliedBreakdown}
-      resultState={resultState}
-      setDrawerVisible={setDrawerVisible}
-      runQuery={runQuery}
-      activeKey={activeKey}
-      breakdownType={breakdownType}
-      handleBreakdownTypeChange={handleBreakdownTypeChange}
-      breakdownTypeData={breakdownTypeData}
-      queryType={queryType}
-      requestQuery={requestQuery}
-      setShowResult={setShowResult}
-      querySaved={querySaved}
-      setQuerySaved={setQuerySaved}
-      durationObj={queryOptions.date_range}
-      handleDurationChange={handleDurationChange}
-      arrayMapper={arrayMapper}
-      setActiveKey={setActiveKey}
-    />
-  );
+  // let result = (
+  //   <EventsAnalytics
+  //     queries={appliedQueries}
+  //     eventsMapper={eventsMapper}
+  //     reverseEventsMapper={reverseEventsMapper}
+  //     breakdown={appliedBreakdown}
+  //     resultState={resultState}
+  //     setDrawerVisible={setDrawerVisible}
+  //     runQuery={runQuery}
+  //     activeKey={activeKey}
+  //     breakdownType={breakdownType}
+  //     handleBreakdownTypeChange={handleBreakdownTypeChange}
+  //     breakdownTypeData={breakdownTypeData}
+  //     queryType={queryType}
+  //     requestQuery={requestQuery}
+  //     setShowResult={setShowResult}
+  //     querySaved={querySaved}
+  //     setQuerySaved={setQuerySaved}
+  //     durationObj={queryOptions.date_range}
+  //     handleDurationChange={handleDurationChange}
+  //     arrayMapper={arrayMapper}
+  //     setActiveKey={setActiveKey}
+  //   />
+  // );
 
-  if (queryType === QUERY_TYPE_FUNNEL) {
-    result = (
-      <FunnelsResultPage
-        setDrawerVisible={setDrawerVisible}
-        queries={appliedQueries}
-        resultState={funnelResult}
-        breakdown={appliedBreakdown}
-        requestQuery={requestQuery}
-        setShowResult={setShowResult}
-        querySaved={querySaved}
-        setQuerySaved={setQuerySaved}
-        durationObj={queryOptions.date_range}
-        handleDurationChange={handleDurationChange}
-        arrayMapper={arrayMapper}
-      />
-    );
-  }
+  // if (queryType === QUERY_TYPE_FUNNEL) {
+  //   result = (
+  //     <FunnelsResultPage
+  //       setDrawerVisible={setDrawerVisible}
+  //       queries={appliedQueries}
+  //       resultState={funnelResult}
+  //       breakdown={appliedBreakdown}
+  //       requestQuery={requestQuery}
+  //       setShowResult={setShowResult}
+  //       querySaved={querySaved}
+  //       setQuerySaved={setQuerySaved}
+  //       durationObj={queryOptions.date_range}
+  //       handleDurationChange={handleDurationChange}
+  //       arrayMapper={arrayMapper}
+  //     />
+  //   );
+  // }
 
-  if (queryType === QUERY_TYPE_ATTRIBUTION) {
-    result = (
-      <AttributionsResult
-        setShowResult={setShowResult}
-        requestQuery={requestQuery}
-        querySaved={querySaved}
-        setQuerySaved={setQuerySaved}
-        resultState={attributionResult}
-        setDrawerVisible={setDrawerVisible}
-        attributionsState={attributionsState}
-      />
-    );
-  }
+  // if (queryType === QUERY_TYPE_ATTRIBUTION) {
+  //   result = (
+  //     <AttributionsResult
+  //       setShowResult={setShowResult}
+  //       requestQuery={requestQuery}
+  //       querySaved={querySaved}
+  //       setQuerySaved={setQuerySaved}
+  //       resultState={attributionResult}
+  //       setDrawerVisible={setDrawerVisible}
+  //       attributionsState={attributionsState}
+  //     />
+  //   );
+  // }
 
-  if (queryType === QUERY_TYPE_CAMPAIGN) {
-    arrayMapper = campaignState.select_metrics.map((metric, index) => {
-      return {
-        eventName: metric,
-        index,
-        mapper: `event${index + 1}`,
-      };
-    });
-    result = (
-      <CampaignAnalytics
-        setShowResult={setShowResult}
-        requestQuery={requestQuery}
-        querySaved={querySaved}
-        setQuerySaved={setQuerySaved}
-        resultState={campaignsResult}
-        setDrawerVisible={setDrawerVisible}
-        arrayMapper={arrayMapper}
-        campaignState={campaignState}
-        // attributionsState={attributionsState}
-      />
-    );
-  }
+  // if (queryType === QUERY_TYPE_CAMPAIGN) {
+  //   arrayMapper = campaignState.select_metrics.map((metric, index) => {
+  //     return {
+  //       eventName: metric,
+  //       index,
+  //       mapper: `event${index + 1}`,
+  //     };
+  //   });
+  //   result = (
+  //     <CampaignAnalytics
+  //       setShowResult={setShowResult}
+  //       requestQuery={requestQuery}
+  //       querySaved={querySaved}
+  //       setQuerySaved={setQuerySaved}
+  //       resultState={campaignsResult}
+  //       setDrawerVisible={setDrawerVisible}
+  //       arrayMapper={arrayMapper}
+  //       campaignState={campaignState}
+  //       // attributionsState={attributionsState}
+  //     />
+  //   );
+  // }
+
+  // result = <AnalysisResultsPage queryType={queryType} />;
 
   const renderQueryComposer = () => {
     if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
@@ -836,7 +834,23 @@ function CoreQuery({
       </Drawer>
 
       {showResult ? (
-        <>{result}</>
+        <AnalysisResultsPage
+          queryType={queryType}
+          resultState={resultState}
+          setDrawerVisible={setDrawerVisible}
+          requestQuery={requestQuery}
+          queries={appliedQueries}
+          breakdown={appliedBreakdown}
+          setShowResult={setShowResult}
+          querySaved={querySaved}
+          setQuerySaved={setQuerySaved}
+          durationObj={queryOptions.date_range}
+          handleDurationChange={handleDurationChange}
+          arrayMapper={arrayMapper}
+          queryOptions={queryOptions}
+          attributionsState={attributionsState}
+          breakdownType={breakdownType}
+        />
       ) : (
         <CoreQueryHome
           setQueryType={setQueryType}

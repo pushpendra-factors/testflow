@@ -1,104 +1,48 @@
 import React from "react";
-import { QUERY_TYPE_ATTRIBUTION } from "../../../utils/constants";
-import styles from "../FunnelsResultPage/index.module.scss";
-import ResultsHeader from "../ResultsHeader";
-import Header from "../../AppLayout/Header";
-import { Spin } from "antd";
 import AttributionsChart from "./AttributionsChart";
 import GroupedAttributionsChart from "./GroupedAttributionsChart";
 
 function AttributionsResult({
-  setShowResult,
-  requestQuery,
-  querySaved,
-  setQuerySaved,
   resultState,
-  setDrawerVisible,
   attributionsState,
 }) {
   let content = null;
 
   const { eventGoal, touchpoint, models, linkedEvents } = attributionsState;
 
-  if (resultState.loading) {
+  if (models.length === 1) {
     content = (
-      <div className="mt-48 flex justify-center items-center w-full h-64">
-        <Spin size="large" />
-      </div>
+      <AttributionsChart
+        event={eventGoal.label}
+        linkedEvents={linkedEvents}
+        touchpoint={touchpoint}
+        data={
+          resultState.data.result ? resultState.data.result : resultState.data
+        }
+        isWidgetModal={false}
+        attribution_method={models[0]}
+      />
     );
   }
 
-  if (resultState.error) {
+  if (models.length === 2) {
     content = (
-      <div className="mt-48 flex justify-center items-center w-full h-64">
-        Something went wrong!
-      </div>
-    );
-  }
-
-  if (resultState.data) {
-    content = (
-      <div className="mt-48 mb-8 fa-container">
-        {models.length === 1 ? (
-          <AttributionsChart
-            event={eventGoal.label}
-            linkedEvents={linkedEvents}
-            touchpoint={touchpoint}
-            data={
-              resultState.data.result
-                ? resultState.data.result
-                : resultState.data
-            }
-            isWidgetModal={false}
-            attribution_method={models[0]}
-          />
-        ) : null}
-        {models.length === 2 ? (
-          <GroupedAttributionsChart
-            event={eventGoal.label}
-            linkedEvents={linkedEvents}
-            touchpoint={touchpoint}
-            data={
-              resultState.data.result
-                ? resultState.data.result
-                : resultState.data
-            }
-            isWidgetModal={false}
-            attribution_method={models[0]}
-            attribution_method_compare={models[1]}
-          />
-        ) : null}
-      </div>
+      <GroupedAttributionsChart
+        event={eventGoal.label}
+        linkedEvents={linkedEvents}
+        touchpoint={touchpoint}
+        data={
+          resultState.data.result ? resultState.data.result : resultState.data
+        }
+        isWidgetModal={false}
+        attribution_method={models[0]}
+        attribution_method_compare={models[1]}
+      />
     );
   }
 
   return (
     <>
-      <Header>
-        <ResultsHeader
-          setShowResult={setShowResult}
-          requestQuery={requestQuery}
-          querySaved={querySaved}
-          setQuerySaved={setQuerySaved}
-          queryType={QUERY_TYPE_ATTRIBUTION}
-        />
-
-        <div className="pt-4">
-          <div
-            className="app-font-family text-3xl font-semibold"
-            style={{ color: "#8692A3" }}
-          >
-            {querySaved || "Untitled Analysis"}
-          </div>
-          <div
-            className={`text-base font-medium pb-1 cursor-pointer ${styles.eventsText}`}
-            style={{ color: "#8692A3" }}
-            onClick={setDrawerVisible.bind(this, true)}
-          >
-            {eventGoal.label} (unique users)
-          </div>
-        </div>
-      </Header>
       {content}
     </>
   );

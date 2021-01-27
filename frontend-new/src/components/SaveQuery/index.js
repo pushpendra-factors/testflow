@@ -30,10 +30,8 @@ import {
 
 function SaveQuery({
   requestQuery,
-  setQuerySaved,
   visible,
   setVisible,
-  activeKey,
   breakdownType,
   queryType,
 }) {
@@ -138,18 +136,19 @@ function SaveQuery({
             };
           }),
         };
-        if (parseInt(activeKey) === 0) {
-          query.query_group = getTotalEventsQuery(query);
-        }
-        if (parseInt(activeKey) === 1) {
-          query.query_group = getTotalUsersQuery(query);
-        }
-        if (parseInt(activeKey) === 2) {
-          query.query_group = getSessionsQuery(query);
-        }
-        if (parseInt(activeKey) === 3) {
-          query.query_group = getFrequencyQuery(query);
-        }
+        query.query_group = getTotalEventsQuery(query);
+        // if (parseInt(activeKey) === 0) {
+        //   query.query_group = getTotalEventsQuery(query);
+        // }
+        // if (parseInt(activeKey) === 1) {
+        //   query.query_group = getTotalUsersQuery(query);
+        // }
+        // if (parseInt(activeKey) === 2) {
+        //   query.query_group = getSessionsQuery(query);
+        // }
+        // if (parseInt(activeKey) === 3) {
+        //   query.query_group = getFrequencyQuery(query);
+        // }
       } else if (queryType === QUERY_TYPE_CAMPAIGN) {
         query = {
           ...requestQuery,
@@ -169,9 +168,9 @@ function SaveQuery({
         const settings = {
           chart: dashboardPresentation,
         };
-        if (activeKey) {
-          settings.activeKey = activeKey;
-        }
+        // if (activeKey) {
+        //   settings.activeKey = activeKey;
+        // }
         if (breakdownType !== "each") {
           settings.breakdownType = breakdownType;
         }
@@ -188,7 +187,7 @@ function SaveQuery({
         );
       }
       dispatch({ type: QUERY_CREATED, payload: res.data });
-      setQuerySaved(title);
+      // setQuerySaved(title);
       setApisCalled(false);
       resetModalState();
     } catch (err) {
@@ -202,13 +201,11 @@ function SaveQuery({
       });
     }
   }, [
-    activeKey,
     breakdownType,
     title,
     active_project.id,
     requestQuery,
     dispatch,
-    setQuerySaved,
     resetModalState,
     addToDashboard,
     dashboardPresentation,

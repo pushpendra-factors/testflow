@@ -34,3 +34,10 @@ export const CHART_TYPE_BARCHART = "barchart";
 export const CHART_TYPE_LINECHART = "linechart";
 export const CHART_TYPE_TABLE = "table";
 export const BARCHART_TICK_LENGTH = 20;
+
+export const EVENT_BREADCRUMB = {
+  [QUERY_TYPE_EVENT]: 'Events',
+  [QUERY_TYPE_FUNNEL]: 'Funnel',
+  [QUERY_TYPE_ATTRIBUTION]: 'Attributions',
+  [QUERY_TYPE_CAMPAIGN]: 'Campaigns'
+}
