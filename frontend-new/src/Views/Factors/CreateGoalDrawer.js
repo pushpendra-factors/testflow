@@ -77,10 +77,10 @@ const operatorMap = {
 const getFilters = (filters) => {
   const result = [];
   filters.forEach((filter) => {
-    filter.values.forEach((value) => {
+    filter.values.forEach((value, index) => {
       result.push({
         en: filter.props[2],
-        lop: "OR",
+        lop: !index ? "AND" : "OR",
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
@@ -94,6 +94,7 @@ const getFilters = (filters) => {
   const onChangeGroupSelect1 = (grp, value) => {
     setShowDropDown(false); 
     // console.log("value-->",value);
+    // console.log("event value-->",value);
     setEvent1(value[0]); 
   }
   // const onChangeFilter = (grp, value) => {
@@ -474,10 +475,10 @@ const renderFilterBlock = () => {
           } 
 
 
-          <div className={' mt-12 border-top--thin'}> 
+          {/* <div className={' mt-12 border-top--thin'}> 
             <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 mt-4'}>Filter by</Text> 
             {renderFilterBlock()}
-          </div>
+          </div> */}
 
           {/* <div className={' mt-5 border-top--thin'}>
 
@@ -510,7 +511,7 @@ const renderFilterBlock = () => {
           </div>
           </div> */}
 
-    <div className={'flex flex-col justify-center items-center'} style={{ height: '50px' }}> 
+    <div className={'flex flex-col justify-center items-center'} style={{ height: '150px' }}> 
     </div>
         <div className={'flex justify-between items-center'}>
 

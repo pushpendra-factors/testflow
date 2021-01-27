@@ -18,7 +18,7 @@ const EventFilterBy = (props) => {
   const [filterProps, setFilterProperties] = useState({
     user: [],
     event: []
-});
+}); 
 // const [filterDD, setFilterDD] = useState(false);
 
  
@@ -41,6 +41,13 @@ const EventFilterBy = (props) => {
     }  
   },[props.activeProject, props.tracked_events, props.factors_models, props.goal_insights])
 
+  useEffect(()=>{
+    if (!props.eventProperties[props.event]) {
+      props.getEventProperties(props.activeProject.id, props.event);
+    }
+    setfilters([]);
+  },[props.event])
+
   useEffect(() => {
     const assignFilterProps = Object.assign({}, filterProps);
     // console.log("assignFilterProps---->",assignFilterProps);
@@ -48,10 +55,10 @@ const EventFilterBy = (props) => {
     let  catAndNumericalProps = [];
 
     // console.log('eventProperties-->>',props.eventProperties);
-    // console.log('event-->>',props.eventProperties, props.event);
-    // if (props.event && props.eventProperties[props.event]) {
-    //   assignFilterProps.event = props.eventProperties[props.event];
-    // }
+    // console.log('event props-->>',props.eventProperties, props.event);
+    if (props.event && props.eventProperties[props.event]) {
+      assignFilterProps.event = props.eventProperties[props.event];
+    }
 
     props.userProperties.map((item)=>{ 
       if(item[1]=='categorical' || item[1]=='numerical'){ 
@@ -95,13 +102,14 @@ const renderFilterBlock = () => {
               <div key={id} className={`mt-0 relative flex flex-grow w-full`}>
                   <FilterBlock activeProject={props.activeProject} 
                       index={id}
-                      blockType={'global'} 
+                      blockType={'event'} 
                       // filterType={'channel'} 
                       filter={filt}
                       extraClass={'filter-block--row'}
                       delBtnClass={'filter-block--delete--mini'}
                       delIcon={`times`}
                       deleteFilter={delFilter}
+                      event={{label: props.event}}
                       // typeProps={{channel: channel}} 
                       filterProps={filterProps}
                       propsConstants={Object.keys(filterProps)}
@@ -114,7 +122,7 @@ const renderFilterBlock = () => {
           filtrs.push(  
               <div key={filtrs.length} className={`mt-0 relative flex flex-grow w-full`}>
                   <FilterBlock activeProject={props.activeProject} 
-                      blockType={'global'} 
+                      blockType={'event'} 
                       // extraClass={styles.filterSelect}
                       extraClass={'filter-block--row'}
                       delBtnClass={'filter-block--delete--mini'}
@@ -123,6 +131,7 @@ const renderFilterBlock = () => {
                       propsConstants={Object.keys(filterProps)}
                       insertFilter={addFilter}
                       closeFilter={closeFilter} 
+                      event={{label: props.event}}
                       operatorProps={{
                         "categorical": [
                           '=',
