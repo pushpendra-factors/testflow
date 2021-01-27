@@ -1362,22 +1362,29 @@ func extractProperty(constraint P.EventConstraints) map[string]string {
 
 func extractProperties(parentNode *ItreeNode) ([]string, []string, []string, []string) {
 	userCatProperties := make([]string, 0)
-	for _, template := range *parentNode.Pattern.PerUserUserCategoricalProperties.Template {
-		userCatProperties = append(userCatProperties, formatProperty(template.Name))
+	if parentNode.Pattern.PerUserUserCategoricalProperties != nil {
+		for _, template := range *parentNode.Pattern.PerUserUserCategoricalProperties.Template {
+			userCatProperties = append(userCatProperties, formatProperty(template.Name))
+		}
 	}
 	userNumProperties := make([]string, 0)
-	for _, template := range *parentNode.Pattern.PerUserUserNumericProperties.Template {
-		userNumProperties = append(userNumProperties, formatProperty(template.Name))
+	if parentNode.Pattern.PerUserUserNumericProperties != nil {
+		for _, template := range *parentNode.Pattern.PerUserUserNumericProperties.Template {
+			userNumProperties = append(userNumProperties, formatProperty(template.Name))
+		}
 	}
 	eventCatProperties := make([]string, 0)
-	for _, template := range *parentNode.Pattern.PerUserEventCategoricalProperties.Template {
-		eventCatProperties = append(eventCatProperties, formatProperty(template.Name))
+	if parentNode.Pattern.PerUserEventCategoricalProperties != nil {
+		for _, template := range *parentNode.Pattern.PerUserEventCategoricalProperties.Template {
+			eventCatProperties = append(eventCatProperties, formatProperty(template.Name))
+		}
 	}
 	eventNumProperties := make([]string, 0)
-	for _, template := range *parentNode.Pattern.PerUserEventNumericProperties.Template {
-		eventNumProperties = append(eventNumProperties, formatProperty(template.Name))
+	if parentNode.Pattern.PerUserEventNumericProperties != nil {
+		for _, template := range *parentNode.Pattern.PerUserEventNumericProperties.Template {
+			eventNumProperties = append(eventNumProperties, formatProperty(template.Name))
+		}
 	}
-
 	return userCatProperties, userNumProperties, eventCatProperties, eventNumProperties
 }
 
