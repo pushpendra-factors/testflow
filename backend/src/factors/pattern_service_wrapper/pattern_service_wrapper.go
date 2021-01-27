@@ -25,7 +25,6 @@ func deepCopy(a, b interface{}) {
 
 // Fetches information from pattern server and operations on patterns in local cache.
 type PatternServiceWrapperInterface interface {
-	GetUserAndEventsInfo() *P.UserAndEventsInfo
 	GetPerUserCount(reqId string, eventNames []string,
 		patternConstraints []P.EventConstraints) (uint, bool)
 	GetPerOccurrenceCount(reqId string, eventNames []string,
@@ -38,11 +37,10 @@ type PatternServiceWrapperInterface interface {
 }
 
 type PatternServiceWrapper struct {
-	projectId         uint64
-	modelId           uint64
-	pMap              map[string]*P.Pattern
-	totalEventCount   uint
-	userAndEventsInfo *P.UserAndEventsInfo
+	projectId       uint64
+	modelId         uint64
+	pMap            map[string]*P.Pattern
+	totalEventCount uint
 }
 
 type funnelNodeResult struct {
@@ -65,10 +63,6 @@ type graphResult struct {
 }
 type FactorGraphResults struct {
 	Charts []graphResult `json:"charts"`
-}
-
-func (pw *PatternServiceWrapper) GetUserAndEventsInfo() *P.UserAndEventsInfo {
-	return pw.userAndEventsInfo
 }
 
 func (pw *PatternServiceWrapper) GetPerUserCount(reqId string, eventNames []string,
@@ -907,20 +901,11 @@ func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode,
 }
 
 func NewPatternServiceWrapper(reqId string, projectId uint64, modelId uint64) (*PatternServiceWrapper, error) {
-	userAndEventsInfo, respModelId, err := PC.GetUserAndEventsInfo(reqId, projectId, modelId)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err, "projectId": projectId}).Error(
-			"GetUserAndEventsInfo failed")
-		return nil, err
-	}
-
 	pMap := make(map[string]*P.Pattern)
 	patternServiceWrapper := PatternServiceWrapper{
-		projectId:         projectId,
-		modelId:           respModelId,
-		userAndEventsInfo: userAndEventsInfo,
-		pMap:              pMap,
+		projectId: projectId,
+		modelId:   modelId,
+		pMap:      pMap,
 	}
 
 	return &patternServiceWrapper, nil

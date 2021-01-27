@@ -68,11 +68,6 @@ func PostFactorsHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, allEventPatterns)
 		return
 	}
-	if patternMode == "AllProperties" {
-		allProperties := ps.GetUserAndEventsInfo()
-		c.JSON(http.StatusOK, allProperties)
-		return
-	}
 	debugParams := make(map[string]string)
 	debugParams["PropertyName"] = propertyName
 	debugParams["PropertyValue"] = propertyValue
@@ -143,11 +138,6 @@ func GetFactorsHandler(c *gin.Context) {
 			allEventPatterns = append(allEventPatterns, pattern)
 		}
 		c.JSON(http.StatusOK, allEventPatterns)
-		return
-	}
-	if patternMode == "AllProperties" {
-		allProperties := ps.GetUserAndEventsInfo()
-		c.JSON(http.StatusOK, allProperties)
 		return
 	}
 }

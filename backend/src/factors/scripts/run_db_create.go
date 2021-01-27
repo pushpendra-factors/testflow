@@ -411,10 +411,10 @@ func main() {
 	}
 
 	// Adding hubspot_documents_project_id_type_user_id_timestamp_idx index on salesforce_documents table.
-	if err := db.Exec("CREATE INDEX hubspot_documents_project_id_type_user_id_timestamp_idx ON hubspot_documents(project_id, type, user_id, timestamp DESC)").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to create index hubspot_documents_project_id_type_user_id_timestamp_idx.")
+	if err := db.Exec("CREATE INDEX hubspot_documents_project_id_type_timestamp_user_id_idx ON hubspot_documents(project_id, type, timestamp DESC, user_id)").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create index hubspot_documents_project_id_type_timestamp_user_id_idx.")
 	} else {
-		log.Info("Created index hubspot_documents_project_id_type_user_id_timestamp_idx.")
+		log.Info("Created index hubspot_documents_project_id_type_timestamp_user_id_idx.")
 	}
 
 	// Create facebook documents table
@@ -446,10 +446,10 @@ func main() {
 	}
 
 	// Adding salesforce_documents_project_id_type_user_id_timestamp_idx index on salesforce_documents table.
-	if err := db.Exec("CREATE INDEX salesforce_documents_project_id_type_user_id_timestamp_idx ON salesforce_documents(project_id, type, user_id, timestamp DESC)").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to create index salesforce_documents_project_id_type_user_id_timestamp_idx.")
+	if err := db.Exec("CREATE INDEX salesforce_documents_project_id_type_timestamp_user_id_idx ON salesforce_documents(project_id, type, timestamp DESC, user_id)").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create index salesforce_documents_project_id_type_timestamp_user_id_idx.")
 	} else {
-		log.Info("Created index salesforce_documents_project_id_type_user_id_timestamp_idx.")
+		log.Info("Created index salesforce_documents_project_id_type_timestamp_user_id_idx.")
 	}
 
 	// Create bigquery settings table.
