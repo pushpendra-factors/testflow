@@ -14,13 +14,13 @@ function SparkChart({
     const margin = {
       top: 10, right: 10, bottom: 30, left: 10
     };
-    const width = d3.select(chartRef.current).node().getBoundingClientRect().width - margin.left - margin.right;
+    const width = d3.select(chartRef.current).node().getBoundingClientRect().width;
     const height = 180;
 
     // append the svg object to the body of the page
     const svg = d3.select(chartRef.current).html('')
       .append('svg')
-      .attr('width', width + margin.left + margin.right)
+      .attr('width', width)
       .attr('height', height + margin.top + margin.bottom)
       .append('g')
       .attr('transform',

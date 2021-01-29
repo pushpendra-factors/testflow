@@ -55,7 +55,7 @@ function GroupedAttributionsChart({
   };
 
   return (
-    <div className="attribution-results">
+    <div className="flex items-center justify-center flex-col">
       <GroupedBarChart
         colors={getColors()}
         categories={getCategories()}
@@ -67,7 +67,7 @@ function GroupedAttributionsChart({
         method2={attribution_method_compare}
         event={event}
       />
-      <div className="mt-8">
+      <div className="mt-12 w-full">
         <AttributionTable
           touchpoint={touchpoint}
           linkedEvents={linkedEvents}

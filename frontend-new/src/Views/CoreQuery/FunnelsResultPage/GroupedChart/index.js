@@ -38,7 +38,7 @@ function GroupedChart({
   const eventsData = generateEventsData(resultState.data, queries, arrayMapper);
 
   return (
-    <>
+    <div className="flex items-center justify-center flex-col">
       <Chart
         isWidgetModal={isWidgetModal}
         chartData={chartData}
@@ -47,7 +47,7 @@ function GroupedChart({
         arrayMapper={arrayMapper}
       />
 
-      <div className="mt-8">
+      <div className="mt-12 w-full">
         <FunnelsResultTable
           breakdown={breakdown}
           queries={queries}
@@ -59,7 +59,7 @@ function GroupedChart({
           isWidgetModal={isWidgetModal}
         />
       </div>
-    </>
+    </div>
   );
 }
 

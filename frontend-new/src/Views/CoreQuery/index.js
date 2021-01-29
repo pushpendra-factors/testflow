@@ -15,7 +15,6 @@ import {
   getCampaignConfigData,
 } from "../../reducers/coreQuery/middleware";
 import {
-  initialResultState,
   calculateFrequencyData,
   calculateActiveUsersData,
   hasApiFailed,
@@ -43,6 +42,10 @@ import AttributionsResult from "./AttributionsResult";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 import CampaignAnalytics from "./CampaignAnalytics";
 import AnalysisResultsPage from "./AnalysisResultsPage";
+import {
+  SET_CAMP_DATE_RANGE,
+  SET_ATTR_DATE_RANGE,
+} from "../../reducers/coreQuery/actions";
 
 function CoreQuery({
   activeProject,
@@ -94,6 +97,7 @@ function CoreQuery({
     touchpoint: "",
     models: [],
     linkedEvents: [],
+    date_range: {},
   });
 
   const [campaignState, setCampaignState] = useState({
@@ -101,6 +105,7 @@ function CoreQuery({
     select_metrics: [],
     filters: [],
     group_by: [],
+    date_range: {},
   });
 
   const dispatch = useDispatch();
@@ -437,48 +442,8 @@ function CoreQuery({
     ]
   );
 
-  const handleDurationChange = useCallback(
-    (dates) => {
-      if (dates && dates.selected) {
-        let frequency = "date";
-        if (
-          moment(dates.selected.endDate).diff(
-            dates.selected.startDate,
-            "hours"
-          ) <= 24
-        ) {
-          frequency = "hour";
-        }
-        setQueryOptions((currState) => {
-          return {
-            ...currState,
-            date_range: {
-              ...currState.date_range,
-              from: dates.selected.startDate,
-              to: dates.selected.endDate,
-              frequency,
-            },
-          };
-        });
-        const appliedDateRange = {
-          ...queryOptions.date_range,
-          from: dates.selected.startDate,
-          to: dates.selected.endDate,
-          frequency,
-        };
-
-        if (queryType === QUERY_TYPE_FUNNEL) {
-          runFunnelQuery(querySaved, appliedDateRange);
-        } else {
-          runQuery(true, querySaved, appliedDateRange);
-        }
-      }
-    },
-    [queryType, runFunnelQuery, runQuery, querySaved, queryOptions.date_range]
-  );
-
   const runAttributionQuery = useCallback(
-    async (isQuerySaved) => {
+    async (isQuerySaved, durationObj) => {
       try {
         closeDrawer();
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
@@ -488,16 +453,25 @@ function CoreQuery({
           ...initialState,
           loading: true,
         });
+        if (!durationObj) {
+          durationObj = attr_dateRange;
+        }
         const query = getAttributionQuery(
           eventGoal,
           touchpoint,
           models,
           window,
           linkedEvents,
-          attr_dateRange
+          durationObj
         );
         updateRequestQuery(query);
-        setAttributionsState({ eventGoal, touchpoint, models, linkedEvents });
+        setAttributionsState({
+          eventGoal,
+          touchpoint,
+          models,
+          linkedEvents,
+          date_range: { ...durationObj },
+        });
         const res = await getAttributionsData(activeProject.id, query);
         updateResultState({
           ...initialState,
@@ -525,7 +499,8 @@ function CoreQuery({
   );
 
   const runCampaignsQuery = useCallback(
-    async (isQuerySaved) => {
+    async (isQuerySaved, durationObj = null) => {
+      console.log(durationObj)
       try {
         closeDrawer();
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
@@ -535,18 +510,22 @@ function CoreQuery({
           ...initialState,
           loading: true,
         });
+        if (!durationObj) {
+          durationObj = camp_dateRange;
+        }
         const query = getCampaignsQuery(
           camp_channels,
           camp_measures,
           camp_filters,
           camp_groupBy,
-          camp_dateRange
+          durationObj
         );
         setCampaignState({
           channel: query.query_group[0].channel,
           filters: query.query_group[0].filters,
           select_metrics: query.query_group[0].select_metrics,
           group_by: query.query_group[0].group_by,
+          date_range: { ...durationObj },
         });
         updateRequestQuery(query);
         const res = await getCampaignsData(activeProject.id, query);
@@ -572,6 +551,60 @@ function CoreQuery({
       camp_dateRange,
       updateResultState,
     ]
+  );
+
+  const handleDurationChange = useCallback(
+    (dates) => {
+      let frequency = "date";
+      if (moment(dates.endDate).diff(dates.startDate, "hours") <= 24) {
+        frequency = "hour";
+      }
+      setQueryOptions((currState) => {
+        return {
+          ...currState,
+          date_range: {
+            ...currState.date_range,
+            from: dates.startDate,
+            to: dates.endDate,
+            frequency,
+          },
+        };
+      });
+      const appliedDateRange = {
+        ...queryOptions.date_range,
+        from: dates.startDate,
+        to: dates.endDate,
+        frequency,
+      };
+
+      if (queryType === QUERY_TYPE_FUNNEL) {
+        runFunnelQuery(querySaved, appliedDateRange);
+      }
+      if (queryType === QUERY_TYPE_EVENT) {
+        runQuery(true, querySaved, appliedDateRange);
+      }
+
+      if (queryType === QUERY_TYPE_CAMPAIGN) {
+        const payload = {
+          from: moment(dates.startDate).startOf("day"),
+          to: moment(dates.endDate).endOf("day"),
+          frequency: "date",
+        };
+        dispatch({ type: SET_CAMP_DATE_RANGE, payload });
+        runCampaignsQuery(querySaved, payload);
+      }
+
+      if (queryType === QUERY_TYPE_ATTRIBUTION) {
+        const payload = {
+          from: moment(dates.startDate).startOf("day"),
+          to: moment(dates.endDate).endOf("day"),
+          frequency: "date",
+        };
+        dispatch({ type: SET_ATTR_DATE_RANGE, payload });
+        runAttributionQuery(querySaved, payload);
+      }
+    },
+    [queryType, runFunnelQuery, runQuery, querySaved, queryOptions.date_range, dispatch, runCampaignsQuery, runAttributionQuery]
   );
 
   useEffect(() => {
@@ -850,6 +883,7 @@ function CoreQuery({
           queryOptions={queryOptions}
           attributionsState={attributionsState}
           breakdownType={breakdownType}
+          campaignState={campaignState}
         />
       ) : (
         <CoreQueryHome

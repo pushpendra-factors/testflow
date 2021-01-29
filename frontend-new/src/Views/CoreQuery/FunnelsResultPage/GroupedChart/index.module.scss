@@ -47,7 +47,7 @@ $textColor: #3E516C;
     :global(.c3-tooltip-container) {
         position: fixed !important;
         transition: 0.5s;
-        z-index: 30;
+        z-index: 100;
     }
 
     :global(.toolTip) {

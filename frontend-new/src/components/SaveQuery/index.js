@@ -137,18 +137,6 @@ function SaveQuery({
           }),
         };
         query.query_group = getTotalEventsQuery(query);
-        // if (parseInt(activeKey) === 0) {
-        //   query.query_group = getTotalEventsQuery(query);
-        // }
-        // if (parseInt(activeKey) === 1) {
-        //   query.query_group = getTotalUsersQuery(query);
-        // }
-        // if (parseInt(activeKey) === 2) {
-        //   query.query_group = getSessionsQuery(query);
-        // }
-        // if (parseInt(activeKey) === 3) {
-        //   query.query_group = getFrequencyQuery(query);
-        // }
       } else if (queryType === QUERY_TYPE_CAMPAIGN) {
         query = {
           ...requestQuery,
@@ -250,7 +238,7 @@ function SaveQuery({
             style={{ width: "100%" }}
             placeholder={"Please Select"}
             onChange={handleSelectChange}
-            className={styles.selectStyles}
+            className={styles.multiSelectStyles}
             value={getSelectedDashboards()}
           >
             {dashboards.data.map((d) => {

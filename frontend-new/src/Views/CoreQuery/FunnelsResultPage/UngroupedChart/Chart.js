@@ -324,7 +324,7 @@ function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper }) {
   });
 
   return (
-    <div id={`${title}-ungroupedChart`} className="ungrouped-chart">
+    <div id={`${title}-ungroupedChart`} className="w-full ungrouped-chart">
       <div
         id={`conversionText-${title}`}
         className="absolute flex items-center justify-end pr-1"

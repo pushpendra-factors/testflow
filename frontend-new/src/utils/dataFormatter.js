@@ -1,4 +1,5 @@
 import React from "react";
+import { QUERY_TYPE_CAMPAIGN, QUERY_TYPE_EVENT } from "./constants";
 
 const visualizationColors = [
   "#4D7DB4",
@@ -138,4 +139,37 @@ export const generateColors = (requiredCumberOfColors) => {
 
 export const formatCount = (count, precision) => {
   return count % 1 !== 0 ? count.toFixed(precision) : count;
+};
+
+export const getChartTypeMenuItems = (
+  queryType,
+  hasBreakdown,
+) => {
+  let menuItems = [];
+  if (queryType === QUERY_TYPE_CAMPAIGN || queryType === QUERY_TYPE_EVENT) {
+    if (hasBreakdown) {
+      menuItems = [
+        {
+          key: "barchart",
+          name: "Barchart",
+        },
+        {
+          key: "linechart",
+          name: "Line Chart",
+        },
+      ];
+    } else {
+      menuItems = [
+        {
+          key: "sparklines",
+          name: "Sparkline",
+        },
+        {
+          key: "linechart",
+          name: "Line Chart",
+        },
+      ];
+    }
+  }
+  return menuItems
 };
