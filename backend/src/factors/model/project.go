@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,18 +19,22 @@ type Project struct {
 	// An index created on token.
 	Token string `gorm:"size:32" json:"token"`
 	// An index created on private_token.
-	PrivateToken string    `gorm:"size:32" json:"private_token"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	ProjectURI   string    `json:"project_uri"`
-	TimeFormat   string    `json:"time_format"`
-	DateFormat   string    `json:"date_format"`
-	TimeZone     string    `json:"time_zone"`
+	PrivateToken string          `gorm:"size:32" json:"private_token"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+	ProjectURI   string          `json:"project_uri"`
+	TimeFormat   string          `json:"time_format"`
+	DateFormat   string          `json:"date_format"`
+	TimeZone     string          `json:"time_zone"`
+	JobsMetadata *postgres.Jsonb `json:"-"`
 }
 
 const TOKEN_GEN_RETRY_LIMIT = 5
 const DefaultProjectName = "My Project"
 const ENABLE_DEFAULT_WEB_ANALYTICS = false
+
+const JobsMetadataKeyNextSessionStartTimestamp = "next_session_start_timestamp"
+const JobsMetadataColumnName = "jobs_metadata"
 
 // Checks for the existence of token already.
 func isTokenExist(token string) (exists int, err error) {
@@ -81,18 +86,32 @@ func (project *Project) BeforeCreate() (err error) {
 }
 
 func createProject(project *Project) (*Project, int) {
-	db := C.GetServices().Db
-
-	log.WithFields(log.Fields{"project": &project}).Info("Creating project")
+	logCtx := log.WithFields(log.Fields{"project": project})
 
 	// Input Validation. (ID is to be auto generated)
 	if project.ID > 0 {
-		log.Error("CreateProject Failed. ProjectId provided.")
+		logCtx.Error("CreateProject Failed. ProjectId provided.")
 		return nil, http.StatusBadRequest
 	}
 
+	// Initialize jobs metadata.
+	jobsMetadata := &map[string]interface{}{
+		// To start pulling events from the time of project
+		// create for adding session for the first time.
+		JobsMetadataKeyNextSessionStartTimestamp: U.TimeNowUnix(),
+	}
+	jobsMetadataJsonb, err := U.EncodeToPostgresJsonb(jobsMetadata)
+	if err != nil {
+		// Log error and continue to create project.
+		logCtx.WithField("jobs_metadata", jobsMetadata).WithError(err).
+			Error("Failed to marshal jobs metadata on create project.")
+	} else {
+		project.JobsMetadata = jobsMetadataJsonb
+	}
+
+	db := C.GetServices().Db
 	if err := db.Create(project).Error; err != nil {
-		log.WithFields(log.Fields{"project": &project}).WithError(err).Error("CreateProject Failed")
+		logCtx.WithError(err).Error("Create project failed.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -337,4 +356,71 @@ func GetAllProjectIDs() ([]uint64, int) {
 	}
 
 	return projectIds, http.StatusFound
+}
+
+// GetNextSessionStartTimestampForProject - Returns start timestamp for
+// pulling events, for add session job, by project.
+func GetNextSessionStartTimestampForProject(projectID uint64) (int64, int) {
+	logCtx := log.WithField("project_id", projectID)
+
+	if projectID == 0 {
+		logCtx.WithField("project_id", projectID).Error("Invalid args to method.")
+		return 0, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	rows, err := db.Table("projects").Limit(1).Where("id = ?", projectID).
+		Select(fmt.Sprintf("%s->>'%s' as session_start_timestamp", JobsMetadataColumnName,
+			JobsMetadataKeyNextSessionStartTimestamp)).Rows()
+	if err != nil {
+		logCtx.WithField("project_id", projectID).WithError(err).
+			Error("Failed to get next session start timestamp for project.")
+		return 0, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	var sessionStartTimestamp *int64
+	for rows.Next() {
+		err = rows.Scan(&sessionStartTimestamp)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to read next session start timestamp.")
+			return 0, http.StatusInternalServerError
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		logCtx.WithError(err).Error("Failure on rows scanner.")
+		return 0, http.StatusInternalServerError
+	}
+
+	if sessionStartTimestamp == nil {
+		return 0, http.StatusNotFound
+	}
+
+	return *sessionStartTimestamp, http.StatusFound
+}
+
+// UpdateNextSessionStartTimestampForProject - Updates next session start timestamp
+// on project jobs metadata.
+func UpdateNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int {
+	logCtx := log.WithField("project_id", projectID).WithField("timestamp", timestamp)
+
+	if projectID == 0 || timestamp == 0 {
+		logCtx.WithField("project_id", projectID).WithField("timestamp", 0).
+			Error("Invalid args to method.")
+		return http.StatusBadRequest
+	}
+
+	// Updating the add_session JSON field directly, to avoid state corruption
+	// because of multiple version of JSON being updaetd by multiple jobs simultaneously.
+	query := fmt.Sprintf(`UPDATE projects SET jobs_metadata = jobs_metadata - '%s' || '{"%s": %d}' WHERE id = %d`,
+		JobsMetadataKeyNextSessionStartTimestamp, JobsMetadataKeyNextSessionStartTimestamp, timestamp, projectID)
+	db := C.GetServices().Db
+	err := db.Exec(query).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update next session start timestamp for project.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
 }
