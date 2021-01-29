@@ -7,4 +7,4 @@ metadata:
     project: factors-production
 data:
   ADD_SESSION_NUM_ROUTINES: "10"
-  ADD_SESSION_MAX_LOOKBACK_HOURS: "12"
+  ADD_SESSION_MAX_LOOKBACK_HOURS: "24"

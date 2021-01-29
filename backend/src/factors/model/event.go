@@ -663,28 +663,12 @@ func doesEventIsPageViewAndHasMarketingProperty(event *Event) (bool, error) {
 	return isPageAndHasMarketingProperty, nil
 }
 
-func filterEventsForSession(events []Event,
-	startTimestamp, endTimestamp int64) []*Event {
+func filterEventsForSession(events []Event, endTimestamp int64) []*Event {
 
 	filteredEvents := make([]*Event, 0, 0)
+	// Filter events by user specific end_timestamp.
 	for i := range events {
-		if events[i].Timestamp >= startTimestamp && events[i].Timestamp <= endTimestamp {
-			// Todo(Dinesh): Avoid decoding event properties multiple times.
-			// Decode once and use it on add_session also.
-			properties, err := U.DecodePostgresJsonb(&events[i].Properties)
-			if err != nil {
-				// log and consider event for session addition, if properties decode fails.
-				log.WithField("project_id", events[i].ProjectId).
-					WithField("event_id", events[i].ID).
-					Error("Failed to decode event properties on filter events.")
-			}
-
-			// skip event for session addition, if skip_session is set to true.
-			value, exists := (*properties)[U.EP_SKIP_SESSION]
-			if exists && value == U.PROPERTY_VALUE_TRUE {
-				continue
-			}
-
+		if events[i].Timestamp <= endTimestamp {
 			// Using address as append doesn't use ref by default.
 			filteredEvents = append(filteredEvents, &events[i])
 		}
@@ -764,19 +748,26 @@ type SessionUserProperties struct {
 // AddSessionForUser - Wrapper for addSessionForUser to handle creating
 // new session for last event when new session conditions met.
 func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
-	bufferTimeBeforeSessionCreateInSecs, startTimestamp int64,
+	bufferTimeBeforeSessionCreateInSecs int64,
 	sessionEventNameId uint64) (int, int, bool, int, int) {
 
 	noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 		noOfUserPropertiesUpdated, isLastEventToBeProcessed,
 		errCode := addSessionForUser(projectId, userId, userEvents,
-		bufferTimeBeforeSessionCreateInSecs, startTimestamp, sessionEventNameId)
+		bufferTimeBeforeSessionCreateInSecs, sessionEventNameId)
 
+	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+		return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
+			noOfUserPropertiesUpdated, errCode
+	}
+
+	// Fix for last event not being processed when the last but previous meets
+	// new session creation condition. Calling the add_session for user
+	// with only last event, for simplicity.
 	if isLastEventToBeProcessed {
 		lastUserEventAsList := userEvents[len(userEvents)-1:]
-		addSessionForUser(projectId, userId, lastUserEventAsList,
-			bufferTimeBeforeSessionCreateInSecs, startTimestamp,
-			sessionEventNameId)
+		_, _, _, _, _, errCode = addSessionForUser(projectId, userId, lastUserEventAsList,
+			bufferTimeBeforeSessionCreateInSecs, sessionEventNameId)
 
 		noOfSessionsCreated++
 	}
@@ -800,7 +791,7 @@ e2 - t2
 e3 - t3
 */
 func addSessionForUser(projectId uint64, userId string, userEvents []Event,
-	bufferTimeBeforeSessionCreateInSecs, startTimestamp int64,
+	bufferTimeBeforeSessionCreateInSecs int64,
 	sessionEventNameId uint64) (int, int, bool, int, bool, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
@@ -808,17 +799,19 @@ func addSessionForUser(projectId uint64, userId string, userEvents []Event,
 	if len(userEvents) == 0 {
 		return 0, 0, false, 0, false, http.StatusNotModified
 	}
+	startTimestamp := userEvents[0].Timestamp
 
 	latestUserEvent := &userEvents[len(userEvents)-1]
+	// User level buffer time. Mainly added for segment.
 	endTimestamp := latestUserEvent.Timestamp - bufferTimeBeforeSessionCreateInSecs
-	// session should have been created till current_time - buffer timestamp.
-	expectedEndTimestamp := U.TimeNowUnix() - bufferTimeBeforeSessionCreateInSecs
+	// Max buffer time should be current timestamp - configured buffer time.
+	maxEndTimestamp := U.TimeNowUnix() - bufferTimeBeforeSessionCreateInSecs
 
-	if endTimestamp < expectedEndTimestamp || endTimestamp <= startTimestamp {
+	if endTimestamp < maxEndTimestamp || endTimestamp <= startTimestamp {
 		endTimestamp = latestUserEvent.Timestamp
 	}
 
-	events := filterEventsForSession(userEvents, startTimestamp, endTimestamp)
+	events := filterEventsForSession(userEvents, endTimestamp)
 	if len(events) == 0 {
 		return 0, 0, false, 0, false, http.StatusNotModified
 	}

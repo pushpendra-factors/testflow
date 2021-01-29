@@ -1003,7 +1003,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	responseEventId := responseMap["event_id"].(string)
 	responseUserId := responseMap["user_id"].(string)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 
 	sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
@@ -1075,7 +1075,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.Nil(t, responseMap["user_id"])
 	responseEventId2 := responseMap["event_id"].(string)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 
 	sessionEventName, errCode = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
@@ -1116,7 +1116,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	responseMap := DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
-	_, err = TaskSession.AddSession([]uint64{project.ID}, timestampBeforeOneDay-60, 0, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, timestampBeforeOneDay-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 	event1, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1131,7 +1131,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
-	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 	event2, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1148,7 +1148,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 
 	// New session has to be created by even timestamp
 	// as user was inactive.
-	lastEventTimestamp = lastEventTimestamp + 1800
+	lastEventTimestamp = lastEventTimestamp + 1801
 	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
 		user.ID, lastEventTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
@@ -1156,7 +1156,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
-	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 	event3, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1787,7 +1787,7 @@ func getAutoTrackedEventIdWithPageRawURL(t *testing.T, projectAuthToken, pageRaw
 
 	project, errCode := M.GetProjectByToken(projectAuthToken)
 	assert.Equal(t, http.StatusFound, errCode)
-	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 1)
+	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 
 	return responseMap["event_id"].(string), responseMap["user_id"].(string)
@@ -1811,7 +1811,7 @@ func getAutoTrackedEventIdWithUserIdAndPageRawURL(t *testing.T, projectAuthToken
 
 	project, errCode := M.GetProjectByToken(projectAuthToken)
 	assert.Equal(t, http.StatusFound, errCode)
-	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 1)
+	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 
 	return responseMap["event_id"].(string)

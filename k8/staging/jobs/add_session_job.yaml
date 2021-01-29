@@ -15,6 +15,7 @@ spec:
         metadata:
           labels:
             layer: jobs
+            nodePool: factors-staging-node-pool
         spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
@@ -45,6 +46,10 @@ spec:
             - $(ADD_SESSION_NUM_ROUTINES)
             - --max_lookback_days
             - $(ADD_SESSION_MAX_LOOKBACK_HOURS)
+            - --start_timestamp
+            - "0"
+            - --end_timestamp
+            - "0"
             - --redis_host_ps
             - $(PERSISTENT_REDIS_HOST)
             - --redis_port_ps

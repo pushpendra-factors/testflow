@@ -61,6 +61,8 @@ const MAX_PATTERN_BYTES = 20 * 1024 * 1024
 
 const COUNT_TYPE_PER_USER = "ct_per_user"
 const COUNT_TYPE_PER_OCCURRENCE = "ct_per_occurrence"
+const EQUALS_OPERATOR_CONST = "Equals"
+const NOT_EQUALS_OPERATOR_CONST = "NotEquals"
 
 type NumericConstraint struct {
 	PropertyName string
@@ -72,6 +74,7 @@ type NumericConstraint struct {
 type CategoricalConstraint struct {
 	PropertyName  string
 	PropertyValue string
+	Operator      string
 }
 type EventConstraints struct {
 	EPNumericConstraints     []NumericConstraint
@@ -582,7 +585,7 @@ func (p *Pattern) GetPerUserCount(
 		}
 		for _, ccs := range ecs.EPCategoricalConstraints {
 			key := PatternPropertyKey(i, ccs.PropertyName)
-			EPCMapEquality[key] = ccs.PropertyValue
+			EPCMapEquality[key] = appendPropertyValues(EPCMapEquality[key], ccs.PropertyValue, ccs.Operator)
 		}
 
 		for _, ncs := range ecs.UPNumericConstraints {
@@ -598,7 +601,7 @@ func (p *Pattern) GetPerUserCount(
 		}
 		for _, ccs := range ecs.UPCategoricalConstraints {
 			key := PatternPropertyKey(i, ccs.PropertyName)
-			UPCMapEquality[key] = ccs.PropertyValue
+			UPCMapEquality[key] = appendPropertyValues(UPCMapEquality[key], ccs.PropertyValue, ccs.Operator)
 		}
 	}
 
@@ -668,6 +671,16 @@ func (p *Pattern) GetPerUserCount(
 	return uint(count), nil
 }
 
+func appendPropertyValues(existingValue string, addedValue string, operator string) string {
+	if existingValue == "" {
+		if operator == NOT_EQUALS_OPERATOR_CONST {
+			return "!=" + "," + addedValue
+		}
+		return addedValue
+	}
+	return (existingValue + "," + addedValue)
+}
+
 func (p *Pattern) GetPerOccurrenceCount(
 	patternConstraints []EventConstraints) (uint, error) {
 	pLen := len(p.EventNames)
@@ -698,7 +711,7 @@ func (p *Pattern) GetPerOccurrenceCount(
 		}
 		for _, ccs := range ecs.EPCategoricalConstraints {
 			key := PatternPropertyKey(i, ccs.PropertyName)
-			EPCMapEquality[key] = ccs.PropertyValue
+			EPCMapEquality[key] = appendPropertyValues(EPCMapEquality[key], ccs.PropertyValue, ccs.Operator)
 		}
 
 		for _, ncs := range ecs.UPNumericConstraints {
@@ -708,7 +721,8 @@ func (p *Pattern) GetPerOccurrenceCount(
 		}
 		for _, ccs := range ecs.UPCategoricalConstraints {
 			key := PatternPropertyKey(i, ccs.PropertyName)
-			UPCMapEquality[key] = ccs.PropertyValue
+			UPCMapEquality[key] = appendPropertyValues(UPCMapEquality[key], ccs.PropertyValue, ccs.Operator)
+
 		}
 	}
 

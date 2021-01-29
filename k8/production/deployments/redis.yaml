@@ -24,6 +24,7 @@ spec:
     metadata:      
       labels:
         layer: redis
+        nodePool: persistent-pool-highmem
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: persistent-pool-highmem

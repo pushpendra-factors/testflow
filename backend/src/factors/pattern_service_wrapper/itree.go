@@ -1621,6 +1621,7 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 				P.CategoricalConstraint{
 					PropertyName:  propertyName,
 					PropertyValue: value,
+					Operator:      P.EQUALS_OPERATOR_CONST,
 				},
 			}
 			if nodeType == NODE_TYPE_EVENT_PROPERTY {

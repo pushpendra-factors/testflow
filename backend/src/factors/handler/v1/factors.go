@@ -162,6 +162,16 @@ func GetFactorsHandler(c *gin.Context) {
 	}
 }
 
+func extractOperator(isEqual bool) string {
+	var op string
+	if isEqual == true {
+		op = P.EQUALS_OPERATOR_CONST
+	} else {
+		op = P.NOT_EQUALS_OPERATOR_CONST
+	}
+	return op
+}
+
 func parseConstraints(filters M.FactorsGoalFilter) (*P.EventConstraints, *P.EventConstraints) {
 	var startEventConstraints P.EventConstraints
 	startEventConstraints.EPNumericConstraints = make([]P.NumericConstraint, 0)
@@ -170,9 +180,11 @@ func parseConstraints(filters M.FactorsGoalFilter) (*P.EventConstraints, *P.Even
 	startEventConstraints.UPCategoricalConstraints = make([]P.CategoricalConstraint, 0)
 	for _, filter := range filters.StartEnEventFitler {
 		if filter.Type == "categorical" {
+			op := extractOperator(filter.Operator)
 			startEventConstraints.EPCategoricalConstraints = append(startEventConstraints.EPCategoricalConstraints, P.CategoricalConstraint{
 				PropertyName:  filter.Key,
 				PropertyValue: filter.Value,
+				Operator:      op,
 			})
 		}
 		if filter.Type == "numerical" {
@@ -186,9 +198,11 @@ func parseConstraints(filters M.FactorsGoalFilter) (*P.EventConstraints, *P.Even
 	}
 	for _, filter := range filters.StartEnUserFitler {
 		if filter.Type == "categorical" {
+			op := extractOperator(filter.Operator)
 			startEventConstraints.UPCategoricalConstraints = append(startEventConstraints.UPCategoricalConstraints, P.CategoricalConstraint{
 				PropertyName:  filter.Key,
 				PropertyValue: filter.Value,
+				Operator:      op,
 			})
 		}
 		if filter.Type == "numerical" {
@@ -208,9 +222,11 @@ func parseConstraints(filters M.FactorsGoalFilter) (*P.EventConstraints, *P.Even
 	endEventConstraints.UPCategoricalConstraints = make([]P.CategoricalConstraint, 0)
 	for _, filter := range filters.EndEnEventFitler {
 		if filter.Type == "categorical" {
+			op := extractOperator(filter.Operator)
 			endEventConstraints.EPCategoricalConstraints = append(endEventConstraints.EPCategoricalConstraints, P.CategoricalConstraint{
 				PropertyName:  filter.Key,
 				PropertyValue: filter.Value,
+				Operator:      op,
 			})
 		}
 		if filter.Type == "numerical" {
@@ -224,9 +240,11 @@ func parseConstraints(filters M.FactorsGoalFilter) (*P.EventConstraints, *P.Even
 	}
 	for _, filter := range filters.EndEnUserFitler {
 		if filter.Type == "categorical" {
+			op := extractOperator(filter.Operator)
 			endEventConstraints.UPCategoricalConstraints = append(endEventConstraints.UPCategoricalConstraints, P.CategoricalConstraint{
 				PropertyName:  filter.Key,
 				PropertyValue: filter.Value,
+				Operator:      op,
 			})
 		}
 		if filter.Type == "numerical" {
@@ -240,13 +258,16 @@ func parseConstraints(filters M.FactorsGoalFilter) (*P.EventConstraints, *P.Even
 	}
 	for _, filter := range filters.GlobalFilters {
 		if filter.Type == "categorical" {
+			op := extractOperator(filter.Operator)
 			endEventConstraints.UPCategoricalConstraints = append(endEventConstraints.UPCategoricalConstraints, P.CategoricalConstraint{
 				PropertyName:  filter.Key,
 				PropertyValue: filter.Value,
+				Operator:      op,
 			})
 			startEventConstraints.UPCategoricalConstraints = append(startEventConstraints.UPCategoricalConstraints, P.CategoricalConstraint{
 				PropertyName:  filter.Key,
 				PropertyValue: filter.Value,
+				Operator:      op,
 			})
 		}
 		if filter.Type == "numerical" {

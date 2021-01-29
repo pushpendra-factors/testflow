@@ -24,6 +24,7 @@ spec:
     metadata:      
       labels:
         layer: sdkserver
+        nodePool: persistent-pool-standard
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: persistent-pool-standard
