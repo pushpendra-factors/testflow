@@ -320,6 +320,7 @@ const renderFilterBlock = () => {
                       operatorProps={{
                         "categorical": [
                           '=',
+                          '!='
                         ],
                         "numerical": [
                           '=',
