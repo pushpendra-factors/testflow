@@ -163,6 +163,11 @@ func mapProperty(pr M.QueryProperty) M.KeyValueTuple {
 	}
 	if pr.Type == "categorical" {
 		value.Value = pr.Value
+		if pr.Operator == "equals" {
+			value.Operator = true
+		} else {
+			value.Operator = false
+		}
 	}
 	return value
 }
