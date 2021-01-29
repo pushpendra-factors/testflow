@@ -484,8 +484,8 @@ func getIDsByPropertyOnFacebookJob(projectID uint64, from, to int64, facebookAcc
 	sqlParams := make([]interface{}, 0)
 	customerAccountIDs := strings.Split(facebookAccountIDs, ",")
 
-	selectStatement := "SELECT value->'id'" + fromFacebooksDocument
-	groupByStatement := "GROUP BY value->'id'"
+	selectStatement := "SELECT value->>'id'" + fromFacebooksDocument
+	groupByStatement := "GROUP BY value->>'id'"
 
 	sqlParams = append(sqlParams, projectID, customerAccountIDs, type1, from, to)
 	filterPropertiesStatement, filterPropertiesParams := getFilterPropertiesForFacebookJobStatementAndParams(filters)
