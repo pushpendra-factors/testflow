@@ -457,6 +457,58 @@ func TestEventsConsiderationForAddingSession(t *testing.T) {
 }
 
 func TestAddSessionDifferentCreationCases(t *testing.T) {
+	t.Run("MaxLookbackTimestamp", func(t *testing.T) {
+		project, _, err := SetupProjectUserReturnDAO()
+		assert.Nil(t, err)
+
+		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+
+		// Test: New user with one event and one skip_session event.
+		timestamp := U.UnixTimeBeforeDuration(32 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
+		randomEventName := RandomURL()
+
+		// This event should not be considered for session
+		// creation as it is beyond the max lookback.
+		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+		}
+		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		userId := response.UserId
+		eventId1 := response.EventId
+
+		timestamp = U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		randomEventName = RandomURL()
+		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			UserId:    userId,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId2 := response.EventId
+
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
+		assert.Nil(t, err)
+
+		// No.of sessions created.
+		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(1), sessionCount)
+
+		// Check session association.
+		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		assert.Empty(t, event1.SessionId)
+		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		assert.NotEmpty(t, event2.SessionId)
+	})
+
 	t.Run("StartingWithMarketingProperty", func(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)

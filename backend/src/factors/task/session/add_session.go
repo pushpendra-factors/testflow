@@ -238,7 +238,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 		// Log and limit the startTimestamp to maxLookbackTimestamp configured.
 		// Case: When one single user has an event which is very old, could cause
 		// scanning and downloading of all events from that timestamp on next run.
-		if maxLookbackTimestamp > 0 && eventsDownloadStartTimestamp > maxLookbackTimestamp {
+		if maxLookbackTimestamp > 0 && eventsDownloadStartTimestamp < maxLookbackTimestamp {
 			logCtx.Error("Events download start timestamp is greater than maxLookbackTimestamp.")
 			eventsDownloadStartTimestamp = maxLookbackTimestamp
 		}
