@@ -16,6 +16,7 @@ spec:
         app: etcd
         env: production
         project: factors-production
+        nodePool: default-pool
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: default-pool

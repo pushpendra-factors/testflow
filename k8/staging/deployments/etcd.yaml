@@ -22,6 +22,7 @@ spec:
     metadata:      
       labels:
         layer: etcd
+        nodePool: factors-staging-node-pool
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: factors-staging-node-pool
