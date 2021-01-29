@@ -108,7 +108,7 @@ func main() {
 	if *startTimestamp > 0 && *endTimestamp == 0 {
 		logCtx.Fatal("end_timestamp cannot be zero when start_timestamp is provided.")
 	}
-	if *endTimestamp <= *startTimestamp {
+	if *startTimestamp > 0 && *endTimestamp <= *startTimestamp {
 		logCtx.Fatal("end_timestamp cannot be lower than or equal to start_timestamp.")
 	}
 
