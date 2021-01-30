@@ -127,7 +127,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 0, 0, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, 0, 0, 0, 0, 1)
 	assert.Nil(t, err)
 
 	// Test events ingested via sdk/track call
@@ -137,6 +137,6 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &eventNames)
-	// should contain all event names
-	assert.Len(t, eventNames.EventNames, 2)
+	// should contain all event names along with $session.
+	assert.Len(t, eventNames.EventNames, 3)
 }

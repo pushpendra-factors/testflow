@@ -47,6 +47,7 @@ func GetFilter(startEvent, endEvent string) FilterPattern {
 
 func (ps *PatternServer) GetAllPatterns(
 	r *http.Request, args *client.GetAllPatternsRequest, result *client.GetAllPatternsResponse) error {
+	overallStartTime := time.Now()
 	if args == nil || args.ProjectId == 0 {
 		err := E.Wrap(errors.New("MissingParams"), "GetAllPatterns missing param projectID")
 		result.Error = err
@@ -133,6 +134,11 @@ func (ps *PatternServer) GetAllPatterns(
 	result.ModelId = modelId
 	result.Patterns = patternsToReturn
 
+	overallEndTime := time.Now()
+	log.WithFields(log.Fields{
+		"time_taken": overallEndTime.Sub(overallStartTime).Milliseconds()}).Info("debug_time_TotalTime")
+	log.WithFields(log.Fields{
+		"count": len(patternsToReturn)}).Info("debug_count_GetAllRawPatterns")
 	return nil
 }
 

@@ -63,6 +63,9 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 
 	// Test: New user with one event and one skip_session event.
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+	// Updating project timestamp to before events start timestamp.
+	errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
 	randomEventName := RandomURL()
 	trackEventProperties := U.PropertiesMap{
 		U.EP_REFERRER:     "www.google.com",
@@ -87,7 +90,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	userId := response.UserId
 
 	// no session created.
-	_, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	_, errCode = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 
 	timestamp = timestamp + 2
@@ -110,7 +113,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	// new user_properties state should be the user's latest user_property state.
 	assert.Equal(t, newUserPropertiesID, user.PropertiesId)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 	assert.Nil(t, err)
 
 	U.SanitizeProperties(&trackEventProperties)
@@ -234,7 +237,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId4 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 	assert.Nil(t, err)
 	U.SanitizeProperties(&trackEventProperties2)
 
@@ -313,7 +316,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId6 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 	assert.Nil(t, err)
 
 	// should have created session as campaign property exist.
@@ -346,7 +349,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId7 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 	assert.Nil(t, err)
 
 	// New session should be created after a new event.
@@ -355,7 +358,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 
 	// Last event with marketing property should be process on next run of add session,
 	// to avoid associating previous session.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 	assert.Nil(t, err)
 	event7, errCode := M.GetEventById(project.ID, eventId7)
 	assert.Equal(t, errCode, http.StatusFound)
@@ -363,13 +366,13 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.NotEqual(t, *event6.SessionId, *event7.SessionId)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+	statusMap, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 	assert.Nil(t, err)
-	assert.Equal(t, statusMap[project.ID].Status, "not_modified")
+	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
 
-func TestAddSessionDifferentCreationCases(t *testing.T) {
-	t.Run("StartingWithMarketingProperty", func(t *testing.T) {
+func TestEventsConsiderationForAddingSession(t *testing.T) {
+	t.Run("ShouldNotChangeSessionOfSessionAddedEvents", func(t *testing.T) {
 		project, _, err := SetupProjectUserReturnDAO()
 		assert.Nil(t, err)
 
@@ -377,6 +380,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -414,7 +420,144 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
+		assert.Nil(t, err)
+
+		// No.of sessions created.
+		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(1), sessionCount)
+
+		// Check session association.
+		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		assert.NotEmpty(t, event1.SessionId)
+		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		assert.Equal(t, event1.SessionId, event2.SessionId)
+		assert.Equal(t, event1.SessionId, event3.SessionId)
+		sessionID1 := event1.SessionId
+
+		// Second run of add_session with same timerange.
+		// Should not change the session associated.
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
+		assert.Nil(t, err)
+
+		// Sessions associated events should be the same.
+		event1, _ = M.GetEvent(project.ID, userId, eventId1)
+		assert.Equal(t, sessionID1, event1.SessionId)
+		event2, _ = M.GetEvent(project.ID, userId, eventId2)
+		event3, _ = M.GetEvent(project.ID, userId, eventId3)
+		assert.Equal(t, event1.SessionId, event2.SessionId)
+		assert.Equal(t, event1.SessionId, event3.SessionId)
+
+		// No.of sessions created so far, should be the same.
+		sessionCount, _ = M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(1), sessionCount)
+	})
+}
+
+func TestAddSessionDifferentCreationCases(t *testing.T) {
+	t.Run("MaxLookbackTimestamp", func(t *testing.T) {
+		project, _, err := SetupProjectUserReturnDAO()
+		assert.Nil(t, err)
+
+		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+
+		// Test: New user with one event and one skip_session event.
+		timestamp := U.UnixTimeBeforeDuration(32 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
+		randomEventName := RandomURL()
+
+		// This event should not be considered for session
+		// creation as it is beyond the max lookback.
+		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+		}
+		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		userId := response.UserId
+		eventId1 := response.EventId
+
+		timestamp = U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		randomEventName = RandomURL()
+		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			UserId:    userId,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId2 := response.EventId
+
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
+		assert.Nil(t, err)
+
+		// No.of sessions created.
+		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(1), sessionCount)
+
+		// Check session association.
+		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		assert.Empty(t, event1.SessionId)
+		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		assert.NotEmpty(t, event2.SessionId)
+	})
+
+	t.Run("StartingWithMarketingProperty", func(t *testing.T) {
+		project, _, err := SetupProjectUserReturnDAO()
+		assert.Nil(t, err)
+
+		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+
+		// Test: New user with one event and one skip_session event.
+		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
+		randomEventName := RandomURL()
+
+		timestamp = timestamp + 2
+		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+		}
+		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		userId := response.UserId
+		eventId1 := response.EventId
+
+		timestamp = timestamp + 2
+		randomEventName = RandomURL()
+		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			UserId:    userId,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId2 := response.EventId
+
+		timestamp = timestamp + 2
+		randomEventName = RandomURL()
+		trackPayload2 = SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			UserId:    userId,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId3 := response.EventId
+
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -439,6 +582,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -455,7 +601,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions for user should be 1.
@@ -491,7 +637,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created. Session continued.
@@ -513,6 +659,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -526,7 +675,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions for user should be 1.
@@ -550,7 +699,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId2 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created. Session continued.
@@ -570,6 +719,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -583,7 +735,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -610,7 +762,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId2 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -631,6 +783,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -644,7 +799,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -668,7 +823,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId2 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -689,6 +844,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -729,7 +887,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
@@ -755,6 +913,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -808,7 +969,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId4 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
@@ -840,6 +1001,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -878,7 +1042,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
@@ -905,6 +1069,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -922,7 +1089,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
@@ -943,6 +1110,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -983,7 +1153,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		event1, _ := M.GetEvent(project.ID, userId, eventId1)
@@ -1009,6 +1179,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -1025,7 +1198,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		userId := response.UserId
 		eventId1 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions for user should be 1.
@@ -1049,7 +1222,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId2 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created. Session continued.
@@ -1069,6 +1242,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
@@ -1123,7 +1299,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId4 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -1150,6 +1326,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := U.RandomLowerAphaNumString(5)
 
 		timestamp = timestamp + 2
@@ -1186,7 +1365,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		eventId3 := response.EventId
 
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 30, 1)
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
 		// No.of sessions created.
@@ -1210,6 +1389,9 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 
 	// Event before session buffer time.
 	timestamp := U.UnixTimeBeforeDuration(time.Minute * 35)
+	// Updating project timestamp to before events start timestamp.
+	errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
 	randomEventName := RandomURL()
 	trackPayload := SDK.TrackPayload{
 		Auto:      true,
@@ -1245,7 +1427,7 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 	eventId2 := response.EventId
 
 	// Should not create session for last event timestmap  - 30 mins.
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 0, 30, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 0, 0, 30, 1)
 	assert.Nil(t, err)
 
 	event, errCode := M.GetEventById(project.ID, eventId)

@@ -15,6 +15,7 @@ spec:
         metadata:
           labels:
             layer: jobs
+            nodePool: persistent-pool-highmem-16
         spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: persistent-pool-highmem-16

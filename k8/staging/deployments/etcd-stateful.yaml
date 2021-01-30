@@ -16,6 +16,7 @@ spec:
         app: etcd
         env: staging
         project: factors-staging
+        nodePool: factors-staging-node-pool
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: factors-staging-node-pool

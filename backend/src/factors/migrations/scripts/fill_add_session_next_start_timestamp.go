@@ -1,0 +1,294 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
+
+	C "factors/config"
+	M "factors/model"
+	U "factors/util"
+)
+
+func getNextSessionInfoFromDB(projectID uint64, withSession bool,
+	sessionEventNameId uint64, maxLookbackTimestamp int64) (int64, int) {
+
+	sessionExistStr := "NOT NULL"
+	startTimestampAggrFunc := "max"
+	if !withSession {
+		sessionExistStr = "NULL"
+		startTimestampAggrFunc = "min"
+	}
+	selectStmnt := fmt.Sprintf("%s(timestamp) as start_timestamp",
+		startTimestampAggrFunc)
+
+	db := C.GetServices().Db
+	query := db.Table("events").
+		Where("project_id = ? AND event_name_id != ?", projectID, sessionEventNameId).
+		Where(fmt.Sprintf("session_id IS %s AND properties->>'%s' IS NULL",
+			sessionExistStr, U.EP_SKIP_SESSION)).
+		Select(selectStmnt)
+
+	if maxLookbackTimestamp > 0 {
+		query = query.Where("timestamp > ?", maxLookbackTimestamp)
+	}
+
+	rows, err := query.Rows()
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return 0, http.StatusNotFound
+		}
+
+		log.WithField("project_id", projectID).WithError(err).
+			Error("Failed to get next session start timestamp for project.")
+		return 0, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	var startTimestamp *int64
+	for rows.Next() {
+		err = rows.Scan(&startTimestamp)
+		if err != nil {
+			log.WithError(err).Error("Failed to read next session start timestamp.")
+			return 0, http.StatusInternalServerError
+		}
+	}
+
+	if startTimestamp == nil {
+		return 0, http.StatusNotFound
+	}
+
+	return *startTimestamp, http.StatusFound
+}
+
+func getLastSessionEventTimestamp(projectID uint64, sessionEventNameID uint64) (int64, int) {
+	logCtx := log.WithField("project_id", projectID)
+
+	// This is a faster query.
+	// ORDER BY project_id, event_name_id, timestamp DESC is used to instead of
+	// MIN to avoid ordering and use the ordered index on that column.
+	db := C.GetServices().Db
+	query := db.Raw("SELECT timestamp FROM events WHERE project_id = ? AND event_name_id = ? ORDER BY project_id, event_name_id, timestamp DESC LIMIT 1",
+		projectID, sessionEventNameID)
+	rows, err := query.Rows()
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return 0, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("SQL Query failed")
+		return 0, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	var startTimestamp *int64
+	for rows.Next() {
+		err = rows.Scan(&startTimestamp)
+		if err != nil {
+			log.WithError(err).Error("Failed to read on get last event timestamp.")
+			return 0, http.StatusInternalServerError
+		}
+	}
+
+	if startTimestamp == nil {
+		return 0, http.StatusNotFound
+	}
+
+	return *startTimestamp, http.StatusFound
+}
+
+func getNextSessionStartTimestamp(projectID uint64, maxLookbackTimestamp int64) (int64, int) {
+	logCtx := log.WithField("project_id", projectID)
+
+	eventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, projectID)
+	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+		logCtx.Error("Failed to get session event name.")
+		return 0, http.StatusInternalServerError
+	}
+
+	var project *M.Project
+	if errCode == http.StatusNotFound {
+		project, errCode = M.GetProject(projectID)
+		if errCode != http.StatusFound {
+			logCtx.Error("Failed to get project by id.")
+			return 0, http.StatusInternalServerError
+		}
+
+		return project.CreatedAt.Unix(), http.StatusFound
+	}
+
+	// Using previous initial query to build next session_info to initialize the project level metadata.
+	oldUsersStartTimestamp, errCode := getNextSessionInfoFromDB(projectID, true,
+		eventName.ID, maxLookbackTimestamp)
+	if errCode == http.StatusInternalServerError {
+		logCtx.Error("Failed to get next session start for users with session already.")
+		return 0, http.StatusInternalServerError
+	}
+	startTimestamp := oldUsersStartTimestamp
+
+	newUsersStartTimestamp, errCode := getNextSessionInfoFromDB(projectID, false,
+		eventName.ID, maxLookbackTimestamp)
+	if errCode == http.StatusInternalServerError {
+		logCtx.Error("Failed to get next session start new users.")
+		return 0, http.StatusInternalServerError
+	}
+	if newUsersStartTimestamp < oldUsersStartTimestamp {
+		startTimestamp = newUsersStartTimestamp
+	}
+
+	if startTimestamp > 0 {
+		return startTimestamp, http.StatusFound
+	}
+
+	// Use last session event timestamp, if no event on last 6 hours.
+	lastEventTimestamp, errCode := getLastSessionEventTimestamp(projectID, eventName.ID)
+	if errCode == http.StatusInternalServerError {
+		logCtx.Error("Failed to last session event timestamp")
+		return 0, http.StatusInternalServerError
+	}
+
+	if lastEventTimestamp > 0 {
+		return lastEventTimestamp, http.StatusFound
+	}
+
+	// Use the project creation timestamp, if no events found.
+	if project == nil {
+		project, errCode = M.GetProject(projectID)
+		if errCode != http.StatusFound {
+			logCtx.Error("Failed to project by id")
+			return 0, http.StatusInternalServerError
+		}
+	}
+
+	return project.CreatedAt.Unix(), http.StatusFound
+}
+
+func getAndUpdateNextSessionStartTimestamp(projectID uint64, maxLookbackTimestamp int64) int {
+	if projectID == 0 {
+		log.WithField("project_id", projectID).Error("Invalid project_id")
+		return http.StatusInternalServerError
+	}
+
+	project, errCode := M.GetProject(projectID)
+	if errCode != http.StatusFound {
+		return http.StatusInternalServerError
+	}
+
+	// Skip the projects which has jobs_metadata
+	// as this is the first field being added.
+	if project.JobsMetadata != nil {
+		return http.StatusOK
+	}
+
+	startTimestamp, errCode := getNextSessionStartTimestamp(projectID, maxLookbackTimestamp)
+	if errCode == http.StatusInternalServerError {
+		return http.StatusInternalServerError
+	}
+
+	errCode = updateNextSessionStartTimestampForProject(projectID, startTimestamp)
+	if errCode != http.StatusAccepted {
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
+func updateNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int {
+	logCtx := log.WithField("project_id", projectID).WithField("timestamp", timestamp)
+
+	if projectID == 0 || timestamp == 0 {
+		logCtx.WithField("project_id", projectID).WithField("timestamp", 0).
+			Error("Invalid args to method.")
+		return http.StatusBadRequest
+	}
+
+	query := fmt.Sprintf(`UPDATE projects SET jobs_metadata = '{"%s": %d}' WHERE id = %d`,
+		M.JobsMetadataKeyNextSessionStartTimestamp, timestamp, projectID)
+	db := C.GetServices().Db
+	err := db.Exec(query).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update next session start timestamp for project.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func main() {
+	env := flag.String("env", "development", "")
+	dbHost := flag.String("db_host", "localhost", "")
+	dbPort := flag.Int("db_port", 5432, "")
+	dbUser := flag.String("db_user", "autometa", "")
+	dbName := flag.String("db_name", "autometa", "")
+	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	projectID := flag.Uint64("project_id", 0, "")
+
+	maxLookbackHours := flag.Int64("max_lookback_hours", 24, "")
+
+	flag.Parse()
+
+	if *env != "development" && *env != "staging" && *env != "production" {
+		err := fmt.Errorf("env [ %s ] not recognised", *env)
+		panic(err)
+	}
+
+	config := &C.Configuration{
+		AppName: "fill_session_next_start_timestamp",
+		Env:     *env,
+		DBInfo: C.DBConf{
+			Host:     *dbHost,
+			Port:     *dbPort,
+			User:     *dbUser,
+			Name:     *dbName,
+			Password: *dbPass,
+		},
+	}
+
+	C.InitConf(*env)
+
+	err := C.InitDB(config.DBInfo)
+	if err != nil {
+		log.WithError(err).Panic("Failed to initialize db in add session.")
+	}
+
+	var maxLookbackTimestamp int64
+	if *maxLookbackHours > 0 {
+		maxLookbackTimestamp = U.UnixTimeBeforeDuration(time.Hour * time.Duration(*maxLookbackHours))
+	}
+
+	if *projectID > 0 {
+		logCtx := log.WithField("project_id", *projectID)
+		errCode := getAndUpdateNextSessionStartTimestamp(*projectID, maxLookbackTimestamp)
+		if errCode == http.StatusInternalServerError {
+			logCtx.Error("Failed to update next session start timestamp.")
+			return
+		}
+
+		logCtx.Info("Successfully updated next session start timestamp for project.")
+		return
+	} else {
+		projectIDs, errCode := M.GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			log.Fatal("No projects found.")
+		}
+
+		for i := range projectIDs {
+			logCtx := log.WithField("total_projects", len(projectIDs)).
+				WithField("in-progress", i+1).
+				WithField("project_id", projectIDs[i])
+
+			errCode := getAndUpdateNextSessionStartTimestamp(projectIDs[i], maxLookbackTimestamp)
+			if errCode == http.StatusInternalServerError {
+				logCtx.Error("Failed to update next session start timestamp.")
+			} else {
+				logCtx.Info("Updated next session start timestamp.")
+			}
+		}
+	}
+
+	log.Info("Successfully updated next session start timestamp.")
+}

@@ -80,7 +80,7 @@ function GroupBlock({
   };
 
   const renderInitGroupSelect = (index) => {
-    return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
+    return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center mt-4`} >
       {!isDDVisible[index] &&
         <Button size={'large'} type="link" onClick={() => triggerDropDown(index)}><SVG name="plus" extraClass={`mr-2`} /> Add new </Button> }
       {isDDVisible[index]
@@ -156,7 +156,7 @@ function GroupBlock({
   const renderExistingBreakdowns = () => {
     if (groupByState.global.length < 1) return;
     return (groupByState.global.map((opt, index) => (
-      <div key={index} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
+      <div key={index} className={`${styles.group_block__select} flex justify-start items-center mt-4`} >
         {!isDDVisible[index] && <>
         <Button size={'large'}
         type="text"
@@ -188,10 +188,10 @@ function GroupBlock({
   return (
     <div className={'flex flex-col justify-start'}>
 
-      <div className={`${styles.group_block__event} flex justify-start items-center`}>
+      {/* <div className={`${styles.group_block__event} flex justify-start items-center`}>
         <div className={'fa--query_block--add-event inactive flex justify-center items-center mr-2'}><SVG name={'groupby'} size={24} color={'purple'}/></div>
         <Text type={'title'} level={6} weight={'thin'} extraClass={'m-0'}>Group By</Text>
-      </div>
+      </div> */}
 
       {renderExistingBreakdowns()}
       {renderInitGroupSelect(groupByState.global.length)}

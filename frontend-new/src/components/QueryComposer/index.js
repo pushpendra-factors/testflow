@@ -12,6 +12,10 @@ import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from "../../utils/constants";
 
 import FaDatepicker from "../../components/FaDatepicker";
 
+import ComposerBlock from '../QueryCommons/ComposerBlock';
+
+import CriteriaSection from './CriteriaSection';
+
 import { DEFAULT_DATE_RANGE, displayRange } from "./DateRangeSelector/utils";
 
 import {
@@ -40,6 +44,7 @@ function QueryComposer({
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [calendarLabel, setCalendarLabel] = useState("Pick Dates");
+  const [criteriaTabOpen, setCriteriaTabOpen] = useState(false);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -103,9 +108,12 @@ function QueryComposer({
     }
 
     return (
-      <div key={0} className={"fa--query_block bordered "}>
-        <GroupBlock queryType={queryType} events={queries}></GroupBlock>
-      </div>
+      <ComposerBlock blockTitle={'Group By'} isOpen={true} showIcon={false}>
+        <div key={0} className={"fa--query_block borderless no-padding "}>
+          <GroupBlock queryType={queryType} events={queries}></GroupBlock>
+        </div>
+      </ComposerBlock>
+
     );
   };
 
@@ -119,110 +127,6 @@ function QueryComposer({
     const options = Object.assign({}, queryOptions);
     options.session_analytics_seq = seq;
     setQueryOptions(options);
-  };
-
-  const moreOptionsBlock = () => {
-    if (queries.length >= 2) {
-      return (
-        <div className={" fa--query_block bordered "}>
-          <Collapse
-            bordered={false}
-            expandIcon={() => {}}
-            expandIconPosition={"right"}
-          >
-            <Panel
-              header={
-                <div className={"flex justify-between items-center"}>
-                  <Text
-                    type={"title"}
-                    level={6}
-                    weight={"bold"}
-                    extraClass={"m-0 mb-2 inline"}
-                  >
-                    More options
-                  </Text>
-                  <SVG name="plus" color={"grey"} />
-                </div>
-              }
-            >
-              <div className={"flex justify-start items-center"}>
-                <span className={"mr-2"}>
-                  <SVG name="sortdown" size={16} color={"purple"}></SVG>
-                </span>
-                <Text type={"title"} level={7} extraClass={"m-0 mr-2 inline"}>
-                  Analyse events in the
-                </Text>
-                <div>
-                  {/* <FaSelect optionClick={(op) => setEventSequence(op[2])} options={[['Same sequence', '' , 'same_sequence'], ['Exact sequence', '', 'exact_sequence']]}></FaSelect> */}
-                  <Select
-                    style={{ width: 170 }}
-                    value="same_sequence"
-                    onChange={setEventSequence}
-                    className={"no-ant-border"}
-                  >
-                    <Option value="same_sequence"> Same Sequence</Option>
-                    <Option value="exact_sequence"> Exact Sequence</Option>
-                  </Select>
-                </div>
-              </div>
-
-              <div className={"flex flex-col justify-start items-start mt-4"}>
-                <div className={"flex justify-start items-center"}>
-                  <span className={"mr-2"}>
-                    <SVG name="sortdown" size={16} color={"purple"}></SVG>
-                  </span>
-                  <Text type={"title"} level={7} extraClass={"m-0 mr-2 inline"}>
-                    In Session Analytics
-                  </Text>
-                </div>
-
-                <div className={"flex justify-start items-center mt-2"}>
-                  <div
-                    className={styles.composer_body__session_analytics__options}
-                  >
-                    <Popover
-                      className="fa-event-popover"
-                      content={
-                        <SeqSelector
-                          seq={queryOptions.session_analytics_seq}
-                          queryCount={queries.length}
-                          setAnalysisSequence={setAnalysisSequence}
-                        />
-                      }
-                      trigger="click"
-                      visible={analyticsSeqOpen}
-                      onVisibleChange={(visible) =>
-                        setAnalyticsSeqVisible(visible)
-                      }
-                    >
-                      <Button
-                        Button
-                        type="link"
-                        className={"ml-4"}
-                        size={"small"}
-                      >
-                        Between &nbsp;
-                        {queryOptions.session_analytics_seq.start}
-                        &nbsp; to &nbsp;
-                        {queryOptions.session_analytics_seq.end}
-                      </Button>
-                    </Popover>
-                    <Text
-                      type={"paragraph"}
-                      mini
-                      weight={"thin"}
-                      extraClass={"m-0 ml-2 inline"}
-                    >
-                      happened in the same session
-                    </Text>
-                  </div>
-                </div>
-              </div>
-            </Panel>
-          </Collapse>
-        </div>
-      );
-    }
   };
 
   const getDateRange = () => {
@@ -308,11 +212,111 @@ function QueryComposer({
     }
   };
 
+  const renderEACrit = () => {
+    return (
+      <div>
+        <CriteriaSection queryType={QUERY_TYPE_EVENT}></CriteriaSection>
+      </div>
+    );
+  }
+
+  const renderFuCrit = () => {
+    return (
+      <div className={"flex justify-start items-center mt-2"}>
+        <div
+          className={styles.composer_body__session_analytics__options}
+        >
+          <Text
+            type={"paragraph"}
+            mini
+            weight={"thin"}
+            extraClass={"m-0 ml-2 inline"}
+          >
+            Where sequence
+                    </Text>
+          <Popover
+            className="fa-event-popover"
+            content={
+              <SeqSelector
+                seq={queryOptions.session_analytics_seq}
+                queryCount={queries.length}
+                setAnalysisSequence={setAnalysisSequence}
+              />
+            }
+            trigger="click"
+            visible={analyticsSeqOpen}
+            onVisibleChange={(visible) =>
+              setAnalyticsSeqVisible(visible)
+            }
+          >
+            <Button
+              Button
+              type="link"
+              className={"ml-2"}
+              size={"small"}
+            >
+              Between &nbsp;
+                        {queryOptions.session_analytics_seq.start}
+                        &nbsp; to &nbsp;
+                        {queryOptions.session_analytics_seq.end}
+            </Button>
+          </Popover>
+          <Text
+            type={"paragraph"}
+            mini
+            weight={"thin"}
+            extraClass={"m-0 ml-2 inline"}
+          >
+            happened in the same session
+                    </Text>
+        </div>
+      </div>
+    )
+  }
+
+  const renderCriteria = () => {
+    if(queryType === QUERY_TYPE_EVENT) {
+      if(queries.length <= 0) return null;
+
+      return (
+        <ComposerBlock blockTitle={'Criteria'}
+          isOpen={criteriaTabOpen} 
+          onClick={() => {
+            setCriteriaTabOpen(!criteriaTabOpen)}}>
+            <div className={styles.criteria}>
+              {renderEACrit()}
+            </div>
+        </ComposerBlock>
+      );
+    } 
+    if(queryType === QUERY_TYPE_FUNNEL) {
+      if(queries.length <= 1) return null;
+      return (
+        <ComposerBlock blockTitle={'Criteria'}
+          isOpen={criteriaTabOpen} 
+          onClick={() => {
+            setCriteriaTabOpen(!criteriaTabOpen)}}>
+              {renderFuCrit()}
+            
+        </ComposerBlock>
+      );
+    }
+    
+  }
+
+  const renderQueryList = () => {
+    return (
+      <ComposerBlock blockTitle={'Events'} isOpen={true} showIcon={false}>
+        {queryList()}
+      </ComposerBlock>
+    )
+  }
+
   return (
     <div className={styles.composer_body}>
-      {queryList()}
+      {renderQueryList()}
       {groupByBlock()}
-      {queryType === QUERY_TYPE_FUNNEL ? moreOptionsBlock() : null}
+      {renderCriteria()}
       {footer()}
     </div>
   );

@@ -1,6 +1,4 @@
 /* eslint-disable */
-
-import { dispatch } from 'd3';
 import { 
   fetchEventsAction, fetchEventPropertiesAction, 
   fetchUserPropertiesAction, setGroupByAction, 

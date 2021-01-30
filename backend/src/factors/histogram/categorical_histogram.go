@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -110,13 +111,24 @@ func (h *CategoricalHistogramStruct) PDF(x []string) (float64, error) {
 			if x[j] == "" {
 				continue
 			}
+			var operator string
+			values := strings.Split(x[j], ",")
+			if values[0] == "!=" {
+				operator = values[0]
+				values = values[1:]
+			}
 			if fMaps[j].Count < 1 {
 				binProb = 0.0
 				break
 			}
 			var varFreq uint64 = 0
-			if count, ok := fMaps[j].Fmap[x[j]]; ok {
-				varFreq = count
+			for _, value := range values {
+				if count, ok := fMaps[j].Fmap[value]; ok {
+					varFreq += count
+				}
+			}
+			if operator == "!=" {
+				varFreq = (fMaps[j].Count - varFreq)
 			}
 			binProb *= float64(varFreq) / float64(h.Bins[i].Count)
 		}
