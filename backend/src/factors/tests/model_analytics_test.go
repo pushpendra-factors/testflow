@@ -987,7 +987,7 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	}
 
 	// add session to created events.
-	_, err = TaskSession.AddSession([]uint64{project.ID}, startTimestamp-(60*30), 0, 0, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, startTimestamp-(60*30), 0, 0, 0, 1)
 	assert.Nil(t, err)
 
 	//x1 -> x2

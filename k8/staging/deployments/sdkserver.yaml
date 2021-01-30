@@ -24,6 +24,7 @@ spec:
     metadata:      
       labels:
         layer: sdkserver
+        nodePool: factors-staging-node-pool
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: factors-staging-node-pool

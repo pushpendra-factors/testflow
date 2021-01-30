@@ -54,7 +54,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	project.UpdatedAt = time.Time{}
 	getProject.CreatedAt = time.Time{}
 	getProject.UpdatedAt = time.Time{}
-	assert.Equal(t, project, getProject)
+	assert.Equal(t, project.ID, getProject.ID)
 
 	// Test Get Project on random id.
 	var randomId uint64 = U.RandomUint64WithUnixNano()
@@ -157,4 +157,28 @@ func TestCreateDefaultProjectForAgent(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, errCode)
 		assert.Nil(t, project)
 	})
+}
+
+func TestNextSessionStartTimestampForProject(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	assert.NotNil(t, project.JobsMetadata)
+	jobsMetadata, err := U.DecodePostgresJsonb(project.JobsMetadata)
+	assert.Nil(t, err)
+	assert.NotNil(t, (*jobsMetadata)[M.JobsMetadataKeyNextSessionStartTimestamp])
+	assert.NotZero(t, (*jobsMetadata)[M.JobsMetadataKeyNextSessionStartTimestamp])
+	timestamp := (*jobsMetadata)[M.JobsMetadataKeyNextSessionStartTimestamp]
+
+	gotTimestamp, errCode := M.GetNextSessionStartTimestampForProject(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, timestamp, float64(gotTimestamp))
+
+	newTimestamp := gotTimestamp + 10
+	errCode = M.UpdateNextSessionStartTimestampForProject(project.ID, newTimestamp)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	gotTimestampAfterUpdate, errCode := M.GetNextSessionStartTimestampForProject(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, newTimestamp, gotTimestampAfterUpdate)
 }

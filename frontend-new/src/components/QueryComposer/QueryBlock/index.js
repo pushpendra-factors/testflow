@@ -61,13 +61,13 @@ function QueryBlock({
     return (
             <div className={styles.query_block__event_selector}>
                    {isDDVisible
-                     ? <GroupSelect
+                     ? <div className={styles.query_block__event_selector__btn}><GroupSelect
                   groupedProperties={eventOptions}
                   placeholder="Select Event"
                   optionClick={(group, val) => onChange(val[0])}
                   onClickOutside={() => setDDVisible(false)}
 
-                  ></GroupSelect>
+                  ></GroupSelect></div>
 
                      : null }
                 </div>
@@ -209,7 +209,7 @@ function QueryBlock({
   const ifQueries = queries.length > 0;
   if (!event) {
     return (
-            <div className={`${styles.query_block} fa--query_block ${ifQueries ? 'bordered' : ''}`}>
+            <div className={`${styles.query_block} fa--query_block mt-4 ${ifQueries ? 'borderless no-padding' : 'borderless no-padding'}`}>
                 <div className={`${styles.query_block__event} flex justify-start items-center`}>
                     <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}><SVG name={'plus'} color={'purple'}></SVG></div>
                         {!isDDVisible && <Button size={'large'} type="link" onClick={triggerDropDown}>{ifQueries ? 'Add another event' : 'Add First Event'}</Button> }
@@ -220,7 +220,7 @@ function QueryBlock({
   }
 
   return (
-        <div className={`${styles.query_block} fa--query_block bordered `}>
+        <div className={`${styles.query_block} fa--query_block borderless no-padding mt-4`}>
             <div className={`${styles.query_block__event} flex justify-start items-center`}>
                 <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{queryType === QUERY_TYPE_FUNNEL ? index : alphabetIndex[index - 1]}</Text> </div>
                 {!isDDVisible && <Button size={'large'} type="link" onClick={triggerDropDown}><SVG name="mouseevent" extraClass={'mr-1'}></SVG> {event.label} </Button> }

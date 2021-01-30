@@ -25,6 +25,7 @@ spec:
       creationTimestamp: null
       labels:
         app: website
+        nodePool: default-pool
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: default-pool

@@ -15,6 +15,7 @@ spec:
         metadata:
           labels:
             layer: jobs
+            nodePool: persistent-pool-highmem-16
         spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: persistent-pool-highmem-16
@@ -45,7 +46,11 @@ spec:
             - $(ADD_SESSION_NUM_ROUTINES)
             - --max_lookback_hours
             - $(ADD_SESSION_MAX_LOOKBACK_HOURS)
-             - --redis_host_ps
+            - --start_timestamp
+            - "0"
+            - --end_timestamp
+            - "0"
+            - --redis_host_ps
             - $(PERSISTENT_REDIS_HOST)
             - --redis_port_ps
             - $(PERSISTENT_REDIS_PORT)

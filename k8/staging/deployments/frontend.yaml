@@ -25,6 +25,7 @@ spec:
       creationTimestamp: null
       labels:
         app: frontend
+        nodePool: factors-staging-node-pool
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: factors-staging-node-pool

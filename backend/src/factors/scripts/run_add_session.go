@@ -32,9 +32,14 @@ func main() {
 	projectIds := flag.String("project_ids", "*", "Allowed projects to create sessions offline.")
 	disabledProjectIds := flag.String("disabled_project_ids", "", "Disallowed projects to create sessions offline.")
 	numRoutines := flag.Int("num_routines", 1, "Number of routines to use.")
-	maxLookbackHours := flag.Int64("max_lookback_hours", 0, "Max lookback hours to look for session existence.")
-	hardLimitTimestamp := flag.Int64("hard_limit_timestamp", 0, "Hard limit all query to the given timestamp.")
 	bufferTimeBeforeCreateSessionInMins := flag.Int64("buffer_time_in_mins", 30, "Buffer time to wait before processing an event for session.")
+
+	// Limits the start_timestamp to max lookback, if exceeds.
+	maxLookbackHours := flag.Int64("max_lookback_hours", 0, "Max lookback hours to look for session existence.")
+
+	// Add session for a specific window of events.
+	startTimestamp := flag.Int64("start_timestamp", 0, "Add session to specific window of events - start timestamp.")
+	endTimestamp := flag.Int64("end_timestamp", 0, "Add session to specific window of events - end timestamp.")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
@@ -96,8 +101,15 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *hardLimitTimestamp > 0 && *maxLookbackHours == 0 {
-		log.Fatal("hard_limit_timestamp is not allowed without max_lookback_hours.")
+	logCtx := log.WithField("start_timestamp", *startTimestamp).WithField("end_timestamp", *endTimestamp)
+	if *endTimestamp > 0 && *startTimestamp == 0 {
+		logCtx.Fatal("start_timestamp cannot be zero when start_timestamp is provided.")
+	}
+	if *startTimestamp > 0 && *endTimestamp == 0 {
+		logCtx.Fatal("end_timestamp cannot be zero when start_timestamp is provided.")
+	}
+	if *startTimestamp > 0 && *endTimestamp <= *startTimestamp {
+		logCtx.Fatal("end_timestamp cannot be lower than or equal to start_timestamp.")
 	}
 
 	var maxLookbackTimestamp int64
@@ -105,8 +117,8 @@ func main() {
 		maxLookbackTimestamp = util.UnixTimeBeforeDuration(time.Hour * time.Duration(*maxLookbackHours))
 	}
 
-	statusMap, err := session.AddSession(allowedProjectIds, maxLookbackTimestamp, *hardLimitTimestamp,
-		*bufferTimeBeforeCreateSessionInMins, *numRoutines)
+	statusMap, err := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
+		*startTimestamp, *endTimestamp, *bufferTimeBeforeCreateSessionInMins, *numRoutines)
 
 	modifiedStatusMap := make(map[uint64]session.Status, 0)
 

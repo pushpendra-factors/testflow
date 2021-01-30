@@ -1,0 +1,10 @@
+.cmpBlock {
+    &__title {
+        display: flex;
+        justify-content: space-between;
+
+        &__icon {
+            align-self: center;
+        }
+    }
+}

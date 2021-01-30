@@ -16,6 +16,7 @@ spec:
         metadata:
           labels:
             layer: jobs
+            nodePool: default-pool
         spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: default-pool
