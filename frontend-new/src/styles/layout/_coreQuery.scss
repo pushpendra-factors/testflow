@@ -135,9 +135,27 @@ $cq-card-transition: transform .2s ease-in-out;
     border-top: 1px solid transparent;
         border-bottom: 1px solid transparent;
 
+
+    &.no-padding {
+        padding: 0;
+    }
+
     &.bordered{
         // border-top: 1px solid $fa-color--mono-2;
         border-bottom: 1px solid $fa-color--mono-1;
+    }
+
+    &.borderless{
+        border: none;
+    }
+
+    .ant-collapse-content {
+        overflow: visible;
+    }
+
+    .ant-collapse-content-box {
+        padding-left: 0;
+        padding-right: 0;
     }
 
     
