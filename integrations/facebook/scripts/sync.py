@@ -33,6 +33,7 @@ FACEBOOK_AD_ACCOUNT = 'int_facebook_ad_account'
 DATA = 'data'
 FACEBOOK = 'facebook'
 PLATFORM = 'platform'
+MAX_LOOKBACK = 30
 
 METRIC_TYPE_INCR = 'incr'
 HEALTHCHECK_PING_ID = 'f2265955-a71c-42fe-a5ba-36d22a98419c'
@@ -51,7 +52,6 @@ doc_type_map = {
     AD_SET : 'adset',
     CAMPAIGN: 'campaign'
 }
-
 def get_datetime_from_datestring(date):
     date = date.split('-')
     date = datetime(int(date[0]),int(date[1]),int(date[2]))
@@ -95,14 +95,14 @@ def record_metric(metric_type, metric_name, metric_value=0):
 
 def get_time_ranges_list(date_start):
     if date_start == 0:
-        date_object = datetime.now().date() - timedelta(days=60)
-        days = 60
+        date_object = datetime.now().date() - timedelta(days=MAX_LOOKBACK)
+        days = MAX_LOOKBACK
     else:
         date_object = datetime.strptime(str(date_start), "%Y-%m-%d").date()
         days = (datetime.now().date() - date_object).days
-        if days > 60:
-            date_object = datetime.now().date() - timedelta(days=60)
-            days = 60
+        if days > MAX_LOOKBACK:
+            date_object = datetime.now().date() - timedelta(days=MAX_LOOKBACK)
+            days = MAX_LOOKBACK
 
     time_ranges = []
 
@@ -138,37 +138,46 @@ def get_last_sync_info(project_id, account_id):
         sync_info_with_type[info['type_alias']+info['platform']]= date.strftime('%Y-%m-%d')
     return sync_info_with_type
 
-def get_and_insert_metadata(facebook_int_setting):
+def get_and_insert_metadata(facebook_int_setting, sync_info_with_type):
     status = ''
-    errMsgs = []
+    errMsg = []
     # campaign metadata
     fields_campaign = ['id', 'name', 'account_id', 'buying_type','effective_status','spend_cap','start_time','stop_time']
-    response = get_and_insert_paginated_metadata(facebook_int_setting, CAMPAIGN, fields_campaign)
+    response, metadata = get_and_insert_paginated_metadata(facebook_int_setting, CAMPAIGN, fields_campaign)
     if response['status'] == 'failed':
         status = 'failed'
-        errMsgs.append(response['errMsg'])
+        errMsg.append(response['errMsg'])
+    elif (CAMPAIGN+FACEBOOK not in sync_info_with_type):
+        backfill_metadata(facebook_int_setting, CAMPAIGN, metadata)
+    
     # adset metadata
     fields_adset = ['id', 'account_id','campaign_id','configured_status', 'daily_budget', 'effective_status','end_time','name','start_time','stop_time']
-    response = get_and_insert_paginated_metadata(facebook_int_setting, AD_SET, fields_adset)
+    response, metadata = get_and_insert_paginated_metadata(facebook_int_setting, AD_SET, fields_adset)
     if response['status'] == 'failed':
         status = 'failed'
-        errMsgs.append(response['errMsg'])
+        errMsg.append(response['errMsg'])
+    elif (AD_SET+FACEBOOK not in sync_info_with_type):
+        backfill_metadata(facebook_int_setting, AD_SET, metadata)
+    
     if status == 'failed':
-        return {'status': 'failed', 'errMsg': errMsgs}
+        return {'status': 'failed', 'errMsg': errMsg}
     return {'status': 'success'}
 
 
 def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields):
-    url = 'https://graph.facebook.com/v9.0/{}/{}s?fields={}&&access_token={}&limit=1000'.format(
+    metadata = []
+    url = 'https://graph.facebook.com/v9.0/{}/{}s?fields={}&&access_token={}&&limit=1000'.format(
     facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type_map[doc_type], fields, facebook_int_setting[ACCESS_TOKEN])
     response = requests.get(url)
     if not response.ok:
-        errString = 'Failed to get {}s metadata from facebook. StatusCode: %d. Error: %s'.format(doc_type, response.status_code, response.text)
+        errString = 'Failed to get {}s metadata from facebook. StatusCode: {}. Error: {}'.format(doc_type, response.status_code, response.text)
         log.error(errString)
         return {'status': 'failed', 'errMsg': errString}
     for data in response.json()[DATA]:
         timestamp = int(datetime.now().strftime('%Y%m%d'))
         add_document_response = add_facebook_document(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type, data['id'], data, timestamp, FACEBOOK)
+    metadata.extend(response.json()[DATA])
+    
     # paging
     if 'paging' not in response.json():
         return {'status': 'success'}
@@ -176,23 +185,31 @@ def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields):
         url = response.json()['paging']['next']
         response = requests.get(url)
         if not response.ok:
-            errString = 'Failed to get {}s metadata from facebook post pagination. StatusCode: %d. Error: %s'.format(doc_type, response.status_code, response.text)
+            errString = 'Failed to get {}s metadata from facebook post pagination. StatusCode: {}. Error: {}'.format(doc_type, response.status_code, response.text)
             log.error(errString)
             return {'status': 'failed', 'errMsg': errString}
         for data in response.json()[DATA]:
             timestamp = int(datetime.now().strftime('%Y%m%d'))
             add_document_response = add_facebook_document(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type, data['id'], data, timestamp, FACEBOOK)
-    return {'status': 'success'}
+        metadata.extend(response.json()[DATA])
+
+    return {'status': 'success'}, metadata
+
+def backfill_metadata(facebook_int_setting, doc_type, metadata):
+    for days in range(1, MAX_LOOKBACK+1):
+        timestamp = int((datetime.now()- timedelta(days=days)).strftime('%Y%m%d'))
+        for data in metadata:
+            add_document_response = add_facebook_document(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type, data['id'], data, timestamp, FACEBOOK)
 
 def get_collections(facebook_int_setting, sync_info_with_type):
     response = {'status': ''}
     status = ''
-    errMsgs = []
+    errMsg = []
     try:
-        res = get_and_insert_metadata(facebook_int_setting)
+        res = get_and_insert_metadata(facebook_int_setting, sync_info_with_type)
         if res['status'] == 'failed':
             status = 'failed'
-            errMsgs.append(res['errMsgs'])
+            errMsg.append(res['errMsg'])
 
         if (CAMPAIGN_INSIGHTS+FACEBOOK not in sync_info_with_type):
             res_campaign = get_campaign_insights(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT],
@@ -202,7 +219,7 @@ def get_collections(facebook_int_setting, sync_info_with_type):
                 facebook_int_setting[ACCESS_TOKEN], sync_info_with_type[CAMPAIGN_INSIGHTS+FACEBOOK])
         if res_campaign['status'] == 'failed':
             status = 'failed'
-            errMsgs.append(res['errMsgs'])
+            errMsg.append(res['errMsg'])
 
         if (AD_SET_INSIGHTS+FACEBOOK not in sync_info_with_type):
             res_adset = get_adset_insights(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT],
@@ -212,7 +229,7 @@ def get_collections(facebook_int_setting, sync_info_with_type):
                 facebook_int_setting[ACCESS_TOKEN], sync_info_with_type[AD_SET_INSIGHTS+FACEBOOK])
         if res_adset['status'] == 'failed':
             status = 'failed'
-            errMsgs.append(res['errMsgs'])
+            errMsg.append(res['errMsg'])
 
         if (AD_INSIGHTS+FACEBOOK not in sync_info_with_type):
             res_ad = get_ad_insights(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT],
@@ -222,7 +239,7 @@ def get_collections(facebook_int_setting, sync_info_with_type):
                 facebook_int_setting[ACCESS_TOKEN], sync_info_with_type[AD_INSIGHTS+FACEBOOK])
         if res_ad['status'] == 'failed':
             status = 'failed'
-            errMsgs.append(res['errMsgs'])
+            errMsg.append(res_ad['errMsg'])
 
     except Exception as e:
         response['status'] = 'failed'
@@ -230,7 +247,7 @@ def get_collections(facebook_int_setting, sync_info_with_type):
         return response
     if status == 'failed':
         response['status'] = 'failed'
-        response['msg'] = errMsgs
+        response['msg'] = errMsg
         return response
     response['status']='success'
     return response
@@ -257,35 +274,39 @@ def get_ad_insights(project_id, ad_account_id, access_token, date_start):
     'date_start','date_stop','frequency','impressions','inline_post_engagement','social_spend', 'spend','unique_clicks','reach']
     return fetch_and_insert_insights(project_id, ad_account_id, access_token, AD_INSIGHTS, fields, date_start)
 
+
 def fetch_and_insert_insights(project_id, ad_account_id, access_token, doc_type, fields_insight, date_start):
     time_ranges = get_time_ranges_list(date_start)
     breakdowns = ['publisher_platform']
-    url = 'https://graph.facebook.com/v9.0/{}/insights?breakdowns={}&&time_ranges={}&&fields={}&&access_token={}&&level={}'.format(
-    ad_account_id, breakdowns, time_ranges, fields_insight, access_token, level_breakdown[doc_type])
-    breakdown_response = requests.get(url)
-    if not breakdown_response.ok:
-        errString = 'Failed to get {} insights from facebook. StatusCode: %d Error: %s'.format(doc_type, breakdown_response.status_code, breakdown_response.text)
-        log.error(errString)
-        return {'status': 'failed', 'errMsg': errString}
-
-    for data in breakdown_response.json()[DATA]:
-        date_stop = get_datetime_from_datestring(data['date_stop'])
-        timestamp= int(datetime.strftime(date_stop, '%Y%m%d'))
-        add_facebook_document(project_id, ad_account_id, doc_type, data[id_fields[doc_type]], data, timestamp, data['publisher_platform'])
-
-    # paging
-    if 'paging' not in breakdown_response.json():
-        return {'status': 'success'}
-    while 'next' in breakdown_response.json()['paging']:
-        url = breakdown_response.json()['paging']['next']
+    for time_range in time_ranges:
+        url = 'https://graph.facebook.com/v9.0/{}/insights?breakdowns={}&&time_range={}&&fields={}&&access_token={}&&level={}&&limit=1000'.format(
+        ad_account_id, breakdowns, time_range, fields_insight, access_token, level_breakdown[doc_type])
         breakdown_response = requests.get(url)
         if not breakdown_response.ok:
-            errString = 'Failed to get {} insights from facebook post pagination. StatusCode: %d Error: %s'.format(doc_type, breakdown_response.status_code, breakdown_response.text)
+            errString = 'Failed to get {} insights from facebook. StatusCode: {} Error: {}'.format(doc_type, breakdown_response.status_code, breakdown_response.text)
             log.error(errString)
             return {'status': 'failed', 'errMsg': errString}
+
         for data in breakdown_response.json()[DATA]:
-            timestamp = int(''.join(data['stop_time'].split('T')[0].split('-')))
+            date_stop = get_datetime_from_datestring(data['date_stop'])
+            timestamp= int(datetime.strftime(date_stop, '%Y%m%d'))
             add_facebook_document(project_id, ad_account_id, doc_type, data[id_fields[doc_type]], data, timestamp, data['publisher_platform'])
+
+        # paging
+        if 'paging' not in breakdown_response.json():
+            return {'status': 'success'}
+        while 'next' in breakdown_response.json()['paging']:
+            url = breakdown_response.json()['paging']['next']
+            breakdown_response = requests.get(url)
+            if not breakdown_response.ok:
+                errString = 'Failed to get {} insights from facebook post pagination. StatusCode: {} Error: {}'.format(doc_type, breakdown_response.status_code, breakdown_response.text)
+                log.error(errString)
+                return {'status': 'failed', 'errMsg': errString}   
+
+            for data in breakdown_response.json()[DATA]:
+                date_stop = get_datetime_from_datestring(data['date_stop'])
+                timestamp= int(datetime.strftime(date_stop, '%Y%m%d'))
+                add_facebook_document(project_id, ad_account_id, doc_type, data[id_fields[doc_type]], data, timestamp, data['publisher_platform'])
     return {'status': 'success'}
 
 
