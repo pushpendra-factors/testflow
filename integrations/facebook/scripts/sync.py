@@ -294,7 +294,7 @@ def fetch_and_insert_insights(project_id, ad_account_id, access_token, doc_type,
 
         # paging
         if 'paging' not in breakdown_response.json():
-            return {'status': 'success'}
+            continue
         while 'next' in breakdown_response.json()['paging']:
             url = breakdown_response.json()['paging']['next']
             breakdown_response = requests.get(url)
