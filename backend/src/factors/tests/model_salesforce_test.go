@@ -830,3 +830,91 @@ func TestSameUserSmartEvent(t *testing.T) {
 	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "test", cuid, userID2, M.SalesforceDocumentTypeContact, &currentProperties, &prevProperties, &filter)
 	assert.Equal(t, true, ok)
 }
+
+func TestSalesforceEventUserPropertiesState(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	refreshToken := U.RandomLowerAphaNumString(5)
+	instancURL := U.RandomLowerAphaNumString(5)
+	errCode := M.UpdateAgentIntSalesforce(agent.UUID,
+		refreshToken,
+		instancURL,
+	)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	_, errCode = M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntSalesforceEnabledAgentUUID: &agent.UUID,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	cuID := U.RandomLowerAphaNumString(5)
+	firstPropTimestamp := time.Now().Unix()
+	user, status := M.CreateUser(&M.User{
+		ProjectId:      project.ID,
+		JoinTimestamp:  firstPropTimestamp,
+		CustomerUserId: cuID,
+	})
+	assert.Equal(t, http.StatusCreated, status)
+	assert.NotNil(t, user)
+
+	properties := &postgres.Jsonb{RawMessage: []byte(`{"name":"user1","city":"bangalore"}`)}
+	_, status = M.UpdateUserProperties(project.ID, user.ID, properties, firstPropTimestamp)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	contactID := U.RandomLowerAphaNumString(7)
+	name := U.RandomLowerAphaNumString(3)
+	createdDate := time.Now()
+
+	// salesforce record
+	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s","Email":"%s"}`, contactID, name, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), cuID)
+	salesforceDocument := &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameLead,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	//should return error on duplicate
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusConflict, status)
+
+	//enrich job, create contact created and contact updated event
+	enrichStatus := IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
+	assert.Equal(t, "success", enrichStatus[2].Status)
+
+	query := M.Query{
+		From: createdDate.Unix() - 500,
+		To:   createdDate.Unix() + 500,
+		EventsWithProperties: []M.QueryEventWithProperties{
+			{
+				Name:       "$sf_lead_created",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class: M.QueryClassFunnel,
+		GroupByProperties: []M.QueryGroupByProperty{
+			{
+				Entity:         M.PropertyEntityUser,
+				Property:       "city",
+				EventName:      "$sf_lead_created",
+				EventNameIndex: 1,
+			},
+		},
+
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result, status, _ := M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, "city", result.Headers[0])
+	assert.Equal(t, "bangalore", result.Rows[1][0])
+	assert.Equal(t, int64(1), result.Rows[1][1])
+
+}
