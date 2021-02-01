@@ -154,7 +154,7 @@ TrackSalesforceEventByDocumentType tracks salesforce events by action
 	for action created -> create both created and updated events with date created timestamp
 	for action updated -> create on updated event with lastmodified timestamp
 */
-func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.TrackPayload, document *M.SalesforceDocument) (string, string, error) {
+func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.TrackPayload, document *M.SalesforceDocument, customerUserID string) (string, string, error) {
 	if projectID == 0 {
 		return "", "", errors.New("invalid project id")
 	}
@@ -176,6 +176,19 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	var eventID, userID string
 	if document.Action == M.SalesforceDocumentCreated {
 		payload := *trackPayload
+		if customerUserID != "" {
+			user, status := M.CreateUser(&M.User{
+				ProjectId:      projectID,
+				CustomerUserId: customerUserID,
+				JoinTimestamp:  createdTimestamp,
+			})
+
+			if status != http.StatusCreated {
+				return "", "", fmt.Errorf("create user failed for doc type %d, status code %d", document.Type, status)
+			}
+			payload.UserId = user.ID
+		}
+
 		payload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentCreated)
 		payload.Timestamp = createdTimestamp
 
@@ -198,6 +211,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		payload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentUpdated)
 
 		if document.Action == M.SalesforceDocumentUpdated {
+
 			payload.Timestamp = lastModifiedTimestamp
 			// TODO(maisa): Use GetSyncedSalesforceDocumentByType while updating multiple contacts in an account object
 			documents, status := M.GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type)
@@ -208,6 +222,18 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 			event, status := M.GetEventById(projectID, documents[0].SyncID)
 			if status != http.StatusFound {
 				return "", "", errors.New("failed to get event from sync id ")
+			}
+
+			if customerUserID != "" {
+				status, _ = SDK.Identify(projectID, &SDK.IdentifyPayload{
+					UserId:         event.UserId,
+					CustomerUserId: customerUserID,
+					Timestamp:      lastModifiedTimestamp,
+				}, false)
+
+				if status != http.StatusOK {
+					return "", "", fmt.Errorf("failed indentifying user on update event track")
+				}
 			}
 
 			userID = event.UserId
@@ -264,24 +290,16 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument, salesforceS
 		UserProperties:  *enProperties,
 	}
 
-	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
+	if customerUserID == "" {
+		logCtx.Error("Skipping user identification on salesforce account sync. No customer_user_id on properties.")
+	}
+
+	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to track salesforce account event.")
 		return http.StatusInternalServerError
-	}
-
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
-	if customerUserID != "" {
-		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userID, CustomerUserId: customerUserID}, false)
-		if status != http.StatusOK {
-			logCtx.WithField("customer_user_id", customerUserID).Error(
-				"Failed to identify user on salesforce account sync.")
-			return http.StatusInternalServerError
-		}
-	} else {
-		logCtx.Error("Skipped user identification on salesforce account sync. No customer_user_id on properties.")
 	}
 
 	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
@@ -346,24 +364,16 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument, salesforceS
 		UserProperties:  *enProperties,
 	}
 
-	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
+	if customerUserID == "" {
+		logCtx.Error("Skipping user identification on salesforce contact sync. No customer_user_id on properties.")
+	}
+
+	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to track salesforce contact event.")
 		return http.StatusInternalServerError
-	}
-
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
-	if customerUserID != "" {
-		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userID, CustomerUserId: customerUserID}, false)
-		if status != http.StatusOK {
-			logCtx.WithField("customer_user_id", customerUserID).Error(
-				"Failed to identify user on salesforce contact sync.")
-			return http.StatusInternalServerError
-		}
-	} else {
-		logCtx.Error("Skipped user identification on salesforce contact sync. No customer_user_id on properties.")
 	}
 
 	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
@@ -418,15 +428,19 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 
 	if prevProperties == nil {
 		prevDoc, status := M.GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID, customerUserID, userID, docType)
-		if status != http.StatusFound {
+		if status != http.StatusFound && status != http.StatusNotFound {
 			return nil, prevProperties, false
 		}
 
 		var err error
-		_, prevProperties, err = GetSalesforceDocumentProperties(projectID, prevDoc)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to GetSalesforceDocumentProperties")
-			return nil, prevProperties, false
+		if status == http.StatusNotFound {
+			prevProperties = &map[string]interface{}{}
+		} else {
+			_, prevProperties, err = GetSalesforceDocumentProperties(projectID, prevDoc)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to GetSalesforceDocumentProperties")
+				return nil, prevProperties, false
+			}
 		}
 
 		if !M.CRMFilterEvaluator(projectID, currentProperties, prevProperties,
@@ -526,14 +540,14 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument, sales
 	customerUserID, userID := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		trackPayload.UserId = userID
-		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
+		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
 		if err != nil {
 			logCtx.WithError(err).Error(
 				"Failed to track salesforce opportunity event.")
 			return http.StatusInternalServerError
 		}
 	} else {
-		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
+		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
 		if err != nil {
 			logCtx.WithError(err).Error(
 				"Failed to track salesforce opportunity event.")
@@ -583,24 +597,16 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument, salesforceSma
 		UserProperties:  *enProperties,
 	}
 
-	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
+	if customerUserID == "" {
+		logCtx.Error("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
+	}
+
+	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to track salesforce lead event.")
 		return http.StatusInternalServerError
-	}
-
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
-	if customerUserID != "" {
-		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userID, CustomerUserId: customerUserID}, false)
-		if status != http.StatusOK {
-			logCtx.WithField("customer_user_id", customerUserID).Error(
-				"Failed to identify user on salesforce lead sync.")
-			return http.StatusInternalServerError
-		}
-	} else {
-		logCtx.Error("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
 	}
 
 	// ALways us lastmodified timestamp for updated properties, error handling already done during event creation

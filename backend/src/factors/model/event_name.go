@@ -909,7 +909,7 @@ func GetDecodedSmartEventFilterExp(enFilterExp string) (*SmartCRMEventFilter, er
 
 // isRuleApplicable compare property based on rule provided
 func isRuleApplicable(properties *map[string]interface{}, propertyName string, rule *CRMFilterRule) bool {
-	if propertyValue, exists := (*properties)[propertyName]; exists {
+	if propertyValue, exists := (*properties)[propertyName]; exists && propertyValue != nil {
 		if comparisonOp[rule.Operator](rule.Value, propertyValue) {
 			return true
 		}

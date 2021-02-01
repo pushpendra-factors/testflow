@@ -214,7 +214,7 @@ func GenerateEvents(wg *sync.WaitGroup, probMap ProbMap, segmentConfig config.Us
 			eventAttributes := SetEventAttributes(segmentProbMap, segmentConfig, event)
 			eventAttributesWithDecorators := utils.AppendMaps(eventAttributes, decorators)
 			timeStamp, counter := ComputeActivityTimestamp(segmentConfig, i, realTimeWait)
-			op := FormatOutput(timeStamp, userId, event, userAttributes, eventAttributesWithDecorators)
+			op := FormatOutput(timeStamp, userId, event, userAttributes, eventAttributesWithDecorators, segmentConfig.Smart_events)
 			registration.WriterInstance.WriteOutput(op)
 			i = i + counter
 			WaitIfRealTime(realTimeWait)

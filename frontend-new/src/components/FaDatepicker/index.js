@@ -5,7 +5,8 @@ import moment from 'moment';
 const { RangePicker } = DatePicker;
 
 import {getFirstDayOfLastWeek, getLastDayOfLastWeek, 
-    getFirstDayOfLastMonth, getLastDayOfLastMonth
+    getFirstDayOfLastMonth, getLastDayOfLastMonth, 
+    getRangeByLabel
 } from './utils';
 
 
@@ -107,8 +108,9 @@ const FaDatepicker = ({ placement,
             onSelect(newDateData);
         }
         if (type == 'this_week') {
-            let startDate = moment().startOf('week');
-            let endDate = moment();
+            const dateRng = getRangeByLabel('This Week');
+            let startDate = dateRng.startDate;
+            let endDate = dateRng.endDate;
             let newDateData = {
                 ...dateData,
                 startDate,
@@ -129,8 +131,9 @@ const FaDatepicker = ({ placement,
             onSelect(newDateData);
         }
         if (type == 'this_month') {
-            let startDate = moment().startOf('month');
-            let endDate = moment();
+            const dateRng = getRangeByLabel('This Month');
+            let startDate = dateRng.startDate;
+            let endDate = dateRng.endDate;
             let newDateData = {
                 ...dateData,
                 startDate,

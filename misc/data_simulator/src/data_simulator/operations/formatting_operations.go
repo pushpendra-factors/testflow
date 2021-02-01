@@ -11,13 +11,14 @@ import (
 	"strconv"
 )
 
-func FormatOutput(timeStamp int, userId string, event string, userAttributes map[string]string, eventAttributes map[string]string) string {
+func FormatOutput(timeStamp int, userId string, event string, userAttributes map[string]string, eventAttributes map[string]string, smartEvents map[string]string) string {
 	var op EventOutput
 	op.UserId = userId
 	op.Event = event
 	op.Timestamp = timeStamp
 	op.UserAttributes = convertStringToInterface(userAttributes)
 	op.EventAttributes = convertStringToInterface(eventAttributes)
+	op.SmartEventType = smartEvents[event]
 	e, _ := json.Marshal(&op)
 	return string(e)
 }

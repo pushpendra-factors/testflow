@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"errors"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
@@ -24,10 +25,20 @@ func SetupProjectReturnDAO() (*M.Project, error) {
 	// Create random project.
 	random_project_name := U.RandomLowerAphaNumString(15)
 
-	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name}, agent.UUID, M.ADMIN, billingAccount.ID)
-	if err_code != http.StatusCreated {
+	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name},
+		agent.UUID, M.ADMIN, billingAccount.ID)
+	if errCode != http.StatusCreated {
 		return nil, fmt.Errorf("Project Creation failed.")
 	}
+
+	// Updates the next session start timestamp of project with older timestamp
+	// to make the add_session to consider events with older timestamp as next
+	// session start timestamp is initialized with project creation timestamp.
+	errCode = M.UpdateNextSessionStartTimestampForProject(project.ID, 1500000000)
+	if errCode != http.StatusAccepted {
+		return nil, errors.New("failed to update next session start timestamp")
+	}
+
 	return project, nil
 }
 

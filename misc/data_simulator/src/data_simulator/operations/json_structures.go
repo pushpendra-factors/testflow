@@ -11,6 +11,7 @@ type EventOutput struct {
 	Timestamp       int                    `json:"timestamp"`
 	UserAttributes  map[string]interface{} `json:"user_properties"`
 	EventAttributes map[string]interface{} `json:"event_properties"`
+	SmartEventType  string                 `json:"smart_event"`
 }
 
 type AdwordsDocument struct {

@@ -440,7 +440,8 @@ export default function FilterBlock({
           value={searchTerm}
         />
         <div className={styles.filter_block__filter_select__content}>
-          <div className={styles.filter_block__filter_select__options}>
+          <div className={`${styles.filter_block__filter_select__options} 
+            ${filterTypeState === 'values' &&  styles.filter_block__filter_select__values__options}`}>
             { 
             filterTypeState!== 'values'? 
               renderOptions(filterDropDownOptions[filterTypeState])

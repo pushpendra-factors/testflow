@@ -216,21 +216,26 @@ func GetHubspotSmartEventPayload(projectID uint64, eventName, customerUserID, us
 
 	if prevProperties == nil {
 		prevDoc, status := M.GetLastSyncedHubspotDocumentByCustomerUserIDORUserID(projectID, customerUserID, userID, docType)
-		if status != http.StatusFound {
+		if status != http.StatusFound && status != http.StatusNotFound {
 			return nil, prevProperties, false
 		}
 
 		var err error
-		if docType == M.HubspotDocumentTypeContact {
-			_, prevProperties, err = getContactProperties(prevDoc)
-		}
-		if docType == M.HubspotDocumentTypeDeal {
-			_, prevProperties, err = getDealProperties(prevDoc)
-		}
+		if status == http.StatusNotFound { // use empty properties if no previous record exist
+			prevProperties = &map[string]interface{}{}
+		} else {
 
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to GetHubspotDocumentProperties")
-			return nil, prevProperties, false
+			if docType == M.HubspotDocumentTypeContact {
+				_, prevProperties, err = getContactProperties(prevDoc)
+			}
+			if docType == M.HubspotDocumentTypeDeal {
+				_, prevProperties, err = getDealProperties(prevDoc)
+			}
+
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to GetHubspotDocumentProperties")
+				return nil, prevProperties, false
+			}
 		}
 
 		if !M.CRMFilterEvaluator(projectID, currentProperties, prevProperties,
@@ -337,9 +342,21 @@ func syncContact(projectID uint64, document *M.HubspotDocument, hubspotSmartEven
 	logCtx = logCtx.WithField("action", document.Action).WithField(
 		M.UserPropertyHubspotContactLeadGUID, leadGUID)
 
+	customerUserID := getCustomerUserIDFromProperties(projectID, *enProperties)
 	var eventID, userID string
 	if document.Action == M.HubspotDocumentActionCreated {
+
+		user, status := M.CreateUser(&M.User{
+			ProjectId:      projectID,
+			JoinTimestamp:  getEventTimestamp(document.Timestamp),
+			CustomerUserId: customerUserID})
+		if status != http.StatusCreated {
+			logCtx.WithField("status", status).Error("Failed to create user for hubspot contact created event.")
+			return http.StatusInternalServerError
+		}
+
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_CREATED
+		trackPayload.UserId = user.ID
 
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -347,7 +364,7 @@ func syncContact(projectID uint64, document *M.HubspotDocument, hubspotSmartEven
 			return http.StatusInternalServerError
 		}
 
-		userID = response.UserId
+		userID = user.ID
 		eventID = response.EventId
 	} else if document.Action == M.HubspotDocumentActionUpdated {
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED
@@ -364,28 +381,29 @@ func syncContact(projectID uint64, document *M.HubspotDocument, hubspotSmartEven
 		// contact created event.
 		userID = userPropertiesRecords[0].UserId
 		trackPayload.UserId = userID
+
+		if customerUserID != "" {
+			status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
+				UserId: userID, CustomerUserId: customerUserID}, false)
+			if status != http.StatusOK {
+				logCtx.WithField("customer_user_id", customerUserID).Error(
+					"Failed to identify user on hubspot contact sync.")
+				return http.StatusInternalServerError
+			}
+		} else {
+			logCtx.Error("Skipped user identification on hubspot contact sync. No customer_user_id on properties.")
+		}
+
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithField("status", status).Error("Failed to track hubspot contact updated event.")
 			return http.StatusInternalServerError
 		}
 		eventID = response.EventId
+
 	} else {
 		logCtx.Error("Invalid action on hubspot contact sync.")
 		return http.StatusInternalServerError
-	}
-
-	customerUserID := getCustomerUserIDFromProperties(projectID, *properties)
-	if customerUserID != "" {
-		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userID, CustomerUserId: customerUserID}, false)
-		if status != http.StatusOK {
-			logCtx.WithField("customer_user_id", customerUserID).Error(
-				"Failed to identify user on hubspot contact sync.")
-			return http.StatusInternalServerError
-		}
-	} else {
-		logCtx.Error("Skipped user identification on hubspot contact sync. No customer_user_id on properties.")
 	}
 
 	var prevProperties *map[string]interface{}
