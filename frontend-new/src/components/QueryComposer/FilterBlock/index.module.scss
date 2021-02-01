@@ -41,11 +41,17 @@
 
         &__options {
             overflow: scroll;
-            max-height: 360px;
+            max-height: 300px;
             max-width: 400px;
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
+
+            
+        }
+
+        &__values_options {
+            max-height: 260px;
         }
 
         &__option {
