@@ -216,21 +216,26 @@ func GetHubspotSmartEventPayload(projectID uint64, eventName, customerUserID, us
 
 	if prevProperties == nil {
 		prevDoc, status := M.GetLastSyncedHubspotDocumentByCustomerUserIDORUserID(projectID, customerUserID, userID, docType)
-		if status != http.StatusFound {
+		if status != http.StatusFound && status != http.StatusNotFound {
 			return nil, prevProperties, false
 		}
 
 		var err error
-		if docType == M.HubspotDocumentTypeContact {
-			_, prevProperties, err = getContactProperties(prevDoc)
-		}
-		if docType == M.HubspotDocumentTypeDeal {
-			_, prevProperties, err = getDealProperties(prevDoc)
-		}
+		if status == http.StatusNotFound { // use empty properties if no previous record exist
+			prevProperties = &map[string]interface{}{}
+		} else {
 
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to GetHubspotDocumentProperties")
-			return nil, prevProperties, false
+			if docType == M.HubspotDocumentTypeContact {
+				_, prevProperties, err = getContactProperties(prevDoc)
+			}
+			if docType == M.HubspotDocumentTypeDeal {
+				_, prevProperties, err = getDealProperties(prevDoc)
+			}
+
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to GetHubspotDocumentProperties")
+				return nil, prevProperties, false
+			}
 		}
 
 		if !M.CRMFilterEvaluator(projectID, currentProperties, prevProperties,
