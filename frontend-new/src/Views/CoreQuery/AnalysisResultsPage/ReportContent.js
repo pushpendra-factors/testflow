@@ -81,7 +81,7 @@ function ReportContent({
         }
       }
     }
-  }, [savedChartType, queryType, campaignState.group_by]);
+  }, [savedChartType, queryType, campaignState.group_by, breakdown]);
 
   if (resultState.loading) {
     content = (
