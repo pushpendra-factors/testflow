@@ -19,7 +19,7 @@ function QueryBlock({
   activeProject, groupBy, setGroupBy,
   delGroupBy, userProperties, eventProperties
 }) {
-  const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event));
+  const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event && queries.length <= 1));
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
   const [filterProps, setFilterProperties] = useState({
@@ -102,20 +102,6 @@ function QueryBlock({
     if (isFilterDDVisible) {
       return <FilterBlock
       filterProps={filterProps}
-      // Baliga!!
-      //  operatorProps={{
-      //   "categorical": [
-      //     '=',
-      //   ],
-      //   "numerical": [
-      //     '=',
-      //     '<=',
-      //     '>='
-      //   ],
-      //   "datetime": [
-      //     '='
-      //   ]
-      // }}
       activeProject={activeProject}
       event={event}
       insertFilter={insertFilters}
