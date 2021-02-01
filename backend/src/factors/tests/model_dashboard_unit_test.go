@@ -991,6 +991,38 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 	}
 }
 
+func TestCreateDashboardUnitWithDeletedQuery(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotEmpty(t, project, agent)
+
+	dashboardQuery, errCode, errMsg := M.CreateQuery(project.ID, &M.Queries{
+		ProjectID: project.ID,
+		Type:      M.QueryTypeDashboardQuery,
+		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, dashboardQuery)
+
+	// Delete the above query.
+	errCode, errMsg = M.DeleteDashboardQuery(project.ID, dashboardQuery.ID)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// Try creating a new dashboard unit for the deleted query.
+	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID,
+		&M.Dashboard{Name: U.RandomString(5), Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID,
+		&M.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: M.PresentationLine,
+			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{json.RawMessage(`{}`)}},
+		M.DashboardUnitWithQueryID)
+	assert.NotEqual(t, http.StatusCreated, errCode)
+	assert.Empty(t, dashboardUnit)
+}
+
 func sendAttributionQueryReq(r *gin.Engine, projectID uint64, agent *M.Agent, dashboardID, unitID uint64, query M.AttributionQuery, refresh bool) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
