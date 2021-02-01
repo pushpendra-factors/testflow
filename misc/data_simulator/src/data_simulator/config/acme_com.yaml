@@ -497,7 +497,7 @@ user_segments:
     user_attributes:
       default:  
         -
-          key: Industry
+          key: Salesforce_Industry
           order_level: 1
           values:
             EdTech: 0.16
@@ -510,15 +510,13 @@ user_segments:
           key: Revenue
           order_level: 1
           values:
-            1-1: 0.204
-            2-5: 0.159
-            6-10: 0.127
-            11-25: 0.148
-            26-50: 0.087
-            51-100: 0.057
-            100-200: 0.031
-            0-0: 0.187
-          data_type: Numerical
+            0-1Mn: 0.204
+            2-5Mn: 0.346
+            6-10Mn: 0.127
+            11-25Mn: 0.148
+            26-50Mn: 0.087
+            51-100Mn: 0.057
+            100+Mn: 0.031
         -
           key: Country
           order_level: 1
@@ -530,7 +528,7 @@ user_segments:
             AUSTRALIA: 0.054
             OTHERS: 0.066
         -
-          key: Number of Employees
+          key: Salesforce_Num_Employees
           order_level: 1
           values:
             1-5: 0.107
@@ -538,9 +536,7 @@ user_segments:
             26-50: 0.247
             51-100: 0.197
             101-500: 0.052
-            500-1000: 0.038
-            0-0: 0.096
-          data_type: Numerical
+            500-1000: 0.134
         -
           key: Number of Sessions
           order_level: 1
@@ -588,7 +584,7 @@ user_segments:
             None: 0.474
       custom:
       -
-          key: Job Title
+          key: Salesforce_Job_Title
           order_level: 1
           values:  
             CEO: 0.065
@@ -607,7 +603,7 @@ user_segments:
           -
             probablity: 0.18147
             attributes: 
-              Industry: 
+              Salesforce_Industry: 
                 -
                   FinTech
       RULE2:
@@ -617,13 +613,13 @@ user_segments:
           -
             probablity: 0.43593
             attributes: 
-              Industry: 
+              Salesforce_Industry: 
                 -
                   EdTech
           -
             probablity: 0.31704
             attributes: 
-              Industry: 
+              Salesforce_Industry: 
                 -
                   Healthcare
       RULE3:
@@ -703,7 +699,7 @@ user_segments:
           -
             probablity: 0.033375
             attributes: 
-              Number of Employees: 
+              Salesforce_Num_Employees: 
                 -
                   6-25
       RULE14:
@@ -728,3 +724,9 @@ user_segments:
               Time Spent on Site: 
                 -
                   16-30
+    smart_events:
+      Discovery Call Booked: CS
+      Opportunity Created: CS 
+      Deal Created: CS
+      Deal Won: CS
+      Deal Lost: CS

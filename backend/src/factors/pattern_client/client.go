@@ -361,7 +361,7 @@ func httpDo(method string, urls []string, paramBytes []byte, headers map[string]
 			}
 			client := http.Client{
 				// timeout in one minute.
-				Timeout: time.Duration(60 * time.Second),
+				Timeout: time.Duration(600 * time.Second),
 			}
 			r, err := client.Do(req)
 			resp.err = err
