@@ -6,22 +6,24 @@ import { numberWithCommas } from "../../utils/dataFormatter";
 function SparkLineChart({
   queries,
   chartsData,
-  parentClass,
   appliedColors,
-  eventsMapper,
   page,
   resultState,
   frequency,
+  arrayMapper,
 }) {
   if (queries.length > 1) {
     return (
-      <div className={parentClass}>
+      <div className="flex items-center flex-wrap justify-center w-full">
         {queries.map((q, index) => {
+          const mapper = arrayMapper.find(
+            (elem) => elem.eventName === q && elem.index === index
+          ).mapper;
           let total = 0;
           const data = chartsData.map((elem) => {
             return {
               date: elem.date,
-              [eventsMapper[q]]: elem[eventsMapper[q]],
+              [mapper]: elem[mapper],
             };
           });
           const queryRow = resultState.data.metrics.rows.find(
@@ -37,7 +39,7 @@ function SparkLineChart({
             <div
               style={{ minWidth: "300px" }}
               key={q + index}
-              className="w-1/3 mt-4 px-1"
+              className="w-1/3 mt-4 px-4"
             >
               <div className="flex flex-col">
                 <ChartHeader
@@ -49,7 +51,7 @@ function SparkLineChart({
                   <SparkChart
                     frequency={frequency}
                     page={page}
-                    event={eventsMapper[q]}
+                    event={mapper}
                     chartData={data}
                     chartColor={appliedColors[index]}
                   />
@@ -66,7 +68,7 @@ function SparkLineChart({
       total % 1 !== 0 ? parseFloat(total.toFixed(2)) : numberWithCommas(total);
 
     return (
-      <div className={parentClass}>
+      <div className="flex items-center justify-center w-full">
         <div className="w-1/4">
           <ChartHeader bgColor="#4D7DB4" query={queries[0]} total={total} />
         </div>
@@ -74,7 +76,9 @@ function SparkLineChart({
           <SparkChart
             frequency={frequency}
             page={page}
-            event={eventsMapper[queries[0]]}
+            event={
+              arrayMapper.find((elem) => elem.eventName === queries[0]).mapper
+            }
             chartData={chartsData}
             chartColor="#4D7DB4"
           />

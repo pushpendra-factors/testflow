@@ -16,6 +16,7 @@ import AttributionsResult from "../AttributionsResult";
 import CampaignAnalytics from "../CampaignAnalytics";
 import { getChartTypeMenuItems } from "../../../utils/dataFormatter";
 import CampaignMetricsDropdown from "./CampaignMetricsDropdown";
+import ResultTab from "../EventsAnalytics/ResultTab";
 
 function ReportContent({
   resultState,
@@ -23,15 +24,13 @@ function ReportContent({
   setDrawerVisible,
   queries,
   breakdown,
-  requestQuery,
-  querySaved,
-  setQuerySaved,
   queryOptions,
   savedChartType = null,
   handleDurationChange,
   campaignState,
   arrayMapper,
   attributionsState,
+  isWidgetModal
 }) {
   let content = null,
     queryDetail = null,
@@ -54,8 +53,14 @@ function ReportContent({
         campaignState.group_by.length > 0
       );
     }
+    if(queryType === QUERY_TYPE_EVENT) {
+      items = getChartTypeMenuItems(
+        queryType,
+        breakdown.length > 0
+      );
+    }
     setChartTypeMenuItems(items);
-  }, [queryType, campaignState.group_by]);
+  }, [queryType, campaignState.group_by, breakdown]);
 
   useEffect(() => {
     if (savedChartType) {
@@ -63,6 +68,13 @@ function ReportContent({
     } else {
       if (queryType === QUERY_TYPE_CAMPAIGN) {
         if (campaignState.group_by.length) {
+          setChartType(CHART_TYPE_BARCHART);
+        } else {
+          setChartType(CHART_TYPE_SPARKLINES);
+        }
+      }
+      if (queryType === QUERY_TYPE_EVENT) {
+        if (breakdown.length) {
           setChartType(CHART_TYPE_BARCHART);
         } else {
           setChartType(CHART_TYPE_SPARKLINES);
@@ -87,7 +99,7 @@ function ReportContent({
     );
   }
 
-  if (queryType === QUERY_TYPE_FUNNEL) {
+  if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
     durationObj = queryOptions.date_range;
     queryDetail = arrayMapper
       .map((elem) => {
@@ -119,14 +131,11 @@ function ReportContent({
     if (queryType === QUERY_TYPE_FUNNEL) {
       content = (
         <FunnelsResultPage
-          setDrawerVisible={setDrawerVisible}
           queries={queries}
           resultState={resultState}
           breakdown={breakdown}
-          requestQuery={requestQuery}
-          querySaved={querySaved}
-          setQuerySaved={setQuerySaved}
           arrayMapper={arrayMapper}
+          isWidgetModal={isWidgetModal}
         />
       );
     }
@@ -157,6 +166,20 @@ function ReportContent({
           campaignState={campaignState}
           chartType={chartType}
           currMetricsValue={currMetricsValue}
+        />
+      );
+    }
+
+    if (queryType === QUERY_TYPE_EVENT) {
+      content = (
+        <ResultTab
+          resultState={resultState}
+          arrayMapper={arrayMapper}
+          chartType={chartType}
+          breakdown={breakdown}
+          queries={queries}
+          page="totalEvents"
+          durationObj={durationObj}
         />
       );
     }

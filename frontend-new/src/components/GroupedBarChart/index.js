@@ -1,8 +1,6 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import c3 from "c3";
-import * as d3 from "d3";
 import styles from "../../Views/CoreQuery/FunnelsResultPage/GroupedChart/index.module.scss";
-import { getMaxYpoint } from "../BarChart/utils";
 
 function GroupedBarChart({
   categories,

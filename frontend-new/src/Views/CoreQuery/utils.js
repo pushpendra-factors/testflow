@@ -4,6 +4,11 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
+  TOTAL_EVENTS_CRITERIA,
+  TYPE_EVENTS_OCCURRENCE,
+  TYPE_UNIQUE_USERS,
+  ACTIVE_USERS_CRITERIA,
+  FREQUENCY_CRITERIA,
 } from "../../utils/constants";
 
 export const labelsObj = {
@@ -58,8 +63,8 @@ const getEventsWithProperties = (queries) => {
   const ewps = [];
   queries.forEach((ev) => {
     const filterProps = [];
-    ev.filters.forEach((fil) => { 
-      if(Array.isArray(fil.values)) {
+    ev.filters.forEach((fil) => {
+      if (Array.isArray(fil.values)) {
         fil.values.forEach((val, index) => {
           filterProps.push({
             en: fil.props[2],
@@ -70,7 +75,6 @@ const getEventsWithProperties = (queries) => {
             va: val,
           });
         });
-
       } else {
         filterProps.push({
           en: fil.props[2],
@@ -81,7 +85,6 @@ const getEventsWithProperties = (queries) => {
           va: fil.values,
         });
       }
-      
     });
     ewps.push({
       na: ev.label,
@@ -94,7 +97,7 @@ const getEventsWithProperties = (queries) => {
 export const getFunnelQuery = (groupBy, queries, dateRange) => {
   const query = {};
   query.cl = QUERY_TYPE_FUNNEL;
-  query.ty = "unique_users";
+  query.ty = TYPE_UNIQUE_USERS;
 
   const period = {};
   if (dateRange.from && dateRange.to) {
@@ -125,7 +128,6 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
         ena: opt.eventName,
         eni: opt.eventIndex,
       };
-
     } else {
       appGbp = {
         pr: opt.property,
@@ -133,13 +135,12 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
         pty: opt.prop_type,
         ena: opt.eventName,
       };
-      
     }
     if (opt.prop_type === "datetime") {
-      opt.gbty ? appGbp['grn'] = opt.grn: appGbp['grn'] = "day";
+      opt.gbty ? (appGbp["grn"] = opt.grn) : (appGbp["grn"] = "day");
     }
     if (opt.prop_type === "numerical") {
-      opt.gbty ? appGbp['gbty'] = opt.gbty: appGbp['gbty'] = '';
+      opt.gbty ? (appGbp["gbty"] = opt.gbty) : (appGbp["gbty"] = "");
     }
     return appGbp;
   });
@@ -149,15 +150,19 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
 };
 
 export const getQuery = (
-  activeTab,
   groupBy,
   queries,
-  breakdownType = "each",
+  result_criteria,
+  user_type,
   dateRange
 ) => {
   const query = {};
   query.cl = QUERY_TYPE_EVENT;
-  query.ty = parseInt(activeTab) === 0 ? "events_occurrence" : "unique_users";
+  query.ty =
+    result_criteria === TOTAL_EVENTS_CRITERIA ||
+    result_criteria === FREQUENCY_CRITERIA
+      ? TYPE_EVENTS_OCCURRENCE
+      : TYPE_UNIQUE_USERS;
 
   const period = {};
   if (dateRange.from && dateRange.to) {
@@ -174,59 +179,65 @@ export const getQuery = (
   query.fr = period.from;
   query.to = period.to;
 
-  if (activeTab === "2") {
-    query.ewp = [
+  query.ewp = getEventsWithProperties(queries);
+  query.gbt = dateRange.frequency;
+
+  const appliedGroupBy = [...groupBy.event, ...groupBy.global];
+
+  query.gbp = appliedGroupBy.map((opt) => {
+    let gbpReq = {};
+    if (opt.eventIndex) {
+      gbpReq = {
+        pr: opt.property,
+        en: opt.prop_category,
+        pty: opt.prop_type,
+        ena: opt.eventName,
+        eni: opt.eventIndex,
+      };
+    } else {
+      gbpReq = {
+        pr: opt.property,
+        en: opt.prop_category,
+        pty: opt.prop_type,
+        ena: opt.eventName,
+      };
+    }
+    if (opt.prop_type === "datetime") {
+      opt.gbty ? (gbpReq["grn"] = opt.grn) : (gbpReq["grn"] = "day");
+    }
+    if (opt.prop_type === "numerical") {
+      opt.gbty ? (gbpReq["gbty"] = opt.gbty) : (gbpReq["gbty"] = "");
+    }
+    return gbpReq;
+  });
+  query.ec = constantObj.each;
+  query.tz = "Asia/Kolkata";
+  const sessionsQuery = {
+    cl: QUERY_TYPE_EVENT,
+    ty: TYPE_UNIQUE_USERS,
+    fr: period.from,
+    to: period.to,
+    ewp: [
       {
         na: "$session",
         pr: [],
       },
+    ],
+    gbt: "",
+    ec: constantObj.each,
+    tz: "Asia/Kolkata",
+  };
+  if (result_criteria === ACTIVE_USERS_CRITERIA) {
+    return [query, { ...query, gbt: "" }, sessionsQuery];
+  } else if (result_criteria === FREQUENCY_CRITERIA) {
+    return [
+      query,
+      { ...query, gbt: "" },
+      { ...query, ty: TYPE_UNIQUE_USERS },
+      { ...query, ty: TYPE_UNIQUE_USERS, gbt: "" },
     ];
-    query.gbt = "";
-  } else {
-    query.ewp = getEventsWithProperties(queries);
-    query.gbt = breakdownType === "each" ? dateRange.frequency || "date" : "";
-
-    const appliedGroupBy = [...groupBy.event, ...groupBy.global];
-
-    query.gbp = appliedGroupBy.map((opt) => {
-      let gbpReq = {};
-      if (opt.eventIndex) {
-        gbpReq = {
-          pr: opt.property,
-          en: opt.prop_category,
-          pty: opt.prop_type,
-          ena: opt.eventName,
-          eni: opt.eventIndex,
-        };
-      } else {
-        gbpReq = {
-          pr: opt.property,
-          en: opt.prop_category,
-          pty: opt.prop_type,
-          ena: opt.eventName,
-        };
-      }
-      if (opt.prop_type === "datetime") {
-        opt.gbty ? gbpReq['grn'] = opt.grn: gbpReq['grn'] = "day";
-      }
-      if (opt.prop_type === "numerical") {
-        opt.gbty ? gbpReq['gbty'] = opt.gbty:   gbpReq['gbty'] = '';
-      }
-      console.log(gbpReq);
-      return gbpReq;
-    });
   }
-  query.ec = activeTab === "2" ? constantObj.each : constantObj[breakdownType];
-  query.tz = "Asia/Kolkata";
-  if (breakdownType === "each") {
-    if (activeTab === "2") {
-      return [query];
-    } else {
-      return [query, { ...query, gbt: "" }];
-    }
-  } else {
-    return [query];
-  }
+  return [query, { ...query, gbt: "" }];
 };
 
 export const calculateFrequencyData = (
@@ -679,65 +690,4 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
   };
 
   return result;
-};
-
-export const getSessionsQuery = (query) => {
-  const user = query.query_group.map((elem) => {
-    return {
-      ...elem,
-      ty: "unique_users",
-    };
-  });
-  const session = [
-    {
-      cl: "events",
-      ec: "each_given_event",
-      ewp: [
-        {
-          na: "$session",
-          pr: [],
-        },
-      ],
-      fr: moment().startOf("week").utc().unix(),
-      to: moment().utc().unix(),
-      gbt: "",
-      ty: "unique_users",
-      tz: "Asia/Kolkata",
-    },
-  ];
-  return [...user, ...session];
-};
-
-export const getFrequencyQuery = (query) => {
-  const event = query.query_group.map((elem) => {
-    return {
-      ...elem,
-      ty: "events_occurrence",
-    };
-  });
-  const user = query.query_group.map((elem) => {
-    return {
-      ...elem,
-      ty: "unique_users",
-    };
-  });
-  return [...event, ...user];
-};
-
-export const getTotalEventsQuery = (query) => {
-  return query.query_group.map((group) => {
-    return {
-      ...group,
-      ty: "events_occurrence",
-    };
-  });
-};
-
-export const getTotalUsersQuery = (query) => {
-  return query.query_group.map((group) => {
-    return {
-      ...group,
-      ty: "unique_users",
-    };
-  });
 };

@@ -5,7 +5,7 @@ import {
 } from './utils';
 
 function SingleEventSingleBreakdownTable({
-  data, events, breakdown, chartType, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, originalData, page, isWidgetModal, durationObj
+  data, events, breakdown, chartType, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, originalData, page, isWidgetModal, durationObj, reportTitle="Events Analytics"
 }) {
   const appliedBreakdown = [breakdown[0].property];
 
@@ -16,6 +16,21 @@ function SingleEventSingleBreakdownTable({
     // reset sorter on change of chart type
     setSorter({});
   }, [chartType]);
+
+  const getCSVData = () => {
+    return {
+      fileName: `${reportTitle}.csv`,
+      data: tableData.map(({ index, ...rest }) => {
+        // if (breakdown.length) {
+        //   arrayMapper.forEach((elem) => {
+        //     rest[elem.eventName] = rest[`${elem.mapper}-${elem.index}`];
+        //     delete rest[`${elem.mapper}-${elem.index}`];
+        //   });
+        // }
+        return { ...rest };
+      }),
+    };
+  };
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
@@ -67,6 +82,7 @@ function SingleEventSingleBreakdownTable({
       columns={columns}
       rowSelection={rowSelection}
       scroll={{ x: 250 }}
+      getCSVData={getCSVData}
     />
   );
 }

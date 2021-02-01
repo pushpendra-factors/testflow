@@ -13,7 +13,7 @@ function SingleEventSingleBreakdown({
   chartType,
   isWidgetModal,
   durationObj,
-  title
+  title,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -58,52 +58,49 @@ function SingleEventSingleBreakdown({
 
   const appliedColors = generateColors(visibleProperties.length);
 
-  let chartContent = null;
+  let chart = null;
+  const table = (
+    <div className="mt-12 w-full">
+      <SingleEventSingleBreakdownTable
+        isWidgetModal={isWidgetModal}
+        data={chartsData}
+        breakdown={breakdown}
+        events={queries}
+        chartType={chartType}
+        page={page}
+        setVisibleProperties={setVisibleProperties}
+        visibleProperties={visibleProperties}
+        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+        lineChartData={lineChartData}
+        originalData={resultState.data}
+        durationObj={durationObj}
+      />
+    </div>
+  );
 
   if (chartType === "barchart") {
-    chartContent = (
-      <div className="flex mt-8 w-full">
-        <BarChart title={title} chartData={visibleProperties} />
-      </div>
-    );
+    chart = <BarChart title={title} chartData={visibleProperties} />;
   } else {
-    chartContent = (
-      <div className="flex mt-8">
-        <LineChart
-          frequency={durationObj.frequency}
-          chartData={lineChartData}
-          appliedColors={appliedColors}
-          queries={visibleLabels}
-          reverseEventsMapper={reverseMapper}
-          eventsMapper={mapper}
-          setHiddenEvents={setHiddenProperties}
-          hiddenEvents={hiddenProperties}
-          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
-          arrayMapper={arrayMapper}
-        />
-      </div>
+    chart = (
+      <LineChart
+        frequency={durationObj.frequency}
+        chartData={lineChartData}
+        appliedColors={appliedColors}
+        queries={visibleLabels}
+        reverseEventsMapper={reverseMapper}
+        eventsMapper={mapper}
+        setHiddenEvents={setHiddenProperties}
+        hiddenEvents={hiddenProperties}
+        isDecimalAllowed={page === "activeUsers" || page === "frequency"}
+        arrayMapper={arrayMapper}
+      />
     );
   }
 
   return (
-    <div className="w-full">
-      {chartContent}
-      <div className="mt-8">
-        <SingleEventSingleBreakdownTable
-          isWidgetModal={isWidgetModal}
-          data={chartsData}
-          breakdown={breakdown}
-          events={queries}
-          chartType={chartType}
-          page={page}
-          setVisibleProperties={setVisibleProperties}
-          visibleProperties={visibleProperties}
-          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          lineChartData={lineChartData}
-          originalData={resultState.data}
-          durationObj={durationObj}
-        />
-      </div>
+    <div className="flex items-center justify-center flex-col">
+      {chart}
+      {table}
     </div>
   );
 }

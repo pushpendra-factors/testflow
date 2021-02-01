@@ -1,14 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
-  getTableColumns, getDataInTableFormat, getDateBasedColumns, getDateBasedTableData
-} from './utils';
-import DataTable from '../../../../components/DataTable';
+  getTableColumns,
+  getDataInTableFormat,
+  getDateBasedColumns,
+  getDateBasedTableData,
+} from "./utils";
+import DataTable from "../../../../components/DataTable";
 
 function SingleEventMultipleBreakdownTable({
-  originalData, chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, page, events, isWidgetModal, durationObj
+  originalData,
+  chartType,
+  breakdown,
+  data,
+  visibleProperties,
+  setVisibleProperties,
+  maxAllowedVisibleProperties,
+  lineChartData,
+  page,
+  events,
+  isWidgetModal,
+  durationObj,
+  reportTitle="Events Analytics"
 }) {
   const [sorter, setSorter] = useState({});
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
 
   useEffect(() => {
     // reset sorter on change of chart type
@@ -19,43 +34,83 @@ function SingleEventMultipleBreakdownTable({
     setSorter(sorter);
   }, []);
 
-  const nonDatecolumns = getTableColumns(events, breakdown, sorter, handleSorting, page);
+  const nonDatecolumns = getTableColumns(
+    events,
+    breakdown,
+    sorter,
+    handleSorting,
+    page
+  );
 
   let columns;
   let tableData = [];
 
-  if (chartType === 'linechart') {
-    tableData = getDateBasedTableData(data.map(elem => elem.label), originalData, nonDatecolumns, searchText, sorter, durationObj.frequency);
-    columns = getDateBasedColumns(lineChartData, breakdown, sorter, handleSorting, durationObj.frequency);
+  const getCSVData = () => {
+    return {
+      fileName: `${reportTitle}.csv`,
+      data: tableData.map(({ index, ...rest }) => {
+        // if (breakdown.length) {
+        //   arrayMapper.forEach((elem) => {
+        //     rest[elem.eventName] = rest[`${elem.mapper}-${elem.index}`];
+        //     delete rest[`${elem.mapper}-${elem.index}`];
+        //   });
+        // }
+        return { ...rest };
+      }),
+    };
+  };
+
+  if (chartType === "linechart") {
+    tableData = getDateBasedTableData(
+      data.map((elem) => elem.label),
+      originalData,
+      nonDatecolumns,
+      searchText,
+      sorter,
+      durationObj.frequency
+    );
+    columns = getDateBasedColumns(
+      lineChartData,
+      breakdown,
+      sorter,
+      handleSorting,
+      durationObj.frequency
+    );
   } else {
     tableData = getDataInTableFormat(data, nonDatecolumns, searchText, sorter);
     columns = nonDatecolumns;
   }
 
-  const visibleLabels = visibleProperties.map(elem => elem.label);
+  const visibleLabels = visibleProperties.map((elem) => elem.label);
 
   const selectedRowKeys = [];
 
-  tableData.forEach(elem => {
+  tableData.forEach((elem) => {
     const variableColumns = nonDatecolumns.slice(0, nonDatecolumns.length - 1);
-    const val = variableColumns.map(v => {
+    const val = variableColumns.map((v) => {
       return elem[v.title];
     });
-    if (visibleLabels.indexOf(val.join(',')) > -1) {
+    if (visibleLabels.indexOf(val.join(",")) > -1) {
       selectedRowKeys.push(elem.index);
     }
   });
 
   const onSelectionChange = (_, selectedRows) => {
-    if (selectedRows.length > maxAllowedVisibleProperties || !selectedRows.length) {
+    if (
+      selectedRows.length > maxAllowedVisibleProperties ||
+      !selectedRows.length
+    ) {
       return false;
     }
-    const newVisibleProperties = selectedRows.map(elem => {
-      const variableColumns = nonDatecolumns.slice(0, nonDatecolumns.length - 1);
-      const val = variableColumns.map(v => {
+    const newVisibleProperties = selectedRows.map((elem) => {
+      const variableColumns = nonDatecolumns.slice(
+        0,
+        nonDatecolumns.length - 1
+      );
+      const val = variableColumns.map((v) => {
         return elem[v.title];
       });
-      const obj = data.find(d => d.label === val.join(','));
+      const obj = data.find((d) => d.label === val.join(","));
       return obj;
     });
     setVisibleProperties(newVisibleProperties);
@@ -63,7 +118,7 @@ function SingleEventMultipleBreakdownTable({
 
   const rowSelection = {
     selectedRowKeys,
-    onChange: onSelectionChange
+    onChange: onSelectionChange,
   };
 
   return (
@@ -75,6 +130,7 @@ function SingleEventMultipleBreakdownTable({
       columns={columns}
       rowSelection={rowSelection}
       scroll={{ x: 250 }}
+      getCSVData={getCSVData}
     />
   );
 }

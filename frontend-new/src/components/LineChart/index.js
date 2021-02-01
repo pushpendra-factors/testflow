@@ -94,7 +94,7 @@ function LineChart({
         height: 300,
       },
       padding: {
-        left: 30,
+        left: 50,
         bottom: 24,
         right: 10,
       },

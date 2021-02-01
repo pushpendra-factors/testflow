@@ -47,7 +47,7 @@ function NoBreakdownCharts({
             !unit.cardSize ? "mt-8 flex-col" : "mt-4"
           }`}
           appliedColors={appliedColors}
-          eventsMapper={eventsMapper}
+          arrayMapper={arrayMapper}
           page={page}
           resultState={resultState}
         />

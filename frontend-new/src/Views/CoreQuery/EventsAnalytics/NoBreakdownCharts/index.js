@@ -34,63 +34,61 @@ function NoBreakdownCharts({
     return null;
   }
 
-  let chartContent = null;
+  let chart = null;
 
   const lineChartData = getDataInLineChartFormat(
     chartsData,
     queries,
-    eventsMapper,
     hiddenEvents,
     arrayMapper
   );
 
+  const table = (
+    <div className="mt-12 w-full">
+      <NoBreakdownTable
+        isWidgetModal={isWidgetModal}
+        data={chartsData}
+        events={queries}
+        chartType={chartType}
+        setHiddenEvents={setHiddenEvents}
+        hiddenEvents={hiddenEvents}
+        durationObj={durationObj}
+        arrayMapper={arrayMapper}
+      />
+    </div>
+  );
+
   if (chartType === "sparklines") {
-    chartContent = (
+    chart = (
       <SparkLineChart
         frequency={durationObj.frequency}
         queries={queries}
         chartsData={chartsData}
-        parentClass="flex items-center flex-wrap mt-4 justify-center"
         appliedColors={appliedColors}
-        eventsMapper={eventsMapper}
+        arrayMapper={arrayMapper}
         page={page}
         resultState={resultState}
       />
     );
   } else if (chartType === "linechart") {
-    chartContent = (
-      <div className="flex mt-8">
-        <LineChart
-          frequency={durationObj.frequency}
-          chartData={lineChartData}
-          appliedColors={appliedColors}
-          queries={queries}
-          reverseEventsMapper={reverseEventsMapper}
-          eventsMapper={eventsMapper}
-          setHiddenEvents={setHiddenEvents}
-          hiddenEvents={hiddenEvents}
-          arrayMapper={arrayMapper}
-          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
-        />
-      </div>
+    chart = (
+      <LineChart
+        frequency={durationObj.frequency}
+        chartData={lineChartData}
+        appliedColors={appliedColors}
+        queries={queries}
+        setHiddenEvents={setHiddenEvents}
+        hiddenEvents={hiddenEvents}
+        arrayMapper={arrayMapper}
+        isDecimalAllowed={page === "activeUsers" || page === "frequency"}
+      />
     );
   }
 
   return (
-    <div className="w-full">
-      {chartContent}
-      <div className="mt-8">
-        <NoBreakdownTable
-          isWidgetModal={isWidgetModal}
-          data={chartsData}
-          events={queries}
-          reverseEventsMapper={reverseEventsMapper}
-          chartType={chartType}
-          setHiddenEvents={setHiddenEvents}
-          hiddenEvents={hiddenEvents}
-          durationObj={durationObj}
-        />
-      </div>
+    <div className="flex items-center justify-center flex-col">
+      {chart}
+      {table}
     </div>
   );
 }
