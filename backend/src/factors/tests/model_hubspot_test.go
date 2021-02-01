@@ -158,4 +158,45 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	currentProperties["lifecyclestage"] = "opportunity"
 	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID1, hubspotDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, true, ok)
+
+	// use empty records if no previous record exist
+	filter = M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceHubspot,
+		ObjectType:           "contact",
+		Description:          "hubspot booked",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "lifecyclestage",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         M.PROPERTY_VALUE_ANY,
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         M.PROPERTY_VALUE_ANY,
+						Operator:      M.COMPARE_NOT_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	cuid = "123-456-789" // new customer user id
+	userID4 := "1230234" // new user id no previous record
+	currentProperties = make(map[string]interface{})
+	currentProperties["lifecyclestage"] = "opportunity1"
+	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID4, hubspotDocument.Type, &currentProperties, nil, &filter)
+	assert.Equal(t, true, ok)
+
+	// if property value nil
+	PrevProperties := make(map[string]interface{})
+	PrevProperties["lifecyclestage"] = nil
+	smartEvent, _, ok = IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID4, hubspotDocument.Type, &currentProperties, &PrevProperties, &filter)
+	assert.Equal(t, true, ok)
 }

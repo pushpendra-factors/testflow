@@ -788,4 +788,45 @@ func TestSameUserSmartEvent(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Equal(t, int64(1), result.Rows[0][0])
 	assert.Equal(t, int64(1), result.Rows[0][1])
+
+	// no previous record will ruturn true for all not equal to any value
+	filter = M.SmartCRMEventFilter{
+		Source:               M.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce user created",
+		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
+		Filters: []M.PropertyFilter{
+			{
+				Name: "day",
+				Rules: []M.CRMFilterRule{
+					{
+						PropertyState: M.CurrentState,
+						Value:         M.PROPERTY_VALUE_ANY,
+						Operator:      M.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: M.PreviousState,
+						Value:         M.PROPERTY_VALUE_ANY,
+						Operator:      M.COMPARE_NOT_EQUAL,
+					},
+				},
+				LogicalOp: M.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               M.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	cuid := "123-4567"
+	userID2 := "123-234-455"
+	currentProperties = make(map[string]interface{})
+	currentProperties["day"] = "Sunday"
+	_, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "test", cuid, userID2, M.SalesforceDocumentTypeContact, &currentProperties, nil, &filter)
+	assert.Equal(t, true, ok)
+
+	// if property value is nil
+	prevProperties := make(map[string]interface{})
+	prevProperties["day"] = nil
+	_, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "test", cuid, userID2, M.SalesforceDocumentTypeContact, &currentProperties, &prevProperties, &filter)
+	assert.Equal(t, true, ok)
 }

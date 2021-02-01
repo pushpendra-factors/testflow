@@ -418,15 +418,19 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 
 	if prevProperties == nil {
 		prevDoc, status := M.GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID, customerUserID, userID, docType)
-		if status != http.StatusFound {
+		if status != http.StatusFound && status != http.StatusNotFound {
 			return nil, prevProperties, false
 		}
 
 		var err error
-		_, prevProperties, err = GetSalesforceDocumentProperties(projectID, prevDoc)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to GetSalesforceDocumentProperties")
-			return nil, prevProperties, false
+		if status == http.StatusNotFound {
+			prevProperties = &map[string]interface{}{}
+		} else {
+			_, prevProperties, err = GetSalesforceDocumentProperties(projectID, prevDoc)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to GetSalesforceDocumentProperties")
+				return nil, prevProperties, false
+			}
 		}
 
 		if !M.CRMFilterEvaluator(projectID, currentProperties, prevProperties,
