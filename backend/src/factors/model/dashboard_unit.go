@@ -166,6 +166,7 @@ func CreateMultipleDashboardUnits(requestPayload []DashboardUnitRequestPayload, 
 func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *DashboardUnit, queryType string) (*DashboardUnit, int, string) {
 	db := C.GetServices().Db
 
+	logCtx := log.WithFields(log.Fields{"dashboard_unit": dashboardUnit, "project_id": projectId})
 	if projectId == 0 || agentUUID == "" {
 		return nil, http.StatusBadRequest, "Invalid request"
 	}
@@ -190,8 +191,7 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 				Type:  QueryTypeDashboardQuery,
 			})
 		if errCode != http.StatusCreated {
-			log.WithFields(log.Fields{"dashboard_unit": dashboardUnit,
-				"project_id": projectId}).Error(errMsg)
+			logCtx.Error(errMsg)
 			return nil, errCode, errMsg
 		}
 		dashboardUnit.QueryId = query.ID
@@ -204,6 +204,10 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 			if err == nil {
 				dashboardUnit.Query = *queryJsonb
 			}
+		} else {
+			errMsg = fmt.Sprintf("Failed to get query with id %d", dashboardUnit.QueryId)
+			logCtx.Error(errMsg)
+			return nil, errCode, errMsg
 		}
 	}
 	dashboardUnit.ProjectID = projectId

@@ -276,6 +276,7 @@ function QueryComposer({
 
   const renderCriteria = () => {
     if(queryType === QUERY_TYPE_EVENT) {
+      return null; // Need to remove this post result page changes.
       if(queries.length <= 0) return null;
 
       return (

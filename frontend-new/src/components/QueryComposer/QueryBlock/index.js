@@ -19,7 +19,7 @@ function QueryBlock({
   activeProject, groupBy, setGroupBy,
   delGroupBy, userProperties, eventProperties
 }) {
-  const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event));
+  const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event && queries.length <= 1));
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
   const [filterProps, setFilterProperties] = useState({
@@ -102,20 +102,6 @@ function QueryBlock({
     if (isFilterDDVisible) {
       return <FilterBlock
       filterProps={filterProps}
-      // Baliga!!
-      //  operatorProps={{
-      //   "categorical": [
-      //     '=',
-      //   ],
-      //   "numerical": [
-      //     '=',
-      //     '<=',
-      //     '>='
-      //   ],
-      //   "datetime": [
-      //     '='
-      //   ]
-      // }}
       activeProject={activeProject}
       event={event}
       insertFilter={insertFilters}
@@ -220,10 +206,10 @@ function QueryBlock({
   }
 
   return (
-        <div className={`${styles.query_block} fa--query_block borderless no-padding mt-4`}>
-            <div className={`${styles.query_block__event} flex justify-start items-center`}>
+        <div className={`${styles.query_block} fa--query_block_section borderless no-padding mt-4`}>
+            <div className={`${styles.query_block__event} block_section flex justify-start items-center`}>
                 <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{queryType === QUERY_TYPE_FUNNEL ? index : alphabetIndex[index - 1]}</Text> </div>
-                {!isDDVisible && <Button size={'large'} type="link" onClick={triggerDropDown}><SVG name="mouseevent" extraClass={'mr-1'}></SVG> {event.label} </Button> }
+                {!isDDVisible && <Button size={'large'} icon={<SVG name="mouseevent" extraClass={'mr-1'}></SVG>} className={`leading-10`} type="link" onClick={triggerDropDown}> {event.label} </Button> }
                 {additionalActions()}
                 {selectEvents()}
             </div>

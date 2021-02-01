@@ -264,6 +264,26 @@ $cq-card-transition: transform .2s ease-in-out;
     
 }
 
+.fa--query_block_section {
+    @extend .fa--query_block;
+
+    .block_section {
+        &:hover{
+            .fa--query_block--actions{
+                display: block;
+            }
+        }
+    }
+
+    &:hover{
+        .fa--query_block--actions{
+            display: none;
+        }
+    }
+
+
+}
+
 .fa-filter-select {
     .ant-input-affix-wrapper {
         border: none;
