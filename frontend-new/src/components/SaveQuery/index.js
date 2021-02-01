@@ -21,12 +21,6 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
-import {
-  getSessionsQuery,
-  getFrequencyQuery,
-  getTotalEventsQuery,
-  getTotalUsersQuery,
-} from "../../Views/CoreQuery/utils";
 
 function SaveQuery({
   requestQuery,
@@ -136,7 +130,6 @@ function SaveQuery({
             };
           }),
         };
-        query.query_group = getTotalEventsQuery(query);
       } else if (queryType === QUERY_TYPE_CAMPAIGN) {
         query = {
           ...requestQuery,

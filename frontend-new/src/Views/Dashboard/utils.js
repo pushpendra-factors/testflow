@@ -1,6 +1,6 @@
 import moment from "moment";
 import {
-  runQuery,
+  getEventsData,
   getFunnelData,
   getAttributionsData,
   getCampaignsData,
@@ -72,9 +72,9 @@ export const getDataFromServer = (
       }
     } else {
       if (refresh) {
-        return runQuery(activeProjectId, queryGroup);
+        return getEventsData(activeProjectId, queryGroup);
       } else {
-        return runQuery(activeProjectId, queryGroup, {
+        return getEventsData(activeProjectId, queryGroup, {
           refresh,
           unit_id: unitId,
           id: dashboardId,

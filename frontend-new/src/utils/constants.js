@@ -45,3 +45,10 @@ export const EVENT_BREADCRUMB = {
 export const valueMapper = {
   $no_group: "Overall",
 };
+
+export const TOTAL_EVENTS_CRITERIA = "total_events";
+export const TOTAL_USERS_CRITERIA = "total_users";
+export const ACTIVE_USERS_CRITERIA = "active_users";
+export const FREQUENCY_CRITERIA = "frequency";
+export const TYPE_EVENTS_OCCURRENCE = "events_occurrence";
+export const TYPE_UNIQUE_USERS = "unique_users";
