@@ -224,14 +224,16 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 				return "", "", errors.New("failed to get event from sync id ")
 			}
 
-			status, _ = SDK.Identify(projectID, &SDK.IdentifyPayload{
-				UserId:         event.UserId,
-				CustomerUserId: customerUserID,
-				Timestamp:      lastModifiedTimestamp,
-			}, false)
+			if customerUserID != "" {
+				status, _ = SDK.Identify(projectID, &SDK.IdentifyPayload{
+					UserId:         event.UserId,
+					CustomerUserId: customerUserID,
+					Timestamp:      lastModifiedTimestamp,
+				}, false)
 
-			if status != http.StatusOK {
-				return "", "", fmt.Errorf("failed indentifying user on update event track")
+				if status != http.StatusOK {
+					return "", "", fmt.Errorf("failed indentifying user on update event track")
+				}
 			}
 
 			userID = event.UserId
