@@ -583,24 +583,23 @@ func GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *ChannelQ
 	var selectMetrics []string
 	var sql string
 	var params []interface{}
-	query, customerAccountID, err := transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
+	transformedQuery, customerAccountID, err := transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
 	if err != nil {
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), err
 	}
-	if hasAllIDsOnlyInGroupBy(query) {
-		sql, params, selectMetrics, err = buildAdwordsSimpleQueryV1(query, projectID, *customerAccountID, reqID, fetchSource)
+	if hasAllIDsOnlyInGroupBy(transformedQuery) {
+		sql, params, selectMetrics, err = buildAdwordsSimpleQueryV1(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), err
 		}
 		return sql, params, selectMetrics, nil
 	}
-	sql, params, selectMetrics = buildAdwordsComplexQueryV1(query, projectID, *customerAccountID, fetchSource)
+	sql, params, selectMetrics = buildAdwordsComplexQueryV1(transformedQuery, projectID, *customerAccountID, fetchSource)
 	return sql, params, selectMetrics, nil
 }
 
 func transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID uint64, query ChannelQueryV1, reqID string) (*ChannelQueryV1, *string, error) {
-	query.From = getAdwordsDateOnlyTimestampInInt64(query.From)
-	query.To = getAdwordsDateOnlyTimestampInInt64(query.To)
+	var transformedQuery ChannelQueryV1
 	logCtx := log.WithField("req_id", reqID)
 	var err error
 	projectSetting, errCode := GetProjectSetting(projectID)
@@ -609,21 +608,25 @@ func transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID uint64, qu
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 
-	query, err = convertFromRequestToAdwordsSpecificRepresentation(query)
+	transformedQuery, err = convertFromRequestToAdwordsSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)
 		return &ChannelQueryV1{}, nil, err
 	}
-	return &query, customerAccountID, nil
+	return &transformedQuery, customerAccountID, nil
 }
 
 // @Kark TODO v1
 // Currently, this relies on assumption of Object across different filterObjects. Change when we need robust.
 func convertFromRequestToAdwordsSpecificRepresentation(query ChannelQueryV1) (ChannelQueryV1, error) {
+	var transformedQuery ChannelQueryV1
+	transformedQuery.From = getAdwordsDateOnlyTimestampInInt64(query.From)
+	transformedQuery.To = getAdwordsDateOnlyTimestampInInt64(query.To)
+
 	var err1, err2, err3 error
-	query.SelectMetrics, err1 = getAdwordsSpecificMetrics(query.SelectMetrics)
-	query.Filters, err2 = getAdwordsSpecificFilters(query.Filters)
-	query.GroupBy, err3 = getAdwordsSpecificGroupBy(query.GroupBy)
+	transformedQuery.SelectMetrics, err1 = getAdwordsSpecificMetrics(query.SelectMetrics)
+	transformedQuery.Filters, err2 = getAdwordsSpecificFilters(query.Filters)
+	transformedQuery.GroupBy, err3 = getAdwordsSpecificGroupBy(query.GroupBy)
 	if err1 != nil {
 		return query, err1
 	}
@@ -633,7 +636,7 @@ func convertFromRequestToAdwordsSpecificRepresentation(query ChannelQueryV1) (Ch
 	if err3 != nil {
 		return query, err3
 	}
-	return query, nil
+	return transformedQuery, nil
 }
 
 // @Kark TODO v1
@@ -651,26 +654,34 @@ func getAdwordsSpecificMetrics(requestSelectMetrics []string) ([]string, error) 
 
 // @Kark TODO v1
 func getAdwordsSpecificFilters(requestFilters []FilterV1) ([]FilterV1, error) {
-	for index, requestFilter := range requestFilters {
+	resultFilters := make([]FilterV1, 0, 0)
+	for _, requestFilter := range requestFilters {
+		var resultFilter FilterV1
 		filterObject, isPresent := adwordsExternalRepresentationToInternalRepresentation[requestFilter.Object]
 		if !isPresent {
 			return make([]FilterV1, 0, 0), errors.New("Invalid filter key found for document type")
 		}
-		(&requestFilters[index]).Object = filterObject
+		resultFilter = requestFilter
+		resultFilter.Object = filterObject
+		resultFilters = append(resultFilters, resultFilter)
 	}
-	return requestFilters, nil
+	return resultFilters, nil
 }
 
 // @Kark TODO v1
 func getAdwordsSpecificGroupBy(requestGroupBys []GroupBy) ([]GroupBy, error) {
-	for index, requestGroupBy := range requestGroupBys {
+	resultGroupBys := make([]GroupBy, 0, 0)
+	for _, requestGroupBy := range requestGroupBys {
+		var resultGroupBy GroupBy
 		groupByObject, isPresent := adwordsExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
 			return make([]GroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
 		}
-		(&requestGroupBys[index]).Object = groupByObject
+		resultGroupBy = requestGroupBy
+		resultGroupBy.Object = groupByObject
+		resultGroupBys = append(resultGroupBys, resultGroupBy)
 	}
-	return requestGroupBys, nil
+	return resultGroupBys, nil
 }
 
 func buildAdwordsSimpleQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, error) {

@@ -349,24 +349,23 @@ func GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64, query *Channel
 	var selectMetrics []string
 	var sql string
 	var params []interface{}
-	query, customerAccountID, err := transFormRequestFieldsAndFetchRequiredFieldsForFacebook(projectID, *query, reqID)
+	transformedQuery, customerAccountID, err := transFormRequestFieldsAndFetchRequiredFieldsForFacebook(projectID, *query, reqID)
 	if err != nil {
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), err
 	}
-	if hasAllIDsOnlyInGroupBy(query) {
-		sql, params, selectMetrics, err := buildFacebookSimpleQueryV1(query, projectID, customerAccountID, reqID, fetchSource)
+	if hasAllIDsOnlyInGroupBy(transformedQuery) {
+		sql, params, selectMetrics, err := buildFacebookSimpleQueryV1(transformedQuery, projectID, customerAccountID, reqID, fetchSource)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), err
 		}
 		return sql, params, selectMetrics, nil
 	}
-	sql, params, selectMetrics = buildFacebookComplexQueryV1(query, projectID, customerAccountID, fetchSource)
+	sql, params, selectMetrics = buildFacebookComplexQueryV1(transformedQuery, projectID, customerAccountID, fetchSource)
 	return sql, params, selectMetrics, nil
 }
 
 func transFormRequestFieldsAndFetchRequiredFieldsForFacebook(projectID uint64, query ChannelQueryV1, reqID string) (*ChannelQueryV1, string, error) {
-	query.From = getAdwordsDateOnlyTimestampInInt64(query.From)
-	query.To = getAdwordsDateOnlyTimestampInInt64(query.To)
+	var transformedQuery ChannelQueryV1
 	var err error
 	logCtx := log.WithField("req_id", reqID)
 	projectSetting, errCode := GetProjectSetting(projectID)
@@ -375,21 +374,25 @@ func transFormRequestFieldsAndFetchRequiredFieldsForFacebook(projectID uint64, q
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
 
-	query, err = convertFromRequestToFacebookSpecificRepresentation(query)
+	transformedQuery, err = convertFromRequestToFacebookSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)
 		return &ChannelQueryV1{}, "", err
 	}
-	return &query, customerAccountID, nil
+	return &transformedQuery, customerAccountID, nil
 }
 
 // @Kark TODO v1
 // Currently, this relies on assumption of Object across different filterObjects. Change when we need robust.
 func convertFromRequestToFacebookSpecificRepresentation(query ChannelQueryV1) (ChannelQueryV1, error) {
+	var transformedQuery ChannelQueryV1
+	transformedQuery.From = getAdwordsDateOnlyTimestampInInt64(query.From)
+	transformedQuery.To = getAdwordsDateOnlyTimestampInInt64(query.To)
+
 	var err1, err2, err3 error
-	query.SelectMetrics, err1 = getFacebookSpecificMetrics(query.SelectMetrics)
-	query.Filters, err2 = getFacebookSpecificFilters(query.Filters)
-	query.GroupBy, err3 = getFacebookSpecificGroupBy(query.GroupBy)
+	transformedQuery.SelectMetrics, err1 = getFacebookSpecificMetrics(query.SelectMetrics)
+	transformedQuery.Filters, err2 = getFacebookSpecificFilters(query.Filters)
+	transformedQuery.GroupBy, err3 = getFacebookSpecificGroupBy(query.GroupBy)
 	if err1 != nil {
 		return query, err1
 	}
@@ -399,7 +402,7 @@ func convertFromRequestToFacebookSpecificRepresentation(query ChannelQueryV1) (C
 	if err3 != nil {
 		return query, err3
 	}
-	return query, nil
+	return transformedQuery, nil
 }
 
 // @Kark TODO v1
@@ -417,26 +420,34 @@ func getFacebookSpecificMetrics(requestSelectMetrics []string) ([]string, error)
 
 // @Kark TODO v1
 func getFacebookSpecificFilters(requestFilters []FilterV1) ([]FilterV1, error) {
-	for index, requestFilter := range requestFilters {
+	resultFilters := make([]FilterV1, 0, 0)
+	for _, requestFilter := range requestFilters {
+		var resultFilter FilterV1
 		filterObject, isPresent := facebookExternalRepresentationToInternalRepresentation[requestFilter.Object]
 		if !isPresent {
 			return make([]FilterV1, 0, 0), errors.New("Invalid filter key found for document type")
 		}
-		(&requestFilters[index]).Object = filterObject
+		resultFilter = requestFilter
+		resultFilter.Object = filterObject
+		resultFilters = append(resultFilters, resultFilter)
 	}
-	return requestFilters, nil
+	return resultFilters, nil
 }
 
 // @Kark TODO v1
 func getFacebookSpecificGroupBy(requestGroupBys []GroupBy) ([]GroupBy, error) {
-	for index, requestGroupBy := range requestGroupBys {
+	resultGroupBys := make([]GroupBy, 0, 0)
+	for _, requestGroupBy := range requestGroupBys {
+		var resultGroupBy GroupBy
 		groupByObject, isPresent := facebookExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
 			return make([]GroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
 		}
-		(&requestGroupBys[index]).Object = groupByObject
+		resultGroupBy = requestGroupBy
+		resultGroupBy.Object = groupByObject
+		resultGroupBys = append(resultGroupBys, resultGroupBy)
 	}
-	return requestGroupBys, nil
+	return resultGroupBys, nil
 }
 
 /*
