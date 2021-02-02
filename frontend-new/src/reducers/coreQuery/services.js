@@ -191,7 +191,7 @@ export const getCampaignsData = (
       "&dashboard_unit_id=" +
       dashboard.unit_id;
   }
-  return post(null, `http://localhost:8000/campaigns-query`, reqBody);
+  return post(null, url, reqBody);
 };
 
 export const getWebAnalyticsData = (
