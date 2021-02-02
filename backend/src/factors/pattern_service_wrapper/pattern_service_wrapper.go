@@ -33,6 +33,7 @@ type PatternServiceWrapperInterface interface {
 		patternConstraints []P.EventConstraints, countType string) (uint, bool)
 	GetPattern(reqId string, eventNames []string) *P.Pattern
 	GetAllPatterns(reqId, startEvent, endEvent string) ([]*P.Pattern, error)
+	GetAllContainingPatterns(reqId, event string) ([]*P.Pattern, error)
 	GetTotalEventCount(reqId string) uint
 }
 
@@ -128,6 +129,16 @@ func (pw *PatternServiceWrapper) GetAllPatterns(reqId,
 	startEvent, endEvent string) ([]*P.Pattern, error) {
 	// Fetch from server.
 	patterns, err := PC.GetAllPatterns(reqId, pw.projectId, pw.modelId, startEvent, endEvent)
+	// Add it to cache.
+	for _, p := range patterns {
+		pw.pMap[P.EventArrayToString(p.EventNames)] = p
+	}
+	return patterns, err
+}
+
+func (pw *PatternServiceWrapper) GetAllContainingPatterns(reqId, event string) ([]*P.Pattern, error) {
+	// Fetch from server.
+	patterns, err := PC.GetAllContainingPatterns(reqId, pw.projectId, pw.modelId, event)
 	// Add it to cache.
 	for _, p := range patterns {
 		pw.pMap[P.EventArrayToString(p.EventNames)] = p

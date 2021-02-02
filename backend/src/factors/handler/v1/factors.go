@@ -135,8 +135,15 @@ func GetFactorsHandler(c *gin.Context) {
 			return
 		}
 	}
-	startEvent := c.Query("start_event")
-	endEvent := c.Query("end_event")
+	event := c.Query("event")
+	basePropertyKey := c.Query("basePropertyKey")
+	basePropertyValue := c.Query("basePropertyValue")
+	basePropertyOperator := false
+	if c.Query("basePropertyOperator") == "=" {
+		basePropertyOperator = true
+	}
+	basePropertyType := c.Query("basePropertyType")
+	distributionProperty := c.Query("distributionProperty")
 
 	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
 	if err != nil {
@@ -147,17 +154,27 @@ func GetFactorsHandler(c *gin.Context) {
 		})
 		return
 	}
-	if patternMode == "AllPatterns" {
-		allEventPatterns := make([]string, 0)
-		allPatterns, _ := ps.GetAllPatterns("", startEvent, endEvent)
-		for _, eventPattern := range allPatterns {
-			pattern := ""
-			for _, eventName := range eventPattern.EventNames {
-				pattern = pattern + "," + eventName
-			}
-			allEventPatterns = append(allEventPatterns, pattern)
+	if patternMode == "EventDistribution" {
+		res, _ := PW.BuildUserDistribution("", event, ps)
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	if patternMode == "EventDistributionWithProperties" {
+		distributionProperties := make(map[string]string)
+		distributionProperties[distributionProperty] = "categorical"
+		baseProperty := P.EventConstraints{}
+		if basePropertyType == "numerical" {
+
 		}
-		c.JSON(http.StatusOK, allEventPatterns)
+		if basePropertyType == "categorical" {
+			baseProperty.UPCategoricalConstraints = append(baseProperty.UPCategoricalConstraints, P.CategoricalConstraint{
+				PropertyName:  basePropertyKey,
+				PropertyValue: basePropertyValue,
+				Operator:      extractOperator(basePropertyOperator),
+			})
+		}
+		res, _ := PW.BuildUserDistributionWithProperties("", event, baseProperty, distributionProperties, ps)
+		c.JSON(http.StatusOK, res)
 		return
 	}
 }
