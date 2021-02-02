@@ -197,7 +197,7 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 		dashboardUnit.QueryId = query.ID
 	} else {
 		// Todo (Anil) for new UI requests, fill up Query using queryId for backward compatibility
-		query, errCode := GetQueryWithQueryId(dashboardUnit.ProjectID, dashboardUnit.QueryId)
+		query, errCode := GetQueryWithQueryId(projectId, dashboardUnit.QueryId)
 		// skip if error exists
 		if errCode == http.StatusFound {
 			queryJsonb, err := U.EncodeStructTypeToPostgresJsonb((*query).Query)
