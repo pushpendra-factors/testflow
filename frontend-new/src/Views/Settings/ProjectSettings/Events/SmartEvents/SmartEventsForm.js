@@ -19,6 +19,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
     const [dataObjectProperty, setDataObjectProperty] = useState('');
     const [timestampReferenceOthers, setTimestampReferenceOthers] = useState(false);
     const [objPropertiesSourceArr, setobjPropertiesSourceArr] = useState(null);
+    const [objPropertiesSourceArrDT, setobjPropertiesSourceArrDT] = useState(null);
     
     const [form] = Form.useForm();
      
@@ -124,6 +125,27 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
         setLoading(false);  
         });
       },[dataObjectSource,dataObject ])
+
+      useEffect(()=>{
+          let objPropArr = []; 
+          let objPropArrDateTime = []; 
+          objPropertiesSource && Object.keys(objPropertiesSource)?.map((key) =>   {
+              if(!_.isEmpty(objPropertiesSource[key])){ 
+                    objPropertiesSource[key]?.sort().map((item)=>{
+                      objPropArr = [...objPropArr, item];
+                    })
+                    if(key=='datetime'){
+                        objPropertiesSource[key]?.sort().map((item)=>{
+                            objPropArrDateTime = [...objPropArrDateTime, item];
+                        }) 
+                    }
+                } 
+            });
+            setobjPropertiesSourceArr(objPropArr);
+            setobjPropertiesSourceArrDT(objPropArrDateTime);
+                                            
+
+      },[objPropertiesSource]) 
 
   return (
     <>
@@ -257,30 +279,25 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
                                     className={'m-0'}
                                     rules={[{ required: true, message: 'Please select an object property.' }]}
                                     >
-                                    <Select value={dataObjectProperty} onChange={(value)=>{onSelectObjectProperty(value)}} className={'fa-select w-full'} placeholder={'Select object property'} size={'large'}>
-                                        {/* {events[0]?.values.map((item)=>{ 
-                                            if(dataObjectSource == 'salesforce'){
-                                                if(item[0].includes(`$sf_${dataObject}`)) {
-                                                    return <Option  key={item} value={item}>{item}</Option>  
-                                                } 
-                                            }
-                                            if(dataObjectSource == 'hubspot'){
-                                                if(item[0].includes(`$hubspot_${dataObject}`)) {
-                                                    return <Option  key={item} value={item}>{item}</Option>  
-                                                } 
-                                            }
-                                        })}   */}
+                                    <Select 
+                                    value={dataObjectProperty} 
+                                    onChange={(value)=>{onSelectObjectProperty(value)}}
+                                     className={'fa-select w-full'} 
+                                     placeholder={'Select object property'} 
+                                     size={'large'}
+                                     showSearch
+                                     optionFilterProp="children"
+                                     filterOption={(input, option) =>
+                                        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                     }
+                                     filterSort={(optionA, optionB) =>
+                                        optionA.children.toLowerCase().localeCompare(optionB.children.toLowerCase())
+                                     }
+                                    >
 
-{
-                                            Object.keys(objPropertiesSource)?.map((key) =>   {
-                                                if(!_.isEmpty(objPropertiesSource[key])){
-                                                    return <OptGroup label={key}>
-                                                        {objPropertiesSource[key]?.sort().map((item,index)=>{
-                                                        return <Option value={item}>{item}</Option>
-                                                        })} 
-                                                        </OptGroup> 
-                                                } 
-                                            })}
+                                        {objPropertiesSourceArr?.sort().map((item)=>{
+                                            return <Option value={item}>{item}</Option> 
+                                        })}
 
                                     </Select>
                                     </Form.Item>
@@ -313,20 +330,20 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
                                     className={'m-0'} 
                                     rules={[{ required: true, message: 'Please select a date type property.' }]}
                                     >
-                                    <Select className={'fa-select w-full mt-2'} placeholder={'List all the date type proprties  '} size={'large'}>
-                                        {
-                                            Object.keys(objPropertiesSource)?.map((key) =>   {
-                                                if(key === 'datetime'){
-                                                    if(!_.isEmpty(objPropertiesSource[key])){
-                                                        return <OptGroup label={key}>
-                                                            {objPropertiesSource[key]?.sort().map((item,index)=>{
-                                                            return <Option value={item}>{item}</Option>
-                                                            })} 
-                                                        </OptGroup>  
-                                                    }
-                                                }
-                                            
-                                            })}
+                                    <Select className={'fa-select w-full mt-2'} placeholder={'List all the date type proprties  '} size={'large'}
+                                        showSearch
+                                        optionFilterProp="children"
+                                        filterOption={(input, option) =>
+                                           option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                        }
+                                        filterSort={(optionA, optionB) =>
+                                           optionA.children.toLowerCase().localeCompare(optionB.children.toLowerCase())
+                                        }
+                                    >
+
+                                        {objPropertiesSourceArrDT?.sort().map((item)=>{
+                                            return <Option value={item}>{item}</Option> 
+                                        })}
 
                                     </Select>
                                     </Form.Item>

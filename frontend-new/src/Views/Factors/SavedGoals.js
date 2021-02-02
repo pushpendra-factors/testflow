@@ -1,35 +1,85 @@
 import React, {useEffect, useState} from 'react';
 import { Text, SVG } from 'factorsComponents'; 
-import { Table, Avatar } from 'antd';
+import {  Button, Table, Avatar, Menu, Dropdown, Modal, message } from 'antd';
 import { useHistory } from 'react-router-dom'; 
-import {  fetchGoalInsights, saveGoalInsightRules } from 'Reducers/factors';
+import {  fetchGoalInsights, saveGoalInsightRules, removeSavedGoal, fetchFactorsGoals } from 'Reducers/factors';
 import { connect } from 'react-redux';
+import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 
-const columns = [
-    {
-      title: 'Saved Goals',
-      dataIndex: 'title',
-      key: 'title',
-      render: (text) => <Text type={'title'} level={6} extraClass={'cursor-pointer m-0'} >{text}</Text>
-    },
-    {
-      title: 'Created By',
-      dataIndex: 'author',
-      key: 'author',
-      render: (text) => <div className="flex items-center">
-        {text === "System Generated" ? <Text type={'title'} level={7} color={'grey'} extraClass={'cursor-pointer m-0'} >{`System Generated`}</Text> : <>
-          <Avatar src="assets/avatar/avatar.png" className={'mr-2'} /><Text type={'title'} level={6} extraClass={'cursor-pointer m-0 ml-2'} >{text}</Text>
-          </>
-        }
-          </div>
-    }
-  ];
+const { confirm } = Modal;
 
-const SavedGoals = ({goals, fetchGoalInsights,  factors_models, agents, saveGoalInsightRules, SetfetchingIngishts}) => {
+
+
+
+const SavedGoals = ({goals, fetchGoalInsights,  factors_models, agents, saveGoalInsightRules, SetfetchingIngishts, removeSavedGoal, fetchFactorsGoals}) => {
 
     const [loadingTable, SetLoadingTable] = useState(true);
     const [dataSource, setdataSource] = useState(null);
     const history = useHistory();
+
+    const menu = (values) => {
+      return (
+      <Menu>
+        <Menu.Item key="0" onClick={() => confirmRemove(values)}>
+          <a>Remove</a>
+        </Menu.Item> 
+      </Menu>
+      );
+    };
+
+    const columns = [
+      {
+        title: 'Saved Goals',
+        dataIndex: 'actions',
+        key: 'actions',
+        render: (goal) => <Text type={'title'} level={6} extraClass={'cursor-pointer m-0'} onClick={()=>getInsights(goal.project_id,goal.rule, goal.name)} >{goal.name}</Text>
+      },
+      {
+        title: 'Created By',
+        dataIndex: 'author',
+        key: 'author',
+        render: (text) => <div className="flex items-center">
+          {text === "System Generated" ? <Text type={'title'} level={7} color={'grey'} extraClass={'cursor-pointer m-0'} >{`System Generated`}</Text> : <>
+            <Avatar src="assets/avatar/avatar.png" className={'mr-2'} /><Text type={'title'} level={6} extraClass={'cursor-pointer m-0 ml-2'} >{text}</Text>
+            </>
+          }
+            </div>
+      },
+      {
+        title: '',
+        dataIndex: 'actions',
+        key: 'actions',
+        render: (values) => (
+          <Dropdown overlay={() => menu(values)} trigger={['hover']}>
+            <Button size={'large'} type="text" icon={<MoreOutlined />} />
+          </Dropdown>
+        )
+      }
+    ];
+
+
+    const confirmRemove = (goalValues) => { 
+      const goalId = {
+        id: goalValues.id
+      } 
+      confirm({
+        title: 'Are you sure you want to remove this Goal?',
+        icon: <ExclamationCircleOutlined />,
+        content: 'Please confirm to proceed',
+        okText: 'Yes',
+        onOk() { 
+          removeSavedGoal(goalValues.project_id, goalId).then(() => {
+            message.success('User removed!');
+            fetchFactorsGoals(goalValues.project_id);
+          }).catch((err) => {
+            message.error(err);
+          });
+        }
+      });
+
+    };
+
+
 
     useEffect(() => {
         SetLoadingTable(true);
@@ -38,18 +88,20 @@ const SavedGoals = ({goals, fetchGoalInsights,  factors_models, agents, saveGoal
           const formattedArray = [];
           goals.map((goal, index) => {
             let createdUser = '';
-            agents.map((agent) => {
-              if (agent.uuid === goal.created_by) {
-                createdUser = `${agent.first_name} ${agent.last_name}`;
-              }
-            });
-            formattedArray.push({
-              key: index,
-              title: goal.name,
-              author: createdUser ? createdUser : 'System Generated',
-              rule: goal.rule,
-              project_id: goal.project_id
-            });
+            if(goal.is_active){ 
+              agents.map((agent) => {
+                if (agent.uuid === goal.created_by) {
+                  createdUser = `${agent.first_name} ${agent.last_name}`;
+                }
+              });
+              formattedArray.push({
+                  key: index, 
+                  author: createdUser ? createdUser : 'System Generated',
+                  rule: goal.rule,
+                  project_id: goal.project_id,
+                  actions: goal
+              }); 
+            }
             setdataSource(formattedArray);
           });
           SetLoadingTable(false);
@@ -77,15 +129,9 @@ const SavedGoals = ({goals, fetchGoalInsights,  factors_models, agents, saveGoal
 
   return (
             <Table loading={loadingTable} className="ant-table--custom mt-8" columns={columns} dataSource={dataSource} pagination={false} 
-            onRow={(record, rowIndex) => {
-            return {
-                onClick: event => {
-                getInsights(record.project_id,record.rule, record.title) 
-                }, // click row 
-            };
-        }}
+ 
         />
-  );
+  ); 
 };
 
 
@@ -93,9 +139,9 @@ const mapStateToProps = (state) => {
     return { 
       goals: state.factors.goals,
       agents: state.agent.agents,
-      factors_models: state.factors.factors_models,
+      factors_models: state.factors.factors_models, 
     };
   };
 
 
-export default connect(mapStateToProps, {fetchGoalInsights,  saveGoalInsightRules})(SavedGoals);
+export default connect(mapStateToProps, {fetchGoalInsights,  saveGoalInsightRules, removeSavedGoal, fetchFactorsGoals})(SavedGoals);

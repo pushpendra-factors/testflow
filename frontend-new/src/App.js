@@ -14,6 +14,7 @@ import {
   Redirect,
 } from "react-router-dom";
 import PageSuspenseLoader from "./components/SuspenseLoaders/PageSuspenseLoader";
+import * as Sentry from "@sentry/react"; 
 
 const AppLayout = lazy(() => import("./Views/AppLayout"));
 const Login = lazy(() => import("./Views/Pages/Login"));
@@ -25,6 +26,16 @@ const FactorsInsights = lazy(() => import("./Views/Factors/FactorsInsights"));
 
 function App({ isAgentLoggedIn, agent_details }) {
   useEffect(() => { 
+
+ 
+
+    Sentry.setUser({  
+      username: agent_details?.first_name,
+      email: agent_details?.email,
+      id: agent_details?.uuid,
+    });
+
+
 
     if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
       // DEV env
