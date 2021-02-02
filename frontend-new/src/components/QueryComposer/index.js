@@ -12,9 +12,9 @@ import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from "../../utils/constants";
 
 import FaDatepicker from "../../components/FaDatepicker";
 
-import ComposerBlock from '../QueryCommons/ComposerBlock';
+import ComposerBlock from "../QueryCommons/ComposerBlock";
 
-import CriteriaSection from './CriteriaSection';
+import CriteriaSection from "./CriteriaSection";
 
 import { DEFAULT_DATE_RANGE, displayRange } from "./DateRangeSelector/utils";
 
@@ -108,12 +108,11 @@ function QueryComposer({
     }
 
     return (
-      <ComposerBlock blockTitle={'Group By'} isOpen={true} showIcon={false}>
+      <ComposerBlock blockTitle={"Group By"} isOpen={true} showIcon={false}>
         <div key={0} className={"fa--query_block borderless no-padding "}>
           <GroupBlock queryType={queryType} events={queries}></GroupBlock>
         </div>
       </ComposerBlock>
-
     );
   };
 
@@ -177,9 +176,9 @@ function QueryComposer({
 
   const handleRunQuery = useCallback(() => {
     if (queryType === QUERY_TYPE_EVENT) {
-      runQuery(true, false, null);
+      runQuery(false);
     } else {
-      runFunnelQuery();
+      runFunnelQuery(false);
     }
   }, [runFunnelQuery, runQuery, queryType]);
 
@@ -218,14 +217,12 @@ function QueryComposer({
         <CriteriaSection queryType={QUERY_TYPE_EVENT}></CriteriaSection>
       </div>
     );
-  }
+  };
 
   const renderFuCrit = () => {
     return (
       <div className={"flex justify-start items-center mt-2"}>
-        <div
-          className={styles.composer_body__session_analytics__options}
-        >
+        <div className={styles.composer_body__session_analytics__options}>
           <Text
             type={"paragraph"}
             mini
@@ -233,7 +230,7 @@ function QueryComposer({
             extraClass={"m-0 ml-2 inline"}
           >
             Where sequence
-                    </Text>
+          </Text>
           <Popover
             className="fa-event-popover"
             content={
@@ -245,20 +242,13 @@ function QueryComposer({
             }
             trigger="click"
             visible={analyticsSeqOpen}
-            onVisibleChange={(visible) =>
-              setAnalyticsSeqVisible(visible)
-            }
+            onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
           >
-            <Button
-              Button
-              type="link"
-              className={"ml-2"}
-              size={"small"}
-            >
+            <Button Button type="link" className={"ml-2"} size={"small"}>
               Between &nbsp;
-                        {queryOptions.session_analytics_seq.start}
-                        &nbsp; to &nbsp;
-                        {queryOptions.session_analytics_seq.end}
+              {queryOptions.session_analytics_seq.start}
+              &nbsp; to &nbsp;
+              {queryOptions.session_analytics_seq.end}
             </Button>
           </Popover>
           <Text
@@ -268,50 +258,51 @@ function QueryComposer({
             extraClass={"m-0 ml-2 inline"}
           >
             happened in the same session
-                    </Text>
+          </Text>
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   const renderCriteria = () => {
-    if(queryType === QUERY_TYPE_EVENT) {
-      return null; // Need to remove this post result page changes.
-      if(queries.length <= 0) return null;
+    if (queryType === QUERY_TYPE_EVENT) {
+      if (queries.length <= 0) return null;
 
       return (
-        <ComposerBlock blockTitle={'Criteria'}
-          isOpen={criteriaTabOpen} 
+        <ComposerBlock
+          blockTitle={"Criteria"}
+          isOpen={criteriaTabOpen}
           onClick={() => {
-            setCriteriaTabOpen(!criteriaTabOpen)}}>
-            <div className={styles.criteria}>
-              {renderEACrit()}
-            </div>
-        </ComposerBlock>
-      );
-    } 
-    if(queryType === QUERY_TYPE_FUNNEL) {
-      if(queries.length <= 1) return null;
-      return (
-        <ComposerBlock blockTitle={'Criteria'}
-          isOpen={criteriaTabOpen} 
-          onClick={() => {
-            setCriteriaTabOpen(!criteriaTabOpen)}}>
-              {renderFuCrit()}
-            
+            setCriteriaTabOpen(!criteriaTabOpen);
+          }}
+        >
+          <div className={styles.criteria}>{renderEACrit()}</div>
         </ComposerBlock>
       );
     }
-    
-  }
+    if (queryType === QUERY_TYPE_FUNNEL) {
+      if (queries.length <= 1) return null;
+      return (
+        <ComposerBlock
+          blockTitle={"Criteria"}
+          isOpen={criteriaTabOpen}
+          onClick={() => {
+            setCriteriaTabOpen(!criteriaTabOpen);
+          }}
+        >
+          {renderFuCrit()}
+        </ComposerBlock>
+      );
+    }
+  };
 
   const renderQueryList = () => {
     return (
-      <ComposerBlock blockTitle={'Events'} isOpen={true} showIcon={false}>
+      <ComposerBlock blockTitle={"Events"} isOpen={true} showIcon={false}>
         {queryList()}
       </ComposerBlock>
-    )
-  }
+    );
+  };
 
   return (
     <div className={styles.composer_body}>

@@ -8,7 +8,7 @@ function CalendarRow({
   handleChartTypeChange,
   chartTypeMenuItems,
   chartType,
-  metricsDropdown
+  metricsDropdown,
 }) {
   const setDateRange = useCallback(
     (range) => {

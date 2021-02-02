@@ -26,7 +26,6 @@ function SaveQuery({
   requestQuery,
   visible,
   setVisible,
-  breakdownType,
   queryType,
 }) {
   const [title, setTitle] = useState("");
@@ -149,12 +148,6 @@ function SaveQuery({
         const settings = {
           chart: dashboardPresentation,
         };
-        // if (activeKey) {
-        //   settings.activeKey = activeKey;
-        // }
-        if (breakdownType !== "each") {
-          settings.breakdownType = breakdownType;
-        }
         const reqBody = {
           settings,
           description: "",
@@ -182,7 +175,6 @@ function SaveQuery({
       });
     }
   }, [
-    breakdownType,
     title,
     active_project.id,
     requestQuery,

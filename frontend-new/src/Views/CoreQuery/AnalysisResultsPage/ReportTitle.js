@@ -7,7 +7,7 @@ function ReportTitle({ title, setDrawerVisible, queryDetail }) {
   return (
     <div style={{ borderBottom: "1px solid #E7E9ED" }} className="pb-4">
       <div
-        style={{ fontSize: "32px", letterSpacing: "-0.02em", color: "#8692A3" }}
+        style={{ fontSize: "32px", letterSpacing: "-0.02em", color: title ? "#3E516C" : "#8692A3" }}
         className="leading-9 font-semibold"
       >
         {title || `Untitled Analysis ${moment().format("DD/MM/YYYY")}`}

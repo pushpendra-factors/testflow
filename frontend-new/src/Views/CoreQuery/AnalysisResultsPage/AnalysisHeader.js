@@ -6,7 +6,12 @@ import moment from "moment";
 import { EVENT_BREADCRUMB } from "../../../utils/constants";
 import SaveQuery from "../../../components/SaveQuery";
 
-function AnalysisHeader({ queryType, onBreadCrumbClick, requestQuery, breakdownType }) {
+function AnalysisHeader({
+  queryType,
+  onBreadCrumbClick,
+  requestQuery,
+  queryTitle,
+}) {
   const [showSaveModal, setShowSaveModal] = useState(false);
 
   const addShadowToHeader = useCallback(() => {
@@ -53,8 +58,10 @@ function AnalysisHeader({ queryType, onBreadCrumbClick, requestQuery, breakdownT
           </Button>
         </Tooltip>
         <div className={styles.breadcrumb}>
-          Reports / {EVENT_BREADCRUMB[queryType]} / Untitled Analyis{" "}
-          {moment().format("DD/MM/YYYY")}
+          {queryTitle
+            ? `Reports / ${EVENT_BREADCRUMB[queryType]} / ${queryTitle}`
+            : `Reports / ${EVENT_BREADCRUMB[queryType]} / Untitled Analyis${" "}
+          ${moment().format("DD/MM/YYYY")}`}
         </div>
       </div>
       <div className="flex items-center">
@@ -88,7 +95,6 @@ function AnalysisHeader({ queryType, onBreadCrumbClick, requestQuery, breakdownT
           requestQuery={requestQuery}
           visible={showSaveModal}
           setVisible={setShowSaveModal}
-          breakdownType={breakdownType}
           queryType={queryType}
         />
 

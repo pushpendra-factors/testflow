@@ -130,6 +130,7 @@ export const deleteQuery = async (dispatch, query) => {
     dispatch({ type: QUERY_DELETED, payload: query.id });
   } catch (err) {
     console.log(err);
+    dispatch({ type: QUERY_DELETED, payload: query.id });
   }
 };
 
@@ -190,7 +191,7 @@ export const getCampaignsData = (
       "&dashboard_unit_id=" +
       dashboard.unit_id;
   }
-  return post(null, url, reqBody);
+  return post(null, `http://localhost:8000/campaigns-query`, reqBody);
 };
 
 export const getWebAnalyticsData = (

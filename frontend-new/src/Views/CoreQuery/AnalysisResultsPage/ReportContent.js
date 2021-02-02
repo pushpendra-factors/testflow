@@ -8,6 +8,7 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_BARCHART,
   CHART_TYPE_SPARKLINES,
+  EACH_USER_TYPE,
 } from "../../../utils/constants";
 import { Spin } from "antd";
 import FunnelsResultPage from "../FunnelsResultPage";
@@ -30,7 +31,9 @@ function ReportContent({
   campaignState,
   arrayMapper,
   attributionsState,
-  isWidgetModal
+  isWidgetModal,
+  breakdownType,
+  queryTitle
 }) {
   let content = null,
     queryDetail = null,
@@ -53,7 +56,7 @@ function ReportContent({
         campaignState.group_by.length > 0
       );
     }
-    if(queryType === QUERY_TYPE_EVENT) {
+    if(queryType === QUERY_TYPE_EVENT && breakdownType === EACH_USER_TYPE) {
       items = getChartTypeMenuItems(
         queryType,
         breakdown.length > 0
@@ -180,6 +183,7 @@ function ReportContent({
           queries={queries}
           page="totalEvents"
           durationObj={durationObj}
+          breakdownType={breakdownType}
         />
       );
     }
@@ -189,7 +193,7 @@ function ReportContent({
     <>
       <ReportTitle
         setDrawerVisible={setDrawerVisible}
-        title={""}
+        title={queryTitle}
         queryDetail={queryDetail}
       />
       <div className="mt-6">

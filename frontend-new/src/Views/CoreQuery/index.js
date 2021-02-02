@@ -2,14 +2,12 @@ import React, { useState, useCallback, useEffect } from "react";
 import moment from "moment";
 import { bindActionCreators } from "redux";
 import { connect, useSelector, useDispatch } from "react-redux";
-import FunnelsResultPage from "./FunnelsResultPage";
 import QueryComposer from "../../components/QueryComposer";
 import AttrQueryComposer from "../../components/AttrQueryComposer";
 import CampQueryComposer from "../../components/CampQueryComposer";
 import CoreQueryHome from "../CoreQueryHome";
 import { Drawer, Button } from "antd";
 import { SVG, Text } from "../../components/factorsComponents";
-import EventsAnalytics from "./EventsAnalytics";
 import {
   deleteGroupByForEvent,
   getCampaignConfigData,
@@ -17,7 +15,6 @@ import {
 import {
   calculateFrequencyData,
   calculateActiveUsersData,
-  hasApiFailed,
   formatApiData,
   getQuery,
   initialState,
@@ -41,6 +38,7 @@ import {
   TOTAL_USERS_CRITERIA,
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
+  EACH_USER_TYPE,
 } from "../../utils/constants";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 import AnalysisResultsPage from "./AnalysisResultsPage";
@@ -65,12 +63,6 @@ function CoreQuery({
   const [requestQuery, updateRequestQuery] = useState(null);
   const [rowClicked, setRowClicked] = useState(false);
   const [querySaved, setQuerySaved] = useState(false);
-  const [breakdownTypeData, setBreakdownTypeData] = useState({
-    loading: false,
-    error: false,
-    all: null,
-    any: null,
-  });
   const [breakdownType, setBreakdownType] = useState("each");
   const [queries, setQueries] = useState([]);
   const [queryOptions, setQueryOptions] = useState({
@@ -145,54 +137,6 @@ function CoreQuery({
     setAppliedBreakdown(newAppliedBreakdown);
   }, [groupBy]);
 
-  // const callRunQueryApiService = useCallback(
-  //   async (activeProjectId, activeTab, appliedDateRange) => {
-  //     try {
-  //       const query = getQuery(
-  //         activeTab,
-  //         groupBy,
-  //         queries,
-  //         "each",
-  //         appliedDateRange
-  //       );
-  //       if (activeTab !== "2") {
-  //         updateRequestQuery(query);
-  //       }
-
-  //       const res = await runQueryService(activeProjectId, query);
-  //       if (res.status === 200 && !hasApiFailed(res)) {
-  //         if (activeTab !== "2") {
-  //           updateResultState(activeTab, {
-  //             loading: false,
-  //             error: false,
-  //             data: formatApiData(
-  //               res.data.result_group[0],
-  //               res.data.result_group[1]
-  //             ),
-  //           });
-  //         }
-  //         return res.data;
-  //       } else {
-  //         updateResultState(activeTab, {
-  //           loading: false,
-  //           error: true,
-  //           data: null,
-  //         });
-  //         return null;
-  //       }
-  //     } catch (err) {
-  //       console.log(err);
-  //       updateResultState(activeTab, {
-  //         loading: false,
-  //         error: true,
-  //         data: null,
-  //       });
-  //       return null;
-  //     }
-  //   },
-  //   [updateResultState, groupBy, queries]
-  // );
-
   const runQuery = useCallback(
     async (isQuerySaved, durationObj) => {
       try {
@@ -205,6 +149,7 @@ function CoreQuery({
         setQuerySaved(isQuerySaved);
         setAppliedQueries(queries.map((elem) => elem.label));
         updateAppliedBreakdown();
+        setBreakdownType(user_type);
         updateResultState({ ...initialState, loading: true });
         const query = getQuery(
           groupBy,
@@ -215,10 +160,7 @@ function CoreQuery({
         );
         updateRequestQuery(query);
         const res = await getEventsData(activeProject.id, query);
-        if (
-          result_criteria === TOTAL_EVENTS_CRITERIA ||
-          result_criteria === TOTAL_USERS_CRITERIA
-        ) {
+        if (result_criteria === TOTAL_EVENTS_CRITERIA) {
           updateResultState({
             ...initialState,
             data: formatApiData(
@@ -226,6 +168,21 @@ function CoreQuery({
               res.data.result_group[1]
             ),
           });
+        } else if (result_criteria === TOTAL_USERS_CRITERIA) {
+          if (user_type === EACH_USER_TYPE) {
+            updateResultState({
+              ...initialState,
+              data: formatApiData(
+                res.data.result_group[0],
+                res.data.result_group[1]
+              ),
+            });
+          } else {
+            updateResultState({
+              ...initialState,
+              data: res.data.result_group[0],
+            });
+          }
         } else if (result_criteria === ACTIVE_USERS_CRITERIA) {
           const userData = formatApiData(
             res.data.result_group[0],
@@ -247,11 +204,10 @@ function CoreQuery({
             res.data.result_group[2],
             res.data.result_group[3]
           );
-          const frequencyData = calculateFrequencyData(
-            eventData,
-            userData,
-            [...groupBy.global, ...groupBy.event]
-          );
+          const frequencyData = calculateFrequencyData(eventData, userData, [
+            ...groupBy.global,
+            ...groupBy.event,
+          ]);
           updateResultState({ ...initialState, data: frequencyData });
         }
       } catch (err) {
@@ -271,48 +227,6 @@ function CoreQuery({
       updateResultState,
     ]
   );
-
-  // const handleBreakdownTypeChange = useCallback(
-  //   async (e) => {
-  //     const key = e.target.value;
-  //     setBreakdownType(key);
-  //     if (key === "each") {
-  //       return false;
-  //     }
-  //     if (breakdownTypeData[key]) {
-  //       return false;
-  //     } else {
-  //       try {
-  //         setBreakdownTypeData((currState) => {
-  //           return { ...currState, loading: true };
-  //         });
-  //         const query = getQuery("1", groupBy, queries, key, dateRange);
-  //         // updateRequestQuery(query);
-  //         const res = await runQueryService(activeProject.id, query);
-  //         if (res.status === 200 && !hasApiFailed(res)) {
-  //           setBreakdownTypeData((currState) => {
-  //             return {
-  //               ...currState,
-  //               loading: false,
-  //               error: false,
-  //               [key]: res.data.result_group[0],
-  //             };
-  //           });
-  //         } else {
-  //           setBreakdownTypeData((currState) => {
-  //             return { ...currState, loading: false, error: true };
-  //           });
-  //         }
-  //       } catch (err) {
-  //         console.log(err);
-  //         setBreakdownTypeData((currState) => {
-  //           return { ...currState, loading: false, error: true };
-  //         });
-  //       }
-  //     }
-  //   },
-  //   [activeProject.id, queries, groupBy, breakdownTypeData, dateRange]
-  // );
 
   const runFunnelQuery = useCallback(
     async (isQuerySaved, durationObj) => {
@@ -533,11 +447,7 @@ function CoreQuery({
       } else if (rowClicked.queryType === QUERY_TYPE_CAMPAIGN) {
         runCampaignsQuery(rowClicked.queryName);
       } else {
-        if (rowClicked.settings) {
-          runQuery(rowClicked.queryName, null);
-        } else {
-          runQuery(rowClicked.queryName);
-        }
+        runQuery(rowClicked.queryName);
       }
       setRowClicked(false);
     }
@@ -652,31 +562,6 @@ function CoreQuery({
     });
   });
 
-  // let result = (
-  //   <EventsAnalytics
-  //     queries={appliedQueries}
-  //     eventsMapper={eventsMapper}
-  //     reverseEventsMapper={reverseEventsMapper}
-  //     breakdown={appliedBreakdown}
-  //     resultState={resultState}
-  //     setDrawerVisible={setDrawerVisible}
-  //     runQuery={runQuery}
-  //     activeKey={activeKey}
-  //     breakdownType={breakdownType}
-  //     handleBreakdownTypeChange={handleBreakdownTypeChange}
-  //     breakdownTypeData={breakdownTypeData}
-  //     queryType={queryType}
-  //     requestQuery={requestQuery}
-  //     setShowResult={setShowResult}
-  //     querySaved={querySaved}
-  //     setQuerySaved={setQuerySaved}
-  //     durationObj={queryOptions.date_range}
-  //     handleDurationChange={handleDurationChange}
-  //     arrayMapper={arrayMapper}
-  //     setActiveKey={setActiveKey}
-  //   />
-  // );
-
   const renderQueryComposer = () => {
     if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
       return (
@@ -749,6 +634,7 @@ function CoreQuery({
           setRowClicked={setRowClicked}
           location={location}
           setActiveKey={setActiveKey}
+          setBreakdownType={setBreakdownType}
         />
       )}
     </>

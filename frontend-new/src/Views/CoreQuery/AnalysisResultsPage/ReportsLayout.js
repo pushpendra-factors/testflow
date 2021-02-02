@@ -2,17 +2,23 @@ import React from "react";
 import AnalysisHeader from "./AnalysisHeader";
 import ReportContent from "./ReportContent";
 
-function ReportsLayout({ queryType, setShowResult, requestQuery, breakdownType, ...rest }) {
+function ReportsLayout({
+  queryType,
+  setShowResult,
+  requestQuery,
+  querySaved,
+  ...rest
+}) {
   return (
     <>
       <AnalysisHeader
         requestQuery={requestQuery}
         onBreadCrumbClick={setShowResult.bind(this, false)}
         queryType={queryType}
-        breakdownType={breakdownType}
+        queryTitle={querySaved}
       />
       <div className="mt-24 px-20">
-        <ReportContent queryType={queryType} {...rest} />
+        <ReportContent queryTitle={querySaved} queryType={queryType} {...rest} />
       </div>
     </>
   );

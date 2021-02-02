@@ -52,3 +52,19 @@ export const ACTIVE_USERS_CRITERIA = "active_users";
 export const FREQUENCY_CRITERIA = "frequency";
 export const TYPE_EVENTS_OCCURRENCE = "events_occurrence";
 export const TYPE_UNIQUE_USERS = "unique_users";
+
+export const EACH_USER_TYPE = "each";
+export const ANY_USER_TYPE = "any";
+export const ALL_USER_TYPE = "all";
+
+export const constantObj = {
+  [EACH_USER_TYPE]: "each_given_event",
+  [ANY_USER_TYPE]: "any_given_event",
+  [ALL_USER_TYPE]: "all_given_event",
+};
+
+export const reverse_user_types = {
+  each_given_event: EACH_USER_TYPE,
+  any_given_event: ANY_USER_TYPE,
+  all_given_event: ALL_USER_TYPE
+}

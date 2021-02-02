@@ -9,6 +9,10 @@ import {
   TYPE_UNIQUE_USERS,
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
+  constantObj,
+  ANY_USER_TYPE,
+  ALL_USER_TYPE,
+  EACH_USER_TYPE,
 } from "../../utils/constants";
 
 export const labelsObj = {
@@ -23,12 +27,6 @@ export const presentationObj = {
   pl: "linechart",
   pt: "table",
   pc: "sparklines",
-};
-
-const constantObj = {
-  each: "each_given_event",
-  any: "any_given_event",
-  all: "all_given_event",
 };
 
 export const initialState = { loading: false, error: false, data: null };
@@ -180,7 +178,7 @@ export const getQuery = (
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
-  query.gbt = dateRange.frequency;
+  query.gbt = user_type === EACH_USER_TYPE ? dateRange.frequency : "";
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
 
@@ -210,7 +208,7 @@ export const getQuery = (
     }
     return gbpReq;
   });
-  query.ec = constantObj.each;
+  query.ec = constantObj[user_type];
   query.tz = "Asia/Kolkata";
   const sessionsQuery = {
     cl: QUERY_TYPE_EVENT,
@@ -236,6 +234,9 @@ export const getQuery = (
       { ...query, ty: TYPE_UNIQUE_USERS },
       { ...query, ty: TYPE_UNIQUE_USERS, gbt: "" },
     ];
+  }
+  if (user_type === ANY_USER_TYPE || user_type === ALL_USER_TYPE) {
+    return [query];
   }
   return [query, { ...query, gbt: "" }];
 };
