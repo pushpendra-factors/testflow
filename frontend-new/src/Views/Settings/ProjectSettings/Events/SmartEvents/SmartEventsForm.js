@@ -171,7 +171,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
                                 <Col span={12}>
                                     <div className={'flex justify-end'}>
                                     <Button size={'large'} disabled={loading} onClick={() => setShowSmartEventForm(false)}>Cancel</Button>
-                                    <Button size={'large'} loading={loading} className={'ml-2'} type={'primary'}  htmlType="submit">Save</Button>
+                                    <Button size={'large'} disabled={loading}  className={'ml-2'} type={'primary'}  htmlType="submit">Save</Button>
                                     </div>
                                 </Col>
                             </Row> 
