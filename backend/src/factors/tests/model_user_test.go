@@ -701,3 +701,24 @@ func TestGetUserPropertiesAsMap(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, userProperties, decodedUserProperties)
 }
+
+func TestUserIdentityPropertiesOnCreateUser(t *testing.T) {
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+
+	cuid := "abcd@xyz.com"
+	user, status := M.CreateUser(&M.User{
+		ProjectId:      project.ID,
+		CustomerUserId: cuid,
+		Properties:     postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"city":"city1"}`))},
+	})
+	assert.Equal(t, http.StatusCreated, status)
+	properties, status := M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, cuid, (*properties)[U.UP_EMAIL])
+	assert.Equal(t, cuid, (*properties)[U.UP_USER_ID])
+	assert.Equal(t, "city1", (*properties)["city"])
+
+}
