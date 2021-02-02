@@ -620,9 +620,6 @@ func transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID uint64, qu
 // Currently, this relies on assumption of Object across different filterObjects. Change when we need robust.
 func convertFromRequestToAdwordsSpecificRepresentation(query ChannelQueryV1) (ChannelQueryV1, error) {
 	var transformedQuery ChannelQueryV1
-	transformedQuery.From = getAdwordsDateOnlyTimestampInInt64(query.From)
-	transformedQuery.To = getAdwordsDateOnlyTimestampInInt64(query.To)
-
 	var err1, err2, err3 error
 	transformedQuery.SelectMetrics, err1 = getAdwordsSpecificMetrics(query.SelectMetrics)
 	transformedQuery.Filters, err2 = getAdwordsSpecificFilters(query.Filters)
@@ -636,6 +633,11 @@ func convertFromRequestToAdwordsSpecificRepresentation(query ChannelQueryV1) (Ch
 	if err3 != nil {
 		return query, err3
 	}
+	transformedQuery.From = getAdwordsDateOnlyTimestampInInt64(query.From)
+	transformedQuery.To = getAdwordsDateOnlyTimestampInInt64(query.To)
+	transformedQuery.Timezone = query.Timezone
+	transformedQuery.GroupByTimestamp = query.GroupByTimestamp
+
 	return transformedQuery, nil
 }
 
@@ -670,8 +672,27 @@ func getAdwordsSpecificFilters(requestFilters []FilterV1) ([]FilterV1, error) {
 
 // @Kark TODO v1
 func getAdwordsSpecificGroupBy(requestGroupBys []GroupBy) ([]GroupBy, error) {
+	sortedGroupBys := make([]GroupBy, 0, 0)
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterCampaign {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterAdGroup {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterAd {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
 	resultGroupBys := make([]GroupBy, 0, 0)
-	for _, requestGroupBy := range requestGroupBys {
+	for _, requestGroupBy := range sortedGroupBys {
 		var resultGroupBy GroupBy
 		groupByObject, isPresent := adwordsExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
@@ -940,9 +961,9 @@ func buildAdwordsComplexQueryV1(query *ChannelQueryV1, projectID uint64, custome
 
 	completeInnerJoin := " from " + reportCTEAlias + " "
 	for index, jobsCTEAlias := range jobsCTEAliases {
-		completeInnerJoin += innerJoinClause + jobsCTEAlias + " ON " + reportCTEAlias + "." + reportCTEJoinFields[index] + " = " + jobsCTEAlias + "." + jobCTEJoinFields[index] + " AND "
+		completeInnerJoin += innerJoinClause + jobsCTEAlias + " ON " + reportCTEAlias + "." + reportCTEJoinFields[index] + " = " + jobsCTEAlias + "." + jobCTEJoinFields[index] + " "
 	}
-	completeInnerJoin = completeInnerJoin[:len(completeInnerJoin)-4] + " "
+	completeInnerJoin = completeInnerJoin + " "
 
 	resultSQLStatement := completeWithClause + selectQuery + completeInnerJoin
 
@@ -1110,14 +1131,14 @@ func splitGroupByByObjectType(query *ChannelQueryV1) ([]GroupBy, []GroupBy, []Gr
 	adGroupGroupBys := make([]GroupBy, 0, 0)
 	adGroupBys := make([]GroupBy, 0, 0)
 
-	for _, filter := range query.GroupBy {
-		switch filter.Object {
+	for _, groupBy := range query.GroupBy {
+		switch groupBy.Object {
 		case adwordsCampaign:
-			campaignsGroupBys = append(campaignsGroupBys, filter)
+			campaignsGroupBys = append(campaignsGroupBys, groupBy)
 		case adwordsAdGroup:
-			adGroupGroupBys = append(adGroupGroupBys, filter)
+			adGroupGroupBys = append(adGroupGroupBys, groupBy)
 		case adwordsAd:
-			adGroupBys = append(adGroupBys, filter)
+			adGroupBys = append(adGroupBys, groupBy)
 		}
 	}
 	return campaignsGroupBys, adGroupGroupBys, adGroupBys
