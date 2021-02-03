@@ -29,7 +29,7 @@ export const generateGroupedChartsData = (
   const firstEventIdx = response.headers.findIndex((elem) => elem === "step_0");
   response.rows.forEach((elem) => {
     const row = elem.map(item=>{
-      return valueMapper[item] || item;
+      return item;
     });
     const breakdownName = row.slice(0, firstEventIdx).join(",");
     const isVisible = groups.filter(
@@ -52,7 +52,7 @@ export const generateGroups = (response, maxAllowedVisibleProperties) => {
   const firstEventIdx = response.headers.findIndex((elem) => elem === "step_0");
   const result = response.rows.map((elem, index) => {
     const row = elem.map(item=>{
-      return valueMapper[item] || item;
+      return item;
     })
     const netCounts = row.filter((row) => typeof row === "number");
     const name = row.slice(0, firstEventIdx).join(",");
@@ -140,7 +140,7 @@ export const generateTableData = (
         (elem) => elem.toLowerCase().indexOf(searchText.toLowerCase()) > -1
       );
     const result = appliedGroups.map((grp, index) => {
-      const group = grp.replaceAll("Overall", "$no_group");
+      const group = grp;
       const eventsData = {};
       data.forEach((d, idx) => {
         eventsData[`${d.name}-${idx}`] =
