@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime"
 	"runtime/debug"
 
 	log "github.com/sirupsen/logrus"
@@ -67,5 +68,23 @@ func NotifyOnPanic(taskId, env string) {
 		}
 
 		log.Fatal(pe) // using fatal to avoid panic loop.
+	}
+}
+
+// GoRoutineRecovery ...
+func GoRoutineRecovery(environment string) {
+	if r := recover(); r != nil {
+
+		buf := make([]byte, 1024)
+		runtime.Stack(buf, false)
+
+		msg := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\n", r, string(buf))
+
+		log.Errorf("Recovering from panic in goroutine: %v", msg)
+
+		err := NotifyThroughSNS("GoRoutineError", environment, msg)
+		if err != nil {
+			log.WithError(err).Error("failed to send message to sns")
+		}
 	}
 }
