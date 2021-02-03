@@ -253,7 +253,7 @@ func TestCreateMultipleDashboardUnits(t *testing.T) {
 	}
 
 	requestPayload1 := []M.DashboardUnitRequestPayload{{Title: U.RandomString(10), Description: U.RandomString(20),
-		Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, QueryId: uint64(U.RandomIntInRange(50, 100))},
+		Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}},
 	}
 
 	testArgs1 := args{requestPayload: requestPayload1,
@@ -262,11 +262,11 @@ func TestCreateMultipleDashboardUnits(t *testing.T) {
 		dashboardId: dashboard.ID}
 
 	requestPayload2 := []M.DashboardUnitRequestPayload{{Title: U.RandomString(10), Description: U.RandomString(20),
-		Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, QueryId: uint64(U.RandomIntInRange(50, 100))},
+		Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}},
 		{Title: U.RandomString(10), Description: U.RandomString(20),
-			Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, QueryId: uint64(U.RandomIntInRange(50, 100))},
+			Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}},
 		{Title: U.RandomString(10), Description: U.RandomString(20),
-			Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, QueryId: uint64(U.RandomIntInRange(50, 100))},
+			Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}},
 	}
 
 	testArgs2 := args{requestPayload: requestPayload2,
@@ -287,6 +287,14 @@ func TestCreateMultipleDashboardUnits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			for i := range tt.args.requestPayload {
+				query, _, _ := M.CreateQuery(project.ID, &M.Queries{
+					ProjectID: project.ID,
+					Type:      M.QueryTypeDashboardQuery,
+					Query:     postgres.Jsonb{json.RawMessage(`{}`)},
+				})
+				tt.args.requestPayload[i].QueryId = query.ID
+			}
 			dashboardUnits, responseStatus, errorMsg := M.CreateMultipleDashboardUnits(tt.args.requestPayload, tt.args.projectId, tt.args.agentUUID, tt.args.dashboardId)
 
 			assert.NotNil(t, dashboardUnits)
@@ -338,7 +346,7 @@ func TestCreateDashboardUnitForMultipleDashboards(t *testing.T) {
 		unitPayload  M.DashboardUnitRequestPayload
 	}
 	requestPayload := M.DashboardUnitRequestPayload{Title: U.RandomString(10), Description: U.RandomString(20),
-		Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}, QueryId: uint64(U.RandomIntInRange(50, 100))}
+		Settings: &postgres.Jsonb{json.RawMessage(`{"chart":"pc"}`)}}
 
 	testArgs1 := args{
 		dashboardIds: []uint64{dashboard1.ID},
@@ -364,6 +372,12 @@ func TestCreateDashboardUnitForMultipleDashboards(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			query, _, _ := M.CreateQuery(project.ID, &M.Queries{
+				ProjectID: project.ID,
+				Type:      M.QueryTypeDashboardQuery,
+				Query:     postgres.Jsonb{json.RawMessage(`{}`)},
+			})
+			tt.args.unitPayload.QueryId = query.ID
 			dashboardUnits, got1, got2 := M.CreateDashboardUnitForMultipleDashboards(tt.args.dashboardIds, tt.args.projectId, tt.args.agentUUID, tt.args.unitPayload)
 
 			assert.NotNil(t, dashboardUnits)
