@@ -34,6 +34,7 @@ export const CHART_TYPE_BARCHART = "barchart";
 export const CHART_TYPE_LINECHART = "linechart";
 export const CHART_TYPE_TABLE = "table";
 export const BARCHART_TICK_LENGTH = 20;
+export const UNGROUPED_FUNNEL_TICK_LENGTH = 100;
 
 export const valueMapper = {
   $no_group: "Overall"
