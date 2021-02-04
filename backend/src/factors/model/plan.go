@@ -51,7 +51,7 @@ var StartupPlan = Plan{
 	Name:             "Startup",
 	Code:             StartupPlanCode,
 	BasePrice:        49,
-	MaxNoOfAgents:    50,
+	MaxNoOfAgents:    100,
 	DaysToRetainData: 365,
 
 	MonthlyNoOfEvents:     5000000,
