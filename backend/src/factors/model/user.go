@@ -523,7 +523,7 @@ func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, requ
 
 	// same seg_aid with different c_uid. log error. return user.
 	if user.CustomerUserId != custUserId {
-		logCtx.Error("Different customer_user_id seen for existing user with segment_anonymous_id.")
+		logCtx.Warn("Different customer_user_id seen for existing user with segment_anonymous_id.")
 	}
 
 	// provided and fetched c_uid are same.
