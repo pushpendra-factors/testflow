@@ -216,7 +216,7 @@ func (it *Itree) buildRootNode(reqId string, allActiveUsers *P.Pattern,
 		fcp, _ = allActiveUsers.GetCount(patternConstraints, countType)
 		fcr, _ = pattern.GetCount(patternConstraints, countType)
 
-	} else if len(pattern.EventNames) == 1 {
+	} else if len(pattern.EventNames) == 2 {
 		fcp, _ = patternWrapper.GetCount(reqId, pattern.EventNames[:1],
 			patternConstraints[:1], countType)
 		fcr, _ = pattern.GetCount(patternConstraints, countType)
