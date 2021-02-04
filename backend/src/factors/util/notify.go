@@ -71,17 +71,16 @@ func NotifyOnPanic(taskId, env string) {
 	}
 }
 
-func NotifyOnPanicWithError(environment string) {
+func NotifyOnPanicWithError(env, appName string) {
 	if r := recover(); r != nil {
 
 		buf := make([]byte, 1024)
 		runtime.Stack(buf, false)
 
 		msg := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\n", r, string(buf))
-
 		log.Errorf("Recovering from panic: %v", msg)
 
-		err := NotifyThroughSNS("Panic on ", environment, msg)
+		err := NotifyThroughSNS(appName, env, msg)
 		if err != nil {
 			log.WithError(err).Error("failed to send message to sns")
 		}

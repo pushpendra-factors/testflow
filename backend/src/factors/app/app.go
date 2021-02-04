@@ -141,7 +141,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	defer C.SafeFlushAllCollectors()
-	defer U.NotifyOnPanic(appName, *env)
+	defer U.NotifyOnPanicWithError(*env, appName)
 
 	r := gin.New()
 	// Group based middlewares should be registered on corresponding init methods.
