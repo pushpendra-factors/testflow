@@ -222,8 +222,55 @@ user_segments:
             Schedule A Demo Form: RULE2
             Logout: 0.2109
           Schedule A Demo Form:
-            Discovery Call Booked: 0.3919
-            Logout: 0.6081
+            Discovery Call Booked: 0.16
+            Pricing Plan - Basic: 0.008
+            Pricing Plan - Growth: 0.005
+            Pricing Plan - Pro: 0.006
+            Pricing Plan - Enterprise: 0.002
+            Subscribe to Newsletter Form: 0.047
+            Whitepaper Download: 0.09
+            Webinar Signed Up: 0.12
+            Webinar Attended: 0.09
+            Junk Leads: 0.04
+            MQL Email Sequence - Email -1 Recieved: 0.41
+            Logout: 0.022
+          Junk Leads:
+            Logout: 1.0
+          MQL Email Sequence - Email -5 Recieved:
+            Logout: 1.0
+          MQL Email Sequence - Email -1 Recieved:
+            MQL Email Sequence - Email -2 Recieved: 0.41
+            Logout: 0.59
+          MQL Email Sequence - Email -2 Recieved:
+            MQL Email Sequence - Email -3 Recieved: 0.59
+            Logout: 0.41
+          MQL Email Sequence - Email -3 Recieved:
+            MQL Email Sequence - Email -4 Recieved: 0.73
+            Logout: 0.27
+          MQL Email Sequence - Email -4 Recieved: 
+            MQL Email Sequence - Email -5 Recieved: 0.76
+            Logout: 0.24
+          Whitepaper Download:
+            Schedule A Demo Form: 0.2
+            Logout: 0.8
+          Webinar Signed Up:
+            Schedule A Demo Form: 0.18
+            Logout: 0.82
+          Webinar Attended:
+            Schedule A Demo Form: 0.26
+            Logout: 0.74
+          Pricing Plan - Basic:
+            Discovery Call Booked: 0.2
+            Logout: 0.8
+          Pricing Plan - Growth:
+            Discovery Call Booked: 0.45
+            Logout: 0.55
+          Pricing Plan - Pro:
+            Discovery Call Booked: 0.61
+            Logout: 0.39
+          Pricing Plan - Enterprise:
+            Discovery Call Booked: 0.8
+            Logout: 0.2
           Subscribe to Newsletter Form:
             www.acme.com: 0.1073
             www.acme.com/pricing: 0.1478
@@ -443,6 +490,36 @@ user_segments:
             www.g2.com: 0.075
             Others: 0.06
             Direct: 0.145
+        -
+          key: Source-Medium
+          order_level: 1
+          values:
+            google-paid: 0.2
+            google-organic: 0.35
+            direct-none: 0.15
+            linkedin-paid: 0.10
+            allreferral: 0.2
+        -
+          key: page_url
+          order_level: 1
+          values:
+            /: 0.1
+            /blog/best-saas-analytics-tool/: 0.08
+            /blog/10-ways-to-inculcate-data-driven-habit/: 0.07
+            /blog/advice-from-saas-analytics-leaders/: 0.055
+            /blog/how-to-calculate-ltv-for-saas/: 0.04
+            /blog/all-about-marketing-analytics-for-saas/: 0.09
+            /saas-analytics/: 0.08
+            /paid-marketing-analytics/: 0.04
+            /seo-analytics/: 0.03
+            /content-marketing-analytics/: 0.08
+            /product/explain/: 0.09
+            /product/checklists/: 0.08
+            /product/analyse/: 0.05
+            /product/attribution/: 0.06
+            /pricing/: 0.04
+            /about-us/: 0.01
+            Others: 0.005
     event_decorators:
       www.acme.com?utm_campaign=TRUE:
         $campaign:
@@ -494,6 +571,67 @@ user_segments:
           Brand_awareness: 0.03
           Email_marketing: 0.10
           Rebranding_campaign: 0.05
+    user_decorators:
+      Schedule A Demo Form:
+        Lead Size:
+          SMB: 0.43
+          Mid-market: 0.35
+          Enterprise: 0.22
+        Lead Status:
+          Working: 0.25
+          Junk: 0.08
+          Qualified: 0.08
+          Active: 0.24
+          Active Lost: 0.25
+          Working Lost: 0.1
+      Pricing Plan - Basic:
+        Lead Size:
+          SMB: 0.43
+          Mid-market: 0.35
+          Enterprise: 0.22
+        Lead Status:
+          Working: 0.25
+          Junk: 0.08
+          Qualified: 0.08
+          Active: 0.24
+          Active Lost: 0.25
+          Working Lost: 0.1
+      Pricing Plan - Growth:
+        Lead Size:
+          SMB: 0.43
+          Mid-market: 0.35
+          Enterprise: 0.22
+        Lead Status:
+          Working: 0.25
+          Junk: 0.08
+          Qualified: 0.08
+          Active: 0.24
+          Active Lost: 0.25
+          Working Lost: 0.1
+      Pricing Plan - Pro:
+        Lead Size:
+          SMB: 0.43
+          Mid-market: 0.35
+          Enterprise: 0.22
+        Lead Status:
+          Working: 0.25
+          Junk: 0.08
+          Qualified: 0.08
+          Active: 0.24
+          Active Lost: 0.25
+          Working Lost: 0.1
+      Pricing Plan - Enterprise:
+        Lead Size:
+          SMB: 0.43
+          Mid-market: 0.35
+          Enterprise: 0.22
+        Lead Status:
+          Working: 0.25
+          Junk: 0.08
+          Qualified: 0.08
+          Active: 0.24
+          Active Lost: 0.25
+          Working Lost: 0.1 
     user_attributes:
       default:  
         -
@@ -582,6 +720,27 @@ user_segments:
             Pricing: 0.052
             Features: 0.076
             None: 0.474
+        -
+          key: Initial_URL
+          order_level: 1
+          values:
+            /: 0.1
+            /blog/best-saas-analytics-tool/: 0.08
+            /blog/10-ways-to-inculcate-data-driven-habit/: 0.07
+            /blog/advice-from-saas-analytics-leaders/: 0.055
+            /blog/how-to-calculate-ltv-for-saas/: 0.04
+            /blog/all-about-marketing-analytics-for-saas/: 0.09
+            /saas-analytics/: 0.08
+            /paid-marketing-analytics/: 0.04
+            /seo-analytics/: 0.03
+            /content-marketing-analytics/: 0.08
+            /product/explain/: 0.09
+            /product/checklists/: 0.08
+            /product/analyse/: 0.05
+            /product/attribution/: 0.06
+            /pricing/: 0.04
+            /about-us/: 0.01
+            Others: 0.005
       custom:
       -
           key: Salesforce_Job_Title

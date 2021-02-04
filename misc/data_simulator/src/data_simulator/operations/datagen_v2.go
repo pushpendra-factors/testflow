@@ -185,6 +185,7 @@ func GenerateEvents(wg *sync.WaitGroup, probMap ProbMap, segmentConfig config.Us
 	var lastKnownGoodState string
 	var realTimeWait int
 	var decorators map[string]string
+	var userdecorators map[string]string
 
 	// Setting attributes in output
 	userAttributes := SetUserAttributes(segmentProbMap, segmentConfig, userId)
@@ -205,6 +206,7 @@ func GenerateEvents(wg *sync.WaitGroup, probMap ProbMap, segmentConfig config.Us
 					segmentProbMap, userAttributes, segmentConfig)
 
 				decorators = GetEventDecorators(event, segmentProbMap)
+				userdecorators = GetUserDecorators(event, segmentProbMap)
 				if utils.Contains(segmentConfig.Event_probablity_map.Correlation_matrix.Exit_events, event) {
 					Log.Debug.Printf("User %s Exit events: %s", userId, event)
 					break
@@ -213,8 +215,9 @@ func GenerateEvents(wg *sync.WaitGroup, probMap ProbMap, segmentConfig config.Us
 
 			eventAttributes := SetEventAttributes(segmentProbMap, segmentConfig, event)
 			eventAttributesWithDecorators := utils.AppendMaps(eventAttributes, decorators)
+			userAttributesWithDecorators := utils.AppendMaps(userAttributes, userdecorators)
 			timeStamp, counter := ComputeActivityTimestamp(segmentConfig, i, realTimeWait)
-			op := FormatOutput(timeStamp, userId, event, userAttributes, eventAttributesWithDecorators, segmentConfig.Smart_events)
+			op := FormatOutput(timeStamp, userId, event, userAttributesWithDecorators, eventAttributesWithDecorators, segmentConfig.Smart_events)
 			registration.WriterInstance.WriteOutput(op)
 			i = i + counter
 			WaitIfRealTime(realTimeWait)
