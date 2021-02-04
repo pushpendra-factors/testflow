@@ -295,7 +295,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 			query.ConversionEvent.Properties,
 			query.AttributionMethodology,
 			query.AttributionMethodologyCompare, // run for AttributionMethodologyCompare
-			eventNameToIDList, sessions, query.LookbackDays)
+			eventNameToIDList, sessions, query.LookbackDays, query.From, query.To)
 
 	} else if query.ConversionEventCompare.Name != "" {
 		// Two events comparison
@@ -306,7 +306,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 			query.ConversionEvent.Properties,
 			query.LinkedEvents,
 			query.AttributionMethodology,
-			eventNameToIDList, sessions, query.LookbackDays)
+			eventNameToIDList, sessions, query.LookbackDays, query.From, query.To)
 
 		if err != nil {
 			return nil, err
@@ -318,7 +318,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 			query.ConversionEventCompare.Properties,
 			query.LinkedEvents,
 			query.AttributionMethodology,
-			eventNameToIDList, sessions, query.LookbackDays)
+			eventNameToIDList, sessions, query.LookbackDays, query.From, query.To)
 
 		if err != nil {
 			return nil, err
@@ -347,7 +347,7 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 			query.ConversionEvent.Properties,
 			query.LinkedEvents,
 			query.AttributionMethodology,
-			eventNameToIDList, sessions, query.LookbackDays)
+			eventNameToIDList, sessions, query.LookbackDays, query.From, query.To)
 	}
 
 	if err != nil {
@@ -370,10 +370,10 @@ func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryR
 	return result, nil
 }
 
-func RunAttributionForMethodologyComparison(projectID uint64, from, to int64,
-	goalEventName string, goalEventProperties []QueryProperty, attributionMethodology,
-	attributionMethodologyCompare string, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]RangeTimestamp, lookbackDays int) (map[string]*AttributionData, error) {
+func RunAttributionForMethodologyComparison(projectID uint64, from, to int64, goalEventName string,
+	goalEventProperties []QueryProperty, attributionMethodology, attributionMethodologyCompare string,
+	eventNameToIDList map[string][]interface{}, sessions map[string]map[string]RangeTimestamp,
+	lookbackDays int, campaignFrom, campaignTo int64) (map[string]*AttributionData, error) {
 
 	// empty linkedEvents as they are not analyzed in compare events.
 	var linkedEvents []QueryEventWithProperties
@@ -402,7 +402,7 @@ func RunAttributionForMethodologyComparison(projectID uint64, from, to int64,
 
 	// attribution based on given attribution methodology
 	userConversionHit, _, err := ApplyAttribution(attributionMethodology, goalEventName, usersToBeAttributed,
-		sessions, coalUserIdConversionTimestamp, lookbackDays)
+		sessions, coalUserIdConversionTimestamp, lookbackDays, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +412,7 @@ func RunAttributionForMethodologyComparison(projectID uint64, from, to int64,
 	// attribution based on given attributionMethodologyCompare methodology
 	userConversionCompareHit, _, err := ApplyAttribution(attributionMethodologyCompare,
 		goalEventName, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
-		lookbackDays)
+		lookbackDays, campaignFrom, campaignTo)
 	if err != nil {
 		return nil, err
 	}
@@ -445,7 +445,7 @@ func runAttribution(projectID uint64,
 	attributionMethodology string,
 	eventNameToIDList map[string][]interface{},
 	sessions map[string]map[string]RangeTimestamp,
-	lookbackDays int) (map[string]*AttributionData, error) {
+	lookbackDays int, campaignFrom, campaignTo int64) (map[string]*AttributionData, error) {
 
 	// 3. Fetch users who hit conversion event
 	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err := getConvertedUsers(projectID,
@@ -471,7 +471,7 @@ func runAttribution(projectID uint64,
 	// 4. Apply attribution based on given attribution methodology
 	userConversionHit, userLinkedFEHit, err := ApplyAttribution(attributionMethodology,
 		goalEventName,
-		usersToBeAttributed, sessions, coalUserIdConversionTimestamp, lookbackDays)
+		usersToBeAttributed, sessions, coalUserIdConversionTimestamp, lookbackDays, campaignFrom, campaignTo)
 	if err != nil {
 		return nil, err
 	}

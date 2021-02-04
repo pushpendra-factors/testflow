@@ -39,7 +39,7 @@ func TestAttributionModelCompare(t *testing.T) {
 		CustomerAccountID: customerAccountId,
 		TypeAlias:         "campaign_performance_report",
 		Timestamp:         20200510,
-		Value:             &postgres.Jsonb{value},
+		Value:             &postgres.Jsonb{RawMessage: value},
 	}
 
 	status := M.CreateAdwordsDocument(document)
@@ -87,6 +87,7 @@ func TestAttributionModelCompare(t *testing.T) {
 			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
 			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        M.QueryEventWithProperties{},
+			QueryType:                     M.AttributionQueryTypeEngagementBased,
 		}
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
@@ -138,6 +139,7 @@ func TestAttributionModelCompare(t *testing.T) {
 			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
 			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
 			ConversionEventCompare:        M.QueryEventWithProperties{},
+			QueryType:                     M.AttributionQueryTypeEngagementBased,
 		}
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)

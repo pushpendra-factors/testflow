@@ -626,6 +626,8 @@ func TestAttributionMethodologies(t *testing.T) {
 	camp2 := "campaign2"
 	camp3 := "campaign3"
 
+	queryFrom := 0
+	queryTo := 1000
 	userSession := make(map[string]map[string]M.RangeTimestamp)
 	userSession[user1] = make(map[string]M.RangeTimestamp)
 	userSession[user1][camp1] = M.RangeTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
@@ -656,7 +658,8 @@ func TestAttributionMethodologies(t *testing.T) {
 				conversionEvent,
 				[]M.UserEventInfo{{user1, conversionEvent}},
 				userSession,
-				coalUserIdConversionTimestamp, lookbackDays,
+				coalUserIdConversionTimestamp,
+				lookbackDays,
 			},
 			map[string][]string{user1: {camp1, camp2, camp3}},
 			map[string]map[string][]string{},
@@ -690,7 +693,7 @@ func TestAttributionMethodologies(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession,
-				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays)
+				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays, int64(queryFrom), int64(queryTo))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -719,7 +722,8 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 	camp1 := "campaign1"
 	camp2 := "campaign2"
 	camp3 := "campaign3"
-
+	queryFrom := 0
+	queryTo := 1000
 	userSession := make(map[string]map[string]M.RangeTimestamp)
 	userSession[user1] = make(map[string]M.RangeTimestamp)
 	userSession[user1][camp0] = M.RangeTimestamp{MinTimestamp: 10, MaxTimestamp: 40}
@@ -808,7 +812,8 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession,
-				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays)
+				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays,
+				int64(queryFrom), int64(queryTo))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -837,7 +842,8 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 	camp2 := "campaign2"
 	camp3 := "campaign3"
 	camp4 := "$none"
-
+	queryFrom := 0
+	queryTo := 1000
 	userSession := make(map[string]map[string]M.RangeTimestamp)
 	userSession[user1] = make(map[string]M.RangeTimestamp)
 	userSession[user1][camp1] = M.RangeTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
@@ -926,7 +932,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession,
-				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays)
+				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays, int64(queryFrom), int64(queryTo))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
 				return
