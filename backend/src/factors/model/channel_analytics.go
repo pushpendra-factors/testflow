@@ -441,7 +441,7 @@ func RunChannelGroupQuery(projectID uint64, queries []ChannelQueryV1, reqID stri
 func runSingleChannelQuery(projectID uint64, query ChannelQueryV1, resultHolder *ChannelResultGroupV1, index int, waitGroup *sync.WaitGroup, reqID string) {
 	environment := C.GetConfig().Env
 	defer waitGroup.Done()
-	defer U.GoRoutineRecovery(environment)
+	defer U.NotifyOnPanicWithError(environment)
 	result, _ := ExecuteChannelQueryV1(projectID, &query, reqID)
 	(*resultHolder).Results[index] = *result
 }

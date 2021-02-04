@@ -71,8 +71,7 @@ func NotifyOnPanic(taskId, env string) {
 	}
 }
 
-// GoRoutineRecovery ...
-func GoRoutineRecovery(environment string) {
+func NotifyOnPanicWithError(environment string) {
 	if r := recover(); r != nil {
 
 		buf := make([]byte, 1024)
@@ -80,9 +79,9 @@ func GoRoutineRecovery(environment string) {
 
 		msg := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\n", r, string(buf))
 
-		log.Errorf("Recovering from panic in goroutine: %v", msg)
+		log.Errorf("Recovering from panic: %v", msg)
 
-		err := NotifyThroughSNS("GoRoutineError", environment, msg)
+		err := NotifyThroughSNS("Panic on ", environment, msg)
 		if err != nil {
 			log.WithError(err).Error("failed to send message to sns")
 		}
