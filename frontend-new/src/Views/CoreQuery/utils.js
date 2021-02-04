@@ -187,7 +187,7 @@ export const getQuery = (
     query.gbt = breakdownType === "each" ? dateRange.frequency || "date" : "";
 
     const appliedGroupBy = [...groupBy.event, ...groupBy.global];
-
+    console.log(appliedGroupBy)
     query.gbp = appliedGroupBy.map((opt) => {
       let gbpReq = {};
       if (opt.eventIndex) {
