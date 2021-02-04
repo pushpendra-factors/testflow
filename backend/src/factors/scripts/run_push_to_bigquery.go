@@ -60,6 +60,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  taskID,
 		},
 		SentryDSN: *sentryDSN,
 	}

@@ -359,12 +359,12 @@ func main() {
 		panic(err)
 	}
 
-	taskID := "Task:Yourstory:AddMissingEventProperties"
+	taskID := "yourstory_add_missing_event_properties"
 	healthcheckPingID := C.HealthcheckYourstoryAddPropertiesPingID
 	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	config := &C.Configuration{
-		AppName:            "yourstory_add_missing_event_properties",
+		AppName:            taskID,
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -374,6 +374,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  taskID,
 		},
 	}
 

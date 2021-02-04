@@ -61,6 +61,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  taskID,
 		},
 		RedisHost: *redisHost,
 		RedisPort: *redisPort,

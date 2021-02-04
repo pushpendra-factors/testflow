@@ -15,10 +15,11 @@ import (
 )
 
 type SlowQueries struct {
-	Runtime float64 `json:"runtime"`
-	Query   string  `json:"query"`
-	Pid     int64   `json:"pid"`
-	Usename string  `json:"usename"`
+	Runtime         float64 `json:"runtime"`
+	Query           string  `json:"query"`
+	Pid             int64   `json:"pid"`
+	Usename         string  `json:"usename"`
+	ApplicationName string  `json:"application_name"`
 }
 
 func main() {
@@ -58,6 +59,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  taskID,
 		},
 		QueueRedisHost: *queueRedisHost,
 		QueueRedisPort: *queueRedisPort,
@@ -82,7 +84,7 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	queryStr := `SELECT EXTRACT(epoch from (now() - query_start)) as runtime,query, pid, usename FROM  pg_stat_activity` +
+	queryStr := `SELECT EXTRACT(epoch from (now() - query_start)) as runtime,query, pid, usename, application_name FROM  pg_stat_activity` +
 		` WHERE EXTRACT(epoch from (now() - query_start)) > 120 AND state = 'active' AND query NOT ILIKE '%pg_stat_activity%'` +
 		` ORDER BY runtime DESC`
 	rows, err := db.Raw(queryStr).Rows()

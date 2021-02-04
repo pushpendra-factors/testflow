@@ -40,13 +40,13 @@ func main() {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
 	}
 
-	taskID := "Task#HubspotEnrich"
+	taskID := "hubspot_enrich_job"
 	healthcheckPingID := C.HealthcheckHubspotEnrichPingID
 	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	// init DB, etcd
 	config := &C.Configuration{
-		AppName:            "hubspot_enrich_job",
+		AppName:            taskID,
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -56,6 +56,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  taskID,
 		},
 		RedisHost:           *redisHost,
 		RedisPort:           *redisPort,

@@ -70,6 +70,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  workerName,
 		},
 		RedisHost:           *redisHost,
 		RedisPort:           *redisPort,

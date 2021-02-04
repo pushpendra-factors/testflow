@@ -41,12 +41,12 @@ func main() {
 		panic(err)
 	}
 
-	taskID := "Task#CleanUpEventUserCache"
+	taskID := "cleanup_event_user_cache"
 	healthcheckPingID := C.HealthcheckCleanupEventUserCachePingID
 	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	config := &C.Configuration{
-		AppName:            "CleanUpEventUserCache",
+		AppName:            taskID,
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -56,6 +56,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  taskID,
 		},
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *RedisPortPersistent,
