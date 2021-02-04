@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { formatData } from "../../CoreQuery/AttributionsResult/utils";
 import AttributionTable from "../../CoreQuery/AttributionsResult/AttributionTable";
 import BarLineChart from "../../../components/BarLineChart";
+import {
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_TABLE,
+} from "../../../utils/constants";
 
 function SingleTouchPoint({
   data,
@@ -14,7 +18,8 @@ function SingleTouchPoint({
   chartType,
   title,
   resultState,
-  unit
+  unit,
+  section,
 }) {
   const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
   const [chartsData, setChartsData] = useState([]);
@@ -32,40 +37,38 @@ function SingleTouchPoint({
   }
 
   let chartContent = null;
-
-  if (chartType === "barchart") {
+  
+  if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <div className="mt-4">
-        <BarLineChart
-          responseRows={data.rows}
-          responseHeaders={data.headers}
-          visibleIndices={visibleIndices}
-          title={title}
-          chartData={chartsData}
-        />
-      </div>
+      <BarLineChart
+        responseRows={data.rows}
+        responseHeaders={data.headers}
+        visibleIndices={visibleIndices}
+        title={title}
+        chartData={chartsData}
+        section={section}
+        height={225}
+      />
     );
   } else {
     chartContent = (
-      <div className="mt-4">
-        <AttributionTable
-          linkedEvents={linkedEvents}
-          touchpoint={touchpoint}
-          event={event}
-          data={data}
-          isWidgetModal={isWidgetModal}
-          visibleIndices={visibleIndices}
-          setVisibleIndices={setVisibleIndices}
-          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          attribution_method={attribution_method}
-        />
-      </div>
+      <AttributionTable
+        linkedEvents={linkedEvents}
+        touchpoint={touchpoint}
+        event={event}
+        data={data}
+        isWidgetModal={isWidgetModal}
+        visibleIndices={visibleIndices}
+        setVisibleIndices={setVisibleIndices}
+        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+        attribution_method={attribution_method}
+      />
     );
   }
 
   let tableContent = null;
 
-  if (chartType === "table") {
+  if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
         onClick={() => setwidgetModal({ unit, data: resultState.data })}
@@ -78,7 +81,15 @@ function SingleTouchPoint({
   }
 
   return (
-    <div className="total-events w-full">
+    <div
+      style={{
+        boxShadow:
+          chartType === CHART_TYPE_BARCHART
+            ? "inset 0px 1px 0px rgba(0, 0, 0, 0.1)"
+            : "",
+      }}
+      className="w-full px-6"
+    >
       {chartContent}
       {tableContent}
     </div>

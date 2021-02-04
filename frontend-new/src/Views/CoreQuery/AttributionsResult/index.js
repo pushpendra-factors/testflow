@@ -5,6 +5,7 @@ import GroupedAttributionsChart from "./GroupedAttributionsChart";
 function AttributionsResult({
   resultState,
   attributionsState,
+  section
 }) {
   let content = null;
 
@@ -21,6 +22,7 @@ function AttributionsResult({
         }
         isWidgetModal={false}
         attribution_method={models[0]}
+        section={section}
       />
     );
   }
@@ -37,6 +39,7 @@ function AttributionsResult({
         isWidgetModal={false}
         attribution_method={models[0]}
         attribution_method_compare={models[1]}
+        section={section}
       />
     );
   }

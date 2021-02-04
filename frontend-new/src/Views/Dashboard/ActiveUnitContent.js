@@ -3,7 +3,6 @@ import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
 } from "../CoreQuery/utils";
-import ResultTab from "../CoreQuery/EventsAnalytics/ResultTab";
 import ResultantChart from "../CoreQuery/FunnelsResultPage/ResultantChart";
 import { Text, SVG } from "../../components/factorsComponents";
 import { Button, Divider, Spin } from "antd";
@@ -109,23 +108,24 @@ function ActiveUnitContent({
   let content = null;
 
   if (queryType === QUERY_TYPE_EVENT) {
-    content = (
-      <ResultTab
-        queries={events.map((elem) => elem.label)}
-        eventsMapper={eventsMapper}
-        reverseEventsMapper={reverseEventsMapper}
-        breakdown={breakdown}
-        queryType={queryType}
-        isWidgetModal={true}
-        page="totalEvents"
-        durationObj={durationObj}
-        handleDurationChange={handleDurationChange}
-        resultState={[resultState]}
-        index={0}
-        arrayMapper={arrayMapper}
-        title={`modal${unit.id}`}
-      />
-    );
+    // content = (
+    //   <ResultTab
+    //     queries={events.map((elem) => elem.label)}
+    //     eventsMapper={eventsMapper}
+    //     reverseEventsMapper={reverseEventsMapper}
+    //     breakdown={breakdown}
+    //     queryType={queryType}
+    //     isWidgetModal={true}
+    //     page="totalEvents"
+    //     durationObj={durationObj}
+    //     handleDurationChange={handleDurationChange}
+    //     resultState={[resultState]}
+    //     index={0}
+    //     arrayMapper={arrayMapper}
+    //     title={`modal${unit.id}`}
+    //   />
+    // );
+    content = null;
   }
 
   if (queryType === QUERY_TYPE_ATTRIBUTION) {

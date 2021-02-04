@@ -12,7 +12,8 @@ function BreakdownCharts({
   breakdown,
   data,
   title = "chart",
-  currentEventIndex
+  currentEventIndex,
+  section
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -85,6 +86,7 @@ function BreakdownCharts({
         queries={visibleProperties.map((v) => v.label)}
         arrayMapper={mapper}
         isDecimalAllowed={false}
+        section={section}
       />
     );
   }

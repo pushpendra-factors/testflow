@@ -30,26 +30,23 @@ function UngroupedChart({
 
   if (chartType === "barchart") {
     chartContent = (
-      <div className="mt-4">
-        <Chart
-          title={title}
-          chartData={chartData}
-          cardSize={unit.cardSize}
-          arrayMapper={arrayMapper}
-        />
-      </div>
+      <Chart
+        title={title}
+        chartData={chartData}
+        cardSize={unit.cardSize}
+        arrayMapper={arrayMapper}
+        height={275}
+      />
     );
   } else {
     chartContent = (
-      <div className="mt-4">
-        <FunnelsResultTable
-          chartData={chartData}
-          breakdown={[]}
-          queries={queries}
-          groups={[]}
-          arrayMapper={arrayMapper}
-        />
-      </div>
+      <FunnelsResultTable
+        chartData={chartData}
+        breakdown={[]}
+        queries={queries}
+        groups={[]}
+        arrayMapper={arrayMapper}
+      />
     );
   }
 
@@ -68,7 +65,15 @@ function UngroupedChart({
   }
 
   return (
-    <div className="total-events w-full">
+    <div
+      style={{
+        boxShadow:
+          chartType === "barchart"
+            ? "inset 0px 1px 0px rgba(0, 0, 0, 0.1)"
+            : "",
+      }}
+      className="w-full px-6 mt-4"
+    >
       {chartContent}
       {tableContent}
     </div>

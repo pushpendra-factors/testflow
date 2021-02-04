@@ -7,6 +7,7 @@ import BarChart from "../../../components/BarChart";
 import LineChart from "../../../components/LineChart";
 import SingleEventMultipleBreakdownTable from "../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/SingleEventMultipleBreakdownTable";
 import { generateColors } from "../../../utils/dataFormatter";
+import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA } from "../../../utils/constants";
 
 function SingleEventMultipleBreakdown({
   resultState,
@@ -17,6 +18,7 @@ function SingleEventMultipleBreakdown({
   queries,
   unit,
   durationObj,
+  section
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -100,14 +102,16 @@ function SingleEventMultipleBreakdown({
           eventsMapper={mapper}
           setHiddenEvents={setHiddenProperties}
           hiddenEvents={hiddenProperties}
-          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
+          isDecimalAllowed={page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA}
           cardSize={unit.cardSize}
+          section={section}
+          height={200}
         />
       </div>
     );
   }
 
-  return <div className="total-events w-full">{chartContent}</div>;
+  return <div style={{ boxShadow: "inset 0px 1px 0px rgba(0, 0, 0, 0.1)" }} className="w-full px-6">{chartContent}</div>;
 }
 
 export default SingleEventMultipleBreakdown;

@@ -3,7 +3,7 @@ import GroupedChart from './GroupedChart';
 import UngroupedChart from './UngroupedChart';
 
 function ResultantChart({
-  queries, resultState, breakdown, isWidgetModal, arrayMapper
+  queries, resultState, breakdown, isWidgetModal, arrayMapper, section
 }) {
   if (!breakdown.length) {
     return (
@@ -12,6 +12,7 @@ function ResultantChart({
         queries={queries}
         isWidgetModal={isWidgetModal}
         arrayMapper={arrayMapper}
+        section={section}
       />
     );
   } else {
@@ -22,6 +23,7 @@ function ResultantChart({
         breakdown={breakdown}
         isWidgetModal={isWidgetModal}
         arrayMapper={arrayMapper}
+        section={section}
       />
     );
   }

@@ -5,6 +5,11 @@ import moment from "moment";
 import styles from "./index.module.scss";
 import ChartLegends from "./ChartLegends";
 import { numberWithCommas } from "../../utils/dataFormatter";
+import {
+  REPORT_SECTION,
+  DASHBOARD_WIDGET_SECTION,
+} from "../../utils/constants";
+import DashboardWidgetLegends from "../DashboardWidgetLegends";
 
 function LineChart({
   chartData,
@@ -16,6 +21,8 @@ function LineChart({
   frequency,
   arrayMapper,
   cardSize = 1,
+  height = 300,
+  section,
 }) {
   const chartRef = useRef(null);
 
@@ -91,11 +98,11 @@ function LineChart({
     c3.generate({
       bindto: chartRef.current,
       size: {
-        height: 300,
+        height: height,
       },
       padding: {
         left: 50,
-        bottom: 24,
+        bottom: section === REPORT_SECTION ? 24 : 0,
         right: 10,
       },
       transition: {
@@ -193,6 +200,8 @@ function LineChart({
     focusAllLines,
     isDecimalAllowed,
     frequency,
+    height,
+    section
   ]);
 
   const displayChart = useCallback(() => {
@@ -206,16 +215,26 @@ function LineChart({
 
   return (
     <div className="flex flex-col w-full">
+      {section === DASHBOARD_WIDGET_SECTION ? (
+        <DashboardWidgetLegends
+          arrayMapper={arrayMapper}
+          cardSize={cardSize}
+          colors={colors}
+          legends={queries}
+        />
+      ) : null}
       <div className={styles.lineChart} ref={chartRef} />
-      <ChartLegends
-        colors={colors}
-        events={queries}
-        focusHoveredLines={focusHoveredLines}
-        focusAllLines={focusAllLines}
-        setHiddenEvents={setHiddenEvents}
-        hiddenEvents={hiddenEvents}
-        arrayMapper={arrayMapper}
-      />
+      {section === REPORT_SECTION ? (
+        <ChartLegends
+          colors={colors}
+          events={queries}
+          focusHoveredLines={focusHoveredLines}
+          focusAllLines={focusAllLines}
+          setHiddenEvents={setHiddenEvents}
+          hiddenEvents={hiddenEvents}
+          arrayMapper={arrayMapper}
+        />
+      ) : null}
     </div>
   );
 }

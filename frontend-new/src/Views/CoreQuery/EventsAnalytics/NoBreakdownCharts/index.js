@@ -8,17 +8,17 @@ import NoBreakdownTable from "./NoBreakdownTable";
 import SparkLineChart from "../../../../components/SparkLineChart";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
+import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA } from "../../../../utils/constants";
 
 function NoBreakdownCharts({
   queries,
-  eventsMapper,
-  reverseEventsMapper,
   resultState,
   page,
   chartType,
   isWidgetModal,
   durationObj,
   arrayMapper,
+  section
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
@@ -42,6 +42,8 @@ function NoBreakdownCharts({
     hiddenEvents,
     arrayMapper
   );
+
+  console.log(page);
 
   const table = (
     <div className="mt-12 w-full">
@@ -80,7 +82,8 @@ function NoBreakdownCharts({
         setHiddenEvents={setHiddenEvents}
         hiddenEvents={hiddenEvents}
         arrayMapper={arrayMapper}
-        isDecimalAllowed={page === "activeUsers" || page === "frequency"}
+        isDecimalAllowed={page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA}
+        section={section}
       />
     );
   }

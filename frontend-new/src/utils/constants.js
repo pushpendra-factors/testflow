@@ -66,5 +66,13 @@ export const constantObj = {
 export const reverse_user_types = {
   each_given_event: EACH_USER_TYPE,
   any_given_event: ANY_USER_TYPE,
-  all_given_event: ALL_USER_TYPE
-}
+  all_given_event: ALL_USER_TYPE,
+};
+
+export const REPORT_SECTION = "reports";
+export const DASHBOARD_WIDGET_SECTION = "dashboardWidget";
+
+export const linechart_legend_length = {
+  0: 15,
+  1: 30,
+};

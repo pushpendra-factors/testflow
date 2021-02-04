@@ -11,9 +11,18 @@ import NoBreakdownTable from "../../CoreQuery/CampaignAnalytics/NoBreakdownChart
 import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_LINECHART,
+  CHART_TYPE_TABLE,
 } from "../../../utils/constants";
 
-function NoBreakdownCharts({ chartType, data, arrayMapper, isWidgetModal, unit }) {
+function NoBreakdownCharts({
+  chartType,
+  data,
+  arrayMapper,
+  isWidgetModal,
+  unit,
+  section,
+  setwidgetModal,
+}) {
   const [chartsData, setChartsData] = useState([]);
 
   useEffect(() => {
@@ -29,9 +38,25 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, isWidgetModal, unit }
     );
   }
 
+  let tableContent = null;
+
+  if (chartType === CHART_TYPE_TABLE) {
+    tableContent = (
+      <div
+        onClick={() => setwidgetModal({ unit, data })}
+        style={{ color: "#5949BC" }}
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+      >
+        Show More &rarr;
+      </div>
+    );
+  }
+
+  let chartContent = null;
+
   if (chartType === CHART_TYPE_SPARKLINES) {
     if (chartsData.length === 1) {
-      return (
+      chartContent = (
         <div
           className={`flex items-center mt-4 flex-wrap justify-center ${
             !unit.cardSize ? "flex-col" : ""
@@ -59,7 +84,7 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, isWidgetModal, unit }
 
     if (chartsData.length > 1) {
       const appliedColors = generateColors(chartsData.length);
-      return (
+      chartContent = (
         <div className="flex items-center flex-wrap mt-4 justify-center">
           {chartsData.map((chartData, index) => {
             return (
@@ -93,24 +118,25 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, isWidgetModal, unit }
   } else if (chartType === CHART_TYPE_LINECHART) {
     const lineChartData = formatDataInLineChartFormat(chartsData);
     const appliedColors = generateColors(chartsData.length);
-    return (
-      <div className="w-full flex items-center mt-4 justify-center">
-        <LineChart
-          frequency="date"
-          chartData={lineChartData}
-          hiddenEvents={[]}
-          setHiddenEvents={() => {}}
-          appliedColors={appliedColors}
-          queries={chartsData.map((elem) => elem.name)}
-          arrayMapper={arrayMapper.filter(
-            (elem) => chartsData.findIndex((d) => d.index === elem.index) > -1
-          )}
-          isDecimalAllowed={false}
-        />
-      </div>
+    chartContent = (
+      <LineChart
+        frequency="date"
+        chartData={lineChartData}
+        hiddenEvents={[]}
+        setHiddenEvents={() => {}}
+        appliedColors={appliedColors}
+        queries={chartsData.map((elem) => elem.name)}
+        arrayMapper={arrayMapper.filter(
+          (elem) => chartsData.findIndex((d) => d.index === elem.index) > -1
+        )}
+        isDecimalAllowed={false}
+        section={section}
+        height={200}
+        cardSize={unit.cardSize}
+      />
     );
   } else {
-    return (
+    chartContent = (
       <NoBreakdownTable
         chartType={chartType}
         chartsData={chartsData}
@@ -118,6 +144,22 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, isWidgetModal, unit }
       />
     );
   }
+
+  return (
+    <div
+      style={{
+        boxShadow:
+          chartType === CHART_TYPE_SPARKLINES ||
+          chartType === CHART_TYPE_LINECHART
+            ? "inset 0px 1px 0px rgba(0, 0, 0, 0.1)"
+            : "",
+      }}
+      className="w-full px-6"
+    >
+      {chartContent}
+      {tableContent}
+    </div>
+  );
 }
 
 export default NoBreakdownCharts;

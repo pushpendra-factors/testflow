@@ -8,17 +8,20 @@ import NoBreakdownTable from "../../CoreQuery/EventsAnalytics/NoBreakdownCharts/
 import SparkLineChart from "../../../components/SparkLineChart";
 import LineChart from "../../../components/LineChart";
 import { generateColors } from "../../../utils/dataFormatter";
+import {
+  ACTIVE_USERS_CRITERIA,
+  FREQUENCY_CRITERIA,
+} from "../../../utils/constants";
 
 function NoBreakdownCharts({
   queries,
-  eventsMapper,
-  reverseEventsMapper,
   resultState,
   page,
   chartType,
   durationObj,
   arrayMapper,
   unit,
+  section
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
@@ -34,67 +37,63 @@ function NoBreakdownCharts({
     return null;
   }
 
-  let chartContent = null;
+  let content = null;
 
   if (chartType === "sparklines") {
-    chartContent = (
-      <div className="mt-4">
-        <SparkLineChart
-          frequency={durationObj.frequency}
-          queries={queries}
-          chartsData={chartsData}
-          parentClass={`flex items-center flex-wrap justify-center ${
-            !unit.cardSize ? "mt-8 flex-col" : "mt-4"
-          }`}
-          appliedColors={appliedColors}
-          arrayMapper={arrayMapper}
-          page={page}
-          resultState={resultState}
-        />
-      </div>
+    content = (
+      <SparkLineChart
+        frequency={durationObj.frequency}
+        queries={queries}
+        chartsData={chartsData}
+        parentClass={`flex items-center flex-wrap justify-center ${
+          !unit.cardSize ? "mt-8 flex-col" : "mt-4"
+        }`}
+        appliedColors={appliedColors}
+        arrayMapper={arrayMapper}
+        page={page}
+        resultState={resultState}
+      />
     );
   } else if (chartType === "table") {
-    chartContent = (
-      <div className="mt-4">
-        <NoBreakdownTable
-          data={chartsData}
-          events={queries}
-          reverseEventsMapper={reverseEventsMapper}
-          chartType={chartType}
-          setHiddenEvents={setHiddenEvents}
-          hiddenEvents={hiddenEvents}
-          durationObj={durationObj}
-        />
-      </div>
+    content = (
+      <NoBreakdownTable
+        data={chartsData}
+        events={queries}
+        chartType={chartType}
+        setHiddenEvents={setHiddenEvents}
+        hiddenEvents={hiddenEvents}
+        isWidgetModal={false}
+        durationObj={durationObj}
+        arrayMapper={arrayMapper}
+      />
     );
   } else {
     const lineChartData = getDataInLineChartFormat(
       chartsData,
       queries,
-      eventsMapper,
       hiddenEvents,
       arrayMapper
     );
-    chartContent = (
-      <div className="flex mt-4">
-        <LineChart
-          frequency={durationObj.frequency}
-          chartData={lineChartData}
-          appliedColors={appliedColors}
-          queries={queries}
-          reverseEventsMapper={reverseEventsMapper}
-          eventsMapper={eventsMapper}
-          setHiddenEvents={setHiddenEvents}
-          hiddenEvents={hiddenEvents}
-          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
-          arrayMapper={arrayMapper}
-          cardSize={unit.cardSize}
-        />
-      </div>
+    content = (
+      <LineChart
+        frequency={durationObj.frequency}
+        chartData={lineChartData}
+        appliedColors={appliedColors}
+        queries={queries}
+        setHiddenEvents={setHiddenEvents}
+        hiddenEvents={hiddenEvents}
+        isDecimalAllowed={
+          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
+        }
+        arrayMapper={arrayMapper}
+        cardSize={unit.cardSize}
+        height={200}
+        section={section}
+      />
     );
   }
 
-  return <div className="total-events w-full">{chartContent}</div>;
+  return <div style={{ boxShadow: "inset 0px 1px 0px rgba(0, 0, 0, 0.1)" }} className="w-full px-6">{content}</div>;
 }
 
 export default NoBreakdownCharts;

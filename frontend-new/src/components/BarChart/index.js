@@ -7,7 +7,12 @@ import ChartLegends from "./ChartLegends";
 import { numberWithCommas } from "../../utils/dataFormatter";
 import { BARCHART_TICK_LENGTH } from "../../utils/constants";
 
-function BarChart({ chartData, queries, title = "chart" }) {
+function BarChart({
+  chartData,
+  queries,
+  title = "chart",
+  height: widgetHeight,
+}) {
   const tooltip = useRef(null);
   const chartRef = useRef(null);
 
@@ -84,7 +89,7 @@ function BarChart({ chartData, queries, title = "chart" }) {
       .html("")
       .append("svg")
       .attr("width", availableWidth)
-      .attr("height", 300)
+      .attr("height", widgetHeight || 300)
       .attr("id", `chart-${title}`);
     const svg = d3.select(`#chart-${title}`);
     const max = getMaxYpoint(

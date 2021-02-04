@@ -10,6 +10,7 @@ function AttributionsChart({
   attribution_method,
   touchpoint,
   linkedEvents,
+  section
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -33,6 +34,7 @@ function AttributionsChart({
         responseHeaders={data.headers}
         chartData={chartsData}
         visibleIndices={visibleIndices}
+        section={section}
       />
       <div className="mt-12 w-full">
         <AttributionTable

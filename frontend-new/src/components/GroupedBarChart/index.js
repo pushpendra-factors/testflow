@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import c3 from "c3";
 import styles from "../../Views/CoreQuery/FunnelsResultPage/GroupedChart/index.module.scss";
+import { REPORT_SECTION, DASHBOARD_WIDGET_SECTION } from "../../utils/constants";
+import TopLegends from "./TopLegends";
 
 function GroupedBarChart({
   categories,
@@ -12,13 +14,16 @@ function GroupedBarChart({
   method1,
   method2,
   event,
+  height: widgetHeight,
+  section,
+  cardSize
 }) {
   const chartRef = useRef(null);
   
   const drawChart = useCallback(() => {
     c3.generate({
       size: {
-        height: 300,
+        height: widgetHeight || 300,
       },
       padding: {
         left: 50,
@@ -31,7 +36,7 @@ function GroupedBarChart({
         colors
       },
       legend: {
-        show: true,
+        show: section === REPORT_SECTION,
       },
       transition: {
         duration: 1000,
@@ -128,6 +133,7 @@ function GroupedBarChart({
 
   return (
     <div className={`w-full bar-chart ${styles.groupedChart}`}>
+      {section === DASHBOARD_WIDGET_SECTION ? <TopLegends cardSize={cardSize} colors={colors} /> : null}
       <div ref={chartRef}></div>
     </div>
   );

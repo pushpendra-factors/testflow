@@ -4,6 +4,7 @@ import BarChart from "../../../../components/BarChart";
 import SingleEventSingleBreakdownTable from "./SingleEventSingleBreakdownTable";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
+import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA } from "../../../../utils/constants";
 
 function SingleEventSingleBreakdown({
   queries,
@@ -14,6 +15,7 @@ function SingleEventSingleBreakdown({
   isWidgetModal,
   durationObj,
   title,
+  section
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -91,8 +93,9 @@ function SingleEventSingleBreakdown({
         eventsMapper={mapper}
         setHiddenEvents={setHiddenProperties}
         hiddenEvents={hiddenProperties}
-        isDecimalAllowed={page === "activeUsers" || page === "frequency"}
+        isDecimalAllowed={page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA}
         arrayMapper={arrayMapper}
+        section={section}
       />
     );
   }

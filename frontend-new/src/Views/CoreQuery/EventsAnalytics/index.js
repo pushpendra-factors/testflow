@@ -1,207 +1,112 @@
 import React from "react";
-import Header from "../../AppLayout/Header";
-import EventsInfo from "../FunnelsResultPage/EventsInfo";
-import ContentTabs from "../../../components/ContentTabs";
-import ResultTab from "./ResultTab/index.js";
-import { SVG } from "../../../components/factorsComponents";
-import EventBreakdown from "./EventBreakdown";
-import ResultsHeader from "../ResultsHeader";
-import { QUERY_TYPE_EVENT } from "../../../utils/constants";
+import NoBreakdownCharts from "./NoBreakdownCharts";
+import SingleEventSingleBreakdown from "./SingleEventSingleBreakdown";
+import SingleEventMultipleBreakdown from "./SingleEventMultipleBreakdown";
+import MultipleEventsWithBreakdown from "./MultipleEventsWIthBreakdown";
+import {
+  EACH_USER_TYPE,
+  ANY_USER_TYPE,
+  ALL_USER_TYPE,
+} from "../../../utils/constants";
+import EventBreakdownCharts from "./EventBreakdown/EventBreakdownCharts";
 
 function EventsAnalytics({
   queries,
-  eventsMapper,
-  reverseEventsMapper,
   breakdown,
   resultState,
-  setDrawerVisible,
-  runQuery,
-  activeKey,
-  breakdownType,
-  handleBreakdownTypeChange,
-  breakdownTypeData,
-  queryType,
-  requestQuery,
-  setShowResult,
-  querySaved,
-  setQuerySaved,
-  durationObj,
-  handleDurationChange,
+  page,
+  isWidgetModal = false,
   arrayMapper,
-  setActiveKey,
+  title = "chart",
+  chartType,
+  durationObj,
+  breakdownType,
+  section
 }) {
-  const handleTabChange = (tabKey) => {
-    setActiveKey(tabKey);
-    runQuery(false, querySaved, null, tabKey);
-  };
+  let content = null;
 
-  let totalUsersTabContent = null;
+  if (breakdownType === EACH_USER_TYPE) {
+    if (resultState.data && !resultState.data.metrics.rows.length) {
+      content = (
+        <div className="h-64 flex items-center justify-center w-full">
+          No Data Found!
+        </div>
+      );
+    }
 
-  if (activeKey === "1" && breakdownType === "each") {
-    totalUsersTabContent = (
-      <ResultTab
-        handleBreakdownTypeChange={handleBreakdownTypeChange}
-        breakdownType={breakdownType}
-        activeKey={activeKey}
-        index={1}
-        page="totalUsers"
-        resultState={resultState}
-        breakdown={breakdown}
-        eventsMapper={eventsMapper}
-        reverseEventsMapper={reverseEventsMapper}
-        queries={queries}
-        durationObj={durationObj}
-        handleDurationChange={handleDurationChange}
-        arrayMapper={arrayMapper}
-      />
-    );
-  } else if (activeKey === "1" && breakdownType !== "each") {
-    totalUsersTabContent = (
-      <EventBreakdown
-        data={breakdownTypeData}
-        queries={queries}
-        breakdown={breakdown}
-        breakdownType={breakdownType}
-        handleBreakdownTypeChange={handleBreakdownTypeChange}
-        durationObj={durationObj}
-        handleDurationChange={handleDurationChange}
-        arrayMapper={arrayMapper}
-      />
+    if (resultState.data && resultState.data.metrics.rows.length) {
+      if (!breakdown.length) {
+        content = (
+          <NoBreakdownCharts
+            queries={queries}
+            resultState={resultState}
+            page={page}
+            chartType={chartType}
+            isWidgetModal={isWidgetModal}
+            arrayMapper={arrayMapper}
+            durationObj={durationObj}
+            section={section}
+          />
+        );
+      }
+
+      if (queries.length === 1 && breakdown.length === 1) {
+        content = (
+          <SingleEventSingleBreakdown
+            queries={queries}
+            breakdown={breakdown}
+            resultState={resultState}
+            page={page}
+            chartType={chartType}
+            isWidgetModal={isWidgetModal}
+            title={title}
+            durationObj={durationObj}
+            section={section}
+          />
+        );
+      }
+
+      if (queries.length > 1 && breakdown.length) {
+        content = (
+          <MultipleEventsWithBreakdown
+            queries={queries}
+            breakdown={breakdown}
+            resultState={resultState}
+            page={page}
+            chartType={chartType}
+            isWidgetModal={isWidgetModal}
+            title={title}
+            durationObj={durationObj}
+            section={section}
+          />
+        );
+      }
+
+      if (queries.length === 1 && breakdown.length > 1) {
+        content = (
+          <SingleEventMultipleBreakdown
+            queries={queries}
+            breakdown={breakdown}
+            resultState={resultState}
+            page={page}
+            chartType={chartType}
+            isWidgetModal={isWidgetModal}
+            title={title}
+            durationObj={durationObj}
+            section={section}
+          />
+        );
+      }
+    }
+  }
+
+  if (breakdownType === ANY_USER_TYPE || breakdownType === ALL_USER_TYPE) {
+    content = (
+      <EventBreakdownCharts data={resultState.data} breakdown={breakdown} />
     );
   }
 
-  const tabItems = [
-    {
-      key: "0",
-      title: "Total Events",
-      titleIcon: (
-        <SVG
-          name={"totalevents"}
-          size={24}
-          color={activeKey === "0" ? "#3E516C" : "#8692A3"}
-        />
-      ),
-      content:
-        activeKey === "0" ? (
-          <ResultTab
-            handleBreakdownTypeChange={handleBreakdownTypeChange}
-            breakdownType={breakdownType}
-            index={0}
-            page="totalEvents"
-            resultState={resultState}
-            breakdown={breakdown}
-            eventsMapper={eventsMapper}
-            reverseEventsMapper={reverseEventsMapper}
-            queries={queries}
-            durationObj={durationObj}
-            handleDurationChange={handleDurationChange}
-            arrayMapper={arrayMapper}
-          />
-        ) : null,
-    },
-    {
-      key: "1",
-      title: "Total Users",
-      titleIcon: (
-        <SVG
-          name={"totalusers"}
-          size={24}
-          color={activeKey === "1" ? "#3E516C" : "#8692A3"}
-        />
-      ),
-      content: activeKey === "1" ? totalUsersTabContent : null,
-    },
-    {
-      key: "2",
-      title: "Active Users",
-      titleIcon: (
-        <SVG
-          name={"activeusers"}
-          size={24}
-          color={activeKey === "2" ? "#3E516C" : "#8692A3"}
-        />
-      ),
-      content:
-        activeKey === "2" ? (
-          <ResultTab
-            handleBreakdownTypeChange={handleBreakdownTypeChange}
-            breakdownType={breakdownType}
-            activeKey={activeKey}
-            index={2}
-            page="activeUsers"
-            resultState={resultState}
-            breakdown={breakdown}
-            eventsMapper={eventsMapper}
-            reverseEventsMapper={reverseEventsMapper}
-            queries={queries}
-            durationObj={durationObj}
-            handleDurationChange={handleDurationChange}
-            arrayMapper={arrayMapper}
-          />
-        ) : null,
-    },
-    {
-      key: "3",
-      title: "Frequency",
-      titleIcon: (
-        <SVG
-          name={"frequency"}
-          size={24}
-          color={activeKey === "3" ? "#3E516C" : "#8692A3"}
-        />
-      ),
-      content:
-        activeKey === "3" ? (
-          <ResultTab
-            handleBreakdownTypeChange={handleBreakdownTypeChange}
-            breakdownType={breakdownType}
-            activeKey={activeKey}
-            index={3}
-            page="frequency"
-            resultState={resultState}
-            breakdown={breakdown}
-            eventsMapper={eventsMapper}
-            reverseEventsMapper={reverseEventsMapper}
-            queries={queries}
-            durationObj={durationObj}
-            handleDurationChange={handleDurationChange}
-            arrayMapper={arrayMapper}
-          />
-        ) : null,
-    },
-  ];
-
-  return (
-    <>
-      <Header>
-        <ResultsHeader
-          setShowResult={setShowResult}
-          requestQuery={requestQuery}
-          querySaved={querySaved}
-          setQuerySaved={setQuerySaved}
-          activeKey={activeKey}
-          breakdownType={breakdownType}
-          queryType={QUERY_TYPE_EVENT}
-        />
-        <div className="py-4">
-          <EventsInfo
-            setDrawerVisible={setDrawerVisible}
-            queries={queries}
-            queryType={queryType}
-          />
-        </div>
-      </Header>
-      <div className="mt-40 mb-8 fa-container">
-        <ContentTabs
-          breakdownTypeData={breakdownTypeData}
-          resultState={resultState}
-          onChange={handleTabChange}
-          activeKey={activeKey}
-          tabItems={tabItems}
-        />
-      </div>
-    </>
-  );
+  return <>{content}</>;
 }
 
 export default EventsAnalytics;

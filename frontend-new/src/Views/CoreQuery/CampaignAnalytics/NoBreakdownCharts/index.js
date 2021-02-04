@@ -13,7 +13,7 @@ import {
   CHART_TYPE_LINECHART,
 } from "../../../../utils/constants";
 
-function NoBreakdownCharts({ chartType, data, arrayMapper }) {
+function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
   const [chartsData, setChartsData] = useState([]);
 
   useEffect(() => {
@@ -113,6 +113,7 @@ function NoBreakdownCharts({ chartType, data, arrayMapper }) {
           (elem) => chartsData.findIndex((d) => d.index === elem.index) > -1
         )}
         isDecimalAllowed={false}
+        section={section}
       />
     );
   }

@@ -91,7 +91,7 @@ function WidgetCard({
         } else if (queryType === QUERY_TYPE_CAMPAIGN) {
           setResultState({
             ...initialState,
-            data: res.data.result,
+            data: res.data,
           });
         } else {
           let result_group;
@@ -225,9 +225,9 @@ function WidgetCard({
         ref={cardRef}
         className={"fa-dashboard--widget-card w-full flex"}
       >
-        <div className={"px-8 py-4 flex justify-between items-start w-full"}>
+        <div className={"py-5 flex justify-between items-start w-full"}>
           <div className={"w-full"}>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-6">
               <div className="flex flex-col">
                 <div
                   className="flex cursor-pointer items-center"
@@ -246,7 +246,7 @@ function WidgetCard({
                   </Text>
                   <SVG color="#8692A3" size={20} name="expand" />
                 </div>
-                <div>
+                <div className="description">
                   <Text
                     ellipsis
                     type={"paragraph"}
@@ -260,7 +260,7 @@ function WidgetCard({
               </div>
               <div>
                 <Dropdown overlay={getMenu()} trigger={["hover"]}>
-                  <Button type="text" icon={<MoreOutlined />} />
+                  <Button type="text" icon={<SVG size={20} name={"threedot"} color="#8692A3" />} />
                 </Dropdown>
               </div>
             </div>

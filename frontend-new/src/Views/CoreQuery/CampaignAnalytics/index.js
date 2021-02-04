@@ -7,7 +7,8 @@ function CampaignAnalytics({
   arrayMapper,
   campaignState,
   chartType,
-  currMetricsValue
+  currMetricsValue,
+  section
 }) {
   const { group_by: breakdown } = campaignState;
   
@@ -21,6 +22,7 @@ function CampaignAnalytics({
         data={resultState.data}
         breakdown={breakdown}
         currentEventIndex={currMetricsValue}
+        section={section}
       />
     );
   } else {
@@ -29,6 +31,7 @@ function CampaignAnalytics({
         arrayMapper={arrayMapper}
         chartType={chartType}
         data={resultState.data}
+        section={section}
       />
     );
   }

@@ -10,6 +10,7 @@ function CampaignAnalytics({
   setwidgetModal,
   unit,
   title,
+  section
 }) {
   const { group_by: breakdown } = campaignState;
   if (breakdown.length) {
@@ -23,6 +24,7 @@ function CampaignAnalytics({
         setwidgetModal={setwidgetModal}
         unit={unit}
         title={title}
+        section={section}
       />
     );
   } else {
@@ -35,6 +37,7 @@ function CampaignAnalytics({
         setwidgetModal={setwidgetModal}
         unit={unit}
         title={title}
+        section={section}
       />
     );
   }

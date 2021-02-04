@@ -8,6 +8,7 @@ import BarChart from "../../../components/BarChart";
 import MultipleEventsWithBreakdownTable from "../../CoreQuery/EventsAnalytics/MultipleEventsWIthBreakdown/MultipleEventsWithBreakdownTable";
 import LineChart from "../../../components/LineChart";
 import { generateColors } from "../../../utils/dataFormatter";
+import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA } from "../../../utils/constants";
 // import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
@@ -19,6 +20,7 @@ function MultipleEventsWithBreakdown({
   breakdown,
   unit,
   durationObj,
+  section
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -105,15 +107,17 @@ function MultipleEventsWithBreakdown({
           eventsMapper={mapper}
           setHiddenEvents={setHiddenProperties}
           hiddenEvents={hiddenProperties}
-          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
+          isDecimalAllowed={page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA}
           arrayMapper={arrayMapper}
           cardSize={unit.cardSize}
+          section={section}
+          height={200}
         />
       </div>
     );
   }
 
-  return <div className="total-events w-full">{chartContent}</div>;
+  return <div style={{ boxShadow: "inset 0px 1px 0px rgba(0, 0, 0, 0.1)" }} className="w-full px-6">{chartContent}</div>;
 }
 
 export default MultipleEventsWithBreakdown;

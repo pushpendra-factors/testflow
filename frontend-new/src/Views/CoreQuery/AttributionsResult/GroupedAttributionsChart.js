@@ -10,7 +10,8 @@ function GroupedAttributionsChart({
   attribution_method,
   attribution_method_compare,
   touchpoint,
-  linkedEvents
+  linkedEvents,
+  section
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -66,6 +67,7 @@ function GroupedAttributionsChart({
         method1={attribution_method}
         method2={attribution_method_compare}
         event={event}
+        section={section}
       />
       <div className="mt-12 w-full">
         <AttributionTable

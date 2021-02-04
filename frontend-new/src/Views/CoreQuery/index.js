@@ -39,6 +39,7 @@ import {
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
   EACH_USER_TYPE,
+  REPORT_SECTION,
 } from "../../utils/constants";
 import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
 import AnalysisResultsPage from "./AnalysisResultsPage";
@@ -624,6 +625,8 @@ function CoreQuery({
           attributionsState={attributionsState}
           breakdownType={breakdownType}
           campaignState={campaignState}
+          eventPage={result_criteria}
+          section={REPORT_SECTION}
         />
       ) : (
         <CoreQueryHome

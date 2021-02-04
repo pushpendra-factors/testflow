@@ -17,7 +17,7 @@ import AttributionsResult from "../AttributionsResult";
 import CampaignAnalytics from "../CampaignAnalytics";
 import { getChartTypeMenuItems } from "../../../utils/dataFormatter";
 import CampaignMetricsDropdown from "./CampaignMetricsDropdown";
-import ResultTab from "../EventsAnalytics/ResultTab";
+import EventsAnalytics from "../EventsAnalytics";
 
 function ReportContent({
   resultState,
@@ -33,7 +33,9 @@ function ReportContent({
   attributionsState,
   isWidgetModal,
   breakdownType,
-  queryTitle
+  queryTitle,
+  eventPage,
+  section,
 }) {
   let content = null,
     queryDetail = null,
@@ -56,11 +58,8 @@ function ReportContent({
         campaignState.group_by.length > 0
       );
     }
-    if(queryType === QUERY_TYPE_EVENT && breakdownType === EACH_USER_TYPE) {
-      items = getChartTypeMenuItems(
-        queryType,
-        breakdown.length > 0
-      );
+    if (queryType === QUERY_TYPE_EVENT && breakdownType === EACH_USER_TYPE) {
+      items = getChartTypeMenuItems(queryType, breakdown.length > 0);
     }
     setChartTypeMenuItems(items);
   }, [queryType, campaignState.group_by, breakdown]);
@@ -139,6 +138,7 @@ function ReportContent({
           breakdown={breakdown}
           arrayMapper={arrayMapper}
           isWidgetModal={isWidgetModal}
+          section={section}
         />
       );
     }
@@ -148,6 +148,7 @@ function ReportContent({
         <AttributionsResult
           resultState={resultState}
           attributionsState={attributionsState}
+          section={section}
         />
       );
     }
@@ -169,21 +170,23 @@ function ReportContent({
           campaignState={campaignState}
           chartType={chartType}
           currMetricsValue={currMetricsValue}
+          section={section}
         />
       );
     }
 
     if (queryType === QUERY_TYPE_EVENT) {
       content = (
-        <ResultTab
+        <EventsAnalytics
           resultState={resultState}
           arrayMapper={arrayMapper}
           chartType={chartType}
           breakdown={breakdown}
           queries={queries}
-          page="totalEvents"
+          page={eventPage}
           durationObj={durationObj}
           breakdownType={breakdownType}
+          section={section}
         />
       );
     }
