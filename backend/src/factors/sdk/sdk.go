@@ -692,22 +692,6 @@ func Track(projectId uint64, request *TrackPayload,
 	return http.StatusOK, response
 }
 
-func getIdentifiedUserPropertiesAsJsonb(customerUserId string) (*postgres.Jsonb, error) {
-	if customerUserId == "" {
-		return nil, errors.New("invalid customer user id")
-	}
-
-	properties := map[string]interface{}{
-		U.UP_USER_ID: customerUserId,
-	}
-
-	if U.IsEmail(customerUserId) {
-		properties[U.UP_EMAIL] = customerUserId
-	}
-
-	return U.EncodeToPostgresJsonb(&properties)
-}
-
 func isUserAlreadyIdentifiedBySDKRequest(projectID uint64, userID string) bool {
 	userProperties, status := M.GetLatestUserPropertiesOfUserAsMap(projectID, userID)
 	if status != http.StatusFound {
@@ -745,7 +729,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"user_id": request.UserId, "customer_user_id": request.CustomerUserId})
 
-	userProperties, err := getIdentifiedUserPropertiesAsJsonb(request.CustomerUserId)
+	userProperties, err := M.GetIdentifiedUserPropertiesAsJsonb(request.CustomerUserId)
 	if err != nil || userProperties == nil {
 		logCtx.WithError(err).Error("Failed to get and add identified user properties on identify.")
 	}

@@ -56,10 +56,22 @@ func (pw *MockPatternServiceWrapper) GetPattern(reqId string, eventNames []strin
 
 func (pw *MockPatternServiceWrapper) GetAllPatterns(reqId,
 	startEvent, endEvent string) ([]*P.Pattern, error) {
-	filterPatterns := PS.GetFilter(startEvent, endEvent)
+	filterPatterns := PS.GetFilter(startEvent, endEvent, "")
 	patternsToReturn := make([]*pattern.Pattern, 0, 0)
 	for _, p := range pw.patterns {
-		if filterPatterns(p.EventNames, startEvent, endEvent) {
+		if filterPatterns(p.EventNames, startEvent, endEvent, "") {
+			patternsToReturn = append(patternsToReturn, p)
+		}
+	}
+	return patternsToReturn, nil
+}
+
+func (pw *MockPatternServiceWrapper) GetAllContainingPatterns(reqId,
+	event string) ([]*P.Pattern, error) {
+	filterPatterns := PS.GetFilter("", "", event)
+	patternsToReturn := make([]*pattern.Pattern, 0, 0)
+	for _, p := range pw.patterns {
+		if filterPatterns(p.EventNames, "", "", event) {
 			patternsToReturn = append(patternsToReturn, p)
 		}
 	}

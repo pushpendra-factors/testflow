@@ -297,10 +297,26 @@ function CoreQuery({
 
     if (item.title === "Funnels") {
       setQueryType(QUERY_TYPE_FUNNEL);
+      setQueries([]);
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: {
+          global: [],
+          event: [],
+        },
+      });
     }
 
     if (item.title === "Events") {
       setQueryType(QUERY_TYPE_EVENT);
+      setQueries([]);
+      dispatch({
+        type: INITIALIZE_GROUPBY,
+        payload: {
+          global: [],
+          event: [],
+        },
+      });
     }
 
     if (item.title === "Attributions") {

@@ -11,7 +11,7 @@ type pair struct {
 func ApplyAttribution(method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
 	userInitialSession map[string]map[string]RangeTimestamp,
 	coalUserIdConversionTimestamp map[string]int64,
-	lookbackDays int) (map[string][]string, map[string]map[string][]string, error) {
+	lookbackDays int, campaignFrom, campaignTo int64) (map[string][]string, map[string]map[string][]string, error) {
 
 	usersAttribution := make(map[string][]string)
 	linkedEventUserCampaign := make(map[string]map[string][]string)
@@ -23,29 +23,37 @@ func ApplyAttribution(method string, conversionEvent string, usersToBeAttributed
 		attributionKeys := []string{PropertyValueNone}
 		switch method {
 		case AttributionMethodFirstTouch:
-			attributionKeys = getFirstTouchId(userInitialSession[userId], conversionTime, lookbackPeriod)
+			attributionKeys = getFirstTouchId(userInitialSession[userId], conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLastTouch:
-			attributionKeys = getLastTouchId(userInitialSession[userId], conversionTime, lookbackPeriod)
+			attributionKeys = getLastTouchId(userInitialSession[userId], conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodFirstTouchNonDirect:
-			attributionKeys = getFirstTouchNDId(userInitialSession[userId], conversionTime, lookbackPeriod)
+			attributionKeys = getFirstTouchNDId(userInitialSession[userId], conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLastTouchNonDirect:
-			attributionKeys = getLastTouchNDId(userInitialSession[userId], conversionTime, lookbackPeriod)
+			attributionKeys = getLastTouchNDId(userInitialSession[userId], conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLinear:
-			attributionKeys = getLinearTouch(userInitialSession[userId], conversionTime, lookbackPeriod)
+			attributionKeys = getLinearTouch(userInitialSession[userId], conversionTime,
+				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		default:
 			break
 		}
-
+		// in case a successful attribution could not happen, remove converted user
+		if len(attributionKeys) == 0 {
+			delete(usersAttribution, userId)
+		}
 		if eventName == conversionEvent {
 			usersAttribution[userId] = attributionKeys
 		} else {
@@ -60,12 +68,12 @@ func ApplyAttribution(method string, conversionEvent string, usersToBeAttributed
 
 // returns list of attribution keys from given attributionKeyTime map
 func getLinearTouch(attributionTimerange map[string]RangeTimestamp, conversionTime int64,
-	lookbackPeriod int64) []string {
+	lookbackPeriod int64, from, to int64) []string {
 
 	var keys []string
 	for aId, rangeTime := range attributionTimerange {
 		if isConversionWithinLookback(rangeTime.MinTimestamp, conversionTime,
-			lookbackPeriod) {
+			lookbackPeriod) && isConversionWithinQueryPeriod(rangeTime.MinTimestamp, from, to) {
 			keys = append(keys, aId)
 		}
 	}
@@ -74,7 +82,7 @@ func getLinearTouch(attributionTimerange map[string]RangeTimestamp, conversionTi
 
 // returns the first attributionId
 func getFirstTouchId(attributionTimerange map[string]RangeTimestamp, conversionTime int64,
-	lookbackPeriod int64) []string {
+	lookbackPeriod int64, from, to int64) []string {
 	var attributionIds []pair
 	for aId, rangeT := range attributionTimerange {
 		// MinTimestamp for FirstTouch
@@ -88,6 +96,10 @@ func getFirstTouchId(attributionTimerange map[string]RangeTimestamp, conversionT
 		for i := 0; i < len(attributionIds); i++ {
 			if isConversionWithinLookback(attributionIds[i].value, conversionTime,
 				lookbackPeriod) {
+				// exit condition: Attribution not in query range
+				if !isConversionWithinQueryPeriod(attributionIds[i].value, from, to) {
+					return []string{}
+				}
 				return []string{attributionIds[i].key}
 			}
 		}
@@ -97,7 +109,7 @@ func getFirstTouchId(attributionTimerange map[string]RangeTimestamp, conversionT
 
 // returns the last attributionId
 func getLastTouchId(attributionTimerange map[string]RangeTimestamp, conversionTime int64,
-	lookbackPeriod int64) []string {
+	lookbackPeriod int64, from, to int64) []string {
 
 	var attributionIds []pair
 	for aId, rangeT := range attributionTimerange {
@@ -112,6 +124,10 @@ func getLastTouchId(attributionTimerange map[string]RangeTimestamp, conversionTi
 		for i := 0; i < len(attributionIds); i++ {
 			if isConversionWithinLookback(attributionIds[i].value, conversionTime,
 				lookbackPeriod) {
+				// exit condition: Attribution not in query range
+				if !isConversionWithinQueryPeriod(attributionIds[i].value, from, to) {
+					return []string{}
+				}
 				return []string{attributionIds[i].key}
 			}
 		}
@@ -121,7 +137,7 @@ func getLastTouchId(attributionTimerange map[string]RangeTimestamp, conversionTi
 
 // returns the first non $none attributionId
 func getFirstTouchNDId(attributionTimerange map[string]RangeTimestamp, conversionTime int64,
-	lookbackPeriod int64) []string {
+	lookbackPeriod int64, from, to int64) []string {
 
 	var attributionIds []pair
 	for aId, rangeT := range attributionTimerange {
@@ -134,11 +150,15 @@ func getFirstTouchNDId(attributionTimerange map[string]RangeTimestamp, conversio
 			return attributionIds[i].value < attributionIds[j].value
 		})
 		key = attributionIds[0].key
-		for _, pair := range attributionIds {
-			if isConversionWithinLookback(pair.value, conversionTime,
+		for _, atPair := range attributionIds {
+			if isConversionWithinLookback(atPair.value, conversionTime,
 				lookbackPeriod) {
-				if pair.key != PropertyValueNone {
-					key = pair.key
+				if atPair.key != PropertyValueNone {
+					// exit condition: Attribution not in query range
+					if !isConversionWithinQueryPeriod(atPair.value, from, to) {
+						return []string{}
+					}
+					key = atPair.key
 					// break on first non $none
 					break
 				}
@@ -150,7 +170,7 @@ func getFirstTouchNDId(attributionTimerange map[string]RangeTimestamp, conversio
 
 // returns the last non $none attributionId
 func getLastTouchNDId(attributionTimerange map[string]RangeTimestamp, conversionTime int64,
-	lookbackPeriod int64) []string {
+	lookbackPeriod int64, from, to int64) []string {
 
 	var attributionIds []pair
 	for aId, rangeT := range attributionTimerange {
@@ -163,11 +183,15 @@ func getLastTouchNDId(attributionTimerange map[string]RangeTimestamp, conversion
 			return attributionIds[i].value > attributionIds[j].value
 		})
 		key = attributionIds[0].key
-		for _, pair := range attributionIds {
-			if isConversionWithinLookback(pair.value, conversionTime,
+		for _, atPair := range attributionIds {
+			if isConversionWithinLookback(atPair.value, conversionTime,
 				lookbackPeriod) {
-				if pair.key != PropertyValueNone {
-					key = pair.key
+				if atPair.key != PropertyValueNone {
+					// exit condition: Attribution not in query range
+					if !isConversionWithinQueryPeriod(atPair.value, from, to) {
+						return []string{}
+					}
+					key = atPair.key
 					// break on first non $none
 					break
 				}
@@ -175,6 +199,11 @@ func getLastTouchNDId(attributionTimerange map[string]RangeTimestamp, conversion
 		}
 	}
 	return []string{key}
+}
+
+// isConversionWithinQueryPeriod checks if attribution time is within query (campaign) period
+func isConversionWithinQueryPeriod(attributionTime int64, from, to int64) bool {
+	return attributionTime >= from && attributionTime <= to
 }
 
 // isConversionWithinLookback checks if attribution time is within lookback period

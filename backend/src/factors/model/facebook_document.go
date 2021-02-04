@@ -386,9 +386,6 @@ func transFormRequestFieldsAndFetchRequiredFieldsForFacebook(projectID uint64, q
 // Currently, this relies on assumption of Object across different filterObjects. Change when we need robust.
 func convertFromRequestToFacebookSpecificRepresentation(query ChannelQueryV1) (ChannelQueryV1, error) {
 	var transformedQuery ChannelQueryV1
-	transformedQuery.From = getAdwordsDateOnlyTimestampInInt64(query.From)
-	transformedQuery.To = getAdwordsDateOnlyTimestampInInt64(query.To)
-
 	var err1, err2, err3 error
 	transformedQuery.SelectMetrics, err1 = getFacebookSpecificMetrics(query.SelectMetrics)
 	transformedQuery.Filters, err2 = getFacebookSpecificFilters(query.Filters)
@@ -402,6 +399,11 @@ func convertFromRequestToFacebookSpecificRepresentation(query ChannelQueryV1) (C
 	if err3 != nil {
 		return query, err3
 	}
+	transformedQuery.From = getAdwordsDateOnlyTimestampInInt64(query.From)
+	transformedQuery.To = getAdwordsDateOnlyTimestampInInt64(query.To)
+	transformedQuery.Timezone = query.Timezone
+	transformedQuery.GroupByTimestamp = query.GroupByTimestamp
+
 	return transformedQuery, nil
 }
 
@@ -436,8 +438,27 @@ func getFacebookSpecificFilters(requestFilters []FilterV1) ([]FilterV1, error) {
 
 // @Kark TODO v1
 func getFacebookSpecificGroupBy(requestGroupBys []GroupBy) ([]GroupBy, error) {
+	sortedGroupBys := make([]GroupBy, 0, 0)
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterCampaign {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterAdGroup {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
+	for _, groupBy := range requestGroupBys {
+		if groupBy.Object == CAFilterAd {
+			sortedGroupBys = append(sortedGroupBys, groupBy)
+		}
+	}
+
 	resultGroupBys := make([]GroupBy, 0, 0)
-	for _, requestGroupBy := range requestGroupBys {
+	for _, requestGroupBy := range sortedGroupBys {
 		var resultGroupBy GroupBy
 		groupByObject, isPresent := facebookExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
@@ -702,9 +723,9 @@ func buildFacebookComplexQueryV1(query *ChannelQueryV1, projectID uint64, custom
 
 	completeInnerJoin := " from " + reportCTEAlias + " "
 	for index, jobsCTEAlias := range jobsCTEAliases {
-		completeInnerJoin += innerJoinClause + jobsCTEAlias + " ON " + reportCTEAlias + "." + reportCTEJoinFields[index] + " = " + jobsCTEAlias + "." + jobCTEJoinFields[index] + " AND "
+		completeInnerJoin += innerJoinClause + jobsCTEAlias + " ON " + reportCTEAlias + "." + reportCTEJoinFields[index] + " = " + jobsCTEAlias + "." + jobCTEJoinFields[index] + " "
 	}
-	completeInnerJoin = completeInnerJoin[:len(completeInnerJoin)-4] + " "
+	completeInnerJoin = completeInnerJoin + " "
 
 	resultSQLStatement := completeWithClause + selectQuery + completeInnerJoin
 
@@ -853,11 +874,11 @@ func splitFiltersByObjectTypeForFacebook(query *ChannelQueryV1) ([]FilterV1, []F
 
 	for _, filter := range query.Filters {
 		switch filter.Object {
-		case "campaign":
+		case facebookCampaign:
 			campaignsFilters = append(campaignsFilters, filter)
-		case "ad_set":
+		case facebookAdSet:
 			adSetFilters = append(adSetFilters, filter)
-		case "ad":
+		case facebookAd:
 			adFilters = append(adFilters, filter)
 		}
 	}
@@ -870,14 +891,14 @@ func splitGroupByByObjectTypeForFacebook(query *ChannelQueryV1) ([]GroupBy, []Gr
 	adSetGroupBys := make([]GroupBy, 0, 0)
 	adSetBys := make([]GroupBy, 0, 0)
 
-	for _, filter := range query.GroupBy {
-		switch filter.Object {
-		case "campaign":
-			campaignsGroupBys = append(campaignsGroupBys, filter)
-		case "ad_set":
-			adSetGroupBys = append(adSetGroupBys, filter)
-		case "ad":
-			adSetBys = append(adSetBys, filter)
+	for _, groupBy := range query.GroupBy {
+		switch groupBy.Object {
+		case facebookCampaign:
+			campaignsGroupBys = append(campaignsGroupBys, groupBy)
+		case facebookAdSet:
+			adSetGroupBys = append(adSetGroupBys, groupBy)
+		case facebookAd:
+			adSetBys = append(adSetBys, groupBy)
 		}
 	}
 	return campaignsGroupBys, adSetGroupBys, adSetBys

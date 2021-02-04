@@ -21,6 +21,7 @@ const (
 	RPCServiceName                         = "ps"
 	RPCEndpoint                            = "/rpc"
 	OperationNameGetAllPatterns            = "GetAllPatterns"
+	OperationNameGetAllContainingPatterns  = "GetAllContainingPatterns"
 	OperationNameGetPatterns               = "GetPatterns"
 	OperationNameGetCountOfPattern         = "GetCountOfPattern"
 	OperationNameGetProjectModelsIntervals = "GetProjectModelsIntervals"
@@ -43,6 +44,17 @@ type GetAllPatternsRequest struct {
 }
 
 type GetAllPatternsResponse struct {
+	GenericRPCResp
+	Patterns []*json.RawMessage `json:"ps"`
+}
+
+type GetAllContainingPatternsRequest struct {
+	ProjectId uint64 `json:"pid"`
+	ModelId   uint64 `json:"mid"`
+	Event     string `json:"en"`
+}
+
+type GetAllContainingPatternsResponse struct {
 	GenericRPCResp
 	Patterns []*json.RawMessage `json:"ps"`
 }
@@ -153,6 +165,67 @@ func GetAllPatterns(reqId string, projectId, modelId uint64, startEvent, endEven
 		resultPatterns, err := CreatePatternsFromRawPatterns(result.Patterns)
 		if err != nil {
 			log.WithError(err).Error("Error Decoding result patterns on response Ignoring GetAllPatternsResponse")
+			continue
+		}
+
+		patterns = append(patterns, resultPatterns...)
+	}
+
+	return patterns, nil
+}
+
+func GetAllContainingPatterns(reqId string, projectId, modelId uint64, event string) ([]*pattern.Pattern, error) {
+	params := GetAllContainingPatternsRequest{
+		ProjectId: projectId,
+		ModelId:   modelId,
+		Event:     event,
+	}
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetAllContainingPatterns, params)
+	if err != nil {
+		return []*pattern.Pattern{}, err
+	}
+	serverAddrs := C.GetServices().GetPatternServerAddresses()
+
+	gatherResp := make(chan httpResp, len(serverAddrs))
+	headers := map[string]string{
+		"content-type": "application/json",
+		"X-Req-Id":     reqId,
+	}
+
+	urls := make([]string, 0, 0)
+	for _, serverAddr := range serverAddrs {
+		url := fmt.Sprintf("http://%s%s", serverAddr, RPCEndpoint)
+		urls = append(urls, url)
+	}
+
+	httpDo(http.MethodPost, urls, paramBytes, headers, gatherResp)
+
+	patterns := make([]*pattern.Pattern, 0, 0)
+
+	for r := range gatherResp {
+		if r.err != nil {
+			log.WithError(r.err).Error("Error Ignoring GetAllContainingPatternsResponse")
+			continue
+		}
+		var result GetAllContainingPatternsResponse
+		defer r.resp.Body.Close()
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
+		if err != nil {
+			log.WithError(err).Error("Error Decoding response Ignoring GetAllContainingPatternsResponse")
+			continue
+		}
+		if result.Ignored {
+			log.Debugln("Ignoring GetAllContainingPatternsResponse")
+			continue
+		}
+		if result.Error != nil {
+			log.WithError(result.Error).Error("Error GetAllContainingPatternsResponse")
+			continue
+		}
+
+		resultPatterns, err := CreatePatternsFromRawPatterns(result.Patterns)
+		if err != nil {
+			log.WithError(err).Error("Error Decoding result patterns on response Ignoring GetAllContainingPatternsResponse")
 			continue
 		}
 

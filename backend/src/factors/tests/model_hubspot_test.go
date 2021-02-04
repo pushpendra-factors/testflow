@@ -304,4 +304,31 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 	assert.Equal(t, "bangalore", result.Rows[1][0])
 	assert.Equal(t, int64(1), result.Rows[1][1])
 
+	query = M.Query{
+		From: createdDate.Unix() - 500,
+		To:   createdDate.Unix() + 500,
+		EventsWithProperties: []M.QueryEventWithProperties{
+			{
+				Name:       "$hubspot_contact_created",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class: M.QueryClassFunnel,
+		GroupByProperties: []M.QueryGroupByProperty{
+			{
+				Entity:         M.PropertyEntityUser,
+				Property:       "$user_id",
+				EventName:      "$hubspot_contact_created",
+				EventNameIndex: 1,
+			},
+		},
+
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result, status, _ = M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, cuID, result.Rows[1][0])
+	assert.Equal(t, int64(1), result.Rows[1][1])
 }

@@ -61,6 +61,22 @@ func (user *User) BeforeCreate(scope *gorm.Scope) error {
 	return nil
 }
 
+func GetIdentifiedUserPropertiesAsJsonb(customerUserId string) (*postgres.Jsonb, error) {
+	if customerUserId == "" {
+		return nil, errors.New("invalid customer user id")
+	}
+
+	properties := map[string]interface{}{
+		U.UP_USER_ID: customerUserId,
+	}
+
+	if U.IsEmail(customerUserId) {
+		properties[U.UP_EMAIL] = customerUserId
+	}
+
+	return U.EncodeToPostgresJsonb(&properties)
+}
+
 // createUserWithError - Returns error during create to match
 // with constraint errors.
 func createUserWithError(user *User) (*User, error) {
@@ -74,6 +90,25 @@ func createUserWithError(user *User) (*User, error) {
 	// Add id with our uuid generator, if not given.
 	if user.ID == "" {
 		user.ID = U.GetUUID()
+	}
+
+	// Prioritize identity properties if customer_user_id is provided
+	if user.CustomerUserId != "" {
+		identityProperties, err := GetIdentifiedUserPropertiesAsJsonb(user.CustomerUserId)
+		if err != nil {
+			return nil, errors.New("failed to get identity properties")
+		}
+
+		propertiesMap, err := U.DecodePostgresJsonb(identityProperties)
+		if err != nil {
+			return nil, errors.New("failed to decode identity properties")
+		}
+
+		properties, err := U.AddToPostgresJsonb(&user.Properties, *propertiesMap, true)
+		if err != nil {
+			return nil, errors.New("failed to add identity properties on user properties")
+		}
+		user.Properties = *properties
 	}
 
 	db := C.GetServices().Db
@@ -488,7 +523,7 @@ func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, requ
 
 	// same seg_aid with different c_uid. log error. return user.
 	if user.CustomerUserId != custUserId {
-		logCtx.Error("Different customer_user_id seen for existing user with segment_anonymous_id.")
+		logCtx.Warn("Different customer_user_id seen for existing user with segment_anonymous_id.")
 	}
 
 	// provided and fetched c_uid are same.

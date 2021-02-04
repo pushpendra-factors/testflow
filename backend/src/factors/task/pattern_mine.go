@@ -36,7 +36,7 @@ const max_SEGMENTS = 25000
 const max_EVENT_NAMES = 250
 const top_K = 5
 const topK_patterns = 5
-const topKProperties = 5
+const topKProperties = 20
 const keventsSpecial = 5
 const keventsURL = 10
 const max_PATTERN_LENGTH = 3
@@ -473,8 +473,6 @@ func GetEncodedEventsPatterns(projectId uint64, filteredPatterns []*P.Pattern, e
 		for _, p := range campEventsList {
 			if valPattern, ok := tmpPatterns[p]; ok {
 				goalPatterns = append(goalPatterns, valPattern)
-				mineLog.Info(fmt.Sprint("Goal event from campaign ", valPattern.String()))
-
 			}
 		}
 
@@ -528,11 +526,6 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 
 	goalPatterns, err := GetEncodedEventsPatterns(projectId, filteredPatterns, eventNamesWithType, campEventsList)
 	mineLog.Info("Number of Goal Patterns to use in factors: ", len(goalPatterns))
-
-	for _, v := range goalPatterns {
-		mineLog.Info("goal pattern for factor: ", v.EventNames[0])
-	}
-
 	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil
 	}
@@ -634,13 +627,10 @@ func buildPropertiesInfoFromInput(projectId uint64, eventNames []string, filepat
 		}
 	}
 
-	file, err := os.Open(filepath)
+	scanner, err := OpenEventFileAndGetScanner(filepath)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
 	allProperty, err := P.CollectPropertiesInfo(scanner, userAndEventsInfo)
 	if err != nil {
 		return nil, nil, err
@@ -838,22 +828,28 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 	return uploadedChunkIds, nil
 }
 
-func rewriteEventsFile(tmpPath string, reader io.Reader, userPropMap, eventPropMap map[string]bool, campaignLimitCount int) ([]string, error) {
+func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, eventPropMap map[string]bool, campaignLimitCount int) ([]string, error) {
 	// read events file , filter and create properties based on userProp and eventsProp
 	// create encoded events based on $session and campaign eventName
 
-	scanner := bufio.NewScanner(reader)
+	mineLog.WithField("path", tmpEventsFilePath).Info("Read Events from file to create encoded events")
+	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
+	if err != nil {
+		log.Error("Unable to open events File")
+	}
+
+	mineLog.WithField("path", tmpPath).Info("Create a temp file to save and read events")
 	file, err := os.Create(tmpPath)
+	defer file.Close()
+
 	if err != nil {
 		return nil, err
 	}
-	log.Info("Create a temp file to save and read events")
 	campEventsMap := make(map[string]int)
 	campEventsList := make([]string, 0)
-	defer file.Close()
 
-	mineLog.Info("User Properties", userPropMap)
-	mineLog.Info("Event Properties", eventPropMap)
+	mineLog.WithField("model user properties", userPropMap).Info("Final User properties to model")
+	mineLog.WithField("model event Properties", eventPropMap).Info("Final Event Properties to model")
 
 	w := bufio.NewWriter(file)
 	for scanner.Scan() {
@@ -934,6 +930,12 @@ func rewriteEventsFile(tmpPath string, reader io.Reader, userPropMap, eventPropM
 
 	}
 
+	err = os.Remove(tmpEventsFilePath)
+	mineLog.WithField("path", tmpEventsFilePath).Info("Remove tmpEvents File")
+	if err != nil {
+		mineLog.WithField("path", tmpEventsFilePath).Error("unable to remove File", err)
+		return nil, err
+	}
 	return campEventsList, nil
 }
 
@@ -992,23 +994,24 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 	} else {
 		upSortedList := U.RankByWordCount(userPropertiesMap)
 
-		// restrict number of properties
-		if len(upSortedList) > numProp {
-			upSortedList = upSortedList[0:numProp]
-		}
-		// add keys based on ranking
-		for _, u := range upSortedList {
-			upFilteredMap[u.Key] = true
-		}
-
-		// add keys based on WHITELIST_Properties
 		for _, v := range U.WHITELIST_FACTORS_USER_PROPERTIES {
 			upFilteredMap[v] = true
 		}
 
+		var userPropertiesCount = 0
+		for _, u := range upSortedList {
+			if upFilteredMap[u.Key] != true && userPropertiesCount < numProp {
+				upFilteredMap[u.Key] = true
+				userPropertiesCount++
+			}
+		}
+
 		// delete keys based on disabled_Properties
 		for _, Uprop := range U.DISABLED_FACTORS_USER_PROPERTIES {
-			delete(upFilteredMap, Uprop)
+			if upFilteredMap[Uprop] == true {
+				delete(upFilteredMap, Uprop)
+
+			}
 		}
 		mineLog.Info("Number of User Properties: ", len(upFilteredMap))
 
@@ -1027,35 +1030,33 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 
 	epSortedList := U.RankByWordCount(eventPropertiesMap)
 
-	if len(epSortedList) > numProp {
-		epSortedList = epSortedList[0:numProp]
-	}
-
-	for _, u := range epSortedList {
-		epFilteredMap[u.Key] = true
-	}
 	for _, v := range U.WHITELIST_FACTORS_EVENT_PROPERTIES {
 		epFilteredMap[v] = true
 	}
+
+	var eventCountLocal = 0
+	for _, u := range epSortedList {
+		if epFilteredMap[u.Key] != true && eventCountLocal < numProp {
+			epFilteredMap[u.Key] = true
+			eventCountLocal++
+		}
+	}
+
 	for _, Eprop := range U.DISABLED_FACTORS_EVENT_PROPERTIES {
 		delete(epFilteredMap, Eprop)
 	}
-
+	mineLog.Info("Total Event properties count after filtering : ", len(epFilteredMap))
 	return upFilteredMap, epFilteredMap
 }
 
-func buildEventsFileOnProperties(diskManager *serviceDisk.DiskDriver, cloudManager *filestore.FileManager, projectId uint64,
+func buildEventsFileOnProperties(tmpEventsFilePath string, efTmpPath string, efTmpName string, diskManager *serviceDisk.DiskDriver, projectId uint64,
 	modelId uint64, eReader io.Reader, userPropList, eventPropList map[string]bool, campaignLimitCount int) ([]string, error) {
 
 	var err error
-	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, modelId)
-	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
-	efPath := efTmpPath + "tmpEvents" + efTmpName
-	eTmpReader, err := diskManager.Get(efTmpPath, efTmpName)
-	campEvents, err := rewriteEventsFile(efPath, eTmpReader, userPropList, eventPropList, campaignLimitCount)
+	efPath := efTmpPath + "tmpevents_" + efTmpName
+	campEvents, err := rewriteEventsFile(tmpEventsFilePath, efPath, userPropList, eventPropList, campaignLimitCount)
 	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
-			"eventFileName": efCloudName}).Error("Failed to filter disabled properties")
+		mineLog.WithFields(log.Fields{"err": err, "tmpEventsFilePath": tmpEventsFilePath}).Error("Failed to filter disabled properties")
 		return nil, err
 	}
 	r, err := os.Open(efPath)
@@ -1065,6 +1066,7 @@ func buildEventsFileOnProperties(diskManager *serviceDisk.DiskDriver, cloudManag
 			"eventFileName": efTmpName}).Error("Failed to create event file on disk.")
 		return nil, err
 	}
+	mineLog.WithFields(log.Fields{"eventFilePath": efPath}).Info("Removing temp events File")
 	err = os.Remove(efPath)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efPath}).Error("Failed to remove file")
@@ -1138,7 +1140,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 	mineLog.Info("Successfully Built user and event properties info and written it to file.")
 
-	campEventsList, err := buildEventsFileOnProperties(diskManager, cloudManager, projectId,
+	campEventsList, err := buildEventsFileOnProperties(tmpEventsFilepath, efTmpPath, efTmpName, diskManager, projectId,
 		modelId, eReader, userPropList, eventPropList, campaignLimitCount)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")

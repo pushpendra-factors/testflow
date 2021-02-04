@@ -33,6 +33,7 @@ type PatternServiceWrapperInterface interface {
 		patternConstraints []P.EventConstraints, countType string) (uint, bool)
 	GetPattern(reqId string, eventNames []string) *P.Pattern
 	GetAllPatterns(reqId, startEvent, endEvent string) ([]*P.Pattern, error)
+	GetAllContainingPatterns(reqId, event string) ([]*P.Pattern, error)
 	GetTotalEventCount(reqId string) uint
 }
 
@@ -128,6 +129,16 @@ func (pw *PatternServiceWrapper) GetAllPatterns(reqId,
 	startEvent, endEvent string) ([]*P.Pattern, error) {
 	// Fetch from server.
 	patterns, err := PC.GetAllPatterns(reqId, pw.projectId, pw.modelId, startEvent, endEvent)
+	// Add it to cache.
+	for _, p := range patterns {
+		pw.pMap[P.EventArrayToString(p.EventNames)] = p
+	}
+	return patterns, err
+}
+
+func (pw *PatternServiceWrapper) GetAllContainingPatterns(reqId, event string) ([]*P.Pattern, error) {
+	// Fetch from server.
+	patterns, err := PC.GetAllContainingPatterns(reqId, pw.projectId, pw.modelId, event)
 	// Add it to cache.
 	for _, p := range patterns {
 		pw.pMap[P.EventArrayToString(p.EventNames)] = p
@@ -993,13 +1004,10 @@ type FactorsInsights struct {
 	FactorsSubInsights            []*FactorsInsights      `json:"factors_sub_insights"`
 }
 
-func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
-	countType string, pw PatternServiceWrapperInterface) ([]*FactorsInsights, float64, float64, float64) {
+func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0GoalPercentage float64,
+	countType string, pw PatternServiceWrapperInterface) []*FactorsInsights {
 	seenPropertyConstraints := make(map[string]bool)
 	seenEvents := make(map[string]bool)
-	var Level0GoalUsersCount float64
-	var Level0GoalPercentage float64
-	var Level0TotalUsers float64
 	type parentInsightsTuple struct {
 		parentIndex int
 		index       int
@@ -1084,13 +1092,6 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 				index:       node.Index,
 				insights:    insights,
 			})
-			if indexLevelMap[node.Index] == 1 {
-				Level0GoalUsersCount = node.Fpr
-				if node.Fpp > 0 {
-					Level0GoalPercentage = roundTo1Decimal(node.Fpr * 100 / node.Fpp)
-				}
-				Level0TotalUsers = node.Fpp
-			}
 		}
 	}
 	indexLevelInsightsMap[0] = FactorsInsights{
@@ -1119,7 +1120,7 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode,
 			}
 		}
 	}
-	return indexLevelInsightsMap[0].FactorsSubInsights, Level0GoalUsersCount, roundTo1Decimal(Level0GoalPercentage), Level0TotalUsers
+	return indexLevelInsightsMap[0].FactorsSubInsights
 }
 
 func isValidInsightTransition(parentType string, childType string) bool {
@@ -1171,7 +1172,7 @@ func FactorV1(reqId string, projectId uint64, startEvent string,
 		log.Error(err)
 		return Factors{}, err, nil
 	}
-	iPatternNodes := []*ItreeNode{}
+	rootNode := &ItreeNode{}
 	iPatternNodesUnsorted := []*ItreeNode{}
 	var debugData interface{}
 	if itree, err, debugInfo := BuildNewItreeV1(reqId, startEvent, startEventConstraints,
@@ -1183,27 +1184,22 @@ func FactorV1(reqId string, projectId uint64, startEvent string,
 		for _, node := range itree.Nodes {
 			if node.NodeType == NODE_TYPE_ROOT {
 
+				rootNode = node
 				// Root node.
 				continue
 			}
-			iPatternNodes = append(iPatternNodes, node)
 			iPatternNodesUnsorted = append(iPatternNodesUnsorted, node)
 		}
 	}
 
-	// Rerank iPatternNodes in descending order of ranked scores.
-	sort.SliceStable(iPatternNodes,
-		func(i, j int) bool {
-			// InformationDrop * parentPatternFrequency is the ranking score for the node.
-			scoreI := iPatternNodes[i].InformationDrop * (iPatternNodes[i].Fpp - iPatternNodes[i].OtherFcp)
-			scoreJ := iPatternNodes[j].InformationDrop * (iPatternNodes[j].Fpp - iPatternNodes[j].OtherFcp)
-			return (scoreI > scoreJ)
-		})
-
 	v1FactorResult := Factors{}
 
 	startDateTime := time.Now()
-	insights, goalUsersCount, goalsUsersPercentage, totalUsersCount := buildFactorResultsFromPatternsV1(reqId, iPatternNodesUnsorted, countType, pw)
+	goalUsersCount, totalUsersCount, goalsUsersPercentage := rootNode.Fcr, rootNode.Fcp, float64(0)
+	if rootNode.Fcp > 0 {
+		goalsUsersPercentage = roundTo1Decimal(rootNode.Fcr * 100 / rootNode.Fcp)
+	}
+	insights := buildFactorResultsFromPatternsV1(reqId, iPatternNodesUnsorted, goalsUsersPercentage, countType, pw)
 	v1FactorResult.GoalUserCount = goalUsersCount
 	v1FactorResult.OverallPercentage = goalsUsersPercentage
 	v1FactorResult.OverallMultiplier = 1

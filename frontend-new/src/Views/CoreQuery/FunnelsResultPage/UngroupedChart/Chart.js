@@ -6,6 +6,7 @@ import {
   calculatePercentage,
   generateColors,
 } from "../../../../utils/dataFormatter";
+import { UNGROUPED_FUNNEL_TICK_LENGTH } from "../../../../utils/constants";
 
 function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper, height: widgetHeight }) {
   const chartRef = useRef(null);
@@ -180,7 +181,12 @@ function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper, height: 
       .attr("class", "axis axis--x")
       .attr("transform", `translate(0,${height})`)
       .call(
-        d3.axisBottom(xScale).tickFormat((d, i) => {
+        d3.axisBottom(xScale).tickFormat((_, i) => {
+          if (arrayMapper[i].eventName.length > UNGROUPED_FUNNEL_TICK_LENGTH) {
+            return (
+              arrayMapper[i].eventName.substr(0, UNGROUPED_FUNNEL_TICK_LENGTH) + "..."
+            );
+          }
           return arrayMapper[i].eventName;
         })
       );

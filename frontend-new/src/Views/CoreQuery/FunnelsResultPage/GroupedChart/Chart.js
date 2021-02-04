@@ -283,7 +283,7 @@ function Chart({
                                       chartColors[event.name]
                                     }">Event ${event.index}</div>
                                     <div class="leading-4"><span class="font-semibold">${
-                                      event.data[group]
+                                        group === "Overall" ? event.data["$no_group"] : event.data[group]
                                     }</span> (${eventWeightage}%)</div>
                                 </div>
                             `;
@@ -304,7 +304,7 @@ function Chart({
                                           chartColors[prevEvent.name]
                                         }">Event ${prevEvent.index}</div>
                                         <div class="leading-4"><span class="font-semibold">${
-                                          prevEvent.data[group]
+                                            group === "Overall" ? prevEvent.data["$no_group"] : prevEvent.data[group]
                                         }</span> (${prevEventWeightage}%)</div>
                                     </div>
                                     <div class="flex justify-between mt-2">
@@ -312,7 +312,7 @@ function Chart({
                                           chartColors[event.name]
                                         }">Event ${event.index}</div>
                                         <div class="leading-4"><span class="font-semibold">${
-                                          event.data[group]
+                                            group === "Overall" ? event.data["$no_group"] : event.data[group]
                                         }</span> (${eventWeightage}%)</div>
                                     </div>
                                 </div>

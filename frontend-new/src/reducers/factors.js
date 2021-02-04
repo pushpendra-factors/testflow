@@ -72,6 +72,12 @@
           case 'DEL_USER_PROPERTY_REJECTED': {
             return { ...state, error: action.payload };
           }
+          case 'GOAL_REMOVED_FULFILLED': {
+            return { ...state };
+          } 
+          case 'GOAL_REMOVED_REJECTED': {
+            return { ...state, error: action.payload };
+          }
           
         }
         return state;
@@ -232,6 +238,21 @@ export function delUserPropertyTracked(projectID, data) {
             resolve(response)
           }).catch((err)=>{        
             dispatch({type:"DEL_USER_PROPERTY_REJECTED", payload: err});
+            reject(err);
+          });
+      });
+    }
+  }
+
+export function removeSavedGoal(projectID, data) { 
+    return function(dispatch) {
+      return new Promise((resolve,reject) => { 
+        del(dispatch, host + "projects/"+projectID+`/v1/factors/goals/remove`, data)
+          .then((response)=>{        
+            dispatch({type:"GOAL_REMOVED_FULFILLED", payload: response.data});
+            resolve(response)
+          }).catch((err)=>{        
+            dispatch({type:"GOAL_REMOVED_REJECTED", payload: err});
             reject(err);
           });
       });

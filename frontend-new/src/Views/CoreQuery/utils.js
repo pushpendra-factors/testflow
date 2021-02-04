@@ -135,7 +135,7 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
       };
     }
     if (opt.prop_type === "datetime") {
-      opt.gbty ? (appGbp["grn"] = opt.grn) : (appGbp["grn"] = "day");
+      opt.grn ? appGbp['grn'] = opt.grn: appGbp['grn'] = "day";
     }
     if (opt.prop_type === "numerical") {
       opt.gbty ? (appGbp["gbty"] = opt.gbty) : (appGbp["gbty"] = "");
@@ -201,7 +201,7 @@ export const getQuery = (
       };
     }
     if (opt.prop_type === "datetime") {
-      opt.gbty ? (gbpReq["grn"] = opt.grn) : (gbpReq["grn"] = "day");
+      opt.grn ? appGbp['grn'] = opt.grn: appGbp['grn'] = "day";
     }
     if (opt.prop_type === "numerical") {
       opt.gbty ? (gbpReq["gbty"] = opt.gbty) : (gbpReq["gbty"] = "");

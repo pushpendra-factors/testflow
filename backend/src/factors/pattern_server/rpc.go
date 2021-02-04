@@ -15,26 +15,39 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type FilterPattern func(patternEvents []string, startEvent, endEvent string) bool
+type FilterPattern func(patternEvents []string, startEvent, endEvent, anyEvent string) bool
 
-func filterByStart(patternEvents []string, startEvent, endEvent string) bool {
+func filterByStart(patternEvents []string, startEvent, endEvent, anyEvent string) bool {
 	return strings.Compare(startEvent, patternEvents[0]) == 0
 }
 
-func filterByEnd(patternEvents []string, startEvent, endEvent string) bool {
+func filterByEnd(patternEvents []string, startEvent, endEvent, anyEvent string) bool {
 	pLen := len(patternEvents)
 	return strings.Compare(endEvent, patternEvents[pLen-1]) == 0
 }
 
-func filterByStartAndEnd(patternEvents []string, startEvent, endEvent string) bool {
-	return filterByStart(patternEvents, startEvent, "") && filterByEnd(patternEvents, "", endEvent)
+func filterByStartAndEnd(patternEvents []string, startEvent, endEvent, anyEvent string) bool {
+	return filterByStart(patternEvents, startEvent, "", "") && filterByEnd(patternEvents, "", endEvent, "")
 }
 
-func GetFilter(startEvent, endEvent string) FilterPattern {
+func filterByContaining(patternEvents []string, startEvent, endEvent, anyEvent string) bool {
+	pLen := len(patternEvents)
+	for i := 0; i < pLen; i++ {
+		if strings.Compare(anyEvent, patternEvents[i]) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func GetFilter(startEvent, endEvent, anyEvent string) FilterPattern {
 	if startEvent != "" && endEvent != "" {
 		return filterByStartAndEnd
 	}
 
+	if anyEvent != "" {
+		return filterByContaining
+	}
 	if endEvent != "" {
 		return filterByEnd
 	}
@@ -95,7 +108,7 @@ func (ps *PatternServer) GetAllPatterns(
 		return nil
 	}
 
-	filterPatterns := GetFilter(args.StartEvent, args.EndEvent)
+	filterPatterns := GetFilter(args.StartEvent, args.EndEvent, "")
 
 	patternsToReturn := make([]*json.RawMessage, 0, 0)
 
@@ -123,7 +136,103 @@ func (ps *PatternServer) GetAllPatterns(
 			patternsToReturn = append(patternsToReturn, rawPatterns...)
 		} else {
 			for _, pwm := range patternsWithMeta {
-				if filterPatterns(pwm.PatternEvents, args.StartEvent, args.EndEvent) {
+				if filterPatterns(pwm.PatternEvents, args.StartEvent, args.EndEvent, "") {
+					patternsToReturn = append(patternsToReturn, &pwm.RawPattern)
+				}
+			}
+		}
+	}
+
+	result.ProjectId = args.ProjectId
+	result.ModelId = modelId
+	result.Patterns = patternsToReturn
+
+	overallEndTime := time.Now()
+	log.WithFields(log.Fields{
+		"time_taken": overallEndTime.Sub(overallStartTime).Milliseconds()}).Info("debug_time_TotalTime")
+	log.WithFields(log.Fields{
+		"count": len(patternsToReturn)}).Info("debug_count_GetAllRawPatterns")
+	return nil
+}
+
+func (ps *PatternServer) GetAllContainingPatterns(
+	r *http.Request, args *client.GetAllContainingPatternsRequest, result *client.GetAllContainingPatternsResponse) error {
+	overallStartTime := time.Now()
+	if args == nil || args.ProjectId == 0 {
+		err := E.Wrap(errors.New("MissingParams"), "GetAllContainingPatterns missing param projectID")
+		result.Error = err
+		return err
+	}
+
+	modelId := args.ModelId
+
+	if modelId == 0 {
+		latestInterval, err := ps.GetProjectModelLatestInterval(args.ProjectId)
+		if err != nil {
+			result.Error = err
+			return err
+		}
+		modelId = latestInterval.ModelId
+	}
+
+	log.WithFields(log.Fields{
+		"pid": args.ProjectId,
+		"mid": modelId,
+		"en":  args.Event,
+	}).Debugln("RPC Fetching patterns")
+
+	startTime := time.Now()
+	chunkIds, found := ps.GetProjectModelChunks(args.ProjectId, modelId)
+	if !found {
+		err := E.Wrap(errors.New("ProjectModelChunks Not Found"), fmt.Sprintf("GetAllContainingPatterns failed to fetch ProjectModelChunks, ProjectID: %d, ModelID: %d", args.ProjectId, modelId))
+		result.Error = err
+		return err
+	}
+	endTime := time.Now()
+	log.WithFields(log.Fields{
+		"time_taken": endTime.Sub(startTime).Milliseconds()}).Info("debug_time_GetProjectModelChunks")
+
+	chunksToServe := make([]string, 0, 0)
+	for _, chunkId := range chunkIds {
+		if ps.IsProjectModelChunkServable(args.ProjectId, modelId, chunkId) {
+			chunksToServe = append(chunksToServe, chunkId)
+		}
+	}
+
+	if len(chunksToServe) == 0 {
+		result.Ignored = true
+		return nil
+	}
+
+	filterPatterns := GetFilter("", "", args.Event)
+
+	patternsToReturn := make([]*json.RawMessage, 0, 0)
+
+	// fetch in go routines to optimize
+	for _, chunkId := range chunksToServe {
+		startTime := time.Now()
+		patternsWithMeta, err := ps.store.GetPatternsWithMeta(args.ProjectId, modelId, chunkId)
+		if err != nil {
+			log.WithError(err).WithFields(log.Fields{
+				"pid": args.ProjectId,
+				"mid": modelId,
+				"cid": chunkId,
+			}).Error("Failed To get chunk patterns")
+			continue
+		}
+		endTime := time.Now()
+		log.WithFields(log.Fields{
+			"time_taken": endTime.Sub(startTime).Milliseconds()}).Info("debug_time_GetPatternsWithMeta")
+		if filterPatterns == nil {
+			startTime := time.Now()
+			rawPatterns := store.GetAllRawPatterns(patternsWithMeta)
+			endTime := time.Now()
+			log.WithFields(log.Fields{
+				"time_taken": endTime.Sub(startTime).Milliseconds()}).Info("debug_time_GetAllRawPatterns")
+			patternsToReturn = append(patternsToReturn, rawPatterns...)
+		} else {
+			for _, pwm := range patternsWithMeta {
+				if filterPatterns(pwm.PatternEvents, "", "", args.Event) {
 					patternsToReturn = append(patternsToReturn, &pwm.RawPattern)
 				}
 			}
