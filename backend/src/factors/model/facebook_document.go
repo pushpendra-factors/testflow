@@ -479,7 +479,7 @@ func getSQLAndParamsFromFacebookReports(query *ChannelQueryV1, projectID uint64,
 		responseSelectMetrics = append(responseSelectMetrics, value)
 	}
 
-	selectQuery += joinWithComma(append(selectKeys, selectMetrics...)...)
+	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
 	whereConditionForFilters := getFacebookFiltersWhereStatement(query.Filters)
 
