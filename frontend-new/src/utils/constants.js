@@ -71,9 +71,12 @@ export const reverse_user_types = {
 };
 
 export const REPORT_SECTION = "reports";
+export const DASHBOARD_MODAL = "dashboard_modal";
 export const DASHBOARD_WIDGET_SECTION = "dashboardWidget";
 
-export const linechart_legend_length = {
-  0: 15,
-  1: 30,
-};
+export const linechart_legend_length = 30;
+
+export const legend_counts = {
+  0:2,
+  1: 5,
+}
