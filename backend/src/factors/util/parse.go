@@ -39,3 +39,11 @@ func GetInt64FromMapOfInterface(input map[string]interface{}, key string, defaul
 	}
 	return int64(SafeConvertToFloat64(value))
 }
+
+func GetStringFromMapOfInterface(input map[string]interface{}, key string, defaultValue string) string {
+	value, present := input[key]
+	if !present {
+		return defaultValue
+	}
+	return value.(string)
+}
