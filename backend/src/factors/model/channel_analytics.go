@@ -417,7 +417,9 @@ func GetAllChannelFilterValues(projectID uint64, filterObject, filterProperty st
 }
 
 // RunChannelGroupQuery - @TODO Kark v1
-func RunChannelGroupQuery(projectID uint64, queries []ChannelQueryV1, reqID string) (ChannelResultGroupV1, int) {
+func RunChannelGroupQuery(projectID uint64, queriesOriginal []ChannelQueryV1, reqID string) (ChannelResultGroupV1, int) {
+	queries := make([]ChannelQueryV1, 0, 0)
+	U.DeepCopy(&queriesOriginal, &queries)
 
 	var resultGroup ChannelResultGroupV1
 	resultGroup.Results = make([]ChannelQueryResultV1, len(queries))
@@ -441,7 +443,7 @@ func RunChannelGroupQuery(projectID uint64, queries []ChannelQueryV1, reqID stri
 func runSingleChannelQuery(projectID uint64, query ChannelQueryV1, resultHolder *ChannelResultGroupV1, index int, waitGroup *sync.WaitGroup, reqID string) {
 	environment := C.GetConfig().Env
 	defer waitGroup.Done()
-	defer U.GoRoutineRecovery(environment)
+	defer U.NotifyOnPanicWithError(environment, "app_server")
 	result, _ := ExecuteChannelQueryV1(projectID, &query, reqID)
 	(*resultHolder).Results[index] = *result
 }
@@ -547,7 +549,10 @@ func GetChannelFilterValues(projectID uint64, channel, filter string) ([]string,
 }
 
 // ExecuteChannelQuery - @Kark TODO v0
-func ExecuteChannelQuery(projectID uint64, query *ChannelQuery) (*ChannelQueryResult, int) {
+func ExecuteChannelQuery(projectID uint64, queryOriginal *ChannelQuery) (*ChannelQueryResult, int) {
+	var query *ChannelQuery
+	U.DeepCopy(queryOriginal, &query)
+
 	if !isValidChannel(query.Channel) || !isValidFilterKey(query.FilterKey) ||
 		query.From == 0 || query.To == 0 {
 		return nil, http.StatusBadRequest

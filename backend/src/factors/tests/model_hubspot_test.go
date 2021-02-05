@@ -2,14 +2,17 @@ package tests
 
 import (
 	"encoding/json"
+	H "factors/handler"
 	IntHubspot "factors/integration/Hubspot"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
@@ -331,4 +334,121 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, cuID, result.Rows[1][0])
 	assert.Equal(t, int64(1), result.Rows[1][1])
+}
+
+func TestHubspotObjectPropertiesAPI(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	property1 := U.RandomLowerAphaNumString(4)
+	documentID := 1
+	createdAt := time.Now().AddDate(0, 0, -1).Unix() * 1000
+	updatedAt := createdAt + 100
+	cuid := U.RandomLowerAphaNumString(5)
+
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "%s": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	value1 := "val1"
+	jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := M.HubspotDocument{
+		TypeAlias: M.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status := M.CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// 100 unique values
+	limit := 100
+	for i := 0; i < limit; i++ {
+		updatedAt = updatedAt + 100
+		value1 = fmt.Sprintf("%s_%d", property1, i)
+		jsonContact = fmt.Sprintf(jsonContactModel, documentID, createdAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
+		contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+		hubspotDocument = M.HubspotDocument{
+			TypeAlias: M.HubspotDocumentTypeNameContact,
+			Value:     &contactPJson,
+		}
+		status := M.CreateHubspotDocument(project.ID, &hubspotDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	var property1Values []interface{}
+	w := sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, M.SmartCRMEventSourceHubspot, M.HubspotDocumentTypeNameContact, property1)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &property1Values)
+	assert.Nil(t, err)
+	//should contain all values
+	for i := 0; i < limit; i++ {
+		assert.Contains(t, property1Values, fmt.Sprintf("%s_%d", property1, i))
+	}
+
+	// increasing count based on value1
+	for i := 0; i < 5; i++ {
+		for j := 0; j < i+1; j++ {
+			updatedAt = updatedAt + 100
+			value1 = fmt.Sprintf("%s_%d", property1, i)
+			jsonContact = fmt.Sprintf(jsonContactModel, documentID, createdAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
+			contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+			hubspotDocument = M.HubspotDocument{
+				TypeAlias: M.HubspotDocumentTypeNameContact,
+				Value:     &contactPJson,
+			}
+			status := M.CreateHubspotDocument(project.ID, &hubspotDocument)
+			assert.Equal(t, http.StatusCreated, status)
+		}
+	}
+
+	// 101 unique values
+	updatedAt = updatedAt + 100
+	value1 = "val3"
+	jsonContact = fmt.Sprintf(jsonContactModel, documentID, createdAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = M.HubspotDocument{
+		TypeAlias: M.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status = M.CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	w = sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, M.SmartCRMEventSourceHubspot, M.HubspotDocumentTypeNameContact, property1)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &property1Values)
+	assert.Nil(t, err)
+
+	// should come in ordered for top 5
+	for i := range property1Values[:5] {
+		assert.Equal(t, fmt.Sprintf("%s_%d", property1, 4-i), property1Values[i])
+	}
 }

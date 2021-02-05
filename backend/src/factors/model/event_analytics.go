@@ -24,7 +24,9 @@ type ResultGroup struct {
 	Results []QueryResult `json:"result_group"`
 }
 
-func RunEventsGroupQuery(queries []Query, projectId uint64) (ResultGroup, int) {
+func RunEventsGroupQuery(queriesOriginal []Query, projectId uint64) (ResultGroup, int) {
+	queries := make([]Query, 0, 0)
+	U.DeepCopy(&queriesOriginal, &queries)
 
 	var resultGroup ResultGroup
 	resultGroup.Results = make([]QueryResult, len(queries))

@@ -2,18 +2,22 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
+	"factors/handler/helpers"
 	IntSalesforce "factors/integration/salesforce"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -944,4 +948,127 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, cuID, result.Rows[1][0])
 	assert.Equal(t, int64(1), result.Rows[1][1])
+}
+
+func sendGetCRMObjectValuesByPropertyNameReq(r *gin.Engine, projectID uint64, agent *M.Agent, objectSource, objectType, propertyName string) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+		return nil
+	}
+
+	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/v1/crm/%s/%s/properties/%s/values", projectID, objectSource, objectType, propertyName)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating request")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestSalesforceObjectPropertiesAPI(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	property1 := U.RandomLowerAphaNumString(4)
+	property2 := U.RandomLowerAphaNumString(4)
+	documentID := U.RandomLowerAphaNumString(4)
+	createdDate := time.Now().AddDate(0, 0, -1)
+
+	jsonData := fmt.Sprintf(`{"Id":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), createdDate.UTC().Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocumentPrev := &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status := M.CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
+	assert.Equal(t, http.StatusCreated, status)
+
+	limit := 100
+	for i := 0; i < limit; i++ {
+		createdDate = createdDate.Add(10 * time.Second)
+		value1 := fmt.Sprintf("%s_%d", property1, i)
+		value2 := fmt.Sprintf("%s_%d", property2, i)
+		jsonData = fmt.Sprintf(`{"Id":"%s","%s":"%s", "%s":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, value1, property2, value2, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), createdDate.UTC().Format(M.SalesforceDocumentTimeLayout))
+		salesforceDocumentPrev := &M.SalesforceDocument{
+			ProjectID: project.ID,
+			TypeAlias: M.SalesforceDocumentTypeNameContact,
+			Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+		}
+		status := M.CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	var property1Values []interface{}
+	var property2Values []interface{}
+	w := sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, M.SmartCRMEventSourceSalesforce, M.SalesforceDocumentTypeNameContact, property1)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &property1Values)
+	assert.Nil(t, err)
+
+	w = sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, M.SmartCRMEventSourceSalesforce, M.SalesforceDocumentTypeNameContact, property2)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &property2Values)
+	assert.Nil(t, err)
+	for i := 0; i < limit; i++ {
+		assert.Contains(t, property1Values, fmt.Sprintf("%s_%d", property1, i))
+		assert.Contains(t, property2Values, fmt.Sprintf("%s_%d", property2, i))
+	}
+
+	for i := 0; i < 5; i++ {
+		for j := 0; j < i+1; j++ {
+			createdDate = createdDate.Add(10 * time.Second)
+			value1 := fmt.Sprintf("%s_%d", property1, i)
+			value2 := fmt.Sprintf("%s_%d", property2, i)
+			jsonData = fmt.Sprintf(`{"Id":"%s","%s":"%s", "%s":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, value1, property2, value2, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), createdDate.UTC().Format(M.SalesforceDocumentTimeLayout))
+			salesforceDocumentPrev := &M.SalesforceDocument{
+				ProjectID: project.ID,
+				TypeAlias: M.SalesforceDocumentTypeNameContact,
+				Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+			}
+			status := M.CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
+			assert.Equal(t, http.StatusCreated, status)
+		}
+	}
+
+	createdDate = createdDate.Add(10 * time.Second)
+	value3 := "val3"
+	jsonData = fmt.Sprintf(`{"Id":"%s","%s":"%s", "%s":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, value3, property2, value3, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), createdDate.UTC().Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocumentPrev = &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocumentPrev)
+	assert.Equal(t, http.StatusCreated, status)
+
+	w = sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, M.SmartCRMEventSourceSalesforce, M.SalesforceDocumentTypeNameContact, property1)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &property1Values)
+	assert.Nil(t, err)
+
+	w = sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, M.SmartCRMEventSourceSalesforce, M.SalesforceDocumentTypeNameContact, property2)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &property2Values)
+	assert.Nil(t, err)
+	for i := range property1Values[:5] {
+		assert.Equal(t, fmt.Sprintf("%s_%d", property1, 4-i), property1Values[i])
+		assert.Equal(t, fmt.Sprintf("%s_%d", property2, 4-i), property2Values[i])
+	}
+
 }

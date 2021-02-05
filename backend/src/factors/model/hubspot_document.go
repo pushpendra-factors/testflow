@@ -606,6 +606,43 @@ type HubspotDocumentProperties struct {
 	Properties map[string]HubspotProperty `json:"properties"`
 }
 
+func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []HubspotDocument, propertyName string, limit int) []interface{} {
+	if len(hubspotDocuments) < 1 || propertyName == "" {
+		return nil
+	}
+
+	valuesAggregate := make(map[interface{}]int)
+	for i := range hubspotDocuments {
+		var docProperties HubspotDocumentProperties
+		err := json.Unmarshal((hubspotDocuments[i].Value).RawMessage, &docProperties)
+		if err != nil {
+			log.WithFields(log.Fields{"document_id": hubspotDocuments[i].ID}).WithError(err).Error("Failed to unmarshal hubspot document on getAllHubspotDocumentPropertiesValue")
+			continue
+		}
+
+		for name, value := range docProperties.Properties {
+			if name != propertyName {
+				continue
+			}
+
+			if value.Value == "" {
+				continue
+			}
+
+			valuesAggregate[value.Value] = valuesAggregate[value.Value] + 1
+		}
+	}
+
+	propertyValueTuples := getPropertyValueTuples(valuesAggregate, limit)
+	propertyValues := make([]interface{}, len(propertyValueTuples))
+	for i := range propertyValueTuples {
+		propertyValues[i] = propertyValueTuples[i].Name
+	}
+
+	return propertyValues
+
+}
+
 func getHubspotDocumentPropertiesNameByType(hubspotDocuments []HubspotDocument) ([]string, []string) {
 	dateTimeProperties := make(map[string]interface{})
 	categoricalProperties := make(map[string]interface{})
@@ -667,6 +704,29 @@ func getHubspotDocumentPropertiesNameByType(hubspotDocuments []HubspotDocument) 
 	return categoricalPropertiesArray, dateTimePropertiesArray
 }
 
+func getLatestHubspotDocumentsByLimit(projectID uint64, docType int, limit int) ([]HubspotDocument, error) {
+	if projectID == 0 {
+		return nil, errors.New("invalid project_id")
+	}
+
+	if docType == 0 || limit <= 0 {
+		return nil, errors.New("invalid parameters")
+	}
+
+	lookbackTimestampInMilliseconds := U.UnixTimeBeforeDuration(48*time.Hour) * 1000 //last 48 hours
+
+	var hubspotDocuments []HubspotDocument
+	db := C.GetServices().Db
+	err := db.Model(&HubspotDocument{}).Where("project_id = ? AND type = ? AND action= ? AND timestamp > ?",
+		projectID, docType, HubspotDocumentActionUpdated, lookbackTimestampInMilliseconds).Order("timestamp desc").Limit(1000).Find(&hubspotDocuments).Error
+	if err != nil {
+		return nil, err
+
+	}
+
+	return hubspotDocuments, nil
+}
+
 // GetHubspotObjectPropertiesName returns property names by type
 func GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string) {
 	if ProjectID == 0 || objectType == "" {
@@ -679,23 +739,36 @@ func GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]stri
 	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
-	lookbackTimestampInMilliseconds := U.UnixTimeBeforeDuration(48*time.Hour) * 1000 //last 48 hours
 
-	var hubspotDocuments []HubspotDocument
-	db := C.GetServices().Db
-	err = db.Model(&HubspotDocument{}).Where("project_id = ? AND type = ? AND action= ? AND timestamp > ?",
-		ProjectID, docType, 2, lookbackTimestampInMilliseconds).Order("timestamp desc").Limit(1000).Find(&hubspotDocuments).Error
+	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to get hubspot documents for GetHubspotObjectProperties")
-		return nil, nil
-	}
-
-	if len(hubspotDocuments) < 1 {
-		logCtx.Error("No documents returned.")
+		logCtx.WithError(err).Error("Failed to GetSalesforceObjectPropertiesValues")
 		return nil, nil
 	}
 
 	return getHubspotDocumentPropertiesNameByType(hubspotDocuments)
+}
+
+// GetAllHubspotObjectValuesByPropertyName returns all values by property name
+func GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, objectType, propertyName string) []interface{} {
+	if ProjectID == 0 || objectType == "" || propertyName == "" {
+		return nil
+	}
+
+	docType, err := GetHubspotTypeByAlias(objectType)
+	if err != nil {
+		return nil
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
+
+	hubspotDocuments, err := getLatestHubspotDocumentsByLimit(ProjectID, docType, 1000)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to GetAllHubspotObjectPropertyValues")
+		return nil
+	}
+
+	return getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments, propertyName, 100)
 }
 
 func UpdateHubspotDocumentAsSynced(projectId uint64, id string, syncId string, timestamp int64, action int, userID string) int {

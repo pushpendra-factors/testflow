@@ -2,7 +2,6 @@
 package pattern_service_wrapper
 
 import (
-	"encoding/json"
 	M "factors/model"
 	P "factors/pattern"
 	PC "factors/pattern_client"
@@ -16,12 +15,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-// DeepCopy deepcopies a to b using json marshaling
-func deepCopy(a, b interface{}) {
-	byt, _ := json.Marshal(a)
-	json.Unmarshal(byt, b)
-}
 
 // Fetches information from pattern server and operations on patterns in local cache.
 type PatternServiceWrapperInterface interface {
@@ -499,7 +492,7 @@ func buildFunnelFormats(node *ItreeNode, countType string) (
 	funnelEvents := append(make([]string, 0, len(node.Pattern.EventNames)), node.Pattern.EventNames...)
 	if node.PatternConstraints != nil {
 		funnelConstraints = make([]P.EventConstraints, len(node.PatternConstraints))
-		deepCopy(&node.PatternConstraints, &funnelConstraints)
+		U.DeepCopy(&node.PatternConstraints, &funnelConstraints)
 	} else {
 		funnelConstraints = make([]P.EventConstraints, len(funnelEvents))
 	}
@@ -529,7 +522,7 @@ func buildFunnelFormats(node *ItreeNode, countType string) (
 		// Base funnel events are the same.
 		baseFunnelEvents = append(make([]string, 0, len(funnelEvents)), funnelEvents...)
 		baseFunnelConstraints = make([]P.EventConstraints, len(funnelConstraints))
-		deepCopy(&funnelConstraints, &baseFunnelConstraints)
+		U.DeepCopy(&funnelConstraints, &baseFunnelConstraints)
 		// Remove pLen-2 constraints.
 		baseFunnelConstraints[pLen-2] = P.EventConstraints{}
 	} else if node.NodeType == NODE_TYPE_USER_PROPERTY {
@@ -576,7 +569,7 @@ func buildFunnelFormats(node *ItreeNode, countType string) (
 		// Base funnel events are the same.
 		baseFunnelEvents = append(make([]string, 0, len(funnelEvents)), funnelEvents...)
 		baseFunnelConstraints = make([]P.EventConstraints, len(funnelConstraints))
-		deepCopy(&funnelConstraints, &baseFunnelConstraints)
+		U.DeepCopy(&funnelConstraints, &baseFunnelConstraints)
 		// Remove addedConstraint from baseFunnelConstraint .
 		for j, pNConstraint := range baseFunnelConstraints[pLen-2].UPNumericConstraints {
 			for _, aNConstraint := range node.AddedConstraint.UPNumericConstraints {
