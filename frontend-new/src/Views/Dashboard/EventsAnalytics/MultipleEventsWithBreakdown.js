@@ -8,7 +8,11 @@ import BarChart from "../../../components/BarChart";
 import MultipleEventsWithBreakdownTable from "../../CoreQuery/EventsAnalytics/MultipleEventsWIthBreakdown/MultipleEventsWithBreakdownTable";
 import LineChart from "../../../components/LineChart";
 import { generateColors } from "../../../utils/dataFormatter";
-import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA } from "../../../utils/constants";
+import {
+  ACTIVE_USERS_CRITERIA,
+  FREQUENCY_CRITERIA,
+  CHART_TYPE_TABLE,
+} from "../../../utils/constants";
 // import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
@@ -16,11 +20,11 @@ function MultipleEventsWithBreakdown({
   resultState,
   page,
   chartType,
-  title,
   breakdown,
   unit,
   durationObj,
-  section
+  section,
+  setwidgetModal,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -59,6 +63,20 @@ function MultipleEventsWithBreakdown({
 
   let chartContent = null;
 
+  let tableContent = null;
+
+  if (chartType === CHART_TYPE_TABLE) {
+    tableContent = (
+      <div
+        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        style={{ color: "#5949BC" }}
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+      >
+        Show More &rarr;
+      </div>
+    );
+  }
+
   const lineChartData = formatDataInLineChartFormat(
     visibleProperties,
     arrayMapper,
@@ -68,56 +86,59 @@ function MultipleEventsWithBreakdown({
 
   if (chartType === "barchart") {
     chartContent = (
-      <div className="flex mt-4">
-        <BarChart
-          chartData={formatVisibleProperties(visibleProperties, queries)}
-          title={title}
-          queries={queries}
-        />
-      </div>
+      <BarChart
+        height={200}
+        chartData={formatVisibleProperties(visibleProperties, queries)}
+        title={unit.id}
+        queries={queries}
+        section={section}
+      />
     );
   } else if (chartType === "table") {
     chartContent = (
-      <div className="mt-4">
-        <MultipleEventsWithBreakdownTable
-          data={chartsData}
-          lineChartData={lineChartData}
-          queries={queries}
-          breakdown={breakdown}
-          events={queries}
-          chartType={chartType}
-          setVisibleProperties={setVisibleProperties}
-          visibleProperties={visibleProperties}
-          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          originalData={resultState.data}
-          page={page}
-          durationObj={durationObj}
-        />
-      </div>
+      <MultipleEventsWithBreakdownTable
+        data={chartsData}
+        lineChartData={lineChartData}
+        queries={queries}
+        breakdown={breakdown}
+        events={queries}
+        chartType={chartType}
+        setVisibleProperties={setVisibleProperties}
+        visibleProperties={visibleProperties}
+        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+        originalData={resultState.data}
+        page={page}
+        durationObj={durationObj}
+      />
     );
   } else {
     chartContent = (
-      <div className="flex mt-4">
-        <LineChart
-          frequency={durationObj.frequency}
-          chartData={lineChartData}
-          appliedColors={appliedColors}
-          queries={visibleLabels}
-          reverseEventsMapper={reverseMapper}
-          eventsMapper={mapper}
-          setHiddenEvents={setHiddenProperties}
-          hiddenEvents={hiddenProperties}
-          isDecimalAllowed={page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA}
-          arrayMapper={arrayMapper}
-          cardSize={unit.cardSize}
-          section={section}
-          height={200}
-        />
-      </div>
+      <LineChart
+        frequency={durationObj.frequency}
+        chartData={lineChartData}
+        appliedColors={appliedColors}
+        queries={visibleLabels}
+        reverseEventsMapper={reverseMapper}
+        eventsMapper={mapper}
+        setHiddenEvents={setHiddenProperties}
+        hiddenEvents={hiddenProperties}
+        isDecimalAllowed={
+          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
+        }
+        arrayMapper={arrayMapper}
+        cardSize={unit.cardSize}
+        section={section}
+        height={200}
+      />
     );
   }
 
-  return <div style={{ boxShadow: "inset 0px 1px 0px rgba(0, 0, 0, 0.1)" }} className="w-full px-6">{chartContent}</div>;
+  return (
+    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
+      {chartContent}
+      {tableContent}
+    </div>
+  );
 }
 
 export default MultipleEventsWithBreakdown;

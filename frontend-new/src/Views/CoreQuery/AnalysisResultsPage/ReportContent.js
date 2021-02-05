@@ -31,7 +31,6 @@ function ReportContent({
   campaignState,
   arrayMapper,
   attributionsState,
-  isWidgetModal,
   breakdownType,
   queryTitle,
   eventPage,
@@ -62,7 +61,7 @@ function ReportContent({
       items = getChartTypeMenuItems(queryType, breakdown.length > 0);
     }
     setChartTypeMenuItems(items);
-  }, [queryType, campaignState.group_by, breakdown]);
+  }, [queryType, campaignState.group_by, breakdown, breakdownType]);
 
   useEffect(() => {
     if (savedChartType) {
@@ -118,7 +117,7 @@ function ReportContent({
   if (queryType === QUERY_TYPE_CAMPAIGN) {
     queryDetail = campaignState.select_metrics.join(", ");
     durationObj = campaignState.date_range;
-    if (campaignState.select_metrics.length > 1) {
+    if (campaignState.select_metrics.length > 1 && campaignState.group_by.length) {
       metricsDropdown = (
         <CampaignMetricsDropdown
           metrics={campaignState.select_metrics}
@@ -137,7 +136,6 @@ function ReportContent({
           resultState={resultState}
           breakdown={breakdown}
           arrayMapper={arrayMapper}
-          isWidgetModal={isWidgetModal}
           section={section}
         />
       );
@@ -198,6 +196,7 @@ function ReportContent({
         setDrawerVisible={setDrawerVisible}
         title={queryTitle}
         queryDetail={queryDetail}
+        section={section}
       />
       <div className="mt-6">
         <CalendarRow

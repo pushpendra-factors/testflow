@@ -9,7 +9,6 @@ function CampaignAnalytics({
   resultState,
   setwidgetModal,
   unit,
-  title,
   section
 }) {
   const { group_by: breakdown } = campaignState;
@@ -23,7 +22,6 @@ function CampaignAnalytics({
         isWidgetModal={false}
         setwidgetModal={setwidgetModal}
         unit={unit}
-        title={title}
         section={section}
       />
     );
@@ -36,7 +34,6 @@ function CampaignAnalytics({
         isWidgetModal={false}
         setwidgetModal={setwidgetModal}
         unit={unit}
-        title={title}
         section={section}
       />
     );

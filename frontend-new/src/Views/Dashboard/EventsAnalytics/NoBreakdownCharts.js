@@ -11,6 +11,7 @@ import { generateColors } from "../../../utils/dataFormatter";
 import {
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
+  CHART_TYPE_TABLE,
 } from "../../../utils/constants";
 
 function NoBreakdownCharts({
@@ -21,7 +22,8 @@ function NoBreakdownCharts({
   durationObj,
   arrayMapper,
   unit,
-  section
+  section,
+  setwidgetModal,
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
@@ -37,25 +39,38 @@ function NoBreakdownCharts({
     return null;
   }
 
-  let content = null;
+  let chartContent = null;
+
+  let tableContent = null;
+
+  if (chartType === CHART_TYPE_TABLE) {
+    tableContent = (
+      <div
+        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        style={{ color: "#5949BC" }}
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+      >
+        Show More &rarr;
+      </div>
+    );
+  }
 
   if (chartType === "sparklines") {
-    content = (
+    chartContent = (
       <SparkLineChart
         frequency={durationObj.frequency}
         queries={queries}
         chartsData={chartsData}
-        parentClass={`flex items-center flex-wrap justify-center ${
-          !unit.cardSize ? "mt-8 flex-col" : "mt-4"
-        }`}
         appliedColors={appliedColors}
         arrayMapper={arrayMapper}
         page={page}
         resultState={resultState}
+        cardSize={unit.cardSize}
+        height={queries.length === 1 && unit.cardSize ? 180 : 100}
       />
     );
   } else if (chartType === "table") {
-    content = (
+    chartContent = (
       <NoBreakdownTable
         data={chartsData}
         events={queries}
@@ -74,7 +89,7 @@ function NoBreakdownCharts({
       hiddenEvents,
       arrayMapper
     );
-    content = (
+    chartContent = (
       <LineChart
         frequency={durationObj.frequency}
         chartData={lineChartData}
@@ -87,13 +102,20 @@ function NoBreakdownCharts({
         }
         arrayMapper={arrayMapper}
         cardSize={unit.cardSize}
-        height={200}
+        height={225}
         section={section}
       />
     );
   }
 
-  return <div style={{ boxShadow: "inset 0px 1px 0px rgba(0, 0, 0, 0.1)" }} className="w-full px-6">{content}</div>;
+  return (
+    <div
+      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
+    >
+      {chartContent}
+      {tableContent}
+    </div>
+  );
 }
 
 export default NoBreakdownCharts;

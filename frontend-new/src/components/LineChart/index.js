@@ -8,6 +8,7 @@ import { numberWithCommas } from "../../utils/dataFormatter";
 import {
   REPORT_SECTION,
   DASHBOARD_WIDGET_SECTION,
+  DASHBOARD_MODAL,
 } from "../../utils/constants";
 import DashboardWidgetLegends from "../DashboardWidgetLegends";
 
@@ -102,7 +103,7 @@ function LineChart({
       },
       padding: {
         left: 50,
-        bottom: section === REPORT_SECTION ? 24 : 0,
+        bottom: (section === REPORT_SECTION || section === DASHBOARD_MODAL) ? 24 : 0,
         right: 10,
       },
       transition: {
@@ -201,7 +202,7 @@ function LineChart({
     isDecimalAllowed,
     frequency,
     height,
-    section
+    section,
   ]);
 
   const displayChart = useCallback(() => {
@@ -224,7 +225,7 @@ function LineChart({
         />
       ) : null}
       <div className={styles.lineChart} ref={chartRef} />
-      {section === REPORT_SECTION ? (
+      {section === REPORT_SECTION || section === DASHBOARD_MODAL ? (
         <ChartLegends
           colors={colors}
           events={queries}

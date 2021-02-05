@@ -4,7 +4,7 @@ import BarChart from "../../../../components/BarChart";
 import EventBreakdownTable from "./EventBreakdownTable";
 import ChartHeader from "../../../../components/SparkLineChart/ChartHeader";
 
-function EventBreakdownCharts({ data, breakdown }) {
+function EventBreakdownCharts({ data, breakdown, section }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
   const maxAllowedVisibleProperties = 5;
@@ -36,7 +36,7 @@ function EventBreakdownCharts({ data, breakdown }) {
   );
 
   if (breakdown.length) {
-    chart = <BarChart chartData={visibleProperties} />;
+    chart = <BarChart section={section} chartData={visibleProperties} />;
   } else {
     chart = (
       <ChartHeader total={data.rows[0]} query={"Count"} bgColor="#4D7DB4" />

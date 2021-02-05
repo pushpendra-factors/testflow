@@ -11,6 +11,8 @@ function SparkLineChart({
   resultState,
   frequency,
   arrayMapper,
+  height,
+  cardSize = 1
 }) {
   if (queries.length > 1) {
     return (
@@ -54,6 +56,7 @@ function SparkLineChart({
                     event={mapper}
                     chartData={data}
                     chartColor={appliedColors[index]}
+                    height={height}
                   />
                 </div>
               </div>
@@ -68,7 +71,7 @@ function SparkLineChart({
       total % 1 !== 0 ? parseFloat(total.toFixed(2)) : numberWithCommas(total);
 
     return (
-      <div className="flex items-center justify-center w-full">
+      <div className={`flex items-center justify-center w-full ${!cardSize ? "flex-col" : ""}`}>
         <div className="w-1/4">
           <ChartHeader bgColor="#4D7DB4" query={queries[0]} total={total} />
         </div>
@@ -81,6 +84,7 @@ function SparkLineChart({
             }
             chartData={chartsData}
             chartColor="#4D7DB4"
+            height={height}
           />
         </div>
       </div>

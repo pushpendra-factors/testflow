@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { generateUngroupedChartsData } from "../../CoreQuery/FunnelsResultPage/utils";
 import Chart from "../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart";
 import FunnelsResultTable from "../../CoreQuery/FunnelsResultPage/FunnelsResultTable";
+import { CHART_TYPE_BARCHART, CHART_TYPE_TABLE } from "../../../utils/constants";
 
 function UngroupedChart({
   resultState,
@@ -28,7 +29,7 @@ function UngroupedChart({
 
   let chartContent = null;
 
-  if (chartType === "barchart") {
+  if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <Chart
         title={title}
@@ -52,7 +53,7 @@ function UngroupedChart({
 
   let tableContent = null;
 
-  if (chartType === "table") {
+  if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
         onClick={() => setwidgetModal({ unit, data: resultState.data })}
@@ -66,13 +67,7 @@ function UngroupedChart({
 
   return (
     <div
-      style={{
-        boxShadow:
-          chartType === "barchart"
-            ? "inset 0px 1px 0px rgba(0, 0, 0, 0.1)"
-            : "",
-      }}
-      className="w-full px-6 mt-4"
+      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
     >
       {chartContent}
       {tableContent}

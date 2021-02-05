@@ -11,6 +11,7 @@ import NoBreakdownTable from "./NoBreakdownTable";
 import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_LINECHART,
+  DASHBOARD_MODAL,
 } from "../../../../utils/constants";
 
 function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
@@ -34,7 +35,7 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
       <NoBreakdownTable
         chartType={chartType}
         chartsData={chartsData}
-        isWidgetModal={false}
+        isWidgetModal={section === DASHBOARD_MODAL}
       />
     </div>
   );

@@ -114,11 +114,10 @@ function ExpandableView({
 
   const handleDurationChange = useCallback(
     (dates) => {
-      if (dates && dates.selected) {
-        let frequency = "date";
+      let frequency = "date";
         if (
-          moment(dates.selected.endDate).diff(
-            dates.selected.startDate,
+          moment(dates.endDate).diff(
+            dates.startDate,
             "hours"
           ) <= 24
         ) {
@@ -126,13 +125,12 @@ function ExpandableView({
         }
         const newDurationObj = {
           ...duration,
-          from: dates.selected.startDate,
-          to: dates.selected.endDate,
+          from: dates.startDate,
+          to: dates.endDate,
           frequency,
         };
         setDuration(newDurationObj);
         getData(newDurationObj);
-      }
     },
     [duration, getData]
   );

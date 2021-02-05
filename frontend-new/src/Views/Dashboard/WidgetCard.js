@@ -91,7 +91,7 @@ function WidgetCard({
         } else if (queryType === QUERY_TYPE_CAMPAIGN) {
           setResultState({
             ...initialState,
-            data: res.data,
+            data: res.data.result,
           });
         } else {
           let result_group;
@@ -107,7 +107,7 @@ function WidgetCard({
             ...equivalentQuery.breakdown.event,
             ...equivalentQuery.breakdown.global,
           ];
-          
+
           if (
             unit.settings.activeKey &&
             parseInt(unit.settings.activeKey) === 2
@@ -226,8 +226,13 @@ function WidgetCard({
         className={"fa-dashboard--widget-card w-full flex"}
       >
         <div className={"py-5 flex justify-between items-start w-full"}>
-          <div className={"w-full"}>
-            <div className="flex items-center justify-between px-6">
+          <div className={"w-full flex flex-1 flex-col h-full"}>
+            <div
+              style={{
+                borderBottom: "1px solid rgb(231, 233, 237)",
+              }}
+              className="flex items-center justify-between px-6 pb-4"
+            >
               <div className="flex flex-col">
                 <div
                   className="flex cursor-pointer items-center"
@@ -246,7 +251,7 @@ function WidgetCard({
                   </Text>
                   <SVG color="#8692A3" size={20} name="expand" />
                 </div>
-                <div className="description">
+                {/* <div className="description">
                   <Text
                     ellipsis
                     type={"paragraph"}
@@ -256,22 +261,23 @@ function WidgetCard({
                   >
                     {unit.description}
                   </Text>
-                </div>
+                </div> */}
               </div>
               <div>
                 <Dropdown overlay={getMenu()} trigger={["hover"]}>
-                  <Button type="text" icon={<SVG size={20} name={"threedot"} color="#8692A3" />} />
+                  <Button
+                    type="text"
+                    icon={<SVG size={20} name={"threedot"} color="#8692A3" />}
+                  />
                 </Dropdown>
               </div>
             </div>
-            <div className="mt-4">
-              <CardContent
-                durationObj={durationObj}
-                unit={unit}
-                resultState={resultState}
-                setwidgetModal={setwidgetModal}
-              />
-            </div>
+            <CardContent
+              durationObj={durationObj}
+              unit={unit}
+              resultState={resultState}
+              setwidgetModal={setwidgetModal}
+            />
           </div>
         </div>
       </div>

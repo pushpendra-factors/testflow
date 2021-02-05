@@ -4,7 +4,7 @@ import BarChart from "../../../../components/BarChart";
 import LineChart from "../../../../components/LineChart";
 import SingleEventMultipleBreakdownTable from "./SingleEventMultipleBreakdownTable";
 import { generateColors } from "../../../../utils/dataFormatter";
-import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA } from "../../../../utils/constants";
+import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA, DASHBOARD_MODAL } from "../../../../utils/constants";
 
 function SingleEventMultipleBreakdown({
   queries,
@@ -12,7 +12,6 @@ function SingleEventMultipleBreakdown({
   resultState,
   page,
   chartType,
-  isWidgetModal,
   durationObj,
   title,
   section
@@ -64,7 +63,7 @@ function SingleEventMultipleBreakdown({
   const table = (
     <div className="mt-12 w-full">
       <SingleEventMultipleBreakdownTable
-        isWidgetModal={isWidgetModal}
+        isWidgetModal={section === DASHBOARD_MODAL}
         data={chartsData}
         lineChartData={lineChartData}
         breakdown={breakdown}
@@ -81,7 +80,7 @@ function SingleEventMultipleBreakdown({
   );
 
   if (chartType === "barchart") {
-    chart = <BarChart title={title} chartData={visibleProperties} />;
+    chart = <BarChart section={section} title={title} chartData={visibleProperties} />;
   } else {
     chart = (
       <LineChart

@@ -15,7 +15,6 @@ function EventsAnalytics({
   breakdown,
   resultState,
   page,
-  isWidgetModal = false,
   arrayMapper,
   title = "chart",
   chartType,
@@ -42,7 +41,6 @@ function EventsAnalytics({
             resultState={resultState}
             page={page}
             chartType={chartType}
-            isWidgetModal={isWidgetModal}
             arrayMapper={arrayMapper}
             durationObj={durationObj}
             section={section}
@@ -58,7 +56,6 @@ function EventsAnalytics({
             resultState={resultState}
             page={page}
             chartType={chartType}
-            isWidgetModal={isWidgetModal}
             title={title}
             durationObj={durationObj}
             section={section}
@@ -74,7 +71,6 @@ function EventsAnalytics({
             resultState={resultState}
             page={page}
             chartType={chartType}
-            isWidgetModal={isWidgetModal}
             title={title}
             durationObj={durationObj}
             section={section}
@@ -90,7 +86,6 @@ function EventsAnalytics({
             resultState={resultState}
             page={page}
             chartType={chartType}
-            isWidgetModal={isWidgetModal}
             title={title}
             durationObj={durationObj}
             section={section}
@@ -102,7 +97,7 @@ function EventsAnalytics({
 
   if (breakdownType === ANY_USER_TYPE || breakdownType === ALL_USER_TYPE) {
     content = (
-      <EventBreakdownCharts data={resultState.data} breakdown={breakdown} />
+      <EventBreakdownCharts section={section}  data={resultState.data} breakdown={breakdown} />
     );
   }
 

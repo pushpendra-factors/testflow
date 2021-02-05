@@ -6,6 +6,7 @@ import {
 } from "../utils";
 import Chart from "./Chart";
 import FunnelsResultTable from "../FunnelsResultTable";
+import { DASHBOARD_MODAL } from "../../../../utils/constants";
 
 function GroupedChart({
   resultState,
@@ -58,7 +59,7 @@ function GroupedChart({
           chartData={eventsData}
           arrayMapper={arrayMapper}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          isWidgetModal={isWidgetModal}
+          isWidgetModal={section === DASHBOARD_MODAL}
         />
       </div>
     </div>

@@ -1,9 +1,21 @@
-import React from "react";
+import React, { useCallback } from "react";
 import moment from "moment";
 import { Button } from "antd";
 import { SVG } from "../../../components/factorsComponents";
+import { REPORT_SECTION, DASHBOARD_MODAL } from "../../../utils/constants";
 
-function ReportTitle({ title, setDrawerVisible, queryDetail }) {
+function ReportTitle({ title, setDrawerVisible, queryDetail, section }) {
+
+  const handleClick = useCallback(()=>{
+    if(section === REPORT_SECTION) {
+      setDrawerVisible(true);
+    }
+    if(section === DASHBOARD_MODAL) {
+      console.log("adaddad")
+      setDrawerVisible();
+    }
+  }, [section, setDrawerVisible])
+
   return (
     <div style={{ borderBottom: "1px solid #E7E9ED" }} className="pb-4">
       <div
@@ -30,7 +42,7 @@ function ReportTitle({ title, setDrawerVisible, queryDetail }) {
             className="items-center"
             size={"large"}
             type="text"
-            onClick={setDrawerVisible.bind(this, true)}
+            onClick={handleClick}
           >
             <SVG
               extraClass="mr-1"

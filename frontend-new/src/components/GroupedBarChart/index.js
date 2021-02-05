@@ -125,6 +125,8 @@ function GroupedBarChart({
     responseHeaders,
     responseRows,
     visibleIndices,
+    section,
+    widgetHeight
   ]);
 
   useEffect(() => {

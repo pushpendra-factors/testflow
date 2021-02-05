@@ -76,6 +76,7 @@ function NoBreakdownCharts({
               event={chartsData[0].mapper}
               chartData={chartsData[0].dataOverTime}
               chartColor="#4D7DB4"
+              height={unit.cardSize ? 180 : 100}
             />
           </div>
         </div>
@@ -106,6 +107,7 @@ function NoBreakdownCharts({
                       event={chartData.mapper}
                       chartData={chartData.dataOverTime}
                       chartColor={appliedColors[index]}
+                      height={100}
                     />
                   </div>
                 </div>
@@ -147,14 +149,7 @@ function NoBreakdownCharts({
 
   return (
     <div
-      style={{
-        boxShadow:
-          chartType === CHART_TYPE_SPARKLINES ||
-          chartType === CHART_TYPE_LINECHART
-            ? "inset 0px 1px 0px rgba(0, 0, 0, 0.1)"
-            : "",
-      }}
-      className="w-full px-6"
+      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
     >
       {chartContent}
       {tableContent}

@@ -64,7 +64,7 @@ function CoreQuery({
   const [requestQuery, updateRequestQuery] = useState(null);
   const [rowClicked, setRowClicked] = useState(false);
   const [querySaved, setQuerySaved] = useState(false);
-  const [breakdownType, setBreakdownType] = useState("each");
+  const [breakdownType, setBreakdownType] = useState(EACH_USER_TYPE);
   const [queries, setQueries] = useState([]);
   const [queryOptions, setQueryOptions] = useState({
     groupBy: [

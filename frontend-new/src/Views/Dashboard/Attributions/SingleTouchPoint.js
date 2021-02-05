@@ -16,7 +16,6 @@ function SingleTouchPoint({
   linkedEvents,
   setwidgetModal,
   chartType,
-  title,
   resultState,
   unit,
   section,
@@ -44,7 +43,7 @@ function SingleTouchPoint({
         responseRows={data.rows}
         responseHeaders={data.headers}
         visibleIndices={visibleIndices}
-        title={title}
+        title={unit.id}
         chartData={chartsData}
         section={section}
         height={225}
@@ -82,13 +81,7 @@ function SingleTouchPoint({
 
   return (
     <div
-      style={{
-        boxShadow:
-          chartType === CHART_TYPE_BARCHART
-            ? "inset 0px 1px 0px rgba(0, 0, 0, 0.1)"
-            : "",
-      }}
-      className="w-full px-6"
+      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
     >
       {chartContent}
       {tableContent}

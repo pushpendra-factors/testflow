@@ -23,8 +23,8 @@ function TopLegends({
             ></div>
             <div className="px-2">
               <Text mini type="paragraph">
-                {legend.length > linechart_legend_length[cardSize]
-                  ? legend.substr(0, linechart_legend_length[cardSize]) + "..."
+                {legend.length > linechart_legend_length
+                  ? legend.substr(0, linechart_legend_length) + "..."
                   : legend}
               </Text>
             </div>

@@ -20,7 +20,6 @@ function BreakdownCharts({
   data,
   isWidgetModal,
   setwidgetModal,
-  title,
   unit,
   section,
 }) {
@@ -66,7 +65,12 @@ function BreakdownCharts({
 
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <BarChart height={250} title={title} chartData={visibleProperties} />
+      <BarChart
+        section={section}
+        height={250}
+        title={unit.id}
+        chartData={visibleProperties}
+      />
     );
   } else if (chartType === CHART_TYPE_LINECHART) {
     const mapper = visibleProperties.map((v, index) => {
@@ -99,7 +103,6 @@ function BreakdownCharts({
           cardSize={unit.cardSize}
           section={section}
           height={200}
-          cardSize={unit.cardSize}
         />
       </>
     );
@@ -121,18 +124,7 @@ function BreakdownCharts({
   }
 
   return (
-    <div
-      style={{
-        boxShadow:
-          chartType === CHART_TYPE_BARCHART ||
-          chartType === CHART_TYPE_LINECHART
-            ? "inset 0px 1px 0px rgba(0, 0, 0, 0.1)"
-            : "",
-      }}
-      className={`w-full px-6 ${
-        chartType === CHART_TYPE_BARCHART ? "pt-4" : ""
-      }`}
-    >
+    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
       {chartContent}
       {tableContent}
     </div>

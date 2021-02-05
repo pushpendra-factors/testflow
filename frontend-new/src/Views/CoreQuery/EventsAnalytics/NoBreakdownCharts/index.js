@@ -8,14 +8,13 @@ import NoBreakdownTable from "./NoBreakdownTable";
 import SparkLineChart from "../../../../components/SparkLineChart";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
-import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA } from "../../../../utils/constants";
+import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA, DASHBOARD_MODAL } from "../../../../utils/constants";
 
 function NoBreakdownCharts({
   queries,
   resultState,
   page,
   chartType,
-  isWidgetModal,
   durationObj,
   arrayMapper,
   section
@@ -43,12 +42,10 @@ function NoBreakdownCharts({
     arrayMapper
   );
 
-  console.log(page);
-
   const table = (
     <div className="mt-12 w-full">
       <NoBreakdownTable
-        isWidgetModal={isWidgetModal}
+        isWidgetModal={section === DASHBOARD_MODAL}
         data={chartsData}
         events={queries}
         chartType={chartType}

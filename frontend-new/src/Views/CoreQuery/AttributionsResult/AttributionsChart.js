@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import { formatData } from "./utils";
 import BarLineChart from "../../../components/BarLineChart";
 import AttributionTable from "./AttributionTable";
+import { DASHBOARD_MODAL } from "../../../utils/constants";
 
 function AttributionsChart({
   data,
-  isWidgetModal,
   event,
   attribution_method,
   touchpoint,
@@ -42,7 +42,7 @@ function AttributionsChart({
           touchpoint={touchpoint}
           event={event}
           data={data}
-          isWidgetModal={isWidgetModal}
+          isWidgetModal={section === DASHBOARD_MODAL}
           visibleIndices={visibleIndices}
           setVisibleIndices={setVisibleIndices}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}

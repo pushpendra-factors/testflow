@@ -435,7 +435,6 @@ function Chart({
       })}
       {section === DASHBOARD_WIDGET_SECTION ? (
         <DashboardWidgetLegends
-          parentClassName="flex justify-center py-3"
           arrayMapper={arrayMapper}
           cardSize={cardSize}
           colors={chartColors}

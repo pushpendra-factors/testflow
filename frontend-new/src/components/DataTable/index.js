@@ -83,7 +83,7 @@ function DataTable({
         rowKey="index"
         rowSelection={!isDashboardWidget ? rowSelection : null}
         columns={columns}
-        dataSource={isDashboardWidget ? tableData.slice(0, 4) : tableData}
+        dataSource={isDashboardWidget ? tableData.slice(0, 3) : tableData}
         className={`${styles.table} ${className}`}
         scroll={scroll}
       />

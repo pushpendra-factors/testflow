@@ -8,6 +8,7 @@ import {
   LockOutlined, ReloadOutlined, EditOutlined, UnlockOutlined
 } from '@ant-design/icons';
 import DurationInfo from '../../components/DurationInfo';
+import FaDatepicker from '../../components/FaDatepicker';
 
 function DashboardSubMenu({
   dashboard, handleEditClick, durationObj, handleDurationChange, refreshClicked, setRefreshClicked
@@ -42,10 +43,18 @@ function DashboardSubMenu({
     <div className={'flex justify-between items-center px-0 mb-5'}>
       <div className={'flex justify-between items-center'}>
         <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>Data from</Text>
-        <DurationInfo
-          durationObj={durationObj}
-          handleDurationChange={handleDurationChange}
-        />
+        <FaDatepicker
+            customPicker
+            presetRange
+            monthPicker
+            quarterPicker
+            range={{
+              startDate: durationObj.from,
+              endDate: durationObj.to,
+            }}
+            placement="topRight"
+            onSelect={handleDurationChange}
+          />
         {btn}
         <Button onClick={handleEditClick.bind(this, dashboard)} size={'large'} type={'text'} className={'m-0 fa-button-ghost flex items-center p-0 py-2'}><EditOutlined /> Edit</Button>
       </div>

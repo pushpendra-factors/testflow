@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { formatData, formatDataInLineChartFormat } from "./utils";
-import { CHART_TYPE_BARCHART, CHART_TYPE_LINECHART } from "../../../../utils/constants";
+import { CHART_TYPE_BARCHART, CHART_TYPE_LINECHART, DASHBOARD_MODAL } from "../../../../utils/constants";
 import BarChart from "../../../../components/BarChart";
 import BreakdownTable from "./BreakdownTable";
 import LineChart from "../../../../components/LineChart";
@@ -46,7 +46,7 @@ function BreakdownCharts({
         chartsData={chartsData}
         breakdown={breakdown}
         arrayMapper={arrayMapper}
-        isWidgetModal={false}
+        isWidgetModal={section === DASHBOARD_MODAL}
         responseData={data}
         visibleProperties={visibleProperties}
         maxAllowedVisibleProperties={maxAllowedVisibleProperties}
@@ -58,7 +58,7 @@ function BreakdownCharts({
   let chart = null;
 
   if (chartType === CHART_TYPE_BARCHART) {
-    chart = <BarChart title={title} chartData={visibleProperties} />;
+    chart = <BarChart section={section} title={title} chartData={visibleProperties} />;
   } else if(chartType === CHART_TYPE_LINECHART) {
     const mapper = visibleProperties.map((v, index) => {
       return {

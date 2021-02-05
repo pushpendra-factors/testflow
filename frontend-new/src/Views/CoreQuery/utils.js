@@ -13,13 +13,14 @@ import {
   ANY_USER_TYPE,
   ALL_USER_TYPE,
   EACH_USER_TYPE,
+  TOTAL_USERS_CRITERIA,
 } from "../../utils/constants";
 
 export const labelsObj = {
-  totalEvents: "Event Count",
-  totalUsers: "User Count",
-  activeUsers: "User Count",
-  frequency: "Count",
+  [TOTAL_EVENTS_CRITERIA]: "Event Count",
+  [TOTAL_USERS_CRITERIA]: "User Count",
+  [ACTIVE_USERS_CRITERIA]: "User Count",
+  [FREQUENCY_CRITERIA]: "Count",
 };
 
 export const presentationObj = {
@@ -135,7 +136,7 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
       };
     }
     if (opt.prop_type === "datetime") {
-      opt.grn ? appGbp['grn'] = opt.grn: appGbp['grn'] = "day";
+      opt.grn ? (appGbp["grn"] = opt.grn) : (appGbp["grn"] = "day");
     }
     if (opt.prop_type === "numerical") {
       opt.gbty ? (appGbp["gbty"] = opt.gbty) : (appGbp["gbty"] = "");
@@ -201,7 +202,7 @@ export const getQuery = (
       };
     }
     if (opt.prop_type === "datetime") {
-      opt.grn ? appGbp['grn'] = opt.grn: appGbp['grn'] = "day";
+      opt.grn ? (gbpReq["grn"] = opt.grn) : (gbpReq["grn"] = "day");
     }
     if (opt.prop_type === "numerical") {
       opt.gbty ? (gbpReq["gbty"] = opt.gbty) : (gbpReq["gbty"] = "");

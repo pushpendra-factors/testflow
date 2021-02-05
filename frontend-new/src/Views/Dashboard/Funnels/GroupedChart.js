@@ -86,13 +86,7 @@ function GroupedChart({
 
   return (
     <div
-      style={{
-        boxShadow:
-          chartType === "barchart"
-            ? "inset 0px 1px 0px rgba(0, 0, 0, 0.1)"
-            : "",
-      }}
-      className="w-full px-6"
+      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
     >
       {chartContent}
       {tableContent}

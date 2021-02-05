@@ -3,8 +3,9 @@ import { generateUngroupedChartsData } from "../utils";
 
 import Chart from "./Chart";
 import FunnelsResultTable from "../FunnelsResultTable";
+import { DASHBOARD_MODAL } from "../../../../utils/constants";
 
-function UngroupedChart({ resultState, queries, isWidgetModal, arrayMapper }) {
+function UngroupedChart({ resultState, queries, section, arrayMapper }) {
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
@@ -25,7 +26,7 @@ function UngroupedChart({ resultState, queries, isWidgetModal, arrayMapper }) {
 
       <div className="mt-12 w-full">
         <FunnelsResultTable
-          isWidgetModal={isWidgetModal}
+          isWidgetModal={section === DASHBOARD_MODAL}
           chartData={chartData}
           breakdown={[]}
           queries={queries}

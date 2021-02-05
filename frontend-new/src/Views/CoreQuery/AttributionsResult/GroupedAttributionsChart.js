@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import AttributionTable from "./AttributionTable";
 import { formatGroupedData } from "./utils";
 import GroupedBarChart from "../../../components/GroupedBarChart";
+import { DASHBOARD_MODAL } from "../../../utils/constants";
 
 function GroupedAttributionsChart({
   data,
@@ -11,7 +12,7 @@ function GroupedAttributionsChart({
   attribution_method_compare,
   touchpoint,
   linkedEvents,
-  section
+  section,
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -75,7 +76,7 @@ function GroupedAttributionsChart({
           linkedEvents={linkedEvents}
           event={event}
           data={data}
-          isWidgetModal={isWidgetModal}
+          isWidgetModal={section === DASHBOARD_MODAL}
           visibleIndices={visibleIndices}
           setVisibleIndices={setVisibleIndices}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}

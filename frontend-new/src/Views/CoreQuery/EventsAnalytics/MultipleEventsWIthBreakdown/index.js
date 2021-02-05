@@ -8,7 +8,11 @@ import BarChart from "../../../../components/BarChart";
 import MultipleEventsWithBreakdownTable from "./MultipleEventsWithBreakdownTable";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
-import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA } from "../../../../utils/constants";
+import {
+  ACTIVE_USERS_CRITERIA,
+  FREQUENCY_CRITERIA,
+  DASHBOARD_MODAL,
+} from "../../../../utils/constants";
 
 function MultipleEventsWithBreakdown({
   queries,
@@ -16,10 +20,9 @@ function MultipleEventsWithBreakdown({
   resultState,
   page,
   chartType,
-  isWidgetModal,
   durationObj,
   title,
-  section
+  section,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -66,7 +69,7 @@ function MultipleEventsWithBreakdown({
   const table = (
     <div className="mt-12 w-full">
       <MultipleEventsWithBreakdownTable
-        isWidgetModal={isWidgetModal}
+        isWidgetModal={section === DASHBOARD_MODAL}
         data={chartsData}
         lineChartData={lineChartData}
         queries={queries}
@@ -82,12 +85,13 @@ function MultipleEventsWithBreakdown({
       />
     </div>
   );
-  
+
   const appliedColors = generateColors(visibleProperties.length);
 
   if (chartType === "barchart") {
     chart = (
       <BarChart
+        section={section}
         chartData={formatVisibleProperties(visibleProperties, queries)}
         queries={queries}
         title={title}
@@ -104,7 +108,9 @@ function MultipleEventsWithBreakdown({
         eventsMapper={mapper}
         setHiddenEvents={setHiddenProperties}
         hiddenEvents={hiddenProperties}
-        isDecimalAllowed={page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA}
+        isDecimalAllowed={
+          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
+        }
         arrayMapper={arrayMapper}
         section={section}
       />
