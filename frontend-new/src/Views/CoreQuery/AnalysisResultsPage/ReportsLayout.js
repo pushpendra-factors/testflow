@@ -7,6 +7,7 @@ function ReportsLayout({
   setShowResult,
   requestQuery,
   querySaved,
+  setQuerySaved,
   ...rest
 }) {
   return (
@@ -16,6 +17,7 @@ function ReportsLayout({
         onBreadCrumbClick={setShowResult.bind(this, false)}
         queryType={queryType}
         queryTitle={querySaved}
+        setQuerySaved={setQuerySaved}
       />
       <div className="mt-24 px-20">
         <ReportContent queryTitle={querySaved} queryType={queryType} {...rest} />

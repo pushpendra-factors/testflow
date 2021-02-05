@@ -11,6 +11,7 @@ function AnalysisHeader({
   onBreadCrumbClick,
   requestQuery,
   queryTitle,
+  setQuerySaved
 }) {
   const [showSaveModal, setShowSaveModal] = useState(false);
 
@@ -96,6 +97,7 @@ function AnalysisHeader({
           visible={showSaveModal}
           setVisible={setShowSaveModal}
           queryType={queryType}
+          setQuerySaved={setQuerySaved}
         />
 
         <Button

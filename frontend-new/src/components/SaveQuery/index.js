@@ -27,6 +27,7 @@ function SaveQuery({
   visible,
   setVisible,
   queryType,
+  setQuerySaved
 }) {
   const [title, setTitle] = useState("");
   const [addToDashboard, setAddToDashboard] = useState(false);
@@ -161,7 +162,7 @@ function SaveQuery({
         );
       }
       dispatch({ type: QUERY_CREATED, payload: res.data });
-      // setQuerySaved(title);
+      setQuerySaved(title);
       setApisCalled(false);
       resetModalState();
     } catch (err) {
