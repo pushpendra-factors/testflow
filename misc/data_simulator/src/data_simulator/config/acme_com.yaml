@@ -741,6 +741,15 @@ user_segments:
             /pricing/: 0.04
             /about-us/: 0.01
             Others: 0.005
+        -
+          key: Source-Medium
+          order_level: 1
+          values:
+            paid: 0.2
+            organic: 0.35
+            none: 0.15
+            paid: 0.1
+            referral: 0.2
       custom:
       -
           key: Salesforce_Job_Title
