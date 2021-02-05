@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -402,6 +403,91 @@ func getSalesforceDocumentPropertiesByCategory(salesforceDocument []SalesforceDo
 	return categoricalPropertiesArray, dateTimePropertiesArray
 }
 
+// ValuesCount object holds property value name and its frequency
+type ValuesCount struct {
+	Name  interface{}
+	Count int
+}
+
+// getPropertyValueTuples return property values by limit, if distinct values is over limit most frequent is picked
+func getPropertyValueTuples(valuesAggregate map[interface{}]int, limit int) []ValuesCount {
+
+	var aggValues []ValuesCount
+	for name, count := range valuesAggregate {
+		aggValues = append(aggValues, ValuesCount{Name: name, Count: count})
+	}
+
+	if len(aggValues) > limit {
+
+		sort.Slice(aggValues, func(i, j int) bool {
+			return aggValues[i].Count > aggValues[j].Count
+		})
+
+		aggValues = aggValues[:limit]
+	}
+
+	return aggValues
+}
+
+// getSalesforceDocumentValuesByPropertyAndLimit return values by property name. If unique values is above limit, top n frequent value is returned
+func getSalesforceDocumentValuesByPropertyAndLimit(salesforceDocument []SalesforceDocument, propertyName string, limit int) []interface{} {
+	if len(salesforceDocument) < 1 {
+		return nil
+	}
+
+	valuesAggregate := make(map[interface{}]int, 0)
+	for i := range salesforceDocument {
+
+		var docProperties map[string]interface{}
+		err := json.Unmarshal((salesforceDocument[i].Value).RawMessage, &docProperties)
+		if err != nil {
+			log.WithFields(log.Fields{"document_id": salesforceDocument[i].ID}).WithError(err).Error("Failed to unmarshal salesforce document on getSalesforceDocumentPropertiesByCategory")
+			continue
+		}
+
+		for name, value := range docProperties {
+			if name != propertyName {
+				continue
+			}
+
+			if value == nil || value == "" {
+				continue
+			}
+
+			valuesAggregate[value] = valuesAggregate[value] + 1
+		}
+	}
+
+	propertyValueTuples := getPropertyValueTuples(valuesAggregate, limit)
+	propertyValues := make([]interface{}, len(propertyValueTuples))
+	for i := range propertyValueTuples {
+		propertyValues[i] = propertyValueTuples[i].Name
+	}
+
+	return propertyValues
+}
+
+func getLatestSalesforceDocumetsByLimit(projectID uint64, docType int, limit int) ([]SalesforceDocument, error) {
+	if projectID == 0 {
+		return nil, errors.New("invalid project_id")
+	}
+
+	if docType == 0 || limit <= 0 {
+		return nil, errors.New("invalid parameter")
+	}
+
+	var salesforceDocument []SalesforceDocument
+	lbTimestamp := U.UnixTimeBeforeDuration(48 * time.Hour)
+	db := C.GetServices().Db
+	err := db.Model(&SalesforceDocument{}).Where("project_id = ? AND type = ? AND action = ? AND timestamp > ?",
+		projectID, docType, SalesforceDocumentUpdated, lbTimestamp).Order("timestamp desc").Limit(limit).Find(&salesforceDocument).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return salesforceDocument, nil
+}
+
 // GetSalesforceObjectPropertiesName returns object property names by type
 func GetSalesforceObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string) {
 	if ProjectID == 0 || objectType == "" {
@@ -414,23 +500,34 @@ func GetSalesforceObjectPropertiesName(ProjectID uint64, objectType string) ([]s
 	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
-	lbTimestamp := U.UnixTimeBeforeDuration(48 * time.Hour)
-
-	var salesforceDocument []SalesforceDocument
-	db := C.GetServices().Db
-	err := db.Model(&SalesforceDocument{}).Where("project_id = ? AND type = ? AND action = ? AND timestamp > ?",
-		ProjectID, docType, 2, lbTimestamp).Order("timestamp desc").Limit(1000).Find(&salesforceDocument).Error
+	salesforceDocument, err := getLatestSalesforceDocumetsByLimit(ProjectID, docType, 1000)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to get salesforce documents for GetSalesforceObjectPropertiesName.")
-		return nil, nil
-	}
-
-	if len(salesforceDocument) < 1 {
-		logCtx.Error("No documents returned.")
+		logCtx.WithError(err).Error("Failed to GetSalesforceObjectPropertiesName")
 		return nil, nil
 	}
 
 	return getSalesforceDocumentPropertiesByCategory(salesforceDocument)
+}
+
+// GetSalesforceObjectValuesByPropertyName returns object values by property name
+func GetSalesforceObjectValuesByPropertyName(ProjectID uint64, objectType string, propertyName string) []interface{} {
+	if ProjectID == 0 || objectType == "" || propertyName == "" {
+		return nil
+	}
+
+	docType := GetSalesforceDocTypeByAlias(objectType)
+	if docType == 0 {
+		return nil
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": ProjectID, "doc_type": docType})
+	salesforceDocument, err := getLatestSalesforceDocumetsByLimit(ProjectID, docType, 1000)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to GetSalesforceObjectPropertiesValues")
+		return nil
+	}
+
+	return getSalesforceDocumentValuesByPropertyAndLimit(salesforceDocument, propertyName, 100)
 }
 
 func getSalesforceLastModifiedTimestamp(document *SalesforceDocument) (int64, error) {
