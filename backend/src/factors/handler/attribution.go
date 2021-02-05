@@ -74,10 +74,6 @@ func AttributionHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"Error": errMsg})
 		return
 	}
-	// for existing queries and backward support
-	if requestPayload.Query.QueryType == "" {
-		requestPayload.Query.QueryType = M.AttributionQueryTypeConversionBased
-	}
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
 	if isDashboardQueryRequest && !H.IsHardRefreshForToday(requestPayload.Query.From, hardRefresh) {

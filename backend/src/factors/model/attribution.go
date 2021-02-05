@@ -247,8 +247,10 @@ func applyOperator(attributionKeyType string, keyValue string, filter Attributio
 	4. Apply attribution methodology
 	5. Add performance data by attributionId
 */
-func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryResult, error) {
+func ExecuteAttributionQuery(projectID uint64, queryOriginal *AttributionQuery) (*QueryResult, error) {
 
+	var query *AttributionQuery
+	U.DeepCopy(queryOriginal, &query)
 	// for existing queries and backward support
 	if query.QueryType == "" {
 		query.QueryType = AttributionQueryTypeConversionBased
