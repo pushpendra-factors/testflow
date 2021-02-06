@@ -14,7 +14,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
-  QUERY_TYPE_CAMPAIGN
+  QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
 
 function ExpandableView({
@@ -45,7 +45,10 @@ function ExpandableView({
           if (newDurationObj.frequency === "hour") {
             refresh = true;
           }
-        } else if (unit.query.query.cl && unit.query.query.cl === QUERY_TYPE_ATTRIBUTION) {
+        } else if (
+          unit.query.query.cl &&
+          unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
+        ) {
           queryType = QUERY_TYPE_ATTRIBUTION;
         } else {
           queryType = QUERY_TYPE_FUNNEL;
@@ -114,23 +117,27 @@ function ExpandableView({
 
   const handleDurationChange = useCallback(
     (dates) => {
-      let frequency = "date";
-        if (
-          moment(dates.endDate).diff(
-            dates.startDate,
-            "hours"
-          ) <= 24
-        ) {
-          frequency = "hour";
-        }
-        const newDurationObj = {
-          ...duration,
-          from: dates.startDate,
-          to: dates.endDate,
-          frequency,
-        };
-        setDuration(newDurationObj);
-        getData(newDurationObj);
+      let from,
+        to,
+        frequency = "date";
+      if (Array.isArray(dates.startDate)) {
+        from = dates.startDate[0];
+        to = dates.startDate[1];
+      } else {
+        from = dates.startDate;
+        to = dates.endDate;
+      }
+      if (moment(to).diff(from, "hours") <= 24) {
+        frequency = "hour";
+      }
+      const newDurationObj = {
+        ...duration,
+        from,
+        to,
+        frequency,
+      };
+      setDuration(newDurationObj);
+      getData(newDurationObj);
     },
     [duration, getData]
   );

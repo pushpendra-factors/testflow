@@ -378,8 +378,17 @@ function CoreQuery({
 
   const handleDurationChange = useCallback(
     (dates) => {
-      let frequency = "date";
-      if (moment(dates.endDate).diff(dates.startDate, "hours") <= 24) {
+      let from,
+        to,
+        frequency = "date";
+      if (Array.isArray(dates.startDate)) {
+        from = dates.startDate[0];
+        to = dates.startDate[1];
+      } else {
+        from = dates.startDate;
+        to = dates.endDate;
+      }
+      if (moment(to).diff(from, "hours") <= 24) {
         frequency = "hour";
       }
       setQueryOptions((currState) => {
@@ -387,16 +396,16 @@ function CoreQuery({
           ...currState,
           date_range: {
             ...currState.date_range,
-            from: dates.startDate,
-            to: dates.endDate,
+            from,
+            to,
             frequency,
           },
         };
       });
       const appliedDateRange = {
         ...queryOptions.date_range,
-        from: dates.startDate,
-        to: dates.endDate,
+        from,
+        to,
         frequency,
       };
 
@@ -409,8 +418,8 @@ function CoreQuery({
 
       if (queryType === QUERY_TYPE_CAMPAIGN) {
         const payload = {
-          from: moment(dates.startDate).startOf("day"),
-          to: moment(dates.endDate).endOf("day"),
+          from: moment(from).startOf("day"),
+          to: moment(to).endOf("day"),
           frequency: "date",
         };
         dispatch({ type: SET_CAMP_DATE_RANGE, payload });
@@ -419,8 +428,8 @@ function CoreQuery({
 
       if (queryType === QUERY_TYPE_ATTRIBUTION) {
         const payload = {
-          from: moment(dates.startDate).startOf("day"),
-          to: moment(dates.endDate).endOf("day"),
+          from: moment(from).startOf("day"),
+          to: moment(to).endOf("day"),
           frequency: "date",
         };
         dispatch({ type: SET_ATTR_DATE_RANGE, payload });

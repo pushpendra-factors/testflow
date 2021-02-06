@@ -22,18 +22,24 @@ function Dashboard() {
   }, []);
 
   const handleDurationChange = useCallback((dates) => {
-    let frequency = "date";
-    if (
-      moment(dates.endDate).diff(dates.startDate, "hours") <=
-      24
-    ) {
+    let from,
+      to,
+      frequency = "date";
+    if (Array.isArray(dates.startDate)) {
+      from = dates.startDate[0];
+      to = dates.startDate[1];
+    } else {
+      from = dates.startDate;
+      to = dates.endDate;
+    }
+    if (moment(to).diff(from, "hours") <= 24) {
       frequency = "hour";
     }
     setDurationObj((currState) => {
       return {
         ...currState,
-        from: dates.startDate,
-        to: dates.endDate,
+        from,
+        to,
         frequency,
       };
     });
