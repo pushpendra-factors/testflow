@@ -52,8 +52,8 @@ var facebookDocumentTypeAlias = map[string]int{
 var objectAndPropertyToValueInFacebookReportsMapping = map[string]string{
 	"campaign:name": "value->>'campaign_name' as campaign_name",
 	"ad_set:name":   "value->>'adset_name' as adset_name",
-	"campaign:id":   "campaign_id",
-	"ad_set:id":     "ad_set_id",
+	"campaign:id":   "campaign_id::bigint",
+	"ad_set:id":     "ad_set_id::bigint",
 	"ad:id":         "id",
 }
 

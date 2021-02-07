@@ -504,23 +504,23 @@ func executeAllChannelsQueryV1(projectID uint64, query *ChannelQueryV1, reqID st
 	facebookSQL = fmt.Sprintf("( %s )", facebookSQL[:len(facebookSQL)-2])
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
 		for _, metric := range adwordsMetrics {
-			value := fmt.Sprintf("%s(%s) as %s", adwordsMetricsToOperation[metric], metric, metric)
+			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
 			selectMetrics = append(selectMetrics, value)
 		}
-		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, channeAnalyticsLimit)
+		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads ORDER BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
 		columns = buildColumns(query, false)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
 		selectMetrics = append(selectMetrics, AliasDateTime)
 		for _, metric := range adwordsMetrics {
-			value := fmt.Sprintf("%s(%s) as %s", adwordsMetricsToOperation[metric], metric, metric)
+			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
 			selectMetrics = append(selectMetrics, value)
 		}
-		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads GROUP BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, AliasDateTime, channeAnalyticsLimit)
+		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads GROUP BY %s ORDER BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, AliasDateTime, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
 		columns = buildColumns(query, false)
 	} else {
-		unionQuery = fmt.Sprintf("SELECT * FROM ( %s UNION %s ) all_ads LIMIT 5000;", adwordsSQL, facebookSQL)
+		unionQuery = fmt.Sprintf("SELECT * FROM ( %s UNION %s ) all_ads ORDER BY %s %s;", adwordsSQL, facebookSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
 		columns = buildColumns(query, true)
 	}
@@ -628,17 +628,28 @@ func appendSelectTimestampIfRequiredForChannels(stmnt string, groupByTimestamp s
 		getSelectTimestampByTypeForChannels(groupByTimestamp, timezone), AliasDateTime))
 }
 
+// TO change.
 // @Kark TODO v1
 func getSelectTimestampByTypeForChannels(timestampType, timezone string) string {
+
+	// switch timestampType {
+	// case GroupByTimestampWeek:
+
+	// case GroupByTimestampMonth:
+
+	// default:
+
+	// }
+	// fmt.Sprintf("LEFT(timestamp::text, %s)", )
+
 	var selectTz string
+	var selectStr string
 
 	if timezone == "" {
 		selectTz = DefaultTimezone
 	} else {
 		selectTz = timezone
 	}
-
-	var selectStr string
 	if timestampType == GroupByTimestampHour {
 		selectStr = fmt.Sprintf("date_trunc('hour', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
 	} else if timestampType == GroupByTimestampWeek {
