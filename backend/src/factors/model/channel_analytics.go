@@ -632,16 +632,6 @@ func appendSelectTimestampIfRequiredForChannels(stmnt string, groupByTimestamp s
 // @Kark TODO v1
 func getSelectTimestampByTypeForChannels(timestampType, timezone string) string {
 
-	// switch timestampType {
-	// case GroupByTimestampWeek:
-
-	// case GroupByTimestampMonth:
-
-	// default:
-
-	// }
-	// fmt.Sprintf("LEFT(timestamp::text, %s)", )
-
 	var selectTz string
 	var selectStr string
 

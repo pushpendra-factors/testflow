@@ -98,7 +98,6 @@ var adwordsMetricsToOperation = map[string]string{
 	"conversions": "sum",
 }
 
-// TODO
 var propertyToExposedValueFromCTE = map[string]string{
 	"campaign:id":   "campaign_id",
 	"campaign:name": "campaign_name",
@@ -918,7 +917,7 @@ func getSQLAndParamsFromAdwordsSimpleReports(query *ChannelQueryV1, projectID ui
 	}
 	selectQuery += joinWithComma(append(selectKeys, selectMetrics...)...)
 
-	// OrderBy And Where
+	// OrderBy
 	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
 
 	// Where
@@ -972,9 +971,6 @@ func getSQLAndParamsFromAdwordsSimpleReports(query *ChannelQueryV1, projectID ui
 	return resultSQLStatement, finalParams, responseSelectMetrics
 }
 
-/*
-TODO Kark Build query
-*/
 // @Kark TODO v1
 func buildAdwordsComplexQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string) {
 	idBasedFilters, nonIdBasedFilters := splitFiltersBasedOnIdProperty(query.Filters)
