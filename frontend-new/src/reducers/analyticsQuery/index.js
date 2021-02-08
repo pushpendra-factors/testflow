@@ -9,7 +9,7 @@ const defaultState = {
     to: 2,
   },
   show_criteria: TOTAL_EVENTS_CRITERIA,
-  performance_criteria: '',
+  performance_criteria: EACH_USER_TYPE,
 };
 
 export const SET_SESSION_ORDER = "SET_SESSION_ORDER";
