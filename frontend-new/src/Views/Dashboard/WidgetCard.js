@@ -109,8 +109,7 @@ function WidgetCard({
           ];
 
           if (
-            unit.settings.activeKey &&
-            parseInt(unit.settings.activeKey) === 2
+            unit.query.query.query_group.length === 3
           ) {
             const userData = formatApiData(result_group[0], result_group[1]);
             const sessionsData = result_group[2];
@@ -124,8 +123,7 @@ function WidgetCard({
               data: activeUsersData,
             });
           } else if (
-            unit.settings.activeKey &&
-            parseInt(unit.settings.activeKey) === 3
+            unit.query.query.query_group.length === 4
           ) {
             const eventsData = formatApiData(result_group[0], result_group[1]);
             const userData = formatApiData(result_group[2], result_group[3]);
