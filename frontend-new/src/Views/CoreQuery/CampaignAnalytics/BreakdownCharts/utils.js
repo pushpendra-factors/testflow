@@ -125,8 +125,8 @@ export const getTableData = (
   const currEventName = arrayMapper.find(
     (elem) => elem.index === currentEventIndex
   ).eventName;
-  const filteredRows = data.result_group[1].rows.filter((row) =>
-    row[0].toLowerCase().includes(searchText.toLowerCase())
+  const filteredRows = data.result_group[1].rows.filter((row) => 
+    row[0].toString().toLowerCase().includes(searchText.toLowerCase())
   );
   const result = filteredRows.map((d, index) => {
     const breakdownVals = {};
