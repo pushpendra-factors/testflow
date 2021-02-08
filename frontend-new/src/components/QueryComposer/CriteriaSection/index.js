@@ -10,112 +10,104 @@ import {
 } from "../../../reducers/analyticsQuery";
 
 import { SVG, Text } from "../../factorsComponents";
-import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from "../../../utils/constants";
-import FaSelect from "../../FaSelect";
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../../utils/constants';
+import FaSelect from '../../FaSelect';
 
-import { Button } from "antd";
+import {Button} from 'antd';
 
-const CriteriaSection = ({
-  queryType,
-  crit_show,
-  crit_perf,
-  setShowCriteria,
-  setPerformanceCriteria,
-}) => {
-  const [critShowSelect, setCritShowSelect] = useState(false);
-  const [critPerfSelect, setCritPerfSelect] = useState(false);
+const CriteriaSection = ({queryType, queryCount = 0, crit_show, crit_perf, setShowCriteria, setPerformanceCriteria}) => {
 
-  const CRITERIA_SHOW_OPTIONS = [
-    ["Total Events", null, "total_events"],
-    ["Total Users", null, "total_users"],
-    ["Active Users", null, "active_users"],
-    ["Frequency", null, "frequency"],
-  ];
+    const [critShowSelect, setCritShowSelect] = useState(false);
+    const [critPerfSelect, setCritPerfSelect] = useState(false);
 
-  const CRITERIA_PERF_OPTIONS = [
-    ["Any Event", null, "any"],
-    ["Each Event", null, "each"],
-    ["All Events", null, "all"],
-  ];
+    const CRITERIA_SHOW_OPTIONS = [
+        ['Total Users', null, 'total_users'], 
+        ['Total Events', null, 'total_events'],
+        ['Frequency', null, 'frequency'],
+    ];
 
-  const renderCritPerf = () => {
-    if (!crit_show) return null;
+    const CRITERIA_PERF_OPTIONS = [
+        ['Any Event', null, 'any'], 
+        ['Each Event', null, 'each'],
+        ['All Events', null, 'all']
+    ];
 
-    return (
-      <div className={`flex items-center`}>
-        <Text type={"title"} level={7} extraClass={"m-0 mr-2 inline"}>
-          who performed
-        </Text>
+    const renderCritPerf = () => {
+        if(!crit_show || crit_show !== 'total_users' || queryCount <=1 ) return null;
 
-        <div className={``}>
-          <Button
-            size={"large"}
-            type="link"
-            onClick={() => setCritPerfSelect(!critPerfSelect)}
-          >
-            {crit_perf
-              ? CRITERIA_PERF_OPTIONS.filter((op) => op[2] === crit_perf)[0][0]
-              : crit_perf}
-          </Button>
+        return (
+            <div className={`flex items-center`}>
 
-          {critPerfSelect && (
-            <FaSelect
-              options={CRITERIA_PERF_OPTIONS}
-              optionClick={(op) => {
-                setPerformanceCriteria(op[2]);
-                setCritPerfSelect(false);
-              }}
-              onClickOutside={() => setCritPerfSelect(false)}
-            ></FaSelect>
-          )}
-        </div>
-      </div>
-    );
-  };
+                <Text type={"title"} level={7} extraClass={"m-0 mr-2 inline"}>
+                  who performed
+                </Text>
 
-  const renderCritShow = () => {
-    return (
-      <div className={`mr-2 items-center`}>
-        <Button
-          size={"large"}
-          type="link"
-          onClick={() => setCritShowSelect(!critShowSelect)}
-        >
-          {crit_show
-            ? CRITERIA_SHOW_OPTIONS.filter((op) => op[2] === crit_show)[0][0]
-            : crit_show}
-        </Button>
+                <div className={``}>
+                    <Button 
+                            size={'large'} 
+                            type="link" 
+                            onClick={() => setCritPerfSelect(!critPerfSelect)}>
+                                {crit_perf? CRITERIA_PERF_OPTIONS.filter((op) => op[2] === crit_perf)[0][0] : 'Select'}</Button>
 
-        {critShowSelect && (
-          <FaSelect
-            options={CRITERIA_SHOW_OPTIONS}
-            optionClick={(op) => {
-              setShowCriteria(op[2]);
-              setCritShowSelect(false);
-            }}
-            onClickOutside={() => setCritShowSelect(false)}
-          ></FaSelect>
-        )}
-      </div>
-    );
-  };
+                    {critPerfSelect && <FaSelect 
+                            options={CRITERIA_PERF_OPTIONS}
+                            optionClick={(op) => {
+                                setPerformanceCriteria(op[2])
+                                setCritPerfSelect(false);
+                            }}
+                            onClickOutside={() => setCritPerfSelect(false)}
+                        >
 
-  if (queryType == QUERY_TYPE_EVENT) {
-    return (
-      <div className={styles.criteria}>
-        <Text type={"title"} level={7} extraClass={"m-0 mr-2 inline"}>
-          Show
-        </Text>
+                        </FaSelect>}
 
-        {renderCritShow()}
+                </div>
 
-        {renderCritPerf()}
-      </div>
-    );
-  } else {
-    return null;
-  }
-};
+                
+            </div>
+        )
+    }
+
+    const renderCritShow = () => {
+        return (<div className={`mr-2 items-center`}>
+            <Button 
+                    size={'large'} 
+                    type="link" 
+                    onClick={() => setCritShowSelect(!critShowSelect)}>
+                        {crit_show? CRITERIA_SHOW_OPTIONS.filter((op) => op[2] === crit_show)[0][0]: crit_show}
+            </Button>
+
+            {critShowSelect && 
+                <FaSelect 
+                    options={CRITERIA_SHOW_OPTIONS}
+                    optionClick={(op) => {
+                        setShowCriteria(op[2]);
+                        setCritShowSelect(false);
+                    }}
+                    onClickOutside={() => setCritShowSelect(false)}
+                >
+
+                </FaSelect>
+            }
+
+        </div>);
+    }
+
+    if(queryType == QUERY_TYPE_EVENT) {
+        return (<div className={styles.criteria}>
+            <Text type={"title"} level={7} extraClass={"m-0 mr-2 inline"}>
+                  Show
+            </Text>
+
+            {renderCritShow()}
+
+            {renderCritPerf()}
+            
+        </div>)
+    } else {
+        return null;
+    }
+
+}
 
 const mapStateToProps = (state) => ({
   crit_show: state.analyticsQuery.show_criteria,

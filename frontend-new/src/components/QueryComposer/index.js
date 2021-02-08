@@ -100,20 +100,23 @@ function QueryComposer({
   };
 
   const groupByBlock = () => {
-    if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
-      return null;
-    }
-    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
-      return null;
-    }
+    try {
+      if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+        return null;
+      }
+      if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+        return null;
+      }
 
-    return (
-      <ComposerBlock blockTitle={"Group By"} isOpen={true} showIcon={false}>
-        <div key={0} className={"fa--query_block borderless no-padding "}>
-          <GroupBlock queryType={queryType} events={queries}></GroupBlock>
-        </div>
-      </ComposerBlock>
-    );
+      return (
+        <ComposerBlock blockTitle={'Group By'} isOpen={true} showIcon={false}>
+          <div key={0} className={"fa--query_block borderless no-padding "}>
+            <GroupBlock queryType={queryType} events={queries}></GroupBlock>
+          </div>
+        </ComposerBlock>
+
+      );
+    } catch (err) { console.log(err) };
   };
 
   const setEventSequence = (value) => {
@@ -183,38 +186,41 @@ function QueryComposer({
   }, [runFunnelQuery, runQuery, queryType]);
 
   const footer = () => {
-    if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
-      return null;
-    }
-    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
-      return null;
-    } else {
-      return (
-        <div className={styles.composer_footer}>
-          <FaDatepicker
-            customPicker
-            presetRange
-            monthPicker
-            quarterPicker
-            placement="topRight"
-            range={{
-              startDate: queryOptions.date_range.from,
-              endDate: queryOptions.date_range.to,
-            }}
-            onSelect={setDateRange}
-          />
-          <Button size={"large"} type="primary" onClick={handleRunQuery}>
-            Run Query
-          </Button>
-        </div>
-      );
-    }
+    try {
+      if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+        return null;
+      }
+      if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+        return null;
+      } else {
+        return (
+          <div className={styles.composer_footer}>
+            <FaDatepicker
+              customPicker
+              presetRange
+              monthPicker
+              quarterPicker
+              placement="topRight"
+              range={{
+                startDate: queryOptions.date_range.from,
+                endDate: queryOptions.date_range.to,
+              }}
+              onSelect={setDateRange}
+            />
+            <Button size={"large"} type="primary" onClick={handleRunQuery}>
+              Run Query
+            </Button>
+          </div>
+        );
+      }
+    } catch (err) { console.log(err) }
   };
 
   const renderEACrit = () => {
     return (
       <div>
-        <CriteriaSection queryType={QUERY_TYPE_EVENT}></CriteriaSection>
+        <CriteriaSection queryCount={queries.length}
+          queryType={QUERY_TYPE_EVENT}></CriteriaSection>
       </div>
     );
   };
@@ -265,44 +271,51 @@ function QueryComposer({
   };
 
   const renderCriteria = () => {
-    if (queryType === QUERY_TYPE_EVENT) {
-      if (queries.length <= 0) return null;
+    try {
+      if (queryType === QUERY_TYPE_EVENT) {
+        if (queries.length <= 0) return null;
 
-      return (
-        <ComposerBlock
-          blockTitle={"Criteria"}
-          isOpen={criteriaTabOpen}
-          onClick={() => {
-            setCriteriaTabOpen(!criteriaTabOpen);
-          }}
-        >
-          <div className={styles.criteria}>{renderEACrit()}</div>
-        </ComposerBlock>
-      );
-    }
-    if (queryType === QUERY_TYPE_FUNNEL) {
-      if (queries.length <= 1) return null;
-      return (
-        <ComposerBlock
-          blockTitle={"Criteria"}
-          isOpen={criteriaTabOpen}
-          onClick={() => {
-            setCriteriaTabOpen(!criteriaTabOpen);
-          }}
-        >
-          {renderFuCrit()}
-        </ComposerBlock>
-      );
-    }
-  };
+        return (
+          <ComposerBlock blockTitle={'Criteria'}
+            isOpen={criteriaTabOpen}
+            onClick={() => {
+              setCriteriaTabOpen(!criteriaTabOpen)
+            }}>
+            <div className={styles.criteria}>
+              {renderEACrit()}
+            </div>
+          </ComposerBlock>
+        );
+      }
+      if (queryType === QUERY_TYPE_FUNNEL) {
+        if (queries.length <= 1) return null;
+        return (
+          <ComposerBlock blockTitle={'Criteria'}
+            isOpen={criteriaTabOpen}
+            onClick={() => {
+              setCriteriaTabOpen(!criteriaTabOpen)
+            }}>
+            {renderFuCrit()}
+
+          </ComposerBlock>
+        );
+      }
+    } catch (err) { console.log(err) }
+
+  }
 
   const renderQueryList = () => {
-    return (
-      <ComposerBlock blockTitle={"Events"} isOpen={true} showIcon={false}>
-        {queryList()}
-      </ComposerBlock>
-    );
-  };
+    try {
+      return (
+        <ComposerBlock blockTitle={'Events'} isOpen={true} showIcon={false}>
+          {queryList()}
+        </ComposerBlock>
+      )
+    }
+    catch (err) {
+      console.log(err);
+    }
+  }
 
   return (
     <div className={styles.composer_body}>
