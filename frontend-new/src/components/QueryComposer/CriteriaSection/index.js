@@ -10,7 +10,7 @@ import {
 } from "../../../reducers/analyticsQuery";
 
 import { SVG, Text } from "../../factorsComponents";
-import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../../utils/constants';
+import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL, TOTAL_EVENTS_CRITERIA, TOTAL_USERS_CRITERIA, ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA } from '../../../utils/constants';
 import FaSelect from '../../FaSelect';
 
 import {Button} from 'antd';
@@ -21,9 +21,10 @@ const CriteriaSection = ({queryType, queryCount = 0, crit_show, crit_perf, setSh
     const [critPerfSelect, setCritPerfSelect] = useState(false);
 
     const CRITERIA_SHOW_OPTIONS = [
-        ['Total Users', null, 'total_users'], 
-        ['Total Events', null, 'total_events'],
-        ['Frequency', null, 'frequency'],
+        ['Total Events', null, TOTAL_EVENTS_CRITERIA],
+        ['Total Users', null, TOTAL_USERS_CRITERIA], 
+        ['Active Users', null, ACTIVE_USERS_CRITERIA],
+        ['Frequency', null, FREQUENCY_CRITERIA],
     ];
 
     const CRITERIA_PERF_OPTIONS = [
@@ -33,7 +34,7 @@ const CriteriaSection = ({queryType, queryCount = 0, crit_show, crit_perf, setSh
     ];
 
     const renderCritPerf = () => {
-        if(!crit_show || crit_show !== 'total_users' || queryCount <=1 ) return null;
+        if(!crit_show || crit_show !== TOTAL_USERS_CRITERIA || queryCount <=1 ) return null;
 
         return (
             <div className={`flex items-center`}>
