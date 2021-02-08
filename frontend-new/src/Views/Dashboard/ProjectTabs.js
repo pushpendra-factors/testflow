@@ -1,41 +1,77 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
+import { Tabs, Button, Spin, Select } from "antd";
+import { SVG } from "../../components/factorsComponents";
+import { useSelector, useDispatch } from "react-redux";
 import {
-  Tabs, Button, Spin
-} from 'antd';
-import { SVG } from '../../components/factorsComponents';
-import { useSelector, useDispatch } from 'react-redux';
-import { fetchActiveDashboardUnits, DeleteUnitFromDashboard } from '../../reducers/dashboard/services';
-import { ACTIVE_DASHBOARD_CHANGE, WIDGET_DELETED } from '../../reducers/types';
-import SortableCards from './SortableCards';
-import DashboardSubMenu from './DashboardSubMenu';
-import ExpandableView from './ExpandableView';
-import ConfirmationModal from '../../components/ConfirmationModal';
+  fetchActiveDashboardUnits,
+  DeleteUnitFromDashboard,
+} from "../../reducers/dashboard/services";
+import { ACTIVE_DASHBOARD_CHANGE, WIDGET_DELETED } from "../../reducers/types";
+import SortableCards from "./SortableCards";
+import DashboardSubMenu from "./DashboardSubMenu";
+import ExpandableView from "./ExpandableView";
+import ConfirmationModal from "../../components/ConfirmationModal";
+import styles from "./index.module.scss";
+
 const { TabPane } = Tabs;
 
 function ProjectTabs({
-  setaddDashboardModal, handleEditClick, durationObj, handleDurationChange, refreshClicked, setRefreshClicked
+  setaddDashboardModal,
+  handleEditClick,
+  durationObj,
+  handleDurationChange,
+  refreshClicked,
+  setRefreshClicked,
 }) {
   const [widgetModal, setwidgetModal] = useState(false);
   const [deleteWidgetModal, showDeleteWidgetModal] = useState(false);
   const [deleteApiCalled, setDeleteApiCalled] = useState(false);
   const [widgetModalLoading, setwidgetModalLoading] = useState(false);
-  const { active_project } = useSelector(state => state.global);
-  const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(state => state.dashboard);
+  const { active_project } = useSelector((state) => state.global);
+  const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
+    (state) => state.dashboard
+  );
+  const MAX_DASHBOARD_TABS = 3;
   const dispatch = useDispatch();
 
-  const handleTabChange = useCallback((value) => {
-    if(parseInt(value) === activeDashboard.id) {
-      return false;
-    }
-    dispatch({
-      type: ACTIVE_DASHBOARD_CHANGE,
-      payload: dashboards.data.find(d => d.id === parseInt(value))
-    });
-  }, [dashboards, dispatch, activeDashboard.id]);
+  const changeActiveDashboard = useCallback(
+    (value) => {
+      if (parseInt(value) === activeDashboard.id) {
+        return false;
+      }
+      dispatch({
+        type: ACTIVE_DASHBOARD_CHANGE,
+        payload: dashboards.data.find((d) => d.id === parseInt(value)),
+      });
+    },
+    [dashboards, dispatch, activeDashboard.id]
+  );
+
+  const handleTabChange = useCallback(
+    (value) => {
+      if (dashboards.data.length > MAX_DASHBOARD_TABS) {
+        const dbIndex = dashboards.data.findIndex(
+          (elem) => parseInt(elem.id) === parseInt(value)
+        );
+        if (dbIndex <= MAX_DASHBOARD_TABS - 2) {
+          changeActiveDashboard(value);
+        } else {
+          return false;
+        }
+      } else {
+        changeActiveDashboard(value);
+      }
+    },
+    [dashboards, changeActiveDashboard]
+  );
 
   const fetchUnits = useCallback(() => {
     if (active_project.id && activeDashboard.id) {
-      fetchActiveDashboardUnits(dispatch, active_project.id, activeDashboard.id);
+      fetchActiveDashboardUnits(
+        dispatch,
+        active_project.id,
+        activeDashboard.id
+      );
     }
   }, [active_project.id, activeDashboard.id, dispatch]);
 
@@ -56,7 +92,11 @@ function ProjectTabs({
   const confirmDelete = useCallback(async () => {
     try {
       setDeleteApiCalled(true);
-      await DeleteUnitFromDashboard(active_project.id, deleteWidgetModal.dashboard_id, deleteWidgetModal.id)
+      await DeleteUnitFromDashboard(
+        active_project.id,
+        deleteWidgetModal.dashboard_id,
+        deleteWidgetModal.id
+      );
       dispatch({ type: WIDGET_DELETED, payload: deleteWidgetModal.id });
       setDeleteApiCalled(false);
       showDeleteWidgetModal(false);
@@ -64,13 +104,79 @@ function ProjectTabs({
       console.log(err);
       console.log(err.response);
     }
+  }, [
+    deleteWidgetModal.dashboard_id,
+    deleteWidgetModal.id,
+    active_project.id,
+    dispatch,
+  ]);
 
-  }, [deleteWidgetModal.dashboard_id, deleteWidgetModal.id, active_project.id, dispatch]);
+  const getActiveKey = useCallback(() => {
+    if (dashboards.data.length > MAX_DASHBOARD_TABS) {
+      const dbIndex = dashboards.data.findIndex(
+        (elem) => parseInt(elem.id) === parseInt(activeDashboard.id)
+      );
+      if (dbIndex <= MAX_DASHBOARD_TABS - 2) {
+        return activeDashboard.id.toString();
+      } else {
+        return dashboards.data[MAX_DASHBOARD_TABS - 1].id.toString();
+      }
+    } else {
+      return activeDashboard.id.toString();
+    }
+  }, [activeDashboard, dashboards]);
+
+  const getTabName = useCallback(
+    (d, index) => {
+      if (dashboards.data.length <= MAX_DASHBOARD_TABS) {
+        return d.name;
+      } else {
+        if (index <= MAX_DASHBOARD_TABS - 2) {
+          return d.name;
+        } else if (index === MAX_DASHBOARD_TABS - 1) {
+          let val = null;
+          const isDashboardInDD = dashboards.data
+            .slice(index)
+            .find((elem) => elem.id === activeDashboard.id);
+          if (isDashboardInDD) {
+            val = isDashboardInDD.id;
+          }
+          return (
+            <Select
+              onSelect={changeActiveDashboard}
+              value={val || dashboards.data.slice(index)[0].id}
+              className={styles.dashboardDropdown}
+            >
+              {dashboards.data.slice(index).map((option) => {
+                return (
+                  <Select.Option value={option.id} key={option.id}>
+                    {option.name}
+                  </Select.Option>
+                );
+              })}
+            </Select>
+          );
+        } else {
+          return null;
+        }
+      }
+      // return d.name;
+    },
+    [dashboards.data, activeDashboard.id, changeActiveDashboard]
+  );
 
   const operations = (
     <>
-      <Button type="text" size={'small'} onClick={() => setaddDashboardModal(true)}><SVG name="plus" color={'grey'} /></Button>
-      <Button type="text" size={'small'}><SVG name="edit" color={'grey'} /></Button>
+      <Button
+        type="text"
+        size={"small"}
+        onClick={() => setaddDashboardModal(true)}
+      >
+        <SVG name="plus" color={"grey"} />
+      </Button>
+      <Button type="text" size={"small"}>
+        <SVG name="edit" color={"grey"} />
+      </Button>
     </>
   );
 
@@ -95,14 +201,14 @@ function ProjectTabs({
       <>
         <Tabs
           onChange={handleTabChange}
-          activeKey={activeDashboard.id.toString()}
-          className={'fa-tabs--dashboard'}
+          activeKey={getActiveKey()}
+          className={"fa-tabs--dashboard"}
           tabBarExtraContent={operations}
         >
-          {dashboards.data.map(d => {
+          {dashboards.data.map((d, index) => {
             return (
-              <TabPane tab={d.name} key={d.id}>
-                <div className={'fa-container mt-4 min-h-screen'}>
+              <TabPane tab={getTabName(d, index)} key={d.id}>
+                <div className={"fa-container mt-4 min-h-screen"}>
                   <DashboardSubMenu
                     durationObj={durationObj}
                     handleDurationChange={handleDurationChange}
@@ -141,7 +247,6 @@ function ProjectTabs({
           cancelText="Cancel"
           confirmLoading={deleteApiCalled}
         />
-
       </>
     );
   }
