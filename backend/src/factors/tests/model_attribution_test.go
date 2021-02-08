@@ -308,7 +308,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			To:                     timestamp + 3*day,
 			AttributionKey:         M.AttributionKeyCampaign,
 			AttributionMethodology: M.AttributionMethodFirstTouch,
-			ConversionEvent:        M.QueryEventWithProperties{"event1", nil},
+			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           10,
 			QueryType:              M.AttributionQueryTypeEngagementBased,
 		}
@@ -342,8 +342,8 @@ func TestAttributionEngagementModel(t *testing.T) {
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(1), getConversionUserCount(result, "222222"))
-		assert.Equal(t, float64(1), getConversionUserCount(result, "333333"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "222222"))
+		assert.Equal(t, float64(0), getConversionUserCount(result, "333333"))
 		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
 	})
 
@@ -598,9 +598,9 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 		assert.Equal(t, http.StatusAccepted, status)
 
 		// 3 days is out of query window, but should be considered as it falls under Engagement window
-		status = createEventWithSession(project.ID, "eventNewX", user1.ID, timestamp+9*86400, user1NewPropertiesId, "12345")
+		status = createEventWithSession(project.ID, "eventNewX", user1.ID, timestamp+5*86400, user1NewPropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "eventNewX", user2.ID, timestamp+9*86400, user2NewPropertiesId, "12345")
+		status = createEventWithSession(project.ID, "eventNewX", user2.ID, timestamp+6*86400, user2NewPropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
 
 		query := &M.AttributionQuery{
