@@ -490,8 +490,8 @@ func executeAllChannelsQueryV1(projectID uint64, query *ChannelQueryV1, reqID st
 	var unionQuery string
 	var unionParams []interface{}
 	var selectMetrics, columns []string
-	adwordsSQL, adwordsParams, adwordsMetrics, adwordsErr := GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
-	facebookSQL, facebookParams, _, facebookErr := GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
+	adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
+	facebookSQL, facebookParams, _, _, facebookErr := GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
 
 	if adwordsErr != nil {
 		return make([]string, 0, 0), [][]interface{}{}, adwordsErr
@@ -509,7 +509,6 @@ func executeAllChannelsQueryV1(projectID uint64, query *ChannelQueryV1, reqID st
 		}
 		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads ORDER BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
-		columns = buildColumns(query, false)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
 		selectMetrics = append(selectMetrics, AliasDateTime)
 		for _, metric := range adwordsMetrics {
@@ -518,12 +517,11 @@ func executeAllChannelsQueryV1(projectID uint64, query *ChannelQueryV1, reqID st
 		}
 		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads GROUP BY %s ORDER BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, AliasDateTime, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
-		columns = buildColumns(query, false)
 	} else {
 		unionQuery = fmt.Sprintf("SELECT * FROM ( %s UNION %s ) all_ads ORDER BY %s %s;", adwordsSQL, facebookSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
-		columns = buildColumns(query, true)
 	}
+	columns = append(adwordsSelectKeys, adwordsMetrics...)
 	_, resultMetrics, err := ExecuteSQL(unionQuery, unionParams, logCtx)
 	return columns, resultMetrics, err
 }
@@ -575,25 +573,6 @@ func ExecuteChannelQuery(projectID uint64, queryOriginal *ChannelQuery) (*Channe
 		return result, http.StatusOK
 	}
 	return nil, http.StatusBadRequest
-}
-
-func buildColumns(query *ChannelQueryV1, fetchSource bool) []string {
-	result := make([]string, 0, 0)
-	if fetchSource {
-		result = append(result, source)
-	}
-	for _, groupBy := range query.GroupBy {
-		result = append(result, groupBy.Object+"_"+groupBy.Property)
-	}
-
-	groupByTimeStamp := query.GetGroupByTimestamp()
-	if len(groupByTimeStamp) != 0 {
-		result = append(result, "datetime")
-	}
-	for _, selectMetrics := range query.SelectMetrics {
-		result = append(result, selectMetrics)
-	}
-	return result
 }
 
 // Common Methods for facebook and adwords starts here.
@@ -679,7 +658,7 @@ func ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([
 		return nil, nil, err
 	}
 	if len(resultRows) == 0 {
-		log.Error("Aggregate query returned zero rows.")
+		log.Warn("Aggregate query returned zero rows.")
 		return nil, make([][]interface{}, 0, 0), errors.New("no rows returned")
 	}
 	return columns, resultRows, nil
