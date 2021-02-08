@@ -1,44 +1,68 @@
 .inputLabel {
-    color: #8692A3;
+  color: #8692a3;
 }
 
 .linkText {
-    color: #5949BC;
-    cursor: pointer;
-    &:hover {
-        text-decoration: underline;
-    }
+  color: #5949bc;
+  cursor: pointer;
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .switchBtn {
-    margin-right: 0.5rem;
+  margin-right: 0.5rem;
 }
 
 .noteText {
-    color: #3E516C;
+  color: #3e516c;
 }
 
-.selectStyles {
-    cursor: pointer;
+.multiSelectStyles,
+.singleSelectStyles {
+  cursor: pointer;
 
-    :global(.ant-select-selector) {
-        border-radius: 6px !important;
-        padding-left: 12px !important;
-        padding-top: 4px !important;
-        padding-bottom: 4px !important;
-    
-        :global(.ant-select-selection-item) {
-            background-color: #E7E9ED !important;
-            height: unset !important;
-            border-radius: 4px !important;
-        }
-    
-        :global(.ant-select-selection-item-content) {
-            padding: 4px 8px 4px 8px !important;
-        }
-    
-        :global(.ant-select-selection-item-remove) {
-            display: none !important;
-        }
+  :global(.ant-select-selector) {
+    border-radius: 6px !important;
+    padding-left: 12px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+
+    :global(.ant-select-selection-item) {
+      border-radius: 4px !important;
     }
+
+    :global(.ant-select-selection-item-content) {
+      padding: 4px 8px 4px 8px !important;
+    }
+
+    :global(.ant-select-selection-item-remove) {
+      display: none !important;
+    }
+  }
+}
+
+.multiSelectStyles {
+  :global(.ant-select-selector) {
+    :global(.ant-select-selection-item) {
+      background-color: #e7e9ed !important;
+      height: unset !important;
+    }
+  }
+}
+
+.singleSelectStyles {
+  min-width: 120px;
+  :global(.ant-select-selector) {
+    display: flex;
+    align-items: center;
+    height: 40px !important;
+  }
+  :global(.ant-select-selection-item) {
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.01em;
+    color: #3e516c;
+  }
 }

@@ -5,7 +5,12 @@ import * as d3 from "d3";
 import { getMaxYpoint } from "../BarChart/utils";
 import ChartLegends from "./ChartLegends";
 import { formatCount } from "../../utils/dataFormatter";
-import { BARCHART_TICK_LENGTH } from "../../utils/constants";
+import {
+  BARCHART_TICK_LENGTH,
+  REPORT_SECTION,
+  DASHBOARD_WIDGET_SECTION,
+} from "../../utils/constants";
+import TopLegends from "./TopLegends";
 
 function BarLineChart({
   chartData,
@@ -13,60 +18,65 @@ function BarLineChart({
   responseRows,
   responseHeaders,
   visibleIndices,
+  height: widgetHeight,
+  section,
 }) {
   const chartRef = useRef(null);
   const tooltip = useRef(null);
 
-  const showTooltip = useCallback((d, i, chartType) => {
-    const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
-    nodes.forEach((node, index) => {
-      if (index !== i) {
-        d3.select(node).attr("class", "bar opaque");
-      }
-    });
-    let nodePosition, left, top;
-    const scrollTop =
-      window.pageYOffset !== undefined
-        ? window.pageYOffset
-        : (
-            document.documentElement ||
-            document.body.parentNode ||
-            document.body
-          ).scrollTop;
-    if (chartType === "bar") {
-      nodePosition = d3.select(nodes[i]).node().getBoundingClientRect();
-      left = nodePosition.x + nodePosition.width / 2;
-      // // if user is hovering over the last bar
-      if (left + 200 >= document.documentElement.clientWidth) {
-        left = nodePosition.x + nodePosition.width / 2 - 200;
-      }
-      top = nodePosition.y + scrollTop;
-    } else {
-      let identifier;
-      if(d[0] === '$none') {
-        identifier = `id-${title}-none-${i}`
+  const showTooltip = useCallback(
+    (d, i, chartType) => {
+      const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
+      nodes.forEach((node, index) => {
+        if (index !== i) {
+          d3.select(node).attr("class", "bar opaque");
+        }
+      });
+      let nodePosition, left, top;
+      const scrollTop =
+        window.pageYOffset !== undefined
+          ? window.pageYOffset
+          : (
+              document.documentElement ||
+              document.body.parentNode ||
+              document.body
+            ).scrollTop;
+      if (chartType === "bar") {
+        nodePosition = d3.select(nodes[i]).node().getBoundingClientRect();
+        left = nodePosition.x + nodePosition.width / 2;
+        // // if user is hovering over the last bar
+        if (left + 200 >= document.documentElement.clientWidth) {
+          left = nodePosition.x + nodePosition.width / 2 - 200;
+        }
+        top = nodePosition.y + scrollTop;
       } else {
-        identifier = `id-${title}-${d[0].split(" ").join('-')}-${i}`
+        let identifier;
+        if (d[0] === "$none") {
+          identifier = `id-${title}-none-${i}`;
+        } else {
+          identifier = `id-${title}-${d[0].split(" ").join("-")}-${i}`;
+        }
+        nodePosition = d3
+          .select(`#${identifier}`)
+          .node()
+          .getBoundingClientRect();
+        left = nodePosition.x + 20;
+        if (left + 200 >= document.documentElement.clientWidth) {
+          left = nodePosition.x + nodePosition.width / 2 - 200;
+        }
+        top = nodePosition.y - 10 + scrollTop;
       }
-      nodePosition = d3.select(`#${identifier}`).node().getBoundingClientRect();
-      left = nodePosition.x + 20;
-      if (left + 200 >= document.documentElement.clientWidth) {
-        left = nodePosition.x + nodePosition.width / 2 - 200;
-      }
-      top = (nodePosition.y - 10) + scrollTop;
-    }
 
-    const impressionsIdx = responseHeaders.indexOf("Impressions");
-    const clicksIdx = responseHeaders.indexOf("Clicks");
-    const spendIdx = responseHeaders.indexOf("Spend");
-    const visitorsIdx = responseHeaders.indexOf("Website Visitors");
-    const rowIndex = visibleIndices[i];
+      const impressionsIdx = responseHeaders.indexOf("Impressions");
+      const clicksIdx = responseHeaders.indexOf("Clicks");
+      const spendIdx = responseHeaders.indexOf("Spend");
+      const visitorsIdx = responseHeaders.indexOf("Website Visitors");
+      const rowIndex = visibleIndices[i];
 
-    const toolTipHeight = d3.select(".toolTip").node().getBoundingClientRect()
-      .height;
+      const toolTipHeight = d3.select(".toolTip").node().getBoundingClientRect()
+        .height;
 
-    tooltip.current
-      .html(
+      tooltip.current.html(
         `
         <div style="border-bottom: 1px solid #E7E9ED;">
           <div class="pb-2" style="color: #3E516C;font-size: 14px;line-height: 24px;font-weight: 500;">${
@@ -103,11 +113,14 @@ function BarLineChart({
           </div>
         </div>
                 `
-      )
-      tooltip.current.style("visibility", 'visible')
-      .style("left", left + "px")
-      .style("top", top - toolTipHeight + 5 + "px");
-  }, [responseHeaders, responseRows, title, visibleIndices]);
+      );
+      tooltip.current
+        .style("visibility", "visible")
+        .style("left", left + "px")
+        .style("top", top - toolTipHeight + 5 + "px");
+    },
+    [responseHeaders, responseRows, title, visibleIndices]
+  );
 
   const hideTooltip = useCallback(() => {
     const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
@@ -115,7 +128,7 @@ function BarLineChart({
       d3.select(node).attr("class", "bar");
     });
     // tooltip.current.style("opacity", 0);
-    tooltip.current.style("visibility", 'hidden');
+    tooltip.current.style("visibility", "hidden");
   }, []);
 
   const drawChart = useCallback(() => {
@@ -124,7 +137,7 @@ function BarLineChart({
       .select(chartRef.current)
       .append("div")
       .attr("class", "toolTip")
-      .style("visibility", 'hidden')
+      .style("visibility", "hidden")
       .style("transition", "0.5s");
     const valuesLeft = [];
     chartData.forEach((cd) => {
@@ -135,6 +148,7 @@ function BarLineChart({
     chartData.forEach((cd) => {
       valuesRight.push(cd[1]);
     });
+    console.log(widgetHeight || 300);
     const maxRight = getMaxYpoint(Math.max(...valuesRight));
     const availableWidth = d3
       .select(chartRef.current)
@@ -145,7 +159,7 @@ function BarLineChart({
       .select(chartRef.current)
       .append("svg")
       .attr("width", availableWidth)
-      .attr("height", 300);
+      .attr("height", widgetHeight || 300);
     const width = +svg.attr("width") - margin.left - margin.right;
     const height = +svg.attr("height") - margin.top - margin.bottom;
     const xScale = d3
@@ -173,12 +187,14 @@ function BarLineChart({
     g.append("g")
       .attr("class", `axis axis--x ${styles.xAxis}`)
       .attr("transform", "translate(0," + height + ")")
-      .call(d3.axisBottom(xScale).tickFormat(label=>{
-        if (label.length > BARCHART_TICK_LENGTH) {
-          return label.substr(0, BARCHART_TICK_LENGTH) + "...";
-        }
-        return label;
-      }));
+      .call(
+        d3.axisBottom(xScale).tickFormat((label) => {
+          if (label.length > BARCHART_TICK_LENGTH) {
+            return label.substr(0, BARCHART_TICK_LENGTH) + "...";
+          }
+          return label;
+        })
+      );
 
     // axis-y
     g.append("g")
@@ -269,8 +285,8 @@ function BarLineChart({
       .style("stroke", "#D4787D")
       .style("stroke-width", 4)
       .attr("id", (d, i) => {
-        if(d[0] === '$none') {
-          return `id-${title}-none-${i}`
+        if (d[0] === "$none") {
+          return `id-${title}-none-${i}`;
         }
         return `id-${title}-${d[0].split(" ").join("-")}-${i}`;
       })
@@ -295,8 +311,9 @@ function BarLineChart({
 
   return (
     <div className="w-full bar-chart">
+      {section === DASHBOARD_WIDGET_SECTION ? <TopLegends /> : null}
       <div className={barStyles.ungroupedChart} ref={chartRef}></div>
-      <ChartLegends />
+      {section === REPORT_SECTION ? <ChartLegends /> : null}
     </div>
   );
 }

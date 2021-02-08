@@ -1,16 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import { generateEventsData, generateGroups, generateGroupedChartsData } from '../../CoreQuery/FunnelsResultPage/utils';
-import Chart from '../../CoreQuery/FunnelsResultPage/GroupedChart/Chart';
-import FunnelsResultTable from '../../CoreQuery/FunnelsResultPage/FunnelsResultTable';
+import React, { useEffect, useState } from "react";
+import {
+  generateEventsData,
+  generateGroups,
+  generateGroupedChartsData,
+} from "../../CoreQuery/FunnelsResultPage/utils";
+import Chart from "../../CoreQuery/FunnelsResultPage/GroupedChart/Chart";
+import FunnelsResultTable from "../../CoreQuery/FunnelsResultPage/FunnelsResultTable";
 
 function GroupedChart({
-  resultState, queries, arrayMapper, title, breakdown, chartType, unit, setwidgetModal
+  resultState,
+  queries,
+  arrayMapper,
+  title,
+  breakdown,
+  chartType,
+  unit,
+  setwidgetModal,
+  section,
 }) {
   const [groups, setGroups] = useState([]);
   const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
 
   useEffect(() => {
-    const formattedGroups = generateGroups(resultState.data, maxAllowedVisibleProperties);
+    const formattedGroups = generateGroups(
+      resultState.data,
+      maxAllowedVisibleProperties
+    );
     setGroups(formattedGroups);
   }, [queries, resultState.data, maxAllowedVisibleProperties]);
 
@@ -18,49 +33,61 @@ function GroupedChart({
     return null;
   }
 
-  const chartData = generateGroupedChartsData(resultState.data, queries, groups, arrayMapper);
+  const chartData = generateGroupedChartsData(
+    resultState.data,
+    queries,
+    groups,
+    arrayMapper
+  );
   const eventsData = generateEventsData(resultState.data, queries, arrayMapper);
 
   let chartContent = null;
 
-  if (chartType === 'barchart') {
+  if (chartType === "barchart") {
     chartContent = (
-      <div className="mt-4">
-        <Chart
-          chartData={chartData}
-          groups={groups.filter(elem => elem.is_visible)}
-          eventsData={eventsData}
-          title={title}
-          arrayMapper={arrayMapper}
-        />
-      </div>
+      <Chart
+        chartData={chartData}
+        groups={groups.filter((elem) => elem.is_visible)}
+        eventsData={eventsData}
+        title={title}
+        arrayMapper={arrayMapper}
+        height={225}
+        section={section}
+        cardSize={unit.cardSize}
+      />
     );
   } else {
     chartContent = (
-      <div className="mt-4">
-        <FunnelsResultTable
-          breakdown={breakdown}
-          queries={queries}
-          groups={groups}
-          setGroups={setGroups}
-          chartData={eventsData}
-          arrayMapper={arrayMapper}
-          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-        />
+      <FunnelsResultTable
+        breakdown={breakdown}
+        queries={queries}
+        groups={groups}
+        setGroups={setGroups}
+        chartData={eventsData}
+        arrayMapper={arrayMapper}
+        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+      />
+    );
+  }
+
+  let tableContent = null;
+
+  if (chartType === "table") {
+    tableContent = (
+      <div
+        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        style={{ color: "#5949BC" }}
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+      >
+        Show More &rarr;
       </div>
     );
   }
-  
-  let tableContent = null;
-
-  if (chartType === 'table') {
-    tableContent = (
-      <div onClick={() => setwidgetModal({ unit, data: resultState.data })} style={{ color: '#5949BC' }} className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center">Show More &rarr;</div>
-    )
-  }
 
   return (
-    <div className="total-events w-full">
+    <div
+      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
+    >
       {chartContent}
       {tableContent}
     </div>

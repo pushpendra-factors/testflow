@@ -8,17 +8,22 @@ import NoBreakdownTable from "../../CoreQuery/EventsAnalytics/NoBreakdownCharts/
 import SparkLineChart from "../../../components/SparkLineChart";
 import LineChart from "../../../components/LineChart";
 import { generateColors } from "../../../utils/dataFormatter";
+import {
+  ACTIVE_USERS_CRITERIA,
+  FREQUENCY_CRITERIA,
+  CHART_TYPE_TABLE,
+} from "../../../utils/constants";
 
 function NoBreakdownCharts({
   queries,
-  eventsMapper,
-  reverseEventsMapper,
   resultState,
   page,
   chartType,
   durationObj,
   arrayMapper,
   unit,
+  section,
+  setwidgetModal,
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
@@ -36,65 +41,81 @@ function NoBreakdownCharts({
 
   let chartContent = null;
 
+  let tableContent = null;
+
+  if (chartType === CHART_TYPE_TABLE) {
+    tableContent = (
+      <div
+        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        style={{ color: "#5949BC" }}
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+      >
+        Show More &rarr;
+      </div>
+    );
+  }
+
   if (chartType === "sparklines") {
     chartContent = (
-      <div className="mt-4">
-        <SparkLineChart
-          frequency={durationObj.frequency}
-          queries={queries}
-          chartsData={chartsData}
-          parentClass={`flex items-center flex-wrap justify-center ${
-            !unit.cardSize ? "mt-8 flex-col" : "mt-4"
-          }`}
-          appliedColors={appliedColors}
-          eventsMapper={eventsMapper}
-          page={page}
-          resultState={resultState}
-        />
-      </div>
+      <SparkLineChart
+        frequency={durationObj.frequency}
+        queries={queries}
+        chartsData={chartsData}
+        appliedColors={appliedColors}
+        arrayMapper={arrayMapper}
+        page={page}
+        resultState={resultState}
+        cardSize={unit.cardSize}
+        height={queries.length === 1 && unit.cardSize ? 180 : 100}
+      />
     );
   } else if (chartType === "table") {
     chartContent = (
-      <div className="mt-4">
-        <NoBreakdownTable
-          data={chartsData}
-          events={queries}
-          reverseEventsMapper={reverseEventsMapper}
-          chartType={chartType}
-          setHiddenEvents={setHiddenEvents}
-          hiddenEvents={hiddenEvents}
-          durationObj={durationObj}
-        />
-      </div>
+      <NoBreakdownTable
+        data={chartsData}
+        events={queries}
+        chartType={chartType}
+        setHiddenEvents={setHiddenEvents}
+        hiddenEvents={hiddenEvents}
+        isWidgetModal={false}
+        durationObj={durationObj}
+        arrayMapper={arrayMapper}
+      />
     );
   } else {
     const lineChartData = getDataInLineChartFormat(
       chartsData,
       queries,
-      eventsMapper,
       hiddenEvents,
       arrayMapper
     );
     chartContent = (
-      <div className="flex mt-4">
-        <LineChart
-          frequency={durationObj.frequency}
-          chartData={lineChartData}
-          appliedColors={appliedColors}
-          queries={queries}
-          reverseEventsMapper={reverseEventsMapper}
-          eventsMapper={eventsMapper}
-          setHiddenEvents={setHiddenEvents}
-          hiddenEvents={hiddenEvents}
-          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
-          arrayMapper={arrayMapper}
-          cardSize={unit.cardSize}
-        />
-      </div>
+      <LineChart
+        frequency={durationObj.frequency}
+        chartData={lineChartData}
+        appliedColors={appliedColors}
+        queries={queries}
+        setHiddenEvents={setHiddenEvents}
+        hiddenEvents={hiddenEvents}
+        isDecimalAllowed={
+          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
+        }
+        arrayMapper={arrayMapper}
+        cardSize={unit.cardSize}
+        height={225}
+        section={section}
+      />
     );
   }
 
-  return <div className="total-events w-full">{chartContent}</div>;
+  return (
+    <div
+      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
+    >
+      {chartContent}
+      {tableContent}
+    </div>
+  );
 }
 
 export default NoBreakdownCharts;

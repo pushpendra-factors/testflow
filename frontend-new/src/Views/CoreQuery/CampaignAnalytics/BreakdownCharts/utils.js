@@ -118,13 +118,17 @@ export const getTableData = (
   breakdown,
   currentEventIndex,
   arrayMapper,
-  currentSorter
+  currentSorter,
+  searchText
 ) => {
   const breakdownIndices = getBreakdownIndices(data, breakdown);
   const currEventName = arrayMapper.find(
     (elem) => elem.index === currentEventIndex
   ).eventName;
-  const result = data.result_group[1].rows.map((d, index) => {
+  const filteredRows = data.result_group[1].rows.filter((row) =>
+    row[0].toLowerCase().includes(searchText.toLowerCase())
+  );
+  const result = filteredRows.map((d, index) => {
     const breakdownVals = {};
     breakdownIndices.forEach((b) => {
       const dataIndex = data.result_group[1].headers[b];

@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import c3 from "c3";
-import * as d3 from "d3";
 import styles from "../../Views/CoreQuery/FunnelsResultPage/GroupedChart/index.module.scss";
-import { getMaxYpoint } from "../BarChart/utils";
+import { REPORT_SECTION, DASHBOARD_WIDGET_SECTION } from "../../utils/constants";
+import TopLegends from "./TopLegends";
 
 function GroupedBarChart({
   categories,
@@ -14,32 +14,16 @@ function GroupedBarChart({
   method1,
   method2,
   event,
+  height: widgetHeight,
+  section,
+  cardSize
 }) {
   const chartRef = useRef(null);
-
-  const maxYPoint = getMaxYpoint(
-    Math.max(...[...chartData[0].slice(1), ...chartData[1].slice(1)])
-  );
-  const yScale = d3.scaleLinear().domain([0, maxYPoint]);
-  const tickValues = d3.axisLeft(yScale).scale().ticks(5);
-
-  const getPadding = useCallback(() => {
-    if (tickValues[1] - tickValues[0] >= 10000) {
-      return 120;
-    }
-    if (tickValues[1] - tickValues[0] >= 5000) {
-      return 90;
-    }
-    if (tickValues[1] - tickValues[0] >= 500) {
-      return 60;
-    }
-    return 30;
-  }, [tickValues]);
-
+  
   const drawChart = useCallback(() => {
     c3.generate({
       size: {
-        height: 300,
+        height: widgetHeight || 300,
       },
       padding: {
         left: 50,
@@ -49,71 +33,10 @@ function GroupedBarChart({
       data: {
         columns: chartData,
         type: "bar",
-        colors,
-        // colors: chartColors,
-        // onmouseover: (elemData) => {
-        //   // blur all the bars
-        //   d3.select(chartRef.current)
-        //     .selectAll(".c3-shapes")
-        //     .selectAll("path")
-        //     .style("opacity", "0.3");
-
-        //   let id = elemData.name;
-        //   if (!id) id = elemData.id;
-
-        //   const searchedClass = `c3-target-${id.split(" ").join("-")}`;
-        //   let hoveredIndex;
-
-        //   // style previous bar
-
-        //   const bars = d3
-        //     .select(chartRef.current)
-        //     .selectAll(".c3-chart-bar.c3-target")
-        //     .nodes();
-
-        //   bars.forEach((node, index) => {
-        //     if (
-        //       node.getAttribute("class").split(" ").indexOf(searchedClass) > -1
-        //     ) {
-        //       hoveredIndex = index;
-        //     }
-        //   });
-
-        //   if (hoveredIndex !== 0) {
-        //     d3.select(bars[hoveredIndex - 1])
-        //       .select(`.c3-shape-${elemData.index}`)
-        //       .style("opacity", 1);
-        //   }
-
-        //   // style hovered bar
-        //   d3.select(chartRef.current)
-        //     .selectAll(`.c3-shapes-${id.split(" ").join("-")}`)
-        //     .selectAll("path")
-        //     .nodes()
-        //     .forEach((node, index) => {
-        //       if (index === elemData.index) {
-        //         d3.select(node).style("opacity", 1);
-        //       } else {
-        //         d3.select(node).style("opacity", 0.3);
-        //       }
-        //     });
-        // },
-        // onmouseout: () => {
-        //   d3.select(chartRef.current)
-        //     .selectAll(".c3-shapes")
-        //     .selectAll("path")
-        //     .style("opacity", "1");
-        // },
+        colors
       },
-      // onrendered: () => {
-      //   d3.select(chartRef.current)
-      //     .select(".c3-axis.c3-axis-x")
-      //     .selectAll(".tick")
-      //     .select("tspan")
-      //     .attr("dy", "16px");
-      // },
       legend: {
-        show: true,
+        show: section === REPORT_SECTION,
       },
       transition: {
         duration: 1000,
@@ -131,11 +54,11 @@ function GroupedBarChart({
           categories: categories,
         },
         y: {
-          padding: {
-            top: getPadding(),
-          },
           tick: {
-            values: tickValues,
+            count: 5,
+            format(d) {
+              return parseInt(d);
+            },
           },
         },
       },
@@ -195,15 +118,15 @@ function GroupedBarChart({
   }, [
     categories,
     chartData,
-    tickValues,
     colors,
     event,
-    getPadding,
     method1,
     method2,
     responseHeaders,
     responseRows,
     visibleIndices,
+    section,
+    widgetHeight
   ]);
 
   useEffect(() => {
@@ -212,6 +135,7 @@ function GroupedBarChart({
 
   return (
     <div className={`w-full bar-chart ${styles.groupedChart}`}>
+      {section === DASHBOARD_WIDGET_SECTION ? <TopLegends cardSize={cardSize} colors={colors} /> : null}
       <div ref={chartRef}></div>
     </div>
   );

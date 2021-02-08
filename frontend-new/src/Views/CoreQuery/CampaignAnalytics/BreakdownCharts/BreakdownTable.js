@@ -15,6 +15,7 @@ function BreakdownTable({
   visibleProperties,
   maxAllowedVisibleProperties,
   setVisibleProperties,
+  reportTitle = "CampaignAnalytics",
 }) {
   let columns, data;
   const [sorter, setSorter] = useState({});
@@ -23,6 +24,15 @@ function BreakdownTable({
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
   }, []);
+
+  const getCSVData = () => {
+    return {
+      fileName: `${reportTitle}.csv`,
+      data: data.map(({ index, ...rest }) => {
+        return rest;
+      }),
+    };
+  };
 
   if (true) {
     columns = getTableColumns(
@@ -37,7 +47,8 @@ function BreakdownTable({
       breakdown,
       currentEventIndex,
       arrayMapper,
-      sorter
+      sorter,
+      searchText
     );
   } else {
     columns = [];
@@ -71,6 +82,7 @@ function BreakdownTable({
       columns={columns}
       scroll={{ x: 250 }}
       rowSelection={rowSelection}
+      getCSVData={getCSVData}
     />
   );
 }

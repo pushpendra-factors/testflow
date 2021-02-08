@@ -11,7 +11,7 @@ export const getEventNames = (dispatch, projectId) => {
   return get(dispatch, host + "projects/" + projectId + "/v1/event_names", {});
 };
 
-export const runQuery = (
+export const getEventsData = (
   projectId,
   query_group,
   dashboard = { refresh: true }
@@ -130,6 +130,7 @@ export const deleteQuery = async (dispatch, query) => {
     dispatch({ type: QUERY_DELETED, payload: query.id });
   } catch (err) {
     console.log(err);
+    dispatch({ type: QUERY_DELETED, payload: query.id });
   }
 };
 

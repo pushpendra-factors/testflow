@@ -8,23 +8,26 @@ function EventBreakdownTable({
   visibleProperties,
   setVisibleProperties,
   maxAllowedVisibleProperties,
+  reportTitle = "Events Analytics",
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState("");
-
-  //   useEffect(() => {
-  //     // reset sorter on change of chart type
-  //     setSorter({});
-  //   }, [chartType]);
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
   }, []);
 
-  // let columns, tableData;
-
   const columns = getTableColumns(breakdown, sorter, handleSorting);
   const tableData = getTableData(data, breakdown, searchText, sorter);
+
+  const getCSVData = () => {
+    return {
+      fileName: `${reportTitle}.csv`,
+      data: tableData.map(({ index, ...rest }) => {
+        return { ...rest };
+      }),
+    };
+  };
 
   const onSelectionChange = (selectedIncices) => {
     if (selectedIncices.length > maxAllowedVisibleProperties) {
@@ -53,6 +56,7 @@ function EventBreakdownTable({
       setSearchText={setSearchText}
       columns={columns}
       rowSelection={rowSelection}
+      getCSVData={getCSVData}
     />
   );
 }

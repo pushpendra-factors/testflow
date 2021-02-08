@@ -21,12 +21,23 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_TEMPLATE,
+  TYPE_EVENTS_OCCURRENCE,
+  TOTAL_EVENTS_CRITERIA,
+  TOTAL_USERS_CRITERIA,
+  ACTIVE_USERS_CRITERIA,
+  FREQUENCY_CRITERIA,
+  reverse_user_types,
+  EACH_USER_TYPE,
 } from "../../utils/constants";
 import {
   SHOW_ANALYTICS_RESULT,
   INITIALIZE_MTA_STATE,
   INITIALIZE_CAMPAIGN_STATE,
 } from "../../reducers/types";
+import {
+  SET_SHOW_CRITERIA,
+  SET_PERFORMANCE_CRITERIA,
+} from "../../reducers/analyticsQuery";
 
 const coreQueryoptions = [
   {
@@ -94,6 +105,7 @@ function CoreQuery({
   setRowClicked,
   setQueryOptions,
   location,
+  setBreakdownType,
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
@@ -183,6 +195,40 @@ function CoreQuery({
               record.query.query_group[0]
             );
             updateEventFunnelsState(equivalentQuery);
+            if (record.query.query_group.length === 1) {
+              dispatch({
+                type: SET_PERFORMANCE_CRITERIA,
+                payload: reverse_user_types[record.query.query_group[0].ec],
+              });
+              dispatch({
+                type: SET_SHOW_CRITERIA,
+                payload: TOTAL_USERS_CRITERIA,
+              });
+            } else {
+              dispatch({
+                type: SET_PERFORMANCE_CRITERIA,
+                payload: EACH_USER_TYPE,
+              });
+              if (record.query.query_group.length === 2) {
+                dispatch({
+                  type: SET_SHOW_CRITERIA,
+                  payload:
+                    record.query.query_group[0].ty === TYPE_EVENTS_OCCURRENCE
+                      ? TOTAL_EVENTS_CRITERIA
+                      : TOTAL_USERS_CRITERIA,
+                });
+              } else if (record.query.query_group.length === 3) {
+                dispatch({
+                  type: SET_SHOW_CRITERIA,
+                  payload: ACTIVE_USERS_CRITERIA,
+                });
+              } else {
+                dispatch({
+                  type: SET_SHOW_CRITERIA,
+                  payload: FREQUENCY_CRITERIA,
+                });
+              }
+            }
           }
         } else if (
           record.query.cl &&
@@ -204,9 +250,6 @@ function CoreQuery({
           queryName: record.title,
           settings: record.settings,
         });
-        if(record.settings && record.settings.activeKey) {
-          setActiveKey(record.settings.activeKey);
-        }
       } catch (err) {
         console.log(err);
       }
@@ -245,10 +288,9 @@ function CoreQuery({
     }
   }, [location.state, setQueryToState]);
 
-  const data = queriesState.data
-    .map((q) => {
-      return getFormattedRow(q);
-    });
+  const data = queriesState.data.map((q) => {
+    return getFormattedRow(q);
+  });
 
   const setQueryTypeTab = (item) => {
     setDrawerVisible(true);

@@ -1,10 +1,13 @@
-import React, {useState} from 'react';
-import styles from './index.module.scss';
+import React, { useState } from "react";
+import styles from "./index.module.scss";
 
 import { connect } from "react-redux";
 import { bindActionCreators } from "redux";
 
-import {setShowCriteria, setPerformanceCriteria} from 'Reducers/analyticsQuery';
+import {
+  setShowCriteria,
+  setPerformanceCriteria,
+} from "../../../reducers/analyticsQuery";
 
 import { SVG, Text } from "../../factorsComponents";
 import { QUERY_TYPE_EVENT, QUERY_TYPE_FUNNEL } from '../../../utils/constants';
@@ -12,7 +15,7 @@ import FaSelect from '../../FaSelect';
 
 import {Button} from 'antd';
 
-const CriteriaSection = ({queryType, crit_show, crit_perf, setShowCriteria, setPerformanceCriteria}) => {
+const CriteriaSection = ({queryType, queryCount = 0, crit_show, crit_perf, setShowCriteria, setPerformanceCriteria}) => {
 
     const [critShowSelect, setCritShowSelect] = useState(false);
     const [critPerfSelect, setCritPerfSelect] = useState(false);
@@ -30,7 +33,7 @@ const CriteriaSection = ({queryType, crit_show, crit_perf, setShowCriteria, setP
     ];
 
     const renderCritPerf = () => {
-        if(!crit_show) return null;
+        if(!crit_show || crit_show !== 'total_users' || queryCount <=1 ) return null;
 
         return (
             <div className={`flex items-center`}>
@@ -44,7 +47,7 @@ const CriteriaSection = ({queryType, crit_show, crit_perf, setShowCriteria, setP
                             size={'large'} 
                             type="link" 
                             onClick={() => setCritPerfSelect(!critPerfSelect)}>
-                                {crit_perf? CRITERIA_PERF_OPTIONS.filter((op) => op[2] === crit_perf)[0][0] : crit_perf}</Button>
+                                {crit_perf? CRITERIA_PERF_OPTIONS.filter((op) => op[2] === crit_perf)[0][0] : 'Select'}</Button>
 
                     {critPerfSelect && <FaSelect 
                             options={CRITERIA_PERF_OPTIONS}
@@ -107,17 +110,17 @@ const CriteriaSection = ({queryType, crit_show, crit_perf, setShowCriteria, setP
 }
 
 const mapStateToProps = (state) => ({
-    crit_show: state.analyticsQuery.show_criteria,
-    crit_perf: state.analyticsQuery.performance_criteria,
+  crit_show: state.analyticsQuery.show_criteria,
+  crit_perf: state.analyticsQuery.performance_criteria,
 });
-  
+
 const mapDispatchToProps = (dispatch) =>
-    bindActionCreators(
-    { 
-        setShowCriteria, 
-        setPerformanceCriteria
+  bindActionCreators(
+    {
+      setShowCriteria,
+      setPerformanceCriteria,
     },
-      dispatch
-);
+    dispatch
+  );
 
 export default connect(mapStateToProps, mapDispatchToProps)(CriteriaSection);

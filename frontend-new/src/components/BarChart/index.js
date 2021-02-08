@@ -5,9 +5,22 @@ import { checkForWindowSizeChange } from "../../Views/CoreQuery/FunnelsResultPag
 import { getMaxYpoint, getBarChartLeftMargin } from "./utils";
 import ChartLegends from "./ChartLegends";
 import { numberWithCommas } from "../../utils/dataFormatter";
-import { BARCHART_TICK_LENGTH } from "../../utils/constants";
+import {
+  BARCHART_TICK_LENGTH,
+  REPORT_SECTION,
+  DASHBOARD_MODAL,
+  DASHBOARD_WIDGET_SECTION,
+} from "../../utils/constants";
+import DashboardWidgetLegends from "../DashboardWidgetLegends";
 
-function BarChart({ chartData, queries, title = "chart" }) {
+function BarChart({
+  chartData,
+  queries,
+  title = "chart",
+  height: widgetHeight,
+  section,
+  cardSize = 1,
+}) {
   const tooltip = useRef(null);
   const chartRef = useRef(null);
 
@@ -84,7 +97,7 @@ function BarChart({ chartData, queries, title = "chart" }) {
       .html("")
       .append("svg")
       .attr("width", availableWidth)
-      .attr("height", 300)
+      .attr("height", widgetHeight || 300)
       .attr("id", `chart-${title}`);
     const svg = d3.select(`#chart-${title}`);
     const max = getMaxYpoint(
@@ -183,7 +196,7 @@ function BarChart({ chartData, queries, title = "chart" }) {
       .selectAll(".tick")
       .select("text")
       .attr("dy", "16px");
-  }, [chartData, showTooltip, hideTooltip, title]);
+  }, [chartData, showTooltip, hideTooltip, title, widgetHeight]);
 
   const displayChart = useCallback(() => {
     drawChart();
@@ -204,10 +217,34 @@ function BarChart({ chartData, queries, title = "chart" }) {
     displayChart();
   }, [displayChart]);
 
+  let legendsMapper = [];
+  let legendColors = {}
+
+  if (queries && queries.length > 1 && section === DASHBOARD_WIDGET_SECTION) {
+    legendsMapper = queries.map((q, index) => {
+      legendColors[`event${index + 1}`] = chartData.find(d=>d.eventIndex === index).color
+      return {
+        index,
+        eventName: q,
+        mapper: `event${index + 1}`,
+      };
+    });
+  }
+
   return (
     <div className="w-full bar-chart">
+      {queries && queries.length > 1 && section === DASHBOARD_WIDGET_SECTION ? (
+        <DashboardWidgetLegends
+          arrayMapper={legendsMapper}
+          cardSize={cardSize}
+          colors={legendColors}
+          legends={queries}
+        />
+      ) : null}
       <div ref={chartRef} className={styles.ungroupedChart}></div>
-      {queries && queries.length > 1 ? (
+      {queries &&
+      queries.length > 1 &&
+      (section === REPORT_SECTION || section === DASHBOARD_MODAL) ? (
         <div className="mt-4">
           <ChartLegends events={queries} chartData={chartData} />
         </div>

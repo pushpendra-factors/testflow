@@ -4,14 +4,15 @@ import { SortData, getTitleWithSorter } from "../../../../utils/dataFormatter";
 export const getNoGroupingTableData = (
   data,
   currentSorter,
-  reverseEventsMapper,
+  arrayMapper,
   frequency
 ) => {
   const clonedData = data.map((elem) => {
     const element = { ...elem };
     for (const key in element) {
       if (key !== "date") {
-        element[reverseEventsMapper[key]] = element[key];
+        const q = arrayMapper.find((elem) => elem.mapper === key).eventName;
+        element[q] = element[key];
         delete element[key];
       }
     }
@@ -30,7 +31,6 @@ export const getNoGroupingTableData = (
       date: moment(elem.date).format(format),
     };
   });
-
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
@@ -56,10 +56,7 @@ export const getColumns = (events, currentSorter, handleSorting) => {
   return [...result, ...eventColumns];
 };
 
-export const formatSingleEventAnalyticsData = (
-  response,
-  arrayMapper
-) => {
+export const formatSingleEventAnalyticsData = (response, arrayMapper) => {
   const result = response.rows.map((row) => {
     const key = arrayMapper[0].mapper;
     return {
@@ -70,10 +67,7 @@ export const formatSingleEventAnalyticsData = (
   return result;
 };
 
-export const formatMultiEventsAnalyticsData = (
-  response,
-  arrayMapper
-) => {
+export const formatMultiEventsAnalyticsData = (response, arrayMapper) => {
   const result = [];
   response.rows.forEach((r) => {
     const eventsData = {};
@@ -92,7 +86,6 @@ export const formatMultiEventsAnalyticsData = (
 export const getDataInLineChartFormat = (
   data,
   queries,
-  eventsMapper,
   hiddenEvents = [],
   arrayMapper
 ) => {
@@ -157,18 +150,19 @@ export const getNoGroupingTablularDatesBasedData = (
   data,
   currentSorter,
   searchText,
-  reverseEventsMapper,
+  arrayMapper,
   frequency
 ) => {
-  const events = Object.keys(reverseEventsMapper);
+  const filteredEvents = arrayMapper
+    .filter((elem) =>
+      elem.eventName.toLowerCase().includes(searchText.toLowerCase())
+    )
+    .map((elem) => elem.mapper);
   let format = "MMM D";
   if (frequency === "hour") {
     format = "h A, MMM D";
   }
   const dates = data.map((elem) => moment(elem.date).format(format));
-  const filteredEvents = events.filter((event) =>
-    reverseEventsMapper[event].includes(searchText)
-  );
   const result = filteredEvents.map((elem, index) => {
     const eventsData = {};
     dates.forEach((date) => {
@@ -178,7 +172,7 @@ export const getNoGroupingTablularDatesBasedData = (
     });
     return {
       index,
-      event: reverseEventsMapper[elem],
+      event: arrayMapper.find((m) => m.mapper === elem).eventName,
       ...eventsData,
     };
   });

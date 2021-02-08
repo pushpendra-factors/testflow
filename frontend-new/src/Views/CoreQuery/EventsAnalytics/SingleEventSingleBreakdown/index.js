@@ -4,6 +4,7 @@ import BarChart from "../../../../components/BarChart";
 import SingleEventSingleBreakdownTable from "./SingleEventSingleBreakdownTable";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
+import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA, DASHBOARD_MODAL } from "../../../../utils/constants";
 
 function SingleEventSingleBreakdown({
   queries,
@@ -11,9 +12,9 @@ function SingleEventSingleBreakdown({
   resultState,
   page,
   chartType,
-  isWidgetModal,
   durationObj,
-  title
+  title,
+  section
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -58,52 +59,50 @@ function SingleEventSingleBreakdown({
 
   const appliedColors = generateColors(visibleProperties.length);
 
-  let chartContent = null;
+  let chart = null;
+  const table = (
+    <div className="mt-12 w-full">
+      <SingleEventSingleBreakdownTable
+        isWidgetModal={section === DASHBOARD_MODAL}
+        data={chartsData}
+        breakdown={breakdown}
+        events={queries}
+        chartType={chartType}
+        page={page}
+        setVisibleProperties={setVisibleProperties}
+        visibleProperties={visibleProperties}
+        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+        lineChartData={lineChartData}
+        originalData={resultState.data}
+        durationObj={durationObj}
+      />
+    </div>
+  );
 
   if (chartType === "barchart") {
-    chartContent = (
-      <div className="flex mt-8 w-full">
-        <BarChart title={title} chartData={visibleProperties} />
-      </div>
-    );
+    chart = <BarChart section={section} title={title} chartData={visibleProperties} />;
   } else {
-    chartContent = (
-      <div className="flex mt-8">
-        <LineChart
-          frequency={durationObj.frequency}
-          chartData={lineChartData}
-          appliedColors={appliedColors}
-          queries={visibleLabels}
-          reverseEventsMapper={reverseMapper}
-          eventsMapper={mapper}
-          setHiddenEvents={setHiddenProperties}
-          hiddenEvents={hiddenProperties}
-          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
-          arrayMapper={arrayMapper}
-        />
-      </div>
+    chart = (
+      <LineChart
+        frequency={durationObj.frequency}
+        chartData={lineChartData}
+        appliedColors={appliedColors}
+        queries={visibleLabels}
+        reverseEventsMapper={reverseMapper}
+        eventsMapper={mapper}
+        setHiddenEvents={setHiddenProperties}
+        hiddenEvents={hiddenProperties}
+        isDecimalAllowed={page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA}
+        arrayMapper={arrayMapper}
+        section={section}
+      />
     );
   }
 
   return (
-    <div className="w-full">
-      {chartContent}
-      <div className="mt-8">
-        <SingleEventSingleBreakdownTable
-          isWidgetModal={isWidgetModal}
-          data={chartsData}
-          breakdown={breakdown}
-          events={queries}
-          chartType={chartType}
-          page={page}
-          setVisibleProperties={setVisibleProperties}
-          visibleProperties={visibleProperties}
-          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          lineChartData={lineChartData}
-          originalData={resultState.data}
-          durationObj={durationObj}
-        />
-      </div>
+    <div className="flex items-center justify-center flex-col">
+      {chart}
+      {table}
     </div>
   );
 }

@@ -21,21 +21,13 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
-import {
-  getSessionsQuery,
-  getFrequencyQuery,
-  getTotalEventsQuery,
-  getTotalUsersQuery,
-} from "../../Views/CoreQuery/utils";
 
 function SaveQuery({
   requestQuery,
-  setQuerySaved,
   visible,
   setVisible,
-  activeKey,
-  breakdownType,
   queryType,
+  setQuerySaved
 }) {
   const [title, setTitle] = useState("");
   const [addToDashboard, setAddToDashboard] = useState(false);
@@ -138,18 +130,6 @@ function SaveQuery({
             };
           }),
         };
-        if (parseInt(activeKey) === 0) {
-          query.query_group = getTotalEventsQuery(query);
-        }
-        if (parseInt(activeKey) === 1) {
-          query.query_group = getTotalUsersQuery(query);
-        }
-        if (parseInt(activeKey) === 2) {
-          query.query_group = getSessionsQuery(query);
-        }
-        if (parseInt(activeKey) === 3) {
-          query.query_group = getFrequencyQuery(query);
-        }
       } else if (queryType === QUERY_TYPE_CAMPAIGN) {
         query = {
           ...requestQuery,
@@ -169,12 +149,6 @@ function SaveQuery({
         const settings = {
           chart: dashboardPresentation,
         };
-        if (activeKey) {
-          settings.activeKey = activeKey;
-        }
-        if (breakdownType !== "each") {
-          settings.breakdownType = breakdownType;
-        }
         const reqBody = {
           settings,
           description: "",
@@ -202,13 +176,10 @@ function SaveQuery({
       });
     }
   }, [
-    activeKey,
-    breakdownType,
     title,
     active_project.id,
     requestQuery,
     dispatch,
-    setQuerySaved,
     resetModalState,
     addToDashboard,
     dashboardPresentation,
@@ -253,7 +224,7 @@ function SaveQuery({
             style={{ width: "100%" }}
             placeholder={"Please Select"}
             onChange={handleSelectChange}
-            className={styles.selectStyles}
+            className={styles.multiSelectStyles}
             value={getSelectedDashboards()}
           >
             {dashboards.data.map((d) => {

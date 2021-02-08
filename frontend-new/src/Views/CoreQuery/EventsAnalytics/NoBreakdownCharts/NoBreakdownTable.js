@@ -11,12 +11,13 @@ import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";
 function NoBreakdownTable({
   data,
   events,
-  reverseEventsMapper,
   chartType,
   setHiddenEvents,
   hiddenEvents,
   isWidgetModal,
   durationObj,
+  arrayMapper,
+  reportTitle="Events Analytics"
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState("");
@@ -36,7 +37,7 @@ function NoBreakdownTable({
     tableData = getNoGroupingTableData(
       data,
       sorter,
-      reverseEventsMapper,
+      arrayMapper,
       durationObj.frequency
     );
   } else {
@@ -50,7 +51,7 @@ function NoBreakdownTable({
       data,
       sorter,
       searchText,
-      reverseEventsMapper,
+      arrayMapper,
       durationObj.frequency
     );
 
@@ -78,6 +79,15 @@ function NoBreakdownTable({
     };
   }
 
+  const getCSVData = () => {
+    return {
+      fileName: `${reportTitle}.csv`,
+      data: tableData.map(({ index, ...rest }) => {
+        return rest;
+      }),
+    };
+  };
+
   return (
     <DataTable
       isWidgetModal={isWidgetModal}
@@ -87,6 +97,7 @@ function NoBreakdownTable({
       columns={columns}
       scroll={{ x: 250 }}
       rowSelection={rowSelection}
+      getCSVData = {getCSVData}
     />
   );
 }

@@ -8,16 +8,13 @@ import {
 } from "../../../../utils/dataFormatter";
 import LineChart from "../../../../components/LineChart";
 import NoBreakdownTable from "./NoBreakdownTable";
-import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";
-import ChartTypeDropdown from "../../../../components/ChartTypeDropdown";
+import {
+  CHART_TYPE_SPARKLINES,
+  CHART_TYPE_LINECHART,
+  DASHBOARD_MODAL,
+} from "../../../../utils/constants";
 
-function NoBreakdownCharts({
-  chartType,
-  data,
-  arrayMapper,
-  isWidgetModal,
-  setChartType,
-}) {
+function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
   const [chartsData, setChartsData] = useState([]);
 
   useEffect(() => {
@@ -34,129 +31,100 @@ function NoBreakdownCharts({
   }
 
   const table = (
-    <div className="mt-16">
+    <div className="mt-12 w-full">
       <NoBreakdownTable
         chartType={chartType}
         chartsData={chartsData}
-        isWidgetModal={isWidgetModal}
+        isWidgetModal={section === DASHBOARD_MODAL}
       />
     </div>
   );
 
-  const menuItems = [
-    {
-      key: "sparklines",
-      onClick: setChartType,
-      name: "Sparkline",
-    },
-    {
-      key: "linechart",
-      onClick: setChartType,
-      name: "Line Chart",
-    },
-  ];
-
-  const typeDropdown = (
-    <div className="flex items-center w-full mt-4 justify-end">
-      <ChartTypeDropdown
-        chartType={chartType}
-        menuItems={menuItems}
-        onClick={(item) => {
-          setChartType(item.key);
-        }}
-      />
-    </div>
-  );
+  let chart = null;
 
   if (chartType === CHART_TYPE_SPARKLINES) {
     if (chartsData.length === 1) {
-      return (
-        <>
-          {typeDropdown}
-          <div className="flex items-center flex-wrap mt-4 justify-center">
-            <div className="w-1/4">
-              <ChartHeader
-                bgColor="#4D7DB4"
-                query={chartsData[0].name}
-                total={numberWithCommas(chartsData[0].total)}
-              />
-            </div>
-            <div className="w-3/4">
-              <SparkChart
-                frequency="date"
-                page="campaigns"
-                event={chartsData[0].mapper}
-                chartData={chartsData[0].dataOverTime}
-                chartColor="#4D7DB4"
-              />
-            </div>
+      chart = (
+        <div className="flex items-center justify-center w-full">
+          <div className="w-1/4">
+            <ChartHeader
+              bgColor="#4D7DB4"
+              query={chartsData[0].name}
+              total={numberWithCommas(chartsData[0].total)}
+            />
           </div>
-          {table}
-        </>
+          <div className="w-3/4">
+            <SparkChart
+              frequency="date"
+              page="campaigns"
+              event={chartsData[0].mapper}
+              chartData={chartsData[0].dataOverTime}
+              chartColor="#4D7DB4"
+            />
+          </div>
+        </div>
       );
     }
 
     if (chartsData.length > 1) {
       const appliedColors = generateColors(chartsData.length);
-      return (
-        <>
-          {typeDropdown}
-          <div className="flex items-center flex-wrap mt-4 justify-center">
-            {chartsData.map((chartData, index) => {
-              return (
-                <div
-                  style={{ minWidth: "300px" }}
-                  key={chartData.index}
-                  className="w-1/3 mt-4 px-1"
-                >
-                  <div className="flex flex-col">
-                    <ChartHeader
-                      total={numberWithCommas(chartData.total)}
-                      query={chartData.name}
-                      bgColor={appliedColors[index]}
+      chart = (
+        <div className="flex items-center flex-wrap justify-center w-full">
+          {chartsData.map((chartData, index) => {
+            return (
+              <div
+                style={{ minWidth: "300px" }}
+                key={chartData.index}
+                className="w-1/3 mt-4 px-4"
+              >
+                <div className="flex flex-col">
+                  <ChartHeader
+                    total={numberWithCommas(chartData.total)}
+                    query={chartData.name}
+                    bgColor={appliedColors[index]}
+                  />
+                  <div className="mt-8">
+                    <SparkChart
+                      frequency="date"
+                      page="campaigns"
+                      event={chartData.mapper}
+                      chartData={chartData.dataOverTime}
+                      chartColor={appliedColors[index]}
                     />
-                    <div className="mt-8">
-                      <SparkChart
-                        frequency="date"
-                        page="campaigns"
-                        event={chartData.mapper}
-                        chartData={chartData.dataOverTime}
-                        chartColor={appliedColors[index]}
-                      />
-                    </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-          {table}
-        </>
+              </div>
+            );
+          })}
+        </div>
       );
     }
-  } else {
+  } else if (chartType === CHART_TYPE_LINECHART) {
     const lineChartData = formatDataInLineChartFormat(chartsData);
     const appliedColors = generateColors(chartsData.length);
-    return (
-      <>
-        {typeDropdown}
-        <div className="w-full flex items-center mt-4 justify-center">
-          <LineChart
-            frequency="date"
-            chartData={lineChartData}
-            hiddenEvents={[]}
-            setHiddenEvents={() => {}}
-            appliedColors={appliedColors}
-            queries={chartsData.map((elem) => elem.name)}
-            arrayMapper={arrayMapper.filter(
-              (elem) => chartsData.findIndex((d) => d.index === elem.index) > -1
-            )}
-            isDecimalAllowed={false}
-          />
-        </div>
-        {table}
-      </>
+    chart = (
+      <LineChart
+        frequency="date"
+        chartData={lineChartData}
+        hiddenEvents={[]}
+        setHiddenEvents={() => {}}
+        appliedColors={appliedColors}
+        queries={chartsData.map((elem) => elem.name)}
+        arrayMapper={arrayMapper.filter(
+          (elem) => chartsData.findIndex((d) => d.index === elem.index) > -1
+        )}
+        isDecimalAllowed={false}
+        section={section}
+      />
     );
   }
+
+  return (
+    <div className="flex items-center justify-center flex-col">
+      {chart}
+      {table}
+    </div>
+  );
 }
 
 export default NoBreakdownCharts;

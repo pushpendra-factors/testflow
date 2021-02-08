@@ -13,6 +13,7 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
+  DASHBOARD_WIDGET_SECTION,
 } from "../../utils/constants";
 import Attributions from "./Attributions";
 import CampaignAnalytics from "./CampaignAnalytics";
@@ -131,6 +132,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           unit={unit}
           setwidgetModal={setwidgetModal}
           arrayMapper={arrayMapper}
+          section={DASHBOARD_WIDGET_SECTION}
         />
       );
     }
@@ -144,11 +146,10 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
           title={unit.id}
-          eventsMapper={eventsMapper}
-          reverseEventsMapper={reverseEventsMapper}
           unit={unit}
           setwidgetModal={setwidgetModal}
           arrayMapper={arrayMapper}
+          section={DASHBOARD_WIDGET_SECTION}
         />
       );
     }
@@ -162,6 +163,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           setwidgetModal={setwidgetModal}
           attributionsState={attributionsState}
           chartType={presentationObj[dashboardPresentation]}
+          section={DASHBOARD_WIDGET_SECTION}
         />
       );
     }
@@ -176,6 +178,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           campaignState={campaignState}
           chartType={presentationObj[dashboardPresentation]}
           arrayMapper={arrayMapper}
+          section={DASHBOARD_WIDGET_SECTION}
         />
       );
     }

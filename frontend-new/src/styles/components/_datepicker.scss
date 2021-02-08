@@ -3,6 +3,8 @@
     position: relative;
     button{
         transition: all 0.3s; 
+        display: flex;
+        align-items: center;
     }
 }
 .fa-custom-datepicker--dropdown
