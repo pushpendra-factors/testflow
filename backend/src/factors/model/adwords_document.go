@@ -73,6 +73,7 @@ var AdwordsDocumentTypeAlias = map[string]int{
 	adGroupPerformanceReport:      10,
 }
 
+// TODO Check if this is being used in proper places within adwords.
 var objectAndPropertyToValueInsideAdwordsReportsMapping = map[string]string{
 	"campaign:id":   "campaign_id",
 	"ad_group:id":   "ad_group_id",
@@ -98,6 +99,10 @@ var adwordsMetricsToOperation = map[string]string{
 	"conversions": "sum",
 }
 
+/*
+TODO. Decided on using a common representation of exposed fields for the cte and simple query.
+We use query.GroupBy in places where join of reports and meta happen. This should be avoided.
+*/
 var propertyToExposedValueFromCTE = map[string]string{
 	"campaign:id":   "campaign_id",
 	"campaign:name": "campaign_name",
@@ -137,10 +142,16 @@ var adwordsExternalRepresentationToInternalRepresentation = map[string]string{
 }
 
 var adwordsInternalRepresentationToExternalRepresentation = map[string]string{
-	"impressions": "impressions",
-	"clicks":      "clicks",
-	"cost":        "spend",
-	"conversions": "conversion",
+	"impressions":   "impressions",
+	"clicks":        "clicks",
+	"cost":          "spend",
+	"conversions":   "conversion",
+	"campaign:id":   "campaign_id",
+	"campaign:name": "campaign_name",
+	"ad_group:id":   "ad_group_id",
+	"ad_group:name": "ad_group_name",
+	"ad:id":         "ad_id",
+	"keyword:id":    "keyword_id",
 }
 
 var errorEmptyAdwordsDocument = errors.New("empty adwords document")
@@ -580,35 +591,36 @@ func getAdwordsDocumentTypeForFilterKeyV1(filterObject string) int {
 func ExecuteAdwordsChannelQueryV1(projectID uint64, query *ChannelQueryV1, reqID string) ([]string, [][]interface{}, error) {
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
-	sql, params, _, err := GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
+	sql, params, selectKeys, selectMetrics, err := GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
 	if err != nil {
 		return make([]string, 0, 0), make([][]interface{}, 0, 0), err
 	}
 	_, resultMetrics, err := ExecuteSQL(sql, params, logCtx)
-	columns := buildColumns(query, fetchSource)
+	columns := append(selectKeys, selectMetrics...)
 	return columns, resultMetrics, err
 }
 
+// GetSQLQueryAndParametersForAdwordsQueryV1 - @Kark TODO v1
 // TODO query breakage with "!%(MISSING)" on gorm.
 // TODO Understand null cases.
-// GetSQLQueryAndParametersForAdwordsQueryV1 - @Kark TODO v1
-func GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, error) {
+func GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
 	var selectMetrics []string
+	var selectKeys []string
 	var sql string
 	var params []interface{}
 	transformedQuery, customerAccountID, err := transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
 	if err != nil {
-		return "", make([]interface{}, 0, 0), make([]string, 0, 0), err
+		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), err
 	}
 	if hasAllIDsOnlyInGroupBy(transformedQuery) {
-		sql, params, selectMetrics, err = buildAdwordsSimpleQueryV1(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
+		sql, params, selectKeys, selectMetrics, err = buildAdwordsSimpleQueryV1(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
 		if err != nil {
-			return "", make([]interface{}, 0, 0), make([]string, 0, 0), err
+			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), err
 		}
-		return sql, params, selectMetrics, nil
+	} else {
+		sql, params, selectKeys, selectMetrics = buildAdwordsComplexQueryV1(transformedQuery, projectID, *customerAccountID, fetchSource)
 	}
-	sql, params, selectMetrics = buildAdwordsComplexQueryV1(transformedQuery, projectID, *customerAccountID, fetchSource)
-	return sql, params, selectMetrics, nil
+	return sql, params, selectKeys, selectMetrics, nil
 }
 
 // @Kark TODO v1
@@ -731,16 +743,17 @@ SUM((value->>'impressions')::float) as impressions, SUM((value->>'clicks')::floa
  WHERE project_id = '2' AND customer_account_id IN ( '2368493227' ) AND type = '5' AND timestamp between '20200331' AND '20200401'
   GROUP BY campaign_id, datetime ORDER BY impressions DESC, clicks DESC LIMIT 2500 ;
 */
-func buildAdwordsSimpleQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, error) {
+// @Kark TODO v1
+func buildAdwordsSimpleQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
 	campaignIDs, adGroupIDs, err := getIDsFromAdwordsSimpleJob(query, projectID, customerAccountID, reqID)
 	if err != nil {
-		return "", make([]interface{}, 0), make([]string, 0), err
+		return "", make([]interface{}, 0), make([]string, 0), make([]string, 0), err
 	}
 	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
-	sql, params, selectMetrics := getSQLAndParamsFromAdwordsSimpleReports(query, projectID, query.From, query.To, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel],
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromAdwordsSimpleReports(query, projectID, query.From, query.To, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel],
 		campaignIDs, adGroupIDs, reqID, fetchSource)
-	return sql, params, selectMetrics, nil
+	return sql, params, selectKeys, selectMetrics, nil
 }
 
 // Validation issue needed. Not both ad_id , keyword_id at same time.
@@ -876,7 +889,7 @@ AND type = '5' AND timestamp between '20200331' AND '20200401' GROUP BY campaign
 */
 // @TODO Kark v1
 func getSQLAndParamsFromAdwordsSimpleReports(query *ChannelQueryV1, projectID uint64, from, to int64, adwordsAccountIDs string,
-	docType int, campaignIDs []int, adGroupIDs []int, reqID string, fetchSource bool) (string, []interface{}, []string) {
+	docType int, campaignIDs []int, adGroupIDs []int, reqID string, fetchSource bool) (string, []interface{}, []string, []string) {
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
 	selectQuery := "SELECT "
 	selectMetrics := make([]string, 0, 0)
@@ -884,6 +897,7 @@ func getSQLAndParamsFromAdwordsSimpleReports(query *ChannelQueryV1, projectID ui
 	groupByStatement := ""
 	groupByKeysWithoutTimestamp := make([]string, 0, 0)
 	selectKeys := make([]string, 0, 0)
+	responseSelectKeys := make([]string, 0, 0)
 	responseSelectMetrics := make([]string, 0, 0)
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	finalWhereStatement := ""
@@ -891,7 +905,7 @@ func getSQLAndParamsFromAdwordsSimpleReports(query *ChannelQueryV1, projectID ui
 	// QueryBy
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
-		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, objectAndPropertyToValueInsideAdwordsReportsMapping[key])
+		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, adwordsInternalRepresentationToExternalRepresentation[key])
 	}
 	if isGroupByTimestamp {
 		groupByStatement = joinWithComma(append(groupByKeysWithoutTimestamp, AliasDateTime)...)
@@ -899,14 +913,23 @@ func getSQLAndParamsFromAdwordsSimpleReports(query *ChannelQueryV1, projectID ui
 		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
 	}
 
-	// Select
+	// SelectKeys
 	if fetchSource {
 		selectKeys = append(selectKeys, fmt.Sprintf("'%s' as %s", adwordsStringColumn, source))
+		responseSelectKeys = append(responseSelectKeys, source)
 	}
-	selectKeys = append(selectKeys, groupByKeysWithoutTimestamp...)
+
+	for _, groupBy := range query.GroupBy {
+		key := groupBy.Object + ":" + groupBy.Property
+		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInsideAdwordsReportsMapping[key], adwordsInternalRepresentationToExternalRepresentation[key])
+		selectKeys = append(selectKeys, value)
+		responseSelectKeys = append(responseSelectKeys, adwordsInternalRepresentationToExternalRepresentation[key])
+	}
+
 	if isGroupByTimestamp {
 		selectKeys = append(selectKeys, fmt.Sprintf("%s as %s",
 			getSelectTimestampByTypeForChannels(query.GetGroupByTimestamp(), query.Timezone), AliasDateTime))
+		responseSelectKeys = append(responseSelectKeys, AliasDateTime)
 	}
 	for _, selectMetric := range query.SelectMetrics {
 		value := fmt.Sprintf("%s as %s", adwordsMetricsToAggregatesInReportsMapping[selectMetric], adwordsInternalRepresentationToExternalRepresentation[selectMetric])
@@ -968,11 +991,11 @@ func getSQLAndParamsFromAdwordsSimpleReports(query *ChannelQueryV1, projectID ui
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
 	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
-	return resultSQLStatement, finalParams, responseSelectMetrics
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 
 // @Kark TODO v1
-func buildAdwordsComplexQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string) {
+func buildAdwordsComplexQueryV1(query *ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string, []string) {
 	idBasedFilters, nonIdBasedFilters := splitFiltersBasedOnIdProperty(query.Filters)
 	keywordGroupBy, nonKeywordGroupBys := splitGroupByBasedOnKeyword(query.GroupBy)
 	if containsKeywords(query) {
@@ -1015,11 +1038,12 @@ impressions DESC, clicks DESC LIMIT 2500 ;
 */
 // @Kark TODO v1
 func buildAdwordsComplexWithKeywords(query *ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool,
-	idBasedFilters []FilterV1, nonIdBasedFilters []FilterV1, keywordBasedGroupBys []GroupBy, nonKeywordBasedGroupBys []GroupBy) (string, []interface{}, []string) {
+	idBasedFilters []FilterV1, nonIdBasedFilters []FilterV1, keywordBasedGroupBys []GroupBy, nonKeywordBasedGroupBys []GroupBy) (string, []interface{}, []string, []string) {
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	groupByKeysWithoutTimestamp := make([]string, 0, 0)
 	selectKeys := make([]string, 0, 0)
 	selectMetrics := make([]string, 0, 0)
+	responseSelectKeys := make([]string, 0, 0)
 	responseSelectMetrics := make([]string, 0, 0)
 
 	reportCTE, reportCTEAlias, reportSelectMetrics, reportCTEJoinFields, reportParams := getCTEAndParamsForKeywordsReportComplexStrategy(query, projectID, customerAccountID, idBasedFilters, keywordBasedGroupBys, nonKeywordBasedGroupBys)
@@ -1035,6 +1059,7 @@ func buildAdwordsComplexWithKeywords(query *ChannelQueryV1, projectID uint64, cu
 	finalParams = append(finalParams, reportParams...)
 	finalParams = append(finalParams, jobsParams...)
 
+	// responseSelectKeys
 	// GroupBy
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
@@ -1050,13 +1075,27 @@ func buildAdwordsComplexWithKeywords(query *ChannelQueryV1, projectID uint64, cu
 		finalGroupByKeys = append(groupByKeysWithoutTimestamp, reportCTEAlias+"."+AliasDateTime)
 	}
 
-	// selectKeys
-	selectKeys = groupByKeysWithoutTimestamp
+	// SelectKeys
 	if fetchSource {
 		selectKeys = append(selectKeys, fmt.Sprintf("'%s' as %s", adwordsStringColumn, source))
+		responseSelectKeys = append(responseSelectKeys, source)
+	}
+
+	for _, groupBy := range query.GroupBy {
+		key := groupBy.Object + ":" + groupBy.Property
+		value := ""
+		if groupBy.Object == adwordsKeyword {
+			value = fmt.Sprintf("%s.%s as %s", reportCTEAlias, propertyToExposedValueFromCTE[key], adwordsInternalRepresentationToExternalRepresentation[key])
+		} else {
+			value = fmt.Sprintf("%s.%s as %s", jobsCTEAlias, propertyToExposedValueFromCTE[key], adwordsInternalRepresentationToExternalRepresentation[key])
+		}
+		selectKeys = append(selectKeys, value)
+		responseSelectKeys = append(responseSelectKeys, adwordsInternalRepresentationToExternalRepresentation[key])
 	}
 	if isGroupByTimestamp {
-		selectKeys = append(selectKeys, reportCTEAlias+"."+AliasDateTime)
+		value := fmt.Sprintf("%s.%s as %s", reportCTEAlias, AliasDateTime, AliasDateTime)
+		selectKeys = append(selectKeys, value)
+		responseSelectKeys = append(responseSelectKeys, AliasDateTime)
 	}
 	for _, selectMetric := range reportSelectMetrics {
 		value := fmt.Sprintf("%s(%s.%s) as %s", adwordsMetricsToOperation[selectMetric], reportCTEAlias, selectMetric, adwordsInternalRepresentationToExternalRepresentation[selectMetric])
@@ -1084,7 +1123,7 @@ func buildAdwordsComplexWithKeywords(query *ChannelQueryV1, projectID uint64, cu
 		resultSQLStatement += "GROUP BY " + joinWithComma(finalGroupByKeys...)
 	}
 	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
-	return resultSQLStatement, finalParams, responseSelectMetrics
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 
 // @Kark TODO v1
@@ -1199,23 +1238,24 @@ AND value->>'campaign_name' ILIKE '%Brand - BLR - New_Aug_Desktop_RLSA%' GROUP B
 ORDER BY impressions DESC, clicks DESC LIMIT 2500 ;
 */
 // @Kark TODO v1
-func buildAdwordsComplexWithoutKeywords(query *ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool, idBasedFilters []FilterV1, nonIDBasedFilters []FilterV1) (string, []interface{}, []string) {
+func buildAdwordsComplexWithoutKeywords(query *ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool, idBasedFilters []FilterV1, nonIDBasedFilters []FilterV1) (string, []interface{}, []string, []string) {
 	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
-	sql, params, selectMetrics := getSQLAndParamsForAdwordsComplexWithoutKeywords(query, projectID, query.From, query.To, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel],
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsForAdwordsComplexWithoutKeywords(query, projectID, query.From, query.To, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel],
 		fetchSource)
-	return sql, params, selectMetrics
+	return sql, params, selectKeys, selectMetrics
 }
 
 // @Kark TODO v1
 func getSQLAndParamsForAdwordsComplexWithoutKeywords(query *ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
-	docType int, fetchSource bool) (string, []interface{}, []string) {
+	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	selectQuery := "SELECT "
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	groupByKeysWithoutTimestamp := make([]string, 0, 0)
 	selectKeys := make([]string, 0, 0)
 	selectMetrics := make([]string, 0, 0)
+	responseSelectKeys := make([]string, 0, 0)
 	responseSelectMetrics := make([]string, 0, 0)
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 
@@ -1228,30 +1268,34 @@ func getSQLAndParamsForAdwordsComplexWithoutKeywords(query *ChannelQueryV1, proj
 	// GroupBy
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
-		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, objectAndPropertyToValueInsideAdwordsReportsMapping[key])
+		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, propertyToExposedValueFromCTE[key])
 	}
 	if isGroupByTimestamp {
 		finalGroupByKeys = append(groupByKeysWithoutTimestamp, AliasDateTime)
 	} else {
 		finalGroupByKeys = groupByKeysWithoutTimestamp
 	}
+
 	// SelectKeys
 	if fetchSource {
 		selectKeys = append(selectKeys, fmt.Sprintf("'%s' as %s", adwordsStringColumn, source))
+		responseSelectKeys = append(responseSelectKeys, source)
 	}
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
 		value := ""
 		if groupBy.Property == "id" {
-			value = fmt.Sprintf("%s as %s", objectAndPropertyToValueInsideAdwordsReportsMapping[key], objectAndPropertyToValueInsideAdwordsReportsMapping[key])
+			value = fmt.Sprintf("%s as %s", objectAndPropertyToValueInsideAdwordsReportsMapping[key], propertyToExposedValueFromCTE[key])
 		} else {
-			value = fmt.Sprintf("value->>'%s' as %s", objectAndPropertyToValueInsideAdwordsReportsMapping[key], objectAndPropertyToValueInsideAdwordsReportsMapping[key])
+			value = fmt.Sprintf("value->>'%s' as %s", objectAndPropertyToValueInsideAdwordsReportsMapping[key], propertyToExposedValueFromCTE[key])
 		}
 		selectKeys = append(selectKeys, value)
+		responseSelectKeys = append(responseSelectKeys, propertyToExposedValueFromCTE[key])
 	}
 	if isGroupByTimestamp {
 		selectKeys = append(selectKeys, fmt.Sprintf("%s as %s",
 			getSelectTimestampByTypeForChannels(query.GetGroupByTimestamp(), query.Timezone), AliasDateTime))
+		responseSelectKeys = append(responseSelectKeys, AliasDateTime)
 	}
 	for _, selectMetric := range query.SelectMetrics {
 		value := fmt.Sprintf("%s as %s", adwordsMetricsToAggregatesInReportsMapping[selectMetric], adwordsInternalRepresentationToExternalRepresentation[selectMetric])
@@ -1281,7 +1325,7 @@ func getSQLAndParamsForAdwordsComplexWithoutKeywords(query *ChannelQueryV1, proj
 		resultSQLStatement += " GROUP BY " + joinWithComma(finalGroupByKeys...)
 	}
 	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
-	return resultSQLStatement, finalParams, responseSelectMetrics
+	return resultSQLStatement, finalParams, responseSelectKeys, responseSelectMetrics
 }
 
 // @Kark TODO v1
@@ -1299,6 +1343,7 @@ func getUniqueIDsForCTEAndSelectKeysAndGroupByFields(groupBys []GroupBy, lowestH
 			key := groupBy.Object + ":id"
 			uniqueIDColumn := objectAndPropertyToValueInsideAdwordsJobsMapping[lowestHierarchyLevel][key]
 			uniqueIDsForCTE = append(uniqueIDsForCTE, uniqueIDColumn)
+			uniqueObjects[groupBy.Object] = struct{}{}
 		}
 
 		if !isObjectPresentPreviously && groupBy.Property != "id" {
@@ -1733,12 +1778,12 @@ func getAdwordsMetrics(projectID uint64, customerAccountID string,
 		return nil, err
 	}
 	if len(resultRows) == 0 {
-		log.Error("Aggregate query returned zero rows.")
+		log.Warn("Aggregate query returned zero rows.")
 		return nil, errors.New("no rows returned")
 	}
 
 	if len(resultRows) > 1 {
-		log.Error("Aggregate query returned more than one row on get adwords metric kvs.")
+		log.Warn("Aggregate query returned more than one row on get adwords metric kvs.")
 	}
 
 	metricKvs := make(map[string]interface{})
