@@ -18,7 +18,7 @@ function MultipleEventsWithBreakdownTable({
   lineChartData,
   isWidgetModal,
   durationObj,
-  reportTitle="Events Analytics"
+  reportTitle = "Events Analytics",
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState("");
@@ -37,14 +37,12 @@ function MultipleEventsWithBreakdownTable({
   const getCSVData = () => {
     return {
       fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, ...rest }) => {
-        // if (breakdown.length) {
-        //   arrayMapper.forEach((elem) => {
-        //     rest[elem.eventName] = rest[`${elem.mapper}-${elem.index}`];
-        //     delete rest[`${elem.mapper}-${elem.index}`];
-        //   });
-        // }
-        return { ...rest };
+      data: tableData.map(({ index, eventIndex, dateWise, color, ...rest }) => {
+        const result = {};
+        for (let obj in rest) {
+          result[obj.split(";")[0]] = rest[obj];
+        }
+        return result;
       }),
     };
   };
