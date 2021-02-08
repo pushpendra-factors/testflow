@@ -2244,38 +2244,51 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 
 }
 
-func BuildUserDistribution(reqId string, event string, patternWrapper PatternServiceWrapperInterface) (map[string]uint, error) {
+func BuildUserDistribution(reqId string, event string, patternWrapper PatternServiceWrapperInterface) (map[string]uint, map[string]uint, map[string]uint, error) {
 	if event == "" {
-		return nil, fmt.Errorf("Missing event")
+		return nil, nil, nil, fmt.Errorf("Missing event")
 	}
 
 	patterns, err := patternWrapper.GetAllContainingPatterns(reqId, event)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching patterns")
+		return nil, nil, nil, fmt.Errorf("error fetching patterns")
 	}
-	coEvents := make(map[string]uint)
+	before := make(map[string]uint)
+	after := make(map[string]uint)
+	base := make(map[string]uint)
 	for _, pattern := range patterns {
+		if len(pattern.EventNames) == 1 {
+			base["base"] = pattern.PerUserCount
+		}
 		if len(pattern.EventNames) == 2 {
 			if pattern.EventNames[0] == event && pattern.EventNames[1] != event {
-				coEvents[pattern.EventNames[1]] += pattern.PerUserCount
+				after[pattern.EventNames[1]] += pattern.PerUserCount
 			}
 			if pattern.EventNames[1] == event && pattern.EventNames[0] != event {
-				coEvents[pattern.EventNames[0]] += pattern.PerUserCount
+				before[pattern.EventNames[0]] += pattern.PerUserCount
 			}
 		}
 	}
 	// Janani: optimize it - reverse the loop
-	for eventFiltered, _ := range coEvents {
+	for eventFiltered, _ := range before {
 		for _, pattern := range patterns {
 			if len(pattern.EventNames) == 3 {
-				if (pattern.EventNames[0] == event && pattern.EventNames[1] == eventFiltered && pattern.EventNames[2] == event) ||
-					(pattern.EventNames[0] == eventFiltered && pattern.EventNames[1] == event && pattern.EventNames[2] == eventFiltered) {
-					coEvents[eventFiltered] -= pattern.PerUserCount
+				if pattern.EventNames[0] == event && pattern.EventNames[1] == eventFiltered && pattern.EventNames[2] == event {
+					before[eventFiltered] -= pattern.PerUserCount
 				}
 			}
 		}
 	}
-	return coEvents, nil
+	for eventFiltered, _ := range after {
+		for _, pattern := range patterns {
+			if len(pattern.EventNames) == 3 {
+				if pattern.EventNames[0] == eventFiltered && pattern.EventNames[1] == event && pattern.EventNames[2] == eventFiltered {
+					after[eventFiltered] -= pattern.PerUserCount
+				}
+			}
+		}
+	}
+	return base, before, after, nil
 }
 
 func BuildUserDistributionWithProperties(reqId string, event string, baseProperty P.EventConstraints, distributionProperty map[string]string, patternWrapper PatternServiceWrapperInterface) (map[string]uint, error) {

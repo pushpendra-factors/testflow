@@ -154,9 +154,19 @@ func GetFactorsHandler(c *gin.Context) {
 		})
 		return
 	}
+	type EventDistribution struct {
+		Base   map[string]uint `json:"base"`
+		After  map[string]uint `json:"after"`
+		Before map[string]uint `json:"before"`
+	}
 	if patternMode == "EventDistribution" {
-		res, _ := PW.BuildUserDistribution("", event, ps)
-		c.JSON(http.StatusOK, res)
+		res, res2, res3, _ := PW.BuildUserDistribution("", event, ps)
+		finalResult := EventDistribution{
+			Base:   res,
+			Before: res2,
+			After:  res3,
+		}
+		c.JSON(http.StatusOK, finalResult)
 		return
 	}
 	if patternMode == "EventDistributionWithProperties" {
@@ -275,7 +285,7 @@ func PostFactorsCompareHandler(c *gin.Context) {
 			results2.GoalRule = params
 
 		}
-		res := formatComparisonResults(results1, results2)
+		res := formatComparisonResults(results1, results2, true)
 		c.JSON(http.StatusOK, res)
 	}
 	if comparisonMode == "Property" {
@@ -335,7 +345,7 @@ func PostFactorsCompareHandler(c *gin.Context) {
 			results2.Type = inputType
 			results2.GoalRule = params2
 		}
-		res := formatComparisonResults(results1, results2)
+		res := formatComparisonResults(results1, results2, false)
 		c.JSON(http.StatusOK, res)
 	}
 }
@@ -347,7 +357,7 @@ type ComparisonResult struct {
 	Type             string
 }
 
-func formatComparisonResults(result1 PW.Factors, result2 PW.Factors) map[string]ComparisonResult {
+func formatComparisonResults(result1 PW.Factors, result2 PW.Factors, removeSingleInsight bool) map[string]ComparisonResult {
 	result := make(map[string]ComparisonResult)
 	var key string
 	for _, insight := range result1.Insights {
@@ -393,6 +403,15 @@ func formatComparisonResults(result1 PW.Factors, result2 PW.Factors) map[string]
 		FirstWeek:        []float64{result1.OverallMultiplier, result1.OverallPercentage, result1.TotalUsersCount, result1.GoalUserCount},
 		SecondWeek:       []float64{result2.OverallMultiplier, result2.OverallPercentage, result2.TotalUsersCount, result2.GoalUserCount},
 		PercentageChange: overallPercentageChange,
+	}
+	if removeSingleInsight == true {
+		filteredResult := make(map[string]ComparisonResult)
+		for key, value := range result {
+			if !(value.FirstWeek == nil || value.SecondWeek == nil) {
+				filteredResult[key] = value
+			}
+		}
+		return filteredResult
 	}
 	return result
 }
