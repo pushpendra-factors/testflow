@@ -31,7 +31,7 @@ function ProjectTabs({
   const { dashboards, activeDashboard, activeDashboardUnits } = useSelector(
     (state) => state.dashboard
   );
-  const MAX_DASHBOARD_TABS = 3;
+  const MAX_DASHBOARD_TABS = 5;
   const dispatch = useDispatch();
 
   const changeActiveDashboard = useCallback(
