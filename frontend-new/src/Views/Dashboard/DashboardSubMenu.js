@@ -7,7 +7,6 @@ import {
   // LockOutlined, ReloadOutlined, UserAddOutlined, MoreOutlined, EditOutlined, UnlockOutlined
   LockOutlined, ReloadOutlined, EditOutlined, UnlockOutlined
 } from '@ant-design/icons';
-import DurationInfo from '../../components/DurationInfo';
 import FaDatepicker from '../../components/FaDatepicker';
 
 function DashboardSubMenu({

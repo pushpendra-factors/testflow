@@ -120,7 +120,7 @@ function SingleEventSingleBreakdown({
         arrayMapper={arrayMapper}
         cardSize={unit.cardSize}
         section={section}
-        height={200}
+        height={225}
       />
     );
   }

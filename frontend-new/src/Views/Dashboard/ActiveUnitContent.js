@@ -22,6 +22,7 @@ function ActiveUnitContent({
   resultState,
   durationObj,
   handleDurationChange,
+  setwidgetModal
 }) {
   const history = useHistory();
 
@@ -140,6 +141,7 @@ function ActiveUnitContent({
         eventPage={TOTAL_EVENTS_CRITERIA}
         section={DASHBOARD_MODAL}
         queryTitle={unit.title}
+        onReportClose={setwidgetModal}
       />
     </div>
   );

@@ -133,7 +133,7 @@ function NoBreakdownCharts({
         )}
         isDecimalAllowed={false}
         section={section}
-        height={200}
+        height={225}
         cardSize={unit.cardSize}
       />
     );

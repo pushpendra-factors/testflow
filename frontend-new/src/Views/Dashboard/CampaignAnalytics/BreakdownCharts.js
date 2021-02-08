@@ -102,7 +102,7 @@ function BreakdownCharts({
           isDecimalAllowed={false}
           cardSize={unit.cardSize}
           section={section}
-          height={200}
+          height={225}
         />
       </>
     );

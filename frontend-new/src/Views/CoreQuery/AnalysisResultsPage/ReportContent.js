@@ -35,6 +35,7 @@ function ReportContent({
   queryTitle,
   eventPage,
   section,
+  onReportClose
 }) {
   let content = null,
     queryDetail = null,
@@ -197,6 +198,7 @@ function ReportContent({
         title={queryTitle}
         queryDetail={queryDetail}
         section={section}
+        onReportClose={onReportClose}
       />
       <div className="mt-6">
         <CalendarRow
