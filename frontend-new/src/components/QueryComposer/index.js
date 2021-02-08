@@ -162,7 +162,7 @@ function QueryComposer({
         moment(queryOptionsState.date_range.to).diff(
           queryOptionsState.date_range.from,
           "hours"
-        ) <= 24
+        ) < 24
       ) {
         queryOptionsState.date_range.frequency = "hour";
       } else {

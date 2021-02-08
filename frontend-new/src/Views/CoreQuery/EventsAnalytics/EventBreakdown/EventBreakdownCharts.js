@@ -18,7 +18,11 @@ function EventBreakdownCharts({ data, breakdown, section }) {
   }, [data]);
 
   if (!chartsData.length) {
-    return null;
+    return (
+      <div className="h-64 flex items-center justify-center w-full">
+        No Data Found!
+      </div>
+    );
   }
 
   let chart = null;

@@ -32,7 +32,7 @@ function Dashboard() {
       from = dates.startDate;
       to = dates.endDate;
     }
-    if (moment(to).diff(from, "hours") <= 24) {
+    if (moment(to).diff(from, "hours") < 24) {
       frequency = "hour";
     }
     setDurationObj((currState) => {
