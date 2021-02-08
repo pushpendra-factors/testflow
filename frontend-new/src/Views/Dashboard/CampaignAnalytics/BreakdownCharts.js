@@ -10,6 +10,7 @@ import { generateColors } from "../../../utils/dataFormatter";
 import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_LINECHART,
+  CHART_TYPE_TABLE,
 } from "../../../utils/constants";
 
 function BreakdownCharts({
@@ -18,7 +19,9 @@ function BreakdownCharts({
   breakdown,
   data,
   isWidgetModal,
-  title
+  setwidgetModal,
+  unit,
+  section,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [currentEventIndex, setCurrentEventIndex] = useState(0);
@@ -44,11 +47,30 @@ function BreakdownCharts({
     );
   }
 
-  if (chartType === CHART_TYPE_BARCHART) {
-    return (
-      <div className="flex items-center flex-wrap mt-4 justify-center">
-        <BarChart title={title} chartData={visibleProperties} />
+  let tableContent = null;
+
+  if (chartType === CHART_TYPE_TABLE) {
+    tableContent = (
+      <div
+        onClick={() => setwidgetModal({ unit, data })}
+        style={{ color: "#5949BC" }}
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+      >
+        Show More &rarr;
       </div>
+    );
+  }
+
+  let chartContent = null;
+
+  if (chartType === CHART_TYPE_BARCHART) {
+    chartContent = (
+      <BarChart
+        section={section}
+        height={250}
+        title={unit.id}
+        chartData={visibleProperties}
+      />
     );
   } else if (chartType === CHART_TYPE_LINECHART) {
     const mapper = visibleProperties.map((v, index) => {
@@ -67,24 +89,25 @@ function BreakdownCharts({
       mapper
     );
     const appliedColors = generateColors(visibleProperties.length);
-    return (
+    chartContent = (
       <>
-        <div className="flex items-center flex-wrap mt-4 justify-center">
-          <LineChart
-            frequency="date"
-            chartData={lineChartData}
-            hiddenEvents={[]}
-            setHiddenEvents={() => {}}
-            appliedColors={appliedColors}
-            queries={visibleProperties.map((v) => v.label)}
-            arrayMapper={mapper}
-            isDecimalAllowed={false}
-          />
-        </div>
+        <LineChart
+          frequency="date"
+          chartData={lineChartData}
+          hiddenEvents={[]}
+          setHiddenEvents={() => {}}
+          appliedColors={appliedColors}
+          queries={visibleProperties.map((v) => v.label)}
+          arrayMapper={mapper}
+          isDecimalAllowed={false}
+          cardSize={unit.cardSize}
+          section={section}
+          height={225}
+        />
       </>
     );
   } else {
-    return (
+    chartContent = (
       <BreakdownTable
         currentEventIndex={currentEventIndex}
         chartType={chartType}
@@ -97,8 +120,15 @@ function BreakdownCharts({
         maxAllowedVisibleProperties={maxAllowedVisibleProperties}
         setVisibleProperties={setVisibleProperties}
       />
-    )
+    );
   }
+
+  return (
+    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
+      {chartContent}
+      {tableContent}
+    </div>
+  );
 }
 
 export default BreakdownCharts;

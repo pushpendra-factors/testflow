@@ -8,6 +8,11 @@ import BarChart from "../../../../components/BarChart";
 import MultipleEventsWithBreakdownTable from "./MultipleEventsWithBreakdownTable";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
+import {
+  ACTIVE_USERS_CRITERIA,
+  FREQUENCY_CRITERIA,
+  DASHBOARD_MODAL,
+} from "../../../../utils/constants";
 
 function MultipleEventsWithBreakdown({
   queries,
@@ -15,9 +20,9 @@ function MultipleEventsWithBreakdown({
   resultState,
   page,
   chartType,
-  isWidgetModal,
   durationObj,
-  title
+  title,
+  section,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -54,64 +59,68 @@ function MultipleEventsWithBreakdown({
     });
   });
 
-  let chartContent = null;
-
   const lineChartData = formatDataInLineChartFormat(
     visibleProperties,
     arrayMapper,
-    hiddenProperties,
+    hiddenProperties
   );
+
+  let chart = null;
+  const table = (
+    <div className="mt-12 w-full">
+      <MultipleEventsWithBreakdownTable
+        isWidgetModal={section === DASHBOARD_MODAL}
+        data={chartsData}
+        lineChartData={lineChartData}
+        queries={queries}
+        breakdown={breakdown}
+        events={queries}
+        chartType={chartType}
+        setVisibleProperties={setVisibleProperties}
+        visibleProperties={visibleProperties}
+        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+        originalData={resultState.data}
+        page={page}
+        durationObj={durationObj}
+      />
+    </div>
+  );
+
   const appliedColors = generateColors(visibleProperties.length);
 
   if (chartType === "barchart") {
-    chartContent = (
-      <div className="flex mt-8">
-        <BarChart
-          chartData={formatVisibleProperties(visibleProperties, queries)}
-          queries={queries}
-          title={title}
-        />
-      </div>
+    chart = (
+      <BarChart
+        section={section}
+        chartData={formatVisibleProperties(visibleProperties, queries)}
+        queries={queries}
+        title={title}
+      />
     );
   } else {
-    chartContent = (
-      <div className="flex mt-8">
-        <LineChart
-          frequency={durationObj.frequency}
-          chartData={lineChartData}
-          appliedColors={appliedColors}
-          queries={visibleLabels}
-          reverseEventsMapper={reverseMapper}
-          eventsMapper={mapper}
-          setHiddenEvents={setHiddenProperties}
-          hiddenEvents={hiddenProperties}
-          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
-          arrayMapper={arrayMapper}
-        />
-      </div>
+    chart = (
+      <LineChart
+        frequency={durationObj.frequency}
+        chartData={lineChartData}
+        appliedColors={appliedColors}
+        queries={visibleLabels}
+        reverseEventsMapper={reverseMapper}
+        eventsMapper={mapper}
+        setHiddenEvents={setHiddenProperties}
+        hiddenEvents={hiddenProperties}
+        isDecimalAllowed={
+          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
+        }
+        arrayMapper={arrayMapper}
+        section={section}
+      />
     );
   }
 
   return (
-    <div className="total-events w-full">
-      {chartContent}
-      <div className="mt-8">
-        <MultipleEventsWithBreakdownTable
-          isWidgetModal={isWidgetModal}
-          data={chartsData}
-          lineChartData={lineChartData}
-          queries={queries}
-          breakdown={breakdown}
-          events={queries}
-          chartType={chartType}
-          setVisibleProperties={setVisibleProperties}
-          visibleProperties={visibleProperties}
-          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          originalData={resultState.data}
-          page={page}
-          durationObj={durationObj}
-        />
-      </div>
+    <div className="flex items-center justify-center flex-col">
+      {chart}
+      {table}
     </div>
   );
 }

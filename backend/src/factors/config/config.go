@@ -54,6 +54,7 @@ type DBConf struct {
 	User     string
 	Name     string
 	Password string
+	AppName  string
 }
 
 type Configuration struct {
@@ -310,12 +311,13 @@ func InitDBWithMaxIdleAndMaxOpenConn(dbConf DBConf,
 	}
 
 	db, err := gorm.Open("postgres",
-		fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
+		fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable application_name=%s",
 			dbConf.Host,
 			dbConf.Port,
 			dbConf.User,
 			dbConf.Name,
 			dbConf.Password,
+			dbConf.AppName,
 		))
 	// Connection Pooling and Logging.
 	db.DB().SetMaxOpenConns(maxOpenConns)

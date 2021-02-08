@@ -311,7 +311,7 @@ const (
 	DateRangePreset2MinInSeconds  int64  = 2 * 60
 	DateRangePreset30MinInSeconds int64  = 30 * 60
 
-	QueryCachePlaceholderExpirySeconds     float64 = 2 * 60 * 60       // 2 Hours.
+	QueryCachePlaceholderExpirySeconds     float64 = 5 * 60            // 5 Minutes.
 	QueryCacheImmutableResultExpirySeconds float64 = 30 * 24 * 60 * 60 // 30 Days.
 	QueryCacheMutableResultExpirySeconds   float64 = 10 * 60           // 10 Minutes.
 
@@ -1340,7 +1340,10 @@ func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery
 	return baseQuery, err
 }
 
-func Analyze(projectId uint64, query Query) (*QueryResult, int, string) {
+func Analyze(projectId uint64, queryOriginal Query) (*QueryResult, int, string) {
+	var query Query
+	U.DeepCopy(&queryOriginal, &query)
+
 	if valid, errMsg := IsValidQuery(&query); !valid {
 		return nil, http.StatusBadRequest, errMsg
 	}

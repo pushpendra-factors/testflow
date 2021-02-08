@@ -173,6 +173,8 @@ def get_and_insert_metadata(facebook_int_setting, sync_info_with_type):
 def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields):
     request_counter = 0
     metadata = []
+    records_counter = 0
+    log.warning("Fetching %s metadata started for Project %s", doc_type, facebook_int_setting['project_id'])
     url = 'https://graph.facebook.com/v9.0/{}/{}s?fields={}&&access_token={}&&limit=1000'.format(
     facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type_map[doc_type], fields, facebook_int_setting[ACCESS_TOKEN])
     response = requests.get(url)
@@ -180,14 +182,19 @@ def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields):
     if not response.ok:
         errString = 'Failed to get {}s metadata from facebook. StatusCode: {}. Error: {}. Project_id: {}'.format(doc_type, response.status_code, response.text, facebook_int_setting['project_id'])
         log.error(errString)
+        log.warning("Fetching %s metadata ended for Project %s", doc_type, facebook_int_setting['project_id'])
         return {'status': 'failed', 'errMsg': errString, API_REQUESTS: request_counter}, metadata
     for data in response.json()[DATA]:
         timestamp = int(datetime.now().strftime('%Y%m%d'))
         add_document_response = add_facebook_document(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type, data['id'], data, timestamp, FACEBOOK)
     metadata.extend(response.json()[DATA])
-    
+    records_counter = len(metadata)
+
     # paging
     if 'paging' not in response.json():
+        recordsLogString = "No. of {} metdata records fetch for Project {} : {}".format(doc_type, facebook_int_setting['project_id'], records_counter)
+        log.warning(recordsLogString)
+        log.warning("Fetching %s metadata ended for Project %s", doc_type, facebook_int_setting['project_id'])
         return {'status': 'success', 'errMsg': '',  API_REQUESTS: request_counter}, metadata
     while 'next' in response.json()['paging']:
         url = response.json()['paging']['next']
@@ -196,19 +203,27 @@ def get_and_insert_paginated_metadata(facebook_int_setting, doc_type, fields):
         if not response.ok:
             errString = 'Failed to get {}s metadata from facebook post pagination. StatusCode: {}. Error: {}. Project_id: {}'.format(doc_type, response.status_code, response.text, facebook_int_setting['project_id'])
             log.error(errString)
+            log.warning("Fetching %s metadata ended for Project %s", doc_type, facebook_int_setting['project_id'])
             return {'status': 'failed', 'errMsg': errString,  API_REQUESTS: request_counter}, metadata
         for data in response.json()[DATA]:
             timestamp = int(datetime.now().strftime('%Y%m%d'))
             add_document_response = add_facebook_document(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type, data['id'], data, timestamp, FACEBOOK)
         metadata.extend(response.json()[DATA])
-
+    records_counter = len(metadata)
+    recordsLogString = "No. of {} metdata records fetch for Project {} : {}".format(doc_type, facebook_int_setting['project_id'], records_counter)
+    log.warning(recordsLogString)
+    log.warning("Fetching %s metadata ended for Project %s", doc_type, facebook_int_setting['project_id'])
     return {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}, metadata
 
 def backfill_metadata(facebook_int_setting, doc_type, metadata):
+    records_counter = 0
     for days in range(1, MAX_LOOKBACK+1):
         timestamp = int((datetime.now()- timedelta(days=days)).strftime('%Y%m%d'))
         for data in metadata:
             add_document_response = add_facebook_document(facebook_int_setting['project_id'], facebook_int_setting[FACEBOOK_AD_ACCOUNT], doc_type, data['id'], data, timestamp, FACEBOOK)
+            records_counter += 1
+    recordsLogString = "No of records backfilled of type {} metadata from Project {}: {}".format(doc_type, facebook_int_setting['project_id'], records_counter)
+    log.warning(recordsLogString) 
 
 def get_collections(facebook_int_setting, sync_info_with_type):
     response = {'status': ''}
@@ -295,18 +310,22 @@ def get_ad_insights(project_id, ad_account_id, access_token, date_start):
 # return statement: {'status': failed/success, errMsg: , api_requests: }
 def fetch_and_insert_insights(project_id, ad_account_id, access_token, doc_type, fields_insight, date_start):
     request_counter = 0
+    records_counter = 0 
     time_ranges = get_time_ranges_list(date_start)
     breakdowns = ['publisher_platform']
+    log.warning("Fetching %s started for Project %s", doc_type, project_id)
     for time_range in time_ranges:
         url = 'https://graph.facebook.com/v9.0/{}/insights?breakdowns={}&&time_range={}&&fields={}&&access_token={}&&level={}&&limit=1000'.format(
         ad_account_id, breakdowns, time_range, fields_insight, access_token, level_breakdown[doc_type])
         breakdown_response = requests.get(url)
         request_counter +=1
         if not breakdown_response.ok:
-            errString = 'Failed to get {} insights from facebook. StatusCode: {} Error: {}. Project_id: {}'.format(doc_type, breakdown_response.status_code, breakdown_response.text, project_id)
+            errString = 'Failed to get {} from facebook. StatusCode: {} Error: {}. Project_id: {}'.format(doc_type, breakdown_response.status_code, breakdown_response.text, project_id)
             log.error(errString)
+            log.warning("Fetching %s ended for Project %s", doc_type, project_id)
             return {'status': 'failed', 'errMsg': errString, API_REQUESTS: request_counter}
 
+        records_counter = len(breakdown_response.json()[DATA])
         for data in breakdown_response.json()[DATA]:
             date_stop = get_datetime_from_datestring(data['date_stop'])
             timestamp= int(datetime.strftime(date_stop, '%Y%m%d'))
@@ -320,14 +339,19 @@ def fetch_and_insert_insights(project_id, ad_account_id, access_token, doc_type,
             breakdown_response = requests.get(url)
             request_counter +=1
             if not breakdown_response.ok:
-                errString = 'Failed to get {} insights from facebook post pagination. StatusCode: {} Error: {}. Project_id: {}'.format(doc_type, breakdown_response.status_code, breakdown_response.text, project_id)
+                errString = 'Failed to get {} from facebook post pagination. StatusCode: {} Error: {}. Project_id: {}'.format(doc_type, breakdown_response.status_code, breakdown_response.text, project_id)
                 log.error(errString)
+                log.warning("Fetching %s ended for Project %s", doc_type, project_id)
                 return {'status': 'failed', 'errMsg': errString, API_REQUESTS: request_counter}   
-
+            
+            records_counter += len(breakdown_response.json()[DATA])
             for data in breakdown_response.json()[DATA]:
                 date_stop = get_datetime_from_datestring(data['date_stop'])
                 timestamp= int(datetime.strftime(date_stop, '%Y%m%d'))
                 add_facebook_document(project_id, ad_account_id, doc_type, data[id_fields[doc_type]], data, timestamp, data['publisher_platform'])
+        recordsLogString = "No of {} records fetched for Project {} and timestamp {}: {}".format(doc_type, project_id,time_range['until'], records_counter)
+        log.warning(recordsLogString)
+    log.warning("Fetching %s ended for Project %s", doc_type, project_id)
     return {'status': 'success', 'errMsg': '', API_REQUESTS: request_counter}
 
 

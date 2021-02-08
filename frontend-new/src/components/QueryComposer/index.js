@@ -12,9 +12,9 @@ import { QUERY_TYPE_FUNNEL, QUERY_TYPE_EVENT } from "../../utils/constants";
 
 import FaDatepicker from "../../components/FaDatepicker";
 
-import ComposerBlock from '../QueryCommons/ComposerBlock';
+import ComposerBlock from "../QueryCommons/ComposerBlock";
 
-import CriteriaSection from './CriteriaSection';
+import CriteriaSection from "./CriteriaSection";
 
 import { DEFAULT_DATE_RANGE, displayRange } from "./DateRangeSelector/utils";
 
@@ -100,21 +100,23 @@ function QueryComposer({
   };
 
   const groupByBlock = () => {
-    if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
-      return null;
-    }
-    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
-      return null;
-    }
+    try {
+      if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+        return null;
+      }
+      if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+        return null;
+      }
 
-    return (
-      <ComposerBlock blockTitle={'Group By'} isOpen={true} showIcon={false}>
-        <div key={0} className={"fa--query_block borderless no-padding "}>
-          <GroupBlock queryType={queryType} events={queries}></GroupBlock>
-        </div>
-      </ComposerBlock>
+      return (
+        <ComposerBlock blockTitle={'Group By'} isOpen={true} showIcon={false}>
+          <div key={0} className={"fa--query_block borderless no-padding "}>
+            <GroupBlock queryType={queryType} events={queries}></GroupBlock>
+          </div>
+        </ComposerBlock>
 
-    );
+      );
+    } catch (err) { console.log(err) };
   };
 
   const setEventSequence = (value) => {
@@ -177,55 +179,56 @@ function QueryComposer({
 
   const handleRunQuery = useCallback(() => {
     if (queryType === QUERY_TYPE_EVENT) {
-      runQuery(true, false, null);
+      runQuery(false);
     } else {
-      runFunnelQuery();
+      runFunnelQuery(false);
     }
   }, [runFunnelQuery, runQuery, queryType]);
 
   const footer = () => {
-    if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
-      return null;
-    }
-    if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
-      return null;
-    } else {
-      return (
-        <div className={styles.composer_footer}>
-          <FaDatepicker
-            customPicker
-            presetRange
-            monthPicker
-            quarterPicker
-            placement="topRight"
-            range={{
-              startDate: queryOptions.date_range.from,
-              endDate: queryOptions.date_range.to,
-            }}
-            onSelect={setDateRange}
-          />
-          <Button size={"large"} type="primary" onClick={handleRunQuery}>
-            Run Query
-          </Button>
-        </div>
-      );
-    }
+    try {
+      if (queryType === QUERY_TYPE_EVENT && queries.length < 1) {
+        return null;
+      }
+      if (queryType === QUERY_TYPE_FUNNEL && queries.length < 2) {
+        return null;
+      } else {
+        return (
+          <div className={styles.composer_footer}>
+            <FaDatepicker
+              customPicker
+              presetRange
+              monthPicker
+              quarterPicker
+              placement="topRight"
+              range={{
+                startDate: queryOptions.date_range.from,
+                endDate: queryOptions.date_range.to,
+              }}
+              onSelect={setDateRange}
+            />
+            <Button size={"large"} type="primary" onClick={handleRunQuery}>
+              Run Query
+            </Button>
+          </div>
+        );
+      }
+    } catch (err) { console.log(err) }
   };
 
   const renderEACrit = () => {
     return (
       <div>
-        <CriteriaSection queryType={QUERY_TYPE_EVENT}></CriteriaSection>
+        <CriteriaSection queryCount={queries.length}
+          queryType={QUERY_TYPE_EVENT}></CriteriaSection>
       </div>
     );
-  }
+  };
 
   const renderFuCrit = () => {
     return (
       <div className={"flex justify-start items-center mt-2"}>
-        <div
-          className={styles.composer_body__session_analytics__options}
-        >
+        <div className={styles.composer_body__session_analytics__options}>
           <Text
             type={"paragraph"}
             mini
@@ -233,7 +236,7 @@ function QueryComposer({
             extraClass={"m-0 ml-2 inline"}
           >
             Where sequence
-                    </Text>
+          </Text>
           <Popover
             className="fa-event-popover"
             content={
@@ -245,20 +248,13 @@ function QueryComposer({
             }
             trigger="click"
             visible={analyticsSeqOpen}
-            onVisibleChange={(visible) =>
-              setAnalyticsSeqVisible(visible)
-            }
+            onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
           >
-            <Button
-              Button
-              type="link"
-              className={"ml-2"}
-              size={"small"}
-            >
+            <Button Button type="link" className={"ml-2"} size={"small"}>
               Between &nbsp;
-                        {queryOptions.session_analytics_seq.start}
-                        &nbsp; to &nbsp;
-                        {queryOptions.session_analytics_seq.end}
+              {queryOptions.session_analytics_seq.start}
+              &nbsp; to &nbsp;
+              {queryOptions.session_analytics_seq.end}
             </Button>
           </Popover>
           <Text
@@ -268,49 +264,57 @@ function QueryComposer({
             extraClass={"m-0 ml-2 inline"}
           >
             happened in the same session
-                    </Text>
+          </Text>
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   const renderCriteria = () => {
-    if(queryType === QUERY_TYPE_EVENT) {
-      return null; // Need to remove this post result page changes.
-      if(queries.length <= 0) return null;
+    try {
+      if (queryType === QUERY_TYPE_EVENT) {
+        if (queries.length <= 0) return null;
 
-      return (
-        <ComposerBlock blockTitle={'Criteria'}
-          isOpen={criteriaTabOpen} 
-          onClick={() => {
-            setCriteriaTabOpen(!criteriaTabOpen)}}>
+        return (
+          <ComposerBlock blockTitle={'Criteria'}
+            isOpen={criteriaTabOpen}
+            onClick={() => {
+              setCriteriaTabOpen(!criteriaTabOpen)
+            }}>
             <div className={styles.criteria}>
               {renderEACrit()}
             </div>
-        </ComposerBlock>
-      );
-    } 
-    if(queryType === QUERY_TYPE_FUNNEL) {
-      if(queries.length <= 1) return null;
-      return (
-        <ComposerBlock blockTitle={'Criteria'}
-          isOpen={criteriaTabOpen} 
-          onClick={() => {
-            setCriteriaTabOpen(!criteriaTabOpen)}}>
-              {renderFuCrit()}
-            
-        </ComposerBlock>
-      );
-    }
-    
+          </ComposerBlock>
+        );
+      }
+      if (queryType === QUERY_TYPE_FUNNEL) {
+        if (queries.length <= 1) return null;
+        return (
+          <ComposerBlock blockTitle={'Criteria'}
+            isOpen={criteriaTabOpen}
+            onClick={() => {
+              setCriteriaTabOpen(!criteriaTabOpen)
+            }}>
+            {renderFuCrit()}
+
+          </ComposerBlock>
+        );
+      }
+    } catch (err) { console.log(err) }
+
   }
 
   const renderQueryList = () => {
-    return (
-      <ComposerBlock blockTitle={'Events'} isOpen={true} showIcon={false}>
-        {queryList()}
-      </ComposerBlock>
-    )
+    try {
+      return (
+        <ComposerBlock blockTitle={'Events'} isOpen={true} showIcon={false}>
+          {queryList()}
+        </ComposerBlock>
+      )
+    }
+    catch (err) {
+      console.log(err);
+    }
   }
 
   return (

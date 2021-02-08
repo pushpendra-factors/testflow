@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import AttributionTable from "../../CoreQuery/AttributionsResult/AttributionTable";
 import GroupedBarChart from "../../../components/GroupedBarChart";
 import { formatGroupedData } from "../../CoreQuery/AttributionsResult/utils";
+import { CHART_TYPE_BARCHART, CHART_TYPE_TABLE } from "../../../utils/constants";
 
 function DualTouchPoint({
   data,
@@ -14,8 +15,10 @@ function DualTouchPoint({
   chartType,
   unit,
   resultState,
-  setwidgetModal
+  setwidgetModal,
+  section,
 }) {
+  console.log(unit)
   const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
   const [chartsData, setChartsData] = useState([]);
   const [visibleIndices, setVisibleIndices] = useState(
@@ -59,44 +62,43 @@ function DualTouchPoint({
   };
   let chartContent = null;
 
-  if (chartType === "barchart") {
+  if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <div className="mt-4">
-        <GroupedBarChart
-          colors={getColors()}
-          categories={getCategories()}
-          chartData={chartsData}
-          visibleIndices={visibleIndices}
-          responseRows={data.rows}
-          responseHeaders={data.headers}
-          method1={attribution_method}
-          method2={attribution_method_compare}
-          event={event}
-        />
-      </div>
+      <GroupedBarChart
+        colors={getColors()}
+        categories={getCategories()}
+        chartData={chartsData}
+        visibleIndices={visibleIndices}
+        responseRows={data.rows}
+        responseHeaders={data.headers}
+        method1={attribution_method}
+        method2={attribution_method_compare}
+        event={event}
+        section={section}
+        height={225}
+        cardSize={unit.cardSize}
+      />
     );
   } else {
     chartContent = (
-      <div className="mt-4">
-        <AttributionTable
-          touchpoint={touchpoint}
-          linkedEvents={linkedEvents}
-          event={event}
-          data={data}
-          isWidgetModal={isWidgetModal}
-          visibleIndices={visibleIndices}
-          setVisibleIndices={setVisibleIndices}
-          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          attribution_method={attribution_method}
-          attribution_method_compare={attribution_method_compare}
-        />
-      </div>
+      <AttributionTable
+        touchpoint={touchpoint}
+        linkedEvents={linkedEvents}
+        event={event}
+        data={data}
+        isWidgetModal={isWidgetModal}
+        visibleIndices={visibleIndices}
+        setVisibleIndices={setVisibleIndices}
+        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+        attribution_method={attribution_method}
+        attribution_method_compare={attribution_method_compare}
+      />
     );
   }
 
   let tableContent = null;
 
-  if (chartType === "table") {
+  if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
         onClick={() => setwidgetModal({ unit, data: resultState.data })}
@@ -109,7 +111,9 @@ function DualTouchPoint({
   }
 
   return (
-    <div className="total-events w-full">
+    <div
+      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
+    >
       {chartContent}
       {tableContent}
     </div>

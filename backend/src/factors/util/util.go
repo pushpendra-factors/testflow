@@ -725,6 +725,12 @@ func GenerateHashStringForStruct(queryPayload interface{}) (string, error) {
 	return GenerateHash(queryCacheBytes), nil
 }
 
+// DeepCopy Deep copies a to b using json marshaling.
+func DeepCopy(a, b interface{}) {
+	byt, _ := json.Marshal(a)
+	json.Unmarshal(byt, b)
+}
+
 type Pair struct {
 	Key   string
 	Value int

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import AttributionTable from "./AttributionTable";
 import { formatGroupedData } from "./utils";
 import GroupedBarChart from "../../../components/GroupedBarChart";
+import { DASHBOARD_MODAL } from "../../../utils/constants";
 
 function GroupedAttributionsChart({
   data,
@@ -10,7 +11,8 @@ function GroupedAttributionsChart({
   attribution_method,
   attribution_method_compare,
   touchpoint,
-  linkedEvents
+  linkedEvents,
+  section,
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -55,7 +57,7 @@ function GroupedAttributionsChart({
   };
 
   return (
-    <div className="attribution-results">
+    <div className="flex items-center justify-center flex-col">
       <GroupedBarChart
         colors={getColors()}
         categories={getCategories()}
@@ -66,14 +68,15 @@ function GroupedAttributionsChart({
         method1={attribution_method}
         method2={attribution_method_compare}
         event={event}
+        section={section}
       />
-      <div className="mt-8">
+      <div className="mt-12 w-full">
         <AttributionTable
           touchpoint={touchpoint}
           linkedEvents={linkedEvents}
           event={event}
           data={data}
-          isWidgetModal={isWidgetModal}
+          isWidgetModal={section === DASHBOARD_MODAL}
           visibleIndices={visibleIndices}
           setVisibleIndices={setVisibleIndices}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}

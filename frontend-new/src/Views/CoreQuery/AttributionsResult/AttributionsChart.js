@@ -2,14 +2,15 @@ import React, { useState, useEffect } from "react";
 import { formatData } from "./utils";
 import BarLineChart from "../../../components/BarLineChart";
 import AttributionTable from "./AttributionTable";
+import { DASHBOARD_MODAL } from "../../../utils/constants";
 
 function AttributionsChart({
   data,
-  isWidgetModal,
   event,
   attribution_method,
   touchpoint,
   linkedEvents,
+  section
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -27,20 +28,21 @@ function AttributionsChart({
   }
 
   return (
-    <div className="attribution-results">
+    <div className="flex items-center justify-center flex-col">
       <BarLineChart
         responseRows={data.rows}
         responseHeaders={data.headers}
         chartData={chartsData}
         visibleIndices={visibleIndices}
+        section={section}
       />
-      <div className="mt-8">
+      <div className="mt-12 w-full">
         <AttributionTable
           linkedEvents={linkedEvents}
           touchpoint={touchpoint}
           event={event}
           data={data}
-          isWidgetModal={isWidgetModal}
+          isWidgetModal={section === DASHBOARD_MODAL}
           visibleIndices={visibleIndices}
           setVisibleIndices={setVisibleIndices}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}

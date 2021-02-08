@@ -4,7 +4,7 @@ import {
   getTableColumns,
   getTableData,
   getDateBaseTableColumns,
-  getDateBasedTableData
+  getDateBasedTableData,
 } from "./utils";
 import DataTable from "../../../../components/DataTable";
 
@@ -13,14 +13,25 @@ function NoBreakdownTable({
   chartType,
   isWidgetModal,
   frequency,
+  reportTitle = "CampaignAnalytics",
 }) {
-  let columns, data;
+  let columns = [],
+    data = [];
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState("");
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
   }, []);
+
+  const getCSVData = () => {
+    return {
+      fileName: `${reportTitle}.csv`,
+      data: data.map(({ index, ...rest }) => {
+        return rest;
+      }),
+    };
+  };
 
   if (chartType === CHART_TYPE_SPARKLINES) {
     columns = getTableColumns(chartsData, sorter, handleSorting);
@@ -43,6 +54,7 @@ function NoBreakdownTable({
       setSearchText={setSearchText}
       columns={columns}
       scroll={{ x: 250 }}
+      getCSVData={getCSVData}
       // rowSelection={rowSelection}
     />
   );

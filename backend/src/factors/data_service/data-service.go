@@ -44,6 +44,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  "data_server",
 		},
 		RedisHost: *redisHost,
 		RedisPort: *redisPort,

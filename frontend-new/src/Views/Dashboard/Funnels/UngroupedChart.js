@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { generateUngroupedChartsData } from "../../CoreQuery/FunnelsResultPage/utils";
 import Chart from "../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart";
 import FunnelsResultTable from "../../CoreQuery/FunnelsResultPage/FunnelsResultTable";
+import { CHART_TYPE_BARCHART, CHART_TYPE_TABLE } from "../../../utils/constants";
 
 function UngroupedChart({
   resultState,
@@ -28,34 +29,31 @@ function UngroupedChart({
 
   let chartContent = null;
 
-  if (chartType === "barchart") {
+  if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <div className="mt-4">
-        <Chart
-          title={title}
-          chartData={chartData}
-          cardSize={unit.cardSize}
-          arrayMapper={arrayMapper}
-        />
-      </div>
+      <Chart
+        title={title}
+        chartData={chartData}
+        cardSize={unit.cardSize}
+        arrayMapper={arrayMapper}
+        height={275}
+      />
     );
   } else {
     chartContent = (
-      <div className="mt-4">
-        <FunnelsResultTable
-          chartData={chartData}
-          breakdown={[]}
-          queries={queries}
-          groups={[]}
-          arrayMapper={arrayMapper}
-        />
-      </div>
+      <FunnelsResultTable
+        chartData={chartData}
+        breakdown={[]}
+        queries={queries}
+        groups={[]}
+        arrayMapper={arrayMapper}
+      />
     );
   }
 
   let tableContent = null;
 
-  if (chartType === "table") {
+  if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
         onClick={() => setwidgetModal({ unit, data: resultState.data })}
@@ -68,7 +66,9 @@ function UngroupedChart({
   }
 
   return (
-    <div className="total-events w-full">
+    <div
+      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
+    >
       {chartContent}
       {tableContent}
     </div>

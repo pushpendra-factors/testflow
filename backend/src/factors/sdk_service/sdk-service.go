@@ -74,6 +74,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  "sdk_server",
 		},
 		GeolocationFile:                  *geoLocFilePath,
 		DeviceDetectorPath:               *deviceDetectorPath,

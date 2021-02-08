@@ -55,12 +55,12 @@ func main() {
 		panic(err)
 	}
 
-	taskID := "Task#AddSession"
+	taskID := "add_session"
 	healthcheckPingID := C.HealthcheckAddSessionPingID
 	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	config := &C.Configuration{
-		AppName:            "add_session",
+		AppName:            taskID,
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -70,6 +70,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  taskID,
 		},
 		RedisHost:           *redisHost,
 		RedisPort:           *redisPort,

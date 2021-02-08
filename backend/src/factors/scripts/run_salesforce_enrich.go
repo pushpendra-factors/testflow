@@ -46,7 +46,7 @@ func main() {
 	dryRunSmartEvent := flag.Bool("dry_run_smart_event", false, "Dry run mode for smart event creation")
 
 	flag.Parse()
-	taskID := "Task#SalesforceEnrich"
+	taskID := "salesforce_enrich"
 	healthcheckPingID := C.HealthcheckSalesforceEnrichPingID
 	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
@@ -59,7 +59,7 @@ func main() {
 	}
 
 	config := &C.Configuration{
-		AppName:            "salesforce_enrich",
+		AppName:            taskID,
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -69,6 +69,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  taskID,
 		},
 		APIDomain:           *apiDomain,
 		SentryDSN:           *sentryDSN,

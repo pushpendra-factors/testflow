@@ -38,6 +38,7 @@ type UserSegmentV2 struct {
 	Start_Time                 time.Time
 	Event_attributes           EventAttributes
 	Event_decorators           map[string]map[string]map[string]float64
+	User_decorators            map[string]map[string]map[string]float64
 	User_attributes            UserAttributes
 	Set_attributes             bool
 	Rules                      map[string]AttributeRule

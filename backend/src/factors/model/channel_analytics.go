@@ -417,7 +417,9 @@ func GetAllChannelFilterValues(projectID uint64, filterObject, filterProperty st
 }
 
 // RunChannelGroupQuery - @TODO Kark v1
-func RunChannelGroupQuery(projectID uint64, queries []ChannelQueryV1, reqID string) (ChannelResultGroupV1, int) {
+func RunChannelGroupQuery(projectID uint64, queriesOriginal []ChannelQueryV1, reqID string) (ChannelResultGroupV1, int) {
+	queries := make([]ChannelQueryV1, 0, 0)
+	U.DeepCopy(&queriesOriginal, &queries)
 
 	var resultGroup ChannelResultGroupV1
 	resultGroup.Results = make([]ChannelQueryResultV1, len(queries))
@@ -441,7 +443,7 @@ func RunChannelGroupQuery(projectID uint64, queries []ChannelQueryV1, reqID stri
 func runSingleChannelQuery(projectID uint64, query ChannelQueryV1, resultHolder *ChannelResultGroupV1, index int, waitGroup *sync.WaitGroup, reqID string) {
 	environment := C.GetConfig().Env
 	defer waitGroup.Done()
-	defer U.GoRoutineRecovery(environment)
+	defer U.NotifyOnPanicWithError(environment, "app_server")
 	result, _ := ExecuteChannelQueryV1(projectID, &query, reqID)
 	(*resultHolder).Results[index] = *result
 }
@@ -488,8 +490,8 @@ func executeAllChannelsQueryV1(projectID uint64, query *ChannelQueryV1, reqID st
 	var unionQuery string
 	var unionParams []interface{}
 	var selectMetrics, columns []string
-	adwordsSQL, adwordsParams, adwordsMetrics, adwordsErr := GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
-	facebookSQL, facebookParams, _, facebookErr := GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
+	adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
+	facebookSQL, facebookParams, _, _, facebookErr := GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
 
 	if adwordsErr != nil {
 		return make([]string, 0, 0), [][]interface{}{}, adwordsErr
@@ -502,26 +504,24 @@ func executeAllChannelsQueryV1(projectID uint64, query *ChannelQueryV1, reqID st
 	facebookSQL = fmt.Sprintf("( %s )", facebookSQL[:len(facebookSQL)-2])
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
 		for _, metric := range adwordsMetrics {
-			value := fmt.Sprintf("%s(%s) as %s", adwordsMetricsToOperation[metric], metric, metric)
+			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
 			selectMetrics = append(selectMetrics, value)
 		}
-		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, channeAnalyticsLimit)
+		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads ORDER BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
-		columns = buildColumns(query, false)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
 		selectMetrics = append(selectMetrics, AliasDateTime)
 		for _, metric := range adwordsMetrics {
-			value := fmt.Sprintf("%s(%s) as %s", adwordsMetricsToOperation[metric], metric, metric)
+			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
 			selectMetrics = append(selectMetrics, value)
 		}
-		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads GROUP BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, AliasDateTime, channeAnalyticsLimit)
+		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads GROUP BY %s ORDER BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, AliasDateTime, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
-		columns = buildColumns(query, false)
 	} else {
-		unionQuery = fmt.Sprintf("SELECT * FROM ( %s UNION %s ) all_ads LIMIT 5000;", adwordsSQL, facebookSQL)
+		unionQuery = fmt.Sprintf("SELECT * FROM ( %s UNION %s ) all_ads ORDER BY %s %s;", adwordsSQL, facebookSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
-		columns = buildColumns(query, true)
 	}
+	columns = append(adwordsSelectKeys, adwordsMetrics...)
 	_, resultMetrics, err := ExecuteSQL(unionQuery, unionParams, logCtx)
 	return columns, resultMetrics, err
 }
@@ -547,7 +547,10 @@ func GetChannelFilterValues(projectID uint64, channel, filter string) ([]string,
 }
 
 // ExecuteChannelQuery - @Kark TODO v0
-func ExecuteChannelQuery(projectID uint64, query *ChannelQuery) (*ChannelQueryResult, int) {
+func ExecuteChannelQuery(projectID uint64, queryOriginal *ChannelQuery) (*ChannelQueryResult, int) {
+	var query *ChannelQuery
+	U.DeepCopy(queryOriginal, &query)
+
 	if !isValidChannel(query.Channel) || !isValidFilterKey(query.FilterKey) ||
 		query.From == 0 || query.To == 0 {
 		return nil, http.StatusBadRequest
@@ -570,25 +573,6 @@ func ExecuteChannelQuery(projectID uint64, query *ChannelQuery) (*ChannelQueryRe
 		return result, http.StatusOK
 	}
 	return nil, http.StatusBadRequest
-}
-
-func buildColumns(query *ChannelQueryV1, fetchSource bool) []string {
-	result := make([]string, 0, 0)
-	if fetchSource {
-		result = append(result, source)
-	}
-	for _, groupBy := range query.GroupBy {
-		result = append(result, groupBy.Object+"_"+groupBy.Property)
-	}
-
-	groupByTimeStamp := query.GetGroupByTimestamp()
-	if len(groupByTimeStamp) != 0 {
-		result = append(result, "datetime")
-	}
-	for _, selectMetrics := range query.SelectMetrics {
-		result = append(result, selectMetrics)
-	}
-	return result
 }
 
 // Common Methods for facebook and adwords starts here.
@@ -623,17 +607,18 @@ func appendSelectTimestampIfRequiredForChannels(stmnt string, groupByTimestamp s
 		getSelectTimestampByTypeForChannels(groupByTimestamp, timezone), AliasDateTime))
 }
 
+// TO change.
 // @Kark TODO v1
 func getSelectTimestampByTypeForChannels(timestampType, timezone string) string {
+
 	var selectTz string
+	var selectStr string
 
 	if timezone == "" {
 		selectTz = DefaultTimezone
 	} else {
 		selectTz = timezone
 	}
-
-	var selectStr string
 	if timestampType == GroupByTimestampHour {
 		selectStr = fmt.Sprintf("date_trunc('hour', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
 	} else if timestampType == GroupByTimestampWeek {
@@ -673,7 +658,7 @@ func ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([
 		return nil, nil, err
 	}
 	if len(resultRows) == 0 {
-		log.Error("Aggregate query returned zero rows.")
+		log.Warn("Aggregate query returned zero rows.")
 		return nil, make([][]interface{}, 0, 0), errors.New("no rows returned")
 	}
 	return columns, resultRows, nil

@@ -1,11 +1,18 @@
-import React from 'react';
-import UngroupedChart from './UngroupedChart';
-import GroupedChart from './GroupedChart';
+import React from "react";
+import UngroupedChart from "./UngroupedChart";
+import GroupedChart from "./GroupedChart";
 
 function Funnels({
-  breakdown, resultState, events, chartType, title, unit, setwidgetModal, arrayMapper
+  breakdown,
+  resultState,
+  events,
+  chartType,
+  title,
+  unit,
+  setwidgetModal,
+  arrayMapper,
+  section,
 }) {
-
   if (!breakdown.length) {
     return (
       <UngroupedChart
@@ -16,6 +23,7 @@ function Funnels({
         setwidgetModal={setwidgetModal}
         unit={unit}
         arrayMapper={arrayMapper}
+        section={section}
       />
     );
   } else {
@@ -29,6 +37,7 @@ function Funnels({
         title={title}
         setwidgetModal={setwidgetModal}
         arrayMapper={arrayMapper}
+        section={section}
       />
     );
   }

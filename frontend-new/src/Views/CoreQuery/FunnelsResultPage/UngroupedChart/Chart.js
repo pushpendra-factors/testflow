@@ -8,7 +8,7 @@ import {
 } from "../../../../utils/dataFormatter";
 import { UNGROUPED_FUNNEL_TICK_LENGTH } from "../../../../utils/constants";
 
-function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper }) {
+function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper, height: widgetHeight }) {
   const chartRef = useRef(null);
   const tooltip = useRef(null);
   const appliedColors = generateColors(chartData.length);
@@ -134,7 +134,7 @@ function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper }) {
       .html("")
       .append("svg")
       .attr("width", availableWidth)
-      .attr("height", 300)
+      .attr("height", widgetHeight || 300)
       .attr("id", `chart-${title}`);
     const svg = d3.select(`#chart-${title}`);
     const margin = {
@@ -242,11 +242,13 @@ function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper }) {
       })
 
       .attr("y", function (d) {
-        return yScale(d.value) < 200 ? yScale(d.value) + 20 : 220;
+        const boundHeight = height >= 300 ? 200 : 175;
+        return yScale(d.value) < boundHeight ? yScale(d.value) + 20 : boundHeight + 20;
       })
       .attr("class", "font-bold")
       .attr("fill", function (d) {
-        return yScale(d.value) < 200 ? "white" : "black";
+        const boundHeight = height >= 300 ? 200 : 175;
+        return yScale(d.value) < boundHeight ? "white" : "black";
       })
       .attr("text-anchor", "middle");
 
@@ -299,7 +301,7 @@ function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper }) {
           return `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4} ${x1},${y1}`;
         }
       });
-  }, [chartData, showTooltip, hideTooltip, appliedColors, title, arrayMapper]);
+  }, [chartData, showTooltip, hideTooltip, appliedColors, title, arrayMapper, widgetHeight]);
 
   const displayChart = useCallback(() => {
     drawChart();
@@ -330,7 +332,7 @@ function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper }) {
   });
 
   return (
-    <div id={`${title}-ungroupedChart`} className="ungrouped-chart">
+    <div id={`${title}-ungroupedChart`} className="w-full ungrouped-chart">
       <div
         id={`conversionText-${title}`}
         className="absolute flex items-center justify-end pr-1"

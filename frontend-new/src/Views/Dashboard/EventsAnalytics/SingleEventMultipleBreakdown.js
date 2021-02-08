@@ -7,16 +7,22 @@ import BarChart from "../../../components/BarChart";
 import LineChart from "../../../components/LineChart";
 import SingleEventMultipleBreakdownTable from "../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/SingleEventMultipleBreakdownTable";
 import { generateColors } from "../../../utils/dataFormatter";
+import {
+  ACTIVE_USERS_CRITERIA,
+  FREQUENCY_CRITERIA,
+  CHART_TYPE_TABLE,
+} from "../../../utils/constants";
 
 function SingleEventMultipleBreakdown({
   resultState,
   page,
   chartType,
-  title,
   breakdown,
   queries,
   unit,
   durationObj,
+  section,
+  setwidgetModal,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -63,51 +69,70 @@ function SingleEventMultipleBreakdown({
 
   let chartContent = null;
 
-  if (chartType === "barchart") {
-    chartContent = (
-      <div className="flex mt-4">
-        <BarChart title={title} chartData={visibleProperties} />
-      </div>
-    );
-  } else if (chartType === "table") {
-    chartContent = (
-      <div className="mt-4">
-        <SingleEventMultipleBreakdownTable
-          data={chartsData}
-          lineChartData={lineChartData}
-          breakdown={breakdown}
-          events={queries}
-          chartType={chartType}
-          setVisibleProperties={setVisibleProperties}
-          visibleProperties={visibleProperties}
-          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          originalData={resultState.data}
-          page={page}
-          durationObj={durationObj}
-        />
-      </div>
-    );
-  } else {
-    chartContent = (
-      <div className="flex mt-4">
-        <LineChart
-          arrayMapper={arrayMapper}
-          frequency={durationObj.frequency}
-          chartData={lineChartData}
-          appliedColors={appliedColors}
-          queries={visibleLabels}
-          reverseEventsMapper={reverseMapper}
-          eventsMapper={mapper}
-          setHiddenEvents={setHiddenProperties}
-          hiddenEvents={hiddenProperties}
-          isDecimalAllowed={page === "activeUsers" || page === "frequency"}
-          cardSize={unit.cardSize}
-        />
+  let tableContent = null;
+
+  if (chartType === CHART_TYPE_TABLE) {
+    tableContent = (
+      <div
+        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        style={{ color: "#5949BC" }}
+        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+      >
+        Show More &rarr;
       </div>
     );
   }
 
-  return <div className="total-events w-full">{chartContent}</div>;
+  if (chartType === "barchart") {
+    chartContent = (
+      <div className="flex mt-4">
+        <BarChart section={section} height={250} title={unit.id} chartData={visibleProperties} />
+      </div>
+    );
+  } else if (chartType === "table") {
+    chartContent = (
+      <SingleEventMultipleBreakdownTable
+        data={chartsData}
+        lineChartData={lineChartData}
+        breakdown={breakdown}
+        events={queries}
+        chartType={chartType}
+        setVisibleProperties={setVisibleProperties}
+        visibleProperties={visibleProperties}
+        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+        originalData={resultState.data}
+        page={page}
+        durationObj={durationObj}
+      />
+    );
+  } else {
+    chartContent = (
+      <LineChart
+        arrayMapper={arrayMapper}
+        frequency={durationObj.frequency}
+        chartData={lineChartData}
+        appliedColors={appliedColors}
+        queries={visibleLabels}
+        reverseEventsMapper={reverseMapper}
+        eventsMapper={mapper}
+        setHiddenEvents={setHiddenProperties}
+        hiddenEvents={hiddenProperties}
+        isDecimalAllowed={
+          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
+        }
+        cardSize={unit.cardSize}
+        section={section}
+        height={225}
+      />
+    );
+  }
+
+  return (
+    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
+      {chartContent}
+      {tableContent}
+    </div>
+  );
 }
 
 export default SingleEventMultipleBreakdown;

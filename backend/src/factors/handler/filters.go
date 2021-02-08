@@ -204,21 +204,24 @@ func GetSmartEventFiltersHandler(c *gin.Context) {
 		return
 	}
 
-	responsePayload := make([]*APISmartEventFilterResponePayload, len(eventNames))
+	var responsePayload []*APISmartEventFilterResponePayload
 	for i := 0; i < len(eventNames); i++ {
-		decFilterExp, err := M.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
-		if err != nil {
-			log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed to decode smart event filter expression on GetSmartEventFiltersHandler.")
-			continue
-		}
-
-		responsePayload[i] = &APISmartEventFilterResponePayload{
+		APISmartEventFilter := &APISmartEventFilterResponePayload{
 			ProjectID:   eventNames[i].ProjectId,
 			EventNameID: eventNames[i].ID,
 			EventName:   eventNames[i].Name,
-			FilterExpr:  *decFilterExp,
 		}
+
+		decFilterExp, err := M.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
+		if err == nil {
+			APISmartEventFilter.FilterExpr = *decFilterExp
+		} else {
+			log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed to decode smart event filter expression on GetSmartEventFiltersHandler.")
+		}
+
+		responsePayload = append(responsePayload, APISmartEventFilter)
 	}
+
 	c.JSON(http.StatusOK, responsePayload)
 }
 
