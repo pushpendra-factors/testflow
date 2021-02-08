@@ -72,7 +72,7 @@ function SparkLineChart({
 
     return (
       <div className={`flex items-center justify-center w-full ${!cardSize ? "flex-col" : ""}`}>
-        <div className="w-1/4">
+        <div className={cardSize? "w-1/4" : ''}>
           <ChartHeader bgColor="#4D7DB4" query={queries[0]} total={total} />
         </div>
         <div className="w-3/4">
