@@ -18,6 +18,9 @@ const NAME = PREFIX+"name";
 const FIRST_NAME = PREFIX+"first_name";
 const LAST_NAME = PREFIX+"last_name";
 
+// Events
+const EV_FORM_SUBMITTED = PREFIX + 'form_submitted';
+
 const isBotUserAgent = function(nAgt) {
     let lcaseAgt = nAgt.toLowerCase();
     // ref: https://stackoverflow.com/a/15047834, https://webmasters.stackexchange.com/a/64805
@@ -354,4 +357,6 @@ module.exports = {
     PAGE_SCROLL_PERCENT: PAGE_SCROLL_PERCENT,
     EMAIL: EMAIL,
     PHONE, PHONE,
+
+    EV_FORM_SUBMITTED: EV_FORM_SUBMITTED
 }

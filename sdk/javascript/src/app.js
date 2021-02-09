@@ -10,9 +10,10 @@ const Properties = require("./properties");
 
 const SDK_NOT_INIT_ERROR = new Error("Factors SDK is not initialized.");
 
+
 function isAllowedEventName(eventName) {
     // whitelisted $ event_name.
-    if (eventName == "$form_submitted") return true;
+    if (eventName == Properties.EV_FORM_SUBMITTED) return true;
 
     // Don't allow event_name starts with '$'.
     if (eventName.indexOf("$")  == 0) return false; 
@@ -83,6 +84,19 @@ function setLastPollerId(id) {
 function getLastPollerId() {
     return factorsWindow().lastPollerId;
 }
+
+function waitForGlobalKey(key, callback, timer = 0) {
+    if (window[key]) {
+      callback();
+    } else {
+    if(timer <= 10) {
+        logger.debug("Checking for key: times " + timer, false);
+        setTimeout(function() {
+            waitForGlobalKey(key, callback, timer + 1);
+        }, 10000);
+    }
+    }
+};
 
 const FACTORS_WINDOW_TIMEOUT_KEY_PREFIX = 'lastTimeoutId_';
 
@@ -192,6 +206,9 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
         })
         .then(function() {
             return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
+        })
+        .then(function() {
+            return _this.autoDriftEventsCapture(_this, true);
         })
         .catch(function(err) {
             logger.errorLine(err);
@@ -406,7 +423,7 @@ App.prototype.captureAndTrackFormSubmit = function(appInstance, formElement) {
 
     logger.debug("Capturing form submit with properties: "+JSON.stringify(properties), false);
 
-    appInstance.track("$form_submitted", properties);
+    appInstance.track(Properties.EV_FORM_SUBMITTED, properties);
 }
 
 App.prototype.captureAndTrackNonFormInput = function(appInstance) {
@@ -420,7 +437,28 @@ App.prototype.captureAndTrackNonFormInput = function(appInstance) {
 
     logger.debug("Capturing non-form submit with properties: "+JSON.stringify(properties), false);
 
-    appInstance.track("$form_submitted", properties);
+    appInstance.track(Properties.EV_FORM_SUBMITTED, properties);
+}
+
+App.prototype.autoDriftEventsCapture = function(appInstance, enabled) {
+    if (!enabled) return false; // not enabled.
+    waitForGlobalKey("drift", function() {
+        window.drift.on('phoneCapture', function (e) {
+            if(!FormCapture.isPhone(e.phone)) return null;
+            var props = {}
+            props[Properties.PHONE] = e.phone;
+            appInstance.track(Properties.EV_FORM_SUBMITTED, props);
+        });
+
+        window.drift.on('emailCapture', function (e) {
+            if((!e.data || !e.data.email) || !FormCapture.isEmail(e.data.email)) return null;
+            var props = {}
+            props[Properties.EMAIL] = e.data.email;
+            appInstance.track(Properties.EV_FORM_SUBMITTED, props);
+        });
+    });
+
+    return true;
 }
 
 App.prototype.autoFormCapture = function(enabled=false) {

@@ -42,7 +42,7 @@ function App({ isAgentLoggedIn, agent_details }) {
     } else {
       // PROD ENV
 
-      //intercom init and passing logged-in user-data
+      //intercom init and passing logged-in user-data 
     var APP_ID = "rvffkuu7";
     window.intercomSettings = {
       app_id: APP_ID,
