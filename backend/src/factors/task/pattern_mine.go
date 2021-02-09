@@ -1076,6 +1076,19 @@ func buildEventsFileOnProperties(tmpEventsFilePath string, efTmpPath string, efT
 
 }
 
+func buildEventsInfoForEncodedEvents(campEventsList []string, userAndEventsInfo *P.UserAndEventsInfo) *P.UserAndEventsInfo {
+	// add events info for campEventsList . This create empty numeric and categorical Key values for each event in encodedList
+	eMap := *userAndEventsInfo.EventPropertiesInfoMap
+	for _, eventName := range campEventsList {
+		// Initialize info.
+		eMap[eventName] = &P.PropertiesInfo{
+			NumericPropertyKeys:          make(map[string]bool),
+			CategoricalPropertyKeyValues: make(map[string]map[string]bool),
+		}
+	}
+	return userAndEventsInfo
+}
+
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
@@ -1119,7 +1132,9 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")
 		return "", 0, err
 	}
-	// campEventsList = nil
+
+	userAndEventsInfo = buildEventsInfoForEncodedEvents(campEventsList, userAndEventsInfo)
+
 	mineLog.Info("Successfully Built events data and written to file.")
 	mineLog.Info("Number of Campaign events:", len(campEventsList))
 	repeatedEvents := GetAllRepeatedEvents(eventNames, campEventsList)

@@ -300,12 +300,11 @@ func buildPropertiesHistogramTemplates(
 					eventPropertiesCTemplate = append(eventPropertiesCTemplate, cptu)
 				}
 			} else {
-				//TODO(vinith) bandaid code need to be removed
-				if !IsEncodedEvent(events[i]) {
-					log.Error(fmt.Sprintf(
-						"Missing info for event %s in pattern %s. Not building event histogram templates.",
-						events[i], events))
-				}
+
+				log.Error(fmt.Sprintf(
+					"Missing info for event %s in pattern %s. Not building event histogram templates.",
+					events[i], events))
+
 				return &userPropertiesNTemplate, &userPropertiesCTemplate, nil, nil, nil
 			}
 		}
