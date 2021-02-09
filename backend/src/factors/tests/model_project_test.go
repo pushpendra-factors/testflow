@@ -160,8 +160,16 @@ func TestCreateDefaultProjectForAgent(t *testing.T) {
 }
 
 func TestNextSessionStartTimestampForProject(t *testing.T) {
-	project, err := SetupProjectReturnDAO()
-	assert.Nil(t, err)
+	// Create project without resetting next session start timestamp.
+	createAgentParams := &M.CreateAgentParams{Agent: &M.Agent{FirstName: getRandomName(),
+		LastName: getRandomName(), Email: getRandomEmail(), Phone: "123456789"}, PlanCode: M.FreePlanCode}
+	createdAgent, errCode := M.CreateAgentWithDependencies(createAgentParams)
+	assert.Equal(t, http.StatusCreated, errCode)
+	billingAccount, errCode := M.GetBillingAccountByAgentUUID(createdAgent.Agent.UUID)
+	assert.Equal(t, http.StatusFound, errCode)
+	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: U.RandomLowerAphaNumString(15)},
+		createdAgent.Agent.UUID, M.ADMIN, billingAccount.ID)
+	assert.Equal(t, http.StatusCreated, errCode)
 
 	assert.NotNil(t, project.JobsMetadata)
 	jobsMetadata, err := U.DecodePostgresJsonb(project.JobsMetadata)
