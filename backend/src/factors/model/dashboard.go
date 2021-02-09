@@ -49,7 +49,6 @@ var types = []string{DashboardTypePrivate, DashboardTypeProjectVisible}
 
 const AgentProjectPersonalDashboardName = "My Dashboard"
 const AgentProjectPersonalDashboardDescription = "No Description"
-const DashboardCachingDurationInSeconds = 32 * 24 * 60 * 60 // 32 days.
 
 func isValidDashboard(dashboard *Dashboard) bool {
 	if dashboard.Name == "" {
@@ -450,7 +449,7 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 		return
 	}
 
-	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), DashboardCachingDurationInSeconds)
+	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return

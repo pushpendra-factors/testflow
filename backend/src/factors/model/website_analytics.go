@@ -1717,7 +1717,7 @@ func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
 		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult")
 		return
 	}
-	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), DashboardCachingDurationInSeconds)
+	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), U.GetDashboardCacheResultExpiryInSeconds(from, to))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return

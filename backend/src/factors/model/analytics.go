@@ -1099,11 +1099,10 @@ func getQueryCacheRedisKeySuffix(hashString string, from, to int64) string {
 }
 
 func getQueryCacheResultExpiry(from, to int64) float64 {
-	if to-from == DateRangePreset2MinInSeconds || to-from == DateRangePreset30MinInSeconds ||
-		U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
+	if to-from == DateRangePreset2MinInSeconds || to-from == DateRangePreset30MinInSeconds {
 		return QueryCacheMutableResultExpirySeconds
 	}
-	return QueryCacheImmutableResultExpirySeconds
+	return U.GetQueryCacheResultExpiryInSeconds(from, to)
 }
 
 // GetQueryResultFromCache To get value from cache for a particular query payload.
