@@ -12,6 +12,7 @@ const ViewSetup = ({ activeProject }) => {
   // eslint-disable-next-line
   const assetURL = BUILD_CONFIG.sdk_asset_url;
 
+
   return (
     <Row>
           <Col span={24}>
@@ -45,62 +46,84 @@ const ViewSetup = ({ activeProject }) => {
   );
 };
 
-const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings }) => {
+const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings, agents, currentAgent }) => {
+  const [enableEdit, setEnableEdit] = useState(false);
+
   const currentProjectId = activeProject.id;
 
-  const toggleAutoTrack = (checked) => {
+  useEffect(() => {
+    setEnableEdit(false);
+    agents && currentAgent && agents.map((agent) => {
+      console.log(agent,currentAgent);
+      if (agent.uuid === currentAgent.uuid) {
+        if (agent.role === 1) {
+          setEnableEdit(true);
+        }
+      }
+    }); 
+  }, [activeProject, agents, currentAgent]);
+
+
+  const toggleAutoTrack = (checked) => { 
     udpateProjectSettings(currentProjectId, { auto_track: checked }).catch((err) => {
       console.log('Oops! something went wrong-->', err);
       message.error('Oops! something went wrong.');
-    });
+    }); 
   };
 
-  const toggleExcludeBot = (checked) => {
-    udpateProjectSettings(currentProjectId, { exclude_bot: checked }).catch((err) => {
-      console.log('Oops! something went wrong-->', err);
-      message.error('Oops! something went wrong.');
-    });
+  const toggleExcludeBot = (checked) => { 
+      udpateProjectSettings(currentProjectId, { exclude_bot: checked }).catch((err) => {
+        console.log('Oops! something went wrong-->', err);
+        message.error('Oops! something went wrong.');
+      }); 
   };
 
-  const toggleAutoFormCapture = (checked) => {
-    udpateProjectSettings(currentProjectId, { auto_form_capture: checked }).catch((err) => {
-      console.log('Oops! something went wrong-->', err);
-      message.error('Oops! something went wrong.');
-    });
+  const toggleAutoFormCapture = (checked) => { 
+      udpateProjectSettings(currentProjectId, { auto_form_capture: checked }).catch((err) => {
+        console.log('Oops! something went wrong-->', err);
+        message.error('Oops! something went wrong.');
+      });  
   };
+ 
+ 
+
 
   return (
     <Row>
+      {enableEdit &&  <Col span={24}>
+        <Text type={'title'} level={7}  color={'grey'} extraClass={'m-0 my-2'}>*Only Admin(s) can change configurations.</Text>
+    </Col>
+      }
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-2'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" onChange={toggleAutoTrack} defaultChecked={currentProjectSettings.auto_track} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On"  disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoTrack} defaultChecked={currentProjectSettings.auto_track} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
-      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Track standard events such as page_view, page_load time, page_spent_time and button clicks for each user</Text>
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" onChange={toggleExcludeBot} defaultChecked={currentProjectSettings.exclude_bot} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleExcludeBot} defaultChecked={currentProjectSettings.exclude_bot} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
-      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Automatically exclude bot traffic from website traffic using Factor’s proprietary algorithm</Text>
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" onChange={toggleAutoFormCapture} defaultChecked={currentProjectSettings.auto_form_capture} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" disabled={enableEdit} unCheckedChildren="OFF" onChange={toggleAutoFormCapture} defaultChecked={currentProjectSettings.auto_form_capture} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
-      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Automatically track personal identification information such as email and phone number from Form Submissions</Text>
     </Col>
     </Row>
   );
 };
 
 function EditUserDetails({
-  activeProject, fetchProjectSettings, currentProjectSettings, udpateProjectSettings
+  activeProject, fetchProjectSettings, currentProjectSettings, udpateProjectSettings, agents, currentAgent
 }) {
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -130,7 +153,13 @@ function EditUserDetails({
                   <ViewSetup currentProjectSettings={currentProjectSettings} activeProject={activeProject} />
                 </TabPane>
                 <TabPane tab="Configuration" key="2">
-                  <JSConfig udpateProjectSettings={udpateProjectSettings} currentProjectSettings={currentProjectSettings} activeProject={activeProject} />
+                  <JSConfig 
+                  udpateProjectSettings={udpateProjectSettings} 
+                  currentProjectSettings={currentProjectSettings} 
+                  activeProject={activeProject}
+                  agents={agents}
+                  currentAgent={currentAgent}
+                   />
                 </TabPane>
               </Tabs>
             }
@@ -145,7 +174,9 @@ function EditUserDetails({
 const mapStateToProps = (state) => {
   return {
     currentProjectSettings: state.global.currentProjectSettings,
-    activeProject: state.global.active_project
+    activeProject: state.global.active_project,
+    agents: state.agent.agents, 
+    currentAgent: state.agent.agent_details
   };
 };
 export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings })(EditUserDetails);

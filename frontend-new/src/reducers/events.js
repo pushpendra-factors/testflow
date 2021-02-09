@@ -28,6 +28,12 @@ var host = BUILD_CONFIG.backend_host;
           case 'SAVE_SMART_EVENTS_REJECTED': {
             return { ...state, error: action.payload };
           } 
+          case 'FETCH_SPECIFICPROPERTIESVALUE_FULFILLED': {
+            return { ...state, specificPropertiesData: action.payload };
+          } 
+          case 'FETCH_SPECIFICPROPERTIESVALUE_REJECTED': {
+            return { ...state, error: action.payload };
+          } 
           
         }
         return state;
@@ -73,6 +79,22 @@ export function fetchObjectPropertiesbySource(projectID,source,dataObj) {
                 resolve(response)
               }).catch((err)=>{        
                 dispatch({type:"FETCH_OBJECTPROPERTIESBYSOURCE_REJECTED", payload: err});
+                reject(err);
+              });
+          });
+        }
+} 
+
+    
+export function fetchSpecificPropertiesValue(projectID,source,dataObj,propName) {
+        return function(dispatch) {
+          return new Promise((resolve,reject) => {
+            get(dispatch, host + "projects/"+projectID+'/v1/crm/'+source+'/'+dataObj+'/properties/'+propName+'/values')
+              .then((response)=>{        
+                dispatch({type:"FETCH_SPECIFICPROPERTIESVALUE_FULFILLED", payload: response.data});
+                resolve(response)
+              }).catch((err)=>{        
+                dispatch({type:"FETCH_SPECIFICPROPERTIESVALUE_REJECTED", payload: err});
                 reject(err);
               });
           });

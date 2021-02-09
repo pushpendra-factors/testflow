@@ -12,9 +12,17 @@
       }
     }
 
-    .ant-tabs-ink-bar {
-      background: $fa-color--brand-color;
-    }
+        .ant-tabs-ink-bar {
+            background: $fa-color--brand-color;
+        }
+        .ant-tabs-tab
+        {
+            &.ant-tabs-tab-disabled{
+                // background-color: $fa-color--mono-1;
+                opacity: 0.3;   
+            } 
+        }
+    
   }
 }
 

@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Form, Input, Button, Tabs, Select, message, Radio
-} from 'antd';
+  Row, Col, Form, Input, Button, Tabs, Select, message, Radio, Menu, Dropdown
+} from 'antd'; 
+import { DownOutlined } from '@ant-design/icons';
 import { Text } from 'factorsComponents'; 
 import { connect } from 'react-redux'; 
-import {saveSmartEvents, fetchSmartEvents, fetchObjectPropertiesbySource} from 'Reducers/events';
+import {saveSmartEvents, fetchSmartEvents, fetchObjectPropertiesbySource, fetchSpecificPropertiesValue} from 'Reducers/events';
 import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware'; 
 import _ from 'lodash';
 const { TabPane } = Tabs; 
 const { Option, OptGroup } = Select;
 
-function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, fetchObjectPropertiesbySource, setShowSmartEventForm, saveSmartEvents, activeProject, events}) { 
+function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesData, fetchSmartEvents, fetchSpecificPropertiesValue, fetchObjectPropertiesbySource, setShowSmartEventForm, saveSmartEvents, activeProject, events}) { 
     
     const [loading, setLoading] = useState(false); 
     const [errorInfo, seterrorInfo] = useState(null);
@@ -18,8 +19,15 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
     const [dataObject, setDataObject] = useState(null);
     const [dataObjectProperty, setDataObjectProperty] = useState('');
     const [timestampReferenceOthers, setTimestampReferenceOthers] = useState(false);
+    const [specificEvaluation, setSpecificEvaluation] = useState(false);
     const [objPropertiesSourceArr, setobjPropertiesSourceArr] = useState(null);
     const [objPropertiesSourceArrDT, setobjPropertiesSourceArrDT] = useState(null);
+    
+    // Specific Rules
+    const [currOperator, setCurrOperator] = useState('EQUAL'); 
+    const [lastOperator, setLastOperator] = useState('EQUAL');
+    const [currVal, setCurrVal] = useState('');
+    const [lastVal, setLastVal] = useState(''); 
     
     const [form] = Form.useForm();
      
@@ -35,11 +43,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
               "logical_op": "AND",
               "property_name": "string",
               "rules": [
-                {
-                  "gen": "curr",
-                  "op": "EQUAL",
-                  "value": {}
-                }
+                 
               ]
             }
           ],
@@ -51,6 +55,42 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
         },
         "name": "string"
       };
+
+      const supportedOperators = [
+            'EQUAL',
+            'NOT EQUAL',
+            'GREATER THAN',
+            'LESS THAN',
+            'CONTAINS',
+            'NOT CONTAINS',
+            ];
+
+      const operatorsCurrMenu = (
+        <Menu>
+        {supportedOperators.map(((item,index)=>{
+            return (
+            <Menu.Item key={index}>
+                <a className={'capitalize'} onClick={()=>setCurrOperator(item)}>
+                    {item.toLowerCase()}
+                </a>
+            </Menu.Item> 
+            )
+        }))}
+        </Menu>
+      );
+      const operatorsLastMenu = (
+        <Menu>
+        {supportedOperators.map(((item,index)=>{
+            return (
+            <Menu.Item key={index}>
+                <a className={'capitalize'} onClick={()=>setLastOperator(item)}>
+                    {item.toLowerCase()}
+                </a>
+            </Menu.Item> 
+            )
+        }))}
+        </Menu>
+      );
       
     const onFinish = data => {
         setLoading(true); 
@@ -71,8 +111,13 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
                       "rules": data.property_evaluation_type == 'any' ? [] : [
                         {
                           "gen": "curr",
-                          "op": "EQUAL",
-                          "value": {}
+                          "op": currOperator,
+                          "value": currVal
+                        },
+                        {
+                          "gen": "last",
+                          "op": lastOperator,
+                          "value": lastVal
                         }
                       ]
                     }
@@ -81,6 +126,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
             }
 
         } 
+
         saveSmartEvents(activeProject.id,finalData).then((data)=>{ 
             message.success('Smart Event Added!');
             fetchSmartEvents(activeProject.id);
@@ -100,6 +146,14 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
         }
         else{
               setTimestampReferenceOthers(false) 
+          }
+      }
+      const onChangeRuleforEvaluation = (e) => { 
+         if(e.target.value == "specific"){
+            setSpecificEvaluation(true)
+        }
+        else{
+              setSpecificEvaluation(false) 
           }
       }
 
@@ -147,6 +201,12 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
 
       },[objPropertiesSource]) 
 
+      useEffect(()=>{
+          if(dataObjectSource && dataObject && dataObjectProperty){
+              fetchSpecificPropertiesValue(activeProject.id,dataObjectSource, dataObject,dataObjectProperty); 
+          }
+      },[dataObjectProperty])
+ 
   return (
     <>
      
@@ -181,7 +241,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
                                 <Text type={'title'} level={7} extraClass={'m-0'}>Display Name</Text>
                                 <Form.Item
                                         name="name"
-                                        rules={[{ required: true, message: 'Please input displayt name.' }]}
+                                        rules={[{ required: true, message: 'Please input display name.' }]}
                                 >
                                 <Input disabled={loading} size="large" className={'fa-input w-full'} placeholder="Display Name" />
                                         </Form.Item>
@@ -256,20 +316,24 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
                                 </Col>
                             </Row>
                             }
+                            { dataObject &&
                             <Row className={'mt-8'}>
                                 <Col span={18}> 
                                     <Text type={'title'} level={7} extraClass={'m-0'}>Rule for evaluation</Text>
                                     <Form.Item
                                     name="property_evaluation_type"
                                     className={'m-0'} 
+                                    rules={[{ required: true, message: 'Please select a property evaluation type.' }]}
                                     > 
-                                                <Radio.Group>
+                                                <Radio.Group onChange={e=>onChangeRuleforEvaluation(e)}>
                                                     <Radio value={'any'}>Any change in property</Radio>
-                                                    <Radio value={'specific'} disabled>Specific change in property</Radio> 
+                                                    <Radio value={'specific'}>Specific change in property</Radio> 
                                                 </Radio.Group> 
                                     </Form.Item>
                                 </Col>
                             </Row>
+                            }
+                           
                             {dataObject && <>
                             <Row className={'mt-8'}>
                                 <Col span={18}>
@@ -305,14 +369,57 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
                             </Row>
                             </>
                             }
+                             { dataObject && specificEvaluation && dataObjectProperty &&
+                            <Row className={'mt-8'}>
+                                <Col span={24}> 
+                                    <div className={'flex items-center'}>
+                                        <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>New Value</Text>
+                                        <div>
+                                        <Dropdown overlay={operatorsCurrMenu}>
+                                            <a className="ant-dropdown-link capitalize" onClick={e => e.preventDefault()}>
+                                            {currOperator.toLowerCase()} <DownOutlined />
+                                            </a>
+                                        </Dropdown>
+                                        </div>
+                                        <div className={'ml-2'}>
+                                            <Select defaultValue={specificPropertiesData?.[0]} value={specificPropertiesData?.[0]}  onChange={(value)=>setCurrVal(value)} className={'fa-select w-full ml-2'} placeholder={'Object Property'}>
+                                                {
+                                                specificPropertiesData?.map((item)=>{ 
+                                                    return <Option key={item} value={item}>{item}</Option>  
+                                                })} 
+                                            </Select>
+                                        </div>
+                                        <Text type={'title'} level={7} extraClass={'m-0 mx-2'}>and previous value</Text>
+                                        <div>
+                                        <Dropdown overlay={operatorsLastMenu}>
+                                            <a className="ant-dropdown-link capitalize" onClick={e => e.preventDefault()}>
+                                            {lastOperator.toLowerCase()} <DownOutlined />
+                                            </a>
+                                        </Dropdown>
+                                        </div>
+                                        <div  className={'ml-2'}>
+                                            <Select defaultValue={specificPropertiesData?.[0]} value={specificPropertiesData?.[0]}  onChange={(value)=>setLastVal(value)} className={'fa-select w-full'} placeholder={'Object Property'}>
+                                                {
+                                                specificPropertiesData?.map((item)=>{ 
+                                                    return <Option key={item} value={item}>{item}</Option>  
+                                                })} 
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </Col>
+                                <Col span={24}> 
+                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Previous and current values of the object property will be available as smart event properties</Text> 
+                                </Col>
+                            </Row> }
 
+                            { dataObject &&
                             <Row className={'mt-8'}>
                                 <Col span={18}> 
                                     <Text type={'title'} level={7} extraClass={'m-0'}>Select time of event</Text>
                                     <Form.Item 
                                     name="timestamp_reference_field"
                                     className={'m-0'} 
-                                    rules={[{ required: true }]}
+                                    rules={[{ required: true, message: 'Please select a time of event' }]}
                                     > 
                                                 <Radio.Group onChange={(value)=>settimestampReference(value)}>
                                                     <Radio value={'timestamp_in_track'}>Factors recieved time</Radio>
@@ -321,6 +428,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
                                     </Form.Item>
                                 </Col>
                             </Row>
+                            }
 
                             {timestampReferenceOthers &&
                             <Row className={'mt-0'}>
@@ -364,8 +472,9 @@ function SmartEventsForm({smart_events, objPropertiesSource, fetchSmartEvents, f
 const mapStateToProps = (state) => ({
     smart_events: state.events.smart_events,
     objPropertiesSource: state.events.objPropertiesSource,
+    specificPropertiesData: state.events.specificPropertiesData,
     activeProject: state.global.active_project, 
     events: state.coreQuery.eventOptions
   });
 
-  export default connect(mapStateToProps, {saveSmartEvents, fetchSmartEvents, fetchEventNames, fetchObjectPropertiesbySource})(SmartEventsForm); 
+  export default connect(mapStateToProps, {saveSmartEvents, fetchSmartEvents, fetchEventNames, fetchSpecificPropertiesValue, fetchObjectPropertiesbySource})(SmartEventsForm); 
