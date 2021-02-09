@@ -1427,7 +1427,7 @@ func (pg *Postgres) cacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnal
 }
 
 // GetWebAnalyticsEnabledProjectIDsFromList Returns only project ids for which web analytics is enabled.
-func GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs string) []uint64 {
+func (pg *Postgres) GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs string) []uint64 {
 	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(stringProjectIDs, excludeProjectIDs)
 	allWebAnalyticsProjectIDs, errCode := getWebAnalyticsEnabledProjectIDs()
 	if errCode != http.StatusFound {
@@ -1454,7 +1454,7 @@ func GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectID
 
 // CacheWebsiteAnalyticsForProjects Runs for all the projectIDs passed as comma separated.
 func (pg *Postgres) CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int) {
-	projectIDsToRun := GetWebAnalyticsEnabledProjectIDsFromList(stringProjectsIDs, excludeProjectIDs)
+	projectIDsToRun := pg.GetWebAnalyticsEnabledProjectIDsFromList(stringProjectsIDs, excludeProjectIDs)
 
 	var waitGroup sync.WaitGroup
 	count := 0

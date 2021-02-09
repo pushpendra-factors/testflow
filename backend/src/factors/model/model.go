@@ -89,6 +89,8 @@ type Model interface {
 	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int)
 	CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup)
+	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string)
+	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string)
 
 	// dashboard
 	CreateDashboard(projectID uint64, agentUUID string, dashboard *model.Dashboard) (*model.Dashboard, int)
@@ -333,6 +335,9 @@ type Model interface {
 	CreateWebAnalyticsDefaultDashboardWithUnits(projectID uint64, agentUUID string) int
 	ExecuteWebAnalyticsQueries(projectID uint64, queries *model.WebAnalyticsQueries) (queryResult *model.WebAnalyticsQueryResult, errCode int)
 	CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int)
+	GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs string) []uint64
+	GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]model.WebAnalyticsCachePayload, int, string)
+	CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload) int
 
 	// journey_mining
 	GetWeightedJourneyMatrix(projectID uint64, journeyEvents []model.QueryEventWithProperties,

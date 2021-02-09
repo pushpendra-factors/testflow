@@ -14,12 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// DashboardUnitCachePayload Payload for dashboard caching method.
-type DashboardUnitCachePayload struct {
-	DashboardUnit model.DashboardUnit
-	BaseQuery     model.BaseQuery
-}
-
 func isValidDashboardUnit(dashboardUnit *model.DashboardUnit) (bool, string) {
 	if dashboardUnit.DashboardId == 0 {
 		return false, "Invalid dashboard"
@@ -528,7 +522,7 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 			return
 		}
 		baseQuery.SetQueryDateRange(from, to)
-		cachePayload := DashboardUnitCachePayload{
+		cachePayload := model.DashboardUnitCachePayload{
 			DashboardUnit: dashboardUnit,
 			BaseQuery:     baseQuery,
 		}
@@ -538,7 +532,7 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 }
 
 // CacheDashboardUnitForDateRange To cache a dashboard unit for the given range.
-func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload) (int, string) {
+func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string) {
 	dashboardUnit := cachePayload.DashboardUnit
 	baseQuery := cachePayload.BaseQuery
 	projectID := dashboardUnit.ProjectID
@@ -598,7 +592,7 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload DashboardUnitCac
 	return http.StatusOK, ""
 }
 
-func (pg *Postgres) cacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload,
+func (pg *Postgres) cacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload,
 	waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	dashboardUnit := cachePayload.DashboardUnit

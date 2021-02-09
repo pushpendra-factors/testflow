@@ -38,6 +38,19 @@ type DashboardUnitRequestPayload struct {
 	Settings *postgres.Jsonb `json:"settings"`
 }
 
+// DashboardUnitCachePayload Payload for dashboard caching method.
+type DashboardUnitCachePayload struct {
+	DashboardUnit DashboardUnit
+	BaseQuery     BaseQuery
+}
+
+type BeamDashboardUnitCachePayload struct {
+	DashboardUnit DashboardUnit
+	QueryClass    string
+	Query         postgres.Jsonb
+	From, To      int64
+}
+
 func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, from, to int64) (*cacheRedis.Key, error) {
 	prefix := "dashboard:query"
 	var suffix string

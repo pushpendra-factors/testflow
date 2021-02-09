@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"factors/model/model"
+	"factors/model/store"
 	"flag"
 	"fmt"
 	"net"
@@ -15,7 +17,6 @@ import (
 	"time"
 
 	C "factors/config"
-	M "factors/model"
 	U "factors/util"
 
 	"github.com/apache/beam/sdks/go/pkg/beam"
@@ -127,7 +128,7 @@ func emitIndividualProjectID(ctx context.Context, projectIDsString string, emit 
 	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
 	if allProjects {
 		var errCode int
-		projectIDs, errCode = M.GetAllProjectIDs()
+		projectIDs, errCode = store.GetStore().GetAllProjectIDs()
 		if errCode != http.StatusFound {
 			return
 		}
@@ -141,19 +142,19 @@ type getDashboardUnitCachePayloadsFn struct {
 	Config *C.Configuration
 }
 
-func (f *getDashboardUnitCachePayloadsFn) StartBundle(ctx context.Context, emit func(M.BeamDashboardUnitCachePayload)) {
+func (f *getDashboardUnitCachePayloadsFn) StartBundle(ctx context.Context, emit func(model.BeamDashboardUnitCachePayload)) {
 	log.Info("Initializing conf from StartBundle getDashboardUnitCachePayloadsFn")
 	initConf(f.Config)
 }
 
-func (f *getDashboardUnitCachePayloadsFn) FinishBundle(ctx context.Context, emit func(M.BeamDashboardUnitCachePayload)) {
+func (f *getDashboardUnitCachePayloadsFn) FinishBundle(ctx context.Context, emit func(model.BeamDashboardUnitCachePayload)) {
 	log.Info("Closing DB Connection from FinishBundle getDashboardUnitCachePayloadsFn")
 	C.GetServices().Db.Close()
 	C.SafeFlushAllCollectors()
 }
 
 func (f *getDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, projectsToRunString string,
-	emit func(M.BeamDashboardUnitCachePayload)) {
+	emit func(model.BeamDashboardUnitCachePayload)) {
 
 	projectIDSplit := strings.Split(projectsToRunString, "|")
 	stringProjectIDs := strings.TrimSpace(projectIDSplit[0])
@@ -164,7 +165,7 @@ func (f *getDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
 	if allProjects {
 		var errCode int
-		allProjectIDs, errCode := M.GetAllProjectIDs()
+		allProjectIDs, errCode := store.GetStore().GetAllProjectIDs()
 		if errCode != http.StatusFound {
 			return
 		}
@@ -176,17 +177,17 @@ func (f *getDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 	}
 
 	for _, projectID := range projectIDs {
-		dashboardUnits, errCode := M.GetDashboardUnitsForProjectID(uint64(projectID))
+		dashboardUnits, errCode := store.GetStore().GetDashboardUnitsForProjectID(uint64(projectID))
 		if errCode != http.StatusFound {
 			continue
 		}
 
 		for _, dashboardUnit := range dashboardUnits {
-			queryClass, errMsg := M.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
-			if errMsg == "" && queryClass != M.QueryClassWeb {
+			queryClass, errMsg := store.GetStore().GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+			if errMsg == "" && queryClass != model.QueryClassWeb {
 				for _, rangeFunction := range U.QueryDateRangePresets {
 					from, to := rangeFunction()
-					cachePayload := M.BeamDashboardUnitCachePayload{
+					cachePayload := model.BeamDashboardUnitCachePayload{
 						DashboardUnit: dashboardUnit,
 						QueryClass:    queryClass,
 						Query:         dashboardUnit.Query,
@@ -216,24 +217,24 @@ func (f *cacheDashboardUnitDoFn) FinishBundle(ctx context.Context, emit func(Cac
 }
 
 func (f *cacheDashboardUnitDoFn) ProcessElement(ctx context.Context,
-	beamCachePayload M.BeamDashboardUnitCachePayload, emit func(CacheResponse)) {
+	beamCachePayload model.BeamDashboardUnitCachePayload, emit func(CacheResponse)) {
 
 	getLogContext().WithFields(log.Fields{
 		"Time":     time.Now().UnixNano() / 1000,
 		"TimeType": "Start",
 	}).Info("ProcessElement log cacheDashboardUnitDoFn")
 
-	baseQuery, err := M.DecodeQueryForClass(beamCachePayload.Query, beamCachePayload.QueryClass)
+	baseQuery, err := model.DecodeQueryForClass(beamCachePayload.Query, beamCachePayload.QueryClass)
 	if err != nil {
 		return
 	}
 	baseQuery.SetQueryDateRange(beamCachePayload.From, beamCachePayload.To)
-	cachePayload := M.DashboardUnitCachePayload{
+	cachePayload := model.DashboardUnitCachePayload{
 		DashboardUnit: beamCachePayload.DashboardUnit,
 		BaseQuery:     baseQuery,
 	}
 	startTime := U.TimeNowUnix()
-	errCode, errMsg := M.CacheDashboardUnitForDateRange(cachePayload)
+	errCode, errMsg := store.GetStore().CacheDashboardUnitForDateRange(cachePayload)
 	timeTaken := U.TimeNowUnix() - startTime
 
 	dashboardUnit := cachePayload.DashboardUnit
@@ -260,27 +261,27 @@ type getWebAnalyticsCachePayloadsFn struct {
 	Config *C.Configuration
 }
 
-func (f *getWebAnalyticsCachePayloadsFn) StartBundle(ctx context.Context, emit func(M.WebAnalyticsCachePayload)) {
+func (f *getWebAnalyticsCachePayloadsFn) StartBundle(ctx context.Context, emit func(model.WebAnalyticsCachePayload)) {
 	log.Info("Initializing conf from StartBundle getWebAnalyticsCachePayloadsFn")
 	initConf(f.Config)
 }
 
-func (f *getWebAnalyticsCachePayloadsFn) FinishBundle(ctx context.Context, emit func(M.WebAnalyticsCachePayload)) {
+func (f *getWebAnalyticsCachePayloadsFn) FinishBundle(ctx context.Context, emit func(model.WebAnalyticsCachePayload)) {
 	log.Info("Closing DB Connection from FinishBundle getWebAnalyticsCachePayloadsFn")
 	C.GetServices().Db.Close()
 	C.SafeFlushAllCollectors()
 }
 
 func (f *getWebAnalyticsCachePayloadsFn) ProcessElement(ctx context.Context, projectsToRunString string,
-	emit func(M.WebAnalyticsCachePayload)) {
+	emit func(model.WebAnalyticsCachePayload)) {
 
 	projectIDSplit := strings.Split(projectsToRunString, "|")
 	stringProjectIDs := strings.TrimSpace(projectIDSplit[0])
 	excludeProjectIDs := strings.TrimSpace(projectIDSplit[1])
 
-	projectIDs := M.GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs)
+	projectIDs := store.GetStore().GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDs {
-		cachePayloads, errCode, errMsg := M.GetWebAnalyticsCachePayloadsForProject(projectID)
+		cachePayloads, errCode, errMsg := store.GetStore().GetWebAnalyticsCachePayloadsForProject(projectID)
 		if errCode != http.StatusFound {
 			log.Error("Error getting web analytics cache payloads ", errMsg)
 			return
@@ -307,14 +308,14 @@ func (f *cacheWebAnalyticsDoFn) FinishBundle(ctx context.Context, emit func(Cach
 }
 
 func (f *cacheWebAnalyticsDoFn) ProcessElement(ctx context.Context,
-	cachePayload M.WebAnalyticsCachePayload, emit func(CacheResponse)) {
+	cachePayload model.WebAnalyticsCachePayload, emit func(CacheResponse)) {
 
 	getLogContext().WithFields(log.Fields{
 		"Time":     time.Now().UnixNano() / 1000,
 		"TimeType": "Start",
 	}).Info("ProcessElement log cacheWebAnalyticsDoFn")
 	startTime := U.TimeNowUnix()
-	errCode := M.CacheWebsiteAnalyticsForDateRange(cachePayload)
+	errCode := store.GetStore().CacheWebsiteAnalyticsForDateRange(cachePayload)
 	timeTaken := U.TimeNowUnix() - startTime
 
 	cacheResponse := CacheResponse{
@@ -417,13 +418,13 @@ func reportOverallJobSummary(commonKey uint64, values func(*CacheResponse) bool)
 }
 
 func registerStructs() {
-	beam.RegisterType(reflect.TypeOf((*M.DashboardUnit)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*M.BeamDashboardUnitCachePayload)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*model.DashboardUnit)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*model.BeamDashboardUnitCachePayload)(nil)).Elem())
 
 	beam.RegisterType(reflect.TypeOf((*getDashboardUnitCachePayloadsFn)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*cacheDashboardUnitDoFn)(nil)).Elem())
 
-	beam.RegisterType(reflect.TypeOf((*M.WebAnalyticsCachePayload)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*model.WebAnalyticsCachePayload)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*getWebAnalyticsCachePayloadsFn)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*cacheWebAnalyticsDoFn)(nil)).Elem())
 }
