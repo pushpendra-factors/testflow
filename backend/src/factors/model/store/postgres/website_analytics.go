@@ -1353,18 +1353,18 @@ func (pg *Postgres) ExecuteWebAnalyticsQueries(projectId uint64, queries *model.
 }
 
 // GetWebAnalyticsCachePayloadsForProject Returns web analytics cache payloads with date range and queries.
-func GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]WebAnalyticsCachePayload, int, string) {
-	dashboardID, webAnalyticsQueries, errCode := GetWebAnalyticsQueriesFromDashboardUnits(projectID)
+func (pg *Postgres) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]model.WebAnalyticsCachePayload, int, string) {
+	dashboardID, webAnalyticsQueries, errCode := pg.GetWebAnalyticsQueriesFromDashboardUnits(projectID)
 	if errCode != http.StatusFound {
 		errMsg := fmt.Sprintf("Failed to get web analytics queries for project %d", projectID)
-		return []WebAnalyticsCachePayload{}, errCode, errMsg
+		return []model.WebAnalyticsCachePayload{}, errCode, errMsg
 	}
 
-	var cachePayloads []WebAnalyticsCachePayload
+	var cachePayloads []model.WebAnalyticsCachePayload
 	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to := rangeFunction()
 
-		cachePayloads = append(cachePayloads, WebAnalyticsCachePayload{
+		cachePayloads = append(cachePayloads, model.WebAnalyticsCachePayload{
 			ProjectID:   projectID,
 			DashboardID: dashboardID,
 			From:        from,
@@ -1378,7 +1378,7 @@ func GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]WebAnalyticsCac
 func (pg *Postgres) cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 
-	cachePayloads, errCode, errMsg := GetWebAnalyticsCachePayloadsForProject(projectID)
+	cachePayloads, errCode, errMsg := pg.GetWebAnalyticsCachePayloadsForProject(projectID)
 	if errCode != http.StatusFound {
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
@@ -1393,12 +1393,12 @@ func (pg *Postgres) cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGrou
 }
 
 // CacheWebsiteAnalyticsForDateRange Cache web analytics dashboard for with given payload.
-func CacheWebsiteAnalyticsForDateRange(cachePayload WebAnalyticsCachePayload) int {
+func (pg *Postgres) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload) int {
 	projectID := cachePayload.ProjectID
 	dashboardID := cachePayload.DashboardID
 	from, to := cachePayload.From, cachePayload.To
 	queries := cachePayload.Queries
-	if isWebAnalyticsDashboardAlreadyCached(projectID, dashboardID, from, to) {
+	if model.IsWebAnalyticsDashboardAlreadyCached(projectID, dashboardID, from, to) {
 		return http.StatusOK
 	}
 
@@ -1415,15 +1415,15 @@ func CacheWebsiteAnalyticsForDateRange(cachePayload WebAnalyticsCachePayload) in
 		return http.StatusInternalServerError
 	}
 
-	SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to)
+	model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to)
 	return http.StatusOK
 }
 
-func (pg *postgres.Hstore) cacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload,
+func (pg *Postgres) cacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload,
 	waitGroup *sync.WaitGroup) {
 
 	defer waitGroup.Done()
-	CacheWebsiteAnalyticsForDateRange(cachePayload)
+	pg.CacheWebsiteAnalyticsForDateRange(cachePayload)
 }
 
 // GetWebAnalyticsEnabledProjectIDsFromList Returns only project ids for which web analytics is enabled.
@@ -1453,7 +1453,7 @@ func GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectID
 }
 
 // CacheWebsiteAnalyticsForProjects Runs for all the projectIDs passed as comma separated.
-func CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int) {
+func (pg *Postgres) CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int) {
 	projectIDsToRun := GetWebAnalyticsEnabledProjectIDsFromList(stringProjectsIDs, excludeProjectIDs)
 
 	var waitGroup sync.WaitGroup

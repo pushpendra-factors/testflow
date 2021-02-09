@@ -22,10 +22,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type CachedVisitedUsersList struct {
-	Users map[string]bool
-}
-
 func (pg *Postgres) createUserPropertiesIfChanged(projectId uint64, userId string,
 	currentPropertiesId string, newProperties *postgres.Jsonb, timestamp int64) (string, int) {
 

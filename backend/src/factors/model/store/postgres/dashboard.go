@@ -7,7 +7,6 @@ import (
 	"factors/model/model"
 	"net/http"
 	"sort"
-	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -15,39 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Dashboard struct {
-	// Composite primary key, id + project_id + agent_id.
-	ID uint64 `gorm:"primary_key:true" json:"id"`
-	// Foreign key dashboards(project_id) ref projects(id).
-	ProjectId     uint64          `gorm:"primary_key:true" json:"project_id"`
-	AgentUUID     string          `gorm:"primary_key:true" json:"-"`
-	Name          string          `gorm:"not null" json:"name"`
-	Description   string          `json:"description"`
-	Type          string          `gorm:"type:varchar(5);not null" json:"type"`
-	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
-	IsDeleted     bool            `gorm:"not null;default:false" json:"is_deleted"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
-}
-
-type UpdatableDashboard struct {
-	Name          string                     `json:"name"`
-	Type          string                     `json:"type"`
-	Description   string                     `json:"description"`
-	UnitsPosition *map[string]map[uint64]int `json:"units_position"`
-}
-
-const (
-	DashboardTypePrivate        = "pr"
-	DashboardTypeProjectVisible = "pv"
-)
-
-var types = []string{DashboardTypePrivate, DashboardTypeProjectVisible}
-
-const AgentProjectPersonalDashboardName = "My Dashboard"
-const AgentProjectPersonalDashboardDescription = "No Description"
-
-func isValidDashboard(dashboard *Dashboard) bool {
+func isValidDashboard(dashboard *model.Dashboard) bool {
 	if dashboard.Name == "" {
 		return false
 	}
