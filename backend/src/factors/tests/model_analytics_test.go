@@ -1987,6 +1987,15 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 			assert.Equal(t, http.StatusOK, w.Code)
 		}
 
+		// Add "bad_number" string for numerical page_load_time and numerical_property.
+		// Should get filteted out and existing tests should pass as is.
+		iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"$page_load_time":"%s"},"user_properties":{"numerical_property":"%s"}}`,
+			eventName1, iUser.ID, startTimestamp+10, "bad_number", "bad_number")
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
 		query1 := M.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
@@ -2070,11 +2079,11 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 			User property numerical_property set as empty ($none).
 			Will create 11 buckets. including 1 $none.
 		*/
-		iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
-		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+		iUser, _ = M.CreateUser(&M.User{ProjectId: project.ID})
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":""}}`,
 			eventName1, iUser.ID, startTimestamp+10, 0)
-		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		result, errCode, _ = M.Analyze(project.ID, query1)
@@ -2374,6 +2383,55 @@ func TestQueryCachingFailedCondition(t *testing.T) {
 		assert.NotEmpty(t, w)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		assert.Equal(t, "{\"error\":\"Failed executing query\"}", w.Body.String())
+	}
+}
+
+func TestNumericalBucketingRegex(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+
+	for _, numericValue := range []float64{1, 1.2, 1.4678, -2, -2.86, 0} {
+		eventName := U.RandomString(5)
+		iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"numerical_property":%f}}`,
+			eventName, iUser.ID, startTimestamp+10, numericValue)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		query := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: eventName,
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					Entity:   M.PropertyEntityEvent,
+					Property: "numerical_property",
+					Type:     U.PropertyTypeNumerical,
+				},
+			},
+			Class:           M.QueryClassInsights,
+			Type:            M.QueryTypeEventsOccurrence,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		result, errCode, _ := M.Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotEmpty(t, result)
+
+		// Should have returned value with single row.
+		expectedBucket, _ := U.FloatRoundOffWithPrecision(numericValue, 1)
+		assert.Equal(t, fmt.Sprint(expectedBucket), result.Rows[0][1])
+		assert.Equal(t, int64(1), result.Rows[0][2])
 	}
 }
 

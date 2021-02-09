@@ -617,6 +617,7 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProp
 		bucketedSelect = bucketedSelect + eventNameSelect + ", "
 	}
 	var boundStepNames []string
+	var bucketedNumericValueFilter []string
 	for _, gbp := range groupProps {
 		groupKey := groupKeyByIndex(gbp.Index)
 		if gbp.Type != U.PropertyTypeNumerical {
@@ -639,8 +640,8 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProp
 		boundsStepName := groupKey + "_bounds"
 		boundsStatement := fmt.Sprintf("SELECT percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) + 0.00001 AS lbound, "+
 			"percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) AS ubound FROM %s "+
-			"WHERE %s != '%s' AND %s != '' ", NumericalLowerBoundPercentile, groupKey, NumericalUpperBoundPercentile,
-			groupKey, refStepName, groupKey, PropertyValueNone, groupKey)
+			"WHERE %s != '%s' AND %s != '' AND %s ~ '\\$none|^-?[0-9]+\\.?[0-9]*$' ", NumericalLowerBoundPercentile, groupKey, NumericalUpperBoundPercentile,
+			groupKey, refStepName, groupKey, PropertyValueNone, groupKey, groupKey)
 		boundsStatement = as(boundsStepName, boundsStatement)
 		*qStmnt = joinWithComma(*qStmnt, boundsStatement)
 
@@ -662,6 +663,8 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProp
 		boundStepNames = append(boundStepNames, boundsStepName)
 		aggregateGroupBys = append(aggregateGroupBys, bucketKey)
 		aggregateOrderBys = append(aggregateOrderBys, bucketKey)
+		bucketedNumericValueFilter = append(bucketedNumericValueFilter,
+			fmt.Sprintf("%s ~ '\\$none|^-?[0-9]+\\.?[0-9]*$'", groupKey))
 	}
 
 	bucketedSelect = bucketedSelect + additionalSelectKeys
@@ -672,6 +675,7 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProp
 	if len(boundStepNames) > 0 {
 		bucketedSelect = bucketedSelect + ", " + strings.Join(boundStepNames, ", ")
 	}
+	bucketedSelect = bucketedSelect + " WHERE " + strings.Join(bucketedNumericValueFilter, " AND ")
 
 	*qStmnt = joinWithComma(*qStmnt, as(bucketedStepName, bucketedSelect))
 	return
