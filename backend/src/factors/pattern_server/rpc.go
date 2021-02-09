@@ -155,6 +155,18 @@ func (ps *PatternServer) GetAllPatterns(
 	return nil
 }
 
+func isModelWeekly(ps *PatternServer, modelId uint64, projectId uint64) bool {
+	modelInfos, _ := ps.GetProjectModelIntervals(projectId)
+	for _, model := range modelInfos {
+		if model.ModelId == modelId {
+			if model.ModelType == "w" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (ps *PatternServer) GetAllContainingPatterns(
 	r *http.Request, args *client.GetAllContainingPatternsRequest, result *client.GetAllContainingPatternsResponse) error {
 	overallStartTime := time.Now()
@@ -181,6 +193,7 @@ func (ps *PatternServer) GetAllContainingPatterns(
 		"en":  args.Event,
 	}).Debugln("RPC Fetching patterns")
 
+	isWeekly := isModelWeekly(ps, modelId, args.ProjectId)
 	startTime := time.Now()
 	chunkIds, found := ps.GetProjectModelChunks(args.ProjectId, modelId)
 	if !found {
@@ -232,7 +245,7 @@ func (ps *PatternServer) GetAllContainingPatterns(
 			patternsToReturn = append(patternsToReturn, rawPatterns...)
 		} else {
 			for _, pwm := range patternsWithMeta {
-				if filterPatterns(pwm.PatternEvents, "", "", args.Event) {
+				if filterPatterns(pwm.PatternEvents, "", "", args.Event) && ((isWeekly && len(chunksToServe) <= 25) || len(pwm.PatternEvents) <= 2) {
 					patternsToReturn = append(patternsToReturn, &pwm.RawPattern)
 				}
 			}

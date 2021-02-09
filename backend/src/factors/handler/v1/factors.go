@@ -155,9 +155,9 @@ func GetFactorsHandler(c *gin.Context) {
 		return
 	}
 	type EventDistribution struct {
-		Base   map[string]uint `json:"base"`
-		After  map[string]uint `json:"after"`
-		Before map[string]uint `json:"before"`
+		Base   interface{} `json:"base"`
+		After  interface{} `json:"after"`
+		Before interface{} `json:"before"`
 	}
 	if patternMode == "EventDistribution" {
 		res, res2, res3, _ := PW.BuildUserDistribution("", event, ps)
@@ -351,8 +351,8 @@ func PostFactorsCompareHandler(c *gin.Context) {
 }
 
 type ComparisonResult struct {
-	FirstWeek        []float64
-	SecondWeek       []float64
+	FirstWeek        []float64 `json:"first"`
+	SecondWeek       []float64 `json:"second"`
 	PercentageChange float64
 	Type             string
 }

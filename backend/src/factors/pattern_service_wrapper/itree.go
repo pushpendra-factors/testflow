@@ -2244,7 +2244,29 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 
 }
 
-func BuildUserDistribution(reqId string, event string, patternWrapper PatternServiceWrapperInterface) (map[string]uint, map[string]uint, map[string]uint, error) {
+func sortMap(data map[string]uint) interface{} {
+	type tuple struct {
+		key   string
+		value uint
+	}
+	arr := make([]tuple, 0)
+	for key, value := range data {
+		arr = append(arr, tuple{
+			key:   key,
+			value: value,
+		})
+	}
+	sort.Slice(arr, func(i, j int) bool {
+		return arr[i].value > arr[j].value
+	})
+	res := make([]string, 0)
+	for _, element := range arr {
+		res = append(res, fmt.Sprintf("%v ----> %v", element.key, element.value))
+	}
+	return res
+}
+
+func BuildUserDistribution(reqId string, event string, patternWrapper PatternServiceWrapperInterface) (interface{}, interface{}, interface{}, error) {
 	if event == "" {
 		return nil, nil, nil, fmt.Errorf("Missing event")
 	}
@@ -2288,49 +2310,47 @@ func BuildUserDistribution(reqId string, event string, patternWrapper PatternSer
 			}
 		}
 	}
-	return base, before, after, nil
+	return sortMap(base), sortMap(before), sortMap(after), nil
 }
 
-func BuildUserDistributionWithProperties(reqId string, event string, baseProperty P.EventConstraints, distributionProperty map[string]string, patternWrapper PatternServiceWrapperInterface) (map[string]uint, error) {
+func BuildUserDistributionWithProperties(reqId string, event string, baseProperty P.EventConstraints, distributionProperty map[string]string, patternWrapper PatternServiceWrapperInterface) (interface{}, error) {
 	if event == "" {
 		event = U.SEN_ALL_ACTIVE_USERS
 	}
 	res := make(map[string]uint)
-	patterns, err := patternWrapper.GetAllContainingPatterns(reqId, event)
-	if err != nil {
+	pattern := patternWrapper.GetPattern(reqId, []string{event})
+	if pattern == nil {
 		return nil, fmt.Errorf("error fetching patterns")
 	}
-	for _, pattern := range patterns {
-		if len(pattern.EventNames) == 1 {
-			if count, _ := pattern.GetCount(constructPatternConstraints(
-				1, &baseProperty, &baseProperty), P.COUNT_TYPE_PER_USER); count > 0 {
-				res["base"] = count
-				allUserCatProperties, _, _, _ := extractProperties(&ItreeNode{Pattern: pattern})
-				if distributionProperty == nil || len(distributionProperty) == 0 {
-					for _, property := range allUserCatProperties {
-						if property != baseProperty.UPCategoricalConstraints[0].PropertyName {
-							distributionProperty[property] = "categorical"
-						}
+	if len(pattern.EventNames) == 1 {
+		if count, _ := pattern.GetCount(constructPatternConstraints(
+			1, &baseProperty, &baseProperty), P.COUNT_TYPE_PER_USER); count > 0 {
+			res["base"] = count
+			allUserCatProperties, _, _, _ := extractProperties(&ItreeNode{Pattern: pattern})
+			if distributionProperty == nil || len(distributionProperty) == 0 {
+				for _, property := range allUserCatProperties {
+					if property != baseProperty.UPCategoricalConstraints[0].PropertyName {
+						distributionProperty[property] = "categorical"
 					}
 				}
-				for property, propertyCategory := range distributionProperty {
-					if propertyCategory == "categorical" {
-						values := pattern.GetPerUserUserPropertyValues(0, property)
-						for _, value := range values {
-							constraints := P.EventConstraints{}
-							constraints.UPCategoricalConstraints = baseProperty.UPCategoricalConstraints
-							constraints.UPNumericConstraints = baseProperty.UPNumericConstraints
-							constraints.UPCategoricalConstraints = append(constraints.UPCategoricalConstraints,
-								P.CategoricalConstraint{PropertyName: property, PropertyValue: value, Operator: P.EQUALS_OPERATOR_CONST})
-							if count, _ := pattern.GetCount(constructPatternConstraints(
-								1, &constraints, &constraints), P.COUNT_TYPE_PER_USER); count > 0 {
-								res[property+"-"+value] = count
-							}
+			}
+			for property, propertyCategory := range distributionProperty {
+				if propertyCategory == "categorical" {
+					values := pattern.GetPerUserUserPropertyValues(0, property)
+					for _, value := range values {
+						constraints := P.EventConstraints{}
+						constraints.UPCategoricalConstraints = baseProperty.UPCategoricalConstraints
+						constraints.UPNumericConstraints = baseProperty.UPNumericConstraints
+						constraints.UPCategoricalConstraints = append(constraints.UPCategoricalConstraints,
+							P.CategoricalConstraint{PropertyName: property, PropertyValue: value, Operator: P.EQUALS_OPERATOR_CONST})
+						if count, _ := pattern.GetCount(constructPatternConstraints(
+							1, &constraints, &constraints), P.COUNT_TYPE_PER_USER); count > 0 {
+							res[property+"-"+value] = count
 						}
 					}
 				}
 			}
 		}
 	}
-	return res, nil
+	return sortMap(res), nil
 }
