@@ -29,14 +29,28 @@ function NoBreakdownCharts({
   const appliedColors = generateColors(queries.length);
 
   let chartsData = [];
-  if (queries.length === 1) {
-    chartsData = formatSingleEventAnalyticsData(resultState.data, arrayMapper);
+  if (resultState.data && !resultState.data.metrics.rows.length) {
+    chartsData = [];
   } else {
-    chartsData = formatMultiEventsAnalyticsData(resultState.data, arrayMapper);
+    if (queries.length === 1) {
+      chartsData = formatSingleEventAnalyticsData(
+        resultState.data,
+        arrayMapper
+      );
+    } else {
+      chartsData = formatMultiEventsAnalyticsData(
+        resultState.data,
+        arrayMapper
+      );
+    }
   }
 
   if (!chartsData.length) {
-    return null;
+    return (
+      <div className="mt-4 flex justify-center items-center w-full h-64 ">
+        No Data Found!
+      </div>
+    );
   }
 
   let chartContent = null;
@@ -109,9 +123,7 @@ function NoBreakdownCharts({
   }
 
   return (
-    <div
-      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
-    >
+    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
       {chartContent}
       {tableContent}
     </div>
