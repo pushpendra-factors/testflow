@@ -327,12 +327,12 @@ const UserPropertyGroupByPresent string = "$present"
 var trailingZeroRegex = regexp.MustCompile(`\.0\b`)
 
 func (query *Query) GetGroupByTimestamp() string {
+	windowInSecs := query.To - query.From
 	switch query.GroupByTimestamp.(type) {
 	case bool:
 		// For query objects on old dashboard units,
 		// with GroupByTimestamp as bool and true, to work.
 		if query.GroupByTimestamp.(bool) {
-			windowInSecs := query.To - query.From
 			if windowInSecs <= 86400 {
 				return GroupByTimestampHour
 			}
@@ -341,7 +341,11 @@ func (query *Query) GetGroupByTimestamp() string {
 
 		return ""
 	case string:
-		return query.GroupByTimestamp.(string)
+		gbt := query.GroupByTimestamp.(string)
+		if gbt != "" && windowInSecs < U.SECONDS_IN_A_DAY {
+			return GroupByTimestampHour
+		}
+		return gbt
 	default:
 		return ""
 	}
