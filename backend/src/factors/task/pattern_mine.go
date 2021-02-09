@@ -1013,8 +1013,6 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 
 			}
 		}
-		mineLog.Info("Number of User Properties: ", len(upFilteredMap))
-
 		for key := range upFilteredMap {
 			mineLog.Info("insert user property", key)
 			_, errInt = M.CreateFactorsTrackedUserProperty(projectId, key, "")
@@ -1078,6 +1076,19 @@ func buildEventsFileOnProperties(tmpEventsFilePath string, efTmpPath string, efT
 
 }
 
+func buildEventsInfoForEncodedEvents(campEventsList []string, userAndEventsInfo *P.UserAndEventsInfo) *P.UserAndEventsInfo {
+	// add events info for campEventsList . This create empty numeric and categorical Key values for each event in encodedList
+	eMap := *userAndEventsInfo.EventPropertiesInfoMap
+	for _, eventName := range campEventsList {
+		// Initialize info.
+		eMap[eventName] = &P.PropertiesInfo{
+			NumericPropertyKeys:          make(map[string]bool),
+			CategoricalPropertyKeyValues: make(map[string]map[string]bool),
+		}
+	}
+	return userAndEventsInfo
+}
+
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
@@ -1106,47 +1117,24 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 
 	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
-	userPropList, eventPropList := buildWhiteListProperties(projectId, allPropsMap, topKProperties)
-
-	mineLog.Info("Number of EventNames: ", len(eventNames))
-	mineLog.Info("Number of User Properties: ", len(userPropList))
-	mineLog.Info("User Properties: ", userPropList)
-	mineLog.Info("Event Properties: ", eventPropList)
-
-	mineLog.Info("Number of Event Properties: ", len(eventPropList))
-
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return "", 0, err
 	}
-	userAndEventsInfoBytes, err := json.Marshal(userAndEventsInfo)
-	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal events Info.")
-		return "", 0, err
-	}
+	userPropList, eventPropList := buildWhiteListProperties(projectId, allPropsMap, topKProperties)
 
-	if len(userAndEventsInfoBytes) > 249900000 {
-		// Limit is 250MB
-		errorString := fmt.Sprintf(
-			"Too big properties info, modelId: %d, modelType: %s, projectId: %d, numBytes: %d",
-			modelId, modelType, projectId, len(userAndEventsInfoBytes))
-		mineLog.Error(errorString)
-		return "", 0, fmt.Errorf(errorString)
-	}
-	err = writeEventInfoFile(projectId, modelId, bytes.NewReader(userAndEventsInfoBytes), (*cloudManager))
-	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events Info.")
-		return "", 0, err
-	}
-	mineLog.Info("Successfully Built user and event properties info and written it to file.")
-
+	mineLog.Info("Number of EventNames: ", len(eventNames))
+	mineLog.Info("Number of User Properties: ", len(userPropList))
+	mineLog.Info("Number of Event Properties: ", len(eventPropList))
 	campEventsList, err := buildEventsFileOnProperties(tmpEventsFilepath, efTmpPath, efTmpName, diskManager, projectId,
 		modelId, eReader, userPropList, eventPropList, campaignLimitCount)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")
 		return "", 0, err
 	}
-	// campEventsList = nil
+
+	userAndEventsInfo = buildEventsInfoForEncodedEvents(campEventsList, userAndEventsInfo)
+
 	mineLog.Info("Successfully Built events data and written to file.")
 	mineLog.Info("Number of Campaign events:", len(campEventsList))
 	repeatedEvents := GetAllRepeatedEvents(eventNames, campEventsList)

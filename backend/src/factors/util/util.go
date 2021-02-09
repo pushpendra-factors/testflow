@@ -40,6 +40,20 @@ var QueryDateRangePresets = map[string]func() (int64, int64){
 	"TODAY":         GetQueryRangePresetTodayIST,
 }
 
+// Caching related constants for core query and dashboards.
+const (
+	// ImmutableDataEndDateBufferInSeconds Buffer period after which data is assumed to be immutable. Required to rerun
+	// cached queries when add_session / other enrichment jobs were still running or not yet ran when data got cached.
+	ImmutableDataEndDateBufferInSeconds      = 2 * SECONDS_IN_A_DAY // 2 Days.
+	CacheExpiryDashboardMutableDataInSeconds = 1 * SECONDS_IN_A_DAY // 1 Days.
+	CacheExpiryQueryMutableDataInSeconds     = 2 * 60 * 60          // 2 Hours.
+
+	CacheExpiryWeeklyRangeInSeconds = 6 * 7 * SECONDS_IN_A_DAY // 6 Weeks.
+	CacheExpiryDefaultInSeconds     = 62 * SECONDS_IN_A_DAY    // 62 Days.
+
+	CacheExpiryTodaysDataInSeconds = 10 * 60 // 10 minutes.
+)
+
 // Group Names
 var MostRecent string = "MOST RECENT"
 var FrequentlySeen string = "FREQUENTLY SEEN"
@@ -745,4 +759,48 @@ func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 // IsCampaignEvent check if eventname is campaign Event
 func IsCampaignEvent(eventName string) bool {
 	return strings.HasPrefix(eventName, "$session[campaign")
+}
+
+// GetDashboardCacheResultExpiryInSeconds Returns expiry for cache based on query date range.
+func GetDashboardCacheResultExpiryInSeconds(from, to int64) float64 {
+	toStartOfDay := GetBeginningOfDayTimestampZ(to, TimeZoneStringIST)
+	nowStartOfDay := GetBeginningOfDayTimestampZ(TimeNow().Unix(), TimeZoneStringIST)
+	if to >= nowStartOfDay {
+		// End date is in today's range. Keep small expiry.
+		return float64(CacheExpiryTodaysDataInSeconds)
+	} else if nowStartOfDay > toStartOfDay && nowStartOfDay-toStartOfDay > ImmutableDataEndDateBufferInSeconds {
+		// Data can be assumed to be immutable here after buffer (2) days.
+		if to-from == (7*SECONDS_IN_A_DAY - 1) {
+			// Weekly range.
+			return float64(CacheExpiryWeeklyRangeInSeconds)
+		} else if to-from > (27*SECONDS_IN_A_DAY - 1) {
+			// Monthly range. Set no expiry.
+			return 0
+		} else {
+			return float64(CacheExpiryDefaultInSeconds)
+		}
+	}
+	return float64(CacheExpiryDashboardMutableDataInSeconds)
+}
+
+// GetQueryCacheResultExpiryInSeconds Returns expiry for cache based on query date range.
+func GetQueryCacheResultExpiryInSeconds(from, to int64) float64 {
+	toStartOfDay := GetBeginningOfDayTimestampZ(to, TimeZoneStringIST)
+	nowStartOfDay := GetBeginningOfDayTimestampZ(TimeNow().Unix(), TimeZoneStringIST)
+	if to >= nowStartOfDay {
+		// End date is in today's range. Keep small expiry.
+		return float64(CacheExpiryTodaysDataInSeconds)
+	} else if nowStartOfDay > toStartOfDay && nowStartOfDay-toStartOfDay > ImmutableDataEndDateBufferInSeconds {
+		// Data can be assumed to be immutable here after buffer (2) days.
+		if to-from == (7*SECONDS_IN_A_DAY - 1) {
+			// Weekly range.
+			return float64(CacheExpiryWeeklyRangeInSeconds)
+		} else if to-from > (27*SECONDS_IN_A_DAY - 1) {
+			// Monthly range. Set no expiry.
+			return 0
+		} else {
+			return float64(CacheExpiryDefaultInSeconds)
+		}
+	}
+	return float64(CacheExpiryQueryMutableDataInSeconds)
 }
