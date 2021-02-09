@@ -62,6 +62,13 @@ type NamedQueryUnit struct {
 	QueryName string `json:"qname"`
 }
 
+// WebAnalyticsCachePayload Payload for web analytics cache method.
+type WebAnalyticsCachePayload struct {
+	ProjectID, DashboardID uint64
+	From, To               int64
+	Queries                *WebAnalyticsQueries
+}
+
 type DashboardUnitWebAnalyticsQueryName struct {
 	UnitID    uint64 `json:"unit_id"`
 	QueryName string `json:"query_name"`
@@ -1585,33 +1592,54 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	return queryResult, http.StatusOK
 }
 
-func cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
-
+// GetWebAnalyticsCachePayloadsForProject Returns web analytics cache payloads with date range and queries.
+func GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]WebAnalyticsCachePayload, int, string) {
 	dashboardID, webAnalyticsQueries, errCode := GetWebAnalyticsQueriesFromDashboardUnits(projectID)
 	if errCode != http.StatusFound {
 		errMsg := fmt.Sprintf("Failed to get web analytics queries for project %d", projectID)
+		return []WebAnalyticsCachePayload{}, errCode, errMsg
+	}
+
+	var cachePayloads []WebAnalyticsCachePayload
+	for _, rangeFunction := range U.QueryDateRangePresets {
+		from, to := rangeFunction()
+
+		cachePayloads = append(cachePayloads, WebAnalyticsCachePayload{
+			ProjectID:   projectID,
+			DashboardID: dashboardID,
+			From:        from,
+			To:          to,
+			Queries:     webAnalyticsQueries,
+		})
+	}
+	return cachePayloads, http.StatusFound, ""
+}
+
+func cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+
+	cachePayloads, errCode, errMsg := GetWebAnalyticsCachePayloadsForProject(projectID)
+	if errCode != http.StatusFound {
 		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
 		return
 	}
 
 	var dashboardWaitGroup sync.WaitGroup
-	for _, rangeFunction := range U.QueryDateRangePresets {
-		from, to := rangeFunction()
+	for index := range cachePayloads {
 		dashboardWaitGroup.Add(1)
-
-		go cacheWebsiteAnalyticsForDateRange(projectID, dashboardID,
-			from, to, webAnalyticsQueries, &dashboardWaitGroup)
+		go cacheWebsiteAnalyticsForDateRange(cachePayloads[index], &dashboardWaitGroup)
 	}
 	dashboardWaitGroup.Wait()
 }
 
-func cacheWebsiteAnalyticsForDateRange(projectID, dashboardID uint64, from, to int64,
-	queries *WebAnalyticsQueries, waitGroup *sync.WaitGroup) {
-
-	defer waitGroup.Done()
+// CacheWebsiteAnalyticsForDateRange Cache web analytics dashboard for with given payload.
+func CacheWebsiteAnalyticsForDateRange(cachePayload WebAnalyticsCachePayload) int {
+	projectID := cachePayload.ProjectID
+	dashboardID := cachePayload.DashboardID
+	from, to := cachePayload.From, cachePayload.To
+	queries := cachePayload.Queries
 	if isWebAnalyticsDashboardAlreadyCached(projectID, dashboardID, from, to) {
-		return
+		return http.StatusOK
 	}
 
 	queriesWithTimeRange := &WebAnalyticsQueries{
@@ -1624,10 +1652,17 @@ func cacheWebsiteAnalyticsForDateRange(projectID, dashboardID uint64, from, to i
 	queryResult, errCode := ExecuteWebAnalyticsQueries(
 		projectID, queriesWithTimeRange)
 	if errCode != http.StatusOK {
-		return
+		return http.StatusInternalServerError
 	}
 
 	SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to)
+	return http.StatusOK
+}
+
+func cacheWebsiteAnalyticsForDateRange(cachePayload WebAnalyticsCachePayload, waitGroup *sync.WaitGroup) {
+
+	defer waitGroup.Done()
+	CacheWebsiteAnalyticsForDateRange(cachePayload)
 }
 
 func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64,
@@ -1724,12 +1759,12 @@ func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
 	}
 }
 
-// CacheWebsiteAnalyticsForProjects Runs for all the projectIDs passed as comma separated.
-func CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int) {
-	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(stringProjectsIDs, excludeProjectIDs)
+// GetWebAnalyticsEnabledProjectIDsFromList Returns only project ids for which web analytics is enabled.
+func GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs string) []uint64 {
+	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(stringProjectIDs, excludeProjectIDs)
 	allWebAnalyticsProjectIDs, errCode := getWebAnalyticsEnabledProjectIDs()
 	if errCode != http.StatusFound {
-		return
+		return []uint64{}
 	}
 
 	var projectIDs []uint64
@@ -1747,6 +1782,12 @@ func CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs strin
 			projectIDsToRun = append(projectIDsToRun, projectID)
 		}
 	}
+	return projectIDsToRun
+}
+
+// CacheWebsiteAnalyticsForProjects Runs for all the projectIDs passed as comma separated.
+func CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int) {
+	projectIDsToRun := GetWebAnalyticsEnabledProjectIDsFromList(stringProjectsIDs, excludeProjectIDs)
 
 	var waitGroup sync.WaitGroup
 	count := 0

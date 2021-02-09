@@ -52,8 +52,16 @@ type DashboardCacheResult struct {
 
 // DashboardUnitCachePayload Payload for dashboard caching method.
 type DashboardUnitCachePayload struct {
-	dashboardUnit DashboardUnit
-	baseQuery     BaseQuery
+	DashboardUnit DashboardUnit
+	BaseQuery     BaseQuery
+}
+
+// BeamDashboardUnitCachePayload Dashboard caching payload for beam pipeline.
+type BeamDashboardUnitCachePayload struct {
+	DashboardUnit DashboardUnit
+	QueryClass    string
+	Query         postgres.Jsonb
+	From, To      int64
 }
 
 const (
@@ -549,19 +557,16 @@ func CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int {
 	return len(dashboardUnits)
 }
 
-// CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
-func CacheDashboardUnit(dashboardUnit DashboardUnit, waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
-
+// GetQueryAndClassFromDashboardUnit Fill query and returns query class of dashboard unit.
+func GetQueryAndClassFromDashboardUnit(dashboardUnit *DashboardUnit) (queryClass, errMsg string) {
 	projectID := dashboardUnit.ProjectID
 	savedQuery, errCode := GetQueryWithQueryId(projectID, dashboardUnit.QueryId)
 	if errCode != http.StatusFound {
-		errMsg := fmt.Sprintf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
-		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		errMsg = fmt.Sprintf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
 		return
 	}
+	dashboardUnit.Query = savedQuery.Query
 
-	var queryClass string
 	var query Query
 	var queryGroup QueryGroup
 	// try decoding for Query
@@ -570,13 +575,23 @@ func CacheDashboardUnit(dashboardUnit DashboardUnit, waitGroup *sync.WaitGroup) 
 		// if fails, try decoding for QueryGroup
 		err1 := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &queryGroup)
 		if err1 != nil {
-			errMsg := fmt.Sprintf("Failed to decode jsonb query, query_id %d", dashboardUnit.QueryId)
-			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			errMsg = fmt.Sprintf("Failed to decode jsonb query, query_id %d", dashboardUnit.QueryId)
 			return
 		}
 		queryClass = queryGroup.GetClass()
 	} else {
 		queryClass = query.Class
+	}
+	return
+}
+
+// CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
+func CacheDashboardUnit(dashboardUnit DashboardUnit, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	queryClass, errMsg := GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+	if errMsg != "" {
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return
 	}
 
 	// excluding 'Web' class dashboard units
@@ -597,31 +612,31 @@ func CacheDashboardUnit(dashboardUnit DashboardUnit, waitGroup *sync.WaitGroup) 
 		}
 		baseQuery.SetQueryDateRange(from, to)
 		cachePayload := DashboardUnitCachePayload{
-			dashboardUnit: dashboardUnit,
-			baseQuery:     baseQuery,
+			DashboardUnit: dashboardUnit,
+			BaseQuery:     baseQuery,
 		}
 		go cacheDashboardUnitForDateRange(cachePayload, &unitWaitGroup)
 	}
 	unitWaitGroup.Wait()
 }
 
-func cacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload, waitGroup *sync.WaitGroup) {
-	defer waitGroup.Done()
-	dashboardUnit := cachePayload.dashboardUnit
-	baseQuery := cachePayload.baseQuery
+// CacheDashboardUnitForDateRange To cache a dashboard unit for the given range.
+func CacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload) (int, string) {
+	dashboardUnit := cachePayload.DashboardUnit
+	baseQuery := cachePayload.BaseQuery
 	projectID := dashboardUnit.ProjectID
 	dashboardID := dashboardUnit.DashboardId
 	dashboardUnitID := dashboardUnit.ID
 	from, to := baseQuery.GetQueryDateRange()
 	logCtx := log.WithFields(log.Fields{
-		"Method":          "cacheDashboardUnitForDateRange",
+		"Method":          "CacheDashboardUnitForDateRange",
 		"ProjectID":       projectID,
 		"DashboardID":     dashboardID,
 		"DashboardUnitID": dashboardUnitID,
 		"FromTo":          fmt.Sprintf("%d-%d", from, to),
 	})
 	if isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, dashboardUnitID, from, to) {
-		return
+		return http.StatusOK, ""
 	}
 	logCtx.Info("Starting to cache unit for date range")
 	startTime := U.TimeNowUnix()
@@ -652,8 +667,7 @@ func cacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload, wait
 		result, errCode = RunEventsGroupQuery(groupQuery.Queries, projectID)
 	}
 	if errCode != http.StatusOK {
-		logCtx.Errorf("Error while running query %s", errMsg)
-		return
+		return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg)
 	}
 
 	timeTaken := U.TimeNowUnix() - startTime
@@ -664,6 +678,28 @@ func cacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload, wait
 
 	// Set in query cache result as well in case someone runs the same query from query handler.
 	SetQueryCacheResult(projectID, baseQuery, result)
+	return http.StatusOK, ""
+}
+
+func cacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	dashboardUnit := cachePayload.DashboardUnit
+	baseQuery := cachePayload.BaseQuery
+	projectID := dashboardUnit.ProjectID
+	dashboardID := dashboardUnit.DashboardId
+	dashboardUnitID := dashboardUnit.ID
+	from, to := baseQuery.GetQueryDateRange()
+	logCtx := log.WithFields(log.Fields{
+		"Method":          "cacheDashboardUnitForDateRange",
+		"ProjectID":       projectID,
+		"DashboardID":     dashboardID,
+		"DashboardUnitID": dashboardUnitID,
+		"FromTo":          fmt.Sprintf("%d-%d", from, to),
+	})
+	errCode, errMsg := CacheDashboardUnitForDateRange(cachePayload)
+	if errCode != http.StatusOK {
+		logCtx.Errorf("Error while running query %s", errMsg)
+	}
 }
 
 func isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, unitID uint64, from, to int64) bool {

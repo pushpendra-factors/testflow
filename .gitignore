@@ -36,6 +36,7 @@ integrations/adwords/**/.swp
 **/*.rdb
 .vscode
 **/.idea
+*.swp
 
 # Android SDK
 sdk/android/*.iml

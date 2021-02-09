@@ -101,6 +101,7 @@ type Configuration struct {
 	ActiveFactorsTrackedEventsLimit         int
 	ActiveFactorsTrackedUserPropertiesLimit int
 	DryRunCRMSmartEvent                     bool
+	IsBeamPipeline                          bool
 	AllowSmartEventRuleCreation             bool
 }
 
@@ -344,14 +345,19 @@ func InitDB(dbConf DBConf) error {
 }
 
 func InitRedisPersistent(host string, port int) {
-	initRedisConnection(host, port, true)
+	initRedisConnection(host, port, true, 300, 100)
 }
 
 func InitRedis(host string, port int) {
-	initRedisConnection(host, port, false)
+	initRedisConnection(host, port, false, 300, 100)
 }
 
-func initRedisConnection(host string, port int, persistent bool) {
+// InitRedisConnection Init redis with custom requirements.
+func InitRedisConnection(host string, port int, persistent bool, maxActive, maxIdle int) {
+	initRedisConnection(host, port, persistent, maxActive, maxIdle)
+}
+
+func initRedisConnection(host string, port int, persistent bool, maxActive, maxIdle int) {
 	if host == "" || port == 0 {
 		log.WithField("host", host).WithField("port", port).Fatal(
 			"Invalid redis host or port.")
@@ -363,8 +369,8 @@ func initRedisConnection(host string, port int, persistent bool) {
 
 	conn := fmt.Sprintf("%s:%d", host, port)
 	redisPool := &redis.Pool{
-		MaxActive: 300,
-		MaxIdle:   100,
+		MaxActive: maxActive,
+		MaxIdle:   maxIdle,
 		// IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", conn)
@@ -461,6 +467,16 @@ func InitMetricsExporter(env, appName, projectID, projectLocation string) {
 // InitSmartEventMode initializes smart event mode
 func InitSmartEventMode(mode bool) {
 	configuration.DryRunCRMSmartEvent = mode
+}
+
+// SetIsBeamPipeline Sets variable to indicate that the job is running from a beam pipeline.
+func SetIsBeamPipeline() {
+	configuration.IsBeamPipeline = true
+}
+
+// IsBeamPipeline Returns is the beam pipeline variable is set.
+func IsBeamPipeline() bool {
+	return configuration.IsBeamPipeline
 }
 
 // InitSentryLogging Adds sentry hook to capture error logs.

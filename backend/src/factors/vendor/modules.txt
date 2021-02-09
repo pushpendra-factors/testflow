@@ -53,6 +53,62 @@ github.com/RichardKnop/redsync
 ## explicit
 github.com/alecthomas/template
 github.com/alecthomas/template/parse
+# github.com/apache/beam v2.21.0+incompatible
+## explicit
+github.com/apache/beam/sdks/go/pkg/beam
+github.com/apache/beam/sdks/go/pkg/beam/artifact
+github.com/apache/beam/sdks/go/pkg/beam/core/funcx
+github.com/apache/beam/sdks/go/pkg/beam/core/graph
+github.com/apache/beam/sdks/go/pkg/beam/core/graph/coder
+github.com/apache/beam/sdks/go/pkg/beam/core/graph/mtime
+github.com/apache/beam/sdks/go/pkg/beam/core/graph/window
+github.com/apache/beam/sdks/go/pkg/beam/core/metrics
+github.com/apache/beam/sdks/go/pkg/beam/core/runtime
+github.com/apache/beam/sdks/go/pkg/beam/core/runtime/coderx
+github.com/apache/beam/sdks/go/pkg/beam/core/runtime/exec
+github.com/apache/beam/sdks/go/pkg/beam/core/runtime/exec/optimized
+github.com/apache/beam/sdks/go/pkg/beam/core/runtime/graphx
+github.com/apache/beam/sdks/go/pkg/beam/core/runtime/graphx/v1
+github.com/apache/beam/sdks/go/pkg/beam/core/runtime/harness
+github.com/apache/beam/sdks/go/pkg/beam/core/runtime/harness/init
+github.com/apache/beam/sdks/go/pkg/beam/core/runtime/harness/session
+github.com/apache/beam/sdks/go/pkg/beam/core/runtime/pipelinex
+github.com/apache/beam/sdks/go/pkg/beam/core/sdf
+github.com/apache/beam/sdks/go/pkg/beam/core/typex
+github.com/apache/beam/sdks/go/pkg/beam/core/util/dot
+github.com/apache/beam/sdks/go/pkg/beam/core/util/hooks
+github.com/apache/beam/sdks/go/pkg/beam/core/util/ioutilx
+github.com/apache/beam/sdks/go/pkg/beam/core/util/protox
+github.com/apache/beam/sdks/go/pkg/beam/core/util/reflectx
+github.com/apache/beam/sdks/go/pkg/beam/core/util/stringx
+github.com/apache/beam/sdks/go/pkg/beam/core/util/symtab
+github.com/apache/beam/sdks/go/pkg/beam/internal/errors
+github.com/apache/beam/sdks/go/pkg/beam/io/filesystem
+github.com/apache/beam/sdks/go/pkg/beam/io/filesystem/gcs
+github.com/apache/beam/sdks/go/pkg/beam/io/filesystem/local
+github.com/apache/beam/sdks/go/pkg/beam/io/pubsubio/v1
+github.com/apache/beam/sdks/go/pkg/beam/log
+github.com/apache/beam/sdks/go/pkg/beam/model/fnexecution_v1
+github.com/apache/beam/sdks/go/pkg/beam/model/jobmanagement_v1
+github.com/apache/beam/sdks/go/pkg/beam/model/pipeline_v1
+github.com/apache/beam/sdks/go/pkg/beam/options/gcpopts
+github.com/apache/beam/sdks/go/pkg/beam/options/jobopts
+github.com/apache/beam/sdks/go/pkg/beam/provision
+github.com/apache/beam/sdks/go/pkg/beam/runners/dataflow
+github.com/apache/beam/sdks/go/pkg/beam/runners/dataflow/dataflowlib
+github.com/apache/beam/sdks/go/pkg/beam/runners/direct
+github.com/apache/beam/sdks/go/pkg/beam/runners/dot
+github.com/apache/beam/sdks/go/pkg/beam/runners/flink
+github.com/apache/beam/sdks/go/pkg/beam/runners/spark
+github.com/apache/beam/sdks/go/pkg/beam/runners/universal
+github.com/apache/beam/sdks/go/pkg/beam/runners/universal/runnerlib
+github.com/apache/beam/sdks/go/pkg/beam/runners/vet
+github.com/apache/beam/sdks/go/pkg/beam/util/errorx
+github.com/apache/beam/sdks/go/pkg/beam/util/gcsx
+github.com/apache/beam/sdks/go/pkg/beam/util/grpcx
+github.com/apache/beam/sdks/go/pkg/beam/util/shimx
+github.com/apache/beam/sdks/go/pkg/beam/x/beamx
+github.com/apache/beam/sdks/go/pkg/beam/x/hooks/perf
 # github.com/aws/aws-sdk-go v1.23.20
 ## explicit
 github.com/aws/aws-sdk-go/aws
@@ -208,6 +264,7 @@ github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.4.2
 ## explicit
 github.com/golang/protobuf/internal/gengogrpc
+github.com/golang/protobuf/jsonpb
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go
 github.com/golang/protobuf/protoc-gen-go/descriptor
@@ -586,6 +643,7 @@ golang.org/x/xerrors/internal
 # google.golang.org/api v0.15.1
 ## explicit
 google.golang.org/api/bigquery/v2
+google.golang.org/api/dataflow/v1b3
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
 google.golang.org/api/internal
@@ -683,12 +741,15 @@ google.golang.org/grpc/tap
 # google.golang.org/protobuf v1.23.0
 google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
 google.golang.org/protobuf/compiler/protogen
+google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt
 google.golang.org/protobuf/internal/descopts
+google.golang.org/protobuf/internal/detectknown
 google.golang.org/protobuf/internal/detrand
 google.golang.org/protobuf/internal/encoding/defval
+google.golang.org/protobuf/internal/encoding/json
 google.golang.org/protobuf/internal/encoding/messageset
 google.golang.org/protobuf/internal/encoding/tag
 google.golang.org/protobuf/internal/encoding/text

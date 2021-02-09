@@ -13,6 +13,7 @@ require (
 	github.com/RichardKnop/logging v0.0.0-20190827224416-1a693bdd4fae
 	github.com/RichardKnop/redsync v1.2.0
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
+	github.com/apache/beam v2.21.0+incompatible
 	github.com/aws/aws-sdk-go v1.23.20
 	github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973 // indirect
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b

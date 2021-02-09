@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-beamondataflow
+  labels:
+    env: production
+    project: factors-production
+data:
+  BEAM_RUNNER: "dataflow"
+  BEAM_PROJECT: "factors-production"
+  BEAM_REGION: "us-west1"
+  BEAM_ZONE: "us-west1-b"
+  BEAM_TEMP_LOCATION: "gs://factors-misc/beam/tmp/"
+  BEAM_STAGIN_LOCATION: "gs://factors-misc/beam/binaries/"
+  BEAM_WORKER_HARNESS_IMAGE: "apache/beam_go_sdk:latest"
+  BEAM_SUBNETWORK: "regions/us-west1/subnetworks/us-west-1-factors-production-subnet-1"
