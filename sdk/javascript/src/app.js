@@ -447,6 +447,7 @@ App.prototype.autoDriftEventsCapture = function(appInstance, enabled) {
             if(!FormCapture.isPhone(e.phone)) return null;
             var props = {}
             props[Properties.PHONE] = e.phone;
+            props[Properties.SOURCE] = 'drift';
             appInstance.track(Properties.EV_FORM_SUBMITTED, props);
         });
 
@@ -454,6 +455,7 @@ App.prototype.autoDriftEventsCapture = function(appInstance, enabled) {
             if((!e.data || !e.data.email) || !FormCapture.isEmail(e.data.email)) return null;
             var props = {}
             props[Properties.EMAIL] = e.data.email;
+            props[Properties.SOURCE] = 'drift';
             appInstance.track(Properties.EV_FORM_SUBMITTED, props);
         });
     });

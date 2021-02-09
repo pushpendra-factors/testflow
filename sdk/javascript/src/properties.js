@@ -18,6 +18,9 @@ const NAME = PREFIX+"name";
 const FIRST_NAME = PREFIX+"first_name";
 const LAST_NAME = PREFIX+"last_name";
 
+// No $ since it's supposed to be tracked for marketing purposes
+const SOURCE = "source";
+
 // Events
 const EV_FORM_SUBMITTED = PREFIX + 'form_submitted';
 
@@ -357,6 +360,7 @@ module.exports = {
     PAGE_SCROLL_PERCENT: PAGE_SCROLL_PERCENT,
     EMAIL: EMAIL,
     PHONE, PHONE,
+    SOURCE: SOURCE,
 
     EV_FORM_SUBMITTED: EV_FORM_SUBMITTED
 }
