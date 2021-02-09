@@ -8,7 +8,8 @@ import (
 	"errors"
 	C "factors/config"
 	"factors/handler/helpers"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -72,7 +73,7 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 			return
 		}
 
-		project, errCode := M.GetProjectByToken(token)
+		project, errCode := store.GetStore().GetProjectByToken(token)
 		if errCode != http.StatusFound {
 			errorMessage := "Invalid token"
 			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed because of invalid token.")
@@ -146,7 +147,7 @@ func SetScopeProjectIdByPrivateToken() gin.HandlerFunc {
 			return
 		}
 
-		project, errCode := M.GetProjectByPrivateToken(token)
+		project, errCode := store.GetStore().GetProjectByPrivateToken(token)
 		if errCode != http.StatusFound {
 			errorMessage := "Invalid token"
 			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed because of invalid private token.")
@@ -200,7 +201,7 @@ func SetScopeProjectIdByPrivateTokenUsingBasicAuth() gin.HandlerFunc {
 			return
 		}
 
-		project, errCode := M.GetProjectByPrivateToken(token)
+		project, errCode := store.GetStore().GetProjectByPrivateToken(token)
 		if errCode != http.StatusFound {
 			c.AbortWithStatusJSON(http.StatusUnauthorized,
 				gin.H{"error": "Invalid authorization token"})
@@ -234,7 +235,7 @@ func SetScopeProjectIdByStoreAndSecret() gin.HandlerFunc {
 			return
 		}
 
-		projectId, secret, shouldHashEmail, errCode := M.GetProjectDetailsByShopifyDomain(shopifyDomain)
+		projectId, secret, shouldHashEmail, errCode := store.GetStore().GetProjectDetailsByShopifyDomain(shopifyDomain)
 		if errCode != http.StatusFound {
 			errorMessage := "Invalid Domain"
 			log.WithFields(log.Fields{"error": errorMessage, "domain": shopifyDomain}).Error(
@@ -243,7 +244,7 @@ func SetScopeProjectIdByStoreAndSecret() gin.HandlerFunc {
 			return
 		}
 
-		project, errCode := M.GetProject(projectId)
+		project, errCode := store.GetStore().GetProject(projectId)
 		if errCode != http.StatusFound {
 			c.AbortWithStatusJSON(http.StatusUnauthorized,
 				gin.H{"error": "Request failed. Invalid project."})
@@ -379,8 +380,7 @@ func ValidateLoggedInAgentHasAccessToRequestProject() gin.HandlerFunc {
 	}
 }
 
-// returns *M.Agent, errString, errCode
-func validateAuthData(authDataStr string) (*M.Agent, string, int) {
+func validateAuthData(authDataStr string) (*model.Agent, string, int) {
 	if authDataStr == "" {
 		return nil, "error parsing auth data empty", http.StatusBadRequest
 	}
@@ -389,7 +389,7 @@ func validateAuthData(authDataStr string) (*M.Agent, string, int) {
 		return nil, "error parsing auth data", http.StatusUnauthorized
 	}
 
-	agent, errCode := M.GetAgentByUUID(authData.AgentUUID)
+	agent, errCode := store.GetStore().GetAgentByUUID(authData.AgentUUID)
 	if errCode == http.StatusNotFound {
 		return nil, "agent not found", http.StatusUnauthorized
 	} else if errCode == http.StatusInternalServerError {
@@ -419,14 +419,14 @@ func isAdminTokenLogin(token string) bool {
 
 func SetLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var loginAgent *M.Agent
+		var loginAgent *model.Agent
 
 		loginAuthToken := c.Request.Header.Get("Authorization")
 		loginAuthToken = strings.TrimSpace(loginAuthToken)
 		if loginAuthToken != "" {
 			// Admin token login.
 			if isAdminTokenLogin(loginAuthToken) {
-				agent, errCode := M.GetAgentByEmail(C.GetConfig().AdminLoginEmail)
+				agent, errCode := store.GetStore().GetAgentByEmail(C.GetConfig().AdminLoginEmail)
 				if errCode != http.StatusFound {
 					c.AbortWithStatus(errCode)
 					return
@@ -438,7 +438,7 @@ func SetLoggedInAgent() gin.HandlerFunc {
 				agentLoginTokenMap := C.GetConfig().LoginTokenMap
 				for token, email := range agentLoginTokenMap {
 					if loginAuthToken == token {
-						agent, errCode := M.GetAgentByEmail(email)
+						agent, errCode := store.GetStore().GetAgentByEmail(email)
 						if errCode != http.StatusFound {
 							c.AbortWithStatusJSON(errCode, gin.H{"error": "invalid token"})
 							return
@@ -516,7 +516,7 @@ func SetAuthorizedProjectsByLoggedInAgent() gin.HandlerFunc {
 		} else {
 			// Set project with project agent mapping.
 
-			projectAgentMappings, errCode := M.GetProjectAgentMappingsByAgentUUID(loggedInAgentUUID)
+			projectAgentMappings, errCode := store.GetStore().GetProjectAgentMappingsByAgentUUID(loggedInAgentUUID)
 			if errCode == http.StatusInternalServerError {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get projects."})
 				return

@@ -1,7 +1,8 @@
 package tests
 
 import (
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"sort"
@@ -17,60 +18,60 @@ func TestCreateGetBillingAccountByAgentUUID(t *testing.T) {
 		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+134325454")
 		assert.Equal(t, http.StatusCreated, errCode)
 
-		ba, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
+		ba, errCode := store.GetStore().GetBillingAccountByAgentUUID(agent.UUID)
 		assert.Equal(t, http.StatusFound, errCode)
-		assert.Equal(t, M.FreePlanID, ba.PlanID)
+		assert.Equal(t, model.FreePlanID, ba.PlanID)
 	})
 	t.Run("SpecificPlan", func(t *testing.T) {
-		cAP := &M.CreateAgentParams{Agent: &M.Agent{Email: getRandomEmail(), Phone: "+2142355"}, PlanCode: M.StartupPlanCode}
-		resp, errCode := M.CreateAgentWithDependencies(cAP)
+		cAP := &model.CreateAgentParams{Agent: &model.Agent{Email: getRandomEmail(), Phone: "+2142355"}, PlanCode: model.StartupPlanCode}
+		resp, errCode := store.GetStore().CreateAgentWithDependencies(cAP)
 		assert.Equal(t, http.StatusCreated, errCode)
-		ba, errCode := M.GetBillingAccountByAgentUUID(resp.Agent.UUID)
+		ba, errCode := store.GetStore().GetBillingAccountByAgentUUID(resp.Agent.UUID)
 		assert.Equal(t, http.StatusFound, errCode)
-		assert.Equal(t, M.StartupPlanID, ba.PlanID)
+		assert.Equal(t, model.StartupPlanID, ba.PlanID)
 	})
 }
 
 func TestUpdateBillingAccount(t *testing.T) {
 
-	agent, errCode := SetupAgentReturnDAO(getRandomEmail(),"+1232545")
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+1232545")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	ba, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
+	ba, errCode := store.GetStore().GetBillingAccountByAgentUUID(agent.UUID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, "", ba.OrganizationName)
 	assert.Equal(t, "", ba.BillingAddress)
 	assert.Equal(t, "", ba.Pincode)
 	assert.Equal(t, "", ba.PhoneNo)
-	assert.Equal(t, M.FreePlanID, ba.PlanID)
+	assert.Equal(t, model.FreePlanID, ba.PlanID)
 
 	orgName := U.RandomString(8)
 	PhoneNo := "123452"
 	billingAddress := U.RandomString(20)
 	pincode := "640034"
-	errCode = M.UpdateBillingAccount(ba.ID, M.StartupPlanID, orgName, billingAddress, pincode, PhoneNo)
+	errCode = store.GetStore().UpdateBillingAccount(ba.ID, model.StartupPlanID, orgName, billingAddress, pincode, PhoneNo)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	updatedBa, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
+	updatedBa, errCode := store.GetStore().GetBillingAccountByAgentUUID(agent.UUID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, orgName, updatedBa.OrganizationName)
 	assert.Equal(t, billingAddress, updatedBa.BillingAddress)
 	assert.Equal(t, pincode, updatedBa.Pincode)
 	assert.Equal(t, PhoneNo, updatedBa.PhoneNo)
-	assert.Equal(t, M.StartupPlanID, updatedBa.PlanID)
+	assert.Equal(t, model.StartupPlanID, updatedBa.PlanID)
 }
 
 func TestGetProjectsUnderBillingAccount(t *testing.T) {
 	td, errCode := SetupTestData()
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: U.RandomString(6)}, td.Agent.UUID, M.ADMIN, td.BillingAccount.ID)
+	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: U.RandomString(6)}, td.Agent.UUID, model.ADMIN, td.BillingAccount.ID)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	expProjectIDs := []uint64{td.Project.ID, project.ID}
 	sort.Slice(expProjectIDs, func(i, j int) bool { return expProjectIDs[i] < expProjectIDs[j] })
 
-	resProjects, errCode := M.GetProjectsUnderBillingAccountID(td.BillingAccount.ID)
+	resProjects, errCode := store.GetStore().GetProjectsUnderBillingAccountID(td.BillingAccount.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, 2, len(resProjects))
 
@@ -87,12 +88,12 @@ func TestGetAgentsByProjectIDs(t *testing.T) {
 	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	project2, errCode := M.CreateProjectWithDependencies(&M.Project{Name: U.RandomString(6)}, agent2.UUID, M.ADMIN, td.BillingAccount.ID)
+	project2, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: U.RandomString(6)}, agent2.UUID, model.ADMIN, td.BillingAccount.ID)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	expAgentsUUID := []string{td.Agent.UUID, agent2.UUID}
 
-	agents, errCode := M.GetAgentsByProjectIDs([]uint64{td.Project.ID, project2.ID})
+	agents, errCode := store.GetStore().GetAgentsByProjectIDs([]uint64{td.Project.ID, project2.ID})
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, 2, len(agents))
 
@@ -109,11 +110,11 @@ func TestIsNewAgentCreationAllowed(t *testing.T) {
 
 	project := td.Project
 
-	freePlan, _ := M.GetPlanByID(td.BillingAccount.PlanID)
+	freePlan, _ := store.GetStore().GetPlanByID(td.BillingAccount.PlanID)
 
 	noOfAgentsToCreate := freePlan.MaxNoOfAgents - 1
 
-	createdAgents := make([]*M.Agent, 0, 0)
+	createdAgents := make([]*model.Agent, 0, 0)
 	for i := 0; i < noOfAgentsToCreate; i++ {
 		ag, errCode := SetupAgentReturnDAO(getRandomEmail(), "+2353464")
 		assert.Equal(t, http.StatusCreated, errCode)
@@ -122,12 +123,12 @@ func TestIsNewAgentCreationAllowed(t *testing.T) {
 	// create project agent mapping
 	for _, createdAgent := range createdAgents {
 
-		allowed, errCode := M.IsNewProjectAgentMappingCreationAllowed(td.Project.ID, createdAgent.Email)
+		allowed, errCode := store.GetStore().IsNewProjectAgentMappingCreationAllowed(td.Project.ID, createdAgent.Email)
 		assert.Equal(t, http.StatusOK, errCode)
 
 		assert.True(t, allowed)
 
-		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
 			ProjectID: project.ID,
 			AgentUUID: createdAgent.UUID,
 		})
@@ -135,7 +136,7 @@ func TestIsNewAgentCreationAllowed(t *testing.T) {
 	}
 
 	// new agent creation will fail
-	allowed, errCode := M.IsNewProjectAgentMappingCreationAllowed(td.Project.ID, getRandomEmail())
+	allowed, errCode := store.GetStore().IsNewProjectAgentMappingCreationAllowed(td.Project.ID, getRandomEmail())
 	assert.Equal(t, http.StatusOK, errCode)
 
 	assert.False(t, allowed)
@@ -147,7 +148,7 @@ func TestGetBillingAccountByProjectID(t *testing.T) {
 
 	project := td.Project
 
-	resultBA, errCode := M.GetBillingAccountByProjectID(project.ID)
+	resultBA, errCode := store.GetStore().GetBillingAccountByProjectID(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 
 	assert.Equal(t, td.BillingAccount.ID, resultBA.ID)

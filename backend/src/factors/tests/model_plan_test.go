@@ -1,7 +1,8 @@
 package tests
 
 import (
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"net/http"
 	"testing"
 
@@ -9,13 +10,13 @@ import (
 )
 
 func TestGetPlanByCode(t *testing.T) {
-	plan, errCode := M.GetPlanByCode(M.FreePlanCode)
+	plan, errCode := store.GetStore().GetPlanByCode(model.FreePlanCode)
 	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, M.FreePlanID, plan.ID)
+	assert.Equal(t, model.FreePlanID, plan.ID)
 }
 
 func TestGetPlanByID(t *testing.T) {
-	plan, errCode := M.GetPlanByID(M.StartupPlanID)
+	plan, errCode := store.GetStore().GetPlanByID(model.StartupPlanID)
 	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, M.StartupPlanCode, plan.Code)
+	assert.Equal(t, model.StartupPlanCode, plan.Code)
 }

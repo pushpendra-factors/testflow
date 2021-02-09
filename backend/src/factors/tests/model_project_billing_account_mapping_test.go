@@ -1,7 +1,8 @@
 package tests
 
 import (
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"sort"
@@ -17,7 +18,7 @@ func TestGetProjectBillingAccountMappings(t *testing.T) {
 	billingAcc := testData.BillingAccount
 	project := testData.Project
 
-	projectBillingAccMappings, errCode := M.GetProjectBillingAccountMappings(billingAcc.ID)
+	projectBillingAccMappings, errCode := store.GetStore().GetProjectBillingAccountMappings(billingAcc.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, 1, len(projectBillingAccMappings))
 	assert.Equal(t, project.ID, projectBillingAccMappings[0].ProjectID)
@@ -31,7 +32,7 @@ func TestGetProjectBillingAccountMapping(t *testing.T) {
 	billingAcc := testData.BillingAccount
 	project := testData.Project
 
-	projectBillingAccMapping, errCode := M.GetProjectBillingAccountMapping(project.ID)
+	projectBillingAccMapping, errCode := store.GetStore().GetProjectBillingAccountMapping(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 
 	assert.Equal(t, billingAcc.ID, projectBillingAccMapping.BillingAccountID)
@@ -44,9 +45,9 @@ func TestCreateMultipleProjectsUnderSameBillingAccount(t *testing.T) {
 	agent := testData.Agent
 	billingAcc := testData.BillingAccount
 	randProjectName := U.RandomLowerAphaNumString(15)
-	newProject, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randProjectName}, agent.UUID, M.ADMIN, billingAcc.ID)
+	newProject, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: randProjectName}, agent.UUID, model.ADMIN, billingAcc.ID)
 	assert.Equal(t, http.StatusCreated, errCode)
-	projectBillingAccMappings, errCode := M.GetProjectBillingAccountMappings(billingAcc.ID)
+	projectBillingAccMappings, errCode := store.GetStore().GetProjectBillingAccountMappings(billingAcc.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, 2, len(projectBillingAccMappings))
 

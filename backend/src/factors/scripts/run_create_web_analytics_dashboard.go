@@ -9,7 +9,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"factors/util"
 )
 
@@ -25,7 +26,7 @@ func getProjectIdsWithoutWebAnalyticsDashboard(onlyProjectsMap map[uint64]bool) 
 	projectIds = make([]uint64, 0, 0)
 
 	db := C.GetServices().Db
-	queryStmnt := "SELECT id FROM projects WHERE id not in (SELECT distinct(project_id) FROM dashboards WHERE dashboards.name = '" + M.DefaultDashboardWebsiteAnalytics + "')"
+	queryStmnt := "SELECT id FROM projects WHERE id not in (SELECT distinct(project_id) FROM dashboards WHERE dashboards.name = '" + model.DefaultDashboardWebsiteAnalytics + "')"
 
 	//TODO(Maisa): create util function for joining []uint64
 	inProjectIds := ""
@@ -67,7 +68,7 @@ func getProjectIdsWithoutWebAnalyticsDashboard(onlyProjectsMap map[uint64]bool) 
 func getPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int) {
 	db := C.GetServices().Db
 
-	var projectAgentMappings []M.ProjectAgentMapping
+	var projectAgentMappings []model.ProjectAgentMapping
 	err := db.Limit(1).Order("created_at ASC").
 		Where("project_id = ?", projectId).Find(&projectAgentMappings).Error
 	if err != nil {
@@ -146,7 +147,7 @@ func main() {
 			continue
 		}
 
-		errCode = M.CreateWebAnalyticsDefaultDashboardWithUnits(projectId, agentUuid)
+		errCode = store.GetStore().CreateWebAnalyticsDefaultDashboardWithUnits(projectId, agentUuid)
 		if errCode != http.StatusCreated {
 			logCtx.WithField("err_code", errCode).Error("Failed to create web analytics dashboard.")
 			continue

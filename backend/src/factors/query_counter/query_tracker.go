@@ -1,7 +1,7 @@
 package querycounter
 
 import (
-	M "factors/model"
+	"factors/model/model"
 	P "factors/pattern"
 	"fmt"
 
@@ -13,7 +13,7 @@ type QueryTracker struct {
 	eventsSequenceTracker []EventsPropertiesQueryTracker
 	// QueryType is one of QueryTypeEventsOccurrence or QueryTypeUniqueUsers.
 	queryType         string
-	groupByProperties []M.QueryGroupByProperty
+	groupByProperties []model.QueryGroupByProperty
 
 	// private state variables.
 	count         float64
@@ -25,8 +25,8 @@ type QueryTracker struct {
 	numUsersSeen  int
 }
 
-func NewQueryTracker(query *M.Query) (*QueryTracker, error) {
-	if query.Class == M.QueryClassInsights {
+func NewQueryTracker(query *model.Query) (*QueryTracker, error) {
+	if query.Class == model.QueryClassInsights {
 		var qTracker QueryTracker
 		qTracker.queryType = query.Type
 		qTracker.groupByProperties = query.GroupByProperties
@@ -49,11 +49,11 @@ func NewQueryTracker(query *M.Query) (*QueryTracker, error) {
 		}
 		qTracker.eventsSequenceTracker = []EventsPropertiesQueryTracker{*epqTracker}
 		return &qTracker, nil
-	} else if query.Class == M.QueryClassEvents {
+	} else if query.Class == model.QueryClassEvents {
 		// TODO(aravind): This is in new dashboard. Check how this and query groups can be supported.
 		var qTracker QueryTracker
 		return &qTracker, nil
-	} else if query.Class == M.QueryClassFunnel {
+	} else if query.Class == model.QueryClassFunnel {
 		var qTracker QueryTracker
 		qTracker.queryType = query.Type
 		qTracker.groupByProperties = query.GroupByProperties
@@ -64,7 +64,7 @@ func NewQueryTracker(query *M.Query) (*QueryTracker, error) {
 			// For funnel queries since one event is tracked at a given point of time
 			// either any or all will work. Without loss of generality we will set it as all.
 			epqTracker, err := NewEventPropertiesQueryTracker(
-				[]M.QueryEventWithProperties{ewp}, M.EventCondAllGivenEvent)
+				[]model.QueryEventWithProperties{ewp}, model.EventCondAllGivenEvent)
 			if err != nil {
 				log.WithError(err).WithFields(
 					log.Fields{"query": *query}).Info("Error Building query")
@@ -109,7 +109,7 @@ func (qT *QueryTracker) CountForEvent(eventDetails *P.CounterEventFormat) error 
 	if qT.prevUserId != qT.currUserId && qT.currUserId != "" && qT.prevUserId != "" {
 		qT.numUsersSeen++
 		qT.prevTimestamp = 0
-		if qT.queryType == M.QueryTypeUniqueUsers {
+		if qT.queryType == model.QueryTypeUniqueUsers {
 			qT.ResetForNextTrack()
 		}
 	}
@@ -120,7 +120,7 @@ func (qT *QueryTracker) CountForEvent(eventDetails *P.CounterEventFormat) error 
 		return err
 	}
 
-	if qT.waitIndex >= qLen && qT.queryType == M.QueryTypeUniqueUsers {
+	if qT.waitIndex >= qLen && qT.queryType == model.QueryTypeUniqueUsers {
 		// Has already completed an iteration for the current user. Return.
 		// waitIndex will get reset on ResetOnNewUser.
 		return nil
@@ -130,7 +130,7 @@ func (qT *QueryTracker) CountForEvent(eventDetails *P.CounterEventFormat) error 
 		qT.waitIndex += 1
 		qT.count += 1
 
-		if qT.waitIndex == qLen && qT.queryType == M.QueryTypeEventsOccurrence {
+		if qT.waitIndex == qLen && qT.queryType == model.QueryTypeEventsOccurrence {
 			// Allow recounting for the same user, if of type events occurrence.
 			qT.ResetForNextTrack()
 		}

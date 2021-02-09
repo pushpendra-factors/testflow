@@ -2,7 +2,7 @@
 package pattern_service_wrapper
 
 import (
-	M "factors/model"
+	"factors/model/model"
 	P "factors/pattern"
 	PC "factors/pattern_client"
 	U "factors/util"
@@ -965,13 +965,13 @@ var JOURNEYTYPE string = "journey"
 
 // Factors object
 type Factors struct {
-	GoalRule          M.FactorsGoalRule  `json:"goal"`
-	Insights          []*FactorsInsights `json:"insights"`
-	GoalUserCount     float64            `json:"goal_user_count"`
-	TotalUsersCount   float64            `json:"total_users_count"`
-	OverallPercentage float64            `json:"overall_percentage"`
-	OverallMultiplier float64            `json:"overall_multiplier"`
-	Type              string             `json:"type"`
+	GoalRule          model.FactorsGoalRule `json:"goal"`
+	Insights          []*FactorsInsights    `json:"insights"`
+	GoalUserCount     float64               `json:"goal_user_count"`
+	TotalUsersCount   float64               `json:"total_users_count"`
+	OverallPercentage float64               `json:"overall_percentage"`
+	OverallMultiplier float64               `json:"overall_multiplier"`
+	Type              string                `json:"type"`
 }
 
 // FactorsAttributeTuple object

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"factors/filestore"
-	M "factors/model"
+	"factors/model/model"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	U "factors/util"
@@ -211,9 +211,9 @@ func PullEventsForArchive(db *gorm.DB, projectID uint64,
 			peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil user properties.")
 		}
 
-		eventPropertiesString, _ := json.Marshal(M.SanitizeEventProperties(*eventPropertiesMap))
-		userPropertiesString, _ := json.Marshal(M.SanitizeUserProperties(*userPropertiesMap))
-		event := M.ArchiveEventTableFormat{
+		eventPropertiesString, _ := json.Marshal(model.SanitizeEventProperties(*eventPropertiesMap))
+		userPropertiesString, _ := json.Marshal(model.SanitizeUserProperties(*userPropertiesMap))
+		event := model.ArchiveEventTableFormat{
 			EventID:           eventID,
 			UserID:            userID,
 			UserJoinTimestamp: userJoinTimestamp,
@@ -243,7 +243,7 @@ func PullEventsForArchive(db *gorm.DB, projectID uint64,
 	}
 
 	for userID, customerUserID := range userIDMap {
-		user := M.ArchiveUsersTableFormat{
+		user := model.ArchiveUsersTableFormat{
 			UserID:         userID,
 			CustomerUserID: customerUserID,
 			IngestionDate:  time.Unix(startTime, 0).UTC(),

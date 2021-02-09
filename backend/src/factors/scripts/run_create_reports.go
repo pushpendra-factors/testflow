@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
 	"factors/util"
 
 	"factors/task/reports"
@@ -122,16 +122,16 @@ func main() {
 	reportTypes := make([]string, 0, 0)
 
 	if *addWeekly {
-		reportTypes = append(reportTypes, M.ReportTypeWeekly)
+		reportTypes = append(reportTypes, model.ReportTypeWeekly)
 	}
 
 	if *addMonthly {
-		reportTypes = append(reportTypes, M.ReportTypeMonthly)
+		reportTypes = append(reportTypes, model.ReportTypeMonthly)
 	}
 
 	// if no specific type given: create all.
 	if len(reportTypes) == 0 {
-		reportTypes = append(reportTypes, M.ReportTypeWeekly, M.ReportTypeMonthly)
+		reportTypes = append(reportTypes, model.ReportTypeWeekly, model.ReportTypeMonthly)
 	}
 
 	reports.BuildReports(*env, db, dashboards, reportTypes,
@@ -139,7 +139,7 @@ func main() {
 }
 
 func fetchDashboards(gormDB *gorm.DB, limit, lastSeenID uint64, projectsToBuildFor,
-	dashboardsToBuildFor, projectsToSkipFor []uint64) ([]*M.Dashboard, int) {
+	dashboardsToBuildFor, projectsToSkipFor []uint64) ([]*model.Dashboard, int) {
 
 	if len(projectsToBuildFor) == 0 && len(dashboardsToBuildFor) > 0 {
 		log.WithField("dashboardIds", dashboardsToBuildFor).Error(
@@ -147,7 +147,7 @@ func fetchDashboards(gormDB *gorm.DB, limit, lastSeenID uint64, projectsToBuildF
 		return nil, http.StatusBadRequest
 	}
 
-	var dashboards []*M.Dashboard
+	var dashboards []*model.Dashboard
 
 	db := gormDB.Limit(limit).Order("id ASC")
 

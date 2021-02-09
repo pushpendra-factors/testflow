@@ -9,7 +9,8 @@ import (
 
 	C "factors/config"
 	"factors/filestore"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	BQ "factors/services/bigquery"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
@@ -80,7 +81,7 @@ func main() {
 	}
 
 	pbLog.Info("Checking for existing config for project_id.")
-	bigquerySetting, status := M.GetBigquerySettingByProjectID(*projectIDFlag)
+	bigquerySetting, status := store.GetStore().GetBigquerySettingByProjectID(*projectIDFlag)
 	if status == http.StatusInternalServerError {
 		log.WithError(err).Fatalf("Failed to get bigquery setting for project_id")
 	} else if status == http.StatusNotFound {
@@ -97,13 +98,13 @@ func main() {
 		credentialsBuffer := new(bytes.Buffer)
 		credentialsBuffer.ReadFrom(credentialsReader)
 
-		bigquerySetting = &M.BigquerySetting{
+		bigquerySetting = &model.BigquerySetting{
 			ProjectID:               *projectIDFlag,
 			BigqueryProjectID:       *bigqueryProjectIDFlag,
 			BigqueryDatasetName:     *bigqueryDatasetFlag,
 			BigqueryCredentialsJSON: strings.ReplaceAll(credentialsBuffer.String(), "\n", ""),
 		}
-		bigquerySetting, status = M.CreateBigquerySetting(bigquerySetting)
+		bigquerySetting, status = store.GetStore().CreateBigquerySetting(bigquerySetting)
 		if status != http.StatusCreated {
 			pbLog.Fatal("Failed to create bigquery setting")
 		}

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	H "factors/handler"
 	"factors/handler/helpers"
-	M "factors/model"
+	"factors/model/store"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -51,7 +51,7 @@ func TestSignUp(t *testing.T) {
 		phone := "+912253467"
 		w := sendSignUpRequestWithAdditionalDetails(email, phone, r)
 		assert.Equal(t, http.StatusCreated, w.Code)
-		agent, code := M.GetAgentByEmail(email)
+		agent, code := store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, code)
 		assert.Equal(t, agent.FirstName, "first_name")
 		assert.Equal(t, agent.LastName, "last_name")
@@ -62,7 +62,7 @@ func TestSignUp(t *testing.T) {
 
 		w = sendAgentVerifyRequest(r, authData, "12345678", "", "")
 		assert.Equal(t, http.StatusOK, w.Code)
-		agent, code = M.GetAgentByEmail(email)
+		agent, code = store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, code)
 		assert.Equal(t, agent.FirstName, "first_name")
 		assert.Equal(t, agent.LastName, "last_name")
@@ -75,7 +75,7 @@ func TestSignUp(t *testing.T) {
 		phone := "+912253467"
 		w := sendSignUpRequestWithAdditionalDetails(email, phone, r)
 		assert.Equal(t, http.StatusCreated, w.Code)
-		agent, code := M.GetAgentByEmail(email)
+		agent, code := store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, code)
 		assert.Equal(t, agent.FirstName, "first_name")
 		assert.Equal(t, agent.LastName, "last_name")
@@ -86,7 +86,7 @@ func TestSignUp(t *testing.T) {
 
 		w = sendAgentVerifyRequest(r, authData, "12345678", "first_name_1", "last_name_1")
 		assert.Equal(t, http.StatusOK, w.Code)
-		agent, code = M.GetAgentByEmail(email)
+		agent, code = store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, code)
 		assert.Equal(t, agent.FirstName, "first_name_1")
 		assert.Equal(t, agent.LastName, "last_name_1")

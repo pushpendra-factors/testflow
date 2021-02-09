@@ -3,7 +3,7 @@ package handler
 import (
 	C "factors/config"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -39,7 +39,7 @@ func GetUserHandler(c *gin.Context) {
 		return
 	}
 
-	user, errCode := M.GetUser(projectId, id)
+	user, errCode := store.GetStore().GetUser(projectId, id)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 	} else {
@@ -95,7 +95,7 @@ func GetUsersHandler(c *gin.Context) {
 		}
 	}
 
-	users, errCode := M.GetUsers(projectId, offset, limit)
+	users, errCode := store.GetStore().GetUsers(projectId, offset, limit)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 	} else {
@@ -126,7 +126,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		"projectId": projectId,
 	})
 
-	properties, err = M.GetUserPropertiesByProject(projectId, 2500, C.GetLookbackWindowForEventUserCache())
+	properties, err = store.GetStore().GetUserPropertiesByProject(projectId, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {
 		logCtx.WithError(err).Error("get user properties by project")
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -172,7 +172,7 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	propertyValues, err = M.GetPropertyValuesByUserProperty(projectId, propertyName, 2500, C.GetLookbackWindowForEventUserCache())
+	propertyValues, err = store.GetStore().GetPropertyValuesByUserProperty(projectId, propertyName, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {
 		logCtx.WithError(err).Error("get property values by user property")
 		c.AbortWithStatus(http.StatusInternalServerError)

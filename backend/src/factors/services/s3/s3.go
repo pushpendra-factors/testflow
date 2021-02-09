@@ -86,6 +86,27 @@ func (sd *S3Driver) GetPatternChunksDir(projectId, modelId uint64) string {
 	return fmt.Sprintf("%schunks/", modelDir)
 }
 
+// GetPatternChunkFilePathAndName - Placeholder definition. Has to be implemented.
 func (sd *S3Driver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
 	return sd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
+}
+
+// GetEventArchiveFilePathAndName - Placeholder definition. Has to be implemented.
+func (sd *S3Driver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
+	return "", ""
+}
+
+// GetUsersArchiveFilePathAndName - Placeholder definition. Has to be implemented.
+func (sd *S3Driver) GetUsersArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
+	return "", ""
+}
+
+// ListFiles - Placeholder definition. Has to be implemented.
+func (sd *S3Driver) ListFiles(path string) []string {
+	return []string{}
+}
+
+// GetBucketName - Placeholder definition. Has to be implemented.
+func (sd *S3Driver) GetBucketName() string {
+	return ""
 }

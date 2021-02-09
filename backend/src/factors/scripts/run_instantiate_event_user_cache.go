@@ -2,7 +2,7 @@ package main
 
 import (
 	C "factors/config"
-	M "factors/model"
+	"factors/model/store"
 	S "factors/sdk"
 	"factors/util"
 	U "factors/util"
@@ -99,7 +99,7 @@ func main() {
 
 	for projectId, _ := range projectIdMap {
 		S.BackFillEventDataInCacheFromDb(projectId, startOfCurrentDay, *lookBackDays, *eventsLimit, *propertiesLimit, *valuesLimit, *eventRecordsLimit, *perQueryPullRange, *skipExpiry)
-		M.BackFillUserDataInCacheFromDb(projectId, startOfCurrentDay, *usersProcessedLimit, *propertiesLimit, *valuesLimit, *skipExpiry)
+		store.GetStore().BackFillUserDataInCacheFromDb(projectId, startOfCurrentDay, *usersProcessedLimit, *propertiesLimit, *valuesLimit, *skipExpiry)
 	}
 	fmt.Println("Done!!!")
 }

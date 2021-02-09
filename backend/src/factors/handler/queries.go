@@ -3,7 +3,8 @@ package handler
 import (
 	"encoding/json"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"strconv"
@@ -39,7 +40,7 @@ func GetQueriesHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get Queries failed. Invalid project."})
 		return
 	}
-	queries, errCode := M.GetALLQueriesWithProjectId(projectID)
+	queries, errCode := store.GetStore().GetALLQueriesWithProjectId(projectID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get Saved Queries failed."})
 		return
@@ -93,8 +94,8 @@ func CreateQueryHandler(c *gin.Context) {
 		return
 	}
 
-	query, errCode, errMsg := M.CreateQuery(projectID,
-		&M.Queries{
+	query, errCode, errMsg := store.GetStore().CreateQuery(projectID,
+		&model.Queries{
 			Query:     *requestPayload.Query,
 			Title:     requestPayload.Title,
 			Type:      requestPayload.Type,
@@ -148,10 +149,10 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid query id."})
 		return
 	}
-	_, errCode := M.UpdateSavedQuery(projectID, queryID,
-		&M.Queries{
+	_, errCode := store.GetStore().UpdateSavedQuery(projectID, queryID,
+		&model.Queries{
 			Title: requestPayload.Title,
-			Type:  M.QueryTypeSavedQuery,
+			Type:  model.QueryTypeSavedQuery,
 		})
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update Saved Query."})
@@ -183,7 +184,7 @@ func DeleteSavedQueryHandler(c *gin.Context) {
 		return
 	}
 
-	errCode, errMsg := M.DeleteQuery(projectID, queryID)
+	errCode, errMsg := store.GetStore().DeleteQuery(projectID, queryID)
 
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, errMsg)
@@ -214,7 +215,7 @@ func SearchQueriesHandler(c *gin.Context) {
 		return
 	}
 
-	queries, errCode := M.SearchQueriesWithProjectId(projectID, queryParams)
+	queries, errCode := store.GetStore().SearchQueriesWithProjectId(projectID, queryParams)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Search Queries failed. No query found"})
 	}

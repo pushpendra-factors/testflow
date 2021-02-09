@@ -6,7 +6,6 @@ import (
 	H "factors/handler"
 	"factors/handler/helpers"
 	IntSalesforce "factors/integration/salesforce"
-	M "factors/model"
 	"factors/task/event_user_cache"
 	TaskSession "factors/task/session"
 	U "factors/util"
@@ -18,6 +17,9 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"factors/model/model"
+	"factors/model/store"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
@@ -36,14 +38,14 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	start := time.Now()
 
 	// Test successful create eventName.
-	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
+	eventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{Name: "test_event", ProjectId: projectId})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, projectId, eventName.ProjectId)
 	assert.True(t, eventName.CreatedAt.After(start))
 	// Trying to create again should return the old one.
-	expectedEventName := &M.EventName{}
+	expectedEventName := &model.EventName{}
 	copier.Copy(expectedEventName, eventName)
-	retryEventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
+	retryEventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{Name: "test_event", ProjectId: projectId})
 	assert.Equal(t, http.StatusConflict, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(expectedEventName.CreatedAt.Sub(retryEventName.CreatedAt).Seconds()) < 0.1)
@@ -54,9 +56,9 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	retryEventName.UpdatedAt = time.Time{}
 	assert.Equal(t, expectedEventName, retryEventName)
 	// Test Get EventName on the created one.
-	expectedEventName = &M.EventName{}
+	expectedEventName = &model.EventName{}
 	copier.Copy(expectedEventName, eventName)
-	retEventName, errCode := M.GetEventName(expectedEventName.Name, projectId)
+	retEventName, errCode := store.GetStore().GetEventName(expectedEventName.Name, projectId)
 	assert.Equal(t, http.StatusFound, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(expectedEventName.CreatedAt.Sub(retEventName.CreatedAt).Seconds()) < 0.1)
@@ -68,48 +70,48 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	assert.Equal(t, expectedEventName, retEventName)
 
 	// Test Get Event on non existent name.
-	retEventName, errCode = M.GetEventName("non_existent_event", projectId)
+	retEventName, errCode = store.GetStore().GetEventName("non_existent_event", projectId)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, retEventName)
 
 	// Test Get Event with only name.
-	retEventName, errCode = M.GetEventName(eventName.Name, 0)
+	retEventName, errCode = store.GetStore().GetEventName(eventName.Name, 0)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, retEventName)
 
 	// Test Get Event with only projectId.
-	retEventName, errCode = M.GetEventName("", projectId)
+	retEventName, errCode = store.GetStore().GetEventName("", projectId)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, retEventName)
 
 	// Test Validate type on CreateOrGetUserCreatedEventName.
 	randomName := U.RandomLowerAphaNumString(10)
-	ucEventName := &M.EventName{Name: randomName, ProjectId: project.ID}
-	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
+	ucEventName := &model.EventName{Name: randomName, ProjectId: project.ID}
+	retEventName, errCode = store.GetStore().CreateOrGetUserCreatedEventName(ucEventName)
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.Equal(t, M.TYPE_USER_CREATED_EVENT_NAME, retEventName.Type)
+	assert.Equal(t, model.TYPE_USER_CREATED_EVENT_NAME, retEventName.Type)
 
 	// Test Duplicate creation of user created event name. Should be unique by project.
-	duplicateEventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: randomName, ProjectId: project.ID})
+	duplicateEventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{Name: randomName, ProjectId: project.ID})
 	assert.Equal(t, http.StatusConflict, errCode) // Should return conflict with the conflicted object.
-	assert.Equal(t, M.TYPE_USER_CREATED_EVENT_NAME, retEventName.Type)
+	assert.Equal(t, model.TYPE_USER_CREATED_EVENT_NAME, retEventName.Type)
 	assert.Equal(t, retEventName.ID, duplicateEventName.ID)
 
 	// Test CreateOrGetUserCreatedEventName without ProjectId.
-	ucEventName = &M.EventName{Name: U.RandomLowerAphaNumString(10)}
-	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
+	ucEventName = &model.EventName{Name: U.RandomLowerAphaNumString(10)}
+	retEventName, errCode = store.GetStore().CreateOrGetUserCreatedEventName(ucEventName)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, retEventName)
 
 	// Test CreateOrGetUserCreatedEventName without name.
-	ucEventName = &M.EventName{Name: "", ProjectId: project.ID}
-	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
+	ucEventName = &model.EventName{Name: "", ProjectId: project.ID}
+	retEventName, errCode = store.GetStore().CreateOrGetUserCreatedEventName(ucEventName)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, retEventName)
 
 	// Test CreateOrGetUserCreatedEventName with disallowed name.
-	ucEventName = &M.EventName{Name: "$name", ProjectId: project.ID}
-	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
+	ucEventName = &model.EventName{Name: "$name", ProjectId: project.ID}
+	retEventName, errCode = store.GetStore().CreateOrGetUserCreatedEventName(ucEventName)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, retEventName)
 }
@@ -124,25 +126,25 @@ func TestDBGetEventNames(t *testing.T) {
 	projectId := project.ID
 
 	// bad input
-	events, errCode := M.GetEventNames(0)
+	events, errCode := store.GetStore().GetEventNames(0)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 
 	// get events should return not found, no events have been created
-	events, errCode = M.GetEventNames(projectId)
+	events, errCode = store.GetStore().GetEventNames(projectId)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Empty(t, events)
 
 	// create events
-	eventName1, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
+	eventName1, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{Name: "test_event", ProjectId: projectId})
 	assert.Equal(t, http.StatusCreated, errCode)
-	eventName2, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: "test_event_1", ProjectId: projectId})
+	eventName2, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{Name: "test_event_1", ProjectId: projectId})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	createdEventsNames := []string{eventName1.Name, eventName2.Name}
 	sort.Strings(createdEventsNames)
 
 	// should return events
-	events, errCode = M.GetEventNames(projectId)
+	events, errCode = store.GetStore().GetEventNames(projectId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, events, 2)
 
@@ -152,43 +154,43 @@ func TestDBGetEventNames(t *testing.T) {
 }
 
 func TestDBIsFilterMatch(t *testing.T) {
-	assert.True(t, M.IsFilterMatch(U.TokenizeURI("/u1/u2"), U.TokenizeURI("/u1/u2")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/u1/u2"), U.TokenizeURI("/u1")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/u1/u2"), U.TokenizeURI("")))
+	assert.True(t, model.IsFilterMatch(U.TokenizeURI("/u1/u2"), U.TokenizeURI("/u1/u2")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/u1/u2"), U.TokenizeURI("/u1")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/u1/u2"), U.TokenizeURI("")))
 
-	assert.True(t, M.IsFilterMatch(U.TokenizeURI("/u1/:v1"), U.TokenizeURI("/u1/a1")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/u3/:v1"), U.TokenizeURI("/u1/1")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/u1/:v1"), U.TokenizeURI("/u1")))
+	assert.True(t, model.IsFilterMatch(U.TokenizeURI("/u1/:v1"), U.TokenizeURI("/u1/a1")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/u3/:v1"), U.TokenizeURI("/u1/1")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/u1/:v1"), U.TokenizeURI("/u1")))
 
-	assert.True(t, M.IsFilterMatch(U.TokenizeURI("/:v1"), U.TokenizeURI("/a1")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/:v1"), U.TokenizeURI("/a1/a3")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/:v1"), U.TokenizeURI("/")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/:v1"), U.TokenizeURI("")))
+	assert.True(t, model.IsFilterMatch(U.TokenizeURI("/:v1"), U.TokenizeURI("/a1")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/:v1"), U.TokenizeURI("/a1/a3")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/:v1"), U.TokenizeURI("/")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/:v1"), U.TokenizeURI("")))
 
-	assert.True(t, M.IsFilterMatch(U.TokenizeURI("/:v1/u1"), U.TokenizeURI("/a1/u1")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/:v1/u1"), U.TokenizeURI("/a1")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/:v1/u1"), U.TokenizeURI("/a1/a2/u1")))
+	assert.True(t, model.IsFilterMatch(U.TokenizeURI("/:v1/u1"), U.TokenizeURI("/a1/u1")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/:v1/u1"), U.TokenizeURI("/a1")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/:v1/u1"), U.TokenizeURI("/a1/a2/u1")))
 
-	assert.True(t, M.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2"), U.TokenizeURI("/u1/a2/u2")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2"), U.TokenizeURI("/u1/a2")))
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2"), U.TokenizeURI("/a2/u2")))
+	assert.True(t, model.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2"), U.TokenizeURI("/u1/a2/u2")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2"), U.TokenizeURI("/u1/a2")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2"), U.TokenizeURI("/a2/u2")))
 
-	assert.True(t, M.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2/:v2"), U.TokenizeURI("/u1/l1/u2/l2")))
+	assert.True(t, model.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2/:v2"), U.TokenizeURI("/u1/l1/u2/l2")))
 
 	// Empty filter.
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI(""), U.TokenizeURI("/u1")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI(""), U.TokenizeURI("/u1")))
 
 	// Root as filter.
-	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/"), U.TokenizeURI("/u1")))
-	assert.True(t, M.IsFilterMatch(U.TokenizeURI("/"), U.TokenizeURI("/")))
+	assert.False(t, model.IsFilterMatch(U.TokenizeURI("/"), U.TokenizeURI("/u1")))
+	assert.True(t, model.IsFilterMatch(U.TokenizeURI("/"), U.TokenizeURI("/")))
 }
 
-func setupProjectAndFilters(t *testing.T, filters map[string]string) *M.Project {
+func setupProjectAndFilters(t *testing.T, filters map[string]string) *model.Project {
 	project, _ := SetupProjectReturnDAO()
 	assert.NotNil(t, project)
 
 	for name, fexpr := range filters {
-		filterEventName1, errCode := M.CreateOrGetFilterEventName(&M.EventName{ProjectId: project.ID, Name: name, FilterExpr: fexpr})
+		filterEventName1, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{ProjectId: project.ID, Name: name, FilterExpr: fexpr})
 		assert.NotNil(t, filterEventName1)
 		assert.Equal(t, http.StatusCreated, errCode)
 	}
@@ -201,37 +203,37 @@ func TestDBFilterEventNameByEventURL(t *testing.T) {
 	project := setupProjectAndFilters(t, filters)
 
 	// domain only event url should match with root "/" expression.
-	onlyDomainEventURL, errCode := M.FilterEventNameByEventURL(project.ID, "a.com")
+	onlyDomainEventURL, errCode := store.GetStore().FilterEventNameByEventURL(project.ID, "a.com")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, onlyDomainEventURL)
 	assert.Equal(t, filters["only_root"], onlyDomainEventURL.FilterExpr)
 
 	// Match filter - exact and additional / at the end.
-	men, errCode := M.FilterEventNameByEventURL(project.ID, "a.com/u1/u2/")
+	men, errCode := store.GetStore().FilterEventNameByEventURL(project.ID, "a.com/u1/u2/")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men)
 	assert.Equal(t, filters["a_u1_u2"], men.FilterExpr)
 
 	// Match filter - prefix.
-	men1, errCode := M.FilterEventNameByEventURL(project.ID, "a.com/u1/u2/u3/u4/u5")
+	men1, errCode := store.GetStore().FilterEventNameByEventURL(project.ID, "a.com/u1/u2/u3/u4/u5")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men1)
 	assert.Equal(t, filters["a_u1_u2"], men1.FilterExpr)
 
 	// Match filter with property - exact.
-	men2, errCode := M.FilterEventNameByEventURL(project.ID, "a.com/u3/1")
+	men2, errCode := store.GetStore().FilterEventNameByEventURL(project.ID, "a.com/u3/1")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men2)
 	assert.Equal(t, filters["u3_v1"], men2.FilterExpr)
 
 	// Match filter with property - prefix.
-	men3, errCode := M.FilterEventNameByEventURL(project.ID, "a.com/u3/1/u1/u2")
+	men3, errCode := store.GetStore().FilterEventNameByEventURL(project.ID, "a.com/u3/1/u1/u2")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men3)
 	assert.Equal(t, filters["u3_v1"], men3.FilterExpr)
 
 	// Match by domain scope.
-	men4, errCode := M.FilterEventNameByEventURL(project.ID, "b.com/u1/u2")
+	men4, errCode := store.GetStore().FilterEventNameByEventURL(project.ID, "b.com/u1/u2")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men4)
 	assert.Equal(t, filters["b_u1_u2"], men4.FilterExpr)
@@ -240,27 +242,27 @@ func TestDBFilterEventNameByEventURL(t *testing.T) {
 	filters1 := map[string]string{"u1_u2": "a.com/u1/u2", "u1_u2_u3": "a.com/u1/u2/u3"}
 	project1 := setupProjectAndFilters(t, filters1)
 
-	men11, errCode := M.FilterEventNameByEventURL(project1.ID, "a.com/u1/u2")
+	men11, errCode := store.GetStore().FilterEventNameByEventURL(project1.ID, "a.com/u1/u2")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men11)
 	assert.Equal(t, filters1["u1_u2"], men11.FilterExpr)
 
-	men12, errCode := M.FilterEventNameByEventURL(project1.ID, "a.com/u1/u2/u3")
+	men12, errCode := store.GetStore().FilterEventNameByEventURL(project1.ID, "a.com/u1/u2/u3")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men12)
 	assert.Equal(t, filters1["u1_u2_u3"], men12.FilterExpr)
 
-	men13, errCode := M.FilterEventNameByEventURL(project1.ID, "a.com/u1/u2/u3/u4")
+	men13, errCode := store.GetStore().FilterEventNameByEventURL(project1.ID, "a.com/u1/u2/u3/u4")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men13)
 	assert.Equal(t, filters1["u1_u2_u3"], men13.FilterExpr)
 
-	men14, errCode := M.FilterEventNameByEventURL(project1.ID, "a.com/u1/u2/u4")
+	men14, errCode := store.GetStore().FilterEventNameByEventURL(project1.ID, "a.com/u1/u2/u4")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men14)
 	assert.Equal(t, filters1["u1_u2"], men14.FilterExpr)
 
-	men15, errCode := M.FilterEventNameByEventURL(project1.ID, "a.com/u3/u1/u2")
+	men15, errCode := store.GetStore().FilterEventNameByEventURL(project1.ID, "a.com/u3/u1/u2")
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, men15)
 
@@ -268,32 +270,32 @@ func TestDBFilterEventNameByEventURL(t *testing.T) {
 	filters2 := map[string]string{"u1_v1": "a.com/u1/:v1", "u1_u2": "a.com/u1/u2", "u1_v1_u2": "a.com/u1/:v1/u2", "u1_u2_v1": "a.com/u1/u2/:v1", "u1_u2_u3": "a.com/u1/u2/u3", "u1_v1_v2": "a.com/u1/:v1:/:v2"}
 	project2 := setupProjectAndFilters(t, filters2)
 
-	men20, errCode := M.FilterEventNameByEventURL(project2.ID, "a.com/u1/u2")
+	men20, errCode := store.GetStore().FilterEventNameByEventURL(project2.ID, "a.com/u1/u2")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men20)
 	assert.Equal(t, filters2["u1_u2"], men20.FilterExpr)
 
-	men21, errCode := M.FilterEventNameByEventURL(project2.ID, "a.com/u1/i1")
+	men21, errCode := store.GetStore().FilterEventNameByEventURL(project2.ID, "a.com/u1/i1")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men21)
 	assert.Equal(t, filters2["u1_v1"], men21.FilterExpr)
 
-	men22, errCode := M.FilterEventNameByEventURL(project2.ID, "a.com/u1/i1/i2")
+	men22, errCode := store.GetStore().FilterEventNameByEventURL(project2.ID, "a.com/u1/i1/i2")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men22)
 	assert.Equal(t, filters2["u1_v1_v2"], men22.FilterExpr)
 
-	men23, errCode := M.FilterEventNameByEventURL(project2.ID, "a.com/u1/i1/u2")
+	men23, errCode := store.GetStore().FilterEventNameByEventURL(project2.ID, "a.com/u1/i1/u2")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men23)
 	assert.Equal(t, filters2["u1_v1_u2"], men23.FilterExpr)
 
-	men24, errCode := M.FilterEventNameByEventURL(project2.ID, "a.com/u1/u2/u3")
+	men24, errCode := store.GetStore().FilterEventNameByEventURL(project2.ID, "a.com/u1/u2/u3")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men24)
 	assert.Equal(t, filters2["u1_u2_u3"], men24.FilterExpr)
 
-	men25, errCode := M.FilterEventNameByEventURL(project2.ID, "a.com/u1/u2/i1")
+	men25, errCode := store.GetStore().FilterEventNameByEventURL(project2.ID, "a.com/u1/u2/i1")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men25)
 	assert.Equal(t, filters2["u1_u2_v1"], men25.FilterExpr)
@@ -301,18 +303,18 @@ func TestDBFilterEventNameByEventURL(t *testing.T) {
 
 func TestDBFillEventPropertiesByFilterExpr(t *testing.T) {
 	props := U.PropertiesMap{}
-	M.FillEventPropertiesByFilterExpr(&props, "a.com/:v1", "a.com/i1")
+	model.FillEventPropertiesByFilterExpr(&props, "a.com/:v1", "a.com/i1")
 	assert.NotNil(t, props["v1"])
 	assert.Equal(t, "i1", props["v1"])
 
 	props1 := U.PropertiesMap{}
-	M.FillEventPropertiesByFilterExpr(&props1, "a.com/u1/:v1", "a.com/u1/i1")
+	model.FillEventPropertiesByFilterExpr(&props1, "a.com/u1/:v1", "a.com/u1/i1")
 	assert.NotNil(t, props1["v1"])
 	assert.Equal(t, "i1", props1["v1"])
 
 	// multiple values
 	props2 := U.PropertiesMap{}
-	M.FillEventPropertiesByFilterExpr(&props2, "a.com/u1/:v1/u2/:v2", "a.com/u1/i1/u2/i2")
+	model.FillEventPropertiesByFilterExpr(&props2, "a.com/u1/:v1/u2/:v2", "a.com/u1/i1/u2/i2")
 	assert.NotNil(t, props2["v1"])
 	assert.NotNil(t, props2["v2"])
 	assert.Equal(t, "i1", props2["v1"])
@@ -320,14 +322,14 @@ func TestDBFillEventPropertiesByFilterExpr(t *testing.T) {
 
 	// continuous multiple values
 	props3 := U.PropertiesMap{}
-	M.FillEventPropertiesByFilterExpr(&props3, "a.com/u1/:v1/:v2", "a.com/u1/i1/i2")
+	model.FillEventPropertiesByFilterExpr(&props3, "a.com/u1/:v1/:v2", "a.com/u1/i1/i2")
 	assert.NotNil(t, props3["v1"])
 	assert.NotNil(t, props3["v2"])
 	assert.Equal(t, "i1", props3["v1"])
 	assert.Equal(t, "i2", props3["v2"])
 
 	props4 := U.PropertiesMap{}
-	M.FillEventPropertiesByFilterExpr(&props4, "a.com/u1/:v1/u2", "https://a.com/u1/i1/u2")
+	model.FillEventPropertiesByFilterExpr(&props4, "a.com/u1/:v1/u2", "https://a.com/u1/i1/u2")
 	assert.NotNil(t, props4["v1"])
 	assert.Equal(t, "i1", props4["v1"])
 }
@@ -340,7 +342,7 @@ func TestDBCreateOrGetFilterEventName(t *testing.T) {
 
 	expr := "a.com/u1/u2/u3"
 	name := "login"
-	eventName, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+	eventName, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 		ProjectId:  project.ID,
 		FilterExpr: expr,
 		Name:       name,
@@ -350,12 +352,12 @@ func TestDBCreateOrGetFilterEventName(t *testing.T) {
 	assert.NotZero(t, eventName.ID)
 	assert.Equal(t, name, eventName.Name)
 	assert.Equal(t, expr, eventName.FilterExpr)
-	assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, eventName.Type)
+	assert.Equal(t, model.TYPE_FILTER_EVENT_NAME, eventName.Type)
 
 	// only domain as expr.
 	expr = "b.com"
 	name = "root"
-	eventName, errCode = M.CreateOrGetFilterEventName(&M.EventName{
+	eventName, errCode = store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 		ProjectId:  project.ID,
 		Name:       name,
 		FilterExpr: expr,
@@ -365,12 +367,12 @@ func TestDBCreateOrGetFilterEventName(t *testing.T) {
 	assert.NotZero(t, eventName.ID)
 	assert.Equal(t, name, eventName.Name)
 	assert.Equal(t, "b.com/", eventName.FilterExpr) // only domain. root as expr.
-	assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, eventName.Type)
+	assert.Equal(t, model.TYPE_FILTER_EVENT_NAME, eventName.Type)
 
 	// Test property and sanitization of expr.
 	expr = "https://a.com/u1/:v1?q=10"
 	name = "login2"
-	eventName, errCode = M.CreateOrGetFilterEventName(&M.EventName{
+	eventName, errCode = store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 		ProjectId:  project.ID,
 		Name:       name,
 		FilterExpr: expr,
@@ -380,11 +382,11 @@ func TestDBCreateOrGetFilterEventName(t *testing.T) {
 	assert.NotZero(t, eventName.ID)
 	assert.Equal(t, name, eventName.Name)
 	assert.Equal(t, "a.com/u1/:v1", eventName.FilterExpr) // sanitized expr.
-	assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, eventName.Type)
+	assert.Equal(t, model.TYPE_FILTER_EVENT_NAME, eventName.Type)
 
 	expr = ""
 	name = "login2"
-	eventName, errCode = M.CreateOrGetFilterEventName(&M.EventName{
+	eventName, errCode = store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 		ProjectId:  project.ID,
 		Name:       name,
 		FilterExpr: expr,
@@ -394,7 +396,7 @@ func TestDBCreateOrGetFilterEventName(t *testing.T) {
 
 	expr = "a.com/u1/u2"
 	name = ""
-	eventName, errCode = M.CreateOrGetFilterEventName(&M.EventName{
+	eventName, errCode = store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 		ProjectId:  project.ID,
 		Name:       name,
 		FilterExpr: expr,
@@ -405,7 +407,7 @@ func TestDBCreateOrGetFilterEventName(t *testing.T) {
 	// Test expr without domain.
 	expr = "/u1/u2"
 	name = "u1_u2"
-	eventName, errCode = M.CreateOrGetFilterEventName(&M.EventName{
+	eventName, errCode = store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 		ProjectId:  project.ID,
 		Name:       name,
 		FilterExpr: expr,
@@ -421,7 +423,7 @@ func TestDBGetFilterEventNames(t *testing.T) {
 	assert.NotNil(t, project)
 
 	// No filter event_names available.
-	eventNames, errCode := M.GetFilterEventNames(project.ID)
+	eventNames, errCode := store.GetStore().GetFilterEventNames(project.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.NotNil(t, eventNames)
 	assert.Zero(t, len(eventNames))
@@ -429,7 +431,7 @@ func TestDBGetFilterEventNames(t *testing.T) {
 	// Create filter_event_name.
 	expr := "a.com/u1/u2/u3"
 	name := "login"
-	createdEN, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+	createdEN, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 		ProjectId:  project.ID,
 		FilterExpr: expr,
 		Name:       name,
@@ -437,16 +439,16 @@ func TestDBGetFilterEventNames(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, createdEN)
 
-	eventNames, errCode = M.GetFilterEventNames(project.ID)
+	eventNames, errCode = store.GetStore().GetFilterEventNames(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, eventNames)
 	assert.Equal(t, 1, len(eventNames))
 	assert.Equal(t, createdEN.ID, eventNames[0].ID)
 
 	// Should not return deleted.
-	errCode = M.DeleteFilterEventName(project.ID, createdEN.ID)
+	errCode = store.GetStore().DeleteFilterEventName(project.ID, createdEN.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
-	eventNames, errCode = M.GetFilterEventNames(project.ID)
+	eventNames, errCode = store.GetStore().GetFilterEventNames(project.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 }
 
@@ -456,13 +458,13 @@ func TestDBUpdateFilterEventName(t *testing.T) {
 	assert.NotNil(t, project)
 
 	// Invalid event_name id.
-	eventName, errCode := M.UpdateFilterEventName(project.ID, 9999, &M.EventName{Name: U.RandomLowerAphaNumString(5)})
+	eventName, errCode := store.GetStore().UpdateFilterEventName(project.ID, 9999, &model.EventName{Name: U.RandomLowerAphaNumString(5)})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, eventName)
 
 	expr := "a.com/u1/u2/u3"
 	name := "login"
-	createdEN, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+	createdEN, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 		ProjectId:  project.ID,
 		FilterExpr: expr,
 		Name:       name,
@@ -472,20 +474,20 @@ func TestDBUpdateFilterEventName(t *testing.T) {
 
 	// Try updating expr.
 	newExpr := "/new/expr"
-	eventName, errCode = M.UpdateFilterEventName(project.ID, createdEN.ID, &M.EventName{Name: "login", FilterExpr: newExpr})
+	eventName, errCode = store.GetStore().UpdateFilterEventName(project.ID, createdEN.ID, &model.EventName{Name: "login", FilterExpr: newExpr})
 	assert.Equal(t, http.StatusAccepted, errCode)
 	assert.NotNil(t, eventName)
 	assert.NotEqual(t, eventName.FilterExpr, newExpr) // not updated.
 
 	// Happy path.
 	newName := U.RandomLowerAphaNumString(5)
-	eventName, errCode = M.UpdateFilterEventName(project.ID, createdEN.ID, &M.EventName{Name: newName})
+	eventName, errCode = store.GetStore().UpdateFilterEventName(project.ID, createdEN.ID, &model.EventName{Name: newName})
 	assert.Equal(t, http.StatusAccepted, errCode)
 	assert.NotNil(t, eventName)
 	assert.Equal(t, newName, eventName.Name)
 
 	// Invalid project_id.
-	eventName, errCode = M.UpdateFilterEventName(999999, createdEN.ID, &M.EventName{Name: U.RandomLowerAphaNumString(5)})
+	eventName, errCode = store.GetStore().UpdateFilterEventName(999999, createdEN.ID, &model.EventName{Name: U.RandomLowerAphaNumString(5)})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, eventName)
 }
@@ -496,12 +498,12 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 	assert.NotNil(t, project)
 
 	// Invalid event_name id.
-	errCode := M.DeleteFilterEventName(project.ID, 9999)
+	errCode := store.GetStore().DeleteFilterEventName(project.ID, 9999)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 
 	expr := "a.com/u1/u2/u3"
 	name := "login"
-	createdEN, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+	createdEN, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 		ProjectId:  project.ID,
 		FilterExpr: expr,
 		Name:       name,
@@ -509,7 +511,7 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, createdEN)
 
-	errCode = M.DeleteFilterEventName(project.ID, createdEN.ID)
+	errCode = store.GetStore().DeleteFilterEventName(project.ID, createdEN.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
 }
 
@@ -524,7 +526,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 
-	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.NotNil(t, user)
 	assert.Equal(t, http.StatusCreated, errCode)
 	rEventName := "event1"
@@ -560,7 +562,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
 	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
 	// with limit.
-	getEventNames1, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
+	getEventNames1, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)
 	assert.Len(t, getEventNames1[U.MostRecent], 4)
 
@@ -574,14 +576,14 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
-	getEventNames2, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
+	getEventNames2, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
 	assert.Equal(t, nil, err)
 	assert.Len(t, getEventNames2[U.MostRecent], 2)
 	assert.Equal(t, "$session", getEventNames2[U.MostRecent][0])
 	assert.Equal(t, "event2", getEventNames2[U.MostRecent][1])
 }
 
-func sendCreateSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *M.Agent, enPayload *map[string]interface{}) *httptest.ResponseRecorder {
+func sendCreateSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent, enPayload *map[string]interface{}) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -607,7 +609,7 @@ func sendCreateSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *M.Age
 	return w
 }
 
-func sendGetSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+func sendGetSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -632,7 +634,7 @@ func sendGetSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *M.Agent)
 	return w
 }
 
-func sendUpdateSmartEventFilterReq(r *gin.Engine, projectID uint64, agent *M.Agent, enPayload *map[string]interface{}, filterID uint64) *httptest.ResponseRecorder {
+func sendUpdateSmartEventFilterReq(r *gin.Engine, projectID uint64, agent *model.Agent, enPayload *map[string]interface{}, filterID uint64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -665,30 +667,30 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	assert.NotNil(t, project)
 
 	// string comparision
-	stringComp := &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	stringComp := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "email",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "test1@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "test@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 
@@ -707,30 +709,30 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	assert.NotEqual(t, 0, stringCompEventNameId)
 
 	// integer comparision
-	intComp := &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	intComp := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "count",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "5",
-						Operator:      M.COMPARE_GREATER_THAN,
+						Operator:      model.COMPARE_GREATER_THAN,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "4",
-						Operator:      M.COMPARE_LESS_THAN,
+						Operator:      model.COMPARE_LESS_THAN,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 
@@ -770,9 +772,9 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	assert.Contains(t, smartEvent.Properties, "$prev_salesforce_contact_email", "$curr_salesforce_contact_email")
 
 	// individual properties test
-	state := M.CRMFilterEvaluator(project.ID, &currentProperties, nil, &(smartCRMEvents[stringFilterIndex].FilterExpr), M.CompareStateCurr)
+	state := model.CRMFilterEvaluator(project.ID, &currentProperties, nil, &(smartCRMEvents[stringFilterIndex].FilterExpr), model.CompareStateCurr)
 	assert.Equal(t, true, state)
-	state = M.CRMFilterEvaluator(project.ID, nil, &prevProperties, &(smartCRMEvents[stringFilterIndex].FilterExpr), M.CompareStatePrev)
+	state = model.CRMFilterEvaluator(project.ID, nil, &prevProperties, &(smartCRMEvents[stringFilterIndex].FilterExpr), model.CompareStatePrev)
 	assert.Equal(t, true, state)
 
 	// int compare
@@ -784,30 +786,30 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	assert.Contains(t, smartEvent.Properties, "$prev_salesforce_contact_count", "$curr_salesforce_contact_count")
 
 	// overwrite filter exp
-	intComp = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	intComp = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "count",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "5",
-						Operator:      M.COMPARE_GREATER_THAN,
+						Operator:      model.COMPARE_GREATER_THAN,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "4",
-						Operator:      M.COMPARE_GREATER_THAN,
+						Operator:      model.COMPARE_GREATER_THAN,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 	requestPayload = make(map[string]interface{})
@@ -837,46 +839,46 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	/* (current email == test1@gmail.com and prev email == test@gmail.com )
 	AND (current company == example2 AND  previous company == example) */
-	filter := &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "email",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "test1@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "test@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 			{
 				Name: "company",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "example2",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "example1",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 
@@ -892,46 +894,46 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	/* (current email == test1@gmail.com OR prev email == test@gmail.com )
 	AND (current company == example2 AND  previous company == example) */
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "email",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "test1@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "test@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_OR,
+				LogicalOp: model.LOGICAL_OP_OR,
 			},
 			{
 				Name: "company",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "example2",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "example1",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 	currentProperties = make(map[string]interface{})
@@ -946,54 +948,54 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	// individual test
 	// individual properties test
-	state := M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	state := model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
 	assert.Equal(t, true, state)
-	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	state = model.CRMFilterEvaluator(1, nil, &prevProperties, filter, model.CompareStatePrev)
 	assert.Equal(t, false, state)
 
 	/* Property OR operation
 	(current email == test1@gmail.com AND prev email == test@gmail.com )
 	OR (current company == example2 AND  previous company == example) */
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "email",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "test1@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "test@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 			{
 				Name: "company",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "example2",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "example1",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_OR,
+		LogicalOp:               model.LOGICAL_OP_OR,
 		TimestampReferenceField: "time",
 	}
 
@@ -1008,9 +1010,9 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	// individual test
 	// individual properties test
-	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	state = model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
 	assert.Equal(t, true, state)
-	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	state = model.CRMFilterEvaluator(1, nil, &prevProperties, filter, model.CompareStatePrev)
 	assert.Equal(t, true, state)
 
 	/*
@@ -1019,46 +1021,46 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	/* (current email == test1@gmail.com and prev email == test@gmail.com )
 	AND (current company == example2 AND  previous company == example) */
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "email",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "test1@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "test@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 			{
 				Name: "company",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "example2",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "example1",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 	currentProperties = make(map[string]interface{})
@@ -1072,53 +1074,53 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	// individual test
 	// individual properties test
-	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	state = model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
 	assert.Equal(t, false, state)
-	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	state = model.CRMFilterEvaluator(1, nil, &prevProperties, filter, model.CompareStatePrev)
 	assert.Equal(t, true, state)
 
 	/* (current email == test1@gmail.com and prev email == test@gmail.com )
 	OR (current company == example2 AND  previous company == example) */
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "email",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "test1@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "test@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 			{
 				Name: "company",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "example2",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "example1",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 	currentProperties = make(map[string]interface{})
@@ -1132,53 +1134,53 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	// individual test
 	// individual properties test
-	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	state = model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
 	assert.Equal(t, false, state)
-	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	state = model.CRMFilterEvaluator(1, nil, &prevProperties, filter, model.CompareStatePrev)
 	assert.Equal(t, false, state)
 
 	/* (current email == test1@gmail.com OR prev email == test@gmail.com )
 	OR (current company == example2 OR previous company == example) */
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "email",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "test1@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "test@gmail.com",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 			{
 				Name: "company",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "example2",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "example1",
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 	currentProperties = make(map[string]interface{})
@@ -1192,39 +1194,39 @@ func TestSmartCRMFilterStringCompare(t *testing.T) {
 
 	// individual test
 	// individual properties test
-	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	state = model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
 	assert.Equal(t, false, state)
-	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	state = model.CRMFilterEvaluator(1, nil, &prevProperties, filter, model.CompareStatePrev)
 	assert.Equal(t, false, state)
 
 }
 
 func TestSmartCRMFilterContains(t *testing.T) {
 	/* (current $description  contains "greetings" and prev $$description contains "greetings" ) */
-	filter := &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "description",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "greetings",
-						Operator:      M.COMPARE_CONTAINS,
+						Operator:      model.COMPARE_CONTAINS,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "greetings",
-						Operator:      M.COMPARE_CONTAINS,
+						Operator:      model.COMPARE_CONTAINS,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 
@@ -1236,30 +1238,30 @@ func TestSmartCRMFilterContains(t *testing.T) {
 	assert.Equal(t, true, ok)
 
 	/* (current $description  not contains "greetings" and prev $$description not contains "greetings" ) */
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "description",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         "greetings",
-						Operator:      M.COMPARE_NOT_CONTAINS,
+						Operator:      model.COMPARE_NOT_CONTAINS,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         "greetings",
-						Operator:      M.COMPARE_NOT_CONTAINS,
+						Operator:      model.COMPARE_NOT_CONTAINS,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 
@@ -1270,30 +1272,30 @@ func TestSmartCRMFilterContains(t *testing.T) {
 func TestSmartCRMFilterInteger(t *testing.T) {
 
 	/* (current page_spent_time  > 5 and prev page_spent_time < 3 ) */
-	filter := &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "page_spent_time",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         5,
-						Operator:      M.COMPARE_GREATER_THAN,
+						Operator:      model.COMPARE_GREATER_THAN,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         3,
-						Operator:      M.COMPARE_LESS_THAN,
+						Operator:      model.COMPARE_LESS_THAN,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 	currentProperties := make(map[string]interface{})
@@ -1305,9 +1307,9 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 
 	// individual test
 	// individual properties test
-	state := M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	state := model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
 	assert.Equal(t, true, state)
-	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	state = model.CRMFilterEvaluator(1, nil, &prevProperties, filter, model.CompareStatePrev)
 	assert.Equal(t, true, state)
 
 	// Fail test
@@ -1318,46 +1320,46 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 
 	/* (current page_spent_time  == 5 and prev page_spent_time == 3 )
 	OR (current page_count == 10 AND  previous page_count == 7) */
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "page_spent_time",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         5,
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         3,
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 			{
 				Name: "page_spent_count",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         10,
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         7,
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 	currentProperties = make(map[string]interface{})
@@ -1371,53 +1373,53 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 
 	// individual test
 	// individual properties test
-	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	state = model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
 	assert.Equal(t, true, state)
-	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	state = model.CRMFilterEvaluator(1, nil, &prevProperties, filter, model.CompareStatePrev)
 	assert.Equal(t, true, state)
 
 	/* (current page_spent_time  == 5 and prev page_spent_time == 3 )
 	OR (current page_count == 10 AND  previous page_count == 7) */
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeSpecific,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "page_spent_time",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         5,
-						Operator:      M.COMPARE_GREATER_THAN,
+						Operator:      model.COMPARE_GREATER_THAN,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         3,
-						Operator:      M.COMPARE_LESS_THAN,
+						Operator:      model.COMPARE_LESS_THAN,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 			{
 				Name: "page_spent_count",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 						Value:         10,
-						Operator:      M.COMPARE_LESS_THAN,
+						Operator:      model.COMPARE_LESS_THAN,
 					},
 					{
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 						Value:         7,
-						Operator:      M.COMPARE_GREATER_THAN,
+						Operator:      model.COMPARE_GREATER_THAN,
 					},
 				},
-				LogicalOp: M.LOGICAL_OP_AND,
+				LogicalOp: model.LOGICAL_OP_AND,
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 	currentProperties = make(map[string]interface{})
@@ -1431,27 +1433,27 @@ func TestSmartCRMFilterInteger(t *testing.T) {
 
 	// individual test
 	// individual properties test
-	state = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	state = model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
 	assert.Equal(t, true, state)
-	state = M.CRMFilterEvaluator(1, nil, &prevProperties, filter, M.CompareStatePrev)
+	state = model.CRMFilterEvaluator(1, nil, &prevProperties, filter, model.CompareStatePrev)
 	assert.Equal(t, true, state)
 }
 
 func TestSmartCRMFilterAnyChange(t *testing.T) {
 
 	/* any change in $page_spent_time */
-	filter := &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeAny,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeAny,
+		Filters: []model.PropertyFilter{
 			{
 				Name:  "page_spent_time",
-				Rules: []M.CRMFilterRule{},
+				Rules: []model.CRMFilterRule{},
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 
@@ -1466,7 +1468,7 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	assert.Contains(t, smartEvent.Properties, "$curr_salesforce_contact_page_spent_time")
 	assert.Contains(t, smartEvent.Properties, "$prev_salesforce_contact_page_spent_time")
 
-	ok = M.CRMFilterEvaluator(1, &currentProperties, nil, filter, M.CompareStateCurr)
+	ok = model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
 	assert.Equal(t, true, ok)
 	// same value
 	prevProperties["page_spent_time"] = 7
@@ -1475,22 +1477,22 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	assert.Equal(t, prevProperties, *rPrevProperties)
 
 	/* any change in $page_spent_time OR $count */
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeAny,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeAny,
+		Filters: []model.PropertyFilter{
 			{
 				Name:  "page_spent_time",
-				Rules: []M.CRMFilterRule{},
+				Rules: []model.CRMFilterRule{},
 			},
 			{
 				Name:  "count",
-				Rules: []M.CRMFilterRule{},
+				Rules: []model.CRMFilterRule{},
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_OR,
+		LogicalOp:               model.LOGICAL_OP_OR,
 		TimestampReferenceField: "time",
 	}
 
@@ -1514,29 +1516,29 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	/*
 		prev $page_spent_time equals anything and curr $page_spent_time = 10
 	*/
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeAny,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeAny,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "page_spent_time",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						Operator:      M.COMPARE_EQUAL,
-						Value:         M.PROPERTY_VALUE_ANY,
-						PropertyState: M.PreviousState,
+						Operator:      model.COMPARE_EQUAL,
+						Value:         model.PROPERTY_VALUE_ANY,
+						PropertyState: model.PreviousState,
 					},
 					{
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 						Value:         10,
-						PropertyState: M.CurrentState,
+						PropertyState: model.CurrentState,
 					},
 				},
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 
@@ -1554,29 +1556,29 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	/*
 		prev $page_spent_time equals 10 and curr $page_spent_time equal anything
 	*/
-	filter = &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeAny,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeAny,
+		Filters: []model.PropertyFilter{
 			{
 				Name: "page_spent_time",
-				Rules: []M.CRMFilterRule{
+				Rules: []model.CRMFilterRule{
 					{
-						Operator:      M.COMPARE_EQUAL,
-						Value:         M.PROPERTY_VALUE_ANY,
-						PropertyState: M.CurrentState,
+						Operator:      model.COMPARE_EQUAL,
+						Value:         model.PROPERTY_VALUE_ANY,
+						PropertyState: model.CurrentState,
 					},
 					{
-						Operator:      M.COMPARE_EQUAL,
+						Operator:      model.COMPARE_EQUAL,
 						Value:         10,
-						PropertyState: M.PreviousState,
+						PropertyState: model.PreviousState,
 					},
 				},
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 
@@ -1598,44 +1600,45 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	filter := &M.SmartCRMEventFilter{
-		Source:               M.SmartCRMEventSourceSalesforce,
+	filter := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
 		ObjectType:           "contact",
 		Description:          "salesforce contact",
-		FilterEvaluationType: M.FilterEvaluationTypeAny,
-		Filters: []M.PropertyFilter{
+		FilterEvaluationType: model.FilterEvaluationTypeAny,
+		Filters: []model.PropertyFilter{
 			{
 				Name:  "page_spent_time",
-				Rules: []M.CRMFilterRule{},
+				Rules: []model.CRMFilterRule{},
 			},
 		},
-		LogicalOp:               M.LOGICAL_OP_AND,
+		LogicalOp:               model.LOGICAL_OP_AND,
 		TimestampReferenceField: "time",
 	}
 
 	//Smart event names
-	smartEventNames := make([]M.EventName, 0)
+	smartEventNames := make([]model.EventName, 0)
 	for i := 0; i < 5; i++ {
 		filter.Filters[0].Name = fmt.Sprintf("property %d", i)
-		eventName, status := M.CreateOrGetCRMSmartEventFilterEventName(project.ID, &M.EventName{ProjectId: project.ID, Name: fmt.Sprintf("Smart Event Name %d", i)}, filter)
+		eventName, status := store.GetStore().CreateOrGetCRMSmartEventFilterEventName(project.ID,
+			&model.EventName{ProjectId: project.ID, Name: fmt.Sprintf("Smart Event Name %d", i)}, filter)
 		assert.Equal(t, http.StatusCreated, status)
 		smartEventNames = append(smartEventNames, *eventName)
 	}
 
 	// Normal event names
-	eventNames := make([]M.EventName, 0)
+	eventNames := make([]model.EventName, 0)
 	for i := 0; i < 5; i++ {
-		eventName, status := M.CreateOrGetEventName(&M.EventName{ProjectId: project.ID, Name: fmt.Sprintf("Event Name %d", i), Type: M.TYPE_USER_CREATED_EVENT_NAME})
+		eventName, status := store.GetStore().CreateOrGetEventName(&model.EventName{ProjectId: project.ID, Name: fmt.Sprintf("Event Name %d", i), Type: model.TYPE_USER_CREATED_EVENT_NAME})
 		assert.Equal(t, http.StatusCreated, status)
 		eventNames = append(eventNames, *eventName)
 	}
 
-	user, status := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, status)
 
 	// creating multiple normal events
 	for i := 0; i < 100; i++ {
-		_, status := M.CreateEvent(&M.Event{
+		_, status := store.GetStore().CreateEvent(&model.Event{
 			EventNameId: eventNames[i%5].ID,
 			ProjectId:   project.ID,
 			UserId:      user.ID,
@@ -1646,7 +1649,7 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 
 	// creating less smart events
 	for i := 0; i < 10; i++ {
-		_, status := M.CreateEvent(&M.Event{
+		_, status := store.GetStore().CreateEvent(&model.Event{
 			EventNameId: smartEventNames[i%5].ID,
 			ProjectId:   project.ID,
 			UserId:      user.ID,
@@ -1658,7 +1661,7 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
 	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
 
-	getEventNames, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
+	getEventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)
 	responseSmartEventNames := getEventNames[U.SmartEvent][:5]
 	//check top 5 are smart event names

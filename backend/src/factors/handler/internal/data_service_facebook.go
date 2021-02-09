@@ -2,7 +2,8 @@ package internal
 
 import (
 	"encoding/json"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"net/http"
 	"strconv"
 
@@ -11,14 +12,14 @@ import (
 )
 
 func DataServiceFacebookGetProjectSettings(c *gin.Context) {
-	facebookProjectSettings, status := M.GetFacebookEnabledProjectSettings()
+	facebookProjectSettings, status := store.GetStore().GetFacebookEnabledProjectSettings()
 	c.JSON(status, facebookProjectSettings)
 }
 
 func DataServiceFacebookAddDocumentHandler(c *gin.Context) {
 	r := c.Request
 
-	var facebookDocument M.FacebookDocument
+	var facebookDocument model.FacebookDocument
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&facebookDocument); err != nil {
@@ -28,7 +29,7 @@ func DataServiceFacebookAddDocumentHandler(c *gin.Context) {
 		return
 	}
 
-	errCode := M.CreateFacebookDocument(facebookDocument.ProjectID, &facebookDocument)
+	errCode := store.GetStore().CreateFacebookDocument(facebookDocument.ProjectID, &facebookDocument)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest || errCode == http.StatusConflict {
 		log.WithField("document", facebookDocument).Error("Failed to insert the facebook document on create document.")
 		c.AbortWithStatusJSON(errCode,
@@ -42,7 +43,7 @@ func DataServiceFacebookAddDocumentHandler(c *gin.Context) {
 func DataServiceFacebookGetLastSyncInfoHandler(c *gin.Context) {
 	r := c.Request
 
-	var payload M.FacebookLastSyncInfoPayload
+	var payload model.FacebookLastSyncInfoPayload
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
@@ -52,6 +53,6 @@ func DataServiceFacebookGetLastSyncInfoHandler(c *gin.Context) {
 		return
 	}
 	projectID, _ := strconv.ParseUint(payload.ProjectId, 10, 64)
-	lastSyncInfo, status := M.GetFacebookLastSyncInfo(projectID, payload.CustomerAdAccountId)
+	lastSyncInfo, status := store.GetStore().GetFacebookLastSyncInfo(projectID, payload.CustomerAdAccountId)
 	c.JSON(status, lastSyncInfo)
 }

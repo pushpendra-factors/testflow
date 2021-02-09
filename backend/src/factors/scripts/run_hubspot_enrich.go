@@ -2,13 +2,13 @@ package main
 
 import (
 	C "factors/config"
+	"factors/model/store"
 	"flag"
 	"fmt"
 	"net/http"
 	"time"
 
 	IntHubspot "factors/integration/hubspot"
-	M "factors/model"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -83,7 +83,7 @@ func main() {
 	C.InitSmartEventMode(config.DryRunCRMSmartEvent)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
-	hubspotEnabledProjectSettings, errCode := M.GetAllHubspotProjectSettings()
+	hubspotEnabledProjectSettings, errCode := store.GetStore().GetAllHubspotProjectSettings()
 	if errCode != http.StatusFound {
 		log.Panic("No projects enabled hubspot integration.")
 	}

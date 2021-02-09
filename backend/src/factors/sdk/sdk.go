@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	"factors/model/model"
+	"factors/model/store"
 	"fmt"
 	"net/http"
 	"strings"
@@ -18,7 +20,6 @@ import (
 
 	C "factors/config"
 	"factors/metrics"
-	M "factors/model"
 	U "factors/util"
 )
 
@@ -279,11 +280,11 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 	}
 	allevents := make(map[string]bool)
 	for i := 1; i <= no_of_days; i++ {
-		var eventNames M.CacheEventNamesWithTimestamp
+		var eventNames model.CacheEventNamesWithTimestamp
 		eventNames.EventNames = make(map[string]U.CountTimestampTuple)
 
 		dateFormat := currentTime.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
-		eventNamesKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(project_id, dateFormat)
+		eventNamesKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(project_id, dateFormat)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key")
 			return
@@ -291,7 +292,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 
 		logCtx.WithField("dateFormat", dateFormat).Info("Begin: Event names - DB query by occurence")
 		begin := U.TimeNow()
-		events, err := M.GetOrderedEventNamesFromDb(
+		events, err := store.GetStore().GetOrderedEventNamesFromDb(
 			project_id,
 			currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 			currentTime.AddDate(0, 0, -(i-1)).Unix(),
@@ -338,7 +339,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 
 			logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event}).Info("Begin: Get event Properties DB call")
 			begin := U.TimeNow()
-			properties, err := M.GetRecentEventPropertyKeysWithLimits(
+			properties, err := store.GetStore().GetRecentEventPropertyKeysWithLimits(
 				project_id, event,
 				currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 				currentTime.AddDate(0, 0, -(i-1)).Unix(),
@@ -351,7 +352,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 			}
 
 			if len(properties) > 0 {
-				eventPropertiesKey, err := M.GetPropertiesByEventCategoryRollUpCacheKey(project_id, event, dateFormat)
+				eventPropertiesKey, err := model.GetPropertiesByEventCategoryRollUpCacheKey(project_id, event, dateFormat)
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to get cache key - properties")
 					return
@@ -361,7 +362,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 
 					logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key}).Info("Begin: Get event Property values DB call")
 					begin := U.TimeNow()
-					values, category, err := M.GetRecentEventPropertyValuesWithLimits(project_id, event, property.Key, valuesLimit, rowsLimit,
+					values, category, err := store.GetStore().GetRecentEventPropertyValuesWithLimits(project_id, event, property.Key, valuesLimit, rowsLimit,
 						currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 						currentTime.AddDate(0, 0, -(i-1)).Unix())
 					end := U.TimeNow()
@@ -384,7 +385,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 					eventPropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
 
 					if category == U.PropertyTypeCategorical {
-						eventPropertyValuesKey, _ := M.GetValuesByEventPropertyRollUpCacheKey(project_id, event, property.Key, dateFormat)
+						eventPropertyValuesKey, _ := model.GetValuesByEventPropertyRollUpCacheKey(project_id, event, property.Key, dateFormat)
 						for _, value := range values {
 							if value.Value != "" {
 								eventPropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
@@ -464,7 +465,7 @@ func Track(projectId uint64, request *TrackPayload,
 			&TrackResponse{Error: "Tracking failed. Event name cannot be omitted or left empty."}
 	}
 
-	projectSettings, errCode := M.GetProjectSetting(projectId)
+	projectSettings, errCode := store.GetStore().GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
 		return http.StatusInternalServerError, &TrackResponse{Error: "Tracking failed. Invalid project."}
 	}
@@ -474,7 +475,7 @@ func Track(projectId uint64, request *TrackPayload,
 		return http.StatusNotModified, &TrackResponse{Message: "Tracking skipped. Bot request."}
 	}
 
-	var eventName *M.EventName
+	var eventName *model.EventName
 	var eventNameErrCode int
 
 	// if auto_track enabled, auto_name = event_name else auto_name = "UCEN".
@@ -484,9 +485,9 @@ func Track(projectId uint64, request *TrackPayload,
 		request.EventProperties[U.EP_IS_PAGE_VIEW] = true
 
 		// Pass eventURL through filter and get corresponding event_name mapped by user.
-		eventName, eventNameErrCode = M.FilterEventNameByEventURL(projectId, request.Name)
+		eventName, eventNameErrCode = store.GetStore().FilterEventNameByEventURL(projectId, request.Name)
 		if eventName != nil && eventNameErrCode == http.StatusFound {
-			err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
+			err := model.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
 			if err != nil {
 				log.WithFields(log.Fields{"project_id": projectId, "filter_expr": eventName.FilterExpr,
 					"event_url": request.Name, log.ErrorKey: err}).Error(
@@ -494,15 +495,15 @@ func Track(projectId uint64, request *TrackPayload,
 			}
 		} else {
 			// create a auto tracked event name, if no filter_expr match.
-			eventName, eventNameErrCode = M.CreateOrGetAutoTrackedEventName(
-				&M.EventName{Name: request.Name, ProjectId: projectId})
+			eventName, eventNameErrCode = store.GetStore().CreateOrGetAutoTrackedEventName(
+				&model.EventName{Name: request.Name, ProjectId: projectId})
 		}
 	} else if request.SmartEventType != "" {
 		request.Name = strings.TrimSuffix(request.Name, "/")
-		eventName, eventNameErrCode = M.GetSmartEventEventName(&M.EventName{Name: request.Name, ProjectId: projectId, Type: request.SmartEventType})
+		eventName, eventNameErrCode = store.GetStore().GetSmartEventEventName(&model.EventName{Name: request.Name, ProjectId: projectId, Type: request.SmartEventType})
 	} else {
-		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(
-			&M.EventName{Name: request.Name, ProjectId: projectId})
+		eventName, eventNameErrCode = store.GetStore().CreateOrGetUserCreatedEventName(
+			&model.EventName{Name: request.Name, ProjectId: projectId})
 	}
 
 	if eventNameErrCode != http.StatusCreated && eventNameErrCode != http.StatusConflict &&
@@ -528,7 +529,7 @@ func Track(projectId uint64, request *TrackPayload,
 	// if create_user not true and user is not found,
 	// allow to create_user.
 	if !request.CreateUser && request.UserId != "" {
-		_, errCode := M.GetUser(projectId, request.UserId)
+		_, errCode := store.GetStore().GetUser(projectId, request.UserId)
 		if errCode == http.StatusNotFound {
 			request.CreateUser = true
 		}
@@ -536,7 +537,7 @@ func Track(projectId uint64, request *TrackPayload,
 
 	var existingUserProperties *map[string]interface{}
 	if request.CreateUser || request.UserId == "" {
-		newUser := &M.User{ProjectId: projectId}
+		newUser := &model.User{ProjectId: projectId}
 
 		// create user with given id.
 		if request.CreateUser {
@@ -553,7 +554,7 @@ func Track(projectId uint64, request *TrackPayload,
 		}
 
 		// Precondition: create new user, if user_id not given or create_user is true.
-		createdUser, errCode := M.CreateUser(newUser)
+		createdUser, errCode := store.GetStore().CreateUser(newUser)
 		if errCode != http.StatusCreated {
 			return errCode, &TrackResponse{Error: "Tracking failed. User creation failed."}
 		}
@@ -563,7 +564,7 @@ func Track(projectId uint64, request *TrackPayload,
 	} else {
 		// Adding initial user properties if user_id exists,
 		// but initial properties are not. i.e user created on identify.
-		existingUserProperties, errCode = M.GetLatestUserPropertiesOfUserAsMap(projectId, request.UserId)
+		existingUserProperties, errCode = store.GetStore().GetLatestUserPropertiesOfUserAsMap(projectId, request.UserId)
 		if errCode != http.StatusFound {
 			logCtx.WithField("user_id", errCode).WithField("err_code",
 				errCode).Error("Tracking failed. Get user properties as map failed.")
@@ -588,14 +589,14 @@ func Track(projectId uint64, request *TrackPayload,
 		userProperties = requestUserProperties
 	}
 
-	_ = M.FillLocationUserProperties(userProperties, clientIP)
+	_ = model.FillLocationUserProperties(userProperties, clientIP)
 	// Add latest touch user properties.
 	if hasDefinedMarketingProperty {
 		U.FillLatestTouchUserProperties(userProperties, eventProperties)
 	}
 	// Add user properties from form submit event properties.
 	if request.Name == U.EVENT_NAME_FORM_SUBMITTED {
-		customerUserID, formSubmitUserProperties, errCode := M.GetCustomerUserIDAndUserPropertiesFromFormSubmit(
+		customerUserID, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(
 			projectId, request.UserId, eventProperties)
 		if errCode == http.StatusInternalServerError {
 			log.WithFields(log.Fields{"userProperties": userProperties,
@@ -624,7 +625,7 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 
 	if existingUserProperties == nil {
-		existingUserProperties, errCode = M.GetLatestUserPropertiesOfUserAsMap(projectId, request.UserId)
+		existingUserProperties, errCode = store.GetStore().GetLatestUserPropertiesOfUserAsMap(projectId, request.UserId)
 		if errCode == http.StatusInternalServerError {
 			logCtx.WithField("user_id", errCode).WithField("err_code",
 				errCode).Error("Tracking failed. Get user properties as map failed.")
@@ -644,7 +645,7 @@ func Track(projectId uint64, request *TrackPayload,
 		response.Error = "Failed updating user properties."
 	}
 
-	userPropertiesId, errCode := M.UpdateUserProperties(projectId, request.UserId,
+	userPropertiesId, errCode := store.GetStore().UpdateUserProperties(projectId, request.UserId,
 		&postgres.Jsonb{userPropsJSON}, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		logCtx.WithField("err_code", errCode).
@@ -652,7 +653,7 @@ func Track(projectId uint64, request *TrackPayload,
 		response.Error = "Failed updating user properties."
 	}
 
-	event := &M.Event{
+	event := &model.Event{
 		ID:               request.EventId,
 		EventNameId:      eventName.ID,
 		CustomerEventId:  request.CustomerEventId,
@@ -677,7 +678,7 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 	event.Properties = postgres.Jsonb{eventPropsJSON}
 
-	createdEvent, errCode := M.CreateEvent(event)
+	createdEvent, errCode := store.GetStore().CreateEvent(event)
 	if errCode == http.StatusNotAcceptable {
 		return errCode, &TrackResponse{Error: "Tracking failed. Event creation failed. Invalid payload.",
 			CustomerEventId: request.CustomerEventId}
@@ -693,12 +694,12 @@ func Track(projectId uint64, request *TrackPayload,
 }
 
 func isUserAlreadyIdentifiedBySDKRequest(projectID uint64, userID string) bool {
-	userProperties, status := M.GetLatestUserPropertiesOfUserAsMap(projectID, userID)
+	userProperties, status := store.GetStore().GetLatestUserPropertiesOfUserAsMap(projectID, userID)
 	if status != http.StatusFound {
 		return false
 	}
 
-	metaObj := M.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
 	for _, customerUserIDMeta := range *metaObj {
 		if customerUserIDMeta.Source == sdkRequestTypeUserIdentify {
 			return true
@@ -729,7 +730,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"user_id": request.UserId, "customer_user_id": request.CustomerUserId})
 
-	userProperties, err := M.GetIdentifiedUserPropertiesAsJsonb(request.CustomerUserId)
+	userProperties, err := model.GetIdentifiedUserPropertiesAsJsonb(request.CustomerUserId)
 	if err != nil || userProperties == nil {
 		logCtx.WithError(err).Error("Failed to get and add identified user properties on identify.")
 	}
@@ -737,7 +738,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	// if create_user not true and user is not found,
 	// allow to create_user.
 	if !request.CreateUser && request.UserId != "" {
-		_, errCode := M.GetUser(projectId, request.UserId)
+		_, errCode := store.GetStore().GetUser(projectId, request.UserId)
 		if errCode == http.StatusNotFound {
 			request.CreateUser = true
 		}
@@ -754,7 +755,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 
 		response := &IdentifyResponse{}
 
-		newUser := M.User{
+		newUser := model.User{
 			ID:             request.UserId,
 			ProjectId:      projectId,
 			CustomerUserId: request.CustomerUserId,
@@ -766,7 +767,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 				logCtx.WithFields(log.Fields{"userId": request.UserId, "customerUserId": request.CustomerUserId}).Error("Source missing in indentify overwrite.")
 			}
 
-			err := M.UpdateIdentifyOverwriteUserPropertiesMeta(projectId, request.CustomerUserId, request.UserId, request.PageURL,
+			err := store.GetStore().UpdateIdentifyOverwriteUserPropertiesMeta(projectId, request.CustomerUserId, request.UserId, request.PageURL,
 				request.Source, userProperties, request.Timestamp, request.CreateUser)
 			if err != nil {
 				logCtx.WithFields(log.Fields{"userId": request.UserId,
@@ -778,7 +779,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 			newUser.Properties = *userProperties
 		}
 
-		_, errCode := M.CreateUser(&newUser)
+		_, errCode := store.GetStore().CreateUser(&newUser)
 		if errCode != http.StatusCreated {
 			return errCode, &IdentifyResponse{
 				Error: "Identification failed. User creation failed."}
@@ -797,14 +798,14 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	if request.UserId == "" {
 		response := &IdentifyResponse{}
 
-		userLatest, errCode := M.GetUserLatestByCustomerUserId(projectId, request.CustomerUserId)
+		userLatest, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, request.CustomerUserId)
 		switch errCode {
 		case http.StatusInternalServerError:
 			return errCode, &IdentifyResponse{
 				Error: "Identification failed. Processing without user_id failed."}
 
 		case http.StatusNotFound:
-			newUser := M.User{
+			newUser := model.User{
 				ProjectId:      projectId,
 				CustomerUserId: request.CustomerUserId,
 				JoinTimestamp:  request.JoinTimestamp,
@@ -814,7 +815,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 				newUser.Properties = *userProperties
 			}
 
-			_, errCode := M.CreateUser(&newUser)
+			_, errCode := store.GetStore().CreateUser(&newUser)
 			if errCode != http.StatusCreated {
 				return errCode, &IdentifyResponse{
 					Error: "Identification failed. User creation failed."}
@@ -829,7 +830,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 		return http.StatusOK, response
 	}
 
-	scopeUser, errCode := M.GetUser(projectId, request.UserId)
+	scopeUser, errCode := store.GetStore().GetUser(projectId, request.UserId)
 	if errCode != http.StatusFound {
 		return errCode, &IdentifyResponse{Error: "Identification failed. Invalid user_id."}
 	}
@@ -849,7 +850,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	// Precondition: user is already identified with different customer_user.
 	// Creating a new user with the given customer_user_id and respond with new_user_id.
 	if scopeUser.CustomerUserId != "" && !overwrite {
-		newUser := M.User{
+		newUser := model.User{
 			ProjectId:      projectId,
 			CustomerUserId: request.CustomerUserId,
 			JoinTimestamp:  request.JoinTimestamp,
@@ -869,7 +870,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 			newUser.Properties = *userProperties
 		}
 
-		_, errCode := M.CreateUser(&newUser)
+		_, errCode := store.GetStore().CreateUser(&newUser)
 		if errCode != http.StatusCreated {
 			return errCode, &IdentifyResponse{Error: "Identification failed. User creation failed."}
 		}
@@ -880,7 +881,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	}
 
 	if overwrite {
-		err := M.UpdateIdentifyOverwriteUserPropertiesMeta(projectId, request.CustomerUserId, request.UserId, request.PageURL, request.Source, userProperties, request.Timestamp, request.CreateUser)
+		err := store.GetStore().UpdateIdentifyOverwriteUserPropertiesMeta(projectId, request.CustomerUserId, request.UserId, request.PageURL, request.Source, userProperties, request.Timestamp, request.CreateUser)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"userId": request.UserId,
 				"customerUserId": request.CustomerUserId}).WithError(err).Error("Failed to add identify overwrite meta")
@@ -888,12 +889,12 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	}
 
 	// Happy path. Maps customer_user to an user.
-	updateUser := &M.User{CustomerUserId: request.CustomerUserId}
+	updateUser := &model.User{CustomerUserId: request.CustomerUserId}
 	if userProperties != nil {
 		updateUser.Properties = *userProperties
 	}
 
-	_, errCode = M.UpdateUser(projectId, request.UserId, updateUser, request.Timestamp)
+	_, errCode = store.GetStore().UpdateUser(projectId, request.UserId, updateUser, request.Timestamp)
 	if errCode != http.StatusAccepted {
 		return errCode, &IdentifyResponse{Error: "Identification failed. Failed mapping customer_user to user"}
 	}
@@ -912,7 +913,7 @@ func AddUserProperties(projectId uint64,
 
 	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&request.Properties)
-	_ = M.FillLocationUserProperties(validProperties, request.ClientIP)
+	_ = model.FillLocationUserProperties(validProperties, request.ClientIP)
 	propertiesJSON, err := json.Marshal(validProperties)
 	if err != nil {
 		return http.StatusBadRequest,
@@ -922,7 +923,7 @@ func AddUserProperties(projectId uint64,
 	// if create_user not true and user is not found,
 	// allow to create_user.
 	if !request.CreateUser && request.UserId != "" {
-		_, errCode := M.GetUser(projectId, request.UserId)
+		_, errCode := store.GetStore().GetUser(projectId, request.UserId)
 		if errCode == http.StatusNotFound {
 			request.CreateUser = true
 		}
@@ -930,7 +931,7 @@ func AddUserProperties(projectId uint64,
 
 	// Precondition: user_id not given.
 	if request.CreateUser || request.UserId == "" {
-		newUser := &M.User{
+		newUser := &model.User{
 			ProjectId:  projectId,
 			Properties: postgres.Jsonb{propertiesJSON},
 		}
@@ -947,7 +948,7 @@ func AddUserProperties(projectId uint64,
 		}
 
 		// Create user with properties and respond user_id. Only properties allowed on create.
-		newUser, errCode := M.CreateUser(newUser)
+		newUser, errCode := store.GetStore().CreateUser(newUser)
 		if errCode != http.StatusCreated {
 			return errCode, &AddUserPropertiesResponse{Error: "Add user properties failed. User create failed"}
 		}
@@ -955,7 +956,7 @@ func AddUserProperties(projectId uint64,
 			Message: "Added user properties successfully."}
 	}
 
-	user, errCode := M.GetUser(projectId, request.UserId)
+	user, errCode := store.GetStore().GetUser(projectId, request.UserId)
 	if errCode == http.StatusNotFound {
 		return http.StatusBadRequest,
 			&AddUserPropertiesResponse{Error: "Add user properties failed. Invalid user_id."}
@@ -964,7 +965,7 @@ func AddUserProperties(projectId uint64,
 			&AddUserPropertiesResponse{Error: "Add user properties failed"}
 	}
 
-	_, errCode = M.UpdateUserPropertiesByCurrentProperties(projectId, user.ID,
+	_, errCode = store.GetStore().UpdateUserPropertiesByCurrentProperties(projectId, user.ID,
 		user.PropertiesId, &postgres.Jsonb{propertiesJSON}, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return errCode,
@@ -1008,7 +1009,7 @@ func enqueueRequest(token, reqType, reqPayload interface{}) error {
 }
 
 func excludeBotRequestBySetting(token, userAgent string) bool {
-	settings, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(token)
+	settings, errCode := store.GetStore().GetProjectSettingByTokenWithCacheAndDefault(token)
 	if errCode != http.StatusFound {
 		log.WithField("err_code", errCode).
 			Error("Failed to get project settings on excludeBotRequestBeforeQueue.")
@@ -1019,7 +1020,7 @@ func excludeBotRequestBySetting(token, userAgent string) bool {
 }
 
 func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) {
-	project, errCode := M.GetProjectByToken(token)
+	project, errCode := store.GetStore().GetProjectByToken(token)
 	if errCode == http.StatusFound {
 		return Track(project.ID, reqPayload, false, SourceJSSDK)
 	}
@@ -1077,7 +1078,7 @@ func TrackWithQueue(token string, reqPayload *TrackPayload,
 }
 
 func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyResponse) {
-	project, errCode := M.GetProjectByToken(token)
+	project, errCode := store.GetStore().GetProjectByToken(token)
 	if errCode == http.StatusFound {
 		return Identify(project.ID, reqPayload, true)
 	}
@@ -1095,7 +1096,7 @@ func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyR
 // AMPIdentifyByToken identifies AMP user by project token
 func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *IdentifyResponse) {
 
-	project, errCode := M.GetProjectByToken(token)
+	project, errCode := store.GetStore().GetProjectByToken(token)
 	if errCode != http.StatusFound {
 		log.WithField("token", token).Error("Failed to get project from AMP sdk project token.")
 
@@ -1106,7 +1107,7 @@ func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *Ide
 		return http.StatusUnauthorized, &IdentifyResponse{Error: "Identify failed. Invalid project id."}
 	}
 
-	user, errCode := M.CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	user, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
 	if errCode != http.StatusCreated && errCode != http.StatusFound {
 		log.WithField("project_id", project.ID).Error("Identify failed. Failed to CreateOrGetAMPUser.")
 		return errCode, &IdentifyResponse{Error: "Identify failed. Failed to get AMP user."}
@@ -1187,7 +1188,7 @@ func IdentifyWithQueue(token string, reqPayload *IdentifyPayload,
 func AddUserPropertiesByToken(token string,
 	reqPayload *AddUserPropertiesPayload) (int, *AddUserPropertiesResponse) {
 
-	project, errCode := M.GetProjectByToken(token)
+	project, errCode := store.GetStore().GetProjectByToken(token)
 	if errCode == http.StatusFound {
 		return AddUserProperties(project.ID, reqPayload)
 	}
@@ -1237,7 +1238,7 @@ func AddUserPropertiesWithQueue(token string, reqPayload *AddUserPropertiesPaylo
 func UpdateEventPropertiesByToken(token string,
 	reqPayload *UpdateEventPropertiesPayload) (int, *UpdateEventPropertiesResponse) {
 
-	project, errCode := M.GetProjectByToken(token)
+	project, errCode := store.GetStore().GetProjectByToken(token)
 	if errCode == http.StatusFound {
 		return UpdateEventProperties(project.ID, reqPayload)
 	}
@@ -1286,7 +1287,7 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
 
 	logCtx := log.WithField("project_id", projectID).WithField("event_id", eventID)
 
-	userPropertiesJsonb, errCode := M.GetUserProperties(projectID, userID, userPropertiesID)
+	userPropertiesJsonb, errCode := store.GetStore().GetUserProperties(projectID, userID, userPropertiesID)
 	if errCode != http.StatusFound {
 		return errCode
 	}
@@ -1333,7 +1334,7 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
 		return http.StatusBadRequest
 	}
 
-	errCode = M.OverwriteUserProperties(projectID, userID,
+	errCode = store.GetStore().OverwriteUserProperties(projectID, userID,
 		userPropertiesID, updateUserPropertiesJson)
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("err_code", errCode).
@@ -1363,7 +1364,7 @@ func UpdateEventProperties(projectId uint64,
 		WithField("event_id", request.EventId).
 		WithField("timestamp", request.Timestamp)
 
-	event, errCode := M.GetEventById(projectId, request.EventId)
+	event, errCode := store.GetStore().GetEventById(projectId, request.EventId)
 	if errCode == http.StatusNotFound && request.Timestamp > U.UnixTimeBeforeDuration(time.Hour*5) {
 		logCtx.Warn("Failed old update event properties request with unavailable event_id permanently.")
 		return http.StatusBadRequest, &UpdateEventPropertiesResponse{
@@ -1374,13 +1375,13 @@ func UpdateEventProperties(projectId uint64,
 			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid event."}
 	}
 
-	user, errCode := M.GetUser(projectId, event.UserId)
+	user, errCode := store.GetStore().GetUser(projectId, event.UserId)
 	if errCode != http.StatusFound {
 		return errCode, &UpdateEventPropertiesResponse{
 			Error: "Update event properties failed. User not found."}
 	}
 
-	errCode = M.UpdateEventProperties(projectId, request.EventId,
+	errCode = store.GetStore().UpdateEventProperties(projectId, request.EventId,
 		properitesToBeUpdated, request.Timestamp)
 	if errCode != http.StatusAccepted {
 		return errCode,
@@ -1451,7 +1452,7 @@ type AMPTrackResponse struct {
 func AMPUpdateEventPropertiesByToken(token string,
 	reqPayload *AMPUpdateEventPropertiesPayload) (int, *Response) {
 
-	project, errCode := M.GetProjectByToken(token)
+	project, errCode := store.GetStore().GetProjectByToken(token)
 	if errCode != http.StatusFound {
 		return http.StatusUnauthorized, &Response{Error: "Invalid token"}
 	}
@@ -1468,7 +1469,7 @@ func AMPUpdateEventPropertiesByToken(token string,
 
 	pageURL := U.CleanURI(parsedSourceURL.Host + parsedSourceURL.Path)
 
-	user, errCode := M.CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	user, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
 	if errCode != http.StatusFound {
 		return errCode, &Response{Error: "Invalid amp user."}
 	}
@@ -1496,7 +1497,7 @@ func AMPUpdateEventPropertiesByToken(token string,
 		updateEventProperties[U.EP_PAGE_SCROLL_PERCENT] = reqPayload.PageScrollPercent
 	}
 
-	errCode = M.UpdateEventProperties(project.ID, eventID, &updateEventProperties, time.Now().Unix())
+	errCode = store.GetStore().UpdateEventProperties(project.ID, eventID, &updateEventProperties, time.Now().Unix())
 
 	if errCode != http.StatusAccepted {
 		logCtx.WithFields(log.Fields{"project_id": project.ID, "event_id": eventID}).
@@ -1508,14 +1509,14 @@ func AMPUpdateEventPropertiesByToken(token string,
 }
 
 func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response) {
-	project, errCode := M.GetProjectByToken(token)
+	project, errCode := store.GetStore().GetProjectByToken(token)
 	if errCode != http.StatusFound {
 		return http.StatusUnauthorized, &Response{Error: "Invalid token"}
 	}
 	logCtx := log.WithField("project_id", project.ID)
 
 	var isNewUser bool
-	user, errCode := M.CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	user, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
 	if errCode != http.StatusFound && errCode != http.StatusCreated {
 		return errCode, &Response{Error: "Invalid user"}
 	}

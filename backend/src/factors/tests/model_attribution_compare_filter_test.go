@@ -3,6 +3,8 @@ package tests
 import (
 	"encoding/json"
 	H "factors/handler"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"testing"
@@ -10,8 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
-
-	M "factors/model"
 )
 
 func TestAttributionModelCompare(t *testing.T) {
@@ -24,17 +24,17 @@ func TestAttributionModelCompare(t *testing.T) {
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
 	// Should return error for non adwords customer account id
-	result, err := M.ExecuteAttributionQuery(project.ID, &M.AttributionQuery{})
+	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
 	assert.Nil(t, result)
 	assert.NotNil(t, err)
 
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 	})
 
 	assert.Equal(t, http.StatusAccepted, errCode)
 	value := []byte(`{"cost": "0","clicks": "0","campaign_id":"123456","impressions": "0", "campaign_name": "test"}`)
-	document := &M.AdwordsDocument{
+	document := &model.AdwordsDocument{
 		ProjectID:         project.ID,
 		CustomerAccountID: customerAccountId,
 		TypeAlias:         "campaign_performance_report",
@@ -42,7 +42,7 @@ func TestAttributionModelCompare(t *testing.T) {
 		Value:             &postgres.Jsonb{RawMessage: value},
 	}
 
-	status := M.CreateAdwordsDocument(document)
+	status := store.GetStore().CreateAdwordsDocument(document)
 	assert.Equal(t, http.StatusCreated, status)
 
 	/*
@@ -57,15 +57,15 @@ func TestAttributionModelCompare(t *testing.T) {
 	day := int64(86400)
 
 	// Creating 3 users
-	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
 	assert.NotNil(t, user1)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
 	assert.NotNil(t, user2)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
 	assert.NotNil(t, user3)
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -76,21 +76,21 @@ func TestAttributionModelCompare(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:                          timestamp - 2*day,
 			To:                            timestamp + 3*day,
 			LookbackDays:                  10,
-			AttributionKey:                M.AttributionKeyCampaign,
-			AttributionKeyFilter:          []M.AttributionKeyFilter{},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
-			QueryType:                     M.AttributionQueryTypeEngagementBased,
+			AttributionKey:                model.AttributionKeyCampaign,
+			AttributionKeyFilter:          []model.AttributionKeyFilter{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
+			QueryType:                     model.AttributionQueryTypeEngagementBased,
 		}
 
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "111111"))
@@ -98,20 +98,20 @@ func TestAttributionModelCompare(t *testing.T) {
 	})
 
 	t.Run("AttributionQueryCompareOutOfTimestampRangeNoLookBack", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:                          timestamp + 3*day,
 			To:                            timestamp + 3*day,
 			LookbackDays:                  10,
-			AttributionKey:                M.AttributionKeyCampaign,
-			AttributionKeyFilter:          []M.AttributionKeyFilter{},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
+			AttributionKey:                model.AttributionKeyCampaign,
+			AttributionKeyFilter:          []model.AttributionKeyFilter{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "111111"))
@@ -128,21 +128,21 @@ func TestAttributionModelCompare(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:                          timestamp,
 			To:                            timestamp + 4*day,
 			LookbackDays:                  10,
-			AttributionKey:                M.AttributionKeyCampaign,
-			AttributionKeyFilter:          []M.AttributionKeyFilter{},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
-			QueryType:                     M.AttributionQueryTypeEngagementBased,
+			AttributionKey:                model.AttributionKeyCampaign,
+			AttributionKeyFilter:          []model.AttributionKeyFilter{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
+			QueryType:                     model.AttributionQueryTypeEngagementBased,
 		}
 
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(result, "222222"))
@@ -158,21 +158,21 @@ func TestAttributionModelCompare(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:                          timestamp + 4*day,
 			To:                            timestamp + 10*day,
 			LookbackDays:                  20,
-			AttributionKey:                M.AttributionKeyCampaign,
-			AttributionKeyFilter:          []M.AttributionKeyFilter{},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
+			AttributionKey:                model.AttributionKeyCampaign,
+			AttributionKeyFilter:          []model.AttributionKeyFilter{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
 		//Should only have user2 with no 0 linked event count
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(result, "222222"))
@@ -192,7 +192,7 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
@@ -208,40 +208,40 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	user1Properties := make(map[string]interface{})
 	user1Properties[U.UP_LATEST_CAMPAIGN] = 123456
 	user1PropertiesBytes, _ := json.Marshal(user1Properties)
-	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{RawMessage: user1PropertiesBytes},
+	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{RawMessage: user1PropertiesBytes},
 		JoinTimestamp: timestamp})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user1)
 
 	_, errCode = createSession(project.ID, user1.ID, timestamp+4*day, "")
 	assert.Equal(t, http.StatusCreated, errCode)
-	userEventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "event1"})
+	userEventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "event1"})
 	assert.Equal(t, http.StatusCreated, errCode)
-	_, errCode = M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "event2"})
+	_, errCode = store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "event2"})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	_, errCode = M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: userEventName.ID, UserId: user1.ID,
+	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID, UserId: user1.ID,
 		Timestamp: timestamp + 3*day})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	query := &M.AttributionQuery{
+	query := &model.AttributionQuery{
 		From:                          timestamp + 3*day,
 		To:                            timestamp + 10*day,
 		LookbackDays:                  2,
-		AttributionKey:                M.AttributionKeyCampaign,
-		AttributionKeyFilter:          []M.AttributionKeyFilter{},
-		LinkedEvents:                  []M.QueryEventWithProperties{},
-		AttributionMethodology:        M.AttributionMethodFirstTouch,
-		AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-		ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-		ConversionEventCompare:        M.QueryEventWithProperties{},
+		AttributionKey:                model.AttributionKeyCampaign,
+		AttributionKeyFilter:          []model.AttributionKeyFilter{},
+		LinkedEvents:                  []model.QueryEventWithProperties{},
+		AttributionMethodology:        model.AttributionMethodFirstTouch,
+		AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+		ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+		ConversionEventCompare:        model.QueryEventWithProperties{},
 	}
 
 	// Should find within lookBack window
-	_, err = M.ExecuteAttributionQuery(project.ID, query)
+	_, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 
-	_, errCode = M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: userEventName.ID,
+	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID,
 		UserId: user1.ID, Timestamp: timestamp + 5*day})
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -250,7 +250,7 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	query.From = timestamp + 5*day
 
 	//event beyond look back window
-	result, err := M.ExecuteAttributionQuery(project.ID, query)
+	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(0), getConversionUserCount(result, "campaign1"))
 	assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
@@ -267,17 +267,17 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	customerAccountId := U.RandomLowerAphaNumString(5)
 
 	// Should return error for non adwords customer account id
-	result, err := M.ExecuteAttributionQuery(project.ID, &M.AttributionQuery{})
+	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
 	assert.Nil(t, result)
 	assert.NotNil(t, err)
 
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 	})
 
 	assert.Equal(t, http.StatusAccepted, errCode)
 	value := []byte(`{"cost": "0","clicks": "0","campaign_id":"123456","impressions": "0", "campaign_name": "test"}`)
-	document := &M.AdwordsDocument{
+	document := &model.AdwordsDocument{
 		ProjectID:         project.ID,
 		CustomerAccountID: customerAccountId,
 		TypeAlias:         "campaign_performance_report",
@@ -285,7 +285,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		Value:             &postgres.Jsonb{value},
 	}
 
-	status := M.CreateAdwordsDocument(document)
+	status := store.GetStore().CreateAdwordsDocument(document)
 	assert.Equal(t, http.StatusCreated, status)
 
 	/*
@@ -300,15 +300,15 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	day := int64(86400)
 
 	// Creating 3 users
-	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
 	assert.NotNil(t, user1)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
 	assert.NotNil(t, user2)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
 	assert.NotNil(t, user3)
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -319,24 +319,24 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:           timestamp - 2*day,
 			To:             timestamp + 3*day,
 			LookbackDays:   10,
-			AttributionKey: M.AttributionKeyCampaign,
-			AttributionKeyFilter: []M.AttributionKeyFilter{
-				{AttributionKey: M.AttributionKeyCampaign,
-					Operator: M.EqualsOpStr,
+			AttributionKey: model.AttributionKeyCampaign,
+			AttributionKeyFilter: []model.AttributionKeyFilter{
+				{AttributionKey: model.AttributionKeyCampaign,
+					Operator: model.EqualsOpStr,
 					Value:    "111111"},
 			},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "111111"))
@@ -344,72 +344,72 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	})
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:           timestamp - 2*day,
 			To:             timestamp + 3*day,
 			LookbackDays:   10,
-			AttributionKey: M.AttributionKeyCampaign,
-			AttributionKeyFilter: []M.AttributionKeyFilter{
-				{AttributionKey: M.AttributionKeyCampaign,
-					Operator: M.NotEqualOpStr,
+			AttributionKey: model.AttributionKeyCampaign,
+			AttributionKeyFilter: []model.AttributionKeyFilter{
+				{AttributionKey: model.AttributionKeyCampaign,
+					Operator: model.NotEqualOpStr,
 					Value:    "111111"},
 			},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "111111"))
 		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
 	})
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:           timestamp - 2*day,
 			To:             timestamp + 3*day,
 			LookbackDays:   10,
-			AttributionKey: M.AttributionKeyCampaign,
-			AttributionKeyFilter: []M.AttributionKeyFilter{
-				{AttributionKey: M.AttributionKeyCampaign,
-					Operator: M.ContainsOpStr,
+			AttributionKey: model.AttributionKeyCampaign,
+			AttributionKeyFilter: []model.AttributionKeyFilter{
+				{AttributionKey: model.AttributionKeyCampaign,
+					Operator: model.ContainsOpStr,
 					Value:    "111111"},
 			},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "111111"))
 		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
 	})
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:           timestamp - 2*day,
 			To:             timestamp + 3*day,
 			LookbackDays:   10,
-			AttributionKey: M.AttributionKeyCampaign,
-			AttributionKeyFilter: []M.AttributionKeyFilter{
-				{AttributionKey: M.AttributionKeyCampaign,
-					Operator: M.NotContainsOpStr,
+			AttributionKey: model.AttributionKeyCampaign,
+			AttributionKeyFilter: []model.AttributionKeyFilter{
+				{AttributionKey: model.AttributionKeyCampaign,
+					Operator: model.NotContainsOpStr,
 					Value:    "111111"},
 			},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "111111"))
@@ -426,24 +426,24 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:           timestamp,
 			To:             timestamp + 4*day,
 			LookbackDays:   10,
-			AttributionKey: M.AttributionKeyCampaign,
-			AttributionKeyFilter: []M.AttributionKeyFilter{
-				{AttributionKey: M.AttributionKeyCampaign,
-					Operator: M.ContainsOpStr,
+			AttributionKey: model.AttributionKeyCampaign,
+			AttributionKeyFilter: []model.AttributionKeyFilter{
+				{AttributionKey: model.AttributionKeyCampaign,
+					Operator: model.ContainsOpStr,
 					Value:    "111111"},
 			},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(result, "222222"))
@@ -455,24 +455,24 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	})
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:           timestamp,
 			To:             timestamp + 4*day,
 			LookbackDays:   10,
-			AttributionKey: M.AttributionKeyCampaign,
-			AttributionKeyFilter: []M.AttributionKeyFilter{
-				{AttributionKey: M.AttributionKeyCampaign,
-					Operator: M.NotContainsOpStr,
+			AttributionKey: model.AttributionKeyCampaign,
+			AttributionKeyFilter: []model.AttributionKeyFilter{
+				{AttributionKey: model.AttributionKeyCampaign,
+					Operator: model.NotContainsOpStr,
 					Value:    "111111"},
 			},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(result, "222222"))
@@ -488,42 +488,42 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:           timestamp + 4*day,
 			To:             timestamp + 10*day,
 			LookbackDays:   20,
-			AttributionKey: M.AttributionKeyCampaign,
-			AttributionKeyFilter: []M.AttributionKeyFilter{
-				{AttributionKey: M.AttributionKeyCampaign,
+			AttributionKey: model.AttributionKeyCampaign,
+			AttributionKeyFilter: []model.AttributionKeyFilter{
+				{AttributionKey: model.AttributionKeyCampaign,
 					Property:  "name",
-					Operator:  M.ContainsOpStr,
+					Operator:  model.ContainsOpStr,
 					Value:     "111111",
 					LogicalOp: "OR"},
-				{AttributionKey: M.AttributionKeyCampaign,
+				{AttributionKey: model.AttributionKeyCampaign,
 					Property:  "name",
-					Operator:  M.ContainsOpStr,
+					Operator:  model.ContainsOpStr,
 					Value:     "222222",
 					LogicalOp: "OR"},
-				{AttributionKey: M.AttributionKeyCampaign,
+				{AttributionKey: model.AttributionKeyCampaign,
 					Property:  "name",
-					Operator:  M.ContainsOpStr,
+					Operator:  model.ContainsOpStr,
 					Value:     "333333",
 					LogicalOp: "OR"},
-				{AttributionKey: M.AttributionKeyCampaign,
+				{AttributionKey: model.AttributionKeyCampaign,
 					Property:  "name",
-					Operator:  M.ContainsOpStr,
+					Operator:  model.ContainsOpStr,
 					Value:     "1234567",
 					LogicalOp: "OR"},
 			},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
 		//Should only have user2 with no 0 linked event count
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, float64(1), getConversionUserCount(result, "222222"))
@@ -538,42 +538,42 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	})
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
-		query := &M.AttributionQuery{
+		query := &model.AttributionQuery{
 			From:           timestamp + 4*day,
 			To:             timestamp + 10*day,
 			LookbackDays:   20,
-			AttributionKey: M.AttributionKeyCampaign,
-			AttributionKeyFilter: []M.AttributionKeyFilter{
-				{AttributionKey: M.AttributionKeyCampaign,
+			AttributionKey: model.AttributionKeyCampaign,
+			AttributionKeyFilter: []model.AttributionKeyFilter{
+				{AttributionKey: model.AttributionKeyCampaign,
 					Property:  "name",
-					Operator:  M.NotContainsOpStr,
+					Operator:  model.NotContainsOpStr,
 					Value:     "111111",
 					LogicalOp: "AND"},
-				{AttributionKey: M.AttributionKeyCampaign,
+				{AttributionKey: model.AttributionKeyCampaign,
 					Property:  "name",
-					Operator:  M.NotContainsOpStr,
+					Operator:  model.NotContainsOpStr,
 					Value:     "222222",
 					LogicalOp: "AND"},
-				{AttributionKey: M.AttributionKeyCampaign,
+				{AttributionKey: model.AttributionKeyCampaign,
 					Property:  "name",
-					Operator:  M.NotContainsOpStr,
+					Operator:  model.NotContainsOpStr,
 					Value:     "333333",
 					LogicalOp: "AND"},
-				{AttributionKey: M.AttributionKeyCampaign,
+				{AttributionKey: model.AttributionKeyCampaign,
 					Property:  "name",
-					Operator:  M.NotContainsOpStr,
+					Operator:  model.NotContainsOpStr,
 					Value:     "1234567",
 					LogicalOp: "AND"},
 			},
-			LinkedEvents:                  []M.QueryEventWithProperties{},
-			AttributionMethodology:        M.AttributionMethodFirstTouch,
-			AttributionMethodologyCompare: M.AttributionMethodLastTouch,
-			ConversionEvent:               M.QueryEventWithProperties{Name: "event1"},
-			ConversionEventCompare:        M.QueryEventWithProperties{},
+			LinkedEvents:                  []model.QueryEventWithProperties{},
+			AttributionMethodology:        model.AttributionMethodFirstTouch,
+			AttributionMethodologyCompare: model.AttributionMethodLastTouch,
+			ConversionEvent:               model.QueryEventWithProperties{Name: "event1"},
+			ConversionEventCompare:        model.QueryEventWithProperties{},
 		}
 
 		//Should only have user2 with no 0 linked event count
-		result, err = M.ExecuteAttributionQuery(project.ID, query)
+		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(result, "222222"))

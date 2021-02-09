@@ -1,0 +1,621 @@
+package postgres
+
+import (
+	"encoding/json"
+	C "factors/config"
+	"factors/model/model"
+	U "factors/util"
+	"fmt"
+	"net/http"
+	"sync"
+
+	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
+)
+
+// DashboardUnitCachePayload Payload for dashboard caching method.
+type DashboardUnitCachePayload struct {
+	DashboardUnit model.DashboardUnit
+	BaseQuery     model.BaseQuery
+}
+
+func isValidDashboardUnit(dashboardUnit *model.DashboardUnit) (bool, string) {
+	if dashboardUnit.DashboardId == 0 {
+		return false, "Invalid dashboard"
+	}
+
+	if dashboardUnit.Title == "" {
+		return false, "Invalid title"
+	}
+
+	validPresentation := false
+	for _, p := range model.DashboardUnitPresentations {
+		if p == dashboardUnit.Presentation {
+			validPresentation = true
+			break
+		}
+	}
+	if !validPresentation {
+		return false, "Invalid presentation"
+	}
+
+	// Todo(Dinesh): Validate query based on query class here.
+
+	return true, ""
+}
+
+// CreateDashboardUnitForMultipleDashboards creates multiple dashboard units each for given
+// list of dashboards
+func (pg *Postgres) CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64,
+	agentUUID string, unitPayload model.DashboardUnitRequestPayload) ([]*model.DashboardUnit, int, string) {
+
+	var dashboardUnits []*model.DashboardUnit
+	for _, dashboardId := range dashboardIds {
+		dashboardUnit, errCode, errMsg := pg.CreateDashboardUnit(projectId, agentUUID,
+			&model.DashboardUnit{
+				DashboardId:  dashboardId,
+				Description:  unitPayload.Description,
+				Query:        postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+				Title:        unitPayload.Title,
+				Presentation: unitPayload.Presentation,
+				QueryId:      unitPayload.QueryId,
+				Settings:     *unitPayload.Settings,
+			}, model.DashboardUnitWithQueryID)
+		if errCode != http.StatusCreated {
+			return nil, errCode, errMsg
+		}
+		dashboardUnits = append(dashboardUnits, dashboardUnit)
+	}
+	return dashboardUnits, http.StatusCreated, ""
+}
+
+// CreateMultipleDashboardUnits creates multiple dashboard units for list of queries for single dashboard
+func (pg *Postgres) CreateMultipleDashboardUnits(requestPayload []model.DashboardUnitRequestPayload, projectId uint64,
+	agentUUID string, dashboardId uint64) ([]*model.DashboardUnit, int, string) {
+	var dashboardUnits []*model.DashboardUnit
+	for _, payload := range requestPayload {
+
+		// query should have been created before the dashboard unit
+		if payload.QueryId == 0 {
+			return dashboardUnits, http.StatusBadRequest, "invalid queryID. empty queryID."
+		}
+		dashboardUnit, errCode, errMsg := pg.CreateDashboardUnit(projectId, agentUUID,
+			&model.DashboardUnit{
+				DashboardId:  dashboardId,
+				Description:  payload.Description,
+				Query:        postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+				Title:        payload.Title,
+				Presentation: payload.Presentation,
+				QueryId:      payload.QueryId,
+				Settings:     *payload.Settings,
+			}, model.DashboardUnitWithQueryID)
+		if errCode != http.StatusCreated {
+			return nil, errCode, errMsg
+		}
+		dashboardUnits = append(dashboardUnits, dashboardUnit)
+	}
+	return dashboardUnits, http.StatusCreated, ""
+}
+
+func (pg *Postgres) CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *model.DashboardUnit,
+	queryType string) (*model.DashboardUnit, int, string) {
+
+	db := C.GetServices().Db
+
+	logCtx := log.WithFields(log.Fields{"dashboard_unit": dashboardUnit, "project_id": projectId})
+	if projectId == 0 || agentUUID == "" {
+		return nil, http.StatusBadRequest, "Invalid request"
+	}
+
+	updateDashboardUnitSettingsAndPresentation(dashboardUnit)
+
+	valid, errMsg := isValidDashboardUnit(dashboardUnit)
+	if !valid {
+		return nil, http.StatusBadRequest, errMsg
+	}
+
+	hasAccess, dashboard := pg.HasAccessToDashboard(projectId, agentUUID, dashboardUnit.DashboardId)
+	if !hasAccess {
+		return nil, http.StatusForbidden, "Unauthorized to access dashboard"
+	}
+	// Todo (Anil) remove this query creation after we move to new UI completely.
+	if dashboardUnit.QueryId == 0 {
+		query, errCode, errMsg := pg.CreateQuery(projectId,
+			&model.Queries{
+				Query: dashboardUnit.Query,
+				Title: dashboardUnit.Title,
+				Type:  model.QueryTypeDashboardQuery,
+			})
+		if errCode != http.StatusCreated {
+			logCtx.Error(errMsg)
+			return nil, errCode, errMsg
+		}
+		dashboardUnit.QueryId = query.ID
+	} else {
+		// Todo (Anil) for new UI requests, fill up Query using queryId for backward compatibility
+		query, errCode := pg.GetQueryWithQueryId(projectId, dashboardUnit.QueryId)
+		// skip if error exists
+		if errCode == http.StatusFound {
+			queryJsonb, err := U.EncodeStructTypeToPostgresJsonb((*query).Query)
+			if err == nil {
+				dashboardUnit.Query = *queryJsonb
+			}
+		} else {
+			errMsg = fmt.Sprintf("Failed to get query with id %d", dashboardUnit.QueryId)
+			logCtx.Error(errMsg)
+			return nil, errCode, errMsg
+		}
+	}
+	dashboardUnit.ProjectID = projectId
+	if err := db.Create(dashboardUnit).Error; err != nil {
+		errMsg := "Failed to create dashboard unit."
+		log.WithFields(log.Fields{"dashboard_unit": dashboardUnit,
+			"project_id": projectId}).WithError(err).Error(errMsg)
+		return nil, http.StatusInternalServerError, errMsg
+	}
+
+	// Todo (Anil) remove this DashboardUnitForNoQueryID based UnitPosition updating
+	// ... after we move to new UI completely. todo
+	if queryType == model.DashboardUnitForNoQueryID {
+		errCode := pg.addUnitPositionOnDashboard(projectId, agentUUID, dashboardUnit.DashboardId,
+			dashboardUnit.ID, model.GetUnitType(dashboardUnit.Presentation), dashboard.UnitsPosition)
+		if errCode != http.StatusAccepted {
+			errMsg := "Failed add position for new dashboard unit."
+			log.WithFields(log.Fields{"project_id": projectId,
+				"dashboardUnitId": dashboardUnit.ID}).Error(errMsg)
+			return nil, http.StatusInternalServerError, ""
+		}
+	}
+	return dashboardUnit, http.StatusCreated, ""
+}
+
+// updateDashboardUnitSettingsAndPresentation updates Settings or Presentation for
+// dashboard Unit using the other's value.
+func updateDashboardUnitSettingsAndPresentation(unit *model.DashboardUnit) {
+
+	if unit.Presentation != "" {
+		// request is received from old UI updating Settings
+		s := make(map[string]string)
+		s["chart"] = unit.Presentation
+		settings, err := json.Marshal(s)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": unit.ProjectID,
+				"dashboardUnitId": unit.ID}).Error("failed to update settings for given presentation")
+			return
+		}
+		unit.Settings = postgres.Jsonb{settings}
+	} else {
+		// request is received from new UI updating Presentation
+		settings := make(map[string]string)
+		err := json.Unmarshal(unit.Settings.RawMessage, &settings)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": unit.ProjectID,
+				"dashboardUnitId": unit.ID}).Error("failed to update presentation for given settings")
+			return
+		}
+		unit.Presentation = settings["chart"]
+	}
+}
+
+// GetDashboardUnitsForProjectID Returns all dashboard units for the given projectID.
+func (pg *Postgres) GetDashboardUnitsForProjectID(projectID uint64) ([]model.DashboardUnit, int) {
+	db := C.GetServices().Db
+
+	var dashboardUnits []model.DashboardUnit
+	if projectID == 0 {
+		log.Errorf("Invalid project id %d", projectID)
+		return dashboardUnits, http.StatusBadRequest
+	} else if err := db.Where("project_id = ? AND is_deleted = ?", projectID, false).
+		Find(&dashboardUnits).Error; err != nil {
+		log.WithError(err).Errorf("Failed to get dashboard units for projectID %d", projectID)
+		return dashboardUnits, http.StatusInternalServerError
+	}
+
+	dashboardUnits = pg.fillQueryInDashboardUnits(dashboardUnits)
+
+	return dashboardUnits, http.StatusFound
+}
+
+// Todo (Anil) Remove: Adding query using queryId for units from new UI
+// fillQueryInDashboardUnits updates unit.Query by fetching query using queryId
+func (pg *Postgres) fillQueryInDashboardUnits(units []model.DashboardUnit) []model.DashboardUnit {
+
+	for i, unit := range units {
+		query, errCode := pg.GetQueryWithQueryId(unit.ProjectID, unit.QueryId)
+		if errCode == http.StatusFound {
+			queryJsonb, err := U.EncodeStructTypeToPostgresJsonb((*query).Query)
+			if err == nil {
+				units[i].Query = *queryJsonb
+			}
+		}
+	}
+	return units
+}
+
+func (pg *Postgres) GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) ([]model.DashboardUnit, int) {
+	db := C.GetServices().Db
+
+	var dashboardUnits []model.DashboardUnit
+	if projectId == 0 || dashboardId == 0 || agentUUID == "" {
+		log.Error("Failed to get dashboard units. Invalid project_id or dashboard_id or agent_id")
+		return dashboardUnits, http.StatusBadRequest
+	}
+
+	if hasAccess, _ := pg.HasAccessToDashboard(projectId, agentUUID, dashboardId); !hasAccess {
+		return nil, http.StatusForbidden
+	}
+
+	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ? AND is_deleted = ?",
+		projectId, dashboardId, false).Find(&dashboardUnits).Error
+	if err != nil {
+		log.WithField("project_id", projectId).WithError(err).Error("Failed to get dashboard units.")
+		return dashboardUnits, http.StatusInternalServerError
+	}
+
+	dashboardUnits = pg.fillQueryInDashboardUnits(dashboardUnits)
+
+	return dashboardUnits, http.StatusFound
+}
+
+// GetDashboardUnitByUnitID To get a dashboard unit by project id and unit id.
+func (pg *Postgres) GetDashboardUnitByUnitID(projectID, unitID uint64) (*model.DashboardUnit, int) {
+	db := C.GetServices().Db
+	var dashboardUnit model.DashboardUnit
+	if err := db.Model(&model.DashboardUnit{}).Where("project_id = ? AND id=? AND is_deleted = ?",
+		projectID, unitID, false).Find(&dashboardUnit).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+	return &dashboardUnit, http.StatusFound
+}
+
+func (pg *Postgres) GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID uint64, types []string) ([]model.DashboardUnit, int) {
+	db := C.GetServices().Db
+
+	var dashboardUnits []model.DashboardUnit
+	if projectID == 0 || dashboardID == 0 {
+		log.Error("Failed to get dashboard units. Invalid project_id or dashboard_id ")
+		return dashboardUnits, http.StatusBadRequest
+	}
+
+	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ? AND is_deleted = ? ",
+		projectID, dashboardID, false).Where("presentation IN (?)", types).Find(&dashboardUnits).Error
+	if err != nil {
+		log.WithField("project_id", projectID).WithError(err).Error("Failed to get dashboard units.")
+		return dashboardUnits, http.StatusInternalServerError
+	}
+
+	if len(dashboardUnits) == 0 {
+		return dashboardUnits, http.StatusNotFound
+	}
+
+	dashboardUnits = pg.fillQueryInDashboardUnits(dashboardUnits)
+
+	return dashboardUnits, http.StatusFound
+}
+
+func (pg *Postgres) DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64) int {
+
+	if projectId == 0 || agentUUID == "" ||
+		dashboardId == 0 || id == 0 {
+
+		log.Error("Failed to delete dashboard unit. Invalid scope ids.")
+		return http.StatusBadRequest
+	}
+
+	hasAccess, dashboard := pg.HasAccessToDashboard(projectId, agentUUID, dashboardId)
+	if !hasAccess {
+		return http.StatusForbidden
+	}
+
+	errCode := pg.removeUnitPositionOnDashboard(projectId, agentUUID, dashboardId, id, dashboard.UnitsPosition)
+	if errCode != http.StatusAccepted {
+		errMsg := "Failed remove position for unit on dashboard."
+		log.WithFields(log.Fields{"project_id": projectId, "unitId": id}).Error(errMsg)
+		// log error and continue to delete dashboard unit.
+		// To avoid improper experience.
+	}
+	return pg.deleteDashboardUnit(projectId, dashboardId, id)
+}
+
+// DeleteMultipleDashboardUnits deletes multiple dashboard units for given dashboard
+func (pg *Postgres) DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID uint64,
+	dashboardUnitIDs []uint64) (int, string) {
+
+	for _, dashboardUnitID := range dashboardUnitIDs {
+		errCode := pg.DeleteDashboardUnit(projectID, agentUUID, dashboardID, dashboardUnitID)
+		if errCode != http.StatusAccepted {
+			errMsg := "Failed delete unit on dashboard."
+			log.WithFields(log.Fields{"project_id": projectID,
+				"dashboard_id": dashboardID, "unit_id": dashboardUnitID}).Error(errMsg)
+			return errCode, errMsg
+		}
+	}
+	return http.StatusAccepted, ""
+}
+
+func (pg *Postgres) deleteDashboardUnit(projectID uint64, dashboardID uint64, ID uint64) int {
+	db := C.GetServices().Db
+	// Required for getting query_id.
+	dashboardUnit, errCode := pg.GetDashboardUnitByUnitID(projectID, ID)
+	if errCode != http.StatusFound {
+		return http.StatusInternalServerError
+	}
+
+	err := db.Model(&model.DashboardUnit{}).Where("id = ? AND project_id = ? AND dashboard_id = ?",
+		ID, projectID, dashboardID).Update(map[string]interface{}{"is_deleted": true}).Error
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID, "dashboard_id": dashboardID,
+			"unit_id": ID}).WithError(err).Error("Failed to delete dashboard unit.")
+		return http.StatusInternalServerError
+	}
+
+	// Removing dashboard saved query.
+	errCode, errMsg := pg.DeleteDashboardQuery(projectID, dashboardUnit.QueryId)
+	if errCode != http.StatusAccepted {
+		log.WithFields(log.Fields{"project_id": projectID, "unitId": ID}).Error(errMsg)
+		// log error and continue to delete dashboard unit.
+		// To avoid improper experience.
+	}
+	return http.StatusAccepted
+}
+
+func (pg *Postgres) UpdateDashboardUnit(projectId uint64, agentUUID string,
+	dashboardId uint64, id uint64, unit *model.DashboardUnit) (*model.DashboardUnit, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "agentUUID": agentUUID, "dashboard_id": dashboardId})
+
+	if projectId == 0 || agentUUID == "" ||
+		dashboardId == 0 || id == 0 {
+
+		log.Error("Failed to update dashboard unit. Invalid scope ids.")
+		return nil, http.StatusBadRequest
+	}
+
+	if hasAccess, _ := pg.HasAccessToDashboard(projectId, agentUUID, dashboardId); !hasAccess {
+		return nil, http.StatusForbidden
+	}
+
+	// update allowed fields.
+	updateFields := make(map[string]interface{}, 0)
+	if unit.Title != "" {
+		updateFields["title"] = unit.Title
+	}
+
+	// nothing to update.
+	if len(updateFields) == 0 {
+		return nil, http.StatusBadRequest
+	}
+	var updatedDashboardUnitFields model.DashboardUnit
+	db := C.GetServices().Db
+
+	err := db.Model(&updatedDashboardUnitFields).Where("id = ? AND project_id = ? AND dashboard_id = ? AND is_deleted = ?",
+		id, projectId, dashboardId, false).Update(updateFields).Error
+	if err != nil {
+		logCtx.WithError(err).Error("updatedDashboardUnitFields failed at UpdateDashboardUnit in dashboard_unit.go")
+		return nil, http.StatusInternalServerError
+	}
+	// update query table
+	var dashboardUnit model.DashboardUnit
+	err = db.Model(&model.DashboardUnit{}).Where("id = ? AND project_id = ? AND dashboard_id = ? AND is_deleted = ?",
+		id, projectId, dashboardId, false).Find(&dashboardUnit).Error
+	_, errCode := pg.UpdateSavedQuery(projectId, dashboardUnit.QueryId, &model.Queries{Title: unit.Title, Type: model.QueryTypeDashboardQuery})
+	if errCode != http.StatusAccepted {
+		logCtx.WithError(err).Error("updatedDashboardUnitFields failed at UpdateSavedQuery in queries.go")
+		return nil, errCode
+	}
+
+	// returns only updated fields, avoid using it on model.DashboardUnit API.
+	return &updatedDashboardUnitFields, http.StatusAccepted
+}
+
+// CacheDashboardUnitsForProjects Runs for all the projectIDs passed as comma separated.
+func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int) {
+	logCtx := log.WithFields(log.Fields{
+		"Method": "CacheDashboardUnitsForProjects",
+	})
+
+	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(
+		stringProjectsIDs, excludeProjectIDs)
+	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
+	if allProjects {
+		var errCode int
+		allProjectIDs, errCode := pg.GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			return
+		}
+		for _, projectID := range allProjectIDs {
+			if _, found := excludeProjectIDsMap[projectID]; !found {
+				projectIDs = append(projectIDs, projectID)
+			}
+		}
+	}
+
+	for _, projectID := range projectIDs {
+		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
+		logCtx.Info("Starting to cache units for the project")
+		startTime := U.TimeNowUnix()
+		unitsCount := pg.CacheDashboardUnitsForProjectID(projectID, numRoutines)
+
+		timeTaken := U.TimeNowUnix() - startTime
+		timeTakenString := U.SecondsToHMSString(timeTaken)
+		logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
+			Infof("Time taken for caching %d dashboard units", unitsCount)
+	}
+	return
+}
+
+// CacheDashboardUnitsForProjectID Caches all the dashboard units for the given `projectID`.
+func (pg *Postgres) CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int {
+	if numRoutines == 0 {
+		numRoutines = 1
+	}
+
+	dashboardUnits, errCode := pg.GetDashboardUnitsForProjectID(projectID)
+	if errCode != http.StatusFound || len(dashboardUnits) == 0 {
+		return 0
+	}
+
+	var waitGroup sync.WaitGroup
+	count := 0
+	waitGroup.Add(U.MinInt(len(dashboardUnits), numRoutines))
+	for i := range dashboardUnits {
+		count++
+		go pg.CacheDashboardUnit(dashboardUnits[i], &waitGroup)
+		if count%numRoutines == 0 {
+			waitGroup.Wait()
+			waitGroup.Add(U.MinInt(len(dashboardUnits)-count, numRoutines))
+		}
+	}
+	waitGroup.Wait()
+	return len(dashboardUnits)
+}
+
+// GetQueryAndClassFromDashboardUnit Fill query and returns query class of dashboard unit.
+func (pg *Postgres) GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string) {
+	projectID := dashboardUnit.ProjectID
+	savedQuery, errCode := pg.GetQueryWithQueryId(projectID, dashboardUnit.QueryId)
+	if errCode != http.StatusFound {
+		errMsg = fmt.Sprintf("Failed to fetch query from query_id %d", dashboardUnit.QueryId)
+		return
+	}
+	dashboardUnit.Query = savedQuery.Query
+
+	var query model.Query
+	var queryGroup model.QueryGroup
+	// try decoding for Query
+	U.DecodePostgresJsonbToStructType(&savedQuery.Query, &query)
+	if query.Class == "" {
+		// if fails, try decoding for QueryGroup
+		err1 := U.DecodePostgresJsonbToStructType(&savedQuery.Query, &queryGroup)
+		if err1 != nil {
+			errMsg = fmt.Sprintf("Failed to decode jsonb query, query_id %d", dashboardUnit.QueryId)
+			return
+		}
+		queryClass = queryGroup.GetClass()
+	} else {
+		queryClass = query.Class
+	}
+	return
+}
+
+// CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
+func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	queryClass, errMsg := pg.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+	if errMsg != "" {
+		C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+		return
+	}
+
+	// excluding 'Web' class dashboard units
+	if queryClass == model.QueryClassWeb {
+		return
+	}
+
+	var unitWaitGroup sync.WaitGroup
+	unitWaitGroup.Add(len(U.QueryDateRangePresets))
+	for _, rangeFunction := range U.QueryDateRangePresets {
+		from, to := rangeFunction()
+		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
+		baseQuery, err := model.DecodeQueryForClass(dashboardUnit.Query, queryClass)
+		if err != nil {
+			errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
+		baseQuery.SetQueryDateRange(from, to)
+		cachePayload := DashboardUnitCachePayload{
+			DashboardUnit: dashboardUnit,
+			BaseQuery:     baseQuery,
+		}
+		go pg.cacheDashboardUnitForDateRange(cachePayload, &unitWaitGroup)
+	}
+	unitWaitGroup.Wait()
+}
+
+// CacheDashboardUnitForDateRange To cache a dashboard unit for the given range.
+func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload) (int, string) {
+	dashboardUnit := cachePayload.DashboardUnit
+	baseQuery := cachePayload.BaseQuery
+	projectID := dashboardUnit.ProjectID
+	dashboardID := dashboardUnit.DashboardId
+	dashboardUnitID := dashboardUnit.ID
+	from, to := baseQuery.GetQueryDateRange()
+	logCtx := log.WithFields(log.Fields{
+		"Method":          "CacheDashboardUnitForDateRange",
+		"ProjectID":       projectID,
+		"DashboardID":     dashboardID,
+		"DashboardUnitID": dashboardUnitID,
+		"FromTo":          fmt.Sprintf("%d-%d", from, to),
+	})
+	if model.IsDashboardUnitAlreadyCachedForRange(projectID, dashboardID, dashboardUnitID, from, to) {
+		return http.StatusOK, ""
+	}
+	logCtx.Info("Starting to cache unit for date range")
+	startTime := U.TimeNowUnix()
+
+	var result interface{}
+	var err error
+	var errCode int
+	var errMsg string
+	if baseQuery.GetClass() == model.QueryClassFunnel || baseQuery.GetClass() == model.QueryClassInsights {
+		analyticsQuery := baseQuery.(*model.Query)
+		result, errCode, errMsg = pg.Analyze(projectID, *analyticsQuery)
+	} else if baseQuery.GetClass() == model.QueryClassAttribution {
+		attributionQuery := baseQuery.(*model.AttributionQueryUnit)
+		result, err = pg.ExecuteAttributionQuery(projectID, attributionQuery.Query)
+		if err != nil {
+			errCode = http.StatusInternalServerError
+		} else {
+			errCode = http.StatusOK
+		}
+	} else if baseQuery.GetClass() == model.QueryClassChannel {
+		channelQuery := baseQuery.(*model.ChannelQueryUnit)
+		result, errCode = pg.ExecuteChannelQuery(projectID, channelQuery.Query)
+	} else if baseQuery.GetClass() == model.QueryClassChannelV1 {
+		groupQuery := baseQuery.(*model.ChannelGroupQueryV1)
+		result, errCode = pg.RunChannelGroupQuery(projectID, groupQuery.Queries, "")
+	} else if baseQuery.GetClass() == model.QueryClassEvents {
+		groupQuery := baseQuery.(*model.QueryGroup)
+		result, errCode = pg.RunEventsGroupQuery(groupQuery.Queries, projectID)
+	}
+	if errCode != http.StatusOK {
+		return http.StatusInternalServerError, fmt.Sprintf("Error while running query %s", errMsg)
+	}
+
+	timeTaken := U.TimeNowUnix() - startTime
+	timeTakenString := U.SecondsToHMSString(timeTaken)
+	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
+		Info("Done caching unit for range")
+	model.SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to)
+
+	// Set in query cache result as well in case someone runs the same query from query handler.
+	model.SetQueryCacheResult(projectID, baseQuery, result)
+	return http.StatusOK, ""
+}
+
+func (pg *Postgres) cacheDashboardUnitForDateRange(cachePayload DashboardUnitCachePayload,
+	waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	dashboardUnit := cachePayload.DashboardUnit
+	baseQuery := cachePayload.BaseQuery
+	projectID := dashboardUnit.ProjectID
+	dashboardID := dashboardUnit.DashboardId
+	dashboardUnitID := dashboardUnit.ID
+	from, to := baseQuery.GetQueryDateRange()
+	logCtx := log.WithFields(log.Fields{
+		"Method":          "cacheDashboardUnitForDateRange",
+		"ProjectID":       projectID,
+		"DashboardID":     dashboardID,
+		"DashboardUnitID": dashboardUnitID,
+		"FromTo":          fmt.Sprintf("%d-%d", from, to),
+	})
+	errCode, errMsg := pg.CacheDashboardUnitForDateRange(cachePayload)
+	if errCode != http.StatusOK {
+		logCtx.Errorf("Error while running query %s", errMsg)
+	}
+}

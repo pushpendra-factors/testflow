@@ -3,7 +3,8 @@ package v1
 import (
 	"encoding/json"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"math"
@@ -30,13 +31,13 @@ func GetAllFactorsGoalsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	goals, errCode := M.GetAllFactorsGoals(projectID)
+	goals, errCode := store.GetStore().GetAllFactorsGoals(projectID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	for index, goal := range goals {
-		var ipRule M.FactorsGoalRule
+		var ipRule model.FactorsGoalRule
 		json.Unmarshal((goal.Rule).RawMessage, &ipRule)
 		opRule := ReverseMapRule(ipRule)
 		ruleJSON, _ := json.Marshal(opRule)
@@ -47,9 +48,9 @@ func GetAllFactorsGoalsHandler(c *gin.Context) {
 }
 
 type CreateGoalInputParams struct {
-	StartEvent    M.QueryEventWithProperties `json:"st_en"`
-	EndEvent      M.QueryEventWithProperties `json:"en_en"`
-	GlobalFilters []M.QueryProperty          `json:"gpr"`
+	StartEvent    model.QueryEventWithProperties `json:"st_en"`
+	EndEvent      model.QueryEventWithProperties `json:"en_en"`
+	GlobalFilters []model.QueryProperty          `json:"gpr"`
 }
 
 type CreateFactorsGoalParams struct {
@@ -88,7 +89,7 @@ func CreateFactorsGoalsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	id, errCode, errMsg := M.CreateFactorsGoal(projectID, params.Name, MapRule(params.Rule), loggedInAgentUUID)
+	id, errCode, errMsg := store.GetStore().CreateFactorsGoal(projectID, params.Name, MapRule(params.Rule), loggedInAgentUUID)
 	if errCode != http.StatusCreated {
 		if errMsg != "" {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": errMsg})
@@ -103,17 +104,17 @@ func CreateFactorsGoalsHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-func MapRule(ip CreateGoalInputParams) M.FactorsGoalRule {
-	op := M.FactorsGoalRule{}
+func MapRule(ip CreateGoalInputParams) model.FactorsGoalRule {
+	op := model.FactorsGoalRule{}
 	op.StartEvent = ip.StartEvent.Name
 	op.EndEvent = ip.EndEvent.Name
-	op.Rule = M.FactorsGoalFilter{}
+	op.Rule = model.FactorsGoalFilter{}
 	if len(ip.StartEvent.Properties) > 0 || len(ip.EndEvent.Properties) > 0 || len(ip.GlobalFilters) > 0 {
-		op.Rule.StartEnEventFitler = make([]M.KeyValueTuple, 0)
-		op.Rule.EndEnEventFitler = make([]M.KeyValueTuple, 0)
-		op.Rule.StartEnUserFitler = make([]M.KeyValueTuple, 0)
-		op.Rule.EndEnUserFitler = make([]M.KeyValueTuple, 0)
-		op.Rule.GlobalFilters = make([]M.KeyValueTuple, 0)
+		op.Rule.StartEnEventFitler = make([]model.KeyValueTuple, 0)
+		op.Rule.EndEnEventFitler = make([]model.KeyValueTuple, 0)
+		op.Rule.StartEnUserFitler = make([]model.KeyValueTuple, 0)
+		op.Rule.EndEnUserFitler = make([]model.KeyValueTuple, 0)
+		op.Rule.GlobalFilters = make([]model.KeyValueTuple, 0)
 	}
 	for _, property := range ip.StartEvent.Properties {
 		if property.Entity == "user" {
@@ -137,8 +138,8 @@ func MapRule(ip CreateGoalInputParams) M.FactorsGoalRule {
 	return op
 }
 
-func mapProperty(pr M.QueryProperty) M.KeyValueTuple {
-	value := M.KeyValueTuple{}
+func mapProperty(pr model.QueryProperty) model.KeyValueTuple {
+	value := model.KeyValueTuple{}
 
 	value.Key = pr.Property
 	value.Type = pr.Type
@@ -211,7 +212,7 @@ func UpdateFactorsGoalsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	id, errCode := M.UpdateFactorsGoal(params.ID, params.Name, MapRule(params.Rule), projectID)
+	id, errCode := store.GetStore().UpdateFactorsGoal(params.ID, params.Name, MapRule(params.Rule), projectID)
 	if errCode != http.StatusOK {
 		logCtx.Errorln("Updating FactorsGoal failed")
 		if errCode == http.StatusFound {
@@ -268,7 +269,7 @@ func RemoveFactorsGoalsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	id, errCode := M.DeactivateFactorsGoal(params.ID, projectID)
+	id, errCode := store.GetStore().DeactivateFactorsGoal(params.ID, projectID)
 	if errCode != http.StatusOK {
 		logCtx.Errorln("Removing FactorsGoal failed")
 		if errCode == http.StatusFound {
@@ -322,13 +323,13 @@ func SearchFactorsGoalHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	goals, errCode := M.GetAllFactorsGoalsWithNamePattern(projectID, params.SearchText)
+	goals, errCode := store.GetStore().GetAllFactorsGoalsWithNamePattern(projectID, params.SearchText)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 	for index, goal := range goals {
-		var ipRule M.FactorsGoalRule
+		var ipRule model.FactorsGoalRule
 		json.Unmarshal((goal.Rule).RawMessage, &ipRule)
 		opRule := ReverseMapRule(ipRule)
 		ruleJSON, _ := json.Marshal(opRule)
@@ -338,10 +339,10 @@ func SearchFactorsGoalHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, goals)
 }
 
-func ReverseMapRule(ip M.FactorsGoalRule) CreateGoalInputParams {
+func ReverseMapRule(ip model.FactorsGoalRule) CreateGoalInputParams {
 	op := CreateGoalInputParams{}
-	op.StartEvent = M.QueryEventWithProperties{}
-	op.EndEvent = M.QueryEventWithProperties{}
+	op.StartEvent = model.QueryEventWithProperties{}
+	op.EndEvent = model.QueryEventWithProperties{}
 	op.StartEvent.Name = ip.StartEvent
 	op.EndEvent.Name = ip.EndEvent
 	for _, filter := range ip.Rule.StartEnEventFitler {
@@ -362,8 +363,8 @@ func ReverseMapRule(ip M.FactorsGoalRule) CreateGoalInputParams {
 	return op
 }
 
-func ReverseMapProperty(ip M.KeyValueTuple, entity string) M.QueryProperty {
-	op := M.QueryProperty{}
+func ReverseMapProperty(ip model.KeyValueTuple, entity string) model.QueryProperty {
+	op := model.QueryProperty{}
 	op.Entity = entity
 	op.Type = ip.Type
 	op.Property = ip.Key

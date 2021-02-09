@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	C "factors/config"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"strconv"
@@ -28,11 +29,11 @@ type API_FilterResponePayload struct {
 
 // APISmartEventFilterResponePayload implements the response payload for smart event filter
 type APISmartEventFilterResponePayload struct {
-	EventNameID uint64                `json:"id,omitempty"`
-	ProjectID   uint64                `json:"project_id,omitempty"`
-	EventName   string                `json:"name,omitempty"`
-	Deleted     bool                  `json:"deleted,omitempty" swaggerignore:"true"`
-	FilterExpr  M.SmartCRMEventFilter `json:"expr,omitempty"`
+	EventNameID uint64                    `json:"id,omitempty"`
+	ProjectID   uint64                    `json:"project_id,omitempty"`
+	EventName   string                    `json:"name,omitempty"`
+	Deleted     bool                      `json:"deleted,omitempty" swaggerignore:"true"`
+	FilterExpr  model.SmartCRMEventFilter `json:"expr,omitempty"`
 }
 
 // Test command: curl -H "Content-Type: application/json" -i -X POST http://localhost:8080/projects/1/filters -d '{ "name": "login", "expr": "a.com/u1/u2"}'
@@ -64,8 +65,8 @@ func CreateFilterHandler(c *gin.Context) {
 		return
 	}
 
-	eventName, errCode := M.CreateOrGetFilterEventName(
-		&M.EventName{ProjectId: projectId, Name: requestPayload.EventName, FilterExpr: requestPayload.FilterExpr})
+	eventName, errCode := store.GetStore().CreateOrGetFilterEventName(
+		&model.EventName{ProjectId: projectId, Name: requestPayload.EventName, FilterExpr: requestPayload.FilterExpr})
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating event_name failed"})
 		return
@@ -83,8 +84,8 @@ func CreateFilterHandler(c *gin.Context) {
 
 // APISmartEventFilterRequestPayload implements the request payload for smart event filters
 type APISmartEventFilterRequestPayload struct {
-	EventName  string                `json:"name"`
-	FilterExpr M.SmartCRMEventFilter `json:"expr"`
+	EventName  string                    `json:"name"`
+	FilterExpr model.SmartCRMEventFilter `json:"expr"`
 }
 
 // CreateSmartEventFilterHandler godoc
@@ -126,8 +127,8 @@ func CreateSmartEventFilterHandler(c *gin.Context) {
 		return
 	}
 
-	eventName, errCode := M.CreateOrGetCRMSmartEventFilterEventName(projectID,
-		&M.EventName{ProjectId: projectID, Name: requestPayload.EventName}, &requestPayload.FilterExpr)
+	eventName, errCode := store.GetStore().CreateOrGetCRMSmartEventFilterEventName(projectID,
+		&model.EventName{ProjectId: projectID, Name: requestPayload.EventName}, &requestPayload.FilterExpr)
 	if errCode != http.StatusCreated && errCode != http.StatusAccepted {
 		if errCode == http.StatusBadRequest {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid filter expression"})
@@ -163,7 +164,7 @@ func GetFiltersHandler(c *gin.Context) {
 		return
 	}
 
-	eventNames, errCode := M.GetFilterEventNames(projectId)
+	eventNames, errCode := store.GetStore().GetFilterEventNames(projectId)
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get filters failed. Invalid project."})
 		return
@@ -198,7 +199,7 @@ func GetSmartEventFiltersHandler(c *gin.Context) {
 		return
 	}
 
-	eventNames, errCode := M.GetSmartEventFilterEventNames(projectID)
+	eventNames, errCode := store.GetStore().GetSmartEventFilterEventNames(projectID)
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get smart event filters failed. Invalid project."})
 		return
@@ -212,7 +213,7 @@ func GetSmartEventFiltersHandler(c *gin.Context) {
 			EventName:   eventNames[i].Name,
 		}
 
-		decFilterExp, err := M.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
+		decFilterExp, err := model.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
 		if err == nil {
 			APISmartEventFilter.FilterExpr = *decFilterExp
 		} else {
@@ -273,7 +274,7 @@ func UpdateSmartEventFilterHandler(c *gin.Context) {
 		return
 	}
 
-	eventName, status := M.UpdateCRMSmartEventFilter(projectID, filterID, &M.EventName{Name: requestPayload.EventName}, &requestPayload.FilterExpr)
+	eventName, status := store.GetStore().UpdateCRMSmartEventFilter(projectID, filterID, &model.EventName{Name: requestPayload.EventName}, &requestPayload.FilterExpr)
 	if status != http.StatusAccepted {
 		c.JSON(status, gin.H{"error": "Failed to update smart event name"})
 		return
@@ -337,7 +338,8 @@ func UpdateFilterHandler(c *gin.Context) {
 	}
 
 	// Update name if there is any change.
-	eventName, errCode := M.UpdateFilterEventName(projectId, filterId, &M.EventName{Name: requestPayload.EventName})
+	eventName, errCode := store.GetStore().UpdateFilterEventName(projectId, filterId,
+		&model.EventName{Name: requestPayload.EventName})
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Updating filter failed."})
 		return
@@ -376,7 +378,7 @@ func DeleteFilterHandler(c *gin.Context) {
 		return
 	}
 
-	errCode := M.DeleteFilterEventName(projectId, filterId)
+	errCode := store.GetStore().DeleteFilterEventName(projectId, filterId)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Updating filter failed."})
 		return

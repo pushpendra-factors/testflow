@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"factors/handler/helpers"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 
@@ -30,7 +32,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 		project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
 		assert.Nil(t, err)
 
-		var firstEvent *M.Event
+		var firstEvent *model.Event
 
 		// 10 times: page_spent_time as 5
 		for i := 0; i < 10; i++ {
@@ -40,7 +42,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 			response := DecodeJSONResponseToMap(w.Body)
 			assert.NotNil(t, response["event_id"])
 			if i == 0 {
-				event, errCode := M.GetEventById(project.ID, response["event_id"].(string))
+				event, errCode := store.GetStore().GetEventById(project.ID, response["event_id"].(string))
 				assert.Equal(t, http.StatusFound, errCode)
 				assert.NotNil(t, event)
 				firstEvent = event
@@ -57,15 +59,15 @@ func TestEventAnalyticsQuery(t *testing.T) {
 		}
 
 		// Query count of events: page_spent_time > 11
-		query := M.Query{
+		query := model.Query{
 			From: firstEvent.Timestamp - 10,
 			To:   time.Now().UTC().Unix(),
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: eventName.Name,
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityEvent,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
 							Property:  "$page_spent_time",
 							Operator:  "greaterThan",
 							Type:      "numerical",
@@ -75,28 +77,28 @@ func TestEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeEventsOccurrence,
-			EventsCondition: M.EventCondAnyGivenEvent,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAnyGivenEvent,
 		}
 
-		result, errCode, _ := M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
 		assert.Equal(t, int64(5), result.Rows[0][0])
 
 		// Query count of events: page_spent_time > 11
-		query2 := M.Query{
+		query2 := model.Query{
 			From: firstEvent.Timestamp - 10,
 			To:   time.Now().UTC().Unix(),
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: eventName.Name,
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityEvent,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
 							Property:  "$page_spent_time",
 							Operator:  "greaterThan",
 							Type:      "numerical",
@@ -106,13 +108,13 @@ func TestEventAnalyticsQuery(t *testing.T) {
 					},
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeEventsOccurrence,
-			EventsCondition: M.EventCondAnyGivenEvent,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAnyGivenEvent,
 		}
 
-		result2, errCode, _ := M.ExecuteEventsQuery(project.ID, query2)
+		result2, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query2)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
 		assert.Equal(t, "count", result2.Headers[0])
@@ -130,13 +132,13 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, user1.ID)
-	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, user2.ID)
-	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, user3.ID)
 
@@ -193,15 +195,15 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 
 	t.Run("AnalyticsEventsQueryUniqueUserWithUserPropertyFilterAndBreakdown", func(t *testing.T) {
 
-		query := M.Query{
+		query := model.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s0",
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityUser,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
 							Property:  "$initial_source",
 							Operator:  "equals",
 							Type:      "categorial",
@@ -210,18 +212,18 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 						},
 					},
 				},
-				M.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s1",
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeUniqueUsers,
-			EventsCondition: M.EventCondAllGivenEvent,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
 		//unique user count should return 2 for s0 to s1 with fliter property1
-		result, errCode, _ := M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
@@ -229,37 +231,37 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 
 		//unique user count should return 2 for s0 to s1 with fliter property2
 		query.EventsWithProperties[0].Properties[0].Value = "B"
-		result, errCode, _ = M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
 		assert.Equal(t, int64(2), result.Rows[0][0])
 
-		query = M.Query{
+		query = model.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s0",
 				},
-				M.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s1",
 				},
 			},
-			GroupByProperties: []M.QueryGroupByProperty{
-				M.QueryGroupByProperty{
-					Entity:   M.PropertyEntityUser,
+			GroupByProperties: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:   model.PropertyEntityUser,
 					Property: "$initial_source",
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeUniqueUsers,
-			EventsCondition: M.EventCondAllGivenEvent,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
 		//breakdown by user property should return property A with 1 count and property B with 2 count
-		result, errCode, _ = M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "$initial_source", result.Headers[0])
@@ -270,15 +272,15 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, int64(1), result.Rows[1][1])
 	})
 	t.Run("AnalyticsEventsQueryUniqueUserWithEventPropertyFilterAndBreakdown", func(t *testing.T) {
-		query := M.Query{
+		query := model.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s0",
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityEvent,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
 							Property:  "$campaign_id",
 							Operator:  "equals",
 							Type:      "categorial",
@@ -287,54 +289,54 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 						},
 					},
 				},
-				M.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s1",
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeUniqueUsers,
-			EventsCondition: M.EventCondAllGivenEvent,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		result, errCode, _ := M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
 		assert.Equal(t, int64(2), result.Rows[0][0])
 
 		query.EventsWithProperties[0].Properties[0].Value = "4321"
-		result, errCode, _ = M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
 		assert.Equal(t, int64(2), result.Rows[0][0])
 
-		query = M.Query{
+		query = model.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s0",
 				},
-				M.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s1",
 				},
 			},
-			GroupByProperties: []M.QueryGroupByProperty{
-				M.QueryGroupByProperty{
-					Entity:         M.PropertyEntityEvent,
+			GroupByProperties: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:         model.PropertyEntityEvent,
 					Property:       "$campaign_id",
 					EventName:      "s0",
 					EventNameIndex: 1,
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeUniqueUsers,
-			EventsCondition: M.EventCondAllGivenEvent,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
 		}
-		result, errCode, _ = M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, "$campaign_id", result.Headers[0])
 		assert.Equal(t, "1234", result.Rows[0][0])
 		assert.Equal(t, int64(2), result.Rows[0][1])
@@ -344,15 +346,15 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 	})
 
 	t.Run("AnalyticsEventsQueryEventOccurrenceWithCountEventOccurrences", func(t *testing.T) {
-		query := M.Query{
+		query := model.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s0",
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityUser,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
 							Property:  "$initial_source",
 							Operator:  "equals",
 							Type:      "categorial",
@@ -361,14 +363,14 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 						},
 					},
 				},
-				M.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s1",
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeEventsOccurrence,
-			EventsCondition: M.EventCondAllGivenEvent,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
 		/*
@@ -377,7 +379,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 			user2 -> 		 -> s1 with property1
 			user3 -> event s0 with property2 -> s1 with property2
 		*/
-		result, errCode, _ := M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "count", result.Headers[1])
@@ -386,14 +388,14 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, "s1", result.Rows[1][0])
 		assert.Equal(t, int64(3), result.Rows[1][1])
 
-		query.GroupByProperties = []M.QueryGroupByProperty{
-			M.QueryGroupByProperty{
-				Entity:   M.PropertyEntityUser,
+		query.GroupByProperties = []model.QueryGroupByProperty{
+			model.QueryGroupByProperty{
+				Entity:   model.PropertyEntityUser,
 				Property: "$initial_source",
 			},
 		}
 		// property2 -> 4, property1 ->1
-		result, errCode, _ = M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "$initial_source", result.Headers[1])
@@ -410,11 +412,11 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, int64(1), result.Rows[2][2])
 
 		//Count should be same as when done with user property = 5
-		query.EventsWithProperties[0].Properties[0].Entity = M.PropertyEntityEvent
+		query.EventsWithProperties[0].Properties[0].Entity = model.PropertyEntityEvent
 		query.EventsWithProperties[0].Properties[0].Property = "$campaign_id"
 		query.EventsWithProperties[0].Properties[0].Value = "1234"
-		query.GroupByProperties = []M.QueryGroupByProperty{}
-		result, errCode, _ = M.ExecuteEventsQuery(project.ID, query)
+		query.GroupByProperties = []model.QueryGroupByProperty{}
+		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "count", result.Headers[1])
@@ -426,15 +428,15 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 
 	// Test for event filter on user property and group by user property at the same event.
 	t.Run("AnalyticsEventsQueryUniqueUserWithUserPropertyFilterAndUserBreakdown", func(t *testing.T) {
-		query := M.Query{
+		query := model.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s0",
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityUser,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
 							Property:  "$initial_source",
 							Operator:  "equals",
 							Type:      "categorial",
@@ -443,26 +445,26 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 						},
 					},
 				},
-				M.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s1",
 				},
 			},
-			GroupByProperties: []M.QueryGroupByProperty{
-				M.QueryGroupByProperty{
-					Entity:         M.PropertyEntityUser,
+			GroupByProperties: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:         model.PropertyEntityUser,
 					Property:       "$initial_source",
 					EventName:      "s0",
 					EventNameIndex: 1,
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeUniqueUsers,
-			EventsCondition: M.EventCondAllGivenEvent,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
 		//unique user count should return 2 for s0 to s1 with fliter property1
-		result, errCode, _ := M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 	})
@@ -482,7 +484,7 @@ func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
 		numPropertyRangeStart := 1
 		numPropertyRangeEnd := 100
 		for i := numPropertyRangeStart; i <= numPropertyRangeEnd; i++ {
-			iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+			iUser, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
 				eventName1, iUser.ID, startTimestamp+10, i, i)
@@ -490,26 +492,26 @@ func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
 			assert.Equal(t, http.StatusOK, w.Code)
 		}
 
-		query := M.Query{
+		query := model.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: eventName1,
 				},
 			},
-			GroupByProperties: []M.QueryGroupByProperty{
-				M.QueryGroupByProperty{
-					Entity:   M.PropertyEntityEvent,
+			GroupByProperties: []model.QueryGroupByProperty{
+				model.QueryGroupByProperty{
+					Entity:   model.PropertyEntityEvent,
 					Property: "$page_load_time",
 					Type:     U.PropertyTypeNumerical,
 				},
 			},
-			Class:           M.QueryClassInsights,
-			Type:            M.QueryTypeEventsOccurrence,
-			EventsCondition: M.EventCondAllGivenEvent,
+			Class:           model.QueryClassInsights,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAllGivenEvent,
 		}
-		result, errCode, _ := M.Analyze(project.ID, query)
+		result, errCode, _ := store.GetStore().Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 0)
 
@@ -520,20 +522,20 @@ func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
 			User property numerical_property set as empty ($none).
 			Will create 11 buckets. including 1 $none.
 		*/
-		iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+		iUser, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":""}}`,
 			eventName1, iUser.ID, startTimestamp+10, 0)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		result, errCode, _ = M.Analyze(project.ID, query)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
 		validateNumericalBucketRanges(t, result, 0, numPropertyRangeEnd, 0)
 
 		// Using group by numerical property.
-		query.GroupByProperties[0].Entity = M.PropertyEntityUser
+		query.GroupByProperties[0].Entity = model.PropertyEntityUser
 		query.GroupByProperties[0].Property = "numerical_property"
-		result, errCode, _ = M.Analyze(project.ID, query)
+		result, errCode, _ = store.GetStore().Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 1)
 	})
@@ -555,7 +557,7 @@ func TestEventAnalyticsQueryGroupSingleQueryHandler(t *testing.T) {
 		assert.NotNil(t, agent)
 		assert.Nil(t, err)
 
-		var firstEvent *M.Event
+		var firstEvent *model.Event
 
 		// 10 times: page_spent_time as 5
 		for i := 0; i < 10; i++ {
@@ -565,7 +567,7 @@ func TestEventAnalyticsQueryGroupSingleQueryHandler(t *testing.T) {
 			response := DecodeJSONResponseToMap(w.Body)
 			assert.NotNil(t, response["event_id"])
 			if i == 0 {
-				event, errCode := M.GetEventById(project.ID, response["event_id"].(string))
+				event, errCode := store.GetStore().GetEventById(project.ID, response["event_id"].(string))
 				assert.Equal(t, http.StatusFound, errCode)
 				assert.NotNil(t, event)
 				firstEvent = event
@@ -582,15 +584,15 @@ func TestEventAnalyticsQueryGroupSingleQueryHandler(t *testing.T) {
 		}
 
 		// Query count of events: page_spent_time > 11
-		query1 := M.Query{
+		query1 := model.Query{
 			From: firstEvent.Timestamp - 10,
 			To:   time.Now().UTC().Unix(),
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: eventName.Name,
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityEvent,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
 							Property:  "$page_spent_time",
 							Operator:  "greaterThan",
 							Type:      "numerical",
@@ -600,19 +602,19 @@ func TestEventAnalyticsQueryGroupSingleQueryHandler(t *testing.T) {
 					},
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeEventsOccurrence,
-			EventsCondition: M.EventCondAnyGivenEvent,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAnyGivenEvent,
 		}
 
-		queryGroup := M.QueryGroup{}
-		queryGroup.Queries = make([]M.Query, 0)
+		queryGroup := model.QueryGroup{}
+		queryGroup.Queries = make([]model.Query, 0)
 		queryGroup.Queries = append(queryGroup.Queries, query1)
 
 		w := sendEventsQueryHandler(r, project.ID, agent, &queryGroup)
 		assert.Equal(t, http.StatusOK, w.Code)
-		var resultGroup M.ResultGroup
+		var resultGroup model.ResultGroup
 		decoder := json.NewDecoder(w.Body)
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&resultGroup); err != nil {
@@ -643,7 +645,7 @@ func TestEventAnalyticsQueryGroupMultiQueryHandler(t *testing.T) {
 		assert.NotNil(t, agent)
 		assert.Nil(t, err)
 
-		var firstEvent *M.Event
+		var firstEvent *model.Event
 
 		// 10 times: page_spent_time as 5
 		for i := 0; i < 10; i++ {
@@ -653,7 +655,7 @@ func TestEventAnalyticsQueryGroupMultiQueryHandler(t *testing.T) {
 			response := DecodeJSONResponseToMap(w.Body)
 			assert.NotNil(t, response["event_id"])
 			if i == 0 {
-				event, errCode := M.GetEventById(project.ID, response["event_id"].(string))
+				event, errCode := store.GetStore().GetEventById(project.ID, response["event_id"].(string))
 				assert.Equal(t, http.StatusFound, errCode)
 				assert.NotNil(t, event)
 				firstEvent = event
@@ -670,15 +672,15 @@ func TestEventAnalyticsQueryGroupMultiQueryHandler(t *testing.T) {
 		}
 
 		// Query count of events: page_spent_time > 11
-		query1 := M.Query{
+		query1 := model.Query{
 			From: firstEvent.Timestamp - 10,
 			To:   time.Now().UTC().Unix(),
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: eventName.Name,
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityEvent,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
 							Property:  "$page_spent_time",
 							Operator:  "greaterThan",
 							Type:      "numerical",
@@ -688,22 +690,22 @@ func TestEventAnalyticsQueryGroupMultiQueryHandler(t *testing.T) {
 					},
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeEventsOccurrence,
-			EventsCondition: M.EventCondAnyGivenEvent,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAnyGivenEvent,
 		}
 
 		// Query count of events: page_spent_time > 11
-		query2 := M.Query{
+		query2 := model.Query{
 			From: firstEvent.Timestamp - 10,
 			To:   time.Now().UTC().Unix(),
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: eventName.Name,
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityEvent,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityEvent,
 							Property:  "$page_spent_time",
 							Operator:  "greaterThan",
 							Type:      "numerical",
@@ -713,20 +715,20 @@ func TestEventAnalyticsQueryGroupMultiQueryHandler(t *testing.T) {
 					},
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeEventsOccurrence,
-			EventsCondition: M.EventCondAnyGivenEvent,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondAnyGivenEvent,
 		}
 
-		queryGroup := M.QueryGroup{}
-		queryGroup.Queries = make([]M.Query, 0)
+		queryGroup := model.QueryGroup{}
+		queryGroup.Queries = make([]model.Query, 0)
 		queryGroup.Queries = append(queryGroup.Queries, query1)
 		queryGroup.Queries = append(queryGroup.Queries, query2)
 
 		w := sendEventsQueryHandler(r, project.ID, agent, &queryGroup)
 		assert.Equal(t, http.StatusOK, w.Code)
-		var resultGroup M.ResultGroup
+		var resultGroup model.ResultGroup
 		decoder := json.NewDecoder(w.Body)
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&resultGroup); err != nil {
@@ -747,7 +749,7 @@ func TestEventAnalyticsQueryGroupMultiQueryHandler(t *testing.T) {
 	})
 }
 
-func sendEventsQueryHandler(r *gin.Engine, projectId uint64, agent *M.Agent, queryGroup *M.QueryGroup) *httptest.ResponseRecorder {
+func sendEventsQueryHandler(r *gin.Engine, projectId uint64, agent *model.Agent, queryGroup *model.QueryGroup) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -780,13 +782,13 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, user1.ID)
-	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, user2.ID)
-	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, user3.ID)
 
@@ -843,15 +845,15 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 
 	t.Run("AnalyticsEachEventsQueryUniqueUserWithUserPropertyFilterAndBreakdown", func(t *testing.T) {
 
-		query := M.Query{
+		query := model.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s0",
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityUser,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
 							Property:  "$initial_source",
 							Operator:  "equals",
 							Type:      "categorial",
@@ -860,18 +862,18 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 						},
 					},
 				},
-				M.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s1",
 				},
 			},
-			Class: M.QueryClassEvents,
+			Class: model.QueryClassEvents,
 
-			Type:            M.QueryTypeUniqueUsers,
-			EventsCondition: M.EventCondEachGivenEvent,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
 		}
 
 		//unique user count should return 2 for s0 to s1 with fliter property1
-		result, errCode, _ := M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
@@ -888,15 +890,15 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 	})
 
 	t.Run("AnalyticsEachEventsQueryEventOccurrenceBreakdownByDate", func(t *testing.T) {
-		query := M.Query{
+		query := model.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s0",
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    M.PropertyEntityUser,
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
 							Property:  "$initial_source",
 							Operator:  "equals",
 							Type:      "categorial",
@@ -905,17 +907,17 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 						},
 					},
 				},
-				M.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "s1",
 				},
 			},
-			Class:            M.QueryClassEvents,
+			Class:            model.QueryClassEvents,
 			GroupByTimestamp: "date",
-			Type:             M.QueryTypeEventsOccurrence,
-			EventsCondition:  M.EventCondEachGivenEvent,
+			Type:             model.QueryTypeEventsOccurrence,
+			EventsCondition:  model.EventCondEachGivenEvent,
 		}
 
-		result, errCode, _ := M.ExecuteEventsQuery(project.ID, query)
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "datetime", result.Headers[0])
 		if result.Headers[1] == "s0" {

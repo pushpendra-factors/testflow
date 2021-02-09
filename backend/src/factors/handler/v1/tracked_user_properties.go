@@ -2,7 +2,7 @@ package v1
 
 import (
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 
@@ -25,7 +25,7 @@ func GetAllFactorsTrackedUserPropertiesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	trackedUserProperties, errCode := M.GetAllFactorsTrackedUserPropertiesByProject(projectID)
+	trackedUserProperties, errCode := store.GetStore().GetAllFactorsTrackedUserPropertiesByProject(projectID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -71,7 +71,7 @@ func CreateFactorsTrackedUserPropertyHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	id, errCode := M.CreateFactorsTrackedUserProperty(projectID, params.UserPropertyName, loggedInAgentUUID)
+	id, errCode := store.GetStore().CreateFactorsTrackedUserProperty(projectID, params.UserPropertyName, loggedInAgentUUID)
 	if !(errCode == http.StatusCreated || errCode == http.StatusOK) {
 		logCtx.Errorln("Tracked user property creation failed")
 		if errCode == http.StatusConflict {
@@ -132,7 +132,7 @@ func RemoveFactorsTrackedUserPropertyHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	id, errCode := M.RemoveFactorsTrackedUserProperty(params.ID, projectID)
+	id, errCode := store.GetStore().RemoveFactorsTrackedUserProperty(params.ID, projectID)
 	if errCode != http.StatusOK {
 		logCtx.Errorln("Removing Tracked event failed")
 		if errCode == http.StatusConflict {

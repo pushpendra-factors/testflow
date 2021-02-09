@@ -2,7 +2,8 @@ package main
 
 import (
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"factors/util"
 	"flag"
 	"os"
@@ -79,7 +80,7 @@ func main() {
 		linkedEventsArray = append(linkedEventsArray, value)
 	}
 
-	query := &M.AttributionQuery{
+	query := &model.AttributionQuery{
 		LinkedEvents:           linkedEventsArray,
 		From:                   *customStartTime,
 		To:                     *customEndTime,
@@ -89,7 +90,7 @@ func main() {
 		AttributionMethodology: *attributionMethod,
 	}
 
-	result, err := M.ExecuteAttributionQuery(*projectIdFlag, query)
+	result, err := store.GetStore().ExecuteAttributionQuery(*projectIdFlag, query)
 	if err != nil {
 		log.Error("Failed to execute query")
 	}

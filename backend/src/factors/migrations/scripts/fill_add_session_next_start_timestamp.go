@@ -10,7 +10,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 )
 
@@ -104,15 +105,15 @@ func getLastSessionEventTimestamp(projectID uint64, sessionEventNameID uint64) (
 func getNextSessionStartTimestamp(projectID uint64, maxLookbackTimestamp int64) (int64, int) {
 	logCtx := log.WithField("project_id", projectID)
 
-	eventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, projectID)
+	eventName, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, projectID)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 		logCtx.Error("Failed to get session event name.")
 		return 0, http.StatusInternalServerError
 	}
 
-	var project *M.Project
+	var project *model.Project
 	if errCode == http.StatusNotFound {
-		project, errCode = M.GetProject(projectID)
+		project, errCode = store.GetStore().GetProject(projectID)
 		if errCode != http.StatusFound {
 			logCtx.Error("Failed to get project by id.")
 			return 0, http.StatusInternalServerError
@@ -157,7 +158,7 @@ func getNextSessionStartTimestamp(projectID uint64, maxLookbackTimestamp int64) 
 
 	// Use the project creation timestamp, if no events found.
 	if project == nil {
-		project, errCode = M.GetProject(projectID)
+		project, errCode = store.GetStore().GetProject(projectID)
 		if errCode != http.StatusFound {
 			logCtx.Error("Failed to project by id")
 			return 0, http.StatusInternalServerError
@@ -173,7 +174,7 @@ func getAndUpdateNextSessionStartTimestamp(projectID uint64, maxLookbackTimestam
 		return http.StatusInternalServerError
 	}
 
-	project, errCode := M.GetProject(projectID)
+	project, errCode := store.GetStore().GetProject(projectID)
 	if errCode != http.StatusFound {
 		return http.StatusInternalServerError
 	}
@@ -207,7 +208,7 @@ func updateNextSessionStartTimestampForProject(projectID uint64, timestamp int64
 	}
 
 	query := fmt.Sprintf(`UPDATE projects SET jobs_metadata = '{"%s": %d}' WHERE id = %d`,
-		M.JobsMetadataKeyNextSessionStartTimestamp, timestamp, projectID)
+		model.JobsMetadataKeyNextSessionStartTimestamp, timestamp, projectID)
 	db := C.GetServices().Db
 	err := db.Exec(query).Error
 	if err != nil {
@@ -271,7 +272,7 @@ func main() {
 		logCtx.Info("Successfully updated next session start timestamp for project.")
 		return
 	} else {
-		projectIDs, errCode := M.GetAllProjectIDs()
+		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
 		if errCode != http.StatusFound {
 			log.Fatal("No projects found.")
 		}

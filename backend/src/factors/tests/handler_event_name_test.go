@@ -5,7 +5,8 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"factors/task/event_user_cache"
 	TaskSession "factors/task/session"
 	U "factors/util"
@@ -21,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendGetEventNamesApproxRequest(projectId uint64, agent *M.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+func sendGetEventNamesApproxRequest(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -36,7 +37,7 @@ func sendGetEventNamesApproxRequest(projectId uint64, agent *M.Agent, r *gin.Eng
 	return w
 }
 
-func sendGetEventNamesExactRequest(projectId uint64, agent *M.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+func sendGetEventNamesExactRequest(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -64,10 +65,10 @@ func buildEventNameRequest(projectId uint64, requestType, cookieData string) (*h
 	return req, nil
 }
 
-func createEventWithTimestampByName(t *testing.T, project *M.Project, user *M.User, name string, timestamp int64) (*M.EventName, *M.Event) {
-	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: name})
+func createEventWithTimestampByName(t *testing.T, project *model.Project, user *model.User, name string, timestamp int64) (*model.EventName, *model.Event) {
+	eventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: name})
 	assert.NotNil(t, eventName)
-	event, errCode := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp})
+	event, errCode := store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp})
 	assert.Equal(t, http.StatusCreated, errCode)
 	return eventName, event
 }
@@ -95,7 +96,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names.
 	assert.Len(t, eventNames.EventNames, 0)
 
-	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.NotNil(t, user)
 	assert.Equal(t, http.StatusCreated, errCode)
 

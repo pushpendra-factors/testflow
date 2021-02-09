@@ -1,7 +1,8 @@
 package tests
 
 import (
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"testing"
@@ -13,16 +14,16 @@ func TestGetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType(t *testing.T) 
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 		IntAdwordsEnabledAgentUUID:  &agent.UUID,
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 	agentAdwordsToken := U.RandomLowerAphaNumString(10)
-	errCode = M.UpdateAgentIntAdwordsRefreshToken(agent.UUID, agentAdwordsToken)
+	errCode = store.GetStore().UpdateAgentIntAdwordsRefreshToken(agent.UUID, agentAdwordsToken)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	adwordsLastSyncInfo, errCode := M.GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
+	adwordsLastSyncInfo, errCode := store.GetStore().GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
 	assert.Equal(t, http.StatusOK, errCode)
 	for _, alsi := range adwordsLastSyncInfo {
 		if alsi.ProjectId == project.ID {
@@ -35,16 +36,16 @@ func TestGetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType(t *testing.T) 
 	project1, agent1, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	customerAccountId1 := U.RandomLowerAphaNumString(5)
-	_, errCode = M.UpdateProjectSettings(project1.ID, &M.ProjectSetting{
+	_, errCode = store.GetStore().UpdateProjectSettings(project1.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId1,
 		IntAdwordsEnabledAgentUUID:  &agent1.UUID,
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 	agentAdwordsToken1 := U.RandomLowerAphaNumString(10)
-	errCode = M.UpdateAgentIntAdwordsRefreshToken(agent1.UUID, agentAdwordsToken1)
+	errCode = store.GetStore().UpdateAgentIntAdwordsRefreshToken(agent1.UUID, agentAdwordsToken1)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	adwordsLastSyncInfo1, errCode := M.GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
+	adwordsLastSyncInfo1, errCode := store.GetStore().GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
 	assert.Equal(t, http.StatusOK, errCode)
 	for _, alsi := range adwordsLastSyncInfo1 {
 		if alsi.ProjectId == project.ID {

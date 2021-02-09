@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	H "factors/handler/helpers"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"io/ioutil"
 	"net/http"
@@ -16,7 +17,7 @@ import (
 )
 
 type AttributionRequestPayload struct {
-	Query *M.AttributionQuery `json:"query"`
+	Query *model.AttributionQuery `json:"query"`
 }
 
 // AttributionHandler godoc
@@ -85,9 +86,9 @@ func AttributionHandler(c *gin.Context) {
 		}
 	}
 
-	var cacheResult M.QueryResult
-	attributionQueryUnitPayload := M.AttributionQueryUnit{
-		Class: M.QueryClassAttribution,
+	var cacheResult model.QueryResult
+	attributionQueryUnitPayload := model.AttributionQueryUnit{
+		Class: model.QueryClassAttribution,
 		Query: requestPayload.Query,
 	}
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest)
@@ -97,20 +98,20 @@ func AttributionHandler(c *gin.Context) {
 	}
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
-	M.SetQueryCachePlaceholder(projectId, &attributionQueryUnitPayload)
+	model.SetQueryCachePlaceholder(projectId, &attributionQueryUnitPayload)
 	H.SleepIfHeaderSet(c)
 
-	result, err := M.ExecuteAttributionQuery(projectId, requestPayload.Query)
+	result, err := store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query)
 	if err != nil {
 		logCtx.WithError(err).Error("query execution failed")
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Query execution failed"})
-		M.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
+		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
 		return
 	}
-	M.SetQueryCacheResult(projectId, &attributionQueryUnitPayload, result)
+	model.SetQueryCacheResult(projectId, &attributionQueryUnitPayload, result)
 
 	if isDashboardQueryRequest {
-		M.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
+		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
 			requestPayload.Query.From, requestPayload.Query.To)
 	}
 	c.JSON(http.StatusOK, result)
@@ -135,7 +136,7 @@ func decodeAttributionPayload(r *http.Request, logCtx *log.Entry) (bool, string,
 
 	decoder2 := json.NewDecoder(bytes.NewReader(data))
 	decoder2.DisallowUnknownFields()
-	var requestPayloadUnit M.AttributionQueryUnit
+	var requestPayloadUnit model.AttributionQueryUnit
 	if err = decoder2.Decode(&requestPayloadUnit); err == nil {
 		requestPayload.Query = requestPayloadUnit.Query
 		return false, "", requestPayload

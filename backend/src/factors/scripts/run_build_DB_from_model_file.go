@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	P "factors/pattern"
 	"factors/util"
 	U "factors/util"
@@ -139,7 +140,7 @@ func main() {
 
 	defer file.Close()
 
-	var project *M.Project
+	var project *model.Project
 
 	if projectName == nil || *projectName == "" {
 		log.Error("No project name or uuid provided ")
@@ -170,11 +171,11 @@ func main() {
 
 func createRandomAgentUUID() (string, error) {
 	email := U.RandomLowerAphaNumString(6) + "@asdfds.local"
-	createAgentParams := M.CreateAgentParams{
-		Agent:    &M.Agent{Email: email, Phone: "987654321"},
-		PlanCode: M.FreePlanCode,
+	createAgentParams := model.CreateAgentParams{
+		Agent:    &model.Agent{Email: email, Phone: "987654321"},
+		PlanCode: model.FreePlanCode,
 	}
-	if agent, err := M.CreateAgentWithDependencies(&createAgentParams); err != http.StatusCreated {
+	if agent, err := store.GetStore().CreateAgentWithDependencies(&createAgentParams); err != http.StatusCreated {
 		return "", errors.New("Failed to create agent")
 	} else {
 		return agent.Agent.UUID, nil
@@ -182,7 +183,7 @@ func createRandomAgentUUID() (string, error) {
 
 }
 
-func denormalizedEventsFileToProject(file *os.File, project *M.Project) (int64, int64, error) {
+func denormalizedEventsFileToProject(file *os.File, project *model.Project) (int64, int64, error) {
 	var startTime int64
 	var endTime int64
 	_, err := file.Seek(0, 0)
@@ -228,15 +229,16 @@ func denormalizedEventsFileToProject(file *os.File, project *M.Project) (int64, 
 	return startTime, endTime, nil
 }
 
-func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*M.Project, error) {
+func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*model.Project, error) {
 
-	billingAcc, errCode := M.GetBillingAccountByAgentUUID(agentUUID)
+	billingAcc, errCode := store.GetStore().GetBillingAccountByAgentUUID(agentUUID)
 	if errCode != http.StatusFound {
 		log.WithField("err_code", errCode).Error("CreateProject Failed, billing account error")
 		return nil, errors.New("Failed to create billingaccount")
 	}
 
-	cproject, errCode := M.CreateProjectWithDependencies(&M.Project{Name: projectName}, agentUUID, 0, billingAcc.ID)
+	cproject, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: projectName},
+		agentUUID, 0, billingAcc.ID)
 	if errCode != http.StatusCreated {
 		log.Error("failed to CreateProjectWithDependencies")
 		return nil, errors.New("failed to CreateProjectWithDependencies")
@@ -244,33 +246,36 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 	return cproject, nil
 }
 
-func eventToDb(event denEvent, project *M.Project) int {
-	user, err := M.CreateOrGetUser(project.ID, event.UserId)
+func eventToDb(event denEvent, project *model.Project) int {
+	user, err := store.GetStore().CreateOrGetUser(project.ID, event.UserId)
 	if err != http.StatusCreated && err != http.StatusOK {
 		log.Errorf("Failed to GetSegmentUser status: %d", err)
 		return err
 	}
 
-	userPropertiesId, errCode := M.UpdateUserProperties(project.ID, user.ID, event.UserProperties, event.UserJoinTimestamp)
+	userPropertiesId, errCode := store.GetStore().UpdateUserProperties(project.ID,
+		user.ID, event.UserProperties, event.UserJoinTimestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return errCode
 	}
 
-	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: event.EventName})
+	eventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(
+		&model.EventName{ProjectId: project.ID, Name: event.EventName})
 	if errCode != http.StatusConflict && errCode != http.StatusCreated {
 		log.Error("failed to create CreateOrGetUserCreatedEventName")
 		return errCode
 	}
 
-	_, errCode = M.CreateEvent(&M.Event{
-		ProjectId:        project.ID,
-		EventNameId:      eventName.ID,
-		UserId:           user.ID,
-		Timestamp:        event.EventTime,
-		Count:            event.EventCount,
-		Properties:       *event.EventProperties,
-		UserPropertiesId: userPropertiesId,
-	})
+	_, errCode = store.GetStore().CreateEvent(
+		&model.Event{
+			ProjectId:        project.ID,
+			EventNameId:      eventName.ID,
+			UserId:           user.ID,
+			Timestamp:        event.EventTime,
+			Count:            event.EventCount,
+			Properties:       *event.EventProperties,
+			UserPropertiesId: userPropertiesId,
+		})
 	if errCode != http.StatusFound && errCode != http.StatusCreated {
 		log.Errorf("failed to create event, errCode: %+v\n", errCode)
 		return errCode
@@ -291,7 +296,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 		}
 	}
 
-	query := M.Query{
+	query := model.Query{
 		From: startTime,
 		To:   endTime,
 	}
@@ -304,7 +309,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	if err != nil {
 		return errors.New("Faile to unmarshal")
 	}
-	result, errCode, _ := M.Analyze(projectId, query)
+	result, errCode, _ := store.GetStore().Analyze(projectId, query)
 	if errCode != http.StatusOK {
 		errors.New("Failed to analyze query")
 	}
@@ -320,7 +325,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	if err != nil {
 		return errors.New("Faile to unmarshal")
 	}
-	result, errCode, _ = M.Analyze(projectId, query)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query)
 	if errCode != http.StatusOK {
 		errors.New("Failed to analyze query")
 	}
@@ -336,7 +341,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	if err != nil {
 		return errors.New("Faile to unmarshal")
 	}
-	result, errCode, _ = M.Analyze(projectId, query)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query)
 	if errCode != http.StatusOK {
 		errors.New("Failed to analyze query")
 	}
@@ -355,7 +360,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	if err != nil {
 		return errors.New("Faile to unmarshal")
 	}
-	result, errCode, _ = M.Analyze(projectId, query)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query)
 	if errCode != http.StatusOK {
 		errors.New("Failed to analyze query")
 	}
@@ -379,7 +384,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	if err != nil {
 		return errors.New("Faile to unmarshal")
 	}
-	result, errCode, _ = M.Analyze(projectId, query)
+	result, errCode, _ = store.GetStore().Analyze(projectId, query)
 	if errCode != http.StatusOK {
 		return errors.New("Failed to analyze query")
 	}
@@ -475,7 +480,7 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 	if err != nil {
 		return err
 	}
-	query := M.Query{
+	query := model.Query{
 		From: startTime,
 		To:   endTime,
 	}
@@ -485,7 +490,7 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 	if err != nil {
 		return errors.New("Failed to unmarshal")
 	}
-	result, _, _ := M.Analyze(projectId, query)
+	result, _, _ := store.GetStore().Analyze(projectId, query)
 	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))
 	log.Info(fmt.Sprintf("\nQuery Result\nperUserCount:%d\n", result.Rows[0][0]))
 
@@ -512,7 +517,7 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 	if err != nil {
 		return errors.New("Failed to unmarshal")
 	}
-	result, _, _ = M.Analyze(projectId, query)
+	result, _, _ = store.GetStore().Analyze(projectId, query)
 	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))
 	log.Info(fmt.Sprintf("\nQuery Result\nnperUserCount:%d\n", result.Rows[0][3]))
 	return nil

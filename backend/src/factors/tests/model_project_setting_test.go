@@ -1,9 +1,10 @@
 package tests
 
 import (
-	M "factors/model"
-	U "factors/util"
 	C "factors/config"
+	"factors/model/model"
+	"factors/model/store"
+	U "factors/util"
 	"net/http"
 	"testing"
 	"time"
@@ -18,8 +19,8 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 
 	// Test UpdateProjectSetting.
 	autoTrack := true
-	updatedPSettings, errCode := M.UpdateProjectSettings(project.ID,
-		&M.ProjectSetting{AutoTrack: &autoTrack})
+	updatedPSettings, errCode := store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{AutoTrack: &autoTrack})
 	assert.Equal(t, http.StatusAccepted, errCode)
 	assert.NotNil(t, updatedPSettings)
 	assert.Equal(t, autoTrack, *updatedPSettings.AutoTrack)
@@ -27,11 +28,11 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 	// Test updating one column and another column should not be
 	// updated with default value.
 	intSegment := true
-	updatedPSettings, errCode = M.UpdateProjectSettings(project.ID,
-		&M.ProjectSetting{IntSegment: &intSegment})
+	updatedPSettings, errCode = store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{IntSegment: &intSegment})
 	assert.Equal(t, http.StatusAccepted, errCode)
 	assert.NotNil(t, updatedPSettings)
-	projectSetting, errCode := M.GetProjectSetting(project.ID)
+	projectSetting, errCode := store.GetStore().GetProjectSetting(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, projectSetting)
 	// auto_track should stay false.
@@ -41,10 +42,10 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 
 	agentUUID := agent.UUID
 	accountId := U.RandomLowerAphaNumString(6)
-	updatedPSettings, errCode = M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+	updatedPSettings, errCode = store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &accountId, IntAdwordsEnabledAgentUUID: &agentUUID})
 	assert.Equal(t, errCode, http.StatusAccepted)
-	projectSetting, errCode = M.GetProjectSetting(project.ID)
+	projectSetting, errCode = store.GetStore().GetProjectSetting(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, projectSetting)
 	assert.Equal(t, true, *projectSetting.ExcludeBot)
@@ -53,46 +54,46 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 
 	// Test UpdateProjectSetting without projectId.
 	autoTrack = true
-	updatedPSettings, errCode = M.UpdateProjectSettings(0,
-		&M.ProjectSetting{AutoTrack: &autoTrack})
+	updatedPSettings, errCode = store.GetStore().UpdateProjectSettings(0,
+		&model.ProjectSetting{AutoTrack: &autoTrack})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, updatedPSettings)
 
 	// Test clean adwords customer account id on update.
 	adwordsCustomerAccountId := "899-900-900"
-	updatedPSettings, errCode = M.UpdateProjectSettings(project.ID,
-		&M.ProjectSetting{IntAdwordsCustomerAccountId: &adwordsCustomerAccountId})
+	updatedPSettings, errCode = store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{IntAdwordsCustomerAccountId: &adwordsCustomerAccountId})
 	assert.Equal(t, errCode, http.StatusAccepted)
-	projectSetting, errCode = M.GetProjectSetting(project.ID)
+	projectSetting, errCode = store.GetStore().GetProjectSetting(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, projectSetting)
 	assert.Equal(t, "899900900", *projectSetting.IntAdwordsCustomerAccountId)
 }
 
-func TestGetProjectSettingByKeyWithTimeout(t *testing.T) { 
+func TestGetProjectSettingByKeyWithTimeout(t *testing.T) {
 	project, _ := SetupProjectReturnDAO()
 	assert.NotNil(t, project)
-	
+
 	// Should not timeout.
-	// If the db queries are slow in local. 
+	// If the db queries are slow in local.
 	// This case will start failing. So setting a high timeout period 5 seconds.
-	projectSetting, errCode := M.GetProjectSettingByKeyWithTimeout("token", 
-		project.Token, time.Second * 5) 
+	projectSetting, errCode := store.GetStore().GetProjectSettingByKeyWithTimeout("token",
+		project.Token, time.Second*5)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotNil(t, projectSetting)
 
 	// Should timeout.
-	// Assuming that no database environment can execute 
+	// Assuming that no database environment can execute
 	// the query in less than 1 micro seconds.
-	projectSetting, errCode = M.GetProjectSettingByKeyWithTimeout("token", 
-		project.Token, time.Microsecond * 1)
+	projectSetting, errCode = store.GetStore().GetProjectSettingByKeyWithTimeout("token",
+		project.Token, time.Microsecond*1)
 	assert.Equal(t, errCode, http.StatusInternalServerError)
 	assert.Nil(t, projectSetting)
 
 	// Should return from default, as flag is set.
 	C.GetConfig().UseDefaultProjectSettingForSDK = true
-	projectSetting, errCode = M.GetProjectSettingByKeyWithTimeout("token", 
-		project.Token, time.Microsecond * 1)
+	projectSetting, errCode = store.GetStore().GetProjectSettingByKeyWithTimeout("token",
+		project.Token, time.Microsecond*1)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotNil(t, projectSetting)
 }

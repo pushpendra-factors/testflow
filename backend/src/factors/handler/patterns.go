@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
 	P "factors/pattern"
 	PW "factors/pattern_service_wrapper"
 	U "factors/util"
@@ -23,9 +23,9 @@ func ParseFactorQuery(query map[string]interface{}) (
 	var startEventWithProperties map[string]interface{}
 	var endEventWithProperties map[string]interface{}
 	if queryType, ok := query["queryType"]; ok {
-		if queryType == M.QueryTypeEventsOccurrence {
+		if queryType == model.QueryTypeEventsOccurrence {
 			countType = P.COUNT_TYPE_PER_OCCURRENCE
-		} else if queryType == M.QueryTypeUniqueUsers {
+		} else if queryType == model.QueryTypeUniqueUsers {
 			countType = P.COUNT_TYPE_PER_USER
 		} else {
 			err := fmt.Errorf(fmt.Sprintf("Unknown queryType %s in query", queryType))

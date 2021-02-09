@@ -3,7 +3,7 @@ package main
 import (
 	"database/sql"
 	C "factors/config"
-	"factors/model"
+	"factors/model/model"
 	"factors/util"
 	"flag"
 	"fmt"
@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	M "factors/model"
 	U "factors/util"
 
 	"github.com/jinzhu/gorm"
@@ -101,7 +100,7 @@ func main() {
 func getActiveProjectIDAndCustomerIDs() (map[uint64][]string, error) {
 	db := C.GetServices().Db
 
-	projectSettings := make([]M.ProjectSetting, 0, 0)
+	projectSettings := make([]model.ProjectSetting, 0, 0)
 	mapOfProjectToCustomerIds := make(map[uint64][]string)
 
 	err := db.Table("project_settings").Where("int_adwords_enabled_agent_uuid IS NOT NULL AND int_adwords_enabled_agent_uuid != ''").Find(&projectSettings).Error

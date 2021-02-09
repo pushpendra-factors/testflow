@@ -2,7 +2,8 @@ package main
 
 import (
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"flag"
 	"fmt"
 	"net/http"
@@ -91,7 +92,7 @@ func renameDuplicateEventNames(projectID uint64, dryRun bool, renameStat *map[ui
 	if err != nil {
 		log.WithError(err).Fatal("Failed to get duplicate event names")
 	}
-	var renamedEventNames []M.EventName
+	var renamedEventNames []model.EventName
 
 	var duplicateEventNames []eventNameCount
 	for rows.Next() {
@@ -103,11 +104,11 @@ func renameDuplicateEventNames(projectID uint64, dryRun bool, renameStat *map[ui
 	}
 
 	for _, duplicateEventName := range duplicateEventNames {
-		var eventName M.EventName
+		var eventName model.EventName
 		eventName.Name = duplicateEventName.Name
 		eventName.ProjectId = projectID
 		eventName.Type = duplicateEventName.Type
-		retEventName, errCode := M.CreateOrGetEventName(&eventName)
+		retEventName, errCode := store.GetStore().CreateOrGetEventName(&eventName)
 		if errCode != http.StatusConflict {
 			log.Fatal("Failed to get event name by name, type and projectId")
 		}
@@ -117,10 +118,10 @@ func renameDuplicateEventNames(projectID uint64, dryRun bool, renameStat *map[ui
 		if err != nil {
 			log.Fatal("Failed to get the event names to be renamed")
 		}
-		var renameEventNames []M.EventName
+		var renameEventNames []model.EventName
 		var renameEventNamesID []uint64
 		for rows.Next() {
-			var renameEventName M.EventName
+			var renameEventName model.EventName
 			if err := db.ScanRows(rows, &renameEventName); err != nil {
 				log.WithError(err).Fatal("Failed scanning rows on duplicate event names job")
 			}
@@ -147,21 +148,21 @@ func renameDuplicateEventNames(projectID uint64, dryRun bool, renameStat *map[ui
 			defer rows.Close()
 
 			if len(eventNamesIdCount) > 0 {
-				if _, exists :=  (*renameStat)[projectID]; !exists {
+				if _, exists := (*renameStat)[projectID]; !exists {
 					(*renameStat)[projectID] = fmt.Sprintf("%+v", eventNamesIdCount)
 				} else {
 					(*renameStat)[projectID] = fmt.Sprintf("%s, %+v", (*renameStat)[projectID], eventNamesIdCount)
 				}
-				
+
 			}
 			continue
-		} 
+		}
 
 		for i, renameEventName := range renameEventNames {
 			renamePrefix := "$renamed_$" + strconv.Itoa(i+1) + "_"
 			renameEventName.Name = renamePrefix + renameEventName.Name
 			updateQueryStr := "UPDATE event_names SET name = ? WHERE project_id = ? AND id = ? RETURNING event_names.*"
-			var returnEventName M.EventName
+			var returnEventName model.EventName
 			err := db.Raw(updateQueryStr, renameEventName.Name,
 				renameEventName.ProjectId, renameEventName.ID).Scan(&returnEventName).Error
 			if err != nil {

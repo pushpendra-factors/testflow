@@ -4,7 +4,7 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	IntSalesforce "factors/integration/salesforce"
-	M "factors/model"
+	"factors/model/store"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -101,7 +101,7 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	syncInfo, status := M.GetSalesforceSyncInfo()
+	syncInfo, status := store.GetStore().GetSalesforceSyncInfo()
 	if status != http.StatusFound {
 		log.Panicf("Failed to get salesforce syncinfo: %d", status)
 	}
@@ -125,7 +125,7 @@ func main() {
 	}
 
 	// salesforce enrich
-	salesforceEnabledProjects, status := M.GetAllSalesforceProjectSettings()
+	salesforceEnabledProjects, status := store.GetStore().GetAllSalesforceProjectSettings()
 	if status != http.StatusFound {
 		log.Panic("No projects enabled salesforce integration.")
 	}

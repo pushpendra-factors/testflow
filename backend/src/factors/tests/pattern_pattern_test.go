@@ -3,7 +3,7 @@ package tests
 import (
 	"bufio"
 	"encoding/json"
-	M "factors/model"
+	"factors/model/model"
 	P "factors/pattern"
 	PS "factors/pattern_server/store"
 	T "factors/task"
@@ -1021,9 +1021,9 @@ func TestPatternFilterTopKpatternTypes(t *testing.T) {
 		patterns = append(patterns, tmpIE)
 		patterns = append(patterns, tmpSpec)
 
-		eNT[topUCevents[idx]] = M.TYPE_USER_CREATED_EVENT_NAME
-		eNT[topPageViewEvents[idx]] = M.TYPE_FILTER_EVENT_NAME
-		eNT[topIEEvents[idx]] = M.TYPE_INTERNAL_EVENT_NAME
+		eNT[topUCevents[idx]] = model.TYPE_USER_CREATED_EVENT_NAME
+		eNT[topPageViewEvents[idx]] = model.TYPE_FILTER_EVENT_NAME
+		eNT[topIEEvents[idx]] = model.TYPE_INTERNAL_EVENT_NAME
 		eNT[topSpecEvents[idx]] = "specialEvents"
 
 	}

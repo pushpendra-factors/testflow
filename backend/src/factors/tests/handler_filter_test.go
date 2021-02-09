@@ -5,7 +5,8 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -19,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateFilterReq(r *gin.Engine, projectId uint64, agent *M.Agent, name, expr string) *httptest.ResponseRecorder {
+func sendCreateFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent, name, expr string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -149,7 +150,7 @@ func TestAPICreateFilterHandler(t *testing.T) {
 
 }
 
-func sendGetFilterRequest(projectId uint64, agent *M.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+func sendGetFilterRequest(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -196,7 +197,8 @@ func TestAPIGetFiltersHandler(t *testing.T) {
 		}
 
 		for k, v := range filters {
-			M.CreateOrGetFilterEventName(&M.EventName{ProjectId: project.ID, Name: k, FilterExpr: v})
+			store.GetStore().CreateOrGetFilterEventName(&model.EventName{
+				ProjectId: project.ID, Name: k, FilterExpr: v})
 		}
 
 		w := sendGetFilterRequest(project.ID, agent, r)
@@ -209,7 +211,7 @@ func TestAPIGetFiltersHandler(t *testing.T) {
 
 }
 
-func sendUpdateFilterReq(r *gin.Engine, projectId, filterId uint64, agent *M.Agent, name, expr *string) *httptest.ResponseRecorder {
+func sendUpdateFilterReq(r *gin.Engine, projectId, filterId uint64, agent *model.Agent, name, expr *string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -247,7 +249,8 @@ func TestAPIUpdateFilterHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	filter, _ := M.CreateOrGetFilterEventName(&M.EventName{ProjectId: project.ID, Name: "u1_u2", FilterExpr: "a.com/u1/:u2"})
+	filter, _ := store.GetStore().CreateOrGetFilterEventName(&model.EventName{
+		ProjectId: project.ID, Name: "u1_u2", FilterExpr: "a.com/u1/:u2"})
 	assert.NotNil(t, filter)
 
 	t.Run("GetProjectSettings", func(t *testing.T) {
@@ -289,7 +292,7 @@ func TestAPIUpdateFilterHandler(t *testing.T) {
 	})
 }
 
-func sendDeleteFilterReq(r *gin.Engine, projectId, fileterId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+func sendDeleteFilterReq(r *gin.Engine, projectId, fileterId uint64, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -330,7 +333,8 @@ func TestAPIDeleteFilterHandler(t *testing.T) {
 	})
 
 	t.Run("ValidFilter", func(t *testing.T) {
-		filter, _ := M.CreateOrGetFilterEventName(&M.EventName{ProjectId: project.ID, Name: "u1_u2", FilterExpr: "a.com/u1/:u2"})
+		filter, _ := store.GetStore().CreateOrGetFilterEventName(&model.EventName{
+			ProjectId: project.ID, Name: "u1_u2", FilterExpr: "a.com/u1/:u2"})
 		assert.NotNil(t, filter)
 
 		w := sendDeleteFilterReq(r, project.ID, filter.ID, agent)

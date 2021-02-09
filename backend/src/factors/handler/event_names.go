@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/base64"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -48,7 +48,7 @@ func GetEventNamesHandler(c *gin.Context) {
 
 	// RedisGet is the only call. In case of Cache crash, job will be manually triggered to repopulate cache
 	// No fallback for now.
-	eventNames, err := M.GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, C.GetLookbackWindowForEventUserCache())
+	eventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {
 		logCtx.WithError(err).Error("get event names ordered by occurence and recency")
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -124,7 +124,8 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 	logCtx.WithField("decodedEventName", eventName).Debug("Decoded event name on properties request.")
 
-	properties, err = M.GetPropertiesByEvent(projectId, eventName, 2500, C.GetLookbackWindowForEventUserCache())
+	properties, err = store.GetStore().GetPropertiesByEvent(projectId, eventName, 2500,
+		C.GetLookbackWindowForEventUserCache())
 	if err != nil {
 		logCtx.WithError(err).Error("get properties by event")
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -192,7 +193,8 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 
 	log.WithField("decodedEventName", eventName).Debug("Decoded event name on properties value request.")
 
-	propertyValues, err = M.GetPropertyValuesByEventProperty(projectId, eventName, propertyName, 2500, C.GetLookbackWindowForEventUserCache())
+	propertyValues, err = store.GetStore().GetPropertyValuesByEventProperty(projectId, eventName,
+		propertyName, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {
 		logCtx.WithError(err).Error("get properties values by event property")
 		c.AbortWithStatus(http.StatusInternalServerError)

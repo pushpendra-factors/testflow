@@ -9,7 +9,7 @@ import (
 	"time"
 
 	C "factors/config"
-	M "factors/model"
+	"factors/model/store"
 	U "factors/util"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -323,7 +323,7 @@ func addEventPropertiesByName(
 			continue
 		}
 
-		errCode := M.OverwriteEventPropertiesByID(projectID, event.ID, newPropertiesJsonb)
+		errCode := store.GetStore().OverwriteEventPropertiesByID(projectID, event.ID, newPropertiesJsonb)
 		if errCode != http.StatusAccepted {
 			logCtx.Error("Failed to update event properties after adding missing properties.")
 			continue

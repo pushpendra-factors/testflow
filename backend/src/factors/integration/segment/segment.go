@@ -12,7 +12,7 @@ import (
 
 	Int "factors/integration"
 	"factors/metrics"
-	M "factors/model"
+	"factors/model/store"
 	SDK "factors/sdk"
 	U "factors/util"
 	"factors/vendor_custom/machinery/v1/tasks"
@@ -278,7 +278,7 @@ func ReceiveEventWithQueue(token string, event *Event,
 
 	logCtx := log.WithField("token", token)
 
-	projectSetting, errCode := M.GetProjectSettingByPrivateTokenWithCacheAndDefault(token)
+	projectSetting, errCode := store.GetStore().GetProjectSettingByPrivateTokenWithCacheAndDefault(token)
 	if errCode != http.StatusFound || projectSetting == nil {
 		logCtx.Error("Failed to get project settings on segment ReceiveEventWithQueue.")
 		return http.StatusBadRequest, &EventResponse{}
@@ -310,7 +310,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		return http.StatusBadRequest, &EventResponse{Error: "Invalid payload"}
 	}
 
-	project, errCode := M.GetProjectByPrivateToken(token)
+	project, errCode := store.GetStore().GetProjectByPrivateToken(token)
 	if errCode == http.StatusNotFound {
 		return http.StatusUnauthorized, &EventResponse{Error: "Invalid token."}
 	}
@@ -337,7 +337,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 	}
 	requestTimestamp := parsedTimestamp.Unix()
 
-	user, errCode := M.CreateOrGetSegmentUser(project.ID, event.AnonymousID,
+	user, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, event.AnonymousID,
 		event.UserId, requestTimestamp)
 	if errCode != http.StatusOK && errCode != http.StatusCreated {
 		response.Error = "Invalid user"
@@ -502,7 +502,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 	case "identify":
 		// Identification happens on every call before type switch.
 		// Updates the user properties with the traits, here.
-		_, status := M.UpdateUserProperties(project.ID, userID, &event.Traits, requestTimestamp)
+		_, status := store.GetStore().UpdateUserProperties(project.ID, userID, &event.Traits, requestTimestamp)
 		if status != http.StatusAccepted && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"user_properties": event.Traits,
 				"error_code": status}).Error("Segment event failure. Updating user_properties failed.")

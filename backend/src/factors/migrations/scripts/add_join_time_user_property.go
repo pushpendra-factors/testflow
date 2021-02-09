@@ -3,7 +3,8 @@ package main
 import (
 	"encoding/json"
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -51,7 +52,7 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	var users []M.User
+	var users []model.User
 	err = db.Find(&users).Error
 	if err != nil {
 		log.WithError(err).Fatal("Failed to fetch unidentified users.")
@@ -69,7 +70,7 @@ func main() {
 	// customer_user_id of identified users.
 	for index, user := range users {
 		if user.CustomerUserId == "" {
-			var userPropertyRecords []M.UserProperties
+			var userPropertyRecords []model.UserProperties
 			err = db.Where("project_id = ? AND user_id = ?", user.ProjectId, user.ID).Find(&userPropertyRecords).Error
 			if err != nil {
 				log.WithError(err).Fatal("Failed to fetch current users propery records for a user.")
@@ -92,7 +93,7 @@ func main() {
 					log.WithError(err).Fatal("Failed to add join timestamp to properties.")
 				}
 
-				errCode := M.OverwriteUserProperties(user.ProjectId, user.ID, userProperties.ID, newPropertiesJsonb)
+				errCode := store.GetStore().OverwriteUserProperties(user.ProjectId, user.ID, userProperties.ID, newPropertiesJsonb)
 				if errCode == http.StatusInternalServerError {
 					log.WithError(err).Fatal("Failed to replace user properties with join time.")
 				}
@@ -149,7 +150,7 @@ func main() {
 func UpdatePropertyOnAllUserPropertyRecordsIfPropertyNotExist(projectId uint64, userId string,
 	property string, value interface{}) int {
 
-	userPropertyRecords, errCode := M.GetUserPropertyRecordsByUserId(projectId, userId)
+	userPropertyRecords, errCode := store.GetStore().GetUserPropertyRecordsByUserId(projectId, userId)
 	if errCode == http.StatusInternalServerError {
 		return errCode
 	} else if errCode == http.StatusNotFound {
@@ -189,7 +190,7 @@ func UpdatePropertyOnAllUserPropertyRecordsIfPropertyNotExist(projectId uint64, 
 		updatedProperties := postgres.Jsonb{RawMessage: json.RawMessage(properitesBytes)}
 
 		// Triggers multiple updates.
-		errCode := M.OverwriteUserProperties(projectId, userId, userProperties.ID, &updatedProperties)
+		errCode := store.GetStore().OverwriteUserProperties(projectId, userId, userProperties.ID, &updatedProperties)
 		if errCode == http.StatusInternalServerError {
 			logCtx.WithError(err).Error("Failed to update user property record. DB query failed.")
 			continue

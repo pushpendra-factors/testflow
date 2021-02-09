@@ -5,7 +5,8 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -19,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateDashboardUnitReq(r *gin.Engine, projectId uint64, agent *M.Agent, dashboardId uint64, dashboardUnit *M.DashboardUnitRequestPayload) *httptest.ResponseRecorder {
+func sendCreateDashboardUnitReq(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardId uint64, dashboardUnit *model.DashboardUnitRequestPayload) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -43,7 +44,7 @@ func sendCreateDashboardUnitReq(r *gin.Engine, projectId uint64, agent *M.Agent,
 	return w
 }
 
-func sendGetDashboardUnitResult(r *gin.Engine, projectId uint64, agent *M.Agent, dashboardId uint64, dashboardUnitId uint64, query *gin.H) *httptest.ResponseRecorder {
+func sendGetDashboardUnitResult(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardId uint64, dashboardUnitId uint64, query *gin.H) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -67,7 +68,7 @@ func sendGetDashboardUnitResult(r *gin.Engine, projectId uint64, agent *M.Agent,
 	return w
 }
 
-func sendGetDashboardUnitChannelResult(r *gin.Engine, projectId uint64, agent *M.Agent, dashboardId uint64, dashboardUnitId uint64, query *M.ChannelQuery) *httptest.ResponseRecorder {
+func sendGetDashboardUnitChannelResult(r *gin.Engine, projectId uint64, agent *model.Agent, dashboardId uint64, dashboardUnitId uint64, query *model.ChannelQuery) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -101,21 +102,21 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 
 	rName := U.RandomString(5)
-	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID,
-		&M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
+	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID,
+		&model.Dashboard{Name: rName, Type: model.DashboardTypeProjectVisible})
 	assert.NotNil(t, dashboard)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, rName, dashboard.Name)
 
 	t.Run("CreateDashboardUnit:WithValidQuery", func(t *testing.T) {
 		rTitle := U.RandomString(5)
-		query := M.Query{
-			EventsCondition: M.EventCondAnyGivenEvent,
+		query := model.Query{
+			EventsCondition: model.EventCondAnyGivenEvent,
 			From:            1556602834,
 			To:              1557207634,
-			Type:            M.QueryTypeEventsOccurrence,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "event1",
 				},
 			},
@@ -125,26 +126,26 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 		queryJson, err := json.Marshal(query)
 		assert.Nil(t, err)
 
-		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &M.DashboardUnitRequestPayload{Title: rTitle,
-			Query: &postgres.Jsonb{queryJson}, Presentation: M.PresentationLine})
+		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Title: rTitle,
+			Query: &postgres.Jsonb{queryJson}, Presentation: model.PresentationLine})
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 
 	t.Run("CreateDashboardUnit:WithNoEventsQuery", func(t *testing.T) {
 		rTitle := U.RandomString(5)
-		query := M.Query{
-			EventsCondition:      M.EventCondAnyGivenEvent,
+		query := model.Query{
+			EventsCondition:      model.EventCondAnyGivenEvent,
 			From:                 1556602834,
 			To:                   1557207634,
-			Type:                 M.QueryTypeEventsOccurrence,
-			EventsWithProperties: []M.QueryEventWithProperties{}, // invalid, no events.
+			Type:                 model.QueryTypeEventsOccurrence,
+			EventsWithProperties: []model.QueryEventWithProperties{}, // invalid, no events.
 			OverridePeriod:       true,
 		}
 		queryJson, err := json.Marshal(query)
 		assert.Nil(t, err)
 
-		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &M.DashboardUnitRequestPayload{Title: rTitle,
-			Query: &postgres.Jsonb{queryJson}, Presentation: M.PresentationLine})
+		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &model.DashboardUnitRequestPayload{Title: rTitle,
+			Query: &postgres.Jsonb{queryJson}, Presentation: model.PresentationLine})
 
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})

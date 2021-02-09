@@ -3,7 +3,7 @@ package querycounter
 import (
 	"bufio"
 	"encoding/json"
-	M "factors/model"
+	"factors/model/model"
 	P "factors/pattern"
 
 	log "github.com/sirupsen/logrus"
@@ -13,7 +13,7 @@ type StreamingQueryResult struct {
 	Metric float64
 }
 
-func CountQueries(scanner *bufio.Scanner, queries map[string]M.Query) (map[string]StreamingQueryResult, error) {
+func CountQueries(scanner *bufio.Scanner, queries map[string]model.Query) (map[string]StreamingQueryResult, error) {
 	// A tracker for each query.
 	queryTrackers := map[string]QueryTracker{}
 	queryResults := map[string]StreamingQueryResult{}

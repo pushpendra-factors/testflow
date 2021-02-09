@@ -1,7 +1,8 @@
 package main
 
 import (
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"factors/util"
 	"flag"
 	"fmt"
@@ -65,7 +66,7 @@ func main() {
 	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
 	if allProjects {
 		var errCode int
-		projectIDs, errCode = M.GetAllProjectIDs()
+		projectIDs, errCode = store.GetStore().GetAllProjectIDs()
 		if errCode != http.StatusFound {
 			return
 		}
@@ -83,7 +84,14 @@ func main() {
 				logCtx.Infof("  Skipping already migrated unit %d", dashboardUnit.ID)
 				continue
 			}
-			query := M.Queries{ProjectID: dashboardUnit.ProjectID, Title: dashboardUnit.Title, Query: dashboardUnit.Query, Type: M.QueryTypeDashboardQuery, CreatedAt: dashboardUnit.CreatedAt, UpdatedAt: dashboardUnit.UpdatedAt}
+			query := model.Queries{
+				ProjectID: dashboardUnit.ProjectID,
+				Title:     dashboardUnit.Title,
+				Query:     dashboardUnit.Query,
+				Type:      model.QueryTypeDashboardQuery,
+				CreatedAt: dashboardUnit.CreatedAt,
+				UpdatedAt: dashboardUnit.UpdatedAt,
+			}
 			err = db.Create(&query).Error
 			if err != nil {
 				logCtx.WithError(err).Error("Migration failed. Failed to add data to queries table.")
@@ -101,9 +109,9 @@ func main() {
 	return
 }
 
-func getAllDashboardUnitsRowsForProject(projectID uint64) ([]M.DashboardUnit, error) {
+func getAllDashboardUnitsRowsForProject(projectID uint64) ([]model.DashboardUnit, error) {
 	db := C.GetServices().Db
-	dashboardUnits := make([]M.DashboardUnit, 0, 0)
+	dashboardUnits := make([]model.DashboardUnit, 0, 0)
 	err := db.Table("dashboard_units").Where("project_id = ?", projectID).Find(&dashboardUnits).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch rows from dashboardUnits table")

@@ -5,7 +5,7 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
-	M "factors/model"
+	"factors/model/model"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendGetProjectSettingsReq(r *gin.Engine, projectId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+func sendGetProjectSettingsReq(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -74,7 +74,7 @@ func TestAPIGetProjectSettingHandler(t *testing.T) {
 
 }
 
-func sendUpdateProjectSettingReq(r *gin.Engine, projectId uint64, agent *M.Agent, params map[string]interface{}) *httptest.ResponseRecorder {
+func sendUpdateProjectSettingReq(r *gin.Engine, projectId uint64, agent *model.Agent, params map[string]interface{}) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")

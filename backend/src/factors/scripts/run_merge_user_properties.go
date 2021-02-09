@@ -8,7 +8,7 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 
 	C "factors/config"
-	M "factors/model"
+	"factors/model/store"
 	"factors/util"
 
 	log "github.com/sirupsen/logrus"
@@ -64,9 +64,10 @@ func main() {
 
 	var errCode int
 	if *userIDFlag != "" && *projectIDFlag != 0 {
-		_, errCode = M.MergeUserPropertiesForUserID(*projectIDFlag, *userIDFlag, postgres.Jsonb{}, "", util.TimeNowUnix(), *dryRunFlag, true)
+		_, errCode = store.GetStore().MergeUserPropertiesForUserID(*projectIDFlag,
+			*userIDFlag, postgres.Jsonb{}, "", util.TimeNowUnix(), *dryRunFlag, true)
 	} else if *projectIDFlag != 0 {
-		errCode = M.MergeUserPropertiesForProjectID(*projectIDFlag, *dryRunFlag)
+		errCode = store.GetStore().MergeUserPropertiesForProjectID(*projectIDFlag, *dryRunFlag)
 	}
 
 	if errCode == http.StatusNotModified {

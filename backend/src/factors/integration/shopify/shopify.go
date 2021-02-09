@@ -2,7 +2,8 @@ package integration
 
 import (
 	"crypto/sha256"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -116,18 +117,18 @@ func GetTrackDetailsFromCheckoutObject(
 			h.Write([]byte(custUserId))
 			custUserId = fmt.Sprintf("%x", h.Sum(nil))
 		}
-		user, errCode := M.GetUserLatestByCustomerUserId(projectId, custUserId)
+		user, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, custUserId)
 		switch errCode {
 		case http.StatusInternalServerError:
 			return "", "", false, nil, nil, 0, fmt.Errorf(
 				"Getting user by email failed.")
 
 		case http.StatusNotFound:
-			user = &M.User{ProjectId: projectId,
+			user = &model.User{ProjectId: projectId,
 				CustomerUserId: custUserId,
 				JoinTimestamp:  eventTimestamp,
 			}
-			_, errCode := M.CreateUser(user)
+			_, errCode := store.GetStore().CreateUser(user)
 			if errCode != http.StatusCreated {
 				return "", "", false, nil, nil, 0, fmt.Errorf("Creating user by email failed.")
 			}
@@ -272,18 +273,18 @@ func GetTrackDetailsFromOrderObject(
 			h.Write([]byte(custUserId))
 			custUserId = fmt.Sprintf("%x", h.Sum(nil))
 		}
-		user, errCode := M.GetUserLatestByCustomerUserId(projectId, custUserId)
+		user, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, custUserId)
 		switch errCode {
 		case http.StatusInternalServerError:
 			return "", "", false, nil, nil, 0, fmt.Errorf(
 				"Getting user by email failed.")
 
 		case http.StatusNotFound:
-			user = &M.User{ProjectId: projectId,
+			user = &model.User{ProjectId: projectId,
 				CustomerUserId: custUserId,
 				JoinTimestamp:  eventTimestamp,
 			}
-			_, errCode := M.CreateUser(user)
+			_, errCode := store.GetStore().CreateUser(user)
 			if errCode != http.StatusCreated {
 				return "", "", false, nil, nil, 0, fmt.Errorf("Creating user by email failed.")
 			}
@@ -356,7 +357,7 @@ func GetTrackDetailsFromCartObject(
 		return "", "", false, nil, nil, 0, fmt.Errorf("Missing cart token in CartObject")
 	}
 
-	userId, errCode := M.GetCacheUserIdForShopifyCartToken(projectId, cartToken)
+	userId, errCode := model.GetCacheUserIdForShopifyCartToken(projectId, cartToken)
 	if errCode != http.StatusOK {
 		return "", "", false, nil, nil, 0, fmt.Errorf(fmt.Sprintf(
 			"Missing userId for project_id:%d, cart_token:%s", projectId, cartToken))
@@ -377,7 +378,7 @@ func GetTrackDetailsFromCartObject(
 	}
 	eventTimestamp := eventTime.Unix()
 
-	_, errCode = M.GetUser(projectId, userId)
+	_, errCode = store.GetStore().GetUser(projectId, userId)
 	if errCode != http.StatusFound {
 		return "", "", false, nil, nil, 0, fmt.Errorf(
 			fmt.Sprintf("Shopify User not found projectId:%d userId:%s for cart_token:%s",

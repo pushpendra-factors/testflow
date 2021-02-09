@@ -9,7 +9,8 @@ import (
 
 	C "factors/config"
 	"factors/filestore"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
@@ -128,14 +129,14 @@ func main() {
 	}).Infof("Starting journey mining")
 	jobStartTime := U.TimeNowUnix()
 	journeyEvents, goalEvents := getChargebeeSept22Journey()
-	M.GetWeightedJourneyMatrix(*projectIDFlag, journeyEvents, goalEvents, startTimeUnix,
+	store.GetStore().GetWeightedJourneyMatrix(*projectIDFlag, journeyEvents, goalEvents, startTimeUnix,
 		endTimeUnix, *lookBackDaysFlag, *eventFiles, *userFiles, *includeSessionFlag, *sessionPropertyFlag, cloudManager)
 
 	timeTaken := U.SecondsToHMSString(U.TimeNowUnix() - jobStartTime)
 	jobDetails = append(jobDetails, fmt.Sprintf("Time taken for journey mining: %s", timeTaken))
 	U.NotifyThroughSNS(config.AppName, config.Env, jobDetails)
 
-	// M.ChargebeeAnalysis(getSegmentAGoals(), getSegmentBGoals(), getSegmentCGoals(),
+	// model.ChargebeeAnalysis(getSegmentAGoals(), getSegmentBGoals(), getSegmentCGoals(),
 	// getSegmentVisitedPagesEvents(), *files, startTimeUnix, endTimeUnix, cloudManager)
 }
 
@@ -162,66 +163,67 @@ func downloadAndGetArchivalFilesForRange(db *gorm.DB, cloudManager *filestore.Fi
 	}
 	*jobDetails = append(*jobDetails, archiveJobDetails...)
 
-	eventFilePaths, userFilePaths, errCode := M.GetArchivalFileNamesForProject(projectID, startTime, endTime)
+	eventFilePaths, userFilePaths, errCode := store.GetStore().GetArchivalFileNamesForProject(
+		projectID, startTime, endTime)
 	if errCode != http.StatusFound {
 		return eventFilePaths, userFilePaths, fmt.Errorf("Error getting filepaths for project")
 	}
 	return eventFilePaths, userFilePaths, nil
 }
 
-func get38EventsScheduleDemoJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "www.chargebee.com"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/stripe-recurring-payments-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments-with-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management-with-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/launch"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-business"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/integrations"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-with-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-accounting-and-taxes"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways/stripe"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-reporting"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/enterprise-subscription-billing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/features"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/recurly"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments/direct-debit-payments"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-subscription-finance-operations"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/customer-retention/churn-management"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/customer-self-service-portal"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-sales-driven-saas"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/zuora"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/campaigns/saas-subscription-billing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/security"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-billing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/partners"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments/payment-methods"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways/braintree"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/chargify"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func get38EventsScheduleDemoJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "www.chargebee.com"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/stripe-recurring-payments-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments-with-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management-with-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/launch"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-business"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/integrations"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-with-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-accounting-and-taxes"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways/stripe"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-reporting"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/enterprise-subscription-billing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/features"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/recurly"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments/direct-debit-payments"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-subscription-finance-operations"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/customer-retention/churn-management"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/customer-self-service-portal"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-sales-driven-saas"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/zuora"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/campaigns/saas-subscription-billing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/security"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-billing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/partners"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments/payment-methods"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways/braintree"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/chargify"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo/",
@@ -230,59 +232,59 @@ func get38EventsScheduleDemoJourney() ([]M.QueryEventWithProperties, []M.QueryEv
 		}
 }
 
-func get38EventsTrialSignupJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "www.chargebee.com"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/stripe-recurring-payments-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments-with-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management-with-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/launch"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-business"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/integrations"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-with-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-accounting-and-taxes"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways/stripe"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-reporting"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/enterprise-subscription-billing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/features"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/recurly"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments/direct-debit-payments"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-subscription-finance-operations"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/customer-retention/churn-management"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/customer-self-service-portal"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-sales-driven-saas"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/zuora"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/campaigns/saas-subscription-billing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/security"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-billing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/partners"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments/payment-methods"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways/braintree"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/chargify"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func get38EventsTrialSignupJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "www.chargebee.com"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/stripe-recurring-payments-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments-with-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management-with-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/launch"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-business"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/integrations"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-with-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-accounting-and-taxes"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways/stripe"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-reporting"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/enterprise-subscription-billing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/features"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/recurly"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments/direct-debit-payments"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-subscription-finance-operations"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/customer-retention/churn-management"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/customer-self-service-portal"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-sales-driven-saas"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/zuora"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/campaigns/saas-subscription-billing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/security"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-billing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/partners"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments/payment-methods"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways/braintree"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/compare-competitors/chargify"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/trial-signup",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/trial-signup/",
@@ -291,35 +293,35 @@ func get38EventsTrialSignupJourney() ([]M.QueryEventWithProperties, []M.QueryEve
 		}
 }
 
-func get14EventsJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "www.chargebee.com"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/stripe-recurring-payments-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments-with-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management-with-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/launch"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-business"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/integrations"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func get14EventsJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "www.chargebee.com"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/stripe-recurring-payments-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments-with-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management-with-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/launch"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-business"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/integrations"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo/",
@@ -328,36 +330,36 @@ func get14EventsJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithPrope
 		}
 }
 
-func get15EventsScheduleDemoJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "www.chargebee.com"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/stripe-recurring-payments-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management-with-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/launch"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func get15EventsScheduleDemoJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "www.chargebee.com"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/stripe-recurring-payments-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management-with-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/launch"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo/",
@@ -366,36 +368,36 @@ func get15EventsScheduleDemoJourney() ([]M.QueryEventWithProperties, []M.QueryEv
 		}
 }
 
-func get15EventsTrialSignupJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "www.chargebee.com"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/stripe-recurring-payments-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management-with-chargebee"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/launch"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func get15EventsTrialSignupJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "www.chargebee.com"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/stripe-recurring-payments-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management-with-chargebee"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/launch"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/trial-signup",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/trial-signup/",
@@ -404,42 +406,42 @@ func get15EventsTrialSignupJourney() ([]M.QueryEventWithProperties, []M.QueryEve
 		}
 }
 
-func get5EventScheduledDemoJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func get5EventScheduledDemoJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/trial-signup",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/trial-signup/",
 				},
 			}},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo/",
@@ -448,42 +450,42 @@ func get5EventScheduledDemoJourney() ([]M.QueryEventWithProperties, []M.QueryEve
 		}
 }
 
-func get5EventTrialSignupJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func get5EventTrialSignupJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo/",
 				},
 			}},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/trial-signup",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/trial-signup/",
@@ -492,42 +494,42 @@ func get5EventTrialSignupJourney() ([]M.QueryEventWithProperties, []M.QueryEvent
 		}
 }
 
-func get5EventNotDoneScheduledDemoJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func get5EventNotDoneScheduledDemoJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/trial-signup",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/trial-signup/",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.chargebee.com/schedule-a-demo/",
@@ -536,30 +538,30 @@ func get5EventNotDoneScheduledDemoJourney() ([]M.QueryEventWithProperties, []M.Q
 		}
 }
 
-func get10EventHippoVideoJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/hippo-video-editor.html"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/video-for-sales-and-prospecting.html"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/edit-videos-online.html"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/pricing.html"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/create-videos-online.html"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/video-editing-software.html"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/video-for-sales.html"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/video-personalization.html"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func get10EventHippoVideoJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/hippo-video-editor.html"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/video-for-sales-and-prospecting.html"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/edit-videos-online.html"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/pricing.html"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/create-videos-online.html"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/video-editing-software.html"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/video-for-sales.html"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/video-personalization.html"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.hippovideo.io/users/sign_up",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.hippovideo.io/users/sign_up/",
@@ -568,27 +570,27 @@ func get10EventHippoVideoJourney() ([]M.QueryEventWithProperties, []M.QueryEvent
 		}
 }
 
-func get6EventHippoVideoJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "www.hippovideo.io"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/video-for-sales-and-prospecting.html"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/pricing.html"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/video-for-sales.html"},
-			M.QueryEventWithProperties{Name: "www.hippovideo.io/video-personalization.html"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func get6EventHippoVideoJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "www.hippovideo.io"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/video-for-sales-and-prospecting.html"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/pricing.html"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/video-for-sales.html"},
+			model.QueryEventWithProperties{Name: "www.hippovideo.io/video-personalization.html"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.NotEqualOpStr,
+					Operator:  model.NotEqualOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.hippovideo.io/users/sign_in",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.NotEqualOpStr,
+					Operator:  model.NotEqualOpStr,
 					Property:  "$page_url",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "www.hippovideo.io/users/sign_in/",
@@ -597,29 +599,29 @@ func get6EventHippoVideoJourney() ([]M.QueryEventWithProperties, []M.QueryEventW
 		}
 }
 
-func get3EventLivspaceJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "stage2.livspace.com/in/lead-quiz"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "stage2_lead-quiz:language_next-button-click"},
+func get3EventLivspaceJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "stage2.livspace.com/in/lead-quiz"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "stage2_lead-quiz:language_next-button-click"},
 		}
 }
 
-func getSegmentAGoals() []M.QueryEventWithProperties {
-	return []M.QueryEventWithProperties{
-		M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-			M.QueryProperty{
-				Entity:    M.PropertyEntityEvent,
+func getSegmentAGoals() []model.QueryEventWithProperties {
+	return []model.QueryEventWithProperties{
+		model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+			model.QueryProperty{
+				Entity:    model.PropertyEntityEvent,
 				LogicalOp: "AND",
-				Operator:  M.EqualsOpStr,
+				Operator:  model.EqualsOpStr,
 				Property:  "$page_url",
 				Type:      U.PropertyTypeCategorical,
 				Value:     "www.chargebee.com/trial-signup",
 			},
-			M.QueryProperty{
-				Entity:    M.PropertyEntityEvent,
+			model.QueryProperty{
+				Entity:    model.PropertyEntityEvent,
 				LogicalOp: "OR",
-				Operator:  M.EqualsOpStr,
+				Operator:  model.EqualsOpStr,
 				Property:  "$page_url",
 				Type:      U.PropertyTypeCategorical,
 				Value:     "www.chargebee.com/trial-signup/",
@@ -628,43 +630,43 @@ func getSegmentAGoals() []M.QueryEventWithProperties {
 	}
 }
 
-func getSegmentBGoals() []M.QueryEventWithProperties {
-	return []M.QueryEventWithProperties{
-		M.QueryEventWithProperties{Name: "$form_submitted", Properties: []M.QueryProperty{
-			M.QueryProperty{
-				Entity:    M.PropertyEntityEvent,
+func getSegmentBGoals() []model.QueryEventWithProperties {
+	return []model.QueryEventWithProperties{
+		model.QueryEventWithProperties{Name: "$form_submitted", Properties: []model.QueryProperty{
+			model.QueryProperty{
+				Entity:    model.PropertyEntityEvent,
 				LogicalOp: "AND",
 				Operator:  "contains",
 				Property:  "$page_url",
 				Type:      U.PropertyTypeCategorical,
 				Value:     "www.chargebee.com/schedule-a-demo",
 			},
-			M.QueryProperty{
-				Entity:    M.PropertyEntityEvent,
+			model.QueryProperty{
+				Entity:    model.PropertyEntityEvent,
 				LogicalOp: "OR",
 				Operator:  "contains",
 				Property:  "$page_url",
 				Type:      U.PropertyTypeCategorical,
 				Value:     "www.chargebee.com/subscription-management-with-chargebee",
 			},
-			M.QueryProperty{
-				Entity:    M.PropertyEntityEvent,
+			model.QueryProperty{
+				Entity:    model.PropertyEntityEvent,
 				LogicalOp: "OR",
 				Operator:  "contains",
 				Property:  "$page_url",
 				Type:      U.PropertyTypeCategorical,
 				Value:     "www.chargebee.com/recurring-billing-with-chargebee",
 			},
-			M.QueryProperty{
-				Entity:    M.PropertyEntityEvent,
+			model.QueryProperty{
+				Entity:    model.PropertyEntityEvent,
 				LogicalOp: "OR",
 				Operator:  "contains",
 				Property:  "$page_url",
 				Type:      U.PropertyTypeCategorical,
 				Value:     "www.chargebee.com/recurring-payments-with-chargebee",
 			},
-			M.QueryProperty{
-				Entity:    M.PropertyEntityEvent,
+			model.QueryProperty{
+				Entity:    model.PropertyEntityEvent,
 				LogicalOp: "OR",
 				Operator:  "contains",
 				Property:  "$page_url",
@@ -675,13 +677,13 @@ func getSegmentBGoals() []M.QueryEventWithProperties {
 	}
 }
 
-func getSegmentCGoals() []M.QueryEventWithProperties {
-	return []M.QueryEventWithProperties{
-		M.QueryEventWithProperties{Name: "$session", Properties: []M.QueryProperty{
-			M.QueryProperty{
-				Entity:    M.PropertyEntityUser,
+func getSegmentCGoals() []model.QueryEventWithProperties {
+	return []model.QueryEventWithProperties{
+		model.QueryEventWithProperties{Name: "$session", Properties: []model.QueryProperty{
+			model.QueryProperty{
+				Entity:    model.PropertyEntityUser,
 				LogicalOp: "AND",
-				Operator:  M.EqualsOpStr,
+				Operator:  model.EqualsOpStr,
 				Property:  "$hubspot_company_contact_hs_band",
 				Type:      U.PropertyTypeCategorical,
 				Value:     "$none",
@@ -690,32 +692,32 @@ func getSegmentCGoals() []M.QueryEventWithProperties {
 	}
 }
 
-func getSegmentVisitedPagesEvents() []M.QueryEventWithProperties {
-	return []M.QueryEventWithProperties{
-		M.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/for-education"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-business"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
-		M.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
+func getSegmentVisitedPagesEvents() []model.QueryEventWithProperties {
+	return []model.QueryEventWithProperties{
+		model.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/for-education"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-business"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/saas-pricing-models"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management/create-manage-plans"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
+		model.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
 	}
 }
 
-func getChargebeeHubspotContactUpdatedJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func getChargebeeHubspotContactUpdatedJourney() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_lifecyclestage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "customer",
@@ -724,27 +726,27 @@ func getChargebeeHubspotContactUpdatedJourney() ([]M.QueryEventWithProperties, [
 		}
 }
 
-func getChargebeeSept22Journey() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func getChargebeeSept22Journey() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_marketing_conversions_mode",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "SignUp",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
 					Operator:  "contains",
 					Property:  "$hubspot_contact_marketing_conversions_mode",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "Drift",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
 					Operator:  "contains",
 					Property:  "$hubspot_contact_marketing_conversions_mode",
@@ -752,28 +754,28 @@ func getChargebeeSept22Journey() ([]M.QueryEventWithProperties, []M.QueryEventWi
 					Value:     "Calendly",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-accounting-and-taxes"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-reporting"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/integrations"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-education"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-busines"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-sales-driven-saas"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/for-subscription-finance-operations"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/enterprise-subscription-billing"},
-			M.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-accounting-and-taxes"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/saas-reporting"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/integrations"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-education"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-busines"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-sales-driven-saas"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/for-subscription-finance-operations"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/enterprise-subscription-billing"},
+			model.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.NotEqualOpStr,
+					Operator:  model.NotEqualOpStr,
 					Property:  "$hubspot_contact_demo_booked_on",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "$none",
@@ -782,160 +784,160 @@ func getChargebeeSept22Journey() ([]M.QueryEventWithProperties, []M.QueryEventWi
 		}
 }
 
-func getObserveAISept24Journey() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
-	return []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+func getObserveAISept24Journey() ([]model.QueryEventWithProperties, []model.QueryEventWithProperties) {
+	return []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_lifecyclestage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "lead",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_lifecyclestage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "marketingqualifiedlead",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_lifecyclestage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "salesqualifiedlead",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_lifecyclestage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "customer",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_lifecyclestage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "other",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_lifecyclestage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "$none",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_salesforceopportunitystage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "Qualification ( SS-3)",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_salesforceopportunitystage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "SS-3 Qualification",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_salesforceopportunitystage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "SS-4 Opportunity Validation",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_salesforceopportunitystage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "SS-5 Need Confirmed",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_salesforceopportunitystage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "SS-6 Alignment & Poc",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_salesforceopportunitystage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "SS-7 Pov Complete & Shortlist",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_salesforceopportunitystage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "SS-8 Verbal & Terms",
 				},
 			}},
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_salesforceopportunitystage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "SS-12 Closed Lost",
 				},
 			}},
-		}, []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+		}, []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []model.QueryProperty{
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "AND",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_salesforceopportunitystage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "SS-10 Closed Won",
 				},
-				M.QueryProperty{
-					Entity:    M.PropertyEntityEvent,
+				model.QueryProperty{
+					Entity:    model.PropertyEntityEvent,
 					LogicalOp: "OR",
-					Operator:  M.EqualsOpStr,
+					Operator:  model.EqualsOpStr,
 					Property:  "$hubspot_contact_salesforceopportunitystage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "SS-11 Closed Won",

@@ -7,7 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	TaskSession "factors/task/session"
 	U "factors/util"
 
@@ -56,11 +57,11 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 
-	queryResult, errCode := M.ExecuteWebAnalyticsQueries(
+	queryResult, errCode := store.GetStore().ExecuteWebAnalyticsQueries(
 		project.ID,
-		&M.WebAnalyticsQueries{
+		&model.WebAnalyticsQueries{
 			QueryNames: []string{
-				M.QueryNameUniqueUsers,
+				model.QueryNameUniqueUsers,
 			},
 			From: U.UnixTimeBeforeDuration(time.Hour * 1),
 			To:   U.TimeNowUnix(),
@@ -71,21 +72,21 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 	assert.Equal(t, http.StatusOK, errCode)
 
 	unitID := U.GetUUID()
-	queryResult, errCode = M.ExecuteWebAnalyticsQueries(
+	queryResult, errCode = store.GetStore().ExecuteWebAnalyticsQueries(
 		project.ID,
-		&M.WebAnalyticsQueries{
+		&model.WebAnalyticsQueries{
 			QueryNames: []string{
-				M.QueryNameUniqueUsers,
+				model.QueryNameUniqueUsers,
 			},
-			CustomGroupQueries: []M.WebAnalyticsCustomGroupQuery{
-				M.WebAnalyticsCustomGroupQuery{
+			CustomGroupQueries: []model.WebAnalyticsCustomGroupQuery{
+				model.WebAnalyticsCustomGroupQuery{
 					GroupByProperties: []string{
 						"authorName",
 					},
 					Metrics: []string{
-						M.WAGroupMetricPageViews,
-						M.WAGroupMetricTotalExits,
-						M.WAGroupMetricExitPercentage,
+						model.WAGroupMetricPageViews,
+						model.WAGroupMetricTotalExits,
+						model.WAGroupMetricExitPercentage,
 					},
 					UniqueID: unitID,
 				},
@@ -159,20 +160,20 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 	assert.Nil(t, err)
 
 	unitID := U.GetUUID()
-	queryResult, errCode := M.ExecuteWebAnalyticsQueries(
+	queryResult, errCode := store.GetStore().ExecuteWebAnalyticsQueries(
 		project.ID,
-		&M.WebAnalyticsQueries{
+		&model.WebAnalyticsQueries{
 			QueryNames: []string{
-				M.QueryNameUniqueUsers,
+				model.QueryNameUniqueUsers,
 			},
-			CustomGroupQueries: []M.WebAnalyticsCustomGroupQuery{
-				M.WebAnalyticsCustomGroupQuery{
+			CustomGroupQueries: []model.WebAnalyticsCustomGroupQuery{
+				model.WebAnalyticsCustomGroupQuery{
 					GroupByProperties: []string{
 						"$page_url",
 						"authorName",
 					},
 					Metrics: []string{
-						M.WAGroupMetricExitPercentage,
+						model.WAGroupMetricExitPercentage,
 					},
 					UniqueID: unitID,
 				},
@@ -213,21 +214,21 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 
-	queryResult, errCode = M.ExecuteWebAnalyticsQueries(
+	queryResult, errCode = store.GetStore().ExecuteWebAnalyticsQueries(
 		project.ID,
-		&M.WebAnalyticsQueries{
+		&model.WebAnalyticsQueries{
 			QueryNames: []string{
-				M.QueryNameUniqueUsers,
+				model.QueryNameUniqueUsers,
 			},
-			CustomGroupQueries: []M.WebAnalyticsCustomGroupQuery{
-				M.WebAnalyticsCustomGroupQuery{
+			CustomGroupQueries: []model.WebAnalyticsCustomGroupQuery{
+				model.WebAnalyticsCustomGroupQuery{
 					GroupByProperties: []string{
 						"$page_url",
 						"authorName",
 					},
 					Metrics: []string{
-						M.WAGroupMetricPageViews,
-						M.WAGroupMetricExitPercentage,
+						model.WAGroupMetricPageViews,
+						model.WAGroupMetricExitPercentage,
 					},
 					UniqueID: unitID,
 				},
@@ -251,15 +252,15 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 }
 
 func TestWebAnalyticsGetFormattedTime(t *testing.T) {
-	assert.Equal(t, "1h", M.GetFormattedTime(3600))
-	assert.Equal(t, "1m", M.GetFormattedTime(60))
-	assert.Equal(t, "1s", M.GetFormattedTime(1))
-	assert.Equal(t, "1h 2m", M.GetFormattedTime(3720))
-	assert.Equal(t, "1h 2m 1s", M.GetFormattedTime(3721.01))
+	assert.Equal(t, "1h", model.GetFormattedTime(3600))
+	assert.Equal(t, "1m", model.GetFormattedTime(60))
+	assert.Equal(t, "1s", model.GetFormattedTime(1))
+	assert.Equal(t, "1h 2m", model.GetFormattedTime(3720))
+	assert.Equal(t, "1h 2m 1s", model.GetFormattedTime(3721.01))
 	// should return only ms, if no seconds available and millseconds available.
-	assert.Equal(t, "10ms", M.GetFormattedTime(0.01))
-	assert.Equal(t, "950ms", M.GetFormattedTime(0.950))
+	assert.Equal(t, "10ms", model.GetFormattedTime(0.01))
+	assert.Equal(t, "950ms", model.GetFormattedTime(0.950))
 	// should return 0s if not milliseconds available.
-	assert.Equal(t, "0s", M.GetFormattedTime(0.0001))
+	assert.Equal(t, "0s", model.GetFormattedTime(0.0001))
 
 }

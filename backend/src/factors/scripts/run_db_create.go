@@ -6,7 +6,7 @@ package main
 
 import (
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
 	"factors/util"
 	"flag"
 	"fmt"
@@ -56,7 +56,7 @@ func main() {
 	defer db.Close()
 
 	// Create projects table.
-	if err := db.CreateTable(&M.Project{}).Error; err != nil {
+	if err := db.CreateTable(&model.Project{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("projects table creation failed.")
 	} else {
 		log.Info("Created projects table")
@@ -76,39 +76,39 @@ func main() {
 	}
 
 	// Create project settings table.
-	if err := db.CreateTable(&M.ProjectSetting{}).Error; err != nil {
+	if err := db.CreateTable(&model.ProjectSetting{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_settings table creation failed.")
 	} else {
 		log.Info("Created project_settings table.")
 	}
 	// Add foreign key constraint by project.
-	if err := db.Model(&M.ProjectSetting{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.ProjectSetting{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_settings table association with projects table failed.")
 	} else {
 		log.Info("project_settings table is associated with projects table.")
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.ProjectSetting{}).AddForeignKey("int_adwords_enabled_agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.ProjectSetting{}).AddForeignKey("int_adwords_enabled_agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_settings_table table association with agents table failed.")
 	} else {
 		log.Info("project_settings table is associated with agents table.")
 	}
 
-	if err := db.Model(&M.ProjectSetting{}).AddForeignKey("int_salesforce_enabled_agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.ProjectSetting{}).AddForeignKey("int_salesforce_enabled_agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to create project_settings int_salesforce_enabled_agent_uuid to agents(uuid) foriegn key.")
 	} else {
 		log.Info("Created project_settings int_salesforce_enabled_agent_uuid to agents(uuid) foriegn key.")
 	}
 
 	// Create users table.
-	if err := db.CreateTable(&M.User{}).Error; err != nil {
+	if err := db.CreateTable(&model.User{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("users table creation failed.")
 	} else {
 		log.Info("Created users table")
 	}
 	// Add foreign key constraints.
-	if err := db.Model(&M.User{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.User{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("users table association with projects table failed.")
 	} else {
 		log.Info("users table is associated with projects table.")
@@ -127,19 +127,19 @@ func main() {
 	}
 
 	// Create user_properties table.
-	if err := db.CreateTable(&M.UserProperties{}).Error; err != nil {
+	if err := db.CreateTable(&model.UserProperties{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("user_properties table creation failed.")
 	} else {
 		log.Info("Created user_propeties table")
 	}
 	// Add foreign key with projects.
-	if err := db.Model(&M.UserProperties{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.UserProperties{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("user_properties table association with projects table failed.")
 	} else {
 		log.Info("user_properties table is associated with projects table.")
 	}
 	// Adding composite foreign key with users table.
-	if err := db.Model(&M.UserProperties{}).AddForeignKey("project_id, user_id", "users(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.UserProperties{}).AddForeignKey("project_id, user_id", "users(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("user_properties table association with users table failed.")
 	} else {
 		log.Info("user_properties table is associated with users table.")
@@ -159,13 +159,13 @@ func main() {
 	}
 
 	// Create event_names table.
-	if err := db.CreateTable(&M.EventName{}).Error; err != nil {
+	if err := db.CreateTable(&model.EventName{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("event_names table creation failed.")
 	} else {
 		log.Info("Created event_names table")
 	}
 	// Add foreign key constraints.
-	if err := db.Model(&M.EventName{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.EventName{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("event_names table association with projects table failed.")
 	} else {
 		log.Info("event_names table is associated with projects table.")
@@ -184,7 +184,7 @@ func main() {
 	}
 
 	// Create events table.
-	if err := db.CreateTable(&M.Event{}).Error; err != nil {
+	if err := db.CreateTable(&model.Event{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("events table creation failed.")
 	} else {
 		log.Info("Created events table")
@@ -198,19 +198,19 @@ func main() {
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.Event{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.Event{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("events table association with projects table failed.")
 	} else {
 		log.Info("events table is associated with projects table.")
 	}
 	// Adding composite foreign key with users table.
-	if err := db.Model(&M.Event{}).AddForeignKey("project_id, user_id", "users(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.Event{}).AddForeignKey("project_id, user_id", "users(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("events table association with users table failed.")
 	} else {
 		log.Info("events table is associated with users table.")
 	}
 	// Adding composite foreign key with event_names table.
-	if err := db.Model(&M.Event{}).AddForeignKey("project_id, event_name_id", "event_names(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.Event{}).AddForeignKey("project_id, event_name_id", "event_names(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("events table association with event_names table failed.")
 	} else {
 		log.Info("events table is associated with event_names table.")
@@ -229,7 +229,7 @@ func main() {
 	}
 
 	// Create agents table.
-	if err := db.CreateTable(&M.Agent{}).Error; err != nil {
+	if err := db.CreateTable(&model.Agent{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("agents table creation failed.")
 	} else {
 		log.Info("Created agents table")
@@ -243,7 +243,7 @@ func main() {
 	}
 
 	// Create project_agent_mappings table
-	if err := db.CreateTable(&M.ProjectAgentMapping{}).Error; err != nil {
+	if err := db.CreateTable(&model.ProjectAgentMapping{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_agent_mappings table creation failed.")
 	} else {
 		log.Info("Created project_agent_mappings table")
@@ -257,35 +257,35 @@ func main() {
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.ProjectAgentMapping{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.ProjectAgentMapping{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_agent_mappings table association with projects table failed.")
 	} else {
 		log.Info("project_agent_mappings table is associated with projects table.")
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.ProjectAgentMapping{}).AddForeignKey("agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.ProjectAgentMapping{}).AddForeignKey("agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_agent_mappings table association with agents table failed.")
 	} else {
 		log.Info("project_agent_mappings table is associated with agents table.")
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.ProjectAgentMapping{}).AddForeignKey("invited_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.ProjectAgentMapping{}).AddForeignKey("invited_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_agent_mappings table association with agents table failed.")
 	} else {
 		log.Info("project_agent_mappings table is associated with agents table.")
 	}
 
 	// Create dashboard table.
-	if err := db.CreateTable(&M.Dashboard{}).Error; err != nil {
+	if err := db.CreateTable(&model.Dashboard{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("dashboard table creation failed.")
 	} else {
 		log.Info("Created dashboard table")
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.Dashboard{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.Dashboard{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("dashboard table association with projects table failed.")
 	} else {
 		log.Info("dashboard table is associated with projects table.")
@@ -299,35 +299,35 @@ func main() {
 	}
 
 	// Create dashboard_unit table.
-	if err := db.CreateTable(&M.DashboardUnit{}).Error; err != nil {
+	if err := db.CreateTable(&model.DashboardUnit{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("dashboard_unit table creation failed.")
 	} else {
 		log.Info("Created dashboard_unit table")
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.DashboardUnit{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.DashboardUnit{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("dashboard_unit table association with projects table failed.")
 	} else {
 		log.Info("dashboard_unit table is associated with projects table.")
 	}
 
 	// Add foreign key constraints dashboard_id, dashboards(project_id, id).
-	if err := db.Model(&M.DashboardUnit{}).AddForeignKey("project_id, dashboard_id", "dashboards(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.DashboardUnit{}).AddForeignKey("project_id, dashboard_id", "dashboards(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("dashboard_unit table association with dashboards table failed.")
 	} else {
 		log.Info("dashboard_unit table is associated with dashboards table.")
 	}
 
 	// Create billing_accounts table
-	if err := db.CreateTable(&M.BillingAccount{}).Error; err != nil {
+	if err := db.CreateTable(&model.BillingAccount{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("billing_accounts table creation failed.")
 	} else {
 		log.Info("Created billing_accounts table")
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.BillingAccount{}).AddForeignKey("agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.BillingAccount{}).AddForeignKey("agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("billing_accounts table association with agents table failed.")
 	} else {
 		log.Info("billing_accounts table is associated with projects table.")
@@ -341,21 +341,21 @@ func main() {
 	}
 
 	// Create project_billing_account_mappings table
-	if err := db.CreateTable(&M.ProjectBillingAccountMapping{}).Error; err != nil {
+	if err := db.CreateTable(&model.ProjectBillingAccountMapping{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table creation failed.")
 	} else {
 		log.Info("project_billing_account_mappings table creation failed.")
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.ProjectBillingAccountMapping{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.ProjectBillingAccountMapping{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table association with projects table failed.")
 	} else {
 		log.Info("project_billing_account_mappings table is associated with projects table.")
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.ProjectBillingAccountMapping{}).AddForeignKey("billing_account_id", "billing_accounts(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.ProjectBillingAccountMapping{}).AddForeignKey("billing_account_id", "billing_accounts(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table association with billing_accounts table failed.")
 	} else {
 		log.Info("project_billing_account_mappings table is associated with billing_accounts table.")
@@ -369,7 +369,7 @@ func main() {
 	}
 
 	// Create reports table
-	if err := db.CreateTable(&M.DBReport{}).Error; err != nil {
+	if err := db.CreateTable(&model.DBReport{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("reports table creation failed.")
 	} else {
 		log.Info("reports table creation failed.")
@@ -383,28 +383,28 @@ func main() {
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.DBReport{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.DBReport{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("reports table association with projects table failed.")
 	} else {
 		log.Info("reports table is associated with projects table.")
 	}
 
 	// Add foreign key constraints dashboards(project_id, id).
-	if err := db.Model(&M.DBReport{}).AddForeignKey("project_id, dashboard_id", "dashboards(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.DBReport{}).AddForeignKey("project_id, dashboard_id", "dashboards(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("reports table association with dashboards table failed.")
 	} else {
 		log.Info("reports table is associated with dashboards table.")
 	}
 
 	// Create adwords document table
-	if err := db.CreateTable(&M.AdwordsDocument{}).Error; err != nil {
+	if err := db.CreateTable(&model.AdwordsDocument{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("adwords document table creation failed.")
 	} else {
 		log.Info("created adwords document table.")
 	}
 
 	// Create hubspot documents table.
-	if err := db.CreateTable(&M.HubspotDocument{}).Error; err != nil {
+	if err := db.CreateTable(&model.HubspotDocument{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("hubspot_documents table creation failed.")
 	} else {
 		log.Info("created hubspot documents table.")
@@ -425,28 +425,28 @@ func main() {
 	}
 
 	// Create facebook documents table
-	if err := db.CreateTable(&M.FacebookDocument{}).Error; err != nil {
+	if err := db.CreateTable(&model.FacebookDocument{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("facebook_documents table creation failed.")
 	} else {
 		log.Info("created facebook documents table.")
 	}
 
 	// Add foreign key constraints agents(uuid).
-	if err := db.Model(&M.ProjectSetting{}).AddForeignKey("int_facebook_agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.ProjectSetting{}).AddForeignKey("int_facebook_agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_settings table association with agents table failed.")
 	} else {
 		log.Info("project_settings table is associated with agents table.")
 	}
 
 	// Create salesforce_documents documents table
-	if err := db.CreateTable(&M.SalesforceDocument{}).Error; err != nil {
+	if err := db.CreateTable(&model.SalesforceDocument{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("salesforce_documents table creation failed.")
 	} else {
 		log.Info("created salesforce_documents documents table.")
 	}
 
 	// Add foreign key constraints projects(id).
-	if err := db.Model(&M.SalesforceDocument{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.SalesforceDocument{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("salesforce_documents table association with projects table failed.")
 	} else {
 		log.Info("salesforce_documents table is associated with projects table.")
@@ -467,20 +467,20 @@ func main() {
 	}
 
 	// Create bigquery settings table.
-	if err := db.CreateTable(&M.BigquerySetting{}).Error; err != nil {
+	if err := db.CreateTable(&model.BigquerySetting{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("bigquery_settings table creation failed.")
 	} else {
 		log.Info("created bigquery_settings table.")
 	}
 	// Create queries table.
-	if err := db.CreateTable(&M.Queries{}).Error; err != nil {
+	if err := db.CreateTable(&model.Queries{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("queries table creation failed.")
 	} else {
 		log.Info("Created queries table")
 	}
 
 	// Add foreign key constraints.
-	if err := db.Model(&M.Queries{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.Queries{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("queries table association with projects table failed.")
 	} else {
 		log.Info("queries table is associated with projects table.")
@@ -493,7 +493,7 @@ func main() {
 	}
 
 	// Create scheduled_tasks table.
-	if err := db.CreateTable(&M.ScheduledTask{}).Error; err != nil {
+	if err := db.CreateTable(&model.ScheduledTask{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("scheduled_tasks table creation failed.")
 	} else {
 		log.Info("created scheduled_tasks table.")
@@ -510,7 +510,7 @@ func main() {
 	}
 
 	// tracked events
-	if err := db.CreateTable(&M.FactorsTrackedEvent{}).Error; err != nil {
+	if err := db.CreateTable(&model.FactorsTrackedEvent{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_events table creation failed.")
 	} else {
 		log.Info("created factors_tracked_events table.")
@@ -524,21 +524,21 @@ func main() {
 	}
 
 	// Add foreign key constraint
-	if err := db.Model(&M.FactorsTrackedEvent{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.FactorsTrackedEvent{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_events table association with projects table failed.")
 	} else {
 		log.Info("factors_tracked_events table is associated with projects table.")
 	}
 
 	// Add foreign key constraint
-	if err := db.Model(&M.FactorsTrackedEvent{}).AddForeignKey("created_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.FactorsTrackedEvent{}).AddForeignKey("created_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_events table association with agents table failed.")
 	} else {
 		log.Info("factors_tracked_events table is associated with agents table.")
 	}
 
 	// tracked user properties
-	if err := db.CreateTable(&M.FactorsTrackedUserProperty{}).Error; err != nil {
+	if err := db.CreateTable(&model.FactorsTrackedUserProperty{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_user_properties table creation failed.")
 	} else {
 		log.Info("created factors_tracked_user_properties table.")
@@ -552,21 +552,21 @@ func main() {
 	}
 
 	// Add foreign key constraint
-	if err := db.Model(&M.FactorsTrackedUserProperty{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.FactorsTrackedUserProperty{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_user_properties table association with projects table failed.")
 	} else {
 		log.Info("factors_tracked_user_properties table is associated with projects table.")
 	}
 
 	// Add foreign key constraint
-	if err := db.Model(&M.FactorsTrackedUserProperty{}).AddForeignKey("created_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.FactorsTrackedUserProperty{}).AddForeignKey("created_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("factors_tracked_user_properties table association with agents table failed.")
 	} else {
 		log.Info("factors_tracked_user_properties table is associated with agents table.")
 	}
 
 	// saved goals
-	if err := db.CreateTable(&M.FactorsGoal{}).Error; err != nil {
+	if err := db.CreateTable(&model.FactorsGoal{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("factors_goals table creation failed.")
 	} else {
 		log.Info("created factors_goals table.")
@@ -580,14 +580,14 @@ func main() {
 	}
 
 	// Add foreign key constraint
-	if err := db.Model(&M.FactorsGoal{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.FactorsGoal{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("factors_goals table association with projects table failed.")
 	} else {
 		log.Info("factors_goals table is associated with projects table.")
 	}
 
 	// Add foreign key constraint
-	if err := db.Model(&M.FactorsGoal{}).AddForeignKey("created_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&model.FactorsGoal{}).AddForeignKey("created_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("factors_goals table association with agents table failed.")
 	} else {
 		log.Info("factors_goals table is associated with agents table.")

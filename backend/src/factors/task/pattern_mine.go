@@ -5,10 +5,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"factors/filestore"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	P "factors/pattern"
 	PMM "factors/pattern_model_meta"
-	"factors/pattern_server/store"
+	patternStore "factors/pattern_server/store"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	U "factors/util"
@@ -449,7 +450,7 @@ func mineAndWriteLenTwoPatterns(
 // GetEncodedEventsPatterns get all goalPatterns from DB
 func GetEncodedEventsPatterns(projectId uint64, filteredPatterns []*P.Pattern, eventNamesWithType map[string]string, campEventsList []string) ([]*P.Pattern, error) {
 
-	goalPatternsFromDB, errCode := M.GetAllActiveFactorsGoals(projectId)
+	goalPatternsFromDB, errCode := store.GetStore().GetAllActiveFactorsGoals(projectId)
 
 	if errCode != http.StatusFound {
 		mineLog.Info("Failure on Get goal patterns.")
@@ -486,14 +487,14 @@ func GetEncodedEventsPatterns(projectId uint64, filteredPatterns []*P.Pattern, e
 		// check if campaignEvent
 		if !U.IsCampaignEvent(valPat.String()) {
 			mineLog.Info(fmt.Sprint("Insering in DB Goal event: ", idx, valPat.String()))
-			tmpFactorsRule := M.FactorsGoalRule{EndEvent: valPat.String()}
-			goalID, httpStatusTrackedEvent := M.CreateFactorsTrackedEvent(projectId, valPat.String(), "")
+			tmpFactorsRule := model.FactorsGoalRule{EndEvent: valPat.String()}
+			goalID, httpStatusTrackedEvent := store.GetStore().CreateFactorsTrackedEvent(projectId, valPat.String(), "")
 			if goalID == 0 {
 				mineLog.Info("Unable to create a trackedEvent ", httpStatusTrackedEvent, " ", goalID)
 			}
 			mineLog.Info("trackedEvent in db  ", httpStatusTrackedEvent, " ", valPat.String(), " ", goalID)
 
-			_, httpstatus, err := M.CreateFactorsGoal(projectId, valPat.String(), tmpFactorsRule, "")
+			_, httpstatus, err := store.GetStore().CreateFactorsGoal(projectId, valPat.String(), tmpFactorsRule, "")
 			if httpstatus != http.StatusCreated {
 				mineLog.Info("Unable to create factors goal in db: ", httpstatus, " ", valPat.String(), " ", err)
 			}
@@ -738,7 +739,7 @@ func writePatternsAsChunks(patterns []*P.Pattern, chunksDir string) error {
 			return err
 		}
 
-		patternWithMeta := store.PatternWithMeta{
+		patternWithMeta := patternStore.PatternWithMeta{
 			PatternEvents: pattern.EventNames,
 			RawPattern:    json.RawMessage(patternBytes),
 		}
@@ -941,7 +942,7 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 
 func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64) ([]string, map[string]string, error) {
 	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilePath)
-	eventNames, err := M.GetEventNamesFromFile(scanner, projectId)
+	eventNames, err := model.GetEventNamesFromFile(scanner, projectId)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": tmpEventsFilePath}).Error("Failed to read event names from file")
 		return nil, nil, err
@@ -951,7 +952,7 @@ func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64) ([]string,
 
 	mineLog.WithField("tmpEventsFilePath",
 		tmpEventsFilePath).Info("Building user and event properties info and writing it to file.")
-	eventNamesWithType, err := M.GetEventTypeFromDb(projectId, eventNames, 100000)
+	eventNamesWithType, err := store.GetStore().GetEventTypeFromDb(projectId, eventNames, 100000)
 
 	mineLog.WithField("Event Names and type",
 		eventNamesWithType).Info("Building user and type from DB.")
@@ -979,7 +980,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 		}
 	}
 
-	userPropertiesList, errInt := M.GetAllActiveFactorsTrackedUserPropertiesByProject(projectId)
+	userPropertiesList, errInt := store.GetStore().GetAllActiveFactorsTrackedUserPropertiesByProject(projectId)
 	if errInt != http.StatusFound {
 		mineLog.WithFields(log.Fields{"err": errInt}).Error("Unable to fetch UserProperties from db")
 		return nil, nil
@@ -1015,7 +1016,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 		}
 		for key := range upFilteredMap {
 			mineLog.Info("insert user property", key)
-			_, errInt = M.CreateFactorsTrackedUserProperty(projectId, key, "")
+			_, errInt = store.GetStore().CreateFactorsTrackedUserProperty(projectId, key, "")
 			if errInt != http.StatusCreated {
 				errorString := fmt.Sprintf("unable to insert user property to db %s", key)
 				mineLog.WithFields(log.Fields{"http status": errInt}).Error(errorString)
@@ -1224,10 +1225,10 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	return newVersionId, len(chunkIds), nil
 }
 
-func convert(eventNamesWithAggregation []M.EventNameWithAggregation) []M.EventName {
-	eventNames := make([]M.EventName, 0)
+func convert(eventNamesWithAggregation []model.EventNameWithAggregation) []model.EventName {
+	eventNames := make([]model.EventName, 0)
 	for _, event := range eventNamesWithAggregation {
-		eventNames = append(eventNames, M.EventName{
+		eventNames = append(eventNames, model.EventName{
 			ID:         event.ID,
 			Name:       event.Name,
 			CreatedAt:  event.CreatedAt,
@@ -1247,7 +1248,7 @@ func OpenEventFileAndGetScanner(filePath string) (*bufio.Scanner, error) {
 	if err != nil {
 		return nil, err
 	}
-	scanner := store.CreateScannerFromReader(f)
+	scanner := patternStore.CreateScannerFromReader(f)
 	return scanner, nil
 }
 
@@ -1302,7 +1303,7 @@ func takeTopKUC(allPatterns []patternProperties, topK int) []patternProperties {
 	allPatternsType := make([]patternProperties, 0)
 	for _, pattern := range allPatterns {
 
-		if pattern.patternType == M.TYPE_USER_CREATED_EVENT_NAME {
+		if pattern.patternType == model.TYPE_USER_CREATED_EVENT_NAME {
 			allPatternsType = append(allPatternsType, pattern)
 		}
 	}
@@ -1319,7 +1320,7 @@ func takeTopKpageView(allPatterns []patternProperties, topK int) []patternProper
 	allPatternsType := make([]patternProperties, 0)
 	for _, pattern := range allPatterns {
 
-		if pattern.patternType == M.TYPE_FILTER_EVENT_NAME || pattern.patternType == M.TYPE_AUTO_TRACKED_EVENT_NAME {
+		if pattern.patternType == model.TYPE_FILTER_EVENT_NAME || pattern.patternType == model.TYPE_AUTO_TRACKED_EVENT_NAME {
 			allPatternsType = append(allPatternsType, pattern)
 		}
 	}
@@ -1335,7 +1336,7 @@ func takeTopKIE(allPatterns []patternProperties, topK int) []patternProperties {
 	allPatternsType := make([]patternProperties, 0)
 	for _, pattern := range allPatterns {
 
-		if pattern.patternType == M.TYPE_INTERNAL_EVENT_NAME {
+		if pattern.patternType == model.TYPE_INTERNAL_EVENT_NAME {
 			allPatternsType = append(allPatternsType, pattern)
 		}
 	}

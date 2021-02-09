@@ -2,10 +2,9 @@ package v1
 
 import (
 	mid "factors/middleware"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
-
-	M "factors/model"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -26,7 +25,7 @@ func GetAllFactorsTrackedEventsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	trackedEvents, errCode := M.GetAllFactorsTrackedEventsByProject(projectID)
+	trackedEvents, errCode := store.GetStore().GetAllFactorsTrackedEventsByProject(projectID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -72,7 +71,7 @@ func CreateFactorsTrackedEventsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	id, errCode := M.CreateFactorsTrackedEvent(projectID, params.EventName, loggedInAgentUUID)
+	id, errCode := store.GetStore().CreateFactorsTrackedEvent(projectID, params.EventName, loggedInAgentUUID)
 	if !(errCode == http.StatusCreated || errCode == http.StatusOK) {
 		logCtx.Errorln("Tracked event creation failed")
 		if errCode == http.StatusConflict {
@@ -133,7 +132,7 @@ func RemoveFactorsTrackedEventsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	id, errCode := M.DeactivateFactorsTrackedEvent(params.ID, projectID)
+	id, errCode := store.GetStore().DeactivateFactorsTrackedEvent(params.ID, projectID)
 	if errCode != http.StatusOK {
 		logCtx.Errorln("Removing Tracked event failed")
 		if errCode == http.StatusConflict {

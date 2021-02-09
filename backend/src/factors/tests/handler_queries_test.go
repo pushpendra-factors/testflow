@@ -5,7 +5,8 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -19,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent, query *H.SavedQueryRequestPayload) *httptest.ResponseRecorder {
+func sendCreateQueryReq(r *gin.Engine, projectId uint64, agent *model.Agent, query *H.SavedQueryRequestPayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -43,7 +44,7 @@ func sendCreateQueryReq(r *gin.Engine, projectId uint64, agent *M.Agent, query *
 	r.ServeHTTP(w, req)
 	return w
 }
-func sendGetSavedQueriesReq(r *gin.Engine, projectId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+func sendGetSavedQueriesReq(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -67,7 +68,7 @@ func sendGetSavedQueriesReq(r *gin.Engine, projectId uint64, agent *M.Agent) *ht
 	return w
 }
 
-func sendUpdateSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, agent *M.Agent, query *H.SavedQueryUpdatePayload) *httptest.ResponseRecorder {
+func sendUpdateSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, agent *model.Agent, query *H.SavedQueryUpdatePayload) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -92,7 +93,7 @@ func sendUpdateSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, ag
 	return w
 }
 
-func sendDeleteSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+func sendDeleteSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -115,7 +116,7 @@ func sendDeleteSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, ag
 	r.ServeHTTP(w, req)
 	return w
 }
-func sendSearchQueryReq(r *gin.Engine, projectId uint64, searchString string, agent *M.Agent) *httptest.ResponseRecorder {
+func sendSearchQueryReq(r *gin.Engine, projectId uint64, searchString string, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -147,12 +148,12 @@ func TestAPISearchQueryHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 
 	rTitle := "xyz"
-	query := M.Query{
-		EventsCondition:      M.EventCondAnyGivenEvent,
+	query := model.Query{
+		EventsCondition:      model.EventCondAnyGivenEvent,
 		From:                 1556602834,
 		To:                   1557207634,
-		Type:                 M.QueryTypeEventsOccurrence,
-		EventsWithProperties: []M.QueryEventWithProperties{}, // invalid, no events.
+		Type:                 model.QueryTypeEventsOccurrence,
+		EventsWithProperties: []model.QueryEventWithProperties{}, // invalid, no events.
 		OverridePeriod:       true,
 	}
 
@@ -160,14 +161,14 @@ func TestAPISearchQueryHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
-		Type:  M.QueryTypeSavedQuery,
+		Type:  model.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	w = sendSearchQueryReq(r, project.ID, "x", agent)
 	assert.Equal(t, http.StatusFound, w.Code)
 
-	var queries []M.Queries
+	var queries []model.Queries
 	decoder := json.NewDecoder(w.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&queries); err != nil {
@@ -190,13 +191,13 @@ func TestAPICreateQueryHandler(t *testing.T) {
 
 	t.Run("CreateQuery:WithValidQuery", func(t *testing.T) {
 		rTitle := U.RandomString(5)
-		query := M.Query{
-			EventsCondition: M.EventCondAnyGivenEvent,
+		query := model.Query{
+			EventsCondition: model.EventCondAnyGivenEvent,
 			From:            1556602834,
 			To:              1557207634,
-			Type:            M.QueryTypeEventsOccurrence,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "event1",
 				},
 			},
@@ -207,18 +208,18 @@ func TestAPICreateQueryHandler(t *testing.T) {
 		assert.Nil(t, err)
 
 		w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
-			Type:  M.QueryTypeSavedQuery,
+			Type:  model.QueryTypeSavedQuery,
 			Query: &postgres.Jsonb{queryJson}})
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 	t.Run("CreateQuery:WithNoEventsQuery", func(t *testing.T) {
 		rTitle := U.RandomString(5)
-		query := M.Query{
-			EventsCondition:      M.EventCondAnyGivenEvent,
+		query := model.Query{
+			EventsCondition:      model.EventCondAnyGivenEvent,
 			From:                 1556602834,
 			To:                   1557207634,
-			Type:                 M.QueryTypeEventsOccurrence,
-			EventsWithProperties: []M.QueryEventWithProperties{}, // invalid, no events.
+			Type:                 model.QueryTypeEventsOccurrence,
+			EventsWithProperties: []model.QueryEventWithProperties{}, // invalid, no events.
 			OverridePeriod:       true,
 		}
 
@@ -226,18 +227,18 @@ func TestAPICreateQueryHandler(t *testing.T) {
 		assert.Nil(t, err)
 
 		w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
-			Type:  M.QueryTypeSavedQuery,
+			Type:  model.QueryTypeSavedQuery,
 			Query: &postgres.Jsonb{queryJson}})
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 	t.Run("CreateQuery:WithNoTitle", func(t *testing.T) {
-		query := M.Query{
-			EventsCondition: M.EventCondAnyGivenEvent,
+		query := model.Query{
+			EventsCondition: model.EventCondAnyGivenEvent,
 			From:            1556602834,
 			To:              1557207634,
-			Type:            M.QueryTypeEventsOccurrence,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
 					Name: "event1",
 				},
 			},
@@ -248,7 +249,7 @@ func TestAPICreateQueryHandler(t *testing.T) {
 		assert.Nil(t, err)
 
 		w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: "",
-			Type:  M.QueryTypeSavedQuery,
+			Type:  model.QueryTypeSavedQuery,
 			Query: &postgres.Jsonb{queryJson}})
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
@@ -264,13 +265,13 @@ func TestAPIUpdateSavedQueryHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 
 	rTitle := U.RandomString(5)
-	query := M.Query{
-		EventsCondition: M.EventCondAnyGivenEvent,
+	query := model.Query{
+		EventsCondition: model.EventCondAnyGivenEvent,
 		From:            1556602834,
 		To:              1557207634,
-		Type:            M.QueryTypeEventsOccurrence,
-		EventsWithProperties: []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
 				Name: "event1",
 			},
 		},
@@ -281,7 +282,7 @@ func TestAPIUpdateSavedQueryHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
-		Type:  M.QueryTypeSavedQuery,
+		Type:  model.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
@@ -293,7 +294,7 @@ func TestAPIUpdateSavedQueryHandler(t *testing.T) {
 	w = sendUpdateSavedQueryReq(r, project.ID, queryId, agent, &H.SavedQueryUpdatePayload{Title: rTitle1})
 	assert.Equal(t, http.StatusAccepted, w.Code)
 
-	query1, errCode := M.GetQueryWithQueryId(project.ID, queryId)
+	query1, errCode := store.GetStore().GetQueryWithQueryId(project.ID, queryId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, query1.Title, rTitle1)
 	assert.Equal(t, 2, query1.Type)
@@ -309,13 +310,13 @@ func TestAPIDeleteSavedQueryHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 
 	rTitle := U.RandomString(5)
-	query := M.Query{
-		EventsCondition: M.EventCondAnyGivenEvent,
+	query := model.Query{
+		EventsCondition: model.EventCondAnyGivenEvent,
 		From:            1556602834,
 		To:              1557207634,
-		Type:            M.QueryTypeEventsOccurrence,
-		EventsWithProperties: []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
 				Name: "event1",
 			},
 		},
@@ -326,7 +327,7 @@ func TestAPIDeleteSavedQueryHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
-		Type:  M.QueryTypeSavedQuery,
+		Type:  model.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
@@ -337,7 +338,7 @@ func TestAPIDeleteSavedQueryHandler(t *testing.T) {
 	w = sendDeleteSavedQueryReq(r, project.ID, queryId, agent)
 	assert.Equal(t, http.StatusAccepted, w.Code)
 
-	_, errCode := M.GetQueryWithQueryId(project.ID, queryId)
+	_, errCode := store.GetStore().GetQueryWithQueryId(project.ID, queryId)
 	assert.Equal(t, http.StatusNotFound, errCode)
 }
 
@@ -351,13 +352,13 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 
 	rTitle := U.RandomString(5)
-	query := M.Query{
-		EventsCondition: M.EventCondAnyGivenEvent,
+	query := model.Query{
+		EventsCondition: model.EventCondAnyGivenEvent,
 		From:            1556602834,
 		To:              1557207634,
-		Type:            M.QueryTypeEventsOccurrence,
-		EventsWithProperties: []M.QueryEventWithProperties{
-			M.QueryEventWithProperties{
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
 				Name: "event1",
 			},
 		},
@@ -368,20 +369,20 @@ func TestAPIGetQueriesHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
-		Type:  M.QueryTypeSavedQuery,
+		Type:  model.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	rTitle1 := U.RandomString(5)
 	w = sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle1,
-		Type:  M.QueryTypeSavedQuery,
+		Type:  model.QueryTypeSavedQuery,
 		Query: &postgres.Jsonb{queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	w = sendGetSavedQueriesReq(r, project.ID, agent)
 	assert.Equal(t, http.StatusFound, w.Code)
 
-	var queries []M.Queries
+	var queries []model.Queries
 	decoder := json.NewDecoder(w.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&queries); err != nil {

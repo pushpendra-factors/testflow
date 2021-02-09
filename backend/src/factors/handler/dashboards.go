@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	H "factors/handler/helpers"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -44,7 +45,7 @@ func GetDashboardsHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	dashboards, errCode := M.GetDashboards(projectId, agentUUID)
+	dashboards, errCode := store.GetStore().GetDashboards(projectId, agentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get dashboards failed."})
 		return
@@ -82,8 +83,8 @@ func CreateDashboardHandler(c *gin.Context) {
 		return
 	}
 
-	dashboard, errCode := M.CreateDashboard(projectId, agentUUID,
-		&M.Dashboard{Name: requestPayload.Name, Description: requestPayload.Description, Type: requestPayload.Type})
+	dashboard, errCode := store.GetStore().CreateDashboard(projectId, agentUUID,
+		&model.Dashboard{Name: requestPayload.Name, Description: requestPayload.Description, Type: requestPayload.Type})
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to create dashboard."})
 		return
@@ -118,7 +119,7 @@ func UpdateDashboardHandler(c *gin.Context) {
 		return
 	}
 
-	var requestPayload M.UpdatableDashboard
+	var requestPayload model.UpdatableDashboard
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
@@ -129,7 +130,7 @@ func UpdateDashboardHandler(c *gin.Context) {
 		return
 	}
 
-	errCode := M.UpdateDashboard(projectId, agentUUID, dashboardId, &requestPayload)
+	errCode := store.GetStore().UpdateDashboard(projectId, agentUUID, dashboardId, &requestPayload)
 	if errCode != http.StatusAccepted {
 		errMsg := "Update dashboard failed."
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": errMsg})
@@ -164,7 +165,7 @@ func DeleteDashboardHandler(c *gin.Context) {
 		return
 	}
 
-	errCode := M.DeleteDashboard(projectId, agentUUID, dashboardId)
+	errCode := store.GetStore().DeleteDashboard(projectId, agentUUID, dashboardId)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to delete dashboard."})
 		return
@@ -198,7 +199,7 @@ func GetDashboardUnitsHandler(c *gin.Context) {
 		return
 	}
 
-	dashboardUnits, errCode := M.GetDashboardUnits(projectId, agentUUID, dashboardId)
+	dashboardUnits, errCode := store.GetStore().GetDashboardUnits(projectId, agentUUID, dashboardId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get dashboard units failed."})
 		return
@@ -233,7 +234,7 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
-	var requestPayload M.DashboardUnitRequestPayload
+	var requestPayload model.DashboardUnitRequestPayload
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
@@ -261,15 +262,15 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 		requestPayload.Settings = &postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}
 	}
 
-	dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(projectId, agentUUID,
-		&M.DashboardUnit{
+	dashboardUnit, errCode, errMsg := store.GetStore().CreateDashboardUnit(projectId, agentUUID,
+		&model.DashboardUnit{
 			DashboardId:  dashboardId,
 			Query:        *requestPayload.Query,
 			Title:        requestPayload.Title,
 			Presentation: requestPayload.Presentation,
 			QueryId:      requestPayload.QueryId,
 			Settings:     *requestPayload.Settings,
-		}, M.DashboardUnitForNoQueryID)
+		}, model.DashboardUnitForNoQueryID)
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, errMsg)
 		return
@@ -310,7 +311,7 @@ func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) {
 		dashboardIds = append(dashboardIds, dashboardId)
 	}
 
-	var requestPayload M.DashboardUnitRequestPayload
+	var requestPayload model.DashboardUnitRequestPayload
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
@@ -329,7 +330,7 @@ func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) {
 		return
 	}
 
-	dashboardUnits, errCode, errMsg := M.CreateDashboardUnitForMultipleDashboards(dashboardIds, projectId, agentUUID, requestPayload)
+	dashboardUnits, errCode, errMsg := store.GetStore().CreateDashboardUnitForMultipleDashboards(dashboardIds, projectId, agentUUID, requestPayload)
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, errMsg)
 		return
@@ -363,7 +364,7 @@ func CreateDashboardUnitsForMultipleQueriesHandler(c *gin.Context) {
 		return
 	}
 
-	var requestPayload []M.DashboardUnitRequestPayload
+	var requestPayload []model.DashboardUnitRequestPayload
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
@@ -376,7 +377,7 @@ func CreateDashboardUnitsForMultipleQueriesHandler(c *gin.Context) {
 		return
 	}
 
-	dashboardUnits, errCode, errMsg := M.CreateMultipleDashboardUnits(requestPayload, projectId, agentUUID, dashboardId)
+	dashboardUnits, errCode, errMsg := store.GetStore().CreateMultipleDashboardUnits(requestPayload, projectId, agentUUID, dashboardId)
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, errMsg)
 		return
@@ -405,7 +406,7 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	var requestPayload M.DashboardUnitRequestPayload
+	var requestPayload model.DashboardUnitRequestPayload
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
@@ -428,8 +429,8 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
-	_, errCode := M.UpdateDashboardUnit(projectId, agentUUID, dashboardId,
-		unitId, &M.DashboardUnit{Title: requestPayload.Title})
+	_, errCode := store.GetStore().UpdateDashboardUnit(projectId, agentUUID, dashboardId,
+		unitId, &model.DashboardUnit{Title: requestPayload.Title})
 	if errCode != http.StatusAccepted && errCode != http.StatusNoContent {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update dashboard unit."})
 		return
@@ -470,7 +471,7 @@ func DeleteDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
-	errCode := M.DeleteDashboardUnit(projectId, agentUUID, dashboardId, unitId)
+	errCode := store.GetStore().DeleteDashboardUnit(projectId, agentUUID, dashboardId, unitId)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to delete dashboard unit."})
 		return
@@ -517,7 +518,7 @@ func DeleteMultiDashboardUnitHandler(c *gin.Context) {
 		dashboardUnitIDs = append(dashboardUnitIDs, dashboardUnitID)
 	}
 
-	errCode, errMsg := M.DeleteMultipleDashboardUnits(projectID, agentUUID, dashboardID, dashboardUnitIDs)
+	errCode, errMsg := store.GetStore().DeleteMultipleDashboardUnits(projectID, agentUUID, dashboardID, dashboardUnitIDs)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
 		return
@@ -547,8 +548,8 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 	}
 	logCtx = logCtx.WithField("project_id", projectId)
 
-	var requestPayload M.DashboardUnitsWebAnalyticsQuery
-	var queryResult *M.WebAnalyticsQueryResult
+	var requestPayload model.DashboardUnitsWebAnalyticsQuery
+	var queryResult *model.WebAnalyticsQueryResult
 	var fromCache, hardRefresh bool
 	var lastRefreshedAt int64
 
@@ -574,7 +575,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
 
-	cacheResult, errCode := M.GetCacheResultForWebAnalyticsDashboard(projectId, dashboardId,
+	cacheResult, errCode := model.GetCacheResultForWebAnalyticsDashboard(projectId, dashboardId,
 		requestPayload.From, requestPayload.To)
 	if errCode == http.StatusFound && !H.IsHardRefreshForToday(requestPayload.From, hardRefresh) {
 		queryResult = cacheResult.Result
@@ -585,7 +586,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		// response map[query_name]result = Pass it to ExecuteWebAnalyticsQueries.
 		// build map[unit_id]result and respond.
 
-		var cacheResult M.WebAnalyticsQueryResult
+		var cacheResult model.WebAnalyticsQueryResult
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, true)
 		if shouldReturn {
 			c.AbortWithStatusJSON(resCode, resMsg)
@@ -593,7 +594,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		}
 
 		// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
-		M.SetQueryCachePlaceholder(projectId, &requestPayload)
+		model.SetQueryCachePlaceholder(projectId, &requestPayload)
 		H.SleepIfHeaderSet(c)
 
 		queryNames := make([]string, 0, len(requestPayload.Units))
@@ -601,18 +602,18 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 			queryNames = append(queryNames, unit.QueryName)
 		}
 
-		customGroupQueries := make([]M.WebAnalyticsCustomGroupQuery, 0, 0)
+		customGroupQueries := make([]model.WebAnalyticsCustomGroupQuery, 0, 0)
 		for _, unit := range requestPayload.CustomGroupUnits {
-			customGroupQueries = append(customGroupQueries, M.WebAnalyticsCustomGroupQuery{
+			customGroupQueries = append(customGroupQueries, model.WebAnalyticsCustomGroupQuery{
 				UniqueID:          fmt.Sprintf("%d", unit.UnitID),
 				Metrics:           unit.Metrics,
 				GroupByProperties: unit.GroupByProperties,
 			})
 		}
 
-		queryResult, errCode = M.ExecuteWebAnalyticsQueries(
+		queryResult, errCode = store.GetStore().ExecuteWebAnalyticsQueries(
 			projectId,
-			&M.WebAnalyticsQueries{
+			&model.WebAnalyticsQueries{
 				QueryNames:         queryNames,
 				CustomGroupQueries: customGroupQueries,
 				From:               requestPayload.From,
@@ -626,17 +627,17 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 
 			c.AbortWithStatusJSON(http.StatusInternalServerError,
 				gin.H{"error": "Web analytics query failed. Execution failed."})
-			M.DeleteQueryCacheKey(projectId, &requestPayload)
+			model.DeleteQueryCacheKey(projectId, &requestPayload)
 			return
 		}
-		M.SetQueryCacheResult(projectId, &requestPayload, queryResult)
+		model.SetQueryCacheResult(projectId, &requestPayload, queryResult)
 
-		M.SetCacheResultForWebAnalyticsDashboard(queryResult, projectId,
+		model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectId,
 			dashboardId, requestPayload.From, requestPayload.To)
 		lastRefreshedAt = U.TimeNowIn(U.TimeZoneStringIST).Unix()
 	}
 
-	queryResultsByUnitMap := make(map[uint64]M.GenericQueryResult)
+	queryResultsByUnitMap := make(map[uint64]model.GenericQueryResult)
 
 	queryResultsByName := queryResult.QueryResult
 	for _, unit := range requestPayload.Units {

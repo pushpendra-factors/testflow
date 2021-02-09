@@ -3,7 +3,8 @@ package handler
 import (
 	"factors/handler/helpers"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"fmt"
 	"net/http"
 	"time"
@@ -46,10 +47,10 @@ func SignUp(c *gin.Context) {
 	companyUrl := params.CompanyURL
 	subscribeNewsletter := params.SubscribeNewsletter
 	if planCode == "" {
-		planCode = M.FreePlanCode
+		planCode = model.FreePlanCode
 	}
 
-	if existingAgent, code := M.GetAgentByEmail(email); code == http.StatusInternalServerError {
+	if existingAgent, code := store.GetStore().GetAgentByEmail(email); code == http.StatusInternalServerError {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	} else if code == http.StatusFound {
@@ -63,11 +64,11 @@ func SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusFound)
 		return
 	}
-	createAgentParams := M.CreateAgentParams{
-		Agent:    &M.Agent{Email: email, Phone: phone, LastName: lastName, FirstName: firstName, CompanyURL: companyUrl, SubscribeNewsletter: subscribeNewsletter},
+	createAgentParams := model.CreateAgentParams{
+		Agent:    &model.Agent{Email: email, Phone: phone, LastName: lastName, FirstName: firstName, CompanyURL: companyUrl, SubscribeNewsletter: subscribeNewsletter},
 		PlanCode: planCode,
 	}
-	createAgentResp, code := M.CreateAgentWithDependencies(&createAgentParams)
+	createAgentResp, code := store.GetStore().CreateAgentWithDependencies(&createAgentParams)
 	if code == http.StatusInternalServerError {
 		log.WithField("email", email).Error("Failed To Create Agent")
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -87,7 +88,7 @@ func SignUp(c *gin.Context) {
 	c.JSON(http.StatusCreated, resp)
 }
 
-func sendSignUpEmail(agent *M.Agent) error {
+func sendSignUpEmail(agent *model.Agent) error {
 	authToken, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, time.Second*helpers.SecondsInFifteenDays)
 	if err != nil {
 		log.WithField("email", agent.Email).Error("Failed To Create Agent Auth Token")

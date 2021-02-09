@@ -1,7 +1,7 @@
 package reports
 
 import (
-	M "factors/model"
+	"factors/model/model"
 	"factors/util"
 	"net/http"
 	"time"
@@ -12,9 +12,9 @@ import (
 )
 
 func fetchDashboardReportsByType(db *gorm.DB, projectID, dashboardID uint64,
-	reportType string) ([]*M.Report, int) {
+	reportType string) ([]*model.Report, int) {
 
-	var dbReports []*M.DBReport
+	var dbReports []*model.DBReport
 
 	err := db.Where("project_id = ? ", projectID).Where("dashboard_id = ? AND type = ?",
 		dashboardID, reportType).Order("ID ASC").Find(&dbReports).Error
@@ -27,10 +27,10 @@ func fetchDashboardReportsByType(db *gorm.DB, projectID, dashboardID uint64,
 		return nil, http.StatusNotFound
 	}
 
-	reports := make([]*M.Report, len(dbReports), len(dbReports))
+	reports := make([]*model.Report, len(dbReports), len(dbReports))
 
 	for i, dbReport := range dbReports {
-		report, err := M.TranslateDBReportToReport(dbReport)
+		report, err := model.TranslateDBReportToReport(dbReport)
 		if err != nil {
 			continue
 		}
@@ -40,10 +40,10 @@ func fetchDashboardReportsByType(db *gorm.DB, projectID, dashboardID uint64,
 	return reports, http.StatusFound
 }
 
-func fetchMostRecentReportByType(reports []*M.Report, projectID, dashboardID uint64,
-	reportType string) (*M.Report, int) {
+func fetchMostRecentReportByType(reports []*model.Report, projectID, dashboardID uint64,
+	reportType string) (*model.Report, int) {
 
-	var mostRecentReport *M.Report
+	var mostRecentReport *model.Report
 	status := http.StatusNotFound
 	mostRecentTs := int64(0)
 	for _, report := range reports {
@@ -62,8 +62,8 @@ func fetchMostRecentReportByType(reports []*M.Report, projectID, dashboardID uin
 	return mostRecentReport, status
 }
 
-func findStartTimeForDashboardByType(dashboard *M.Dashboard,
-	existingReports []*M.Report, reportType string) time.Time {
+func findStartTimeForDashboardByType(dashboard *model.Dashboard,
+	existingReports []*model.Report, reportType string) time.Time {
 
 	var startTime time.Time
 	mostRecentReport, errCode := fetchMostRecentReportByType(existingReports,
@@ -79,9 +79,9 @@ func findStartTimeForDashboardByType(dashboard *M.Dashboard,
 	}
 
 	var beginingOfPeriod time.Time
-	if reportType == M.ReportTypeWeekly {
+	if reportType == model.ReportTypeWeekly {
 		beginingOfPeriod = now.New(startTime).BeginningOfWeek()
-	} else if reportType == M.ReportTypeMonthly {
+	} else if reportType == model.ReportTypeMonthly {
 		beginingOfPeriod = now.New(startTime).BeginningOfMonth()
 	}
 
@@ -120,14 +120,14 @@ func getLastMonthEndTime() time.Time {
 
 // startTime is rounded off to begining of the period type
 // endTime is rounded off to end of the period type
-func getIntervalsByType(startTime, endTime time.Time, reportType string) []M.Interval {
-	intervals := make([]M.Interval, 0, 0)
+func getIntervalsByType(startTime, endTime time.Time, reportType string) []model.Interval {
+	intervals := make([]model.Interval, 0, 0)
 	startTs := startTime.UTC()
 
 	var endTs time.Time
-	if reportType == M.ReportTypeWeekly {
+	if reportType == model.ReportTypeWeekly {
 		endTs = now.New(endTime).EndOfWeek()
-	} else if reportType == M.ReportTypeMonthly {
+	} else if reportType == model.ReportTypeMonthly {
 		endTs = now.New(endTime).EndOfMonth()
 	} else {
 		log.Fatalf("Invalid report type give on get_intervals: %s", reportType)
@@ -136,17 +136,17 @@ func getIntervalsByType(startTime, endTime time.Time, reportType string) []M.Int
 
 	for startTs.Before(endTs) {
 		var periodStart, periodEnd time.Time
-		if reportType == M.ReportTypeWeekly {
+		if reportType == model.ReportTypeWeekly {
 			periodStart = now.New(startTs).BeginningOfWeek()
 			periodEnd = now.New(periodStart).EndOfWeek()
-		} else if reportType == M.ReportTypeMonthly {
+		} else if reportType == model.ReportTypeMonthly {
 			periodStart = now.New(startTs).BeginningOfMonth()
 			periodEnd = now.New(periodStart).EndOfMonth()
 		} else {
 			log.Fatalf("Invalid report type give on get_intervals: %s", reportType)
 		}
 
-		interval := M.Interval{StartTime: periodStart.Unix(), EndTime: periodEnd.Unix()}
+		interval := model.Interval{StartTime: periodStart.Unix(), EndTime: periodEnd.Unix()}
 		intervals = append(intervals, interval)
 
 		startTs = periodEnd.Add(24 * time.Hour)
@@ -155,26 +155,26 @@ func getIntervalsByType(startTime, endTime time.Time, reportType string) []M.Int
 	return intervals
 }
 
-func getWeekInterval(startUnix, endUnix int64) M.Interval {
+func getWeekInterval(startUnix, endUnix int64) model.Interval {
 	startTime := unixToUTCTime(startUnix)
 	endTime := unixToUTCTime(endUnix)
 
-	return M.Interval{StartTime: now.New(startTime).BeginningOfWeek().UTC().Unix(),
+	return model.Interval{StartTime: now.New(startTime).BeginningOfWeek().UTC().Unix(),
 		EndTime: now.New(endTime).EndOfWeek().UTC().Unix()}
 }
 
-func getPrevWeekInterval(startUnix, endUnix int64) M.Interval {
+func getPrevWeekInterval(startUnix, endUnix int64) model.Interval {
 	startTime := unixToUTCTime(startUnix)
 
 	startOfGivenWeek := now.New(startTime).BeginningOfWeek()
 	prevWeek := now.New(startOfGivenWeek.Add(-24 * time.Hour))
 
-	return M.Interval{StartTime: prevWeek.BeginningOfWeek().UTC().Unix(),
+	return model.Interval{StartTime: prevWeek.BeginningOfWeek().UTC().Unix(),
 		EndTime: prevWeek.EndOfWeek().UTC().Unix()}
 }
 
-func findValidReportBy(reports []*M.Report, projectID, dashboardID uint64,
-	startTime, endTime int64) (*M.Report, int) {
+func findValidReportBy(reports []*model.Report, projectID, dashboardID uint64,
+	startTime, endTime int64) (*model.Report, int) {
 
 	for _, report := range reports {
 		if report.ProjectID == projectID && report.DashboardID == dashboardID &&

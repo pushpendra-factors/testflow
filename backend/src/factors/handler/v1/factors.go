@@ -2,7 +2,7 @@ package v1
 
 import (
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
 	P "factors/pattern"
 	PW "factors/pattern_service_wrapper"
 	U "factors/util"
@@ -426,7 +426,7 @@ func extractOperator(isEqual bool) string {
 	return op
 }
 
-func parseConstraints(filters M.FactorsGoalFilter) (*P.EventConstraints, *P.EventConstraints) {
+func parseConstraints(filters model.FactorsGoalFilter) (*P.EventConstraints, *P.EventConstraints) {
 	var startEventConstraints P.EventConstraints
 	startEventConstraints.EPNumericConstraints = make([]P.NumericConstraint, 0)
 	startEventConstraints.EPCategoricalConstraints = make([]P.CategoricalConstraint, 0)

@@ -16,7 +16,9 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	IntSegment "factors/integration/segment"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
+
 	TaskSession "factors/task/session"
 	U "factors/util"
 )
@@ -63,7 +65,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	enable := true
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	// Empty body.
@@ -254,7 +256,7 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	enable := true
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	// invalid private token.
@@ -375,7 +377,7 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
 	// Check event properties added.
-	retEvent, errCode := M.GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	eventPropertiesBytes, err := retEvent.Properties.Value()
 	var eventPropertiesMap map[string]interface{}
@@ -383,7 +385,7 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, genericEventProps)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, webEventProps)
 	// Check event properties added.
-	retUser, errCode := M.GetUser(project.ID, retEvent.UserId)
+	retUser, errCode := store.GetStore().GetUser(project.ID, retEvent.UserId)
 	assert.NotNil(t, retUser)
 	userPropertiesBytes, err := retUser.Properties.Value()
 	var userPropertiesMap map[string]interface{}
@@ -500,7 +502,7 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 		assert.Nil(t, jsonResponseMap2["error"])
 		assert.NotNil(t, jsonResponseMap2["event_id"])
 		// Check event properties added.
-		retEvent, errCode := M.GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+		retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
 		assert.Equal(t, http.StatusFound, errCode)
 		eventPropertiesBytes, err := retEvent.Properties.Value()
 		assert.Nil(t, err)
@@ -524,12 +526,12 @@ func TestIntSegmentHandlePageEventWithFilterExpression(t *testing.T) {
 	assert.NotNil(t, project)
 	enable := true
 	// disable := false
-	_, errCode := M.UpdateProjectSettings(project.ID,
-		&M.ProjectSetting{IntSegment: &enable, AutoTrack: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID,
+		&model.ProjectSetting{IntSegment: &enable, AutoTrack: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	// Filter.
-	filterEventName, errCode := M.CreateOrGetFilterEventName(&M.EventName{ProjectId: project.ID,
+	filterEventName, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{ProjectId: project.ID,
 		Name: "MyAccountDiscover", FilterExpr: "www.livspace.com/my-account/discover/:id"})
 	assert.NotNil(t, filterEventName)
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -642,13 +644,13 @@ func TestIntSegmentHandlePageEventWithFilterExpression(t *testing.T) {
 	json.Unmarshal(jsonResponse2, &jsonResponseMap2)
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
-	event, errCode := M.GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	event, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	// event should use filter expr event name.
 	assert.Equal(t, filterEventName.ID, event.EventNameId)
 
 	// Filter1.
-	filterEventName1, errCode := M.CreateOrGetFilterEventName(&M.EventName{ProjectId: project.ID,
+	filterEventName1, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{ProjectId: project.ID,
 		Name: "MyAccountDiscover", FilterExpr: "www.livspace.com/:loc_id/magazine/*"})
 	assert.NotNil(t, filterEventName1)
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -761,7 +763,7 @@ func TestIntSegmentHandlePageEventWithFilterExpression(t *testing.T) {
 	json.Unmarshal(jsonResponse2, &jsonResponseMap)
 	assert.Nil(t, jsonResponseMap["error"])
 	assert.NotNil(t, jsonResponseMap["event_id"])
-	event1, errCode := M.GetEventById(project.ID, jsonResponseMap["event_id"].(string))
+	event1, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	// event should use filter expr event name.
 	assert.NotEqual(t, filterEventName1.ID, event1.EventNameId)
@@ -776,7 +778,7 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	enable := true
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	t.Run("CreateNewSesssionForNewUser", func(t *testing.T) {
@@ -896,11 +898,11 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 		assert.Nil(t, err)
 
-		event, errCode := M.GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+		event, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, event.SessionId)
 
-		sessionEvent, errCode := M.GetEventById(project.ID, *event.SessionId)
+		sessionEvent, errCode := store.GetStore().GetEventById(project.ID, *event.SessionId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, sessionEvent)
 
@@ -924,7 +926,7 @@ func TestSegmentTrackEventForBlockedToken(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	enable := true
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	// Block by token.
@@ -1050,7 +1052,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	enable := true
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	// Inconsistent datatype tested with App(build, version),
@@ -1165,7 +1167,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
 	// Check event properties added.
-	retEvent, errCode := M.GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	eventPropertiesBytes, err := retEvent.Properties.Value()
 	var eventPropertiesMap map[string]interface{}
@@ -1173,7 +1175,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, genericEventProps)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, webEventProps)
 	// Check event properties added.
-	retUser, errCode := M.GetUser(project.ID, retEvent.UserId)
+	retUser, errCode := store.GetStore().GetUser(project.ID, retEvent.UserId)
 	assert.NotNil(t, retUser)
 	userPropertiesBytes, err := retUser.Properties.Value()
 	var userPropertiesMap map[string]interface{}
@@ -1294,7 +1296,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	assert.Nil(t, jsonResponseMap3["error"])
 	assert.NotNil(t, jsonResponseMap3["event_id"])
 	// Check event properties added.
-	retEvent1, errCode := M.GetEventById(project.ID, jsonResponseMap3["event_id"].(string))
+	retEvent1, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap3["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	eventPropertiesBytes1, err := retEvent1.Properties.Value()
 	var eventPropertiesMap1 map[string]interface{}
@@ -1302,7 +1304,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap1, genericEventProps)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap1, webEventProps)
 	// Check event properties added.
-	retUser, errCode = M.GetUser(project.ID, retEvent1.UserId)
+	retUser, errCode = store.GetStore().GetUser(project.ID, retEvent1.UserId)
 	assert.NotNil(t, retUser)
 	userPropertiesBytes1, err := retUser.Properties.Value()
 	var userPropertiesMap1 map[string]interface{}
@@ -1322,7 +1324,7 @@ func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	enable := true
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	sampleScreenPayload := `
@@ -1435,14 +1437,14 @@ func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
 	// Check event properties added.
-	retEvent, errCode := M.GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	eventPropertiesBytes, err := retEvent.Properties.Value()
 	var eventPropertiesMap map[string]interface{}
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, genericEventProps)
 	// Check event properties added.
-	retUser, errCode := M.GetUser(project.ID, retEvent.UserId)
+	retUser, errCode := store.GetStore().GetUser(project.ID, retEvent.UserId)
 	assert.NotNil(t, retUser)
 	userPropertiesBytes, err := retUser.Properties.Value()
 	var userPropertiesMap map[string]interface{}
@@ -1461,7 +1463,7 @@ func TestIntSegmentHandlerWithIdentifyEvent(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	enable := true
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	sampleIdentifyPayload := `
@@ -1507,7 +1509,7 @@ func TestIntSegmentHandlerWithIdentifyEvent(t *testing.T) {
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["user_id"])
 	// Check event properties added.
-	retUser, _ := M.GetUser(project.ID, jsonResponseMap2["user_id"].(string))
+	retUser, _ := store.GetStore().GetUser(project.ID, jsonResponseMap2["user_id"].(string))
 	assert.NotNil(t, retUser)
 	userPropertiesBytes, err := retUser.Properties.Value()
 	var userPropertiesMap map[string]interface{}
@@ -1528,7 +1530,7 @@ func TestIntSegmentHandlerWithPayloadFromSegmentPlatform(t *testing.T) {
 	assert.NotNil(t, project)
 
 	enable := true
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	// create basic auth token.
@@ -1683,7 +1685,7 @@ func TestIntSegmentHandlerWithTimestamp(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	enable := true
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	eventTimestamp := time.Now().Add(time.Hour * -1)
@@ -1798,7 +1800,7 @@ func TestIntSegmentHandlerWithTimestamp(t *testing.T) {
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
 	// Check event properties added.
-	retEvent, errCode := M.GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, retEvent)
 	assert.Equal(t, eventTimestampInUnix, retEvent.Timestamp)
@@ -1809,7 +1811,7 @@ func TestSegmentEventWithQueue(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	enable := true
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	// Page.

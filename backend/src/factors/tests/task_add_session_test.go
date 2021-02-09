@@ -2,6 +2,8 @@ package tests
 
 import (
 	"encoding/json"
+	"factors/model/model"
+	"factors/model/store"
 	"fmt"
 	"net/http"
 	"testing"
@@ -10,18 +12,17 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 
-	M "factors/model"
 	SDK "factors/sdk"
 	TaskSession "factors/task/session"
 	U "factors/util"
 )
 
 func assertAssociatedSession(t *testing.T, projectId uint64, eventIdsInOrder []string,
-	skipSessionEventIds []string, message string) (sessionEvent *M.Event) {
+	skipSessionEventIds []string, message string) (sessionEvent *model.Event) {
 
-	var firstEvent *M.Event
+	var firstEvent *model.Event
 	for i, eventId := range eventIdsInOrder {
-		event, errCode := M.GetEventById(projectId, eventId)
+		event, errCode := store.GetStore().GetEventById(projectId, eventId)
 		assert.Equal(t, http.StatusFound, errCode, message)
 
 		if i == 0 {
@@ -48,7 +49,7 @@ func assertAssociatedSession(t *testing.T, projectId uint64, eventIdsInOrder []s
 	}
 
 	// check session event
-	sessionEvent, errCode := M.GetEventById(projectId, *firstEvent.SessionId)
+	sessionEvent, errCode := store.GetStore().GetEventById(projectId, *firstEvent.SessionId)
 	assert.Equal(t, http.StatusFound, errCode, message)
 	assert.Equal(t, firstEvent.Timestamp-1, sessionEvent.Timestamp, message)
 
@@ -64,7 +65,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	// Test: New user with one event and one skip_session event.
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 	// Updating project timestamp to before events start timestamp.
-	errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 	assert.Equal(t, http.StatusAccepted, errCode)
 	randomEventName := RandomURL()
 	trackEventProperties := U.PropertiesMap{
@@ -90,7 +91,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	userId := response.UserId
 
 	// no session created.
-	_, errCode = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	_, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 
 	timestamp = timestamp + 2
@@ -107,8 +108,8 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	// create new user_properties state, for testing session user_properties addition
 	// on latest user_properties, which is not associated to any event.
 	userProperties := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
-	newUserPropertiesID, errCode := M.UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
-	user, _ := M.GetUser(project.ID, userId)
+	newUserPropertiesID, errCode := store.GetStore().UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
+	user, _ := store.GetStore().GetUser(project.ID, userId)
 	assert.NotNil(t, user)
 	// new user_properties state should be the user's latest user_property state.
 	assert.Equal(t, newUserPropertiesID, user.PropertiesId)
@@ -133,9 +134,9 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 
 	// check session user_properties so far, on both event associated
 	// user_property and user's latest user_property.
-	event, errCode := M.GetEventById(project.ID, eventId)
+	event, errCode := store.GetStore().GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
-	userPropertiesRecord, errCode := M.GetUserPropertiesRecord(project.ID, event.UserId, event.UserPropertiesId)
+	userPropertiesRecord, errCode := store.GetStore().GetUserPropertiesRecord(project.ID, event.UserId, event.UserPropertiesId)
 	userPropertiesMap, err := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_SESSION_COUNT])
@@ -143,7 +144,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*userPropertiesMap)[U.UP_OS])
 	// check latest user_properties state.
-	user, _ = M.GetUser(project.ID, event.UserId)
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
 	lastestUserPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	assert.NotEqual(t, event.UserPropertiesId, user.PropertiesId)
@@ -277,9 +278,9 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Equal(t, float64(4), (*lsEventProperties2)[U.SP_SPENT_TIME])
 
 	// check session count so far.
-	event4, errCode := M.GetEventById(project.ID, eventId4)
+	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
 	assert.Equal(t, http.StatusFound, errCode)
-	userPropertiesRecord, errCode = M.GetUserPropertiesRecord(project.ID, event4.UserId, event4.UserPropertiesId)
+	userPropertiesRecord, errCode = store.GetStore().GetUserPropertiesRecord(project.ID, event4.UserId, event4.UserPropertiesId)
 	userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
@@ -325,9 +326,9 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.NotEqual(t, sessionEvent2.ID, sessionEvent3.ID)
 
 	// check session count so far.
-	event6, errCode := M.GetEventById(project.ID, eventId6)
+	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
 	assert.Equal(t, http.StatusFound, errCode)
-	userPropertiesRecord, errCode = M.GetUserPropertiesRecord(project.ID, event6.UserId, event6.UserPropertiesId)
+	userPropertiesRecord, errCode = store.GetStore().GetUserPropertiesRecord(project.ID, event6.UserId, event6.UserPropertiesId)
 	userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
@@ -360,7 +361,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	// to avoid associating previous session.
 	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 	assert.Nil(t, err)
-	event7, errCode := M.GetEventById(project.ID, eventId7)
+	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.NotEqual(t, *event6.SessionId, *event7.SessionId)
@@ -381,7 +382,7 @@ func TestEventsConsiderationForAddingSession(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -424,15 +425,15 @@ func TestEventsConsiderationForAddingSession(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
-		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
+		event3, _ := store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
 		assert.Equal(t, event1.SessionId, event3.SessionId)
 		sessionID1 := event1.SessionId
@@ -443,15 +444,15 @@ func TestEventsConsiderationForAddingSession(t *testing.T) {
 		assert.Nil(t, err)
 
 		// Sessions associated events should be the same.
-		event1, _ = M.GetEvent(project.ID, userId, eventId1)
+		event1, _ = store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.Equal(t, sessionID1, event1.SessionId)
-		event2, _ = M.GetEvent(project.ID, userId, eventId2)
-		event3, _ = M.GetEvent(project.ID, userId, eventId3)
+		event2, _ = store.GetStore().GetEvent(project.ID, userId, eventId2)
+		event3, _ = store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
 		assert.Equal(t, event1.SessionId, event3.SessionId)
 
 		// No.of sessions created so far, should be the same.
-		sessionCount, _ = M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionCount, _ = store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 	})
 }
@@ -466,7 +467,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(32 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -498,14 +499,14 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.Empty(t, event1.SessionId)
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
 		assert.NotEmpty(t, event2.SessionId)
 	})
 
@@ -518,7 +519,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -561,15 +562,15 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
-		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
+		event3, _ := store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
 		assert.Equal(t, event1.SessionId, event3.SessionId)
 	})
@@ -583,7 +584,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -605,12 +606,12 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions for user should be 1.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
 
 		timestamp = timestamp + 2
@@ -641,12 +642,12 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created. Session continued.
-		sessionCount, _ = M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionCount, _ = store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
-		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
+		event3, _ := store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
 		assert.Equal(t, event2.SessionId, event3.SessionId)
 	})
@@ -660,7 +661,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -679,12 +680,12 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions for user should be 1.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
 
 		timestamp = timestamp + 2
@@ -703,11 +704,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created. Session continued.
-		sessionCount, _ = M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionCount, _ = store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
 	})
 
@@ -720,7 +721,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -739,12 +740,12 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
 
 		timestamp = timestamp + 2
@@ -766,11 +767,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created.
-		sessionCount, _ = M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionCount, _ = store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(2), sessionCount)
 
 		// Check session association.
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
 		assert.NotEmpty(t, event2.SessionId)
 		assert.NotEqual(t, event1.SessionId, event2.SessionId)
 	})
@@ -784,7 +785,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -803,12 +804,12 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
 
 		timestamp = timestamp + (32 * 60) + 2
@@ -827,11 +828,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created.
-		sessionCount, _ = M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionCount, _ = store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(2), sessionCount)
 
 		// Check session association.
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
 		assert.NotEmpty(t, event2.SessionId)
 		assert.NotEqual(t, event1.SessionId, event2.SessionId)
 	})
@@ -845,7 +846,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -891,15 +892,15 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(2), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
-		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
+		event3, _ := store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.NotEmpty(t, event2.SessionId)
 		assert.NotEqual(t, event1.SessionId, event2.SessionId)
 		assert.Equal(t, event2.SessionId, event3.SessionId)
@@ -914,7 +915,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -973,23 +974,23 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(3), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
 
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
 		assert.NotEmpty(t, event2.SessionId)
 		assert.NotEqual(t, event1.SessionId, event2.SessionId)
 
-		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		event3, _ := store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.NotEmpty(t, event3.SessionId)
 		assert.NotEqual(t, event1.SessionId, event3.SessionId)
 		assert.NotEqual(t, event2.SessionId, event3.SessionId)
-		event4, _ := M.GetEvent(project.ID, userId, eventId4)
+		event4, _ := store.GetStore().GetEvent(project.ID, userId, eventId4)
 		assert.Equal(t, event3.SessionId, event4.SessionId)
 	})
 
@@ -1002,7 +1003,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -1046,18 +1047,18 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(2), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
 
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
 		assert.NotEmpty(t, event2.SessionId)
 		assert.NotEqual(t, event1.SessionId, event2.SessionId)
-		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		event3, _ := store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.Equal(t, event2.SessionId, event3.SessionId)
 	})
 
@@ -1070,7 +1071,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -1093,12 +1094,12 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// Check no.of sessions created for user so far.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
 	})
 
@@ -1111,7 +1112,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -1156,18 +1157,18 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
 		assert.Nil(t, err)
 
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
 		// New session should be created for last event and associated.
-		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		event3, _ := store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.NotEmpty(t, event3.SessionId)
 		assert.NotEqual(t, event2.SessionId, event3.SessionId)
 
 		// Check no.of sessions created for user so far.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(2), sessionCount)
 	})
 
@@ -1180,7 +1181,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -1202,12 +1203,12 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions for user should be 1.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
 
 		timestamp = timestamp + (32 * 60) + 2
@@ -1226,11 +1227,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created. Session continued.
-		sessionCount, _ = M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionCount, _ = store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(2), sessionCount)
 
 		// Check session association.
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
 		assert.NotEqual(t, *event1.SessionId, *event2.SessionId)
 	})
 
@@ -1243,7 +1244,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := RandomURL()
 
@@ -1303,18 +1304,18 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(2), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
-		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		event3, _ := store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.NotEqual(t, event2.SessionId, event3.SessionId)
-		event4, _ := M.GetEvent(project.ID, userId, eventId4)
+		event4, _ := store.GetStore().GetEvent(project.ID, userId, eventId4)
 		assert.Equal(t, event3.SessionId, event4.SessionId)
 	})
 
@@ -1327,7 +1328,7 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 		// Updating project timestamp to before events start timestamp.
-		errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		randomEventName := U.RandomLowerAphaNumString(5)
 
@@ -1369,15 +1370,15 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.Nil(t, err)
 
 		// No.of sessions created.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(1), sessionCount)
 
 		// Check session association.
-		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
-		event2, _ := M.GetEvent(project.ID, userId, eventId2)
-		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
+		event3, _ := store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
 		assert.Equal(t, event1.SessionId, event3.SessionId)
 	})
@@ -1390,7 +1391,7 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 	// Event before session buffer time.
 	timestamp := U.UnixTimeBeforeDuration(time.Minute * 35)
 	// Updating project timestamp to before events start timestamp.
-	errCode := M.UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
 	assert.Equal(t, http.StatusAccepted, errCode)
 	randomEventName := RandomURL()
 	trackPayload := SDK.TrackPayload{
@@ -1430,16 +1431,16 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 0, 0, 30, 1)
 	assert.Nil(t, err)
 
-	event, errCode := M.GetEventById(project.ID, eventId)
+	event, errCode := store.GetStore().GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, event.SessionId)
 
 	// events within buffer time.
-	event1, errCode := M.GetEventById(project.ID, eventId1)
+	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, event1.SessionId)
 
-	event2, errCode := M.GetEventById(project.ID, eventId2)
+	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, event2.SessionId)
 }

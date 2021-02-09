@@ -2,7 +2,8 @@ package internal
 
 import (
 	"encoding/json"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +13,7 @@ import (
 func DataServiceAdwordsAddDocumentHandler(c *gin.Context) {
 	r := c.Request
 
-	var adwordsDocument M.AdwordsDocument
+	var adwordsDocument model.AdwordsDocument
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&adwordsDocument); err != nil {
@@ -22,7 +23,7 @@ func DataServiceAdwordsAddDocumentHandler(c *gin.Context) {
 		return
 	}
 
-	errCode := M.CreateAdwordsDocument(&adwordsDocument)
+	errCode := store.GetStore().CreateAdwordsDocument(&adwordsDocument)
 	if errCode == http.StatusConflict {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Duplicate documents."})
 		return
@@ -38,6 +39,6 @@ func DataServiceAdwordsAddDocumentHandler(c *gin.Context) {
 }
 
 func DataServiceAdwordsGetLastSyncInfoHandler(c *gin.Context) {
-	lastSyncInfo, status := M.GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
+	lastSyncInfo, status := store.GetStore().GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
 	c.JSON(status, lastSyncInfo)
 }

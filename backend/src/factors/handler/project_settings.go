@@ -3,7 +3,8 @@ package handler
 import (
 	"encoding/json"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 
@@ -33,7 +34,7 @@ func GetProjectSettingHandler(c *gin.Context) {
 		return
 	}
 
-	settings, errCode := M.GetProjectSetting(projectId)
+	settings, errCode := store.GetStore().GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})
 	} else {
@@ -69,7 +70,7 @@ func UpdateProjectSettingsHandler(c *gin.Context) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 
-	var projectSetting M.ProjectSetting
+	var projectSetting model.ProjectSetting
 	if err := decoder.Decode(&projectSetting); err != nil {
 		logCtx.WithError(err).Error(
 			"Project setting update failed. Json Decoding failed.")
@@ -78,7 +79,7 @@ func UpdateProjectSettingsHandler(c *gin.Context) {
 		return
 	}
 
-	updatedPSetting, errCode := M.UpdateProjectSettings(projectId, &projectSetting)
+	updatedPSetting, errCode := store.GetStore().UpdateProjectSettings(projectId, &projectSetting)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update project settings."})
 		return

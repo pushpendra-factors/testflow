@@ -1,0 +1,341 @@
+package model
+
+import (
+	"factors/filestore"
+	"factors/model/model"
+	U "factors/util"
+
+	"sync"
+	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
+)
+
+// Model - Interface of all methods to be implemented by the stores.
+type Model interface {
+	// adwords_document
+	CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) int
+	GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType() ([]model.AdwordsLastSyncInfo, int)
+	GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string) (map[string]model.CampaignInfo, error)
+	GetAdwordsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int)
+	GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string) (string, []interface{}, int)
+	ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, error)
+	ExecuteAdwordsChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
+	GetAdwordsFilterValuesByType(projectID uint64, docType int) ([]string, int)
+	GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error)
+
+	// agent
+	CreateAgentWithDependencies(params *model.CreateAgentParams) (*model.CreateAgentResponse, int)
+	GetAgentByEmail(email string) (*model.Agent, int)
+	GetAgentByUUID(uuid string) (*model.Agent, int)
+	GetAgentsByUUIDs(uuids []string) ([]*model.Agent, int)
+	GetAgentInfo(uuid string) (*model.AgentInfo, int)
+	UpdateAgentIntAdwordsRefreshToken(uuid, refreshToken string) int
+	UpdateAgentIntSalesforce(uuid, refreshToken string, instanceURL string) int
+	UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int
+	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
+	UpdateAgentInformation(agentUUID, firstName, lastName, phone string) int
+	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
+
+	// analytics
+	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
+	Analyze(projectID uint64, query model.Query) (*model.QueryResult, int, string)
+
+	// archival
+	GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]model.EventsArchivalBatch, error)
+
+	// attribution
+	ExecuteAttributionQuery(projectID uint64, query *model.AttributionQuery) (*model.QueryResult, error)
+	ApplyAttribution(method string, conversionEvent string, usersToBeAttributed []model.UserEventInfo,
+		userInitialSession map[string]map[string]model.RangeTimestamp, coalUserIdConversionTimestamp map[string]int64,
+		lookbackDays int, campaignFrom, campaignTo int64) (map[string][]string, map[string]map[string][]string, error)
+
+	// bigquery_setting
+	CreateBigquerySetting(setting *model.BigquerySetting) (*model.BigquerySetting, int)
+	UpdateBigquerySettingLastRunAt(settingID string, lastRunAt int64) (int64, int)
+	GetBigquerySettingByProjectID(projectID uint64) (*model.BigquerySetting, int)
+
+	// billing_account
+	GetBillingAccountByProjectID(projectID uint64) (*model.BillingAccount, int)
+	GetBillingAccountByAgentUUID(AgentUUID string) (*model.BillingAccount, int)
+	UpdateBillingAccount(id, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int
+	GetProjectsUnderBillingAccountID(ID uint64) ([]model.Project, int)
+	GetAgentsByProjectIDs(projectIDs []uint64) ([]*model.Agent, int)
+	GetAgentsUnderBillingAccountID(ID uint64) ([]*model.Agent, int)
+	IsNewProjectAgentMappingCreationAllowed(projectID uint64, emailOfAgentToAdd string) (bool, int)
+
+	// channel_analytics
+	GetChannelFilterValuesV1(projectID uint64, channel, filterObject, filterProperty string, reqID string) (model.ChannelFilterValues, int)
+	GetAllChannelFilterValues(projectID uint64, filterObject, filterProperty string, reqID string) ([]interface{}, int)
+	RunChannelGroupQuery(projectID uint64, queries []model.ChannelQueryV1, reqID string) (model.ChannelResultGroupV1, int)
+	ExecuteChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) (*model.ChannelQueryResultV1, int)
+	GetChannelFilterValues(projectID uint64, channel, filter string) ([]string, int)
+	ExecuteChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
+	ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error)
+	GetChannelConfig(channel string, reqID string) (*model.ChannelConfigResult, int)
+
+	// dashboard_unit
+	CreateDashboardUnit(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit, queryType string) (*model.DashboardUnit, int, string)
+	CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64, agentUUID string, unitPayload model.DashboardUnitRequestPayload) ([]*model.DashboardUnit, int, string)
+	CreateMultipleDashboardUnits(requestPayload []model.DashboardUnitRequestPayload, projectId uint64, agentUUID string, dashboardId uint64) ([]*model.DashboardUnit, int, string)
+	GetDashboardUnitsForProjectID(projectID uint64) ([]model.DashboardUnit, int)
+	GetDashboardUnits(projectID uint64, agentUUID string, dashboardId uint64) ([]model.DashboardUnit, int)
+	GetDashboardUnitByUnitID(projectID, unitID uint64) (*model.DashboardUnit, int)
+	GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID uint64, types []string) ([]model.DashboardUnit, int)
+	DeleteDashboardUnit(projectID uint64, agentUUID string, dashboardId uint64, id uint64) int
+	DeleteMultipleDashboardUnits(projectID uint64, agentUUID string, dashboardID uint64, dashboardUnitIDs []uint64) (int, string)
+	UpdateDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64, unit *model.DashboardUnit) (*model.DashboardUnit, int)
+	CacheDashboardUnitsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int)
+	CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int
+	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup)
+
+	// dashboard
+	CreateDashboard(projectID uint64, agentUUID string, dashboard *model.Dashboard) (*model.Dashboard, int)
+	CreateAgentPersonalDashboardForProject(projectID uint64, agentUUID string) (*model.Dashboard, int)
+	GetDashboards(projectID uint64, agentUUID string) ([]model.Dashboard, int)
+	GetDashboard(projectID uint64, agentUUID string, id uint64) (*model.Dashboard, int)
+	HasAccessToDashboard(projectID uint64, agentUUID string, id uint64) (bool, *model.Dashboard)
+	UpdateDashboard(projectID uint64, agentUUID string, id uint64, dashboard *model.UpdatableDashboard) int
+	DeleteDashboard(projectID uint64, agentUUID string, dashboardID uint64) int
+
+	// event_analytics
+	RunEventsGroupQuery(queriesOriginal []model.Query, projectId uint64) (model.ResultGroup, int)
+	ExecuteEventsQuery(projectID uint64, query model.Query) (*model.QueryResult, int, string)
+	RunInsightsQuery(projectID uint64, query model.Query) (*model.QueryResult, int, string)
+	BuildInsightsQuery(projectID uint64, query model.Query) (string, []interface{}, error)
+
+	// event_name
+	CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int)
+	CreateOrGetUserCreatedEventName(eventName *model.EventName) (*model.EventName, int)
+	CreateOrGetAutoTrackedEventName(eventName *model.EventName) (*model.EventName, int)
+	CreateOrGetFilterEventName(eventName *model.EventName) (*model.EventName, int)
+	CreateOrGetCRMSmartEventFilterEventName(projectID uint64, eventName *model.EventName, filterExpr *model.SmartCRMEventFilter) (*model.EventName, int)
+	GetSmartEventEventName(eventName *model.EventName) (*model.EventName, int)
+	GetSmartEventEventNameByNameANDType(projectID uint64, name, typ string) (*model.EventName, int)
+	CreateOrGetSessionEventName(projectID uint64) (*model.EventName, int)
+	GetSessionEventName(projectID uint64) (*model.EventName, int)
+	GetEventName(name string, projectID uint64) (*model.EventName, int)
+	GetEventNames(projectID uint64) ([]model.EventName, int)
+	GetOrderedEventNamesFromDb(projectID uint64, startTimestamp int64, endTimestamp int64, limit int) ([]model.EventNameWithAggregation, error)
+	GetFilterEventNames(projectID uint64) ([]model.EventName, int)
+	GetSmartEventFilterEventNames(projectID uint64) ([]model.EventName, int)
+	GetSmartEventFilterEventNameByID(projectID, id uint64) (*model.EventName, int)
+	GetEventNamesByNames(projectID uint64, names []string) ([]model.EventName, int)
+	GetFilterEventNamesByExprPrefix(projectID uint64, prefix string) ([]model.EventName, int)
+	UpdateEventName(projectId uint64, id uint64, nameType string, eventName *model.EventName) (*model.EventName, int)
+	UpdateCRMSmartEventFilter(projectID uint64, id uint64, eventName *model.EventName, filterExpr *model.SmartCRMEventFilter) (*model.EventName, int)
+	UpdateFilterEventName(projectID uint64, id uint64, eventName *model.EventName) (*model.EventName, int)
+	DeleteFilterEventName(projectID uint64, id uint64) int
+	FilterEventNameByEventURL(projectID uint64, eventURL string) (*model.EventName, int)
+	GetEventNameFromEventNameId(eventNameId uint64, projectID uint64) (*model.EventName, error)
+	GetEventTypeFromDb(projectID uint64, eventNames []string, limit int64) (map[string]string, error)
+	GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) (map[string][]string, error)
+	GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDays int) (map[string][]string, error)
+	GetPropertyValuesByEventProperty(projectID uint64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
+
+	// event
+	GetEventCountOfUserByEventName(projectID uint64, userId string, eventNameId uint64) (uint64, int)
+	GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID uint64) (uint64, int)
+	CreateEvent(event *model.Event) (*model.Event, int)
+	GetEvent(projectID uint64, userId string, id string) (*model.Event, int)
+	GetEventById(projectID uint64, id string) (*model.Event, int)
+	GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId uint64, startTimestamp int64, endTimestamp int64) (*model.Event, int)
+	GetRecentEventPropertyKeysWithLimits(projectID uint64, eventName string, starttime int64, endtime int64, eventsLimit int) ([]U.Property, error)
+	GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string, property string, valuesLimit int, rowsLimit int, starttime int64, endtime int64) ([]U.PropertyValue, string, error)
+	UpdateEventProperties(projectId uint64, id string, properties *U.PropertiesMap, updateTimestamp int64) int
+	GetUserEventsByEventNameId(projectID uint64, userId string, eventNameId uint64) ([]model.Event, int)
+	OverwriteEventProperties(projectId uint64, userId string, eventId string, newEventProperties *postgres.Jsonb) int
+	OverwriteEventPropertiesByID(projectId uint64, id string, newEventProperties *postgres.Jsonb) int
+	AddSessionForUser(projectId uint64, userId string, userEvents []model.Event, bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId uint64) (int, int, bool, int, int)
+	GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int)
+
+	// facebook_document
+	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
+	GetFacebookSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string) (string, []interface{}, int)
+	ExecuteFacebookChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, error)
+	GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]model.FacebookLastSyncInfo, int)
+	ExecuteFacebookChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
+	GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error)
+
+	// funnel_analytics
+	RunFunnelQuery(projectID uint64, query model.Query) (*model.QueryResult, int, string)
+
+	// goals
+	GetAllFactorsGoals(ProjectID uint64) ([]model.FactorsGoal, int)
+	GetAllActiveFactorsGoals(ProjectID uint64) ([]model.FactorsGoal, int)
+	CreateFactorsGoal(ProjectID uint64, Name string, Rule model.FactorsGoalRule, agentUUID string) (int64, int, string)
+	DeactivateFactorsGoal(ID int64, ProjectID uint64) (int64, int)
+	ActivateFactorsGoal(Name string, ProjectID uint64) (int64, int)
+	UpdateFactorsGoal(ID int64, Name string, Rule model.FactorsGoalRule, ProjectID uint64) (int64, int)
+	GetFactorsGoal(Name string, ProjectID uint64) (*model.FactorsGoal, error)
+	GetFactorsGoalByID(ID int64, ProjectID uint64) (*model.FactorsGoal, error)
+	GetAllFactorsGoalsWithNamePattern(ProjectID uint64, NamePattern string) ([]model.FactorsGoal, int)
+
+	// hubspot_document
+	GetHubspotDocumentByTypeAndActions(projectId uint64, ids []string, docType int, actions []int) ([]model.HubspotDocument, int)
+	CreateHubspotDocument(projectID uint64, document *model.HubspotDocument) int
+	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
+	GetHubspotFormDocuments(projectID uint64) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int) ([]model.HubspotDocument, int)
+	GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string, stage string) (*model.HubspotDocument, int)
+	GetHubspotObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
+	UpdateHubspotDocumentAsSynced(projectID uint64, id string, syncId string, timestamp int64, action int, userID string) int
+	GetLastSyncedHubspotDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*model.HubspotDocument, int)
+	GetAllHubspotObjectValuesByPropertyName(ProjectID uint64, objectType, propertyName string) []interface{}
+
+	// plan
+	GetPlanByID(planID uint64) (*model.Plan, int)
+	GetPlanByCode(Code string) (*model.Plan, int)
+
+	// project_agent_mapping
+	CreateProjectAgentMappingWithDependencies(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int)
+	GetProjectAgentMapping(projectID uint64, agentUUID string) (*model.ProjectAgentMapping, int)
+	GetProjectAgentMappingsByProjectId(projectID uint64) ([]model.ProjectAgentMapping, int)
+	GetProjectAgentMappingsByProjectIds(projectIds []uint64) ([]model.ProjectAgentMapping, int)
+	GetProjectAgentMappingsByAgentUUID(agentUUID string) ([]model.ProjectAgentMapping, int)
+	DoesAgentHaveProject(agentUUID string) int
+	DeleteProjectAgentMapping(projectID uint64, agentUUIDToRemove string) int
+	EditProjectAgentMapping(projectID uint64, agentUUIDToEdit string, role int64) int
+
+	// project_billing_account
+	GetProjectBillingAccountMappings(billingAccountID uint64) ([]model.ProjectBillingAccountMapping, int)
+	GetProjectBillingAccountMapping(projectID uint64) (*model.ProjectBillingAccountMapping, int)
+
+	// project_setting
+	GetProjectSetting(projectID uint64) (*model.ProjectSetting, int)
+	GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*model.ProjectSetting, int)
+	GetProjectSettingByTokenWithCacheAndDefault(token string) (*model.ProjectSetting, int)
+	GetProjectSettingByPrivateTokenWithCacheAndDefault(privateToken string) (*model.ProjectSetting, int)
+	UpdateProjectSettings(projectID uint64, settings *model.ProjectSetting) (*model.ProjectSetting, int)
+	GetIntAdwordsRefreshTokenForProject(projectID uint64) (string, int)
+	GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int)
+	GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int)
+	GetFacebookEnabledProjectSettings() ([]model.FacebookProjectSettings, int)
+	GetArchiveEnabledProjectIDs() ([]uint64, int)
+	GetBigqueryEnabledProjectIDs() ([]uint64, int)
+	GetAllSalesforceProjectSettings() ([]model.SalesforceProjectSettings, int)
+	IsPSettingsIntShopifyEnabled(projectId uint64) bool
+	GetProjectDetailsByShopifyDomain(shopifyDomain string) (uint64, string, bool, int)
+
+	// project
+	UpdateProject(projectID uint64, project *model.Project) int
+	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID uint64) (*model.Project, int)
+	CreateDefaultProjectForAgent(agentUUID string) (*model.Project, int)
+	GetProject(id uint64) (*model.Project, int)
+	GetProjectByToken(token string) (*model.Project, int)
+	GetProjectByPrivateToken(privateToken string) (*model.Project, int)
+	GetProjects() ([]model.Project, int)
+	GetProjectsByIDs(ids []uint64) ([]model.Project, int)
+	GetAllProjectIDs() ([]uint64, int)
+	GetNextSessionStartTimestampForProject(projectID uint64) (int64, int)
+	UpdateNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int
+
+	// queries
+	CreateQuery(projectID uint64, query *model.Queries) (*model.Queries, int, string)
+	GetALLQueriesWithProjectId(projectID uint64) ([]model.Queries, int)
+	GetDashboardQueryWithQueryId(projectID uint64, queryID uint64) (*model.Queries, int)
+	GetSavedQueryWithQueryId(projectID uint64, queryID uint64) (*model.Queries, int)
+	GetQueryWithQueryId(projectID uint64, queryID uint64) (*model.Queries, int)
+	DeleteQuery(projectID uint64, queryID uint64) (int, string)
+	DeleteSavedQuery(projectID uint64, queryID uint64) (int, string)
+	DeleteDashboardQuery(projectID uint64, queryID uint64) (int, string)
+	UpdateSavedQuery(projectID uint64, queryID uint64, query *model.Queries) (*model.Queries, int)
+	SearchQueriesWithProjectId(projectID uint64, searchString string) ([]model.Queries, int)
+
+	// report
+	CreateReport(report *model.Report) (*model.Report, int)
+	DeleteReportByDashboardID(projectID, dashboardID uint64) int
+	GetReportByID(id uint64) (*model.Report, int)
+	GetReportsByProjectID(projectID uint64) ([]*model.Report, int)
+	GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]*model.ReportDescription, int)
+	GenerateReport(projectID, dashboardID uint64, dashboardName string, reportType string, intervalBeforeThat, interval model.Interval) (*model.Report, int)
+
+	// salesforce_document
+	GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int)
+	GetSalesforceObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)
+	GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID uint64, customerUserID, userID string, docType int) (*model.SalesforceDocument, int)
+	UpdateSalesforceDocumentAsSynced(projectID uint64, document *model.SalesforceDocument, syncID, userID string) int
+	BuildAndUpsertDocument(projectID uint64, objectName string, value model.SalesforceRecord) error
+	CreateSalesforceDocument(projectID uint64, document *model.SalesforceDocument) int
+	CreateSalesforceDocumentByAction(projectID uint64, document *model.SalesforceDocument, action model.SalesforceAction) int
+	GetSyncedSalesforceDocumentByType(projectID uint64, ids []string, docType int) ([]model.SalesforceDocument, int)
+	GetSalesforceObjectValuesByPropertyName(ProjectID uint64, objectType string, propertyName string) []interface{}
+
+	// scheduled_task
+	CreateScheduledTask(task *model.ScheduledTask) int
+	UpdateScheduledTask(taskID string, taskDetails *postgres.Jsonb, endTime int64, status model.ScheduledTaskStatus) (int64, int)
+	GetScheduledTaskByID(taskID string) (*model.ScheduledTask, int)
+	GetScheduledTaskInProgressCount(projectID uint64, taskType model.ScheduledTaskType) (int64, int)
+	GetScheduledTaskLastRunTimestamp(projectID uint64, taskType model.ScheduledTaskType) (int64, int)
+	GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
+		lastRunAt int64, hardStartTime, hardEndTime time.Time) (map[int64]map[string]interface{}, int)
+	GetArchivalFileNamesForProject(projectID uint64, startTime, endTime time.Time) ([]string, []string, int)
+	FailScheduleTask(taskID string)
+	GetCompletedArchivalBatches(projectID uint64, startTime, endTime time.Time) (map[int64]int64, int)
+
+	// tracked_events
+	CreateFactorsTrackedEvent(ProjectID uint64, EventName string, agentUUID string) (int64, int)
+	DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (int64, int)
+	GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int)
+	GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int)
+	GetFactorsTrackedEvent(EventNameID uint64, ProjectID uint64) (*model.FactorsTrackedEvent, error)
+	GetFactorsTrackedEventByID(ID int64, ProjectID uint64) (*model.FactorsTrackedEvent, error)
+
+	// tracked_user_properties
+	CreateFactorsTrackedUserProperty(ProjectID uint64, UserPropertyName string, agentUUID string) (int64, int)
+	RemoveFactorsTrackedUserProperty(ID int64, ProjectID uint64) (int64, int)
+	GetAllFactorsTrackedUserPropertiesByProject(ProjectID uint64) ([]model.FactorsTrackedUserProperty, int)
+	GetAllActiveFactorsTrackedUserPropertiesByProject(ProjectID uint64) ([]model.FactorsTrackedUserProperty, int)
+	GetFactorsTrackedUserProperty(UserPropertyName string, ProjectID uint64) (*model.FactorsTrackedUserProperty, error)
+	GetFactorsTrackedUserPropertyByID(ID int64, ProjectID uint64) (*model.FactorsTrackedUserProperty, error)
+	IsUserPropertyValid(ProjectID uint64, UserProperty string) bool
+
+	// user_properties
+	MergeUserPropertiesForProjectID(projectID uint64, dryRun bool) int
+	SanitizeAddTypeProperties(projectID uint64, users []model.User, propertiesMap *map[string]interface{})
+	GetUserProperties(projectID uint64, userId string, id string) (*postgres.Jsonb, int)
+	GetUserPropertiesRecord(projectID uint64, userId string, id string) (*model.UserProperties, int)
+	GetUserPropertyRecordsByUserId(projectID uint64, userId string) ([]model.UserProperties, int)
+	OverwriteUserProperties(projectId uint64, userId string, id string, propertiesJsonb *postgres.Jsonb) int
+	GetUserPropertiesRecordsByProperty(projectId uint64, key string, value interface{}) ([]model.UserProperties, int)
+	UpdateUserPropertiesForSession(projectID uint64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int
+	UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error
+	BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int, skipExpiryForCache bool)
+	MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProperties postgres.Jsonb, currentPropertiesID string, timestamp int64, dryRun bool, updateCalledUser bool) (string, int)
+	GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID uint64, userID string, formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int)
+
+	// user
+	CreateUser(user *model.User) (*model.User, int)
+	UpdateUser(projectID uint64, id string, user *model.User, updateTimestamp int64) (*model.User, int)
+	UpdateUserProperties(projectId uint64, id string, properties *postgres.Jsonb, updateTimestamp int64) (string, int)
+	GetUser(projectID uint64, id string) (*model.User, int)
+	GetUsers(projectID uint64, offset uint64, limit uint64) ([]model.User, int)
+	GetUsersByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int)
+	GetUserLatestByCustomerUserId(projectID uint64, customerUserId string) (*model.User, int)
+	GetExistingCustomerUserID(projectID uint64, arrayCustomerUserID []string) (map[string]string, int)
+	GetUserBySegmentAnonymousId(projectID uint64, segAnonId string) (*model.User, int)
+	CreateOrGetUser(projectID uint64, custUserId string) (*model.User, int)
+	GetAllUserIDByCustomerUserID(projectID uint64, customerUserID string) ([]string, int)
+	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int)
+	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64) (*model.User, int)
+	GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error)
+	GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string, usersLimit, valuesLimit int, seedDate time.Time) ([]U.PropertyValue, string, error)
+	GetUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map[string][]string, error)
+	GetPropertyValuesByUserProperty(projectID uint64, propertyName string, limit int, lastNDays int) ([]string, error)
+	GetLatestUserPropertiesOfUserAsMap(projectID uint64, id string) (*map[string]interface{}, int)
+	GetDistinctCustomerUserIDSForProject(projectID uint64) ([]string, int)
+	GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string)
+	UpdateUserPropertiesByCurrentProperties(projectId uint64, id string, currentPropertiesId string, properties *postgres.Jsonb, updateTimestamp int64) (string, int)
+
+	// web_analytics
+	GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *model.WebAnalyticsQueries, int)
+	CreateWebAnalyticsDefaultDashboardWithUnits(projectID uint64, agentUUID string) int
+	ExecuteWebAnalyticsQueries(projectID uint64, queries *model.WebAnalyticsQueries) (queryResult *model.WebAnalyticsQueryResult, errCode int)
+	CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeProjectIDs string, numRoutines int)
+
+	// journey_mining
+	GetWeightedJourneyMatrix(projectID uint64, journeyEvents []model.QueryEventWithProperties,
+		goalEvents []model.QueryEventWithProperties, startTime, endTime, lookbackDays int64, eventFiles,
+		userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager)
+}

@@ -5,7 +5,7 @@ import (
 	H "factors/handler"
 	"factors/handler/helpers"
 	"factors/metrics"
-	M "factors/model"
+	"factors/model/model"
 	U "factors/util"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendRecordMetricsRequest(r *gin.Engine, agent *M.Agent, metricType, metricName string, metricValue float64) *httptest.ResponseRecorder {
+func sendRecordMetricsRequest(r *gin.Engine, agent *model.Agent, metricType, metricName string, metricValue float64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")

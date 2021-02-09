@@ -13,7 +13,7 @@ import (
 	C "factors/config"
 	"factors/metrics"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/store"
 	SDK "factors/sdk"
 	"factors/util"
 	U "factors/util"
@@ -255,7 +255,7 @@ type sdkSettingsResponse struct {
 func SDKGetProjectSettingsHandler(c *gin.Context) {
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 
-	projectSetting, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(projectToken)
+	projectSetting, errCode := store.GetStore().GetProjectSettingByTokenWithCacheAndDefault(projectToken)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, &SDK.Response{Error: "Get project settings failed."})
 		return
@@ -362,7 +362,7 @@ func SDKAMPTrackHandler(c *gin.Context) {
 	trackedProperties[TOKEN] = true
 	logCtx := log.WithField(TOKEN, token)
 
-	settings, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(token)
+	settings, errCode := store.GetStore().GetProjectSettingByTokenWithCacheAndDefault(token)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			&SDK.Response{Error: "Track failed. Invalid request."})

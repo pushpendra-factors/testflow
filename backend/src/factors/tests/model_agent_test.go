@@ -1,7 +1,8 @@
 package tests
 
 import (
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"sort"
@@ -33,7 +34,7 @@ func TestAgentDBCreateAgent(t *testing.T) {
 func TestAgentDBGetAgentByEmail(t *testing.T) {
 	email := getRandomEmail()
 	t.Run("GetAgentByEmailNotFound", func(t *testing.T) {
-		_, errCode := M.GetAgentByEmail(email)
+		_, errCode := store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusNotFound, errCode)
 	})
 	phone := "+12322365"
@@ -44,7 +45,7 @@ func TestAgentDBGetAgentByEmail(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("GetAgentByEmailFound", func(t *testing.T) {
-		resultAgent, errCode := M.GetAgentByEmail(email)
+		resultAgent, errCode := store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, errCode)
 		// assert.Equal(t, agent, resultAgent)
 		assert.Equal(t, email, resultAgent.Email)
@@ -54,7 +55,7 @@ func TestAgentDBGetAgentByEmail(t *testing.T) {
 	})
 
 	t.Run("GetAgentByUpperCaseEmailFound", func(t *testing.T) {
-		resultAgent, errCode := M.GetAgentByEmail(strings.ToUpper(email))
+		resultAgent, errCode := store.GetStore().GetAgentByEmail(strings.ToUpper(email))
 		assert.Equal(t, http.StatusFound, errCode)
 		// assert.Equal(t, agent, resultAgent)
 		assert.Equal(t, email, resultAgent.Email)
@@ -79,7 +80,7 @@ func TestAgentDBGetAgentByUUID(t *testing.T) {
 
 		uuid := agent.UUID
 
-		retAgent, errCode := M.GetAgentByUUID(uuid)
+		retAgent, errCode := store.GetStore().GetAgentByUUID(uuid)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Equal(t, agent.UUID, retAgent.UUID)
 		assert.Equal(t, agent.Email, retAgent.Email)
@@ -99,7 +100,7 @@ func TestAgentDBGetAgentsByUUIDs(t *testing.T) {
 			expUUIDs = append(expUUIDs, agent.UUID)
 		}
 
-		agents, errCode := M.GetAgentsByUUIDs(expUUIDs)
+		agents, errCode := store.GetStore().GetAgentsByUUIDs(expUUIDs)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Equal(t, noOfAgentsToCreate, len(agents))
 
@@ -117,14 +118,14 @@ func TestAgentDBGetAgentsByUUIDs(t *testing.T) {
 
 func TestAgentHashPasswordAndComparePassword(t *testing.T) {
 	plainTextPassword := U.RandomString(10)
-	hashedPassword, err := M.HashPassword(plainTextPassword)
+	hashedPassword, err := model.HashPassword(plainTextPassword)
 	assert.Nil(t, err)
 
-	equal := M.IsPasswordAndHashEqual(plainTextPassword, hashedPassword)
+	equal := model.IsPasswordAndHashEqual(plainTextPassword, hashedPassword)
 	assert.True(t, equal)
 
 	wrongPlainTextPass := plainTextPassword + U.RandomString(4)
-	notEqual := M.IsPasswordAndHashEqual(wrongPlainTextPass, hashedPassword)
+	notEqual := model.IsPasswordAndHashEqual(wrongPlainTextPass, hashedPassword)
 	assert.False(t, notEqual)
 }
 
@@ -134,7 +135,7 @@ func TestAgentDBUpdatePassword(t *testing.T) {
 		randPlainTextPassword := U.RandomLowerAphaNumString(8)
 		ts := time.Now().UTC()
 
-		errCode := M.UpdateAgentPassword(uuid, randPlainTextPassword, ts)
+		errCode := store.GetStore().UpdateAgentPassword(uuid, randPlainTextPassword, ts)
 		assert.Equal(t, http.StatusNoContent, errCode)
 	})
 	t.Run("UpdatePasswordSuccess", func(t *testing.T) {
@@ -147,15 +148,15 @@ func TestAgentDBUpdatePassword(t *testing.T) {
 		randPlainTextPassword := U.RandomLowerAphaNumString(8)
 		ts := time.Now().UTC()
 
-		errCode = M.UpdateAgentPassword(agent.UUID, randPlainTextPassword, ts)
+		errCode = store.GetStore().UpdateAgentPassword(agent.UUID, randPlainTextPassword, ts)
 		assert.Equal(t, http.StatusAccepted, errCode)
 
-		retAgent, errCode := M.GetAgentByEmail(email)
+		retAgent, errCode := store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, errCode)
 
 		assert.NotEqual(t, retAgent.Salt, agent.Salt)
 
-		passEqual := M.IsPasswordAndHashEqual(randPlainTextPassword, retAgent.Password)
+		passEqual := model.IsPasswordAndHashEqual(randPlainTextPassword, retAgent.Password)
 		assert.True(t, passEqual)
 		assert.True(t, (*retAgent.PasswordCreatedAt).After(start))
 	})
@@ -164,7 +165,7 @@ func TestAgentDBUpdatePassword(t *testing.T) {
 func TestDBAgentUpdateAgentLastLoginInfo(t *testing.T) {
 	t.Run("UpdatePasswordAgentLastLoginInfoMissingAgent", func(t *testing.T) {
 		ts := time.Now().UTC()
-		errCode := M.UpdateAgentLastLoginInfo(getRandomAgentUUID(), ts)
+		errCode := store.GetStore().UpdateAgentLastLoginInfo(getRandomAgentUUID(), ts)
 		assert.Equal(t, http.StatusNoContent, errCode)
 	})
 	t.Run("UpdatePasswordAgentLastLoginInfoSuccess", func(t *testing.T) {
@@ -175,10 +176,10 @@ func TestDBAgentUpdateAgentLastLoginInfo(t *testing.T) {
 		assert.Equal(t, uint64(0), agent.LoginCount)
 
 		ts := time.Now().UTC()
-		errCode = M.UpdateAgentLastLoginInfo(agent.UUID, ts)
+		errCode = store.GetStore().UpdateAgentLastLoginInfo(agent.UUID, ts)
 		assert.Equal(t, http.StatusAccepted, errCode)
 
-		retAgent, errCode := M.GetAgentByEmail(email)
+		retAgent, errCode := store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Equal(t, uint64(1), retAgent.LoginCount)
 		assert.True(t, (*retAgent.LastLoggedInAt).After(start))
@@ -192,7 +193,7 @@ func TestDBAgentUpdateAgentVerificationDetails(t *testing.T) {
 		lastName := U.RandomLowerAphaNumString(8)
 		password := U.RandomLowerAphaNumString(8)
 		ts := time.Now().UTC()
-		errCode := M.UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName, true, ts)
+		errCode := store.GetStore().UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName, true, ts)
 		assert.Equal(t, http.StatusNoContent, errCode)
 	})
 	t.Run("Success", func(t *testing.T) {
@@ -207,15 +208,15 @@ func TestDBAgentUpdateAgentVerificationDetails(t *testing.T) {
 		lastName := U.RandomLowerAphaNumString(8)
 		password := U.RandomLowerAphaNumString(8)
 		ts := time.Now().UTC()
-		errCode = M.UpdateAgentVerificationDetails(agent.UUID, password, firstName, lastName, true, ts)
+		errCode = store.GetStore().UpdateAgentVerificationDetails(agent.UUID, password, firstName, lastName, true, ts)
 		assert.Equal(t, http.StatusAccepted, errCode)
 
-		updatedAgent, errCode := M.GetAgentByEmail(email)
+		updatedAgent, errCode := store.GetStore().GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Equal(t, true, updatedAgent.IsEmailVerified)
 		assert.Equal(t, firstName, updatedAgent.FirstName)
 		assert.Equal(t, lastName, updatedAgent.LastName)
-		assert.True(t, M.IsPasswordAndHashEqual(password, updatedAgent.Password))
+		assert.True(t, model.IsPasswordAndHashEqual(password, updatedAgent.Password))
 		assert.Empty(t, updatedAgent.IntAdwordsRefreshToken)
 	})
 }
@@ -226,17 +227,17 @@ func TestUpdateAgentIntAdwordsRefreshToken(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	token := U.RandomLowerAphaNumString(10)
-	errCode = M.UpdateAgentIntAdwordsRefreshToken(agent.UUID, token)
+	errCode = store.GetStore().UpdateAgentIntAdwordsRefreshToken(agent.UUID, token)
 	assert.Equal(t, http.StatusAccepted, errCode)
-	updatedAgent, errCode := M.GetAgentByEmail(email)
+	updatedAgent, errCode := store.GetStore().GetAgentByEmail(email)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, false, updatedAgent.IsEmailVerified)
 
 	// updating other cols should not affect token.
 	ts := time.Now().UTC()
-	errCode = M.UpdateAgentLastLoginInfo(agent.UUID, ts)
+	errCode = store.GetStore().UpdateAgentLastLoginInfo(agent.UUID, ts)
 	assert.Equal(t, http.StatusAccepted, errCode)
-	updatedAgent, errCode = M.GetAgentByEmail(email)
+	updatedAgent, errCode = store.GetStore().GetAgentByEmail(email)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, token, updatedAgent.IntAdwordsRefreshToken)
 }
@@ -246,15 +247,15 @@ func TestUpdateAgentInformation(t *testing.T) {
 	agent, errCode := SetupAgentReturnDAO(email, "+13425354765")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	M.UpdateAgentInformation(agent.UUID, "A", "B", "")
-	updatedAgent, errCode := M.GetAgentByEmail(email)
+	store.GetStore().UpdateAgentInformation(agent.UUID, "A", "B", "")
+	updatedAgent, errCode := store.GetStore().GetAgentByEmail(email)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, "A", updatedAgent.FirstName)
 	assert.Equal(t, "B", updatedAgent.LastName)
 	assert.Equal(t, "+13425354765", updatedAgent.Phone)
 
-	M.UpdateAgentInformation(agent.UUID, "", "", "+13425354567")
-	updatedAgent, errCode = M.GetAgentByEmail(email)
+	store.GetStore().UpdateAgentInformation(agent.UUID, "", "", "+13425354567")
+	updatedAgent, errCode = store.GetStore().GetAgentByEmail(email)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, "A", updatedAgent.FirstName)
 	assert.Equal(t, "B", updatedAgent.LastName)

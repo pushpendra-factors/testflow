@@ -2,7 +2,8 @@ package tests
 
 import (
 	"errors"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -10,14 +11,14 @@ import (
 
 // TODO: Use testify.suites to avoid multiple initializations across these tests.
 
-func SetupProjectReturnDAO() (*M.Project, error) {
+func SetupProjectReturnDAO() (*model.Project, error) {
 
 	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+354522436")
 	if errCode != http.StatusCreated {
 		return nil, fmt.Errorf("Project Creation failed, agentCreation failed")
 	}
 
-	billingAccount, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
+	billingAccount, errCode := store.GetStore().GetBillingAccountByAgentUUID(agent.UUID)
 	if errCode != http.StatusFound {
 		return nil, fmt.Errorf("Project Creation failed, agent billing account not found")
 	}
@@ -25,8 +26,8 @@ func SetupProjectReturnDAO() (*M.Project, error) {
 	// Create random project.
 	random_project_name := U.RandomLowerAphaNumString(15)
 
-	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name},
-		agent.UUID, M.ADMIN, billingAccount.ID)
+	project, errCode := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: random_project_name},
+		agent.UUID, model.ADMIN, billingAccount.ID)
 	if errCode != http.StatusCreated {
 		return nil, fmt.Errorf("Project Creation failed.")
 	}
@@ -34,7 +35,7 @@ func SetupProjectReturnDAO() (*M.Project, error) {
 	// Updates the next session start timestamp of project with older timestamp
 	// to make the add_session to consider events with older timestamp as next
 	// session start timestamp is initialized with project creation timestamp.
-	errCode = M.UpdateNextSessionStartTimestampForProject(project.ID, 1500000000)
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, 1500000000)
 	if errCode != http.StatusAccepted {
 		return nil, errors.New("failed to update next session start timestamp")
 	}
@@ -42,14 +43,14 @@ func SetupProjectReturnDAO() (*M.Project, error) {
 	return project, nil
 }
 
-func SetupProjectUserReturnDAO() (*M.Project, *M.User, error) {
+func SetupProjectUserReturnDAO() (*model.Project, *model.User, error) {
 	// Create random project and user.
 	project, err := SetupProjectReturnDAO()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	if err_code != http.StatusCreated {
 		return nil, nil, fmt.Errorf("User Creation failed.")
 	}
@@ -69,11 +70,11 @@ func SetupProjectUserEventName() (uint64, string, uint64, error) {
 	if err != nil {
 		return projectId, userId, eventNameId, err
 	}
-	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	if err_code != http.StatusCreated {
 		return projectId, userId, eventNameId, fmt.Errorf("User Creation failed.")
 	}
-	en, err_code := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
+	en, err_code := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "login"})
 	if err_code != http.StatusCreated {
 		return projectId, userId, eventNameId, fmt.Errorf("EventName Creation failed.")
 	}
@@ -83,7 +84,7 @@ func SetupProjectUserEventName() (uint64, string, uint64, error) {
 	return projectId, userId, eventNameId, nil
 }
 
-func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, error) {
+func SetupProjectUserEventNameReturnDAO() (*model.Project, *model.User, *model.EventName, error) {
 
 	// Create random project and a corresponding eventName and user.
 	project, err := SetupProjectReturnDAO()
@@ -91,12 +92,12 @@ func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, er
 		return nil, nil, nil, err
 	}
 
-	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	if err_code != http.StatusCreated {
 		return nil, nil, nil, fmt.Errorf("User Creation failed.")
 	}
 
-	en, err_code := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
+	en, err_code := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "login"})
 	if err_code != http.StatusConflict && err_code != http.StatusCreated {
 		return nil, nil, nil, fmt.Errorf("EventName Creation failed.")
 	}
@@ -118,22 +119,22 @@ func getRandomAgentUUID() string {
 	return "6ba7b814-9dad-11d1-80b4-00c04fd430c8"
 }
 
-func SetupAgentReturnDAO(email string, phone string) (*M.Agent, int) {
+func SetupAgentReturnDAO(email string, phone string) (*model.Agent, int) {
 
 	if email == "" {
 		email = getRandomEmail()
 	}
 
-	createAgentParams := &M.CreateAgentParams{Agent: &M.Agent{FirstName: getRandomName(),
-		LastName: getRandomName(), Email: email, Phone: phone}, PlanCode: M.FreePlanCode}
-	resp, errCode := M.CreateAgentWithDependencies(createAgentParams)
+	createAgentParams := &model.CreateAgentParams{Agent: &model.Agent{FirstName: getRandomName(),
+		LastName: getRandomName(), Email: email, Phone: phone}, PlanCode: model.FreePlanCode}
+	resp, errCode := store.GetStore().CreateAgentWithDependencies(createAgentParams)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
 	return resp.Agent, http.StatusCreated
 }
 
-func SetupProjectUserEventNameAgentReturnDAO() (*M.Project, *M.User, *M.EventName, *M.Agent, error) {
+func SetupProjectUserEventNameAgentReturnDAO() (*model.Project, *model.User, *model.EventName, *model.Agent, error) {
 
 	// Create random project and a corresponding eventName and user.
 	project, err := SetupProjectReturnDAO()
@@ -141,12 +142,12 @@ func SetupProjectUserEventNameAgentReturnDAO() (*M.Project, *M.User, *M.EventNam
 		return nil, nil, nil, nil, err
 	}
 
-	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	if err_code != http.StatusCreated {
 		return nil, nil, nil, nil, fmt.Errorf("User Creation failed.")
 	}
 
-	en, err_code := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
+	en, err_code := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "login"})
 	if err_code != http.StatusConflict && err_code != http.StatusCreated {
 		return nil, nil, nil, nil, fmt.Errorf("EventName Creation failed.")
 	}
@@ -155,7 +156,7 @@ func SetupProjectUserEventNameAgentReturnDAO() (*M.Project, *M.User, *M.EventNam
 	if errCode != http.StatusCreated {
 		return nil, nil, nil, nil, fmt.Errorf("Agent Creation failed.")
 	}
-	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+	_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent.UUID})
 	if errCode != http.StatusCreated {
 		return nil, nil, nil, nil, fmt.Errorf("ProjectAgentMapping Creation failed.")
@@ -163,7 +164,7 @@ func SetupProjectUserEventNameAgentReturnDAO() (*M.Project, *M.User, *M.EventNam
 	return project, user, en, agent, nil
 }
 
-func SetupProjectWithAgentDAO() (*M.Project, *M.Agent, error) {
+func SetupProjectWithAgentDAO() (*model.Project, *model.Agent, error) {
 	project, err := SetupProjectReturnDAO()
 	if err != nil {
 		return nil, nil, err
@@ -172,7 +173,7 @@ func SetupProjectWithAgentDAO() (*M.Project, *M.Agent, error) {
 	if errCode != http.StatusCreated {
 		return nil, nil, fmt.Errorf("Agent Creation failed.")
 	}
-	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+	_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent.UUID})
 	if errCode != http.StatusCreated {
 		return nil, nil, fmt.Errorf("ProjectAgentMapping Creation failed.")
@@ -181,9 +182,9 @@ func SetupProjectWithAgentDAO() (*M.Project, *M.Agent, error) {
 }
 
 type testData struct {
-	Agent          *M.Agent
-	Project        *M.Project
-	BillingAccount *M.BillingAccount
+	Agent          *model.Agent
+	Project        *model.Project
+	BillingAccount *model.BillingAccount
 }
 
 func SetupTestData() (*testData, int) {
@@ -192,7 +193,7 @@ func SetupTestData() (*testData, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	billingAccount, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
+	billingAccount, errCode := store.GetStore().GetBillingAccountByAgentUUID(agent.UUID)
 	if errCode != http.StatusFound {
 		return nil, http.StatusInternalServerError
 	}
@@ -200,7 +201,7 @@ func SetupTestData() (*testData, int) {
 	// Create random project.
 	random_project_name := U.RandomLowerAphaNumString(15)
 
-	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name}, agent.UUID, M.ADMIN, billingAccount.ID)
+	project, err_code := store.GetStore().CreateProjectWithDependencies(&model.Project{Name: random_project_name}, agent.UUID, model.ADMIN, billingAccount.ID)
 	if err_code != http.StatusCreated {
 		return nil, http.StatusInternalServerError
 	}

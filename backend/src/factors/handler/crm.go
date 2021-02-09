@@ -2,7 +2,8 @@ package handler
 
 import (
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 
@@ -42,10 +43,10 @@ func GetCRMObjectPropertiesHandler(c *gin.Context) {
 	}
 
 	var crmResponsePayload CRMResponsePayload
-	if source == M.SmartCRMEventSourceSalesforce {
-		crmResponsePayload.Categorical, crmResponsePayload.DateTime = M.GetSalesforceObjectPropertiesName(projectID, objectType)
-	} else if source == M.SmartCRMEventSourceHubspot {
-		crmResponsePayload.Categorical, crmResponsePayload.DateTime = M.GetHubspotObjectPropertiesName(projectID, objectType)
+	if source == model.SmartCRMEventSourceSalesforce {
+		crmResponsePayload.Categorical, crmResponsePayload.DateTime = store.GetStore().GetSalesforceObjectPropertiesName(projectID, objectType)
+	} else if source == model.SmartCRMEventSourceHubspot {
+		crmResponsePayload.Categorical, crmResponsePayload.DateTime = store.GetStore().GetHubspotObjectPropertiesName(projectID, objectType)
 	}
 
 	c.JSON(http.StatusOK, crmResponsePayload)
@@ -79,10 +80,10 @@ func GetCRMObjectValuesByPropertyNameHandler(c *gin.Context) {
 	}
 
 	var properties []interface{}
-	if source == M.SmartCRMEventSourceSalesforce {
-		properties = M.GetSalesforceObjectValuesByPropertyName(projectID, objectType, propertyName)
-	} else if source == M.SmartCRMEventSourceHubspot {
-		properties = M.GetAllHubspotObjectValuesByPropertyName(projectID, objectType, propertyName)
+	if source == model.SmartCRMEventSourceSalesforce {
+		properties = store.GetStore().GetSalesforceObjectValuesByPropertyName(projectID, objectType, propertyName)
+	} else if source == model.SmartCRMEventSourceHubspot {
+		properties = store.GetStore().GetAllHubspotObjectValuesByPropertyName(projectID, objectType, propertyName)
 	}
 
 	c.JSON(http.StatusOK, properties)

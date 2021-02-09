@@ -19,7 +19,8 @@ import (
 	IntShopify "factors/integration/shopify"
 	"factors/metrics"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	SDK "factors/sdk"
 	U "factors/util"
 )
@@ -153,7 +154,7 @@ func IntAdwordsAddRefreshTokenHandler(c *gin.Context) {
 
 	// Todo: Check agent has access to project or not, before adding refresh token?
 
-	errCode := M.UpdateAgentIntAdwordsRefreshToken(requestPayload.AgentUUID, requestPayload.RefreshToken)
+	errCode := store.GetStore().UpdateAgentIntAdwordsRefreshToken(requestPayload.AgentUUID, requestPayload.RefreshToken)
 	if errCode != http.StatusAccepted {
 		log.WithField("agent_uuid", requestPayload.AgentUUID).
 			Error("Failed to update adwords refresh token for agent.")
@@ -162,8 +163,8 @@ func IntAdwordsAddRefreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	_, errCode = M.UpdateProjectSettings(projectId,
-		&M.ProjectSetting{IntAdwordsEnabledAgentUUID: &requestPayload.AgentUUID})
+	_, errCode = store.GetStore().UpdateProjectSettings(projectId,
+		&model.ProjectSetting{IntAdwordsEnabledAgentUUID: &requestPayload.AgentUUID})
 	if errCode != http.StatusAccepted {
 		log.WithField("project_id", projectId).
 			Error("Failed to update project settings adwords enable agent uuid.")
@@ -200,7 +201,7 @@ func IntAdwordsGetRefreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	refreshToken, errCode := M.GetIntAdwordsRefreshTokenForProject(projectId)
+	refreshToken, errCode := store.GetStore().GetIntAdwordsRefreshTokenForProject(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "failed to get adwords refresh token for project."})
 		return
@@ -246,7 +247,7 @@ func IntEnableAdwordsHandler(c *gin.Context) {
 	}
 
 	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	agent, errCode := M.GetAgentByUUID(currentAgentUUID)
+	agent, errCode := store.GetStore().GetAgentByUUID(currentAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid agent."})
 		return
@@ -257,8 +258,8 @@ func IntEnableAdwordsHandler(c *gin.Context) {
 		return
 	}
 
-	addEnableAgentUUIDSetting := M.ProjectSetting{IntAdwordsEnabledAgentUUID: &currentAgentUUID}
-	_, errCode = M.UpdateProjectSettings(projectId, &addEnableAgentUUIDSetting)
+	addEnableAgentUUIDSetting := model.ProjectSetting{IntAdwordsEnabledAgentUUID: &currentAgentUUID}
+	_, errCode = store.GetStore().UpdateProjectSettings(projectId, &addEnableAgentUUIDSetting)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to enable adwords"})
 		return
@@ -308,7 +309,7 @@ func IntEnableSalesforceHandler(c *gin.Context) {
 	}
 
 	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	agent, errCode := M.GetAgentByUUID(currentAgentUUID)
+	agent, errCode := store.GetStore().GetAgentByUUID(currentAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid agent."})
 		return
@@ -319,8 +320,8 @@ func IntEnableSalesforceHandler(c *gin.Context) {
 		return
 	}
 
-	addEnableAgentUUIDSetting := M.ProjectSetting{IntSalesforceEnabledAgentUUID: &currentAgentUUID}
-	_, errCode = M.UpdateProjectSettings(projectId, &addEnableAgentUUIDSetting)
+	addEnableAgentUUIDSetting := model.ProjectSetting{IntSalesforceEnabledAgentUUID: &currentAgentUUID}
+	_, errCode = store.GetStore().UpdateProjectSettings(projectId, &addEnableAgentUUIDSetting)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to enable salesforce"})
 		return
@@ -344,7 +345,7 @@ func IntShopifyHandler(c *gin.Context) {
 		return
 	}
 
-	if !M.IsPSettingsIntShopifyEnabled(projectId) {
+	if !store.GetStore().IsPSettingsIntShopifyEnabled(projectId) {
 		logCtx.WithField("project_id", projectId).Error("Shopify webhook failure. Integration not enabled.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Creating event_name failed. Invalid project."})
 		return
@@ -647,7 +648,7 @@ func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 	}
 
 	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	_, errCode := M.GetAgentByUUID(currentAgentUUID)
+	_, errCode := store.GetStore().GetAgentByUUID(currentAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid agent."})
 		return
@@ -678,7 +679,7 @@ func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
 		return
 	}
-	_, errCode = M.UpdateProjectSettings(projectId, &M.ProjectSetting{
+	_, errCode = store.GetStore().UpdateProjectSettings(projectId, &model.ProjectSetting{
 		IntFacebookEmail: requestPayload.Email, IntFacebookAccessToken: newBody.AccessToken,
 		IntFacebookAgentUUID: &currentAgentUUID, IntFacebookUserID: requestPayload.UserID,
 		IntFacebookAdAccount: requestPayload.AdAccount})
@@ -706,7 +707,7 @@ func IntShopifySDKHandler(c *gin.Context) {
 		return
 	}
 
-	if !M.IsPSettingsIntShopifyEnabled(projectId) {
+	if !store.GetStore().IsPSettingsIntShopifyEnabled(projectId) {
 		logCtx.WithField("project_id", projectId).Error("Shopify sdk failure. Integration not enabled.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Request failed. Invalid token or project."})
 		return
@@ -729,7 +730,7 @@ func IntShopifySDKHandler(c *gin.Context) {
 			"Shopify Cart Token Payload decode failed")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "empty token or userId."})
 	}
-	errCode := M.SetCacheShopifyCartTokenToUserId(
+	errCode := model.SetCacheShopifyCartTokenToUserId(
 		projectId, cartTokenPayload.CartToken, cartTokenPayload.UserId)
 	if errCode != http.StatusOK && errCode != http.StatusCreated {
 		c.AbortWithStatus(errCode)
@@ -793,7 +794,7 @@ func SalesforceCallbackHandler(c *gin.Context) {
 		return
 	}
 
-	errCode := M.UpdateAgentIntSalesforce(*oauthState.AgentUUID,
+	errCode := store.GetStore().UpdateAgentIntSalesforce(*oauthState.AgentUUID,
 		refreshToken,
 		instancURL,
 	)
@@ -804,8 +805,8 @@ func SalesforceCallbackHandler(c *gin.Context) {
 		return
 	}
 
-	_, errCode = M.UpdateProjectSettings(oauthState.ProjectID,
-		&M.ProjectSetting{IntSalesforceEnabledAgentUUID: oauthState.AgentUUID},
+	_, errCode = store.GetStore().UpdateProjectSettings(oauthState.ProjectID,
+		&model.ProjectSetting{IntSalesforceEnabledAgentUUID: oauthState.AgentUUID},
 	)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update project settings salesforce enable agent uuid.")

@@ -9,7 +9,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 )
 
@@ -113,7 +114,7 @@ func getNextSessionInfo(projectId, sessionEventNameId uint64,
 			// Avoiding this will keep min among start_timestamp low, which is start
 			// timestamp for events download.
 			diff := nextSessionInfoList[nni].StartTimestamp - oldUsersNextSessionInfo[oni].StartTimestamp
-			if diff <= M.NewUserSessionInactivityInSeconds {
+			if diff <= model.NewUserSessionInactivityInSeconds {
 				nextSessionInfoList[nni] = oldUsersNextSessionInfo[oni]
 			}
 		}
@@ -136,13 +137,13 @@ func getNextSessionInfo(projectId, sessionEventNameId uint64,
 // getAllEventsAsUserEventsMap - Returns a map of user:[events...] withing given period,
 // excluding session event and event with session_id.
 func getAllEventsAsUserEventsMap(projectId, sessionEventNameId uint64,
-	startTimestamp, endTimestamp int64) (*map[string][]M.Event, int, int) {
+	startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"start_timestamp": startTimestamp, "end_timestamp": endTimestamp})
 
-	var userEventsMap map[string][]M.Event
-	var events []M.Event
+	var userEventsMap map[string][]model.Event
+	var events []model.Event
 	if startTimestamp == 0 || endTimestamp == 0 {
 		logCtx.Error("Invalid start_timestamp or end_timestamp.")
 		return &userEventsMap, 0, http.StatusInternalServerError
@@ -176,10 +177,10 @@ func getAllEventsAsUserEventsMap(projectId, sessionEventNameId uint64,
 		logCtx.Error("Too much time taken to download events on get_all_events_as_user_map.")
 	}
 
-	userEventsMap = make(map[string][]M.Event)
+	userEventsMap = make(map[string][]model.Event)
 	for i := range events {
 		if _, exists := userEventsMap[events[i].UserId]; !exists {
-			userEventsMap[events[i].UserId] = make([]M.Event, 0, 0)
+			userEventsMap[events[i].UserId] = make([]model.Event, 0, 0)
 		} else {
 			// Event with session should be added as first event, if available.
 			// To support continuation of the session.
@@ -216,7 +217,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 
 	logCtx.Info("Adding session for project.")
 
-	sessionEventName, errCode := M.CreateOrGetSessionEventName(projectId)
+	sessionEventName, errCode := store.GetStore().CreateOrGetSessionEventName(projectId)
 	if errCode != http.StatusCreated && errCode != http.StatusConflict {
 		logCtx.Error("Failed to create session event name.")
 		return status, http.StatusInternalServerError
@@ -229,7 +230,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 		eventsDownloadStartTimestamp = startTimestamp
 		eventsDownloadEndTimestamp = endTimestamp
 	} else {
-		eventsDownloadStartTimestamp, errCode = M.GetNextSessionStartTimestampForProject(projectId)
+		eventsDownloadStartTimestamp, errCode = store.GetStore().GetNextSessionStartTimestampForProject(projectId)
 		if errCode != http.StatusFound {
 			logCtx.Error("Failed to get last min session timestamp of user for project.")
 			return status, http.StatusInternalServerError
@@ -263,20 +264,20 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 	var noOfEventsProcessedForSession, noOfSessionsCreated, noOfSessionsContinued, noOfUserPropertiesUpdates int
 	for userID, events := range *userEventsMap {
 		noOfProcessedEvents, noOfCreated, isContinuedFirst,
-			noOfUserPropUpdates, errCode := M.AddSessionForUser(projectId, userID, events,
+			noOfUserPropUpdates, errCode := store.GetStore().AddSessionForUser(projectId, userID, events,
 			bufferTimeBeforeSessionCreateInSecs, sessionEventName.ID)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			return status, http.StatusInternalServerError
 		}
 
-		currentNextSessionStartTimestamp, errCode := M.GetNextSessionStartTimestampForProject(projectId)
+		currentNextSessionStartTimestamp, errCode := store.GetStore().GetNextSessionStartTimestampForProject(projectId)
 		if errCode != http.StatusFound {
 			return status, http.StatusInternalServerError
 		}
 
 		// Update the next_session_timestamp for project with session added oldest event across users.
 		if currentNextSessionStartTimestamp > events[len(events)-1].Timestamp {
-			errCode = M.UpdateNextSessionStartTimestampForProject(projectId, events[len(events)-1].Timestamp)
+			errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(projectId, events[len(events)-1].Timestamp)
 			if errCode != http.StatusAccepted {
 				return status, http.StatusInternalServerError
 			}
@@ -317,7 +318,7 @@ func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList st
 		return projectIDs, http.StatusFound
 	}
 
-	projectIds, errCode := M.GetAllProjectIDs()
+	projectIds, errCode := store.GetStore().GetAllProjectIDs()
 	if errCode != http.StatusFound {
 		return projectIds, errCode
 	}

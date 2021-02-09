@@ -15,7 +15,8 @@ import (
 
 	C "factors/config"
 	H "factors/handler"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	SDK "factors/sdk"
 	TaskSession "factors/task/session"
 	U "factors/util"
@@ -62,7 +63,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 	// Test track bot with exclude_bot off.
 	botState := false
-	M.UpdateProjectSettings(project.ID, &M.ProjectSetting{ExcludeBot: &botState})
+	store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{ExcludeBot: &botState})
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile" : "true"}}`, U.RandomString(8))),
 		map[string]string{
 			"Authorization": project.Token,
@@ -116,10 +117,10 @@ func TestSDKTrackHandler(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.Nil(t, responseMap["user_id"])
-	rEvent, errCode := M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	rEvent, errCode := store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent)
-	retEventName, err := M.GetEventNameFromEventNameId(rEvent.EventNameId, project.ID)
+	retEventName, err := store.GetStore().GetEventNameFromEventNameId(rEvent.EventNameId, project.ID)
 	assert.Nil(t, err)
 	assert.Equal(t, retEventName.Name, "example.com")
 	eventPropertiesBytes, err := rEvent.Properties.Value()
@@ -140,7 +141,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SCROLL_PERCENT]) // Should be default value.
 	assert.True(t, eventProperties[U.EP_IS_PAGE_VIEW].(bool))
 	assert.True(t, len(rEvent.UserPropertiesId) > 0)
-	rUser, errCode := M.GetUser(rEvent.ProjectId, rEvent.UserId)
+	rUser, errCode := store.GetStore().GetUser(rEvent.ProjectId, rEvent.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rUser)
 	userPropertiesBytes, err := rUser.Properties.Value()
@@ -164,7 +165,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
 	assert.Nil(t, propsResponseMap1["user_id"])
 	assert.NotNil(t, propsResponseMap1["event_id"])
-	retEvent, errCode := M.GetEvent(project.ID, user.ID, propsResponseMap1["event_id"].(string))
+	retEvent, errCode := store.GetStore().GetEvent(project.ID, user.ID, propsResponseMap1["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	// check event default properties and tracked properties.
 	eventPropertiesBytes, err = retEvent.Properties.Value()
@@ -184,7 +185,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	// Should assign page_load_time to page_spent_time when page_spent_time is not available.
 	assert.NotEqual(t, float64(10), eventProperties[U.EP_PAGE_SPENT_TIME])
 	// check user default properties.
-	retUser, errCode := M.GetUser(project.ID, user.ID)
+	retUser, errCode := store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesBytes, err = retUser.Properties.Value()
 	assert.Nil(t, err)
@@ -217,7 +218,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	// Created filter.
 	expr := "a.com/u1/u2/:prop1"
 	name := "login"
-	filterEventName, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+	filterEventName, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 		ProjectId:  project.ID,
 		FilterExpr: expr,
 		Name:       name,
@@ -227,7 +228,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.NotZero(t, filterEventName.ID)
 	assert.Equal(t, name, filterEventName.Name)
 	assert.Equal(t, expr, filterEventName.FilterExpr)
-	assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, filterEventName.Type)
+	assert.Equal(t, model.TYPE_FILTER_EVENT_NAME, filterEventName.Type)
 
 	// Test filter_event_name hit with exact match.
 	rEventName = "a.com/u1/u2/i1"
@@ -237,7 +238,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.Nil(t, responseMap["user_id"])
-	rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	rEvent, errCode = store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent)
 	assert.Equal(t, filterEventName.ID, rEvent.EventNameId)
@@ -254,7 +255,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.Nil(t, responseMap["user_id"])
-	rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	rEvent, errCode = store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent)
 	assert.Equal(t, filterEventName.ID, rEvent.EventNameId)
@@ -271,16 +272,16 @@ func TestSDKTrackHandler(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.Nil(t, responseMap["user_id"])
-	rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	rEvent, errCode = store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent)
-	eventName, errCode := M.GetEventName(rEventName, project.ID)
+	eventName, errCode := store.GetStore().GetEventName(rEventName, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, eventName)
-	assert.Equal(t, M.TYPE_AUTO_TRACKED_EVENT_NAME, eventName.Type)
+	assert.Equal(t, model.TYPE_AUTO_TRACKED_EVENT_NAME, eventName.Type)
 
 	// Test filter_event_name miss after filter deleted by user.
-	errCode = M.DeleteFilterEventName(project.ID, filterEventName.ID)
+	errCode = store.GetStore().DeleteFilterEventName(project.ID, filterEventName.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
 	rEventName = "a.com/u1/u2/i1"
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$os_version": "1_2_3"}}`,
@@ -289,19 +290,19 @@ func TestSDKTrackHandler(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.Nil(t, responseMap["user_id"])
-	rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	rEvent, errCode = store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent)
-	eventName, errCode = M.GetEventName(rEventName, project.ID)
+	eventName, errCode = store.GetStore().GetEventName(rEventName, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, eventName)
-	assert.NotEqual(t, filterEventName.ID, eventName.ID)            // should not use deleted filter.
-	assert.Equal(t, M.TYPE_AUTO_TRACKED_EVENT_NAME, eventName.Type) // should create auto created event.
+	assert.NotEqual(t, filterEventName.ID, eventName.ID)                // should not use deleted filter.
+	assert.Equal(t, model.TYPE_AUTO_TRACKED_EVENT_NAME, eventName.Type) // should create auto created event.
 
 	t.Run("FilterExpressionWithHash", func(t *testing.T) {
 		expr := "factors-dev.com/#/reports/:report_id"
 		name := "seen_reports"
-		filterEventName, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+		filterEventName, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 			ProjectId:  project.ID,
 			FilterExpr: expr,
 			Name:       name,
@@ -311,7 +312,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotZero(t, filterEventName.ID)
 		assert.Equal(t, name, filterEventName.Name)
 		assert.Equal(t, expr, filterEventName.FilterExpr)
-		assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, filterEventName.Type)
+		assert.Equal(t, model.TYPE_FILTER_EVENT_NAME, filterEventName.Type)
 
 		rEventName = "factors-dev.com/#/reports/1234"
 		w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(
@@ -321,7 +322,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		responseMap = DecodeJSONResponseToMap(w.Body)
 		assert.NotEmpty(t, responseMap)
 		assert.Nil(t, responseMap["user_id"])
-		rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+		rEvent, errCode = store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, rEvent)
 		assert.Equal(t, filterEventName.ID, rEvent.EventNameId)
@@ -339,7 +340,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		responseMap = DecodeJSONResponseToMap(w.Body)
 		assert.NotEmpty(t, responseMap)
-		rEvent, errCode := M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+		rEvent, errCode := store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, rEvent)
 		eventPropertiesBytes, err := rEvent.Properties.Value()
@@ -391,7 +392,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, responseMap["event_id"])
 		assert.NotNil(t, responseMap["user_id"])
 		eventUserId := responseMap["user_id"].(string)
-		rUser, errCode := M.GetUser(project.ID, eventUserId)
+		rUser, errCode := store.GetStore().GetUser(project.ID, eventUserId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, rUser)
 		userPropertiesBytes, err := rUser.Properties.Value()
@@ -445,7 +446,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotEmpty(t, responseMap)
 		assert.NotNil(t, responseMap["event_id"])
 		assert.Nil(t, responseMap["user_id"]) // no new user.
-		rUser, errCode = M.GetUser(project.ID, eventUserId)
+		rUser, errCode = store.GetStore().GetUser(project.ID, eventUserId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, rUser)
 		userPropertiesBytes, err = rUser.Properties.Value()
@@ -474,7 +475,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, responseMap["event_id"])
 		assert.NotNil(t, responseMap["user_id"]) // no new user.
 		eventUserId = responseMap["user_id"].(string)
-		rUser, errCode = M.GetUser(project.ID, eventUserId)
+		rUser, errCode = store.GetStore().GetUser(project.ID, eventUserId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, rUser)
 		userPropertiesBytes, err = rUser.Properties.Value()
@@ -502,7 +503,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, responseMap["event_id"])
 		assert.NotNil(t, responseMap["user_id"])
 		eventUserId := responseMap["user_id"].(string)
-		rUser, errCode := M.GetUser(project.ID, eventUserId)
+		rUser, errCode := store.GetStore().GetUser(project.ID, eventUserId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, rUser)
 		userPropertiesBytes, err = rUser.Properties.Value()
@@ -525,7 +526,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, responseMap["event_id"])
 		assert.Nil(t, responseMap["user_id"])
 		// latest user properties should have the new campaign values.
-		rUser, errCode = M.GetUser(project.ID, eventUserId)
+		rUser, errCode = store.GetStore().GetUser(project.ID, eventUserId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, rUser)
 		userPropertiesBytes, err = rUser.Properties.Value()
@@ -541,7 +542,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	t.Run("IgnoreFilterPropertyAtTheEndOnmatch", func(t *testing.T) {
 		expr := "example.com/profile/id"
 		name := "seen_reports"
-		filterEventName, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+		filterEventName, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{
 			ProjectId:  project.ID,
 			FilterExpr: expr,
 			Name:       name,
@@ -551,7 +552,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotZero(t, filterEventName.ID)
 		assert.Equal(t, name, filterEventName.Name)
 		assert.Equal(t, expr, filterEventName.FilterExpr)
-		assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, filterEventName.Type)
+		assert.Equal(t, model.TYPE_FILTER_EVENT_NAME, filterEventName.Type)
 
 		rEventName = "example.com/profile/id/1"
 		w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(
@@ -561,7 +562,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		responseMap = DecodeJSONResponseToMap(w.Body)
 		assert.NotEmpty(t, responseMap)
 		assert.Nil(t, responseMap["user_id"])
-		rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+		rEvent, errCode = store.GetStore().GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, rEvent)
 		assert.Equal(t, filterEventName.ID, rEvent.EventNameId)
@@ -580,7 +581,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotEmpty(t, responseMap)
 		assert.NotNil(t, responseMap["event_id"])
 		assert.Nil(t, responseMap["user_id"])
-		rUser, errCode := M.GetUser(project.ID, user.ID)
+		rUser, errCode := store.GetStore().GetUser(project.ID, user.ID)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, rUser)
 		userPropertiesBytes, err := rUser.Properties.Value()
@@ -608,7 +609,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotEmpty(t, responseMap)
 		assert.NotNil(t, responseMap["event_id"])
 		assert.Nil(t, responseMap["user_id"])
-		rUser, errCode = M.GetUser(project.ID, user.ID)
+		rUser, errCode = store.GetStore().GetUser(project.ID, user.ID)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, rUser)
 		userPropertiesBytes, err = rUser.Properties.Value()
@@ -645,7 +646,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	assert.NotNil(t, response.EventId)
 	assert.NotNil(t, response.UserId)
 	assert.Equal(t, http.StatusOK, status)
-	user, errCode := M.GetUser(project.ID, response.UserId)
+	user, errCode := store.GetStore().GetUser(project.ID, response.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
@@ -663,12 +664,12 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 	assert.NotNil(t, response.EventId)
 	assert.Empty(t, response.UserId)
-	_, errCode = M.GetEvent(project.ID, userID, response.EventId)
+	_, errCode = store.GetStore().GetEvent(project.ID, userID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
 
-	event, errCode := M.GetEvent(project.ID, userID, response.EventId)
+	event, errCode := store.GetStore().GetEvent(project.ID, userID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
-	user, errCode = M.GetUser(project.ID, userID)
+	user, errCode = store.GetStore().GetUser(project.ID, userID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, event.UserPropertiesId, user.PropertiesId)
 	// Should be the same user_properties state as there is no change.
@@ -691,7 +692,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 	assert.NotNil(t, response.EventId)
 	assert.Empty(t, response.UserId)
-	_, errCode = M.GetEvent(project.ID, userID, response.EventId)
+	_, errCode = store.GetStore().GetEvent(project.ID, userID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	timestamp = timestamp + 1
 	trackPayload = SDK.TrackPayload{
@@ -702,12 +703,12 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 	assert.NotNil(t, response.EventId)
 	assert.Empty(t, response.UserId)
-	event, errCode = M.GetEvent(project.ID, userID, response.EventId)
+	event, errCode = store.GetStore().GetEvent(project.ID, userID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
 
 	// New campaign should create new user_properties
 	// state and attach it to the event.
-	user, errCode = M.GetUser(project.ID, userID)
+	user, errCode = store.GetStore().GetUser(project.ID, userID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEqual(t, lastUserPropertiesID, user.PropertiesId)
 	assert.Equal(t, event.UserPropertiesId, user.PropertiesId)
@@ -740,11 +741,11 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 		assert.Equal(t, eventId, response.EventId)
 		// User should be created with the given user id, as create_user is set.
 		assert.Equal(t, userId, response.UserId)
-		event, _ := M.GetEventById(project.ID, response.EventId)
+		event, _ := store.GetStore().GetEventById(project.ID, response.EventId)
 		assert.NotNil(t, event)
 		// Event timestamp should be externaly given timestamp.
 		assert.Equal(t, timestamp, event.Timestamp)
-		user, _ := M.GetUser(project.ID, response.UserId)
+		user, _ := store.GetStore().GetUser(project.ID, response.UserId)
 		assert.NotNil(t, user)
 		// Event should be associated with created user.
 		assert.Equal(t, user.ID, event.UserId)
@@ -769,7 +770,7 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 		assert.Equal(t, eventId, response.EventId)
 		// User should not be created with the given user id, as create_user is false.
 		assert.Empty(t, response.UserId)
-		event, _ := M.GetEventById(project.ID, response.EventId)
+		event, _ := store.GetStore().GetEventById(project.ID, response.EventId)
 		assert.NotNil(t, event)
 		// Event should be associated with the given existing user.
 		assert.Equal(t, user.ID, event.UserId)
@@ -886,7 +887,7 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 		status, response := SDK.Identify(project.ID, payload, false)
 		assert.Equal(t, http.StatusOK, status)
 		assert.Equal(t, userID, response.UserId)
-		user, _ := M.GetUser(project.ID, response.UserId)
+		user, _ := store.GetStore().GetUser(project.ID, response.UserId)
 		assert.NotNil(t, user)
 		assert.Equal(t, customerUserID, user.CustomerUserId)
 		assert.Equal(t, timestamp, user.JoinTimestamp)
@@ -906,7 +907,7 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 		status, response := SDK.Identify(project.ID, payload, false)
 		assert.Equal(t, http.StatusOK, status)
 		assert.Equal(t, userID2, response.UserId)
-		user, _ := M.GetUser(project.ID, response.UserId)
+		user, _ := store.GetStore().GetUser(project.ID, response.UserId)
 		assert.NotNil(t, user)
 		assert.Equal(t, customerUserID, user.CustomerUserId)
 		// Should be equal to request Join timestamp.
@@ -924,7 +925,7 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		// Should use the existing user.
 		assert.Empty(t, response.UserId)
-		user, _ := M.GetUser(project.ID, user.ID)
+		user, _ := store.GetStore().GetUser(project.ID, user.ID)
 		assert.NotNil(t, user)
 		assert.Equal(t, customerUserId, user.CustomerUserId)
 		assert.NotEmpty(t, user.JoinTimestamp)
@@ -949,7 +950,7 @@ func TestSDKAddUserPropertiesWithExternalUserIdAndTimestamp(t *testing.T) {
 		status, response := SDK.AddUserProperties(project.ID, payload)
 		assert.Equal(t, http.StatusOK, status)
 		assert.Equal(t, userId, response.UserId)
-		user, _ := M.GetUser(project.ID, response.UserId)
+		user, _ := store.GetStore().GetUser(project.ID, response.UserId)
 		assert.NotNil(t, user)
 		assert.Equal(t, timestamp, user.JoinTimestamp)
 		properties, err := U.DecodePostgresJsonb(&user.Properties)
@@ -971,7 +972,7 @@ func TestSDKAddUserPropertiesWithExternalUserIdAndTimestamp(t *testing.T) {
 		assert.Equal(t, http.StatusOK, status)
 		// Should use the existing user given.
 		assert.Empty(t, response.UserId)
-		user, _ := M.GetUser(project.ID, user.ID)
+		user, _ := store.GetStore().GetUser(project.ID, user.ID)
 		assert.NotNil(t, user)
 		assert.NotEmpty(t, user.JoinTimestamp)
 		properties, err := U.DecodePostgresJsonb(&user.Properties)
@@ -1006,10 +1007,10 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 
-	sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	sessionEventName, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
-	userSessionEvents, errCode := M.GetUserEventsByEventNameId(project.ID,
+	userSessionEvents, errCode := store.GetStore().GetUserEventsByEventNameId(project.ID,
 		responseMap["user_id"].(string), sessionEventName.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.True(t, len(userSessionEvents) == 1)
@@ -1054,9 +1055,9 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotEmpty(t, sessionProperties[U.EP_GCLID])
 	assert.NotEmpty(t, sessionProperties[U.EP_FBCLIID])
 	// Tracked event should have latest session of user associated with it.
-	rEvent, errCode := M.GetEvent(project.ID, responseUserId, responseEventId)
+	rEvent, errCode := store.GetStore().GetEvent(project.ID, responseUserId, responseEventId)
 	assert.Equal(t, http.StatusFound, errCode)
-	latestSessionEvent, errCode := M.GetLatestEventOfUserByEventNameId(rEvent.ProjectId,
+	latestSessionEvent, errCode := store.GetStore().GetLatestEventOfUserByEventNameId(rEvent.ProjectId,
 		rEvent.UserId, sessionEventName.ID, rEvent.Timestamp-86400, rEvent.Timestamp)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent.SessionId)
@@ -1078,17 +1079,17 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
 
-	sessionEventName, errCode = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	sessionEventName, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
-	userSessionEvents2, errCode := M.GetUserEventsByEventNameId(project.ID, responseUserId,
+	userSessionEvents2, errCode := store.GetStore().GetUserEventsByEventNameId(project.ID, responseUserId,
 		sessionEventName.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	// should not create new session.
 	assert.True(t, len(userSessionEvents2) == 1)
 	assert.Equal(t, userSessionEvents[0].ID, userSessionEvents2[0].ID)
 	// Tracked event should have latest session of active user associated with it.
-	rEvent2, errCode := M.GetEvent(project.ID, responseUserId, responseEventId2)
+	rEvent2, errCode := store.GetStore().GetEvent(project.ID, responseUserId, responseEventId2)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent2.SessionId)
 	assert.NotEmpty(t, *rEvent2.SessionId)
@@ -1104,7 +1105,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	assert.Nil(t, err)
 
 	timestampBeforeOneDay := U.UnixTimeBeforeDuration(time.Hour * 24)
-	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID,
+	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
 		JoinTimestamp: timestampBeforeOneDay})
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -1118,7 +1119,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	assert.NotNil(t, responseMap["event_id"])
 	_, err = TaskSession.AddSession([]uint64{project.ID}, timestampBeforeOneDay-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
-	event1, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
+	event1, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event1.SessionId)
 
@@ -1133,15 +1134,15 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	assert.NotNil(t, responseMap["event_id"])
 	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
-	event2, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
+	event2, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event2.SessionId)
 	assert.Equal(t, *event1.SessionId, *event2.SessionId)
 	// No of sessions should be 1.
-	sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	sessionEventName, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
-	sessionEvents, errCode := M.GetUserEventsByEventNameId(project.ID, user.ID,
+	sessionEvents, errCode := store.GetStore().GetUserEventsByEventNameId(project.ID, user.ID,
 		sessionEventName.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, sessionEvents, 1)
@@ -1158,15 +1159,15 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	assert.NotNil(t, responseMap["event_id"])
 	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
-	event3, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
+	event3, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event3.SessionId)
 	assert.NotEqual(t, *event2.SessionId, *event3.SessionId) // new session.
 	// No of sessions should be 2.
-	sessionEventName, errCode = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	sessionEventName, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
-	sessionEvents, errCode = M.GetUserEventsByEventNameId(project.ID, user.ID,
+	sessionEvents, errCode = store.GetStore().GetUserEventsByEventNameId(project.ID, user.ID,
 		sessionEventName.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, sessionEvents, 2)
@@ -1215,14 +1216,14 @@ func TestTrackHandlerWithFormSubmit(t *testing.T) {
 	assert.NotNil(t, responseMap["user_id"])
 	userId := responseMap["user_id"].(string)
 	userProperties := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
-	_, errCode := M.UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
+	_, errCode := store.GetStore().UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
 	// form submit event name created.
-	formSubmitEventName, errCode := M.GetEventName(U.EVENT_NAME_FORM_SUBMITTED, project.ID)
+	formSubmitEventName, errCode := store.GetStore().GetEventName(U.EVENT_NAME_FORM_SUBMITTED, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, formSubmitEventName)
 	// form submit event properties added as user properties.
-	user, errCode := M.GetUser(project.ID, userId)
+	user, errCode := store.GetStore().GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, user)
 	userPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
@@ -1242,7 +1243,7 @@ func TestTrackHandlerFormSubmitWithUserAlreadyIdentfiedBySDKRequest(t *testing.T
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, user.ID)
 
@@ -1251,11 +1252,11 @@ func TestTrackHandlerFormSubmitWithUserAlreadyIdentfiedBySDKRequest(t *testing.T
 	w := ServePostRequestWithHeaders(r, identifyURI, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
 		customerUserID, user.ID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
-	user, errCode = M.GetUser(project.ID, user.ID)
+	user, errCode = store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, customerUserID, user.CustomerUserId)
-	userProperties, errCode := M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
-	metaObj := M.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	userProperties, errCode := store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
+	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
 	assert.NotNil(t, (*metaObj)[customerUserID])
 	assert.NotEqual(t, "", (*metaObj)[customerUserID].Source)
 	assert.Equal(t, "", (*metaObj)[customerUserID].PageURL)
@@ -1269,7 +1270,7 @@ func TestTrackHandlerFormSubmitWithUserAlreadyIdentfiedBySDKRequest(t *testing.T
 	responseMap := DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
-	user, errCode = M.GetUser(project.ID, user.ID)
+	user, errCode = store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	// shouldn't overwrite the user identified by sdk identify request
 	assert.Equal(t, customerUserID, user.CustomerUserId)
@@ -1295,14 +1296,14 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 	assert.NotNil(t, responseMap["user_id"])
 	userId := responseMap["user_id"].(string)
 
-	user, errCode := M.GetUser(project.ID, userId)
+	user, errCode := store.GetStore().GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
-	userPropertiesMap, errCode := M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
+	userPropertiesMap, errCode := store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, "xxx@gmail.com", (*userPropertiesMap)[U.UP_EMAIL])
 	assert.Equal(t, "Example Inc", (*userPropertiesMap)[U.UP_COMPANY])
 	assert.Equal(t, "xxx@gmail.com", user.CustomerUserId)
-	metaObj := M.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
 	metaData, ok := (*metaObj)["xxx@gmail.com"]
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "sdk_event_track", metaData.Source)
@@ -1313,10 +1314,10 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 		[]byte(fmt.Sprintf(`{"event_name": "%s","user_id":"%s", "event_properties": {"$email": "yyy@gmail.com", "$company": "Example Inc","$name":"username"}}`,
 			U.EVENT_NAME_FORM_SUBMITTED, userId)), map[string]string{"Authorization": project.Token})
 	userId = responseMap["user_id"].(string)
-	user, _ = M.GetUser(project.ID, userId)
+	user, _ = store.GetStore().GetUser(project.ID, userId)
 	assert.Equal(t, "xxx@gmail.com", user.CustomerUserId)
 	assert.Nil(t, (*userPropertiesMap)["$name"])
-	metaObj = M.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
 	_, ok = (*metaObj)["yyy@gmail.com"]
 	assert.Equal(t, false, ok)
 
@@ -1326,12 +1327,12 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 		[]byte(fmt.Sprintf(`{"event_name": "%s","user_id":"%s","timestamp":%d, "event_properties": {"$email": "yyy@business.com", "$company": "Example Inc", "$page_url":"www.test.com/new1"}}`,
 			U.EVENT_NAME_FORM_SUBMITTED, userId, currentTime)), map[string]string{"Authorization": project.Token})
 	userId = responseMap["user_id"].(string)
-	user, _ = M.GetUser(project.ID, userId)
+	user, _ = store.GetStore().GetUser(project.ID, userId)
 	assert.Equal(t, "yyy@business.com", user.CustomerUserId)
-	userPropertiesMap, errCode = M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
+	userPropertiesMap, errCode = store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, (*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY])
-	metaObj = M.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
 	metaData, ok = (*metaObj)["yyy@business.com"]
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "www.test.com/new1", metaData.PageURL)
@@ -1342,14 +1343,14 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri,
 		[]byte(fmt.Sprintf(`{"event_name": "%s","user_id":"%s", "event_properties": {"$email": "yyz@business.com", "$company": "Example Inc2","$name":"username2"}}`,
 			U.EVENT_NAME_FORM_SUBMITTED, userId)), map[string]string{"Authorization": project.Token})
-	user, _ = M.GetUser(project.ID, userId)
+	user, _ = store.GetStore().GetUser(project.ID, userId)
 	assert.Equal(t, "yyz@business.com", user.CustomerUserId)
 	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, "Example Inc2", (*userPropertiesMap)["$company"])
 	assert.Equal(t, "username2", (*userPropertiesMap)["$name"])
 	assert.NotNil(t, (*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY])
-	metaObj = M.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
 	_, ok = (*metaObj)["xxx@gmail.com"]
 	assert.Equal(t, true, ok)
 	_, ok = (*metaObj)["yyy@business.com"]
@@ -1361,7 +1362,7 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri,
 		[]byte(fmt.Sprintf(`{"event_name": "%s","user_id":"%s", "event_properties": {"$email": "yyz@example.com", "$company": "Example Inc2","$name":"username3"}}`,
 			U.EVENT_NAME_FORM_SUBMITTED, userId)), map[string]string{"Authorization": project.Token})
-	user, _ = M.GetUser(project.ID, userId)
+	user, _ = store.GetStore().GetUser(project.ID, userId)
 	assert.Equal(t, "yyz@business.com", user.CustomerUserId)
 	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
@@ -1371,7 +1372,7 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 	assert.Equal(t, "yyz@business.com", (*userPropertiesMap)["$email"])
 	assert.Equal(t, "yyz@business.com", (*userPropertiesMap)["$user_id"])
 	assert.NotNil(t, (*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY])
-	metaObj = M.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
 	_, ok = (*metaObj)["xxx@gmail.com"]
 	assert.Equal(t, true, ok)
 	_, ok = (*metaObj)["yyy@business.com"]
@@ -1415,7 +1416,7 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["user_id"])
 	assert.NotEmpty(t, responseMap["user_id"].(string))
-	retUser, errCode := M.GetUser(project.ID, responseMap["user_id"].(string))
+	retUser, errCode := store.GetStore().GetUser(project.ID, responseMap["user_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, retUser)
 	userProperties, err := U.DecodePostgresJsonb(&retUser.Properties)
@@ -1459,7 +1460,7 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, responseMap["user_id"])
 	assert.Equal(t, user.ID, responseMap["user_id"])
-	retUser, errCode = M.GetUser(project.ID, responseMap["user_id"].(string))
+	retUser, errCode = store.GetStore().GetUser(project.ID, responseMap["user_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, retUser)
 	userProperties, err = U.DecodePostgresJsonb(&retUser.Properties)
@@ -1473,7 +1474,7 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
 		r2CustomerUserId, user.ID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
-	retUser, errCode = M.GetUser(project.ID, user.ID)
+	retUser, errCode = store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, retUser)
 	userProperties, err = U.DecodePostgresJsonb(&retUser.Properties)
@@ -1481,7 +1482,7 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	assert.NotNil(t, (*userProperties)[U.UP_USER_ID])
 	assert.Equal(t, r2CustomerUserId, (*userProperties)[U.UP_USER_ID])
 	assert.Equal(t, r2CustomerUserId, retUser.CustomerUserId)
-	metaObj := M.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
 	metaData, ok := (*metaObj)[r2CustomerUserId]
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "", metaData.PageURL)
@@ -1492,7 +1493,7 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	assert.NotEqual(t, 0, metaData.Timestamp)
 }
 
-func assertEqualJoinTimePropertyOnAllRecords(t *testing.T, records []M.UserProperties, expectedJoinTime int64) {
+func assertEqualJoinTimePropertyOnAllRecords(t *testing.T, records []model.UserProperties, expectedJoinTime int64) {
 	for _, userProperties := range records {
 		var propertiesMap map[string]interface{}
 		err := json.Unmarshal(userProperties.Properties.RawMessage, &propertiesMap)
@@ -1514,10 +1515,10 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 	project, user1, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 
-	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// identify all users with same c_uid.
@@ -1531,10 +1532,10 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 
 	// all user properties of all users with same c_uid should have joinTime as min of joinTime
 	// among users.
-	userPropertiesRecords, errCode := M.GetUserPropertyRecordsByUserId(project.ID, user1.ID)
+	userPropertiesRecords, errCode := store.GetStore().GetUserPropertyRecordsByUserId(project.ID, user1.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assertEqualJoinTimePropertyOnAllRecords(t, userPropertiesRecords, user1.JoinTimestamp)
-	userPropertiesRecords, errCode = M.GetUserPropertyRecordsByUserId(project.ID, user2.ID)
+	userPropertiesRecords, errCode = store.GetStore().GetUserPropertyRecordsByUserId(project.ID, user2.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assertEqualJoinTimePropertyOnAllRecords(t, userPropertiesRecords, user1.JoinTimestamp)
 
@@ -1551,7 +1552,7 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
 		customerUserId, user3.ID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
-	userPropertiesRecords, errCode = M.GetUserPropertyRecordsByUserId(project.ID, user3.ID)
+	userPropertiesRecords, errCode = store.GetStore().GetUserPropertyRecordsByUserId(project.ID, user3.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assertEqualJoinTimePropertyOnAllRecords(t, userPropertiesRecords, user1.JoinTimestamp)
 }
@@ -1642,7 +1643,7 @@ func TestSDKAddUserPropertiesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
-	retUser, errCode := M.GetUser(project.ID, user.ID)
+	retUser, errCode := store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesBytes, err := retUser.Properties.Value()
 	assert.Nil(t, err)
@@ -1658,7 +1659,7 @@ func TestSDKAddUserPropertiesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	propsResponseMap := DecodeJSONResponseToMap(w.Body)
 	assert.Nil(t, propsResponseMap["user_id"])
-	retUser, errCode = M.GetUser(project.ID, user.ID)
+	retUser, errCode = store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesBytes, err = retUser.Properties.Value()
 	assert.Nil(t, err)
@@ -1679,7 +1680,7 @@ func TestSDKAddUserPropertiesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
 	assert.Nil(t, propsResponseMap1["user_id"])
-	retUser, errCode = M.GetUser(project.ID, user.ID)
+	retUser, errCode = store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesBytes, err = retUser.Properties.Value()
 	assert.Nil(t, err)
@@ -1785,7 +1786,7 @@ func getAutoTrackedEventIdWithPageRawURL(t *testing.T, projectAuthToken, pageRaw
 	assert.NotNil(t, responseMap["event_id"])
 	assert.NotNil(t, responseMap["user_id"])
 
-	project, errCode := M.GetProjectByToken(projectAuthToken)
+	project, errCode := store.GetStore().GetProjectByToken(projectAuthToken)
 	assert.Equal(t, http.StatusFound, errCode)
 	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
@@ -1809,7 +1810,7 @@ func getAutoTrackedEventIdWithUserIdAndPageRawURL(t *testing.T, projectAuthToken
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
 
-	project, errCode := M.GetProjectByToken(projectAuthToken)
+	project, errCode := store.GetStore().GetProjectByToken(projectAuthToken)
 	assert.Equal(t, http.StatusFound, errCode)
 	_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
 	assert.Nil(t, err)
@@ -1855,18 +1856,18 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	// Test update event properties and initial user properites added
 	// from update event properties.
 	eventId, _ = getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
-	event, errCode := M.GetEventById(project.ID, eventId)
+	event, errCode := store.GetStore().GetEventById(project.ID, eventId)
 	assert.NotNil(t, event)
-	user, errCode := M.GetUser(project.ID, event.UserId)
+	user, errCode := store.GetStore().GetUser(project.ID, event.UserId)
 	assert.NotNil(t, user)
 	latestUserProperitesIDBeforeUpdateEvent := user.PropertiesId
 	// Trigger update event properties
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
 		eventId, 100)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	event, _ = M.GetEventById(project.ID, eventId)
+	event, _ = store.GetStore().GetEventById(project.ID, eventId)
 	assert.NotNil(t, event)
-	user, _ = M.GetUser(project.ID, event.UserId)
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
 	assert.NotNil(t, user)
 	latestUserProperitesIDAfterUpdateEvent := user.PropertiesId
 	// Latest user_properties_id of user, before and after
@@ -1878,7 +1879,7 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	assert.Equal(t, latestUserProperitesIDAfterUpdateEvent,
 		event.UserPropertiesId)
 	// initial_user_properites should be added.
-	userPropertiesRecord, _ := M.GetUserPropertiesRecord(project.ID,
+	userPropertiesRecord, _ := store.GetStore().GetUserPropertiesRecord(project.ID,
 		event.UserId, event.UserPropertiesId)
 	assert.NotNil(t, userPropertiesRecord)
 	userProperties, _ := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
@@ -1887,25 +1888,25 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	assert.Equal(t, event.ID, (*userProperties)[U.UP_INITIAL_PAGE_EVENT_ID])
 	// Creating new user_properties state for the event user.
 	newUserPropertiesJson := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
-	newUserPropertiesID, _ := M.UpdateUserProperties(project.ID, event.UserId, &newUserPropertiesJson, U.TimeNowUnix())
+	newUserPropertiesID, _ := store.GetStore().UpdateUserProperties(project.ID, event.UserId, &newUserPropertiesJson, U.TimeNowUnix())
 	// Trigger update event properties again after user properties update.
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
 		eventId, 200)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	user, _ = M.GetUser(project.ID, event.UserId)
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
 	assert.NotNil(t, user)
 	latestUserProperitesIDAfterUpdateEvent2 := user.PropertiesId
 	// Latest user_properties of user should be new.
 	assert.Equal(t, newUserPropertiesID, latestUserProperitesIDAfterUpdateEvent2)
 	// Event user_properties should be updated.
-	userPropertiesRecord, _ = M.GetUserPropertiesRecord(project.ID,
+	userPropertiesRecord, _ = store.GetStore().GetUserPropertiesRecord(project.ID,
 		event.UserId, event.UserPropertiesId)
 	assert.NotNil(t, userPropertiesRecord)
 	userProperties, _ = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
 	assert.NotNil(t, userProperties)
 	assert.Equal(t, float64(200), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
 	// Latest user_properites should also be updated.
-	userPropertiesRecord, _ = M.GetUserPropertiesRecord(project.ID,
+	userPropertiesRecord, _ = store.GetStore().GetUserPropertiesRecord(project.ID,
 		event.UserId, latestUserProperitesIDAfterUpdateEvent2)
 	assert.NotNil(t, userPropertiesRecord)
 	userProperties, _ = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
@@ -1916,7 +1917,7 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d, "$page_scroll_percent": %d}}`,
 		eventId, 1, 10)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	updatedEvent, errCode := M.GetEventById(project.ID, eventId)
+	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, updatedEvent)
 	propertiesMap, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
@@ -1939,11 +1940,11 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d, "$page_scroll_percent": %d}}`,
 		eventId, 100, 10)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	updatedEvent, errCode := M.GetEventById(project.ID, eventId)
+	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, *updatedEvent.SessionId)
 	// Should update initial user properties on initial call.
-	user, errCode := M.GetUser(project.ID, userId)
+	user, errCode := store.GetStore().GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
 	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
@@ -1956,13 +1957,13 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	eventId = getAutoTrackedEventIdWithUserIdAndPageRawURL(t, project.Token, userId, pageRawURL)
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
 		eventId, 200)), map[string]string{"Authorization": project.Token})
-	updatedEvent2, errCode := M.GetEventById(project.ID, eventId)
+	updatedEvent2, errCode := store.GetStore().GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, *updatedEvent.SessionId)
 	// Should use the same session.
 	assert.Equal(t, *updatedEvent.SessionId, *updatedEvent2.SessionId)
 	// Should not update user properties on consequtive calls.
-	user, errCode = M.GetUser(project.ID, userId)
+	user, errCode = store.GetStore().GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
 	userProperties, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
@@ -1988,7 +1989,7 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	}
 	errCode, _ := SDK.AMPTrackByToken(project.Token, payload)
 	assert.Equal(t, errCode, http.StatusOK)
-	user, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload.Timestamp)
+	user, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user.ID, "")
 
@@ -2003,7 +2004,7 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	}
 	errCode, _ = SDK.AMPTrackByToken(project.Token, payload1)
 	assert.Equal(t, errCode, http.StatusOK)
-	user1, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload1.Timestamp)
+	user1, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload1.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user1.ID, "")
 
@@ -2018,7 +2019,7 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	}
 	errCode, _ = SDK.AMPTrackByToken(project.Token, payload2)
 	assert.Equal(t, errCode, http.StatusOK)
-	user2, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload2.Timestamp)
+	user2, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload2.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user2.ID, "")
 
@@ -2035,7 +2036,7 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	}
 	errCode, _ = SDK.AMPTrackByToken(project.Token, payload3)
 	assert.Equal(t, errCode, http.StatusOK)
-	user3, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload3.Timestamp)
+	user3, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload3.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user3.ID, "")
 }
@@ -2053,7 +2054,7 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 	}
 	errCode, response := SDK.AMPTrackByToken(project.Token, request)
 	assert.Equal(t, http.StatusOK, errCode)
-	event, errCode := M.GetEventById(project.ID, response.EventId)
+	event, errCode := store.GetStore().GetEventById(project.ID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	// AMP Tracked event should use the given timestamp.
 	assert.Equal(t, timestamp, event.Timestamp)
@@ -2084,7 +2085,7 @@ func TestSDKAMPIdentifyHandler(t *testing.T) {
 	var jsonResponseMap map[string]interface{}
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	assert.Equal(t, "User has been identified successfully.", jsonResponseMap["message"])
-	user, errCode := M.CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	user, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, clientID, timestamp)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, cUID, user.CustomerUserId)
 
@@ -2100,7 +2101,7 @@ func TestSDKAMPIdentifyHandler(t *testing.T) {
 	status, message := SDK.AMPIdentifyByToken(project.Token, &payload)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "User has been identified successfully.", message.Message)
-	user, errCode = M.CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	user, errCode = store.GetStore().CreateOrGetAMPUser(project.ID, clientID, timestamp)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, oldTimestamp, user.JoinTimestamp)
 }
@@ -2110,7 +2111,7 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 	assert.Nil(t, err)
 
 	customerUserID := getRandomEmail()
-	user1, _ := M.CreateUser(&M.User{
+	user1, _ := store.GetStore().CreateUser(&model.User{
 		ID:             U.GetUUID(),
 		ProjectId:      project.ID,
 		CustomerUserId: customerUserID,
@@ -2125,7 +2126,7 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 		))},
 	})
 
-	user2, _ := M.CreateUser(&M.User{
+	user2, _ := store.GetStore().CreateUser(&model.User{
 		ID:             U.GetUUID(),
 		ProjectId:      project.ID,
 		CustomerUserId: customerUserID,
@@ -2150,8 +2151,8 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 		},
 	)
 	assert.Equal(t, http.StatusOK, errCode)
-	user1DBAfterAdd, _ := M.GetUser(project.ID, user1.ID)
-	user2DBAfterAdd, _ := M.GetUser(project.ID, user2.ID)
+	user1DBAfterAdd, _ := store.GetStore().GetUser(project.ID, user1.ID)
+	user2DBAfterAdd, _ := store.GetStore().GetUser(project.ID, user2.ID)
 	user1DBAfterAddProperties, _ := U.DecodePostgresJsonb(&user1DBAfterAdd.Properties)
 	user2DBAfterAddProperties, _ := U.DecodePostgresJsonb(&user2DBAfterAdd.Properties)
 	// Merge must have got called and updated user2 as well.
@@ -2169,7 +2170,7 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	assert.Nil(t, err)
 
 	customerUserID := getRandomEmail()
-	user1, _ := M.CreateUser(&M.User{
+	user1, _ := store.GetStore().CreateUser(&model.User{
 		ID:             U.GetUUID(),
 		ProjectId:      project.ID,
 		CustomerUserId: customerUserID,
@@ -2185,7 +2186,7 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	})
 
 	// Without CustomerUserID
-	user2, _ := M.CreateUser(&M.User{
+	user2, _ := store.GetStore().CreateUser(&model.User{
 		ID:        U.GetUUID(),
 		ProjectId: project.ID,
 		Properties: postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{
@@ -2198,8 +2199,8 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 		))},
 	})
 	// Before identify, properties are different for the users.
-	user1DB, _ := M.GetUser(project.ID, user1.ID)
-	user2DB, _ := M.GetUser(project.ID, user2.ID)
+	user1DB, _ := store.GetStore().GetUser(project.ID, user1.ID)
+	user2DB, _ := store.GetStore().GetUser(project.ID, user2.ID)
 	user1DBProperties, _ := U.DecodePostgresJsonb(&user1DB.Properties)
 	user2DBProperties, _ := U.DecodePostgresJsonb(&user2DB.Properties)
 	assert.NotEqual(t, user1DBProperties, user2DBProperties)
@@ -2211,8 +2212,8 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 
 	errCode, _ := SDK.IdentifyByToken(project.Token, identifyPayload)
 	assert.Equal(t, http.StatusOK, errCode)
-	user1DB, _ = M.GetUser(project.ID, user1.ID)
-	user2DB, _ = M.GetUser(project.ID, user2.ID)
+	user1DB, _ = store.GetStore().GetUser(project.ID, user1.ID)
+	user2DB, _ = store.GetStore().GetUser(project.ID, user2.ID)
 	user1DBProperties, _ = U.DecodePostgresJsonb(&user1DB.Properties)
 	user2DBProperties, _ = U.DecodePostgresJsonb(&user2DB.Properties)
 	// Merge must have got called and updated user2 as well.
@@ -2224,8 +2225,8 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	// Should not change on retry.
 	errCode, _ = SDK.IdentifyByToken(project.Token, identifyPayload)
 	assert.Equal(t, http.StatusOK, errCode)
-	user1DBRetry, _ := M.GetUser(project.ID, user1.ID)
-	user2DBRetry, _ := M.GetUser(project.ID, user2.ID)
+	user1DBRetry, _ := store.GetStore().GetUser(project.ID, user1.ID)
+	user2DBRetry, _ := store.GetStore().GetUser(project.ID, user2.ID)
 	user1DBRetryProperties, _ := U.DecodePostgresJsonb(&user1DBRetry.Properties)
 	user2DBRetryProperties, _ := U.DecodePostgresJsonb(&user2DBRetry.Properties)
 	// Merge must have got called and updated user2 as well.
@@ -2248,13 +2249,13 @@ func TestSDKTrackFirstEventUserProperties(t *testing.T) {
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 	assert.Equal(t, http.StatusOK, status)
 
-	event, errCode := M.GetEventById(project.ID, response.EventId)
+	event, errCode := store.GetStore().GetEventById(project.ID, response.EventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, event)
 	assert.NotEmpty(t, event.UserId)
 	assert.NotEmpty(t, event.UserPropertiesId)
 
-	user, errCode := M.GetUser(project.ID, event.UserId)
+	user, errCode := store.GetStore().GetUser(project.ID, event.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
 
 	// After first event tracking, the event associated user_properites_id

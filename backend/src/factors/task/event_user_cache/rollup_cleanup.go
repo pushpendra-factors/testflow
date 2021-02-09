@@ -3,7 +3,7 @@ package event_user_cache
 import (
 	"encoding/json"
 	cacheRedis "factors/cache/redis"
-	M "factors/model"
+	"factors/model/model"
 	U "factors/util"
 	"fmt"
 	"sort"
@@ -37,7 +37,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 		count, _ := strconv.Atoi(eventsCount)
 		if count > *eventsLimit {
 			projectsEventsTimmed++
-			eventsInCacheTodayCacheKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(eventCountKeys[projIndex].ProjectID, "*", eventCountKeys[projIndex].Suffix)
+			eventsInCacheTodayCacheKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(eventCountKeys[projIndex].ProjectID, "*", eventCountKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -65,7 +65,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 		count, _ := strconv.Atoi(propertiesCount)
 		if count > *propertiesLimit {
 			projectsEventPropertiesTrimmed++
-			eventPropertiesInCacheTodayCacheKey, err := M.GetPropertiesByEventCategoryCacheKey(eventPropertyCountKeys[projIndex].ProjectID, "*", "*", "*", eventPropertyCountKeys[projIndex].Suffix)
+			eventPropertiesInCacheTodayCacheKey, err := model.GetPropertiesByEventCategoryCacheKey(eventPropertyCountKeys[projIndex].ProjectID, "*", "*", "*", eventPropertyCountKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -94,7 +94,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 		count, _ := strconv.Atoi(valuesCount)
 		if count > *valuesLimit {
 			projectsEventPropertyValuesTrimmed++
-			valuesInCacheTodayCacheKey, _ := M.GetValuesByEventPropertyCacheKey(eventPropertyValuesCountKeys[projIndex].ProjectID, "*", "*", "*", eventPropertyValuesCountKeys[projIndex].Suffix)
+			valuesInCacheTodayCacheKey, _ := model.GetValuesByEventPropertyCacheKey(eventPropertyValuesCountKeys[projIndex].ProjectID, "*", "*", "*", eventPropertyValuesCountKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -122,7 +122,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 		count, _ := strconv.Atoi(userpropertiesCount)
 		if count > *propertiesLimit {
 			projectsUserPropertiesTrimmed++
-			userpropertiesInCacheTodayCacheKey, err := M.GetUserPropertiesCategoryByProjectCacheKey(userPropertyCountKeys[projIndex].ProjectID, "*", "*", userPropertyCountKeys[projIndex].Suffix)
+			userpropertiesInCacheTodayCacheKey, err := model.GetUserPropertiesCategoryByProjectCacheKey(userPropertyCountKeys[projIndex].ProjectID, "*", "*", userPropertyCountKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -150,7 +150,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 		count, _ := strconv.Atoi(uservaluesCount)
 		if count > *valuesLimit {
 			projectsUserPropertyValuesTrimmed++
-			uservaluesInCacheTodayCacheKey, err := M.GetValuesByUserPropertyCacheKey(userPropertyValuesKeys[projIndex].ProjectID, "*", "*", userPropertyValuesKeys[projIndex].Suffix)
+			uservaluesInCacheTodayCacheKey, err := model.GetValuesByUserPropertyCacheKey(userPropertyValuesKeys[projIndex].ProjectID, "*", "*", userPropertyValuesKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -201,7 +201,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 		for _, eventKey := range eventCountKeys {
 			log.WithField("ProjectId", eventKey.ProjectID).Info("Starting RollUp")
 			// Events
-			eventsInCacheKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(eventKey.ProjectID, "*", date)
+			eventsInCacheKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(eventKey.ProjectID, "*", date)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -211,7 +211,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 			}
 
 			// Smart Events
-			smartEventsInCacheKey, err := M.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(eventKey.ProjectID, "*", date)
+			smartEventsInCacheKey, err := model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(eventKey.ProjectID, "*", date)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -223,8 +223,8 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 			eventKeys = append(eventKeys, smartEventKeys...)
 			eventCounts = append(eventCounts, smarEventCounts...)
 			if len(eventKeys) > 0 {
-				cacheEventObject := M.GetCacheEventObject(eventKeys, eventCounts)
-				eventNamesKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(eventKey.ProjectID, date)
+				cacheEventObject := model.GetCacheEventObject(eventKeys, eventCounts)
+				eventNamesKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(eventKey.ProjectID, date)
 				enEventCache, err := json.Marshal(cacheEventObject)
 				if err != nil {
 					log.WithError(err).Error("Failed to marshall event names")
@@ -244,7 +244,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 				value string
 			}
 			distinctEventsInPropertiesKey := make(map[string][]keyValue)
-			eventPropertiesInCacheKey, err := M.GetPropertiesByEventCategoryCacheKey(eventKey.ProjectID, "*", "*", "*", date)
+			eventPropertiesInCacheKey, err := model.GetPropertiesByEventCategoryCacheKey(eventKey.ProjectID, "*", "*", "*", date)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -268,8 +268,8 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 					propertyNames = append(propertyNames, property.key)
 					propertyCounts = append(propertyCounts, property.value)
 				}
-				cacheEventPropertyObject := M.GetCachePropertyObject(propertyNames, propertyCounts)
-				eventPropertiesKey, err := M.GetPropertiesByEventCategoryRollUpCacheKey(eventKey.ProjectID, eventName, date)
+				cacheEventPropertyObject := model.GetCachePropertyObject(propertyNames, propertyCounts)
+				eventPropertiesKey, err := model.GetPropertiesByEventCategoryRollUpCacheKey(eventKey.ProjectID, eventName, date)
 				enEventPropertiesCache, err := json.Marshal(cacheEventPropertyObject)
 				if err != nil {
 					log.WithError(err).Error("Failed to marshall - event properties")
@@ -288,7 +288,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 
 			// event property values
 			distinctPropertiesInValuesKey := make(map[string]map[string][]keyValue)
-			eventvaluesInCacheKey, _ := M.GetValuesByEventPropertyCacheKey(eventKey.ProjectID, "*", "*", "*", date)
+			eventvaluesInCacheKey, _ := model.GetValuesByEventPropertyCacheKey(eventKey.ProjectID, "*", "*", "*", date)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -317,8 +317,8 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 						valueNames = append(valueNames, value.key)
 						valueCounts = append(valueCounts, value.value)
 					}
-					cacheEventPropertyValueObject := M.GetCachePropertyValueObject(valueNames, valueCounts)
-					eventPropertyValuesKey, _ := M.GetValuesByEventPropertyRollUpCacheKey(eventKey.ProjectID, eventName, property, date)
+					cacheEventPropertyValueObject := model.GetCachePropertyValueObject(valueNames, valueCounts)
+					eventPropertyValuesKey, _ := model.GetValuesByEventPropertyRollUpCacheKey(eventKey.ProjectID, eventName, property, date)
 					enEventPropertyValuesCache, err := json.Marshal(cacheEventPropertyValueObject)
 					if err != nil {
 						log.WithError(err).Error("Failed to marshall - property values")
@@ -388,7 +388,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 		}
 		for _, property := range userPropertyCountKeys {
 			log.WithField("project_id", property.ProjectID).Info("Starting Rollup for UserProperties")
-			userPropertiesInCacheKey, err := M.GetUserPropertiesCategoryByProjectCacheKey(property.ProjectID, "*", "*", date)
+			userPropertiesInCacheKey, err := model.GetUserPropertiesCategoryByProjectCacheKey(property.ProjectID, "*", "*", date)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -397,8 +397,8 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 				log.WithError(err).Error("Error Getting keys")
 			}
 			if len(userPropertyKeys) > 0 {
-				cacheUserPropertyObject := M.GetCachePropertyObject(userPropertyKeys, userPropertyCount)
-				propertyCacheKey, err := M.GetUserPropertiesCategoryByProjectRollUpCacheKey(property.ProjectID, date)
+				cacheUserPropertyObject := model.GetCachePropertyObject(userPropertyKeys, userPropertyCount)
+				propertyCacheKey, err := model.GetUserPropertiesCategoryByProjectRollUpCacheKey(property.ProjectID, date)
 				enPropertiesCache, err := json.Marshal(cacheUserPropertyObject)
 				if err != nil {
 					log.WithError(err).Error("Failed to marshal property key - getuserpropertiesbyproject")
@@ -414,7 +414,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 				key   *cacheRedis.Key
 				value string
 			}
-			uservaluesInCacheKey, _ := M.GetValuesByUserPropertyCacheKey(property.ProjectID, "*", "*", date)
+			uservaluesInCacheKey, _ := model.GetValuesByUserPropertyCacheKey(property.ProjectID, "*", "*", date)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -440,8 +440,8 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 					valueNames = append(valueNames, value.key)
 					valueCounts = append(valueCounts, value.value)
 				}
-				cacheUserPropertyValueObject := M.GetCachePropertyValueObject(valueNames, valueCounts)
-				PropertyValuesKey, err := M.GetValuesByUserPropertyRollUpCacheKey(property.ProjectID, propertyName, date)
+				cacheUserPropertyValueObject := model.GetCachePropertyValueObject(valueNames, valueCounts)
+				PropertyValuesKey, err := model.GetValuesByUserPropertyRollUpCacheKey(property.ProjectID, propertyName, date)
 				enPropertyValuesCache, err := json.Marshal(cacheUserPropertyValueObject)
 				if err != nil {
 					log.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
@@ -509,7 +509,7 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 }
 
 func getAllProjectEventCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {
-	eventsCountCacheKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(0, dateKey)
+	eventsCountCacheKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(0, dateKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -517,7 +517,7 @@ func getAllProjectEventCountKeys(dateKey string) ([]*cacheRedis.Key, []string, e
 }
 
 func getAllProjectEventPropertyCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {
-	propertiesCountCacheKey, err := M.GetPropertiesByEventCategoryCountCacheKey(0, dateKey)
+	propertiesCountCacheKey, err := model.GetPropertiesByEventCategoryCountCacheKey(0, dateKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -525,7 +525,7 @@ func getAllProjectEventPropertyCountKeys(dateKey string) ([]*cacheRedis.Key, []s
 }
 
 func getAllProjectEventPropertyValueCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {
-	valuesCountCacheKey, err := M.GetValuesByEventPropertyCountCacheKey(0, dateKey)
+	valuesCountCacheKey, err := model.GetValuesByEventPropertyCountCacheKey(0, dateKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -533,7 +533,7 @@ func getAllProjectEventPropertyValueCountKeys(dateKey string) ([]*cacheRedis.Key
 }
 
 func getAllProjectUserPropertyCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {
-	userpropertiesCountCacheKey, err := M.GetUserPropertiesCategoryByProjectCountCacheKey(0, dateKey)
+	userpropertiesCountCacheKey, err := model.GetUserPropertiesCategoryByProjectCountCacheKey(0, dateKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -541,7 +541,7 @@ func getAllProjectUserPropertyCountKeys(dateKey string) ([]*cacheRedis.Key, []st
 }
 
 func getAllProjectUserPropertyValueCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {
-	uservaluesCountCacheKey, err := M.GetValuesByUserPropertyCountCacheKey(0, dateKey)
+	uservaluesCountCacheKey, err := model.GetValuesByUserPropertyCountCacheKey(0, dateKey)
 	if err != nil {
 		return nil, nil, err
 	}

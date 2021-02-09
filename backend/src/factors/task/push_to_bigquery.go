@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"factors/filestore"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	BQ "factors/services/bigquery"
 	serviceDisk "factors/services/disk"
 	"factors/util"
@@ -44,7 +45,7 @@ func ArchiveEvents(db *gorm.DB, cloudManager *filestore.FileManager,
 	})
 
 	allJobDetails := make(map[uint64][]string)
-	enabledProjectIDs, status := M.GetArchiveEnabledProjectIDs()
+	enabledProjectIDs, status := store.GetStore().GetArchiveEnabledProjectIDs()
 	if status != http.StatusFound {
 		return allJobDetails, []error{fmt.Errorf("Failed to get archive enabled projects from DB")}
 	}
@@ -73,7 +74,7 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 	})
 
 	if !bypassSettings {
-		projectSettings, _ := M.GetProjectSetting(projectID)
+		projectSettings, _ := store.GetStore().GetProjectSetting(projectID)
 		if projectSettings == nil {
 			return jobDetails, fmt.Errorf("Failed to fetch project settings")
 		} else if projectSettings.ArchiveEnabled == nil || !*projectSettings.ArchiveEnabled {
@@ -81,27 +82,27 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 		}
 	}
 
-	inProgressCount, status := M.GetScheduledTaskInProgressCount(projectID, M.TASK_TYPE_EVENTS_ARCHIVAL)
+	inProgressCount, status := store.GetStore().GetScheduledTaskInProgressCount(projectID, model.TASK_TYPE_EVENTS_ARCHIVAL)
 	if status != http.StatusFound {
 		return jobDetails, fmt.Errorf("Failed to in progress tasks count")
 	} else if inProgressCount != 0 {
 		return jobDetails, fmt.Errorf("%d tasks in progress state. Mark failed or success before proceeding", inProgressCount)
 	}
 
-	parentScheduledTask := M.ScheduledTask{
+	parentScheduledTask := model.ScheduledTask{
 		JobID:      util.GetUUID(),
-		TaskType:   M.TASK_TYPE_EVENTS_ARCHIVAL,
+		TaskType:   model.TASK_TYPE_EVENTS_ARCHIVAL,
 		ProjectID:  projectID,
-		TaskStatus: M.TASK_STATUS_IN_PROGRESS,
+		TaskStatus: model.TASK_STATUS_IN_PROGRESS,
 	}
-	lastRunTime, status := M.GetScheduledTaskLastRunTimestamp(projectID, M.TASK_TYPE_EVENTS_ARCHIVAL)
+	lastRunTime, status := store.GetStore().GetScheduledTaskLastRunTimestamp(projectID, model.TASK_TYPE_EVENTS_ARCHIVAL)
 	if status == http.StatusInternalServerError {
 		return jobDetails, fmt.Errorf("Failed to get last run timestamp")
 	} else if status == http.StatusNotFound {
 		pbLog.Info("No previous entry found. Running full archival.")
 	}
 
-	batches, err := M.GetNextArchivalBatches(projectID, lastRunTime+1, maxLookbackDays, startTime, endTime)
+	batches, err := store.GetStore().GetNextArchivalBatches(projectID, lastRunTime+1, maxLookbackDays, startTime, endTime)
 	if err != nil {
 		return jobDetails, err
 	} else if len(batches) == 0 {
@@ -113,7 +114,7 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 	for _, batch := range batches {
 		scheduledTask := parentScheduledTask
 		scheduledTask.TaskStartTime = util.TimeNowUnix()
-		taskDetails := M.EventArchivalTaskDetails{
+		taskDetails := model.EventArchivalTaskDetails{
 			FromTimestamp: batch.StartTime,
 			ToTimestamp:   batch.EndTime,
 			BucketName:    (*cloudManager).GetBucketName(),
@@ -121,7 +122,7 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 		taskDetailsJsonb, _ := util.EncodeStructTypeToPostgresJsonb(taskDetails)
 		scheduledTask.TaskDetails = taskDetailsJsonb
 
-		status := M.CreateScheduledTask(&scheduledTask)
+		status := store.GetStore().CreateScheduledTask(&scheduledTask)
 		if status != http.StatusCreated {
 			return jobDetails, fmt.Errorf("Failed to created schedule task in database")
 		}
@@ -147,7 +148,7 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 		taskDetails.EventCount = int64(rowCount)
 		if err != nil {
 			pbLog.WithError(err).Error("Failed to pull events for archival")
-			M.FailScheduleTask(scheduledTask.ID)
+			store.GetStore().FailScheduleTask(scheduledTask.ID)
 			return jobDetails, err
 		} else if rowCount == 0 {
 			logInfoAndCaptureJobDetails(
@@ -155,8 +156,8 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 				batch.StartTime, batch.EndTime)
 			taskDetails.FileCreated = false
 			taskDetailsJsonb, _ := util.EncodeStructTypeToPostgresJsonb(taskDetails)
-			rowsUpdated, status := M.UpdateScheduledTask(
-				scheduledTask.ID, taskDetailsJsonb, util.TimeNowUnix(), M.TASK_STATUS_SUCCESS)
+			rowsUpdated, status := store.GetStore().UpdateScheduledTask(
+				scheduledTask.ID, taskDetailsJsonb, util.TimeNowUnix(), model.TASK_STATUS_SUCCESS)
 			if status != http.StatusAccepted || rowsUpdated == 0 {
 				return jobDetails, fmt.Errorf("Failed to update scheduled task in database")
 			}
@@ -168,11 +169,11 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 		cloudUsersFilePath, cloudUsersFileName := (*cloudManager).GetUsersArchiveFilePathAndName(projectID, batch.StartTime, batch.EndTime)
 		if err := writeCloudArchiveFile(cloudManager, eventsFilePath, cloudEventsFilePath, cloudEventsFileName); err != nil {
 			pbLog.WithError(err).Errorf("Failed to create events file %s", eventsFilePath)
-			M.FailScheduleTask(scheduledTask.ID)
+			store.GetStore().FailScheduleTask(scheduledTask.ID)
 			return jobDetails, err
 		} else if err := writeCloudArchiveFile(cloudManager, usersFilePath, cloudUsersFilePath, cloudUsersFileName); err != nil {
 			pbLog.WithError(err).Errorf("Failed to create users file %s", eventsFilePath)
-			M.FailScheduleTask(scheduledTask.ID)
+			store.GetStore().FailScheduleTask(scheduledTask.ID)
 			return jobDetails, err
 		}
 		cloudEventsFile := cloudEventsFilePath + cloudEventsFileName
@@ -183,8 +184,8 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 		taskDetails.UsersFilePath = cloudUserFile
 		taskDetailsJsonb, _ = util.EncodeStructTypeToPostgresJsonb(taskDetails)
 		taskEndTime := util.TimeNowUnix()
-		rowsUpdated, status := M.UpdateScheduledTask(
-			scheduledTask.ID, taskDetailsJsonb, taskEndTime, M.TASK_STATUS_SUCCESS)
+		rowsUpdated, status := store.GetStore().UpdateScheduledTask(
+			scheduledTask.ID, taskDetailsJsonb, taskEndTime, model.TASK_STATUS_SUCCESS)
 		if status != http.StatusAccepted || rowsUpdated == 0 {
 			return jobDetails, fmt.Errorf("Failed to update scheduled task in database")
 		}
@@ -201,7 +202,7 @@ func PushToBigquery(cloudManager *filestore.FileManager, startTime, endTime time
 	})
 
 	allJobDetails := make(map[uint64][]string)
-	enabledProjectIDs, status := M.GetBigqueryEnabledProjectIDs()
+	enabledProjectIDs, status := store.GetStore().GetBigqueryEnabledProjectIDs()
 	if status != http.StatusFound {
 		return allJobDetails, []error{fmt.Errorf("Failed to get bigquery enabled projects from DB")}
 	}
@@ -227,21 +228,21 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 	})
 
 	var jobDetails []string
-	projectSettings, _ := M.GetProjectSetting(projectID)
+	projectSettings, _ := store.GetStore().GetProjectSetting(projectID)
 	if projectSettings == nil {
 		return jobDetails, fmt.Errorf("Failed to fetch project settings")
 	} else if projectSettings.BigqueryEnabled == nil || !*projectSettings.BigqueryEnabled {
 		return jobDetails, fmt.Errorf("Bigquery not enabled for project id %d", projectID)
 	}
 
-	inProgressCount, status := M.GetScheduledTaskInProgressCount(projectID, M.TASK_TYPE_BIGQUERY_UPLOAD)
+	inProgressCount, status := store.GetStore().GetScheduledTaskInProgressCount(projectID, model.TASK_TYPE_BIGQUERY_UPLOAD)
 	if status != http.StatusFound {
 		return jobDetails, fmt.Errorf("Failed to in progress tasks count")
 	} else if inProgressCount != 0 {
 		return jobDetails, fmt.Errorf("%d tasks in progress state. Mark failed or success before proceeding", inProgressCount)
 	}
 
-	bigquerySetting, status := M.GetBigquerySettingByProjectID(projectID)
+	bigquerySetting, status := store.GetStore().GetBigquerySettingByProjectID(projectID)
 	if status == http.StatusInternalServerError {
 		return jobDetails, fmt.Errorf("Failed to get bigquery setting for project_id %d", projectID)
 	} else if status == http.StatusNotFound {
@@ -252,14 +253,14 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 			bigquerySetting.BigqueryDatasetName),
 	})
 
-	lastRunAt, status := M.GetScheduledTaskLastRunTimestamp(projectID, M.TASK_TYPE_BIGQUERY_UPLOAD)
+	lastRunAt, status := store.GetStore().GetScheduledTaskLastRunTimestamp(projectID, model.TASK_TYPE_BIGQUERY_UPLOAD)
 	if status == http.StatusInternalServerError {
 		return jobDetails, fmt.Errorf("Failed to get last run timestamp")
 	} else if status == http.StatusNotFound {
 		pbLog.Info("No previous entry found. Will process all the files.")
 	}
 
-	newArchiveFilesMap, status := M.GetNewArchivalFileNamesAndEndTimeForProject(
+	newArchiveFilesMap, status := store.GetStore().GetNewArchivalFileNamesAndEndTimeForProject(
 		projectID, lastRunAt, startTime, endTime)
 	if status == http.StatusInternalServerError {
 		return jobDetails, fmt.Errorf("Failed to get new archive files from database")
@@ -287,11 +288,11 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 	}
 	defer client.Close()
 
-	parentScheduledTask := M.ScheduledTask{
+	parentScheduledTask := model.ScheduledTask{
 		JobID:      util.GetUUID(),
-		TaskType:   M.TASK_TYPE_BIGQUERY_UPLOAD,
+		TaskType:   model.TASK_TYPE_BIGQUERY_UPLOAD,
 		ProjectID:  projectID,
-		TaskStatus: M.TASK_STATUS_IN_PROGRESS,
+		TaskStatus: model.TASK_STATUS_IN_PROGRESS,
 	}
 
 	for _, fileEndTime := range fileEndTimes {
@@ -302,7 +303,7 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 
 		scheduledTask := parentScheduledTask
 		scheduledTask.TaskStartTime = util.TimeNowUnix()
-		taskDetails := M.BigqueryUploadTaskDetails{
+		taskDetails := model.BigqueryUploadTaskDetails{
 			FromTimestamp:     fileStartTime,
 			ToTimestamp:       fileEndTime,
 			BigqueryProjectID: bigquerySetting.BigqueryProjectID,
@@ -312,7 +313,7 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 		}
 		taskDetailsJsonb, _ := util.EncodeStructTypeToPostgresJsonb(taskDetails)
 		scheduledTask.TaskDetails = taskDetailsJsonb
-		status = M.CreateScheduledTask(&scheduledTask)
+		status = store.GetStore().CreateScheduledTask(&scheduledTask)
 		if status != http.StatusCreated {
 			return jobDetails, fmt.Errorf("Failed to create scheduled task for bigquery upload")
 		}
@@ -324,7 +325,7 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 		uploadStats, err := BQ.UploadFileToBigQuery(ctx, client, archiveFile, bigquerySetting, BQ.BIGQUERY_TABLE_EVENTS, pbLog, cloudManager)
 		if err != nil {
 			pbLog.WithError(err).Errorf("Failed to upload file %s. Aborting further processing.", archiveFile)
-			M.FailScheduleTask(scheduledTask.ID)
+			store.GetStore().FailScheduleTask(scheduledTask.ID)
 			return jobDetails, err
 		}
 
@@ -337,7 +338,7 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 				bigquerySetting, BQ.BIGQUERY_TABLE_USERS, pbLog, cloudManager)
 			if err != nil {
 				pbLog.WithError(err).Errorf("Failed to upload file %s. Aborting further processing.", userArchiveFile)
-				M.FailScheduleTask(scheduledTask.ID)
+				store.GetStore().FailScheduleTask(scheduledTask.ID)
 				return jobDetails, err
 			}
 		}
@@ -348,7 +349,7 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 		taskDetails.UsersUploadStats = usersUploadStatsJsonb
 		taskDetailsJsonb, _ = util.EncodeStructTypeToPostgresJsonb(taskDetails)
 		taskEndTime := util.TimeNowUnix()
-		rowsUpdated, status := M.UpdateScheduledTask(scheduledTask.ID, taskDetailsJsonb, taskEndTime, M.TASK_STATUS_SUCCESS)
+		rowsUpdated, status := store.GetStore().UpdateScheduledTask(scheduledTask.ID, taskDetailsJsonb, taskEndTime, model.TASK_STATUS_SUCCESS)
 		if status != http.StatusAccepted || rowsUpdated == 0 {
 			return jobDetails, fmt.Errorf("Failed to update scheduled task. Aborting further processing")
 		}
@@ -366,7 +367,7 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 	return jobDetails, nil
 }
 
-func dedupUsersTable(ctx context.Context, client *bigquery.Client, bigquerySetting *M.BigquerySetting) ([][]string, error) {
+func dedupUsersTable(ctx context.Context, client *bigquery.Client, bigquerySetting *model.BigquerySetting) ([][]string, error) {
 	bigqueryTableName := fmt.Sprintf("%s.%s.%s", bigquerySetting.BigqueryProjectID,
 		bigquerySetting.BigqueryDatasetName, BQ.BIGQUERY_TABLE_USERS)
 

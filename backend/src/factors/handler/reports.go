@@ -2,7 +2,7 @@ package handler
 
 import (
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"strconv"
@@ -27,7 +27,7 @@ func GetReportsHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	reports, errCode := M.GetValidReportsListAgentHasAccessTo(projectId, agentUUID)
+	reports, errCode := store.GetStore().GetValidReportsListAgentHasAccessTo(projectId, agentUUID)
 
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get reports failed."})
@@ -66,13 +66,13 @@ func GetReportHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	report, errCode := M.GetReportByID(reportId)
+	report, errCode := store.GetStore().GetReportByID(reportId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to fetch report"})
 		return
 	}
 
-	hasAccess, _ := M.HasAccessToDashboard(report.ProjectID, agentUUID, report.DashboardID)
+	hasAccess, _ := store.GetStore().HasAccessToDashboard(report.ProjectID, agentUUID, report.DashboardID)
 	if !hasAccess {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get Report failed. Report cannot be accessed."})
 		return

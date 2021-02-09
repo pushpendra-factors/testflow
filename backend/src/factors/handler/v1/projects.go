@@ -3,7 +3,8 @@ package v1
 import (
 	"net/http"
 
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 
 	mid "factors/middleware"
@@ -49,17 +50,17 @@ import (
 func GetProjectsHandler(c *gin.Context) {
 	authorizedProjects := U.GetScopeByKey(c, "authorizedProjects")
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	projects, errCode := M.GetProjectsByIDs(authorizedProjects.([]uint64))
+	projects, errCode := store.GetStore().GetProjectsByIDs(authorizedProjects.([]uint64))
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
 	} else if errCode == http.StatusNoContent || errCode == http.StatusBadRequest {
 		resp := make(map[string]interface{})
-		resp["projects"] = []M.Project{}
+		resp["projects"] = []model.Project{}
 		c.JSON(http.StatusNotFound, resp)
 		return
 	}
-	projectAgentMappings, errCode := M.GetProjectAgentMappingsByProjectIds(authorizedProjects.([]uint64))
+	projectAgentMappings, errCode := store.GetStore().GetProjectAgentMappingsByProjectIds(authorizedProjects.([]uint64))
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return

@@ -5,7 +5,8 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -20,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendGetUserReq(r *gin.Engine, projectId uint64, agent *M.Agent, offset, limit *int) *httptest.ResponseRecorder {
+func sendGetUserReq(r *gin.Engine, projectId uint64, agent *model.Agent, offset, limit *int) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -62,10 +63,10 @@ func TestAPIGetUsers(t *testing.T) {
 	projectId := project.ID
 
 	// Create 100 Users.
-	users := make([]M.User, 0, 0)
+	users := make([]model.User, 0, 0)
 	numUsers := 100
 	for i := 0; i < numUsers; i++ {
-		user, _ := M.CreateUser(&M.User{ProjectId: projectId})
+		user, _ := store.GetStore().CreateUser(&model.User{ProjectId: projectId})
 		users = append(users, *user)
 	}
 
@@ -75,7 +76,7 @@ func TestAPIGetUsers(t *testing.T) {
 	w := sendGetUserReq(r, projectId, agent, nil, nil)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	retUsers := make([]M.User, 0, 0)
+	retUsers := make([]model.User, 0, 0)
 	json.Unmarshal(jsonResponse, &retUsers)
 	assert.Equal(t, limit, len(retUsers))
 	assertUserMapsWithOffset(t, users[offset:offset+limit], retUsers)
@@ -100,7 +101,7 @@ func TestAPIGetUsers(t *testing.T) {
 	assertUserMapsWithOffset(t, users[offset:numUsers], retUsers)
 }
 
-func assertUserMapsWithOffset(t *testing.T, expectedUsers []M.User, actualUsers []M.User) {
+func assertUserMapsWithOffset(t *testing.T, expectedUsers []model.User, actualUsers []model.User) {
 	assert.Equal(t, len(expectedUsers), len(actualUsers))
 	for i := 0; i < len(actualUsers); i++ {
 		expectedUser := expectedUsers[i]

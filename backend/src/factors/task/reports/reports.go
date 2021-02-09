@@ -1,10 +1,12 @@
 package reports
 
 import (
-	M "factors/model"
 	"fmt"
 	"net/http"
 	"time"
+
+	"factors/model/model"
+	modelStore "factors/model/store"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/now"
@@ -17,11 +19,11 @@ const (
 
 var reportLog = baseLog.WithField("prefix", buildReportTag)
 
-func BuildReports(env string, db *gorm.DB, dashboards []*M.Dashboard, reportTypes []string,
+func BuildReports(env string, db *gorm.DB, dashboards []*model.Dashboard, reportTypes []string,
 	customStartTime int64, customEndTime int64, mailReports bool) {
 	reportLog.Infof("Build reports started.")
 
-	createdReports := make([]*M.Report, 0, 0)
+	createdReports := make([]*model.Report, 0, 0)
 	successList := make([]string, 0, 0)
 	noContentList := make([]string, 0, 0)
 	failureList := make([]string, 0, 0)
@@ -52,8 +54,8 @@ func BuildReports(env string, db *gorm.DB, dashboards []*M.Dashboard, reportType
 	notifyStatus(env, buildReportTag, successList, noContentList, failureList)
 }
 
-func buildReportsByType(env string, db *gorm.DB, dashboards []*M.Dashboard, reportType string,
-	customStartTime int64, customEndTime int64, mailReports bool) (reports []*M.Report,
+func buildReportsByType(env string, db *gorm.DB, dashboards []*model.Dashboard, reportType string,
+	customStartTime int64, customEndTime int64, mailReports bool) (reports []*model.Report,
 	successList, noContentList, failureList []string) {
 
 	defer func() {
@@ -99,8 +101,8 @@ type ReportBuild struct {
 	DashboardID        uint64
 	DashboardName      string
 	Type               string
-	IntervalBeforeThat M.Interval
-	Interval           M.Interval
+	IntervalBeforeThat model.Interval
+	Interval           model.Interval
 }
 
 func getDashboardReportDedupeKey(projectId, dashboardId uint64, reportType string,
@@ -109,7 +111,7 @@ func getDashboardReportDedupeKey(projectId, dashboardId uint64, reportType strin
 	return fmt.Sprintf("%d:%d_%d:%d", projectId, dashboardId, reportType, startTime, endTime)
 }
 
-func getWeeklyStartAndEndTime(dashboard *M.Dashboard, reportType string, eReports []*M.Report,
+func getWeeklyStartAndEndTime(dashboard *model.Dashboard, reportType string, eReports []*model.Report,
 	cStartTimeUnix, cEndTimeUnix int64) (time.Time, time.Time) {
 
 	var startTime time.Time
@@ -129,7 +131,7 @@ func getWeeklyStartAndEndTime(dashboard *M.Dashboard, reportType string, eReport
 	return startTime, endTime
 }
 
-func getMonthlyStartAndEndTime(dashboard *M.Dashboard, reportType string, eReports []*M.Report,
+func getMonthlyStartAndEndTime(dashboard *model.Dashboard, reportType string, eReports []*model.Report,
 	cStartTimeUnix, cEndTimeUnix int64) (time.Time, time.Time) {
 
 	var startTime time.Time
@@ -149,15 +151,15 @@ func getMonthlyStartAndEndTime(dashboard *M.Dashboard, reportType string, eRepor
 	return startTime, endTime
 }
 
-func findWhichReportsToBuild(db *gorm.DB, dashboard *M.Dashboard, existingReports []*M.Report,
+func findWhichReportsToBuild(db *gorm.DB, dashboard *model.Dashboard, existingReports []*model.Report,
 	reportType string, customStartTime, customEndTime int64,
 	buildReportsDedupe *map[string]bool) ([]*ReportBuild, int) {
 
 	var startTime, endTime time.Time
-	if reportType == M.ReportTypeWeekly {
+	if reportType == model.ReportTypeWeekly {
 		startTime, endTime = getWeeklyStartAndEndTime(dashboard, reportType, existingReports,
 			customStartTime, customEndTime)
-	} else if reportType == M.ReportTypeMonthly {
+	} else if reportType == model.ReportTypeMonthly {
 		startTime, endTime = getMonthlyStartAndEndTime(dashboard, reportType, existingReports,
 			customStartTime, customEndTime)
 	} else {
@@ -200,30 +202,30 @@ func findWhichReportsToBuild(db *gorm.DB, dashboard *M.Dashboard, existingReport
 }
 
 func getReportType(typ string) string {
-	if typ == M.ReportTypeWeekly {
+	if typ == model.ReportTypeWeekly {
 		return "weekly"
 	}
 
-	if typ == M.ReportTypeMonthly {
+	if typ == model.ReportTypeMonthly {
 		return "weekly"
 	}
 
 	return ""
 }
 
-func buildReportsByBuildConfig(buildReportsFor []*ReportBuild) (reports []*M.Report,
+func buildReportsByBuildConfig(buildReportsFor []*ReportBuild) (reports []*model.Report,
 	successList, noContentList, failureList []string) {
 
 	failureList = make([]string, 0, 0)
 	successList = make([]string, 0, 0)
 	noContentList = make([]string, 0, 0)
-	reports = make([]*M.Report, 0, 0)
+	reports = make([]*model.Report, 0, 0)
 
 	for _, bR := range buildReportsFor {
 		readableType := getReportType(bR.Type)
 
 		reportLog.Infof("Building %s report for project_id %d, dashboard_id %d.", bR.Type, bR.ProjectID, bR.DashboardID)
-		report, errCode := M.GenerateReport(bR.ProjectID, bR.DashboardID, bR.DashboardName,
+		report, errCode := modelStore.GetStore().GenerateReport(bR.ProjectID, bR.DashboardID, bR.DashboardName,
 			bR.Type, bR.IntervalBeforeThat, bR.Interval)
 		if errCode == http.StatusInternalServerError {
 			failureList = append(failureList,
@@ -235,7 +237,7 @@ func buildReportsByBuildConfig(buildReportsFor []*ReportBuild) (reports []*M.Rep
 			continue
 		}
 
-		report, errCode = M.CreateReport(report)
+		report, errCode = modelStore.GetStore().CreateReport(report)
 		if errCode != http.StatusCreated {
 			failureList = append(failureList,
 				fmt.Sprintf("Failed to store %s report in DB for project_id: %d, dashboard_id: %d, interval_start: %d.",
@@ -250,7 +252,7 @@ func buildReportsByBuildConfig(buildReportsFor []*ReportBuild) (reports []*M.Rep
 	return
 }
 
-func findWhichInvalidReportsToRebuild(existingReports []*M.Report, reportType string,
+func findWhichInvalidReportsToRebuild(existingReports []*model.Report, reportType string,
 	store *store, buildReportsDedupe *map[string]bool) []*ReportBuild {
 
 	reportBuilds := make([]*ReportBuild, 0, 0)

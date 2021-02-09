@@ -13,10 +13,12 @@ import (
 
 	C "factors/config"
 
+	"factors/model/model"
+	"factors/model/store"
+
 	H "factors/handler"
 
 	V1 "factors/handler/v1"
-	M "factors/model"
 	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
@@ -25,7 +27,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func createProjectAgentEventsFactorsTrackedEvents(r *gin.Engine) (uint64, *M.Agent) {
+func createProjectAgentEventsFactorsTrackedEvents(r *gin.Engine) (uint64, *model.Agent) {
 
 	C.GetConfig().LookbackWindowForEventUserCache = 1
 
@@ -34,7 +36,7 @@ func createProjectAgentEventsFactorsTrackedEvents(r *gin.Engine) (uint64, *M.Age
 
 	project, agent, _ := SetupProjectWithAgentDAO()
 
-	user, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 
 	rEventName := "event1"
 	_ = ServePostRequestWithHeaders(r, uri,
@@ -64,7 +66,7 @@ func createProjectAgentEventsFactorsTrackedEvents(r *gin.Engine) (uint64, *M.Age
 	return project.ID, agent
 }
 
-func sendCreateFactorsTrackedEvent(r *gin.Engine, request V1.CreateFactorsTrackedEventParams, agent *M.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendCreateFactorsTrackedEvent(r *gin.Engine, request V1.CreateFactorsTrackedEventParams, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -88,7 +90,7 @@ func sendCreateFactorsTrackedEvent(r *gin.Engine, request V1.CreateFactorsTracke
 	return w
 }
 
-func sendGetAllFactorsTrackedEventRequest(r *gin.Engine, agent *M.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendGetAllFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -108,7 +110,7 @@ func sendGetAllFactorsTrackedEventRequest(r *gin.Engine, agent *M.Agent, project
 	return w
 }
 
-func sendRemoveFactorsTrackedEventRequest(r *gin.Engine, agent *M.Agent, projectID uint64, request V1.RemoveFactorsTrackedEventParams) *httptest.ResponseRecorder {
+func sendRemoveFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.RemoveFactorsTrackedEventParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -182,7 +184,7 @@ func TestCreateFactorsTrackedEvent(t *testing.T) {
 	// get all tracked events
 	w = sendGetAllFactorsTrackedEventRequest(r, agent, projectId)
 	assert.Equal(t, http.StatusOK, w.Code)
-	trackedEvent := []M.FactorsTrackedEventInfo{}
+	trackedEvent := []model.FactorsTrackedEventInfo{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &trackedEvent)
 	assert.Equal(t, successFactorsTrackedEventIds[0], int64(trackedEvent[0].ID))
@@ -203,7 +205,7 @@ func TestCreateFactorsTrackedEvent(t *testing.T) {
 	// get all events
 	w = sendGetAllFactorsTrackedEventRequest(r, agent, projectId)
 	assert.Equal(t, http.StatusOK, w.Code)
-	trackedEvent = []M.FactorsTrackedEventInfo{}
+	trackedEvent = []model.FactorsTrackedEventInfo{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &trackedEvent)
 	assert.Equal(t, successFactorsTrackedEventIds[0], int64(trackedEvent[0].ID))
@@ -211,7 +213,7 @@ func TestCreateFactorsTrackedEvent(t *testing.T) {
 	assert.Equal(t, "event1", trackedEvent[0].Name)
 
 	// Null AgentID
-	id, errCode := M.CreateFactorsTrackedEvent(projectId, "event2", "")
+	id, errCode := store.GetStore().CreateFactorsTrackedEvent(projectId, "event2", "")
 	assert.NotEqual(t, 0, id)
 	assert.Equal(t, 201, errCode)
 

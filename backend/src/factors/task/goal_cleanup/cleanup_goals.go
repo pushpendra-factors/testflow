@@ -2,7 +2,7 @@ package goal_cleanup
 
 import (
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -10,7 +10,7 @@ import (
 //DoGoalCleanUp - Cleaning up Goal table for auto created goals for a specified project id
 func DoGoalCleanUp(projectID uint64) int64 {
 	db := C.GetServices().Db
-	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&M.FactorsGoal{})
+	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&model.FactorsGoal{})
 	if dbObj.Error != nil {
 		log.WithFields(log.Fields{"projectId": projectID}).WithError(db.Error).Error(
 			"Deleting from Goal Table failed")
@@ -22,7 +22,7 @@ func DoGoalCleanUp(projectID uint64) int64 {
 //DoTrackedEventsCleanUp - Cleaning up Tracked events table for auto created tracked events for a specified project id
 func DoTrackedEventsCleanUp(projectID uint64) int64 {
 	db := C.GetServices().Db
-	var trackedEvent M.FactorsTrackedEvent
+	var trackedEvent model.FactorsTrackedEvent
 	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&trackedEvent)
 	if dbObj.Error != nil {
 		log.WithFields(log.Fields{"projectId": projectID}).WithError(db.Error).Error(
@@ -35,7 +35,7 @@ func DoTrackedEventsCleanUp(projectID uint64) int64 {
 //DoTrackedUserPropertiesCleanUp - Cleaning up Tracked user properties table for auto created tracked user properties for a specified project id
 func DoTrackedUserPropertiesCleanUp(projectID uint64) int64 {
 	db := C.GetServices().Db
-	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&M.FactorsTrackedUserProperty{})
+	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&model.FactorsTrackedUserProperty{})
 	if dbObj.Error != nil {
 		log.WithFields(log.Fields{"projectId": projectID}).WithError(db.Error).Error(
 			"Deleting from TrackedUserProperties Table failed")

@@ -2,7 +2,8 @@ package v1
 
 import (
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"time"
@@ -25,7 +26,7 @@ func GetProjectAgentsHandler(c *gin.Context) {
 		return
 	}
 
-	projectAgentMappings, errCode := M.GetProjectAgentMappingsByProjectId(projectId)
+	projectAgentMappings, errCode := store.GetStore().GetProjectAgentMappingsByProjectId(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
@@ -36,14 +37,14 @@ func GetProjectAgentsHandler(c *gin.Context) {
 		agentUUIDs = append(agentUUIDs, pam.AgentUUID)
 	}
 
-	agents, errCode := M.GetAgentsByUUIDs(agentUUIDs)
+	agents, errCode := store.GetStore().GetAgentsByUUIDs(agentUUIDs)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
-	agentInfos := M.CreateAgentInfos(agents)
-	agentInfoMap := make(map[string]*M.AgentInfo)
+	agentInfos := model.CreateAgentInfos(agents)
+	agentInfoMap := make(map[string]*model.AgentInfo)
 	for _, agentInfo := range agentInfos {
 		agentInfoMap[agentInfo.UUID] = agentInfo
 	}
@@ -56,7 +57,7 @@ func GetProjectAgentsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, agentWithProjectMapping)
 }
 
-func mapAgentInfoWithProjectMapping(pam M.ProjectAgentMapping, agent *M.AgentInfo) AgentInfoWithProjectMapping {
+func mapAgentInfoWithProjectMapping(pam model.ProjectAgentMapping, agent *model.AgentInfo) AgentInfoWithProjectMapping {
 	agentWithProject := AgentInfoWithProjectMapping{}
 	agentWithProject.UUID = agent.UUID
 	agentWithProject.Email = agent.Email

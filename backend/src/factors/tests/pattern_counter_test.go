@@ -3,7 +3,7 @@ package tests
 import (
 	"bufio"
 	"encoding/json"
-	M "factors/model"
+	"factors/model/model"
 	P "factors/pattern"
 	T "factors/task"
 	U "factors/util"
@@ -1034,7 +1034,7 @@ func TestGetEventNamesfromFile(t *testing.T) {
 	scanner, err := T.OpenEventFileAndGetScanner(filepath)
 	assert.Nil(t, err)
 	tmpProjectID := uint64(123)
-	eventNames, err := M.GetEventNamesFromFile(scanner, tmpProjectID)
+	eventNames, err := model.GetEventNamesFromFile(scanner, tmpProjectID)
 	assert.Equal(t, 2, len(eventNames))
 	assert.Nil(t, err)
 

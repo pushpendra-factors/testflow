@@ -4,7 +4,8 @@ import (
 	C "factors/config"
 	"factors/handler/helpers"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -46,7 +47,7 @@ func Signin(c *gin.Context) {
 	email := params.Email
 	password := params.Password
 
-	agent, code := M.GetAgentByEmail(email)
+	agent, code := store.GetStore().GetAgentByEmail(email)
 	if code == http.StatusInternalServerError {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -55,12 +56,12 @@ func Signin(c *gin.Context) {
 		return
 	}
 
-	if !M.IsPasswordAndHashEqual(password, agent.Password) {
+	if !model.IsPasswordAndHashEqual(password, agent.Password) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 	ts := time.Now().UTC()
-	errCode := M.UpdateAgentLastLoginInfo(agent.UUID, ts)
+	errCode := store.GetStore().UpdateAgentLastLoginInfo(agent.UUID, ts)
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("email", email).Error("Failed to update Agent lastLoginInfo")
 	}
@@ -130,7 +131,7 @@ func AgentInvite(c *gin.Context) {
 
 	invitedByAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	createProjectAgentMapping, errCode := M.IsNewProjectAgentMappingCreationAllowed(projectId, emailOfAgentToInvite)
+	createProjectAgentMapping, errCode := store.GetStore().IsNewProjectAgentMappingCreationAllowed(projectId, emailOfAgentToInvite)
 	if errCode != http.StatusOK {
 		c.AbortWithStatus(errCode)
 		return
@@ -141,13 +142,13 @@ func AgentInvite(c *gin.Context) {
 		return
 	}
 
-	project, errCode := M.GetProject(projectId)
+	project, errCode := store.GetStore().GetProject(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	invitedAgent, errCode := M.GetAgentByEmail(emailOfAgentToInvite)
+	invitedAgent, errCode := store.GetStore().GetAgentByEmail(emailOfAgentToInvite)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to GetAgentByEmail")
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -157,11 +158,11 @@ func AgentInvite(c *gin.Context) {
 	createNewAgent := errCode == http.StatusNotFound
 
 	if createNewAgent {
-		createAgentParams := M.CreateAgentParams{
-			Agent:    &M.Agent{Email: emailOfAgentToInvite, InvitedBy: &invitedByAgentUUID},
-			PlanCode: M.FreePlanCode,
+		createAgentParams := model.CreateAgentParams{
+			Agent:    &model.Agent{Email: emailOfAgentToInvite, InvitedBy: &invitedByAgentUUID},
+			PlanCode: model.FreePlanCode,
 		}
-		resp, errCode := M.CreateAgentWithDependencies(&createAgentParams)
+		resp, errCode := store.GetStore().CreateAgentWithDependencies(&createAgentParams)
 		if errCode == http.StatusInternalServerError {
 			logCtx.Error("Failed to CreateAgent")
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -170,16 +171,17 @@ func AgentInvite(c *gin.Context) {
 		invitedAgent = resp.Agent
 	}
 
-	newProjectAgentRole := uint64(M.AGENT)
-	if roleOfAgent == M.ADMIN {
-		newProjectAgentRole = uint64(M.ADMIN)
+	newProjectAgentRole := uint64(model.AGENT)
+	if roleOfAgent == model.ADMIN {
+		newProjectAgentRole = uint64(model.ADMIN)
 	}
-	pam, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
-		ProjectID: projectId,
-		AgentUUID: invitedAgent.UUID,
-		InvitedBy: &invitedByAgentUUID,
-		Role:      newProjectAgentRole,
-	})
+	pam, errCode := store.GetStore().CreateProjectAgentMappingWithDependencies(
+		&model.ProjectAgentMapping{
+			ProjectID: projectId,
+			AgentUUID: invitedAgent.UUID,
+			InvitedBy: &invitedByAgentUUID,
+			Role:      newProjectAgentRole,
+		})
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to createProjectAgentMapping")
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -207,8 +209,8 @@ func AgentInvite(c *gin.Context) {
 		logCtx.WithField("link", link).Debugf("Verification LInk")
 	}
 
-	invitedAgentInfo := M.CreateAgentInfo(invitedAgent)
-	agentInfoMap := make(map[string]*M.AgentInfo)
+	invitedAgentInfo := model.CreateAgentInfo(invitedAgent)
+	agentInfoMap := make(map[string]*model.AgentInfo)
 
 	agentInfoMap[invitedAgentInfo.UUID] = invitedAgentInfo
 
@@ -223,7 +225,7 @@ func AgentInvite(c *gin.Context) {
 	resp := make(map[string]interface{})
 	resp["status"] = "success"
 	resp["agents"] = agentInfoMap
-	resp["project_agent_mappings"] = []M.ProjectAgentMapping{*pam}
+	resp["project_agent_mappings"] = []model.ProjectAgentMapping{*pam}
 
 	c.JSON(http.StatusCreated, resp)
 	return
@@ -257,7 +259,7 @@ func AgentUpdate(c *gin.Context) {
 
 	agentUUIDToEdit := params.AgentUUID
 	roleIDToUpdate := params.Role
-	loggedInAgentPAM, errCode := M.GetProjectAgentMapping(projectId, loggedInAgentUUID)
+	loggedInAgentPAM, errCode := store.GetStore().GetProjectAgentMapping(projectId, loggedInAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		logCtx.Errorln("Failed to fetch loggedInAgentPAM")
@@ -274,12 +276,12 @@ func AgentUpdate(c *gin.Context) {
 		return
 	}
 
-	errCode = M.EditProjectAgentMapping(projectId, agentUUIDToEdit, roleIDToUpdate)
+	errCode = store.GetStore().EditProjectAgentMapping(projectId, agentUUIDToEdit, roleIDToUpdate)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
 	}
-	agentMappingDetails, errCode := M.GetProjectAgentMapping(projectId, agentUUIDToEdit)
+	agentMappingDetails, errCode := store.GetStore().GetProjectAgentMapping(projectId, agentUUIDToEdit)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		logCtx.Errorln("Failed to fetch agentMappingDetails")
@@ -344,7 +346,7 @@ func RemoveProjectAgent(c *gin.Context) {
 
 	agentUUIDToRemove := params.AgentUUID
 
-	loggedInAgentPAM, errCode := M.GetProjectAgentMapping(projectId, loggedInAgentUUID)
+	loggedInAgentPAM, errCode := store.GetStore().GetProjectAgentMapping(projectId, loggedInAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		logCtx.Errorln("Failed to fetch loggedInAgentPAM")
@@ -365,7 +367,7 @@ func RemoveProjectAgent(c *gin.Context) {
 		}
 	}
 
-	errCode = M.DeleteProjectAgentMapping(projectId, agentUUIDToRemove)
+	errCode = store.GetStore().DeleteProjectAgentMapping(projectId, agentUUIDToRemove)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
@@ -409,7 +411,7 @@ func AgentActivate(c *gin.Context) {
 	}
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	ts := time.Now().UTC()
-	errCode := M.UpdateAgentVerificationDetails(agentUUID, params.Password, params.FirstName, params.LastName, true, ts)
+	errCode := store.GetStore().UpdateAgentVerificationDetails(agentUUID, params.Password, params.FirstName, params.LastName, true, ts)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -421,7 +423,7 @@ func AgentActivate(c *gin.Context) {
 		return
 	}
 
-	_, errCode = M.CreateDefaultProjectForAgent(agentUUID)
+	_, errCode = store.GetStore().CreateDefaultProjectForAgent(agentUUID)
 	if errCode != http.StatusConflict && errCode != http.StatusCreated {
 		logCtx.WithField("agent_uuid", agentUUID).Error("Failed to create default project for agent.")
 	}
@@ -462,7 +464,7 @@ func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
 
 	email := params.Email
 
-	agent, errCode := M.GetAgentByEmail(email)
+	agent, errCode := store.GetStore().GetAgentByEmail(email)
 	if errCode == http.StatusInternalServerError {
 		logCtx.WithField("email", email).Error("Failed to GetAgentByEmail")
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -486,7 +488,7 @@ func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
 	return
 }
 
-func sendAgentResetPasswordEmail(agent *M.Agent) error {
+func sendAgentResetPasswordEmail(agent *model.Agent) error {
 	authToken, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, time.Second*helpers.SecondsInOneDay)
 	if err != nil {
 		return err
@@ -531,7 +533,7 @@ func AgentSetPassword(c *gin.Context) {
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	ts := time.Now().UTC()
 
-	errCode := M.UpdateAgentPassword(agentUUID, params.Password, ts)
+	errCode := store.GetStore().UpdateAgentPassword(agentUUID, params.Password, ts)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -551,7 +553,7 @@ func AgentSetPassword(c *gin.Context) {
 func AgentInfo(c *gin.Context) {
 	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	agentInfo, errCode := M.GetAgentInfo(currentAgentUUID)
+	agentInfo, errCode := store.GetStore().GetAgentInfo(currentAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
@@ -575,7 +577,7 @@ func GetProjectAgentsHandler(c *gin.Context) {
 		return
 	}
 
-	projectAgentMappings, errCode := M.GetProjectAgentMappingsByProjectId(projectId)
+	projectAgentMappings, errCode := store.GetStore().GetProjectAgentMappingsByProjectId(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
@@ -586,14 +588,14 @@ func GetProjectAgentsHandler(c *gin.Context) {
 		agentUUIDs = append(agentUUIDs, pam.AgentUUID)
 	}
 
-	agents, errCode := M.GetAgentsByUUIDs(agentUUIDs)
+	agents, errCode := store.GetStore().GetAgentsByUUIDs(agentUUIDs)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
-	agentInfos := M.CreateAgentInfos(agents)
-	agentInfoMap := make(map[string]*M.AgentInfo)
+	agentInfos := model.CreateAgentInfos(agents)
+	agentInfoMap := make(map[string]*model.AgentInfo)
 	for _, agentInfo := range agentInfos {
 		agentInfoMap[agentInfo.UUID] = agentInfo
 	}
@@ -608,32 +610,32 @@ func GetProjectAgentsHandler(c *gin.Context) {
 func GetAgentBillingAccount(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	bA, errCode := M.GetBillingAccountByAgentUUID(loggedInAgentUUID)
+	bA, errCode := store.GetStore().GetBillingAccountByAgentUUID(loggedInAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
-	projects, errCode := M.GetProjectsUnderBillingAccountID(bA.ID)
+	projects, errCode := store.GetStore().GetProjectsUnderBillingAccountID(bA.ID)
 
 	projectIDs := make([]uint64, len(projects), len(projects))
 	for i := range projects {
 		projectIDs[i] = projects[i].ID
 	}
 
-	plan, errCode := M.GetPlanByID(bA.PlanID)
+	plan, errCode := store.GetStore().GetPlanByID(bA.PlanID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
-	agents, errCode := M.GetAgentsByProjectIDs(projectIDs)
+	agents, errCode := store.GetStore().GetAgentsByProjectIDs(projectIDs)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
-	agentsInfo := M.CreateAgentInfos(agents)
+	agentsInfo := model.CreateAgentInfos(agents)
 
 	resp := make(map[string]interface{})
 	resp["billing_account"] = bA
@@ -641,8 +643,8 @@ func GetAgentBillingAccount(c *gin.Context) {
 	resp["agents"] = agentsInfo
 	resp["plan"] = plan
 	resp["available_plans"] = map[string]string{
-		M.FreePlanCode:    "Free",
-		M.StartupPlanCode: "Startup",
+		model.FreePlanCode:    "Free",
+		model.StartupPlanCode: "Startup",
 	}
 	c.JSON(http.StatusOK, resp)
 }
@@ -677,19 +679,19 @@ func UpdateAgentBillingAccount(c *gin.Context) {
 		return
 	}
 
-	bA, errCode := M.GetBillingAccountByAgentUUID(loggedInAgentUUID)
+	bA, errCode := store.GetStore().GetBillingAccountByAgentUUID(loggedInAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
-	currPlan, errCode := M.GetPlanByID(bA.PlanID)
+	currPlan, errCode := store.GetStore().GetPlanByID(bA.PlanID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
-	newPlan, errCode := M.GetPlanByCode(params.PlanCode)
+	newPlan, errCode := store.GetStore().GetPlanByCode(params.PlanCode)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
@@ -700,14 +702,14 @@ func UpdateAgentBillingAccount(c *gin.Context) {
 		planToSet = newPlan
 	}
 
-	errCode = M.UpdateBillingAccount(bA.ID, planToSet.ID, params.OrganizationName, params.BillingAddress, params.Pincode, params.PhoneNo)
+	errCode = store.GetStore().UpdateBillingAccount(bA.ID, planToSet.ID, params.OrganizationName, params.BillingAddress, params.Pincode, params.PhoneNo)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
 	// Fetch the updated billing_account and return
-	bA, errCode = M.GetBillingAccountByAgentUUID(loggedInAgentUUID)
+	bA, errCode = store.GetStore().GetBillingAccountByAgentUUID(loggedInAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
@@ -746,13 +748,13 @@ func UpdateAgentInfo(c *gin.Context) {
 		return
 	}
 
-	errCode := M.UpdateAgentInformation(loggedInAgentUUID, params.FirstName, params.LastName, params.Phone)
+	errCode := store.GetStore().UpdateAgentInformation(loggedInAgentUUID, params.FirstName, params.LastName, params.Phone)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
-	agent, errCode := M.GetAgentInfo(loggedInAgentUUID)
+	agent, errCode := store.GetStore().GetAgentInfo(loggedInAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -790,7 +792,7 @@ func UpdateAgentPassword(c *gin.Context) {
 		return
 	}
 
-	agent, errCode := M.GetAgentByUUID(loggedInAgentUUID)
+	agent, errCode := store.GetStore().GetAgentByUUID(loggedInAgentUUID)
 	if errCode == http.StatusInternalServerError {
 		logCtx.WithField("uuid", loggedInAgentUUID).Error("Failed to GetAgentByUUID")
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -800,17 +802,17 @@ func UpdateAgentPassword(c *gin.Context) {
 		return
 	}
 
-	if !M.IsPasswordAndHashEqual(params.CurrentPassword, agent.Password) {
+	if !model.IsPasswordAndHashEqual(params.CurrentPassword, agent.Password) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Incorrect Current Password"})
 		return
 	}
 
-	errCode = M.UpdateAgentPassword(loggedInAgentUUID, params.NewPassword, time.Now().UTC())
+	errCode = store.GetStore().UpdateAgentPassword(loggedInAgentUUID, params.NewPassword, time.Now().UTC())
 	c.Status(errCode)
 }
 
 func isAdmin(role uint64) bool {
-	if role == M.ADMIN {
+	if role == model.ADMIN {
 		return true
 	}
 	return false

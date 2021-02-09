@@ -2,7 +2,7 @@ package v1
 
 import (
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -40,7 +40,7 @@ func GetEventNamesHandler(c *gin.Context) {
 
 	// RedisGet is the only call. In case of Cache crash, job will be manually triggered to repopulate cache
 	// No fallback for now.
-	eventNames, err := M.GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, 30)
+	eventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, 30)
 	if err != nil {
 		logCtx.WithError(err).Error("get event names ordered by occurence and recency")
 		c.AbortWithStatus(http.StatusInternalServerError)

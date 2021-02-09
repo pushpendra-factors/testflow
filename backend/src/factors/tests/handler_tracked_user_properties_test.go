@@ -14,9 +14,10 @@ import (
 	C "factors/config"
 
 	H "factors/handler"
+	"factors/model/model"
+	"factors/model/store"
 
 	V1 "factors/handler/v1"
-	M "factors/model"
 	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
@@ -25,7 +26,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (uint64, *M.Agent) {
+func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (uint64, *model.Agent) {
 
 	C.GetConfig().LookbackWindowForEventUserCache = 1
 
@@ -34,7 +35,7 @@ func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (uint64, *M.Agen
 
 	project, agent, _ := SetupProjectWithAgentDAO()
 
-	user, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 
 	rEventName := "event1"
 	_ = ServePostRequestWithHeaders(r, uri,
@@ -64,7 +65,7 @@ func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (uint64, *M.Agen
 	return project.ID, agent
 }
 
-func sendCreateTrackedUserProperty(r *gin.Engine, request V1.CreateTrackeduserPropertyParams, agent *M.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendCreateTrackedUserProperty(r *gin.Engine, request V1.CreateTrackeduserPropertyParams, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -88,7 +89,7 @@ func sendCreateTrackedUserProperty(r *gin.Engine, request V1.CreateTrackeduserPr
 	return w
 }
 
-func sendGetAllTrackedUserPropertyRequest(r *gin.Engine, agent *M.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendGetAllTrackedUserPropertyRequest(r *gin.Engine, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -108,7 +109,7 @@ func sendGetAllTrackedUserPropertyRequest(r *gin.Engine, agent *M.Agent, project
 	return w
 }
 
-func sendRemoveTrackedUserPropertyRequest(r *gin.Engine, agent *M.Agent, projectID uint64, request V1.RemoveFactorsTrackedUserPropertyParams) *httptest.ResponseRecorder {
+func sendRemoveTrackedUserPropertyRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.RemoveFactorsTrackedUserPropertyParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -181,7 +182,7 @@ func TestCreateTrackedUserProperty(t *testing.T) {
 	// get all tracked user property
 	w = sendGetAllTrackedUserPropertyRequest(r, agent, projectId)
 	assert.Equal(t, http.StatusOK, w.Code)
-	trackedUserProperty := []M.FactorsTrackedUserProperty{}
+	trackedUserProperty := []model.FactorsTrackedUserProperty{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &trackedUserProperty)
 	assert.Equal(t, successTrackedUPIds[0], int64(trackedUserProperty[0].ID))
@@ -212,14 +213,14 @@ func TestCreateTrackedUserProperty(t *testing.T) {
 	// get all user property
 	w = sendGetAllTrackedUserPropertyRequest(r, agent, projectId)
 	assert.Equal(t, http.StatusOK, w.Code)
-	trackedUserProperty = []M.FactorsTrackedUserProperty{}
+	trackedUserProperty = []model.FactorsTrackedUserProperty{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &trackedUserProperty)
 	assert.Equal(t, successTrackedUPIds[0], int64(trackedUserProperty[0].ID))
 	assert.Equal(t, false, trackedUserProperty[0].IsActive)
 
 	// Null AgentID
-	id, errCode := M.CreateFactorsTrackedUserProperty(projectId, "up2", "")
+	id, errCode := store.GetStore().CreateFactorsTrackedUserProperty(projectId, "up2", "")
 	assert.NotEqual(t, 0, id)
 	assert.Equal(t, 201, errCode)
 

@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	H "factors/handler/helpers"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"strconv"
@@ -41,7 +42,7 @@ func ChannelQueryHandler(c *gin.Context) {
 	logCtx = log.WithField("project_id", projectId)
 
 	var err error
-	var queryPayload M.ChannelQuery
+	var queryPayload model.ChannelQuery
 	var dashboardId uint64
 	var unitId uint64
 	hardRefresh := false
@@ -84,9 +85,9 @@ func ChannelQueryHandler(c *gin.Context) {
 		}
 	}
 
-	var cacheResult M.ChannelQueryResult
-	channelQueryUnitPayload := M.ChannelQueryUnit{
-		Class: M.QueryClassChannel,
+	var cacheResult model.ChannelQueryResult
+	channelQueryUnitPayload := model.ChannelQueryUnit{
+		Class: model.QueryClassChannel,
 		Query: &queryPayload,
 	}
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &channelQueryUnitPayload, cacheResult, isDashboardQueryRequest)
@@ -96,20 +97,20 @@ func ChannelQueryHandler(c *gin.Context) {
 	}
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
-	M.SetQueryCachePlaceholder(projectId, &channelQueryUnitPayload)
+	model.SetQueryCachePlaceholder(projectId, &channelQueryUnitPayload)
 	H.SleepIfHeaderSet(c)
 
-	queryResult, errCode := M.ExecuteChannelQuery(projectId, &queryPayload)
+	queryResult, errCode := store.GetStore().ExecuteChannelQuery(projectId, &queryPayload)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{"error": "Channel query failed. Execution failure."})
-		M.DeleteQueryCacheKey(projectId, &channelQueryUnitPayload)
+		model.DeleteQueryCacheKey(projectId, &channelQueryUnitPayload)
 		return
 	}
-	M.SetQueryCacheResult(projectId, &channelQueryUnitPayload, queryResult)
+	model.SetQueryCacheResult(projectId, &channelQueryUnitPayload, queryResult)
 
 	if isDashboardQueryRequest {
-		M.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
+		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
 		c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{
 			Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 		return
@@ -143,7 +144,7 @@ func GetChannelFilterValuesHandler(c *gin.Context) {
 		return
 	}
 
-	filterValues, errCode := M.GetChannelFilterValues(projectId, channel, filter)
+	filterValues, errCode := store.GetStore().GetChannelFilterValues(projectId, channel, filter)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get filter values for channel."})
 		return

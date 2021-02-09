@@ -2,7 +2,7 @@ package tests
 
 import (
 	H "factors/handler"
-	M "factors/model"
+	"factors/model/model"
 	P "factors/pattern"
 	"math"
 	"testing"
@@ -71,7 +71,7 @@ func TestParseFactorQuery(t *testing.T) {
 	event1["name"] = "endEvent"
 	event1["properties"] = []interface{}{}
 	query["eventsWithProperties"] = []interface{}{event1}
-	query["queryType"] = M.QueryTypeUniqueUsers
+	query["queryType"] = model.QueryTypeUniqueUsers
 	startEvent, startEventConstraints, endEvent, endEventConstraints, _, err = H.ParseFactorQuery(query)
 	assert.Nil(t, err)
 	assert.Equal(t, startEvent, "")

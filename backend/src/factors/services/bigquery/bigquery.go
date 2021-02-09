@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"factors/filestore"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 
 	"cloud.google.com/go/bigquery"
 	log "github.com/sirupsen/logrus"
@@ -20,9 +21,9 @@ const (
 	BIGQUERY_TABLE_USERS  string = "f_users"
 )
 
-var bigqueryArchivalTables = map[string]M.EventFileFormat{
-	BIGQUERY_TABLE_EVENTS: M.ArchiveEventTableFormat{},
-	BIGQUERY_TABLE_USERS:  M.ArchiveUsersTableFormat{},
+var bigqueryArchivalTables = map[string]model.EventFileFormat{
+	BIGQUERY_TABLE_EVENTS: model.ArchiveEventTableFormat{},
+	BIGQUERY_TABLE_USERS:  model.ArchiveUsersTableFormat{},
 }
 
 var bqTaskID = "Service#Bigquery"
@@ -31,7 +32,7 @@ var bqLog = log.WithFields(log.Fields{
 })
 
 // CreateBigqueryClient Creates and returns a new bigquery client.
-func CreateBigqueryClient(ctx *context.Context, bigquerySetting *M.BigquerySetting) (*bigquery.Client, error) {
+func CreateBigqueryClient(ctx *context.Context, bigquerySetting *model.BigquerySetting) (*bigquery.Client, error) {
 	client, err := bigquery.NewClient(*ctx, bigquerySetting.BigqueryProjectID,
 		option.WithCredentialsJSON([]byte(bigquerySetting.BigqueryCredentialsJSON)))
 	if err != nil {
@@ -43,7 +44,7 @@ func CreateBigqueryClient(ctx *context.Context, bigquerySetting *M.BigquerySetti
 
 // CreateBigqueryClientForProject Creates and returns a bigquery client for the given projectID.
 func CreateBigqueryClientForProject(ctx *context.Context, projectID uint64) (*bigquery.Client, error) {
-	bigquerySetting, status := M.GetBigquerySettingByProjectID(projectID)
+	bigquerySetting, status := store.GetStore().GetBigquerySettingByProjectID(projectID)
 	if status == http.StatusInternalServerError {
 		return nil, fmt.Errorf("Failed to get bigquery setting for project_id %d", projectID)
 	} else if status == http.StatusNotFound {
@@ -95,7 +96,7 @@ func ExecuteQuery(ctx *context.Context, client *bigquery.Client, query string, r
 // CreateBigqueryArchivalTables Creates tables required in Bigquery.
 // To be called at the time of onboarding new project to Bigquery.
 func CreateBigqueryArchivalTables(projectID uint64) error {
-	bigquerySetting, status := M.GetBigquerySettingByProjectID(projectID)
+	bigquerySetting, status := store.GetStore().GetBigquerySettingByProjectID(projectID)
 	if status == http.StatusInternalServerError {
 		return fmt.Errorf("Failed to get bigquery setting for project_id %d", projectID)
 	} else if status == http.StatusNotFound {
@@ -137,7 +138,7 @@ func CreateBigqueryArchivalTables(projectID uint64) error {
 }
 
 // UploadFileToBigQuery Uploads a given file in cloudManager to specified Bigquery table.
-func UploadFileToBigQuery(ctx context.Context, client *bigquery.Client, archiveFile string, bigquerySetting *M.BigquerySetting,
+func UploadFileToBigQuery(ctx context.Context, client *bigquery.Client, archiveFile string, bigquerySetting *model.BigquerySetting,
 	tableName string, pbLog *log.Entry, cloudManager *filestore.FileManager) (*bigquery.JobStatus, error) {
 
 	pbLog.Infof("Uploading file %s", archiveFile)

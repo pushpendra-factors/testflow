@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	H "factors/handler/helpers"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"net/http"
 	"strconv"
@@ -14,7 +15,7 @@ import (
 )
 
 type QueryRequestPayload struct {
-	Query M.Query `json:"query"`
+	Query model.Query `json:"query"`
 }
 
 /*
@@ -52,7 +53,7 @@ func EventsQueryHandler(c *gin.Context) {
 		return
 	}
 
-	var requestPayload M.QueryGroup
+	var requestPayload model.QueryGroup
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestPayload); err != nil {
@@ -108,7 +109,7 @@ func EventsQueryHandler(c *gin.Context) {
 		}
 	}
 
-	var cacheResult M.ResultGroup
+	var cacheResult model.ResultGroup
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest)
 	if shouldReturn {
 		c.AbortWithStatusJSON(resCode, resMsg)
@@ -116,20 +117,20 @@ func EventsQueryHandler(c *gin.Context) {
 	}
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
-	M.SetQueryCachePlaceholder(projectId, &requestPayload)
+	model.SetQueryCachePlaceholder(projectId, &requestPayload)
 	H.SleepIfHeaderSet(c)
 
-	resultGroup, errCode := M.RunEventsGroupQuery(requestPayload.Queries, projectId)
+	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(requestPayload.Queries, projectId)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "group query failed to run"})
-		M.DeleteQueryCacheKey(projectId, &requestPayload)
+		model.DeleteQueryCacheKey(projectId, &requestPayload)
 		return
 	}
-	M.SetQueryCacheResult(projectId, &requestPayload, resultGroup)
+	model.SetQueryCacheResult(projectId, &requestPayload, resultGroup)
 
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
-		M.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
+		model.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
 		c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{
 			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 		return
@@ -166,7 +167,7 @@ func QueryHandler(c *gin.Context) {
 	var dashboardId uint64
 	var unitId uint64
 	var err error
-	var result *M.QueryResult
+	var result *model.QueryResult
 	hardRefresh := false
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
@@ -215,7 +216,7 @@ func QueryHandler(c *gin.Context) {
 		}
 	}
 
-	var cacheResult M.QueryResult
+	var cacheResult model.QueryResult
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest)
 	if shouldReturn {
 		c.AbortWithStatusJSON(resCode, resMsg)
@@ -223,19 +224,19 @@ func QueryHandler(c *gin.Context) {
 	}
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
-	M.SetQueryCachePlaceholder(projectId, &requestPayload.Query)
+	model.SetQueryCachePlaceholder(projectId, &requestPayload.Query)
 	H.SleepIfHeaderSet(c)
 
-	result, errCode, errMsg := M.Analyze(projectId, requestPayload.Query)
+	result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
-		M.DeleteQueryCacheKey(projectId, &requestPayload.Query)
+		model.DeleteQueryCacheKey(projectId, &requestPayload.Query)
 		return
 	}
-	M.SetQueryCacheResult(projectId, &requestPayload.Query, result)
+	model.SetQueryCacheResult(projectId, &requestPayload.Query, result)
 
 	if isDashboardQueryRequest {
-		M.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
 		c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 		return
 	}

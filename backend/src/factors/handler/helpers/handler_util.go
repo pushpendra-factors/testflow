@@ -1,13 +1,13 @@
 package helpers
 
 import (
+	"factors/model/model"
 	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	C "factors/config"
-	M "factors/model"
 	U "factors/util"
 
 	"github.com/gin-gonic/gin"
@@ -21,13 +21,13 @@ type DashboardQueryResponsePayload struct {
 	RefreshedAt int64       `json:"refreshed_at"`
 }
 
-func getQueryCacheResponse(c *gin.Context, cacheResult M.QueryCacheResult, forDashboard bool) (bool, int, interface{}) {
+func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, forDashboard bool) (bool, int, interface{}) {
 	if forDashboard {
 		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt}
 	}
 	// To Indicate if the result is served from cache without changing the response format.
-	c.Header(M.QueryCacheResponseFromCacheHeader, "true")
-	c.Header(M.QueryCacheResponseCacheRefreshedAt, fmt.Sprint(cacheResult.RefreshedAt))
+	c.Header(model.QueryCacheResponseFromCacheHeader, "true")
+	c.Header(model.QueryCacheResponseCacheRefreshedAt, fmt.Sprint(cacheResult.RefreshedAt))
 	return true, http.StatusOK, cacheResult.Result
 }
 
@@ -42,7 +42,7 @@ func SleepIfHeaderSet(c *gin.Context) {
 		// Sleep header only being used in development to facilitate testing.
 		return
 	}
-	if waitTime := c.Request.Header.Get(M.QueryCacheRequestSleepHeader); waitTime != "" {
+	if waitTime := c.Request.Header.Get(model.QueryCacheRequestSleepHeader); waitTime != "" {
 		waitTimeSeconds, err := strconv.Atoi(waitTime)
 		if err == nil {
 			time.Sleep(time.Duration(waitTimeSeconds) * time.Second)
@@ -51,10 +51,10 @@ func SleepIfHeaderSet(c *gin.Context) {
 }
 
 // GetResponseIfCachedQuery Returns response for the query is cached.
-func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload M.BaseQuery,
+func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload model.BaseQuery,
 	resultContainer interface{}, forDashboard bool) (bool, int, interface{}) {
 
-	cacheResult, errCode := M.GetQueryResultFromCache(projectID, requestPayload, &resultContainer)
+	cacheResult, errCode := model.GetQueryResultFromCache(projectID, requestPayload, &resultContainer)
 	if errCode == http.StatusFound {
 		return getQueryCacheResponse(c, cacheResult, forDashboard)
 	} else if errCode == http.StatusAccepted {
@@ -65,7 +65,7 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload M
 			} else {
 				time.Sleep(5 * time.Second)
 			}
-			cacheResult, errCode = M.GetQueryResultFromCache(projectID, requestPayload, &resultContainer)
+			cacheResult, errCode = model.GetQueryResultFromCache(projectID, requestPayload, &resultContainer)
 			if errCode == http.StatusAccepted {
 				continue
 			} else if errCode == http.StatusFound {
@@ -81,7 +81,7 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload M
 
 // GetResponseIfCachedDashboardQuery Common function to fetch result from cache if present for dashboard query.
 func GetResponseIfCachedDashboardQuery(projectID, dashboardID, unitID uint64, from, to int64) (bool, int, interface{}) {
-	cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectID, dashboardID, unitID, from, to)
+	cacheResult, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId(projectID, dashboardID, unitID, from, to)
 	if errCode == http.StatusFound && cacheResult != nil {
 		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt}
 	} else if errCode == http.StatusBadRequest {

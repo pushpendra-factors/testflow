@@ -6,7 +6,8 @@ import (
 	H "factors/handler"
 	"factors/handler/helpers"
 	V1 "factors/handler/v1"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"factors/task/event_user_cache"
 	U "factors/util"
 	"fmt"
@@ -21,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateFactorsGoalRequest(r *gin.Engine, request V1.CreateFactorsGoalParams, agent *M.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendCreateFactorsGoalRequest(r *gin.Engine, request V1.CreateFactorsGoalParams, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -45,7 +46,7 @@ func sendCreateFactorsGoalRequest(r *gin.Engine, request V1.CreateFactorsGoalPar
 	return w
 }
 
-func sendGetAllFactorsGoalsRequest(r *gin.Engine, agent *M.Agent, projectID uint64) *httptest.ResponseRecorder {
+func sendGetAllFactorsGoalsRequest(r *gin.Engine, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -65,7 +66,7 @@ func sendGetAllFactorsGoalsRequest(r *gin.Engine, agent *M.Agent, projectID uint
 	return w
 }
 
-func sendSearchFactorsGoalsRequest(r *gin.Engine, agent *M.Agent, projectID uint64, request V1.SearchFactorsGoalParams) *httptest.ResponseRecorder {
+func sendSearchFactorsGoalsRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.SearchFactorsGoalParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -86,7 +87,7 @@ func sendSearchFactorsGoalsRequest(r *gin.Engine, agent *M.Agent, projectID uint
 	return w
 }
 
-func sendRemoveFactorsGoalRequest(r *gin.Engine, agent *M.Agent, projectID uint64, request V1.RemoveFactorsGoalParams) *httptest.ResponseRecorder {
+func sendRemoveFactorsGoalRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.RemoveFactorsGoalParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -110,7 +111,7 @@ func sendRemoveFactorsGoalRequest(r *gin.Engine, agent *M.Agent, projectID uint6
 	return w
 }
 
-func sendUpdateFactorsGoalRequest(r *gin.Engine, agent *M.Agent, projectID uint64, request V1.UpdateFactorsGoalParams) *httptest.ResponseRecorder {
+func sendUpdateFactorsGoalRequest(r *gin.Engine, agent *model.Agent, projectID uint64, request V1.UpdateFactorsGoalParams) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -136,7 +137,7 @@ func sendUpdateFactorsGoalRequest(r *gin.Engine, agent *M.Agent, projectID uint6
 
 var id1, id2, id3 int64
 
-func createProjectAgentEvents(r *gin.Engine) (uint64, *M.Agent) {
+func createProjectAgentEvents(r *gin.Engine) (uint64, *model.Agent) {
 
 	C.GetConfig().LookbackWindowForEventUserCache = 1
 
@@ -145,7 +146,7 @@ func createProjectAgentEvents(r *gin.Engine) (uint64, *M.Agent) {
 
 	project, agent, _ := SetupProjectWithAgentDAO()
 
-	user, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 
 	rEventName := "event1"
 	_ = ServePostRequestWithHeaders(r, uri,
@@ -175,9 +176,9 @@ func createProjectAgentEvents(r *gin.Engine) (uint64, *M.Agent) {
 	C.GetConfig().ActiveFactorsGoalsLimit = 50
 	C.GetConfig().ActiveFactorsTrackedUserPropertiesLimit = 50
 	C.GetConfig().ActiveFactorsTrackedEventsLimit = 50
-	id1, _ = M.CreateFactorsTrackedEvent(project.ID, "event1", agent.UUID)
-	id2, _ = M.CreateFactorsTrackedEvent(project.ID, "event2", agent.UUID)
-	id3, _ = M.CreateFactorsTrackedUserProperty(project.ID, "up1", agent.UUID)
+	id1, _ = store.GetStore().CreateFactorsTrackedEvent(project.ID, "event1", agent.UUID)
+	id2, _ = store.GetStore().CreateFactorsTrackedEvent(project.ID, "event2", agent.UUID)
+	id3, _ = store.GetStore().CreateFactorsTrackedUserProperty(project.ID, "up1", agent.UUID)
 	return project.ID, agent
 }
 
@@ -196,26 +197,26 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 
 	request := V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal1"
-	rule := M.FactorsGoalRule{}
+	rule := model.FactorsGoalRule{}
 	rule.StartEvent = "event1"
 	rule.EndEvent = "event2"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
-	var globalFilters []M.KeyValueTuple
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
+	rule.Rule = model.FactorsGoalFilter{}
+	var globalFilters []model.KeyValueTuple
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up1", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 
 	// Happy path
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal1"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event1"
 	rule.EndEvent = "event2"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up1", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w := sendCreateFactorsGoalRequest(r, request, agent, projectId)
@@ -228,13 +229,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// Duplicate rule
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal2"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event1"
 	rule.EndEvent = "event2"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up1", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
@@ -247,13 +248,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// Duplicate name
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal1"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event1"
 	rule.EndEvent = "event2"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv2"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up1", Value: "uv2"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
@@ -266,13 +267,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// non existing end event
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal4"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event1"
 	rule.EndEvent = "event_2"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv3"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up1", Value: "uv3"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
@@ -284,13 +285,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// non existing start event
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal5"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event_1"
 	rule.EndEvent = "event2"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up1", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
@@ -302,13 +303,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// start event not tracked
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal6"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event3"
 	rule.EndEvent = "event2"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up1", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
@@ -321,13 +322,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal7"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event1"
 	rule.EndEvent = "event3"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up1", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
@@ -339,13 +340,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// user property not exist
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal8"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event1"
 	rule.EndEvent = "event2"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up3", Value: "uv1"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up3", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
@@ -357,13 +358,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// user property not tracked
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal9"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event1"
 	rule.EndEvent = "event2"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up2", Value: "uv1"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up2", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
@@ -375,7 +376,7 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// get all goals
 	w = sendGetAllFactorsGoalsRequest(r, agent, projectId)
 	assert.Equal(t, http.StatusOK, w.Code)
-	goals := []M.FactorsGoal{}
+	goals := []model.FactorsGoal{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &goals)
 	assert.Equal(t, successFactorsGoalIds[0], int64(goals[0].ID))
@@ -395,7 +396,7 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// get all goals
 	w = sendGetAllFactorsGoalsRequest(r, agent, projectId)
 	assert.Equal(t, http.StatusOK, w.Code)
-	goals = []M.FactorsGoal{}
+	goals = []model.FactorsGoal{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &goals)
 	assert.Equal(t, successFactorsGoalIds[0], int64(goals[0].ID))
@@ -404,11 +405,11 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	// Happy path
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal10"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.EndEvent = "event1"
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up1", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)
@@ -430,27 +431,27 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	json.Unmarshal(jsonResponse, &obj)
 	assert.Equal(t, successFactorsGoalIds[1], obj.Id)
 
-	goalObj, _ := M.GetFactorsGoalByID(successFactorsGoalIds[1], projectId)
+	goalObj, _ := store.GetStore().GetFactorsGoalByID(successFactorsGoalIds[1], projectId)
 	assert.Equal(t, goalObj.Name, "Updated FactorsGoal")
 
 	// Happy path
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal11"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event1"
 	rule.EndEvent = "event2"
 	rule.Visited = true
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up1", Value: "uv1"})
-	var stuserpr []M.KeyValueTuple
-	stuserpr = append(stuserpr, M.KeyValueTuple{Key: "up1", Value: "uv1"})
-	var enuserpr []M.KeyValueTuple
-	enuserpr = append(enuserpr, M.KeyValueTuple{Key: "up1", Value: "uv1"})
-	var steventpr []M.KeyValueTuple
-	steventpr = append(steventpr, M.KeyValueTuple{Key: "ep1", Value: "uv1"})
-	var eneventpr []M.KeyValueTuple
-	eneventpr = append(eneventpr, M.KeyValueTuple{Key: "ep2", Value: "uv1"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up1", Value: "uv1"})
+	var stuserpr []model.KeyValueTuple
+	stuserpr = append(stuserpr, model.KeyValueTuple{Key: "up1", Value: "uv1"})
+	var enuserpr []model.KeyValueTuple
+	enuserpr = append(enuserpr, model.KeyValueTuple{Key: "up1", Value: "uv1"})
+	var steventpr []model.KeyValueTuple
+	steventpr = append(steventpr, model.KeyValueTuple{Key: "ep1", Value: "uv1"})
+	var eneventpr []model.KeyValueTuple
+	eneventpr = append(eneventpr, model.KeyValueTuple{Key: "ep2", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	rule.Rule.StartEnUserFitler = stuserpr
 	rule.Rule.EndEnUserFitler = enuserpr
@@ -465,13 +466,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	json.Unmarshal(jsonResponse, &obj)
 	successFactorsGoalIds = append(successFactorsGoalIds, obj.Id)
 
-	M.DeactivateFactorsTrackedEvent(id2, projectId)
-	M.RemoveFactorsTrackedUserProperty(id3, projectId)
+	store.GetStore().DeactivateFactorsTrackedEvent(id2, projectId)
+	store.GetStore().RemoveFactorsTrackedUserProperty(id3, projectId)
 
 	// get all goals
 	w = sendGetAllFactorsGoalsRequest(r, agent, projectId)
 	assert.Equal(t, http.StatusOK, w.Code)
-	goals = []M.FactorsGoal{}
+	goals = []model.FactorsGoal{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &goals)
 	assert.Equal(t, successFactorsGoalIds[0], int64(goals[0].ID))
@@ -485,7 +486,7 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	}
 	w = sendSearchFactorsGoalsRequest(r, agent, projectId, searchRequest)
 	assert.Equal(t, http.StatusOK, w.Code)
-	goals = []M.FactorsGoal{}
+	goals = []model.FactorsGoal{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &goals)
 	assert.Equal(t, len(goals), 2)
@@ -496,13 +497,13 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	}
 	w = sendSearchFactorsGoalsRequest(r, agent, projectId, searchRequest)
 	assert.Equal(t, http.StatusOK, w.Code)
-	goals = []M.FactorsGoal{}
+	goals = []model.FactorsGoal{}
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &goals)
 	assert.Equal(t, len(goals), 3)
 
 	// nul agentID
-	id, errCode, _ := M.CreateFactorsGoal(projectId, "WithoutAgentID", M.FactorsGoalRule{EndEvent: "event1"}, "")
+	id, errCode, _ := store.GetStore().CreateFactorsGoal(projectId, "WithoutAgentID", model.FactorsGoalRule{EndEvent: "event1"}, "")
 	assert.NotEqual(t, 0, id)
 	assert.Equal(t, 201, errCode)
 
@@ -510,11 +511,11 @@ func TestCreateFactorsGoalHandler(t *testing.T) {
 	C.GetConfig().ActiveFactorsGoalsLimit = 0
 	request = V1.CreateFactorsGoalParams{}
 	request.Name = "FactorsGoal12"
-	rule = M.FactorsGoalRule{}
+	rule = model.FactorsGoalRule{}
 	rule.StartEvent = "event2"
-	rule.Rule = M.FactorsGoalFilter{}
+	rule.Rule = model.FactorsGoalFilter{}
 	globalFilters = nil
-	globalFilters = append(globalFilters, M.KeyValueTuple{Key: "up2", Value: "uv1"})
+	globalFilters = append(globalFilters, model.KeyValueTuple{Key: "up2", Value: "uv1"})
 	rule.Rule.GlobalFilters = globalFilters
 	request.Rule = V1.ReverseMapRule(rule)
 	w = sendCreateFactorsGoalRequest(r, request, agent, projectId)

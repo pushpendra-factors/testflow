@@ -3,7 +3,7 @@ package main
 import (
 	C "factors/config"
 	"factors/filestore"
-	M "factors/model"
+	"factors/model/store"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
@@ -135,7 +135,7 @@ func main() {
 	projectIdsToSkip := util.GetIntBoolMapFromStringList(projectIdsToSkipFlag)
 	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
 	if allProjects {
-		projectIDs, errCode := M.GetAllProjectIDs()
+		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
 		if errCode != http.StatusFound {
 			log.Fatal("Failed to get all projects and project_ids set to '*'.")
 		}

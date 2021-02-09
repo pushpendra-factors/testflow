@@ -1,7 +1,7 @@
 package querycounter
 
 import (
-	M "factors/model"
+	"factors/model/model"
 	P "factors/pattern"
 	"factors/util"
 	"fmt"
@@ -12,7 +12,7 @@ import (
 
 // EventsPropertiesQueryTracker tracks if the set of events and filters are satisfied, based on type of events condition.
 type EventsPropertiesQueryTracker struct {
-	eventsWithProperties []M.QueryEventWithProperties
+	eventsWithProperties []model.QueryEventWithProperties
 	// all, any or each.
 	eventsCondition string
 
@@ -21,16 +21,16 @@ type EventsPropertiesQueryTracker struct {
 }
 
 func NewEventPropertiesQueryTracker(
-	eventsWithProperties []M.QueryEventWithProperties,
+	eventsWithProperties []model.QueryEventWithProperties,
 	eventsCondition string) (*EventsPropertiesQueryTracker, error) {
 	// Checking for errors.
 	eLen := len(eventsWithProperties)
 	if eLen == 0 {
 		return nil, fmt.Errorf("No events to track")
 	}
-	if eventsCondition != M.EventCondAnyGivenEvent &&
-		eventsCondition != M.EventCondAllGivenEvent &&
-		eventsCondition != M.EventCondEachGivenEvent {
+	if eventsCondition != model.EventCondAnyGivenEvent &&
+		eventsCondition != model.EventCondAllGivenEvent &&
+		eventsCondition != model.EventCondEachGivenEvent {
 		return nil, fmt.Errorf(fmt.Sprintf(
 			"Unknown  condition %s in %s", eventsCondition, eventsWithProperties))
 	}
@@ -60,20 +60,20 @@ func (epqTracker *EventsPropertiesQueryTracker) IsTrackCompleteOnData(eventDetai
 		if ewp.Name == eventDetails.EventName {
 			if isAllPropertyFiltersMatched(ewp.Properties, eventDetails) {
 				epqTracker.eventWithPropertyFound[i] = true
-				if epqTracker.eventsCondition == M.EventCondEachGivenEvent {
+				if epqTracker.eventsCondition == model.EventCondEachGivenEvent {
 					return true
 				}
 			}
 		}
 	}
-	if epqTracker.eventsCondition == M.EventCondAnyGivenEvent {
+	if epqTracker.eventsCondition == model.EventCondAnyGivenEvent {
 		tracked := false
 		for _, trackedI := range epqTracker.eventWithPropertyFound {
 			tracked = tracked || trackedI
 		}
 		return tracked
 	}
-	if epqTracker.eventsCondition == M.EventCondAllGivenEvent {
+	if epqTracker.eventsCondition == model.EventCondAllGivenEvent {
 		tracked := true
 		for _, trackedI := range epqTracker.eventWithPropertyFound {
 			tracked = tracked && trackedI
@@ -83,20 +83,20 @@ func (epqTracker *EventsPropertiesQueryTracker) IsTrackCompleteOnData(eventDetai
 	return false
 }
 
-func isAllPropertyFiltersMatched(propertiesToMatch []M.QueryProperty, eventDetails *P.CounterEventFormat) bool {
+func isAllPropertyFiltersMatched(propertiesToMatch []model.QueryProperty, eventDetails *P.CounterEventFormat) bool {
 	// By default we assume it is an AND operator on all the filter conditions. property.LogicalOp
 	// is also currently default AND in normal queries too.
 	for _, ptm := range propertiesToMatch {
-		if string(ptm.Value) == M.PropertyValueNone {
+		if string(ptm.Value) == model.PropertyValueNone {
 			// Not handling $none values yet.
 			continue
 		}
 		var propertiesMap map[string]interface{}
 
-		if ptm.Entity == M.PropertyEntityUser {
+		if ptm.Entity == model.PropertyEntityUser {
 			propertiesMap = eventDetails.UserProperties
 
-		} else if ptm.Entity == M.PropertyEntityEvent {
+		} else if ptm.Entity == model.PropertyEntityEvent {
 			propertiesMap = eventDetails.EventProperties
 		}
 
@@ -105,7 +105,7 @@ func isAllPropertyFiltersMatched(propertiesToMatch []M.QueryProperty, eventDetai
 			return false
 		}
 		if ptm.Type == util.PropertyTypeDateTime {
-			queryValueDateTime, err := M.DecodeDateTimePropertyValue(ptm.Value)
+			queryValueDateTime, err := model.DecodeDateTimePropertyValue(ptm.Value)
 			if err != nil {
 				log.WithError(err).Error("Failed reading timestamp on datetime request.")
 				return false
@@ -117,19 +117,19 @@ func isAllPropertyFiltersMatched(propertiesToMatch []M.QueryProperty, eventDetai
 		} else if ptm.Type == util.PropertyTypeNumerical {
 			queryValFloat64 := util.SafeConvertToFloat64(ptm.Value)
 			dataValFloat64 := util.SafeConvertToFloat64(dataVal)
-			if ptm.Operator == M.EqualsOpStr && dataValFloat64 != queryValFloat64 {
+			if ptm.Operator == model.EqualsOpStr && dataValFloat64 != queryValFloat64 {
 				return false
-			} else if ptm.Operator == M.NotEqualOpStr && dataValFloat64 == queryValFloat64 {
+			} else if ptm.Operator == model.NotEqualOpStr && dataValFloat64 == queryValFloat64 {
 				return false
-			} else if ptm.Operator == M.NotEqualOpStr && dataValFloat64 == queryValFloat64 {
+			} else if ptm.Operator == model.NotEqualOpStr && dataValFloat64 == queryValFloat64 {
 				return false
-			} else if ptm.Operator == M.GreaterThanOpStr && dataValFloat64 <= queryValFloat64 {
+			} else if ptm.Operator == model.GreaterThanOpStr && dataValFloat64 <= queryValFloat64 {
 				return false
-			} else if ptm.Operator == M.GreaterThanOrEqualOpStr && dataValFloat64 < queryValFloat64 {
+			} else if ptm.Operator == model.GreaterThanOrEqualOpStr && dataValFloat64 < queryValFloat64 {
 				return false
-			} else if ptm.Operator == M.LesserThanOpStr && dataValFloat64 >= queryValFloat64 {
+			} else if ptm.Operator == model.LesserThanOpStr && dataValFloat64 >= queryValFloat64 {
 				return false
-			} else if ptm.Operator == M.LesserThanOrEqualOpStr && dataValFloat64 > queryValFloat64 {
+			} else if ptm.Operator == model.LesserThanOrEqualOpStr && dataValFloat64 > queryValFloat64 {
 				return false
 			} else {
 				log.Error(fmt.Sprintf("Unknown numerical operator %s. No match", ptm.Operator))
@@ -147,13 +147,13 @@ func isAllPropertyFiltersMatched(propertiesToMatch []M.QueryProperty, eventDetai
 				log.WithError(err).Error("Failed converting property value to string.")
 				return false
 			}
-			if ptm.Operator == M.EqualsOpStr && dataValStr != queryValStr {
+			if ptm.Operator == model.EqualsOpStr && dataValStr != queryValStr {
 				return false
-			} else if ptm.Operator == M.NotEqualOpStr && dataValStr == queryValStr {
+			} else if ptm.Operator == model.NotEqualOpStr && dataValStr == queryValStr {
 				return false
-			} else if ptm.Operator == M.ContainsOpStr && !strings.Contains(dataValStr, queryValStr) {
+			} else if ptm.Operator == model.ContainsOpStr && !strings.Contains(dataValStr, queryValStr) {
 				return false
-			} else if ptm.Operator == M.NotContainsOpStr && strings.Contains(dataValStr, queryValStr) {
+			} else if ptm.Operator == model.NotContainsOpStr && strings.Contains(dataValStr, queryValStr) {
 				return false
 			} else {
 				log.Error(fmt.Sprintf("Unknown numerical operator %s. No match", ptm.Operator))

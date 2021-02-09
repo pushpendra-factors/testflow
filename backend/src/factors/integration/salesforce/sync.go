@@ -10,7 +10,8 @@ import (
 	"time"
 
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 
 	"github.com/jinzhu/now"
@@ -35,10 +36,10 @@ type Describe struct {
 
 // QueryResponse structure for query API
 type QueryResponse struct {
-	TotalSize      int                  `json:"totalSize"`
-	Done           bool                 `json:"done"`
-	Records        []M.SalesforceRecord `json:"records"`
-	NextRecordsURL string               `json:"nextRecordsUrl"`
+	TotalSize      int                      `json:"totalSize"`
+	Done           bool                     `json:"done"`
+	Records        []model.SalesforceRecord `json:"records"`
+	NextRecordsURL string                   `json:"nextRecordsUrl"`
 }
 
 // ObjectStatus represents sync info from query to db
@@ -172,7 +173,7 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 	return &jsonResponse, nil
 }
 
-func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTime string) (ObjectStatus, error) {
+func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName, dateTime string) (ObjectStatus, error) {
 	var salesforceObjectStatus ObjectStatus
 	salesforceObjectStatus.ProjetID = ps.ProjectID
 	salesforceObjectStatus.DocType = objectName
@@ -215,7 +216,7 @@ func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTi
 
 		var failures []string
 		for i := range records {
-			err = M.BuildAndUpsertDocument(ps.ProjectID, objectName, records[i])
+			err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, objectName, records[i])
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument.")
 				failures = append(failures, err.Error())
@@ -225,7 +226,7 @@ func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTi
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
 		hasMore = !queryResponse.Done
 		nextBatchRoute = queryResponse.NextRecordsURL
-		records = make([]M.SalesforceRecord, 0)
+		records = make([]model.SalesforceRecord, 0)
 	}
 
 	return salesforceObjectStatus, nil
@@ -264,7 +265,7 @@ type TokenError struct {
 }
 
 // GetAccessToken gets new salesforce access token by refresh token
-func GetAccessToken(ps *M.SalesforceProjectSettings, redirectURL string) (string, error) {
+func GetAccessToken(ps *model.SalesforceProjectSettings, redirectURL string) (string, error) {
 	if ps == nil || redirectURL == "" {
 		return "", errors.New("invalid project setting or redirect url")
 	}
@@ -308,7 +309,7 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectURL string) (string
 }
 
 // SyncDocuments syncs from salesforce to database by doc type
-func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) []ObjectStatus {
+func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) []ObjectStatus {
 	var allObjectStatus []ObjectStatus
 
 	for docType, timestamp := range lastSyncInfo {
@@ -321,7 +322,7 @@ func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int6
 		}
 
 		t := time.Unix(timestamp, 0)
-		sfFormatedTime = t.UTC().Format(M.SalesforceDocumentTimeLayout)
+		sfFormatedTime = t.UTC().Format(model.SalesforceDocumentTimeLayout)
 
 		objectStatus, err := syncByType(ps, accessToken, docType, sfFormatedTime)
 		if err != nil || len(objectStatus.Failures) != 0 {

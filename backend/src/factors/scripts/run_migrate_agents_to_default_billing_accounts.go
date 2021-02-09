@@ -2,7 +2,7 @@ package main
 
 import (
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
 	"factors/util"
 	"flag"
 	"fmt"
@@ -74,13 +74,13 @@ func main() {
 	}
 }
 
-func createDefaultBillingAccount(db *gorm.DB, agent M.Agent) error {
-	billingAcc := &M.BillingAccount{PlanID: M.FreePlanID, AgentUUID: agent.UUID}
+func createDefaultBillingAccount(db *gorm.DB, agent model.Agent) error {
+	billingAcc := &model.BillingAccount{PlanID: model.FreePlanID, AgentUUID: agent.UUID}
 	return db.Create(billingAcc).Error
 }
 
-func getAllAgents(db *gorm.DB) ([]M.Agent, error) {
-	agents := make([]M.Agent, 0, 0)
+func getAllAgents(db *gorm.DB) ([]model.Agent, error) {
+	agents := make([]model.Agent, 0, 0)
 	err := db.Find(&agents).Error
 	if err != nil {
 		return agents, err

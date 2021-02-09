@@ -2,7 +2,8 @@ package tests
 
 import (
 	"encoding/json"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"math"
@@ -23,9 +24,9 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	start := time.Now()
 
 	// Test successful CreateEvent.
-	newEvent := &M.Event{EventNameId: eventNameId, ProjectId: projectId,
+	newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
 		UserId: userId, Timestamp: start.Unix()}
-	event, errCode := M.CreateEvent(newEvent)
+	event, errCode := store.GetStore().CreateEvent(newEvent)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(event.ID) > 30)
 	assert.Equal(t, projectId, event.ProjectId)
@@ -39,7 +40,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, event.CreatedAt, event.UpdatedAt)
 
 	// Test Get Event on the created.
-	retEvent, errCode := M.GetEvent(projectId, userId, event.ID)
+	retEvent, errCode := store.GetStore().GetEvent(projectId, userId, event.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(event.CreatedAt.Sub(retEvent.CreatedAt).Seconds()) < 0.1)
@@ -60,15 +61,15 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.True(t, (*eventProperties)["$hour_of_day"] != 0 && (*eventProperties)["$hour_of_day"] == float64(hr))
 
 	// Test Get Event with wrong project id.
-	retEvent, errCode = M.GetEvent(projectId+1, userId, event.ID)
+	retEvent, errCode = store.GetStore().GetEvent(projectId+1, userId, event.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, retEvent)
 	// Test Get Event with wrong user id.
-	retEvent, errCode = M.GetEvent(projectId, "randomId", event.ID)
+	retEvent, errCode = store.GetStore().GetEvent(projectId, "randomId", event.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, retEvent)
 	// Test successful CreateEvent with count increment
-	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId,
+	event, errCode = store.GetStore().CreateEvent(&model.Event{EventNameId: eventNameId,
 		ProjectId: projectId, UserId: userId, Timestamp: start.Unix()})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(event.ID) > 30)
@@ -93,40 +94,40 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 		//projectId, userId, eventNameId, err := SetupProjectUserEventName()
 		assert.Nil(t, err)
 
-		event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId,
+		event, errCode = store.GetStore().CreateEvent(&model.Event{EventNameId: eventNameId, ProjectId: projectId,
 			UserId: userId, CustomerEventId: &custEventId, Timestamp: time.Now().Unix()})
 		assert.Equal(t, http.StatusCreated, errCode)
-		_, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId,
+		_, errCode = store.GetStore().CreateEvent(&model.Event{EventNameId: eventNameId, ProjectId: projectId,
 			UserId: userId, CustomerEventId: &custEventId, Timestamp: time.Now().Unix()})
 		assert.Equal(t, http.StatusNotAcceptable, errCode)
 	})
 
 	// Test Get Event on non existent id.
-	retEvent, errCode = M.GetEvent(projectId, userId, "9ad21963-bcfb-4563-aa02-8ea589710d1a")
+	retEvent, errCode = store.GetStore().GetEvent(projectId, userId, "9ad21963-bcfb-4563-aa02-8ea589710d1a")
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, retEvent)
 
 	// Test Create Event with properties.
 	properties := json.RawMessage(`{"email": "random@example.com"}`)
-	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId,
+	event, errCode = store.GetStore().CreateEvent(&model.Event{EventNameId: eventNameId, ProjectId: projectId,
 		UserId: userId, Properties: postgres.Jsonb{properties}, Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, event)
 	assert.NotEqual(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
 	// Retrieve and validate properties.
-	retEvent, errCode = M.GetEvent(projectId, userId, event.ID)
+	retEvent, errCode = store.GetStore().GetEvent(projectId, userId, event.ID)
 	eventPropertiesBytes, err := retEvent.Properties.Value()
 	var eventPropertiesMap map[string]interface{}
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 	assert.Equal(t, "random@example.com", eventPropertiesMap["email"])
 	// Test Get Event on wrong format of id.
-	retEvent, errCode = M.GetEvent(projectId, userId, "r4nd0m!234")
+	retEvent, errCode = store.GetStore().GetEvent(projectId, userId, "r4nd0m!234")
 	assert.Equal(t, http.StatusInternalServerError, errCode)
 	assert.Nil(t, retEvent)
 
 	// Test Create Event with external id.
 	eventId := uuid.New().String()
-	event, errCode = M.CreateEvent(&M.Event{ID: eventId, EventNameId: eventNameId,
+	event, errCode = store.GetStore().CreateEvent(&model.Event{ID: eventId, EventNameId: eventNameId,
 		ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, event)
@@ -134,34 +135,34 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 
 	// Test Create Event with invalid uuid as id.
 	eventId = U.RandomLowerAphaNumString(10)
-	event, errCode = M.CreateEvent(&M.Event{ID: eventId, EventNameId: eventNameId,
+	event, errCode = store.GetStore().CreateEvent(&model.Event{ID: eventId, EventNameId: eventNameId,
 		ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusInternalServerError, errCode)
 	assert.Nil(t, event)
 
 	// Test Create Event without projectId.
-	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, UserId: userId,
+	event, errCode = store.GetStore().CreateEvent(&model.Event{EventNameId: eventNameId, UserId: userId,
 		Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 
 	// Test Create Event without userId.
-	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId,
+	event, errCode = store.GetStore().CreateEvent(&model.Event{EventNameId: eventNameId,
 		ProjectId: projectId, Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 
 	// Test Create Event without eventNameId.
-	event, errCode = M.CreateEvent(&M.Event{EventNameId: 0, ProjectId: projectId, UserId: userId,
+	event, errCode = store.GetStore().CreateEvent(&model.Event{EventNameId: 0, ProjectId: projectId, UserId: userId,
 		Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 }
 
-func createEventWithTimestampAndPrperties(t *testing.T, project *M.Project, user *M.User, timestamp int64, properties json.RawMessage) (*M.EventName, *M.Event) {
-	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: fmt.Sprintf("event_%d", timestamp)})
+func createEventWithTimestampAndPrperties(t *testing.T, project *model.Project, user *model.User, timestamp int64, properties json.RawMessage) (*model.EventName, *model.Event) {
+	eventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: fmt.Sprintf("event_%d", timestamp)})
 	assert.NotNil(t, eventName)
-	event, errCode := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
+	event, errCode := store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
 		Timestamp: timestamp, Properties: postgres.Jsonb{properties}})
 	assert.Equal(t, http.StatusCreated, errCode)
 	return eventName, event
@@ -174,10 +175,10 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 	t.Run("RecentPropertiesWithLimit", func(t *testing.T) {
 		timestamp := time.Now().Unix()
 		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
-		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
+		_, errCode1 := store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
 			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp3": "value2", "rProp4": 2}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
-		props, err := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, time.Now().AddDate(0, 0, -30).Unix(), timestamp, 100)
+		props, err := store.GetStore().GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, time.Now().AddDate(0, 0, -30).Unix(), timestamp, 100)
 		assert.Equal(t, nil, err)
 		assert.Equal(t, len(props) >= 4, true)
 		propertyMap := make(map[string]bool)
@@ -194,7 +195,7 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 		timestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
 
-		props, err := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, time.Now().AddDate(0, 0, -1).Unix(), timestamp, 100)
+		props, err := store.GetStore().GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, time.Now().AddDate(0, 0, -1).Unix(), timestamp, 100)
 		assert.Equal(t, nil, err)
 		assert.Len(t, props, 0)
 	})
@@ -207,14 +208,14 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 	t.Run("RecentPropertyValues", func(t *testing.T) {
 		timestamp := time.Now().Unix()
 		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1"}`))
-		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
+		_, errCode1 := store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
 			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
-		_, errCode1 = M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
+		_, errCode1 = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
 			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 
-		values, category, err := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 10, 100, time.Now().AddDate(0, 0, -1).Unix(), timestamp)
+		values, category, err := store.GetStore().GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 10, 100, time.Now().AddDate(0, 0, -1).Unix(), timestamp)
 		assert.Equal(t, nil, err)
 		assert.Len(t, values, 2)
 		assert.Equal(t, values[0].Value, "value1")
@@ -222,13 +223,13 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 		assert.Equal(t, category, U.PropertyTypeCategorical)
 
 		// limited values to 1.
-		values1, category, err := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 1, 100, time.Now().AddDate(0, 0, -30).Unix(), timestamp)
+		values1, category, err := store.GetStore().GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 1, 100, time.Now().AddDate(0, 0, -30).Unix(), timestamp)
 		assert.Equal(t, nil, err)
 		assert.Len(t, values1, 1)
 		assert.Equal(t, values1[0].Value, "value1")
 		assert.Equal(t, category, U.PropertyTypeCategorical)
 
-		values2, category, err := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp2", 10, 100, time.Now().AddDate(0, 0, -30).Unix(), timestamp)
+		values2, category, err := store.GetStore().GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp2", 10, 100, time.Now().AddDate(0, 0, -30).Unix(), timestamp)
 		assert.Equal(t, nil, err)
 		assert.Len(t, values2, 1)
 		assert.Equal(t, values2[0].Value, "1")
@@ -238,11 +239,11 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 	t.Run("PropertyValuesOlderThan24Hour", func(t *testing.T) {
 		timestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1"}`))
-		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
+		_, errCode1 := store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
 			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 
-		values, category, err := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 100, 100, time.Now().AddDate(0, 0, -1).Unix(), timestamp)
+		values, category, err := store.GetStore().GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 100, 100, time.Now().AddDate(0, 0, -1).Unix(), timestamp)
 		assert.Equal(t, nil, err)
 		assert.Empty(t, values)
 		assert.Equal(t, category, "")
@@ -258,10 +259,10 @@ func TestUpdateEventProperties(t *testing.T) {
 		json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
 
 	// should add properties if not exist.
-	errCode := M.UpdateEventProperties(project.ID, event.ID, &U.PropertiesMap{
+	errCode := store.GetStore().UpdateEventProperties(project.ID, event.ID, &U.PropertiesMap{
 		"$page_spent_time": 1.346, "$page_load_time": 1.594}, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
-	updatedEvent, errCode := M.GetEventById(project.ID, event.ID)
+	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, event.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	eventProperties, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
 	assert.Nil(t, err)
@@ -274,10 +275,10 @@ func TestUpdateEventProperties(t *testing.T) {
 	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
 
 	// should update properties if exist.
-	errCode = M.UpdateEventProperties(project.ID, event.ID, &U.PropertiesMap{
+	errCode = store.GetStore().UpdateEventProperties(project.ID, event.ID, &U.PropertiesMap{
 		"$page_spent_time": 3}, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
-	updatedEvent, errCode = M.GetEventById(project.ID, event.ID)
+	updatedEvent, errCode = store.GetStore().GetEventById(project.ID, event.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	eventProperties, err = U.DecodePostgresJsonb(&updatedEvent.Properties)
 	assert.Contains(t, *eventProperties, "$page_spent_time")
@@ -296,21 +297,21 @@ func TestCacheEvent(t *testing.T) {
 
 		eventId := U.RandomString(10)
 		timestamp := time.Now().Unix() - 100
-		err = M.SetCacheUserLastEvent(project.ID, user.ID,
-			&M.CacheEvent{ID: eventId, Timestamp: timestamp})
+		err = model.SetCacheUserLastEvent(project.ID, user.ID,
+			&model.CacheEvent{ID: eventId, Timestamp: timestamp})
 		assert.Nil(t, err)
 
-		cacheEvent, err := M.GetCacheUserLastEvent(project.ID, user.ID)
+		cacheEvent, err := model.GetCacheUserLastEvent(project.ID, user.ID)
 		assert.NotNil(t, cacheEvent)
 		assert.Equal(t, eventId, cacheEvent.ID)
 		assert.Equal(t, timestamp, cacheEvent.Timestamp)
 		assert.Nil(t, err)
 
-		event, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+		event, errCode := store.GetStore().CreateEvent(&model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
 			UserId: user.ID, Timestamp: time.Now().Unix()})
 		assert.Equal(t, http.StatusCreated, errCode)
 
-		cacheEvent, err = M.GetCacheUserLastEvent(project.ID, user.ID)
+		cacheEvent, err = model.GetCacheUserLastEvent(project.ID, user.ID)
 		assert.NotNil(t, cacheEvent)
 		assert.Equal(t, event.ID, cacheEvent.ID)
 		assert.True(t, cacheEvent.Timestamp > timestamp)
@@ -322,7 +323,7 @@ func TestOverwriteEventProperties(t *testing.T) {
 	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
-	event, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
+	event, errCode := store.GetStore().CreateEvent(&model.Event{EventNameId: eventNameId,
 		ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix()})
 
 	eventPropertiesMap, err := U.DecodePostgresJsonb(&event.Properties)
@@ -333,10 +334,10 @@ func TestOverwriteEventProperties(t *testing.T) {
 	eventPropertiesJSONb, err := U.EncodeToPostgresJsonb(eventPropertiesMap)
 	assert.Nil(t, err)
 
-	errCode = M.OverwriteEventProperties(projectId, userId, event.ID, eventPropertiesJSONb)
+	errCode = store.GetStore().OverwriteEventProperties(projectId, userId, event.ID, eventPropertiesJSONb)
 	assert.Equal(t, errCode, http.StatusAccepted)
 
-	rEvent, errCode := M.GetEvent(projectId, userId, event.ID)
+	rEvent, errCode := store.GetStore().GetEvent(projectId, userId, event.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 
 	rEventPropertiesMap, err := U.DecodePostgresJsonb(&rEvent.Properties)
@@ -349,17 +350,17 @@ func TestGetEventCountOfUserByEventName(t *testing.T) {
 	assert.Nil(t, err)
 
 	// No events, should return found and zero count.
-	count, errCode := M.GetEventCountOfUserByEventName(project.ID, user.ID, eventName.ID)
+	count, errCode := store.GetStore().GetEventCountOfUserByEventName(project.ID, user.ID, eventName.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, uint64(0), count)
 
-	newEvent := &M.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+	newEvent := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
 		UserId: user.ID, Timestamp: time.Now().Unix()}
-	event, errCode := M.CreateEvent(newEvent)
+	event, errCode := store.GetStore().CreateEvent(newEvent)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, event)
 
-	count, errCode = M.GetEventCountOfUserByEventName(project.ID, user.ID, eventName.ID)
+	count, errCode = store.GetStore().GetEventCountOfUserByEventName(project.ID, user.ID, eventName.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, uint64(1), count)
 }
@@ -368,7 +369,7 @@ func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user, status := M.CreateUser(&M.User{ProjectId: project.ID})
+	user, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.NotNil(t, user)
 	assert.Equal(t, http.StatusCreated, status)
 
@@ -386,12 +387,13 @@ func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
 	createEventWithTimestampByName(t, project, user, "event6", timeNowUnix-4*U.SECONDS_IN_A_DAY)
 
 	// Should be empty for todays startTime.
-	datesEventCountMap, status := M.GetDatesForNextEventsArchivalBatch(project.ID, timeNowUnix)
+	datesEventCountMap, status := store.GetStore().GetDatesForNextEventsArchivalBatch(project.ID, timeNowUnix)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, 0, len(datesEventCountMap))
 
 	// Must return 3 days.
-	datesEventCountMap, status = M.GetDatesForNextEventsArchivalBatch(project.ID, timeNowUnix-10*U.SECONDS_IN_A_DAY)
+	datesEventCountMap, status = store.GetStore().GetDatesForNextEventsArchivalBatch(project.ID,
+		timeNowUnix-10*U.SECONDS_IN_A_DAY)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, 3, len(datesEventCountMap))
 	expectedDateCount := map[string]int64{

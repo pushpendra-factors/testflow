@@ -7,7 +7,7 @@ import (
 	"time"
 
 	C "factors/config"
-	M "factors/model"
+	"factors/model/store"
 	"factors/util"
 
 	log "github.com/sirupsen/logrus"
@@ -109,7 +109,7 @@ func main() {
 func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	startTime := util.TimeNowUnix()
-	M.CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines)
+	store.GetStore().CacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs, numRoutines)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	timeTaken.Store("all", timeTakenString)
 }
@@ -117,7 +117,7 @@ func cacheDashboardUnitsForProjects(projectIDs, excludeProjectIDs string, numRou
 func cacheWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 	startTime := util.TimeNowUnix()
-	M.CacheWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs, numRoutines)
+	store.GetStore().CacheWebsiteAnalyticsForProjects(projectIDs, excludeProjectIDs, numRoutines)
 	timeTakenStringWeb := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	timeTaken.Store("web", timeTakenStringWeb)
 }

@@ -1,0 +1,106 @@
+package model
+
+import (
+	"encoding/json"
+	"errors"
+	cacheRedis "factors/cache/redis"
+	"fmt"
+	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
+)
+
+type CacheEvent struct {
+	ID        string `json:"id"`
+	Timestamp int64  `json:"ts"`
+}
+
+type Event struct {
+	// Composite primary key with project_id and uuid.
+	ID              string  `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
+	CustomerEventId *string `json:"customer_event_id"`
+
+	// Below are the foreign key constraints added in creation script.
+	// project_id -> projects(id)
+	// (project_id, user_id) -> users(project_id, id)
+	// (project_id, event_name_id) -> event_names(project_id, id)
+	ProjectId        uint64  `gorm:"primary_key:true;" json:"project_id"`
+	UserId           string  `json:"user_id"`
+	UserPropertiesId string  `json:"user_properties_id"`
+	SessionId        *string `json:session_id`
+	EventNameId      uint64  `json:"event_name_id"`
+	Count            uint64  `json:"count"`
+	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
+	Properties                 postgres.Jsonb `json:"properties,omitempty"`
+	PropertiesUpdatedTimestamp int64          `gorm:"not null;default:0" json:"properties_updated_timestamp,omitempty"`
+	// unix epoch timestamp in seconds.
+	Timestamp int64     `json:"timestamp"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+const cacheIndexUserLastEvent = "user_last_event"
+const tableName = "events"
+
+const NewUserSessionInactivityInSeconds int64 = ThirtyMinutesInSeconds
+const ThirtyMinutesInSeconds int64 = 30 * 60
+
+func SetCacheUserLastEvent(projectId uint64, userId string, cacheEvent *CacheEvent) error {
+	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
+	if projectId == 0 || userId == "" {
+		logCtx.Error("Invalid project or user id on addToCacheUserLastEventTimestamp")
+		return errors.New("invalid project or user id")
+	}
+
+	if cacheEvent == nil {
+		logCtx.Error("Nil cache event on setCacheUserLastEvent")
+		return errors.New("nil cache event")
+	}
+
+	cacheEventJson, err := json.Marshal(cacheEvent)
+	if err != nil {
+		logCtx.Error("Failed cache event json marshal.")
+		return err
+	}
+
+	key, err := getUserLastEventCacheKey(projectId, userId)
+	if err != nil {
+		return err
+	}
+
+	var additionalExpiryTime int64 = 5 * 60 // 5 mins
+	cacheExpiry := NewUserSessionInactivityInSeconds + additionalExpiryTime
+	err = cacheRedis.Set(key, string(cacheEventJson), float64(cacheExpiry))
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to setCacheUserLastEvent.")
+	}
+
+	return err
+}
+
+func GetCacheUserLastEvent(projectId uint64, userId string) (*CacheEvent, error) {
+	key, err := getUserLastEventCacheKey(projectId, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	cacheEventJson, err := cacheRedis.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	var cacheEvent CacheEvent
+	err = json.Unmarshal([]byte(cacheEventJson), &cacheEvent)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cacheEvent, nil
+}
+
+func getUserLastEventCacheKey(projectId uint64, userId string) (*cacheRedis.Key, error) {
+	suffix := fmt.Sprintf("uid:%s", userId)
+	prefix := fmt.Sprintf("%s:%s", tableName, cacheIndexUserLastEvent)
+	return cacheRedis.NewKey(projectId, prefix, suffix)
+}

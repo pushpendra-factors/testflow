@@ -3,7 +3,6 @@ package salesforce
 import (
 	"encoding/json"
 	"errors"
-	M "factors/model"
 	"fmt"
 	"net/http"
 	"time"
@@ -11,6 +10,9 @@ import (
 	C "factors/config"
 	SDK "factors/sdk"
 	U "factors/util"
+
+	"factors/model/model"
+	"factors/model/store"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -32,19 +34,19 @@ var possiblePhoneField = []string{
 }
 
 var salesforceSyncOrderByType = [...]int{
-	M.SalesforceDocumentTypeContact,
-	M.SalesforceDocumentTypeAccount,
-	M.SalesforceDocumentTypeLead,
-	M.SalesforceDocumentTypeOpportunity,
+	model.SalesforceDocumentTypeContact,
+	model.SalesforceDocumentTypeAccount,
+	model.SalesforceDocumentTypeLead,
+	model.SalesforceDocumentTypeOpportunity,
 }
 
-func getUserIDFromLastestProperties(properties []M.UserProperties) string {
+func getUserIDFromLastestProperties(properties []model.UserProperties) string {
 	latestIndex := len(properties) - 1
 	return properties[latestIndex].UserId
 }
 
 // GetSalesforceDocumentProperties return map of enriched properties
-func GetSalesforceDocumentProperties(projectID uint64, document *M.SalesforceDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func GetSalesforceDocumentProperties(projectID uint64, document *model.SalesforceDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 	var enProperties map[string]interface{}
 	err := json.Unmarshal(document.Value.RawMessage, &enProperties)
 	if err != nil {
@@ -57,7 +59,7 @@ func GetSalesforceDocumentProperties(projectID uint64, document *M.SalesforceDoc
 	properties := make(map[string]interface{})
 
 	for key, value := range enProperties {
-		enKey := M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceSalesforce, M.GetSalesforceAliasByDocType(document.Type), key)
+		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.GetSalesforceAliasByDocType(document.Type), key)
 		if _, exists := enProperties[enKey]; !exists {
 			enrichedProperties[enKey] = value
 		}
@@ -76,7 +78,7 @@ func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]in
 		return
 	}
 
-	allowedfields := M.GetSalesforceAllowedfiedsByObject(projectID, M.GetSalesforceAliasByDocType(docType))
+	allowedfields := model.GetSalesforceAllowedfiedsByObject(projectID, model.GetSalesforceAliasByDocType(docType))
 	for field, value := range *properties {
 		if value == nil || value == "" || value == 0 {
 			delete(*properties, field)
@@ -92,7 +94,7 @@ func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]in
 	delete(*properties, "attributes") // delte nested meta object
 }
 
-func getSalesforceAccountID(document *M.SalesforceDocument) (string, error) {
+func getSalesforceAccountID(document *model.SalesforceDocument) (string, error) {
 	if document == nil {
 		return "", errors.New("invalid document")
 	}
@@ -119,13 +121,13 @@ func getSalesforceAccountID(document *M.SalesforceDocument) (string, error) {
 func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}, docTypeAlias string) (string, string) {
 
 	for _, phoneField := range possiblePhoneField {
-		if phoneNo, ok := properties[M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceSalesforce, docTypeAlias, phoneField)]; ok {
+		if phoneNo, ok := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docTypeAlias, phoneField)]; ok {
 			phoneStr, err := U.GetValueAsString(phoneNo)
 			if err != nil || phoneStr == "" {
 				continue
 			}
 
-			return M.GetUserIdentificationPhoneNumber(projectID, phoneStr)
+			return store.GetStore().GetUserIdentificationPhoneNumber(projectID, phoneStr)
 		}
 	}
 
@@ -136,8 +138,8 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 	}
 
 	for _, emailField := range possibleEmailField {
-		if email, ok := properties[M.GetCRMEnrichPropertyKeyByType(M.SmartCRMEventSourceSalesforce, docTypeAlias, emailField)].(string); ok && email != "" {
-			existingEmail, errCode := M.GetExistingCustomerUserID(projectID, []string{email})
+		if email, ok := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docTypeAlias, emailField)].(string); ok && email != "" {
+			existingEmail, errCode := store.GetStore().GetExistingCustomerUserID(projectID, []string{email})
 			if errCode == http.StatusFound {
 				return email, existingEmail[email]
 			}
@@ -154,7 +156,7 @@ TrackSalesforceEventByDocumentType tracks salesforce events by action
 	for action created -> create both created and updated events with date created timestamp
 	for action updated -> create on updated event with lastmodified timestamp
 */
-func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.TrackPayload, document *M.SalesforceDocument, customerUserID string) (string, string, error) {
+func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.TrackPayload, document *model.SalesforceDocument, customerUserID string) (string, string, error) {
 	if projectID == 0 {
 		return "", "", errors.New("invalid project id")
 	}
@@ -163,21 +165,21 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		return "", "", errors.New("invalid operation")
 	}
 
-	createdTimestamp, err := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentCreated)
+	createdTimestamp, err := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentCreated)
 	if err != nil {
 		return "", "", err
 	}
 
-	lastModifiedTimestamp, err := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentUpdated)
+	lastModifiedTimestamp, err := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 	if err != nil {
 		return "", "", err
 	}
 
 	var eventID, userID string
-	if document.Action == M.SalesforceDocumentCreated {
+	if document.Action == model.SalesforceDocumentCreated {
 		payload := *trackPayload
 		if customerUserID != "" {
-			user, status := M.CreateUser(&M.User{
+			user, status := store.GetStore().CreateUser(&model.User{
 				ProjectId:      projectID,
 				CustomerUserId: customerUserID,
 				JoinTimestamp:  createdTimestamp,
@@ -189,7 +191,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 			payload.UserId = user.ID
 		}
 
-		payload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentCreated)
+		payload.Name = model.GetSalesforceEventNameByAction(document, model.SalesforceDocumentCreated)
 		payload.Timestamp = createdTimestamp
 
 		status, response := SDK.Track(projectID, &payload, true, SDK.SourceSalesforce)
@@ -206,20 +208,20 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		eventID = response.EventId
 	}
 
-	if document.Action == M.SalesforceDocumentCreated || document.Action == M.SalesforceDocumentUpdated {
+	if document.Action == model.SalesforceDocumentCreated || document.Action == model.SalesforceDocumentUpdated {
 		payload := *trackPayload
-		payload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentUpdated)
+		payload.Name = model.GetSalesforceEventNameByAction(document, model.SalesforceDocumentUpdated)
 
-		if document.Action == M.SalesforceDocumentUpdated {
+		if document.Action == model.SalesforceDocumentUpdated {
 
 			payload.Timestamp = lastModifiedTimestamp
 			// TODO(maisa): Use GetSyncedSalesforceDocumentByType while updating multiple contacts in an account object
-			documents, status := M.GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type)
+			documents, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type)
 			if status != http.StatusFound {
 				return "", "", errors.New("failed to get synced document")
 			}
 
-			event, status := M.GetEventById(projectID, documents[0].SyncID)
+			event, status := store.GetStore().GetEventById(projectID, documents[0].SyncID)
 			if status != http.StatusFound {
 				return "", "", errors.New("failed to get event from sync id ")
 			}
@@ -254,11 +256,11 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	}
 
 	// create additional event for created action if document is not the first version
-	if document.Action == M.SalesforceDocumentCreated && createdTimestamp != lastModifiedTimestamp {
+	if document.Action == model.SalesforceDocumentCreated && createdTimestamp != lastModifiedTimestamp {
 		payload := *trackPayload
 		payload.Timestamp = lastModifiedTimestamp
 		payload.UserId = userID
-		payload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentUpdated)
+		payload.Name = model.GetSalesforceEventNameByAction(document, model.SalesforceDocumentUpdated)
 		status, _ := SDK.Track(projectID, &payload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			return "", "", fmt.Errorf("updated event for different timestamp track failed for doc type %d", document.Type)
@@ -268,12 +270,12 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	return eventID, userID, nil
 }
 
-func enrichAccount(projectID uint64, document *M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
 
-	if document.Type != M.SalesforceDocumentTypeAccount {
+	if document.Type != model.SalesforceDocumentTypeAccount {
 		return http.StatusInternalServerError
 	}
 
@@ -290,7 +292,7 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument, salesforceS
 		UserProperties:  *enProperties,
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID == "" {
 		logCtx.Error("Skipping user identification on salesforce account sync. No customer_user_id on properties.")
 	}
@@ -303,14 +305,14 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument, salesforceS
 	}
 
 	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
-	lastModifiedTimestamp, _ := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentUpdated)
+	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties, lastModifiedTimestamp)
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
+	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce account document as synced.")
 		return http.StatusInternalServerError
@@ -322,7 +324,7 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument, salesforceS
 // SalesforceSmartEventName struct for holding event_name and filter expression
 type SalesforceSmartEventName struct {
 	EventName string
-	Filter    *M.SmartCRMEventFilter
+	Filter    *model.SmartCRMEventFilter
 	Type      string
 }
 
@@ -332,7 +334,7 @@ func getTimestampFromField(propertyName string, properties *map[string]interface
 			return unixTimestamp, nil
 		}
 
-		unixTimestamp, err := M.GetSalesforceDocumentTimestamp(timestamp)
+		unixTimestamp, err := model.GetSalesforceDocumentTimestamp(timestamp)
 		if err != nil {
 			return 0, err
 		}
@@ -343,12 +345,12 @@ func getTimestampFromField(propertyName string, properties *map[string]interface
 	return 0, errors.New("field missing")
 }
 
-func enrichContact(projectID uint64, document *M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichContact(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
 
-	if document.Type != M.SalesforceDocumentTypeContact {
+	if document.Type != model.SalesforceDocumentTypeContact {
 		return http.StatusInternalServerError
 	}
 
@@ -364,7 +366,7 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument, salesforceS
 		UserProperties:  *enProperties,
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID == "" {
 		logCtx.Error("Skipping user identification on salesforce contact sync. No customer_user_id on properties.")
 	}
@@ -377,14 +379,14 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument, salesforceS
 	}
 
 	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
-	lastModifiedTimestamp, _ := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentUpdated)
+	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties, lastModifiedTimestamp)
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
+	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce contact document as synced.")
 		return http.StatusInternalServerError
@@ -400,9 +402,9 @@ will require userID or customerUserID and doctType
 WITH PREVIOUS PROPERTY := userID, customerUserID and doctType won't be used
 */
 func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID, userID string, docType int,
-	currentProperties, prevProperties *map[string]interface{}, filter *M.SmartCRMEventFilter) (*M.CRMSmartEvent, *map[string]interface{}, bool) {
+	currentProperties, prevProperties *map[string]interface{}, filter *model.SmartCRMEventFilter) (*model.CRMSmartEvent, *map[string]interface{}, bool) {
 
-	var crmSmartEvent M.CRMSmartEvent
+	var crmSmartEvent model.CRMSmartEvent
 	var validProperty bool
 	var newProperties map[string]interface{}
 
@@ -415,9 +417,9 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 	}
 
 	if prevProperties != nil {
-		validProperty = M.CRMFilterEvaluator(projectID, currentProperties, prevProperties, filter, M.CompareStateBoth)
+		validProperty = model.CRMFilterEvaluator(projectID, currentProperties, prevProperties, filter, model.CompareStateBoth)
 	} else {
-		validProperty = M.CRMFilterEvaluator(projectID, currentProperties, nil, filter, M.CompareStateCurr)
+		validProperty = model.CRMFilterEvaluator(projectID, currentProperties, nil, filter, model.CompareStateCurr)
 	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType})
@@ -427,7 +429,8 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 	}
 
 	if prevProperties == nil {
-		prevDoc, status := M.GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID, customerUserID, userID, docType)
+		prevDoc, status := store.GetStore().GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(
+			projectID, customerUserID, userID, docType)
 		if status != http.StatusFound && status != http.StatusNotFound {
 			return nil, prevProperties, false
 		}
@@ -443,14 +446,14 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 			}
 		}
 
-		if !M.CRMFilterEvaluator(projectID, currentProperties, prevProperties,
-			filter, M.CompareStateBoth) {
+		if !model.CRMFilterEvaluator(projectID, currentProperties, prevProperties,
+			filter, model.CompareStateBoth) {
 			return nil, prevProperties, false
 		}
 	}
 
 	crmSmartEvent.Name = eventName
-	M.FillSmartEventCRMProperties(&newProperties, currentProperties, prevProperties, filter)
+	model.FillSmartEventCRMProperties(&newProperties, currentProperties, prevProperties, filter)
 	crmSmartEvent.Properties = newProperties
 
 	return &crmSmartEvent, prevProperties, true
@@ -459,7 +462,7 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 // TrackSalesforceSmartEvent valids current properties with CRM smart filter and creates a event
 func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *SalesforceSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64) *map[string]interface{} {
 	var valid bool
-	var smartEventPayload *M.CRMSmartEvent
+	var smartEventPayload *model.CRMSmartEvent
 	if salesforceSmartEventName.EventName == "" || projectID == 0 || salesforceSmartEventName.Type == "" {
 		return prevProperties
 	}
@@ -475,7 +478,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 		return prevProperties
 	}
 
-	M.AddSmartEventReferenceMeta(&smartEventPayload.Properties, eventID)
+	model.AddSmartEventReferenceMeta(&smartEventPayload.Properties, eventID)
 
 	smartEventTrackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
@@ -486,7 +489,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 	}
 
 	timestampReferenceField := salesforceSmartEventName.Filter.TimestampReferenceField
-	if timestampReferenceField == M.TimestampReferenceTypeTrack {
+	if timestampReferenceField == model.TimestampReferenceTypeTrack {
 		smartEventTrackPayload.Timestamp = lastModifiedTimestamp
 
 	} else {
@@ -515,12 +518,12 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 	return prevProperties
 }
 
-func enrichOpportunities(projectID uint64, document *M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
 
-	if document.Type != M.SalesforceDocumentTypeOpportunity {
+	if document.Type != model.SalesforceDocumentTypeOpportunity {
 		return http.StatusInternalServerError
 	}
 
@@ -537,7 +540,7 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument, sales
 	}
 
 	var eventID string
-	customerUserID, userID := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, userID := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		trackPayload.UserId = userID
 		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
@@ -558,7 +561,7 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument, sales
 	}
 
 	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
-	lastModifiedTimestamp, _ := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentUpdated)
+	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
@@ -566,7 +569,7 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument, sales
 			document.Type, properties, prevProperties, lastModifiedTimestamp)
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
+	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce opportunity document as synced.")
 		return http.StatusInternalServerError
@@ -575,12 +578,12 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument, sales
 	return http.StatusOK
 }
 
-func enrichLeads(projectID uint64, document *M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
 	}
 
-	if document.Type != M.SalesforceDocumentTypeLead {
+	if document.Type != model.SalesforceDocumentTypeLead {
 		return http.StatusInternalServerError
 	}
 
@@ -597,7 +600,7 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument, salesforceSma
 		UserProperties:  *enProperties,
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID == "" {
 		logCtx.Error("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
 	}
@@ -610,14 +613,14 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument, salesforceSma
 	}
 
 	// ALways us lastmodified timestamp for updated properties, error handling already done during event creation
-	lastModifiedTimestamp, _ := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentUpdated)
+	lastModifiedTimestamp, _ := model.GetSalesforceDocumentTimestampByAction(document, model.SalesforceDocumentUpdated)
 
 	var prevProperties *map[string]interface{}
 	for _, smartEventName := range salesforceSmartEventNames {
 		prevProperties = TrackSalesforceSmartEvent(projectID, &smartEventName, eventID, customerUserID, userID, document.Type, properties, prevProperties, lastModifiedTimestamp)
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
+	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce lead document as synced.")
 		return http.StatusInternalServerError
@@ -626,7 +629,7 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument, salesforceSma
 	return http.StatusOK
 }
 
-func enrichAll(projectID uint64, documents []M.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
+func enrichAll(projectID uint64, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 {
 		return http.StatusBadRequest
 	}
@@ -638,13 +641,13 @@ func enrichAll(projectID uint64, documents []M.SalesforceDocument, salesforceSma
 		startTime := time.Now().Unix()
 
 		switch documents[i].Type {
-		case M.SalesforceDocumentTypeAccount:
+		case model.SalesforceDocumentTypeAccount:
 			errCode = enrichAccount(projectID, &documents[i], salesforceSmartEventNames)
-		case M.SalesforceDocumentTypeContact:
+		case model.SalesforceDocumentTypeContact:
 			errCode = enrichContact(projectID, &documents[i], salesforceSmartEventNames)
-		case M.SalesforceDocumentTypeLead:
+		case model.SalesforceDocumentTypeLead:
 			errCode = enrichLeads(projectID, &documents[i], salesforceSmartEventNames)
-		case M.SalesforceDocumentTypeOpportunity:
+		case model.SalesforceDocumentTypeOpportunity:
 			errCode = enrichOpportunities(projectID, &documents[i], salesforceSmartEventNames)
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
@@ -671,7 +674,7 @@ func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmar
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
-	eventNames, errCode := M.GetSmartEventFilterEventNames(projectID)
+	eventNames, errCode := store.GetStore().GetSmartEventFilterEventNames(projectID)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Error while GetSmartEventFilterEventNames")
 	}
@@ -683,12 +686,12 @@ func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmar
 	}
 
 	for i := range eventNames {
-		if eventNames[i].Type != M.TYPE_CRM_SALESFORCE {
+		if eventNames[i].Type != model.TYPE_CRM_SALESFORCE {
 			continue
 		}
 
 		var salesforceSmartEventName SalesforceSmartEventName
-		decFilterExp, err := M.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
+		decFilterExp, err := model.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to decode smart event filter expression")
 			continue
@@ -696,7 +699,7 @@ func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmar
 
 		salesforceSmartEventName.EventName = eventNames[i].Name
 		salesforceSmartEventName.Filter = decFilterExp
-		salesforceSmartEventName.Type = M.TYPE_CRM_SALESFORCE
+		salesforceSmartEventName.Type = model.TYPE_CRM_SALESFORCE
 
 		if _, exists := salesforceSmartEventNames[decFilterExp.ObjectType]; !exists {
 			salesforceSmartEventNames[decFilterExp.ObjectType] = []SalesforceSmartEventName{}
@@ -709,7 +712,7 @@ func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmar
 }
 
 // GetSalesforceDocumentsByTypeForSync pulls salesforce documents which are not synced
-func GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int) ([]M.SalesforceDocument, int) {
+func GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int) ([]model.SalesforceDocument, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "type": typ})
 
 	if projectID == 0 || typ == 0 {
@@ -717,7 +720,7 @@ func GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int) ([]M.Salesfo
 		return nil, http.StatusBadRequest
 	}
 
-	var documents []M.SalesforceDocument
+	var documents []model.SalesforceDocument
 
 	db := C.GetServices().Db
 	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false",
@@ -740,12 +743,12 @@ func Enrich(projectID uint64) []Status {
 		return statusByProjectAndType
 	}
 
-	allowedDocTypes := M.GetSalesforceDocumentTypeAlias(projectID)
+	allowedDocTypes := model.GetSalesforceDocumentTypeAlias(projectID)
 
 	salesforceSmartEventNames := GetSalesforceSmartEventNames(projectID)
 
 	for _, docType := range salesforceSyncOrderByType {
-		docTypeAlias := M.GetSalesforceAliasByDocType(docType)
+		docTypeAlias := model.GetSalesforceAliasByDocType(docType)
 		if _, exist := allowedDocTypes[docTypeAlias]; !exist {
 			continue
 		}

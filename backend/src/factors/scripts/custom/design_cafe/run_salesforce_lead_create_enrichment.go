@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	SDK "factors/sdk"
 
 	"errors"
@@ -83,7 +84,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	project, errCode := M.GetProject(*projectIdFlag)
+	project, errCode := store.GetStore().GetProject(*projectIdFlag)
 	if errCode != http.StatusFound {
 		log.Error("Failed to get project")
 		return
@@ -97,7 +98,7 @@ func main() {
 	}
 }
 
-func buildEventFromFile(file *excelize.File, project *M.Project, eventName, sheetName string) error {
+func buildEventFromFile(file *excelize.File, project *model.Project, eventName, sheetName string) error {
 
 	rows, err := file.GetRows(sheetName)
 	if err != nil {
@@ -189,12 +190,12 @@ func userIndentificationByPhoneNo(projectId uint64, phoneNo string) string {
 				return ""
 			}
 
-			userLatest, errCode := M.GetUserLatestByCustomerUserId(projectId, newPhoneNo)
+			userLatest, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, newPhoneNo)
 			if errCode == http.StatusFound {
 				return userLatest.ID
 			}
 
-			userLatest, errCode = M.GetUserLatestByCustomerUserId(projectId, "+"+newPhoneNo)
+			userLatest, errCode = store.GetStore().GetUserLatestByCustomerUserId(projectId, "+"+newPhoneNo)
 			if errCode == http.StatusFound {
 				return userLatest.ID
 			}

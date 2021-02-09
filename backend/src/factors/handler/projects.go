@@ -3,7 +3,8 @@ package handler
 import (
 	"encoding/json"
 	mid "factors/middleware"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	PC "factors/pattern_client"
 	U "factors/util"
 	"net/http"
@@ -23,7 +24,7 @@ func CreateProjectHandler(c *gin.Context) {
 		"agent_uuid": loggedInAgentUUID,
 	})
 
-	var project M.Project
+	var project model.Project
 	err := json.NewDecoder(r.Body).Decode(&project)
 	if err != nil {
 		logCtx.WithError(err).Error("CreateProject Failed. Json Decoding failed.")
@@ -39,14 +40,14 @@ func CreateProjectHandler(c *gin.Context) {
 		return
 	}
 
-	billingAcc, errCode := M.GetBillingAccountByAgentUUID(loggedInAgentUUID)
+	billingAcc, errCode := store.GetStore().GetBillingAccountByAgentUUID(loggedInAgentUUID)
 	if errCode != http.StatusFound {
 		logCtx.WithField("err_code", errCode).Error("CreateProject Failed, billing account error")
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed"})
 		return
 	}
 
-	_, errCode = M.CreateProjectWithDependencies(&project, loggedInAgentUUID, M.ADMIN, billingAcc.ID)
+	_, errCode = store.GetStore().CreateProjectWithDependencies(&project, loggedInAgentUUID, model.ADMIN, billingAcc.ID)
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
 		return
@@ -84,14 +85,14 @@ func EditProjectHandler(c *gin.Context) {
 		return
 	}
 
-	loggedInAgentPAM, errCode := M.GetProjectAgentMapping(projectID, loggedInAgentUUID)
+	loggedInAgentPAM, errCode := store.GetStore().GetProjectAgentMapping(projectID, loggedInAgentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		logCtx.Errorln("Failed to fetch loggedInAgentPAM")
 		return
 	}
 
-	if loggedInAgentPAM.Role != M.ADMIN {
+	if loggedInAgentPAM.Role != model.ADMIN {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "operation denied for non-admins"})
 		return
 	}
@@ -100,21 +101,21 @@ func EditProjectHandler(c *gin.Context) {
 		c.AbortWithStatus(errCode)
 		return
 	}
-	var projectEditDetails M.Project
+	var projectEditDetails model.Project
 
 	err := json.NewDecoder(r.Body).Decode(&projectEditDetails)
 	if err != nil {
 		logCtx.WithError(err).Error("EditProject Failed. Json Decoding failed.")
 	}
 
-	errCode = M.UpdateProject(projectID, &projectEditDetails)
+	errCode = store.GetStore().UpdateProject(projectID, &projectEditDetails)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
 	}
 	projectIdsToGet := []uint64{}
 	projectIdsToGet = append(projectIdsToGet, projectID)
-	projectDetailsAfterEdit, errCode := M.GetProjectsByIDs(projectIdsToGet)
+	projectDetailsAfterEdit, errCode := store.GetStore().GetProjectsByIDs(projectIdsToGet)
 	c.JSON(http.StatusCreated, projectDetailsAfterEdit[0])
 	return
 }
@@ -131,13 +132,13 @@ func EditProjectHandler(c *gin.Context) {
 func GetProjectsHandler(c *gin.Context) {
 	authorizedProjects := U.GetScopeByKey(c, "authorizedProjects")
 
-	projects, errCode := M.GetProjectsByIDs(authorizedProjects.([]uint64))
+	projects, errCode := store.GetStore().GetProjectsByIDs(authorizedProjects.([]uint64))
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
 	} else if errCode == http.StatusNoContent || errCode == http.StatusBadRequest {
 		resp := make(map[string]interface{})
-		resp["projects"] = []M.Project{}
+		resp["projects"] = []model.Project{}
 		c.JSON(http.StatusNotFound, resp)
 		return
 	}

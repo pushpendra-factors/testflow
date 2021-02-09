@@ -2,7 +2,8 @@ package internal
 
 import (
 	"encoding/json"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	"net/http"
 	"strconv"
 
@@ -13,7 +14,7 @@ import (
 func DataServiceHubspotAddDocumentHandler(c *gin.Context) {
 	r := c.Request
 
-	var hubspotDocument M.HubspotDocument
+	var hubspotDocument model.HubspotDocument
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&hubspotDocument); err != nil {
@@ -23,7 +24,7 @@ func DataServiceHubspotAddDocumentHandler(c *gin.Context) {
 		return
 	}
 
-	errCode := M.CreateHubspotDocument(hubspotDocument.ProjectId, &hubspotDocument)
+	errCode := store.GetStore().CreateHubspotDocument(hubspotDocument.ProjectId, &hubspotDocument)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{"error": "Failed to upsert hubspot document."})
@@ -34,7 +35,7 @@ func DataServiceHubspotAddDocumentHandler(c *gin.Context) {
 }
 
 func DataServiceHubspotGetSyncInfoHandler(c *gin.Context) {
-	syncInfo, errCode := M.GetHubspotSyncInfo()
+	syncInfo, errCode := store.GetStore().GetHubspotSyncInfo()
 	c.JSON(errCode, syncInfo)
 }
 
@@ -48,6 +49,6 @@ func DataServiceGetHubspotFormDocumentsHandler(c *gin.Context) {
 		return
 	}
 
-	formDocuments, errCode := M.GetHubspotFormDocuments(projectId)
+	formDocuments, errCode := store.GetStore().GetHubspotFormDocuments(projectId)
 	c.JSON(errCode, formDocuments)
 }

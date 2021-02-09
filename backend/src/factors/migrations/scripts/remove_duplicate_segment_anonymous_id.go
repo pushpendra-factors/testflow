@@ -7,7 +7,8 @@ import (
 	"net/http"
 
 	C "factors/config"
-	M "factors/model"
+	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
@@ -86,15 +87,15 @@ func main() {
 	log.Info("Successfully updated duplicate segment anonymous id.")
 }
 
-func getSegmentUsersToFix(projectId uint64, segAnonId string) ([]M.User, error) {
-	user, errCode := M.GetUserBySegmentAnonymousId(projectId, segAnonId)
+func getSegmentUsersToFix(projectId uint64, segAnonId string) ([]model.User, error) {
+	user, errCode := store.GetStore().GetUserBySegmentAnonymousId(projectId, segAnonId)
 	if errCode != http.StatusFound {
 		log.WithField("project_id", projectId).WithField("err_code",
 			errCode).Info("Failed to GetUserBySegmentAnonymousId")
-		return []M.User{}, errors.New("failed to get segment user")
+		return []model.User{}, errors.New("failed to get segment user")
 	}
 
-	users := make([]M.User, 0, 0)
+	users := make([]model.User, 0, 0)
 	db := C.GetServices().Db
 	err := db.Table("users").Select("id").Where("project_id=? AND segment_anonymous_id = ? AND id != ?",
 		projectId, segAnonId, user.ID).Find(&users).Error
