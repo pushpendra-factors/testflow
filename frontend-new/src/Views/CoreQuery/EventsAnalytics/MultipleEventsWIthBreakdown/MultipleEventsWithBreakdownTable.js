@@ -37,7 +37,7 @@ function MultipleEventsWithBreakdownTable({
   const getCSVData = () => {
     return {
       fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, eventIndex, dateWise, color, ...rest }) => {
+      data: tableData.map(({ index, eventIndex, dateWise, color, label, value, ...rest }) => {
         const result = {};
         for (let obj in rest) {
           result[obj.split(";")[0]] = rest[obj];
