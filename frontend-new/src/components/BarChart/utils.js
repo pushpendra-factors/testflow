@@ -23,8 +23,8 @@ export const getBarChartLeftMargin = (maxVal) => {
   if (margin >= 50) {
     return margin - ((margin - 50) / 10) * 4;
   }
-  if(margin < 20) {
-    return 20;
+  if(margin < 25) {
+    return 25;
   }
   return margin;
 };
