@@ -300,7 +300,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
                             {dataObjectSource &&
                             <Row className={'mt-8'}>
                                 <Col span={18}>
-                                    <Text type={'title'} level={7} extraClass={'m-0'}>Select data Object</Text>
+                                    <Text type={'title'} level={7} extraClass={'m-0'}>Select object</Text>
                                     <Form.Item
                                     name="object_type"
                                     className={'m-0'} 
@@ -422,8 +422,8 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
                                     rules={[{ required: true, message: 'Please select a time of event' }]}
                                     > 
                                                 <Radio.Group onChange={(value)=>settimestampReference(value)}>
-                                                    <Radio value={'timestamp_in_track'}>Factors recieved time</Radio>
-                                                    <Radio value={'other'}>Select an object property</Radio> 
+                                                    <Radio value={'timestamp_in_track'}>Record modified time</Radio>
+                                                    <Radio value={'other'}>Select a property</Radio> 
                                                 </Radio.Group> 
                                     </Form.Item>
                                 </Col>
