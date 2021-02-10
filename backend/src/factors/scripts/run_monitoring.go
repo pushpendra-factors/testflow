@@ -15,11 +15,13 @@ import (
 )
 
 type SlowQueries struct {
-	Runtime         float64 `json:"runtime"`
-	Query           string  `json:"query"`
-	Pid             int64   `json:"pid"`
-	Usename         string  `json:"usename"`
-	ApplicationName string  `json:"application_name"`
+	Runtime                  float64 `json:"runtime"`
+	Query                    string  `json:"query"`
+	Pid                      int64   `json:"pid"`
+	Usename                  string  `json:"usename"`
+	ApplicationName          string  `json:"application_name"`
+	VacuumProgressPercentage float64 `json:"vacuum_progress_percentage,omitempty"`
+	VacuumPhase              string  `json:"vacuum_phase,omitempty"`
 }
 
 func main() {
@@ -84,9 +86,11 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	queryStr := `SELECT EXTRACT(epoch from (now() - query_start)) as runtime,query, pid, usename, application_name FROM  pg_stat_activity` +
-		` WHERE EXTRACT(epoch from (now() - query_start)) > 120 AND state = 'active' AND query NOT ILIKE '%pg_stat_activity%'` +
-		` ORDER BY runtime DESC`
+	queryStr := "SELECT EXTRACT(epoch from (now() - query_start)) as runtime,query, pg_stat_activity.pid, usename, application_name," + " " +
+		"CASE WHEN heap_blks_vacuumed > 0 THEN (heap_blks_vacuumed::FLOAT/heap_blks_total::FLOAT) * 100 ELSE 0 END vacuum_progress_percentage, phase as vacuum_phase" + " " +
+		"FROM  pg_stat_activity LEFT JOIN pg_stat_progress_vacuum ON pg_stat_progress_vacuum.pid=pg_stat_activity.pid" + " " +
+		"WHERE EXTRACT(epoch from (now() - query_start)) > 120 AND state = 'active' AND query NOT ILIKE '%pg_stat_activity%' ORDER BY runtime DESC;"
+
 	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
 		log.WithError(err).Panic("Failed to get slow queries from pg_stat_activity")
