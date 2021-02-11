@@ -242,12 +242,23 @@ upload-cleanup-eventuser-cache: export IMAGE_NAME=cleanup-eventuser-cache-job
 upload-cleanup-eventuser-cache: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/cleanup-eventuser-cache-job:$(TAG)
 
-pack-adwords-migration-job: 
-	docker build -t us.gcr.io/factors-$(ENV)/adwords-migration-job:$(TAG) -f Dockerfile.adwords_migration_job .
+pack-memsql-replicator:
+	docker build -t us.gcr.io/factors-$(ENV)/memsql-replicator:$(TAG) -f Dockerfile.memsql_replicator .
 
-upload-adwords-migration-job: export IMAGE_NAME=adwords-migration-job
-upload-adwords-migration-job: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/adwords-migration-job:$(TAG)
+upload-memsql-replicator:
+	docker push us.gcr.io/factors-$(ENV)/memsql-replicator:$(TAG)
+
+pack-memsql-bulk-download:
+	docker build -t us.gcr.io/factors-$(ENV)/memsql-bulk-download:$(TAG) -f Dockerfile.memsql_bulk_download .
+
+upload-memsql-bulk-download:
+	docker push us.gcr.io/factors-$(ENV)/memsql-bulk-download:$(TAG)
+
+pack-memsql-fill-user-properties:
+	docker build -t us.gcr.io/factors-$(ENV)/memsql-fill-user-properties-job:$(TAG) -f Dockerfile.memsql_fill_user_properties_job .
+
+upload-memsql-fill-user-properties:
+	docker push us.gcr.io/factors-$(ENV)/memsql-fill-user-properties-job:$(TAG)
 
 notify-deployment:
 	$(GOPATH)/src/factors/scripts/notify_deployment.sh

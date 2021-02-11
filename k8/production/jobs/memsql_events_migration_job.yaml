@@ -1,0 +1,54 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: memsql-events-migration-job
+spec:
+  schedule: "1 2 3 4 5" # In UTC. Random time to avoid running periodically.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: memsql-migration
+          containers:
+          - name: memsql-events-migration-job
+            image: us.gcr.io/factors-production/memsql-replicator:v0.01-xxx # Uses replicator image.
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --project_ids
+            - "0"
+            - --events_start_timestamp
+            - "0"
+            - --events_end_timestamp
+            - "0"
+            - --events_num_routines
+            - "10"
+            - --memsql_dsn
+            - "<USER>:<PASSWORD>@tcp(<HOST>:3306)/factors?charset=utf8mb4&parseTime=True&loc=Local"
+            - --events_with_dep
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-postgres
+            - secretRef:
+                name: secret-postgres
+          restartPolicy: OnFailure

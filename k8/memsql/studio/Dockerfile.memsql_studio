@@ -1,0 +1,4 @@
+FROM centos:centos8.3.2011
+RUN echo assumeyes=1 >> /etc/yum.conf && yum update && yum install yum-utils && yum-config-manager --add-repo https://release.memsql.com/production/rpm/x86_64/repodata/memsql.repo && yum install -y memsql-studio
+ENTRYPOINT ["memsql-studio"]
+EXPOSE 8080

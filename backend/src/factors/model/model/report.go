@@ -18,12 +18,13 @@ type Report struct {
 	ProjectID     uint64                `json:"project_id"`
 	DashboardID   uint64                `json:"dashboard_id"`
 	DashboardName string                `json:"dashboard_name"`
-	CreatedAt     time.Time             `json:"created_at"`
 	Type          string                `json:"type"`
 	StartTime     int64                 `json:"start_time"`
 	EndTime       int64                 `json:"end_time"`
 	Invalid       bool                  `json:"invalid"`
 	Units         []DashboardUnitReport `json:"units"`
+	CreatedAt     time.Time             `json:"created_at"`
+	UpdatedAt     time.Time             `json:"updated_at"`
 }
 
 func (r *Report) GetTextContent() string {

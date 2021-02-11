@@ -1,0 +1,45 @@
+apiVersion: memsql.com/v1alpha1
+kind: MemsqlCluster
+metadata:
+  name: memsql-cluster
+spec:
+  # Below is a dummy license key. Replace it with a valid one.
+  license: BDRkMTAwYTEwMzc3YjQwYzliZmYwYjlmNGQ1ODcwOTllUAnsXwAAAAAAAAAAAAAAAAkwNQIYaTnnaBajxkvSTxC9MuEsAglyAGEBiyGgAhkApHsfMKVtqmf7ZXm8alU5AvlWOliISnbXAA==
+  # Ref for hasing: https://docs.singlestore.com/v7.1/guides/deploy-memsql/self-managed/kubernetes/step-3/#1470092e5359c9dfca05a5cd855d8bfa
+  adminHashedPassword: "*4611D065F19273A1D828AF643D65C4AA05982EDB" # user: admin, pwd: db@factors Change and move to secret.
+  nodeImage:
+    repository: memsql/node
+    tag: centos-7.1.13-11ddea2a3a # default: 6.8.9-24b9cbd386
+
+  redundancyLevel: 1
+
+  schedulingDetails:
+    master:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: memsql-aggr-pool
+    aggregator:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: memsql-aggr-pool
+    leaf-ag1:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: memsql-leaf-pool
+
+  serviceSpec:
+    type: "ClusterIP" # default: LoadBalancer
+    objectMetaOverrides:
+      labels:
+        custom: label
+      annotations:
+        custom: annotations
+
+  aggregatorSpec:
+    count: 1   # default: 3
+    height: 0.5 # 0.5 = 4vCPU and 16GB Memory (K8 Request CPU: 4.5 Memory: 18GB), 1 = 8vCPU and 32GB Memory (K8 Request CPU: 8.5 Memory: 36GB)
+    storageGB: 256 # default: 1TB
+    storageClass: memsql-ssd # custom storage class created.
+
+  leafSpec:
+    count: 4 # default: 1
+    height: 1
+    storageGB: 512
+    storageClass: memsql-ssd

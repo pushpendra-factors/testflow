@@ -37,6 +37,7 @@ require (
 	github.com/go-openapi/spec v0.19.13 // indirect
 	github.com/go-openapi/swag v0.19.12 // indirect
 	github.com/go-redis/redis v6.15.7+incompatible
+	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/gofrs/uuid v3.3.0+incompatible // indirect
 	github.com/gogo/protobuf v1.2.0 // indirect
@@ -94,6 +95,7 @@ require (
 	github.com/swaggo/gin-swagger v1.3.0
 	github.com/swaggo/swag v1.6.7
 	github.com/thinkerou/favicon v0.1.0 // indirect
+	github.com/tmdvs/Go-Emoji-Utils v1.1.0
 	github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2 // indirect
 	github.com/ttacon/libphonenumber v1.1.0
 	github.com/urfave/cli v1.22.5 // indirect

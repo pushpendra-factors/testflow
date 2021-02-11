@@ -247,6 +247,9 @@ github.com/go-redis/redis/internal/hashtag
 github.com/go-redis/redis/internal/pool
 github.com/go-redis/redis/internal/proto
 github.com/go-redis/redis/internal/util
+# github.com/go-sql-driver/mysql v1.5.0
+## explicit
+github.com/go-sql-driver/mysql
 # github.com/go-stack/stack v1.8.0
 ## explicit
 github.com/go-stack/stack
@@ -330,6 +333,7 @@ github.com/jinzhu/copier
 # github.com/jinzhu/gorm v1.9.2
 ## explicit
 github.com/jinzhu/gorm
+github.com/jinzhu/gorm/dialects/mysql
 github.com/jinzhu/gorm/dialects/postgres
 # github.com/jinzhu/inflection v0.0.0-20180308033659-04140366298a
 ## explicit
@@ -454,6 +458,10 @@ github.com/swaggo/gin-swagger
 github.com/swaggo/swag
 # github.com/thinkerou/favicon v0.1.0
 ## explicit
+# github.com/tmdvs/Go-Emoji-Utils v1.1.0
+## explicit
+github.com/tmdvs/Go-Emoji-Utils
+github.com/tmdvs/Go-Emoji-Utils/utils
 # github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2
 ## explicit
 github.com/ttacon/builder

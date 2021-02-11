@@ -366,4 +366,8 @@ type Model interface {
 	GetWeightedJourneyMatrix(projectID uint64, journeyEvents []model.QueryEventWithProperties,
 		goalEvents []model.QueryEventWithProperties, startTime, endTime, lookbackDays int64, eventFiles,
 		userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager)
+
+	// replication_metadata
+	GetReplicationMetadataByTable(tableName string) (*model.ReplicationMetadata, int)
+	CreateOrUpdateReplicationMetadataByTable(tableName string, lastRunAt *time.Time, count uint64) int
 }

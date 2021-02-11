@@ -1,0 +1,11 @@
+FROM golang:1.14-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/bulk_download $GOPATH/src/factors/scripts/memsql/bulk_download/bulk_download.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+COPY --from=builder /go/bin/bulk_download /go/bin/bulk_download
+ENTRYPOINT ["/go/bin/bulk_download"]

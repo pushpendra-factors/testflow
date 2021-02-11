@@ -1,0 +1,37 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: memsql-bulk-download-job
+spec:
+  schedule: "1 2 3 4 5" # In UTC. Random time to avoid running periodically.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool:  memsql-migration
+          containers:
+          - name: memsql-bulk-download-job
+            image: us.gcr.io/factors-production/memsql-bulk-download-job:v0.01-xxx
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --project_id
+            - "0"
+            - --start_timestamp
+            - "0"
+            - --end_timestamp
+            - "0"
+            - --memsql_dsn
+            - "<USER>:<PASSWORD>@tcp(<HOST>:3306)/factors?charset=utf8mb4&parseTime=True&loc=Local"
+            envFrom:
+            - configMapRef:
+                name: config-env
+          restartPolicy: OnFailure
