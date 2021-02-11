@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -59,6 +60,9 @@ const (
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
 const UserPropertyGroupByPresent string = "$present"
+
+// NumericalValuePostgresRegex Used to remove non numerical values in numerical bucketing.
+const NumericalValuePostgresRegex string = "\\$none|^-?[0-9]+\\.?[0-9]*$"
 
 func with(stmnt string) string {
 	return fmt.Sprintf("WITH %s", stmnt)
@@ -308,7 +312,7 @@ func isGroupByTypeWithBuckets(groupProps []model.QueryGroupByProperty) bool {
 	return false
 }
 
-func appendNumericalBucketingSteps(qStmnt *string, groupProps []model.QueryGroupByProperty, refStepName, eventNameSelect string,
+func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, groupProps []model.QueryGroupByProperty, refStepName, eventNameSelect string,
 	isGroupByTimestamp bool, additionalSelectKeys string) (bucketedStepName, aggregateSelectKeys string, aggregateGroupBys, aggregateOrderBys []string) {
 	bucketedStepName = "bucketed"
 	bucketedSelect := "SELECT "
@@ -339,8 +343,9 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []model.QueryGroup
 		boundsStepName := groupKey + "_bounds"
 		boundsStatement := fmt.Sprintf("SELECT percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) + 0.00001 AS lbound, "+
 			"percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) AS ubound FROM %s "+
-			"WHERE %s != '%s' AND %s != '' AND %s ~ '\\$none|^-?[0-9]+\\.?[0-9]*$' ", model.NumericalLowerBoundPercentile, groupKey, model.NumericalUpperBoundPercentile,
+			"WHERE %s != '%s' AND %s != '' AND %s ~ ? ", model.NumericalLowerBoundPercentile, groupKey, model.NumericalUpperBoundPercentile,
 			groupKey, refStepName, groupKey, model.PropertyValueNone, groupKey, groupKey)
+		*qParams = append(*qParams, NumericalValuePostgresRegex)
 		boundsStatement = as(boundsStepName, boundsStatement)
 		*qStmnt = joinWithComma(*qStmnt, boundsStatement)
 
@@ -364,7 +369,8 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []model.QueryGroup
 		aggregateGroupBys = append(aggregateGroupBys, bucketKey)
 		aggregateOrderBys = append(aggregateOrderBys, bucketKey)
 		bucketedNumericValueFilter = append(bucketedNumericValueFilter,
-			fmt.Sprintf("%s ~ '\\$none|^-?[0-9]+\\.?[0-9]*$'", groupKey))
+			fmt.Sprintf("%s ~ ?", groupKey))
+		*qParams = append(*qParams, NumericalValuePostgresRegex)
 	}
 
 	bucketedSelect = bucketedSelect + additionalSelectKeys
@@ -939,10 +945,21 @@ func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query
 	}
 }
 
-func (pg *Postgres) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {
+// ExecQueryWithContext Executes raw query with context. Useful to kill queries on program exit or crash.
+func (pg *Postgres) ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, error) {
 	db := C.GetServices().Db
 
-	rows, err := db.Raw(stmnt, params...).Rows()
+	// For query: ...where id in ($1) where $1 is passed as a slice, convert to pq.Array()
+	stmnt, params = model.ExpandArrayWithIndividualValues(stmnt, params)
+
+	// Change ? in the query to to $1, $2 format.
+	stmnt = model.TransformQueryPlaceholdersForContext(stmnt)
+
+	return db.DB().QueryContext(*C.GetServices().DBContext, stmnt, params...)
+}
+
+func (pg *Postgres) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {
+	rows, err := pg.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}

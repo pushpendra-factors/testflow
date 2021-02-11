@@ -1,6 +1,7 @@
 package model
 
 import (
+	"database/sql"
 	"factors/filestore"
 	"factors/model/model"
 	U "factors/util"
@@ -24,6 +25,10 @@ type Model interface {
 	ExecuteAdwordsChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
 	GetAdwordsFilterValuesByType(projectID uint64, docType int) ([]string, int)
 	GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error)
+	BuildAdwordsSimpleQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error)
+	GetIDsFromAdwordsSimpleJob(query *model.ChannelQueryV1, projectID uint64, adwordsAccountIDs string, reqID string) ([]int, []int, error)
+	GetIDsByPropertyOnAdwordsSimpleJob(projectID uint64, from, to int64, adwordsAccountIDs string, typeOfJob string, filters []model.FilterV1, reqID string) ([]int, error)
+	GetAdwordsChannelResultMeta(projectID uint64, customerAccountID string, query *model.ChannelQuery) (*model.ChannelQueryResultMeta, error)
 
 	// agent
 	CreateAgentWithDependencies(params *model.CreateAgentParams) (*model.CreateAgentResponse, int)
@@ -40,6 +45,7 @@ type Model interface {
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
+	ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, error)
 	Analyze(projectID uint64, query model.Query) (*model.QueryResult, int, string)
 
 	// archival
@@ -50,6 +56,19 @@ type Model interface {
 	ApplyAttribution(method string, conversionEvent string, usersToBeAttributed []model.UserEventInfo,
 		userInitialSession map[string]map[string]model.RangeTimestamp, coalUserIdConversionTimestamp map[string]int64,
 		lookbackDays int, campaignFrom, campaignTo int64) (map[string][]string, map[string]map[string][]string, error)
+	GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error)
+	GetLinkedFunnelEventUsers(projectId uint64, from, to int64,
+		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
+		userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error
+	ApplyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo map[string]model.UserInfo,
+		goalEventProperties []model.QueryProperty) ([]string, error)
+	GetConvertedUsers(projectID uint64, goalEventName string,
+		goalEventProperties []model.QueryProperty, from, to int64,
+		eventNameToIdList map[string][]interface{}) (map[string]model.UserInfo,
+		map[string][]model.UserIDPropID, map[string]int64, error)
+	AddPerformanceReportInfo(projectId uint64, attributionData map[string]*model.AttributionData,
+		from, to int64, customerAccountId string, attributionKey string) (string, error)
+	GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error)
 
 	// bigquery_setting
 	CreateBigquerySetting(setting *model.BigquerySetting) (*model.BigquerySetting, int)
@@ -159,6 +178,10 @@ type Model interface {
 	GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]model.FacebookLastSyncInfo, int)
 	ExecuteFacebookChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
 	GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error)
+	GetFacebookMetricBreakdown(projectID uint64, customerAccountID string,
+		query *model.ChannelQuery) (*model.ChannelBreakdownResult, error)
+	GetFacebookChannelResult(projectID uint64, customerAccountID string,
+		query *model.ChannelQuery) (*model.ChannelQueryResult, error)
 
 	// funnel_analytics
 	RunFunnelQuery(projectID uint64, query model.Query) (*model.QueryResult, int, string)

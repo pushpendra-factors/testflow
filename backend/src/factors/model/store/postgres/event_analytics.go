@@ -835,7 +835,7 @@ func addUniqueUsersAggregationQuery(query *model.Query, qStmnt *string,
 			eventName = model.AliasEventName
 		}
 		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
-			&termStmnt, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id")
+			&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id")
 		aggregateFromStepName = bucketedStepName
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
@@ -1535,6 +1535,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
 	ugSelect, ugSelectParams, _ := buildGroupKeys(userGroupProps)
 	_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
+	qParams = append(qParams, ugSelectParams...)
 
 	eventNameSelect := "event_name"
 	groupKeys = joinWithComma(eventNameSelect, groupKeys)
@@ -1559,7 +1560,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 	}
 	if isGroupByTypeWithBuckets(q.GroupByProperties) {
 		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(
-			&qStmnt, q.GroupByProperties, withUsersStepName, eventNameSelect, isGroupByTimestamp, "event_user_id")
+			&qStmnt, &qParams, q.GroupByProperties, withUsersStepName, eventNameSelect, isGroupByTimestamp, "event_user_id")
 		aggregateGroupBys = append(aggregateGroupBys, eventNameSelect)
 		aggregateSelectKeys = eventNameSelect + ", " + aggregateSelectKeys
 		aggregateSelect = aggregateSelect + aggregateSelectKeys
@@ -1576,7 +1577,6 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 	aggregateSelect = aggregateSelect + fmt.Sprintf(", %s DESC", model.AliasAggr)
 	aggregateSelect = appendLimitByCondition(aggregateSelect, q.GroupByProperties, isGroupByTimestamp)
 
-	qParams = append(qParams, ugSelectParams...)
 	qStmnt = appendStatement(qStmnt, aggregateSelect)
 
 	// enclosed by 'with'.
@@ -1891,7 +1891,7 @@ func addEventCountAggregationQuery(query *model.Query, qStmnt *string,
 	if isGroupByTypeWithBuckets(query.GroupByProperties) {
 		eventName := model.AliasEventName
 		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
-			&termStmnt, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_id")
+			&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_id")
 		aggregateFromStepName = bucketedStepName
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")

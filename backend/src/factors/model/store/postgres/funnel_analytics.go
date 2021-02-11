@@ -524,7 +524,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 	aggregateFromName = stepFunnelName
 	if isGroupByTypeWithBuckets(q.GroupByProperties) {
 		bucketedFromName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys :=
-			appendNumericalBucketingSteps(&qStmnt, q.GroupByProperties, stepFunnelName, "", false,
+			appendNumericalBucketingSteps(&qStmnt, &qParams, q.GroupByProperties, stepFunnelName, "", false,
 				strings.Join(funnelCountAliases, ", "))
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateFromName = bucketedFromName

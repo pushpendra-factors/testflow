@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"errors"
-	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -150,7 +149,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	if err != nil {
 		return nil, err
 	}
-	usersInfo, err := getCoalesceIDFromUserIDs(sessionUsers, projectID)
+	usersInfo, err := pg.GetCoalesceIDFromUserIDs(sessionUsers, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +235,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	addWebsiteVisitorsInfo(effectiveFrom, effectiveTo, attributionData, sessions, len(query.LinkedEvents))
 
 	// 5. Add the performance information
-	currency, err := AddPerformanceReportInfo(projectID, attributionData, query.From, query.To,
+	currency, err := pg.AddPerformanceReportInfo(projectID, attributionData, query.From, query.To,
 		*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey)
 	if err != nil {
 		return nil, err
@@ -259,7 +258,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64, fro
 
 	// 3. Fetch users who hit conversion event
 	// coalUserIdConversionTimestamp := make(map[string]int64)
-	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err := getConvertedUsers(projectID,
+	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err := pg.GetConvertedUsers(projectID,
 		goalEventName, goalEventProperties, from, to,
 		eventNameToIDList)
 	if err != nil {
@@ -273,7 +272,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64, fro
 			goalEventName})
 	}
 
-	err = getLinkedFunnelEventUsers(projectID, from, to, linkedEvents, eventNameToIDList, userIDToInfoConverted,
+	err = pg.GetLinkedFunnelEventUsers(projectID, from, to, linkedEvents, eventNameToIDList, userIDToInfoConverted,
 		&usersToBeAttributed)
 	if err != nil {
 		return nil, err
@@ -327,7 +326,7 @@ func (pg *Postgres) runAttribution(projectID uint64,
 	lookbackDays int, campaignFrom, campaignTo int64) (map[string]*model.AttributionData, error) {
 
 	// 3. Fetch users who hit conversion event
-	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err := getConvertedUsers(projectID,
+	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err := pg.GetConvertedUsers(projectID,
 		goalEventName, goalEventProperties, from, to,
 		eventNameToIDList)
 	if err != nil {
@@ -341,7 +340,7 @@ func (pg *Postgres) runAttribution(projectID uint64,
 			goalEventName})
 	}
 
-	err = getLinkedFunnelEventUsers(projectID, from, to, linkedEvents, eventNameToIDList, userIDToInfoConverted,
+	err = pg.GetLinkedFunnelEventUsers(projectID, from, to, linkedEvents, eventNameToIDList, userIDToInfoConverted,
 		&usersToBeAttributed)
 	if err != nil {
 		return nil, err
@@ -459,11 +458,10 @@ func addUpLinkedFunnelEventCount(linkedEvents []model.QueryEventWithProperties,
 	}
 }
 
-// getCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
-func getCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error) {
+// GetCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
+func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error) {
 
 	userIDsInBatches := U.GetStringListAsBatch(userIDs, UserBatchSize)
-	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	userIDToCoalUserIDMap := make(map[string]model.UserInfo)
 	for _, users := range userIDsInBatches {
@@ -471,7 +469,7 @@ func getCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]mo
 		value := U.GetInterfaceList(users)
 		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id, " +
 			" properties_id FROM users WHERE id = ANY (VALUES " + placeHolder + " )"
-		rows, err := db.Raw(queryUserIDCoalID, value...).Rows()
+		rows, err := pg.ExecQueryWithContext(queryUserIDCoalID, value)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
 			return nil, err
@@ -497,7 +495,6 @@ func getCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]mo
 func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint64,
 	query *model.AttributionQuery, adwordsAccountId string) (map[string]map[string]model.RangeTimestamp, []string, error) {
 
-	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	effectiveFrom := query.From
 	effectiveTo := query.To
@@ -530,7 +527,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 	qParams = append(qParams, attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone,
 		attributionEventKey, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, projectId,
 		sessionEventNameId, effectiveFrom, effectiveTo)
-	rows, err := db.Raw(queryUserSessionTimeRange, qParams...).Rows()
+	rows, err := pg.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return attributedSessionsByUserId, userIdsWithSession, err
@@ -665,11 +662,10 @@ func (pg *Postgres) getEventInformation(projectId uint64,
 }
 
 // Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
-func getLinkedFunnelEventUsers(projectId uint64, from, to int64,
+func (pg *Postgres) GetLinkedFunnelEventUsers(projectId uint64, from, to int64,
 	linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
 	userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error {
 
-	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	var usersHitConversion []string
 	for key, _ := range userIDInfo {
@@ -707,7 +703,7 @@ func getLinkedFunnelEventUsers(projectId uint64, from, to int64,
 				qParams = append(qParams, wParams...)
 			}
 			// fetch query results
-			rows, err := db.Raw(queryEventHits, qParams...).Rows()
+			rows, err := pg.ExecQueryWithContext(queryEventHits, qParams)
 			if err != nil {
 				logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 				return err
@@ -728,7 +724,7 @@ func getLinkedFunnelEventUsers(projectId uint64, from, to int64,
 		}
 
 		// Part-II - Filter the fetched users from Part-I base on user_properties
-		filteredUserIdList, err := applyUserPropertiesFilter(projectId, userIDList, userIDInfo, linkedEvent.Properties)
+		filteredUserIdList, err := pg.ApplyUserPropertiesFilter(projectId, userIDList, userIDInfo, linkedEvent.Properties)
 		if err != nil {
 			logCtx.WithError(err).Error("error while applying user properties")
 			return err
@@ -744,10 +740,9 @@ func getLinkedFunnelEventUsers(projectId uint64, from, to int64,
 }
 
 // Applies user properties filter on given set of users and returns only the filters ones those match
-func applyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo map[string]model.UserInfo,
+func (pg *Postgres) ApplyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo map[string]model.UserInfo,
 	goalEventProperties []model.QueryProperty) ([]string, error) {
 
-	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 
 	wStmt, wParams, err := getFilterSQLStmtForUserProperties(goalEventProperties)
@@ -779,7 +774,7 @@ func applyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo
 			queryUserIdCoalId = queryUserIdCoalId + " AND " + fmt.Sprintf("( %s )", wStmt)
 			qParams = append(qParams, wParams...)
 		}
-		rows, err := db.Raw(queryUserIdCoalId, qParams...).Rows()
+		rows, err := pg.ExecQueryWithContext(queryUserIdCoalId, qParams)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
 			return nil, err
@@ -800,13 +795,12 @@ func applyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo
 	return filteredUserIdList, nil
 }
 
-// getConvertedUsers Returns the list of eligible users who hit conversion event
-func getConvertedUsers(projectID uint64, goalEventName string,
+// GetConvertedUsers Returns the list of eligible users who hit conversion event
+func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
 	goalEventProperties []model.QueryProperty, from, to int64,
 	eventNameToIdList map[string][]interface{}) (map[string]model.UserInfo,
 	map[string][]model.UserIDPropID, map[string]int64, error) {
 
-	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 
 	conversionEventNameIds := eventNameToIdList[goalEventName]
@@ -829,7 +823,7 @@ func getConvertedUsers(projectID uint64, goalEventName string,
 		qParams = append(qParams, wParams...)
 	}
 	// fetch query results
-	rows, err := db.Raw(queryEventHits, qParams...).Rows()
+	rows, err := pg.ExecQueryWithContext(queryEventHits, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 		return nil, nil, nil, err
@@ -851,13 +845,13 @@ func getConvertedUsers(projectID uint64, goalEventName string,
 	}
 
 	// Get coalesced Id for converted user_ids (without filter)
-	userIDToCoalIDInfo, err := getCoalesceIDFromUserIDs(userIDList, projectID)
+	userIDToCoalIDInfo, err := pg.GetCoalesceIDFromUserIDs(userIDList, projectID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	// Part-II - Filter the fetched users from Part-I base on user_properties
-	filteredUserIdList, err := applyUserPropertiesFilter(projectID, userIDList, userIDToCoalIDInfo,
+	filteredUserIdList, err := pg.ApplyUserPropertiesFilter(projectID, userIDList, userIDToCoalIDInfo,
 		goalEventProperties)
 	if err != nil {
 		logCtx.WithError(err).Error("error while applying user properties")
@@ -979,9 +973,8 @@ func getKey(id1 string, id2 string) string {
 
 // Adds channel data to attributionData based on attribution id. Key id with no matching channel
 // data is left with empty name parameter
-func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*model.AttributionData,
+func (pg *Postgres) AddPerformanceReportInfo(projectId uint64, attributionData map[string]*model.AttributionData,
 	from, to int64, customerAccountId string, attributionKey string) (string, error) {
-	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId, "Range": fmt.Sprintf("%d - %d", from, to)})
 
 	customerAccountIds := strings.Split(customerAccountId, ",")
@@ -1003,9 +996,9 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*mode
 			"group by value->>'ad_group_id', ad_group_name"
 	}
 
-	rows, err := db.Raw(performanceQuery, projectId, customerAccountIds, reportType,
+	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{projectId, customerAccountIds, reportType,
 		U.GetDateOnlyFromTimestamp(from),
-		U.GetDateOnlyFromTimestamp(to)).Rows()
+		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return "", err
@@ -1035,7 +1028,7 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*mode
 		}
 	}
 
-	currency, err := getAdwordsCurrency(projectId, customerAccountId, from, to)
+	currency, err := pg.GetAdwordsCurrency(projectId, customerAccountId, from, to)
 	if err != nil {
 		return "", err
 	}
@@ -1043,7 +1036,7 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*mode
 }
 
 // Returns currency used for adwords customer_account_id
-func getAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error) {
+func (pg *Postgres) GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error) {
 
 	customerAccountIds := strings.Split(customerAccountId, ",")
 	if len(customerAccountIds) == 0 {
@@ -1053,10 +1046,9 @@ func getAdwordsCurrency(projectId uint64, customerAccountId string, from, to int
 		" WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ? " +
 		" ORDER BY timestamp DESC LIMIT 1"
 	logCtx := log.WithField("ProjectId", projectId)
-	db := C.GetServices().Db
 	// checking just for customerAccountIds[0], we are assuming that all accounts have same currency
-	rows, err := db.Raw(queryCurrency, projectId, customerAccountIds[0], 9, U.GetDateOnlyFromTimestamp(from),
-		U.GetDateOnlyFromTimestamp(to)).Rows()
+	rows, err := pg.ExecQueryWithContext(queryCurrency, []interface{}{projectId, customerAccountIds[0], 9, U.GetDateOnlyFromTimestamp(from),
+		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
 		logCtx.WithError(err).Error("failed to build meta for attribution query result")
 		return "", err
