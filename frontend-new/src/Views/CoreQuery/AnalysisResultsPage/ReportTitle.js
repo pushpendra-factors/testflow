@@ -2,7 +2,11 @@ import React, { useCallback } from "react";
 import moment from "moment";
 import { Button } from "antd";
 import { SVG } from "../../../components/factorsComponents";
-import { REPORT_SECTION, DASHBOARD_MODAL } from "../../../utils/constants";
+import {
+  REPORT_SECTION,
+  DASHBOARD_MODAL,
+  QUERY_TYPE_WEB,
+} from "../../../utils/constants";
 
 function ReportTitle({
   title,
@@ -10,6 +14,7 @@ function ReportTitle({
   queryDetail,
   section,
   onReportClose,
+  queryType,
 }) {
   const handleClick = useCallback(() => {
     if (section === REPORT_SECTION) {
@@ -60,28 +65,30 @@ function ReportTitle({
         >
           {queryDetail}
         </div>
-        <div>
-          <Button
-            style={{
-              display: "flex",
-              padding: "4px",
-              color: "#0E2647",
-              opacity: 0.56,
-            }}
-            className="items-center"
-            size={"large"}
-            type="text"
-            onClick={handleClick}
-          >
-            <SVG
-              extraClass="mr-1"
-              name="edit_query"
-              size="24"
-              color={"#0E2647"}
-            />
-            Edit
-          </Button>
-        </div>
+        {queryType !== QUERY_TYPE_WEB ? (
+          <div>
+            <Button
+              style={{
+                display: "flex",
+                padding: "4px",
+                color: "#0E2647",
+                opacity: 0.56,
+              }}
+              className="items-center"
+              size={"large"}
+              type="text"
+              onClick={handleClick}
+            >
+              <SVG
+                extraClass="mr-1"
+                name="edit_query"
+                size="24"
+                color={"#0E2647"}
+              />
+              Edit
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

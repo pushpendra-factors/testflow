@@ -9,6 +9,7 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_SPARKLINES,
   EACH_USER_TYPE,
+  QUERY_TYPE_WEB,
 } from "../../../utils/constants";
 import { Spin } from "antd";
 import FunnelsResultPage from "../FunnelsResultPage";
@@ -18,6 +19,7 @@ import CampaignAnalytics from "../CampaignAnalytics";
 import { getChartTypeMenuItems } from "../../../utils/dataFormatter";
 import CampaignMetricsDropdown from "./CampaignMetricsDropdown";
 import EventsAnalytics from "../EventsAnalytics";
+import WebsiteAnalyticsTable from "../../Dashboard/WebsiteAnalytics/WebsiteAnalyticsTable";
 
 function ReportContent({
   resultState,
@@ -35,7 +37,7 @@ function ReportContent({
   queryTitle,
   eventPage,
   section,
-  onReportClose
+  onReportClose,
 }) {
   let content = null,
     queryDetail = null,
@@ -101,6 +103,11 @@ function ReportContent({
     );
   }
 
+  if (queryType === QUERY_TYPE_WEB) {
+    durationObj = queryOptions.date_range;
+    queryDetail = "Website Analytics";
+  }
+
   if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
     durationObj = queryOptions.date_range;
     queryDetail = arrayMapper
@@ -118,7 +125,10 @@ function ReportContent({
   if (queryType === QUERY_TYPE_CAMPAIGN) {
     queryDetail = campaignState.select_metrics.join(", ");
     durationObj = campaignState.date_range;
-    if (campaignState.select_metrics.length > 1 && campaignState.group_by.length) {
+    if (
+      campaignState.select_metrics.length > 1 &&
+      campaignState.group_by.length
+    ) {
       metricsDropdown = (
         <CampaignMetricsDropdown
           metrics={campaignState.select_metrics}
@@ -130,6 +140,16 @@ function ReportContent({
   }
 
   if (resultState.data) {
+    if (queryType === QUERY_TYPE_WEB) {
+      content = (
+        <WebsiteAnalyticsTable
+          tableData={resultState.data}
+          section={section}
+          isWidgetModal={true}
+        />
+      );
+    }
+
     if (queryType === QUERY_TYPE_FUNNEL) {
       content = (
         <FunnelsResultPage
@@ -199,9 +219,11 @@ function ReportContent({
         queryDetail={queryDetail}
         section={section}
         onReportClose={onReportClose}
+        queryType={queryType}
       />
       <div className="mt-6">
         <CalendarRow
+          queryType={queryType}
           handleDurationChange={handleDurationChange}
           durationObj={durationObj}
           handleChartTypeChange={handleChartTypeChange}

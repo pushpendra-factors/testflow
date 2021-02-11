@@ -22,7 +22,7 @@ function ActiveUnitContent({
   resultState,
   durationObj,
   handleDurationChange,
-  setwidgetModal
+  setwidgetModal,
 }) {
   const history = useHistory();
 
@@ -102,18 +102,6 @@ function ActiveUnitContent({
     };
   }
 
-  let content = null;
-
-  if (queryType === QUERY_TYPE_WEB) {
-    content = (
-      <WebsiteAnalyticsTable
-        tableData={resultState.data[unit.id]}
-        isWidgetModal={true}
-        modalTitle={unit.title}
-      />
-    );
-  }
-
   const handleEditQuery = useCallback(() => {
     history.push({
       pathname: "/analyse",
@@ -127,22 +115,26 @@ function ActiveUnitContent({
   return (
     <div className="p-4">
       <ReportContent
-        queryType={queryType}
-        resultState={resultState}
-        setDrawerVisible={handleEditQuery}
-        queries={events.map((q) => q.label)}
-        breakdown={breakdown}
-        handleDurationChange={handleDurationChange}
-        arrayMapper={arrayMapper}
-        queryOptions={{ date_range: durationObj }}
-        attributionsState={attributionsState}
-        breakdownType={EACH_USER_TYPE}
-        campaignState={{ ...equivalentQuery, date_range: durationObj }}
-        eventPage={TOTAL_EVENTS_CRITERIA}
-        section={DASHBOARD_MODAL}
-        queryTitle={unit.title}
-        onReportClose={setwidgetModal}
-      />
+          queryType={queryType}
+          resultState={
+            queryType === QUERY_TYPE_WEB
+              ? { ...resultState, data: resultState.data ? resultState.data[unit.id] : null }
+              : resultState
+          }
+          setDrawerVisible={handleEditQuery}
+          queries={events.map((q) => q.label)}
+          breakdown={breakdown}
+          handleDurationChange={handleDurationChange}
+          arrayMapper={arrayMapper}
+          queryOptions={{ date_range: durationObj }}
+          attributionsState={attributionsState}
+          breakdownType={EACH_USER_TYPE}
+          campaignState={{ ...equivalentQuery, date_range: durationObj }}
+          eventPage={TOTAL_EVENTS_CRITERIA}
+          section={DASHBOARD_MODAL}
+          queryTitle={unit.title}
+          onReportClose={setwidgetModal}
+        />
     </div>
   );
 }
