@@ -12,7 +12,8 @@ function AttributionTable({
   attribution_method,
   attribution_method_compare,
   touchpoint,
-  linkedEvents
+  linkedEvents,
+  reportTitle = "Attributions",
 }) {
   const [searchText, setSearchText] = useState("");
   const [sorter, setSorter] = useState({});
@@ -29,6 +30,15 @@ function AttributionTable({
     event
   );
   const tableData = getTableData(data, event, searchText, sorter, attribution_method_compare, touchpoint, linkedEvents);
+
+  const getCSVData = () => {
+    return {
+      fileName: `${reportTitle}.csv`,
+      data: tableData.map(({ index, ...rest }) => {
+        return rest;
+      }),
+    };
+  };
 
   const onSelectionChange = (selectedIncices) => {
     if (selectedIncices.length > maxAllowedVisibleProperties) {
@@ -55,6 +65,7 @@ function AttributionTable({
       columns={columns}
       rowSelection={rowSelection}
       scroll={{ x: 250 }}
+      getCSVData={getCSVData}
     />
   );
 }

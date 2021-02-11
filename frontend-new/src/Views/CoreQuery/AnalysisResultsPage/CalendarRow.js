@@ -1,6 +1,7 @@
 import React, { useCallback } from "react";
 import FaDatepicker from "../../../components/FaDatepicker";
 import ChartTypeDropdown from "../../../components/ChartTypeDropdown";
+import { QUERY_TYPE_WEB } from "../../../utils/constants";
 
 function CalendarRow({
   durationObj,
@@ -9,6 +10,7 @@ function CalendarRow({
   chartTypeMenuItems,
   chartType,
   metricsDropdown,
+  queryType
 }) {
   const setDateRange = useCallback(
     (range) => {
@@ -16,6 +18,10 @@ function CalendarRow({
     },
     [handleDurationChange]
   );
+
+  if(queryType === QUERY_TYPE_WEB) {
+    return null;
+  }
 
 
   return (
