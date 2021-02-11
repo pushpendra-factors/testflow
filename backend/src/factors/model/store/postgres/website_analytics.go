@@ -1214,8 +1214,7 @@ func (pg *Postgres) ExecuteWebAnalyticsQueries(projectId uint64, queries *model.
 		U.EP_IS_PAGE_VIEW, true, sessionEventName.ID)
 
 	queryStartTimestamp := U.TimeNowUnix()
-	db := C.GetServices().Db
-	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
+	rows, err := pg.ExecQueryWithContext(queryStmnt, queryParams)
 	if err != nil {
 		logCtx.WithError(err).
 			Error("Failed to execute raw query to download events on execute_web_analytics_query.")

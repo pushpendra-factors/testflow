@@ -451,8 +451,7 @@ func getOrderByClause(selectMetrics []string) string {
 
 // ExecuteSQL - @Kark TODO v1
 func (pg *Postgres) ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error) {
-	db := C.GetServices().Db
-	rows, err := db.Raw(sqlStatement, params...).Rows()
+	rows, err := pg.ExecQueryWithContext(sqlStatement, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, nil, err

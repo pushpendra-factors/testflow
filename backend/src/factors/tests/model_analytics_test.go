@@ -2347,7 +2347,7 @@ func TestQueryCaching(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		if queryClass != model.QueryClassWeb {
 			// For website analytics, it returns from Dashboard cache.
-			assert.Equal(t, "true", w.HeaderMap.Get(model.QueryCacheResponseFromCacheHeader), w.Body.String())
+			assert.Equal(t, "true", w.HeaderMap.Get(model.QueryCacheResponseFromCacheHeader), queryClass+" "+w.Body.String())
 		}
 	}
 }
@@ -2434,6 +2434,46 @@ func TestNumericalBucketingRegex(t *testing.T) {
 		assert.Equal(t, fmt.Sprint(expectedBucket), result.Rows[0][1])
 		assert.Equal(t, int64(1), result.Rows[0][2])
 	}
+}
+
+func TestTransformQueryPlaceholdersForContext(t *testing.T) {
+	sampleQueries := []string{
+		"select * from users where id=?",
+		"select * from users where id = ?",
+		"SELECT COUNT(*) AS count FROM events  WHERE events.project_id=? AND timestamp\u003e=? AND timestamp\u003c=? AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id=? AND name=?) ORDER BY count DESC LIMIT 100000",
+		"SELECT COUNT(*) AS count FROM events  WHERE events.project_id=? AND timestamp>=? AND timestamp<=? AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id=? AND name=?) ORDER BY count DESC LIMIT 100000",
+	}
+	expectedTransformedQueries := []string{
+		"select * from users where id=$1",
+		"select * from users where id = $1",
+		"SELECT COUNT(*) AS count FROM events  WHERE events.project_id=$1 AND timestamp\u003e=$2 AND timestamp\u003c=$3 AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id=$4 AND name=$5) ORDER BY count DESC LIMIT 100000",
+		"SELECT COUNT(*) AS count FROM events  WHERE events.project_id=$1 AND timestamp>=$2 AND timestamp<=$3 AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id=$4 AND name=$5) ORDER BY count DESC LIMIT 100000",
+	}
+
+	for i := range sampleQueries {
+		transformedQuery := model.TransformQueryPlaceholdersForContext(sampleQueries[i])
+		assert.Equal(t, expectedTransformedQueries[i], transformedQuery)
+	}
+}
+
+func TestExpandArrayWithIndividualValues(t *testing.T) {
+	query := "SELECT * FROM users WHERE id IN (?)"
+	params := []interface{}{[]int{1, 2, 3, 4}}
+	newQuery, newParams := model.ExpandArrayWithIndividualValues(query, params)
+	assert.Equal(t, "SELECT * FROM users WHERE id IN (?, ?, ?, ?)", newQuery)
+	assert.Equal(t, []interface{}{1, 2, 3, 4}, newParams)
+
+	query = "SELECT * FROM users WHERE project_id = ? AND id IN (?)"
+	params = []interface{}{10, []int{1, 2, 3, 4}}
+	newQuery, newParams = model.ExpandArrayWithIndividualValues(query, params)
+	assert.Equal(t, "SELECT * FROM users WHERE project_id = ? AND id IN (?, ?, ?, ?)", newQuery)
+	assert.Equal(t, []interface{}{10, 1, 2, 3, 4}, newParams)
+
+	query = "SELECT * FROM users WHERE project_id = ? AND id IN (?) AND properties_id IN (?)"
+	params = []interface{}{10, []int{1, 2, 3, 4}, []string{"abc", "def"}}
+	newQuery, newParams = model.ExpandArrayWithIndividualValues(query, params)
+	assert.Equal(t, "SELECT * FROM users WHERE project_id = ? AND id IN (?, ?, ?, ?) AND properties_id IN (?, ?)", newQuery)
+	assert.Equal(t, []interface{}{10, 1, 2, 3, 4, "abc", "def"}, newParams)
 }
 
 func sendAnalyticsQueryFromRoutine(r *gin.Engine, queryClass string, projectID uint64, agent *model.Agent, dashboardID,

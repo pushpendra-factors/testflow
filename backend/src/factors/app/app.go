@@ -160,6 +160,8 @@ func main() {
 	}
 	H.InitAppRoutes(r)
 	H.InitIntRoutes(r)
+
+	C.KillDBQueriesOnExit()
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))
 
 	// TODO(Ankit):

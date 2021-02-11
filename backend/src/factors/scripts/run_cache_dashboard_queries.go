@@ -73,6 +73,7 @@ func main() {
 	if err != nil {
 		logCtx.WithError(err).Panic("Failed to initialize DB")
 	}
+	C.KillDBQueriesOnExit()
 	C.InitRedisPersistent(config.RedisHost, config.RedisPort)
 
 	C.InitSentryLogging(config.SentryDSN, config.AppName)

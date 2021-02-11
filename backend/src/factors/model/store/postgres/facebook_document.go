@@ -622,7 +622,7 @@ func (pg *Postgres) ExecuteFacebookChannelQuery(projectID uint64,
 	query.From = changeUnixTimestampToDate(query.From)
 	query.To = changeUnixTimestampToDate(query.To)
 	queryResult := &model.ChannelQueryResult{}
-	result, err := getFacebookChannelResult(projectID, projectSetting.IntFacebookAdAccount, query)
+	result, err := pg.GetFacebookChannelResult(projectID, projectSetting.IntFacebookAdAccount, query)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get facebook query result.")
 		return queryResult, http.StatusInternalServerError
@@ -632,7 +632,7 @@ func (pg *Postgres) ExecuteFacebookChannelQuery(projectID uint64,
 		return queryResult, http.StatusOK
 	}
 
-	metricBreakDown, err := getFacebookMetricBreakdown(projectID, projectSetting.IntFacebookAdAccount, query)
+	metricBreakDown, err := pg.GetFacebookMetricBreakdown(projectID, projectSetting.IntFacebookAdAccount, query)
 	queryResult.MetricsBreakdown = metricBreakDown
 
 	// sort only if the impression is there as column
@@ -652,18 +652,17 @@ func (pg *Postgres) ExecuteFacebookChannelQuery(projectID uint64,
 }
 
 // @TODO Kark v0
-func getFacebookMetricBreakdown(projectID uint64, customerAccountID string,
+func (pg *Postgres) GetFacebookMetricBreakdown(projectID uint64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelBreakdownResult, error) {
 
 	logCtx := log.WithField("project_id", projectID).WithField("customer_account_id", customerAccountID)
 
 	sqlQuery, documentType := getFacebookMetricsQuery(query, true)
 
-	db := C.GetServices().Db
-	rows, err := db.Raw(sqlQuery, projectID, customerAccountID,
+	rows, err := pg.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
 		query.From,
 		query.To,
-		documentType).Rows()
+		documentType})
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build channel query result.")
 		return nil, err
@@ -744,7 +743,7 @@ func getFacebookMetricsQuery(query *model.ChannelQuery, withBreakdown bool) (str
 }
 
 // @TODO Kark v0
-func getFacebookChannelResult(projectID uint64, customerAccountID string,
+func (pg *Postgres) GetFacebookChannelResult(projectID uint64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelQueryResult, error) {
 
 	logCtx := log.WithField("project_id", projectID)
@@ -752,11 +751,10 @@ func getFacebookChannelResult(projectID uint64, customerAccountID string,
 	sqlQuery, documentType := getFacebookMetricsQuery(query, false)
 
 	queryResult := &model.ChannelQueryResult{}
-	db := C.GetServices().Db
-	rows, err := db.Raw(sqlQuery, projectID, customerAccountID,
+	rows, err := pg.ExecQueryWithContext(sqlQuery, []interface{}{projectID, customerAccountID,
 		query.From,
 		query.To,
-		documentType).Rows()
+		documentType})
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build channel query result.")
 		return queryResult, err

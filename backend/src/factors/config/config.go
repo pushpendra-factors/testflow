@@ -2,13 +2,17 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -107,6 +111,8 @@ type Configuration struct {
 
 type Services struct {
 	Db                 *gorm.DB
+	DBContext          *context.Context
+	DBContextCancel    *context.CancelFunc
 	GeoLocation        *geoip2.Reader
 	Etcd               *serviceEtcd.EtcdClient
 	Redis              *redis.Pool
@@ -334,9 +340,30 @@ func InitDBWithMaxIdleAndMaxOpenConn(dbConf DBConf,
 		return err
 	}
 	log.Info("Db Service initialized")
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
 	services.Db = db
 	configuration.DBInfo = dbConf
+	services.DBContext = &ctx
+	services.DBContextCancel = &cancel
 	return nil
+}
+
+// KillDBQueriesOnExit Uses context to kill any running queries when kill signal is received.
+func KillDBQueriesOnExit() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		select {
+		case <-c:
+			if GetServices().DBContext != nil && GetServices().DBContextCancel != nil {
+				(*GetServices().DBContextCancel)()
+				signal.Stop(c)
+			}
+		}
+	}()
 }
 
 func InitDB(dbConf DBConf) error {

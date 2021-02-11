@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -516,4 +517,50 @@ func DeleteQueryCacheKey(projectID uint64, query BaseQuery) {
 	}
 
 	cacheRedis.DelPersistent(cacheKey)
+}
+
+// TransformQueryPlaceholdersForContext Converts ? in queries to $1, $2 format.
+func TransformQueryPlaceholdersForContext(stmnt string) string {
+	var newStmnt string
+	placeholderCount := 1
+	for _, c := range stmnt {
+		if c == '?' {
+			newStmnt += fmt.Sprintf("$%d", placeholderCount)
+			placeholderCount++
+		} else {
+			newStmnt += string(c)
+		}
+	}
+	return newStmnt
+}
+
+// ExpandArrayWithIndividualValues Converts query string ...value IN (?) with array param to ...value IN (?, ?).
+// Expands array param to the params values. To support array param in sql.DB.Query.
+func ExpandArrayWithIndividualValues(stmnt string, params []interface{}) (string, []interface{}) {
+	var newStmnt string
+	var newParams []interface{}
+	placeholderIndex := 0
+	for _, c := range stmnt {
+		if c == '?' {
+			param := params[placeholderIndex]
+			if reflect.TypeOf(param).Kind() == reflect.Slice || reflect.TypeOf(param).Kind() == reflect.Array {
+				arrayParam := reflect.ValueOf(param)
+				for j := 0; j < arrayParam.Len(); j++ {
+					if j == 0 {
+						newStmnt += "?"
+					} else {
+						newStmnt += ", ?"
+					}
+					newParams = append(newParams, arrayParam.Index(j).Interface())
+				}
+			} else {
+				newStmnt += string(c)
+				newParams = append(newParams, params[placeholderIndex])
+			}
+			placeholderIndex++
+		} else {
+			newStmnt += string(c)
+		}
+	}
+	return newStmnt, newParams
 }

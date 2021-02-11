@@ -386,7 +386,6 @@ func (pg *Postgres) GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType() (
 // GetGCLIDBasedCampaignInfo - It returns GCLID based campaign info ( Adgroup, Campaign and Ad) for given time range and adwords account
 func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string) (map[string]model.CampaignInfo, error) {
 
-	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectID": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	adGroupNameCase := "CASE WHEN value->>'ad_group_name' IS NULL THEN ? " +
 		" WHEN value->>'ad_group_name' = '' THEN ? ELSE value->>'ad_group_name' END AS ad_group_name"
@@ -398,9 +397,9 @@ func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, 
 	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + campaignNameCase + ", " + adIDCase +
 		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
-	rows, err := db.Raw(performanceQuery, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
+	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, projectID, customerAccountIDs, AdwordsClickReportType, U.GetDateOnlyFromTimestamp(from),
-		U.GetDateOnlyFromTimestamp(to)).Rows()
+		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, err
@@ -566,7 +565,7 @@ func (pg *Postgres) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, 
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), err
 	}
 	if hasAllIDsOnlyInGroupBy(transformedQuery) {
-		sql, params, selectKeys, selectMetrics, err = buildAdwordsSimpleQueryV1(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
+		sql, params, selectKeys, selectMetrics, err = pg.BuildAdwordsSimpleQueryV1(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), err
 		}
@@ -697,8 +696,8 @@ SUM((value->>'impressions')::float) as impressions, SUM((value->>'clicks')::floa
   GROUP BY campaign_id, datetime ORDER BY impressions DESC, clicks DESC LIMIT 2500 ;
 */
 // @Kark TODO v1
-func buildAdwordsSimpleQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
-	campaignIDs, adGroupIDs, err := getIDsFromAdwordsSimpleJob(query, projectID, customerAccountID, reqID)
+func (pg *Postgres) BuildAdwordsSimpleQueryV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
+	campaignIDs, adGroupIDs, err := pg.GetIDsFromAdwordsSimpleJob(query, projectID, customerAccountID, reqID)
 	if err != nil {
 		return "", make([]interface{}, 0), make([]string, 0), make([]string, 0), err
 	}
@@ -711,14 +710,14 @@ func buildAdwordsSimpleQueryV1(query *model.ChannelQueryV1, projectID uint64, cu
 
 // Validation issue needed. Not both ad_id , keyword_id at same time.
 // @Kark TODO v1
-func getIDsFromAdwordsSimpleJob(query *model.ChannelQueryV1, projectID uint64, adwordsAccountIDs string, reqID string) ([]int, []int, error) {
+func (pg *Postgres) GetIDsFromAdwordsSimpleJob(query *model.ChannelQueryV1, projectID uint64, adwordsAccountIDs string, reqID string) ([]int, []int, error) {
 	var err error
 	campaignsFilters, adGroupFilters, _ := splitFiltersByObjectTypeForAdwords(query)
-	campaignIDs, err := getIDsByPropertyOnAdwordsSimpleJob(projectID, query.From, query.To, adwordsAccountIDs, model.AdwordsCampaign, campaignsFilters, reqID)
+	campaignIDs, err := pg.GetIDsByPropertyOnAdwordsSimpleJob(projectID, query.From, query.To, adwordsAccountIDs, model.AdwordsCampaign, campaignsFilters, reqID)
 	if err != nil {
 		return make([]int, 0), make([]int, 0), err
 	}
-	adGroupIDs, err := getIDsByPropertyOnAdwordsSimpleJob(projectID, query.From, query.To, adwordsAccountIDs, model.AdwordsAdGroup, adGroupFilters, reqID)
+	adGroupIDs, err := pg.GetIDsByPropertyOnAdwordsSimpleJob(projectID, query.From, query.To, adwordsAccountIDs, model.AdwordsAdGroup, adGroupFilters, reqID)
 	if err != nil {
 		return make([]int, 0), make([]int, 0), err
 	}
@@ -746,9 +745,8 @@ func splitFiltersByObjectTypeForAdwords(query *model.ChannelQueryV1) ([]model.Fi
 }
 
 // @TODO Kark v1
-func getIDsByPropertyOnAdwordsSimpleJob(projectID uint64, from, to int64, adwordsAccountIDs string, typeOfJob string, filters []model.FilterV1, reqID string) ([]int, error) {
+func (pg *Postgres) GetIDsByPropertyOnAdwordsSimpleJob(projectID uint64, from, to int64, adwordsAccountIDs string, typeOfJob string, filters []model.FilterV1, reqID string) ([]int, error) {
 	logCtx := log.WithField("req_id", reqID)
-	db := C.GetServices().Db
 	if len(filters) == 0 {
 		return []int{}, nil
 	}
@@ -770,7 +768,7 @@ func getIDsByPropertyOnAdwordsSimpleJob(projectID uint64, from, to int64, adword
 
 	resultSQLStatement := fmt.Sprintf("%s %s %s;", selectStatement, completeFiltersStatement, groupByStatement)
 
-	rows, err := db.Raw(resultSQLStatement, sqlParams...).Rows()
+	rows, err := pg.ExecQueryWithContext(resultSQLStatement, sqlParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, err
@@ -1443,7 +1441,7 @@ func getFilterPropertiesForAdwordsReports(filters []model.FilterV1) (string, []i
 }
 
 // @TODO Kark v0
-func getAdwordsChannelResultMeta(projectID uint64, customerAccountID string,
+func (pg *Postgres) GetAdwordsChannelResultMeta(projectID uint64, customerAccountID string,
 	query *model.ChannelQuery) (*model.ChannelQueryResultMeta, error) {
 
 	customerAccountIDArray := strings.Split(customerAccountID, ",")
@@ -1453,11 +1451,10 @@ func getAdwordsChannelResultMeta(projectID uint64, customerAccountID string,
 
 	logCtx := log.WithField("project_id", projectID)
 
-	db := C.GetServices().Db
-	rows, err := db.Raw(stmnt, projectID, customerAccountIDArray,
+	rows, err := pg.ExecQueryWithContext(stmnt, []interface{}{projectID, customerAccountIDArray,
 		model.AdwordsDocumentTypeAlias["customer_account_properties"],
 		GetAdwordsDateOnlyTimestamp(query.From),
-		GetAdwordsDateOnlyTimestamp(query.To)).Rows()
+		GetAdwordsDateOnlyTimestamp(query.To)})
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build meta for channel query result.")
 		return nil, err
@@ -1498,7 +1495,7 @@ func (pg *Postgres) ExecuteAdwordsChannelQuery(projectID uint64, query *model.Ch
 	}
 
 	queryResult := &model.ChannelQueryResult{}
-	meta, err := getAdwordsChannelResultMeta(projectID,
+	meta, err := pg.GetAdwordsChannelResultMeta(projectID,
 		*projectSetting.IntAdwordsCustomerAccountId, query)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get adwords channel result meta.")
@@ -1719,8 +1716,7 @@ func (pg *Postgres) getAdwordsMetrics(projectID uint64, customerAccountID string
 		return nil, err
 	}
 
-	db := C.GetServices().Db
-	rows, err := db.Raw(stmnt, params...).Rows()
+	rows, err := pg.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1759,8 +1755,7 @@ func (pg *Postgres) getAdwordsMetricsBreakdown(projectID uint64, customerAccount
 		return nil, err
 	}
 
-	db := C.GetServices().Db
-	rows, err := db.Raw(stmnt, params...).Rows()
+	rows, err := pg.ExecQueryWithContext(stmnt, params)
 	if err != nil {
 		return nil, err
 	}
