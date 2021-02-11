@@ -283,7 +283,7 @@ func TestAPIUpdateSavedQueryHandler(t *testing.T) {
 
 	w := sendCreateQueryReq(r, project.ID, agent, &H.SavedQueryRequestPayload{Title: rTitle,
 		Type:  model.QueryTypeSavedQuery,
-		Query: &postgres.Jsonb{queryJson}})
+		Query: &postgres.Jsonb{RawMessage: queryJson}})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	responseMap := DecodeJSONResponseToMap(w.Body)

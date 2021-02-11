@@ -150,12 +150,18 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid query id."})
 		return
 	}
+
+	query := model.Queries{}
+	if requestPayload.Title != "" {
+		query.Title = requestPayload.Title
+	}
+	query.Type = model.QueryTypeSavedQuery
+	if requestPayload.Query != nil && !U.IsEmptyPostgresJsonb(requestPayload.Query) {
+		query.Query = *requestPayload.Query
+	}
+
 	_, errCode := store.GetStore().UpdateSavedQuery(projectID, queryID,
-		&model.Queries{
-			Title: requestPayload.Title,
-			Type:  model.QueryTypeSavedQuery,
-			Query: *requestPayload.Query,
-		})
+		&query)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update Saved Query."})
 		return

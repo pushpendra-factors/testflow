@@ -429,11 +429,22 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
+	unit := model.DashboardUnit{}
+	if requestPayload.Title != "" {
+		unit.Title = requestPayload.Title
+	}
+	if requestPayload.Description != "" {
+		unit.Description = requestPayload.Description
+	}
+	if requestPayload.Presentation != "" {
+		unit.Presentation = requestPayload.Presentation
+	}
+	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {
+		unit.Settings = *requestPayload.Settings
+	}
+
 	_, errCode := store.GetStore().UpdateDashboardUnit(projectId, agentUUID, dashboardId,
-		unitId, &model.DashboardUnit{Title: requestPayload.Title,
-			Description:  requestPayload.Description,
-			Presentation: requestPayload.Presentation,
-			Settings:     *requestPayload.Settings})
+		unitId, &unit)
 	if errCode != http.StatusAccepted && errCode != http.StatusNoContent {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update dashboard unit."})
 		return
