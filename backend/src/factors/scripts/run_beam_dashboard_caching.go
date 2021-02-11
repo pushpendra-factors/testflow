@@ -121,6 +121,7 @@ func initConf(config *C.Configuration) {
 	}
 	C.InitRedisConnection(config.RedisHost, config.RedisPort, true, 20, 5)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	C.KillDBQueriesOnExit()
 }
 
 func emitIndividualProjectID(ctx context.Context, projectIDsString string, emit func(string)) {
