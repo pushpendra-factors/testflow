@@ -669,6 +669,28 @@ func TestUpdateDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusAccepted, errCode)
 		assert.Equal(t, unitName2, updatedDashboard.Title)
 
+		unitName33 := U.RandomString(5)
+		description3 := "description3"
+		presentation3 := "pr"
+		settings3 := postgres.Jsonb{RawMessage: json.RawMessage(`{"Setting" : "Default"}`)}
+		updatedDashboardUnit3, errCode := store.GetStore().UpdateDashboardUnit(project.ID, agent.UUID, dashboard.ID, unit.ID, &model.DashboardUnit{Title: unitName33,
+			Description: description3, Presentation: presentation3, Settings: settings3})
+		assert.Equal(t, http.StatusAccepted, errCode)
+		assert.Equal(t, unitName33, updatedDashboardUnit3.Title)
+		assert.Equal(t, description3, updatedDashboardUnit3.Description)
+		assert.Equal(t, presentation3, updatedDashboardUnit3.Presentation)
+		assert.Equal(t, settings3, updatedDashboardUnit3.Settings)
+
+		unitName44 := U.RandomString(5)
+		presentation4 := "pr"
+		settings4 := postgres.Jsonb{RawMessage: json.RawMessage(`{"Setting" : "Default"}`)}
+		updatedDashboardUnit4, errCode := store.GetStore().UpdateDashboardUnit(project.ID, agent.UUID, dashboard.ID, unit.ID, &model.DashboardUnit{Title: unitName44,
+			Presentation: presentation4, Settings: settings4})
+		assert.Equal(t, http.StatusAccepted, errCode)
+		assert.Equal(t, unitName44, updatedDashboardUnit4.Title)
+		assert.Equal(t, presentation4, updatedDashboardUnit4.Presentation)
+		assert.Equal(t, settings4, updatedDashboardUnit4.Settings)
+
 		// invalid title.
 		updatedDashboard, errCode = store.GetStore().UpdateDashboardUnit(project.ID, agent.UUID, dashboard.ID, unit.ID, &model.DashboardUnit{Title: ""})
 		assert.Equal(t, http.StatusBadRequest, errCode)

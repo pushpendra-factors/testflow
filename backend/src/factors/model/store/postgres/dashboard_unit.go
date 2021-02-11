@@ -178,7 +178,7 @@ func updateDashboardUnitSettingsAndPresentation(unit *model.DashboardUnit) {
 				"dashboardUnitId": unit.ID}).Error("failed to update settings for given presentation")
 			return
 		}
-		unit.Settings = postgres.Jsonb{settings}
+		unit.Settings = postgres.Jsonb{RawMessage: settings}
 	} else {
 		// request is received from new UI updating Presentation
 		settings := make(map[string]string)
@@ -378,6 +378,15 @@ func (pg *Postgres) UpdateDashboardUnit(projectId uint64, agentUUID string,
 	if unit.Title != "" {
 		updateFields["title"] = unit.Title
 	}
+	if unit.Description != "" {
+		updateFields["description"] = unit.Description
+	}
+	if unit.Presentation != "" {
+		updateFields["presentation"] = unit.Presentation
+	}
+	if !U.IsEmptyPostgresJsonb(&unit.Settings) {
+		updateFields["settings"] = unit.Settings
+	}
 
 	// nothing to update.
 	if len(updateFields) == 0 {
@@ -439,7 +448,6 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 		logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).
 			Infof("Time taken for caching %d dashboard units", unitsCount)
 	}
-	return
 }
 
 // CacheDashboardUnitsForProjectID Caches all the dashboard units for the given `projectID`.

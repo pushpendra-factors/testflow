@@ -23,7 +23,8 @@ type SavedQueryRequestPayload struct {
 
 // SavedQueryUpdatePayload is struct update
 type SavedQueryUpdatePayload struct {
-	Title string `json:"title"`
+	Title string          `json:"title"`
+	Query *postgres.Jsonb `json:"query"`
 }
 
 // GetQueriesHandler godoc
@@ -153,6 +154,7 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		&model.Queries{
 			Title: requestPayload.Title,
 			Type:  model.QueryTypeSavedQuery,
+			Query: *requestPayload.Query,
 		})
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update Saved Query."})

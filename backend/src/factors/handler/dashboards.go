@@ -430,7 +430,10 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 	}
 
 	_, errCode := store.GetStore().UpdateDashboardUnit(projectId, agentUUID, dashboardId,
-		unitId, &model.DashboardUnit{Title: requestPayload.Title})
+		unitId, &model.DashboardUnit{Title: requestPayload.Title,
+			Description:  requestPayload.Description,
+			Presentation: requestPayload.Presentation,
+			Settings:     *requestPayload.Settings})
 	if errCode != http.StatusAccepted && errCode != http.StatusNoContent {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update dashboard unit."})
 		return

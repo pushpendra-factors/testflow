@@ -3,6 +3,7 @@ package postgres
 import (
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
@@ -209,7 +210,17 @@ func (pg *Postgres) UpdateSavedQuery(projectID uint64, queryID uint64, query *mo
 		return &model.Queries{}, http.StatusBadRequest
 	}
 
-	err := db.Model(&model.Queries{}).Where("project_id = ? AND id=? AND type=? AND is_deleted = ?", projectID, queryID, query.Type, "false").Update("title", query.Title).Error
+	// update allowed fields.
+	updateFields := make(map[string]interface{}, 0)
+	if query.Title != "" {
+		updateFields["title"] = query.Title
+	}
+	if !U.IsEmptyPostgresJsonb(&query.Query) {
+		updateFields["query"] = query.Query
+	}
+
+	err := db.Model(&model.Queries{}).Where("project_id = ? AND id=? AND type=? AND is_deleted = ?",
+		projectID, queryID, query.Type, "false").Update(updateFields).Error
 	if err != nil {
 		return &model.Queries{}, http.StatusInternalServerError
 	}
