@@ -13,8 +13,8 @@ import {
   EACH_USER_TYPE,
   TOTAL_EVENTS_CRITERIA,
   DASHBOARD_MODAL,
+  reverse_user_types,
 } from "../../utils/constants";
-import WebsiteAnalyticsTable from "./WebsiteAnalytics/WebsiteAnalyticsTable";
 import ReportContent from "../CoreQuery/AnalysisResultsPage/ReportContent";
 
 function ActiveUnitContent({
@@ -63,7 +63,8 @@ function ActiveUnitContent({
     eventsMapper = {},
     reverseEventsMapper = {},
     arrayMapper = [],
-    attributionsState;
+    attributionsState,
+    breakdownType;
 
   if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
     breakdown = [
@@ -80,6 +81,14 @@ function ActiveUnitContent({
         mapper: `event${index + 1}`,
       });
     });
+  }
+
+  if(queryType === QUERY_TYPE_EVENT) {
+    if(unit.query.query.query_group.length > 1) {
+      breakdownType = EACH_USER_TYPE
+    } else {
+      breakdownType = reverse_user_types[unit.query.query.query_group[0].ec]
+    }
   }
 
   if (queryType === QUERY_TYPE_CAMPAIGN) {
@@ -128,7 +137,7 @@ function ActiveUnitContent({
           arrayMapper={arrayMapper}
           queryOptions={{ date_range: durationObj }}
           attributionsState={attributionsState}
-          breakdownType={EACH_USER_TYPE}
+          breakdownType={breakdownType}
           campaignState={{ ...equivalentQuery, date_range: durationObj }}
           eventPage={TOTAL_EVENTS_CRITERIA}
           section={DASHBOARD_MODAL}

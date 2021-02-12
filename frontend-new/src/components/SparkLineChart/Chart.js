@@ -130,7 +130,7 @@ function SparkChart({
         .style('left', left + 'px')
         .style('top', d3.event.pageY - 40 + 'px');
     }
-  }, [bisectDate, chartData, chartColor, event, page, frequency]);
+  }, [bisectDate, chartData, chartColor, event, page, frequency, widgetHeight]);
 
   useEffect(() => {
     drawChart();

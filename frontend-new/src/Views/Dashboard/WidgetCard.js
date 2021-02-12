@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback, useState } from "react";
 import { Button, Dropdown, Menu } from "antd";
 import { Text, SVG } from "../../components/factorsComponents";
-import { RightOutlined, LeftOutlined, MoreOutlined } from "@ant-design/icons";
+import { RightOutlined, LeftOutlined } from "@ant-design/icons";
 import CardContent from "./CardContent";
 import { useSelector } from "react-redux";
 import {

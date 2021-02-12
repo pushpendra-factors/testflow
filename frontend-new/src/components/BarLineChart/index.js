@@ -303,7 +303,7 @@ function BarLineChart({
       .on("mouseout", () => {
         hideTooltip();
       });
-  }, [chartData, hideTooltip, showTooltip, title]);
+  }, [chartData, hideTooltip, showTooltip, title, widgetHeight]);
 
   useEffect(() => {
     drawChart();

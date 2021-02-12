@@ -229,7 +229,6 @@ function AddDashboard({
     description,
     dispatch,
     editDashboard,
-    getUnitsAssignRequestBody,
     resetState,
     title,
   ]);

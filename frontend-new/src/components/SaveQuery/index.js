@@ -187,6 +187,7 @@ function SaveQuery({
     dashboardPresentation,
     selectedDashboards,
     queryType,
+    setQuerySaved
   ]);
 
   let dashboardHelpText = "Create a dashboard widget for regular monitoring";
