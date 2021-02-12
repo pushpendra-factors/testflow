@@ -8,6 +8,7 @@ function ReportsLayout({
   requestQuery,
   querySaved,
   setQuerySaved,
+  breakdownType,
   ...rest
 }) {
   return (
@@ -18,9 +19,15 @@ function ReportsLayout({
         queryType={queryType}
         queryTitle={querySaved}
         setQuerySaved={setQuerySaved}
+        breakdownType={breakdownType}
       />
       <div className="mt-24 px-20">
-        <ReportContent queryTitle={querySaved} queryType={queryType} {...rest} />
+        <ReportContent
+          breakdownType={breakdownType}
+          queryTitle={querySaved}
+          queryType={queryType}
+          {...rest}
+        />
       </div>
     </>
   );

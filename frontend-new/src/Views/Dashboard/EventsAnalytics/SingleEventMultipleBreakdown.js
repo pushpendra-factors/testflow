@@ -11,6 +11,7 @@ import {
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
   CHART_TYPE_TABLE,
+  CHART_TYPE_BARCHART,
 } from "../../../utils/constants";
 
 function SingleEventMultipleBreakdown({
@@ -83,13 +84,13 @@ function SingleEventMultipleBreakdown({
     );
   }
 
-  if (chartType === "barchart") {
+  if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <div className="flex mt-4">
         <BarChart section={section} height={250} title={unit.id} chartData={visibleProperties} />
       </div>
     );
-  } else if (chartType === "table") {
+  } else if (chartType === CHART_TYPE_TABLE) {
     chartContent = (
       <SingleEventMultipleBreakdownTable
         data={chartsData}

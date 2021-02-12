@@ -14,6 +14,7 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
   DASHBOARD_WIDGET_SECTION,
+  reverse_user_types,
 } from "../../utils/constants";
 import Attributions from "./Attributions";
 import CampaignAnalytics from "./CampaignAnalytics";
@@ -68,7 +69,8 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       reverseEventsMapper = {},
       arrayMapper = [],
       attributionsState,
-      campaignState;
+      campaignState,
+      breakdownType;
 
     const { queryType } = equivalentQuery;
     if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) {
@@ -86,6 +88,10 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           mapper: `event${index + 1}`,
         });
       });
+    }
+
+    if(queryType === QUERY_TYPE_EVENT) {
+      breakdownType = reverse_user_types[unit.query.query.query_group[0].ec]
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
@@ -150,6 +156,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           setwidgetModal={setwidgetModal}
           arrayMapper={arrayMapper}
           section={DASHBOARD_WIDGET_SECTION}
+          breakdownType={breakdownType}
         />
       );
     }

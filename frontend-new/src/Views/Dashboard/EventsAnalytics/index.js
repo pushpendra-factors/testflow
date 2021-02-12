@@ -6,7 +6,10 @@ import NoBreakdownCharts from "./NoBreakdownCharts";
 import {
   TOTAL_EVENTS_CRITERIA,
   EACH_USER_TYPE,
+  ANY_USER_TYPE,
+  ALL_USER_TYPE,
 } from "../../../utils/constants";
+import EventBreakdownCharts from "./EventBreakdownCharts";
 
 function EventsAnalytics({
   breakdown,
@@ -19,69 +22,85 @@ function EventsAnalytics({
   durationObj,
   arrayMapper,
   section,
+  breakdownType,
 }) {
   let content = null;
 
-  if (events.length > 1 && breakdown.length) {
-    content = (
-      <MultipleEventsWithBreakdown
-        queries={events}
-        resultState={resultState}
-        page={TOTAL_EVENTS_CRITERIA}
-        chartType={chartType}
-        durationObj={durationObj}
-        section={section}
-        breakdown={breakdown}
-        unit={unit}
-        setwidgetModal={setwidgetModal}
-      />
-    );
+  if (breakdownType === EACH_USER_TYPE) {
+    if (events.length > 1 && breakdown.length) {
+      content = (
+        <MultipleEventsWithBreakdown
+          queries={events}
+          resultState={resultState}
+          page={TOTAL_EVENTS_CRITERIA}
+          chartType={chartType}
+          durationObj={durationObj}
+          section={section}
+          breakdown={breakdown}
+          unit={unit}
+          setwidgetModal={setwidgetModal}
+        />
+      );
+    }
+
+    if (events.length === 1 && breakdown.length === 1) {
+      content = (
+        <SingleEventSingleBreakdown
+          queries={events}
+          resultState={resultState}
+          page={TOTAL_EVENTS_CRITERIA}
+          chartType={chartType}
+          durationObj={durationObj}
+          section={section}
+          breakdown={breakdown}
+          unit={unit}
+          setwidgetModal={setwidgetModal}
+        />
+      );
+    }
+
+    if (events.length === 1 && breakdown.length > 1) {
+      content = (
+        <SingleEventMultipleBreakdown
+          queries={events}
+          resultState={resultState}
+          page={TOTAL_EVENTS_CRITERIA}
+          chartType={chartType}
+          durationObj={durationObj}
+          section={section}
+          breakdown={breakdown}
+          unit={unit}
+          setwidgetModal={setwidgetModal}
+        />
+      );
+    }
+
+    if (!breakdown.length) {
+      content = (
+        <NoBreakdownCharts
+          queries={events}
+          resultState={resultState}
+          page={TOTAL_EVENTS_CRITERIA}
+          chartType={chartType}
+          arrayMapper={arrayMapper}
+          durationObj={durationObj}
+          section={section}
+          unit={unit}
+          setwidgetModal={setwidgetModal}
+        />
+      );
+    }
   }
 
-  if (events.length === 1 && breakdown.length === 1) {
+  if (breakdownType === ANY_USER_TYPE || breakdownType === ALL_USER_TYPE) {
     content = (
-      <SingleEventSingleBreakdown
-        queries={events}
-        resultState={resultState}
-        page={TOTAL_EVENTS_CRITERIA}
-        chartType={chartType}
-        durationObj={durationObj}
+      <EventBreakdownCharts
         section={section}
+        resultState={resultState}
         breakdown={breakdown}
-        unit={unit}
-        setwidgetModal={setwidgetModal}
-      />
-    );
-  }
-
-  if (events.length === 1 && breakdown.length > 1) {
-    content = (
-      <SingleEventMultipleBreakdown
-        queries={events}
-        resultState={resultState}
-        page={TOTAL_EVENTS_CRITERIA}
         chartType={chartType}
-        durationObj={durationObj}
-        section={section}
-        breakdown={breakdown}
-        unit={unit}
         setwidgetModal={setwidgetModal}
-      />
-    );
-  }
-
-  if (!breakdown.length) {
-    content = (
-      <NoBreakdownCharts
-        queries={events}
-        resultState={resultState}
-        page={TOTAL_EVENTS_CRITERIA}
-        chartType={chartType}
-        arrayMapper={arrayMapper}
-        durationObj={durationObj}
-        section={section}
         unit={unit}
-        setwidgetModal={setwidgetModal}
       />
     );
   }

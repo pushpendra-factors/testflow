@@ -20,6 +20,8 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
+  EACH_USER_TYPE,
+  constantObj,
 } from "../../utils/constants";
 
 function SaveQuery({
@@ -27,7 +29,7 @@ function SaveQuery({
   visible,
   setVisible,
   queryType,
-  setQuerySaved
+  setQuerySaved,
 }) {
   const [title, setTitle] = useState("");
   const [addToDashboard, setAddToDashboard] = useState(false);
@@ -203,9 +205,18 @@ function SaveQuery({
     let secondOption = null;
 
     if (queryType === QUERY_TYPE_EVENT) {
-      secondOption = <Radio value="pl">Display Line Chart</Radio>;
-      if (!requestQuery[0].gbp.length) {
-        firstOption = <Radio value="pc">Display Spark Line Chart</Radio>;
+      if (requestQuery[0].ec === constantObj[EACH_USER_TYPE]) {
+        secondOption = <Radio value="pl">Display Line Chart</Radio>;
+        if (!requestQuery[0].gbp.length) {
+          firstOption = <Radio value="pc">Display Spark Line Chart</Radio>;
+        }
+      } else {
+        secondOption = null;
+        if (!requestQuery[0].gbp.length) {
+          firstOption = <Radio value="pc">Display Count</Radio>;
+        } else {
+          firstOption = <Radio value="pb">Display Bar Chart</Radio>;
+        }
       }
     }
 

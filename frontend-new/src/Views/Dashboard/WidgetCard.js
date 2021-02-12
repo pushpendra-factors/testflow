@@ -108,7 +108,12 @@ function WidgetCard({
             ...equivalentQuery.breakdown.global,
           ];
 
-          if (
+          if(unit.query.query.query_group.length === 1) {
+            setResultState({
+              ...initialState,
+              data: result_group[0],
+            });
+          } else if (
             unit.query.query.query_group.length === 3
           ) {
             const userData = formatApiData(result_group[0], result_group[1]);
