@@ -80,7 +80,6 @@ const (
 const (
 	StepPrefix             = "step_"
 	FunnelConversionPrefix = "conversion_"
-	FunnelTimeSuffix       = "_time"
 )
 
 const (
