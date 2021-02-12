@@ -125,7 +125,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
 
             }
 
-        } 
+        }  
 
         saveSmartEvents(activeProject.id,finalData).then((data)=>{ 
             message.success('Smart Event Added!');
@@ -203,9 +203,15 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
 
       useEffect(()=>{
           if(dataObjectSource && dataObject && dataObjectProperty){
-              fetchSpecificPropertiesValue(activeProject.id,dataObjectSource, dataObject,dataObjectProperty); 
+              fetchSpecificPropertiesValue(activeProject.id,dataObjectSource, dataObject,dataObjectProperty);
           }
-      },[dataObjectProperty])
+      },[dataObjectProperty]);
+
+      useEffect(()=>{
+        const defaultValue = specificPropertiesData?.[0]   
+        setLastVal(defaultValue);
+        setCurrVal(defaultValue);
+      },[specificPropertiesData])
  
   return (
     <>
@@ -382,7 +388,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
                                         </Dropdown>
                                         </div>
                                         <div className={'ml-2'}>
-                                            <Select defaultValue={specificPropertiesData?.[0]} value={specificPropertiesData?.[0]}  onChange={(value)=>setCurrVal(value)} className={'fa-select w-full ml-2'} placeholder={'Object Property'}>
+                                            <Select defaultValue={specificPropertiesData?.[0]} value={currVal}  onChange={(value)=>setCurrVal(value)} className={'fa-select w-full ml-2'} placeholder={'Object Property'}>
                                                 {
                                                 specificPropertiesData?.map((item)=>{ 
                                                     return <Option key={item} value={item}>{item}</Option>  
@@ -398,7 +404,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
                                         </Dropdown>
                                         </div>
                                         <div  className={'ml-2'}>
-                                            <Select defaultValue={specificPropertiesData?.[0]} value={specificPropertiesData?.[0]}  onChange={(value)=>setLastVal(value)} className={'fa-select w-full'} placeholder={'Object Property'}>
+                                            <Select defaultValue={specificPropertiesData?.[0]} value={lastVal}  onChange={(value)=>setLastVal(value)} className={'fa-select w-full'} placeholder={'Object Property'}>
                                                 {
                                                 specificPropertiesData?.map((item)=>{ 
                                                     return <Option key={item} value={item}>{item}</Option>  

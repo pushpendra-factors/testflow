@@ -37,6 +37,11 @@ const IntegrationProviderData = [
     desc: 'Sync LinkedIn ads reports with Factors for performance reporting',
     icon:'Linkedin_ads'
   },
+  {
+    name: 'Drift',
+    desc: 'Track events and conversions from Drift’s chat solution on the website',
+    icon:'DriftLogo'
+  },
 ];
 
 const IntegrationCard = ({ item, index }) => { 
