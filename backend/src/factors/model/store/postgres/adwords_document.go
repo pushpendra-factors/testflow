@@ -1024,6 +1024,8 @@ func buildAdwordsComplexWithKeywords(query *model.ChannelQueryV1, projectID uint
 	}
 	if isGroupByTimestamp {
 		finalGroupByKeys = append(groupByKeysWithoutTimestamp, reportCTEAlias+"."+model.AliasDateTime)
+	} else {
+		finalGroupByKeys = groupByKeysWithoutTimestamp
 	}
 
 	// SelectKeys

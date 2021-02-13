@@ -289,23 +289,15 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 	reqID string) ([]string, [][]interface{}, error) {
 
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
-	fetchSource := true
 	var unionQuery string
 	var unionParams []interface{}
 	var selectMetrics, columns []string
-	adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := pg.GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
-	facebookSQL, facebookParams, _, _, facebookErr := pg.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
 
-	if adwordsErr != nil {
-		return make([]string, 0, 0), [][]interface{}{}, adwordsErr
-	}
-	if facebookErr != nil {
-		return make([]string, 0, 0), [][]interface{}{}, facebookErr
-	}
-
-	adwordsSQL = fmt.Sprintf("( %s )", adwordsSQL[:len(adwordsSQL)-2])
-	facebookSQL = fmt.Sprintf("( %s )", facebookSQL[:len(facebookSQL)-2])
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
+		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, err := pg.getFacebookAndAdwordsSQLAndParametersV1(projectID, query, reqID, false)
+		if err != nil {
+			return make([]string, 0, 0), [][]interface{}{}, err
+		}
 		for _, metric := range adwordsMetrics {
 			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
 			selectMetrics = append(selectMetrics, value)
@@ -313,7 +305,12 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads ORDER BY %s %s", joinWithComma(selectMetrics...),
 			adwordsSQL, facebookSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
+		columns = append(adwordsSelectKeys, adwordsMetrics...)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
+		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, err := pg.getFacebookAndAdwordsSQLAndParametersV1(projectID, query, reqID, false)
+		if err != nil {
+			return make([]string, 0, 0), [][]interface{}{}, err
+		}
 		selectMetrics = append(selectMetrics, model.AliasDateTime)
 		for _, metric := range adwordsMetrics {
 			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
@@ -322,13 +319,34 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads GROUP BY %s ORDER BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL,
 			model.AliasDateTime, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
+		columns = append(adwordsSelectKeys, adwordsMetrics...)
 	} else {
+		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, err := pg.getFacebookAndAdwordsSQLAndParametersV1(projectID, query, reqID, true)
+		if err != nil {
+			return make([]string, 0, 0), [][]interface{}{}, err
+		}
 		unionQuery = fmt.Sprintf("SELECT * FROM ( %s UNION %s ) all_ads ORDER BY %s %s;", adwordsSQL, facebookSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
+		columns = append(adwordsSelectKeys, adwordsMetrics...)
 	}
-	columns = append(adwordsSelectKeys, adwordsMetrics...)
 	_, resultMetrics, err := pg.ExecuteSQL(unionQuery, unionParams, logCtx)
 	return columns, resultMetrics, err
+}
+
+func (pg *Postgres) getFacebookAndAdwordsSQLAndParametersV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, error) {
+	adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := pg.GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
+	facebookSQL, facebookParams, _, _, facebookErr := pg.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
+
+	if adwordsErr != nil {
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, adwordsErr
+	}
+	if facebookErr != nil {
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, facebookErr
+	}
+	adwordsSQL = fmt.Sprintf("( %s )", adwordsSQL[:len(adwordsSQL)-2])
+	facebookSQL = fmt.Sprintf("( %s )", facebookSQL[:len(facebookSQL)-2])
+
+	return adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, nil
 }
 
 // GetChannelFilterValues - @Kark TODO v0
