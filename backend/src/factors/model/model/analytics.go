@@ -73,7 +73,7 @@ const (
 const DefaultTimezone = "UTC"
 
 const (
-	ResultsLimit    = 1000
+	ResultsLimit    = 10000
 	MaxResultsLimit = 100000
 )
 
