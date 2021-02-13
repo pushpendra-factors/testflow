@@ -2,6 +2,8 @@
 import requests
 from tornado.log import logging as log
 
+from scripts.adwords.jobs.multiple_requests_fetch_job import MultipleRequestsFetchJob
+
 
 class FactorsDataService:
     data_service_path = None
@@ -74,3 +76,9 @@ class FactorsDataService:
         for doc in docs:
             cls.add_adwords_document(project_id, customer_acc_id,
                                      doc, doc_type, timestamp)
+
+    @classmethod
+    def add_all_adwords_documents_for_first_run(cls, project_id, customer_acc_id, docs, doc_type):
+        for doc in docs:
+            cls.add_adwords_document(project_id, customer_acc_id, doc, doc_type,
+                                     doc[MultipleRequestsFetchJob.TIMESTAMP_FIELD])

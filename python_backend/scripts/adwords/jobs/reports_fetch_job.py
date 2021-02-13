@@ -16,6 +16,7 @@ class ReportsFetch(BaseJob):
     REPORT = ''
     WHERE_IN_COLUMN = 'CampaignStatus'
     WHERE_IN_VALUES = ['ENABLED', 'PAUSED']
+    MAX_LOOK_BACK_DAYS = 30
 
     def __init__(self, next_info):
         super().__init__(next_info)
@@ -40,17 +41,25 @@ class ReportsFetch(BaseJob):
         return CsvUtil.csv_to_dict_list(self.QUERY_FIELDS, lines), 1
 
     @staticmethod
-    def contains_historical_data(last_timestamp, doc_type):
+    def doesnt_contains_historical_data(last_timestamp, doc_type):
         adwords_timestamp_today = TimeUtil.get_timestamp_from_datetime(datetime.utcnow())
-        non_report_related = doc_type in ['campaigns', 'ads', 'ad_groups', 'customer_account_properties']
+        non_report_related = ReportsFetch.non_historical_doc_type(doc_type)
         return non_report_related and last_timestamp != adwords_timestamp_today
 
     @staticmethod
+    def non_historical_doc_type(doc_type):
+        return doc_type in ['campaigns', 'ads', 'ad_groups', 'customer_account_properties']
+
+    @staticmethod
     def get_next_start_time_for_historical_data(last_timestamp):
-        max_look_back_timestamp = TimeUtil.get_timestamp_before_days(30)
+        max_look_back_timestamp = ReportsFetch.get_max_look_back_timestamp()
         if last_timestamp == 0 or last_timestamp < max_look_back_timestamp:
             start_timestamp = max_look_back_timestamp
         else:
             start_timestamp = TimeUtil.get_next_day_timestamp(last_timestamp)
 
         return start_timestamp
+
+    @staticmethod
+    def get_max_look_back_timestamp():
+        return TimeUtil.get_timestamp_before_days(ReportsFetch.MAX_LOOK_BACK_DAYS)

@@ -20,6 +20,7 @@ from scripts.adwords.jobs.reports_fetch_job import ReportsFetch
 
 HEALTHCHECKS_ADWORDS_SYNC_PING_ID = "188cbf7c-0ea1-414b-bf5c-eee47c12a0c8"
 
+
 def setup(argv):
     input_args, rem = EtlParser(argv[1::]).parse()
     EtlConfig.build(input_args)
@@ -34,10 +35,12 @@ def get_next_sync_info(last_sync):
     next_sync_info = []
     last_timestamp = last_sync.get('last_timestamp')
     doc_type = last_sync.get('doc_type_alias')
+    first_run = (last_timestamp == 0)
 
-    if ReportsFetch.contains_historical_data(last_timestamp, doc_type):
+    if ReportsFetch.doesnt_contains_historical_data(last_timestamp, doc_type):
         sync_info = last_sync.copy()
         sync_info['next_timestamp'] = TimeUtil.get_timestamp_from_datetime(datetime.utcnow())
+        sync_info['first_run'] = first_run
         return [sync_info]
     else:
         start_timestamp = ReportsFetch.get_next_start_time_for_historical_data(last_timestamp)
@@ -111,10 +114,10 @@ if __name__ == "__main__":
     }
 
     if len(next_sync_failures) > 0:
-        HealthchecksUtil.ping_healthcheck(scripts.adwords.CONFIG.ADWORDS_APP.env, 
-            HEALTHCHECKS_ADWORDS_SYNC_PING_ID, notify_payload, endpoint="/fail")
-    else:    
-        HealthchecksUtil.ping_healthcheck(scripts.adwords.CONFIG.ADWORDS_APP.env, 
-            HEALTHCHECKS_ADWORDS_SYNC_PING_ID, notify_payload)
+        HealthchecksUtil.ping_healthcheck(scripts.adwords.CONFIG.ADWORDS_APP.env,
+                                          HEALTHCHECKS_ADWORDS_SYNC_PING_ID, notify_payload, endpoint="/fail")
+    else:
+        HealthchecksUtil.ping_healthcheck(scripts.adwords.CONFIG.ADWORDS_APP.env,
+                                          HEALTHCHECKS_ADWORDS_SYNC_PING_ID, notify_payload)
     log.warning("Successfully synced. End of adwords sync job.")
     sys.exit(0)

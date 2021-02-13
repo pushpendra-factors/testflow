@@ -14,10 +14,6 @@ class BaseJob:
         # self._status = {"project_id": self._project_id, "timestamp": self._timestamp, "doc_type": self._doc_type,
         #                 "status": "success"}
 
-    # @static_method
-    # def build(next_info):
-    #     BaseJob(next_info)
-
     def start(self):
         log.warning("ETL for project: %s, cutomer_account_id: %s, document_type: %s, timestamp: %s",
                     str(self._project_id), self._customer_acc_id, self._doc_type, str(self._timestamp))

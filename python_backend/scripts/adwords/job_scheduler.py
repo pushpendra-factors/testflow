@@ -16,6 +16,7 @@ from scripts.adwords.jobs.keywords_performance_report_job import KeywordPerforma
 from scripts.adwords.jobs.search_performance_reports_job import SeachPerformanceReportsJob
 from . import STATUS_FAILED, STATUS_SKIPPED, APP_NAME, etl_record_stats
 from .jobs.ad_group_performance_report_job import AdGroupPerformanceReportJob
+from .jobs.reports_fetch_job import ReportsFetch
 
 
 class JobScheduler:
@@ -63,6 +64,8 @@ class JobScheduler:
         self.project_id = next_info.get("project_id")
         self.refresh_token = next_info.get("refresh_token")
         self.skip_today = skip_today
+        self.first_run = next_info.get("first_run")
+        self.last_timestamp = next_info.get("last_timestamp")
         self.status = {"project_id": self.project_id, "timestamp": self.timestamp,
                        "doc_type": self.doc_type, "status": "success"}
         self.permission_error_key = str(self.customer_acc_id) + ':' + str(self.refresh_token)
@@ -114,10 +117,12 @@ class JobScheduler:
             if len(docs) > 0:
                 if dry:
                     log.error("Dry run. Skipped add adwords documents to db.")
+                elif ReportsFetch.doesnt_contains_historical_data(self.last_timestamp, doc_type) and self.first_run:
+                    FactorsDataService.add_all_adwords_documents_for_first_run(self.project_id, self.customer_acc_id, docs,
+                                                                 doc_type)
                 else:
                     FactorsDataService.add_all_adwords_documents(self.project_id, self.customer_acc_id, docs,
-                                                                 doc_type,
-                                                                 self.timestamp)
+                                                                 doc_type, self.timestamp)
             else:
                 FactorsDataService.add_adwords_document(self.project_id, self.customer_acc_id, {}, doc_type,
                                                         self.timestamp)
