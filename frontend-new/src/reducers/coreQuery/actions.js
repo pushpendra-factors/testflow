@@ -9,6 +9,8 @@ export const DEL_GROUPBY = 'DEL_GROUPBY';
 export const DEL_GROUPBY_EVENT = 'DEL_GROUPBY_EVENT';
 export const SET_EVENT_GOAL = 'SET_EVENT_GOAL';
 export const SET_TOUCHPOINTS = 'SET_TOUCHPOINTS';
+export const SET_TOUCHPOINT_FILTERS = 'SET_TOUCHPOINT_FILTERS';
+export const SET_ATTR_QUERY_TYPE = 'SET_ATTR_QUERY_TYPE';
 export const SET_ATTRIBUTION_MODEL = 'SET_ATTRIBUTION_MODEL';
 export const SET_ATTRIBUTION_WINDOW = 'SET_ATTRIBUTION_WINDOW';
 export const SET_ATTR_LINK_EVENTS = 'SET_ATTR_LINK_EVENTS';
@@ -52,6 +54,14 @@ export const setEventGoalAction = (goal) => {
 
 export const setMarketingTouchpointsAction = (touchpoints) => {
   return { type: SET_TOUCHPOINTS, payload: touchpoints};
+}
+
+export const setTouchPointFiltersAction = (touchpointFilters) => {
+  return { type: SET_TOUCHPOINT_FILTERS, payload: touchpointFilters};
+}
+
+export const setAttributionQueryTypeAction = (attrQueryType) => {
+  return { type: SET_ATTR_QUERY_TYPE, payload: attrQueryType};
 }
 
 export const setAttributionModelsAction = (models) => {

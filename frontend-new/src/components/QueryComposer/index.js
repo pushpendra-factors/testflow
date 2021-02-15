@@ -225,11 +225,9 @@ function QueryComposer({
     );
   };
 
-  const renderFuCrit = () => {
-    return (
-      <div className={"flex justify-start items-center mt-2"}>
-        <div className={styles.composer_body__session_analytics__options}>
-          <Text
+  const renderSeqSel = () => {
+    if(queryOptions.session_analytics_seq.start && queryOptions.session_analytics_seq.end) {
+      return (<><Text
             type={"paragraph"}
             mini
             weight={"thin"}
@@ -264,7 +262,50 @@ function QueryComposer({
             extraClass={"m-0 ml-2 inline"}
           >
             happened in the same session
-          </Text>
+          </Text> </>);
+    } else {
+      return (<><Text
+        type={"paragraph"}
+        mini
+        weight={"thin"}
+        extraClass={"m-0 ml-2 inline"}
+      >
+        Where 
+      </Text>
+      <Popover
+        className="fa-event-popover"
+        content={
+          <SeqSelector
+            seq={queryOptions.session_analytics_seq}
+            queryCount={queries.length}
+            setAnalysisSequence={setAnalysisSequence}
+          />
+        }
+        trigger="click"
+        visible={analyticsSeqOpen}
+        onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
+      >
+        <Button Button type="link" className={"ml-2"} size={"small"}>
+          Select Sequence
+        </Button>
+      </Popover>
+      <Text
+        type={"paragraph"}
+        mini
+        weight={"thin"}
+        extraClass={"m-0 ml-2 inline"}
+      >
+        happened in the same session
+      </Text> </>);
+      
+    }
+  }
+
+  const renderFuCrit = () => {
+    return (
+      <div className={"flex justify-start items-center mt-2"}>
+        <div className={styles.composer_body__session_analytics__options}>
+          {renderSeqSel()}
         </div>
       </div>
     );
@@ -276,11 +317,8 @@ function QueryComposer({
         if (queries.length <= 0) return null;
 
         return (
-          <ComposerBlock blockTitle={'Criteria'}
-            isOpen={criteriaTabOpen}
-            onClick={() => {
-              setCriteriaTabOpen(!criteriaTabOpen)
-            }}>
+          <ComposerBlock blockTitle={'CRITERIA'}
+          isOpen={true} showIcon={false}>
             <div className={styles.criteria}>
               {renderEACrit()}
             </div>
@@ -290,11 +328,8 @@ function QueryComposer({
       if (queryType === QUERY_TYPE_FUNNEL) {
         if (queries.length <= 1) return null;
         return (
-          <ComposerBlock blockTitle={'Criteria'}
-            isOpen={criteriaTabOpen}
-            onClick={() => {
-              setCriteriaTabOpen(!criteriaTabOpen)
-            }}>
+          <ComposerBlock blockTitle={'CRITERIA'}
+          isOpen={true} showIcon={false}>
             {renderFuCrit()}
 
           </ComposerBlock>

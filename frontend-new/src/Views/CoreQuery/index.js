@@ -79,8 +79,8 @@ function CoreQuery({
     ],
     event_analysis_seq: "",
     session_analytics_seq: {
-      start: 1,
-      end: 2,
+      start: 0,
+      end: 0,
     },
     date_range: { ...DefaultDateRangeFormat },
   });
@@ -105,6 +105,8 @@ function CoreQuery({
     groupBy,
     eventGoal,
     touchpoint,
+    touchpoint_filters,
+    attr_query_type,
     models,
     window,
     linkedEvents,
@@ -283,6 +285,8 @@ function CoreQuery({
         const query = getAttributionQuery(
           eventGoal,
           touchpoint,
+          touchpoint_filters,
+          attr_query_type,
           models,
           window,
           linkedEvents,
@@ -316,6 +320,8 @@ function CoreQuery({
       linkedEvents,
       models,
       touchpoint,
+      touchpoint_filters,
+      attr_query_type,
       window,
       attr_dateRange,
       updateResultState,

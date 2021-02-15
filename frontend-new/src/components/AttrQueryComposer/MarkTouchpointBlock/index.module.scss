@@ -1,4 +1,7 @@
 .block {
+    display: flex;
+    flex-direction: column;
+    
     &__content {
         display: flex;
         justify-content: flex-start;
@@ -10,4 +13,14 @@
             margin-left: 16px;
         }
     }
+}
+
+.filterSelect {
+    left: 0;
+    
+}
+
+.filterDelBtn {
+    left: auto;
+    right: 0;
 }

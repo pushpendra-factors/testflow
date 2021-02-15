@@ -14,7 +14,8 @@ import {
     setGoalEvent,
     setTouchPoint,
     setModels, setWindow,
-    setLinkedEvents, setAttrDateRange
+    setLinkedEvents, setAttrDateRange,
+    getCampaignConfigData
 } from '../../reducers/coreQuery/middleware';
 import { Button, Popover } from 'antd';
 import MarkTouchpointBlock from './MarkTouchpointBlock';
@@ -35,6 +36,7 @@ const AttrQueryComposer = ({ activeProject,
 
     useEffect(() => {
         if (activeProject && activeProject.id) {
+            getCampaignConfigData(activeProject.id, "all_ads")
             fetchEventNames(activeProject.id);
             if (!userProperties.length) {
                 getUserProperties(activeProject.id, 'analysis');
@@ -139,6 +141,7 @@ const AttrQueryComposer = ({ activeProject,
     }
 
     const toggleLinkEvExpansion = () => {
+        if(models.length > 1) return null;
         setLinkEvExpansion(!linkEvExpansion);
     }
 
@@ -207,7 +210,7 @@ const AttrQueryComposer = ({ activeProject,
                 { eventGoal?.label?.length &&
                     <div className={`${styles.composer__section} fa--query_block`}>
                         <div className={styles.composer__section__title}>
-                            <Text type={'title'} level={7} weight={'bold'}>OTHER OPTIONS</Text>
+                            <Text type={'title'} level={7} weight={'bold'}>CRITERIA</Text>
                         </div>
                         <div className={styles.composer__section__content}>
                             {renderAttributionOptions()}
@@ -220,11 +223,11 @@ const AttrQueryComposer = ({ activeProject,
                         <div className={styles.composer__section__title}>
                             <Text type={'title'} level={7} weight={'bold'}>LINKED EVENTS</Text>
                             <Button type={'text'} onClick={toggleLinkEvExpansion}>
-                                <SVG name={linkEvExpansion ? 'minus' : 'plus'} color={'black'}></SVG>
+                                <SVG name={linkEvExpansion && models.length <=1 ? 'minus' : 'plus'} color={'black'}></SVG>
                             </Button>
                         </div>
                         <div className={styles.composer__section__content}>
-                            {linkEvExpansion && renderLinkedEvents()}
+                            {linkEvExpansion && models.length <= 1 && renderLinkedEvents()}
                         </div>
                     </div>
                 }
@@ -251,6 +254,7 @@ const mapDispatchToProps = dispatch => bindActionCreators({
     fetchEventNames,
     getEventProperties,
     getUserProperties,
+    getCampaignConfigData,
     setGoalEvent,
     setTouchPoint,
     setAttrDateRange,

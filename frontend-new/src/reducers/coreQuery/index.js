@@ -9,6 +9,8 @@ import {
   INITIALIZE_GROUPBY,
   DEL_GROUPBY_EVENT,
   SET_TOUCHPOINTS,
+  SET_TOUCHPOINT_FILTERS,
+  SET_ATTR_QUERY_TYPE,
   SET_ATTR_DATE_RANGE,
   SET_ATTRIBUTION_MODEL,
   SET_ATTRIBUTION_WINDOW,
@@ -29,7 +31,7 @@ import {
 } from "../types";
 import { DefaultDateRangeFormat } from "../../Views/CoreQuery/utils";
 
-const DEFAULT_TOUCHPOINTS = ["Campaign", "Source", "AdGroup", "Keyword"];
+const DEFAULT_TOUCHPOINTS = ["Campaign", "Source", "Ad Group", "Keyword"];
 
 const defaultState = {
   eventOptions: [],
@@ -49,6 +51,8 @@ const defaultState = {
   show_analytics_result: false,
   eventGoal: {},
   touchpoint: "",
+  touchpoint_filters: [],
+  attr_query_type: 'EngagementBased',
   attr_dateRange: {
     ...DefaultDateRangeFormat,
     dateStr: ""
@@ -151,6 +155,18 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         touchpoint: action.payload,
+      };
+    }
+    case SET_TOUCHPOINT_FILTERS: {
+      return {
+        ...state,
+        touchpoint_filters: action.payload,
+      };
+    }
+    case SET_ATTR_QUERY_TYPE: {
+      return {
+        ...state,
+        attr_query_type: action.payload,
       };
     }
     case SET_ATTR_DATE_RANGE: {

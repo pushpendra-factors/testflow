@@ -7,7 +7,10 @@ import {
   setAttributionModelsAction, setAttributionWindowAction, 
   setAttrLinkEventsAction, setCampChannelAction, 
   setMeasuresAction, getCampaignConfigAction, 
-  setCampFiltersAction, setCampGroupByAction, setAttrDateRangeAction, setCampDateRangeAction, setDefaultStateAction
+  setCampFiltersAction, setCampGroupByAction, 
+  setAttrDateRangeAction, setCampDateRangeAction, 
+  setDefaultStateAction, setTouchPointFiltersAction,
+  setAttributionQueryTypeAction
 } from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties, fetchCampaignConfig } from './services';
 import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
@@ -89,6 +92,22 @@ export const setTouchPoint = (touchpoint) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       resolve(dispatch(setMarketingTouchpointsAction(touchpoint)));
+    })
+  }
+}
+
+export const setTouchPointFilters = (touchPointFilters) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setTouchPointFiltersAction(touchPointFilters)));
+    })
+  }
+}
+
+export const setattrQueryType = (attrQueryType) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setAttributionQueryTypeAction(attrQueryType)));
     })
   }
 }

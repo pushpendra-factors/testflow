@@ -5,11 +5,14 @@ import { bindActionCreators } from 'redux';
 
 import GroupSelect from '../../QueryComposer/GroupSelect';
 
-import { Button } from 'antd';
+import { Button, Radio } from 'antd';
 import { SVG, Text } from '../../factorsComponents';
 import FaSelect from '../../FaSelect';
 
-const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
+import {setattrQueryType} from 'Reducers/coreQuery/middleware';
+
+const AttributionOptions = ({models, window, setModelOpt, setWindowOpt, 
+    timeline, setattrQueryType}) => {
 
     const [selectVisibleModel, setSelectVisibleModel] = useState([false, false]);
     const [selectVisibleWindow, setSelectVisibleWindow] = useState(false);
@@ -219,18 +222,46 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt}) => {
                 </div>)
     };
 
+    const renderTimeLine = () => {
+        return (
+            <Radio.Group onChange={(e) => setattrQueryType(e.target.value)} value={timeline}>
+                <Radio value={'EngagementBased'}>Interaction Time</Radio>
+                <Radio value={'ConversionBased'}>Conversion Time</Radio>
+            </Radio.Group>
+        )
+    }
+
+    const renderAttributionTimeline = () => {
+        return (
+            <div className={styles.block}>
+                <Text 
+                    type={'paragraph'} color={`grey`} 
+                    extraClass={`${styles.block__content__title_muted}`}> 
+                    Attribution Timeline
+                </Text>
+
+                <div className={`${styles.block__content} mt-4`}>
+                    {renderTimeLine()}
+                </div>
+            </div>)
+    }
+
     return (
     <div className={`mt-2`}>
         {renderAttributionModel()}
         {renderAttributionWindow()}
+        {renderAttributionTimeline()}
     </div>)
 
 }
 
 const mapStateToProps = (state) => ({
-    activeProject: state.global.active_project
+    activeProject: state.global.active_project,
+    timeline: state.coreQuery.attr_query_type
 });
   
-const mapDispatchToProps = dispatch => bindActionCreators({}, dispatch);
+const mapDispatchToProps = dispatch => bindActionCreators({
+    setattrQueryType
+}, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(AttributionOptions);

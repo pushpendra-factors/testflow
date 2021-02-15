@@ -513,15 +513,42 @@ const getFilters = (filters) => {
   return result;
 };
 
+const getFiltersTouchpoints = (filters) => {
+  const result = [];
+  filters.forEach((filter) => {
+    filter.values.forEach((value, index) => {
+      result.push({
+        lop: !index ? "AND" : "OR",
+        op: operatorMap[filter.operator],
+        pr: filter.props[0],
+        ty: filter.props[1],
+        va: value,
+      });
+    });
+  });
+  return result;
+};
+
 export const getAttributionQuery = (
   eventGoal,
   touchpoint,
+  touchpointFilters,
+  queryType,
   models,
   window,
   linkedEvents,
   dateRange = {}
 ) => {
+
+  //attribution_key_f Filters
+  //query_type conv_time, interact_time [ConversionBased,EngagementBased];
+
   const eventFilters = getFilters(eventGoal.filters);
+  let touchPointFiltersQuery = [];
+  if(touchpointFilters.length) {
+    touchPointFiltersQuery = getFiltersTouchpoints(touchpointFilters);
+  }
+  
   const query = {
     cl: QUERY_TYPE_ATTRIBUTION,
     meta: {
@@ -534,6 +561,8 @@ export const getAttributionQuery = (
         pr: eventFilters,
       },
       attribution_key: touchpoint,
+      attribution_key_f: touchPointFiltersQuery,
+      query_type: queryType,
       attribution_methodology: models[0],
       lbw: window,
     },
@@ -576,12 +605,24 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
       filters[filters.length - 1].values.push(pr.va);
     }
   });
+
+  const touchPointFilters = [];
+  requestQuery.attribution_key_f.forEach((pr) => {
+    touchPointFilters.push({
+      operator: reverseOperatorMap[pr.op],
+      props: [pr.pr, pr.ty, pr.en],
+      values: [pr.va],
+    });
+  })
+
   const result = {
     queryType: QUERY_TYPE_ATTRIBUTION,
     eventGoal: {
       label: requestQuery.ce.na,
       filters,
     },
+    touchpoint_filters: touchPointFilters,
+    attr_query_type: requestQuery.query_type,
     touchpoint: requestQuery.attribution_key,
     models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,

@@ -4,13 +4,37 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
 import GroupSelect from '../../QueryComposer/GroupSelect';
+import FilterBlock from '../../QueryComposer/FilterBlock';
+
+import {setTouchPointFilters} from 'Reducers/coreQuery/middleware';
 
 import { Button } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 
-const MarkTouchpointBlock = ({touchPoint, touchPointOptions, setTouchpoint}) => {
+const MarkTouchpointBlock = ({touchPoint, touchPointOptions, 
+        setTouchpoint, campaign_config, 
+        activeProject, setTouchPointFilters,
+        filters
+    }) => {
 
     const [selectVisible, setSelectVisible] = useState(false);
+    const [filterDD, setFilterDD] = useState(false);
+    const [filterProps, setFilterProperties] = useState({
+        user: [],
+        event: []
+    });
+
+    useEffect(() => {
+        if (campaign_config.properties && touchPoint) {
+            const props = {};
+            campaign_config.properties.forEach((prop, i) => {
+                if(prop.label === touchPoint.toLowerCase()) {
+                    props[prop.label] = prop.values;
+                }
+            });
+            setFilterProperties(props);
+        }
+    }, [campaign_config, touchPoint])
 
     const toggleTouchPointSelect = () => {
         setSelectVisible(!selectVisible);
@@ -20,6 +44,7 @@ const MarkTouchpointBlock = ({touchPoint, touchPointOptions, setTouchpoint}) => 
         let currTouchpoint = (' ' + touchPoint).slice(1);
         currTouchpoint = val;
         setTouchpoint(currTouchpoint);
+        setTouchPointFilters([]);
         setSelectVisible(false);
     };
 
@@ -59,18 +84,74 @@ const MarkTouchpointBlock = ({touchPoint, touchPointOptions, setTouchpoint}) => 
         )
     }
 
-    const addFilterBlock = () => {};
+    const insertFilter = (fil) => {
+        const fltrs = [...filters];
+        fltrs.push(fil);
+        setTouchPointFilters(fltrs);
+        setFilterDD(false);
+    }
 
-    const deleteItem = () => {};
+    const delFilter = (index) => {
+        const fltrs = [...filters].filter((f,i) => i!==index);
+        setTouchPointFilters(fltrs);
+        setFilterDD(false);
+    }
+
+    const addFilterBlock = () => {setFilterDD(true)};
+
+    const deleteItem = () => {
+        setTouchpoint("");
+        setFilters([]);
+    };
 
     const additionalActions = () => {
         return (
                 <div className={'fa--query_block--actions'}>
-                   <Button size={'large'} type="text" onClick={addFilterBlock} className={'mr-1'}><SVG name="filter"></SVG></Button>
+                   {filterProps[touchPoint.toLowerCase()] && filterProps[touchPoint.toLowerCase()].length &&  <Button size={'large'} type="text" onClick={addFilterBlock} className={'mr-1'}><SVG name="filter"></SVG></Button>}
                    <Button size={'large'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
                 </div>
         );
     };
+
+    const renderFilterBlock = () => {
+        if (filterProps) {
+            const filtrs = [];
+
+            filters.forEach((filt, id) => {
+                filtrs.push(
+                    <div key={id} className={`mt-4`}>
+                        <FilterBlock activeProject={activeProject}
+                            index={id}
+                            blockType={'event'} filterType={'channel'}
+                            filter={filt}
+                            deleteFilter={delFilter}
+                            typeProps={{ channel: "all_ads" }} filterProps={filterProps}
+                            propsConstants={Object.keys(filterProps)}
+                        ></FilterBlock>
+                    </div>
+                )
+            })
+
+            if (filterDD) {
+                filtrs.push(
+                    <div key={filtrs.length} className={`mt-4`}>
+                        <FilterBlock activeProject={activeProject}
+                            blockType={'event'} filterType={'channel'}
+                            
+                            delBtnClass={styles.filterDelBtn}
+                            typeProps={{ channel: 'all_ads' }} filterProps={filterProps}
+                            propsConstants={Object.keys(filterProps)}
+                            insertFilter={insertFilter}
+                            closeFilter={() => setFilterDD(false)}
+                        ></FilterBlock>
+                    </div>
+                )
+            }
+
+            return (<div className={styles.block}>{filtrs}</div>);
+        }
+
+    }
 
     
 
@@ -95,15 +176,20 @@ const MarkTouchpointBlock = ({touchPoint, touchPointOptions, setTouchpoint}) => 
     return (
         <div className={styles.block}>
             {touchPoint?.length? renderMarkTouchpointBlockContent() : renderTouchPointSelect()}
+            {touchPoint?.length? renderFilterBlock() : null}
         </div>
     )
 }
 
 const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
-    touchPointOptions: state.coreQuery.touchpointOptions
+    touchPointOptions: state.coreQuery.touchpointOptions,
+    filters: state.coreQuery.touchpoint_filters,
+    campaign_config: state.coreQuery.campaign_config,
 });
   
-const mapDispatchToProps = dispatch => bindActionCreators({}, dispatch);
+const mapDispatchToProps = dispatch => bindActionCreators({
+    setTouchPointFilters,
+}, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(MarkTouchpointBlock);
