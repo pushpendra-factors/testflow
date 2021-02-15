@@ -122,8 +122,8 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	smartEvent, _, ok := IntHubspot.GetHubspotSmartEventPayload(project.ID, "test", cuid, userID3, hubspotDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "test", smartEvent.Name)
-	assert.Equal(t, "lead", smartEvent.Properties["$prev_hubspot_contact_lifecyclestage"])
-	assert.Equal(t, "opportunity", smartEvent.Properties["$curr_hubspot_contact_lifecyclestage"])
+	assert.Equal(t, "lead", smartEvent.Properties["$old_hubspot_contact_lifecyclestage"])
+	assert.Equal(t, "opportunity", smartEvent.Properties["$new_hubspot_contact_lifecyclestage"])
 
 	// updated last synced to customer
 	updatedDate = createdAt.AddDate(0, 0, 2)
