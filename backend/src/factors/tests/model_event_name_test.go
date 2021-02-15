@@ -769,7 +769,7 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	assert.Equal(t, prevProperties, *rPrevProperties)
 	assert.NotNil(t, smartEvent)
 	assert.Equal(t, "smartEventString", smartEvent.Name)
-	assert.Contains(t, smartEvent.Properties, "$old_salesforce_contact_email", "$new_salesforce_contact_email")
+	assert.Contains(t, smartEvent.Properties, "$prev_salesforce_contact_email", "$curr_salesforce_contact_email")
 
 	// individual properties test
 	state := model.CRMFilterEvaluator(project.ID, &currentProperties, nil, &(smartCRMEvents[stringFilterIndex].FilterExpr), model.CompareStateCurr)
@@ -783,7 +783,7 @@ func TestSmartCRMFilterCreation(t *testing.T) {
 	smartEvent, rPrevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, smartCRMEvents[intFilterIndex].EventName, "", "", 0, &currentProperties, &prevProperties, &(smartCRMEvents[intFilterIndex].FilterExpr))
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
-	assert.Contains(t, smartEvent.Properties, "$old_salesforce_contact_count", "$new_salesforce_contact_count")
+	assert.Contains(t, smartEvent.Properties, "$prev_salesforce_contact_count", "$curr_salesforce_contact_count")
 
 	// overwrite filter exp
 	intComp = &model.SmartCRMEventFilter{
@@ -1465,8 +1465,8 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 	smartEvent, rPrevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(1, "test", "", "", 0, &currentProperties, &prevProperties, filter)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, prevProperties, *rPrevProperties)
-	assert.Contains(t, smartEvent.Properties, "$new_salesforce_contact_page_spent_time")
-	assert.Contains(t, smartEvent.Properties, "$old_salesforce_contact_page_spent_time")
+	assert.Contains(t, smartEvent.Properties, "$curr_salesforce_contact_page_spent_time")
+	assert.Contains(t, smartEvent.Properties, "$prev_salesforce_contact_page_spent_time")
 
 	ok = model.CRMFilterEvaluator(1, &currentProperties, nil, filter, model.CompareStateCurr)
 	assert.Equal(t, true, ok)

@@ -139,14 +139,14 @@ func getPrevPropertyName(pName, source, objectType string) string {
 	if pName == "" {
 		return ""
 	}
-	return fmt.Sprintf("%sold_%s", U.NAME_PREFIX, getCRMPropertyKeyByType(source, objectType, pName))
+	return fmt.Sprintf("%sprev_%s", U.NAME_PREFIX, getCRMPropertyKeyByType(source, objectType, pName))
 }
 
 func getCurrPropertyName(pName, source, objectType string) string {
 	if pName == "" {
 		return ""
 	}
-	return fmt.Sprintf("%snew_%s", U.NAME_PREFIX, getCRMPropertyKeyByType(source, objectType, pName))
+	return fmt.Sprintf("%scurr_%s", U.NAME_PREFIX, getCRMPropertyKeyByType(source, objectType, pName))
 }
 
 // FillSmartEventCRMProperties fills all properties from CRM smart filter to new properties

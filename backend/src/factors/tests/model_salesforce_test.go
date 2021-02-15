@@ -364,8 +364,8 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	smartEvent, _, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "test", cuid, userID3, salesforceDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "test", smartEvent.Name)
-	assert.Equal(t, "Tuesday", smartEvent.Properties["$old_salesforce_contact_day"])
-	assert.Equal(t, "Saturday", smartEvent.Properties["$new_salesforce_contact_day"])
+	assert.Equal(t, "Tuesday", smartEvent.Properties["$prev_salesforce_contact_day"])
+	assert.Equal(t, "Saturday", smartEvent.Properties["$curr_salesforce_contact_day"])
 
 	smartEvent, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "test", "", userID3, salesforceDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, false, ok)
@@ -400,8 +400,8 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	smartEvent, _, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "test", "", userID3, salesforceDocument.Type, &currentProperties, nil, &filter)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "test", smartEvent.Name)
-	assert.Equal(t, "Sunday", smartEvent.Properties["$old_salesforce_contact_day"])
-	assert.Equal(t, "Saturday", smartEvent.Properties["$new_salesforce_contact_day"])
+	assert.Equal(t, "Sunday", smartEvent.Properties["$prev_salesforce_contact_day"])
+	assert.Equal(t, "Saturday", smartEvent.Properties["$curr_salesforce_contact_day"])
 }
 
 func TestSalesforceLastSyncedDocument(t *testing.T) {
@@ -609,8 +609,8 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	smartEvent, prevProperties, ok := IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter1", "", userID1, model.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[0])
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "filter1", smartEvent.Name)
-	assert.Equal(t, "G", smartEvent.Properties["$old_salesforce_contact_character"])
-	assert.Equal(t, "H", smartEvent.Properties["$new_salesforce_contact_character"])
+	assert.Equal(t, "G", smartEvent.Properties["$prev_salesforce_contact_character"])
+	assert.Equal(t, "H", smartEvent.Properties["$curr_salesforce_contact_character"])
 	//prev properties check
 	assert.Equal(t, "Saturday", (*prevProperties)["day"])
 	assert.Equal(t, "G", (*prevProperties)["character"])
@@ -634,8 +634,8 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter2", "", userID2, model.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[1])
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "filter2", smartEvent.Name)
-	assert.Equal(t, "B", smartEvent.Properties["$old_salesforce_contact_character"])
-	assert.Equal(t, "I", smartEvent.Properties["$new_salesforce_contact_character"])
+	assert.Equal(t, "B", smartEvent.Properties["$prev_salesforce_contact_character"])
+	assert.Equal(t, "I", smartEvent.Properties["$curr_salesforce_contact_character"])
 	// prev properties check
 	assert.Equal(t, "B", (*prevProperties)["character"])
 	assert.Equal(t, "Monday", (*prevProperties)["day"])
@@ -658,8 +658,8 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	smartEvent, prevProperties, ok = IntSalesforce.GetSalesforceSmartEventPayload(project.ID, "filter3", "", userID1, model.SalesforceDocumentTypeContact, &currentProperties, nil, &filters[2])
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "filter3", smartEvent.Name)
-	assert.Equal(t, "Saturday", smartEvent.Properties["$old_salesforce_contact_day"])
-	assert.Equal(t, "Sunday", smartEvent.Properties["$new_salesforce_contact_day"])
+	assert.Equal(t, "Saturday", smartEvent.Properties["$prev_salesforce_contact_day"])
+	assert.Equal(t, "Sunday", smartEvent.Properties["$curr_salesforce_contact_day"])
 	//prev properties check
 	assert.Equal(t, "G", (*prevProperties)["character"])
 	assert.Equal(t, "Saturday", (*prevProperties)["day"])
