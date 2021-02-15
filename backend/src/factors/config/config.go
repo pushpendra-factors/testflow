@@ -974,7 +974,7 @@ func PingHealthcheckForSuccess(healthcheckID string, message interface{}) {
 		return
 	}
 	var client = &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: 60 * time.Second,
 	}
 
 	payload, _ := json.MarshalIndent(message, "", " ")
