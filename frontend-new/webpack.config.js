@@ -58,7 +58,8 @@ var buildConfigPlugin = new webpack.DefinePlugin({
 
 const HtmlPlugin = new HtmlWebPackPlugin({
   template: './src/index.template.html',
-  filename: './index.html'
+  filename: './index.html',
+  title: 'Caching',
 });
 
 var isDev = process.env.NODE_ENV === 'development';
@@ -135,7 +136,7 @@ module.exports = {
   output: {
     path: getBuildPath(),
     publicPath: '/',
-    filename: 'index.min.js'
+    filename: '[name].[hash].js', 
   },
   devServer: {
     historyApiFallback: true,
