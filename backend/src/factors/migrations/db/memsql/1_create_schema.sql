@@ -371,6 +371,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     archive_enabled boolean NOT NULL DEFAULT FALSE,
     bigquery_enabled boolean NOT NULL DEFAULT FALSE,
     int_salesforce_enabled_agent_uuid text,
+    int_drift boolean NOT NULL DEFAULT FALSE, 
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),

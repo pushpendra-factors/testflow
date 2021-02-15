@@ -240,6 +240,7 @@ type sdkSettingsResponse struct {
 	AutoTrack       *bool `json:"auto_track"`
 	AutoFormCapture *bool `json:"auto_form_capture"`
 	ExcludeBot      *bool `json:"exclude_bot"`
+	IntDrift        *bool `json:"int_drift"`
 }
 
 // Test command.
@@ -265,6 +266,7 @@ func SDKGetProjectSettingsHandler(c *gin.Context) {
 		AutoTrack:       projectSetting.AutoTrack,
 		AutoFormCapture: projectSetting.AutoFormCapture,
 		ExcludeBot:      projectSetting.ExcludeBot,
+		IntDrift:        projectSetting.IntDrift,
 	}
 
 	c.JSON(http.StatusOK, response)

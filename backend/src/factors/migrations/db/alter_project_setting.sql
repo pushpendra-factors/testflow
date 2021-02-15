@@ -1,0 +1,1 @@
+ALTER TABLE project_settings ADD COLUMN int_drift boolean DEFAULT false;

@@ -35,6 +35,7 @@ type ProjectSetting struct {
 	BigqueryEnabled *bool `gorm:"default:false" json:"bigquery_enabled"`
 	//Salesforce settings
 	IntSalesforceEnabledAgentUUID *string `json:"int_salesforce_enabled_agent_uuid,omitempty"`
+	IntDrift                      *bool   `gorm:"not null;default:false" json:"int_drift,omitempty"`
 }
 
 const ProjectSettingKeyToken = "token"
