@@ -79,6 +79,13 @@ func UpdateProjectSettingsHandler(c *gin.Context) {
 		return
 	}
 
+	// project_id sent on json_payload should be same as project_id on uri param, if given.
+	if projectSetting.ProjectId != 0 && projectId != projectSetting.ProjectId {
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "Project setting update failed. Invalid payload."})
+		return
+	}
+
 	updatedPSetting, errCode := store.GetStore().UpdateProjectSettings(projectId, &projectSetting)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update project settings."})

@@ -5,7 +5,7 @@ import "time"
 type ProjectSetting struct {
 	// Foreign key constraint project_id -> projects(id)
 	// Used project_id as primary key also, becase of 1-1 relationship.
-	ProjectId uint64 `gorm:"primary_key:true" json:"project_id"`
+	ProjectId uint64 `gorm:"primary_key:true" json:"project_id,omitempty"`
 	// Using pointers to avoid update by default value.
 	// omit empty to avoid nil(filelds not updated) on resp json.
 	AutoTrack       *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
