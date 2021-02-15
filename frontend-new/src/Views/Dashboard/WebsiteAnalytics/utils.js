@@ -1,3 +1,5 @@
+import { formatCount } from "../../../utils/dataFormatter";
+
 export const getWebAnalyticsTableData = (tableData, searchText) => {
   const { headers, rows } = tableData;
   const columns = headers.map((header) => {
@@ -24,7 +26,7 @@ export const getWebAnalyticsTableData = (tableData, searchText) => {
   const data = filteredRows.map((row, idx) => {
     const rowData = {};
     row.forEach((elem, index) => {
-      rowData[headers[index]] = elem;
+      rowData[headers[index]] = isNaN(elem) ? elem : formatCount(elem, 1);
     });
     return { ...rowData, index: idx };
   });
@@ -46,7 +48,11 @@ export const getCardsDataInTableFormat = (units, data) => {
         title: unit.title,
         dataIndex: unit.title,
       });
-      result.tableData[0][unit.title] = data[unit.id].rows[0];
+      try {
+        result.tableData[0][unit.title] = isNaN(data[unit.id].rows[0][0]) ? data[unit.id].rows[0][0] : formatCount(parseFloat(data[unit.id].rows[0][0]), 1);
+      } catch(err) {
+        result.tableData[0][unit.title] = data[unit.id].rows[0];
+      }
     }
   });
   return result;

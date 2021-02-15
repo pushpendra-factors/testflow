@@ -9,7 +9,10 @@ function CardUnit({ cardUnits, data }) {
 
   return (
     <div className={`py-4 px-2 flex widget-card-top-div`}>
-      <div className={"fa-dashboard--widget-card w-full flex"}>
+      <div
+        style={{ height: "200px" }}
+        className={"fa-dashboard--widget-card w-full flex"}
+      >
         <div className={"px-8 py-4 flex justify-between items-start w-full"}>
           <div className={"w-full"}>
             <div className="flex items-center justify-between">

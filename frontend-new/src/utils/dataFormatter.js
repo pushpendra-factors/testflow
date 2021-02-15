@@ -138,7 +138,12 @@ export const generateColors = (requiredCumberOfColors) => {
 };
 
 export const formatCount = (count, precision) => {
-  return count % 1 !== 0 ? count.toFixed(precision) : count;
+  try {
+    return count % 1 !== 0 ? count.toFixed(precision) : count;
+  } catch(err) {
+    return count;
+  }
+  
 };
 
 export const getChartTypeMenuItems = (
