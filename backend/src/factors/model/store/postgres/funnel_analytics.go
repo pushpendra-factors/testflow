@@ -3,11 +3,17 @@ package postgres
 import (
 	"errors"
 	"factors/model/model"
+	U "factors/util"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	MetaStepTimeInfo = "MetaStepTimeInfo"
 )
 
 func (pg *Postgres) RunFunnelQuery(projectId uint64, query model.Query) (*model.QueryResult, int, string) {
@@ -26,7 +32,6 @@ func (pg *Postgres) RunFunnelQuery(projectId uint64, query model.Query) (*model.
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
-
 	result, err := pg.ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
@@ -35,6 +40,14 @@ func (pg *Postgres) RunFunnelQuery(projectId uint64, query model.Query) (*model.
 
 	// should be done before translation of group keys
 	translateNullToZeroOnFunnelResult(result)
+
+	if len(query.EventsWithProperties) > 1 {
+		err = addStepTimeToMeta(result, logCtx)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed adding funnel step time to meta.")
+			return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
+		}
+	}
 
 	err = addStepConversionPercentageToFunnel(result)
 	if err != nil {
@@ -53,6 +66,69 @@ func (pg *Postgres) RunFunnelQuery(projectId uint64, query model.Query) (*model.
 	addQueryToResultMeta(result, query)
 
 	return result, http.StatusOK, "Successfully executed query"
+}
+
+// addStepTimeToMeta adds step time in result's meta metrics
+func addStepTimeToMeta(result *model.QueryResult, logCtx *log.Entry) error {
+
+	headers := make([]string, 0, 0)
+	var groupKeyIndexes []int
+	var stepTimeIndexes []int
+	stepTimeStartIndex := -1
+	for index, h := range result.Headers {
+		if strings.HasPrefix(h, model.GroupKeyPrefix) {
+			headers = append(headers, h)
+			groupKeyIndexes = append(groupKeyIndexes, index)
+		}
+		if strings.HasSuffix(h, model.FunnelTimeSuffix) && strings.HasPrefix(h, model.StepPrefix) {
+			headers = append(headers, h)
+			stepTimeIndexes = append(stepTimeIndexes, index)
+			if stepTimeStartIndex == -1 {
+				stepTimeStartIndex = index
+			}
+		}
+	}
+
+	//result.Meta.MetaMetrics
+	var rows [][]interface{}
+	for i := range result.Rows {
+		var row []interface{}
+		for _, ci := range groupKeyIndexes {
+			row = append(row, result.Rows[i][ci])
+		}
+		for _, ci := range stepTimeIndexes {
+			val := 0.0
+			key, ok := result.Rows[i][ci].(int)
+			if ok {
+				val = float64(key)
+			} else {
+				key, ok := result.Rows[i][ci].(string)
+				if ok && key != "" {
+					if valFloat, err := strconv.ParseFloat(key, 64); err == nil {
+						value, err := U.FloatRoundOffWithPrecision(valFloat, 2)
+						if err != nil {
+							// add log but don't fail the query
+							logCtx.WithError(err).Error("Failed to round off time value")
+							value = 0.0
+						}
+						val = value
+					}
+				}
+			}
+			row = append(row, val)
+		}
+		rows = append(rows, row)
+	}
+
+	metaMetricsStepTime := model.HeaderRows{Title: MetaStepTimeInfo, Headers: headers, Rows: rows}
+	result.Meta.MetaMetrics = append(result.Meta.MetaMetrics, metaMetricsStepTime)
+
+	// Removing step time count
+	result.Headers = result.Headers[:stepTimeStartIndex]
+	for i := range result.Rows {
+		result.Rows[i] = result.Rows[i][:stepTimeStartIndex]
+	}
+	return nil
 }
 
 func BuildFunnelQuery(projectId uint64, query model.Query) (string, []interface{}, error) {
@@ -415,6 +491,8 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 
 	var qStmnt string
 	var qParams []interface{}
+	// Init joinTimeSelect with step_0 time.
+	joinTimeSelect := "step_0.timestamp AS step_0_timestamp"
 	for i := range q.EventsWithProperties {
 		var addParams []interface{}
 		stepName := stepNameByIndex(i)
@@ -466,6 +544,10 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 		if egGroupKeys != "" {
 			stepXToYSelect = joinWithComma(stepXToYSelect, egGroupKeys)
 		}
+		joinTimeSelect = joinWithComma(joinTimeSelect, fmt.Sprintf("%s.timestamp AS %s_timestamp", stepName, stepName))
+		stepXToYSelect = joinWithComma(stepXToYSelect, joinTimeSelect)
+		// re-init joinTimeSelect
+		joinTimeSelect = ""
 
 		previousCombinedUsersStepName = prevStepName + "_" + stepNameByIndex(i-2) + "_users"
 		stepXToYJoin := buildStepXToYJoin(stepName, prevStepName, previousCombinedUsersStepName, isSessionAnalysisReqBool, q, i)
@@ -482,8 +564,12 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 	}
 
 	funnelCountAliases := make([]string, 0, 0)
+	funnelCountTimeAliases := make([]string, 0, 0)
 	for i := range q.EventsWithProperties {
 		funnelCountAliases = append(funnelCountAliases, fmt.Sprintf("step_%d", i))
+		if len(q.EventsWithProperties) > 1 {
+			funnelCountTimeAliases = append(funnelCountTimeAliases, fmt.Sprintf("step_%d_timestamp", i))
+		}
 	}
 
 	var stepsJoinStmnt string
@@ -508,6 +594,11 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 	stepFunnelName := "funnel"
 	// select step counts, user properties and event properties group_keys.
 	stepFunnelSelect := joinWithComma(funnelCountAliases...)
+	if len(q.EventsWithProperties) > 1 {
+		for _, str := range funnelCountTimeAliases {
+			stepFunnelSelect = joinWithComma(stepFunnelSelect, str)
+		}
+	}
 	stepFunnelSelect = joinWithComma(stepFunnelSelect, ugSelect)
 	eventGroupProps := removePresentPropertiesGroupBys(q.GroupByProperties)
 	egGroupKeys := buildNoneHandledGroupKeys(eventGroupProps)
@@ -523,8 +614,19 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 	var aggregateSelectKeys, aggregateFromName, aggregateGroupBys, aggregateOrderBys string
 	aggregateFromName = stepFunnelName
 	if isGroupByTypeWithBuckets(q.GroupByProperties) {
+		stepTimeSelect := ""
+		if len(q.EventsWithProperties) > 1 {
+			for _, str := range funnelCountTimeAliases {
+				if stepTimeSelect == "" {
+					stepTimeSelect = str
+				} else {
+					stepTimeSelect = joinWithComma(stepTimeSelect, str)
+				}
+			}
+		}
 		bucketedFromName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys :=
-			appendNumericalBucketingSteps(&qStmnt, &qParams, q.GroupByProperties, stepFunnelName, "", false,
+			appendNumericalBucketingSteps(&qStmnt, &qParams, q.GroupByProperties,
+				stepFunnelName, stepTimeSelect, false,
 				strings.Join(funnelCountAliases, ", "))
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateFromName = bucketedFromName
@@ -542,6 +644,19 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 	var rawCountSelect string
 	for _, fca := range funnelCountAliases {
 		rawCountSelect = joinWithComma(rawCountSelect, fmt.Sprintf("SUM(%s) AS %s", fca, fca))
+	}
+
+	avgStepTimeSelect := make([]string, 0, 0)
+	if len(q.EventsWithProperties) > 1 {
+		for i := 1; i < len(q.EventsWithProperties); i++ {
+			avgStepTimeSelect = append(avgStepTimeSelect,
+				fmt.Sprintf("AVG(step_%d_timestamp-step_%d_timestamp) AS step_%d_%d%s", i, i-1, i-1, i, model.FunnelTimeSuffix))
+		}
+	}
+
+	if len(avgStepTimeSelect) > 0 {
+		avgStepTimeSelectStmt := joinWithComma(avgStepTimeSelect...)
+		rawCountSelect = joinWithComma(rawCountSelect, avgStepTimeSelectStmt)
 	}
 
 	var termStmnt string
