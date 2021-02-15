@@ -5,7 +5,7 @@ metadata:
     layer: persistent-redis
     env: production
     project: factors-production
-    nodePool: persistent-pool-highmem
+    nodePool: persistent-highmem-6-35840
   name: persistent-redis
   namespace: default
 spec:
@@ -24,10 +24,10 @@ spec:
     metadata:      
       labels:
         layer: persistent-redis
-        nodePool: persistent-pool-highmem
+        nodePool: persistent-highmem-6-35840
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-pool-highmem
+        cloud.google.com/gke-nodepool: persistent-highmem-6-35840
       terminationGracePeriodSeconds: 30
       volumes:
         - name: persistent-redis-storage
@@ -44,8 +44,8 @@ spec:
           mountPath: "/usr/local/var/db/redis"
         resources:
           requests:
-            memory: "10G"
-            cpu: "1"
+            memory: "31G"
+            cpu: "6"
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         securityContext: {}
