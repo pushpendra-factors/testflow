@@ -463,15 +463,18 @@ func GetSalesforceSmartEventPayload(projectID uint64, eventName, customerUserID,
 func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *SalesforceSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}, lastModifiedTimestamp int64) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
-	if salesforceSmartEventName.EventName == "" || projectID == 0 || salesforceSmartEventName.Type == "" {
-		return prevProperties
-	}
-
-	if userID == "" || docType == 0 || currentProperties == nil || salesforceSmartEventName.Filter == nil {
-		return prevProperties
-	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType})
+	if projectID == 0 || currentProperties == nil || docType == 0 || userID == "" || lastModifiedTimestamp == 0 {
+		logCtx.Error("Missing required fields.")
+		return prevProperties
+	}
+
+	if salesforceSmartEventName.EventName == "" || salesforceSmartEventName.Type == "" || salesforceSmartEventName.Filter == nil {
+		logCtx.Error("Missing smart event fileds.")
+		return prevProperties
+	}
+
 	smartEventPayload, prevProperties, valid = GetSalesforceSmartEventPayload(projectID, salesforceSmartEventName.EventName, customerUserID,
 		userID, docType, currentProperties, prevProperties, salesforceSmartEventName.Filter)
 	if !valid {
@@ -489,8 +492,8 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 	}
 
 	timestampReferenceField := salesforceSmartEventName.Filter.TimestampReferenceField
-	if timestampReferenceField == model.TimestampReferenceTypeTrack {
-		smartEventTrackPayload.Timestamp = lastModifiedTimestamp
+	if timestampReferenceField == model.TimestampReferenceTypeDocument {
+		smartEventTrackPayload.Timestamp = lastModifiedTimestamp + 1
 
 	} else {
 		fieldTimestamp, err := getTimestampFromField(timestampReferenceField, currentProperties)
@@ -499,7 +502,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 		} else {
 			logCtx.WithField("timestamp_reference_field", timestampReferenceField).
 				WithError(err).Error("Failed to get timestamp from reference field")
-			smartEventTrackPayload.Timestamp = lastModifiedTimestamp
+			smartEventTrackPayload.Timestamp = lastModifiedTimestamp + 1
 
 		}
 	}

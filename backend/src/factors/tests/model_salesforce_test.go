@@ -704,7 +704,7 @@ func TestSameUserSmartEvent(t *testing.T) {
 			},
 		},
 		LogicalOp:               model.LOGICAL_OP_AND,
-		TimestampReferenceField: model.TimestampReferenceTypeTrack,
+		TimestampReferenceField: model.TimestampReferenceTypeDocument,
 	}
 
 	smartEventName := "Event 1"

@@ -268,15 +268,19 @@ func getTimestampFromField(propertyName string, properties *map[string]interface
 func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}, recordTimestamp int64) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
-	if hubspotSmartEventName.EventName == "" || projectID == 0 || hubspotSmartEventName.Type == "" {
-		return prevProperties
-	}
-
-	if userID == "" || docType == 0 || currentProperties == nil || hubspotSmartEventName.Filter == nil {
-		return prevProperties
-	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType})
+
+	if projectID == 0 || userID == "" || docType == 0 || currentProperties == nil || recordTimestamp == 0 {
+		logCtx.Error("Missing required fields.")
+		return prevProperties
+	}
+
+	if hubspotSmartEventName.EventName == "" || hubspotSmartEventName.Filter == nil || hubspotSmartEventName.Type == "" {
+		logCtx.Error("Missing smart event fileds.")
+		return prevProperties
+	}
+
 	smartEventPayload, prevProperties, valid = GetHubspotSmartEventPayload(projectID, hubspotSmartEventName.EventName, customerUserID,
 		userID, docType, currentProperties, prevProperties, hubspotSmartEventName.Filter)
 	if !valid {
@@ -294,14 +298,14 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 	}
 
 	timestampReferenceField := hubspotSmartEventName.Filter.TimestampReferenceField
-	if timestampReferenceField == model.TimestampReferenceTypeTrack {
-		smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp)
+	if timestampReferenceField == model.TimestampReferenceTypeDocument {
+		smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp) + 1
 	} else {
 		fieldTimestamp, err := getTimestampFromField(timestampReferenceField, currentProperties)
 		if err != nil {
 			logCtx.WithField("timestamp_refrence_field", timestampReferenceField).
 				WithError(err).Errorf("Failed to get timestamp from reference field")
-			smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp) // use record timestamp if custom timestamp not available
+			smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp) + 1 // use record timestamp if custom timestamp not available
 		} else {
 			smartEventTrackPayload.Timestamp = getEventTimestamp(fieldTimestamp)
 		}
@@ -396,7 +400,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 				return http.StatusInternalServerError
 			}
 		} else {
-			logCtx.Error("Skipped user identification on hubspot contact sync. No customer_user_id on properties.")
+			logCtx.Warning("Skipped user identification on hubspot contact sync. No customer_user_id on properties.")
 		}
 
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
@@ -574,7 +578,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 	}
 
 	if len(company.ContactIds) == 0 {
-		logCtx.Error("Skipped company sync. No contacts associated to company.")
+		logCtx.Warning("Skipped company sync. No contacts associated to company.")
 	} else {
 		contactIds := make([]string, 0, 0)
 		for i := range company.ContactIds {

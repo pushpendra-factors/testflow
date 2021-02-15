@@ -60,8 +60,8 @@ var ALLOWED_TYPES = [...]string{
 const URI_PROPERTY_PREFIX = ":"
 const EVENT_NAMES_LIMIT = 5000
 
-// TimestampReferenceTypeTrack is the field to be used for smart event time
-const TimestampReferenceTypeTrack = "timestamp_in_track"
+// TimestampReferenceTypeDocument use document timestamp for smart event creation
+const TimestampReferenceTypeDocument = "timestamp_in_track"
 
 // SmartCRMEventFilter struct is base for CRM smart event filter
 type SmartCRMEventFilter struct {

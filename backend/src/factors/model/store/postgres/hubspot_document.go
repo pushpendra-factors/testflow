@@ -19,6 +19,7 @@ import (
 var errorInvalidHubspotDocumentType = errors.New("invalid document type")
 var errorFailedToGetCreatedAtFromHubspotDocument = errors.New("failed to get created_at from document")
 var errorFailedToGetUpdatedAtFromHubspotDocument = errors.New("failed to get updated_at from document")
+var errorUsingFallbackKey = errors.New("using fallback key from document")
 
 const error_DuplicateHubspotDocument = "pq: duplicate key value violates unique constraint \"hubspot_documents_pkey\""
 
@@ -210,7 +211,7 @@ func getHubspotDocumentCreatedTimestamp(document *model.HubspotDocument) (int64,
 
 	var createdAtKey string
 	if document.Type == model.HubspotDocumentTypeContact {
-		createdAtKey = "addedAt"
+		createdAtKey = "createdate"
 	} else if document.Type == model.HubspotDocumentTypeForm {
 		createdAtKey = "createdAt"
 	} else if document.Type == model.HubspotDocumentTypeFormSubmission {
@@ -218,6 +219,39 @@ func getHubspotDocumentCreatedTimestamp(document *model.HubspotDocument) (int64,
 	} else {
 		return 0, errorFailedToGetCreatedAtFromHubspotDocument
 	}
+
+	if document.Type == model.HubspotDocumentTypeContact {
+
+		var hubspotDocumentProperties HubspotDocumentProperties
+		err := json.Unmarshal(document.Value.RawMessage, &hubspotDocumentProperties)
+		if err != nil {
+			return 0, errors.New("Failed to unmarshal document properties")
+		}
+
+		createdAtStr, exist := hubspotDocumentProperties.Properties[createdAtKey]
+		if exist {
+			createdAt, err := model.ReadHubspotTimestamp(createdAtStr.Value)
+			if err != nil {
+				return 0, err
+			}
+			return createdAt, nil
+		}
+
+		createdAtKey = "addedAt"
+		createdAtInt, exists := (*value)[createdAtKey]
+		if !exists {
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+
+		createdAt, err := model.ReadHubspotTimestamp(createdAtInt)
+		if err != nil || createdAt == 0 {
+			log.WithFields(log.Fields{"document_id": document.ID}).Warn("Failed to read addedAt from contact document.")
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+
+		return createdAt, errorUsingFallbackKey
+	}
+
 	createdAtInt, exists := (*value)[createdAtKey]
 	if !exists || createdAtInt == nil {
 		return 0, errorFailedToGetCreatedAtFromHubspotDocument
@@ -350,9 +384,13 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 		timestamp, err = getHubspotDocumentUpdatedTimestamp(document)
 	}
 	if err != nil {
-		logCtx.WithField("action", document.Action).WithError(err).Error(
-			"Failed to get timestamp from hubspot document on create.")
-		return http.StatusInternalServerError
+		if err != errorUsingFallbackKey {
+			logCtx.WithField("action", document.Action).WithError(err).Error(
+				"Failed to get timestamp from hubspot document on create.")
+			return http.StatusInternalServerError
+		}
+
+		logCtx.WithField("action", document.Action).WithError(err).Error("Missing document key.")
 	}
 	document.Timestamp = timestamp
 

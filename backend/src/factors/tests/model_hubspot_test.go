@@ -62,7 +62,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 		]
 	  }`
 
-	jsonContact := fmt.Sprintf(jsonContactModel, 1, createdAt.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", cuid, "123-45")
+	jsonContact := fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", cuid, "123-45")
 	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
 
 	hubspotDocument := model.HubspotDocument{
@@ -72,12 +72,13 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt.Unix(), hubspotDocument.Timestamp)
 	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID1)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	// updated to opportunity
 	updatedDate = createdAt.AddDate(0, 0, 1)
-	jsonContact = fmt.Sprintf(jsonContactModel, 1, createdAt.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", "test@gmail.com", "123-45")
+	jsonContact = fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", "test@gmail.com", "123-45")
 	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
 	hubspotDocument = model.HubspotDocument{
@@ -87,6 +88,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, updatedDate.Unix(), hubspotDocument.Timestamp)
 
 	filter := model.SmartCRMEventFilter{
 		Source:               model.SmartCRMEventSourceHubspot,
@@ -125,7 +127,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 
 	// updated last synced to customer
 	updatedDate = createdAt.AddDate(0, 0, 2)
-	jsonContact = fmt.Sprintf(jsonContactModel, 1, createdAt.Unix(), createdAt.Unix(), updatedDate.Unix(), "customer", cuid, "123-45")
+	jsonContact = fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "customer", cuid, "123-45")
 	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
 	hubspotDocument = model.HubspotDocument{
@@ -135,6 +137,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, updatedDate.Unix(), hubspotDocument.Timestamp)
 	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID1)
 	assert.Equal(t, http.StatusAccepted, status)
 
@@ -145,7 +148,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 
 	// updated last synced to lead with different user_id having same customer_user_id
 	updatedDate = createdAt.AddDate(0, 0, 3)
-	jsonContact = fmt.Sprintf(jsonContactModel, 1, createdAt.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", cuid, "123-45")
+	jsonContact = fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", cuid, "123-45")
 	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
 	hubspotDocument = model.HubspotDocument{
@@ -155,6 +158,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, updatedDate.Unix(), hubspotDocument.Timestamp)
 	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, hubspotDocument.ID, "", hubspotDocument.Timestamp, hubspotDocument.Action, userID3)
 	assert.Equal(t, http.StatusAccepted, status)
 
@@ -266,6 +270,7 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdDate.Unix()*1000, hubspotDocument.Timestamp)
 
 	//enrich job, create contact created and contact updated event
 	enrichStatus := IntHubspot.Sync(project.ID)
@@ -375,7 +380,7 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 	  }`
 
 	value1 := "val1"
-	jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
+	jsonContact := fmt.Sprintf(jsonContactModel, documentID, updatedAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
 	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
 
 	hubspotDocument := model.HubspotDocument{
@@ -384,13 +389,14 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 	}
 	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt, hubspotDocument.Timestamp)
 
 	// 100 unique values
 	limit := 100
 	for i := 0; i < limit; i++ {
 		updatedAt = updatedAt + 100
 		value1 = fmt.Sprintf("%s_%d", property1, i)
-		jsonContact = fmt.Sprintf(jsonContactModel, documentID, createdAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
+		jsonContact = fmt.Sprintf(jsonContactModel, documentID, updatedAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
 		contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
 		hubspotDocument = model.HubspotDocument{
@@ -399,6 +405,7 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 		}
 		status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 		assert.Equal(t, http.StatusCreated, status)
+		assert.Equal(t, updatedAt, hubspotDocument.Timestamp)
 	}
 
 	var property1Values []interface{}
@@ -417,7 +424,7 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 		for j := 0; j < i+1; j++ {
 			updatedAt = updatedAt + 100
 			value1 = fmt.Sprintf("%s_%d", property1, i)
-			jsonContact = fmt.Sprintf(jsonContactModel, documentID, createdAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
+			jsonContact = fmt.Sprintf(jsonContactModel, documentID, updatedAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
 			contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
 			hubspotDocument = model.HubspotDocument{
@@ -426,13 +433,14 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 			}
 			status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 			assert.Equal(t, http.StatusCreated, status)
+			assert.Equal(t, updatedAt, hubspotDocument.Timestamp)
 		}
 	}
 
 	// 101 unique values
 	updatedAt = updatedAt + 100
 	value1 = "val3"
-	jsonContact = fmt.Sprintf(jsonContactModel, documentID, createdAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
+	jsonContact = fmt.Sprintf(jsonContactModel, documentID, updatedAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
 	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
 	hubspotDocument = model.HubspotDocument{
@@ -441,6 +449,7 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 	}
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, updatedAt, hubspotDocument.Timestamp)
 
 	w = sendGetCRMObjectValuesByPropertyNameReq(r, project.ID, agent, model.SmartCRMEventSourceHubspot, model.HubspotDocumentTypeNameContact, property1)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -452,4 +461,105 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 	for i := range property1Values[:5] {
 		assert.Equal(t, fmt.Sprintf("%s_%d", property1, 4-i), property1Values[i])
 	}
+}
+
+func TestHubspotDocumentTimestamp(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	documentID := 1
+	createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
+	cuid := U.RandomLowerAphaNumString(5)
+
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	// document first created
+	jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdDate, createdDate, createdDate, "lead", cuid, "123-45")
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
+
+	// document updated
+	updatedTime := createdDate + 100
+	jsonContact = fmt.Sprintf(jsonContactModel, documentID, updatedTime, createdDate, updatedTime, "lead", cuid, "123-45")
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, updatedTime, hubspotDocument.Timestamp)
+
+	// new document missing createddate should use fallback key
+	jsonContactModel = `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	documentID = 2
+	cuid = U.RandomLowerAphaNumString(5)
+	updatedTime = createdDate + 100
+	jsonContact = fmt.Sprintf(jsonContactModel, documentID, createdDate, updatedTime, "lead", cuid, "123-45")
+	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
 }
