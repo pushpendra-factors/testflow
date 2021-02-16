@@ -71,7 +71,7 @@ function getBuildPath() {
 
 module.exports = {
   entry: './src/index.js',
-  devtool: (isDev || isStaging) ? 'inline-sourcemap' : false,
+  devtool: (isDev || isStaging) ? 'inline-sourcemap' : 'inline-sourcemap', // default false
   module: {
     rules: [
       {

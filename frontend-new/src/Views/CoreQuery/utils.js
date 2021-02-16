@@ -607,13 +607,16 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
   });
 
   const touchPointFilters = [];
-  requestQuery.attribution_key_f.forEach((pr) => {
-    touchPointFilters.push({
-      operator: reverseOperatorMap[pr.op],
-      props: [pr.pr, pr.ty, pr.en],
-      values: [pr.va],
-    });
-  })
+  if (requestQuery.attribution_key_f) {
+    requestQuery.attribution_key_f.forEach((pr) => {
+      touchPointFilters.push({
+        operator: reverseOperatorMap[pr.op],
+        props: [pr.pr, pr.ty, pr.en],
+        values: [pr.va],
+      });
+    })
+  }
+  
 
   const result = {
     queryType: QUERY_TYPE_ATTRIBUTION,
