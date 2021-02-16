@@ -31,8 +31,7 @@ def setup(argv):
 
 # generates next sync info with all missing timestamps
 # for each document type.
-def get_next_sync_info(last_sync):
-    next_sync_info = []
+def get_next_sync_info(last_sync, extract_schema_changed):
     last_timestamp = last_sync.get('last_timestamp')
     doc_type = last_sync.get('doc_type_alias')
     first_run = (last_timestamp == 0)
@@ -42,17 +41,10 @@ def get_next_sync_info(last_sync):
         sync_info['next_timestamp'] = TimeUtil.get_timestamp_from_datetime(datetime.utcnow())
         sync_info['first_run'] = first_run
         return [sync_info]
-    else:
-        start_timestamp = ReportsFetch.get_next_start_time_for_historical_data(last_timestamp)
-        next_timestamps = TimeUtil.get_timestamp_range(start_timestamp)
-
-        for timestamp in next_timestamps:
-            sync_info = last_sync.copy()
-            sync_info['next_timestamp'] = timestamp
-            next_sync_info.append(sync_info)
-
-        return next_sync_info
-
+    elif ReportsFetch.eligible_for_extract_schema_changed(doc_type, extract_schema_changed):
+        return ReportsFetch.get_next_sync_infos_for_older_date_range(0, last_sync)
+    else :
+        return ReportsFetch.get_next_sync_infos_for_older_date_range(last_timestamp, last_sync)
 
 if __name__ == "__main__":
     setup(sys.argv)
@@ -60,6 +52,7 @@ if __name__ == "__main__":
     log.warning("Started adwords sync job.")
 
     is_dry = scripts.adwords.CONFIG.ADWORDS_APP.dry
+    extract_schema_changed = scripts.adwords.CONFIG.ADWORDS_APP.extract_schema_changed
     skip_today = scripts.adwords.CONFIG.ADWORDS_APP.skip_today
     last_sync_infos = FactorsDataService.get_last_sync_infos()
     input_project_id = scripts.adwords.CONFIG.ADWORDS_APP.project_id
@@ -85,7 +78,7 @@ if __name__ == "__main__":
             log.error("Missing doc_type_alias name on last_sync_info.")
             continue
 
-        next_sync_infos = get_next_sync_info(last_sync)
+        next_sync_infos = get_next_sync_info(last_sync, extract_schema_changed)
         if next_sync_infos is None:
             continue
         for next_sync in next_sync_infos:

@@ -9,18 +9,20 @@ class AppConfig(Config):
     skip_today = None
     data_service_host = None
     project_id = None
+    extract_schema_changed = None
 
     @classmethod
-    def _init(cls, env, dry, skip_today, project_id, data_service_host):
+    def _init(cls, env, dry, extract_schema_changed, skip_today, project_id, data_service_host):
         cls.env = env
         cls.dry = (dry == "True")
+        cls.extract_schema_changed = (extract_schema_changed == "True")
         cls.skip_today = (skip_today == "True")
         cls.project_id = project_id
         cls.data_service_host = data_service_host
 
     @classmethod
     def build(cls, argv):
-        cls._init(argv.env, argv.dry, argv.skip_today,
+        cls._init(argv.env, argv.dry, argv.extract_schema_changed, argv.skip_today,
                   argv.project_id, argv.data_service_host)
 
     @classmethod

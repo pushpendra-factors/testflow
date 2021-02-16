@@ -510,6 +510,15 @@ func joinWithComma(x ...string) string {
 	return y
 }
 
+func appendSuffix(suffix string, x ...string) []string {
+	var y []string
+	for _, v := range x {
+		y = append(y, fmt.Sprintf("%s %s ", v, suffix))
+	}
+
+	return y
+}
+
 func hasGroupEntity(props []model.QueryGroupByProperty, entity string) bool {
 	for _, p := range props {
 		if p.Entity == entity {
@@ -954,6 +963,10 @@ func (pg *Postgres) ExecQueryWithContext(stmnt string, params []interface{}) (*s
 
 	// Change ? in the query to to $1, $2 format.
 	stmnt = model.TransformQueryPlaceholdersForContext(stmnt)
+
+	if (C.GetConfig().Env == "development" || C.GetConfig().Env == "test") {
+		log.Info("Query", stmnt, params)
+	}
 
 	return db.DB().QueryContext(*C.GetServices().DBContext, stmnt, params...)
 }

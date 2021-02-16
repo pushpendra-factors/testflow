@@ -14,7 +14,9 @@ from scripts.adwords.jobs.click_performance_report_job import ClickPerformanceRe
 from scripts.adwords.jobs.customer_account_properties_job import GetCustomerAccountPropertiesJob
 from scripts.adwords.jobs.keywords_performance_report_job import KeywordPerformanceReportsJob
 from scripts.adwords.jobs.search_performance_reports_job import SeachPerformanceReportsJob
-from . import STATUS_FAILED, STATUS_SKIPPED, APP_NAME, etl_record_stats
+from . import STATUS_FAILED, STATUS_SKIPPED, APP_NAME, etl_record_stats, CUSTOMER_ACCOUNT_PROPERTIES, CAMPAIGNS, ADS, \
+    AD_GROUPS, CLICK_PERFORMANCE_REPORT, CAMPAIGN_PERFORMANCE_REPORT, AD_PERFORMANCE_REPORT, \
+    AD_GROUP_PERFORMANCE_REPORT, SEARCH_PERFORMANCE_REPORT, KEYWORD_PERFORMANCE_REPORT
 from .jobs.ad_group_performance_report_job import AdGroupPerformanceReportJob
 from .jobs.reports_fetch_job import ReportsFetch
 
@@ -73,37 +75,37 @@ class JobScheduler:
     def sync(self, env, dry):
         doc_type = self.doc_type
         try:
-            if doc_type == "customer_account_properties":
+            if doc_type == CUSTOMER_ACCOUNT_PROPERTIES:
                 docs, req_count = GetCustomerAccountPropertiesJob(self.next_info).start()
 
-            elif doc_type == "campaigns":
+            elif doc_type == CAMPAIGNS:
                 docs, req_count = GetCampaignsJob(self.next_info).start()
 
-            elif doc_type == "ads":
+            elif doc_type == ADS:
                 # docs, req_count = GetAdsJob(self.next_info).start()
                 self.status["status"] = STATUS_SKIPPED
                 self.status["message"] = "Ads is skipped."
                 return self.status
 
-            elif doc_type == "ad_groups":
+            elif doc_type == AD_GROUPS:
                 docs, req_count = GetAdGroupsJob(self.next_info).start()
 
-            elif doc_type == "click_performance_report":
+            elif doc_type == CLICK_PERFORMANCE_REPORT:
                 docs, req_count = ClickPerformanceReportsJob(self.next_info).start()
 
-            elif doc_type == "campaign_performance_report":
+            elif doc_type == CAMPAIGN_PERFORMANCE_REPORT:
                 docs, req_count = CampaignPerformanceReportsJob(self.next_info).start()
 
-            elif doc_type == "ad_performance_report":
+            elif doc_type == AD_PERFORMANCE_REPORT:
                 docs, req_count = AdPerformanceReportsJob(self.next_info).start()
 
-            elif doc_type == "ad_group_performance_report":
+            elif doc_type == AD_GROUP_PERFORMANCE_REPORT:
                 docs, req_count = AdGroupPerformanceReportJob(self.next_info).start()
 
-            elif doc_type == "search_performance_report":
+            elif doc_type == SEARCH_PERFORMANCE_REPORT:
                 docs, req_count = SeachPerformanceReportsJob(self.next_info).start()
 
-            elif doc_type == "keyword_performance_report":
+            elif doc_type == KEYWORD_PERFORMANCE_REPORT:
                 docs, req_count = KeywordPerformanceReportsJob(self.next_info).start()
 
             else:

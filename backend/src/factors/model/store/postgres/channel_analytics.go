@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"errors"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
@@ -196,8 +195,8 @@ func (pg *Postgres) GetChannelFilterValuesV1(projectID uint64, channel, filterOb
 // GetAllChannelFilterValues - @Kark TODO v1
 func (pg *Postgres) GetAllChannelFilterValues(projectID uint64, filterObject, filterProperty string, reqID string) ([]interface{}, int) {
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
-	adwordsSQL, adwordsParams, adwordsErr := pg.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty)
-	facebookSQL, facebookParams, facebookErr := pg.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty)
+	adwordsSQL, adwordsParams, adwordsErr := pg.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
+	facebookSQL, facebookParams, facebookErr := pg.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 
 	if adwordsErr != http.StatusFound {
 		return []interface{}{}, adwordsErr
@@ -482,8 +481,8 @@ func (pg *Postgres) ExecuteSQL(sqlStatement string, params []interface{}, logCtx
 		return nil, nil, err
 	}
 	if len(resultRows) == 0 {
-		log.Warn("Aggregate query returned zero rows.")
-		return nil, make([][]interface{}, 0, 0), errors.New("no rows returned")
+		logCtx.Warn("Aggregate query returned zero rows: ", sqlStatement, params)
+		return nil, make([][]interface{}, 0, 0), nil
 	}
 	return columns, resultRows, nil
 }

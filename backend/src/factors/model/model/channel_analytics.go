@@ -34,24 +34,24 @@ type ChannelQuery struct {
 
 // ChannelQueryV1 - @TODO Kark v1
 type ChannelQueryV1 struct {
-	Channel          string      `json:"channel"`
-	SelectMetrics    []string    `json:"select_metrics"`
-	Filters          []FilterV1  `json:"filters"`
-	GroupBy          []GroupBy   `json:"group_by"`
-	GroupByTimestamp interface{} `json:"gbt"`
-	Timezone         string      `json:"time_zone"`
-	From             int64       `json:"fr"`
-	To               int64       `json:"to"`
+	Channel          string            `json:"channel"`
+	SelectMetrics    []string          `json:"select_metrics"`
+	Filters          []ChannelFilterV1 `json:"filters"`
+	GroupBy          []ChannelGroupBy  `json:"group_by"`
+	GroupByTimestamp interface{}       `json:"gbt"`
+	Timezone         string            `json:"time_zone"`
+	From             int64             `json:"fr"`
+	To               int64             `json:"to"`
 }
 
-// GroupBy - @TODO Kark v1
-type GroupBy struct {
+// ChannelGroupBy - @TODO Kark v1
+type ChannelGroupBy struct {
 	Object   string `json:"name"`
 	Property string `json:"property"`
 }
 
-// FilterV1 - @TODO Kark v1
-type FilterV1 struct {
+// ChannelFilterV1 - @TODO Kark v1
+type ChannelFilterV1 struct {
 	Object    string `json:"name"`
 	Property  string `json:"property"`
 	Condition string `json:"condition"`

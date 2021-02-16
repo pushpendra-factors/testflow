@@ -221,9 +221,8 @@ func (pg *Postgres) GetFacebookFilterValues(projectID uint64, requestFilterObjec
 }
 
 // GetFacebookSQLQueryAndParametersForFilterValues - @TODO Kark v1
-func (pg *Postgres) GetFacebookSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string,
-	requestFilterProperty string) (string, []interface{}, int) {
-
+func (pg *Postgres) GetFacebookSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
+	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	facebookInternalFilterProperty, docType, err := getFilterRelatedInformationForFacebook(requestFilterObject,
 		requestFilterProperty)
 	if err != http.StatusOK {
@@ -231,9 +230,14 @@ func (pg *Postgres) GetFacebookSQLQueryAndParametersForFilterValues(projectID ui
 	}
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
+		logCtx.Error("failed to fetch Project Setting in facebook filter values.")
 		return "", []interface{}{}, http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
+	if customerAccountID == "" || len(customerAccountID) == 0 {
+		logCtx.Error("facebook integration is not available.")
+		return "", []interface{}{}, http.StatusInternalServerError
+	}
 	params := []interface{}{facebookInternalFilterProperty, projectID, customerAccountID,
 		docType, facebookInternalFilterProperty}
 
@@ -260,15 +264,18 @@ func getFilterRelatedInformationForFacebook(requestFilterObject string,
 
 // @TODO Kark v1
 func (pg *Postgres) getFacebookFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
-	logCtx := log.WithField("req_id", reqID)
+	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID)
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
-		logCtx.Error("Failed to fetch Project Setting in facebook filter values.")
+		logCtx.Error("failed to fetch project setting in facebook filter values.")
 		return []interface{}{}, http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
-
-	logCtx = log.WithField("project_id", projectID).WithField("doc_type", docType).WithField("req_id", reqID)
+	if customerAccountID == "" || len(customerAccountID) == 0 {
+		logCtx.Error("facebook integration is not available.")
+		return []interface{}{}, http.StatusInternalServerError
+	}
+	logCtx = logCtx.WithField("doc_type", docType)
 	params := []interface{}{property, projectID, customerAccountID, docType, property}
 	_, resultRows, _ := pg.ExecuteSQL(facebookFilterQueryStr, params, logCtx)
 
@@ -321,6 +328,9 @@ func (pg *Postgres) transFormRequestFieldsAndFetchRequiredFieldsForFacebook(proj
 		return &model.ChannelQueryV1{}, "", errors.New("Project setting not found")
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
+	if customerAccountID == "" || len(customerAccountID) == 0 {
+		return &model.ChannelQueryV1{}, "", errors.New("facebook document integration not available for this project.")
+	}
 
 	transformedQuery, err = convertFromRequestToFacebookSpecificRepresentation(query)
 	if err != nil {
@@ -369,13 +379,13 @@ func getFacebookSpecificMetrics(requestSelectMetrics []string) ([]string, error)
 }
 
 // @Kark TODO v1
-func getFacebookSpecificFilters(requestFilters []model.FilterV1) ([]model.FilterV1, error) {
-	resultFilters := make([]model.FilterV1, 0, 0)
+func getFacebookSpecificFilters(requestFilters []model.ChannelFilterV1) ([]model.ChannelFilterV1, error) {
+	resultFilters := make([]model.ChannelFilterV1, 0, 0)
 	for _, requestFilter := range requestFilters {
-		var resultFilter model.FilterV1
+		var resultFilter model.ChannelFilterV1
 		filterObject, isPresent := facebookExternalRepresentationToInternalRepresentation[requestFilter.Object]
 		if !isPresent {
-			return make([]model.FilterV1, 0, 0), errors.New("Invalid filter key found for document type")
+			return make([]model.ChannelFilterV1, 0, 0), errors.New("Invalid filter key found for document type")
 		}
 		resultFilter = requestFilter
 		resultFilter.Object = filterObject
@@ -385,8 +395,8 @@ func getFacebookSpecificFilters(requestFilters []model.FilterV1) ([]model.Filter
 }
 
 // @Kark TODO v1
-func getFacebookSpecificGroupBy(requestGroupBys []model.GroupBy) ([]model.GroupBy, error) {
-	sortedGroupBys := make([]model.GroupBy, 0, 0)
+func getFacebookSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.ChannelGroupBy, error) {
+	sortedGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	for _, groupBy := range requestGroupBys {
 		if groupBy.Object == CAFilterCampaign {
 			sortedGroupBys = append(sortedGroupBys, groupBy)
@@ -405,12 +415,12 @@ func getFacebookSpecificGroupBy(requestGroupBys []model.GroupBy) ([]model.GroupB
 		}
 	}
 
-	resultGroupBys := make([]model.GroupBy, 0, 0)
+	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	for _, requestGroupBy := range sortedGroupBys {
-		var resultGroupBy model.GroupBy
+		var resultGroupBy model.ChannelGroupBy
 		groupByObject, isPresent := facebookExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
-			return make([]model.GroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
+			return make([]model.ChannelGroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
 		}
 		resultGroupBy = requestGroupBy
 		resultGroupBy.Object = groupByObject
@@ -492,7 +502,7 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID u
 	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
 }
 
-func getFacebookFiltersWhereStatement(filters []model.FilterV1) string {
+func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	resultStatement := ""
 	var filterValue string
 	for index, filter := range filters {
