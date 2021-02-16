@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { HashRouter, Route, Switch } from 'react-router-dom';
+import { HashRouter, Route, Switch, useLocation, Redirect } from 'react-router-dom';
 import './App.css';
 // Styles
 // CoreUI Icons Set
@@ -19,8 +19,18 @@ import { DefaultLayout } from './containers';
 import { Login, Page404, Page500, Signup, Activate, SetPassword, ForgotPassword } from './views/Pages';
 
 // import { renderRoutes } from 'react-router-config';
-
 class App extends Component {
+  componentWillMount = ()=> {
+    const queryParams = new URLSearchParams(window.location.search)
+    const code = queryParams.get("code")
+    const state  = queryParams.get("state")
+    if(code != null) {
+      let splitUrl = window.location.href.split('/')
+      let hostname = splitUrl[0] + "//" + splitUrl[2]
+      window.location.href= `${hostname}/#/settings/linkedin/?code=${code}&state=${state}`
+    }
+
+  }
   render() {
     return (
       <HashRouter>

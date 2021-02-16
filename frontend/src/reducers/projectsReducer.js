@@ -321,6 +321,17 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
         }
         return _state;
       }
+      case "ENABLE_LINKEDIN_AD_ACCOUNT": {
+        let linkedinAdAccount = action.payload.int_linkedin_ad_account;
+        let linkedinAccessToken = action.payload.int_linkedin_access_token
+        let _state = {...state};
+        _state.currentProjectSettings = {
+          ...state.currentProjectSettings,
+          int_linkedin_ad_account: linkedinAdAccount,
+          int_linkedin_access_token: linkedinAccessToken,
+        }
+        return _state;
+      }
     }
 
     return state

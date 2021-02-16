@@ -110,6 +110,10 @@ spec:
           - $(FACEBOOK_APP_ID)
           - --facebook_app_secret
           - $(FACEBOOK_APP_SECRET)
+          - --linkedin_client_id
+          - $(LINKEDIN_CLIENT_ID)
+          - --linkedin_client_secret
+          - $(LINKEDIN_CLIENT_SECRET)
           - --salesforce_app_secret
           - $(SALESFORCE_APP_SECRET)
           - --salesforce_app_id
@@ -151,6 +155,8 @@ spec:
             name: secret-login-token
         - secretRef:
             name: secret-facebook
+        - secretRef:
+            name: secret-linkedin
         - secretRef:
             name: secret-sentry
         - secretRef:

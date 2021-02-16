@@ -35,6 +35,13 @@ type ProjectSetting struct {
 	BigqueryEnabled *bool `gorm:"default:false" json:"bigquery_enabled"`
 	//Salesforce settings
 	IntSalesforceEnabledAgentUUID *string `json:"int_salesforce_enabled_agent_uuid,omitempty"`
+	//Linkedin related fields
+	IntLinkedinAdAccount          string  `json:"int_linkedin_ad_account"`
+	IntLinkedinAccessToken        string  `json:"int_linkedin_access_token"`
+	IntLinkedinRefreshToken       string  `json:"int_linkedin_refresh_token"`
+	IntLinkedinRefreshTokenExpiry int64   `json:"int_linkedin_refresh_token_expiry"`
+	IntLinkedinAccessTokenExpiry  int64   `json:"int_linkedin_access_token_expiry"`
+	IntLinkedinAgentUUID          *string `json:"int_linkedin_agent_uuid"`
 	IntDrift                      *bool   `gorm:"not null;default:false" json:"int_drift,omitempty"`
 }
 
@@ -233,6 +240,14 @@ type FacebookProjectSettings struct {
 	IntFacebookAccessToken string `json:"int_facebook_access_token"`
 	IntFacebookAdAccount   string `json:"int_facebook_ad_account"`
 	IntFacebookEmail       string `json:"int_facebook_email"`
+}
+type LinkedinProjectSettings struct {
+	ProjectId                     string `json:"project_id"`
+	IntLinkedinAdAccount          string `json:"int_linkedin_ad_account"`
+	IntLinkedinAccessToken        string `json:"int_linkedin_access_token"`
+	IntLinkedinRefreshToken       string `json:"int_linkedin_refresh_token"`
+	IntLinkedinRefreshTokenExpiry int64  `json:"int_linkedin_refresh_token_expiry"`
+	IntLinkedinAccessTokenExpiry  int64  `json:"int_linkedin_access_token_expiry"`
 }
 
 // SalesforceProjectSettings contains refresh_token and instance_url for enabled projects

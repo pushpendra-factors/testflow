@@ -68,6 +68,8 @@ func main() {
 		30, "look back window in cache for event/user cache")
 	facebookAppId := flag.String("facebook_app_id", "", "")
 	facebookAppSecret := flag.String("facebook_app_secret", "", "")
+	linkedinClientID := flag.String("linkedin_client_id", "", "")
+	linkedinClientSecret := flag.String("linkedin_client_secret", "", "")
 	salesforceAppId := flag.String("salesforce_app_id", "", "")
 	salesforceAppSecret := flag.String("salesforce_app_secret", "", "")
 
@@ -115,6 +117,8 @@ func main() {
 		AdminLoginToken:                         *adminLoginToken,
 		FacebookAppID:                           *facebookAppId,
 		FacebookAppSecret:                       *facebookAppSecret,
+		LinkedinClientID:                        *linkedinClientID,
+		LinkedinClientSecret:                    *linkedinClientSecret,
 		SalesforceAppID:                         *salesforceAppId,
 		SalesforceAppSecret:                     *salesforceAppSecret,
 		SentryDSN:                               *sentryDSN,

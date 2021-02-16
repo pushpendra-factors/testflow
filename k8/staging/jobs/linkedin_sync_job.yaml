@@ -2,10 +2,10 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: default-pool
-  name: adwords-sync-job
+    nodePool: factors-staging-node-pool
+  name: linkedin-sync-job
 spec:
-  schedule: "0 22 * * *" # In UTC
+  schedule: "0 19 * * *" # In UTC
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
@@ -15,28 +15,19 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: default-pool
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: default-pool
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
-          - name: adwords-sync
-            image: us.gcr.io/factors-staging/adwords-etl:v0.49-4bcdb5e2-644
+          - name: linkedin-sync
+            image: us.gcr.io/factors-staging/linkedin-sync-job:v0.01
             imagePullPolicy: IfNotPresent
             args:
             - --env
             - $(ENV)
-            - --oauth_secret
-            - $(GOOGLE_OAUTH_SECRET)
-            - --developer_token
-            - $(GOOGLE_ADWORDS_DEVELOPER_TOKEN)
             - --data_service_host
             - $(DATA_SERVICE_HOST_URL)
             envFrom:
             - configMapRef:
-                name: config-adwordsserver
-            - configMapRef:
                 name: config-env
-            - secretRef:
-                name: secret-google
           restartPolicy: OnFailure

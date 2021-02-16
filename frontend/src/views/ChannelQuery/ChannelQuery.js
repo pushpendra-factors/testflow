@@ -25,19 +25,26 @@ const CHANNEL_METRIC_ORDER = [ "clicks", "impressions", "conversions",
 
 const CHANNEL_GOOGLE_ADS = { label: 'Google Ads', value: 'google_ads' }
 const CHANNEL_FACEBOOK_ADS = { label: "Facebook Ads", value: "facebook_ads"}
-const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS, CHANNEL_FACEBOOK_ADS]
+const CHANNEL_LINKEDIN_ADS = { label: "LinkedIn Ads", value: "linkedin_ads"}
+const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS, CHANNEL_FACEBOOK_ADS, CHANNEL_LINKEDIN_ADS]
 
 const FILTER_KEY_CAMPAIGN = { label: 'Campaigns', value: 'campaign' }
 const FILTER_KEY_AD = { label: 'Ads', value: 'ad' }
 const FILTER_KEY_AD_SET = {label: "Adsets", value: "adset"}
+const FILTER_KEY_CAMPAIGN_GROUP = { label: 'Campaign Groups', value: 'campaign_group' }
+const FILTER_KEY_CREATIVE = {label: "Creatives", value: "creative"}
 const FILTER_KEY_AD_GROUP = {label:"Adgroups", value: "ad_group"}
 const FILTER_KEY_PLATFORM = {label: "Platforms", value: "platform"}
 const FILTER_KEY_KEYWORD = { label: 'Keywords', value: 'keyword' }
 const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_AD_GROUP, FILTER_KEY_KEYWORD ];
 const FACEBOOK_FILTER_KEY_OPTS = [FILTER_KEY_CAMPAIGN, FILTER_KEY_AD,FILTER_KEY_AD_SET]
+const LINKEDIN_FILTER_KEY_OPTS = [FILTER_KEY_CAMPAIGN_GROUP, FILTER_KEY_CAMPAIGN,FILTER_KEY_CREATIVE]
 
 // supported breakdown opts for each filter key.
 const BREAKDOWN_KEY_OPT_MAP = {
+  [FILTER_KEY_CAMPAIGN_GROUP.value]: [FILTER_KEY_CAMPAIGN_GROUP],
+  [FILTER_KEY_CREATIVE.value]: [FILTER_KEY_CREATIVE],
+  [FILTER_KEY_CAMPAIGN.value]: [FILTER_KEY_CAMPAIGN],
   [FILTER_KEY_CAMPAIGN.value]: [FILTER_KEY_CAMPAIGN],
   [FILTER_KEY_AD.value]: [FILTER_KEY_AD],
   [FILTER_KEY_KEYWORD.value]: [FILTER_KEY_KEYWORD],
@@ -133,7 +140,6 @@ class ChannelQuery extends Component {
           this.setState({ topError: 'Failed to run query.' });
           return
         }
-
         if (r.data.meta)
           this.setState({ resultMeta: r.data.meta });
 
@@ -246,7 +252,6 @@ class ChannelQuery extends Component {
     </Col>;
   }
   handleChannelChange = (option) => {
-    console.log(option)
     this.setState({channel: option, })
   }
 
@@ -260,7 +265,7 @@ class ChannelQuery extends Component {
 
   getBreakdownKeysOpts(filterKey) {
     let opts
-    if(this.state.channel.value == "google_ads")
+    if(this.state.channel.value == "google_ads" || this.state.channel.value == "linkedin_ads")
     {
       opts = [NONE_OPT]
     }
@@ -427,7 +432,7 @@ class ChannelQuery extends Component {
           <Col xs='10' md='10' style={{ marginLeft: "-7%" }}>
             <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
               <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} 
-                options={this.state.channel.value == "google_ads"? FILTER_KEY_OPTS: FACEBOOK_FILTER_KEY_OPTS} placeholder='Filter'/>
+                options={this.state.channel.value == "google_ads"? FILTER_KEY_OPTS: (this.state.channel.value == 'facebook_ads'? FACEBOOK_FILTER_KEY_OPTS : LINKEDIN_FILTER_KEY_OPTS)} placeholder='Filter'/>
             </div>
             <div className='fapp-select light' style={{ display: 'inline-block', width: '275px' }}>
               <CreatableSelect 

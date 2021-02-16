@@ -75,7 +75,6 @@ func ChannelQueryHandler(c *gin.Context) {
 			"error": "Channel query failed. Json decode failed."})
 		return
 	}
-
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.IsHardRefreshForToday(queryPayload.From, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)

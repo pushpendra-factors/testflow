@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -603,12 +601,6 @@ func (pg *Postgres) GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccountI
 	return facebookLastSyncInfos, http.StatusOK
 }
 
-// format yyyymmdd
-func changeUnixTimestampToDate(timestamp int64) int64 {
-	date, _ := strconv.ParseInt(time.Unix(timestamp, 0).Format("20060102"), 10, 64)
-	return date
-}
-
 // ExecuteFacebookChannelQuery - @TODO Kark v0
 func (pg *Postgres) ExecuteFacebookChannelQuery(projectID uint64,
 	query *model.ChannelQuery) (*model.ChannelQueryResult, int) {
@@ -629,8 +621,8 @@ func (pg *Postgres) ExecuteFacebookChannelQuery(projectID uint64,
 		return nil, http.StatusInternalServerError
 	}
 
-	query.From = changeUnixTimestampToDate(query.From)
-	query.To = changeUnixTimestampToDate(query.To)
+	query.From = ChangeUnixTimestampToDate(query.From)
+	query.To = ChangeUnixTimestampToDate(query.To)
 	queryResult := &model.ChannelQueryResult{}
 	result, err := pg.GetFacebookChannelResult(projectID, projectSetting.IntFacebookAdAccount, query)
 	if err != nil {

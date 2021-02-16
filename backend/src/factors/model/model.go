@@ -180,6 +180,14 @@ type Model interface {
 	GetFacebookChannelResult(projectID uint64, customerAccountID string,
 		query *model.ChannelQuery) (*model.ChannelQueryResult, error)
 
+	// linkedin document
+	CreateLinkedinDocument(projectID uint64, document *model.LinkedinDocument) int
+	GetLinkedinSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
+	ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, error)
+	GetLinkedinLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
+	ExecuteLinkedinChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
+	GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error)
+
 	// funnel_analytics
 	RunFunnelQuery(projectID uint64, query model.Query) (*model.QueryResult, int, string)
 
@@ -234,6 +242,7 @@ type Model interface {
 	GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int)
 	GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int)
 	GetFacebookEnabledProjectSettings() ([]model.FacebookProjectSettings, int)
+	GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int)
 	GetArchiveEnabledProjectIDs() ([]uint64, int)
 	GetBigqueryEnabledProjectIDs() ([]uint64, int)
 	GetAllSalesforceProjectSettings() ([]model.SalesforceProjectSettings, int)

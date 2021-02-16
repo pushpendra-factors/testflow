@@ -211,6 +211,14 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntFacebookAddAccessTokenHandler)
 
+	intRouteGroup.POST("/linkedin/auth", IntLinkedinAuthHandler)
+	intRouteGroup.POST("/linkedin/ad_accounts", IntLinkedinAccountHandler)
+
+	intRouteGroup.POST("/linkedin/add_access_token",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		IntLinkedinAddAccessTokenHandler)
+
 	intRouteGroup.POST("/salesforce/enable",
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
@@ -257,6 +265,16 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.GET("/facebook/documents/last_sync_info",
 		IH.DataServiceFacebookGetLastSyncInfoHandler)
 
+	dataServiceRouteGroup.GET("linkedin/documents/last_sync_info",
+		IH.DataServiceLinkedinGetLastSyncInfoHandler)
+
+	dataServiceRouteGroup.POST("/linkedin/documents/add",
+		IH.DataServiceLinkedinAddDocumentHandler)
+
 	dataServiceRouteGroup.POST("/metrics",
 		IH.DataServiceRecordMetricHandler)
+
+	dataServiceRouteGroup.GET("/linkedin/project/settings",
+		IH.DataServiceLinkedinGetProjectSettings)
+
 }

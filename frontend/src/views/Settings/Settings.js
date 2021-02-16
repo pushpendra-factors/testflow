@@ -17,6 +17,7 @@ import adwordsSvg from '../../assets/img/integrations/adwords.svg';
 import hubspotSvg from '../../assets/img/integrations/hubspot.svg'
 import facebookSvg from '../../assets/img/integrations/facebook.svg'
 import salesforceLogo from '../../assets/img/integrations/salesforce.svg';
+import linkedinLogo from '../../assets/img/integrations/linkedin.svg'
 
 class SettingsCard extends Component {
   constructor(props) {
@@ -101,6 +102,7 @@ class Settings extends Component {
                   <SettingsCard title='Hubspot' img={hubspotSvg} href='/settings/hubspot' />
                   <SettingsCard title='Facebook' img={facebookSvg} href='/settings/facebook' />
                   <SettingsCard title='Salesforce' img={salesforceLogo} href='/settings/Salesforce' />
+                  <SettingsCard title='LinkedIn' img={linkedinLogo} href='/settings/linkedin' />
                 </Row>
               </CardBody>
             </Card>

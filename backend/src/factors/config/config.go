@@ -89,6 +89,8 @@ type Configuration struct {
 	AdminLoginToken                  string
 	FacebookAppID                    string
 	FacebookAppSecret                string
+	LinkedinClientID                 string
+	LinkedinClientSecret             string
 	SalesforceAppID                  string
 	SalesforceAppSecret              string
 	SentryDSN                        string
@@ -769,6 +771,13 @@ func GetFacebookAppId() string {
 
 func GetFacebookAppSecret() string {
 	return configuration.FacebookAppSecret
+}
+func GetLinkedinClientID() string {
+	return configuration.LinkedinClientID
+}
+
+func GetLinkedinClientSecret() string {
+	return configuration.LinkedinClientSecret
 }
 
 func GetSalesforceAppId() string {

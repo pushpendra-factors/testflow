@@ -105,6 +105,7 @@ func ExecuteChannelQueryHandler(c *gin.Context) {
 			gin.H{"error": "Channel query failed. Invalid project."})
 		return
 	}
+
 	logCtx = logCtx.WithField("project_id", projectId).WithField("req_id", reqID)
 	var queryPayload model.ChannelGroupQueryV1
 	decoder := json.NewDecoder(r.Body)

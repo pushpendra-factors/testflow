@@ -15,7 +15,6 @@ func DataServiceFacebookGetProjectSettings(c *gin.Context) {
 	facebookProjectSettings, status := store.GetStore().GetFacebookEnabledProjectSettings()
 	c.JSON(status, facebookProjectSettings)
 }
-
 func DataServiceFacebookAddDocumentHandler(c *gin.Context) {
 	r := c.Request
 

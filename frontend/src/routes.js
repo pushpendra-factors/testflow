@@ -75,6 +75,11 @@ const SettingsSalesforce = Loadable({
   loading: Loading,
 });
 
+const SettingsLinkedin = Loadable({
+  loader: () => import('./views/Settings/Linkedin'),
+  loading: Loading,
+}); 
+
 const Profile = Loadable({
   loader: () => import('./views/Profile'),
   loading: Loading,
@@ -113,6 +118,7 @@ const routes = [
   { path: '/settings/agents', exact: true, name: 'Agents', component: SettingsAgents },
   { path: '/settings/facebook', exact: true, name: 'Facebook', component: SettingsFacebook },
   { path: '/settings/Salesforce', exact: true, name: 'Salesforce', component: SettingsSalesforce },
+  { path: '/settings/linkedin', exact: true, name: 'Linkedin', component: SettingsLinkedin },
   { path: '/settings', name: 'Settings', component: Settings },
   { path: '/account_settings', name: 'AccountSettings', component: AccountSettings },
   { path: '/profile', name: 'Profile', component: Profile },

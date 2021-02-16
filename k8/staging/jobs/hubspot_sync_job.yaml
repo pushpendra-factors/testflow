@@ -6,6 +6,7 @@ metadata:
   name: hubspot-sync-job
 spec:
   schedule: "0 18 * * *" # In UTC
+  concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
   jobTemplate:

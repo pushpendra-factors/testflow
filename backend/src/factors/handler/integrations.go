@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -692,6 +694,138 @@ func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 	c.JSON(errCode, gin.H{})
 }
 
+type LinkedinOauthCode struct {
+	Code string `json:"code"`
+}
+type LinkedinOauthToken struct {
+	AccessToken           string `json:"access_token"`
+	ExpiresIn             uint64 `json:"expires_in"`
+	RefreshToken          string `json:"refresh_token"`
+	RefreshTokenExpiresIn uint64 `json:"refresh_token_expires_in"`
+}
+
+/*
+auth steps:
+1. Get authorization code from client side
+2. Use that code to get access token in the function below
+*/
+func IntLinkedinAuthHandler(c *gin.Context) {
+	r := c.Request
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	var linkedinCode LinkedinOauthCode
+	if err := decoder.Decode(&linkedinCode); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload."})
+		return
+	}
+	redirectURI := url.QueryEscape("https://" + C.GetAPPDomain())
+	urloauth := "https://www.linkedin.com/oauth/v2/accessToken?grant_type=authorization_code&code=" + linkedinCode.Code + "&redirect_uri=" + redirectURI + "&client_id=" + C.GetLinkedinClientID() + "&client_secret=" + C.GetLinkedinClientSecret()
+	resp, err := http.Get(urloauth)
+	if err != nil {
+		log.WithError(err).Error("Failed to get access token with golang error")
+		c.AbortWithStatusJSON(resp.StatusCode, gin.H{"error": "failed to get access token"})
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		bodyString := string(body)
+		log.WithFields(log.Fields{"url": urloauth, "response_body": bodyString}).WithError(err).Error("Failed to get access token with response error")
+		c.AbortWithStatusJSON(resp.StatusCode, gin.H{"error": "failed to get access token"})
+		return
+	}
+
+	defer resp.Body.Close()
+	decoder = json.NewDecoder(resp.Body)
+	decoder.DisallowUnknownFields()
+	var responsePayload LinkedinOauthToken
+	err = decoder.Decode(&responsePayload)
+	if err != nil {
+		log.WithError(err).Error("Linkedin access token payload JSON decode failure.", responsePayload)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. enable failed."})
+		return
+	}
+	c.JSON(resp.StatusCode, responsePayload)
+}
+
+type LinkedinAccountPayload struct {
+	AccessToken string `json:"access_token"`
+}
+
+func IntLinkedinAccountHandler(c *gin.Context) {
+	r := c.Request
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	var linkedinAccountPayload LinkedinAccountPayload
+	if err := decoder.Decode(&linkedinAccountPayload); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload."})
+		return
+	}
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", "https://api.linkedin.com/v2/adAccountsV2?q=search", nil)
+	req.Header.Set("Authorization", "Bearer "+linkedinAccountPayload.AccessToken)
+	resp, err := client.Do(req)
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.WithError(err).Error("Failed to read access token from response")
+	}
+	bodyString := string(bodyBytes)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		log.WithError(err).Error("Failed to get access token")
+		c.AbortWithStatusJSON(resp.StatusCode, gin.H{"error": "failed to get access token"})
+		return
+	}
+	c.JSON(resp.StatusCode, bodyString)
+}
+
+type LinkedinAccessTokenPayload struct {
+	AccessToken        string `json:"int_linkedin_access_token"`
+	RefreshToken       string `json:"int_linkedin_refresh_token"`
+	RefreshTokenExpiry int64  `json:"int_linkedin_refresh_token_expiry"`
+	AccessTokenExpiry  int64  `json:"int_linkedin_access_token_expiry"`
+	ProjectID          string `json:"project_id"`
+	AdAccount          string `json:"int_linkedin_ad_account"`
+}
+
+func IntLinkedinAddAccessTokenHandler(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload LinkedinAccessTokenPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectID, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as uint64.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	_, errCode := store.GetStore().GetAgentByUUID(currentAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid agent."})
+		return
+	}
+
+	_, errCode = store.GetStore().UpdateProjectSettings(projectId, &model.ProjectSetting{
+		IntLinkedinAdAccount: requestPayload.AdAccount, IntLinkedinAccessToken: requestPayload.AccessToken,
+		IntLinkedinAgentUUID: &currentAgentUUID, IntLinkedinAccessTokenExpiry: time.Now().Unix() + requestPayload.AccessTokenExpiry,
+		IntLinkedinRefreshToken: requestPayload.RefreshToken, IntLinkedinRefreshTokenExpiry: time.Now().Unix() + requestPayload.RefreshTokenExpiry,
+	})
+	if errCode != http.StatusAccepted {
+		log.WithField("project_id", projectId).Error("Failed to update project settings with linkedin fields")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed updating linkedin fields in project settings"})
+		return
+	}
+
+	c.JSON(errCode, gin.H{})
+}
 func IntShopifySDKHandler(c *gin.Context) {
 	r := c.Request
 

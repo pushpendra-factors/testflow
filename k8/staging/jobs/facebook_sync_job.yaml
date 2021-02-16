@@ -6,6 +6,7 @@ metadata:
   name: facebook-sync-job
 spec:
   schedule: "0 19 * * *" # In UTC
+  concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
   jobTemplate:

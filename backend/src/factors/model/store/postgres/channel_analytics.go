@@ -6,46 +6,57 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 const (
-	CAColumnImpressions          = "impressions"
-	CAColumnClicks               = "clicks"
-	CAColumnTotalCost            = "total_cost"
-	CAColumnConversions          = "conversions"
-	CAColumnAllConversions       = "all_conversions"
-	CAColumnCostPerClick         = "cost_per_click"
-	CAColumnConversionRate       = "conversion_rate"
-	CAColumnCostPerConversion    = "cost_per_conversion"
-	CAColumnFrequency            = "frequency"
-	CAColumnReach                = "reach"
-	CAColumnInlinePostEngagement = "inline_post_engagement"
-	CAColumnUniqueClicks         = "unique_clicks"
-	CAColumnName                 = "name"
-	CAColumnPlatform             = "platform"
-	CAFilterCampaign             = "campaign"
-	CAFilterAdGroup              = "ad_group"
-	CAFilterAd                   = "ad"
-	CAFilterKeyword              = "keyword"
-	CAFilterQuery                = "query"
-	CAFilterAdset                = "adset"
-	CAChannelGoogleAds           = "google_ads"
-	CAChannelFacebookAds         = "facebook_ads"
-	CAAllChannelAds              = "all_ads"
-	CAColumnValueAll             = "all"
-	CAChannelGroupKey            = "group_key"
-	innerJoinClause              = " INNER JOIN "
-	channeAnalyticsLimit         = " LIMIT 2500 "
-	source                       = "source"
+	CAColumnImpressions                    = "impressions"
+	CAColumnClicks                         = "clicks"
+	CAColumnTotalCost                      = "total_cost"
+	CAColumnConversions                    = "conversions"
+	CAColumnAllConversions                 = "all_conversions"
+	CAColumnCostPerClick                   = "cost_per_click"
+	CAColumnConversionRate                 = "conversion_rate"
+	CAColumnCostPerConversion              = "cost_per_conversion"
+	CAColumnFrequency                      = "frequency"
+	CAColumnReach                          = "reach"
+	CAColumnInlinePostEngagement           = "inline_post_engagement"
+	CAColumnUniqueClicks                   = "unique_clicks"
+	CAColumnUniqueImpressions              = "approximateUniqueImpressions"
+	CAColumnName                           = "name"
+	CAColumnPlatform                       = "platform"
+	CAFilterCampaign                       = "campaign"
+	CAFilterAdGroup                        = "ad_group"
+	CAFilterAd                             = "ad"
+	CAFilterKeyword                        = "keyword"
+	CAFilterQuery                          = "query"
+	CAFilterAdset                          = "adset"
+	CAChannelGoogleAds                     = "google_ads"
+	CAChannelFacebookAds                   = "facebook_ads"
+	CAChannelLinkedinAds                   = "linkedin_ads"
+	CAAllChannelAds                        = "all_ads"
+	CAColumnValueAll                       = "all"
+	CAChannelGroupKey                      = "group_key"
+	innerJoinClause                        = " INNER JOIN "
+	channeAnalyticsLimit                   = " LIMIT 2500 "
+	source                                 = "source"
+	CAColumnLikes                          = "likes"
+	CAColumnFollows                        = "follows"
+	CAColumnConversionValueInLocalCurrency = "conversion_value_in_local_currency"
+	CAColumnTotalEngagement                = "total_engagements"
+	CAFilterCampaignGroup                  = "campaign_group"
+	CAFilterCreactive                      = "creative"
 )
 
 var CAChannels = []string{
 	CAChannelGoogleAds,
 	CAChannelFacebookAds,
+	CAChannelLinkedinAds,
 	CAAllChannelAds,
 }
 
@@ -64,6 +75,8 @@ var CAFilters = []string{
 	CAFilterKeyword,
 	CAFilterQuery,
 	CAFilterAdset,
+	CAFilterCampaignGroup,
+	CAFilterCreactive,
 }
 
 // TODO: Move and fetch it from respective channels - allChannels, adwords etc.. because this is error prone.
@@ -98,6 +111,8 @@ func (pg *Postgres) GetChannelConfig(channel string, reqID string) (*model.Chann
 		result = buildFbChannelConfig()
 	case CAChannelGoogleAds:
 		result = buildAdwordsChannelConfig()
+	case CAChannelLinkedinAds:
+		result = buildLinkedinChannelConfig()
 	}
 	return result, http.StatusOK
 }
@@ -182,6 +197,8 @@ func (pg *Postgres) GetChannelFilterValuesV1(projectID uint64, channel, filterOb
 		filterValues, errCode = pg.GetFacebookFilterValues(projectID, filterObject, filterProperty, reqID)
 	case CAChannelGoogleAds:
 		filterValues, errCode = pg.GetAdwordsFilterValues(projectID, filterObject, filterProperty, reqID)
+	case CAChannelLinkedinAds:
+		filterValues, errCode = pg.GetLinkedinFilterValues(projectID, filterObject, filterProperty, reqID)
 	}
 
 	if errCode != http.StatusFound {
@@ -197,6 +214,7 @@ func (pg *Postgres) GetAllChannelFilterValues(projectID uint64, filterObject, fi
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	adwordsSQL, adwordsParams, adwordsErr := pg.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 	facebookSQL, facebookParams, facebookErr := pg.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
+	linkedinSQL, linkedinParams, linkedinErr := pg.GetLinkedinSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
 
 	if adwordsErr != http.StatusFound {
 		return []interface{}{}, adwordsErr
@@ -204,9 +222,13 @@ func (pg *Postgres) GetAllChannelFilterValues(projectID uint64, filterObject, fi
 	if facebookErr != http.StatusFound {
 		return []interface{}{}, facebookErr
 	}
+	if linkedinErr != http.StatusFound {
+		return []interface{}{}, linkedinErr
+	}
 
-	unionQuery := "SELECT filter_value from ( " + adwordsSQL + " UNION " + facebookSQL + " ) all_ads LIMIT 5000"
+	unionQuery := "SELECT filter_value from ( " + adwordsSQL + " UNION " + facebookSQL + " UNION " + linkedinSQL + " ) all_ads LIMIT 5000"
 	unionParams := append(adwordsParams, facebookParams...)
+	unionParams = append(unionParams, linkedinParams...)
 	_, resultRows, _ := pg.ExecuteSQL(unionQuery, unionParams, logCtx)
 
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
@@ -267,6 +289,8 @@ func (pg *Postgres) ExecuteChannelQueryV1(projectID uint64, query *model.Channel
 		columns, resultMetrics, err = pg.ExecuteFacebookChannelQueryV1(projectID, query, reqID)
 	case CAChannelGoogleAds:
 		columns, resultMetrics, err = pg.ExecuteAdwordsChannelQueryV1(projectID, query, reqID)
+	case CAChannelLinkedinAds:
+		columns, resultMetrics, err = pg.ExecuteLinkedinChannelQueryV1(projectID, query, reqID)
 	}
 	if err != nil {
 		logCtx.Warn(query)
@@ -396,6 +420,14 @@ func (pg *Postgres) ExecuteChannelQuery(projectID uint64,
 		}
 		return result, http.StatusOK
 	}
+	if query.Channel == "linkedin_ads" {
+		result, errCode := pg.ExecuteLinkedinChannelQuery(projectID, query)
+		if errCode != http.StatusOK {
+			log.WithField("project_id", projectID).Error("Failed to execute linkedin channel query.")
+			return nil, http.StatusInternalServerError
+		}
+		return result, http.StatusOK
+	}
 	return nil, http.StatusBadRequest
 }
 
@@ -409,6 +441,13 @@ func Convert2DArrayTo1DArray(inputArray [][]interface{}) []interface{} {
 		result = append(result, row...)
 	}
 	return result
+}
+
+// format yyyymmdd
+func ChangeUnixTimestampToDate(timestamp int64) int64 {
+	time := time.Unix(timestamp, 0)
+	date, _ := strconv.ParseInt(time.Format("20060102"), 10, 64)
+	return date
 }
 
 // @Kark TODO v1
