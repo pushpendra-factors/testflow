@@ -29,6 +29,7 @@ const CONFIG = {
     android_sdk_asset_url: 'https://storage.googleapis.com/factors-production-v2/sdk/android/sdk-production-v0.1.aar',
     factors_sdk_token: 'we0jyjxcs0ix4ggnkptymjh48ur8y7q7',
     facebook_app_id: '1022017331596075',
+    linkedin_client_id: '861ix78kpo39ge',
   }
 }
 
