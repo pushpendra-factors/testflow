@@ -291,8 +291,10 @@ function AddDashboard({
         okText={getOkText()}
         transitionName=""
         maskTransitionName=""
+        okButtonProps={{size:'large'}}
+        cancelButtonProps={{size:'large'}}
       >
-        <div className={"px-4"}>
+        <div>
           <Row>
             <Col span={24}>
               <Text

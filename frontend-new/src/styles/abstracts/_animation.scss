@@ -13,3 +13,18 @@
   .fadeInDown {
     animation-name: fa-fadeInDown;
   }
+
+  @keyframes fa-slideInUp {
+    from {
+      transform: translate3d(0, 100%, 0);
+      visibility: none;
+      opacity: 0;
+    }
+    
+    to {
+      transform: translate3d(0, 0, 0);
+      visibility: visible;
+      opacity: 1;
+    }
+  }
+   

@@ -23,10 +23,12 @@ class SVG extends React.Component {
       color === 'white' ? '#FFFFFF'
         : color === 'black' ? '#0E2647'
           : color === 'purple' ? '#5949BC'
-            : color === 'grey' ? '#63686F' : color;
+            : color === 'green' ? '#5ACA89'
+                : color === 'red' ? '#EA6262'
+                  : color === 'grey' ? '#63686F' : color;
 
     return (
-      <IconComponent size={size} color={strokeColor} extraClass={extraClass} />
+      <IconComponent size={size} color={color ? strokeColor : `#63686F` } extraClass={extraClass} />
     );
   }
 }

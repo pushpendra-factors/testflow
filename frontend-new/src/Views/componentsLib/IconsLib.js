@@ -5,17 +5,20 @@ import {
 } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 
-const iconList = [
+const iconList = [ 
   'Brand',
   'Delete',
   'Home',
   'Corequery',
+  'S_Key',
   'Key',
   'Bug',
   'Report',
   'Notify',
   'Hexagon',
   'Plus',
+  'Minus',
+  'User',
   'Mouseevent',
   'Teamfeed',
   'Play',
@@ -32,7 +35,51 @@ const iconList = [
   'Times',
   'Calendar',
   'Groupby',
-  'Sortdown'
+  'Remove',
+  'Sortdown',
+  'Download',
+  'Next',
+  'Search',
+  'Totalevents',
+  'Activeusers',
+  'Frequency',
+  'Totalusers',
+  'SinglePages',
+  'Sparklines',
+  'Dropdown',
+  'Linechart',
+  'Checkmark',
+  'Barchart',
+  'Edit',
+  'Lock',
+  'Globe',
+  'Userplus',
+  'Mouseclick',
+  'Save',
+  'Breadcrumb',
+  'Spikeup',
+  'Spikedown',
+  'Events_dashboard_cq',
+  'Arrowdown',
+  'BrandGreyScale',
+  'DoubleArrowLeft',
+  'Corequery_colored',
+  'Factors_colored',
+  'Close',
+  'Expand',
+  'Clock',
+  'Compare',
+  'Google_ads',
+  'Facebook_ads',
+  'Linkedin_ads',
+  'ProgressArrowS',
+  'Ad_group',
+  'Ad',
+  'Keyword',
+  'Campaign',
+  'Salesforce_ads',
+  'Hubspot_ads',
+  'Segment_ads'
 ];
 
 class CheckBoxLib extends React.Component {
@@ -43,7 +90,7 @@ class CheckBoxLib extends React.Component {
           <Divider orientation="left">
             <Breadcrumb>
               <Breadcrumb.Item> Components </Breadcrumb.Item>
-              <Breadcrumb.Item> Icons </Breadcrumb.Item>
+              <Breadcrumb.Item> Icons ({iconList.length})</Breadcrumb.Item>
             </Breadcrumb>
           </Divider>
         </div>
@@ -70,3 +117,4 @@ class CheckBoxLib extends React.Component {
 }
 
 export default CheckBoxLib;
+ 

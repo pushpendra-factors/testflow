@@ -48,17 +48,15 @@ function AnalysisHeader({
       <div
         onClick={onBreadCrumbClick}
         className="flex items-center cursor-pointer"
-      >
-        <Tooltip placement="bottom" title={"Home"}>
+      > 
           <Button
             style={{ display: "flex", padding: "8px" }}
             className="items-center"
             size={"large"}
             type="text"
           >
-            <SVG size={32} name="factors_colored"></SVG>
-          </Button>
-        </Tooltip>
+            <SVG size={32} name="Brand"></SVG>
+          </Button> 
         <div className={styles.breadcrumb}>
           {queryTitle
             ? `Reports / ${EVENT_BREADCRUMB[queryType]} / ${queryTitle}`
@@ -76,11 +74,11 @@ function AnalysisHeader({
           <SVG name={"annotation"} />
         </Button> */}
 
-        <Tooltip placement="bottom" title={"Created by Jitesh Kriplani"}>
+        {/* <Tooltip placement="bottom" title={"Created by Jitesh Kriplani"}>
           <div className="mr-4 cursor-pointer">
             <SVG name={"report_user"} />
           </div>
-        </Tooltip>
+        </Tooltip> */}
 
         {/* <Button
           // onClick={setVisible.bind(this, true)}

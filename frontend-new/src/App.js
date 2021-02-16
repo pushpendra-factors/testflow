@@ -15,6 +15,7 @@ import {
 } from "react-router-dom";
 import PageSuspenseLoader from "./components/SuspenseLoaders/PageSuspenseLoader";
 import * as Sentry from "@sentry/react"; 
+import LogRocket from 'logrocket';
 
 const AppLayout = lazy(() => import("./Views/AppLayout"));
 const Login = lazy(() => import("./Views/Pages/Login"));
@@ -29,11 +30,13 @@ function App({ isAgentLoggedIn, agent_details }) {
 
  
 
-    Sentry.setUser({  
-      username: agent_details?.first_name,
-      email: agent_details?.email,
-      id: agent_details?.uuid,
-    });
+    if(Sentry){
+      Sentry.setUser({  
+        username: agent_details?.first_name,
+        email: agent_details?.email,
+        id: agent_details?.uuid,
+      }); 
+    }
 
 
 
@@ -41,6 +44,20 @@ function App({ isAgentLoggedIn, agent_details }) {
       // DEV env
     } else {
       // PROD ENV
+
+      //LogRocket
+      if(LogRocket){
+        LogRocket.init('anylrg/tufte-prod'); 
+        LogRocket.identify(agent_details?.uuid, {
+          name: agent_details?.first_name,
+          email: agent_details?.email,
+        });
+        LogRocket.getSessionURL(sessionURL => {
+          Sentry.configureScope(scope => {
+            scope.setExtra("sessionURL", sessionURL);
+          });
+        });
+      }
 
       //intercom init and passing logged-in user-data 
     var APP_ID = "rvffkuu7";

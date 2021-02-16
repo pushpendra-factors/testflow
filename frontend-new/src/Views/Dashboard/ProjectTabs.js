@@ -167,16 +167,8 @@ function ProjectTabs({
 
   const operations = (
     <>
-      <Button
-        type="text"
-        size={"small"}
-        onClick={() => setaddDashboardModal(true)}
-      >
-        <SVG name="plus" color={"grey"} />
-      </Button>
-      <Button type="text" size={"small"}>
-        <SVG name="edit" color={"grey"} />
-      </Button>
+      <Button type="text"  onClick={() => setaddDashboardModal(true)}  icon={<SVG name="plus" size={16} color={'grey'} />}/>
+      {/* <Button type="text" icon={<SVG name="edit" size={16} color={'grey'} />} /> */}
     </>
   );
 

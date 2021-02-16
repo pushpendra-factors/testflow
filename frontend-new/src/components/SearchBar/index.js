@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import SearchModal from './SearchModal';
 import { SVG } from '../factorsComponents';
 import styles from './index.module.scss';
@@ -19,6 +19,18 @@ function SearchBar({ setQueryToState }) {
     setVisible(false);
   }, []);
 
+
+  useEffect(() => {
+    document.onkeydown = keydown;
+    function keydown(evt) {  
+      // cmd+K to trigger global search
+      if (evt.keyCode === 75) {   
+        setVisible(true); 
+      }
+    } 
+  }, []);
+
+
   const handleQueryClick = useCallback((query) => {
     if (history.location.pathname === '/analyse') {
       setQueryToState(query);
@@ -31,19 +43,18 @@ function SearchBar({ setQueryToState }) {
   }, [setQueryToState, history]);
 
   return (
-    <>
-      {!visible ? (
+    <> 
         <Input
           ref={inputRef}
           size="large"
-          placeholder="Lookup factors.ai"
+          placeholder="Search Factors ⌘K"
           prefix={(
-            <SVG name={'search'} size={24} color={'black'} />
+            <SVG name={'search'} size={16} color={'grey'} />
           )}
-          className={styles.searchBarBox}
+          // className={styles.searchBarBox}
+          className={'fa-global-search--input'}
           onFocus={handleFocus}
-        />
-      ) : null}
+        /> 
       <SearchModal
         visible={visible}
         setVisible={setVisible}

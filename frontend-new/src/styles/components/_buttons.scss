@@ -1,8 +1,8 @@
 
 .ant-btn {
-    font-family: 'Work Sans', sans-serif; 
+    font-family: $font-family;
     // height: auto;
-    border-radius: 8px;
+    border-radius: 5px;
     // padding: 8px 16px; 
 
     // border: 1px solid transparent; 
@@ -37,6 +37,14 @@
     
     svg{
         display: inline;
+        margin-right: 6px;
+    }
+
+    //anticon buttons
+    span.anticon{ 
+        svg{
+            margin-right: 0px; 
+        }
     }
     
     &.ant-btn-sm
@@ -98,20 +106,22 @@
     .anticon{
         vertical-align: 0;
     }
-    &.ant-btn-icon-only{
-        height: auto;
-        width: auto; 
-    }
+    // &.ant-btn-icon-only{
+    //     height: auto;
+    //     width: auto; 
+    // }
 
 }
 
-.ant-btn-lg {
-    max-width: 300px;
-    line-height: 1em;
+//commenting this because it breaks entire antd-large buttons. 
+// please use specific button-class if truncation is needed ++ Akhil
+// .ant-btn-lg {
+//     max-width: 300px;
+//     line-height: 1;
     
-    span {
-        max-width: 250px;
-        text-overflow: ellipsis;
-        overflow: hidden;
-    }
-}
+//     span {
+//         max-width: 250px;
+//         text-overflow: ellipsis;
+//         overflow: hidden;
+//     }
+// }

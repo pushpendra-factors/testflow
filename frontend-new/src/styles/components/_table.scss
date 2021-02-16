@@ -1,33 +1,33 @@
 .ant-table--custom
 {
     // table head
-    .ant-table-thead
-    { 
-        .ant-table-cell
-        {
-            background-color: transparent;
-            border-right: thin solid $fa-color--mono-2;
-            border-bottom: thin solid $fa-color--mono-3;
-            font-weight: $font-weight--bold;
-            font-size: 12px;
-            padding: 10px 16px;
-            &:last-of-type{ 
-                    border-right: thin solid transparent; 
+    // .ant-table-thead
+    // { 
+    //     .ant-table-cell
+    //     {
+    //         background-color: transparent;
+    //         border-right: thin solid $fa-color--mono-2;
+    //         border-bottom: thin solid $fa-color--mono-3;
+    //         font-weight: $font-weight--bold;
+    //         font-size: 12px;
+    //         padding: 10px 16px;
+    //         &:last-of-type{ 
+    //                 border-right: thin solid transparent; 
     
-            }
-        } 
-    }
-    // table body
-    .ant-table-tbody
-    {
-        .ant-table-cell
-        { 
-            border-bottom: thin solid $fa-color--mono-2;
-            font-weight: $font-weight--regular;
-            font-size: 16px;
-        }
+    //         }
+    //     } 
+    // }
+    // // table body
+    // .ant-table-tbody
+    // {
+    //     .ant-table-cell
+    //     { 
+    //         border-bottom: thin solid $fa-color--mono-2;
+    //         font-weight: $font-weight--regular;
+    //         font-size: 16px;
+    //     }
 
-    }
+    // }
 }
 
 .fa-table--basic
@@ -39,8 +39,9 @@
         { 
             font-weight: $font-weight--bold;
             font-size: 12px;
-            padding: 10px 12px; 
-        } 
+            padding: 11px 12px;
+            color: $fa-color--mono-5;
+        }  
     }
     // table body
     .ant-table-tbody
@@ -50,7 +51,8 @@
             border-bottom: thin solid $fa-color--mono-2;
             font-weight: $font-weight--regular;
             font-size: 14px;
-            padding: 4px 12px;
+            padding: 10px 12px;
+            color: $fa-color--mono-6;
         }
 
     }

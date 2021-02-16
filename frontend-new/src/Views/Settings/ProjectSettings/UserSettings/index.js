@@ -75,7 +75,7 @@ function UserSettings({
       dataIndex: 'name',
       key: 'name',
       render: (text) => <div className="flex items-center">
-        <Avatar src="assets/avatar/avatar.png" className={'mr-2'} size={32} />&nbsp; {text} </div>
+        <Avatar src="assets/avatar/avatar.png" className={'mr-2'} size={24} /><Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 ml-2'}> {text}</Text> </div>
     },
     {
       title: 'Email',

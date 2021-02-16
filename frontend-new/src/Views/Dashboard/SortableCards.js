@@ -7,6 +7,7 @@ import { updateDashboard } from "../../reducers/dashboard/services";
 import { getRequestForNewState } from "../../reducers/dashboard/utils";
 import { QUERY_TYPE_WEB } from "../../utils/constants";
 import WebsiteAnalytics from "./WebsiteAnalytics";
+import { Text } from 'factorsComponents';
 
 function SortableCards({
   setwidgetModal,
@@ -24,6 +25,13 @@ function SortableCards({
     (state) => state.dashboard
   );
 
+  const NoDataDashboard = () =>{
+    return (<div className={'flex flex-col justify-center fa-dashboard--no-data-container items-center'}>
+      <img src="assets/images/no-data.png" className={'mb-8'}/>
+      <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Add widgets to start monitoring.</Text>
+      <Text type={'title'} level={7} color={'grey'}  extraClass={'m-0'}>You can select any of the saved reports and add them to dashboard as widgets to monitor your metrics.</Text>
+    </div>)
+  }
   const onDrop = useCallback(
     async (newState) => {
       const body = getRequestForNewState(newState);
@@ -50,8 +58,7 @@ function SortableCards({
       savedQueries.findIndex(
         (sq) => sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_WEB
       ) > -1
-  );
-
+  ); 
   return (
     <>
       {activeUnits.length ? (
@@ -78,14 +85,15 @@ function SortableCards({
             );
           })}
         </ReactSortable>
-      ) : null}
-      {webAnalyticsUnits.length ? (
+      ) : (webAnalyticsUnits.length ? (
         <WebsiteAnalytics
           durationObj={durationObj}
           webAnalyticsUnits={webAnalyticsUnits}
           setwidgetModal={setwidgetModal}
         />
-      ) : null}
+      ) : <NoDataDashboard />) 
+      } 
+
     </>
   );
 }

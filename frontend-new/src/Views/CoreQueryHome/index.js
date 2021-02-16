@@ -78,6 +78,7 @@ const columns = [
     title: "Title of the Query",
     dataIndex: "title",
     key: "title",
+    render: (text) => (  <Text type={"title"} level={7} weight={'bold'}  extraClass={"m-0"} >{text}</Text> )
   },
   {
     title: "Created By",
@@ -85,7 +86,7 @@ const columns = [
     key: "author",
     render: (text) => (
       <div className="flex items-center">
-        <Avatar src="assets/avatar/avatar.png" className={"mr-2"} />
+        <Avatar src="assets/avatar/avatar.png" size={24} className={"mr-2"} />
         &nbsp; {text}{" "}
       </div>
     ),
@@ -351,81 +352,57 @@ function CoreQuery({
       <div className={"fa-container mt-24"}>
         <Row gutter={[24, 24]} justify="center">
           <Col span={20}>
-            <Text type={"title"} level={2} weight={"bold"} extraClass={"m-0"}>
+            <Text type={"title"} level={3} weight={"bold"} extraClass={"m-0"}>
               Analyse
             </Text>
             <Text
               type={"title"}
-              level={5}
+              level={6}
               weight={"regular"}
               color={"grey"}
               extraClass={"m-0"}
             >
-              Use these tools to Analyse and get to the bottom of User Behaviors
-              and Marketing Funnels
+              Use these techniques to Analyse and get a deeper understanding of User Behaviors and Marketing Funnels
             </Text>
           </Col>
         </Row>
         <Row gutter={[24, 24]} justify="center" className={"mt-10"}>
-          {coreQueryoptions.map((item, index) => {
-            return (
-              <Col span={4} key={index}>
-                <div
-                  onClick={() => setQueryTypeTab(item)}
-                  className="fai--custom-card flex justify-center items-center flex-col "
-                >
-                  <div className={"fai--custom-card--icon"}>
-                    <SVG name={item.icon} size={48} />{" "}
-                  </div>
-                  <div className="flex justify-start items-center flex-col before-hover">
-                    <Text
-                      type={"title"}
-                      level={3}
-                      weight={"bold"}
-                      extraClass={"fai--custom-card--title"}
-                    >
-                      {item.title}
-                    </Text>
-                  </div>
-                  <div className="flex justify-start items-center flex-col after-hover">
-                    <div
-                      className={
-                        "fai--custom-card--content flex-col flex justify-start items-center"
-                      }
-                    >
-                      <Text
-                        type={"title"}
-                        level={7}
-                        weight={"bold"}
-                        extraClass={"fai--custom-card--desc"}
+          <Col span={20} >
+            <div className={'flex'}>
+                {coreQueryoptions.map((item, index) => {
+                  return (
+                      <div
+                        onClick={() => setQueryTypeTab(item)}
+                        className="fai--custom-card-new flex flex-col "
                       >
-                        {item.desc}
-                      </Text>
-                      <a className={"fai--custom-card--cta"}>
-                        New Query <SVG name={"next"} size={20} />{" "}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </Col>
-            );
-          })}
+                        <div className={"fai--custom-card-new--top-section flex justify-center items-center"}>
+                            <SVG name={item.icon} size={40} />
+                        </div>
+                        <div className="fai--custom-card-new--bottom-section p-4">
+                          <Text type={"title"} level={7} weight={"bold"} extraClass={'m-0'}> {item.title} </Text>
+                          <Text type={"title"} level={7} color={'grey'} extraClass={'m-0 mt-1 fai--custom-card-new--desc'}> {item.desc} </Text>
+                        </div> 
+                      </div>
+                  );
+                })}
+            </div>
+          </Col>
         </Row>
 
-        <Row justify="center" className={"mt-12"}>
+        <Row justify="center" className={"mt-8"}>
           <Col span={20}>
             <Row className={"flex justify-between items-center"}>
               <Col span={10}>
                 <Text
                   type={"title"}
-                  level={4}
+                  level={6}
                   weight={"bold"}
-                  extraClass={"m-0"}
+                  extraClass={"m-0 mb-2"}
                 >
-                  Saved Queries
+                  Saved Reports
                 </Text>
               </Col>
-              <Col span={5}>
+              {/* <Col span={5}>
                 <div className={"flex flex-row justify-end items-end "}>
                   <Button
                     icon={<SVG name={"help"} size={12} color={"grey"} />}
@@ -434,7 +411,7 @@ function CoreQuery({
                     Learn More
                   </Button>
                 </div>
-              </Col>
+              </Col> */}
             </Row>
           </Col>
         </Row>
@@ -449,7 +426,7 @@ function CoreQuery({
                 };
               }}
               loading={queriesState.loading}
-              className="ant-table--custom"
+              className="fa-table--basic"
               columns={columns}
               dataSource={data}
               pagination={false}

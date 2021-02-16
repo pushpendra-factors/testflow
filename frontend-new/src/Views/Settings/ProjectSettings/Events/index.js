@@ -69,7 +69,7 @@ const columns = [
             <div className={'mt-6'}>
                 <Tabs defaultActiveKey="1" >
                             <TabPane tab="Smart Events" key="1">
-                                    <Table className="ant-table--custom mt-4" 
+                                    <Table className="fa-table--basic mt-4" 
                                     columns={columns} 
                                     dataSource={smartEvents} 
                                     pagination={false}

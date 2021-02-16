@@ -147,7 +147,7 @@ function ExpandableView({
   if (widgetModalLoading) {
     content = (
       <div className="flex justify-center items-center w-full min-h-screen">
-        <Spin size="small" />
+        <Spin  />
       </div>
     );
   } else if (unit) {
@@ -169,10 +169,13 @@ function ExpandableView({
       footer={null}
       centered={false}
       zIndex={1015}
-      mask={false}
+      mask={true}
       closable={false}
       onCancel={() => setwidgetModal(false)}
-      className={`w-full inset-0 ${styles.fullModal}`}
+      // className={`w-full inset-0 ${styles.fullModal}`}
+      className={`fa-modal--regular fa-modal--quick-view fa-modal--slideInDown`}
+      transitionName=""
+      maskTransitionName=""
     >
       {content}
     </Modal>

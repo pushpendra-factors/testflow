@@ -21,7 +21,7 @@ const SavedGoals = ({goals, fetchGoalInsights,  factors_models, agents, saveGoal
       return (
       <Menu>
         <Menu.Item key="0" onClick={() => confirmRemove(values)}>
-          <a>Remove</a>
+          <a>Delete Goal</a>
         </Menu.Item> 
       </Menu>
       );
@@ -32,7 +32,7 @@ const SavedGoals = ({goals, fetchGoalInsights,  factors_models, agents, saveGoal
         title: 'Saved Goals',
         dataIndex: 'actions',
         key: 'actions',
-        render: (goal) => <Text type={'title'} level={6} extraClass={'cursor-pointer m-0'} onClick={()=>getInsights(goal.project_id,goal.rule, goal.name)} >{goal.name}</Text>
+        render: (goal) => <Text type={'title'} level={7} weight={'bold'} extraClass={'cursor-pointer m-0'} onClick={()=>getInsights(goal.project_id,goal.rule, goal.name)} >{goal.name}</Text>
       },
       {
         title: 'Created By',
@@ -40,7 +40,7 @@ const SavedGoals = ({goals, fetchGoalInsights,  factors_models, agents, saveGoal
         key: 'author',
         render: (text) => <div className="flex items-center">
           {text === "System Generated" ? <Text type={'title'} level={7} color={'grey'} extraClass={'cursor-pointer m-0'} >{`System Generated`}</Text> : <>
-            <Avatar src="assets/avatar/avatar.png" className={'mr-2'} /><Text type={'title'} level={6} extraClass={'cursor-pointer m-0 ml-2'} >{text}</Text>
+            <Avatar src="assets/avatar/avatar.png" className={'mr-2'} size={24} /><Text type={'title'} level={6} extraClass={'cursor-pointer m-0 ml-2'} >{text}</Text>
             </>
           }
             </div>
@@ -51,7 +51,7 @@ const SavedGoals = ({goals, fetchGoalInsights,  factors_models, agents, saveGoal
         key: 'actions',
         render: (values) => (
           <Dropdown overlay={() => menu(values)} trigger={['hover']}>
-            <Button size={'large'} type="text" icon={<MoreOutlined />} />
+            <Button type="text" icon={<MoreOutlined />} />
           </Dropdown>
         )
       }
@@ -128,7 +128,7 @@ const SavedGoals = ({goals, fetchGoalInsights,  factors_models, agents, saveGoal
 
 
   return (
-            <Table loading={loadingTable} className="ant-table--custom mt-8" columns={columns} dataSource={dataSource} pagination={false} 
+            <Table loading={loadingTable} className="fa-table--basic mt-8" columns={columns} dataSource={dataSource} pagination={false} 
  
         />
   ); 

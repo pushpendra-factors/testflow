@@ -44,6 +44,10 @@
         animation-name: fa-fadeInDown; 
         animation-duration: 0.2s; 
     }
+    &.fa-modal--slideInUp{
+        animation-name: fa-slideInUp; 
+        animation-duration: 0.2s; 
+    }
     .ant-modal-content{
         border-radius:12px;
     }
@@ -85,4 +89,14 @@ outline: none !important;
 .fa-notification--zindex
 {
     z-index: 3000 !important;
+}
+
+.fa-modal--quick-view{ 
+    top: 0; 
+    left: 0;
+    right: 0; 
+    height: 100%;
+    width: 100% !important;
+    padding: 30px 32px;   
+    transform-origin: 0 !important; 
 }

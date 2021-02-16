@@ -13,7 +13,7 @@ import {getFirstDayOfLastWeek, getLastDayOfLastWeek,
 const FaDatepicker = ({ placement,
     onSelect, customPicker, presetRange,
     weekPicker, monthPicker, quarterPicker, yearPicker,
-    range
+    range, buttonSize
 
 }) => {
 
@@ -244,7 +244,7 @@ const FaDatepicker = ({ placement,
             {<>
                 <Dropdown overlayClassName={'fa-custom-datepicker--dropdown'} overlay={menu} placement={placement} trigger={!showDatePicker ? ['click'] : []} >
 
-                    <Button size={'large'}><SVG name={'Calendar'} extraClass={'mr-1'} />
+                    <Button  size={buttonSize? buttonSize : 'large'}><SVG name={'calendar'} size={16} extraClass={'mr-1'} />
                         {!showDatePicker && range ? displayRange(range) : null}
                         {!showDatePicker && !range ? `Choose Date` : null}
                         {showDatePicker && <>

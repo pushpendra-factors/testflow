@@ -26,7 +26,7 @@ const ModalHeader = (SubInsightsData,handleClose) => {
         </div>
         <div className={'flex justify-end items-center'}>
           <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >{`${SubInsightsData.factors_insights_percentage}%`}</Text>
-          {SubInsightsData.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={24} /> : <SVG name={'spikedown'} size={24} />}
+          {SubInsightsData.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={32} color={'green'}/> : <SVG name={'spikedown'} size={32} color={'red'} />}
           <Button size={'large'} type="text" className={'ml-2'} onClick={handleClose}><SVG name="times"></SVG></Button>
         </div>
       </div>
@@ -158,7 +158,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                           <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 fa-insights-box--multiplier pt-2'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
                                           <Text type={'title'} color={'grey'} level={7} extraClass={'m-0 fa-insights-box--label'} >{dataItem.factors_multiplier_increase_flag ? `Lift`: `Drop`}</Text>  
                                         </div>
-                                        {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
+                                        {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={32} color={'green'}/> : <SVG name={'spikedown'} size={32} color={'red'} />}
                                       </div> 
                                   </div>
 
@@ -261,7 +261,7 @@ const SubInsightItem = ({ SubInsightsData, showModal, handleClose, ParentData=nu
                                           <Text type={'title'} level={5} color={'grey'} weight={'bold'} extraClass={'m-0 fa-insights-box--multiplier pt-2'} >{`${dataItem.factors_insights_multiplier}x`}</Text>
                                           <Text type={'title'} color={'grey'} level={7} extraClass={'m-0 fa-insights-box--label'} >{dataItem.factors_multiplier_increase_flag ? `Lift`: `Drop`}</Text> 
                                         </div>
-                                        {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={42} /> : <SVG name={'spikedown'} size={42} />}
+                                        {dataItem.factors_multiplier_increase_flag ? <SVG name={'spikeup'} size={32} color={'green'}/> : <SVG name={'spikedown'} size={32} color={'red'} />}
                                       </div> 
                                   </div>
 

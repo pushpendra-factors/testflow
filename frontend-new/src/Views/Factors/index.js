@@ -92,8 +92,8 @@ const Factors = ({
               <Col span={16}>
                   <Row gutter={[24, 24]} justify="center">
                       <Col span={20}>
-                          <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text>
-                          <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically tracks website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
+                          <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} >Explain</Text> 
+                          <Text type={'title'} level={6} extraClass={'m-0 mt-2'} color={"grey"} >Periodically tracks website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
                       </Col>
                       <Col span={20}>
                           <Button size={'large'} type={'primary'} onClick={() => setGoalDrawer(true)}>Create a New Goal</Button>

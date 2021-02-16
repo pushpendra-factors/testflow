@@ -1,12 +1,19 @@
 /* eslint-disable */
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Layout, Breadcrumb, Row, Col, Divider, Button
+  Layout, Breadcrumb, Row, Col, Divider, Button, Radio
 } from 'antd';
-import { PoweroffOutlined } from '@ant-design/icons';
+import { PoweroffOutlined, DownloadOutlined } from '@ant-design/icons';
 
 function ButtonLib() {
   const { Content } = Layout;
+  const [size, setSize] = useState(null); 
+
+  const handleSizeChange = (e) => {
+    setSize(e.target.value);
+  };
+
+
   return (
     <>
       <div className="mt-20 mb-8">
@@ -86,6 +93,39 @@ function ButtonLib() {
         </Col>
         <Col span={4}>
           <Button  size="medium" shape="circle" type="link" icon={<PoweroffOutlined />}/>
+        </Col>
+      </Row>
+
+      <Row className={'my-6'}>
+        <Col span={24}>
+            <Radio.Group value={size} onChange={handleSizeChange}>
+            <Radio.Button value="large">Large</Radio.Button>
+            <Radio.Button value="default">Default</Radio.Button>
+            <Radio.Button value="small">Small</Radio.Button>
+          </Radio.Group>
+          <br />
+          <br />
+          <Button type="primary" size={size}>
+            Primary
+          </Button>
+          <Button size={size}>Default</Button>
+          <Button type="dashed" size={size}>
+            Dashed
+          </Button>
+          <br />
+          <Button type="link" size={size}>
+            Link
+          </Button>
+          <br />
+          <Button type="primary" icon={<DownloadOutlined />} size={size} />
+          <Button type="primary" shape="circle" icon={<DownloadOutlined />} size={size} />
+          <Button type="primary" shape="round" icon={<DownloadOutlined />} size={size} />
+          <Button type="primary" shape="round" icon={<DownloadOutlined />} size={size}>
+            Download
+          </Button>
+          <Button type="primary" icon={<DownloadOutlined />} size={size}>
+            Download
+          </Button>
         </Col>
       </Row>
 
