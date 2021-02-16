@@ -54,6 +54,9 @@ const (
 
 var selectableMetricsForAdwords = []string{
 	"conversion",
+	"click_through_rate",
+	"conversion_rate",
+	"cost_per_click",
 	"search_impression_share",
 	"search_click_share",
 	"search_top_impression_share",

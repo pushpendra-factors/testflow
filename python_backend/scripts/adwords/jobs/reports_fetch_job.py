@@ -6,11 +6,11 @@ import operator
 import scripts
 from lib.adwords.oauth_service.fetch_service import FetchService
 from lib.utils.csv import CsvUtil
+from lib.utils.format import FormatUtil
 from lib.utils.string import StringUtil
 from lib.utils.time import TimeUtil
 from .base_job import BaseJob
-from .. import CAMPAIGNS, ADS, AD_GROUPS, CUSTOMER_ACCOUNT_PROPERTIES, CAMPAIGN_PERFORMANCE_REPORT, \
-    AD_GROUP_PERFORMANCE_REPORT, KEYWORD_PERFORMANCE_REPORT
+from .. import CAMPAIGNS, ADS, AD_GROUPS, CUSTOMER_ACCOUNT_PROPERTIES
 
 
 # Note: If the number of custom paths exceed 5 in the subClasses. Move it to strategic pattern.
@@ -91,11 +91,6 @@ class ReportsFetch(BaseJob):
         return non_report_related and last_timestamp != adwords_timestamp_today
 
     @staticmethod
-    def eligible_for_extract_schema_changed(doc_type, extract_schema_changed):
-        extract_schemas_changed_reports = doc_type in [CAMPAIGN_PERFORMANCE_REPORT, AD_GROUP_PERFORMANCE_REPORT, KEYWORD_PERFORMANCE_REPORT]
-        return extract_schemas_changed_reports and extract_schema_changed
-
-    @staticmethod
     def get_next_sync_infos_for_older_date_range(last_timestamp, last_sync):
         next_sync_info = []
         start_timestamp = ReportsFetch.get_next_start_time_for_historical_data(last_timestamp)
@@ -127,9 +122,9 @@ class ReportsFetch(BaseJob):
         return TimeUtil.get_timestamp_before_days(ReportsFetch.MAX_LOOK_BACK_DAYS)
 
     @staticmethod
-    def get_transformed_value_for_divisionoperator(row, field1, field2, operation):
-        field1_value = row.get(field1, ReportsFetch.DEFAULT_NUMERATOR_FLOAT)
-        field2_value = row.get(field2, ReportsFetch.DEFAULT_DENOMINATOR_FLOAT)
+    def get_transformed_value_for_division_operator(row, field1, field2, operation):
+        field1_value = FormatUtil.get_numeric_from_percentage_string(row.get(field1, ReportsFetch.DEFAULT_NUMERATOR_FLOAT))
+        field2_value = FormatUtil.get_numeric_from_percentage_string(row.get(field2, ReportsFetch.DEFAULT_DENOMINATOR_FLOAT))
         if field1_value == 0 or field2_value == 0:
             return ReportsFetch.DEFUALT_FLOAT
         else:
