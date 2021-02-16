@@ -232,7 +232,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, err
 	}
 
-	addWebsiteVisitorsInfo(effectiveFrom, effectiveTo, attributionData, sessions, len(query.LinkedEvents))
+	addWebsiteVisitorsInfo(query.From, query.To, attributionData, sessions, len(query.LinkedEvents))
 
 	// 5. Add the performance information
 	currency, err := pg.AddPerformanceReportInfo(projectID, attributionData, query.From, query.To,
@@ -496,7 +496,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 	query *model.AttributionQuery, adwordsAccountId string) (map[string]map[string]model.RangeTimestamp, []string, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
-	effectiveFrom := query.From
+	effectiveFrom := lookbackAdjustedFrom(query.From, query.LookbackDays)
 	effectiveTo := query.To
 	// extend the campaign window for engagement based attribution
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
@@ -933,7 +933,7 @@ func updateSessionsMapWithCoalesceID(attributedSessionsByUserId map[string]map[s
 }
 
 // Maps the count distinct users session to campaign id and adds it to attributionData
-func addWebsiteVisitorsInfo(from int64, to int64, attributionData map[string]*model.AttributionData,
+func addWebsiteVisitorsInfo(queryFrom int64, queryTo int64, attributionData map[string]*model.AttributionData,
 	attributedSessionsByUserId map[string]map[string]model.RangeTimestamp, linkedEventsCount int) {
 	// creating an empty linked events row
 	emptyLinkedEventRow := make([]float64, 0)
@@ -946,7 +946,8 @@ func addWebsiteVisitorsInfo(from int64, to int64, attributionData map[string]*mo
 		for attributionId, rangeTimestamp := range attributionIdMap {
 
 			// only count sessions that happened during attribution period
-			if rangeTimestamp.MaxTimestamp >= from && rangeTimestamp.MaxTimestamp <= to {
+			if rangeTimestamp.MaxTimestamp >= queryFrom && rangeTimestamp.MaxTimestamp <= queryTo ||
+				rangeTimestamp.MinTimestamp >= queryFrom && rangeTimestamp.MinTimestamp <= queryTo {
 
 				if _, ok := attributionData[attributionId]; !ok {
 					attributionData[attributionId] = &model.AttributionData{}
