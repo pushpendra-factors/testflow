@@ -6,101 +6,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/model/store/postgres"
 	U "factors/util"
 )
-
-func getNextSessionInfoFromDB(projectID uint64, withSession bool,
-	sessionEventNameId uint64, maxLookbackTimestamp int64) (int64, int) {
-
-	sessionExistStr := "NOT NULL"
-	startTimestampAggrFunc := "max"
-	if !withSession {
-		sessionExistStr = "NULL"
-		startTimestampAggrFunc = "min"
-	}
-	selectStmnt := fmt.Sprintf("%s(timestamp) as start_timestamp",
-		startTimestampAggrFunc)
-
-	db := C.GetServices().Db
-	query := db.Table("events").
-		Where("project_id = ? AND event_name_id != ?", projectID, sessionEventNameId).
-		Where(fmt.Sprintf("session_id IS %s AND properties->>'%s' IS NULL",
-			sessionExistStr, U.EP_SKIP_SESSION)).
-		Select(selectStmnt)
-
-	if maxLookbackTimestamp > 0 {
-		query = query.Where("timestamp > ?", maxLookbackTimestamp)
-	}
-
-	rows, err := query.Rows()
-	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return 0, http.StatusNotFound
-		}
-
-		log.WithField("project_id", projectID).WithError(err).
-			Error("Failed to get next session start timestamp for project.")
-		return 0, http.StatusInternalServerError
-	}
-	defer rows.Close()
-
-	var startTimestamp *int64
-	for rows.Next() {
-		err = rows.Scan(&startTimestamp)
-		if err != nil {
-			log.WithError(err).Error("Failed to read next session start timestamp.")
-			return 0, http.StatusInternalServerError
-		}
-	}
-
-	if startTimestamp == nil {
-		return 0, http.StatusNotFound
-	}
-
-	return *startTimestamp, http.StatusFound
-}
-
-func getLastSessionEventTimestamp(projectID uint64, sessionEventNameID uint64) (int64, int) {
-	logCtx := log.WithField("project_id", projectID)
-
-	// This is a faster query.
-	// ORDER BY project_id, event_name_id, timestamp DESC is used to instead of
-	// MIN to avoid ordering and use the ordered index on that column.
-	db := C.GetServices().Db
-	query := db.Raw("SELECT timestamp FROM events WHERE project_id = ? AND event_name_id = ? ORDER BY project_id, event_name_id, timestamp DESC LIMIT 1",
-		projectID, sessionEventNameID)
-	rows, err := query.Rows()
-	if err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return 0, http.StatusNotFound
-		}
-
-		logCtx.WithError(err).Error("SQL Query failed")
-		return 0, http.StatusInternalServerError
-	}
-	defer rows.Close()
-
-	var startTimestamp *int64
-	for rows.Next() {
-		err = rows.Scan(&startTimestamp)
-		if err != nil {
-			log.WithError(err).Error("Failed to read on get last event timestamp.")
-			return 0, http.StatusInternalServerError
-		}
-	}
-
-	if startTimestamp == nil {
-		return 0, http.StatusNotFound
-	}
-
-	return *startTimestamp, http.StatusFound
-}
 
 func getNextSessionStartTimestamp(projectID uint64, maxLookbackTimestamp int64) (int64, int) {
 	logCtx := log.WithField("project_id", projectID)
@@ -123,16 +36,16 @@ func getNextSessionStartTimestamp(projectID uint64, maxLookbackTimestamp int64) 
 	}
 
 	// Using previous initial query to build next session_info to initialize the project level metadata.
-	oldUsersStartTimestamp, errCode := getNextSessionInfoFromDB(projectID, true,
-		eventName.ID, maxLookbackTimestamp)
+	oldUsersStartTimestamp, errCode := postgres.GetStore().GetNextSessionEventInfoFromDB(
+		projectID, true, eventName.ID, maxLookbackTimestamp)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to get next session start for users with session already.")
 		return 0, http.StatusInternalServerError
 	}
 	startTimestamp := oldUsersStartTimestamp
 
-	newUsersStartTimestamp, errCode := getNextSessionInfoFromDB(projectID, false,
-		eventName.ID, maxLookbackTimestamp)
+	newUsersStartTimestamp, errCode := postgres.GetStore().GetNextSessionEventInfoFromDB(
+		projectID, false, eventName.ID, maxLookbackTimestamp)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to get next session start new users.")
 		return 0, http.StatusInternalServerError
@@ -146,7 +59,7 @@ func getNextSessionStartTimestamp(projectID uint64, maxLookbackTimestamp int64) 
 	}
 
 	// Use last session event timestamp, if no event on last 6 hours.
-	lastEventTimestamp, errCode := getLastSessionEventTimestamp(projectID, eventName.ID)
+	lastEventTimestamp, errCode := postgres.GetStore().GetLastSessionEventTimestamp(projectID, eventName.ID)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to last session event timestamp")
 		return 0, http.StatusInternalServerError
@@ -190,33 +103,13 @@ func getAndUpdateNextSessionStartTimestamp(projectID uint64, maxLookbackTimestam
 		return http.StatusInternalServerError
 	}
 
-	errCode = updateNextSessionStartTimestampForProject(projectID, startTimestamp)
+	errCode = postgres.GetStore().FillNextSessionStartTimestampForProject(
+		projectID, startTimestamp)
 	if errCode != http.StatusAccepted {
 		return http.StatusInternalServerError
 	}
 
 	return http.StatusOK
-}
-
-func updateNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int {
-	logCtx := log.WithField("project_id", projectID).WithField("timestamp", timestamp)
-
-	if projectID == 0 || timestamp == 0 {
-		logCtx.WithField("project_id", projectID).WithField("timestamp", 0).
-			Error("Invalid args to method.")
-		return http.StatusBadRequest
-	}
-
-	query := fmt.Sprintf(`UPDATE projects SET jobs_metadata = '{"%s": %d}' WHERE id = %d`,
-		model.JobsMetadataKeyNextSessionStartTimestamp, timestamp, projectID)
-	db := C.GetServices().Db
-	err := db.Exec(query).Error
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to update next session start timestamp for project.")
-		return http.StatusInternalServerError
-	}
-
-	return http.StatusAccepted
 }
 
 func main() {

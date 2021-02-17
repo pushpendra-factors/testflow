@@ -39,6 +39,7 @@ type Model interface {
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
 	UpdateAgentInformation(agentUUID, firstName, lastName, phone string) int
 	UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int
+	GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int)
 
 	// analytics
 	ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error)
@@ -167,6 +168,8 @@ type Model interface {
 	OverwriteEventPropertiesByID(projectId uint64, id string, newEventProperties *postgres.Jsonb) int
 	AddSessionForUser(projectId uint64, userId string, userEvents []model.Event, bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId uint64) (int, int, bool, int, int)
 	GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int)
+	GetAllEventsForSessionCreationAsUserEventsMap(projectId, sessionEventNameId uint64, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
+	GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from, to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int)
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
@@ -261,6 +264,7 @@ type Model interface {
 	GetAllProjectIDs() ([]uint64, int)
 	GetNextSessionStartTimestampForProject(projectID uint64) (int64, int)
 	UpdateNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int
+	GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[uint64]bool) (projectIds []uint64, errCode int)
 
 	// queries
 	CreateQuery(projectID uint64, query *model.Queries) (*model.Queries, int, string)
@@ -277,7 +281,7 @@ type Model interface {
 	// report
 	CreateReport(report *model.Report) (*model.Report, int)
 	DeleteReportByDashboardID(projectID, dashboardID uint64) int
-	GetReportByID(id uint64) (*model.Report, int)
+	GetReportByID(projectID, id uint64) (*model.Report, int)
 	GetReportsByProjectID(projectID uint64) ([]*model.Report, int)
 	GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]*model.ReportDescription, int)
 	GenerateReport(projectID, dashboardID uint64, dashboardName string, reportType string, intervalBeforeThat, interval model.Interval) (*model.Report, int)
@@ -292,6 +296,7 @@ type Model interface {
 	CreateSalesforceDocumentByAction(projectID uint64, document *model.SalesforceDocument, action model.SalesforceAction) int
 	GetSyncedSalesforceDocumentByType(projectID uint64, ids []string, docType int) ([]model.SalesforceDocument, int)
 	GetSalesforceObjectValuesByPropertyName(ProjectID uint64, objectType string, propertyName string) []interface{}
+	GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int) ([]model.SalesforceDocument, int)
 
 	// scheduled_task
 	CreateScheduledTask(task *model.ScheduledTask) int

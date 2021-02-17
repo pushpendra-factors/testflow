@@ -531,3 +531,30 @@ func (pg *Postgres) GetAllSalesforceProjectSettings() ([]model.SalesforceProject
 
 	return salesforceProjectSettings, http.StatusFound
 }
+
+func (pg *Postgres) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings() (map[uint64][]string, error) {
+	db := C.GetServices().Db
+
+	projectSettings := make([]model.ProjectSetting, 0, 0)
+	mapOfProjectToCustomerIds := make(map[uint64][]string)
+
+	err := db.Table("project_settings").Where("int_adwords_enabled_agent_uuid IS NOT NULL AND int_adwords_enabled_agent_uuid != ''").Find(&projectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
+		return mapOfProjectToCustomerIds, err
+	}
+	for _, projectSetting := range projectSettings {
+		projectID := projectSetting.ProjectId
+		if projectSetting.IntAdwordsCustomerAccountId != nil {
+			var cleanAdwordsAccountIds []string
+			adwordsAccoundIDs := strings.Split(*projectSetting.IntAdwordsCustomerAccountId, ",")
+			for _, accountID := range adwordsAccoundIDs {
+				adwordsCustomerAccountID := strings.Replace(accountID, "-", "", -1)
+				adwordsCustomerAccountID = strings.TrimSpace(adwordsCustomerAccountID)
+				cleanAdwordsAccountIds = append(cleanAdwordsAccountIds, adwordsCustomerAccountID)
+			}
+			mapOfProjectToCustomerIds[projectID] = cleanAdwordsAccountIds
+		}
+	}
+	return mapOfProjectToCustomerIds, nil
+}

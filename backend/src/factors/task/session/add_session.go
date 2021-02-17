@@ -2,14 +2,12 @@ package session
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
-	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 )
@@ -23,185 +21,6 @@ const (
 	StatusNotModified = "not_modified"
 	StatusFailed      = "failed"
 )
-
-/*
-Get users,
-without session - where session_id null, select user_id, min(timestamp) - for session to start from first event.
-with session - where session_id not null, select user_id, max(timestamp) - for session to start from last
-event of user, with session, so same session could be continued based on conditions.
-*/
-func getNextSessionInfoFromDB(projectId uint64, withSession bool, sessionEventNameId uint64,
-	maxLookbackTimestamp, hardLimitTimestamp int64) ([]NextSessionInfo, int) {
-
-	var nextSessionInfoList []NextSessionInfo
-
-	sessionExistStr := "NOT NULL"
-	startTimestampAggrFunc := "max"
-	if !withSession {
-		sessionExistStr = "NULL"
-		startTimestampAggrFunc = "min"
-	}
-	selectStmnt := fmt.Sprintf("user_id, %s(timestamp) as start_timestamp",
-		startTimestampAggrFunc)
-
-	db := C.GetServices().Db
-	query := db.Table("events").Group("user_id").
-		Where("project_id = ? AND event_name_id != ?", projectId, sessionEventNameId).
-		Where(fmt.Sprintf("session_id IS %s AND properties->>'%s' IS NULL",
-			sessionExistStr, U.EP_SKIP_SESSION)).
-		Select(selectStmnt)
-
-	if maxLookbackTimestamp > 0 {
-		query = query.Where("timestamp > ?", maxLookbackTimestamp)
-	}
-
-	if hardLimitTimestamp > 0 {
-		query = query.Where("timestamp <= ?", hardLimitTimestamp)
-	}
-
-	err := query.Find(&nextSessionInfoList).Error
-	if err != nil {
-		log.WithError(err).Errorf("Failed to get next session info with session %s.", sessionExistStr)
-		return nextSessionInfoList, http.StatusInternalServerError
-	}
-
-	if len(nextSessionInfoList) == 0 {
-		return nextSessionInfoList, http.StatusNotFound
-	}
-
-	return nextSessionInfoList, http.StatusFound
-}
-
-/*
-getNextSessionInfo - Returns user_id and start_timestamp of events for next session creation.
-Users with session already (within max_lookback, if given) will have a start_timestamp of last event with session.
-Users without session already (within max_lookback, if given) will have a start_timestamp of first event.
-*/
-func getNextSessionInfo(projectId, sessionEventNameId uint64,
-	maxLookbackTimestamp, hardLimitTimestamp int64) ([]NextSessionInfo, int) {
-
-	logCtx := log.WithFields(log.Fields{"project_id": projectId,
-		"max_lookback_timestamp": maxLookbackTimestamp})
-	startTimestamp := U.TimeNowUnix()
-	logCtx.Info("Started getting next session info.")
-
-	// new users.
-	nextSessionInfoList, status := getNextSessionInfoFromDB(projectId, false,
-		sessionEventNameId, maxLookbackTimestamp, hardLimitTimestamp)
-	if status != http.StatusFound {
-		return nextSessionInfoList, status
-	}
-
-	// users without session.
-	usersWithoutSession := make(map[string]int)
-	for i, nsi := range nextSessionInfoList {
-		usersWithoutSession[nsi.UserId] = i
-	}
-
-	oldUsersNextSessionInfo, status := getNextSessionInfoFromDB(projectId, true,
-		sessionEventNameId, maxLookbackTimestamp, hardLimitTimestamp)
-	if status == http.StatusInternalServerError {
-		return nextSessionInfoList, status
-	}
-
-	// override without_session info with with_session info.
-	// only if with_session info has new events without session (part of new_user_map).
-	for oni := range oldUsersNextSessionInfo {
-		if nni, exists := usersWithoutSession[oldUsersNextSessionInfo[oni].UserId]; exists {
-			// This is to avoid having start_timestamp from with_session info,
-			// which older than a day but with a new event (from without_session info)
-			// lesser than an hour.
-			// Avoiding this will keep min among start_timestamp low, which is start
-			// timestamp for events download.
-			diff := nextSessionInfoList[nni].StartTimestamp - oldUsersNextSessionInfo[oni].StartTimestamp
-			if diff <= model.NewUserSessionInactivityInSeconds {
-				nextSessionInfoList[nni] = oldUsersNextSessionInfo[oni]
-			}
-		}
-	}
-
-	logCtx = logCtx.WithField("next_session_info_list_size", len(nextSessionInfoList))
-
-	endTimestamp := U.TimeNowUnix()
-	timeTakenInMins := (endTimestamp - startTimestamp) / 60
-	logCtx = logCtx.WithField("time_taken_in_mins", timeTakenInMins)
-	if timeTakenInMins > 3 {
-		logCtx.Error("Too much time taken for getting next session info.")
-	} else {
-		logCtx.Info("Got next session info.")
-	}
-
-	return nextSessionInfoList, http.StatusFound
-}
-
-// getAllEventsAsUserEventsMap - Returns a map of user:[events...] withing given period,
-// excluding session event and event with session_id.
-func getAllEventsAsUserEventsMap(projectId, sessionEventNameId uint64,
-	startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int) {
-
-	logCtx := log.WithFields(log.Fields{"project_id": projectId,
-		"start_timestamp": startTimestamp, "end_timestamp": endTimestamp})
-
-	var userEventsMap map[string][]model.Event
-	var events []model.Event
-	if startTimestamp == 0 || endTimestamp == 0 {
-		logCtx.Error("Invalid start_timestamp or end_timestamp.")
-		return &userEventsMap, 0, http.StatusInternalServerError
-	}
-
-	queryStartTime := U.TimeNowUnix()
-	db := C.GetServices().Db
-	// Ordered by timestamp, created_at to fix the order for events with same
-	// timestamp, as event timestamp is in seconds. This fixes the invalid first
-	// event used for enrichment.
-	excludeSkipSessionCondition := fmt.Sprintf("(properties->>'%s' IS NULL OR properties->>'%s' = ?)",
-		U.EP_SKIP_SESSION, U.EP_SKIP_SESSION)
-	if err := db.Order("timestamp, created_at ASC").
-		Where("project_id = ? AND event_name_id != ? AND timestamp BETWEEN ? AND ?"+" AND "+excludeSkipSessionCondition,
-			projectId, sessionEventNameId, startTimestamp, endTimestamp, false).
-		Find(&events).Error; err != nil {
-
-		logCtx.WithError(err).Error("Failed to get all events of project.")
-		return &userEventsMap, 0, http.StatusInternalServerError
-	}
-
-	if len(events) == 0 {
-		return &userEventsMap, 0, http.StatusNotFound
-	}
-
-	queryTimeInSecs := U.TimeNowUnix() - queryStartTime
-	logCtx = logCtx.WithField("no_of_events", len(events)).
-		WithField("time_taken_in_secs", queryTimeInSecs)
-
-	if queryTimeInSecs >= (2 * 60) {
-		logCtx.Error("Too much time taken to download events on get_all_events_as_user_map.")
-	}
-
-	userEventsMap = make(map[string][]model.Event)
-	for i := range events {
-		if _, exists := userEventsMap[events[i].UserId]; !exists {
-			userEventsMap[events[i].UserId] = make([]model.Event, 0, 0)
-		} else {
-			// Event with session should be added as first event, if available.
-			// To support continuation of the session.
-			currentUserEventHasSession := events[i].SessionId != nil
-			firstUserEventHasSession := userEventsMap[events[i].UserId][0].SessionId != nil
-			userHasNoSessionEvent := firstUserEventHasSession && len(userEventsMap[events[i].UserId]) > 1
-			if !userHasNoSessionEvent && firstUserEventHasSession && currentUserEventHasSession {
-				// Add current event as first event.
-				userEventsMap[events[i].UserId][0] = events[i]
-				continue
-			}
-		}
-
-		userEventsMap[events[i].UserId] = append(userEventsMap[events[i].UserId], events[i])
-	}
-
-	logCtx.WithField("no_of_users", len(userEventsMap)).
-		Info("Got all events on get_all_events_as_user_map.")
-
-	return &userEventsMap, len(events), http.StatusFound
-}
 
 // addSessionByProjectId - Adds session to all users of project.
 func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestamp,
@@ -248,7 +67,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 		eventsDownloadEndTimestamp = U.TimeNowUnix() - bufferTimeBeforeSessionCreateInSecs
 	}
 
-	userEventsMap, noOfEventsDownloaded, errCode := getAllEventsAsUserEventsMap(projectId,
+	userEventsMap, noOfEventsDownloaded, errCode := store.GetStore().GetAllEventsForSessionCreationAsUserEventsMap(projectId,
 		sessionEventName.ID, eventsDownloadStartTimestamp, eventsDownloadEndTimestamp)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to get user events map on add session for project.")

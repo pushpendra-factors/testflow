@@ -21,6 +21,7 @@ type SessionFields struct {
 	campaign        string
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE. EXPERIMENTAION METHOD. NOT READ FOR PRODUCTION.
 func getSessionEvents(
 	db *gorm.DB, projectId uint64, startTime int64, endTime int64) (map[string]*SessionFields, error) {
 	var sessionEvents = make(map[string]*SessionFields)
@@ -61,6 +62,7 @@ func getSessionEvents(
 	return sessionEvents, nil
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE. EXPERIMENTAION METHOD. NOT READ FOR PRODUCTION.
 func getAllEvents(db *gorm.DB, projectId uint64, projectDomain string, startTime int64, endTime int64) (
 	map[string]uint, error) {
 	logctx := log.WithFields(log.Fields{"projectId": projectId})
@@ -180,6 +182,7 @@ func main() {
 		log.Fatal("Failed to pull events. Init failed.")
 	}
 	db := C.GetServices().Db
+	defer db.Close()
 
 	if *projectIdFlag <= 0 {
 		log.Fatal("Failed to pull events. Invalid project_id.")

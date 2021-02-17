@@ -4,17 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	U "factors/util"
 	"fmt"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
-
-type CacheEvent struct {
-	ID        string `json:"id"`
-	Timestamp int64  `json:"ts"`
-}
 
 type Event struct {
 	// Composite primary key with project_id and uuid.
@@ -38,6 +34,22 @@ type Event struct {
 	Timestamp int64     `json:"timestamp"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type CacheEvent struct {
+	ID        string `json:"id"`
+	Timestamp int64  `json:"ts"`
+}
+
+type EventWithProperties struct {
+	ID            string          `json:"id"`
+	Name          string          `json:"event_name"`
+	PropertiesMap U.PropertiesMap `json:"properties_map"`
+}
+
+type EventPropertiesWithCount struct {
+	Count      int
+	Properties U.PropertiesMap
 }
 
 const cacheIndexUserLastEvent = "user_last_event"

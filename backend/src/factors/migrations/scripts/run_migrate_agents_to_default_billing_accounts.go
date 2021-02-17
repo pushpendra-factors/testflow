@@ -74,11 +74,13 @@ func main() {
 	}
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func createDefaultBillingAccount(db *gorm.DB, agent model.Agent) error {
 	billingAcc := &model.BillingAccount{PlanID: model.FreePlanID, AgentUUID: agent.UUID}
 	return db.Create(billingAcc).Error
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func getAllAgents(db *gorm.DB) ([]model.Agent, error) {
 	agents := make([]model.Agent, 0, 0)
 	err := db.Find(&agents).Error

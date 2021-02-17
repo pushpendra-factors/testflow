@@ -4,11 +4,11 @@ import (
 	"database/sql"
 	C "factors/config"
 	"factors/model/model"
+	"factors/model/store/postgres"
 	"factors/util"
 	"flag"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	U "factors/util"
@@ -60,7 +60,7 @@ func main() {
 	db.LogMode(true)
 	defer db.Close()
 
-	projectIDToCustomerAccounts, err := getActiveProjectIDAndCustomerIDs()
+	projectIDToCustomerAccounts, err := postgres.GetStore().GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings()
 	if err != nil {
 		log.Fatal("failed in getting projectSettings", err)
 	}
@@ -97,33 +97,7 @@ func main() {
 
 }
 
-func getActiveProjectIDAndCustomerIDs() (map[uint64][]string, error) {
-	db := C.GetServices().Db
-
-	projectSettings := make([]model.ProjectSetting, 0, 0)
-	mapOfProjectToCustomerIds := make(map[uint64][]string)
-
-	err := db.Table("project_settings").Where("int_adwords_enabled_agent_uuid IS NOT NULL AND int_adwords_enabled_agent_uuid != ''").Find(&projectSettings).Error
-	if err != nil {
-		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
-		return mapOfProjectToCustomerIds, err
-	}
-	for _, projectSetting := range projectSettings {
-		projectID := projectSetting.ProjectId
-		if projectSetting.IntAdwordsCustomerAccountId != nil {
-			var cleanAdwordsAccountIds []string
-			adwordsAccoundIDs := strings.Split(*projectSetting.IntAdwordsCustomerAccountId, ",")
-			for _, accountID := range adwordsAccoundIDs {
-				adwordsCustomerAccountID := strings.Replace(accountID, "-", "", -1)
-				adwordsCustomerAccountID = strings.TrimSpace(adwordsCustomerAccountID)
-				cleanAdwordsAccountIds = append(cleanAdwordsAccountIds, adwordsCustomerAccountID)
-			}
-			mapOfProjectToCustomerIds[projectID] = cleanAdwordsAccountIds
-		}
-	}
-	return mapOfProjectToCustomerIds, nil
-}
-
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func updateKeywordPerformanceReport(projectID uint64, customerAccountID string, currentStartDate int64, currentEndDate int64, db *gorm.DB) {
 	result := db.Exec("UPDATE adwords_documents SET keyword_id = (value->>'id')::bigint, ad_group_id = (value->>'ad_group_id')::bigint, campaign_id = (value->>'campaign_id')::bigint WHERE project_id = ? AND customer_account_id = ? AND type = ? AND timestamp BETWEEN ? AND ? AND keyword_id IS NULL;", projectID, customerAccountID, model.AdwordsDocumentTypeAlias["keyword_performance_report"], currentStartDate, currentEndDate)
 
@@ -135,6 +109,7 @@ func updateKeywordPerformanceReport(projectID uint64, customerAccountID string, 
 	time.Sleep(time.Second)
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func updateAdPerformanceReport(projectID uint64, customerAccountID string, currentStartDate int64, currentEndDate int64, db *gorm.DB) {
 	result := db.Exec("UPDATE adwords_documents SET ad_id = (value->>'id')::bigint, ad_group_id = (value->>'ad_group_id')::bigint WHERE project_id = ? AND customer_account_id = ? AND type = ? AND timestamp BETWEEN ? AND ? AND ad_id IS NULL;", projectID, customerAccountID, model.AdwordsDocumentTypeAlias["ad_performance_report"], currentStartDate, currentEndDate)
 
@@ -146,6 +121,7 @@ func updateAdPerformanceReport(projectID uint64, customerAccountID string, curre
 	time.Sleep(time.Second)
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func updateAdGroupPerformanceReport(projectID uint64, customerAccountID string, currentStartDate int64, currentEndDate int64, db *gorm.DB) {
 	result := db.Exec("UPDATE adwords_documents SET ad_group_id = (value->>'ad_group_id')::bigint, campaign_id = (value->>'campaign_id')::bigint WHERE project_id = ? AND customer_account_id = ? AND type = ? AND timestamp BETWEEN ? AND ? AND ad_group_id IS NULL;", projectID, customerAccountID, model.AdwordsDocumentTypeAlias["ad_group_performance_report"], currentStartDate, currentEndDate)
 
@@ -157,6 +133,7 @@ func updateAdGroupPerformanceReport(projectID uint64, customerAccountID string, 
 	time.Sleep(time.Second)
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func updateCampaignPerformanceReport(projectID uint64, customerAccountID string, currentStartDate int64, currentEndDate int64, db *gorm.DB) {
 	result := db.Exec("UPDATE adwords_documents SET campaign_id = (value->>'campaign_id')::bigint WHERE project_id = ? AND customer_account_id = ? AND type = ? AND timestamp BETWEEN ? AND ? AND campaign_id IS NULL;", projectID, customerAccountID, model.AdwordsDocumentTypeAlias["campaign_performance_report"], currentStartDate, currentEndDate)
 
@@ -168,6 +145,7 @@ func updateCampaignPerformanceReport(projectID uint64, customerAccountID string,
 	time.Sleep(time.Second)
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func updateAdGroupJob(projectID uint64, customerAccountID string, currentStartDate int64, currentEndDate int64, db *gorm.DB) {
 	result := db.Exec("UPDATE adwords_documents SET ad_group_id = (value->>'id')::bigint, campaign_id = (value->>'campaign_id')::bigint WHERE project_id = ? AND customer_account_id = ? AND type = ? AND timestamp BETWEEN ? AND ? AND ad_group_id IS NULL;", projectID, customerAccountID, model.AdwordsDocumentTypeAlias["ad_groups"], currentStartDate, currentEndDate)
 
@@ -179,6 +157,7 @@ func updateAdGroupJob(projectID uint64, customerAccountID string, currentStartDa
 	time.Sleep(time.Second)
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func updateCampaignJob(projectID uint64, customerAccountID string, currentStartDate int64, currentEndDate int64, db *gorm.DB) {
 	result := db.Exec("UPDATE adwords_documents SET campaign_id = (value->>'id')::bigint WHERE project_id = ? AND customer_account_id = ? AND type = ? AND timestamp BETWEEN ? AND ? AND campaign_id IS NULL;", projectID, customerAccountID, model.AdwordsDocumentTypeAlias["campaigns"], currentStartDate, currentEndDate)
 
@@ -190,6 +169,7 @@ func updateCampaignJob(projectID uint64, customerAccountID string, currentStartD
 	time.Sleep(time.Second)
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func updateAdPerformanceReportWithCampaignID(projectID uint64, customerAccountID string, currentDate int64, db *gorm.DB) {
 	rows, err := db.Raw("SELECT campaign_id, id FROM adwords_documents WHERE project_id = ? AND customer_account_id = ? AND type = ? AND timestamp = ? AND id IS NULL;", projectID, customerAccountID, model.AdwordsDocumentTypeAlias["ad_groups"], currentDate).Rows()
 	if err != nil {

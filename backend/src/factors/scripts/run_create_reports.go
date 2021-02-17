@@ -138,6 +138,7 @@ func main() {
 		*customStartTime, *customEndTime, *mailReports)
 }
 
+// NOTE: DEPRECATED - DO NOT MOVE THIS TO STORE. NOT PRODUCTION READY CODE.
 func fetchDashboards(gormDB *gorm.DB, limit, lastSeenID uint64, projectsToBuildFor,
 	dashboardsToBuildFor, projectsToSkipFor []uint64) ([]*model.Dashboard, int) {
 

@@ -65,16 +65,15 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	var projectIDs []ProjectID
-	err = db.Raw("SELECT DISTINCT(id) FROM projects").Find(&projectIDs).Error
-	if err != nil {
-		log.Fatal("Failed to get project ids from db")
+	projects, errCode := store.GetStore().GetProjects()
+	if errCode != http.StatusFound {
+		log.Fatal("Failed to get projects.")
 	}
 
 	renameStat := make(map[uint64]string)
-	for _, projectID := range projectIDs {
-		log.Info("Running on project_id ", projectID.ID)
-		renameDuplicateEventNames(projectID.ID, *dryRun, &renameStat)
+	for _, project := range projects {
+		log.Info("Running on project_id ", project.ID)
+		renameDuplicateEventNames(project.ID, *dryRun, &renameStat)
 	}
 
 	if *dryRun {
@@ -84,6 +83,8 @@ func main() {
 	}
 
 }
+
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func renameDuplicateEventNames(projectID uint64, dryRun bool, renameStat *map[uint64]string) {
 	db := C.GetServices().Db
 

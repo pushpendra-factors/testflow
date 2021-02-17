@@ -254,3 +254,21 @@ func updateAgent(agentUUID string, options ...model.Option) int {
 	}
 	return http.StatusAccepted
 }
+
+func (pg *Postgres) GetPrimaryAgentOfProject(projectId uint64) (uuid string, errCode int) {
+	db := C.GetServices().Db
+
+	var projectAgentMappings []model.ProjectAgentMapping
+	err := db.Limit(1).Order("created_at ASC").
+		Where("project_id = ?", projectId).Find(&projectAgentMappings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get primary agent of project.")
+		return "", http.StatusInternalServerError
+	}
+
+	if len(projectAgentMappings) == 0 {
+		return "", http.StatusNotFound
+	}
+
+	return projectAgentMappings[0].AgentUUID, http.StatusFound
+}

@@ -2,16 +2,52 @@ package main
 
 import (
 	C "factors/config"
+	"factors/model/model"
 	"factors/util"
 	U "factors/util"
 	"flag"
 	"fmt"
 	"time"
 
-	cleanup "factors/task/goal_cleanup"
-
 	log "github.com/sirupsen/logrus"
 )
+
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
+func doGoalCleanUp(projectID uint64) int64 {
+	db := C.GetServices().Db
+	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&model.FactorsGoal{})
+	if dbObj.Error != nil {
+		log.WithFields(log.Fields{"projectId": projectID}).WithError(db.Error).Error(
+			"Deleting from Goal Table failed")
+	}
+	log.WithField("ProjectId", projectID).WithField("Count", dbObj.RowsAffected).Info("Goals Deleted Count")
+	return dbObj.RowsAffected
+}
+
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
+func doTrackedEventsCleanUp(projectID uint64) int64 {
+	db := C.GetServices().Db
+	var trackedEvent model.FactorsTrackedEvent
+	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&trackedEvent)
+	if dbObj.Error != nil {
+		log.WithFields(log.Fields{"projectId": projectID}).WithError(db.Error).Error(
+			"Deleting from TrackedEvents Table failed")
+	}
+	log.WithField("ProjectId", projectID).WithField("Count", dbObj.RowsAffected).Info("TrackedEvents Deleted Count")
+	return dbObj.RowsAffected
+}
+
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
+func doTrackedUserPropertiesCleanUp(projectID uint64) int64 {
+	db := C.GetServices().Db
+	dbObj := db.Where("type = ?", "AT").Where("project_id = ?", projectID).Delete(&model.FactorsTrackedUserProperty{})
+	if dbObj.Error != nil {
+		log.WithFields(log.Fields{"projectId": projectID}).WithError(db.Error).Error(
+			"Deleting from TrackedUserProperties Table failed")
+	}
+	log.WithField("ProjectId", projectID).WithField("Count", dbObj.RowsAffected).Info("TrackedUserProperties Deleted Count")
+	return dbObj.RowsAffected
+}
 
 func main() {
 
@@ -67,9 +103,9 @@ func main() {
 	goalsDeleted := int64(0)
 	projectIdMap := util.GetIntBoolMapFromStringList(projectIds)
 	for projectId, _ := range projectIdMap {
-		trackedEventsDeleted += cleanup.DoTrackedEventsCleanUp(projectId)
-		trackedUserPropertiesDeleted += cleanup.DoTrackedUserPropertiesCleanUp(projectId)
-		goalsDeleted += cleanup.DoGoalCleanUp(projectId)
+		trackedEventsDeleted += doTrackedEventsCleanUp(projectId)
+		trackedUserPropertiesDeleted += doTrackedUserPropertiesCleanUp(projectId)
+		goalsDeleted += doGoalCleanUp(projectId)
 	}
 
 	status := map[string]interface{}{

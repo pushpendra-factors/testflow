@@ -404,3 +404,77 @@ func (pg *Postgres) UpdateNextSessionStartTimestampForProject(projectID uint64, 
 
 	return http.StatusAccepted
 }
+
+// FillNextSessionStartTimestampForProject - Fills the initial next session start timestamp.
+// Postgres only implementation.
+func (pg *Postgres) FillNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int {
+	logCtx := log.WithField("project_id", projectID).WithField("timestamp", timestamp)
+
+	if projectID == 0 || timestamp == 0 {
+		logCtx.WithField("project_id", projectID).WithField("timestamp", 0).
+			Error("Invalid args to method.")
+		return http.StatusBadRequest
+	}
+
+	query := fmt.Sprintf(`UPDATE projects SET jobs_metadata = '{"%s": %d}' WHERE id = %d`,
+		model.JobsMetadataKeyNextSessionStartTimestamp, timestamp, projectID)
+	db := C.GetServices().Db
+	err := db.Exec(query).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update next session start timestamp for project.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func (pg *Postgres) GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[uint64]bool) (projectIds []uint64, errCode int) {
+
+	logCtx := log.WithField("projects", onlyProjectsMap)
+
+	onlyProjectIds := make([]uint64, 0, len(onlyProjectsMap))
+	for k := range onlyProjectsMap {
+		onlyProjectIds = append(onlyProjectIds, k)
+	}
+
+	projectIds = make([]uint64, 0, 0)
+
+	db := C.GetServices().Db
+	queryStmnt := "SELECT id FROM projects WHERE id not in (SELECT distinct(project_id) FROM dashboards WHERE dashboards.name = '" + model.DefaultDashboardWebsiteAnalytics + "')"
+
+	//TODO(Maisa): create util function for joining []uint64
+	inProjectIds := ""
+	for i, opid := range onlyProjectIds {
+		inProjectIds = inProjectIds + fmt.Sprintf("%d", opid)
+
+		if i < len(onlyProjectIds)-1 {
+			inProjectIds = inProjectIds + ","
+		}
+	}
+
+	if len(onlyProjectIds) > 0 {
+		queryStmnt = queryStmnt + " " + fmt.Sprintf("AND id IN (%s)", inProjectIds)
+	}
+
+	rows, err := db.Raw(queryStmnt).Rows()
+	if err != nil {
+		logCtx.WithError(err).
+			Error("Failed to get projectIds on getProjectIdsWithoutWebAnalyticsDashboard.")
+		return projectIds, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var projectId uint64
+
+		if err = rows.Scan(&projectId); err != nil {
+			logCtx.WithError(err).
+				Error("Failed to scan rows on getProjectIdsWithoutWebAnalyticsDashboard.")
+			return projectIds, http.StatusInternalServerError
+		}
+
+		projectIds = append(projectIds, projectId)
+	}
+
+	return projectIds, http.StatusFound
+}

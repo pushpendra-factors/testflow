@@ -66,7 +66,7 @@ func GetReportHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	report, errCode := store.GetStore().GetReportByID(reportId)
+	report, errCode := store.GetStore().GetReportByID(projectId, reportId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to fetch report"})
 		return

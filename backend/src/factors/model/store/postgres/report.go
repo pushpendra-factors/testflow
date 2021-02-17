@@ -74,7 +74,7 @@ func (pg *Postgres) DeleteReportByDashboardID(projectID, dashboardID uint64) int
 	return http.StatusAccepted
 }
 
-func (pg *Postgres) GetReportByID(id uint64) (*model.Report, int) {
+func (pg *Postgres) GetReportByID(projectID, id uint64) (*model.Report, int) {
 	if id == 0 {
 		log.Error("GetReportByID Failed. ID not provided.")
 		return nil, http.StatusBadRequest

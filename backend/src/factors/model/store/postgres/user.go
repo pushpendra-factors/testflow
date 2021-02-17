@@ -7,6 +7,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -801,4 +802,40 @@ func (pg *Postgres) GetUserIdentificationPhoneNumber(projectID uint64, phoneNo s
 	}
 
 	return phoneNo, ""
+}
+
+func (pg *Postgres) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId uint64, isDryRun bool) error {
+	userRows, err := db.Raw("SELECT id, join_timestamp FROM users WHERE project_id = ?", projectId).Rows()
+	defer userRows.Close()
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
+		return err
+	}
+	for userRows.Next() {
+		var userId string
+		var joinTimestamp int64
+		if err = userRows.Scan(&userId, &joinTimestamp); err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
+			return err
+		}
+		type Result struct {
+			Timestamp int64
+		}
+		var result Result
+		db.Raw("SELECT MIN(timestamp) as Timestamp FROM events WHERE user_id = ? AND project_id = ?", userId, projectId).Scan(&result)
+		if result.Timestamp > 0 && result.Timestamp < joinTimestamp {
+			newJoinTimestamp := result.Timestamp - 60
+			log.WithFields(log.Fields{
+				"userId":            userId,
+				"userJoinTimestamp": joinTimestamp,
+				"minEventTimestamp": result.Timestamp,
+				"newJoinTimestamp":  newJoinTimestamp,
+			}).Error("Need to update.")
+			if !isDryRun {
+				db.Exec("UPDATE users SET join_timestamp=? WHERE project_id=? AND id=?", newJoinTimestamp, projectId, userId)
+				log.Info(fmt.Sprintf("Updated %s", userId))
+			}
+		}
+	}
+	return nil
 }

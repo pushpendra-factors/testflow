@@ -73,8 +73,8 @@ func main() {
 	}
 
 	for _, projectID := range projectIDs {
-		dashboardUnits, err := getAllDashboardUnitsRowsForProject(projectID)
-		if err != nil {
+		dashboardUnits, errCode := store.GetStore().GetDashboardUnitsForProjectID(projectID)
+		if errCode != http.StatusFound {
 			logCtx.WithError(err).Error("Queries table migration failed. Failed to fetch data from dahboard_units table.")
 			return
 		}
@@ -107,15 +107,4 @@ func main() {
 	}
 
 	return
-}
-
-func getAllDashboardUnitsRowsForProject(projectID uint64) ([]model.DashboardUnit, error) {
-	db := C.GetServices().Db
-	dashboardUnits := make([]model.DashboardUnit, 0, 0)
-	err := db.Table("dashboard_units").Where("project_id = ?", projectID).Find(&dashboardUnits).Error
-	if err != nil {
-		log.WithError(err).Error("Failed to fetch rows from dashboardUnits table")
-		return dashboardUnits, err
-	}
-	return dashboardUnits, nil
 }

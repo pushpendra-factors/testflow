@@ -506,3 +506,25 @@ func (pg *Postgres) BuildAndUpsertDocument(projectID uint64, objectName string, 
 
 	return nil
 }
+
+// GetSalesforceDocumentsByTypeForSync - Pulls salesforce documents which are not synced
+func (pg *Postgres) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int) ([]model.SalesforceDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "type": typ})
+
+	if projectID == 0 || typ == 0 {
+		logCtx.Error("Invalid project_id or type on get salesforce documents by type.")
+		return nil, http.StatusBadRequest
+	}
+
+	var documents []model.SalesforceDocument
+
+	db := C.GetServices().Db
+	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false",
+		projectID, typ).Find(&documents).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get salesforce documents by type.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return documents, http.StatusFound
+}

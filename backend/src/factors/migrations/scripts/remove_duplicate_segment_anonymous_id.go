@@ -9,7 +9,6 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
-	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -57,36 +56,40 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	segmentUsers, err := getProjectSegmentDuplicateUsers(*projectId)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to getProjectSegmentDuplicateUsers.")
-	}
-	log.Info("Got project segment duplicate users.")
+	/*
+		NOTICE: DEPRECATED - UPDATING SEGMENT ANONYMOUS ID WITH RANDOM STRING IS NOT RECOMMENDED ANY MORE.
 
-	for _, segmentUser := range segmentUsers {
-		users, err := getSegmentUsersToFix(segmentUser.ProjectId, segmentUser.SegmentAnonymousId)
+		segmentUsers, err := getProjectSegmentDuplicateUsers(*projectId)
 		if err != nil {
-			log.WithError(err).Fatal("Failed to getSegmentUsersToFix")
+			log.WithError(err).Fatal("Failed to getProjectSegmentDuplicateUsers.")
 		}
+		log.Info("Got project segment duplicate users.")
 
-		log.WithField("project_id", segmentUser.ProjectId).Info("Got segment users to fix.")
-
-		for _, user := range users {
-			err := db.Table("users").Where("project_id = ? AND id = ?",
-				segmentUser.ProjectId, user.ID).Update("segment_anonymous_id",
-				fmt.Sprintf("%s_%s", segmentUser.SegmentAnonymousId, U.RandomLowerAphaNumString(8))).Error
+		for _, segmentUser := range segmentUsers {
+			users, err := getSegmentUsersToFix(segmentUser.ProjectId, segmentUser.SegmentAnonymousId)
 			if err != nil {
-				log.WithField("project_id", segmentUser.ProjectId).WithError(err).Fatal(
-					"Failed to getSegmentUsersToFix.")
+				log.WithError(err).Fatal("Failed to getSegmentUsersToFix")
 			}
 
-			log.WithField("project_id", segmentUser.ProjectId).Info("Updated user.")
-		}
-	}
+			log.WithField("project_id", segmentUser.ProjectId).Info("Got segment users to fix.")
 
-	log.Info("Successfully updated duplicate segment anonymous id.")
+			for _, user := range users {
+					err := db.Table("users").Where("project_id = ? AND id = ?",
+						segmentUser.ProjectId, user.ID).Update("segment_anonymous_id",
+						fmt.Sprintf("%s_%s", segmentUser.SegmentAnonymousId, U.RandomLowerAphaNumString(8))).Error
+					if err != nil {
+						log.WithField("project_id", segmentUser.ProjectId).WithError(err).Fatal(
+							"Failed to getSegmentUsersToFix.")
+					}
+				log.WithField("project_id", segmentUser.ProjectId).Info("Updated user.")
+			}
+		}
+
+		log.Info("Successfully updated duplicate segment anonymous id.")
+	*/
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func getSegmentUsersToFix(projectId uint64, segAnonId string) ([]model.User, error) {
 	user, errCode := store.GetStore().GetUserBySegmentAnonymousId(projectId, segAnonId)
 	if errCode != http.StatusFound {
@@ -115,6 +118,7 @@ type SegmentDuplicateUser struct {
 	MinCreatedAt       string // using string to preserve nano seconds.
 }
 
+// NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func getProjectSegmentDuplicateUsers(projectId uint64) ([]SegmentDuplicateUser, error) {
 	db := C.GetServices().Db
 	rows, err := db.Raw("SELECT * FROM (SELECT project_id, segment_anonymous_id, count(*) no_of_users, min(created_at) min_created_at FROM users WHERE project_id = ? AND segment_anonymous_id IS NOT NULL group by project_id, segment_anonymous_id) segment_duplicate_users WHERE no_of_users > 1", projectId).Rows()

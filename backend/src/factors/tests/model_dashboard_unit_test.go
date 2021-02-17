@@ -526,11 +526,8 @@ func TestDeleteDashboardUnit(t *testing.T) {
 		assert.Equal(t, currentPosition[model.GetUnitType(model.PresentationCard)][unit2.ID], 0)
 
 		// Unit must have got soft deleted.
-		var deletedUnit model.DashboardUnit
-		db := C.GetServices().Db
-		err = db.Model(model.DashboardUnit{}).Where("project_id = ? AND id = ?", unit.ProjectID, unit.ID).Find(&deletedUnit).Error
-		assert.Nil(t, err)
-		assert.Equal(t, true, deletedUnit.IsDeleted)
+		_, errCode = store.GetStore().GetDashboardUnitByUnitID(unit.ProjectID, unit.ID)
+		assert.Equal(t, http.StatusNotFound, errCode)
 	})
 
 	t.Run("DeleteDashboardUnit:Invalid", func(t *testing.T) {

@@ -2,7 +2,6 @@ package tests
 
 import (
 	"encoding/json"
-	C "factors/config"
 	H "factors/handler"
 	"factors/model/model"
 	"factors/model/store"
@@ -389,18 +388,13 @@ func TestDeleteDashboard(t *testing.T) {
 	errCode = store.GetStore().DeleteDashboard(project.ID, agent.UUID, dashboard.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	var deletedQuery model.Queries
-	var deletedUnit model.DashboardUnit
-	var deletedReport model.DBReport
+	_, errCode = store.GetStore().GetQueryWithQueryId(dashboardQuery.ProjectID, dashboardQuery.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
 
-	db := C.GetServices().Db
-	err = db.Model(model.Queries{}).Where("project_id = ? AND id = ?", dashboardQuery.ProjectID, dashboardQuery.ID).Find(&deletedQuery).Error
-	assert.Nil(t, err)
-	assert.True(t, deletedQuery.IsDeleted)
-	err = db.Model(model.DashboardUnit{}).Where("project_id = ? AND id = ?", dashboardUnit.ProjectID, dashboardUnit.ID).Find(&deletedUnit).Error
-	assert.Nil(t, err)
-	assert.True(t, deletedUnit.IsDeleted)
-	err = db.Model(model.Report{}).Where("project_id = ? AND id = ?", report.ProjectID, report.ID).Find(&deletedReport).Error
-	assert.Nil(t, err)
-	assert.True(t, deletedReport.IsDeleted)
+	_, errCode = store.GetStore().GetDashboardUnitByUnitID(dashboardUnit.ProjectID, dashboardUnit.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, errCode = store.GetStore().GetReportByID(report.ProjectID, report.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
 }

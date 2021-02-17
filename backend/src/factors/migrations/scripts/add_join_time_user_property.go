@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	C "factors/config"
-	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 	"flag"
@@ -52,11 +51,18 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	var users []model.User
-	err = db.Find(&users).Error
-	if err != nil {
-		log.WithError(err).Fatal("Failed to fetch unidentified users.")
-	}
+	/*
+
+		NOTICE: DEPRECATED - GETTING ALL USERS OF ALL PROJECTS IS NOT RECOMMENDED ANY MORE.
+		USE LIMITED SET OF USERS BY PROJECT.
+
+		var users []model.User
+		err = db.Find(&users).Error
+		if err != nil {
+			log.WithError(err).Fatal("Failed to fetch unidentified users.")
+		}
+
+	*/
 
 	type userJoinTimestamp struct {
 		userIds   []string
@@ -70,11 +76,19 @@ func main() {
 	// customer_user_id of identified users.
 	for index, user := range users {
 		if user.CustomerUserId == "" {
-			var userPropertyRecords []model.UserProperties
-			err = db.Where("project_id = ? AND user_id = ?", user.ProjectId, user.ID).Find(&userPropertyRecords).Error
-			if err != nil {
-				log.WithError(err).Fatal("Failed to fetch current users propery records for a user.")
-			}
+
+			/*
+
+				NOTICE: DEPRECATED - GETTING ALL USER PROPERTIES RECORDS FOR A GIVEN USER ID
+				IS NOT RECOMMENDED ANY MORE. FIND A DIFFERENT WAY TO ACHIEVE THIS.
+
+				var userPropertyRecords []model.UserProperties
+				err = db.Where("project_id = ? AND user_id = ?", user.ProjectId, user.ID).Find(&userPropertyRecords).Error
+				if err != nil {
+					log.WithError(err).Fatal("Failed to fetch current users propery records for a user.")
+				}
+
+			*/
 
 			for _, userProperties := range userPropertyRecords {
 				var existingProperties map[string]interface{}

@@ -986,3 +986,323 @@ func (pg *Postgres) GetDatesForNextEventsArchivalBatch(projectID uint64, startTi
 
 	return countByDates, http.StatusFound
 }
+
+func (pg *Postgres) GetNextSessionEventInfoFromDB(projectID uint64, withSession bool,
+	sessionEventNameId uint64, maxLookbackTimestamp int64) (int64, int) {
+
+	sessionExistStr := "NOT NULL"
+	startTimestampAggrFunc := "max"
+	if !withSession {
+		sessionExistStr = "NULL"
+		startTimestampAggrFunc = "min"
+	}
+	selectStmnt := fmt.Sprintf("%s(timestamp) as start_timestamp",
+		startTimestampAggrFunc)
+
+	db := C.GetServices().Db
+	query := db.Table("events").
+		Where("project_id = ? AND event_name_id != ?", projectID, sessionEventNameId).
+		Where(fmt.Sprintf("session_id IS %s AND properties->>'%s' IS NULL",
+			sessionExistStr, U.EP_SKIP_SESSION)).
+		Select(selectStmnt)
+
+	if maxLookbackTimestamp > 0 {
+		query = query.Where("timestamp > ?", maxLookbackTimestamp)
+	}
+
+	rows, err := query.Rows()
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return 0, http.StatusNotFound
+		}
+
+		log.WithField("project_id", projectID).WithError(err).
+			Error("Failed to get next session start timestamp for project.")
+		return 0, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	var startTimestamp *int64
+	for rows.Next() {
+		err = rows.Scan(&startTimestamp)
+		if err != nil {
+			log.WithError(err).Error("Failed to read next session start timestamp.")
+			return 0, http.StatusInternalServerError
+		}
+	}
+
+	if startTimestamp == nil {
+		return 0, http.StatusNotFound
+	}
+
+	return *startTimestamp, http.StatusFound
+}
+
+func (pg *Postgres) GetLastSessionEventTimestamp(projectID uint64, sessionEventNameID uint64) (int64, int) {
+	logCtx := log.WithField("project_id", projectID)
+
+	// This is a faster query.
+	// ORDER BY project_id, event_name_id, timestamp DESC is used to instead of
+	// MIN to avoid ordering and use the ordered index on that column.
+	db := C.GetServices().Db
+	query := db.Raw("SELECT timestamp FROM events WHERE project_id = ? AND event_name_id = ? ORDER BY project_id, event_name_id, timestamp DESC LIMIT 1",
+		projectID, sessionEventNameID)
+	rows, err := query.Rows()
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return 0, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("SQL Query failed")
+		return 0, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	var startTimestamp *int64
+	for rows.Next() {
+		err = rows.Scan(&startTimestamp)
+		if err != nil {
+			log.WithError(err).Error("Failed to read on get last event timestamp.")
+			return 0, http.StatusInternalServerError
+		}
+	}
+
+	if startTimestamp == nil {
+		return 0, http.StatusNotFound
+	}
+
+	return *startTimestamp, http.StatusFound
+}
+
+// GetAllEventsForSessionCreationAsUserEventsMap - Returns a map of user:[events...] withing given period,
+// excluding session event and event with session_id.
+func (pg *Postgres) GetAllEventsForSessionCreationAsUserEventsMap(projectId, sessionEventNameId uint64,
+	startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId,
+		"start_timestamp": startTimestamp, "end_timestamp": endTimestamp})
+
+	var userEventsMap map[string][]model.Event
+	var events []model.Event
+	if startTimestamp == 0 || endTimestamp == 0 {
+		logCtx.Error("Invalid start_timestamp or end_timestamp.")
+		return &userEventsMap, 0, http.StatusInternalServerError
+	}
+
+	queryStartTime := U.TimeNowUnix()
+	db := C.GetServices().Db
+	// Ordered by timestamp, created_at to fix the order for events with same
+	// timestamp, as event timestamp is in seconds. This fixes the invalid first
+	// event used for enrichment.
+	excludeSkipSessionCondition := fmt.Sprintf("(properties->>'%s' IS NULL OR properties->>'%s' = ?)",
+		U.EP_SKIP_SESSION, U.EP_SKIP_SESSION)
+	if err := db.Order("timestamp, created_at ASC").
+		Where("project_id = ? AND event_name_id != ? AND timestamp BETWEEN ? AND ?"+" AND "+excludeSkipSessionCondition,
+			projectId, sessionEventNameId, startTimestamp, endTimestamp, false).
+		Find(&events).Error; err != nil {
+
+		logCtx.WithError(err).Error("Failed to get all events of project.")
+		return &userEventsMap, 0, http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return &userEventsMap, 0, http.StatusNotFound
+	}
+
+	queryTimeInSecs := U.TimeNowUnix() - queryStartTime
+	logCtx = logCtx.WithField("no_of_events", len(events)).
+		WithField("time_taken_in_secs", queryTimeInSecs)
+
+	if queryTimeInSecs >= (2 * 60) {
+		logCtx.Error("Too much time taken to download events on get_all_events_as_user_map.")
+	}
+
+	userEventsMap = make(map[string][]model.Event)
+	for i := range events {
+		if _, exists := userEventsMap[events[i].UserId]; !exists {
+			userEventsMap[events[i].UserId] = make([]model.Event, 0, 0)
+		} else {
+			// Event with session should be added as first event, if available.
+			// To support continuation of the session.
+			currentUserEventHasSession := events[i].SessionId != nil
+			firstUserEventHasSession := userEventsMap[events[i].UserId][0].SessionId != nil
+			userHasNoSessionEvent := firstUserEventHasSession && len(userEventsMap[events[i].UserId]) > 1
+			if !userHasNoSessionEvent && firstUserEventHasSession && currentUserEventHasSession {
+				// Add current event as first event.
+				userEventsMap[events[i].UserId][0] = events[i]
+				continue
+			}
+		}
+
+		userEventsMap[events[i].UserId] = append(userEventsMap[events[i].UserId], events[i])
+	}
+
+	logCtx.WithField("no_of_users", len(userEventsMap)).
+		Info("Got all events on get_all_events_as_user_map.")
+
+	return &userEventsMap, len(events), http.StatusFound
+}
+
+func doesPropertiesMapHaveKeys(propertiesMap U.PropertiesMap, keys []string) (bool, bool, U.PropertiesMap) {
+	filteredPropertiesMap := U.PropertiesMap{}
+
+	if propertiesMap == nil {
+		return false, false, filteredPropertiesMap
+	}
+
+	for i := range keys {
+		value, exists := propertiesMap[keys[i]]
+		if exists && value != nil && value != "" {
+			filteredPropertiesMap[keys[i]] = value
+		}
+	}
+
+	hasAll := len(filteredPropertiesMap) == len(keys)
+	hasSome := len(filteredPropertiesMap) > 0 && len(filteredPropertiesMap) < len(keys)
+
+	return hasAll, hasSome, filteredPropertiesMap
+}
+
+func getPropertiesByNameAndMaxOccurrence(
+	propertiesByNameAndOccurence *map[string]map[string]*model.EventPropertiesWithCount,
+) *map[string]U.PropertiesMap {
+
+	propertiesWithCount := make(map[string]model.EventPropertiesWithCount, 0)
+	for name, propertiesByAuthor := range *propertiesByNameAndOccurence {
+		for _, pwc := range propertiesByAuthor {
+			// Select the poroeprties with max occurrence count.
+			if (*pwc).Count > propertiesWithCount[name].Count &&
+				// Consider only max no.of properties available.
+				len((*pwc).Properties) >= len(propertiesWithCount[name].Properties) {
+
+				propertiesWithCount[name] = *pwc
+			}
+		}
+	}
+
+	propertiesByName := make(map[string]U.PropertiesMap)
+	for name, pwc := range propertiesWithCount {
+		if pwc.Count > 0 && len(pwc.Properties) > 0 {
+			propertiesByName[name] = pwc.Properties
+		}
+	}
+
+	return &propertiesByName
+}
+
+// GetEventsWithoutPropertiesAndWithPropertiesByName - Use for getting properties with and without values
+// and use it for updating the events which doesn't have the values. User for fixing data for YourStory.
+func (pg *Postgres) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from,
+	to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int) {
+	logCtx := log.WithField("project_id", projectID).
+		WithField("from", from).
+		WithField("to", to)
+
+	eventsWithoutProperties := make([]model.EventWithProperties, 0, 0)
+	// map[event_name]map[authorName]*PropertiesWithCount
+	propertiesByNameAndOccurence := make(map[string]map[string]*model.EventPropertiesWithCount, 0)
+
+	queryStartTimestamp := U.TimeNowUnix()
+	// LIKE '%.%' is for excluding custom event_names which are not urls.
+	queryStmnt := "SELECT events.id, name, properties FROM events" + " " +
+		"LEFT JOIN event_names ON events.event_name_id = event_names.id" + " " +
+		"WHERE events.project_id = ? AND event_names.name != '$session'" + " " +
+		"AND event_names.name LIKE '%.%' AND timestamp BETWEEN ? AND ?"
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(queryStmnt, projectID, from, to).Rows()
+	if err != nil {
+		logCtx.WithError(err).
+			Error("Failed to execute raw query on getEventsWithoutPropertiesAndWithPropertiesByName.")
+		return eventsWithoutProperties, nil, http.StatusInternalServerError
+	}
+	defer rows.Close()
+	logCtx = logCtx.WithField("query_exec_time_in_secs", U.TimeNowUnix()-queryStartTimestamp)
+
+	var rowCount int
+	for rows.Next() {
+		var id string
+		var name string
+		var properties postgres.Jsonb
+
+		err = rows.Scan(&id, &name, &properties)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to scan row.")
+			continue
+		}
+
+		propertiesMap, err := U.DecodePostgresJsonbAsPropertiesMap(&properties)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to decode properties.")
+			continue
+		}
+
+		if _, exists := propertiesByNameAndOccurence[name]; !exists {
+			propertiesByNameAndOccurence[name] = make(map[string]*model.EventPropertiesWithCount, 0)
+		}
+
+		hasAll, hasSome, filteredPropertiesMap := doesPropertiesMapHaveKeys(*propertiesMap, mandatoryProperties)
+		if hasAll {
+			authorName, asserted := filteredPropertiesMap["authorName"].(string)
+			if !asserted {
+				log.WithField("author", authorName).Warn("Failed to assert author name as string.")
+				continue
+			}
+
+			if _, exists := propertiesByNameAndOccurence[name][authorName]; !exists {
+				propertiesByNameAndOccurence[name][authorName] = &model.EventPropertiesWithCount{
+					Properties: filteredPropertiesMap,
+					Count:      1,
+				}
+			} else {
+				// Always overwrite, to keep adding hasAll state.
+				(*propertiesByNameAndOccurence[name][authorName]).Properties = filteredPropertiesMap
+				(*propertiesByNameAndOccurence[name][authorName]).Count++
+			}
+		}
+
+		if hasSome {
+			propAuthorName, exists := filteredPropertiesMap["authorName"]
+			if !exists && propAuthorName != nil {
+				continue
+			}
+			authorName := propAuthorName.(string)
+
+			if propertiesWithCount, authorExists := propertiesByNameAndOccurence[name][authorName]; !authorExists {
+				propertiesByNameAndOccurence[name][authorName] = &model.EventPropertiesWithCount{
+					Properties: filteredPropertiesMap,
+					Count:      1,
+				}
+			} else {
+				// Do no overwrite, hasAll state with hasSome state.
+				if allKeysExist, _, _ := doesPropertiesMapHaveKeys((*propertiesWithCount).Properties,
+					mandatoryProperties); allKeysExist {
+					continue
+				}
+
+				// Add properties if more properties available this time.
+				if len(filteredPropertiesMap) > len((*propertiesWithCount).Properties) {
+					(*propertiesByNameAndOccurence[name][authorName]).Properties = filteredPropertiesMap
+				}
+				(*propertiesByNameAndOccurence[name][authorName]).Count++
+			}
+		}
+
+		// Adds all events for update, to support update with most occurrence.
+		eventsWithoutProperties = append(
+			eventsWithoutProperties,
+			model.EventWithProperties{
+				ID:            id,
+				Name:          name,
+				PropertiesMap: *propertiesMap,
+			},
+		)
+
+		rowCount++
+	}
+
+	propertiesByName := getPropertiesByNameAndMaxOccurrence(&propertiesByNameAndOccurence)
+
+	logCtx.WithField("rows", rowCount).Info("Scanned all rows.")
+	return eventsWithoutProperties, propertiesByName, http.StatusFound
+}

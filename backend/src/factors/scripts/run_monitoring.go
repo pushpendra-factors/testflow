@@ -3,12 +3,11 @@ package main
 import (
 	C "factors/config"
 	"factors/integration"
-	"factors/metrics"
+	"factors/model/store/postgres"
 	"factors/sdk"
 	"factors/util"
 	"flag"
 	"fmt"
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -72,6 +71,8 @@ func main() {
 	if err != nil {
 		log.WithError(err).Panic("Failed to initalize db.")
 	}
+	db := C.GetServices().Db
+	defer db.Close()
 
 	err = C.InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
 	if err != nil {
@@ -80,34 +81,9 @@ func main() {
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
-	sqlAdminSlowQueries := make([]SlowQueries, 0, 0)
-	factorsSlowQueries := make([]SlowQueries, 0, 0)
-
-	db := C.GetServices().Db
-	defer db.Close()
-
-	queryStr := "SELECT EXTRACT(epoch from (now() - query_start)) as runtime,query, pg_stat_activity.pid, usename, application_name," + " " +
-		"CASE WHEN heap_blks_vacuumed > 0 THEN (heap_blks_vacuumed::FLOAT/heap_blks_total::FLOAT) * 100 ELSE 0 END vacuum_progress_percentage, phase as vacuum_phase" + " " +
-		"FROM  pg_stat_activity LEFT JOIN pg_stat_progress_vacuum ON pg_stat_progress_vacuum.pid=pg_stat_activity.pid" + " " +
-		"WHERE EXTRACT(epoch from (now() - query_start)) > 120 AND state = 'active' AND query NOT ILIKE '%pg_stat_activity%' ORDER BY runtime DESC;"
-
-	rows, err := db.Raw(queryStr).Rows()
+	sqlAdminSlowQueries, factorsSlowQueries, err := postgres.GetStore().RunMonitoringQuery()
 	if err != nil {
-		log.WithError(err).Panic("Failed to get slow queries from pg_stat_activity")
-	}
-
-	for rows.Next() {
-		var slowQuery SlowQueries
-		if err := db.ScanRows(rows, &slowQuery); err != nil {
-			log.WithError(err).Panic("Failed to scan slow queries from db.")
-		}
-		if slowQuery.Query != "" {
-			if slowQuery.Usename == "cloudsqladmin" {
-				sqlAdminSlowQueries = append(sqlAdminSlowQueries, slowQuery)
-			} else {
-				factorsSlowQueries = append(factorsSlowQueries, slowQuery)
-			}
-		}
+		log.WithError(err).Panic("Failed to run monitoring query.")
 	}
 
 	if *killSlowQueries && len(factorsSlowQueries) > 0 {
@@ -156,7 +132,7 @@ func main() {
 			fmt.Sprintf("Integration queue length %d exceeds threshold of %d", integrationQueueLength, *integrationQueueThreshold))
 	}
 
-	tableSizes := collectTableSizes()
+	tableSizes := postgres.GetStore().CollectTableSizes()
 
 	slowQueriesStatus := map[string]interface{}{
 		"factorsSlowQueries":       factorsSlowQueries[:util.MinInt(5, len(factorsSlowQueries))],
@@ -169,49 +145,4 @@ func main() {
 		"tableSizes":               tableSizes,
 	}
 	C.PingHealthcheckForSuccess(healthcheckPingID, slowQueriesStatus)
-}
-
-// collectTableSizes Captures size for major tables as metrics.
-func collectTableSizes() map[string]string {
-	// Tables with size in GBs. Not including all tables to avoid cluttering in the chart.
-	tableNameToMetricMap := map[string]string{
-		"adwords_documents": metrics.BytesTableSizeAdwordsDocuments,
-		"events":            metrics.BytesTableSizeEvents,
-		"hubspot_documents": metrics.BytesTableSizeHubspotDocuments,
-		"user_properties":   metrics.BytesTableSizeUserProperties,
-		"users":             metrics.BytesTableSizeUsers,
-	}
-
-	tableSizes := make(map[string]string)
-	tablesToMonitor := make([]string, 0, 0)
-	for tableName := range tableNameToMetricMap {
-		tablesToMonitor = append(tablesToMonitor, tableName)
-	}
-	query := fmt.Sprintf("SELECT relname, pg_total_relation_size(relname::text) FROM pg_stat_user_tables "+
-		"WHERE relname in ('%s')", strings.Join(tablesToMonitor, "','"))
-
-	db := C.GetServices().Db
-	rows, err := db.Raw(query).Rows()
-	if err != nil {
-		log.WithError(err).Error("Failed to get table sizes from database")
-		return tableSizes
-	}
-
-	for rows.Next() {
-		var tableName string
-		var tableSize float64
-		if err := rows.Scan(&tableName, &tableSize); err != nil {
-			log.WithError(err).Error("Failed to scan table size from db.")
-		}
-		tableMetric := tableNameToMetricMap[tableName]
-		metrics.RecordBytesSize(tableMetric, tableSize)
-
-		tableSizes[tableName] = util.BytesToReadableFormat(tableSize)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		log.WithError(err).Error("Error while scanning table sizes")
-	}
-	return tableSizes
 }

@@ -3,7 +3,7 @@ package main
 import (
 	C "factors/config"
 	"factors/model/store"
-	S "factors/sdk"
+	"factors/sdk"
 	"factors/util"
 	U "factors/util"
 	"flag"
@@ -98,7 +98,7 @@ func main() {
 	projectIdMap := util.GetIntBoolMapFromStringList(projectIds)
 
 	for projectId, _ := range projectIdMap {
-		S.BackFillEventDataInCacheFromDb(projectId, startOfCurrentDay, *lookBackDays, *eventsLimit, *propertiesLimit, *valuesLimit, *eventRecordsLimit, *perQueryPullRange, *skipExpiry)
+		sdk.BackFillEventDataInCacheFromDb(projectId, startOfCurrentDay, *lookBackDays, *eventsLimit, *propertiesLimit, *valuesLimit, *eventRecordsLimit, *perQueryPullRange, *skipExpiry)
 		store.GetStore().BackFillUserDataInCacheFromDb(projectId, startOfCurrentDay, *usersProcessedLimit, *propertiesLimit, *valuesLimit, *skipExpiry)
 	}
 	fmt.Println("Done!!!")

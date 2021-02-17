@@ -6,51 +6,13 @@ package main
 
 import (
 	C "factors/config"
+	"factors/model/store/postgres"
 	"factors/util"
 	"flag"
 	"fmt"
 
-	"github.com/jinzhu/gorm"
-
 	log "github.com/sirupsen/logrus"
 )
-
-func fixUserJoinTimestamp(db *gorm.DB, projectId uint64, isDryRun bool) error {
-
-	userRows, err := db.Raw("SELECT id, join_timestamp FROM users WHERE project_id = ?", projectId).Rows()
-	defer userRows.Close()
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
-		return err
-	}
-	for userRows.Next() {
-		var userId string
-		var joinTimestamp int64
-		if err = userRows.Scan(&userId, &joinTimestamp); err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
-			return err
-		}
-		type Result struct {
-			Timestamp int64
-		}
-		var result Result
-		db.Raw("SELECT MIN(timestamp) as Timestamp FROM events WHERE user_id = ? AND project_id = ?", userId, projectId).Scan(&result)
-		if result.Timestamp > 0 && result.Timestamp < joinTimestamp {
-			newJoinTimestamp := result.Timestamp - 60
-			log.WithFields(log.Fields{
-				"userId":            userId,
-				"userJoinTimestamp": joinTimestamp,
-				"minEventTimestamp": result.Timestamp,
-				"newJoinTimestamp":  newJoinTimestamp,
-			}).Error("Need to update.")
-			if !isDryRun {
-				db.Exec("UPDATE users SET join_timestamp=? WHERE project_id=? AND id=?", newJoinTimestamp, projectId, userId)
-				log.Info(fmt.Sprintf("Updated %s", userId))
-			}
-		}
-	}
-	return nil
-}
 
 func main() {
 	env := flag.String("env", "development", "")
@@ -96,7 +58,7 @@ func main() {
 	if *projectIdFlag <= 0 {
 		log.Fatal("Failed to pull events. Invalid project_id.")
 	}
-	if err := fixUserJoinTimestamp(db, *projectIdFlag, *dryRunFlag); err != nil {
+	if err := postgres.GetStore().FixAllUsersJoinTimestampForProject(db, *projectIdFlag, *dryRunFlag); err != nil {
 		log.Fatal(err)
 	}
 }
