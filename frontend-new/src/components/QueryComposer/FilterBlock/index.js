@@ -72,7 +72,7 @@ export default function FilterBlock({
       props: [
         {
           label: 'User Properties',
-          icon: 'userplus',
+          icon: 'user',
           
         },
         {
@@ -112,9 +112,9 @@ export default function FilterBlock({
       values = filter.values;
     }
     return (
-      <div className={`${styles.filter_block__filter_content} ml-4`}>
-        {filter.props[0] + ' ' + filter.operator + ' ' + values}
-      </div>
+      <Button type={'link'} className={'ml-2 fa-button--truncate'}>
+        {filter.props[0] + ' ' + filter.operator + ' ' + values} 
+      </Button> 
     );
   };
 
@@ -278,10 +278,10 @@ export default function FilterBlock({
               onClick={() => collapseGroup(grpIndex)}
             >
               <div>
-                <SVG name={group.icon} extraClass={'self-center'}></SVG>
-                <Text type={'title'} extraClass={'ml-1 capitalize'} weight={'bold'}>{group.label}</Text>
+                <SVG color={'purple'} name={group.icon} extraClass={'self-center'}></SVG>
+                <Text level={8} type={'title'} extraClass={'m-0 ml-2 uppercase'} weight={'bold'}>{group.label}</Text>
               </div>
-              <SVG name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
+              <SVG  name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
             </div>}
             <div className={styles.filter_block__filter_select__option_group_container_sec}>
             { collState
@@ -294,10 +294,10 @@ export default function FilterBlock({
                             onClick={() => optionClick([...val, propsConstants[grpIndex]])} >
                           {searchTerm.length > 0 &&
                            <div>
-                            <SVG name={group.icon} extraClass={'self-center'}></SVG>
+                            <SVG  color={'purple'} name={group.icon} extraClass={'self-center'}></SVG>
                            </div>
                           }
-                          <span className={'ml-1'}>{val[0]}</span>
+                          <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>{val[0]}</Text>
                       </div>
                     );
                   }
@@ -421,14 +421,14 @@ export default function FilterBlock({
     if(filterTypeState === 'values') {
       return (<span className={styles.filter_block__filter_select__apply}
         onClick={() => applyFilter()} >
-        <Button block disabled={!newFilterState.values.length} className={styles.filter_block__filter_select__apply_btn} size={'large'} type="primary" onClick={() => applyFilter()}>Apply Filter</Button>
+        <Button block disabled={!newFilterState.values.length} className={styles.filter_block__filter_select__apply_btn} type="primary" onClick={() => applyFilter()}>Apply Filter</Button>
       </span>)
     }
   }
 
   const renderFilterSelect = () => {
     return (
-      <div className={`${styles.filter_block__filter_select} ml-4 fa-select fa-filter-select fa-select--group-select ${extraClass}`}>
+      <div className={`absolute ml-4 fa-select fa-filter-select fa-select--group-select top-0 left-0`} >
         <Input
           id='fai-filter-input'
           className={styles.filter_block__filter_select__input}
@@ -439,7 +439,7 @@ export default function FilterBlock({
           onKeyDown={onSelectSearch}
           value={searchTerm}
         />
-        <div className={styles.filter_block__filter_select__content}>
+        <div className={'border-top--thin-2 '}>
           <div className={`${styles.filter_block__filter_select__options} 
             ${filterTypeState === 'values' &&  styles.filter_block__filter_select__values__options}`}>
             { 
@@ -476,23 +476,26 @@ export default function FilterBlock({
   }
 
   return (
-    <div className={styles.filter_block}>
+    <div className={`flex items-center relative w-full`}>
       {
         filter && 
-          <Button size={'large'} 
-        type="text" 
-        onClick={delFilter}
-        className={`${styles.filter_block__remove} mr-1 ${delBtnClass}`}>
-          <SVG name={delIcon}></SVG></Button>
+          <Button 
+          type="text" 
+          onClick={delFilter}
+          className={`mr-1`}
+          icon={<SVG name={delIcon} />}
+        /> 
       }
       {  
-          blockType === 'event' 
-          && <span className={`${styles.filter_block__prefix} ml-10`}>{index >=1 ? 'and' : 'where'}</span> 
+          filter && blockType === 'event' 
+          && <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>{index >=1 ? 'and' : 'where'}</Text>
       }
-      {filter
-        ? renderFilterContent()
-        : filterSelComp()
-      }
+      <div className={'relative flex flex-grow'}>  
+        {filter
+          ? renderFilterContent()
+          : filterSelComp()
+        }
+      </div>
 
     </div>
   );

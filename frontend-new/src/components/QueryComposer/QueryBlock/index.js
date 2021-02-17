@@ -136,9 +136,9 @@ function QueryBlock({
   const additionalActions = () => {
     return (
             <div className={'fa--query_block--actions'}>
-              <Button type="text" onClick={addGroupBy} className={'mr-1'}><SVG size={20} name="groupby"></SVG></Button>
-               <Button type="text" onClick={addFilter} className={'mr-1'}><SVG size={20} name="filter"></SVG></Button>
-               <Button type="text" onClick={deleteItem}><SVG size={20} name="trash"></SVG></Button>
+              <Button type="text" onClick={addGroupBy} icon={<SVG size={16} name="groupby" color={'grey'} />} />
+               <Button type="text" onClick={addFilter} icon={<SVG size={16} name="filter" color={'grey'} />} />
+               <Button type="text" onClick={deleteItem} icon={<SVG size={16} name="trash" color={'grey'} />} />
             </div>
     );
   };
@@ -195,10 +195,9 @@ function QueryBlock({
   const ifQueries = queries.length > 0;
   if (!event) {
     return (
-            <div className={`${styles.query_block} fa--query_block mt-4 ${ifQueries ? 'borderless no-padding' : 'borderless no-padding'}`}>
-                <div className={`${styles.query_block__event} flex justify-start items-center`}>
-                    <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}><SVG name={'plus'} color={'purple'}></SVG></div>
-                        {!isDDVisible && <Button size={'large'} type="link" onClick={triggerDropDown}>{ifQueries ? 'Add another event' : 'Add First Event'}</Button> }
+            <div className={`${styles.query_block} fa--query_block mt-6 ${ifQueries ? 'borderless no-padding' : 'borderless no-padding'}`}>
+                <div className={`${styles.query_block__event} flex justify-start items-center`}> 
+                        {!isDDVisible && <Button  type="text" onClick={triggerDropDown} icon={<SVG name={'plus'} color={'grey'} />}>{ifQueries ? 'Add another event' : 'Add First Event'}</Button> }
                     {selectEvents()}
                 </div>
             </div>
@@ -206,10 +205,10 @@ function QueryBlock({
   }
 
   return (
-        <div className={`${styles.query_block} fa--query_block_section borderless no-padding mt-4`}>
+        <div className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}>
             <div className={`${styles.query_block__event} block_section flex justify-start items-center`}>
                 <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{queryType === QUERY_TYPE_FUNNEL ? index : alphabetIndex[index - 1]}</Text> </div>
-                {!isDDVisible && <Button size={'large'} icon={<SVG name="mouseevent" extraClass={'mr-1'}></SVG>} className={`leading-10`} type="link" onClick={triggerDropDown}> {event.label} </Button> }
+                {!isDDVisible && <Button  icon={<SVG name="mouseevent" size={16} color={'purple'} />} className={`fa-button--truncate`} type="link" onClick={triggerDropDown}> {event.label} </Button> }
                 {additionalActions()}
                 {selectEvents()}
             </div>

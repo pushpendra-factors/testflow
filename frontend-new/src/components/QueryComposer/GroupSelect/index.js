@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 import { Input } from 'antd';
-import { SVG } from 'factorsComponents';
+import { SVG, Text } from 'factorsComponents';
 
 function GroupSelect({
   groupedProperties, placeholder,
@@ -40,10 +40,10 @@ function GroupSelect({
                 onClick={() => collapseGroup(grpIndex)}
               >
                 <div>
-                    <SVG name={group.icon} size={16} extraClass={'self-center'}></SVG>
-                    <span className={'ml-1'}>{group.label}</span>
+                    <SVG name={group.icon} color={'purple'} extraClass={'self-center'}></SVG>
+                    <Text level={8} type={'title'} extraClass={'m-0 ml-2 uppercase'} weight={'bold'}>{group.label}</Text>
                 </div>
-                <SVG color={'grey'} color={'grey'} name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
+                <SVG color={'grey'}  name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
               </div>}
               <div className={styles.dropdown__filter_select__option_group_container_sec}>
                 { collState
@@ -56,10 +56,10 @@ function GroupSelect({
                             onClick={() => optionClick(group.label, val)} >
                               {searchTerm.length > 0 && 
                               <div>
-                                <SVG name={group.icon} extraClass={'self-center'}></SVG>
+                                <SVG name={group.icon} color={'purple'} extraClass={'self-center'}></SVG>
                               </div>
-                              }
-                              <span className={'ml-1'}>{val[0]}</span>
+                              } 
+                              <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>{val[0]}</Text>
                           </div>
                         );
                       }

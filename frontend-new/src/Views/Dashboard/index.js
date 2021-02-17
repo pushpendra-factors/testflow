@@ -2,8 +2,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import moment from "moment";
 import Header from "../AppLayout/Header";
 import SearchBar from "../../components/SearchBar";
-import ProjectTabs from "./ProjectTabs";
-// import ProjectTabs from './ProjectTabs';
+import ProjectTabs from "./ProjectTabs"; 
 import AddDashboard from "./AddDashboard";
 import { useDispatch } from "react-redux";
 import { DASHBOARD_UNMOUNTED } from "../../reducers/types";
@@ -21,7 +20,7 @@ function Dashboard() {
     setEditDashboard(dashboard);
   }, []);
 
-  const handleDurationChange = useCallback((dates) => {
+  const handleDurationChange = useCallback((dates) => { 
     let from,
       to,
       frequency = "date";
@@ -41,6 +40,7 @@ function Dashboard() {
         from,
         to,
         frequency,
+        ...dates
       };
     });
   }, []);

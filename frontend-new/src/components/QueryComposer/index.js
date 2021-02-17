@@ -109,7 +109,7 @@ function QueryComposer({
       }
 
       return (
-        <ComposerBlock blockTitle={'Group By'} isOpen={true} showIcon={false}>
+        <ComposerBlock blockTitle={'GROUP BY'} isOpen={true} showIcon={false}>
           <div key={0} className={"fa--query_block borderless no-padding "}>
             <GroupBlock queryType={queryType} events={queries}></GroupBlock>
           </div>
@@ -248,7 +248,7 @@ function QueryComposer({
             visible={analyticsSeqOpen}
             onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
           >
-            <Button Button type="link" className={"ml-2"} size={"small"}>
+            <Button Button type="link" className={"ml-2"}>
               Between &nbsp;
               {queryOptions.session_analytics_seq.start}
               &nbsp; to &nbsp;
@@ -285,7 +285,7 @@ function QueryComposer({
         visible={analyticsSeqOpen}
         onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
       >
-        <Button Button type="link" className={"ml-2"} size={"small"}>
+        <Button Button type="link" className={"ml-2"}>
           Select Sequence
         </Button>
       </Popover>
@@ -342,7 +342,7 @@ function QueryComposer({
   const renderQueryList = () => {
     try {
       return (
-        <ComposerBlock blockTitle={'Events'} isOpen={true} showIcon={false}>
+        <ComposerBlock blockTitle={'EVENTS'} isOpen={true} showIcon={false}>
           {queryList()}
         </ComposerBlock>
       )

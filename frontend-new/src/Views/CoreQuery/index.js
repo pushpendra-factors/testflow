@@ -553,9 +553,9 @@ function CoreQuery({
           </Text>
         </div>
         <div className={"flex justify-end items-center"}>
-          <Button size={"large"} type="text">
+          {/* <Button size={"large"} type="text">
             <SVG name="play"></SVG>Help
-          </Button>
+          </Button> */}
           <Button size={"large"} type="text" onClick={() => closeDrawer()}>
             <SVG name="times"></SVG>
           </Button>

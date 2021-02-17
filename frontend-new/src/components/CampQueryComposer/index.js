@@ -199,11 +199,11 @@ const CampQueryComposer = ({ activeProject, channel,
     }
 
     const renderGroupBy = (index, init = false) => {
-        return (<div key={0} className={` ${styles.groupItem} flex justify-start items-center mt-4`} >
+        return (<div key={0} className={` ${styles.groupItem} flex justify-start items-center mt-2`} >
             {!groupByDD[index] &&
                 <>
 
-                    {init === false ? <Button size={'large'}
+                    {init === false ? <Button
                         type="text"
                         onClick={() => delGbpOption(index)}
                         className={`${styles.gbpRemove}`}>
@@ -215,7 +215,7 @@ const CampQueryComposer = ({ activeProject, channel,
                         </div>
                     }
 
-                    <Button size={'large'} type="link" onClick={() => triggerGroupDD(index)}>
+                    <Button type="link" onClick={() => triggerGroupDD(index)}>
                         {init === true ?
                             <>Add new </> :
                             <><SVG name={groupBy[index].prop_category}></SVG>

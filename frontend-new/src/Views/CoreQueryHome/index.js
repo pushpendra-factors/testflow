@@ -1,7 +1,7 @@
 /* eslint-disable */
 import React, { useCallback, useState, useEffect } from "react";
 import { Text, SVG } from "../../components/factorsComponents";
-import { Row, Col, Table, Avatar, Button, Dropdown, Menu } from "antd";
+import { Row, Col, Table, Avatar, Button, Dropdown, Menu, Tag } from "antd";
 import { MoreOutlined } from "@ant-design/icons";
 import Header from "../AppLayout/Header";
 import SearchBar from "../../components/SearchBar";
@@ -373,11 +373,13 @@ function CoreQuery({
                   return (
                       <div
                         onClick={() => setQueryTypeTab(item)}
-                        className="fai--custom-card-new flex flex-col "
+                        className={`fai--custom-card-new flex flex-col ${item.title == 'Templates' ? 'disabled' : null}`}
                       >
-                        <div className={"fai--custom-card-new--top-section flex justify-center items-center"}>
+                        <div className={`fai--custom-card-new--top-section flex justify-center items-center`}>
+                            {item.title == 'Templates' && <Tag color="red" className={'fai--custom-card--badge'}>Coming Soon</Tag>}
                             <SVG name={item.icon} size={40} />
                         </div>
+
                         <div className="fai--custom-card-new--bottom-section p-4">
                           <Text type={"title"} level={7} weight={"bold"} extraClass={'m-0'}> {item.title} </Text>
                           <Text type={"title"} level={7} color={'grey'} extraClass={'m-0 mt-1 fai--custom-card-new--desc'}> {item.desc} </Text>

@@ -38,7 +38,8 @@ function DashboardSubMenu({
       </Button>
     );
   }
-
+console.log("dashboard data->>>",dashboard)
+console.log("durationObj data->>>",durationObj)
   return (
     <div className={'flex justify-between items-center px-0 mb-5'}>
       <div className={'flex justify-between items-center'}>
@@ -61,11 +62,12 @@ function DashboardSubMenu({
       </div>
       <div className={'flex justify-between items-center'}>
       
-      <Tooltip placement="bottom" title={"Refresh data now"} mouseEnterDelay={0.2}>
+      {durationObj?.dateType === 'today' && <Tooltip placement="bottom" title={"Refresh data now"} mouseEnterDelay={0.2}>
         <Button type={"text"} onClick={setRefreshClicked.bind(this, true)} icon={refreshClicked ? null : <SVG name={'syncAlt'}/> }  loading={refreshClicked} style={{minWidth:'142px'}} className={'fa-button-ghost p-0 py-2'}>
           {dashboard?.updated_at ? moment(dashboard.updated_at).fromNow() : 'Refresh Data'} 
         </Button> 
-      </Tooltip>
+      </Tooltip>}
+
         {/* <Button style={{ display: 'flex' }} size={'large'} className={'items-center m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined /></Button>
         <Button style={{ display: 'flex' }} size={'large'} className={'items-center m-0 fa-button-ghost p-0 py-2'}><MoreOutlined /></Button> */}
 

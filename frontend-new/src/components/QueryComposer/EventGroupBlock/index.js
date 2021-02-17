@@ -3,7 +3,7 @@ import styles from './index.module.scss';
 
 import { Button } from 'antd';
 
-import { SVG } from 'factorsComponents';
+import { SVG, Text } from 'factorsComponents';
 
 import { connect } from 'react-redux';
 import GroupSelect from '../GroupSelect';
@@ -18,7 +18,7 @@ const EventGroupBlock = ({
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'User Properties',
-      icon: 'userplus',
+      icon: 'user',
       values: []
     },
     {
@@ -128,17 +128,18 @@ const EventGroupBlock = ({
 
   const renderGroupContent = () => {
     return (
-          <div className={`${styles.group_block__group_content} ml-4`}>
+      <Button type={'link'} className={'ml-2 fa-button--truncate'}>
 
             {groupByEvent.property}
 
             {renderGroupPropertyOptions(groupByEvent)}
-          </div>
+          </Button>
     );
   };
 
   const renderGroupBySelect = () => {
-    return (<GroupSelect groupedProperties={filterOptions}
+    return (
+    <GroupSelect groupedProperties={filterOptions}
             placeholder="Select Property"
             optionClick={(group, val) => onChange(group, val)}
             onClickOutside={() => closeDropDown()}
@@ -147,16 +148,15 @@ const EventGroupBlock = ({
   };
 
   return (
-        <div className={styles.group_block}>
-        <Button size={'small'} type="text" onClick={() => delGroupState(groupByEvent)} className={`${styles.group_block__remove} mr-1`}><SVG name="remove"></SVG></Button>
-        <span className={`${styles.group_block__prefix} ml-10`}>group by</span>
+    <div className={`flex items-center relative w-full`}>
+        <Button type="text" onClick={() => delGroupState(groupByEvent)} className={`mr-1`} icon={<SVG name="remove" />}/>         
+        <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>group by </Text>
         {groupByEvent && groupByEvent.property
           ? renderGroupContent()
           : <>
-            {renderGroupBySelect()}
+            {renderGroupBySelect()} 
           </>
-        }
-
+        } 
         </div>
   );
 };

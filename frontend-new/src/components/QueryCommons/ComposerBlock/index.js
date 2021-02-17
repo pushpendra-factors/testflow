@@ -11,10 +11,10 @@ const ComposerBlock = ({blockTitle, disabled = false, isOpen, showIcon=true, onC
     const renderHeader = () => {
         return (
             <div className={`${styles.cmpBlock__title}`}>
-                <div>
+                <div className={'mb-2'}>
                   <Text
                     type={"title"}
-                    level={6}
+                    level={7}
                     weight={"bold"}
                     disabled={disabled}
                     extraClass={"m-0 mb-2 inline"}

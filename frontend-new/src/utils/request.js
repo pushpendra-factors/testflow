@@ -31,6 +31,10 @@ function request(dispatch, method, url, headers, data) {
     if (window.FACTORS_AI_LOGIN_TOKEN && window.FACTORS_AI_LOGIN_TOKEN !== '') {
       options.headers.Authorization = window.FACTORS_AI_LOGIN_TOKEN;
     }
+
+    if(window.INVALIDATE_CACHE && window.INVALIDATE_CACHE != "") {
+      options.headers["Invalidate-Cache"] = true;
+    }
   
     return fetch(url, options)
       .then((response) => {

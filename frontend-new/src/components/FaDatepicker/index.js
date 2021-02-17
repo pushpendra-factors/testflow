@@ -52,19 +52,17 @@ const FaDatepicker = ({ placement,
             dateString,
             dateType
 
-        }
-        console.log("inside onchange");
+        } 
 
-        if (datePickerType == 'month') {
-            console.log("inside onchange month");
+        if (datePickerType == 'month') { 
             let startDateMonth = moment(startDate).startOf('month');
             let endDateMonth = moment(startDate).endOf('month');
             let newDateDataMonth = {
                 ...dateData,
                 startDate: startDateMonth,
-                endDate: endDateMonth
-            }
-            console.log("inside onchange-->>", newDateDataMonth);
+                endDate: endDateMonth,
+                dateType:datePickerType
+            } 
             onSelect(newDateDataMonth);
             // setdateString('++Month'); 
         }
@@ -74,7 +72,8 @@ const FaDatepicker = ({ placement,
                 let newDateDataMonth = {
                     ...dateData,
                     startDate,
-                    endDate: endDateMonth
+                    endDate: endDateMonth,
+                    dateType:datePickerType
                 }
 
                 onSelect(newDateDataMonth);
@@ -83,7 +82,8 @@ const FaDatepicker = ({ placement,
                 let newDateDataMonth = {
                     ...dateData,
                     startDate,
-                    endDate
+                    endDate,
+                    dateType:datePickerType
                 }
 
                 onSelect(newDateDataMonth);
@@ -102,7 +102,9 @@ const FaDatepicker = ({ placement,
             let newDateData = {
                 ...dateData,
                 startDate: today,
-                endDate: today
+                endDate: today,
+                dateType:type,
+                dateString: 'Today',
             }
             setdateString('Today');
             onSelect(newDateData);
@@ -114,7 +116,9 @@ const FaDatepicker = ({ placement,
             let newDateData = {
                 ...dateData,
                 startDate,
-                endDate
+                endDate,
+                dateType:type,
+                dateString: 'This Week',
             }
             setdateString('This Week');
             onSelect(newDateData);
@@ -125,7 +129,9 @@ const FaDatepicker = ({ placement,
             let newDateData = {
                 ...dateData,
                 startDate,
-                endDate
+                endDate,
+                dateType:type,
+                dateString: 'Last Week',
             }
             setdateString('Last Week');
             onSelect(newDateData);
@@ -137,7 +143,9 @@ const FaDatepicker = ({ placement,
             let newDateData = {
                 ...dateData,
                 startDate,
-                endDate
+                endDate,
+                dateType:type,
+                dateString: 'This Month',
             }
             setdateString('This Month');
             onSelect(newDateData);
@@ -148,7 +156,10 @@ const FaDatepicker = ({ placement,
             let newDateData = {
                 ...dateData,
                 startDate,
-                endDate
+                endDate,
+                dateType:type,
+                dateString: 'Last Month',
+                
             }
             setdateString('Last Month');
             onSelect(newDateData);
@@ -233,10 +244,15 @@ const FaDatepicker = ({ placement,
     );
 
 
-    const displayRange = (range) => {
+    const displayRange = (range) => { 
+        if(dateString == 'Today'){
+            return moment(range.startDate).format('MMM DD, YYYY')
+        }
+        else{
+            return moment(range.startDate).format('MMM DD, YYYY') + ' - ' +
+                moment(range.endDate).format('MMM DD, YYYY'); 
+        }
         
-        return moment(range.startDate).format('MMM DD, YYYY') + ' - ' +
-            moment(range.endDate).format('MMM DD, YYYY');
     }
 
     return (

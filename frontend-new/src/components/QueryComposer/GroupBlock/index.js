@@ -80,9 +80,9 @@ function GroupBlock({
   };
 
   const renderInitGroupSelect = (index) => {
-    return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center mt-4`} >
+    return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center mt-2`} >
       {!isDDVisible[index] &&
-        <Button size={'large'} type="link" onClick={() => triggerDropDown(index)}><SVG name="plus" extraClass={`mr-2`} /> Add new </Button> }
+        <Button type="text" onClick={() => triggerDropDown(index)}><SVG name="plus" extraClass={`mr-2`} /> Add new </Button> }
       {isDDVisible[index]
         ? (<GroupSelect groupedProperties={filterOptions}
           placeholder="Select Property"
@@ -156,14 +156,14 @@ function GroupBlock({
   const renderExistingBreakdowns = () => {
     if (groupByState.global.length < 1) return;
     return (groupByState.global.map((opt, index) => (
-      <div key={index} className={`${styles.group_block__select} flex justify-start items-center mt-4`} >
+      <div key={index} className={`${styles.group_block__select} flex justify-start items-center mt-2`} >
         {!isDDVisible[index] && <>
-        <Button size={'large'}
+        <Button
         type="text"
         onClick={() => delOption(index)}
-        className={`${styles.group_block__remove} mr-2ß`}>
-          <SVG name="remove"></SVG></Button>
-
+        className={`${styles.group_block__remove} mr-2`}
+        icon={<SVG name="delete" />}
+        /> 
         <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {opt.property ? opt.property : 'Select user property'}</Button>
         {renderGroupPropertyOptions(opt, index)}
         </>

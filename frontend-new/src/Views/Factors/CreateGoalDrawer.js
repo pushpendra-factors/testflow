@@ -411,7 +411,7 @@ const renderFilterBlock = () => {
                                 </>
                                 }
 
-                                {event1 && !showDropDown  && <Button type={'link'} size={'large'} style={{maxWidth: '220px',textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} className={'ml-2'} ellipsis onClick={()=>{
+                                {event1 && !showDropDown  && <Button type={'link'} size={'large'} className={'ml-2 fa-button--truncate fa-button--truncate-sm'} ellipsis onClick={()=>{
                                   setShowDropDown(true); 
                                   }} >{event1}</Button> 
                                 } 
@@ -459,7 +459,7 @@ const renderFilterBlock = () => {
                             </>
                             }
 
-                            {event2 && !showDropDown2  && <Button type={'link'} size={'large'} style={{maxWidth: '220px',textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} className={'ml-2'} ellipsis onClick={()=>{
+                            {event2 && !showDropDown2  && <Button type={'link'} size={'large'} className={'ml-2 fa-button--truncate fa-button--truncate-sm'} ellipsis onClick={()=>{
                               setShowDropDown2(true); 
                               }} >{event2}</Button> 
                             }

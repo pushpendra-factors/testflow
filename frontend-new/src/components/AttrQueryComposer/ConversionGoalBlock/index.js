@@ -139,18 +139,20 @@ const ConversionGoalBlock = ({
 
     const renderGoalBlockContent = () => {
         return (
-            <div className={`${styles.block__content}`}>
+            <div className={'flex items-center'}>
                 {!selectVisible && <Button 
                     size={'large'} 
                     type="link" 
-                    onClick={toggleEventSelect}>
-                        <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
+                    onClick={toggleEventSelect}
+                    icon={<SVG name="mouseevent" />}
+                    className={'fa-button--truncate fa-button--truncate-sm'}
+                    >
                          {eventGoal && eventGoal.label} 
                 </Button> }
 
                 {selectEvents()}
 
-                <Text type={'paragraph'} color={`grey`} extraClass={`${styles.block__content__txt_muted}`}> as count of unique users </Text>
+                <Text type={'title'} level={7} weight={'regular'} color={'grey'} extraClass={'m-0 ml-2'}>as count of unique users</Text>
 
                 {additionalActions()}
             </div>
@@ -160,7 +162,7 @@ const ConversionGoalBlock = ({
     const renderGoalSelect = () => {
 
         return (
-            <div className={`${styles.block__content}`}>
+            <div className={'flex items-center'}>
                     <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
                         <SVG name={'plus'} color={'purple'}></SVG>
                     </div>

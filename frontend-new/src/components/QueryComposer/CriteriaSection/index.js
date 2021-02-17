@@ -70,8 +70,7 @@ const CriteriaSection = ({queryType, queryCount = 0, crit_show, crit_perf, setSh
 
     const renderCritShow = () => {
         return (<div className={`mr-2 items-center`}>
-            <Button 
-                    size={'large'} 
+            <Button  
                     type="link" 
                     onClick={() => setCritShowSelect(!critShowSelect)}>
                         {crit_show? CRITERIA_SHOW_OPTIONS.filter((op) => op[2] === crit_show)[0][0]: crit_show}

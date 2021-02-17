@@ -170,12 +170,7 @@ $cq-card-transition: transform .2s ease-in-out;
             padding: 4px 6px; 
         }
     }
-    &:hover{
-        .fa--query_block--actions{
-            display: block;
-        }
-    }
-
+ 
     .fa--query_block--filters
     {
         padding: 12px 0;
@@ -185,8 +180,8 @@ $cq-card-transition: transform .2s ease-in-out;
 
     }
     .fa--query_block--add-event{
-        height: 32px;
-        width: 32px;
+        height: 28px;
+        width: 28px;
         border: 1px solid transparent; 
         border-radius: 100%;
         transition: all 0.3s;
@@ -267,20 +262,11 @@ $cq-card-transition: transform .2s ease-in-out;
 .fa--query_block_section {
     @extend .fa--query_block;
 
-    .block_section {
-        &:hover{
-            .fa--query_block--actions{
-                display: block;
-            }
-        }
-    }
-
     &:hover{
         .fa--query_block--actions{
-            display: none;
+            display: block;
         }
     }
-
 
 }
 
@@ -326,6 +312,7 @@ $cq-card-transition: transform .2s ease-in-out;
     cursor: pointer;
     width: 220px;
     margin-left: 2em;
+    // overflow: hidden;
     &:first-child{
         margin-left: 0px; 
     }
@@ -333,11 +320,30 @@ $cq-card-transition: transform .2s ease-in-out;
     &:hover{
         box-shadow : 6px 7px 17px $fa-color--mono-2;
     }
+    &.disabled{
+        pointer-events: none; 
+        cursor: not-allowed;
+        box-shadow : none !important;
+        opacity: 0.7;
+    }
     .fai--custom-card-new--top-section
     {
         background-color: $fa-color--mono-1;
         border-bottom: 1px solid $fa-color--mono-1;
+        border-radius: 8px;
+        border-bottom-left-radius: 0px;
+        border-bottom-right-radius: 0px;
         padding: 2.75em 0;
+        position: relative;
+       
+        .fai--custom-card--badge
+        {
+            position: absolute;
+            top:-12px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 4px;
+        }
     }
     .fai--custom-card-new--bottom-section
     {
