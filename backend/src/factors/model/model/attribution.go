@@ -92,9 +92,11 @@ const (
 	AttributionQueryTypeEngagementBased = "EngagementBased"
 )
 
-type RangeTimestamp struct {
-	MinTimestamp int64
-	MaxTimestamp int64
+type UserSessionTimestamp struct {
+	MinTimestamp      int64
+	MaxTimestamp      int64
+	TimeStamps        []int64
+	WithinQueryPeriod bool
 }
 
 var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "Website Visitors"}

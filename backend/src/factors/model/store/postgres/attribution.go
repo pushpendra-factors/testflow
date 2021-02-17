@@ -232,7 +232,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, err
 	}
 
-	addWebsiteVisitorsInfo(query.From, query.To, attributionData, sessions, len(query.LinkedEvents))
+	addWebsiteVisitorsInfo(attributionData, sessions, len(query.LinkedEvents))
 
 	// 5. Add the performance information
 	currency, err := pg.AddPerformanceReportInfo(projectID, attributionData, query.From, query.To,
@@ -250,7 +250,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64, from, to int64, goalEventName string,
 	goalEventProperties []model.QueryProperty, attributionMethodology, attributionMethodologyCompare string,
-	eventNameToIDList map[string][]interface{}, sessions map[string]map[string]model.RangeTimestamp,
+	eventNameToIDList map[string][]interface{}, sessions map[string]map[string]model.UserSessionTimestamp,
 	lookbackDays int, campaignFrom, campaignTo int64) (map[string]*model.AttributionData, error) {
 
 	// empty linkedEvents as they are not analyzed in compare events.
@@ -322,7 +322,7 @@ func (pg *Postgres) runAttribution(projectID uint64,
 	linkedEvents []model.QueryEventWithProperties,
 	attributionMethodology string,
 	eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.RangeTimestamp,
+	sessions map[string]map[string]model.UserSessionTimestamp,
 	lookbackDays int, campaignFrom, campaignTo int64) (map[string]*model.AttributionData, error) {
 
 	// 3. Fetch users who hit conversion event
@@ -493,7 +493,7 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
 func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint64,
-	query *model.AttributionQuery, adwordsAccountId string) (map[string]map[string]model.RangeTimestamp, []string, error) {
+	query *model.AttributionQuery, adwordsAccountId string) (map[string]map[string]model.UserSessionTimestamp, []string, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	effectiveFrom := lookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -513,7 +513,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 		return nil, nil, err
 	}
 
-	attributedSessionsByUserId := make(map[string]map[string]model.RangeTimestamp)
+	attributedSessionsByUserId := make(map[string]map[string]model.UserSessionTimestamp)
 	userIdMap := make(map[string]bool)
 	var userIdsWithSession []string
 
@@ -569,14 +569,20 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 			if timeRange, ok := attributedSessionsByUserId[userID][attributionId]; ok {
 				timeRange.MinTimestamp = U.Min(timeRange.MinTimestamp, timestamp)
 				timeRange.MaxTimestamp = U.Max(timeRange.MaxTimestamp, timestamp)
+				timeRange.TimeStamps = append(timeRange.TimeStamps, timestamp)
+				timeRange.WithinQueryPeriod = timeRange.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
 				attributedSessionsByUserId[userID][attributionId] = timeRange
 			} else {
-				sessionRange := model.RangeTimestamp{MinTimestamp: timestamp, MaxTimestamp: timestamp}
+				sessionRange := model.UserSessionTimestamp{MinTimestamp: timestamp,
+					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
+					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To}
 				attributedSessionsByUserId[userID][attributionId] = sessionRange
 			}
 		} else {
-			attributedSessionsByUserId[userID] = make(map[string]model.RangeTimestamp)
-			sessionRange := model.RangeTimestamp{MinTimestamp: timestamp, MaxTimestamp: timestamp}
+			attributedSessionsByUserId[userID] = make(map[string]model.UserSessionTimestamp)
+			sessionRange := model.UserSessionTimestamp{MinTimestamp: timestamp,
+				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
+				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To}
 			attributedSessionsByUserId[userID][attributionId] = sessionRange
 		}
 	}
@@ -868,8 +874,9 @@ func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
 		propertiesID := userIDToCoalIDInfo[userID].PropertiesID
 		filteredCoalIDToUserIDInfo[coalUserID] =
 			append(filteredCoalIDToUserIDInfo[coalUserID],
-				model.UserIDPropID{userID, propertiesID, timestamp})
-		filteredUserIdToUserIDInfo[userID] = model.UserInfo{coalUserID, propertiesID, timestamp}
+				model.UserIDPropID{UserID: userID, PropertiesID: propertiesID, Timestamp: timestamp})
+		filteredUserIdToUserIDInfo[userID] = model.UserInfo{CoalUserID: coalUserID,
+			PropertiesID: propertiesID, Timestamp: timestamp}
 
 		if _, ok := coalUserIdConversionTimestamp[coalUserID]; ok {
 			if timestamp < coalUserIdConversionTimestamp[coalUserID] {
@@ -907,34 +914,39 @@ func lookbackAdjustedTo(to int64, lookbackDays int) int64 {
 }
 
 // updateSessionsMapWithCoalesceID Clones a new map replacing userId by coalUserId.
-func updateSessionsMapWithCoalesceID(attributedSessionsByUserId map[string]map[string]model.RangeTimestamp,
-	usersInfo map[string]model.UserInfo) map[string]map[string]model.RangeTimestamp {
+func updateSessionsMapWithCoalesceID(attributedSessionsByUserId map[string]map[string]model.UserSessionTimestamp,
+	usersInfo map[string]model.UserInfo) map[string]map[string]model.UserSessionTimestamp {
 
-	newSessionsMap := make(map[string]map[string]model.RangeTimestamp)
+	newSessionsMap := make(map[string]map[string]model.UserSessionTimestamp)
 	for userId, attributionIdMap := range attributedSessionsByUserId {
 		userInfo := usersInfo[userId]
-		for attributionId, newTimeRange := range attributionIdMap {
+		for attributionId, newUserSession := range attributionIdMap {
 			if _, ok := newSessionsMap[userInfo.CoalUserID]; ok {
-				if existingTimeRange, ok := newSessionsMap[userInfo.CoalUserID][attributionId]; ok {
+				if existingUserSession, ok := newSessionsMap[userInfo.CoalUserID][attributionId]; ok {
 					// update the existing attribution first and last touch
-					existingTimeRange.MinTimestamp = U.Min(existingTimeRange.MinTimestamp, newTimeRange.MinTimestamp)
-					existingTimeRange.MaxTimestamp = U.Max(existingTimeRange.MaxTimestamp, newTimeRange.MaxTimestamp)
-					newSessionsMap[userInfo.CoalUserID][attributionId] = existingTimeRange
+					existingUserSession.MinTimestamp = U.Min(existingUserSession.MinTimestamp, newUserSession.MinTimestamp)
+					existingUserSession.MaxTimestamp = U.Max(existingUserSession.MaxTimestamp, newUserSession.MaxTimestamp)
+					// mer
+					for _, timestamp := range newUserSession.TimeStamps {
+						existingUserSession.TimeStamps = append(existingUserSession.TimeStamps, timestamp)
+					}
+					existingUserSession.WithinQueryPeriod = existingUserSession.WithinQueryPeriod || newUserSession.WithinQueryPeriod
+					newSessionsMap[userInfo.CoalUserID][attributionId] = existingUserSession
 					continue
 				}
-				newSessionsMap[userInfo.CoalUserID][attributionId] = newTimeRange
+				newSessionsMap[userInfo.CoalUserID][attributionId] = newUserSession
 				continue
 			}
-			newSessionsMap[userInfo.CoalUserID] = make(map[string]model.RangeTimestamp)
-			newSessionsMap[userInfo.CoalUserID][attributionId] = newTimeRange
+			newSessionsMap[userInfo.CoalUserID] = make(map[string]model.UserSessionTimestamp)
+			newSessionsMap[userInfo.CoalUserID][attributionId] = newUserSession
 		}
 	}
 	return newSessionsMap
 }
 
 // Maps the count distinct users session to campaign id and adds it to attributionData
-func addWebsiteVisitorsInfo(queryFrom int64, queryTo int64, attributionData map[string]*model.AttributionData,
-	attributedSessionsByUserId map[string]map[string]model.RangeTimestamp, linkedEventsCount int) {
+func addWebsiteVisitorsInfo(attributionData map[string]*model.AttributionData,
+	attributedSessionsByUserId map[string]map[string]model.UserSessionTimestamp, linkedEventsCount int) {
 	// creating an empty linked events row
 	emptyLinkedEventRow := make([]float64, 0)
 	for i := 0; i < linkedEventsCount; i++ {
@@ -943,11 +955,10 @@ func addWebsiteVisitorsInfo(queryFrom int64, queryTo int64, attributionData map[
 
 	userIdAttributionIdVisit := make(map[string]bool)
 	for userId, attributionIdMap := range attributedSessionsByUserId {
-		for attributionId, rangeTimestamp := range attributionIdMap {
+		for attributionId, sessionTimestamp := range attributionIdMap {
 
 			// only count sessions that happened during attribution period
-			if rangeTimestamp.MaxTimestamp >= queryFrom && rangeTimestamp.MaxTimestamp <= queryTo ||
-				rangeTimestamp.MinTimestamp >= queryFrom && rangeTimestamp.MinTimestamp <= queryTo {
+			if sessionTimestamp.WithinQueryPeriod {
 
 				if _, ok := attributionData[attributionId]; !ok {
 					attributionData[attributionId] = &model.AttributionData{}

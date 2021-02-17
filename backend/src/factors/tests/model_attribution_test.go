@@ -629,11 +629,11 @@ func TestAttributionMethodologies(t *testing.T) {
 
 	queryFrom := 0
 	queryTo := 1000
-	userSession := make(map[string]map[string]model.RangeTimestamp)
-	userSession[user1] = make(map[string]model.RangeTimestamp)
-	userSession[user1][camp1] = model.RangeTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
-	userSession[user1][camp2] = model.RangeTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
-	userSession[user1][camp3] = model.RangeTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
+	userSession := make(map[string]map[string]model.UserSessionTimestamp)
+	userSession[user1] = make(map[string]model.UserSessionTimestamp)
+	userSession[user1][camp1] = model.UserSessionTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
+	userSession[user1][camp2] = model.UserSessionTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
+	userSession[user1][camp3] = model.UserSessionTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 150
 	lookbackDays := 1
@@ -641,7 +641,7 @@ func TestAttributionMethodologies(t *testing.T) {
 		method                        string
 		conversionEvent               string
 		usersToBeAttributed           []model.UserEventInfo
-		userInitialSession            map[string]map[string]model.RangeTimestamp
+		userInitialSession            map[string]map[string]model.UserSessionTimestamp
 		coalUserIdConversionTimestamp map[string]int64
 		lookbackDays                  int
 	}
@@ -725,12 +725,12 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 	camp3 := "campaign3"
 	queryFrom := 0
 	queryTo := 1000
-	userSession := make(map[string]map[string]model.RangeTimestamp)
-	userSession[user1] = make(map[string]model.RangeTimestamp)
-	userSession[user1][camp0] = model.RangeTimestamp{MinTimestamp: 10, MaxTimestamp: 40}
-	userSession[user1][camp1] = model.RangeTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
-	userSession[user1][camp2] = model.RangeTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
-	userSession[user1][camp3] = model.RangeTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
+	userSession := make(map[string]map[string]model.UserSessionTimestamp)
+	userSession[user1] = make(map[string]model.UserSessionTimestamp)
+	userSession[user1][camp0] = model.UserSessionTimestamp{MinTimestamp: 10, MaxTimestamp: 40}
+	userSession[user1][camp1] = model.UserSessionTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
+	userSession[user1][camp2] = model.UserSessionTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
+	userSession[user1][camp3] = model.UserSessionTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 150
 	lookbackDays := 1
@@ -738,7 +738,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 		method                        string
 		conversionEvent               string
 		usersToBeAttributed           []model.UserEventInfo
-		userInitialSession            map[string]map[string]model.RangeTimestamp
+		userInitialSession            map[string]map[string]model.UserSessionTimestamp
 		coalUserIdConversionTimestamp map[string]int64
 		lookbackDays                  int
 	}
@@ -845,12 +845,12 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 	camp4 := "$none"
 	queryFrom := 0
 	queryTo := 1000
-	userSession := make(map[string]map[string]model.RangeTimestamp)
-	userSession[user1] = make(map[string]model.RangeTimestamp)
-	userSession[user1][camp1] = model.RangeTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
-	userSession[user1][camp2] = model.RangeTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
-	userSession[user1][camp3] = model.RangeTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
-	userSession[user1][camp4] = model.RangeTimestamp{MinTimestamp: 10, MaxTimestamp: 400}
+	userSession := make(map[string]map[string]model.UserSessionTimestamp)
+	userSession[user1] = make(map[string]model.UserSessionTimestamp)
+	userSession[user1][camp1] = model.UserSessionTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
+	userSession[user1][camp2] = model.UserSessionTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
+	userSession[user1][camp3] = model.UserSessionTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
+	userSession[user1][camp4] = model.UserSessionTimestamp{MinTimestamp: 10, MaxTimestamp: 400}
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 150
 	lookbackDays := 1
@@ -858,7 +858,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		method                        string
 		conversionEvent               string
 		usersToBeAttributed           []model.UserEventInfo
-		userInitialSession            map[string]map[string]model.RangeTimestamp
+		userInitialSession            map[string]map[string]model.UserSessionTimestamp
 		coalUserIdConversionTimestamp map[string]int64
 		lookbackDays                  int
 	}

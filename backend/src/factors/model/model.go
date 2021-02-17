@@ -51,7 +51,7 @@ type Model interface {
 	// attribution
 	ExecuteAttributionQuery(projectID uint64, query *model.AttributionQuery) (*model.QueryResult, error)
 	ApplyAttribution(method string, conversionEvent string, usersToBeAttributed []model.UserEventInfo,
-		userInitialSession map[string]map[string]model.RangeTimestamp, coalUserIdConversionTimestamp map[string]int64,
+		userInitialSession map[string]map[string]model.UserSessionTimestamp, coalUserIdConversionTimestamp map[string]int64,
 		lookbackDays int, campaignFrom, campaignTo int64) (map[string][]string, map[string]map[string][]string, error)
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error)
 	GetLinkedFunnelEventUsers(projectId uint64, from, to int64,

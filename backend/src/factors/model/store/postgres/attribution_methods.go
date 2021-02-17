@@ -12,7 +12,7 @@ type pair struct {
 
 // This method maps the user to the attribution key based on given attribution methodology.
 func (pg *Postgres) ApplyAttribution(method string, conversionEvent string, usersToBeAttributed []model.UserEventInfo,
-	userInitialSession map[string]map[string]model.RangeTimestamp,
+	userInitialSession map[string]map[string]model.UserSessionTimestamp,
 	coalUserIdConversionTimestamp map[string]int64,
 	lookbackDays int, campaignFrom, campaignTo int64) (map[string][]string, map[string]map[string][]string, error) {
 
@@ -70,7 +70,7 @@ func (pg *Postgres) ApplyAttribution(method string, conversionEvent string, user
 }
 
 // returns list of attribution keys from given attributionKeyTime map
-func getLinearTouch(attributionTimerange map[string]model.RangeTimestamp, conversionTime int64,
+func getLinearTouch(attributionTimerange map[string]model.UserSessionTimestamp, conversionTime int64,
 	lookbackPeriod int64, from, to int64) []string {
 
 	var keys []string
@@ -84,7 +84,7 @@ func getLinearTouch(attributionTimerange map[string]model.RangeTimestamp, conver
 }
 
 // returns the first attributionId
-func getFirstTouchId(attributionTimerange map[string]model.RangeTimestamp, conversionTime int64,
+func getFirstTouchId(attributionTimerange map[string]model.UserSessionTimestamp, conversionTime int64,
 	lookbackPeriod int64, from, to int64) []string {
 	var attributionIds []pair
 	for aId, rangeT := range attributionTimerange {
@@ -111,7 +111,7 @@ func getFirstTouchId(attributionTimerange map[string]model.RangeTimestamp, conve
 }
 
 // returns the last attributionId
-func getLastTouchId(attributionTimerange map[string]model.RangeTimestamp, conversionTime int64,
+func getLastTouchId(attributionTimerange map[string]model.UserSessionTimestamp, conversionTime int64,
 	lookbackPeriod int64, from, to int64) []string {
 
 	var attributionIds []pair
@@ -139,7 +139,7 @@ func getLastTouchId(attributionTimerange map[string]model.RangeTimestamp, conver
 }
 
 // returns the first non $none attributionId
-func getFirstTouchNDId(attributionTimerange map[string]model.RangeTimestamp, conversionTime int64,
+func getFirstTouchNDId(attributionTimerange map[string]model.UserSessionTimestamp, conversionTime int64,
 	lookbackPeriod int64, from, to int64) []string {
 
 	var attributionIds []pair
@@ -172,7 +172,7 @@ func getFirstTouchNDId(attributionTimerange map[string]model.RangeTimestamp, con
 }
 
 // returns the last non $none attributionId
-func getLastTouchNDId(attributionTimerange map[string]model.RangeTimestamp, conversionTime int64,
+func getLastTouchNDId(attributionTimerange map[string]model.UserSessionTimestamp, conversionTime int64,
 	lookbackPeriod int64, from, to int64) []string {
 
 	var attributionIds []pair
