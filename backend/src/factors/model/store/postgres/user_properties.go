@@ -756,6 +756,54 @@ func shouldAllowCustomerUserID(current, incoming string) bool {
 
 }
 
+func getUpdatedPhoneNoFromFormSubmit(formPropertyPhone, userPropertyPhone string) (string, error) {
+
+	if userPropertyPhone != formPropertyPhone {
+
+		if userPropertyPhone == "" {
+			return U.SanitizePhoneNumber(formPropertyPhone), nil
+		}
+
+		if formPropertyPhone == "" {
+			return userPropertyPhone, nil
+		}
+
+		sanitizedPhoneNumber := U.SanitizePhoneNumber(formPropertyPhone)
+		if shouldAllowCustomerUserID(U.GetPropertyValueAsString(userPropertyPhone), sanitizedPhoneNumber) {
+			return sanitizedPhoneNumber, model.ErrDifferentPhoneNoSeen
+		}
+
+		return "", nil
+	}
+
+	return formPropertyPhone, nil
+}
+
+func getUpdatedEmailFromFormSubmit(formPropertyEmail, userPropertyEmail string) (string, error) {
+	lowerCaseformPropertyEmail := U.GetEmailLowerCase(formPropertyEmail)
+	lowerCaseUserPropertyEmail := U.GetEmailLowerCase(userPropertyEmail)
+
+	if lowerCaseUserPropertyEmail != lowerCaseformPropertyEmail {
+
+		if lowerCaseUserPropertyEmail == "" {
+			return lowerCaseformPropertyEmail, nil
+		}
+
+		if lowerCaseformPropertyEmail == "" {
+			return lowerCaseUserPropertyEmail, nil
+		}
+
+		// avoid free email update
+		if !shouldAllowCustomerUserID(U.GetPropertyValueAsString(lowerCaseUserPropertyEmail), lowerCaseformPropertyEmail) {
+			return "", model.ErrDifferentEmailSeen
+		}
+
+		return lowerCaseformPropertyEmail, model.ErrDifferentEmailSeen
+	}
+
+	return lowerCaseformPropertyEmail, nil
+}
+
 // GetCustomerUserIDAndUserPropertiesFromFormSubmit return customer_user_id na and validated user_properties from form submit properties
 func (pg *Postgres) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID uint64, userID string,
 	formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int) {
@@ -776,61 +824,60 @@ func (pg *Postgres) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID u
 		logCtx.Error("Failed to decoding latest user properties on fill form submitted properties.")
 	}
 
-	formPropertyEmail, formPropertyEmailExists := (*formSubmitProperties)[U.UP_EMAIL]
-	userPropertyEmail, userPropertyEmailExists := (*userProperties)[U.UP_EMAIL]
+	formPropertyEmail := U.GetPropertyValueAsString((*formSubmitProperties)[U.UP_EMAIL])
+	userPropertyEmail := U.GetPropertyValueAsString((*userProperties)[U.UP_EMAIL])
 
-	formPropertyPhone, formPropertyPhoneExists := (*formSubmitProperties)[U.UP_PHONE]
-	userPropertyPhone, userPropertyPhoneExists := (*userProperties)[U.UP_PHONE]
+	formPropertyPhone := U.GetPropertyValueAsString((*formSubmitProperties)[U.UP_PHONE])
+	userPropertyPhone := U.GetPropertyValueAsString((*userProperties)[U.UP_PHONE])
 
-	formSubmitUserProperties := getUserPropertiesFromFormSubmitEventProperties(formSubmitProperties)
-
-	if formPropertyEmailExists && userPropertyEmailExists {
-
-		if userPropertyEmail != formPropertyEmail {
-			logCtx.WithField("tag", "different_email_seen_for_customer_user_id").
-				Warn("Different email seen on form event. User property not updated.")
-
-			// avoid free email update
-			lowerCaseEmail := U.GetEmailLowerCase(formPropertyEmail)
-			if !shouldAllowCustomerUserID(U.GetPropertyValueAsString(userPropertyEmail), lowerCaseEmail) {
-				return "", nil, http.StatusBadRequest
-			}
-			return lowerCaseEmail, formSubmitUserProperties, http.StatusConflict
-		}
-
-		return U.GetEmailLowerCase(formPropertyEmail), formSubmitUserProperties, http.StatusOK
-	}
-
-	if formPropertyPhoneExists && userPropertyPhoneExists {
-
-		if userPropertyPhone != formPropertyPhone {
-			logCtx.WithField("tag", "different_phone_seen_for_customer_user_id").
-				Warn("Different phone seen on form event. User property not updated.")
-
-			// only allow update if phone number contains previous substring
-			sanitizedPhoneNumber := U.SanitizePhoneNumber(formPropertyPhone)
-			if shouldAllowCustomerUserID(U.GetPropertyValueAsString(userPropertyPhone), sanitizedPhoneNumber) {
-				return sanitizedPhoneNumber, formSubmitUserProperties, http.StatusConflict
-			}
-
-			return "", nil, http.StatusBadRequest
-		}
-
-		return U.SanitizePhoneNumber(formPropertyPhone), formSubmitUserProperties, http.StatusOK
-	}
-
-	if !formPropertyEmailExists && !formPropertyPhoneExists {
+	if formPropertyEmail == "" && formPropertyPhone == "" {
 		return "", nil, http.StatusBadRequest
 	}
 
-	var identity string
-	if formPropertyEmailExists {
-		identity = U.GetEmailLowerCase(formPropertyEmail)
-	} else if formPropertyPhoneExists {
-		identity = U.SanitizePhoneNumber(formPropertyPhone)
+	formSubmitUserProperties := getUserPropertiesFromFormSubmitEventProperties(formSubmitProperties)
+
+	orderedIdentifierType := model.GetIdentifierPrecendenceOrderByProjecrtID(projectID)
+
+	if len(orderedIdentifierType) < 1 {
+		logCtx.Error("Failed getting project configured form submit identifiers.")
+		return "", nil, http.StatusInternalServerError
 	}
 
-	return identity, formSubmitUserProperties, http.StatusOK
+	for _, identifierType := range orderedIdentifierType {
+
+		if identifierType == model.IdentificationTypeEmail {
+
+			if formPropertyEmail != "" || userPropertyEmail != "" {
+				identity, err := getUpdatedEmailFromFormSubmit(formPropertyEmail, userPropertyEmail)
+				if identity != "" {
+					if err == model.ErrDifferentEmailSeen {
+						logCtx.WithError(err).
+							Warn("Different email seen on form event. User property not updated.")
+						return identity, formSubmitUserProperties, http.StatusConflict
+					}
+					return identity, formSubmitUserProperties, http.StatusOK
+				}
+				return "", nil, http.StatusBadRequest
+			}
+
+		} else if identifierType == model.IdentificationTypePhone {
+
+			if formPropertyPhone != "" || userPropertyPhone != "" {
+				identity, err := getUpdatedPhoneNoFromFormSubmit(formPropertyPhone, userPropertyPhone)
+				if identity != "" {
+					if err == model.ErrDifferentPhoneNoSeen {
+						logCtx.WithError(err).
+							Warn("Different phone seen on form event. User property not updated.")
+						return identity, formSubmitUserProperties, http.StatusConflict
+					}
+					return identity, formSubmitUserProperties, http.StatusOK
+				}
+				return "", nil, http.StatusBadRequest
+			}
+		}
+	}
+
+	return "", nil, http.StatusBadRequest
 }
 
 func (pg *Postgres) GetUserPropertyRecordsByUserId(projectId uint64, userId string) ([]model.UserProperties, int) {

@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -53,6 +54,9 @@ type SessionUserProperties struct {
 // indexed hubspot user property.
 const UserPropertyHubspotContactLeadGUID = "$hubspot_contact_lead_guid"
 const MaxUsersForPropertiesMerge = 100
+
+var ErrDifferentEmailSeen error = errors.New("different_email_seen_for_customer_user_id")
+var ErrDifferentPhoneNoSeen error = errors.New("different_phone_no_seen_for_customer_user_id")
 
 func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string) error {
 	geo := config.GetServices().GeoLocation

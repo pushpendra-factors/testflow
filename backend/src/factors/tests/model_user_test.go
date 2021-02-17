@@ -640,7 +640,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 		customerUserId, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
 			user.ID, &formSubmitProperties)
 		assert.Equal(t, http.StatusOK, errCode)
-		assert.Equal(t, "99999999999", customerUserId)
+		assert.Equal(t, "xxx@example.com", customerUserId)
 		// Should add all other properties from form submit as phone matches.
 		assert.Equal(t, "xxx@example.com", (*formSubmitUserProperties)[U.UP_EMAIL])
 		assert.Equal(t, "99999999999", (*formSubmitUserProperties)[U.UP_PHONE])
@@ -658,10 +658,10 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 		}
 		customerUserId, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
 			user.ID, &formSubmitProperties)
-		assert.Equal(t, http.StatusBadRequest, errCode)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "xxx@example.com", customerUserId)
 		// Should add all other properties from form submit as phone matches.
-		assert.Equal(t, "", customerUserId)
-		assert.Nil(t, formSubmitUserProperties)
+		assert.NotNil(t, formSubmitUserProperties)
 	})
 
 	t.Run("FormSubmitWithCaseSensitiveEmailAndLeadingZeroPhoneNo", func(t *testing.T) {
@@ -722,4 +722,157 @@ func TestUserIdentityPropertiesOnCreateUser(t *testing.T) {
 	assert.Equal(t, cuid, (*properties)[U.UP_USER_ID])
 	assert.Equal(t, "city1", (*properties)["city"])
 
+}
+
+func TestIdentificationOrderPrecedence(t *testing.T) {
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+	timestamp := time.Now().Unix()
+
+	phone := "1234567890"
+	email1 := "ma@mail.com"
+	// identification by phone
+	properties := U.PropertiesMap{"$phone": phone}
+	trackPayload := &SDK.TrackPayload{
+		Name:            U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp:       timestamp,
+		EventProperties: properties,
+	}
+
+	status, response := SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	assert.NotNil(t, response.EventId)
+	assert.NotEmpty(t, response.UserId)
+	assert.Equal(t, http.StatusOK, status)
+	userId := response.UserId
+	user, status = store.GetStore().GetUser(project.ID, userId)
+	assert.Equal(t, phone, user.CustomerUserId)
+	propertiesMap, err := U.DecodePostgresJsonbAsPropertiesMap(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, phone, (*propertiesMap)[U.UP_USER_ID])
+	assert.Equal(t, phone, (*propertiesMap)[U.UP_PHONE])
+	assert.Nil(t, (*propertiesMap)[U.UP_EMAIL])
+
+	// adding email property
+	timestamp = timestamp + 1
+	properties = U.PropertiesMap{"$phone": phone, "$email": email1}
+	trackPayload = &SDK.TrackPayload{
+		Name:            U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp:       timestamp,
+		EventProperties: properties,
+		UserId:          userId,
+	}
+
+	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	assert.NotNil(t, response.EventId)
+	assert.Equal(t, http.StatusOK, status)
+
+	// email should be new customer_user_id
+	user, status = store.GetStore().GetUser(project.ID, userId)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email1, user.CustomerUserId)
+	propertiesMap, err = U.DecodePostgresJsonbAsPropertiesMap(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, email1, (*propertiesMap)[U.UP_USER_ID])
+	assert.Equal(t, phone, (*propertiesMap)[U.UP_PHONE])
+	assert.Equal(t, email1, (*propertiesMap)[U.UP_EMAIL])
+
+	// new email should overwrite
+	email2 := "ma1@mail.com"
+	timestamp = timestamp + 10
+	properties = U.PropertiesMap{"$phone": phone, "$email": email2}
+	trackPayload = &SDK.TrackPayload{
+		Name:            U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp:       timestamp,
+		EventProperties: properties,
+		UserId:          userId,
+	}
+
+	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	assert.NotNil(t, response.EventId)
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, userId)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email2, user.CustomerUserId)
+	propertiesMap, err = U.DecodePostgresJsonbAsPropertiesMap(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, email2, (*propertiesMap)[U.UP_USER_ID])
+	assert.Equal(t, phone, (*propertiesMap)[U.UP_PHONE])
+	assert.Equal(t, email2, (*propertiesMap)[U.UP_EMAIL])
+
+	// phone number change shouldn't affect customer_user_id
+	phone2 := "1234567899"
+	timestamp = timestamp + 10
+	properties = U.PropertiesMap{"$phone": phone2, "$email": email2}
+	trackPayload = &SDK.TrackPayload{
+		Name:            U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp:       timestamp,
+		EventProperties: properties,
+		UserId:          userId,
+	}
+
+	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	assert.NotNil(t, response.EventId)
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, userId)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email2, user.CustomerUserId)
+	propertiesMap, err = U.DecodePostgresJsonbAsPropertiesMap(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, email2, (*propertiesMap)[U.UP_USER_ID])
+	assert.Equal(t, phone2, (*propertiesMap)[U.UP_PHONE])
+	assert.Equal(t, email2, (*propertiesMap)[U.UP_EMAIL])
+
+	/*
+		New user with email initially
+	*/
+
+	timestamp = timestamp + 10
+	email1 = "ma2@mail.com"
+	properties = U.PropertiesMap{U.UP_EMAIL: email1}
+	trackPayload = &SDK.TrackPayload{
+		Name:            U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp:       timestamp,
+		EventProperties: properties,
+	}
+
+	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotNil(t, response.EventId)
+	assert.NotEmpty(t, response.UserId)
+	userId = response.UserId
+	user, status = store.GetStore().GetUser(project.ID, userId)
+	assert.Equal(t, email1, user.CustomerUserId)
+	propertiesMap, err = U.DecodePostgresJsonbAsPropertiesMap(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, email1, (*propertiesMap)[U.UP_USER_ID])
+	assert.Nil(t, (*propertiesMap)[U.UP_PHONE])
+	assert.Equal(t, email1, (*propertiesMap)[U.UP_EMAIL])
+
+	// Only phone property in form submit, should not change customer_user_id. Phone property
+	// added.
+
+	timestamp = timestamp + 10
+	phone = "1234567899"
+	properties = U.PropertiesMap{U.UP_PHONE: phone}
+	trackPayload = &SDK.TrackPayload{
+		Name:            U.EVENT_NAME_FORM_SUBMITTED,
+		Timestamp:       timestamp,
+		EventProperties: properties,
+		UserId:          userId,
+	}
+
+	status, response = SDK.Track(project.ID, trackPayload, false, SDK.SourceJSSDK)
+	assert.NotNil(t, response.EventId)
+	assert.Equal(t, http.StatusOK, status)
+	user, status = store.GetStore().GetUser(project.ID, userId)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, email1, user.CustomerUserId)
+	propertiesMap, err = U.DecodePostgresJsonbAsPropertiesMap(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, email1, (*propertiesMap)[U.UP_USER_ID])
+	// phone property added
+	assert.Equal(t, phone, (*propertiesMap)[U.UP_PHONE])
+	assert.Equal(t, email1, (*propertiesMap)[U.UP_EMAIL])
 }

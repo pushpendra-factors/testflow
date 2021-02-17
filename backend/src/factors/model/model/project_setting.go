@@ -257,6 +257,18 @@ type SalesforceProjectSettings struct {
 	InstanceURL  string `json:"instance_url"`
 }
 
+// Identification types
+const (
+	IdentificationTypePhone = "phone"
+	IdentificationTypeEmail = "email"
+)
+
+var standardOrderedIdentifiers = []string{IdentificationTypeEmail, IdentificationTypePhone}
+
+var overWriteIndentificationOrderByProjectID = map[uint64][]string{
+	483: {IdentificationTypePhone, IdentificationTypeEmail},
+}
+
 // GetSalesforceAllowedObjects return allowed object type for a project
 func GetSalesforceAllowedObjects(projectID uint64) []int {
 	var docTypes []int
@@ -289,4 +301,13 @@ func GetSalesforceAllowedfiedsByObject(projectID uint64, objectName string) map[
 	}
 
 	return nil
+}
+
+// GetIdentifierPrecendenceOrderByProjecrtID return ordered identifier type by projectID
+func GetIdentifierPrecendenceOrderByProjecrtID(projectID uint64) []string {
+	if orderedIndentifiers, exists := overWriteIndentificationOrderByProjectID[projectID]; exists {
+		return orderedIndentifiers
+	}
+
+	return standardOrderedIdentifiers
 }
