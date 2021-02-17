@@ -25,6 +25,7 @@ func DataServiceAdwordsAddDocumentHandler(c *gin.Context) {
 
 	errCode := store.GetStore().CreateAdwordsDocument(&adwordsDocument)
 	if errCode == http.StatusConflict {
+		log.WithField("document", adwordsDocument).Error("Failed to insert the adword document on create document.")
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Duplicate documents."})
 		return
 	}

@@ -57,6 +57,7 @@ var selectableMetricsForAdwords = []string{
 	"click_through_rate",
 	"conversion_rate",
 	"cost_per_click",
+	"cost_per_conversion",
 	"search_impression_share",
 	"search_click_share",
 	"search_top_impression_share",
@@ -140,6 +141,7 @@ var adwordsExtToInternal = map[string]string{
 	"click_through_rate":          "click_through_rate",
 	"conversion_rate":             "conversion_rate",
 	"cost_per_click":              "cost_per_click",
+	"cost_per_conversion":         "cost_per_conversion",
 	"search_impression_share":     "search_impression_share",
 	"search_click_share":          "search_click_share",
 	"search_top_impression_share": "search_top_impression_share",
@@ -227,22 +229,27 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalValue:            "conversion",
 		externalOperation:        "sum",
 	},
-
 	"click_through_rate": {
-		higherOrderExpression:    "sum((value->>'clicks')::float)/NULLIF(sum((value->>'impressions')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'clicks')::float)",
+		higherOrderExpression:    "sum((value->>'clicks')::float)*100/(NULLIF(sum((value->>'impressions')::float), 0)",
+		nonHigherOrderExpression: "sum((value->>'clicks')::float)*100",
 		externalValue:            "click_through_rate",
 		externalOperation:        "sum",
 	},
 	"conversion_rate": {
-		higherOrderExpression:    "sum((value->>'conversions')::float)/NULLIF(sum((value->>'clicks')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'conversions')::float)",
+		higherOrderExpression:    "sum((value->>'conversions')::float)*100/NULLIF(sum((value->>'clicks')::float), 0)",
+		nonHigherOrderExpression: "sum((value->>'conversions')::float)*100",
 		externalValue:            "conversion_rate",
 		externalOperation:        "sum",
 	},
 	"cost_per_click": {
-		higherOrderExpression:    "sum((value->>'cost')::float)/NULLIF(sum((value->>'clicks')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'cost')::float)",
+		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'clicks')::float), 0)",
+		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
+		externalValue:            "cost_per_click",
+		externalOperation:        "sum",
+	},
+	"cost_per_conversion": {
+		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'conversions')::float), 0)",
+		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
 		externalValue:            "cost_per_click",
 		externalOperation:        "sum",
 	},
@@ -258,7 +265,6 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalValue:            "search_click_share",
 		externalOperation:        "sum",
 	},
-
 	"search_top_impression_share": {
 		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_top_impression')::float), 0)",
 		nonHigherOrderExpression: "sum((value->>'total_search_top_impression')::float)",
@@ -271,7 +277,6 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalValue:            "search_budget_lost_absolute_top_impression_share",
 		externalOperation:        "sum",
 	},
-
 	"search_budget_lost_impression_share": {
 		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_budget_lost_impression')::float), 0)",
 		nonHigherOrderExpression: "sum((value->>'total_search_budget_lost_impression')::float)",
@@ -410,6 +415,9 @@ func getAdwordsIDAndHeirarchyColumnsByType(docType int, valueJSON *postgres.Json
 	idStr, err := U.GetValueAsString(id)
 	if err != nil {
 		return "", 0, 0, 0, 0, err
+	}
+	if docType == AdwordsDocumentTypeAlias[keywordPerformanceReport] {
+		idStr = U.GetUUID()
 	}
 
 	value1, value2, value3, value4 := getAdwordsHierarchyColumnsByType(valueMap, docType)

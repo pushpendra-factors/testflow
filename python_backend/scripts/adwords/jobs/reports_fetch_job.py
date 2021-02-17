@@ -20,27 +20,36 @@ class ReportsFetch(BaseJob):
     WHERE_IN_COLUMN = 'CampaignStatus'
     WHERE_IN_VALUES = ['ENABLED', 'PAUSED']
     MAX_LOOK_BACK_DAYS = 30
-    DEFUALT_FLOAT = 0.000
+    DEFAULT_FLOAT = 0.000
     DEFAULT_NUMERATOR_FLOAT = 0.0
     DEFAULT_DENOMINATOR_FLOAT = 1.0
     DEFAULT_DECIMAL_PLACES = 3
 
     # Currently only commonFields Transformation is being done and Expression = Total--- = impressions/share---
-    OTHER_FIELD_NAME = 'other_field_name'
-    RESULT_FIELD = 'result_field'
+    OPERAND1 = 'operand1'
+    OPERAND2 = 'operand2'
     OPERATION = 'operation'
-    TRANSFORM_TO_FORM_NEW_FIELDS = {
-       'search_impression_share': { RESULT_FIELD: 'total_search_impression', OPERATION: operator.truediv, OTHER_FIELD_NAME: 'impressions'},
-       'search_click_share': { RESULT_FIELD: 'total_search_click', OPERATION: operator.truediv, OTHER_FIELD_NAME: 'impressions'},
-       'search_top_impression_share': { RESULT_FIELD: 'total_search_top_impression', OPERATION: operator.truediv, OTHER_FIELD_NAME: 'impressions'},
-       'search_budget_lost_absolute_top_impression_share': { RESULT_FIELD: 'total_search_budget_lost_absolute_top_impression', OPERATION: operator.truediv, OTHER_FIELD_NAME: 'impressions'},
-       'search_budget_lost_impression_share': { RESULT_FIELD: 'total_search_budget_lost_impression', OPERATION: operator.truediv, OTHER_FIELD_NAME: 'impressions'},
-       'search_budget_lost_top_impression_share': { RESULT_FIELD: 'total_search_budget_lost_top_impression', OPERATION: operator.truediv, OTHER_FIELD_NAME: 'impressions'},
-       'search_rank_lost_absolute_top_impression_share': { RESULT_FIELD: 'total_search_rank_lost_absolute_top_impression', OPERATION: operator.truediv, OTHER_FIELD_NAME: 'impressions'},
-       'search_rank_lost_impression_share': { RESULT_FIELD: 'total_search_rank_lost_impression', OPERATION: operator.truediv, OTHER_FIELD_NAME: 'impressions'},
-       'search_rank_lost_top_impression_share': { RESULT_FIELD: 'total_search_rank_lost_top_impression', OPERATION: operator.truediv, OTHER_FIELD_NAME: 'impressions'}
-    }
-
+    RESULT_FIELD = 'result_field'
+    TRANSFORM_AND_ADD_NEW_FIELDS = [
+        {OPERAND1: 'impressions', OPERAND2: 'search_impression_share', RESULT_FIELD: 'total_search_impression',
+         OPERATION: operator.truediv},
+        {OPERAND1: 'impressions', OPERAND2: 'search_click_share', RESULT_FIELD: 'total_search_click',
+         OPERATION: operator.truediv},
+        {OPERAND1: 'impressions', OPERAND2: 'search_top_impression_share', RESULT_FIELD: 'total_search_top_impression',
+         OPERATION: operator.truediv},
+        {OPERAND1: 'impressions', OPERAND2: 'search_budget_lost_absolute_top_impression_share',
+         RESULT_FIELD: 'total_search_budget_lost_absolute_top_impression', OPERATION: operator.truediv},
+        {OPERAND1: 'impressions', OPERAND2: 'search_budget_lost_impression_share',
+         RESULT_FIELD: 'total_search_budget_lost_impression', OPERATION: operator.truediv},
+        {OPERAND1: 'impressions', OPERAND2: 'search_budget_lost_top_impression_share',
+         RESULT_FIELD: 'total_search_budget_lost_top_impression', OPERATION: operator.truediv},
+        {OPERAND1: 'impressions', OPERAND2: 'search_rank_lost_absolute_top_impression_share',
+         RESULT_FIELD: 'total_search_rank_lost_absolute_top_impression', OPERATION: operator.truediv},
+        {OPERAND1: 'impressions', OPERAND2: 'search_rank_lost_impression_share',
+         RESULT_FIELD: 'total_search_rank_lost_impression', OPERATION: operator.truediv},
+        {OPERAND1: 'impressions', OPERAND2: 'search_rank_lost_top_impression_share',
+         RESULT_FIELD: 'total_search_rank_lost_top_impression', OPERATION: operator.truediv}
+    ]
 
     def __init__(self, next_info):
         super().__init__(next_info)
@@ -73,13 +82,13 @@ class ReportsFetch(BaseJob):
         return transformed_rows
 
     def transform_entity(self, row):
-        for field1_name in self.TRANSFORM_TO_FORM_NEW_FIELDS:
-            value = self.TRANSFORM_TO_FORM_NEW_FIELDS[field1_name]
-            field2_name = value[self.OTHER_FIELD_NAME]
-            operation = value[self.OPERATION]
-            result_field_name = value[self.RESULT_FIELD]
+        for transform in self.TRANSFORM_AND_ADD_NEW_FIELDS:
+            field1_name = transform[self.OPERAND1]
+            field2_name = transform[self.OPERAND2]
+            operation = transform[self.OPERATION]
+            result_field_name = transform[self.RESULT_FIELD]
             if field1_name in row and field2_name in row:
-                transformed_value = self.get_transformed_value_for_division_operator(row, field1_name, field2_name, operation)
+                transformed_value = self.get_transformed_value_for_arithmetic_operator(row, field1_name, field2_name, operation)
                 row[result_field_name] = transformed_value
 
         return row
@@ -122,10 +131,9 @@ class ReportsFetch(BaseJob):
         return TimeUtil.get_timestamp_before_days(ReportsFetch.MAX_LOOK_BACK_DAYS)
 
     @staticmethod
-    def get_transformed_value_for_division_operator(row, field1, field2, operation):
-        field1_value = FormatUtil.get_numeric_from_percentage_string(row.get(field1, ReportsFetch.DEFAULT_NUMERATOR_FLOAT))
-        field2_value = FormatUtil.get_numeric_from_percentage_string(row.get(field2, ReportsFetch.DEFAULT_DENOMINATOR_FLOAT))
-        if field1_value == 0 or field2_value == 0:
-            return ReportsFetch.DEFUALT_FLOAT
-        else:
-            return round(operation(field1_value, field2_value), ReportsFetch.DEFAULT_DECIMAL_PLACES)
+    def get_transformed_value_for_arithmetic_operator(row, field1, field2, operation):
+        field1_value = FormatUtil.get_numeric_from_percentage_string(row.get(field1, ""))
+        field2_value = FormatUtil.get_numeric_from_percentage_string(row.get(field2, ""))
+        if operation == operator.truediv and field2_value == 0:
+            return ReportsFetch.DEFAULT_FLOAT
+        return round(operation(field1_value, field2_value), ReportsFetch.DEFAULT_DECIMAL_PLACES)

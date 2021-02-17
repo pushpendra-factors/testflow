@@ -251,9 +251,9 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "12","clicks": "102","campaign_id":"2","impressions": "1002", "campaign_name": "test2"}`)}},
 
 		{ID: "11", Timestamp: 20210201, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "ad_group_performance_report",
-			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "11","clicks": "101","campaign_id":"1","impressions": "1001", "campaign_name":"test1","ad_group_id":"11","ad_group_name":"agtest1", "total_search_click":"11"}`)}},
+			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "11","clicks": "101","campaign_id":"1","impressions": "1001", "campaign_name":"test1","ad_group_id":"11","ad_group_name":"agtest1", "total_search_click":"110"}`)}},
 		{ID: "11", Timestamp: 20210202, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "ad_group_performance_report",
-			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "11","clicks": "101","campaign_id":"1","impressions": "1001", "campaign_name": "test1","ad_group_id":"11","ad_group_name":"agtest1", "total_search_click":"11"}`)}},
+			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "11","clicks": "101","campaign_id":"1","impressions": "1001", "campaign_name": "test1","ad_group_id":"11","ad_group_name":"agtest1", "total_search_click":"110"}`)}},
 		{ID: "12", Timestamp: 20210201, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "ad_group_performance_report",
 			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "12","clicks": "102","campaign_id":"1","impressions": "1002", "campaign_name": "test1","ad_group_id":"12","ad_group_name":"agtest2","status":"paused"}`)}},
 		{ID: "12", Timestamp: 20210202, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "ad_group_performance_report",
@@ -369,7 +369,7 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 
 		[]byte(`{"result":{"result_group":[{"headers":["impressions","search_click_share"],"rows":[[4006,0]]}]}}`),
 		[]byte(`{"result":{"result_group":[{"headers":["search_click_share"],"rows":[[0]]}]}}`),
-		[]byte(`{"result":{"result_group":[{"headers":["ad_group_name","search_click_share"],"rows":[["agtest2",0],["agtest3",0],["agtest1",91]]}]}}`),
+		[]byte(`{"result":{"result_group":[{"headers":["ad_group_name","search_click_share"],"rows":[["agtest2",0],["agtest3",0],["agtest1",9.1]]}]}}`),
 		[]byte(`{"result":{"result_group":[{"headers":["keyword_quality_score","clicks"],"rows":[[0,307],["0.2",204],["0.1",101]]}]}}`),
 	}
 
@@ -392,13 +392,13 @@ func assertIfResponseIsEqualToExpected(t *testing.T, responseBody *bytes.Buffer,
 		log.Warn("o2", expected)
 		log.WithError(err).Error("Error unmarshalling responseBody.", index)
 	}
-	assert.Equal(t, reflect.DeepEqual(current, expected), true)
 	// Used for debugging.
 	if reflect.DeepEqual(current, expected) != true {
 		log.Warn("o1", current)
 		log.Warn("o2", expected)
 		log.Error("Response and expected are not equal", index)
 	}
+	assert.Equal(t, reflect.DeepEqual(current, expected), true)
 }
 
 func TestExecuteChannelQueryHandlerForLinkedin(t *testing.T) {
