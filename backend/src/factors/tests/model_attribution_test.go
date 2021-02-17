@@ -292,7 +292,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 			To:                     timestamp + 3*day,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodFirstTouch,
-			ConversionEvent:        model.QueryEventWithProperties{"event1", nil},
+			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           10,
 			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
@@ -343,8 +343,8 @@ func TestAttributionEngagementModel(t *testing.T) {
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "222222"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "333333"))
+		assert.Equal(t, int64(-1), getConversionUserCount(result, "222222"))
+		assert.Equal(t, int64(-1), getConversionUserCount(result, "333333"))
 		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
 	})
 
@@ -437,6 +437,7 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 		AttributionMethodology: model.AttributionMethodLastTouch,
 		ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
 		LookbackDays:           2,
+		QueryType:              model.AttributionQueryTypeConversionBased,
 	}
 
 	// Should find within look back window
@@ -487,6 +488,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		AttributionMethodology: model.AttributionMethodLastTouch,
 		ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
 		LookbackDays:           0,
+		QueryType:              model.AttributionQueryTypeConversionBased,
 	}
 
 	//both user should be treated different
@@ -505,7 +507,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, float64(1), getConversionUserCount(result, "$none"))
 
-	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
+	t.Run("TestAttributionUserIdentificationWithLookbackDays0", func(t *testing.T) {
 		// continuation to previous users
 		user1NewPropertiesId, status := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
 		assert.Equal(t, http.StatusAccepted, status)
@@ -515,7 +517,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		assert.Equal(t, http.StatusNotModified, status)
 		/*
 			t+3day -> first time $initial_campaign set with event for user1 and user2
-			t+6day -> sessioned event for user1 and user2
+			t+6day -> session event for user1 and user2
 		*/
 		status = createEventWithSession(project.ID, "event1", user1.ID, timestamp+3*86400, user1NewPropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
@@ -533,11 +535,15 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           4,
+			QueryType:              model.AttributionQueryTypeEngagementBased,
 		}
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionUserCount(result, "12345"))
+		// The attribution didn't happen in the query period. First touch is on 3rd day and which
+		// is not between 4th to 7th (query period). Hence count is 0.
+		assert.Equal(t, float64(0), getConversionUserCount(result, "12345"))
 	})
+
 }
 
 func TestAttributionEngagementWithUserIdentification(t *testing.T) {
@@ -574,7 +580,7 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 		QueryType:              model.AttributionQueryTypeEngagementBased,
 	}
 
-	//both user should be treated different
+	// Both user should be treated different
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(2), getConversionUserCount(result, "$none"))
