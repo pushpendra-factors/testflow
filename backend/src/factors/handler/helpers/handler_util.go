@@ -54,6 +54,10 @@ func SleepIfHeaderSet(c *gin.Context) {
 func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload model.BaseQuery,
 	resultContainer interface{}, forDashboard bool) (bool, int, interface{}) {
 
+	if c.Request.Header.Get(model.QueryCacheRequestInvalidatedCacheHeader) == "true" {
+		model.DeleteQueryCacheKey(projectID, requestPayload)
+		return false, http.StatusNotFound, nil
+	}
 	cacheResult, errCode := model.GetQueryResultFromCache(projectID, requestPayload, &resultContainer)
 	if errCode == http.StatusFound {
 		return getQueryCacheResponse(c, cacheResult, forDashboard)

@@ -124,10 +124,11 @@ const (
 	QueryCacheImmutableResultExpirySeconds float64 = 30 * 24 * 60 * 60 // 30 Days.
 	QueryCacheMutableResultExpirySeconds   float64 = 10 * 60           // 10 Minutes.
 
-	QueryCacheRequestSleepHeader       string = "QuerySleepSeconds"
-	QueryCacheResponseFromCacheHeader  string = "Fromcache"
-	QueryCacheResponseCacheRefreshedAt string = "Refreshedat"
-	QueryCacheRedisKeyPrefix           string = "query:cache"
+	QueryCacheRequestInvalidatedCacheHeader string = "Invalidate-Cache"
+	QueryCacheRequestSleepHeader            string = "QuerySleepSeconds"
+	QueryCacheResponseFromCacheHeader       string = "Fromcache"
+	QueryCacheResponseCacheRefreshedAt      string = "Refreshedat"
+	QueryCacheRedisKeyPrefix                string = "query:cache"
 )
 
 const (
