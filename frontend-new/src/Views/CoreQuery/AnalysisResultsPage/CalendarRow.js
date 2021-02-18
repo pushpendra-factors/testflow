@@ -39,7 +39,7 @@ function CalendarRow({
               endDate: durationObj.to,
             }}
             placement="topRight"
-            onSelect={setDateRange}
+            onSelect={setDateRange} 
           />
         </div>
       </div>

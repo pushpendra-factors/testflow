@@ -13,6 +13,7 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_TABLE,
 } from "../../../utils/constants";
+import NoDataChart from 'Components/NoDataChart';
 
 function NoBreakdownCharts({
   chartType,
@@ -33,7 +34,7 @@ function NoBreakdownCharts({
   if (!chartsData.length) {
     return (
       <div className="mt-4 flex justify-center items-center w-full h-64 ">
-        No Data Found!
+        <NoDataChart />
       </div>
     );
   }

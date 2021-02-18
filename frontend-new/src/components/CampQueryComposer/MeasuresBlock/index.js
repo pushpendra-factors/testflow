@@ -17,7 +17,7 @@ const MeasuresBlock = ({measures, onMeasureSelect, measures_metrics}) => {
     const additionalActions = (index) => {
         return (
                 <div className={'fa--query_block--actions'}>
-                   <Button size={'large'} type="text" onClick={() => deleteItem(index)}><SVG name="trash"></SVG></Button>
+                   <Button type="text" onClick={() => deleteItem(index)} icon={<SVG name="trash"/>}/>
                 </div>
         );
     };
@@ -56,11 +56,9 @@ const MeasuresBlock = ({measures, onMeasureSelect, measures_metrics}) => {
 
     const renderMeasureBlockContent = (measure, index) => {
         return (
-            <div key={index} className={`${styles.block__content}`}>
-                {!selectVisible[index] && <Button 
-                    size={'large'} 
-                    type="link" 
-                    className={styles.optText}
+            <div key={index} className={`fa--query_block_section--basic flex items-center relative mt-3`}>
+                {!selectVisible[index] && <Button  
+                    type="link"  
                     onClick={() => toggleSelect(index)}>
                          {measure && measure.replaceAll('_',' ')} 
                 </Button> }
@@ -73,12 +71,9 @@ const MeasuresBlock = ({measures, onMeasureSelect, measures_metrics}) => {
 
     const renderMeasureSelect = (index) => {
         return (
-            <div key={index} className={`${styles.block__content}`}>
-                    <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
-                        <SVG name={'plus'} color={'purple'}></SVG>
-                    </div>
+            <div key={index} className={`flex items-center relative mt-4`}> 
                     
-                    {!selectVisible[index] && <Button size={'large'} type="link" onClick={() => toggleSelect(index)}>Add new</Button>}
+                    {!selectVisible[index] && <Button type="text" onClick={() => toggleSelect(index)} icon={<SVG name={'plus'} />}>Add new</Button>}
                     
                     {selectEvents(index)}
             </div> 

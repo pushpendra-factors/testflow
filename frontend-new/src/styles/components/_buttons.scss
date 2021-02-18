@@ -2,17 +2,23 @@
 .ant-btn {
     font-family: $font-family;
     // height: auto;
-    border-radius: 5px;
-    // padding: 8px 16px; 
+    border-radius: 4px;
+    // padding: 4px 12px; 
 
     // border: 1px solid transparent; 
     border-color: #d9d9d9;
 
     background: $fa-color--white; 
-    color: $fa-color--mono-5;
+    color: $fa-color--mono-5; 
     
     &:disabled{
-        opacity: 0.5;  
+        opacity: 0.5;
+    }
+    &.active{
+        border-color: $fa-color--brand-color; 
+        &:hover,&:active,&:focus{
+            border-color: $fa-color--brand-color; 
+        }
     }
     &.fa-button--truncate{
         max-width: 350px;

@@ -269,6 +269,15 @@ $cq-card-transition: transform .2s ease-in-out;
     }
 
 }
+.fa--query_block_section--basic { 
+
+    &:hover{
+        .fa--query_block--actions{
+            display: block;
+        }
+    }
+
+}
 
 .fa-filter-select {
     .ant-input-affix-wrapper {

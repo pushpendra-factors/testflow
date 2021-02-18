@@ -1,7 +1,7 @@
 import React, { useCallback } from "react";
 import moment from "moment";
 import { Button } from "antd";
-import { SVG } from "../../../components/factorsComponents";
+import { SVG, Text } from "../../../components/factorsComponents";
 import {
   REPORT_SECTION,
   DASHBOARD_MODAL,
@@ -20,75 +20,32 @@ function ReportTitle({
     if (section === REPORT_SECTION) {
       setDrawerVisible(true);
     }
-    if (section === DASHBOARD_MODAL) {
-      console.log("adaddad");
+    if (section === DASHBOARD_MODAL) { 
       setDrawerVisible();
     }
   }, [section, setDrawerVisible]);
 
   return (
-    <div style={{ borderBottom: "1px solid #E7E9ED" }} className="pb-4">
-      <div className="flex justify-between items-center">
-        <div
-          style={{
-            fontSize: "32px",
-            letterSpacing: "-0.02em",
-            color: title ? "#3E516C" : "#8692A3",
-          }}
-          className="leading-9 font-semibold"
-        >
-          {title || `Untitled Analysis ${moment().format("DD/MM/YYYY")}`}
-        </div>
-        {section === DASHBOARD_MODAL ? (
-          <div>
-            <Button
-              style={{
-                display: "flex",
-                padding: "4px",
-                color: "#0E2647",
-                opacity: 0.56,
-              }}
-              className="items-center"
-              size={"large"}
-              type="text"
+    <div className="pb-2 border-bottom--thin-2">
+      <div className="flex justify-between items-center"> 
+        <Text type={"title"} level={3} weight={"bold"} extraClass={'m-0'}> {title || `Untitled Analysis ${moment().format("DD/MM/YYYY")}`} </Text>
+        {section === DASHBOARD_MODAL ? ( 
+            <Button  
+            type={'text'}
               onClick={onReportClose.bind(this, false)}
-            >
-              <SVG extraClass="mr-1" name="close" size="32" color={"#0E2647"} />
-            </Button>
-          </div>
+              icon={<SVG name="Remove" />}
+            />  
         ) : null}
       </div>
-      <div className="flex items-center mt-3">
-        <div
-          style={{ color: "#3E516C" }}
-          className="mr-2 text-base leading-6 font-medium"
-        >
-          {queryDetail}
-        </div>
-        {queryType !== QUERY_TYPE_WEB ? (
-          <div>
-            <Button
-              style={{
-                display: "flex",
-                padding: "4px",
-                color: "#0E2647",
-                opacity: 0.56,
-              }}
-              className="items-center"
-              size={"large"}
-              type="text"
-              onClick={handleClick}
-            >
-              <SVG
-                extraClass="mr-1"
-                name="edit_query"
-                size="24"
-                color={"#0E2647"}
-              />
-              Edit
-            </Button>
-          </div>
-        ) : null}
+      <div className="flex items-center"> 
+      <div className={'fa-title--editable flex items-center cursor-pointer '} onClick={queryType !== QUERY_TYPE_WEB ? handleClick : null}>
+        <Text type={"title"} level={6} color={'grey'} extraClass={'m-0 mr-2'}> {queryDetail} </Text>  
+        <SVG 
+                name="edit" 
+                color={'grey'}
+              /> 
+      </div> 
+
       </div>
     </div>
   );

@@ -66,8 +66,7 @@ function TableUnits({ tableUnits, data, setwidgetModal, resultState }) {
                     </div>
                   </div>
                 </div>
-              </div>
-              );
+              </div> 
             </div>
           );
         } else {

@@ -3,6 +3,7 @@ import { Spin } from 'antd';
 import EventBreakdownCharts from './EventBreakdownCharts';
 import BreakdownType from '../BreakdownType';
 import DurationInfo from '../../../../components/DurationInfo';
+import NoDataChart from 'Components/NoDataChart';
 
 function EventBreakdown({
   breakdown, data, breakdownType, handleBreakdownTypeChange, durationObj, handleDurationChange, isWidgetModal = false
@@ -18,7 +19,7 @@ function EventBreakdown({
   if (data.error) {
     return (
       <div className="flex justify-center items-center w-full h-64">
-        Something went wrong!
+        <NoDataChart />
       </div>
     );
   }

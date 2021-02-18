@@ -13,6 +13,7 @@ import {
   CHART_TYPE_LINECHART,
   DASHBOARD_MODAL,
 } from "../../../../utils/constants";
+import NoDataChart from 'Components/NoDataChart';
 
 function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
   const [chartsData, setChartsData] = useState([]);
@@ -25,7 +26,7 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
   if (!chartsData.length) {
     return (
       <div className="mt-4 flex justify-center items-center w-full h-64 ">
-        No Data Found!
+        <NoDataChart />
       </div>
     );
   }

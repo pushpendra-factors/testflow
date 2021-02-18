@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import styles from "./index.module.scss";
-import { SVG } from "../../../components/factorsComponents";
+import { SVG, Text } from "../../../components/factorsComponents";
 import { Button, Tooltip } from "antd";
 import moment from "moment";
 import { EVENT_BREADCRUMB } from "../../../utils/constants";
@@ -49,19 +49,19 @@ function AnalysisHeader({
         onClick={onBreadCrumbClick}
         className="flex items-center cursor-pointer"
       > 
-          <Button
-            style={{ display: "flex", padding: "8px" }}
-            className="items-center"
+          <Button  
             size={"large"}
             type="text"
-          >
-            <SVG size={32} name="Brand"></SVG>
-          </Button> 
-        <div className={styles.breadcrumb}>
-          {queryTitle
-            ? `Reports / ${EVENT_BREADCRUMB[queryType]} / ${queryTitle}`
-            : `Reports / ${EVENT_BREADCRUMB[queryType]} / Untitled Analyis${" "}
-          ${moment().format("DD/MM/YYYY")}`}
+            icon={<SVG size={32} name="Brand"/>}
+            className={'mr-2'}
+          />
+        <div>
+        <Text type={'title'} level={7} extraClass={'m-0 mt-1'} color={'grey'} lineHeight={'small'} >
+            {queryTitle
+              ? `Reports / ${EVENT_BREADCRUMB[queryType]} / ${queryTitle}`
+              : `Reports / ${EVENT_BREADCRUMB[queryType]} / Untitled Analyis${" "}
+            ${moment().format("DD/MM/YYYY")}`} 
+        </Text>
         </div>
       </div>
       <div className="flex items-center">
@@ -100,13 +100,13 @@ function AnalysisHeader({
           breakdownType={breakdownType}
         />
 
-        <Button
-          style={{ display: "flex", padding: "8px" }}
-          className="items-center"
+        <Button 
           size={"large"}
           type="text"
+          icon={<SVG size={20} name={"threedot"} />}
+          className={'ml-2'}
         >
-          <SVG size={32} name={"threedot"} color="#8692A3" />
+          
         </Button>
       </div>
     </div>

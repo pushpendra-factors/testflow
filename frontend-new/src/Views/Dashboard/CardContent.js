@@ -18,6 +18,7 @@ import {
 } from "../../utils/constants";
 import Attributions from "./Attributions";
 import CampaignAnalytics from "./CampaignAnalytics";
+import NoDataChart from 'Components/NoDataChart';
 
 function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
   let content = null;
@@ -33,7 +34,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
   if (resultState.error) {
     content = (
       <div className="flex justify-center items-center w-full h-64">
-        Something went wrong!
+        <NoDataChart />
       </div>
     );
   }

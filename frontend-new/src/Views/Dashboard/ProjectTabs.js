@@ -12,6 +12,7 @@ import DashboardSubMenu from "./DashboardSubMenu";
 import ExpandableView from "./ExpandableView";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import styles from "./index.module.scss";
+import NoDataChart from 'Components/NoDataChart';
 
 const { TabPane } = Tabs;
 
@@ -183,7 +184,7 @@ function ProjectTabs({
   if (dashboards.error || activeDashboardUnits.error) {
     return (
       <div className="flex justify-center items-center w-full h-64">
-        Something went wrong!
+        <NoDataChart />
       </div>
     );
   }

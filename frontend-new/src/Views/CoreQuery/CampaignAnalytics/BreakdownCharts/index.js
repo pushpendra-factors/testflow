@@ -5,6 +5,7 @@ import BarChart from "../../../../components/BarChart";
 import BreakdownTable from "./BreakdownTable";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
+import NoDataChart from 'Components/NoDataChart';
 
 function BreakdownCharts({
   arrayMapper,
@@ -33,7 +34,7 @@ function BreakdownCharts({
   if (!chartsData.length) {
     return (
       <div className="mt-4 flex justify-center items-center w-full h-64 ">
-        No Data Found!
+        <NoDataChart />
       </div>
     );
   }

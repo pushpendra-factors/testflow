@@ -37,14 +37,14 @@ function DashboardSubMenu({
         <UnlockOutlined /> Public.
       </Button>
     );
-  }
-console.log("dashboard data->>>",dashboard)
-console.log("durationObj data->>>",durationObj)
+  }  
+  const showRefreshBtn = durationObj?.dateType === 'today' || durationObj?.dateType === 'now'
   return (
     <div className={'flex justify-between items-center px-0 mb-5'}>
       <div className={'flex justify-between items-center'}>
         <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>Data from</Text>
         <FaDatepicker
+            nowPicker={dashboard?.name === 'Website Analytics' ? true : false} 
             customPicker
             presetRange
             monthPicker
@@ -62,7 +62,7 @@ console.log("durationObj data->>>",durationObj)
       </div>
       <div className={'flex justify-between items-center'}>
       
-      {durationObj?.dateType === 'today' && <Tooltip placement="bottom" title={"Refresh data now"} mouseEnterDelay={0.2}>
+      {showRefreshBtn && <Tooltip placement="bottom" title={"Refresh data now"} mouseEnterDelay={0.2}>
         <Button type={"text"} onClick={setRefreshClicked.bind(this, true)} icon={refreshClicked ? null : <SVG name={'syncAlt'}/> }  loading={refreshClicked} style={{minWidth:'142px'}} className={'fa-button-ghost p-0 py-2'}>
           {dashboard?.updated_at ? moment(dashboard.updated_at).fromNow() : 'Refresh Data'} 
         </Button> 

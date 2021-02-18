@@ -246,13 +246,13 @@ function WidgetCard({
                   <Text
                     ellipsis
                     type={"title"}
-                    level={5}
+                    level={6}
                     weight={"bold"}
                     extraClass={"m-0 mr-1"}
                   >
                     {unit.title}
                   </Text>
-                  <SVG color="#8692A3" size={20} name="expand" />
+                  <SVG size={16} name="expand" />
                 </div>
                 {/* <div className="description">
                   <Text

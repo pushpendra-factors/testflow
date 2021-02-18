@@ -8,6 +8,7 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_SPARKLINES,
 } from "../../../utils/constants";
+import NoDataChart from 'Components/NoDataChart';
 
 function EventBreakdownCharts({ resultState, breakdown, section, chartType, setwidgetModal, unit }) {
   const [chartsData, setChartsData] = useState([]);
@@ -25,7 +26,7 @@ function EventBreakdownCharts({ resultState, breakdown, section, chartType, setw
   if (!chartsData.length) {
     return (
       <div className="mt-4 flex justify-center items-center w-full h-64 ">
-        No Data Found!
+        <NoDataChart />
       </div>
     );
   }

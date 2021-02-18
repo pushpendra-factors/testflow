@@ -6,6 +6,7 @@ import { getWebAnalyticsData } from "../../../reducers/coreQuery/services";
 import { Spin } from "antd";
 import TableUnits from "./TableUnits";
 import CardUnit from "./CardUnit";
+import NoDataChart from 'Components/NoDataChart';
 
 function WebsiteAnalytics({
   webAnalyticsUnits,
@@ -53,7 +54,7 @@ function WebsiteAnalytics({
   if (resultState.error) {
     return (
       <div className="flex justify-center items-center w-full h-64">
-        Something went wrong!
+        <NoDataChart />
       </div>
     );
   }

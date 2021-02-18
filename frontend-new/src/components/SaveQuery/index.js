@@ -265,12 +265,10 @@ function SaveQuery({
   return (
     <>
       <Button
-        onClick={setVisible.bind(this, true)}
-        style={{ display: "flex" }}
-        placeholder={"Select Options"}
-        className="items-center"
+        onClick={setVisible.bind(this, true)}   
         type="primary"
-        icon={<SVG extraClass="mr-1" name={"save"} size={24} color="#FFFFFF" />}
+        size={'large'}
+        icon={<SVG name={"save"} size={20} color={'white'} />}
       >
         Save
       </Button>

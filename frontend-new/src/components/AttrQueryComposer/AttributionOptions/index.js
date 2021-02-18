@@ -82,9 +82,8 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt,
 
     const renderModel = (index) => {
         if(models && models[index]) {
-            return (<div className={styles.block__select_wrapper}>
-                    <Button 
-                        size={'large'} 
+            return (<div className={`${styles.block__select_wrapper} fa--query_block_section`}>
+                    <Button  
                         type="link" 
                         onClick={() => toggleModelSelect(index)}>
                             <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
@@ -92,7 +91,6 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt,
                                 modelOpts.filter((md) => md[1] === models[index])[0][0]
                             } 
                     </Button>
-
                     {selectModel(index)}
                 </div>)
 
@@ -117,12 +115,14 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt,
 
     const addModelAction = () => {
         return (
-            <div className={'fa--query_block--actions'}>
-                   <Button size={'large'} 
-                        type="text" onClick={
-                        () => setCompareModelActive(true)
-                        } className={'mr-1'}><SVG name="compare"></SVG>
-                    </Button>
+            <div className={'fa--query_block_section'}>
+                <div className={'fa--query_block--actions'}>
+                    <Button 
+                            type="text" onClick={
+                            () => setCompareModelActive(true)
+                            } className={'mr-1'}><SVG name="compare"></SVG>
+                        </Button>
+                </div>
             </div>
         )
     }
@@ -130,7 +130,7 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt,
     const renderAttributionModel = () => {
         
             return (
-                <div className={styles.block}>
+                <div className={`${styles.block}`}>
                     <Text 
                         type={'paragraph'} color={`grey`} 
                         extraClass={`${styles.block__content__title_muted}`}> 

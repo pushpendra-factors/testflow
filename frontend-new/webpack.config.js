@@ -120,6 +120,7 @@ module.exports = {
     extensions: ['*', '.js', '.jsx'],
     alias: {
       factorsComponents: path.resolve(__dirname, './src/components/factorsComponents'),
+      Components: path.resolve(__dirname, './src/components'),
       svgIcons: path.resolve(__dirname, './src/components/svgIcons'),
       Reducers: path.resolve(__dirname, './src/reducers'),
       Utils: path.resolve(__dirname, './src/utils')

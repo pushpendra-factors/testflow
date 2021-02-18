@@ -10,6 +10,9 @@
 .border-bottom--thin-2{
     border-bottom: thin solid $fa-color--mono-2;
 }
+.border-bottom--thin-3{
+    border-bottom: thin solid $fa-color--mono-3;
+}
 .border-top--thin{
     border-top: thin solid $fa-color--mono-1;
 }
@@ -27,16 +30,13 @@
 }
 .border-left--thin-2{
     border-left: thin solid $fa-color--mono-2;
-}
-
+} 
 .border-radius--medium{
     border-radius: 8px;
 }
 .background-color--brand-color-1{
  background-color: $fa-color--brand-1;
 }
-
-
 
 .border-radius--sm
 {
