@@ -31,7 +31,7 @@ import {
 } from "../types";
 import { DefaultDateRangeFormat } from "../../Views/CoreQuery/utils";
 
-const DEFAULT_TOUCHPOINTS = ["Campaign", "Source", "Ad Group", "Keyword"];
+const DEFAULT_TOUCHPOINTS = ["Campaign", "Source", "AdGroup", "Keyword"];
 
 const defaultState = {
   eventOptions: [],

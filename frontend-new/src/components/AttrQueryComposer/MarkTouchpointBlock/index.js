@@ -28,7 +28,7 @@ const MarkTouchpointBlock = ({touchPoint, touchPointOptions,
         if (campaign_config.properties && touchPoint) {
             const props = {};
             campaign_config.properties.forEach((prop, i) => {
-                if(prop.label === touchPoint.toLowerCase()) {
+                if(prop.label === touchPoint.toLowerCase() || (prop.label === 'ad group' && touchPoint === 'AdGroup')) {
                     props[prop.label] = prop.values;
                 }
             });
@@ -104,10 +104,22 @@ const MarkTouchpointBlock = ({touchPoint, touchPointOptions,
         setFilters([]);
     };
 
+    const ifTouchPointFilter = () => {
+        if(touchPoint === 'AdGroup' && filterProps['ad group'] && filterProps['ad group'].length) {
+            return true;
+        }
+
+        if(filterProps[touchPoint.toLowerCase()] && filterProps[touchPoint.toLowerCase()].length) {
+            return true;
+        }
+
+        return false;
+    }
+
     const additionalActions = () => {
         return (
                 <div className={'fa--query_block--actions'}>
-                   {filterProps[touchPoint.toLowerCase()] && filterProps[touchPoint.toLowerCase()].length &&  <Button size={'large'} type="text" onClick={addFilterBlock} className={'mr-1'}><SVG name="filter"></SVG></Button>}
+                   {ifTouchPointFilter() &&  <Button size={'large'} type="text" onClick={addFilterBlock} className={'mr-1'}><SVG name="filter"></SVG></Button>}
                    <Button size={'large'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
                 </div>
         );

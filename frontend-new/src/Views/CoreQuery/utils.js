@@ -513,11 +513,12 @@ const getFilters = (filters) => {
   return result;
 };
 
-const getFiltersTouchpoints = (filters) => {
+const getFiltersTouchpoints = (filters, touchpoint) => {
   const result = [];
   filters.forEach((filter) => {
     filter.values.forEach((value, index) => {
       result.push({
+        attribution_key: touchpoint,
         lop: !index ? "AND" : "OR",
         op: operatorMap[filter.operator],
         pr: filter.props[0],
@@ -546,7 +547,7 @@ export const getAttributionQuery = (
   const eventFilters = getFilters(eventGoal.filters);
   let touchPointFiltersQuery = [];
   if(touchpointFilters.length) {
-    touchPointFiltersQuery = getFiltersTouchpoints(touchpointFilters);
+    touchPointFiltersQuery = getFiltersTouchpoints(touchpointFilters, touchpoint);
   }
   
   const query = {
