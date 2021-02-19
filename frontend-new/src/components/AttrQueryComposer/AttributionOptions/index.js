@@ -82,7 +82,7 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt,
 
     const renderModel = (index) => {
         if(models && models[index]) {
-            return (<div className={`${styles.block__select_wrapper} fa--query_block_section`}>
+            return (<div className={`${styles.block__select_wrapper} fa--query_block_section--basic`}>
                     <Button  
                         type="link" 
                         onClick={() => toggleModelSelect(index)}>
@@ -96,7 +96,7 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt,
 
         } else {
             return (
-                <div className={styles.block__select_wrapper}>
+                <div className={`${styles.block__select_wrapper} fa--query_block_section--basic`}>
                     <div className={styles.block__select_wrapper__block}>
                         {index < 1 &&
                             <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
@@ -115,15 +115,15 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt,
 
     const addModelAction = () => {
         return (
-            <div className={'fa--query_block_section'}>
-                <div className={'fa--query_block--actions'}>
+            
+                <div className={'fa--query_block--actions mt-2'}>
                     <Button 
                             type="text" onClick={
                             () => setCompareModelActive(true)
                             } className={'mr-1'}><SVG name="compare"></SVG>
                         </Button>
                 </div>
-            </div>
+            
         )
     }
 
@@ -137,7 +137,7 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt,
                         Attribution Model 
                     </Text>
 
-                    <div className={`${styles.block__content}`}>
+                    <div className={`${styles.block__content} flex items-center relative fa--query_block_section--basic`}>
                         {renderModel(0)} 
 
                         {compareModelActive && 
@@ -150,7 +150,7 @@ const AttributionOptions = ({models, window, setModelOpt, setWindowOpt,
 
                         {compareModelActive && renderModel(1)}
 
-                        {!compareModelActive && addModelAction()}
+                        {(!compareModelActive && models[0]) && addModelAction()}
                     </div>
                 </div>
             

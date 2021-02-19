@@ -113,8 +113,8 @@ const LinkedEventsBlock = ({
     const additionalActions = () => {
         return (
                 <div className={'fa--query_block--actions'}>
-                   <Button size={'large'} type="text" onClick={addFilterBlock} className={'mr-1'}><SVG name="filter"></SVG></Button>
-                   <Button size={'large'} type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
+                   <Button  type="text" onClick={addFilterBlock} className={'mr-1'}><SVG name="filter"></SVG></Button>
+                   <Button  type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button>
                 </div>
         );
     };
@@ -139,9 +139,8 @@ const LinkedEventsBlock = ({
 
     const renderLinkEventBlockContent = () => {
         return (
-            <div className={`${styles.block__content} mt-2`}>
+            <div className={`${styles.block__content} fa--query_block_section--basic mt-2`}>
                 {!selectVisible && <Button 
-                    size={'large'} 
                     type="link" 
                     onClick={toggleEventSelect}>
                         <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
@@ -163,7 +162,7 @@ const LinkedEventsBlock = ({
                         <SVG name={'plus'} color={'purple'}></SVG>
                     </div>
                     
-                    {!selectVisible && <Button size={'large'} type="link" onClick={toggleEventSelect}>Add new</Button>}
+                    {!selectVisible && <Button type="link" onClick={toggleEventSelect}>Add new</Button>}
                     
                     {selectEvents()}
             </div> 

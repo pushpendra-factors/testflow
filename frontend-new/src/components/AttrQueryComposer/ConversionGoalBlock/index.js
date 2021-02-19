@@ -139,7 +139,7 @@ const ConversionGoalBlock = ({
 
     const renderGoalBlockContent = () => {
         return (
-            <div className={'flex items-center'}>
+            <div className={'flex items-center relative'}>
                 {!selectVisible && <Button 
                     size={'large'} 
                     type="link" 
@@ -162,7 +162,7 @@ const ConversionGoalBlock = ({
     const renderGoalSelect = () => {
 
         return (
-            <div className={'flex items-center'}>
+            <div className={'flex items-center relative'}>
                     <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}>
                         <SVG name={'plus'} color={'purple'}></SVG>
                     </div>
@@ -175,7 +175,7 @@ const ConversionGoalBlock = ({
     };
 
     return (
-        <div className={styles.block}>
+        <div className={`${styles.block} fa--query_block_section--basic`}>
             {eventGoal?.label?.length ? renderGoalBlockContent() : renderGoalSelect()}
             {eventFilters()}
         </div>

@@ -128,12 +128,12 @@ const EventGroupBlock = ({
 
   const renderGroupContent = () => {
     return (
+      <>
       <Button type={'link'} className={'ml-2 fa-button--truncate'}>
-
             {groupByEvent.property}
-
-            {renderGroupPropertyOptions(groupByEvent)}
           </Button>
+        {renderGroupPropertyOptions(groupByEvent)}
+      </>
     );
   };
 

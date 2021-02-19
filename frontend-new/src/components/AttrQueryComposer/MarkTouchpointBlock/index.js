@@ -157,9 +157,8 @@ const MarkTouchpointBlock = ({touchPoint, touchPointOptions,
 
     const renderMarkTouchpointBlockContent = () => {
         return (
-            <div className={`${styles.block__content}`}>
+            <div className={`${styles.block__content} fa--query_block_section--basic`}>
                 {!selectVisible && <Button 
-                    size={'large'} 
                     type="link" 
                     onClick={toggleTouchPointSelect}>
                         <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
