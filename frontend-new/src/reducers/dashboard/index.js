@@ -78,6 +78,11 @@ export default function (state = defaultState, action) {
         activeDashboard: action.payload,
         activeDashboardUnits: { ...defaultState.activeDashboardUnits },
       };
+    case 'DASHBOARD_LAST_REFRESHED':
+      return {
+        ...state,
+        activeDashboard: { ...state.activeDashboard, refreshed_at: action.payload}, 
+      };
     case DASHBOARD_CREATED:
       return {
         ...state,

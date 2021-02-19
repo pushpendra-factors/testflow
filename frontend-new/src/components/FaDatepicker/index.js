@@ -268,7 +268,7 @@ const FaDatepicker = ({ placement,
         if(dateString == 'Now'){
             return moment(range.startDate).format('MMM DD, YYYY hh:mma')
         }
-        if(dateString == 'Today'){
+        if(dateString == 'Today' || range.startDate == range.endDate ){
             return moment(range.startDate).format('MMM DD, YYYY')
         }
         else{

@@ -32,6 +32,9 @@
             max-width: 275px; 
         }
     }
+    &.ant-btn-icon-only{
+        border-radius: 100% !important;
+    }
 
     &.fa-button-ghost{
         background:transparent !important; 
@@ -66,11 +69,7 @@
             margin-right: 0px; 
         }
     }
-    
-    &.ant-btn-sm
-    {  
-        // padding: 3px 6px;
-    }
+     
     
 
 }

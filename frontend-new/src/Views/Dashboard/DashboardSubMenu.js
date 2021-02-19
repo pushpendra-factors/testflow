@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Button, Tooltip
 } from 'antd';
@@ -9,11 +9,13 @@ import {
 } from '@ant-design/icons';
 import FaDatepicker from '../../components/FaDatepicker';
 import moment from 'moment';
+import {connect} from 'react-redux';
 
 function DashboardSubMenu({
-  dashboard, handleEditClick, durationObj, handleDurationChange, refreshClicked, setRefreshClicked
+  dashboard, handleEditClick, durationObj, handleDurationChange, refreshClicked, setRefreshClicked, activeDashboard
 }) {
   let btn = null;
+  const [showRefreshBtn,setShowRefreshBtn] = useState(false);
 
   if (dashboard.type === 'pr') {
     btn = (
@@ -37,8 +39,12 @@ function DashboardSubMenu({
         <UnlockOutlined /> Public.
       </Button>
     );
-  }  
-  const showRefreshBtn = durationObj?.dateType === 'today' || durationObj?.dateType === 'now'
+  }   
+  useEffect(()=>{
+    let isRefresh = durationObj?.dateType === 'today' || durationObj?.dateType === 'now'; 
+    setShowRefreshBtn(isRefresh);
+  },[durationObj,dashboard])
+ 
   return (
     <div className={'flex justify-between items-center px-0 mb-5'}>
       <div className={'flex justify-between items-center'}>
@@ -62,9 +68,9 @@ function DashboardSubMenu({
       </div>
       <div className={'flex justify-between items-center'}>
       
-      {showRefreshBtn && <Tooltip placement="bottom" title={"Refresh data now"} mouseEnterDelay={0.2}>
+      { showRefreshBtn && <Tooltip placement="bottom" title={"Refresh data now"} mouseEnterDelay={0.2}>
         <Button type={"text"} onClick={setRefreshClicked.bind(this, true)} icon={refreshClicked ? null : <SVG name={'syncAlt'}/> }  loading={refreshClicked} style={{minWidth:'142px'}} className={'fa-button-ghost p-0 py-2'}>
-          {dashboard?.updated_at ? moment(dashboard.updated_at).fromNow() : 'Refresh Data'} 
+          {activeDashboard?.refreshed_at ? moment.unix(activeDashboard.refreshed_at).fromNow() : 'Refresh Data'} 
         </Button> 
       </Tooltip>}
 
@@ -76,4 +82,10 @@ function DashboardSubMenu({
   );
 };
 
-export default DashboardSubMenu;
+const mapStateToProps = (state) => {
+  return {
+    activeDashboard: state.dashboard.activeDashboard,  
+  };
+};
+
+export default connect(mapStateToProps)(DashboardSubMenu);

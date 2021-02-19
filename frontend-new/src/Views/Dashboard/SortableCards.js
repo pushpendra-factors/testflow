@@ -90,6 +90,8 @@ function SortableCards({
           durationObj={durationObj}
           webAnalyticsUnits={webAnalyticsUnits}
           setwidgetModal={setwidgetModal}
+          refreshClicked={refreshClicked}
+          setRefreshClicked={setRefreshClicked}
         />
       ) : <NoDataDashboard />) 
       } 

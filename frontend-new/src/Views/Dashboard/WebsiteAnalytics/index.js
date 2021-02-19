@@ -1,20 +1,22 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { getWebAnalyticsRequestBody } from "../utils";
 import { initialState } from "../../CoreQuery/utils";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { getWebAnalyticsData } from "../../../reducers/coreQuery/services";
 import { Spin } from "antd";
 import TableUnits from "./TableUnits";
 import CardUnit from "./CardUnit";
-import NoDataChart from 'Components/NoDataChart';
+import NoDataChart from 'Components/NoDataChart';  
 
 function WebsiteAnalytics({
   webAnalyticsUnits,
   setwidgetModal,
   durationObj,
+  setRefreshClicked
 }) {
   const { active_project } = useSelector((state) => state.global);
   const [resultState, setResultState] = useState(initialState);
+  const dispatch = useDispatch(); 
   const fetchData = useCallback(
     async (refresh = false) => {
       try {
@@ -30,10 +32,13 @@ function WebsiteAnalytics({
           dashboardId,
           refresh
         );
-        setResultState({ ...initialState, data: response.data.result });
+ 
+        setResultState({ ...initialState, data: response.data.result, refreshed_at: response.data.refreshed_at });
+        setRefreshClicked(false);
       } catch (err) {
         console.log(err);
         setResultState({ ...initialState, error: true });
+        setRefreshClicked(false);
       }
     },
     [active_project.id, durationObj, webAnalyticsUnits]
@@ -42,6 +47,13 @@ function WebsiteAnalytics({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+      dispatch({
+        type: 'DASHBOARD_LAST_REFRESHED',
+        payload: resultState.refreshed_at
+      });
+  }, [durationObj]);
 
   if (resultState.loading) {
     return (

@@ -20,15 +20,15 @@ function SearchBar({ setQueryToState }) {
   }, []);
 
 
-  useEffect(() => {
-    document.onkeydown = keydown;
-    function keydown(evt) {  
-      // cmd+K to trigger global search
-      if (evt.keyCode === 75) {   
-        setVisible(true); 
-      }
-    } 
-  }, []);
+  // useEffect(() => {
+  //   document.onkeydown = keydown;
+  //   function keydown(evt) {  
+  //     // cmd+K to trigger global search
+  //     if (evt.keyCode === 75) {   
+  //       setVisible(true); 
+  //     }
+  //   } 
+  // }, []);
 
 
   const handleQueryClick = useCallback((query) => {
@@ -47,7 +47,7 @@ function SearchBar({ setQueryToState }) {
         <Input
           ref={inputRef}
           size="large"
-          placeholder="Search Factors ⌘K"
+          placeholder="Search Factors"
           prefix={(
             <SVG name={'search'} size={16} color={'grey'} />
           )}
