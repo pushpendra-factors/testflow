@@ -231,17 +231,17 @@ func (pg *Postgres) CreateEvent(event *model.Event) (*model.Event, int) {
 		event.ID = U.GetUUID()
 	}
 
-	// Increamenting count based on EventNameId, not by EventName.
+	// Incrementing count based on EventNameId, not by EventName.
 	count, errCode := pg.GetEventCountOfUserByEventName(event.ProjectId, event.UserId, event.EventNameId)
 	if errCode == http.StatusInternalServerError {
 		return nil, errCode
 	}
 	event.Count = count + 1
 
-	eventPropsJSONb, err := U.FillHourAndDayEventProperty(&event.Properties, event.Timestamp)
+	eventPropsJSONb, err := U.FillHourDayAndTimestampEventProperty(&event.Properties, event.Timestamp)
 	if err != nil {
 		logCtx.WithField("eventTimestamp", event.Timestamp).WithError(err).Error(
-			"Adding day of week and hour of day properties failed")
+			"Adding day of week, hour of day and timestamp properties failed")
 	}
 	eventPropsJSONb = U.SanitizePropertiesJsonb(eventPropsJSONb)
 	event.Properties = *eventPropsJSONb

@@ -151,6 +151,7 @@ var EP_GCLID string = "$gclid"
 var EP_FBCLIID string = "$fbclid"
 var EP_COST string = "$cost"
 var EP_REVENUE string = "$revenue"
+var EP_TIMESTAMP string = "$timestamp"
 var EP_HOUR_OF_DAY string = "$hour_of_day"
 var EP_DAY_OF_WEEK string = "$day_of_week"
 var EP_SESSION_COUNT string = "$session_count"
@@ -514,6 +515,7 @@ var CATEGORICAL_PROPERTY_BY_NAME = [...]string{
 
 var DATETIME_PROPERTY_BY_NAME = [...]string{
 	UP_JOIN_TIME,
+	EP_TIMESTAMP,
 }
 
 var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
@@ -919,6 +921,7 @@ var WHITELIST_FACTORS_EVENT_PROPERTIES = [...]string{
 	EP_PAGE_URL,
 	EP_HOUR_OF_DAY,
 	EP_DAY_OF_WEEK,
+	EP_TIMESTAMP,
 }
 
 // DISABLED_FACTORS_EVENT_PROPERTIES Event properties disabled for the factors analysis.
@@ -976,6 +979,7 @@ var ITREE_PROPERTIES_TO_IGNORE = map[string]bool{
 	EP_PAGE_TITLE:           true,
 	EP_DAY_OF_WEEK:          true,
 	EP_HOUR_OF_DAY:          true,
+	EP_TIMESTAMP:            true,
 	// Temporary fix.
 	EP_REFERRER:                    true,
 	EP_REFERRER_URL:                true,
@@ -1337,7 +1341,7 @@ func GetPropertyTypeByKeyValue(propertyKey string, propertyValue interface{}) st
 		}
 		if IsPropertyNameContainsDateOrTime(propertyKey) {
 			_, status := ConvertDateTimeValueToNumber(propertyValue)
-			if status == true {
+			if status {
 				return PropertyTypeDateTime
 			}
 		}
@@ -1388,7 +1392,7 @@ func GetUpdateAllowedEventProperties(properties *PropertiesMap) *PropertiesMap {
 }
 
 // GetUpdateAllowedInitialUserProperties - Returns update allowed initial
-// user_properites based on the update allowed event_properties.
+// user_properties based on the update allowed event_properties.
 func GetUpdateAllowedInitialUserProperties(eventProperties *PropertiesMap) *PropertiesMap {
 	newInitialUserProperties := make(PropertiesMap, 0)
 
@@ -1482,7 +1486,7 @@ func GetSessionProperties(isFirstSession bool, eventProperties,
 }
 
 // Add day_of_week and hour_of_day event property
-func FillHourAndDayEventProperty(properties *postgres.Jsonb, timestamp int64) (*postgres.Jsonb, error) {
+func FillHourDayAndTimestampEventProperty(properties *postgres.Jsonb, timestamp int64) (*postgres.Jsonb, error) {
 	unixTimeUTC := time.Unix(timestamp, 0)
 	weekDay := unixTimeUTC.Weekday().String()
 	hr, _, _ := unixTimeUTC.Clock()
@@ -1492,6 +1496,7 @@ func FillHourAndDayEventProperty(properties *postgres.Jsonb, timestamp int64) (*
 	}
 	(*eventPropsJSON)[EP_DAY_OF_WEEK] = weekDay
 	(*eventPropsJSON)[EP_HOUR_OF_DAY] = hr
+	(*eventPropsJSON)[EP_TIMESTAMP] = timestamp
 	return EncodeToPostgresJsonb(eventPropsJSON)
 }
 
@@ -1569,7 +1574,7 @@ func ClassifyDateTimePropertyKeys(propertiesByType *map[string][]string) map[str
 	return cProperties
 }
 
-// Fills default user propertie which should be present on properties list always.
+// Fills default user properties which should be present on properties list always.
 func FillMandatoryDefaultUserProperties(propertiesByType *map[string][]string) {
 	for propType, props := range *propertiesByType {
 		if _, exists := MandatoryDefaultUserPropertiesByType[propType]; exists {
