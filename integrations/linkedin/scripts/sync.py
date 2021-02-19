@@ -39,6 +39,8 @@ CAMPAIGN_ID = 'campaign_id'
 CREATIVE_ID = 'creative_id'
 MAX_LOOKBACK = 30
 API_REQUESTS = 'api_requests'
+META_COUNT = 100
+INSIGHTS_COUNT = 10000
 
 METRIC_TYPE_INCR = 'incr'
 HEALTHCHECK_PING_ID = '837dce09-92ec-4930-80b3-831b295d1a34'
@@ -124,8 +126,8 @@ def get_insights_and_insert(linkedin_int_setting, sync_info_with_type, doc_type,
     request_counter = meta_request_count
     records = 0
     fields='totalEngagements,impressions,clicks,dateRange,landingPageClicks,costInUsd,leadGenerationMailContactInfoShares,leadGenerationMailInterestedClicks,opens,videoCompletions,videoFirstQuartileCompletions,videoMidpointCompletions,videoThirdQuartileCompletions,videoViews,externalWebsiteConversions,externalWebsitePostClickConversions,externalWebsitePostViewConversions,costInLocalCurrency,conversionValueInLocalCurrency,pivotValue'
-    url = 'https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&pivot={}&dateRange.start.day={}&dateRange.start.month={}&dateRange.start.year={}&timeGranularity=DAILY&fields={}&accounts[0]=urn:li:sponsoredAccount:{}&start=0&count=1000'.format(
-        pivot, start_day, start_month, start_year, fields, linkedin_int_setting[LINKEDIN_AD_ACCOUNT])
+    url = 'https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&pivot={}&dateRange.start.day={}&dateRange.start.month={}&dateRange.start.year={}&timeGranularity=DAILY&fields={}&accounts[0]=urn:li:sponsoredAccount:{}&start=0&count={}'.format(
+        pivot, start_day, start_month, start_year, fields, linkedin_int_setting[LINKEDIN_AD_ACCOUNT], INSIGHTS_COUNT)
     headers = {'Authorization': 'Bearer ' + linkedin_int_setting[ACCESS_TOKEN]}
     response = requests.get(url, headers=headers)
     request_counter += 1
@@ -138,11 +140,11 @@ def get_insights_and_insert(linkedin_int_setting, sync_info_with_type, doc_type,
 
     start = 0
     # paging
-    while len(response.json()[ELEMENTS])>=1000:
-        start += 1000
+    while len(response.json()[ELEMENTS])>=INSIGHTS_COUNT:
+        start += INSIGHTS_COUNT
         fields='totalEngagements,impressions,clicks,dateRange,landingPageClicks,approximateUniqueImpressions,shares,costInUsd,leadGenerationMailContactInfoShares,leadGenerationMailInterestedClicks,oneClickLeadFormOpens,oneClickLeads,opens,videoCompletions,videoFirstQuartileCompletions,videoMidpointCompletions,videoThirdQuartileCompletions,videoViews,externalWebsiteConversions,externalWebsitePostClickConversions,externalWebsitePostViewConversions,costInLocalCurrency,conversionValueInLocalCurrency,pivotValue,pivotValues'
-        url = 'https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&pivot={}&dateRange.start.day={}&dateRange.start.month={}&dateRange.start.year={}&timeGranularity=DAILY&fields={}&accounts[0]=urn:li:sponsoredAccount:{}&start={}&count=1000'.format(
-            pivot, start_day, start_month, start_year, fields, linkedin_int_setting[LINKEDIN_AD_ACCOUNT], start)
+        url = 'https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&pivot={}&dateRange.start.day={}&dateRange.start.month={}&dateRange.start.year={}&timeGranularity=DAILY&fields={}&accounts[0]=urn:li:sponsoredAccount:{}&start={}&count={}'.format(
+            pivot, start_day, start_month, start_year, fields, linkedin_int_setting[LINKEDIN_AD_ACCOUNT], start, INSIGHTS_COUNT)
         headers = {'Authorization': 'Bearer ' + linkedin_int_setting[ACCESS_TOKEN]}
         response = requests.get(url, headers=headers)
         request_counter +=1
@@ -184,7 +186,7 @@ def insert_insights(doc_type, project_id, ad_account, response, campaign_group_m
 def get_metadata(ad_account, access_token, url_endpoint, doc_type, project_id):
     metadata = []
     request_counter = 0
-    url = 'https://api.linkedin.com/v2/{}?q=search&search.account.values[0]=urn:li:sponsoredAccount:{}&start=0&count=1000'.format(url_endpoint,ad_account)
+    url = 'https://api.linkedin.com/v2/{}?q=search&search.account.values[0]=urn:li:sponsoredAccount:{}&start=0&count={}'.format(url_endpoint,ad_account, META_COUNT)
     headers = {'Authorization': 'Bearer ' + access_token}
     response = requests.get(url, headers=headers)
     request_counter += 1
@@ -195,9 +197,9 @@ def get_metadata(ad_account, access_token, url_endpoint, doc_type, project_id):
     
     # paging
     start = 0
-    while len(response.json()[ELEMENTS])>=1000:
-        start +=1000
-        url = 'https://api.linkedin.com/v2/{}?q=search&search.account.values[0]=urn:li:sponsoredAccount:{}&start={}&count=1000'.format(url_endpoint, ad_account, start)
+    while len(response.json()[ELEMENTS])>=META_COUNT:
+        start +=META_COUNT
+        url = 'https://api.linkedin.com/v2/{}?q=search&search.account.values[0]=urn:li:sponsoredAccount:{}&start={}&count={}'.format(url_endpoint, ad_account, start, META_COUNT)
         headers = {'Authorization': 'Bearer ' + access_token}
         response = requests.get(url, headers=headers)
         request_counter += 1
