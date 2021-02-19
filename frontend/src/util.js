@@ -33,7 +33,13 @@ export function isDevelopment() {
 
 export function getHostURL() {
     let host = BUILD_CONFIG.backend_host;
-    return (host[host.length-1] === "/") ? host : host+"/";
+    host = (host[host.length-1] === "/") ? host : host+"/";
+
+    var useMemSQL = localStorage.getItem("use-memsql-datastore")
+    if(useMemSQL && useMemSQL == "true") {
+        host = host + "mql/"
+    }
+    return host
 }
 
 export function getAdwordsHostURL() {
