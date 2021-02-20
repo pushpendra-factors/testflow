@@ -496,13 +496,17 @@ func hasWhereEntity(ewp model.QueryEventWithProperties, entity string) bool {
 }
 
 func joinWithComma(x ...string) string {
+	return joinWithWordInBetween(",", x...)
+}
+
+func joinWithWordInBetween(word string, x ...string) string {
 	var y string
 	for i, v := range x {
 		if v != "" {
 			if i == 0 || y == "" {
 				y = v
 			} else {
-				y = fmt.Sprintf("%s, %s", y, v)
+				y = fmt.Sprintf("%s %s %s", y, word, v)
 			}
 		}
 	}
@@ -964,7 +968,7 @@ func (pg *Postgres) ExecQueryWithContext(stmnt string, params []interface{}) (*s
 	// Change ? in the query to to $1, $2 format.
 	stmnt = model.TransformQueryPlaceholdersForContext(stmnt)
 
-	if (C.GetConfig().Env == "development" || C.GetConfig().Env == "test") {
+	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST {
 		log.Info("Query", stmnt, params)
 	}
 

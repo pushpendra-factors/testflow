@@ -294,7 +294,7 @@ func (pg *Postgres) ExecuteChannelQueryV1(projectID uint64, query *model.Channel
 	}
 	if err != nil {
 		logCtx.Warn(query)
-		logCtx.WithError(err).Error("Failed in channel analytics with following error: ")
+		logCtx.WithError(err).Error("Failed in channel analytics with following error: ", err)
 		status = http.StatusBadRequest
 	}
 	resultMetrics = U.ConvertInternalToExternal(resultMetrics)

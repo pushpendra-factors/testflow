@@ -45,6 +45,7 @@ import (
 var initiated bool = false
 
 const DEVELOPMENT = "development"
+const TEST = "test"
 const STAGING = "staging"
 const PRODUCTION = "production"
 

@@ -39,6 +39,7 @@ const (
 	adGroupPerformanceReport       = "ad_group_performance_report"
 	adPerformanceReport            = "ad_performance_report"
 	keywordPerformanceReport       = "keyword_performance_report"
+	searchPerformanceReport        = "search_performance_report"
 	adwordsCampaign                = "campaign"
 	adwordsAdGroup                 = "ad_group"
 	adwordsAd                      = "ad"
@@ -49,24 +50,59 @@ const (
 	adwordsFilterQueryStr          = "SELECT DISTINCT(value->>?) as filter_value FROM adwords_documents WHERE project_id = ? AND" + " " + "customer_account_id = ? AND type = ? AND value->>? IS NOT NULL LIMIT 5000"
 	staticWhereStatementForAdwords = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument            = " FROM adwords_documents "
-	impressions                    = "impressions"
+
+	impressions                = "impressions"
+	shareHigherOrderExpression = "sum(case when value->>'%s' IS NOT NULL THEN (value->>'%s')::float else 0 END)/NULLIF(sum(case when value->>'%s' IS NOT NULL THEN (value->>'%s')::float else 0 END), 0)"
+	sumOfFloatExp              = "sum((value->>'%s')::float)"
+	approvalStatus             = "approval_status"
+	matchType                  = "match_type"
+	firstPositionCpc           = "first_position_cpc"
+	firstPageCpc               = "first_page_cpc"
+	isNegative                 = "is_negative"
+	topOfPageCpc               = "top_of_page_cpc"
+	qualityScore               = "quality_score"
+
+	clicks                                     = "clicks"
+	clickThroughRate                           = "click_through_rate"
+	conversion                                 = "conversion"
+	conversionRate                             = "conversion_rate"
+	costPerClick                               = "cost_per_click"
+	costPerConversion                          = "cost_per_conversion"
+	searchImpressionShare                      = "search_impression_share"
+	searchClickShare                           = "search_click_share"
+	searchTopImpressionShare                   = "search_top_impression_share"
+	searchBudgetLostAbsoluteTopImpressionShare = "search_budget_lost_absolute_top_impression_share"
+	searchBudgetLostImpressionShare            = "search_budget_lost_impression_share"
+	searchBudgetLostTopImpressionShare         = "search_budget_lost_top_impression_share"
+	searchRankLostAbsoluteTopImpressionShare   = "search_rank_lost_absolute_top_impression_share"
+	searchRankLostImpressionShare              = "search_rank_lost_impression_share"
+	searchRankLostTopImpressionShare           = "search_rank_lost_top_impression_share"
+	totalSearchImpression                      = "total_search_impression"
+	totalSearchClick                           = "total_search_click"
+	totalSearchTopImpression                   = "total_search_top_impression"
+	totalSearchBudgetLostAbsoluteTopImpression = "total_search_budget_lost_absolute_top_impression"
+	totalSearchBudgetLostImpression            = "total_search_budget_lost_impression"
+	totalSearchBudgetLostTopImpression         = "total_search_budget_lost_top_impression"
+	totalSearchRankLostAbsoluteTopImpression   = "total_search_rank_lost_absolute_top_impression"
+	totalSearchRankLostImpression              = "total_search_rank_lost_impression"
+	totalSearchRankLostTopImpression           = "total_search_rank_lost_top_impression"
 )
 
 var selectableMetricsForAdwords = []string{
-	"conversion",
-	"click_through_rate",
-	"conversion_rate",
-	"cost_per_click",
-	"cost_per_conversion",
-	"search_impression_share",
-	"search_click_share",
-	"search_top_impression_share",
-	"search_budget_lost_absolute_top_impression_share",
-	"search_budget_lost_impression_share",
-	"search_budget_lost_top_impression_share",
-	"search_rank_lost_absolute_top_impression_share",
-	"search_rank_lost_impression_share",
-	"search_rank_lost_top_impression_share",
+	conversion,
+	clickThroughRate,
+	conversionRate,
+	costPerClick,
+	costPerConversion,
+	searchImpressionShare,
+	searchClickShare,
+	searchTopImpressionShare,
+	searchBudgetLostAbsoluteTopImpressionShare,
+	searchBudgetLostImpressionShare,
+	searchBudgetLostTopImpressionShare,
+	searchRankLostAbsoluteTopImpressionShare,
+	searchRankLostImpressionShare,
+	searchRankLostTopImpressionShare,
 }
 
 var errorEmptyAdwordsDocument = errors.New("empty adwords document")
@@ -85,16 +121,16 @@ var mapOfObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRela
 		"status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 	},
 	adwordsKeyword: {
-		"id":                  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"status":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"approval_status":     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"match_type":          PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"first_postition_cpc": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"first_page_cpc":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"is_negative":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"top_of_page_cpc":     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"quality_score":       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"id":             PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":           PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"status":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		approvalStatus:   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		matchType:        PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		firstPositionCpc: PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		firstPageCpc:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		isNegative:       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		topOfPageCpc:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		qualityScore:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 	},
 }
 
@@ -106,7 +142,7 @@ var AdwordsDocumentTypeAlias = map[string]int{
 	"click_performance_report":    4,
 	campaignPerformanceReport:     5,
 	adPerformanceReport:           6,
-	"search_performance_report":   7,
+	searchPerformanceReport:       7,
 	keywordPerformanceReport:      8,
 	"customer_account_properties": 9,
 	adGroupPerformanceReport:      10,
@@ -120,37 +156,37 @@ var AdwordsDocumentTypeAlias = map[string]int{
 	We might all above complicated transformations in api if we merge all document types i.e.facebook, linkedin etc...
 */
 var adwordsExtToInternal = map[string]string{
-	"campaign":                    "campaign",
-	"ad_group":                    "ad_group",
-	"ad":                          "ad",
-	"name":                        "name",
-	"keyword":                     "keyword",
-	"id":                          "id",
-	"status":                      "status",
-	"approval_status":             "approval_status",
-	"match_type":                  "match_type",
-	"first_position_cpc":          "first_position_cpc",
-	"first_page_cpc":              "first_page_cpc",
-	"is_negative":                 "is_negative",
-	"top_of_page_cpc":             "top_of_page_cpc",
-	"quality_score":               "quality_score",
-	"impressions":                 "impressions",
-	"clicks":                      "clicks",
-	"spend":                       "cost",
-	"conversion":                  "conversions",
-	"click_through_rate":          "click_through_rate",
-	"conversion_rate":             "conversion_rate",
-	"cost_per_click":              "cost_per_click",
-	"cost_per_conversion":         "cost_per_conversion",
-	"search_impression_share":     "search_impression_share",
-	"search_click_share":          "search_click_share",
-	"search_top_impression_share": "search_top_impression_share",
-	"search_budget_lost_absolute_top_impression_share": "search_budget_lost_absolute_top_impression_share",
-	"search_budget_lost_impression_share":              "search_budget_lost_impression_share",
-	"search_budget_lost_top_impression_share":          "search_budget_lost_top_impression_share",
-	"search_rank_lost_absolute_top_impression_share":   "search_rank_lost_absolute_top_impression_share",
-	"search_rank_lost_impression_share":                "search_rank_lost_impression_share",
-	"search_rank_lost_top_impression_share":            "search_rank_lost_top_impression_share",
+	"campaign":               "campaign",
+	"ad_group":               "ad_group",
+	"ad":                     "ad",
+	"name":                   "name",
+	"keyword":                "keyword",
+	"id":                     "id",
+	"status":                 "status",
+	approvalStatus:           approvalStatus,
+	matchType:                matchType,
+	firstPositionCpc:         firstPositionCpc,
+	firstPageCpc:             firstPageCpc,
+	isNegative:               isNegative,
+	topOfPageCpc:             topOfPageCpc,
+	qualityScore:             qualityScore,
+	impressions:              impressions,
+	clicks:                   clicks,
+	"spend":                  "cost",
+	conversion:               "conversions",
+	clickThroughRate:         clickThroughRate,
+	conversionRate:           conversionRate,
+	costPerClick:             costPerClick,
+	costPerConversion:        costPerConversion,
+	searchImpressionShare:    searchImpressionShare,
+	searchClickShare:         searchClickShare,
+	searchTopImpressionShare: searchTopImpressionShare,
+	searchBudgetLostAbsoluteTopImpressionShare: searchBudgetLostAbsoluteTopImpressionShare,
+	searchBudgetLostImpressionShare:            searchBudgetLostImpressionShare,
+	searchBudgetLostTopImpressionShare:         searchBudgetLostTopImpressionShare,
+	searchRankLostAbsoluteTopImpressionShare:   searchRankLostAbsoluteTopImpressionShare,
+	searchRankLostImpressionShare:              searchRankLostImpressionShare,
+	searchRankLostTopImpressionShare:           searchRankLostTopImpressionShare,
 }
 
 var adwordsInternalPropertiesToJobsInternal = map[string]string{
@@ -164,13 +200,13 @@ var adwordsInternalPropertiesToJobsInternal = map[string]string{
 	"keyword:id":                 "id",
 	"keyword:name":               "criteria",
 	"keyword:status":             "status",
-	"keyword:approval_status":    "approval_status",
+	"keyword:approval_status":    approvalStatus,
 	"keyword:match_type":         "keyword_match_type",
-	"keyword:first_position_cpc": "first_position_cpc",
-	"keyword:first_page_cpc":     "first_page_cpc",
-	"keyword:is_negative":        "is_negative",
-	"keyword:top_of_page_cpc":    "top_of_page_cpc",
-	"keyword:quality_score":      "quality_score",
+	"keyword:first_position_cpc": firstPositionCpc,
+	"keyword:first_page_cpc":     firstPageCpc,
+	"keyword:is_negative":        isNegative,
+	"keyword:top_of_page_cpc":    topOfPageCpc,
+	"keyword:quality_score":      qualityScore,
 }
 
 var adwordsInternalPropertiesToReportsInternal = map[string]string{
@@ -183,14 +219,14 @@ var adwordsInternalPropertiesToReportsInternal = map[string]string{
 	"ad:id":                      "ad_id",
 	"keyword:id":                 "keyword_id",
 	"keyword:name":               "criteria",
-	"keyword:status":             "status",
-	"keyword:approval_status":    "approval_status",
-	"keyword:match_type":         "keyword_match_type",
-	"keyword:first_position_cpc": "first_position_cpc",
-	"keyword:first_page_cpc":     "first_page_cpc",
-	"keyword:is_negative":        "is_negative",
-	"keyword:top_of_page_cpc":    "top_of_page_cpc",
-	"keyword:quality_score":      "quality_score",
+	"keyword:status":             "keyword_status",
+	"keyword:approval_status":    approvalStatus,
+	"keyword:match_type":         matchType,
+	"keyword:first_position_cpc": firstPositionCpc,
+	"keyword:first_page_cpc":     firstPageCpc,
+	"keyword:is_negative":        isNegative,
+	"keyword:top_of_page_cpc":    topOfPageCpc,
+	"keyword:quality_score":      qualityScore,
 }
 
 type metricsAndRelated struct {
@@ -201,22 +237,22 @@ type metricsAndRelated struct {
 }
 
 var nonHigherOrderMetrics = map[string]struct{}{
-	"impressions": {},
-	"clicks":      {},
+	impressions:   {},
+	clicks:        {},
 	"cost":        {},
 	"conversions": {},
 }
 
 // Same structure is being used for internal operations and external.
 var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
-	"impressions": {
+	impressions: {
 		nonHigherOrderExpression: "sum((value->>'impressions')::float)",
 		externalValue:            impressions,
 		externalOperation:        "sum",
 	},
-	"clicks": {
+	clicks: {
 		nonHigherOrderExpression: "sum((value->>'clicks')::float)",
-		externalValue:            "clicks",
+		externalValue:            clicks,
 		externalOperation:        "sum",
 	},
 	"cost": {
@@ -226,85 +262,85 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 	},
 	"conversions": {
 		nonHigherOrderExpression: "sum((value->>'conversions')::float)",
-		externalValue:            "conversion",
+		externalValue:            conversion,
 		externalOperation:        "sum",
 	},
-	"click_through_rate": {
+	clickThroughRate: {
 		higherOrderExpression:    "sum((value->>'clicks')::float)*100/(NULLIF(sum((value->>'impressions')::float), 0)",
 		nonHigherOrderExpression: "sum((value->>'clicks')::float)*100",
-		externalValue:            "click_through_rate",
+		externalValue:            clickThroughRate,
 		externalOperation:        "sum",
 	},
-	"conversion_rate": {
+	conversionRate: {
 		higherOrderExpression:    "sum((value->>'conversions')::float)*100/NULLIF(sum((value->>'clicks')::float), 0)",
 		nonHigherOrderExpression: "sum((value->>'conversions')::float)*100",
-		externalValue:            "conversion_rate",
+		externalValue:            conversionRate,
 		externalOperation:        "sum",
 	},
-	"cost_per_click": {
+	costPerClick: {
 		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'clicks')::float), 0)",
 		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
-		externalValue:            "cost_per_click",
+		externalValue:            costPerClick,
 		externalOperation:        "sum",
 	},
-	"cost_per_conversion": {
+	costPerConversion: {
 		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'conversions')::float), 0)",
 		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
-		externalValue:            "cost_per_click",
+		externalValue:            costPerConversion,
 		externalOperation:        "sum",
 	},
-	"search_impression_share": {
-		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_impression')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'total_search_impression')::float)",
-		externalValue:            "search_impression_share",
+	searchImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchImpressionShare, impressions, searchImpressionShare, totalSearchImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchImpression),
+		externalValue:            searchImpressionShare,
 		externalOperation:        "sum",
 	},
-	"search_click_share": {
-		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_click')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'total_search_click')::float)",
-		externalValue:            "search_click_share",
+	searchClickShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchClickShare, impressions, searchClickShare, totalSearchClick),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchClick),
+		externalValue:            searchClickShare,
 		externalOperation:        "sum",
 	},
-	"search_top_impression_share": {
-		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_top_impression')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'total_search_top_impression')::float)",
-		externalValue:            "search_top_impression_share",
+	searchTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchTopImpressionShare, impressions, searchTopImpressionShare, totalSearchTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchTopImpression),
+		externalValue:            searchTopImpressionShare,
 		externalOperation:        "sum",
 	},
-	"search_budget_lost_absolute_top_impression_share": {
-		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_budget_lost_absolute_top_impression')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'total_search_budget_lost_absolute_top_impression')::float)",
-		externalValue:            "search_budget_lost_absolute_top_impression_share",
+	searchBudgetLostAbsoluteTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchBudgetLostAbsoluteTopImpressionShare, impressions, searchBudgetLostAbsoluteTopImpressionShare, totalSearchBudgetLostAbsoluteTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchBudgetLostAbsoluteTopImpression),
+		externalValue:            searchBudgetLostAbsoluteTopImpressionShare,
 		externalOperation:        "sum",
 	},
-	"search_budget_lost_impression_share": {
-		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_budget_lost_impression')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'total_search_budget_lost_impression')::float)",
-		externalValue:            "conversion",
+	searchBudgetLostImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchBudgetLostImpressionShare, impressions, searchBudgetLostImpressionShare, totalSearchBudgetLostImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchBudgetLostImpression),
+		externalValue:            searchBudgetLostImpressionShare,
 		externalOperation:        "sum",
 	},
-	"search_budget_lost_top_impression_share": {
-		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_budget_lost_top_impression')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'total_search_budget_lost_top_impression')::float)",
-		externalValue:            "search_budget_lost_top_impression_share",
+	searchBudgetLostTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchBudgetLostTopImpressionShare, impressions, searchBudgetLostTopImpressionShare, totalSearchBudgetLostTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchBudgetLostTopImpression),
+		externalValue:            searchBudgetLostTopImpressionShare,
 		externalOperation:        "sum",
 	},
-	"search_rank_lost_absolute_top_impression_share": {
-		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_rank_lost_absolute_top_impression')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'total_search_rank_lost_absolute_top_impression')::float)",
-		externalValue:            "search_rank_lost_absolute_top_impression_share",
+	searchRankLostAbsoluteTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchRankLostAbsoluteTopImpressionShare, impressions, searchRankLostAbsoluteTopImpressionShare, totalSearchRankLostAbsoluteTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchRankLostAbsoluteTopImpression),
+		externalValue:            searchRankLostAbsoluteTopImpressionShare,
 		externalOperation:        "sum",
 	},
-	"search_rank_lost_impression_share": {
-		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_rank_lost_impression')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'total_search_rank_lost_impression')::float)",
-		externalValue:            "search_rank_lost_impression_share",
+	searchRankLostImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchRankLostImpressionShare, impressions, searchRankLostImpressionShare, totalSearchRankLostImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchRankLostImpression),
+		externalValue:            searchRankLostImpressionShare,
 		externalOperation:        "sum",
 	},
-	"search_rank_lost_top_impression_share": {
-		higherOrderExpression:    "sum((value->>'impressions')::float)/NULLIF(sum((value->>'total_search_rank_lost_top_impression')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'total_search_rank_lost_top_impression')::float)",
-		externalValue:            "search_rank_lost_top_impression_share",
+	searchRankLostTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchRankLostTopImpressionShare, impressions, searchRankLostTopImpressionShare, totalSearchRankLostTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchRankLostTopImpression),
+		externalValue:            searchRankLostTopImpressionShare,
 		externalOperation:        "sum",
 	},
 }
@@ -321,13 +357,13 @@ var adwordsIntPropertiesToExternal = map[string]string{
 	"keyword:id":                 "keyword_id",
 	"keyword:name":               "keyword_name",
 	"keyword:status":             "keyword_status",
-	"keyword:approval_status":    "keyword_approval_status",
-	"keyword:match_type":         "keyword_match_type",
-	"keyword:first_position_cpc": "keyword_first_position_cpc",
-	"keyword:first_page_cpc":     "keyword_first_page_cpc",
-	"keyword:is_negative":        "keyword_is_negative",
-	"keyword:top_of_page_cpc":    "keyword_top_of_page_cpc",
-	"keyword:quality_score":      "keyword_quality_score",
+	"keyword:approval_status":    approvalStatus,
+	"keyword:match_type":         matchType,
+	"keyword:first_position_cpc": firstPositionCpc,
+	"keyword:first_page_cpc":     firstPageCpc,
+	"keyword:is_negative":        isNegative,
+	"keyword:top_of_page_cpc":    topOfPageCpc,
+	"keyword:quality_score":      qualityScore,
 }
 
 type fields struct {
@@ -416,7 +452,7 @@ func getAdwordsIDAndHeirarchyColumnsByType(docType int, valueJSON *postgres.Json
 	if err != nil {
 		return "", 0, 0, 0, 0, err
 	}
-	if docType == AdwordsDocumentTypeAlias[keywordPerformanceReport] {
+	if docType == AdwordsDocumentTypeAlias[keywordPerformanceReport] || docType == AdwordsDocumentTypeAlias[searchPerformanceReport] {
 		idStr = U.GetUUID()
 	}
 
@@ -985,6 +1021,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	computeHigherOrderMetricsHere := !fetchSource
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
+	filterPropertiesStatement := ""
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	toFetchImpressionsForHigherOrderMetric := false
 
@@ -998,6 +1035,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	finalOrderByStatement := ""
 	resultantSQLStatement := ""
 
+	// Group By
 	dimensions := fields{}
 	if fetchSource {
 		internalValue := adwordsStringColumn
@@ -1027,7 +1065,8 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 		dimensions.values = append(dimensions.values, externalValue)
 	}
 
-	// TODO Later: Issue for conversion_rate or click_through_rate as they dont have impressions.
+	// select Keys
+	// TODO Later: Issue for conversion_rate or click_through_rate nonHigherOrder as they dont have impressions.
 	metrics := fields{}
 	for _, selectMetric := range query.SelectMetrics {
 		var internalValue, externalValue string
@@ -1061,17 +1100,13 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 		metrics.selectExpressions = append(metrics.selectExpressions, expression)
 		metrics.values = append(metrics.values, externalValue)
 	}
+
 	// Filters
-	finalWhereStatement, filterParams := getFilterPropertiesForAdwordsReports(query.Filters)
-	if len(finalWhereStatement) != 0 {
-		finalWhereStatement = fmt.Sprintf("%s AND %s", staticWhereStatementForAdwords, finalWhereStatement)
-	} else {
-		finalWhereStatement = staticWhereStatementForAdwords
-	}
+	filterPropertiesStatement, filterParams := getFilterPropertiesForAdwordsReports(query.Filters)
+	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwords, filterPropertiesStatement)
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
 
-	// groupBy
 	finalGroupByKeys = dimensions.values
 	if len(finalGroupByKeys) != 0 {
 		finalGroupByStatement = " GROUP BY " + joinWithComma(finalGroupByKeys...)
