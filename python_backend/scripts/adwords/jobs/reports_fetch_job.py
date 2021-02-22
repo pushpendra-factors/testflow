@@ -3,6 +3,8 @@ from datetime import datetime
 from googleads import adwords
 import operator
 
+import logging as log
+
 import scripts
 from lib.adwords.oauth_service.fetch_service import FetchService
 from lib.utils.csv import CsvUtil
@@ -82,6 +84,9 @@ class ReportsFetch(BaseJob):
         return transformed_rows
 
     def transform_entity(self, row):
+        previous_present = 'search_impression_share' in row
+        if self.REPORT == 'CAMPAIGN_PERFORMANCE_REPORT' and self._project_id == 399 and previous_present:
+            log.error("Previous Required Record is %s", row)
         for transform in self.TRANSFORM_AND_ADD_NEW_FIELDS:
             field1_name = transform[self.OPERAND1]
             field2_name = transform[self.OPERAND2]
@@ -91,6 +96,9 @@ class ReportsFetch(BaseJob):
                 transformed_value = self.get_transformed_value_for_arithmetic_operator(row, field1_name, field2_name, operation)
                 row[result_field_name] = transformed_value
 
+        current_not_present = 'search_impression_share' not in row
+        if self.REPORT == 'CAMPAIGN_PERFORMANCE_REPORT' and self._project_id == 399 and previous_present and current_not_present:
+            log.error("Current Required Record is %s", row)
         return row
 
     @staticmethod

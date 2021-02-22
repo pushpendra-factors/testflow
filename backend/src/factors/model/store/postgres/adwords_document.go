@@ -266,7 +266,7 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalOperation:        "sum",
 	},
 	clickThroughRate: {
-		higherOrderExpression:    "sum((value->>'clicks')::float)*100/(NULLIF(sum((value->>'impressions')::float), 0)",
+		higherOrderExpression:    "sum((value->>'clicks')::float)*100/NULLIF(sum((value->>'impressions')::float), 0)",
 		nonHigherOrderExpression: "sum((value->>'clicks')::float)*100",
 		externalValue:            clickThroughRate,
 		externalOperation:        "sum",
