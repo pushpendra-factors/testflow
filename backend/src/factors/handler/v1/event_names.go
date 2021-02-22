@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
+	C "factors/config"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
@@ -40,7 +42,7 @@ func GetEventNamesHandler(c *gin.Context) {
 
 	// RedisGet is the only call. In case of Cache crash, job will be manually triggered to repopulate cache
 	// No fallback for now.
-	eventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, 30)
+	eventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, C.GetLookbackWindowForEventUserCache())
 	if err != nil {
 		logCtx.WithError(err).Error("get event names ordered by occurence and recency")
 		c.AbortWithStatus(http.StatusInternalServerError)
