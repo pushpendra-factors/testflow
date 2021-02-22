@@ -69,9 +69,10 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 	randomEventName := RandomURL()
 	trackEventProperties := U.PropertiesMap{
-		U.EP_REFERRER:     "www.google.com",
-		U.EP_PAGE_URL:     "https://example.com/1/2/",
-		U.EP_PAGE_RAW_URL: "https://example.com/1/2?x=1",
+		U.EP_REFERRER:        "www.google.com",
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
 	}
 	trackUserProperties := U.PropertiesMap{
 		U.UP_OS:         "Mac OSX",
@@ -127,7 +128,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Equal(t, trackEventProperties[U.EP_PAGE_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_URL])
 	assert.Equal(t, trackEventProperties[U.EP_PAGE_RAW_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_RAW_URL])
 	assert.Equal(t, float64(1), (*lsEventProperties1)[U.SP_PAGE_COUNT])
-	assert.Equal(t, float64(1), (*lsEventProperties1)[U.SP_SPENT_TIME])
+	assert.Equal(t, float64(10), (*lsEventProperties1)[U.SP_SPENT_TIME])
 	// session event properties added from user properties.
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*lsEventProperties1)[U.UP_OS])
 	assert.Equal(t, trackUserProperties[U.UP_OS_VERSION], (*lsEventProperties1)[U.UP_OS_VERSION])
@@ -141,7 +142,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, float64(10), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*userPropertiesMap)[U.UP_OS])
 	// check latest user_properties state.
 	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
@@ -150,7 +151,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.NotEqual(t, event.UserPropertiesId, user.PropertiesId)
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, float64(10), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*lastestUserPropertiesMap)[U.UP_OS])
 
 	// Test: New events without session for existing user with session.
@@ -257,7 +258,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Equal(t, trackEventProperties2[U.EP_PAGE_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_URL])
 	assert.Equal(t, trackEventProperties2[U.EP_PAGE_RAW_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_RAW_URL])
 	assert.Equal(t, float64(3), (*lsEventProperties1)[U.SP_PAGE_COUNT])
-	assert.Equal(t, float64(5), (*lsEventProperties1)[U.SP_SPENT_TIME])
+	assert.Equal(t, float64(2), (*lsEventProperties1)[U.SP_SPENT_TIME])
 
 	// event 3 and skip session event 1 and event 4 should create new session,
 	// without considering skip session event 1.
@@ -275,7 +276,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Equal(t, trackEventProperties4[U.EP_PAGE_URL], (*lsEventProperties2)[U.SP_LATEST_PAGE_URL])
 	assert.Equal(t, trackEventProperties4[U.EP_PAGE_RAW_URL], (*lsEventProperties2)[U.SP_LATEST_PAGE_RAW_URL])
 	assert.Equal(t, float64(2), (*lsEventProperties2)[U.SP_PAGE_COUNT])
-	assert.Equal(t, float64(4), (*lsEventProperties2)[U.SP_SPENT_TIME])
+	assert.Equal(t, float64(2), (*lsEventProperties2)[U.SP_SPENT_TIME])
 
 	// check session count so far.
 	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
@@ -285,7 +286,8 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	// This is because of two different user property id in the same session
+	assert.Equal(t, float64(12), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 
 	// Test: Create new session for event with marketing property,
 	// followed by other events, even though there was continuos
@@ -333,7 +335,8 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(8), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	// This is because of two different user property id in the same session
+	assert.Equal(t, float64(14), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 
 	// Test: Last event with marketing property.
 	timestamp = timestamp + 2
@@ -1381,6 +1384,100 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		event3, _ := store.GetStore().GetEvent(project.ID, userId, eventId3)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
 		assert.Equal(t, event1.SessionId, event3.SessionId)
+	})
+
+	t.Run("ContinuingSessionCheckingTotalSpentTime", func(t *testing.T) {
+		project, _, err := SetupProjectUserReturnDAO()
+		assert.Nil(t, err)
+
+		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+
+		// Test: New user with one event and one skip_session event.
+		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		// Updating project timestamp to before events start timestamp.
+		errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+		assert.Equal(t, http.StatusAccepted, errCode)
+		randomEventName := RandomURL()
+
+		trackEventProperties := U.PropertiesMap{
+			U.EP_REFERRER:        "www.google.com",
+			U.EP_PAGE_URL:        "https://example.com/1/2/",
+			U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+			U.EP_PAGE_SPENT_TIME: 10,
+		}
+		trackUserProperties := U.PropertiesMap{
+			U.UP_OS:         "Mac OSX",
+			U.UP_OS_VERSION: "1.23.1",
+		}
+		timestamp = timestamp + 2
+		trackPayload1 := SDK.TrackPayload{
+			Auto:            true,
+			Name:            randomEventName,
+			Timestamp:       timestamp,
+			EventProperties: trackEventProperties,
+			UserProperties:  trackUserProperties,
+		}
+		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		userId := response.UserId
+		eventId1 := response.EventId
+
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
+		assert.Nil(t, err)
+
+		// No.of sessions for user should be 1.
+		sessionEventName, _ := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(1), sessionCount)
+
+		// Check session association.
+		event1, _ := store.GetStore().GetEvent(project.ID, userId, eventId1)
+		assert.NotEmpty(t, event1.SessionId)
+
+		user, _ := store.GetStore().GetUser(project.ID, userId)
+		lastestUserPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
+		assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+		assert.Equal(t, float64(10), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+		assert.Equal(t, trackUserProperties[U.UP_OS], (*lastestUserPropertiesMap)[U.UP_OS])
+		timestamp = timestamp + 2
+		randomEventName = RandomURL()
+		trackEventProperties = U.PropertiesMap{
+			U.EP_REFERRER:        "www.google.com",
+			U.EP_PAGE_URL:        "https://example.com/1/2/",
+			U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+			U.EP_PAGE_SPENT_TIME: 5,
+		}
+		trackPayload2 := SDK.TrackPayload{
+			Auto:            true,
+			Name:            randomEventName,
+			Timestamp:       timestamp,
+			UserId:          userId,
+			EventProperties: trackEventProperties,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId2 := response.EventId
+
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1)
+		assert.Nil(t, err)
+
+		// No.of sessions created. Session continued.
+		sessionCount, _ = store.GetStore().GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(1), sessionCount)
+
+		// Check session association.
+		event2, _ := store.GetStore().GetEvent(project.ID, userId, eventId2)
+		assert.Equal(t, event1.SessionId, event2.SessionId)
+
+		user, _ = store.GetStore().GetUser(project.ID, userId)
+		lastestUserPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+		assert.Nil(t, err)
+		assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
+		assert.Equal(t, float64(2), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+		assert.Equal(t, float64(15), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+		assert.Equal(t, trackUserProperties[U.UP_OS], (*lastestUserPropertiesMap)[U.UP_OS])
 	})
 }
 

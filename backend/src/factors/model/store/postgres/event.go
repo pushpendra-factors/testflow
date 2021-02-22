@@ -485,21 +485,28 @@ func getPageCountAndTimeSpentFromEventsList(events []*model.Event, sessionEvent 
 	if len(events) == 0 {
 		return 0, 0
 	}
-
-	timeSpent := float64(events[len(events)-1].Timestamp - sessionEvent.Timestamp)
-	pageCount := float64(len(events))
+	timeSpent := float64(0)
+	pageCount := float64(0)
+	for _, event := range events {
+		if event.ID != sessionEvent.ID && event.SessionId == nil {
+			properties, _ := U.DecodePostgresJsonb(&event.Properties)
+			pageSpentTime, _ := U.GetPropertyValueAsFloat64((*properties)[U.EP_PAGE_SPENT_TIME])
+			timeSpent += pageSpentTime
+			pageCount += 1
+		}
+	}
 
 	return pageCount, timeSpent
 }
 
 func getPageCountAndTimeSpentForContinuedSession(projectId uint64, userId string,
-	continuedSessionEvent *model.Event, events []*model.Event) (float64, float64, int) {
+	continuedSessionEvent *model.Event, events []*model.Event) (float64, float64, float64, float64, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
 
 	existingPropertiesMap, err := U.DecodePostgresJsonb(&continuedSessionEvent.Properties)
 	if err != nil {
-		return 0, 0, http.StatusInternalServerError
+		return 0, 0, 0, 0, http.StatusInternalServerError
 	}
 
 	var existingPageCount float64
@@ -510,12 +517,20 @@ func getPageCountAndTimeSpentForContinuedSession(projectId uint64, userId string
 		}
 	}
 
-	currentPageCount, spentTime := getPageCountAndTimeSpentFromEventsList(events, continuedSessionEvent)
+	var existingSpentTime float64
+	if existingSpentTimeValue, exists := (*existingPropertiesMap)[U.SP_SPENT_TIME]; exists {
+		existingSpentTime, err = U.GetPropertyValueAsFloat64(existingSpentTimeValue)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get spent count property value as float64.")
+		}
+	}
+
+	currentPageCount, currentSpentTime := getPageCountAndTimeSpentFromEventsList(events, continuedSessionEvent)
 	// Decrement by 1 to remove the last event of session pulled for
 	// existing session which is duplicate on count.
-	pageCount := existingPageCount + currentPageCount - 1
-
-	return pageCount, spentTime, http.StatusFound
+	pageCount := existingPageCount + currentPageCount
+	spentTime := existingSpentTime + currentSpentTime
+	return pageCount, spentTime, currentPageCount, currentSpentTime, http.StatusFound
 }
 
 func (pg *Postgres) OverwriteEventProperties(projectId uint64, userId string, eventId string,
@@ -890,11 +905,11 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 			}
 
 			// Using existing method to get count and page spent time.
-			var sessionPageCount, sessionPageSpentTime float64
+			var sessionPageCount, sessionPageSpentTime, onlyThisSessionPageCount, onlyThisSessionPageSpentTime float64
 
 			if isSessionContinued {
 				// Using db query, since previous session continued, we don't have all the events of the session.
-				sessionPageCount, sessionPageSpentTime, errCode = getPageCountAndTimeSpentForContinuedSession(
+				sessionPageCount, sessionPageSpentTime, onlyThisSessionPageCount, onlyThisSessionPageSpentTime, errCode = getPageCountAndTimeSpentForContinuedSession(
 					projectId, userId, sessionEvent, events[sessionStartIndex:sessionEndIndex+1])
 				if errCode == http.StatusInternalServerError {
 					logCtx.Error("Failed to get page count and spent time of session on add session.")
@@ -903,6 +918,7 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 				// events from sessionStartIndex till i.
 				sessionPageCount, sessionPageSpentTime =
 					getPageCountAndTimeSpentFromEventsList(events[sessionStartIndex:sessionEndIndex+1], sessionEvent)
+				onlyThisSessionPageCount, onlyThisSessionPageSpentTime = sessionPageCount, sessionPageSpentTime
 			}
 
 			if sessionPageCount > 0 {
@@ -927,8 +943,8 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 				SessionEventTimestamp: sessionEvent.Timestamp,
 
 				SessionCount:         sessionEvent.Count,
-				SessionPageCount:     sessionPageCount,
-				SessionPageSpentTime: sessionPageSpentTime,
+				SessionPageCount:     onlyThisSessionPageCount,
+				SessionPageSpentTime: onlyThisSessionPageSpentTime,
 			}
 
 			for i := range eventsOfSession {
