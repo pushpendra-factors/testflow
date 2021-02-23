@@ -94,5 +94,5 @@ func TestGetDashboardCacheResultExpiryInSeconds(t *testing.T) {
 	from = U.GetBeginningOfDayTimestampZ(U.TimeNow().Unix(), U.TimeZoneStringIST)
 	to = U.TimeNowIn(U.TimeZoneStringIST).Unix()
 	expiry = U.GetDashboardCacheResultExpiryInSeconds(from, to)
-	assert.Equal(t, float64(U.CacheExpiryTodaysDataInSeconds), expiry)
+	assert.Equal(t, float64(U.CacheExpiryDashboardTodaysDataInSeconds), expiry)
 }

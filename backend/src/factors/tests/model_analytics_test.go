@@ -2071,7 +2071,7 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 		// Query 3 with raw values. Should have 100 rows for each $page_load_time value.
 		result, errCode, _ = store.GetStore().Analyze(project.ID, query3)
 		assert.Equal(t, http.StatusOK, errCode)
-		assert.Equal(t, 100, len(result.Rows))
+		assert.Equal(t, 101, len(result.Rows))
 
 		/*
 			New event with $page_load_time = 0
