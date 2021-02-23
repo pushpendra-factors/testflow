@@ -13,6 +13,7 @@ import {
   WIDGET_DELETED,
   DASHBOARD_UPDATED,
   SET_ACTIVE_PROJECT,
+  DASHBOARD_LAST_REFRESHED,
 } from "../types";
 import { getRearrangedData } from "./utils";
 
@@ -78,10 +79,13 @@ export default function (state = defaultState, action) {
         activeDashboard: action.payload,
         activeDashboardUnits: { ...defaultState.activeDashboardUnits },
       };
-    case 'DASHBOARD_LAST_REFRESHED':
+    case DASHBOARD_LAST_REFRESHED:
       return {
         ...state,
-        activeDashboard: { ...state.activeDashboard, refreshed_at: action.payload}, 
+        activeDashboard: {
+          ...state.activeDashboard,
+          refreshed_at: action.payload,
+        },
       };
     case DASHBOARD_CREATED:
       return {
@@ -123,6 +127,10 @@ export default function (state = defaultState, action) {
         activeDashboardUnits: {
           ...state.activeDashboardUnits,
           data: [...action.payload],
+        },
+        activeDashboard: {
+          ...state.activeDashboard,
+          units_position: action.units_position,
         },
         dashboards: {
           ...state.dashboards,

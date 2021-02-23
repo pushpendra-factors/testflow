@@ -163,7 +163,6 @@ function WidgetCard({
       unit.query,
       unit.id,
       unit.dashboard_id,
-      unit.settings,
       durationObj,
       setRefreshClicked,
     ]

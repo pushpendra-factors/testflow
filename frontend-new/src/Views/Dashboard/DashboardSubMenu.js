@@ -4,8 +4,7 @@ import {
 } from 'antd';
 import { Text, SVG } from '../../components/factorsComponents';
 import {
-  // LockOutlined, ReloadOutlined, UserAddOutlined, MoreOutlined, EditOutlined, UnlockOutlined
-  LockOutlined, ReloadOutlined, EditOutlined, UnlockOutlined
+  LockOutlined, UnlockOutlined
 } from '@ant-design/icons';
 import FaDatepicker from '../../components/FaDatepicker';
 import moment from 'moment';

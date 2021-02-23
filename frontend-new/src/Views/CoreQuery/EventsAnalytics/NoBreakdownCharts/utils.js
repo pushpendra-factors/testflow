@@ -4,18 +4,10 @@ import { SortData, getTitleWithSorter } from "../../../../utils/dataFormatter";
 export const getNoGroupingTableData = (
   data,
   currentSorter,
-  arrayMapper,
   frequency
 ) => {
   const clonedData = data.map((elem) => {
     const element = { ...elem };
-    for (const key in element) {
-      if (key !== "date") {
-        const q = arrayMapper.find((elem) => elem.mapper === key).eventName;
-        element[q] = element[key];
-        delete element[key];
-      }
-    }
     return element;
   });
 
@@ -34,7 +26,12 @@ export const getNoGroupingTableData = (
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
-export const getColumns = (events, currentSorter, handleSorting) => {
+export const getColumns = (
+  events,
+  arrayMapper,
+  currentSorter,
+  handleSorting
+) => {
   const result = [
     {
       title: "",
@@ -47,10 +44,10 @@ export const getColumns = (events, currentSorter, handleSorting) => {
     },
   ];
 
-  const eventColumns = events.map((e) => {
+  const eventColumns = events.map((e, idx) => {
     return {
       title: getTitleWithSorter(e, e, currentSorter, handleSorting),
-      dataIndex: e,
+      dataIndex: arrayMapper.find((elem) => elem.index === idx).mapper,
     };
   });
   return [...result, ...eventColumns];

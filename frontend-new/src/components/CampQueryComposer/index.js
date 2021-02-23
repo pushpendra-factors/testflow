@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import styles from './index.module.scss';
@@ -13,7 +13,7 @@ import {
     getCampaignConfigData, setCampChannel,
     setCampMeasures, setCampFilters, setCampGroupBy,
     setCampDateRange
-} from 'Reducers/coreQuery/middleware';
+} from '../../reducers/coreQuery/middleware';
 import MeasuresBlock from './MeasuresBlock';
 import FilterBlock from '../QueryComposer/FilterBlock';
 
@@ -257,6 +257,10 @@ const CampQueryComposer = ({ activeProject, channel,
         setCampDateRange(dtRange);
     }
 
+    const runCampaignsQuery = useCallback(() => {
+      handleRunQuery(false, null);
+    }, [handleRunQuery]);
+
     const footer = () => {
         return (
             <div className={`${styles.composer__footer} fa--query_block`}>
@@ -269,7 +273,7 @@ const CampQueryComposer = ({ activeProject, channel,
                         }
                     }
                     placement="topRight" onSelect={setDateRange} />
-                <Button size={'large'} type="primary" onClick={handleRunQuery.bind(this, false)}>Run Query</Button>
+                <Button size={'large'} type="primary" onClick={runCampaignsQuery}>Run Query</Button>
             </div>
         );
 

@@ -6,7 +6,9 @@ import {
   getDateBasedColumns,
   getNoGroupingTablularDatesBasedData,
 } from "./utils";
-import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";
+import {
+  CHART_TYPE_SPARKLINES,
+} from "../../../../utils/constants";
 
 function NoBreakdownTable({
   data,
@@ -17,7 +19,7 @@ function NoBreakdownTable({
   isWidgetModal,
   durationObj,
   arrayMapper,
-  reportTitle="Events Analytics"
+  reportTitle = "Events Analytics",
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState("");
@@ -33,11 +35,10 @@ function NoBreakdownTable({
   let selectedRowKeys;
 
   if (chartType === CHART_TYPE_SPARKLINES) {
-    columns = getColumns(events, sorter, handleSorting);
+    columns = getColumns(events, arrayMapper, sorter, handleSorting);
     tableData = getNoGroupingTableData(
       data,
       sorter,
-      arrayMapper,
       durationObj.frequency
     );
   } else {
@@ -97,7 +98,7 @@ function NoBreakdownTable({
       columns={columns}
       scroll={{ x: 250 }}
       rowSelection={rowSelection}
-      getCSVData = {getCSVData}
+      getCSVData={getCSVData}
     />
   );
 }

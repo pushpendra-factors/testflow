@@ -6,7 +6,8 @@ import { getWebAnalyticsData } from "../../../reducers/coreQuery/services";
 import { Spin } from "antd";
 import TableUnits from "./TableUnits";
 import CardUnit from "./CardUnit";
-import NoDataChart from 'Components/NoDataChart';  
+import NoDataChart from '../../../components/NoDataChart';  
+import { DASHBOARD_LAST_REFRESHED } from "../../../reducers/types";
 
 function WebsiteAnalytics({
   webAnalyticsUnits,
@@ -50,7 +51,7 @@ function WebsiteAnalytics({
 
   useEffect(() => {
       dispatch({
-        type: 'DASHBOARD_LAST_REFRESHED',
+        type: DASHBOARD_LAST_REFRESHED,
         payload: resultState.refreshed_at
       });
   }, [durationObj]);

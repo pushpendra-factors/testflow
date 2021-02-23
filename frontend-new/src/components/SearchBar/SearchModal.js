@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Modal, Input, Button, Tag } from 'antd';
+import React, { useState, useRef, useCallback } from 'react';
+import { Modal, Input, Tag } from 'antd';
 import styles from './index.module.scss';
 import { SVG, Text } from '../factorsComponents';
 import { useSelector } from 'react-redux';
@@ -10,12 +10,8 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
   const history = useHistory();
 
   const inputEl = useRef(null);
-  const [focused, setFocused] = useState(false);
+//   const [focused, setFocused] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-
-  const handleFocus = () => {
-    setFocused(true);
-  };
 
   const handleChange = useCallback((e) => {
     setSearchValue(e.target.value);
@@ -80,7 +76,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
                                     <div onClick={() => handleQueryClick(d)} className={`flex justify-between items-center px-4 py-3 cursor-pointer ${styles.queryItem}`} key={d.id}>
                                         <div className="flex items-center">
                                             <div className="mr-2"><SVG name={svgName} size={20} /></div>
-                                            <Text extraClass={styles.hoverTextColor}  type={"title"} level={7} extraClass={'m-0'}>{d.title}</Text>
+                                            <Text type={"title"} level={7} extraClass={`m-0 ${styles.hoverTextColor}`}>{d.title}</Text>
                                         </div>
                                         <div className={styles.queryType}>
                                             <Tag style={{borderRadius: '4px'}}>{svgName === 'events_dashboard_cq' ? 'Event' : 'Funnel'}</Tag>  
