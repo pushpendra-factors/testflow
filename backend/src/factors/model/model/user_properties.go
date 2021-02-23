@@ -96,13 +96,24 @@ func GetDecodedUserPropertiesIdentifierMetaObject(existingUserProperties *map[st
 		return &metaObj
 	}
 
-	if enMetaObj, exists := (*existingUserProperties)[util.UP_META_OBJECT_IDENTIFIER_KEY]; !exists {
+	intMetaObj, exists := (*existingUserProperties)[util.UP_META_OBJECT_IDENTIFIER_KEY]
+	if !exists {
 		return &metaObj
-	} else {
-		err := json.Unmarshal([]byte(util.GetPropertyValueAsString(enMetaObj)), &metaObj)
-		if err != nil {
-			log.WithError(err).Errorf("Failed to get meta data from user properties")
+	}
+
+	err := json.Unmarshal([]byte(util.GetPropertyValueAsString(intMetaObj)), &metaObj)
+	if err != nil {
+		if metaObjMap, ok := intMetaObj.(map[string]interface{}); ok { // use new structure type
+			var enMetaObj []byte
+			enMetaObj, err = json.Marshal(metaObjMap)
+			if err == nil {
+				err = json.Unmarshal(enMetaObj, &metaObj)
+				if err == nil {
+					return &metaObj
+				}
+			}
 		}
+		log.WithError(err).Errorf("Failed to get meta data from user properties")
 	}
 
 	return &metaObj

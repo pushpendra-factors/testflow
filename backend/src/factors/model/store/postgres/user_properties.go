@@ -59,6 +59,11 @@ func (pg *Postgres) createUserPropertiesIfChanged(projectId uint64, userId strin
 			// else only add new keys.
 			if timestamp >= currentPropertiesRecord.UpdatedTimestamp {
 				mergo.Merge(&mergedPropertiesMap, newPropertiesMap, mergo.WithOverride)
+
+				// manual override for $identifiers values to support new data type.
+				if _, exists := newPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY]; exists {
+					mergedPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY] = newPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY]
+				}
 			} else {
 				mergo.Merge(&mergedPropertiesMap, newPropertiesMap)
 			}
@@ -1116,10 +1121,8 @@ func (pg *Postgres) updateLatestUserPropertiesForSessionIfNotUpdated(projectID u
 
 // UpdateUserPropertiesIdentifierMetaObject overwrites the identifier meta date in the user properties
 func UpdateUserPropertiesIdentifierMetaObject(userProperties *postgres.Jsonb, metaObj *model.UserPropertiesMeta) error {
-
-	enMetaObj, err := json.Marshal(*metaObj)
-	if err != nil {
-		return err
+	if metaObj == nil {
+		return errors.New("invalid meta object")
 	}
 
 	userPropertiesMap, err := U.DecodePostgresJsonbAsPropertiesMap(userProperties)
@@ -1127,11 +1130,13 @@ func UpdateUserPropertiesIdentifierMetaObject(userProperties *postgres.Jsonb, me
 		return err
 	}
 
-	(*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY] = string(enMetaObj)
+	(*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY] = *metaObj
+
 	newUserProperties, err := U.EncodeStructTypeToPostgresJsonb(userPropertiesMap)
 	if err != nil {
 		return err
 	}
+
 	*userProperties = *newUserProperties
 	return nil
 }

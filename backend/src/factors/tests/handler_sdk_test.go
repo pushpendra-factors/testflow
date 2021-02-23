@@ -2269,3 +2269,102 @@ func TestSDKTrackFirstEventUserProperties(t *testing.T) {
 	assert.NotEmpty(t, (*userPropertiesMap)[U.UP_DAY_OF_FIRST_EVENT])
 	assert.NotEmpty(t, (*userPropertiesMap)[U.UP_HOUR_OF_FIRST_EVENT])
 }
+
+func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	cuid := "kevin.wunder@lovelandinnovations.com"
+	user, status := store.GetStore().CreateUser(&model.User{
+		ProjectId:      project.ID,
+		CustomerUserId: cuid,
+	})
+	assert.Equal(t, http.StatusCreated, status)
+
+	/*
+		Using exisitng format
+	*/
+	strMetaObj := fmt.Sprintf(`{"%s":{"timestamp":1606238877,"page_url":"www.example.com/sc","source":"sdk_user_identify"}}`, cuid)
+	properties := map[string]interface{}{
+		U.UP_META_OBJECT_IDENTIFIER_KEY: strMetaObj,
+	}
+
+	timestamp := time.Now().Unix() - 500
+	propertiesPJson, err := U.EncodeToPostgresJsonb(&properties)
+	assert.Nil(t, err)
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID, propertiesPJson, timestamp)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	// verify decoding properties
+	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(&properties)
+	assert.NotEmpty(t, (*metaObj)[cuid])
+	assert.Equal(t, "sdk_user_identify", (*metaObj)[cuid].Source)
+
+	// using non string type
+	intMetaObj, err := U.EncodeStructTypeToMap(metaObj)
+	assert.Nil(t, err)
+	properties = map[string]interface{}{
+		U.UP_META_OBJECT_IDENTIFIER_KEY: intMetaObj,
+	}
+
+	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(&properties)
+	assert.NotEmpty(t, (*metaObj)[cuid])
+	assert.Equal(t, "sdk_user_identify", (*metaObj)[cuid].Source)
+
+	/*
+		Identification flow check
+	*/
+
+	// using existing type
+	// should not overwide since user already identified by sdk_user_identify
+	cuid2 := "user2"
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId:         user.ID,
+		CustomerUserId: cuid2,
+		Source:         "test",
+	}, true)
+
+	assert.Equal(t, http.StatusOK, status)
+	user, _ = store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, cuid, user.CustomerUserId)
+
+	// update customer_user_id by sdk_user_identify
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId:         user.ID,
+		CustomerUserId: cuid2,
+		Source:         "sdk_user_identify",
+		Timestamp:      timestamp + 500,
+	}, true)
+
+	assert.Equal(t, http.StatusOK, status)
+	user, _ = store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, cuid2, user.CustomerUserId)
+
+	propertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(propertiesMap)
+	assert.NotEmpty(t, (*metaObj)[cuid])
+	assert.NotEmpty(t, (*metaObj)[cuid2])
+
+	// using new format by creating new user, will follow new type
+	cuid3 := "user3"
+	user, status = store.GetStore().CreateUser(&model.User{
+		ProjectId: project.ID,
+	})
+
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId:         user.ID,
+		CustomerUserId: cuid3,
+		Source:         "sdk_user_identify",
+	}, true)
+
+	assert.Equal(t, http.StatusOK, status)
+	user, _ = store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, cuid3, user.CustomerUserId)
+	propertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(propertiesMap)
+	assert.NotEmpty(t, (*metaObj)[cuid3])
+	assert.Equal(t, "sdk_user_identify", (*metaObj)[cuid3].Source)
+	assert.Empty(t, (*metaObj)[cuid])
+	assert.Empty(t, (*metaObj)[cuid2])
+}
