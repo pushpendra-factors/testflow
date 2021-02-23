@@ -51,7 +51,8 @@ const (
 	CacheExpiryWeeklyRangeInSeconds = 6 * 7 * SECONDS_IN_A_DAY // 6 Weeks.
 	CacheExpiryDefaultInSeconds     = 62 * SECONDS_IN_A_DAY    // 62 Days.
 
-	CacheExpiryTodaysDataInSeconds = 10 * 60 // 10 minutes.
+	CacheExpiryQueryTodaysDataInSeconds     = 10 * 60      // 10 minutes.
+	CacheExpiryDashboardTodaysDataInSeconds = 12 * 60 * 60 // 12 hours.
 )
 
 // Group Names
@@ -779,7 +780,7 @@ func GetDashboardCacheResultExpiryInSeconds(from, to int64) float64 {
 	nowStartOfDay := GetBeginningOfDayTimestampZ(TimeNow().Unix(), TimeZoneStringIST)
 	if to >= nowStartOfDay {
 		// End date is in today's range. Keep small expiry.
-		return float64(CacheExpiryTodaysDataInSeconds)
+		return float64(CacheExpiryDashboardTodaysDataInSeconds)
 	} else if nowStartOfDay > toStartOfDay && nowStartOfDay-toStartOfDay > ImmutableDataEndDateBufferInSeconds {
 		// Data can be assumed to be immutable here after buffer (2) days.
 		if to-from == (7*SECONDS_IN_A_DAY - 1) {
@@ -801,7 +802,7 @@ func GetQueryCacheResultExpiryInSeconds(from, to int64) float64 {
 	nowStartOfDay := GetBeginningOfDayTimestampZ(TimeNow().Unix(), TimeZoneStringIST)
 	if to >= nowStartOfDay {
 		// End date is in today's range. Keep small expiry.
-		return float64(CacheExpiryTodaysDataInSeconds)
+		return float64(CacheExpiryQueryTodaysDataInSeconds)
 	} else if nowStartOfDay > toStartOfDay && nowStartOfDay-toStartOfDay > ImmutableDataEndDateBufferInSeconds {
 		// Data can be assumed to be immutable here after buffer (2) days.
 		if to-from == (7*SECONDS_IN_A_DAY - 1) {
