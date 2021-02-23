@@ -421,22 +421,7 @@ func (pg *Postgres) CacheDashboardUnitsForProjects(stringProjectsIDs, excludePro
 		"Method": "CacheDashboardUnitsForProjects",
 	})
 
-	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(
-		stringProjectsIDs, excludeProjectIDs)
-	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
-	if allProjects {
-		var errCode int
-		allProjectIDs, errCode := pg.GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			return
-		}
-		for _, projectID := range allProjectIDs {
-			if _, found := excludeProjectIDsMap[projectID]; !found {
-				projectIDs = append(projectIDs, projectID)
-			}
-		}
-	}
-
+	projectIDs := pg.GetProjectsToRunForIncludeExcludeString(stringProjectsIDs, excludeProjectIDs)
 	for _, projectID := range projectIDs {
 		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
 		logCtx.Info("Starting to cache units for the project")
@@ -619,5 +604,56 @@ func (pg *Postgres) cacheDashboardUnitForDateRange(cachePayload model.DashboardU
 	errCode, errMsg := pg.CacheDashboardUnitForDateRange(cachePayload)
 	if errCode != http.StatusOK {
 		logCtx.Errorf("Error while running query %s", errMsg)
+	}
+}
+
+// CacheDashboardsForMonthlyRange To cache monthly dashboards for the project id.
+func (pg *Postgres) CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int) {
+	projectIDsToRun := pg.GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs)
+	monthlyRanges := U.GetMonthlyQueryRangesTuplesIST(numMonths)
+	for _, projectID := range projectIDsToRun {
+		dashboardUnits, errCode := pg.GetDashboardUnitsForProjectID(projectID)
+		if errCode != http.StatusFound || len(dashboardUnits) == 0 {
+			return
+		}
+
+		for _, dashboardUnit := range dashboardUnits {
+			queryClass, errMsg := pg.GetQueryAndClassFromDashboardUnit(&dashboardUnit)
+			if errMsg != "" {
+				C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+				continue
+			}
+
+			// excluding 'Web' class dashboard units
+			if queryClass == model.QueryClassWeb {
+				continue
+			}
+
+			var waitGroup sync.WaitGroup
+			waitGroup.Add(U.MinInt(len(monthlyRanges), numRoutines))
+			count := 0
+			for _, monthlyRange := range monthlyRanges {
+				count++
+				from, to := monthlyRange.First, monthlyRange.Second
+				// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
+				baseQuery, err := model.DecodeQueryForClass(dashboardUnit.Query, queryClass)
+				if err != nil {
+					errMsg := fmt.Sprintf("Error decoding query, query_id %d", dashboardUnit.QueryId)
+					C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+					return
+				}
+				baseQuery.SetQueryDateRange(from, to)
+				cachePayload := model.DashboardUnitCachePayload{
+					DashboardUnit: dashboardUnit,
+					BaseQuery:     baseQuery,
+				}
+				go pg.cacheDashboardUnitForDateRange(cachePayload, &waitGroup)
+				if count%numRoutines == 0 {
+					waitGroup.Wait()
+					waitGroup.Add(U.MinInt(len(monthlyRanges)-count, numRoutines))
+				}
+			}
+			waitGroup.Wait()
+		}
 	}
 }

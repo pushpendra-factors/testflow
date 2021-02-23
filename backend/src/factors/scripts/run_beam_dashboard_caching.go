@@ -161,22 +161,7 @@ func (f *getDashboardUnitCachePayloadsFn) ProcessElement(ctx context.Context, pr
 	stringProjectIDs := strings.TrimSpace(projectIDSplit[0])
 	excludeProjectIDs := strings.TrimSpace(projectIDSplit[1])
 
-	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(
-		stringProjectIDs, excludeProjectIDs)
-	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
-	if allProjects {
-		var errCode int
-		allProjectIDs, errCode := store.GetStore().GetAllProjectIDs()
-		if errCode != http.StatusFound {
-			return
-		}
-		for _, projectID := range allProjectIDs {
-			if _, found := excludeProjectIDsMap[projectID]; !found {
-				projectIDs = append(projectIDs, projectID)
-			}
-		}
-	}
-
+	projectIDs := store.GetStore().GetProjectsToRunForIncludeExcludeString(stringProjectIDs, excludeProjectIDs)
 	for _, projectID := range projectIDs {
 		dashboardUnits, errCode := store.GetStore().GetDashboardUnitsForProjectID(uint64(projectID))
 		if errCode != http.StatusFound {

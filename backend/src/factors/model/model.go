@@ -108,6 +108,7 @@ type Model interface {
 	CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGroup *sync.WaitGroup)
 	GetQueryAndClassFromDashboardUnit(dashboardUnit *model.DashboardUnit) (queryClass, errMsg string)
 	CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string)
+	CacheDashboardsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int)
 
 	// dashboard
 	CreateDashboard(projectID uint64, agentUUID string, dashboard *model.Dashboard) (*model.Dashboard, int)
@@ -264,6 +265,7 @@ type Model interface {
 	GetAllProjectIDs() ([]uint64, int)
 	GetNextSessionStartTimestampForProject(projectID uint64) (int64, int)
 	UpdateNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int
+	GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []uint64
 	GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[uint64]bool) (projectIds []uint64, errCode int)
 
 	// queries
@@ -372,6 +374,7 @@ type Model interface {
 	GetWebAnalyticsEnabledProjectIDsFromList(stringProjectIDs, excludeProjectIDs string) []uint64
 	GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]model.WebAnalyticsCachePayload, int, string)
 	CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnalyticsCachePayload) int
+	CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int)
 
 	// journey_mining
 	GetWeightedJourneyMatrix(projectID uint64, journeyEvents []model.QueryEventWithProperties,

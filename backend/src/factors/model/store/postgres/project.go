@@ -405,6 +405,29 @@ func (pg *Postgres) UpdateNextSessionStartTimestampForProject(projectID uint64, 
 	return http.StatusAccepted
 }
 
+// GetProjectsToRunForIncludeExcludeString For a given list of include / exclude comma separated strings,
+// returns a list of project ids handling * and other cases.
+func (pg *Postgres) GetProjectsToRunForIncludeExcludeString(projectIDs, excludeProjectIDs string) []uint64 {
+	var projectIDsToRun []uint64
+	allProjects, projectIDsMap, excludeProjectIDsMap := C.GetProjectsFromListWithAllProjectSupport(
+		projectIDs, excludeProjectIDs)
+	projectIDsToRun = C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
+
+	if allProjects {
+		var errCode int
+		allProjectIDs, errCode := pg.GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			return projectIDsToRun
+		}
+		for _, projectID := range allProjectIDs {
+			if _, found := excludeProjectIDsMap[projectID]; !found {
+				projectIDsToRun = append(projectIDsToRun, projectID)
+			}
+		}
+	}
+	return projectIDsToRun
+}
+
 // FillNextSessionStartTimestampForProject - Fills the initial next session start timestamp.
 // Postgres only implementation.
 func (pg *Postgres) FillNextSessionStartTimestampForProject(projectID uint64, timestamp int64) int {

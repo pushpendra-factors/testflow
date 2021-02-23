@@ -1470,3 +1470,38 @@ func (pg *Postgres) CacheWebsiteAnalyticsForProjects(stringProjectsIDs, excludeP
 	}
 	waitGroup.Wait()
 }
+
+// CacheWebsiteAnalyticsForMonthlyRange Cache monthly range dashboards for website analytics.
+func (pg *Postgres) CacheWebsiteAnalyticsForMonthlyRange(projectIDs, excludeProjectIDs string, numMonths, numRoutines int) {
+	projectIDsToRun := pg.GetWebAnalyticsEnabledProjectIDsFromList(projectIDs, excludeProjectIDs)
+	monthlyRanges := U.GetMonthlyQueryRangesTuplesIST(numMonths)
+	for _, projectID := range projectIDsToRun {
+		dashboardID, webAnalyticsQueries, errCode := pg.GetWebAnalyticsQueriesFromDashboardUnits(projectID)
+		if errCode != http.StatusFound {
+			errMsg := fmt.Sprintf("Failed to get web analytics queries for project %d", projectID)
+			C.PingHealthcheckForFailure(C.HealthcheckDashboardCachingPingID, errMsg)
+			return
+		}
+
+		var waitGroup sync.WaitGroup
+		waitGroup.Add(U.MinInt(len(monthlyRanges), numRoutines))
+		count := 0
+		for _, monthlyRange := range monthlyRanges {
+			count++
+			from, to := monthlyRange.First, monthlyRange.Second
+			cachePayload := model.WebAnalyticsCachePayload{
+				ProjectID:   projectID,
+				DashboardID: dashboardID,
+				From:        from,
+				To:          to,
+				Queries:     webAnalyticsQueries,
+			}
+			go pg.cacheWebsiteAnalyticsForDateRange(cachePayload, &waitGroup)
+			if count%numRoutines == 0 {
+				waitGroup.Wait()
+				waitGroup.Add(U.MinInt(len(monthlyRanges)-count, numRoutines))
+			}
+		}
+		waitGroup.Wait()
+	}
+}

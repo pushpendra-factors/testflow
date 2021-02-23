@@ -19,6 +19,12 @@ import (
 	"github.com/ttacon/libphonenumber"
 )
 
+// Int64Tuple To be used at places where an int64 tuple is required to be passed or returned.
+type Int64Tuple struct {
+	First  int64
+	Second int64
+}
+
 const SECONDS_IN_A_DAY int64 = 24 * 60 * 60
 const EVENT_USER_CACHE_EXPIRY_SECS = 1728000
 
@@ -397,6 +403,26 @@ func GetQueryRangePresetLastMonthIST() (int64, int64) {
 	rangeStartTime := GetBeginningOfDayTimestampZ(BeginningOfLastMonthStartOfDay(locationIST).Unix(), TimeZoneStringIST)
 	rangeEndTime := GetEndOfDayTimestampZ(EndOfLastMonthStartOfDay(locationIST).Unix(), TimeZoneStringIST)
 	return rangeStartTime, rangeEndTime
+}
+
+// GetMonthlyQueryRangesTuplesIST Return a tuple of start and end unix timestamp for last `numMonths`.
+func GetMonthlyQueryRangesTuplesIST(numMonths int) []Int64Tuple {
+	monthlyRanges := make([]Int64Tuple, 0, 0)
+	if numMonths == 0 {
+		return monthlyRanges
+	}
+	lastMonthStart, lastMonthEnd := GetQueryRangePresetLastMonthIST()
+	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
+	monthlyRanges = append(monthlyRanges, Int64Tuple{lastMonthStart, lastMonthEnd})
+	for i := 1; i < numMonths; i++ {
+		lastMonthEnd = lastMonthStart - 1
+		lastMonthEndTime := time.Unix(lastMonthEnd, 0).In(locationIST)
+		lastMonthStart = time.Date(lastMonthEndTime.Year(), lastMonthEndTime.Month(),
+			1, 0, 0, 0, 0, lastMonthEndTime.Location()).Unix()
+		monthlyRanges = append(monthlyRanges, Int64Tuple{lastMonthStart, lastMonthEnd})
+	}
+
+	return monthlyRanges
 }
 
 // BeginningOfWeekStartOfDay beginning of current week
