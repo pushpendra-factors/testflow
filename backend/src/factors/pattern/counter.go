@@ -96,6 +96,28 @@ func GenCandidatesPair(p1 *Pattern, p2 *Pattern, userAndEventsInfo *UserAndEvent
 	return c1Pattern, c2Pattern, true
 }
 
+//GenCandidatesPairRepeat Generate patterns with same eventNames
+func GenCandidatesPairRepeat(p1 *Pattern, p2 *Pattern, userAndEventsInfo *UserAndEventsInfo) (*Pattern, *Pattern, bool) {
+	p1Len := len(p1.EventNames)
+	p2Len := len(p2.EventNames)
+	if p1Len != p2Len || p1Len != 1 {
+		log.WithFields(log.Fields{"p1": p1.EventNames,
+			"p2": p2.EventNames,
+		}).Error("In GenCandidatesPairRepeat , got patterns with lenght not equal to 1")
+		return nil, nil, false
+	}
+
+	c1String := make([]string, 0)
+	c2String := make([]string, 0)
+	c1String = append(c1String, p1.EventNames[0])
+	c1String = append(c1String, p2.EventNames[0])
+	c2String = append(c2String, p1.EventNames[0])
+	c2String = append(c2String, p2.EventNames[0])
+	c1Pattern, _ := NewPattern(c1String, userAndEventsInfo)
+	c2Pattern, _ := NewPattern(c2String, userAndEventsInfo)
+	return c1Pattern, c2Pattern, true
+}
+
 func candidatesMapToSlice(candidatesMap map[string]*Pattern) []*Pattern {
 	candidates := []*Pattern{}
 	for _, v := range candidatesMap {
@@ -210,7 +232,6 @@ func GenSegmentsForTopGoals(currentPatterns []*Pattern, userAndEventsInfo *UserA
 			return currentPatterns[i].PerUserCount > currentPatterns[j].PerUserCount
 		})
 	candidatesMap := make(map[string]*Pattern)
-
 	// Candidates are formed with TopK goal Events
 	for i := 0; i < numPatterns; i++ {
 		for j := 0; j < numGoalPatterns; j++ {
@@ -224,6 +245,50 @@ func GenSegmentsForTopGoals(currentPatterns []*Pattern, userAndEventsInfo *UserA
 				}
 
 				if c1, c2, ok := GenCandidatesPair(
+					cr, gl, userAndEventsInfo); ok {
+					currentMinCount = gl.PerUserCount
+					candidatesMap[c1.String()] = c1
+					candidatesMap[c2.String()] = c2
+				}
+			}
+
+		}
+	}
+
+	// removing max Candidates filtering condition
+	return candidatesMapToSlice(candidatesMap), currentMinCount, nil
+}
+
+//GenSegmentsForRepeatedEvents form candidated for repeated goal events
+func GenSegmentsForRepeatedEvents(currentPatterns []*Pattern, userAndEventsInfo *UserAndEventsInfo, repeatedEvents []*Pattern) (
+	// create pairs of (startPattern, GoalPattern) to count from events file
+	[]*Pattern, uint, error) {
+	numPatterns := len(currentPatterns)
+	numRepeatPatterns := len(repeatedEvents)
+	var currentMinCount uint
+
+	if numPatterns == 0 {
+		return nil, currentMinCount, fmt.Errorf("Zero Patterns")
+	}
+	// Sort current patterns in decreasing order of frequency.
+	sort.Slice(
+		currentPatterns,
+		func(i, j int) bool {
+			return currentPatterns[i].PerUserCount > currentPatterns[j].PerUserCount
+		})
+	candidatesMap := make(map[string]*Pattern)
+	// Candidates are formed with repeated Events
+	for i := 0; i < numPatterns; i++ {
+		for j := 0; j < numRepeatPatterns; j++ {
+
+			cr := currentPatterns[i]
+			gl := repeatedEvents[j]
+			if strings.Compare(cr.EventNames[0], gl.EventNames[0]) == 0 {
+				if len(cr.EventNames) > 1 || len(gl.EventNames) > 1 {
+					return nil, currentMinCount, fmt.Errorf("Length of events more than 1")
+				}
+
+				if c1, c2, ok := GenCandidatesPairRepeat(
 					cr, gl, userAndEventsInfo); ok {
 					currentMinCount = gl.PerUserCount
 					candidatesMap[c1.String()] = c1

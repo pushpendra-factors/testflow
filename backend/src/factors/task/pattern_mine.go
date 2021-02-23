@@ -424,16 +424,24 @@ func mineAndWriteLenOnePatterns(
 func mineAndWriteLenTwoPatterns(
 	lenOnePatterns []*P.Pattern, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
-	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool, goalPatterns []*P.Pattern) (
+	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool,
+	goalPatterns []*P.Pattern, campEventsList []string) (
 	[]*P.Pattern, int64, error) {
 	// Each event combination is a segment in itself.
 	lenTwoPatterns, _, err := P.GenSegmentsForTopGoals(
 		lenOnePatterns, userAndEventsInfo, goalPatterns)
 
+	repeatPatterns := getAllRepeatedEventPatterns(lenOnePatterns, campEventsList)
+
+	// Each event combination is a segment in itself.
+	lenTwoPatternsRepeated, _, err := P.GenSegmentsForRepeatedEvents(
+		lenOnePatterns, userAndEventsInfo, repeatPatterns)
+
 	if err != nil {
 		return []*P.Pattern{}, 0, err
 	}
 
+	lenTwoPatterns = append(lenTwoPatterns, lenTwoPatternsRepeated...)
 	countPatterns(filepath, lenTwoPatterns, numRoutines, countOccurence)
 	filteredLenTwoPatterns, patternsSize, err := filterAndCompressPatterns(
 		lenTwoPatterns, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
@@ -444,6 +452,7 @@ func mineAndWriteLenTwoPatterns(
 	if err := writePatternsAsChunks(filteredLenTwoPatterns, chunkDir); err != nil {
 		return []*P.Pattern{}, 0, err
 	}
+
 	return filteredLenTwoPatterns, patternsSize, nil
 }
 
@@ -537,7 +546,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	}
 	filteredPatterns, patternsSize, err = mineAndWriteLenTwoPatterns(
 		filteredPatterns, filepath, userAndEventsInfo,
-		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize, countOccurence, goalPatterns)
+		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize, countOccurence, goalPatterns, campEventsList)
 	if err != nil {
 		return err
 	}
@@ -1276,7 +1285,6 @@ func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType m
 	campaignEvents := takeCampaignEvents(allPatterns, campaignEvent)
 
 	allPatternsFiltered := make([]patternProperties, 0)
-
 	allPatternsFiltered = append(allPatternsFiltered, ucTopk...)
 	allPatternsFiltered = append(allPatternsFiltered, feAT_Topk...)
 	allPatternsFiltered = append(allPatternsFiltered, ieTopk...)
@@ -1415,21 +1423,60 @@ func GetAllRepeatedEvents(eventNames []string, campaignEvents []string) []string
 
 	CyclicEvents := make([]string, 0)
 	eventSet := make(map[string]bool)
+	whiteListRepeatedEventMap := make(map[string]bool)
+
+	for _, v := range U.WHITELIST_FACTORS_REPEATED_EVENTS {
+		whiteListRepeatedEventMap[v] = true
+	}
+	mineLog.Info("White List of repeated Events", whiteListRepeatedEventMap)
 	for _, v := range eventNames {
 
-		if strings.HasPrefix(v, "$") == true {
-			if _, ok := eventSet[v]; !ok {
+		if strings.Compare(v, U.EVENT_NAME_SESSION) == 0 {
+			if eventSet[v] == false {
 				CyclicEvents = append(CyclicEvents, v)
+				eventSet[v] = true
+			}
+		}
+
+		if whiteListRepeatedEventMap[v] == true {
+			if eventSet[v] == false {
+				CyclicEvents = append(CyclicEvents, v)
+				eventSet[v] = true
 			}
 		}
 
 	}
+
 	for _, ce := range campaignEvents {
-		if _, ok := eventSet[ce]; !ok {
+		if eventSet[ce] == false {
 			CyclicEvents = append(CyclicEvents, ce)
+			eventSet[ce] = true
 		}
 	}
-
 	return CyclicEvents
+
+}
+
+func getAllRepeatedEventPatterns(allPatterns []*P.Pattern, campaignEvents []string) []*P.Pattern {
+
+	eventNamesList := make([]string, 0)
+	for _, v := range allPatterns {
+		eventNamesList = append(eventNamesList, v.EventNames[0])
+	}
+
+	allRepeatPatterns := GetAllRepeatedEvents(eventNamesList, campaignEvents)
+	allPatternsType := make([]*P.Pattern, 0)
+	exists := make(map[string]bool)
+	for _, v := range allRepeatPatterns {
+		exists[v] = true
+	}
+
+	for _, pt := range allPatterns {
+
+		if exists[pt.EventNames[0]] == true {
+			allPatternsType = append(allPatternsType, pt)
+		}
+	}
+	return allPatternsType
 
 }

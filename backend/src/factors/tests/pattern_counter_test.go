@@ -1831,4 +1831,32 @@ func TestCountPatternsWithOccurenceFalse(t *testing.T) {
 
 }
 
+func TestGenSegmentsForRepeatedEvents(t *testing.T) {
+
+	pA, _ := P.NewPattern([]string{"A"}, nil)
+	pB, _ := P.NewPattern([]string{"B"}, nil)
+	pC, _ := P.NewPattern([]string{"C"}, nil)
+	pD, _ := P.NewPattern([]string{"D"}, nil)
+	pAB, _ := P.NewPattern([]string{"AB", "BC"}, nil)
+
+	currentPatterns := []*P.Pattern{pA, pB, pC, pD}
+	repeatedPatterns := []*P.Pattern{pA, pB, pC}
+	rPatterns, _, err := P.GenSegmentsForRepeatedEvents(currentPatterns, nil, repeatedPatterns)
+	assert.Nil(t, err, "Error is not nil")
+	for _, v := range rPatterns {
+		assert.Equal(t, v.EventNames[0], v.EventNames[1], "Pattern EventNames are not Equal")
+	}
+
+	currentPatterns = []*P.Pattern{}
+	repeatedPatterns = []*P.Pattern{pA, pB, pC}
+	rPatterns, _, err = P.GenSegmentsForRepeatedEvents(currentPatterns, nil, repeatedPatterns)
+	assert.NotNil(t, err, err)
+
+	currentPatterns = []*P.Pattern{pAB}
+	repeatedPatterns = []*P.Pattern{pAB}
+	rPatterns, _, err = P.GenSegmentsForRepeatedEvents(currentPatterns, nil, repeatedPatterns)
+	assert.NotNil(t, err, "length pattern eventNames greater than 1 ")
+
+}
+
 // TODO(aravind): Add tests for genLenThreeSegmentedCandidates and genSegmentedCandidates in run_pattern_mine.go
