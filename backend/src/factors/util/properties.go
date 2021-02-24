@@ -137,6 +137,8 @@ var EP_PAGE_LOAD_TIME string = "$page_load_time"   // unit:seconds
 var EP_PAGE_SPENT_TIME string = "$page_spent_time" // unit:seconds
 var EP_PAGE_SCROLL_PERCENT string = "$page_scroll_percent"
 var EP_SEGMENT_EVENT_VERSION string = "$segment_event_version"
+var EP_SEGMENT_SOURCE_LIBRARY string = "$segment_source_library" // values: analytics.js, analytics-python, analytics-react, etc.,
+var EP_SEGMENT_SOURCE_CHANNEL string = "$segment_source_channel" // values: client, server
 var EP_CAMPAIGN string = "$campaign"
 var EP_CAMPAIGN_ID string = "$campaign_id"
 var EP_SOURCE string = "$source"
@@ -197,7 +199,6 @@ var UP_COUNTRY string = "$country"
 var UP_CITY string = "$city"
 var UP_REGION string = "$region"
 var UP_TIMEZONE string = "$timezone"
-var UP_SEGMENT_CHANNEL string = "$segment_channel" // from segement (browser, client, etc.,).
 var UP_USER_ID string = "$user_id"
 var UP_EMAIL string = "$email"
 var UP_COMPANY string = "$company"
@@ -289,6 +290,8 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_LOCATION_LONGITUDE,
 	EP_SKIP_SESSION,
 	EP_SEGMENT_EVENT_VERSION,
+	EP_SEGMENT_SOURCE_LIBRARY,
+	EP_SEGMENT_SOURCE_CHANNEL,
 	EP_IS_PAGE_VIEW,
 	EP_PAGE_TITLE,
 	EP_PAGE_DOMAIN,
@@ -344,7 +347,6 @@ var INTERNAL_EVENT_PROPERTIES = [...]string{
 
 var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_PLATFORM,
-	UP_SEGMENT_CHANNEL,
 	UP_BROWSER,
 	UP_BROWSER_VERSION,
 	UP_BROWSER_WITH_VERSION,
@@ -860,7 +862,6 @@ var DISABLED_CORE_QUERY_USER_PROPERTIES = [...]string{
 	UP_NETWORK_CARRIER,
 	UP_NETWORK_CELLULAR,
 	UP_NETWORK_WIFI,
-	UP_SEGMENT_CHANNEL,
 	UP_DEVICE_ADVERTISING_ID,
 	UP_DEVICE_ID,
 	UP_MERGE_TIMESTAMP,
@@ -890,7 +891,6 @@ var DISABLED_FACTORS_USER_PROPERTIES = [...]string{
 	UP_NETWORK_CELLULAR,
 	UP_NETWORK_WIFI,
 	UP_APP_BUILD,
-	UP_SEGMENT_CHANNEL,
 	UP_USER_ID,
 	UP_INITIAL_GCLID,
 	UP_INITIAL_FBCLID,
@@ -938,6 +938,8 @@ var DISABLED_FACTORS_EVENT_PROPERTIES = [...]string{
 	EP_LOCATION_LATITUDE,
 	EP_LOCATION_LONGITUDE,
 	EP_SEGMENT_EVENT_VERSION,
+	EP_SEGMENT_SOURCE_LIBRARY,
+	EP_SEGMENT_SOURCE_CHANNEL,
 	EP_PAGE_RAW_URL,
 	EP_GCLID,
 	EP_FBCLIID,

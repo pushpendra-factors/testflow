@@ -74,6 +74,10 @@ type Network struct {
 	Wifi      bool   `json:"wifi"`
 }
 
+type Library struct {
+	Name string `json:"name"`
+}
+
 type Campaign struct {
 	Name    string `json:"name"`
 	Source  string `json:"source"`
@@ -94,6 +98,7 @@ type Context struct {
 	Device    Device   `json:"device"`
 	Network   Network  `json:"network"`
 	App       App      `json:"app"`
+	Library   Library  `json:"library"`
 	Timezone  string   `json:"timezone"`
 }
 
@@ -139,6 +144,12 @@ func fillGenericEventProperties(properties *U.PropertiesMap, event *Event) {
 	if event.Version != nil {
 		(*properties)[U.EP_SEGMENT_EVENT_VERSION] = *event.Version
 	}
+	if event.Context.Library.Name != "" {
+		(*properties)[U.EP_SEGMENT_SOURCE_LIBRARY] = event.Context.Library.Name
+	}
+	if event.Channel != "" {
+		(*properties)[U.EP_SEGMENT_SOURCE_CHANNEL] = event.Channel
+	}
 	if event.Context.Location.Lat != 0 {
 		(*properties)[U.EP_LOCATION_LATITUDE] = event.Context.Location.Lat
 	}
@@ -149,9 +160,6 @@ func fillGenericEventProperties(properties *U.PropertiesMap, event *Event) {
 
 func fillGenericUserProperties(properties *U.PropertiesMap, event *Event) {
 	(*properties)[U.UP_PLATFORM] = U.PLATFORM_WEB
-	if event.Channel != "" {
-		(*properties)[U.UP_SEGMENT_CHANNEL] = event.Channel
-	}
 	if event.Context.UserAgent != "" {
 		(*properties)[U.UP_USER_AGENT] = event.Context.UserAgent
 	}
