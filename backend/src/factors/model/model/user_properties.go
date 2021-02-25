@@ -93,7 +93,7 @@ func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string)
 func GetDecodedUserPropertiesIdentifierMetaObject(existingUserProperties *map[string]interface{}) (*UserPropertiesMeta, error) {
 	metaObj := make(UserPropertiesMeta)
 	if existingUserProperties == nil {
-		return &metaObj, errors.New("empty properties")
+		return &metaObj, nil
 	}
 
 	intMetaObj, exists := (*existingUserProperties)[util.UP_META_OBJECT_IDENTIFIER_KEY]
