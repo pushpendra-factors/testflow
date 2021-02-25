@@ -1,6 +1,9 @@
 import React from "react";
 import { SortData, getTitleWithSorter, formatCount } from "../../../utils/dataFormatter";
 import { ATTRIBUTION_METHODOLOGY } from "../../../utils/constants";
+import styles from './index.module.scss';
+
+import { SVG, Text } from 'factorsComponents';
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;
@@ -52,6 +55,165 @@ export const formatGroupedData = (
     chartData[1].push(row[compareUsersIdx]);
   });
   return chartData;
+};
+
+const renderComparCell = (obj, xcl) => {
+  let changeMetric = null;
+  if(obj.change) {
+    if(obj.change > 0 || obj.change < 0) {
+      const change = Math.abs(obj.change);
+      changeMetric = (
+        <div className={`${styles.cmprCell__change} ${xcl}`}>
+          <SVG name={obj.change > 0 ? `arrowLift` : `arrowDown`} size={16}></SVG>
+          <span>
+            {obj.change === 'Infinity' ? <>&#8734;</> : <>{change} &#37;</>} 
+          </span>
+        </div>  
+      )
+    } 
+  }
+  
+  return (<div className={styles.cmprCell}>
+    <span className={styles.cmprCell__first}>{obj.first}</span>
+    <span className={styles.cmprCell__second}>{obj.second}</span>
+    {changeMetric}
+  </div>)
+}
+
+export const getCompareTableColumns = (
+  currentSorter,
+  handleSorting,
+  attribution_method,
+  attribution_method_compare,
+  touchpoint,
+  linkedEvents,
+  event
+) => {
+  const result = [
+    {
+      title: touchpoint,
+      dataIndex: touchpoint,
+    },
+    {
+      title: getTitleWithSorter(
+        "Impressions",
+        "impressions",
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: "impressions",
+      render: renderComparCell
+    },
+    {
+      title: getTitleWithSorter(
+        "Clicks",
+        "clicks",
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: "clicks",
+      render: renderComparCell
+    },
+    {
+      title: getTitleWithSorter("Spend", "spend", currentSorter, handleSorting),
+      dataIndex: "spend",
+      render: renderComparCell
+    },
+    {
+      title: getTitleWithSorter(
+        "Visitors",
+        "visitors",
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: "visitors",
+      render: renderComparCell
+    },
+    {
+      title: event,
+      className: "tableParentHeader",
+      children: [
+        {
+          title: (
+            <div className="flex flex-col items-center justify-ceneter">
+              <div>Conversion</div>
+              <div style={{ fontSize: "10px", color: "#8692A3" }}>
+                {
+                  ATTRIBUTION_METHODOLOGY.find(
+                    (m) => m.value === attribution_method
+                  ).text
+                }
+              </div>
+            </div>
+          ),
+          dataIndex: "conversion",
+          className: "text-center",
+          render: (obj) => renderComparCell(obj, "justify-center")
+        },
+        {
+          title: (
+            <div className="flex flex-col items-center justify-ceneter">
+              <div>Cost per Conversion</div>
+              <div style={{ fontSize: "10px", color: "#8692A3" }}>
+                {
+                  ATTRIBUTION_METHODOLOGY.find(
+                    (m) => m.value === attribution_method
+                  ).text
+                }
+              </div>
+            </div>
+          ),
+          dataIndex: "cost",
+          className: "text-center",
+          render: (obj) => renderComparCell(obj, "justify-center")
+        },
+      ],
+    },
+  ];
+  if (attribution_method_compare) {
+    result[result.length - 1].children.push({
+      title: (
+        <div className="flex flex-col items-center justify-ceneter">
+          <div>Conversion</div>
+          <div style={{ fontSize: "10px", color: "#8692A3" }}>
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method_compare
+              ).text
+            }
+          </div>
+        </div>
+      ),
+      dataIndex: "conversion_compare",
+      className: "text-center",
+    });
+    result[result.length - 1].children.push({
+      title: (
+        <div className="flex flex-col items-center justify-ceneter">
+          <div>Cost per Conversion</div>
+          <div style={{ fontSize: "10px", color: "#8692A3" }}>
+            {
+              ATTRIBUTION_METHODOLOGY.find(
+                (m) => m.value === attribution_method_compare
+              ).text
+            }
+          </div>
+        </div>
+      ),
+      dataIndex: "cost_compare",
+      className: "text-center",
+    });
+  }
+  let linkedEventsColumns = [];
+  if (linkedEvents.length) {
+    linkedEventsColumns = linkedEvents.map((le) => {
+      return {
+        title: `${le.label} - Users`,
+        dataIndex: le.label,
+      };
+    });
+  }
+  return [...result, ...linkedEventsColumns];
 };
 
 export const getTableColumns = (
@@ -183,6 +345,91 @@ export const getTableColumns = (
   }
   return [...result, ...linkedEventsColumns];
 };
+
+export const getCompareTableData = (
+  data,
+  data2,
+  event,
+  searchText,
+  currentSorter,
+  attribution_method_compare,
+  touchpoint,
+  linkedEvents
+) => {
+  const { headers } = data;
+  const touchpointIdx = headers.indexOf(touchpoint);
+  const impressionsIdx = headers.indexOf("Impressions");
+  const clicksIdx = headers.indexOf("Clicks");
+  const spendIdx = headers.indexOf("Spend");
+  const visitorsIdx = headers.indexOf("Website Visitors");
+  const costIdx = headers.indexOf("Cost Per Conversion");
+  const userIdx = headers.indexOf(`${event} - Users`);
+  const compareUsersIdx = headers.indexOf(`Compare - Users`);
+  const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
+  const data2Rows = data2.rows;
+  const result = data.rows
+    .map((row, index) => {
+      const row2 = data2Rows[index];
+      let resultantRow = {
+        index,
+        [touchpoint]: row[touchpointIdx],
+        impressions: {
+          first: formatCount(row[impressionsIdx], 1),
+          second: formatCount(row2[impressionsIdx], 1),
+          change: calcChangePerc(row[impressionsIdx], row2[impressionsIdx])
+        },
+        clicks: {
+          first: formatCount(row[clicksIdx], 1),
+          second: formatCount(row2[clicksIdx], 1),
+          change: calcChangePerc(row[clicksIdx], row2[clicksIdx])
+        },
+        spend: {
+          first: formatCount(row[spendIdx], 1),
+          second: formatCount(row2[spendIdx], 1),
+          change: calcChangePerc(row[spendIdx], row2[spendIdx])
+        },
+        visitors: {
+          first: formatCount(row[visitorsIdx], 1),
+          second: formatCount(row2[visitorsIdx], 1),
+          change: calcChangePerc(row[visitorsIdx], row2[visitorsIdx])
+        },
+        conversion: {
+          first: formatCount(row[userIdx], 1),
+          second: formatCount(row2[userIdx], 1),
+          change: calcChangePerc(row[userIdx], row2[userIdx])
+        },
+        cost: {
+          first: formatCount(row[costIdx], 1),
+          second: formatCount(row2[costIdx], 1),
+          change: calcChangePerc(row[costIdx], row2[costIdx])
+        },
+      };
+      if (linkedEvents.length) {
+        linkedEvents.forEach((le) => {
+          const eventIdx = headers.indexOf(`${le.label} - Users`);
+          resultantRow[le.label] = formatCount(row[eventIdx], 0);
+        });
+      }
+      if (attribution_method_compare) {
+        resultantRow["conversion_compare"] = row[compareUsersIdx];
+        resultantRow["cost_compare"] = formatCount(row[compareCostIdx], 0);
+      }
+      return resultantRow;
+    })
+    .filter(
+      (row) =>
+        row[touchpoint].toLowerCase().indexOf(searchText.toLowerCase()) > -1
+    );
+
+  if (!currentSorter) {
+    return SortData(result, "conversion", "descend");
+  }
+  return SortData(result, currentSorter.key, currentSorter.order);
+};
+
+const calcChangePerc = (val1, val2) => {
+  return formatCount(((val1 - val2) / val2 * 100), 1);
+}
 
 export const getTableData = (
   data,

@@ -53,7 +53,6 @@ function DashboardSubMenu({
             customPicker
             presetRange
             monthPicker
-            quarterPicker
             range={{
               startDate: durationObj.from,
               endDate: durationObj.to,

@@ -265,7 +265,7 @@ const CampQueryComposer = ({ activeProject, channel,
         return (
             <div className={`${styles.composer__footer} fa--query_block`}>
                 <FaDatepicker customPicker presetRange
-                    monthPicker quarterPicker
+                    monthPicker
                     range={
                         {
                             startDate: dateRange.from,

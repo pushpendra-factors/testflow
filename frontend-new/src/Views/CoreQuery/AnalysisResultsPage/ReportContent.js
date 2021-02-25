@@ -38,6 +38,8 @@ function ReportContent({
   eventPage,
   section,
   onReportClose,
+  runAttrCmprQuery,
+  cmprResultState
 }) {
   let content = null,
     queryDetail = null,
@@ -166,6 +168,7 @@ function ReportContent({
       content = (
         <AttributionsResult
           resultState={resultState}
+          compareResult={cmprResultState}
           attributionsState={attributionsState}
           section={section}
         />
@@ -230,6 +233,8 @@ function ReportContent({
           chartTypeMenuItems={chartTypeMenuItems}
           chartType={chartType}
           metricsDropdown={metricsDropdown}
+          triggerAttrComparision={runAttrCmprQuery}
+          cmprResultState={cmprResultState}
         />
       </div>
       <div className="mt-12">{content}</div>

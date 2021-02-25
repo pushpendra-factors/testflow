@@ -4,6 +4,7 @@ import GroupedAttributionsChart from "./GroupedAttributionsChart";
 
 function AttributionsResult({
   resultState,
+  compareResult,
   attributionsState,
   section
 }) {
@@ -20,6 +21,9 @@ function AttributionsResult({
         data={
           resultState.data.result ? resultState.data.result : resultState.data
         }
+        data2={
+          compareResult?.data ? compareResult.data : null
+        }
         isWidgetModal={false}
         attribution_method={models[0]}
         section={section}
@@ -35,6 +39,9 @@ function AttributionsResult({
         touchpoint={touchpoint}
         data={
           resultState.data.result ? resultState.data.result : resultState.data
+        }
+        data2={
+          compareResult?.data ? compareResult.data : null
         }
         isWidgetModal={false}
         attribution_method={models[0]}

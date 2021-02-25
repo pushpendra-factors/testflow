@@ -13,6 +13,7 @@ function GroupedAttributionsChart({
   touchpoint,
   linkedEvents,
   section,
+  data2
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -76,6 +77,7 @@ function GroupedAttributionsChart({
           linkedEvents={linkedEvents}
           event={event}
           data={data}
+          data2={data2}
           isWidgetModal={section === DASHBOARD_MODAL}
           visibleIndices={visibleIndices}
           setVisibleIndices={setVisibleIndices}

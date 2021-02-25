@@ -199,7 +199,6 @@ function QueryComposer({
               customPicker
               presetRange
               monthPicker
-              quarterPicker
               placement="topRight"
               range={{
                 startDate: queryOptions.date_range.from,

@@ -10,7 +10,8 @@ function AttributionsChart({
   attribution_method,
   touchpoint,
   linkedEvents,
-  section
+  section,
+  data2,
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -42,6 +43,7 @@ function AttributionsChart({
           touchpoint={touchpoint}
           event={event}
           data={data}
+          data2={data2}
           isWidgetModal={section === DASHBOARD_MODAL}
           visibleIndices={visibleIndices}
           setVisibleIndices={setVisibleIndices}

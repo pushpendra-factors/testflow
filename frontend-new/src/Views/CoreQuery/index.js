@@ -61,6 +61,7 @@ function CoreQuery({
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
   const [resultState, setResultState] = useState(initialState);
+  const [cmprResultState, setCmprResultState] = useState(initialState);
   const [requestQuery, updateRequestQuery] = useState(null);
   const [rowClicked, setRowClicked] = useState(false);
   const [querySaved, setQuerySaved] = useState(false);
@@ -267,6 +268,48 @@ function CoreQuery({
       updateResultState,
     ]
   );
+
+  const runAttrCmprQuery = (cmprDuration) => {
+    if(!cmprDuration) 
+    {
+        setCmprResultState({
+        ...initialState
+      })
+    }
+    const query = getAttributionQuery(
+      eventGoal,
+      touchpoint,
+      touchpoint_filters,
+      attr_query_type,
+      models,
+      window,
+      linkedEvents,
+      cmprDuration
+    );
+
+
+    setCmprResultState({
+      ...initialState,
+      loading: true,
+      data: null,
+  })
+    
+
+    getAttributionsData(activeProject.id, query).then((res) => {
+      setCmprResultState({
+          ...initialState,
+          data: res.data,
+      })
+     }, (err) => {
+      setCmprResultState({
+        ...initialState,
+        loading: false,
+        error: true,
+        data: null,
+    })
+
+     });
+  }
 
   const runAttributionQuery = useCallback(
     async (isQuerySaved, durationObj) => {
@@ -606,7 +649,7 @@ function CoreQuery({
       );
     }
   };
-
+  console.log(queryOptions.date_range);
   return (
     <>
       <Drawer
@@ -642,6 +685,8 @@ function CoreQuery({
           campaignState={campaignState}
           eventPage={result_criteria}
           section={REPORT_SECTION}
+          runAttrCmprQuery={runAttrCmprQuery}
+          cmprResultState={cmprResultState}
         />
       ) : (
         <CoreQueryHome
