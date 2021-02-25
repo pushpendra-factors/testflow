@@ -1258,7 +1258,8 @@ func TestTrackHandlerFormSubmitWithUserAlreadyIdentfiedBySDKRequest(t *testing.T
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, customerUserID, user.CustomerUserId)
 	userProperties, errCode := store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
-	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	metaObj, err := model.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	assert.Nil(t, err)
 	assert.NotNil(t, (*metaObj)[customerUserID])
 	assert.NotEqual(t, "", (*metaObj)[customerUserID].Source)
 	assert.Equal(t, "", (*metaObj)[customerUserID].PageURL)
@@ -1305,7 +1306,8 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 	assert.Equal(t, "xxx@gmail.com", (*userPropertiesMap)[U.UP_EMAIL])
 	assert.Equal(t, "Example Inc", (*userPropertiesMap)[U.UP_COMPANY])
 	assert.Equal(t, "xxx@gmail.com", user.CustomerUserId)
-	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaObj, err := model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	assert.Nil(t, err)
 	metaData, ok := (*metaObj)["xxx@gmail.com"]
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "sdk_event_track", metaData.Source)
@@ -1319,7 +1321,8 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 	user, _ = store.GetStore().GetUser(project.ID, userId)
 	assert.Equal(t, "xxx@gmail.com", user.CustomerUserId)
 	assert.Nil(t, (*userPropertiesMap)["$name"])
-	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaObj, err = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	assert.Nil(t, err)
 	_, ok = (*metaObj)["yyy@gmail.com"]
 	assert.Equal(t, false, ok)
 
@@ -1334,7 +1337,8 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 	userPropertiesMap, errCode = store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, (*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY])
-	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaObj, err = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	assert.Nil(t, err)
 	metaData, ok = (*metaObj)["yyy@business.com"]
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "www.test.com/new1", metaData.PageURL)
@@ -1352,7 +1356,8 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 	assert.Equal(t, "Example Inc2", (*userPropertiesMap)["$company"])
 	assert.Equal(t, "username2", (*userPropertiesMap)["$name"])
 	assert.NotNil(t, (*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY])
-	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaObj, err = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	assert.Nil(t, err)
 	_, ok = (*metaObj)["xxx@gmail.com"]
 	assert.Equal(t, true, ok)
 	_, ok = (*metaObj)["yyy@business.com"]
@@ -1374,7 +1379,8 @@ func TestTrackHandlerWithMultipeFormSubmit(t *testing.T) {
 	assert.Equal(t, "yyz@business.com", (*userPropertiesMap)["$email"])
 	assert.Equal(t, "yyz@business.com", (*userPropertiesMap)["$user_id"])
 	assert.NotNil(t, (*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY])
-	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	metaObj, err = model.GetDecodedUserPropertiesIdentifierMetaObject(userPropertiesMap)
+	assert.Nil(t, err)
 	_, ok = (*metaObj)["xxx@gmail.com"]
 	assert.Equal(t, true, ok)
 	_, ok = (*metaObj)["yyy@business.com"]
@@ -1484,7 +1490,8 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	assert.NotNil(t, (*userProperties)[U.UP_USER_ID])
 	assert.Equal(t, r2CustomerUserId, (*userProperties)[U.UP_USER_ID])
 	assert.Equal(t, r2CustomerUserId, retUser.CustomerUserId)
-	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	metaObj, err := model.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	assert.Nil(t, err)
 	metaData, ok := (*metaObj)[r2CustomerUserId]
 	assert.Equal(t, true, ok)
 	assert.Equal(t, "", metaData.PageURL)
@@ -2464,7 +2471,8 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, status)
 
 	// verify decoding properties
-	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(&properties)
+	metaObj, err := model.GetDecodedUserPropertiesIdentifierMetaObject(&properties)
+	assert.Nil(t, err)
 	assert.NotEmpty(t, (*metaObj)[cuid])
 	assert.Equal(t, "sdk_user_identify", (*metaObj)[cuid].Source)
 
@@ -2475,7 +2483,8 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 		U.UP_META_OBJECT_IDENTIFIER_KEY: intMetaObj,
 	}
 
-	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(&properties)
+	metaObj, err = model.GetDecodedUserPropertiesIdentifierMetaObject(&properties)
+	assert.Nil(t, err)
 	assert.NotEmpty(t, (*metaObj)[cuid])
 	assert.Equal(t, "sdk_user_identify", (*metaObj)[cuid].Source)
 
@@ -2510,7 +2519,8 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 
 	propertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
-	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(propertiesMap)
+	metaObj, err = model.GetDecodedUserPropertiesIdentifierMetaObject(propertiesMap)
+	assert.Nil(t, err)
 	assert.NotEmpty(t, (*metaObj)[cuid])
 	assert.NotEmpty(t, (*metaObj)[cuid2])
 
@@ -2531,7 +2541,8 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 	assert.Equal(t, cuid3, user.CustomerUserId)
 	propertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
-	metaObj = model.GetDecodedUserPropertiesIdentifierMetaObject(propertiesMap)
+	metaObj, err = model.GetDecodedUserPropertiesIdentifierMetaObject(propertiesMap)
+	assert.Nil(t, err)
 	assert.NotEmpty(t, (*metaObj)[cuid3])
 	assert.Equal(t, "sdk_user_identify", (*metaObj)[cuid3].Source)
 	assert.Empty(t, (*metaObj)[cuid])

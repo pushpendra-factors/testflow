@@ -90,31 +90,37 @@ func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string)
 }
 
 // GetDecodedUserPropertiesIdentifierMetaObject gets the identifier meta data from the user properties
-func GetDecodedUserPropertiesIdentifierMetaObject(existingUserProperties *map[string]interface{}) *UserPropertiesMeta {
+func GetDecodedUserPropertiesIdentifierMetaObject(existingUserProperties *map[string]interface{}) (*UserPropertiesMeta, error) {
 	metaObj := make(UserPropertiesMeta)
 	if existingUserProperties == nil {
-		return &metaObj
+		return &metaObj, errors.New("empty properties")
 	}
 
 	intMetaObj, exists := (*existingUserProperties)[util.UP_META_OBJECT_IDENTIFIER_KEY]
 	if !exists {
-		return &metaObj
+		return &metaObj, nil
 	}
 
-	err := json.Unmarshal([]byte(util.GetPropertyValueAsString(intMetaObj)), &metaObj)
-	if err != nil {
-		if metaObjMap, ok := intMetaObj.(map[string]interface{}); ok { // use new structure type
-			var enMetaObj []byte
-			enMetaObj, err = json.Marshal(metaObjMap)
-			if err == nil {
-				err = json.Unmarshal(enMetaObj, &metaObj)
-				if err == nil {
-					return &metaObj
-				}
-			}
+	metaObjMap, ok := intMetaObj.(map[string]interface{})
+	if !ok {
+		err := json.Unmarshal([]byte(util.GetPropertyValueAsString(intMetaObj)), &metaObj)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to get meta data from user properties")
 		}
-		log.WithError(err).Errorf("Failed to get meta data from user properties")
+		return &metaObj, err
 	}
 
-	return &metaObj
+	var enMetaObj []byte
+	enMetaObj, err := json.Marshal(metaObjMap)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to encode meta data from user properties")
+		return &metaObj, err
+	}
+
+	err = json.Unmarshal(enMetaObj, &metaObj)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to unmarshal meta data from user properties")
+	}
+
+	return &metaObj, err
 }

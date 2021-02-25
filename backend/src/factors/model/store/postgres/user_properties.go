@@ -1168,7 +1168,11 @@ func (pg *Postgres) UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, 
 		Source:    source,
 	}
 
-	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(existingUserProperties)
+	metaObj, err := model.GetDecodedUserPropertiesIdentifierMetaObject(existingUserProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to GetDecodedUserPropertiesIdentifierMetaObject")
+		return nil
+	}
 
 	(*metaObj)[customerUserID] = *customerUserIDMeta
 	return UpdateUserPropertiesIdentifierMetaObject(userProperties, metaObj)

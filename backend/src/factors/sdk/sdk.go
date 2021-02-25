@@ -709,7 +709,11 @@ func isUserAlreadyIdentifiedBySDKRequest(projectID uint64, userID string) bool {
 		return false
 	}
 
-	metaObj := model.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	metaObj, err := model.GetDecodedUserPropertiesIdentifierMetaObject(userProperties)
+	if err != nil {
+		return false
+	}
+
 	for _, customerUserIDMeta := range *metaObj {
 		if customerUserIDMeta.Source == sdkRequestTypeUserIdentify {
 			return true
