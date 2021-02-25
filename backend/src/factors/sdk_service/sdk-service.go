@@ -60,6 +60,10 @@ func main() {
 
 	blockedSDKRequestProjectTokens := flag.String("blocked_sdk_request_project_tokens",
 		"", "List of tokens (public and private) to block SDK requests.")
+
+	enableSDKAndIntegrationRequestQueueDuplication := flag.Bool("enable_sdk_and_integration_request_queue_duplication",
+		false, "Enables SDK and Integration request queue duplication.")
+
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -89,7 +93,8 @@ func main() {
 		RedisPortPersistent:              *redisPortPersistent,
 		UseDefaultProjectSettingForSDK:   *useDefaultProjectSettingForSDK,
 		// List of tokens (public and private) to block SDK requests.
-		BlockedSDKRequestProjectTokens: C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
+		BlockedSDKRequestProjectTokens:                 C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
+		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
 	}
 
 	err := C.InitSDKService(config)

@@ -102,14 +102,15 @@ type Configuration struct {
 	UseDefaultProjectSettingForSDK   bool
 	BlockedSDKRequestProjectTokens   []string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
-	CacheLookUpRangeProjects                map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
-	LookbackWindowForEventUserCache         int
-	ActiveFactorsGoalsLimit                 int
-	ActiveFactorsTrackedEventsLimit         int
-	ActiveFactorsTrackedUserPropertiesLimit int
-	DryRunCRMSmartEvent                     bool
-	IsBeamPipeline                          bool
-	AllowSmartEventRuleCreation             bool
+	CacheLookUpRangeProjects                       map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
+	LookbackWindowForEventUserCache                int
+	ActiveFactorsGoalsLimit                        int
+	ActiveFactorsTrackedEventsLimit                int
+	ActiveFactorsTrackedUserPropertiesLimit        int
+	DryRunCRMSmartEvent                            bool
+	IsBeamPipeline                                 bool
+	AllowSmartEventRuleCreation                    bool
+	EnableSDKAndIntegrationRequestQueueDuplication bool
 }
 
 type Services struct {
@@ -1047,4 +1048,8 @@ func PingHealthcheckForPanic(taskID, env, healthcheckID string) {
 		}
 		log.Fatal(pe) // using fatal to avoid panic loop.
 	}
+}
+
+func IsSDKAndIntegrationRequestQueueDuplicationEnabled() bool {
+	return configuration.EnableSDKAndIntegrationRequestQueueDuplication
 }

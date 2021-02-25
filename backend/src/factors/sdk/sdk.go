@@ -6,6 +6,7 @@ import (
 	cacheRedis "factors/cache/redis"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 	"fmt"
 	"net/http"
 	"strings"
@@ -123,7 +124,16 @@ const (
 	SourceSalesforce = "salesforce"
 )
 
+// RequestQueue - Name of the primary queue which will
+// be queued with sdk requests.
 const RequestQueue = "sdk_request_queue"
+
+// RequestQueueDuplicate - Name of the secondary Queue which
+// will be queued with copy of tasks sent RequestQueue, if enabled.
+const RequestQueueDuplicate = "dup_sdk_request_queue"
+
+// ProcessRequestTask - Name of the task which has been
+// queued to request queues.
 const ProcessRequestTask = "process_sdk_request"
 
 const (
@@ -976,36 +986,39 @@ func AddUserProperties(projectId uint64,
 		&AddUserPropertiesResponse{Message: "Added user properties successfully."}
 }
 
-func enqueueRequest(token, reqType, reqPayload interface{}) error {
-	reqPayloadJson, err := json.Marshal(reqPayload)
+func enqueueRequest(token, reqType string, reqPayload interface{}) error {
+	logCtx := log.WithField("token", token).WithField("payload", reqPayload)
+
+	taskSignature, err := util.CreateTaskSignatureForQueue(ProcessRequestTask,
+		RequestQueue, token, reqType, reqPayload)
 	if err != nil {
-		log.WithError(err).WithField("token", token).Error(
-			"Failed to marshal sdk request queue payload")
 		return err
 	}
 
 	queueClient := C.GetServices().QueueClient
-	_, err = queueClient.SendTask(&tasks.Signature{
-		Name:                 ProcessRequestTask,
-		RoutingKey:           RequestQueue, // queue to send.
-		RetryLaterOnPriority: true,         // allow delayed tasks to run on priority.
-		Args: []tasks.Arg{
-			{
-				Type:  "string",
-				Value: token,
-			},
-			{
-				Type:  "string",
-				Value: reqType,
-			},
-			{
-				Type:  "string",
-				Value: string(reqPayloadJson),
-			},
-		},
-	})
+	_, err = queueClient.SendTask(taskSignature)
+	if err != nil {
+		return err
+	}
 
-	return err
+	if !C.IsSDKAndIntegrationRequestQueueDuplicationEnabled() {
+		return nil
+	}
+
+	dupTaskSignature, err := util.CreateTaskSignatureForQueue(ProcessRequestTask,
+		RequestQueueDuplicate, token, reqType, reqPayload)
+	if err != nil {
+		return err
+	}
+	_, err = queueClient.SendTask(dupTaskSignature)
+	if err != nil {
+		// Log and return duplicate task queue failure.
+		// To avoid track failure response to the clients.
+		logCtx.WithError(err).Error("Failed to send task to the duplicate queue.")
+		return nil
+	}
+
+	return nil
 }
 
 func excludeBotRequestBySetting(token, userAgent string) bool {

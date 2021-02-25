@@ -15,8 +15,10 @@ import (
 
 	C "factors/config"
 	H "factors/handler"
+	"factors/integration"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/sdk"
 	SDK "factors/sdk"
 	TaskSession "factors/task/session"
 	U "factors/util"
@@ -2268,6 +2270,173 @@ func TestSDKTrackFirstEventUserProperties(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, (*userPropertiesMap)[U.UP_DAY_OF_FIRST_EVENT])
 	assert.NotEmpty(t, (*userPropertiesMap)[U.UP_HOUR_OF_FIRST_EVENT])
+}
+
+func TestSDKAndIntegrationRequestQueueingAndDuplication(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	// Test sdk request queuing and duplication.
+	C.GetConfig().SDKRequestQueueProjectTokens = []string{project.Token}
+	C.GetConfig().EnableSDKAndIntegrationRequestQueueDuplication = true
+
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	queueClient := C.GetServices().QueueClient
+
+	sdkQueueLengthPrev, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueue)
+	assert.Nil(t, err)
+	dupSDKQueueLengthPrev, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueueDuplicate)
+	assert.Nil(t, err)
+
+	w := ServePostRequestWithHeaders(r, uri, []byte(`{"event_name": "signup", "event_properties": {"mobile" : "true"}}`),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["user_id"])
+
+	sdkQueueLength, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueue)
+	assert.Nil(t, err)
+	assert.Equal(t, sdkQueueLengthPrev+1, sdkQueueLength)
+
+	dupSDKQueueLength, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueueDuplicate)
+	assert.Nil(t, err)
+	assert.Equal(t, dupSDKQueueLengthPrev+1, dupSDKQueueLength)
+
+	C.GetConfig().SDKRequestQueueProjectTokens = []string{project.Token}
+
+	integrationQueueLengthPrev, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueue)
+	assert.Nil(t, err)
+	dupIntegrationQueueLengthPrev, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueueDuplicate)
+	assert.Nil(t, err)
+
+	// Test integration request queuing and duplication.
+	C.GetConfig().SegmentRequestQueueProjectTokens = []string{project.PrivateToken}
+
+	enable := true
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	sampleScreenPayload := `
+	{
+		"_metadata": {
+		  "bundled": [
+			"Segment.io"
+		  ],
+		  "unbundled": [
+			
+		  ]
+		},
+		"anonymousId": "80444c7e-1580-4d3c-a77a-2f3427ed7d97",
+		"channel": "client",
+		"context": {
+			"active": true,
+			"app": {
+			  "name": "InitechGlobal",
+			  "version": "545",
+			  "build": "3.0.1.545",
+			  "namespace": "com.production.segment"
+			},
+			"campaign": {
+			  "name": "TPS Innovation Newsletter",
+			  "source": "Newsletter",
+			  "medium": "email",
+			  "term": "tps reports",
+			  "content": "image link"
+			},
+			"device": {
+			  "id": "B5372DB0-C21E-11E4-8DFC-AA07A5B093DB",
+			  "advertisingId": "7A3CBEA0-BDF5-11E4-8DFC-AA07A5B093DB",
+			  "adTrackingEnabled": true,
+			  "manufacturer": "Apple",
+			  "model": "iPhone7,2",
+			  "name": "maguro",
+			  "type": "ios",
+			  "token": "ff15bc0c20c4aa6cd50854ff165fd265c838e5405bfeb9571066395b8c9da449"
+			},
+			"ip": "8.8.8.8",
+			"library": {
+			  "name": "analytics.js",
+			  "version": "2.11.1"
+			},
+			"locale": "nl-NL",
+			"location": {
+			  "city": "San Francisco",
+			  "country": "United States",
+			  "latitude": 40.2964197,
+			  "longitude": -76.9411617,
+			  "speed": 0
+			},
+			"network": {
+			  "bluetooth": false,
+			  "carrier": "T-Mobile NL",
+			  "cellular": true,
+			  "wifi": false
+			},
+			"os": {
+			  "name": "iPhone OS",
+			  "version": "8.1.3"
+			},
+			"page": {
+			  "path": "/academy/",
+			  "referrer": "https://google.com",
+			  "search": "",
+			  "title": "Analytics Academy",
+			  "url": "https://segment.com/academy/"
+			},
+			"referrer": {
+			  "id": "ABCD582CDEFFFF01919",
+			  "type": "dataxu"
+			},
+			"screen": {
+			  "width": 320,
+			  "height": 568,
+			  "density": 2
+			},
+			"groupId": "12345",
+			"timezone": "Europe/Amsterdam",
+			"userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1"
+		},
+		"integrations": {},
+		"messageId": "ajs-19c084e2f80e70cf62bb62509e79b37e",
+		"originalTimestamp": "2019-01-08T16:22:06.053Z",
+		"projectId": "Zzft38QJhB",
+		"properties": {
+		  "path": "/segment.test.html",
+		  "referrer": "",
+		  "search": "?a=10",
+		  "title": "Segment Test",
+		  "url": "http://localhost:8090/segment.test.html?a=10"
+		},
+		"receivedAt": "2019-01-08T16:21:54.106Z",
+		"sentAt": "2019-01-08T16:22:06.058Z",
+		"timestamp": "2019-01-08T16:21:54.101Z",
+		"name": "screen_1",
+		"type": "screen",
+		"userId": "",
+		"version": "2"
+	  }
+	`
+
+	uri = "/integrations/segment"
+	w = ServePostRequestWithHeaders(r, uri, []byte(sampleScreenPayload),
+		map[string]string{"Authorization": project.PrivateToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	integrationQueueLength, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueue)
+	assert.Nil(t, err)
+	assert.Equal(t, integrationQueueLengthPrev+1, integrationQueueLength)
+
+	dupIntegrationQueueLength, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueueDuplicate)
+	assert.Nil(t, err)
+	assert.Equal(t, dupIntegrationQueueLengthPrev+1, dupIntegrationQueueLength)
+
+	// Disable global queue duplication on config singleton.
+	C.GetConfig().EnableSDKAndIntegrationRequestQueueDuplication = false
 }
 
 func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {

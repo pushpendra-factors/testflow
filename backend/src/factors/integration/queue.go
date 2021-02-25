@@ -1,11 +1,12 @@
 package integration
 
 import (
-	"encoding/json"
 	"errors"
 
 	C "factors/config"
-	"factors/vendor_custom/machinery/v1/tasks"
+	"factors/util"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const TypeSegment = "segment"
@@ -18,6 +19,7 @@ var types = [...]string{
 
 const ProcessRequestTask = "process_integration_request"
 const RequestQueue = "integration_request_queue"
+const RequestQueueDuplicate = "dup_integration_request_queue"
 
 func isValidRequest(token, reqType string, reqPayload interface{}) bool {
 	if token == "" {
@@ -44,31 +46,35 @@ func EnqueueRequest(token, reqType string, reqPayload interface{}) error {
 		return errors.New("invalid request")
 	}
 
-	reqPayloadJson, err := json.Marshal(reqPayload)
+	taskSignature, err := util.CreateTaskSignatureForQueue(ProcessRequestTask,
+		RequestQueue, token, reqType, reqPayload)
 	if err != nil {
 		return err
 	}
 
 	queueClient := C.GetServices().QueueClient
-	_, err = queueClient.SendTask(&tasks.Signature{
-		Name:                 ProcessRequestTask,
-		RoutingKey:           RequestQueue, // queue to send.
-		RetryLaterOnPriority: true,         // allow delayed tasks to run on priority.
-		Args: []tasks.Arg{
-			{
-				Type:  "string",
-				Value: token,
-			},
-			{
-				Type:  "string",
-				Value: reqType,
-			},
-			{
-				Type:  "string",
-				Value: string(reqPayloadJson),
-			},
-		},
-	})
+	_, err = queueClient.SendTask(taskSignature)
+	if err != nil {
+		return err
+	}
 
-	return err
+	if !C.IsSDKAndIntegrationRequestQueueDuplicationEnabled() {
+		return nil
+	}
+
+	dupTaskSignature, err := util.CreateTaskSignatureForQueue(ProcessRequestTask,
+		RequestQueueDuplicate, token, reqType, reqPayload)
+	if err != nil {
+		return err
+	}
+
+	_, err = queueClient.SendTask(dupTaskSignature)
+	if err != nil {
+		// Log and return duplicate task queue failure.
+		log.WithField("token", token).WithField("payload", reqPayload).
+			WithError(err).Error("Failed to send integration request task to the duplicate queue.")
+		return nil
+	}
+
+	return nil
 }
