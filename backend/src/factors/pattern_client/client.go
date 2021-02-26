@@ -27,6 +27,7 @@ const (
 	OperationNameGetProjectModelsIntervals = "GetProjectModelsIntervals"
 	OperationNameGetTotalEventCount        = "GetTotalEventCount"
 	Separator                              = "."
+	OperationNameGetUserAndEventsInfo      = "GetUserAndEventsInfo"
 )
 
 type GenericRPCResp struct {
@@ -94,6 +95,16 @@ type ModelInfo struct {
 	ModelType      string `json:"mt"`
 	StartTimestamp int64  `json:"st"`
 	EndTimestamp   int64  `json:"et"`
+}
+
+type GetUserAndEventsInfoRequest struct {
+	ProjectId uint64 `json:"pid"`
+	ModelId   uint64 `json:"mid"` // Optional, if not passed latest modelId will be used
+}
+
+type GetUserAndEventsInfoResponse struct {
+	GenericRPCResp
+	UserAndEventsInfo pattern.UserAndEventsInfo `json:"uei"`
 }
 
 func CreatePatternsFromRawPatterns(rawPatterns []*json.RawMessage) ([]*pattern.Pattern, error) {
@@ -293,6 +304,64 @@ func GetPatterns(reqId string, projectId, modelId uint64, patternEvents [][]stri
 	}
 
 	return patterns, nil
+}
+
+func GetUserAndEventsInfo(reqId string, projectId, modelId uint64) (*pattern.UserAndEventsInfo, uint64, error) {
+
+	params := GetUserAndEventsInfoRequest{
+		ProjectId: projectId,
+		ModelId:   modelId,
+	}
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetUserAndEventsInfo, params)
+	if err != nil {
+		return nil, modelId, err
+	}
+
+	serverAddrs := C.GetServices().GetPatternServerAddresses()
+
+	gatherResp := make(chan httpResp, len(serverAddrs))
+	headers := map[string]string{
+		"content-type": "application/json",
+		"X-Req-Id":     reqId,
+	}
+
+	urls := make([]string, 0, 0)
+	for _, serverAddr := range serverAddrs {
+		url := fmt.Sprintf("http://%s%s", serverAddr, RPCEndpoint)
+		urls = append(urls, url)
+	}
+
+	httpDo(http.MethodPost, urls, paramBytes, headers, gatherResp)
+
+	var respUserAndEventsInfo pattern.UserAndEventsInfo
+	// If modelId is not provided respond with the userAndEventsInfo of the latest modelId.
+	var respModelId uint64
+	for r := range gatherResp {
+		if r.err != nil {
+			log.WithError(r.err).Error("Error Ignoring GetUserAndEventsInfoResponse")
+			continue
+		}
+
+		var result GetUserAndEventsInfoResponse
+		defer r.resp.Body.Close()
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
+		if err != nil {
+			result.Error = err
+		}
+		if result.Ignored {
+			log.Debugln("Ignoring GetUserAndEventsInfoResponse")
+			continue
+		}
+
+		if result.Error != nil {
+			log.WithError(result.Error).Error("Error GetUserAndEventsInfoResponse")
+			continue
+		}
+		respUserAndEventsInfo = result.UserAndEventsInfo
+		respModelId = result.ModelId
+	}
+
+	return &respUserAndEventsInfo, respModelId, nil
 }
 
 func GetProjectModelIntervals(reqId string, projectId uint64) ([]ModelInfo, error) {
