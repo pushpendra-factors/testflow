@@ -338,7 +338,14 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 	leadGUID, exists := (*enProperties)[model.UserPropertyHubspotContactLeadGUID]
 	if !exists {
 		logCtx.Error("Missing lead_guid on hubspot contact properties. Sync failed.")
-		return http.StatusInternalServerError
+		errCode := store.GetStore().UpdateHubspotDocumentAsSynced(
+			projectID, document.ID, "", document.Timestamp, document.Action, "")
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update hubspot contact document as synced.")
+			return http.StatusInternalServerError
+		}
+
+		return http.StatusOK
 	}
 
 	trackPayload := &SDK.TrackPayload{
@@ -692,17 +699,15 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 		return http.StatusInternalServerError
 	}
 
-	dealStage, exists := (*enProperties)[U.CRM_HUBSPOT_DEALSTAGE]
-	if !exists || dealStage == nil {
-		logCtx.Error("No deal stage property found on hubspot deal.")
-		return http.StatusInternalServerError
-	}
+	dealStage, dealstageExists := (*enProperties)[U.CRM_HUBSPOT_DEALSTAGE]
 
 	userID := getDealUserID(projectID, &deal)
 
 	eventID := ""
 	if userID == "" {
 		logCtx.Error("Skipped deal sync. No user associated to hubspot deal.")
+	} else if !dealstageExists || dealStage == nil {
+		logCtx.Error("No deal stage property found on hubspot deal.")
 	} else {
 		trackPayload := &SDK.TrackPayload{
 			Name:            U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
