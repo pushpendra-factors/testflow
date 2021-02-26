@@ -351,7 +351,7 @@ func IsStartOfTodaysRange(from int64, timezoneString TimeZoneString) bool {
 
 // Is30MinutesTimeRange Whether time range is of last 30 minutes.
 func Is30MinutesTimeRange(from, to int64) bool {
-	return (from - to) == 30*60
+	return (to - from) == 30*60
 }
 
 // GetEndOfDayTimestampZ Get's end of the day timestamp in given timezone.

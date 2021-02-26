@@ -116,8 +116,7 @@ func IsWebAnalyticsDashboardAlreadyCached(projectID, dashboardID uint64, from, t
 }
 
 var SkippableWindows = map[string]int64{
-	"2MIN":  120,
-	"30MIN": 1800,
+	"2MIN": 120,
 }
 
 // GetFormattedTime - Converts seconds into hh mm ss format.
