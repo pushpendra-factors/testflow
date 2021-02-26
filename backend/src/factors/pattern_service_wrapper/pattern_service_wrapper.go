@@ -28,13 +28,15 @@ type PatternServiceWrapperInterface interface {
 	GetAllPatterns(reqId, startEvent, endEvent string) ([]*P.Pattern, error)
 	GetAllContainingPatterns(reqId, event string) ([]*P.Pattern, error)
 	GetTotalEventCount(reqId string) uint
+	GetUserAndEventsInfo() *P.UserAndEventsInfo
 }
 
 type PatternServiceWrapper struct {
-	projectId       uint64
-	modelId         uint64
-	pMap            map[string]*P.Pattern
-	totalEventCount uint
+	projectId         uint64
+	modelId           uint64
+	pMap              map[string]*P.Pattern
+	totalEventCount   uint
+	userAndEventsInfo *P.UserAndEventsInfo
 }
 
 type funnelNodeResult struct {
@@ -57,6 +59,11 @@ type graphResult struct {
 }
 type FactorGraphResults struct {
 	Charts []graphResult `json:"charts"`
+}
+
+func (pw *PatternServiceWrapper) GetUserAndEventsInfo() *P.UserAndEventsInfo {
+	userAndEventsInfo, _, _ := PC.GetUserAndEventsInfo("", pw.projectId, pw.modelId)
+	return userAndEventsInfo
 }
 
 func (pw *PatternServiceWrapper) GetPerUserCount(reqId string, eventNames []string,

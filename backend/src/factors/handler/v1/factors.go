@@ -80,6 +80,11 @@ func PostFactorsHandler(c *gin.Context) {
 		return
 	}
 	if patternMode == "AllProperties" {
+		userInfo := ps.GetUserAndEventsInfo()
+		c.JSON(http.StatusOK, userInfo)
+		return
+	}
+	if patternMode == "AllHistogram" {
 		var patternHistogram *P.Pattern
 		if params.StartEvent == "" {
 			patternHistogram = ps.GetPattern("", []string{params.EndEvent})
