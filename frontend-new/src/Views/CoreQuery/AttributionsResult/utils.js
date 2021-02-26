@@ -346,6 +346,14 @@ export const getTableColumns = (
   return [...result, ...linkedEventsColumns];
 };
 
+const constrComparisionCellData = (row, row2, index) => {
+  return {
+    first: formatCount(row[index], 1),
+    second: row2? formatCount(row2[index], 1) : NaN,
+    change: row2? calcChangePerc(row[index], row2[index]) : NaN
+  }
+}
+
 export const getCompareTableData = (
   data,
   data2,
@@ -369,40 +377,16 @@ export const getCompareTableData = (
   const data2Rows = data2.rows;
   const result = data.rows
     .map((row, index) => {
-      const row2 = data2Rows[index];
+      const row2 = data2Rows.filter((r) => r[touchpointIdx] === row[touchpointIdx])[0];
       let resultantRow = {
         index,
         [touchpoint]: row[touchpointIdx],
-        impressions: {
-          first: formatCount(row[impressionsIdx], 1),
-          second: formatCount(row2[impressionsIdx], 1),
-          change: calcChangePerc(row[impressionsIdx], row2[impressionsIdx])
-        },
-        clicks: {
-          first: formatCount(row[clicksIdx], 1),
-          second: formatCount(row2[clicksIdx], 1),
-          change: calcChangePerc(row[clicksIdx], row2[clicksIdx])
-        },
-        spend: {
-          first: formatCount(row[spendIdx], 1),
-          second: formatCount(row2[spendIdx], 1),
-          change: calcChangePerc(row[spendIdx], row2[spendIdx])
-        },
-        visitors: {
-          first: formatCount(row[visitorsIdx], 1),
-          second: formatCount(row2[visitorsIdx], 1),
-          change: calcChangePerc(row[visitorsIdx], row2[visitorsIdx])
-        },
-        conversion: {
-          first: formatCount(row[userIdx], 1),
-          second: formatCount(row2[userIdx], 1),
-          change: calcChangePerc(row[userIdx], row2[userIdx])
-        },
-        cost: {
-          first: formatCount(row[costIdx], 1),
-          second: formatCount(row2[costIdx], 1),
-          change: calcChangePerc(row[costIdx], row2[costIdx])
-        },
+        impressions: constrComparisionCellData(row, row2, impressionsIdx),
+        clicks: constrComparisionCellData(row, row2, clicksIdx),
+        spend: constrComparisionCellData(row, row2, spendIdx),
+        visitors: constrComparisionCellData(row, row2, visitorsIdx),
+        conversion: constrComparisionCellData(row, row2, userIdx),
+        cost: constrComparisionCellData(row, row2, costIdx),
       };
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
