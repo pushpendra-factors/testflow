@@ -59,7 +59,7 @@ const (
 
 	CacheExpiryQueryTodaysDataInSeconds     = 10 * 60      // 10 minutes.
 	CacheExpiryDashboardTodaysDataInSeconds = 12 * 60 * 60 // 12 hours.
-	CacheExpiryDashboard30MinutesInSeconds  = 60 * 60
+	CacheExpiryDashboard30MinutesInSeconds  = 2 * 60 * 60  // 2 hours.
 )
 
 // Group Names
