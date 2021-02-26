@@ -88,6 +88,9 @@ func getWebAnalyticsQueryResultCacheKey(projectID, dashboardID uint64,
 	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
 		// Query for today's dashboard. Use to as 'now'.
 		suffix = fmt.Sprintf("did:%d:from:%d:to:now", dashboardID, from)
+	} else if U.Is30MinutesTimeRange(from, to) {
+		// Query for last 30mins.
+		suffix = fmt.Sprintf("did:%d:30mins", dashboardID)
 	} else {
 		suffix = fmt.Sprintf("did:%d:from:%d:to:%d", dashboardID, from, to)
 	}

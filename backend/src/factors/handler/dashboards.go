@@ -591,7 +591,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 
 	cacheResult, errCode := model.GetCacheResultForWebAnalyticsDashboard(projectId, dashboardId,
 		requestPayload.From, requestPayload.To)
-	if errCode == http.StatusFound && !H.IsHardRefreshForToday(requestPayload.From, hardRefresh) {
+	if errCode == http.StatusFound && !H.ShouldAllowHardRefresh(requestPayload.From, requestPayload.To, hardRefresh) {
 		queryResult = cacheResult.Result
 		fromCache = true
 		lastRefreshedAt = cacheResult.RefreshedAt

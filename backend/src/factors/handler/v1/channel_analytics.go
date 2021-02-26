@@ -158,7 +158,7 @@ func ExecuteChannelQueryHandler(c *gin.Context) {
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
-	if isDashboardQueryRequest && !H.IsHardRefreshForToday(commonQueryFrom, hardRefresh) {
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
 		if shouldReturn {
 			c.AbortWithStatusJSON(resCode, resMsg)

@@ -31,9 +31,9 @@ func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, f
 	return true, http.StatusOK, cacheResult.Result
 }
 
-// IsHardRefreshForToday To check from query api if hard refresh should be applied or return from cache.
-func IsHardRefreshForToday(from int64, hardRefresh bool) bool {
-	return U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) && hardRefresh
+// ShouldAllowHardRefresh To check from query api if hard refresh should be applied or return from cache.
+func ShouldAllowHardRefresh(from, to int64, hardRefresh bool) bool {
+	return (U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) || U.Is30MinutesTimeRange(from, to)) && hardRefresh
 }
 
 // SleepIfHeaderSet Sleep in request handler if header set. Currently used in testing.

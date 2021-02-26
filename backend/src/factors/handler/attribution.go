@@ -77,7 +77,7 @@ func AttributionHandler(c *gin.Context) {
 	}
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
-	if isDashboardQueryRequest && !H.IsHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
 			projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
 		if shouldReturn {

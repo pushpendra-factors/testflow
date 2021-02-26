@@ -59,6 +59,7 @@ const (
 
 	CacheExpiryQueryTodaysDataInSeconds     = 10 * 60      // 10 minutes.
 	CacheExpiryDashboardTodaysDataInSeconds = 12 * 60 * 60 // 12 hours.
+	CacheExpiryDashboard30MinutesInSeconds  = 60 * 60
 )
 
 // Group Names
@@ -346,6 +347,11 @@ func GetBeginningOfDayTimestampZ(timestamp int64, timezoneString TimeZoneString)
 // IsStartOfTodaysRange Checks if the from value is start of todays range.
 func IsStartOfTodaysRange(from int64, timezoneString TimeZoneString) bool {
 	return from == GetBeginningOfDayTimestampZ(TimeNowUnix(), TimeZoneStringIST)
+}
+
+// Is30MinutesTimeRange Whether time range is of last 30 minutes.
+func Is30MinutesTimeRange(from, to int64) bool {
+	return (from - to) == 30*60
 }
 
 // GetEndOfDayTimestampZ Get's end of the day timestamp in given timezone.
@@ -804,7 +810,9 @@ func IsCampaignEvent(eventName string) bool {
 func GetDashboardCacheResultExpiryInSeconds(from, to int64) float64 {
 	toStartOfDay := GetBeginningOfDayTimestampZ(to, TimeZoneStringIST)
 	nowStartOfDay := GetBeginningOfDayTimestampZ(TimeNow().Unix(), TimeZoneStringIST)
-	if to >= nowStartOfDay {
+	if Is30MinutesTimeRange(from, to) {
+		return float64(CacheExpiryDashboard30MinutesInSeconds)
+	} else if to >= nowStartOfDay {
 		// End date is in today's range. Keep small expiry.
 		return float64(CacheExpiryDashboardTodaysDataInSeconds)
 	} else if nowStartOfDay > toStartOfDay && nowStartOfDay-toStartOfDay > ImmutableDataEndDateBufferInSeconds {

@@ -101,7 +101,7 @@ func EventsQueryHandler(c *gin.Context) {
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
-	if isDashboardQueryRequest && !H.IsHardRefreshForToday(commonQueryFrom, hardRefresh) {
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
 		if shouldReturn {
 			c.AbortWithStatusJSON(resCode, resMsg)
@@ -200,7 +200,7 @@ func QueryHandler(c *gin.Context) {
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
-	if isDashboardQueryRequest && !H.IsHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
+	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
 			projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
 		if shouldReturn {
