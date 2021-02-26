@@ -19,9 +19,10 @@ class CampaignPerformanceReportsJob(ReportsFetch):
             'gmail_secondary_clicks', 'impression_assisted_conversions', 'impression_reach', 'impressions',
             'interactions', 'invalid_clicks', 'value_per_all_conversion', 'video_quartile_100_rate', 'video_quartile_25_rate',
             'video_quartile_50_rate', 'video_quartile_75_rate', 'video_view_rate', 'video_views', 'view_through_conversions',
-            'search_impression_share', 'search_click_share', 'search_top_impression_share', 'search_budget_lost_absolute_top_impression_share',
-            'search_budget_lost_impression_share', 'search_budget_lost_top_impression_share', 'search_rank_lost_absolute_top_impression_share',
-            'search_rank_lost_impression_share', 'search_rank_lost_top_impression_share']
+            'search_click_share',
+            'search_impression_share', 'search_top_impression_share', 'search_absolute_top_impression_share',
+            'search_budget_lost_absolute_top_impression_share', 'search_budget_lost_impression_share', 'search_budget_lost_top_impression_share',
+            'search_rank_lost_absolute_top_impression_share', 'search_rank_lost_impression_share', 'search_rank_lost_top_impression_share']
     
     QUERY_FIELDS = list(itertools.chain(FIELDS, SEGMENTS, METRICS))
     REPORT = 'CAMPAIGN_PERFORMANCE_REPORT'

@@ -39,6 +39,8 @@ class ReportsFetch(BaseJob):
          OPERATION: operator.truediv},
         {OPERAND1: 'impressions', OPERAND2: 'search_top_impression_share', RESULT_FIELD: 'total_search_top_impression',
          OPERATION: operator.truediv},
+        {OPERAND1: 'impressions', OPERAND2: 'search_absolute_top_impression_share', RESULT_FIELD: 'total_search_absolute_top_impression',
+         OPERATION: operator.truediv},
         {OPERAND1: 'impressions', OPERAND2: 'search_budget_lost_absolute_top_impression_share',
          RESULT_FIELD: 'total_search_budget_lost_absolute_top_impression', OPERATION: operator.truediv},
         {OPERAND1: 'impressions', OPERAND2: 'search_budget_lost_impression_share',
@@ -52,6 +54,22 @@ class ReportsFetch(BaseJob):
         {OPERAND1: 'impressions', OPERAND2: 'search_rank_lost_top_impression_share',
          RESULT_FIELD: 'total_search_rank_lost_top_impression', OPERATION: operator.truediv}
     ]
+    FIELDS_WITH_PERCENTAGES = {
+        'search_click_share': None,
+        'search_impression_share': None,
+        'search_absolute_top_impression_share': None,
+        'search_budget_lost_impression_share': None,
+        'search_rank_lost_impression_share': None
+    }
+
+    FIELDS_IN_0_TO_1 = {
+        'search_top_impression_share': None,
+        'search_budget_lost_top_impression_share': None,
+        'search_budget_lost_absolute_top_impression_share': None,
+        'search_rank_lost_top_impression_share': None,
+        'search_rank_lost_absolute_top_impression_share': None
+    }
+
 
     def __init__(self, next_info):
         super().__init__(next_info)
@@ -84,21 +102,16 @@ class ReportsFetch(BaseJob):
         return transformed_rows
 
     def transform_entity(self, row):
-        previous_present = 'search_impression_share' in row
-        if self.REPORT == 'CAMPAIGN_PERFORMANCE_REPORT' and self._project_id == 399 and previous_present:
-            log.error("Previous Required Record is %s", row)
         for transform in self.TRANSFORM_AND_ADD_NEW_FIELDS:
             field1_name = transform[self.OPERAND1]
             field2_name = transform[self.OPERAND2]
             operation = transform[self.OPERATION]
             result_field_name = transform[self.RESULT_FIELD]
             if field1_name in row and field2_name in row:
-                transformed_value = self.get_transformed_value_for_arithmetic_operator(row, field1_name, field2_name, operation)
+                field1_value = ReportsFetch.get_transformed_values(field1_name, row.get(field1_name, ""))
+                field2_value = ReportsFetch.get_transformed_values(field2_name, row.get(field2_name, ""))
+                transformed_value = self.get_transformed_value_for_arithmetic_operator(row, field1_value, field2_value, operation)
                 row[result_field_name] = transformed_value
-
-        current_not_present = 'search_impression_share' not in row
-        if self.REPORT == 'CAMPAIGN_PERFORMANCE_REPORT' and self._project_id == 399 and previous_present and current_not_present:
-            log.error("Current Required Record is %s", row)
         return row
 
     @staticmethod
@@ -139,9 +152,16 @@ class ReportsFetch(BaseJob):
         return TimeUtil.get_timestamp_before_days(ReportsFetch.MAX_LOOK_BACK_DAYS)
 
     @staticmethod
-    def get_transformed_value_for_arithmetic_operator(row, field1, field2, operation):
-        field1_value = FormatUtil.get_numeric_from_percentage_string(row.get(field1, ""))
-        field2_value = FormatUtil.get_numeric_from_percentage_string(row.get(field2, ""))
+    def get_transformed_values(field_name, value):
+        response_value = value
+        if field_name in ReportsFetch.FIELDS_WITH_PERCENTAGES:
+            response_value = FormatUtil.get_numeric_from_percentage_string(value)
+        elif field_name in ReportsFetch.FIELDS_IN_0_TO_1:
+            response_value = FormatUtil.get_numeric_multiplied_by_100(value)
+        return response_value
+
+    @staticmethod
+    def get_transformed_value_for_arithmetic_operator(row, field1_value, field2_value, operation):
         if operation == operator.truediv and field2_value == 0:
             return ReportsFetch.DEFAULT_FLOAT
         return round(operation(field1_value, field2_value), ReportsFetch.DEFAULT_DECIMAL_PLACES)

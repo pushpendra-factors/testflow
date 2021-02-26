@@ -10,4 +10,10 @@ class FormatUtil:
         string_without_percent = string_with_percent.replace("%", "").replace("<", "").replace(">", "").strip()
         if string_without_percent == "":
            return 0.0
-        return float(string_without_percent)/100
+        return float(string_without_percent)
+
+    @staticmethod
+    def get_numeric_multiplied_by_100(input_value_as_string):
+        if input_value_as_string is None or input_value_as_string == "":
+            return 0.0
+        return float(input_value_as_string)*100

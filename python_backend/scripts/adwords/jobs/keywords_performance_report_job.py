@@ -7,9 +7,9 @@ class KeywordPerformanceReportsJob(ReportsFetch):
     FIELDS = ['cost_per_conversion', 'all_conversion_value', 'all_conversions', 'cost', 'average_cost', 'average_cpc',
             'average_cpm', 'average_cpv','average_pageviews', 'average_time_on_site',  'click_assisted_conversion_value',
             'click_assisted_conversions', 'clicks', 'conversions', 'ctr', 'impression_assisted_conversions', 'impressions',
-            'search_impression_share', 'search_top_impression_share', 'search_budget_lost_absolute_top_impression_share',
-            'search_budget_lost_top_impression_share', 'search_rank_lost_absolute_top_impression_share',
-            'search_rank_lost_impression_share', 'search_rank_lost_top_impression_share']
+            'search_impression_share', 'search_top_impression_share', 'search_absolute_top_impression_share',
+            'search_budget_lost_absolute_top_impression_share', 'search_budget_lost_impression_share', 'search_budget_lost_top_impression_share',
+            'search_rank_lost_absolute_top_impression_share', 'search_rank_lost_impression_share', 'search_rank_lost_top_impression_share']
     
     SEGMENTS = ['id', 'ad_group_id', 'campaign_id']
 

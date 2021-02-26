@@ -71,6 +71,7 @@ const (
 	searchImpressionShare                      = "search_impression_share"
 	searchClickShare                           = "search_click_share"
 	searchTopImpressionShare                   = "search_top_impression_share"
+	searchAbsoluteTopImpressionShare           = "search_absolute_top_impression_share"
 	searchBudgetLostAbsoluteTopImpressionShare = "search_budget_lost_absolute_top_impression_share"
 	searchBudgetLostImpressionShare            = "search_budget_lost_impression_share"
 	searchBudgetLostTopImpressionShare         = "search_budget_lost_top_impression_share"
@@ -80,6 +81,7 @@ const (
 	totalSearchImpression                      = "total_search_impression"
 	totalSearchClick                           = "total_search_click"
 	totalSearchTopImpression                   = "total_search_top_impression"
+	totalSearchAbsoluteTopImpression           = "total_search_absolute_top_impression"
 	totalSearchBudgetLostAbsoluteTopImpression = "total_search_budget_lost_absolute_top_impression"
 	totalSearchBudgetLostImpression            = "total_search_budget_lost_impression"
 	totalSearchBudgetLostTopImpression         = "total_search_budget_lost_top_impression"
@@ -97,6 +99,7 @@ var selectableMetricsForAdwords = []string{
 	searchImpressionShare,
 	searchClickShare,
 	searchTopImpressionShare,
+	searchAbsoluteTopImpressionShare,
 	searchBudgetLostAbsoluteTopImpressionShare,
 	searchBudgetLostImpressionShare,
 	searchBudgetLostTopImpressionShare,
@@ -156,31 +159,32 @@ var AdwordsDocumentTypeAlias = map[string]int{
 	We might all above complicated transformations in api if we merge all document types i.e.facebook, linkedin etc...
 */
 var adwordsExtToInternal = map[string]string{
-	"campaign":               "campaign",
-	"ad_group":               "ad_group",
-	"ad":                     "ad",
-	"name":                   "name",
-	"keyword":                "keyword",
-	"id":                     "id",
-	"status":                 "status",
-	approvalStatus:           approvalStatus,
-	matchType:                matchType,
-	firstPositionCpc:         firstPositionCpc,
-	firstPageCpc:             firstPageCpc,
-	isNegative:               isNegative,
-	topOfPageCpc:             topOfPageCpc,
-	qualityScore:             qualityScore,
-	impressions:              impressions,
-	clicks:                   clicks,
-	"spend":                  "cost",
-	conversion:               "conversions",
-	clickThroughRate:         clickThroughRate,
-	conversionRate:           conversionRate,
-	costPerClick:             costPerClick,
-	costPerConversion:        costPerConversion,
-	searchImpressionShare:    searchImpressionShare,
-	searchClickShare:         searchClickShare,
-	searchTopImpressionShare: searchTopImpressionShare,
+	"campaign":                       "campaign",
+	"ad_group":                       "ad_group",
+	"ad":                             "ad",
+	"name":                           "name",
+	"keyword":                        "keyword",
+	"id":                             "id",
+	"status":                         "status",
+	approvalStatus:                   approvalStatus,
+	matchType:                        matchType,
+	firstPositionCpc:                 firstPositionCpc,
+	firstPageCpc:                     firstPageCpc,
+	isNegative:                       isNegative,
+	topOfPageCpc:                     topOfPageCpc,
+	qualityScore:                     qualityScore,
+	impressions:                      impressions,
+	clicks:                           clicks,
+	"spend":                          "cost",
+	conversion:                       "conversions",
+	clickThroughRate:                 clickThroughRate,
+	conversionRate:                   conversionRate,
+	costPerClick:                     costPerClick,
+	costPerConversion:                costPerConversion,
+	searchImpressionShare:            searchImpressionShare,
+	searchClickShare:                 searchClickShare,
+	searchTopImpressionShare:         searchTopImpressionShare,
+	searchAbsoluteTopImpressionShare: searchAbsoluteTopImpressionShare,
 	searchBudgetLostAbsoluteTopImpressionShare: searchBudgetLostAbsoluteTopImpressionShare,
 	searchBudgetLostImpressionShare:            searchBudgetLostImpressionShare,
 	searchBudgetLostTopImpressionShare:         searchBudgetLostTopImpressionShare,
@@ -219,7 +223,7 @@ var adwordsInternalPropertiesToReportsInternal = map[string]string{
 	"ad:id":                      "ad_id",
 	"keyword:id":                 "keyword_id",
 	"keyword:name":               "criteria",
-	"keyword:status":             "keyword_status",
+	"keyword:status":             "status",
 	"keyword:approval_status":    approvalStatus,
 	"keyword:match_type":         matchType,
 	"keyword:first_position_cpc": firstPositionCpc,
@@ -307,6 +311,12 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalValue:            searchTopImpressionShare,
 		externalOperation:        "sum",
 	},
+	searchAbsoluteTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchAbsoluteTopImpressionShare, impressions, searchAbsoluteTopImpressionShare, totalSearchAbsoluteTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchTopImpression),
+		externalValue:            searchTopImpressionShare,
+		externalOperation:        "sum",
+	},
 	searchBudgetLostAbsoluteTopImpressionShare: {
 		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchBudgetLostAbsoluteTopImpressionShare, impressions, searchBudgetLostAbsoluteTopImpressionShare, totalSearchBudgetLostAbsoluteTopImpression),
 		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchBudgetLostAbsoluteTopImpression),
@@ -343,27 +353,6 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalValue:            searchRankLostTopImpressionShare,
 		externalOperation:        "sum",
 	},
-}
-
-var adwordsIntPropertiesToExternal = map[string]string{
-	"campaign:id":                "campaign_id",
-	"campaign:name":              "campaign_name",
-	"campaign:status":            "campaign_status",
-	"ad_group:id":                "ad_group_id",
-	"ad_group:name":              "ad_group_name",
-	"ad_group:status":            "ad_group_status",
-	"ad_group:type":              "ad_group_type",
-	"ad:id":                      "ad_id",
-	"keyword:id":                 "keyword_id",
-	"keyword:name":               "keyword_name",
-	"keyword:status":             "keyword_status",
-	"keyword:approval_status":    approvalStatus,
-	"keyword:match_type":         matchType,
-	"keyword:first_position_cpc": firstPositionCpc,
-	"keyword:first_page_cpc":     firstPageCpc,
-	"keyword:is_negative":        isNegative,
-	"keyword:top_of_page_cpc":    topOfPageCpc,
-	"keyword:quality_score":      qualityScore,
 }
 
 type fields struct {
@@ -1047,7 +1036,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
 		internalValue := adwordsInternalPropertiesToReportsInternal[key]
-		externalValue := adwordsIntPropertiesToExternal[key]
+		externalValue := groupBy.Object + "_" + groupBy.Property
 		var expression string
 		if groupBy.Property == "id" {
 			expression = fmt.Sprintf("%s as %s", internalValue, externalValue)

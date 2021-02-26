@@ -51,6 +51,8 @@ const (
 	CAColumnTotalEngagement                = "total_engagements"
 	CAFilterCampaignGroup                  = "campaign_group"
 	CAFilterCreactive                      = "creative"
+	dateTruncateString                     = "date_trunc('%s', make_timestamptz(SUBSTRING (%s::text, 1, 4)::INTEGER, SUBSTRING (%s::text, 5, 2)::INTEGER, SUBSTRING (%s::text, 7, 2)::INTEGER, 0, 0, 0, '%s') AT TIME ZONE '%s')"
+	channelTimestamp                       = "timestamp"
 )
 
 var CAChannels = []string{
@@ -473,7 +475,6 @@ func appendSelectTimestampIfRequiredForChannels(stmnt string, groupByTimestamp s
 // TO change.
 // @Kark TODO v1
 func getSelectTimestampByTypeForChannels(timestampType, timezone string) string {
-
 	var selectTz string
 	var selectStr string
 
@@ -483,14 +484,14 @@ func getSelectTimestampByTypeForChannels(timestampType, timezone string) string 
 		selectTz = timezone
 	}
 	if timestampType == model.GroupByTimestampHour {
-		selectStr = fmt.Sprintf("date_trunc('hour', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+		selectStr = fmt.Sprintf(dateTruncateString, "hour", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
 	} else if timestampType == model.GroupByTimestampWeek {
-		selectStr = fmt.Sprintf("date_trunc('week', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+		selectStr = fmt.Sprintf(dateTruncateString, "week", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
 	} else if timestampType == model.GroupByTimestampMonth {
-		selectStr = fmt.Sprintf("date_trunc('month', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+		selectStr = fmt.Sprintf(dateTruncateString, "month", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
 	} else {
 		// defaults to GroupByTimestampDate.
-		selectStr = fmt.Sprintf("date_trunc('day', to_timestamp(timestamp::text, 'YYYYMMDD') AT TIME ZONE '%s')", selectTz)
+		selectStr = fmt.Sprintf(dateTruncateString, "day", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
 	}
 
 	return selectStr
