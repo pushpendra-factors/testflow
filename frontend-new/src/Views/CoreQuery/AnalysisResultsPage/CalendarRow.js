@@ -85,10 +85,10 @@ function CalendarRow({
           </> 
         }
 
-        {cmprResultState.data && 
+        {cmprResultState && cmprResultState.data && 
           <Button className={`ml-2`} icon={<SVG name="times" />} onClick={() => delComparision()}></Button>}
 
-        {cmprResultState.loading && <Spiner size={`small`}></Spiner>}
+        {cmprResultState && cmprResultState.loading && <Spiner size={`small`}></Spiner>}
 
 
       </div>
