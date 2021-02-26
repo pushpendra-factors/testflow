@@ -58,7 +58,7 @@ function DashboardSubMenu({
               startDate: durationObj.from,
               endDate: durationObj.to,
             }}
-            placement="topRight"
+            placement="topLeft"
             onSelect={handleDurationChange}
             buttonSize={'default'}
             className={'datepicker-minWidth'}
