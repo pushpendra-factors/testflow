@@ -28,6 +28,12 @@ type DashboardIdUnitsPositions struct {
 	ID uint64 `json:"id"`
 }
 
+// Coupled with model.QueryCacheResult in analytics.
+type queryCacheWebResult struct {
+	Result      model.WebAnalyticsQueryResult
+	RefreshedAt int64
+}
+
 // GetDashboardsHandler godoc
 // @Summary Fetches all dashboards for the given project id.
 // @Tags Dashboard
@@ -602,8 +608,18 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 
 		var cacheResult model.WebAnalyticsQueryResult
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, true)
-		if shouldReturn {
-			c.AbortWithStatusJSON(resCode, resMsg)
+		if shouldReturn && !hardRefresh {
+			var queryCacheResult queryCacheWebResult
+			err = json.Unmarshal([]byte(resMsg.(string)), &queryCacheResult)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError,
+					gin.H{"error": "Web analytics query failed. Execution failed."})
+				return
+			}
+
+			webAnalyticsResult := sanitizeWebAnalyticsResult(&queryCacheResult.Result, requestPayload)
+			c.AbortWithStatusJSON(resCode, H.DashboardQueryResponsePayload{
+				Result: webAnalyticsResult, Cache: true, RefreshedAt: queryCacheResult.RefreshedAt})
 			return
 		}
 
@@ -651,6 +667,13 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		lastRefreshedAt = U.TimeNowIn(U.TimeZoneStringIST).Unix()
 	}
 
+	webAnalyticsResult := sanitizeWebAnalyticsResult(queryResult, requestPayload)
+	c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{
+		Result: webAnalyticsResult, Cache: fromCache, RefreshedAt: lastRefreshedAt})
+}
+
+func sanitizeWebAnalyticsResult(queryResult *model.WebAnalyticsQueryResult,
+	requestPayload model.DashboardUnitsWebAnalyticsQuery) map[uint64]model.GenericQueryResult {
 	queryResultsByUnitMap := make(map[uint64]model.GenericQueryResult)
 
 	queryResultsByName := queryResult.QueryResult
@@ -666,7 +689,5 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 			queryResultsByUnitMap[unit.UnitID] = *queryResult.CustomGroupQueryResult[uniqueID]
 		}
 	}
-
-	c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{
-		Result: queryResultsByUnitMap, Cache: fromCache, RefreshedAt: lastRefreshedAt})
+	return queryResultsByUnitMap
 }
