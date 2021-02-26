@@ -26,8 +26,7 @@ class Spiner extends React.Component {
             default: return 100; break; 
         } 
     }
-    let finalSize = sizeCal(size);
-    console.log('extraClass',className)
+    let finalSize = sizeCal(size); 
     return (
         <div className={className}>
             <Lottie 

@@ -11,6 +11,7 @@ import RadioLib from './RadioLib';
 import CheckBoxLib from './CheckBoxLib';
 import ModalLib from './ModalLib';
 import IconsLib from './IconsLib';
+import NumberLib from './NumberLib';
 
 function componentsLib() {
   const { Content } = Layout;
@@ -23,6 +24,8 @@ function componentsLib() {
               <RadioLib />
               <CheckBoxLib />
               <IconsLib />
+              <NumberLib />
+
               {/* <ModalLib /> */}
             </div> 
 
