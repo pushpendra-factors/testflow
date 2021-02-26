@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useMemo } from "react";
 import { ReactSortable } from "react-sortablejs";
 import WidgetCard from "./WidgetCard";
 import { useSelector, useDispatch } from "react-redux";
@@ -7,7 +7,7 @@ import { updateDashboard } from "../../reducers/dashboard/services";
 import { getRequestForNewState } from "../../reducers/dashboard/utils";
 import { QUERY_TYPE_WEB } from "../../utils/constants";
 import WebsiteAnalytics from "./WebsiteAnalytics";
-import { Text } from 'factorsComponents';
+import { Text } from "../../components/factorsComponents";
 
 function SortableCards({
   setwidgetModal,
@@ -25,17 +25,32 @@ function SortableCards({
     (state) => state.dashboard
   );
 
-  const NoDataDashboard = () =>{
-    return (<div className={'flex flex-col justify-center fa-dashboard--no-data-container items-center'}>
-      <img src="assets/images/no-data.png" className={'mb-8'}/>
-      <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Add widgets to start monitoring.</Text>
-      <Text type={'title'} level={7} color={'grey'}  extraClass={'m-0'}>You can select any of the saved reports and add them to dashboard as widgets to monitor your metrics.</Text>
-    </div>)
-  }
+  const NoDataDashboard = () => {
+    return (
+      <div
+        className={
+          "flex flex-col justify-center fa-dashboard--no-data-container items-center"
+        }
+      >
+        <img src="assets/images/no-data.png" className={"mb-8"} />
+        <Text type={"title"} level={5} weight={"bold"} extraClass={"m-0"}>
+          Add widgets to start monitoring.
+        </Text>
+        <Text type={"title"} level={7} color={"grey"} extraClass={"m-0"}>
+          You can select any of the saved reports and add them to dashboard as
+          widgets to monitor your metrics.
+        </Text>
+      </div>
+    );
+  };
   const onDrop = useCallback(
     async (newState) => {
       const body = getRequestForNewState(newState);
-      dispatch({ type: UNITS_ORDER_CHANGED, payload: newState, units_position: body });
+      dispatch({
+        type: UNITS_ORDER_CHANGED,
+        payload: newState,
+        units_position: body,
+      });
       clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         updateDashboard(active_project.id, activeDashboard.id, {
@@ -46,58 +61,61 @@ function SortableCards({
     [activeDashboard.id, active_project.id, dispatch]
   );
 
-  const activeUnits = activeDashboardUnits.data.filter(
-    (elem) =>
-      savedQueries.findIndex(
-        (sq) => sq.id === elem.query_id && sq.query.cl !== QUERY_TYPE_WEB
-      ) > -1
+  const activeUnits = useMemo(() =>
+    activeDashboardUnits.data.filter(
+      (elem) =>
+        savedQueries.findIndex(
+          (sq) => sq.id === elem.query_id && sq.query.cl !== QUERY_TYPE_WEB
+        ) > -1
+    )
   );
 
-  const webAnalyticsUnits = activeDashboardUnits.data.filter(
-    (elem) =>
-      savedQueries.findIndex(
-        (sq) => sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_WEB
-      ) > -1
-  ); 
-  return (
-    <>
-      {activeUnits.length ? (
-        <ReactSortable
-          className="flex flex-wrap"
-          list={activeUnits}
-          setList={onDrop}
-        >
-          {activeUnits.map((item) => {
-            const savedQuery = savedQueries.find(
-              (sq) => sq.id === item.query_id
-            );
-            return (
-              <WidgetCard
-                durationObj={durationObj}
-                key={item.id}
-                unit={{ ...item, query: savedQuery }}
-                onDrop={onDrop}
-                setwidgetModal={setwidgetModal}
-                showDeleteWidgetModal={showDeleteWidgetModal}
-                refreshClicked={refreshClicked}
-                setRefreshClicked={setRefreshClicked}
-              />
-            );
-          })}
-        </ReactSortable>
-      ) : (webAnalyticsUnits.length ? (
-        <WebsiteAnalytics
-          durationObj={durationObj}
-          webAnalyticsUnits={webAnalyticsUnits}
-          setwidgetModal={setwidgetModal}
-          refreshClicked={refreshClicked}
-          setRefreshClicked={setRefreshClicked}
-        />
-      ) : <NoDataDashboard />) 
-      } 
-
-    </>
+  const webAnalyticsUnits = useMemo(() =>
+    activeDashboardUnits.data.filter(
+      (elem) =>
+        savedQueries.findIndex(
+          (sq) => sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_WEB
+        ) > -1
+    )
   );
+
+  if (activeUnits.length) {
+    return (
+      <ReactSortable
+        className="flex flex-wrap"
+        list={activeUnits}
+        setList={onDrop}
+      >
+        {activeUnits.map((item) => {
+          const savedQuery = savedQueries.find((sq) => sq.id === item.query_id);
+          return (
+            <WidgetCard
+              durationObj={durationObj}
+              key={item.id}
+              unit={{ ...item, query: savedQuery }}
+              onDrop={onDrop}
+              setwidgetModal={setwidgetModal}
+              showDeleteWidgetModal={showDeleteWidgetModal}
+              refreshClicked={refreshClicked}
+              setRefreshClicked={setRefreshClicked}
+            />
+          );
+        })}
+      </ReactSortable>
+    );
+  } else if (webAnalyticsUnits.length) {
+    return (
+      <WebsiteAnalytics
+        durationObj={durationObj}
+        webAnalyticsUnits={webAnalyticsUnits}
+        setwidgetModal={setwidgetModal}
+        refreshClicked={refreshClicked}
+        setRefreshClicked={setRefreshClicked}
+      />
+    );
+  } else {
+    return <NoDataDashboard />;
+  }
 }
 
 export default SortableCards;

@@ -13,7 +13,7 @@ import {getFirstDayOfLastWeek, getLastDayOfLastWeek,
 const FaDatepicker = ({ placement,
     onSelect, customPicker, presetRange,
     weekPicker, monthPicker, quarterPicker, yearPicker,
-    range, buttonSize, nowPicker
+    range, buttonSize, nowPicker, className
 
 }) => {
 
@@ -101,8 +101,8 @@ const FaDatepicker = ({ placement,
         if (type == 'now') {
             let newDateData = {
                 ...dateData,
-                startDate: today,
-                endDate: moment().subtract(30, 'minutes'),
+                startDate: moment().subtract(30, 'minutes'),
+                endDate: today,
                 dateType:type,
                 dateString: 'Now',
             }
@@ -112,7 +112,7 @@ const FaDatepicker = ({ placement,
         if (type == 'today') {
             let newDateData = {
                 ...dateData,
-                startDate: today,
+                startDate: moment(today).startOf('day'),
                 endDate: today,
                 dateType:type,
                 dateString: 'Today',
@@ -266,7 +266,8 @@ const FaDatepicker = ({ placement,
 
     const displayRange = (range) => { 
         if(dateString == 'Now'){
-            return moment(range.startDate).format('MMM DD, YYYY hh:mma')
+            // return moment(range.startDate).format('MMM DD, YYYY hh:mma')
+            return 'Now'
         }
         if(dateString == 'Today' || range.startDate == range.endDate ){
             return moment(range.startDate).format('MMM DD, YYYY')
@@ -279,11 +280,11 @@ const FaDatepicker = ({ placement,
     }
 
     return (
-        <div className="fa-custom-datepicker">
+        <div className={`fa-custom-datepicker`}>
             {<>
                 <Dropdown overlayClassName={'fa-custom-datepicker--dropdown'} overlay={menu} placement={placement} trigger={!showDatePicker ? ['click'] : []} >
 
-                    <Button  size={buttonSize? buttonSize : null}><SVG name={'calendar'} size={16} extraClass={'mr-1'} />
+                    <Button className={className} size={buttonSize? buttonSize : null}><SVG name={'calendar'} size={16} extraClass={'mr-1'} />
                         {!showDatePicker && range ? displayRange(range) : null}
                         {!showDatePicker && !range ? `Choose Date` : null}
                         {showDatePicker && <>

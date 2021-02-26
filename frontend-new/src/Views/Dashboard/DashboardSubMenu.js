@@ -42,8 +42,9 @@ function DashboardSubMenu({
   useEffect(()=>{
     let isRefresh = durationObj?.dateType === 'today' || durationObj?.dateType === 'now'; 
     setShowRefreshBtn(isRefresh);
-  },[durationObj,dashboard])
- 
+  },[durationObj,dashboard, activeDashboard])
+  
+
   return (
     <div className={'flex justify-between items-center px-0 mb-5'}>
       <div className={'flex justify-between items-center'}>
@@ -60,6 +61,7 @@ function DashboardSubMenu({
             placement="topRight"
             onSelect={handleDurationChange}
             buttonSize={'default'}
+            className={'datepicker-minWidth'}
           />
         {btn}
         <Button onClick={handleEditClick.bind(this, dashboard)} type={'text'} className={'m-0 fa-button-ghost'} icon={<SVG name={'edit'}/>}>Edit</Button>

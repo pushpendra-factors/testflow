@@ -161,8 +161,8 @@ export const getWebAnalyticsRequestBody = (units, durationObj) => {
   });
 
   if (durationObj.from && durationObj.to) {
-    query.from = moment(durationObj.from).startOf("day").utc().unix();
-    query.to = moment(durationObj.to).endOf("day").utc().unix();
+    query.from = moment(durationObj.from).utc().unix();
+    query.to = moment(durationObj.to).utc().unix();
   } else {
     query.from = moment().startOf("week").utc().unix();
     query.to =

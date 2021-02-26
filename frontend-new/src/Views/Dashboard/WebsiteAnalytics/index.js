@@ -6,18 +6,20 @@ import { getWebAnalyticsData } from "../../../reducers/coreQuery/services";
 import { Spin } from "antd";
 import TableUnits from "./TableUnits";
 import CardUnit from "./CardUnit";
-import NoDataChart from '../../../components/NoDataChart';  
+import NoDataChart from "../../../components/NoDataChart";
 import { DASHBOARD_LAST_REFRESHED } from "../../../reducers/types";
 
 function WebsiteAnalytics({
   webAnalyticsUnits,
   setwidgetModal,
   durationObj,
-  setRefreshClicked
+  setRefreshClicked,
+  refreshClicked,
 }) {
   const { active_project } = useSelector((state) => state.global);
   const [resultState, setResultState] = useState(initialState);
-  const dispatch = useDispatch(); 
+  const dispatch = useDispatch();
+  const [lastRefesh, setLastRefesh] = useState(null); 
   const fetchData = useCallback(
     async (refresh = false) => {
       try {
@@ -35,6 +37,7 @@ function WebsiteAnalytics({
         );
  
         setResultState({ ...initialState, data: response.data.result, refreshed_at: response.data.refreshed_at });
+        setLastRefesh(response?.data?.refreshed_at)   
         setRefreshClicked(false);
       } catch (err) {
         console.log(err);
@@ -42,19 +45,25 @@ function WebsiteAnalytics({
         setRefreshClicked(false);
       }
     },
-    [active_project.id, durationObj, webAnalyticsUnits]
+    [active_project.id, durationObj, webAnalyticsUnits, setRefreshClicked]
   );
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  useEffect(() => {
+    if(refreshClicked) {
+      fetchData(true);
+    }
+    else{
+      fetchData(false); 
+    }
+  }, [refreshClicked,durationObj, fetchData]);
+ 
+   
+  useEffect(() => { 
       dispatch({
         type: DASHBOARD_LAST_REFRESHED,
-        payload: resultState.refreshed_at
+        payload: lastRefesh
       });
-  }, [durationObj]);
+  }, [lastRefesh]);
 
   if (resultState.loading) {
     return (
@@ -83,10 +92,20 @@ function WebsiteAnalytics({
     return (
       <>
         {cardUnits.length ? (
-          <CardUnit resultState={resultState} setwidgetModal={setwidgetModal} cardUnits={cardUnits} data={resultState.data} />
+          <CardUnit
+            resultState={resultState}
+            setwidgetModal={setwidgetModal}
+            cardUnits={cardUnits}
+            data={resultState.data}
+          />
         ) : null}
         {tableUnits.length ? (
-          <TableUnits resultState={resultState} setwidgetModal={setwidgetModal} tableUnits={tableUnits} data={resultState.data} />
+          <TableUnits
+            resultState={resultState}
+            setwidgetModal={setwidgetModal}
+            tableUnits={tableUnits}
+            data={resultState.data}
+          />
         ) : null}
       </>
     );
