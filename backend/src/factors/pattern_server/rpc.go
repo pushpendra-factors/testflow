@@ -338,44 +338,6 @@ func (ps *PatternServer) GetPatterns(
 	return nil
 }
 
-func (ps *PatternServer) GetUserAndEventsInfo(
-	r *http.Request, args *client.GetUserAndEventsInfoRequest,
-	result *client.GetUserAndEventsInfoResponse) error {
-
-	if args == nil || args.ProjectId == 0 {
-		err := E.Wrap(errors.New("MissingParams"), "GetUserAndEventsInfo missing param projectID")
-		result.Error = err
-		return err
-	}
-
-	modelId := args.ModelId
-
-	if modelId == 0 {
-		latestInterval, err := ps.GetProjectModelLatestInterval(args.ProjectId)
-		if err != nil {
-			result.Error = err
-			return err
-		}
-		modelId = latestInterval.ModelId
-	}
-
-	if !ps.IsProjectModelServable(args.ProjectId, modelId) {
-		result.Ignored = true
-		return nil
-	}
-
-	userAndEventsInfo, err := ps.GetModelEventInfo(args.ProjectId, modelId)
-	if err != nil {
-		err = E.Wrap(errors.New("GetUserAndEventsInfo GetModelEventInfo NotFound"), fmt.Sprintf("ProjectId: %d, ModelId: %d", args.ProjectId, modelId))
-		result.Error = err
-		return err
-	}
-	result.ProjectId = args.ProjectId
-	result.ModelId = modelId
-	result.UserAndEventsInfo = userAndEventsInfo
-	return nil
-}
-
 func (ps *PatternServer) GetProjectModelsIntervals(
 	r *http.Request, args *client.GetProjectModelIntervalsRequest,
 	result *client.GetProjectModelIntervalsResponse) error {

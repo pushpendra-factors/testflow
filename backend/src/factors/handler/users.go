@@ -4,7 +4,6 @@ import (
 	C "factors/config"
 	mid "factors/middleware"
 	"factors/model/store"
-	PW "factors/pattern_service_wrapper"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -127,39 +126,15 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		"projectId": projectId,
 	})
 
-	isExplain := c.Query("is_explain")
-	modelId := uint64(0)
-	modelIdParam := c.Query("model_id")
-	if modelIdParam != "" {
-		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
+	properties, err = store.GetStore().GetUserPropertiesByProject(projectId, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("get user properties by project")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
 
-	if isExplain != "true" {
-		properties, err = store.GetStore().GetUserPropertiesByProject(projectId, 2500, C.GetLookbackWindowForEventUserCache())
-		if err != nil {
-			logCtx.WithError(err).Error("get user properties by project")
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-
-		if len(properties) == 0 {
-			logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %v", projectId))
-		}
-	} else {
-		var status int
-		var errMsg string
-		properties, status, errMsg = getUserPropertiesFromPatternServer(projectId, modelId)
-		if status != 0 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":  errMsg,
-				"status": status,
-			})
-			return
-		}
+	if len(properties) == 0 {
+		logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %v", projectId))
 	}
 	properties = U.ClassifyDateTimePropertyKeys(&properties)
 	U.FillMandatoryDefaultUserProperties(&properties)
@@ -191,85 +166,20 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		"projectId": projectId,
 	})
 
-	isExplain := c.Query("is_explain")
-	modelId := uint64(0)
-	modelIdParam := c.Query("model_id")
-	if modelIdParam != "" {
-		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-	}
 	propertyName := c.Params.ByName("property_name")
 	if propertyName == "" {
 		logCtx.WithField("property_name", propertyName).Error("null propertyname")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	if isExplain != "true" {
-		propertyValues, err = store.GetStore().GetPropertyValuesByUserProperty(projectId, propertyName, 2500, C.GetLookbackWindowForEventUserCache())
-		if err != nil {
-			logCtx.WithError(err).Error("get property values by user property")
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-		if len(propertyValues) == 0 {
-			logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %v, propertyName - %s", projectId, propertyName))
-		}
-	} else {
-		var status int
-		var errMsg string
-		propertyValues, status, errMsg = getUserPropertyValuesFromPatternServer(projectId, modelId, propertyName)
-		if status != 0 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":  errMsg,
-				"status": status,
-			})
-			return
-		}
+	propertyValues, err = store.GetStore().GetPropertyValuesByUserProperty(projectId, propertyName, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("get property values by user property")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	if len(propertyValues) == 0 {
+		logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %v, propertyName - %s", projectId, propertyName))
 	}
 	c.JSON(http.StatusOK, propertyValues)
-}
-
-func getUserPropertyValuesFromPatternServer(projectId uint64, modelId uint64, propertyName string) ([]string, int, string) {
-	propertyValues := make([]string, 0)
-	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
-	if err != nil {
-		return propertyValues, http.StatusBadRequest, err.Error()
-	}
-	userInfo := ps.GetUserAndEventsInfo()
-	propertyValues = make([]string, 0)
-	if userInfo.UserPropertiesInfo != nil {
-		for property, values := range (*userInfo.UserPropertiesInfo).CategoricalPropertyKeyValues {
-			if property == propertyName {
-				for value, _ := range values {
-					propertyValues = append(propertyValues, value)
-				}
-			}
-		}
-	}
-	return propertyValues, 0, ""
-}
-
-func getUserPropertiesFromPatternServer(projectId uint64, modelId uint64) (map[string][]string, int, string) {
-	properties := make(map[string][]string)
-	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
-	if err != nil {
-		return properties, http.StatusBadRequest, err.Error()
-	}
-	userInfo := ps.GetUserAndEventsInfo()
-	properties = make(map[string][]string)
-	properties[U.PropertyTypeNumerical] = make([]string, 0)
-	properties[U.PropertyTypeCategorical] = make([]string, 0)
-	if userInfo.UserPropertiesInfo != nil {
-		for property := range (*userInfo.UserPropertiesInfo).NumericPropertyKeys {
-			properties[U.PropertyTypeNumerical] = append(properties[U.PropertyTypeNumerical], property)
-		}
-
-		for property := range (*userInfo.UserPropertiesInfo).CategoricalPropertyKeyValues {
-			properties[U.PropertyTypeCategorical] = append(properties[U.PropertyTypeCategorical], property)
-		}
-	}
-	return properties, 0, ""
 }

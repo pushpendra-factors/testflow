@@ -4,11 +4,9 @@ import (
 	"encoding/base64"
 	mid "factors/middleware"
 	"factors/model/store"
-	PW "factors/pattern_service_wrapper"
 	U "factors/util"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	C "factors/config"
 
@@ -106,17 +104,6 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		"projectId": projectId,
 	})
 
-	isExplain := c.Query("is_explain")
-	modelId := uint64(0)
-	modelIdParam := c.Query("model_id")
-	var err error
-	if modelIdParam != "" {
-		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-	}
 	encodedEName := c.Params.ByName("event_name")
 	if encodedEName == "" {
 		logCtx.WithField("event_name", encodedEName).Error("null event_name")
@@ -124,6 +111,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		return
 	}
 
+	var err error
 	var properties map[string][]string
 	var decENameInBytes []byte
 	decENameInBytes, err = base64.StdEncoding.DecodeString(encodedEName)
@@ -136,29 +124,17 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 	logCtx.WithField("decodedEventName", eventName).Debug("Decoded event name on properties request.")
 
-	if isExplain != "true" {
-		properties, err = store.GetStore().GetPropertiesByEvent(projectId, eventName, 2500,
-			C.GetLookbackWindowForEventUserCache())
-		if err != nil {
-			logCtx.WithError(err).Error("get properties by event")
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-		if len(properties) == 0 {
-			logCtx.WithError(err).Error(fmt.Sprintf("No event properties Returned - ProjectID - %v, EventName - %s", projectId, eventName))
-		}
-	} else {
-		var status int
-		var errMsg string
-		properties, status, errMsg = getEventPropertiesFromPatternServer(projectId, modelId, eventName)
-		if status != 0 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":  errMsg,
-				"status": status,
-			})
-			return
-		}
+	properties, err = store.GetStore().GetPropertiesByEvent(projectId, eventName, 2500,
+		C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("get properties by event")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
+	if len(properties) == 0 {
+		logCtx.WithError(err).Error(fmt.Sprintf("No event properties Returned - ProjectID - %v, EventName - %s", projectId, eventName))
+	}
+
 	U.FilterDisabledCoreEventProperties(&properties)
 
 	c.JSON(http.StatusOK, properties)
@@ -187,18 +163,6 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 		"projectId": projectId,
 	})
 
-	isExplain := c.Query("is_explain")
-	modelId := uint64(0)
-	modelIdParam := c.Query("model_id")
-	var err error
-	if modelIdParam != "" {
-		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-	}
-
 	encodedEName := c.Params.ByName("event_name")
 	if encodedEName == "" {
 		logCtx.WithField("event_name", encodedEName).Error("null event_name")
@@ -213,6 +177,7 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 
+	var err error
 	var propertyValues []string
 	var decNameInBytes []byte
 	decNameInBytes, err = base64.StdEncoding.DecodeString(encodedEName)
@@ -228,68 +193,15 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 
 	log.WithField("decodedEventName", eventName).Debug("Decoded event name on properties value request.")
 
-	if isExplain != "true" {
-		propertyValues, err = store.GetStore().GetPropertyValuesByEventProperty(projectId, eventName,
-			propertyName, 2500, C.GetLookbackWindowForEventUserCache())
-		if err != nil {
-			logCtx.WithError(err).Error("get properties values by event property")
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-		if len(propertyValues) == 0 {
-			logCtx.WithError(err).Error(fmt.Sprintf("No event values Returned - ProjectID - %v, EventName - %s, propertyName -%s", projectId, eventName, propertyName))
-		}
-	} else {
-		var status int
-		var errMsg string
-		propertyValues, status, errMsg = getEventPropertyValuesFromPatternServer(projectId, modelId, eventName, propertyName)
-		if status != 0 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error":  errMsg,
-				"status": status,
-			})
-			return
-		}
+	propertyValues, err = store.GetStore().GetPropertyValuesByEventProperty(projectId, eventName,
+		propertyName, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("get properties values by event property")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	if len(propertyValues) == 0 {
+		logCtx.WithError(err).Error(fmt.Sprintf("No event values Returned - ProjectID - %v, EventName - %s, propertyName -%s", projectId, eventName, propertyName))
 	}
 	c.JSON(http.StatusOK, propertyValues)
-}
-
-func getEventPropertyValuesFromPatternServer(projectId uint64, modelId uint64, eventName, propertyName string) ([]string, int, string) {
-	propertyValues := make([]string, 0)
-	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
-	if err != nil {
-		return propertyValues, http.StatusBadRequest, err.Error()
-	}
-	userInfo := ps.GetUserAndEventsInfo()
-	if userInfo.EventPropertiesInfoMap != nil && (*userInfo.EventPropertiesInfoMap)[eventName] != nil {
-		for property, values := range (*userInfo.EventPropertiesInfoMap)[eventName].CategoricalPropertyKeyValues {
-			if property == propertyName {
-				for value, _ := range values {
-					propertyValues = append(propertyValues, value)
-				}
-			}
-		}
-	}
-	return propertyValues, 0, ""
-}
-
-func getEventPropertiesFromPatternServer(projectId uint64, modelId uint64, eventName string) (map[string][]string, int, string) {
-	properties := make(map[string][]string)
-	ps, err := PW.NewPatternServiceWrapper("", projectId, modelId)
-	if err != nil {
-		return properties, http.StatusBadRequest, err.Error()
-	}
-	userInfo := ps.GetUserAndEventsInfo()
-
-	properties[U.PropertyTypeNumerical] = make([]string, 0)
-	properties[U.PropertyTypeCategorical] = make([]string, 0)
-	if userInfo.EventPropertiesInfoMap != nil && (*userInfo.EventPropertiesInfoMap)[eventName] != nil {
-		for property := range (*userInfo.EventPropertiesInfoMap)[eventName].NumericPropertyKeys {
-			properties[U.PropertyTypeNumerical] = append(properties[U.PropertyTypeNumerical], property)
-		}
-		for property := range (*userInfo.EventPropertiesInfoMap)[eventName].CategoricalPropertyKeyValues {
-			properties[U.PropertyTypeCategorical] = append(properties[U.PropertyTypeCategorical], property)
-		}
-	}
-	return properties, 0, ""
 }
