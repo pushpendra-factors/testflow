@@ -69,6 +69,9 @@ class ReportsFetch(BaseJob):
         'search_rank_lost_top_impression_share': None,
         'search_rank_lost_absolute_top_impression_share': None
     }
+    FIELDS_TO_FLOAT = {
+        'impressions': None
+    }
 
 
     def __init__(self, next_info):
@@ -158,6 +161,8 @@ class ReportsFetch(BaseJob):
             response_value = FormatUtil.get_numeric_from_percentage_string(value)
         elif field_name in ReportsFetch.FIELDS_IN_0_TO_1:
             response_value = FormatUtil.get_numeric_multiplied_by_100(value)
+        elif field_name in ReportsFetch.FIELDS_TO_FLOAT:
+            response_value = float(value)
         return response_value
 
     @staticmethod
