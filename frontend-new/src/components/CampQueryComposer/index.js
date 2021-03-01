@@ -62,6 +62,9 @@ const CampQueryComposer = ({ activeProject, channel,
 
     const setChannel = (chan) => {
         setCampChannel(chan);
+        setCampMeasures([]);
+        setCampGroupBy([]);
+        setCampFilters([]);
     }
 
     const renderChannelBlock = () => {
