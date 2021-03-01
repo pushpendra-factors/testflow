@@ -11,6 +11,9 @@ class EtlParserOptions(ParseOptions):
         parser.add_option("--dry", dest="dry", help="", default="False")
         parser.add_option("--skip_today", dest="skip_today", help="", default="False")
         parser.add_option("--oauth_secret", dest="oauth_secret", help="", default="")
-        parser.add_option("--project_id", dest="project_id", help="", default=None, type=int)
+        parser.add_option("--project_id", dest="project_id", help="", default=None)
+        parser.add_option("--exclude_project_id", dest="exclude_project_id", help="", default=None)
+        parser.add_option("--document_type", dest="document_type", help="", default=None)
+        parser.add_option("--last_timestamp", dest="last_timestamp", help="", default=None, type=int)
         parser.add_option("--data_service_host", dest="data_service_host",
                           help="Data service host", default="http://localhost:8089")

@@ -1,0 +1,18 @@
+FROM python:3.7-alpine
+
+ENV PYTHONPATH "${PYTHONPATH}:$HOME/repos/factors:$HOME/repos/factors/python_backend:$HOME/repos/factors/python_backend/scripts/adwords"
+
+RUN mkdir -p /usr/local/var/factors
+
+WORKDIR /usr/local/var/factors
+COPY debug_start.sh requirements.txt ./
+
+RUN apk update && \
+    apk add --no-cache --virtual .build-deps gcc libc-dev libxslt-dev git && \
+    apk add --no-cache libxslt && \
+    pip install --no-cache-dir lxml>=3.5.0 && \
+    pip install -r requirements.txt && \
+    apk del .build-deps
+
+RUN ["chmod", "+x", "./debug_start.sh"]
+ENTRYPOINT ["sh", "./debug_start.sh"]

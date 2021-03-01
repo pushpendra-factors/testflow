@@ -4,10 +4,9 @@ import logging as log
 
 import scripts
 from lib.data_services.factors_data_service import FactorsDataService
-from lib.sns_notifier import SnsNotifier
 from lib.utils.time import TimeUtil
 from lib.utils.healthchecks import HealthchecksUtil
-from scripts.adwords import STATUS_FAILED, STATUS_SKIPPED, APP_NAME, etl_record_stats
+from scripts.adwords import STATUS_FAILED, STATUS_SKIPPED, etl_record_stats
 from scripts.adwords.etl_config import EtlConfig
 from scripts.adwords.etl_parser import EtlParser
 from scripts.adwords.job_scheduler import JobScheduler
@@ -31,18 +30,23 @@ def setup(argv):
 
 # generates next sync info with all missing timestamps
 # for each document type.
-def get_next_sync_info(last_sync):
+def get_next_sync_info(last_sync, is_dry, input_last_timestamp):
     last_timestamp = last_sync.get('last_timestamp')
     doc_type = last_sync.get('doc_type_alias')
     first_run = (last_timestamp == 0)
 
-    if ReportsFetch.doesnt_contains_historical_data(last_timestamp, doc_type):
+    if is_dry and input_last_timestamp is not None:
+        sync_info = last_sync.copy()
+        sync_info["next_timestamp"] = TimeUtil.get_next_day_timestamp(input_last_timestamp)
+        return [sync_info]
+    elif ReportsFetch.doesnt_contains_historical_data(last_timestamp, doc_type):
         sync_info = last_sync.copy()
         sync_info['next_timestamp'] = TimeUtil.get_timestamp_from_datetime(datetime.utcnow())
         sync_info['first_run'] = first_run
         return [sync_info]
     else:
         return ReportsFetch.get_next_sync_infos_for_older_date_range(last_timestamp, last_sync)
+
 
 if __name__ == "__main__":
     setup(sys.argv)
@@ -52,19 +56,15 @@ if __name__ == "__main__":
     is_dry = scripts.adwords.CONFIG.ADWORDS_APP.dry
     skip_today = scripts.adwords.CONFIG.ADWORDS_APP.skip_today
     last_sync_infos = FactorsDataService.get_last_sync_infos()
-    input_project_id = scripts.adwords.CONFIG.ADWORDS_APP.project_id
+    input_project_ids = scripts.adwords.CONFIG.ADWORDS_APP.project_ids
+    input_exclude_project_ids = scripts.adwords.CONFIG.ADWORDS_APP.exclude_project_ids
+    input_document_type = scripts.adwords.CONFIG.ADWORDS_APP.document_type
+    input_last_timestamp = scripts.adwords.CONFIG.ADWORDS_APP.last_timestamp
 
     next_sync_failures = []
     next_sync_skipped = []
     next_sync_success = {}
-
     for last_sync in last_sync_infos:
-        # add next_sync_info only for the selected project.
-        if input_project_id is not None:
-            project_id = last_sync.get("project_id")
-            if project_id != input_project_id:
-                continue
-
         last_timestamp = last_sync.get('last_timestamp')
         if last_timestamp is None:
             log.error("Missing last_timestamp in last sync info.")
@@ -74,8 +74,17 @@ if __name__ == "__main__":
         if doc_type is None:
             log.error("Missing doc_type_alias name on last_sync_info.")
             continue
+        if len(input_project_ids) != 0 and last_sync.get("project_id") not in input_project_ids:
+            continue
+        if len(input_exclude_project_ids) != 0 and last_sync.get("project_id") in input_exclude_project_ids:
+            continue
+        if input_document_type is not None and last_sync.get("doc_type_alias") != input_document_type:
+            continue
 
-        next_sync_infos = get_next_sync_info(last_sync)
+        if is_dry and input_last_timestamp is not None:
+            last_sync["last_timestamp"] = input_last_timestamp
+
+        next_sync_infos = get_next_sync_info(last_sync, is_dry, input_last_timestamp)
         if next_sync_infos is None:
             continue
         for next_sync in next_sync_infos:

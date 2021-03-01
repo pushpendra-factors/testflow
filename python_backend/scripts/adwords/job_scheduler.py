@@ -116,6 +116,8 @@ class JobScheduler:
 
             etl_record_stats.update(self.project_id, doc_type, req_count)
 
+            log.warning("Started Load of job for Project Id: %s, Timestamp: %d, Doc Type: %s", self.project_id,
+                        self.timestamp, self.doc_type)
             if len(docs) > 0:
                 if dry:
                     log.error("Dry run. Skipped add adwords documents to db.")
@@ -128,7 +130,8 @@ class JobScheduler:
             else:
                 FactorsDataService.add_adwords_document(self.project_id, self.customer_acc_id, {}, doc_type,
                                                         self.timestamp)
-
+            log.warning("Completed Load of job for Project Id: %s, Timestamp: %d, Doc Type: %s", self.project_id,
+                        self.timestamp, self.doc_type)
         except Exception as e:
             str_exception = str(e)
             if "AuthorizationError.USER_PERMISSION_DENIED" in str_exception:

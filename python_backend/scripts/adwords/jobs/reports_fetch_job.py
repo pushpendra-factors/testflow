@@ -1,9 +1,9 @@
+import io
 from datetime import datetime
 
 from googleads import adwords
-import operator
-
 import logging as log
+import operator
 
 import scripts
 from lib.adwords.oauth_service.fetch_service import FetchService
@@ -80,22 +80,35 @@ class ReportsFetch(BaseJob):
     def start(self):
         str_timestamp = str(self._timestamp)
         during = str_timestamp + ',' + str_timestamp
-        downloader = FetchService(scripts.adwords.CONFIG.ADWORDS_OAUTH).get_report_downloader(self._refresh_token, self._customer_account_id)
+        downloader = FetchService(scripts.adwords.CONFIG.ADWORDS_OAUTH).get_report_downloader(self._refresh_token,
+                                                                                              self._customer_account_id)
         fields = StringUtil.snake_to_pascal_case(self.QUERY_FIELDS)
-
+        rows = []
+        log.warning("Started Extract of job for Project Id: %s, Timestamp: %d, Doc Type: %s", self._project_id,
+                    self._timestamp, self._doc_type)
         report_query = (adwords.ReportQueryBuilder()
                         .Select(*fields)
                         .From(self.REPORT)
                         .Where(self.WHERE_IN_COLUMN).In(*self.WHERE_IN_VALUES)
                         .During(during).Build())
+        log.warning("Completed Extract of job for Project Id: %s, Timestamp: %d, Doc Type: %s", self._project_id,
+                    self._timestamp, self._doc_type)
 
-        report = downloader.DownloadReportAsStringWithAwql(
-            report_query, 'CSV', skip_report_header=True,
-            skip_column_header=True, skip_report_summary=True)
+        if scripts.adwords.CONFIG.ADWORDS_APP.dry == True:
+            file_name = "{0}_{1}_{2}_{3}_{4}.csv".format("/var/tmp/data", self._project_id, self._customer_account_id,
+                                                         self._timestamp, self._doc_type)
+            file_stream = io.FileIO(file_name, mode='w')
+            downloader.DownloadReportWithAwql(
+                report_query, 'CSV', output=file_stream, skip_report_header=True,
+                skip_column_header=False, skip_report_summary=True)
+        else:
+            report = downloader.DownloadReportAsStringWithAwql(
+                report_query, 'CSV', skip_report_header=True,
+                skip_column_header=True, skip_report_summary=True)
 
-        lines = report.split('\n')
-        rows = CsvUtil.csv_to_dict_list(self.QUERY_FIELDS, lines)
-        rows = self.transform_entities(rows)
+            lines = report.split('\n')
+            rows = CsvUtil.csv_to_dict_list(self.QUERY_FIELDS, lines)
+            rows = self.transform_entities(rows)
         return rows, 1
 
     def transform_entities(self, rows):

@@ -1,4 +1,4 @@
-.PHONY: pack-python-server upload-python-server pack-adwords-etl upload-adwords-etl
+.PHONY: pack-python-server upload-python-server pack-adwords-etl upload-adwords-etl pack-adwords-etl-debug upload-adwords-etl-debug
 
 TAG?=
 export TAG
@@ -27,3 +27,8 @@ upload-adwords-etl: notify-deployment
 notify-deployment:
 	$(GOPATH)/src/factors/scripts/notify_deployment.sh
 
+pack-adwords-etl-debug:
+	docker build --no-cache -t us.gcr.io/factors-$(ENV)/adwords-etl-debug:$(TAG) -f Dockerfile.adwords_debug .
+upload-adwords-etl-debug: export IMAGE_NAME=adwords-etl-debug
+upload-adwords-etl-debug: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/adwords-etl-debug:$(TAG)
