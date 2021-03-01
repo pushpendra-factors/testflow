@@ -1041,7 +1041,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 		if groupBy.Property == "id" {
 			expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
 		} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
-			expression = fmt.Sprintf("value->>'%s'/1000000 as %s", internalValue, externalValue)
+			expression = fmt.Sprintf("((value->>'%s'::float)/1000000 as %s", internalValue, externalValue)
 		} else {
 			expression = fmt.Sprintf("value->>'%s' as %s", internalValue, externalValue)
 		}
