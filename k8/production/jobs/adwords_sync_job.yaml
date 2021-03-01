@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: default-pool
+    nodePool: persistent-pool-highmem-16
   name: adwords-sync-job
 spec:
   schedule: "0 22 * * *" # In UTC

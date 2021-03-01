@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -233,6 +232,12 @@ var adwordsInternalPropertiesToReportsInternal = map[string]string{
 	"keyword:quality_score":      qualityScore,
 }
 
+var propertiesToBeDividedByMillion = map[string]struct{}{
+	topOfPageCpc:     {},
+	firstPositionCpc: {},
+	firstPageCpc:     {},
+}
+
 type metricsAndRelated struct {
 	higherOrderExpression    string
 	nonHigherOrderExpression string
@@ -313,8 +318,8 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 	},
 	searchAbsoluteTopImpressionShare: {
 		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchAbsoluteTopImpressionShare, impressions, searchAbsoluteTopImpressionShare, totalSearchAbsoluteTopImpression),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchTopImpression),
-		externalValue:            searchTopImpressionShare,
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchAbsoluteTopImpression),
+		externalValue:            searchAbsoluteTopImpressionShare,
 		externalOperation:        "sum",
 	},
 	searchBudgetLostAbsoluteTopImpressionShare: {
@@ -407,11 +412,6 @@ func getAdwordsHierarchyColumnsByType(valueMap *map[string]interface{}, docType 
 func GetAdwordsDateOnlyTimestamp(unixTimestamp int64) string {
 	// Todo: Add timezone support using util.getTimeFromUnixTimestampWithZone.
 	return time.Unix(unixTimestamp, 0).UTC().Format("20060102")
-}
-
-func getAdwordsDateOnlyTimestampInInt64(unixTimestamp int64) int64 {
-	value, _ := strconv.ParseInt(time.Unix(unixTimestamp, 0).UTC().Format("20060102"), 10, 64)
-	return value
 }
 
 func getAdwordsIDAndHeirarchyColumnsByType(docType int, valueJSON *postgres.Jsonb) (string, int64, int64, int64, int64, error) {
@@ -867,8 +867,8 @@ func convertFromRequestToAdwordsSpecificRepresentation(query model.ChannelQueryV
 	if err3 != nil {
 		return query, err3
 	}
-	transformedQuery.From = getAdwordsDateOnlyTimestampInInt64(query.From)
-	transformedQuery.To = getAdwordsDateOnlyTimestampInInt64(query.To)
+	transformedQuery.From = U.GetDateAsStringZ(query.From, U.TimeZoneString(query.Timezone))
+	transformedQuery.To = U.GetDateAsStringZ(query.To, U.TimeZoneString(query.Timezone))
 	transformedQuery.Timezone = query.Timezone
 	transformedQuery.GroupByTimestamp = query.GroupByTimestamp
 
@@ -1040,6 +1040,8 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 		var expression string
 		if groupBy.Property == "id" {
 			expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
+		} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
+			expression = fmt.Sprintf("value->>'%s'/1000000 as %s", internalValue, externalValue)
 		} else {
 			expression = fmt.Sprintf("value->>'%s' as %s", internalValue, externalValue)
 		}

@@ -344,6 +344,17 @@ func GetBeginningOfDayTimestampZ(timestamp int64, timezoneString TimeZoneString)
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
 }
 
+// GetDateAsStringZ gets date in given timezone.
+func GetDateAsStringZ(timestamp int64, timezoneString TimeZoneString) int64 {
+	if len(timezoneString) < 1 {
+		timezoneString = TimeZoneStringIST
+	}
+	location, _ := time.LoadLocation(string(timezoneString))
+	t := time.Unix(timestamp, 0).In(location)
+	value, _ := strconv.ParseInt(t.Format(DATETIME_FORMAT_YYYYMMDD), 10, 64)
+	return value
+}
+
 // IsStartOfTodaysRange Checks if the from value is start of todays range.
 func IsStartOfTodaysRange(from int64, timezoneString TimeZoneString) bool {
 	return from == GetBeginningOfDayTimestampZ(TimeNowUnix(), TimeZoneStringIST)

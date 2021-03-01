@@ -472,7 +472,6 @@ func appendSelectTimestampIfRequiredForChannels(stmnt string, groupByTimestamp s
 		getSelectTimestampByTypeForChannels(groupByTimestamp, timezone), model.AliasDateTime))
 }
 
-// TO change.
 // @Kark TODO v1
 func getSelectTimestampByTypeForChannels(timestampType, timezone string) string {
 	var selectTz string

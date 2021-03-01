@@ -495,8 +495,8 @@ func (pg *Postgres) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64,
 }
 
 func (pg *Postgres) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID uint64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
-	query.From = getAdwordsDateOnlyTimestampInInt64(query.From)
-	query.To = getAdwordsDateOnlyTimestampInInt64(query.To)
+	query.From = U.GetDateAsStringZ(query.From, U.TimeZoneString(query.Timezone))
+	query.To = U.GetDateAsStringZ(query.To, U.TimeZoneString(query.Timezone))
 	var err error
 	logCtx := log.WithField("req_id", reqID)
 	projectSetting, errCode := pg.GetProjectSetting(projectID)

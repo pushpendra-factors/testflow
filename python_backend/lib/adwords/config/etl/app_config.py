@@ -7,21 +7,35 @@ class AppConfig(Config):
     env = None
     dry = None
     skip_today = None
+    project_ids = None
+    exclude_project_ids = None
+    document_type = None
+    last_timestamp = None
     data_service_host = None
-    project_id = None
+
 
     @classmethod
-    def _init(cls, env, dry, skip_today, project_id, data_service_host):
+    def _init(cls, env, dry, skip_today, project_ids, exclude_project_ids, document_type, last_timestamp, data_service_host):
         cls.env = env
         cls.dry = (dry == "True")
         cls.skip_today = (skip_today == "True")
-        cls.project_id = project_id
+        cls.project_ids = project_ids
+        cls.exclude_project_ids = exclude_project_ids
+        cls.document_type = document_type
+        cls.last_timestamp = last_timestamp
         cls.data_service_host = data_service_host
 
     @classmethod
     def build(cls, argv):
+        project_ids = set()
+        exclude_project_ids = set()
+        if argv.project_id is not None:
+            project_ids = set([int(x) for x in argv.project_id.split(",")])
+        if argv.exclude_project_id is not None:
+            exclude_project_ids = set([int(x) for x in argv.exclude_project_id.split(",")])
+
         cls._init(argv.env, argv.dry, argv.skip_today,
-                  argv.project_id, argv.data_service_host)
+                  project_ids, exclude_project_ids, argv.document_type, argv.last_timestamp, argv.data_service_host)
 
     @classmethod
     def get_session_cookie_key(cls):
