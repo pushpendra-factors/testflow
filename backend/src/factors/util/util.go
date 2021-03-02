@@ -33,17 +33,36 @@ type TimeZoneString string
 const (
 	TimeZoneStringIST TimeZoneString = "Asia/Kolkata"
 	TimeZoneStringUTC TimeZoneString = "UTC"
+
+	DateRangePresetLastMonth    = "LAST_MONTH"
+	DateRangePresetLastWeek     = "LAST_WEEK"
+	DateRangePresetCurrentMonth = "CURRENT_MONTH"
+	DateRangePresetCurrentWeek  = "CURRENT_WEEK"
+	DateRangePresetYesterday    = "YESTERDAY"
+	DateRangePresetToday        = "TODAY"
+	DateRangePreset30Minutes    = "30MINS"
 )
 
 // QueryDateRangePresets Presets available for querying in dashboard / core query etc.
 // TODO(prateek): Currently returns in IST. Change once timezone is added in project_settings.
 var QueryDateRangePresets = map[string]func() (int64, int64){
-	"LAST_MONTH":    GetQueryRangePresetLastMonthIST,
-	"LAST_WEEK":     GetQueryRangePresetLastWeekIST,
-	"CURRENT_MONTH": GetQueryRangePresetCurrentMonthIST,
-	"CURRENT_WEEK":  GetQueryRangePresetCurrentWeekIST,
-	"YESTERDAY":     GetQueryRangePresetYesterdayIST,
-	"TODAY":         GetQueryRangePresetTodayIST,
+	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIST,
+	DateRangePresetLastWeek:     GetQueryRangePresetLastWeekIST,
+	DateRangePresetCurrentMonth: GetQueryRangePresetCurrentMonthIST,
+	DateRangePresetCurrentWeek:  GetQueryRangePresetCurrentWeekIST,
+	DateRangePresetYesterday:    GetQueryRangePresetYesterdayIST,
+	DateRangePresetToday:        GetQueryRangePresetTodayIST,
+}
+
+// WebAnalyticsQueryDateRangePresets Date range presets for website analytics.
+var WebAnalyticsQueryDateRangePresets = map[string]func() (int64, int64){
+	DateRangePresetLastMonth:    GetQueryRangePresetLastMonthIST,
+	DateRangePresetLastWeek:     GetQueryRangePresetLastWeekIST,
+	DateRangePresetCurrentMonth: GetQueryRangePresetCurrentMonthIST,
+	DateRangePresetCurrentWeek:  GetQueryRangePresetCurrentWeekIST,
+	DateRangePresetYesterday:    GetQueryRangePresetYesterdayIST,
+	DateRangePresetToday:        GetQueryRangePresetTodayIST,
+	DateRangePreset30Minutes:    GetQueryRangePresetLast30MinutesIST,
 }
 
 // Caching related constants for core query and dashboards.
@@ -59,7 +78,7 @@ const (
 
 	CacheExpiryQueryTodaysDataInSeconds     = 10 * 60      // 10 minutes.
 	CacheExpiryDashboardTodaysDataInSeconds = 12 * 60 * 60 // 12 hours.
-	CacheExpiryDashboard30MinutesInSeconds  = 2 * 60 * 60  // 2 hours.
+	CacheExpiryDashboard30MinutesInSeconds  = 12 * 60 * 60 // 12 hours.
 )
 
 // Group Names
@@ -498,6 +517,15 @@ func GetQueryRangePresetTodayIST() (int64, int64) {
 	timeNow := time.Now().In(locationIST)
 	rangeStartTime := GetBeginningOfDayTimestampZ(timeNow.Unix(), TimeZoneStringIST)
 	return rangeStartTime, timeNow.Unix()
+}
+
+// GetQueryRangePresetLast30MinutesIST Returns start and end unix timestamp for last 30mins range.
+func GetQueryRangePresetLast30MinutesIST() (int64, int64) {
+	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
+	timeNow := time.Now().In(locationIST)
+	endTime := timeNow.Unix()
+	startTime := endTime - 30*60
+	return startTime, endTime
 }
 
 // UnixToHumanTime Converts epoch to readable String timestamp.
