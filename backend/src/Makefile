@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc test
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc pack-pull-events upload-pull-events test
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -108,6 +108,13 @@ pack-build-seq:
 upload-build-seq: export IMAGE_NAME=build-seq-job
 upload-build-seq: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/build-seq-job:$(TAG)
+
+pack-pull-events:
+	docker build -t us.gcr.io/factors-$(ENV)/pull-events-job:$(TAG) -f Dockerfile.pull_events_job .
+
+upload-pull-events: export IMAGE_NAME=pull-events-job
+upload-pull-events: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/pull-events-job:$(TAG)
 
 pack-build-reports:
 	docker build -t us.gcr.io/factors-$(ENV)/build-reports-job:$(TAG) -f Dockerfile.build_reports .
