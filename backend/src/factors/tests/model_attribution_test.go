@@ -117,7 +117,6 @@ func TestAttributionModel(t *testing.T) {
 		t+5day			user2 ->session + event latest_campaign -> 123456
 	*/
 	timestamp := int64(1589068800)
-	day := int64(86400)
 
 	// Creating 3 users
 	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
@@ -135,14 +134,14 @@ func TestAttributionModel(t *testing.T) {
 
 	// Events with +1 Days
 	errCode = createEventWithSession(project.ID, "event1", user1.ID,
-		timestamp+1*day, user1.PropertiesId, "111111")
+		timestamp+1*U.SECONDS_IN_A_DAY, user1.PropertiesId, "111111")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	//Update user1 and user2 properties with latest campaign
 	t.Run("AttributionQueryFirstTouchWithinTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
 			From:                   timestamp,
-			To:                     timestamp + 3*day,
+			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{"event1", nil},
@@ -157,8 +156,8 @@ func TestAttributionModel(t *testing.T) {
 
 	t.Run("AttributionQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                   timestamp + 3*day,
-			To:                     timestamp + 3*day,
+			From:                   timestamp + 3*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -173,17 +172,17 @@ func TestAttributionModel(t *testing.T) {
 
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
-		user2.ID, timestamp+5*day, user2.PropertiesId, "222222")
+		user2.ID, timestamp+5*U.SECONDS_IN_A_DAY, user2.PropertiesId, "222222")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user3.ID, timestamp+5*day, user3.PropertiesId, "333333")
+		user3.ID, timestamp+5*U.SECONDS_IN_A_DAY, user3.PropertiesId, "333333")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryLastTouchCampaignNoLookbackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
 			From:                   timestamp,
-			To:                     timestamp + 4*day,
+			To:                     timestamp + 4*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodLastTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -199,13 +198,13 @@ func TestAttributionModel(t *testing.T) {
 	})
 
 	// linked event for user1
-	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*day, user1.PropertiesId, "1234567")
+	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*U.SECONDS_IN_A_DAY, user1.PropertiesId, "1234567")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestFirstTouchCampaignWithLookbackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                   timestamp + 4*day,
-			To:                     timestamp + 10*day,
+			From:                   timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 10*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -264,7 +263,6 @@ func TestAttributionEngagementModel(t *testing.T) {
 		t+5day			user2 ->session + event latest_campaign -> 123456
 	*/
 	timestamp := int64(1589068800)
-	day := int64(86400)
 
 	// Creating 3 users
 	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
@@ -282,14 +280,14 @@ func TestAttributionEngagementModel(t *testing.T) {
 
 	// Events with +1 Days
 	errCode = createEventWithSession(project.ID, "event1", user1.ID,
-		timestamp+1*day, user1.PropertiesId, "111111")
+		timestamp+1*U.SECONDS_IN_A_DAY, user1.PropertiesId, "111111")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	//Update user1 and user2 properties with latest campaign
 	t.Run("TestAttributionEngagementQueryFirstTouchWithinTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
 			From:                   timestamp,
-			To:                     timestamp + 3*day,
+			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -305,8 +303,8 @@ func TestAttributionEngagementModel(t *testing.T) {
 
 	t.Run("TestAttributionEngagementQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                   timestamp + 3*day,
-			To:                     timestamp + 3*day,
+			From:                   timestamp + 3*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -322,17 +320,17 @@ func TestAttributionEngagementModel(t *testing.T) {
 
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
-		user2.ID, timestamp+5*day, user2.PropertiesId, "222222")
+		user2.ID, timestamp+5*U.SECONDS_IN_A_DAY, user2.PropertiesId, "222222")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user3.ID, timestamp+5*day, user3.PropertiesId, "333333")
+		user3.ID, timestamp+5*U.SECONDS_IN_A_DAY, user3.PropertiesId, "333333")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestAttributionEngagementQueryLastTouchCampaignNoLookbackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
 			From:                   timestamp,
-			To:                     timestamp + 4*day,
+			To:                     timestamp + 4*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodLastTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -349,13 +347,13 @@ func TestAttributionEngagementModel(t *testing.T) {
 	})
 
 	// linked event for user1
-	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*day, user1.PropertiesId, "1234567")
+	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*U.SECONDS_IN_A_DAY, user1.PropertiesId, "1234567")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestEngagementFirstTouchCampaignWithLookbackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                   timestamp + 4*day,
-			To:                     timestamp + 10*day,
+			From:                   timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 10*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -409,7 +407,6 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 		t+8day -> session event
 	*/
 	timestamp := int64(1589068800)
-	day := int64(86400)
 
 	user1Properties := make(map[string]interface{})
 	user1Properties[U.UP_LATEST_CAMPAIGN] = 123456
@@ -419,7 +416,7 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user1)
 
-	_, errCode = createSession(project.ID, user1.ID, timestamp+4*day, "")
+	_, errCode = createSession(project.ID, user1.ID, timestamp+4*U.SECONDS_IN_A_DAY, "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	userEventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "event1"})
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -427,12 +424,12 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID, UserId: user1.ID,
-		Timestamp: timestamp + 3*day})
+		Timestamp: timestamp + 3*U.SECONDS_IN_A_DAY})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &model.AttributionQuery{
-		From:                   timestamp + 3*day,
-		To:                     timestamp + 10*day,
+		From:                   timestamp + 3*U.SECONDS_IN_A_DAY,
+		To:                     timestamp + 10*U.SECONDS_IN_A_DAY,
 		AttributionKey:         model.AttributionKeyCampaign,
 		AttributionMethodology: model.AttributionMethodLastTouch,
 		ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -445,14 +442,14 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	assert.Nil(t, err)
 
 	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID,
-		UserId: user1.ID, Timestamp: timestamp + 5*day})
+		UserId: user1.ID, Timestamp: timestamp + 5*U.SECONDS_IN_A_DAY})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	_, errCode = createSession(project.ID, user1.ID, timestamp+8*day, "")
+	_, errCode = createSession(project.ID, user1.ID, timestamp+8*U.SECONDS_IN_A_DAY, "")
 	assert.Equal(t, http.StatusCreated, errCode)
-	query.From = timestamp + 5*day
+	query.From = timestamp + 5*U.SECONDS_IN_A_DAY
 
-	// event beyond lookback window
+	// Event beyond lookback window.
 	_, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 }
@@ -475,6 +472,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	assert.NotEmpty(t, user2.ID)
 
 	timestamp := int64(1589068800)
+
 	errCode = createEventWithSession(project.ID, "event1", user1.ID, timestamp, user1.PropertiesId, "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -482,8 +480,8 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &model.AttributionQuery{
-		From:                   timestamp - 86400,
-		To:                     timestamp + 2*86400,
+		From:                   timestamp - 1*U.SECONDS_IN_A_DAY,
+		To:                     timestamp + 2*U.SECONDS_IN_A_DAY,
 		AttributionKey:         model.AttributionKeyCampaign,
 		AttributionMethodology: model.AttributionMethodLastTouch,
 		ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -494,24 +492,36 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	//both user should be treated different
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(2), getConversionUserCount(result, "$none"))
+	// Lookback is 0. There should be no attribution.
+	// Attribuiton Time: 1589068798, Conversion Time: 1589068800, diff = 2 secs
+	assert.Equal(t, float64(0), getConversionUserCount(result, "$none"))
 
 	customerUserId := U.RandomLowerAphaNumString(15)
-	_, errCode = store.GetStore().UpdateUser(project.ID, user1.ID, &model.User{CustomerUserId: customerUserId}, timestamp+86400)
+	_, errCode = store.GetStore().UpdateUser(project.ID, user1.ID, &model.User{CustomerUserId: customerUserId}, timestamp+1*U.SECONDS_IN_A_DAY)
 	assert.Equal(t, http.StatusAccepted, errCode)
-	_, errCode = store.GetStore().UpdateUser(project.ID, user2.ID, &model.User{CustomerUserId: customerUserId}, timestamp+86400)
+	_, errCode = store.GetStore().UpdateUser(project.ID, user2.ID, &model.User{CustomerUserId: customerUserId}, timestamp+1*U.SECONDS_IN_A_DAY)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	// both user should be treated same
+	query = &model.AttributionQuery{
+		From:                   timestamp - 1*U.SECONDS_IN_A_DAY,
+		To:                     timestamp + 2*U.SECONDS_IN_A_DAY,
+		AttributionKey:         model.AttributionKeyCampaign,
+		AttributionMethodology: model.AttributionMethodLastTouch,
+		ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+		LookbackDays:           5,
+		QueryType:              model.AttributionQueryTypeConversionBased,
+	}
+
 	result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
+	// both user should be treated same
 	assert.Equal(t, float64(1), getConversionUserCount(result, "$none"))
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays0", func(t *testing.T) {
 		// continuation to previous users
-		user1NewPropertiesId, status := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		user1NewPropertiesId, status := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*U.SECONDS_IN_A_DAY)
 		assert.Equal(t, http.StatusAccepted, status)
-		user2NewPropertiesId, status := store.GetStore().UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		user2NewPropertiesId, status := store.GetStore().UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*U.SECONDS_IN_A_DAY)
 		// Status should be not_modified as user1 and user2 belong to
 		// same customer_user and user_properties merged on first UpdateUserProperties.
 		assert.Equal(t, http.StatusNotModified, status)
@@ -519,18 +529,18 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 			t+3day -> first time $initial_campaign set with event for user1 and user2
 			t+6day -> session event for user1 and user2
 		*/
-		status = createEventWithSession(project.ID, "event1", user1.ID, timestamp+3*86400, user1NewPropertiesId, "12345")
+		status = createEventWithSession(project.ID, "event1", user1.ID, timestamp+3*U.SECONDS_IN_A_DAY, user1NewPropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "event1", user2.ID, timestamp+3*86400, user2NewPropertiesId, "12345")
+		status = createEventWithSession(project.ID, "event1", user2.ID, timestamp+3*U.SECONDS_IN_A_DAY, user2NewPropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "event1", user1.ID, timestamp+6*86400, user1NewPropertiesId, "12345")
+		status = createEventWithSession(project.ID, "event1", user1.ID, timestamp+6*U.SECONDS_IN_A_DAY, user1NewPropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "event1", user2.ID, timestamp+6*86400, user2NewPropertiesId, "12345")
+		status = createEventWithSession(project.ID, "event1", user2.ID, timestamp+6*U.SECONDS_IN_A_DAY, user2NewPropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
 
 		query := &model.AttributionQuery{
-			From:                   timestamp + 4*86400,
-			To:                     timestamp + 7*86400,
+			From:                   timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 7*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodFirstTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -564,6 +574,7 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	assert.NotEmpty(t, user2.ID)
 
 	timestamp := int64(1589068800)
+
 	errCode = createEventWithSession(project.ID, "event1", user1.ID, timestamp, user1.PropertiesId, "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -571,8 +582,8 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &model.AttributionQuery{
-		From:                   timestamp - 86400,
-		To:                     timestamp + 2*86400,
+		From:                   timestamp - 1*U.SECONDS_IN_A_DAY,
+		To:                     timestamp + 2*U.SECONDS_IN_A_DAY,
 		AttributionKey:         model.AttributionKeyCampaign,
 		AttributionMethodology: model.AttributionMethodLastTouch,
 		ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
@@ -583,36 +594,47 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	// Both user should be treated different
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
+	// Lookback days = 0. Hence conversion couldn't happen withing lookback.
+	assert.Equal(t, float64(0), getConversionUserCount(result, "$none"))
+
+	query = &model.AttributionQuery{
+		From:                   timestamp - 1*U.SECONDS_IN_A_DAY,
+		To:                     timestamp + 2*U.SECONDS_IN_A_DAY,
+		AttributionKey:         model.AttributionKeyCampaign,
+		AttributionMethodology: model.AttributionMethodLastTouch,
+		ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
+		LookbackDays:           2,
+		QueryType:              model.AttributionQueryTypeEngagementBased,
+	}
+
+	// Both user should be treated different
+	result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
+	assert.Nil(t, err)
+	// Lookback days = 2
 	assert.Equal(t, float64(2), getConversionUserCount(result, "$none"))
 
-	customerUserId1 := U.RandomLowerAphaNumString(15)
-	customerUserId2 := U.RandomLowerAphaNumString(15)
-	_, errCode = store.GetStore().UpdateUser(project.ID, user1.ID, &model.User{CustomerUserId: customerUserId1}, timestamp+86400)
+	customerUserId1 := U.RandomLowerAphaNumString(15) + "_one"
+	customerUserId2 := U.RandomLowerAphaNumString(15) + "_two"
+	_, errCode = store.GetStore().UpdateUser(project.ID, user1.ID, &model.User{CustomerUserId: customerUserId1}, timestamp+1*U.SECONDS_IN_A_DAY)
 	assert.Equal(t, http.StatusAccepted, errCode)
-	_, errCode = store.GetStore().UpdateUser(project.ID, user2.ID, &model.User{CustomerUserId: customerUserId2}, timestamp+86400)
+	_, errCode = store.GetStore().UpdateUser(project.ID, user2.ID, &model.User{CustomerUserId: customerUserId2}, timestamp+1*U.SECONDS_IN_A_DAY)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	// both user should be treated same
 	result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(2), getConversionUserCount(result, "$none"))
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
-		// continuation to previous users
-		user1NewPropertiesId, status := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
-		assert.Equal(t, http.StatusAccepted, status)
-		user2NewPropertiesId, status := store.GetStore().UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
-		assert.Equal(t, http.StatusAccepted, status)
 
 		// 3 days is out of query window, but should be considered as it falls under Engagement window
-		status = createEventWithSession(project.ID, "eventNewX", user1.ID, timestamp+5*86400, user1NewPropertiesId, "12345")
+		status := createEventWithSession(project.ID, "eventNewX", user1.ID, timestamp+5*U.SECONDS_IN_A_DAY, user1.PropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "eventNewX", user2.ID, timestamp+6*86400, user2NewPropertiesId, "12345")
+		status = createEventWithSession(project.ID, "eventNewX", user2.ID, timestamp+6*U.SECONDS_IN_A_DAY, user2.PropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)
 
 		query := &model.AttributionQuery{
-			From:                   timestamp + 4*86400,
-			To:                     timestamp + 7*86400,
+			From:                   timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:                     timestamp + 7*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodLastTouch,
 			ConversionEvent:        model.QueryEventWithProperties{Name: "eventNewX"},

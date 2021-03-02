@@ -1,7 +1,7 @@
 {
   "hosting": [
     {
-      "site": "tufte-staging",
+      "target": "staging",
       "public": "dist/staging",
       "ignore": [
         "firebase.json",

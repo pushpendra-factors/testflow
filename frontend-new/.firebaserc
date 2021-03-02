@@ -1,12 +1,19 @@
 {
   "projects": {
-    "default": "tufte-staging"
+    "default": "factors-staging"
   },
   "targets": {
+    "factors-staging": {
+      "hosting": {
+        "staging": [
+          "factors-staging"
+        ]
+      }
+    },
     "factors-production": {
       "hosting": {
         "production": [
-          "tufte-prod"
+          "factors-production"
         ]
       }
     }
