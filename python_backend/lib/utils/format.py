@@ -8,6 +8,8 @@ class FormatUtil:
             return 0.0
         if string_with_percent.replace(" ", "") == "<10%":
             return 5.0
+        if string_with_percent.replace(" ", "") == ">90%":
+            return 95.0
  
         string_without_percent = string_with_percent.replace("%", "").strip()
         if string_without_percent == "":

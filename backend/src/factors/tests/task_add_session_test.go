@@ -258,7 +258,8 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	assert.Equal(t, trackEventProperties2[U.EP_PAGE_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_URL])
 	assert.Equal(t, trackEventProperties2[U.EP_PAGE_RAW_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_RAW_URL])
 	assert.Equal(t, float64(3), (*lsEventProperties1)[U.SP_PAGE_COUNT])
-	assert.Equal(t, float64(2), (*lsEventProperties1)[U.SP_SPENT_TIME])
+	// event = 10ms, event1 = 1ms (default), event2 = 1ms (default).
+	assert.Equal(t, float64(12), (*lsEventProperties1)[U.SP_SPENT_TIME])
 
 	// event 3 and skip session event 1 and event 4 should create new session,
 	// without considering skip session event 1.

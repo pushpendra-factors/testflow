@@ -609,17 +609,18 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		var cacheResult model.WebAnalyticsQueryResult
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, true)
 		if shouldReturn && !hardRefresh {
-			var queryCacheResult queryCacheWebResult
-			err = json.Unmarshal([]byte(resMsg.(string)), &queryCacheResult)
+			var cachedResponse H.DashboardQueryResponsePayload
+			cachedResponse = resMsg.(H.DashboardQueryResponsePayload)
+
+			var webAnalyticsResult model.WebAnalyticsQueryResult
+			err := U.DecodeInterfaceMapToStructType(cachedResponse.Result.(map[string]interface{}), &webAnalyticsResult)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError,
 					gin.H{"error": "Web analytics query failed. Execution failed."})
 				return
 			}
-
-			webAnalyticsResult := sanitizeWebAnalyticsResult(&queryCacheResult.Result, requestPayload)
-			c.AbortWithStatusJSON(resCode, H.DashboardQueryResponsePayload{
-				Result: webAnalyticsResult, Cache: true, RefreshedAt: queryCacheResult.RefreshedAt})
+			cachedResponse.Result = sanitizeWebAnalyticsResult(&webAnalyticsResult, requestPayload)
+			c.AbortWithStatusJSON(resCode, cachedResponse)
 			return
 		}
 
