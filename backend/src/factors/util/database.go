@@ -161,6 +161,19 @@ func DecodePostgresJsonbToStructType(sourceJsonb *postgres.Jsonb, destStruct int
 	return nil
 }
 
+// DecodeInterfaceMapToStructType Converts a source of type map[string]interface{} to given struct.
+func DecodeInterfaceMapToStructType(source map[string]interface{}, destStruct interface{}) error {
+	sourceBytes, err := json.Marshal(source)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(sourceBytes, destStruct)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // DecodeJSONStringToStructType Decodes a json string to object of given type.
 func DecodeJSONStringToStructType(jsonString string, destStruct interface{}) error {
 	if jsonString == "" {
