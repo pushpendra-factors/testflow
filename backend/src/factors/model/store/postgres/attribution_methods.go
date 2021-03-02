@@ -53,7 +53,7 @@ func (pg *Postgres) ApplyAttribution(method string, conversionEvent string, user
 		default:
 			break
 		}
-		// in case a successful attribution could not happen, remove converted user
+		// In case a successful attribution could not happen, remove converted user.
 		if len(attributionKeys) == 0 {
 			delete(usersAttribution, userId)
 		}
@@ -91,7 +91,6 @@ func getFirstTouchId(attributionTimerange map[string]model.UserSessionTimestamp,
 		// MinTimestamp for FirstTouch
 		attributionIds = append(attributionIds, pair{aId, rangeT.MinTimestamp})
 	}
-	key := model.PropertyValueNone
 	if len(attributionIds) > 0 {
 		sort.Slice(attributionIds, func(i, j int) bool {
 			return attributionIds[i].value < attributionIds[j].value
@@ -99,7 +98,7 @@ func getFirstTouchId(attributionTimerange map[string]model.UserSessionTimestamp,
 		for i := 0; i < len(attributionIds); i++ {
 			if isConversionWithinLookback(attributionIds[i].value, conversionTime,
 				lookbackPeriod) {
-				// exit condition: Attribution not in query range
+				// Exit condition: Attribution not in query range.
 				if !isConversionWithinQueryPeriod(attributionIds[i].value, from, to) {
 					return []string{}
 				}
@@ -107,7 +106,7 @@ func getFirstTouchId(attributionTimerange map[string]model.UserSessionTimestamp,
 			}
 		}
 	}
-	return []string{key}
+	return []string{}
 }
 
 // returns the last attributionId
@@ -116,10 +115,9 @@ func getLastTouchId(attributionTimerange map[string]model.UserSessionTimestamp, 
 
 	var attributionIds []pair
 	for aId, rangeT := range attributionTimerange {
-		// MaxTimestamp for LastTouch
+		// MaxTimestamp for LastTouch.
 		attributionIds = append(attributionIds, pair{aId, rangeT.MaxTimestamp})
 	}
-	key := model.PropertyValueNone
 	if len(attributionIds) > 0 {
 		sort.Slice(attributionIds, func(i, j int) bool {
 			return attributionIds[i].value > attributionIds[j].value
@@ -127,7 +125,7 @@ func getLastTouchId(attributionTimerange map[string]model.UserSessionTimestamp, 
 		for i := 0; i < len(attributionIds); i++ {
 			if isConversionWithinLookback(attributionIds[i].value, conversionTime,
 				lookbackPeriod) {
-				// exit condition: Attribution not in query range
+				// Exit condition: Attribution not in query range.
 				if !isConversionWithinQueryPeriod(attributionIds[i].value, from, to) {
 					return []string{}
 				}
@@ -135,7 +133,7 @@ func getLastTouchId(attributionTimerange map[string]model.UserSessionTimestamp, 
 			}
 		}
 	}
-	return []string{key}
+	return []string{}
 }
 
 // returns the first non $none attributionId
@@ -147,28 +145,24 @@ func getFirstTouchNDId(attributionTimerange map[string]model.UserSessionTimestam
 		// MinTimestamp for FirstTouch
 		attributionIds = append(attributionIds, pair{aId, rangeT.MinTimestamp})
 	}
-	key := model.PropertyValueNone
 	if len(attributionIds) > 0 {
 		sort.Slice(attributionIds, func(i, j int) bool {
 			return attributionIds[i].value < attributionIds[j].value
 		})
-		key = attributionIds[0].key
 		for _, atPair := range attributionIds {
 			if isConversionWithinLookback(atPair.value, conversionTime,
 				lookbackPeriod) {
 				if atPair.key != model.PropertyValueNone {
-					// exit condition: Attribution not in query range
+					// Exit condition: Attribution not in query range.
 					if !isConversionWithinQueryPeriod(atPair.value, from, to) {
 						return []string{}
 					}
-					key = atPair.key
-					// break on first non $none
-					break
+					return []string{atPair.key}
 				}
 			}
 		}
 	}
-	return []string{key}
+	return []string{}
 }
 
 // returns the last non $none attributionId
@@ -180,36 +174,32 @@ func getLastTouchNDId(attributionTimerange map[string]model.UserSessionTimestamp
 		// MaxTimestamp for LastTouch
 		attributionIds = append(attributionIds, pair{aId, rangeT.MaxTimestamp})
 	}
-	key := model.PropertyValueNone
 	if len(attributionIds) > 0 {
 		sort.Slice(attributionIds, func(i, j int) bool {
 			return attributionIds[i].value > attributionIds[j].value
 		})
-		key = attributionIds[0].key
 		for _, atPair := range attributionIds {
 			if isConversionWithinLookback(atPair.value, conversionTime,
 				lookbackPeriod) {
 				if atPair.key != model.PropertyValueNone {
-					// exit condition: Attribution not in query range
+					// Exit condition: Attribution not in query range.
 					if !isConversionWithinQueryPeriod(atPair.value, from, to) {
 						return []string{}
 					}
-					key = atPair.key
-					// break on first non $none
-					break
+					return []string{atPair.key}
 				}
 			}
 		}
 	}
-	return []string{key}
+	return []string{}
 }
 
-// isConversionWithinQueryPeriod checks if attribution time is within query (campaign) period
+// isConversionWithinQueryPeriod checks if attribution time is within query (campaign) period.
 func isConversionWithinQueryPeriod(attributionTime int64, from, to int64) bool {
 	return attributionTime >= from && attributionTime <= to
 }
 
-// isConversionWithinLookback checks if attribution time is within lookback period
+// isConversionWithinLookback checks if attribution time is within lookback period.
 func isConversionWithinLookback(attributionTime int64,
 	conversionTime int64, lookbackPeriod int64) bool {
 

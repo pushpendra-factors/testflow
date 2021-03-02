@@ -47,6 +47,7 @@ func addHeadersByAttributionKey(result *model.QueryResult, query *model.Attribut
 	if len(query.LinkedEvents) > 0 {
 		for _, event := range query.LinkedEvents {
 			result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
+			result.Headers = append(result.Headers, fmt.Sprintf("%s - CPC", event.Name))
 		}
 	}
 }
@@ -156,53 +157,39 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	sessions := updateSessionsMapWithCoalesceID(_sessions, usersInfo)
 
 	isCompare := false
-	effectiveFrom := query.From
-	effectiveTo := query.To
-	// extend the campaign window for engagement based attribution
+	// Default conversion for AttributionQueryTypeConversionBased.
+	conversionFrom := query.From
+	conversionTo := query.To
+	// Extend the campaign window for engagement based attribution.
 	if query.QueryType == model.AttributionQueryTypeEngagementBased {
-		effectiveFrom = query.From
-		effectiveTo = lookbackAdjustedTo(query.To, query.LookbackDays)
+		conversionFrom = query.From
+		conversionTo = lookbackAdjustedTo(query.To, query.LookbackDays)
 	}
 	var attributionData map[string]*model.AttributionData
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true
 		attributionData, err = pg.RunAttributionForMethodologyComparison(projectID,
-			effectiveFrom, effectiveTo,
-			query.ConversionEvent.Name,
-			query.ConversionEvent.Properties,
-			query.AttributionMethodology,
-			query.AttributionMethodologyCompare, // run for AttributionMethodologyCompare
-			eventNameToIDList, sessions, query.LookbackDays, query.From, query.To)
+			conversionFrom, conversionTo, query, eventNameToIDList, sessions)
 
 	} else if query.ConversionEventCompare.Name != "" {
 		// Two events comparison
 		isCompare = true
 		attributionData, err = pg.runAttribution(projectID,
-			effectiveFrom, effectiveTo,
-			query.ConversionEvent.Name,
-			query.ConversionEvent.Properties,
-			query.LinkedEvents,
-			query.AttributionMethodology,
-			eventNameToIDList, sessions, query.LookbackDays, query.From, query.To)
+			conversionFrom, conversionTo, query.ConversionEvent, query, eventNameToIDList, sessions)
 
 		if err != nil {
 			return nil, err
 		}
-
+		// Running for ConversionEventCompare.
 		attributionCompareData, err := pg.runAttribution(projectID,
-			effectiveFrom, effectiveTo,
-			query.ConversionEventCompare.Name, // run for ConversionEventCompare
-			query.ConversionEventCompare.Properties,
-			query.LinkedEvents,
-			query.AttributionMethodology,
-			eventNameToIDList, sessions, query.LookbackDays, query.From, query.To)
+			conversionFrom, conversionTo, query.ConversionEventCompare, query, eventNameToIDList, sessions)
 
 		if err != nil {
 			return nil, err
 		}
 
-		// merge compare data into attributionData
+		// Merge compare data into attributionData.
 		for key := range attributionData {
 			if _, exists := attributionCompareData[key]; exists {
 				attributionData[key].ConversionEventCompareCount = attributionCompareData[key].ConversionEventCount
@@ -210,7 +197,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 				attributionData[key].ConversionEventCompareCount = 0
 			}
 		}
-		// filling any non-matched touch points
+		// Filling any non-matched touch points.
 		for missingKey := range attributionCompareData {
 			if _, exists := attributionData[missingKey]; !exists {
 				attributionData[missingKey] = &model.AttributionData{}
@@ -218,14 +205,10 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 			}
 		}
 	} else {
-		// single event attribution
+		// Single event attribution.
 		attributionData, err = pg.runAttribution(projectID,
-			effectiveFrom, effectiveTo,
-			query.ConversionEvent.Name,
-			query.ConversionEvent.Properties,
-			query.LinkedEvents,
-			query.AttributionMethodology,
-			eventNameToIDList, sessions, query.LookbackDays, query.From, query.To)
+			conversionFrom, conversionTo, query.ConversionEvent,
+			query, eventNameToIDList, sessions)
 	}
 
 	if err != nil {
@@ -248,55 +231,55 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	return result, nil
 }
 
-func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64, from, to int64, goalEventName string,
-	goalEventProperties []model.QueryProperty, attributionMethodology, attributionMethodologyCompare string,
-	eventNameToIDList map[string][]interface{}, sessions map[string]map[string]model.UserSessionTimestamp,
-	lookbackDays int, campaignFrom, campaignTo int64) (map[string]*model.AttributionData, error) {
+func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
+	conversionFrom, conversionTo int64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
+	sessions map[string]map[string]model.UserSessionTimestamp) (map[string]*model.AttributionData, error) {
 
-	// empty linkedEvents as they are not analyzed in compare events.
+	// Empty linkedEvents as they are not analyzed in compare events.
 	var linkedEvents []model.QueryEventWithProperties
 
-	// 3. Fetch users who hit conversion event
-	// coalUserIdConversionTimestamp := make(map[string]int64)
+	// Fetch users who hit conversion event.
 	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err := pg.GetConvertedUsers(projectID,
-		goalEventName, goalEventProperties, from, to,
+		query.ConversionEvent.Name, query.ConversionEvent.Properties, conversionFrom, conversionTo,
 		eventNameToIDList)
 	if err != nil {
 		return nil, err
 	}
 
-	// Add users who hit conversion event
+	// Add users who hit conversion event.
 	var usersToBeAttributed []model.UserEventInfo
 	for key := range coalescedIDToInfoConverted {
-		usersToBeAttributed = append(usersToBeAttributed, model.UserEventInfo{key,
-			goalEventName})
+		usersToBeAttributed = append(usersToBeAttributed, model.UserEventInfo{CoalUserID: key,
+			EventName: query.ConversionEvent.Name})
 	}
 
-	err = pg.GetLinkedFunnelEventUsers(projectID, from, to, linkedEvents, eventNameToIDList, userIDToInfoConverted,
+	err = pg.GetLinkedFunnelEventUsers(projectID, conversionFrom, conversionTo,
+		linkedEvents, eventNameToIDList, userIDToInfoConverted,
 		&usersToBeAttributed)
 	if err != nil {
 		return nil, err
 	}
 
-	// attribution based on given attribution methodology
-	userConversionHit, _, err := pg.ApplyAttribution(attributionMethodology, goalEventName, usersToBeAttributed,
-		sessions, coalUserIdConversionTimestamp, lookbackDays, from, to)
+	// Attribution based on given attribution methodology.
+	userConversionHit, _, err := pg.ApplyAttribution(query.AttributionMethodology,
+		query.ConversionEvent.Name, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
+		query.LookbackDays, query.From, query.To)
 	if err != nil {
 		return nil, err
 	}
 
 	attributionData := addUpConversionEventCount(userConversionHit)
 
-	// attribution based on given attributionMethodologyCompare methodology
-	userConversionCompareHit, _, err := pg.ApplyAttribution(attributionMethodologyCompare,
-		goalEventName, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
-		lookbackDays, campaignFrom, campaignTo)
+	// Attribution based on given attributionMethodologyCompare methodology.
+	userConversionCompareHit, _, err := pg.ApplyAttribution(query.AttributionMethodologyCompare,
+		query.ConversionEvent.Name, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
+		query.LookbackDays, query.From, query.To)
 	if err != nil {
 		return nil, err
 	}
 	attributionDataCompare := addUpConversionEventCount(userConversionCompareHit)
 
-	// merge compare data into attributionData
+	// Merge compare data into attributionData.
 	for key := range attributionData {
 		if _, exists := attributionDataCompare[key]; exists {
 			attributionData[key].ConversionEventCompareCount = attributionDataCompare[key].ConversionEventCount
@@ -316,18 +299,16 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64, fro
 }
 
 func (pg *Postgres) runAttribution(projectID uint64,
-	from, to int64,
-	goalEventName string,
-	goalEventProperties []model.QueryProperty,
-	linkedEvents []model.QueryEventWithProperties,
-	attributionMethodology string,
-	eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionTimestamp,
-	lookbackDays int, campaignFrom, campaignTo int64) (map[string]*model.AttributionData, error) {
+	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
+	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
+	sessions map[string]map[string]model.UserSessionTimestamp) (map[string]*model.AttributionData, error) {
+
+	goalEventName := goalEvent.Name
+	goalEventProperties := goalEvent.Properties
 
 	// 3. Fetch users who hit conversion event
 	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err := pg.GetConvertedUsers(projectID,
-		goalEventName, goalEventProperties, from, to,
+		goalEventName, goalEventProperties, conversionFrom, conversionTo,
 		eventNameToIDList)
 	if err != nil {
 		return nil, err
@@ -335,36 +316,40 @@ func (pg *Postgres) runAttribution(projectID uint64,
 
 	// Add users who hit conversion event
 	var usersToBeAttributed []model.UserEventInfo
-	for key, _ := range coalescedIDToInfoConverted {
-		usersToBeAttributed = append(usersToBeAttributed, model.UserEventInfo{key,
-			goalEventName})
+	for key := range coalescedIDToInfoConverted {
+		usersToBeAttributed = append(usersToBeAttributed, model.UserEventInfo{CoalUserID: key,
+			EventName: goalEventName})
 	}
 
-	err = pg.GetLinkedFunnelEventUsers(projectID, from, to, linkedEvents, eventNameToIDList, userIDToInfoConverted,
-		&usersToBeAttributed)
+	err = pg.GetLinkedFunnelEventUsers(projectID, conversionFrom, conversionTo, query.LinkedEvents,
+		eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
 	if err != nil {
 		return nil, err
 	}
 
 	// 4. Apply attribution based on given attribution methodology
-	userConversionHit, userLinkedFEHit, err := pg.ApplyAttribution(attributionMethodology,
-		goalEventName,
-		usersToBeAttributed, sessions, coalUserIdConversionTimestamp, lookbackDays, campaignFrom, campaignTo)
+	userConversionHit, userLinkedFEHit, err := pg.ApplyAttribution(query.AttributionMethodology,
+		goalEventName, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
+		query.LookbackDays, query.From, query.To)
 	if err != nil {
 		return nil, err
 	}
 
 	attributionData := make(map[string]*model.AttributionData)
 	attributionData = addUpConversionEventCount(userConversionHit)
-	addUpLinkedFunnelEventCount(linkedEvents, attributionData, userLinkedFEHit)
+	addUpLinkedFunnelEventCount(query.LinkedEvents, attributionData, userLinkedFEHit)
 	return attributionData, nil
 }
 
-// Converts a slice of float64 to a slice of interface.
-func getInterfaceListFromFloat64(data []float64) []interface{} {
+// getLinkedEventColumnAsInterfaceList return interface list having linked event count and CPC
+func getLinkedEventColumnAsInterfaceList(spend float64, data []float64) []interface{} {
 	var list []interface{}
 	for _, val := range data {
-		list = append(list, []interface{}{val})
+		cpc := 0.0
+		if val != 0.0 {
+			cpc, _ = U.FloatRoundOffWithPrecision(spend/val, U.DefaultPrecision)
+		}
+		list = append(list, []interface{}{val, cpc})
 	}
 	return list
 }
@@ -377,7 +362,7 @@ func getRowsByMaps(attributionData map[string]*model.AttributionData,
 	nonMatchingRow := []interface{}{"none", 0, 0, float64(0), int64(0), float64(0), float64(0),
 		float64(0), float64(0)}
 	for i := 0; i < len(linkedEvents); i++ {
-		nonMatchingRow = append(nonMatchingRow, []interface{}{0.0})
+		nonMatchingRow = append(nonMatchingRow, []interface{}{0.0, 0.0})
 	}
 	for key, data := range attributionData {
 		attributionIdName := data.Name
@@ -388,12 +373,12 @@ func getRowsByMaps(attributionData map[string]*model.AttributionData,
 			var row []interface{}
 			cpc := 0.0
 			if data.ConversionEventCount != 0.0 {
-				cpc = data.Spend / data.ConversionEventCount
+				cpc, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCount, U.DefaultPrecision)
 			}
 			if isCompare {
 				cpcCompare := 0.0
 				if data.ConversionEventCompareCount != 0.0 {
-					cpcCompare = data.Spend / data.ConversionEventCompareCount
+					cpcCompare, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCompareCount, U.DefaultPrecision)
 				}
 				row = append(row, attributionIdName, data.Impressions, data.Clicks, data.Spend,
 					data.WebsiteVisitors, data.ConversionEventCount, cpc,
@@ -402,7 +387,7 @@ func getRowsByMaps(attributionData map[string]*model.AttributionData,
 				row = append(row, attributionIdName, data.Impressions, data.Clicks, data.Spend,
 					data.WebsiteVisitors, data.ConversionEventCount, cpc, 0.0, 0.0)
 			}
-			row = append(row, getInterfaceListFromFloat64(data.LinkedEventsCount)...)
+			row = append(row, getLinkedEventColumnAsInterfaceList(row[3].(float64), data.LinkedEventsCount)...)
 			rows = append(rows, row)
 		}
 	}
@@ -445,7 +430,7 @@ func addUpLinkedFunnelEventCount(linkedEvents []model.QueryEventWithProperties,
 			}
 		}
 	}
-	// update linked up events with event hit count
+	// Update linked up events with event hit count.
 	for linkedEventName, userIdAttributionIdMap := range linkedUserAttributionData {
 		for _, attributionKeys := range userIdAttributionIdMap {
 			weight := 1 / float64(len(attributionKeys))
@@ -668,13 +653,13 @@ func (pg *Postgres) getEventInformation(projectId uint64,
 }
 
 // Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
-func (pg *Postgres) GetLinkedFunnelEventUsers(projectId uint64, from, to int64,
+func (pg *Postgres) GetLinkedFunnelEventUsers(projectId uint64, queryFrom, queryTo int64,
 	linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
 	userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	var usersHitConversion []string
-	for key, _ := range userIDInfo {
+	for key := range userIDInfo {
 		usersHitConversion = append(usersHitConversion, key)
 	}
 
@@ -696,7 +681,7 @@ func (pg *Postgres) GetLinkedFunnelEventUsers(projectId uint64, from, to int64,
 			queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND " +
 				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
 				" AND user_id = ANY (VALUES " + usersPlaceHolder + " ) "
-			qParams := []interface{}{projectId, from, to}
+			qParams := []interface{}{projectId, queryFrom, queryTo}
 			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
 			// add event filter
@@ -739,7 +724,7 @@ func (pg *Postgres) GetLinkedFunnelEventUsers(projectId uint64, from, to int64,
 		// Part-III add the filtered users with eventId usersToBeAttributed
 		for _, userId := range filteredUserIdList {
 			*usersToBeAttributed = append(*usersToBeAttributed,
-				model.UserEventInfo{userIDInfo[userId].CoalUserID, linkedEvent.Name})
+				model.UserEventInfo{CoalUserID: userIDInfo[userId].CoalUserID, EventName: linkedEvent.Name})
 		}
 	}
 	return nil
@@ -803,7 +788,7 @@ func (pg *Postgres) ApplyUserPropertiesFilter(projectId uint64, userIdList []str
 
 // GetConvertedUsers Returns the list of eligible users who hit conversion event
 func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
-	goalEventProperties []model.QueryProperty, from, to int64,
+	goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
 	eventNameToIdList map[string][]interface{}) (map[string]model.UserInfo,
 	map[string][]model.UserIDPropID, map[string]int64, error) {
 
@@ -816,11 +801,11 @@ func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
 	}
 	queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND timestamp >= ? AND " +
 		" timestamp <=? AND events.event_name_id IN (" + placeHolder + ") "
-	qParams := []interface{}{projectID, from, to}
+	qParams := []interface{}{projectID, conversionFrom, conversionTo}
 	qParams = append(qParams, conversionEventNameIds...)
 
 	// add event filter
-	wStmt, wParams, err := getFilterSQLStmtForEventProperties(goalEventProperties) // query.ConversionEvent.Properties)
+	wStmt, wParams, err := getFilterSQLStmtForEventProperties(goalEventProperties)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -880,9 +865,7 @@ func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
 
 		if _, ok := coalUserIdConversionTimestamp[coalUserID]; ok {
 			if timestamp < coalUserIdConversionTimestamp[coalUserID] {
-				// TODO (Anil) : discuss which T1, (T2, T3,) T4 -> () = Attribution lookback period.
-				// Which T? should be considered?
-				// considering earliest conversion
+				// Considering earliest conversion.
 				coalUserIdConversionTimestamp[coalUserID] = timestamp
 			}
 		} else {
@@ -923,13 +906,11 @@ func updateSessionsMapWithCoalesceID(attributedSessionsByUserId map[string]map[s
 		for attributionId, newUserSession := range attributionIdMap {
 			if _, ok := newSessionsMap[userInfo.CoalUserID]; ok {
 				if existingUserSession, ok := newSessionsMap[userInfo.CoalUserID][attributionId]; ok {
-					// update the existing attribution first and last touch
+					// Update the existing attribution first and last touch.
 					existingUserSession.MinTimestamp = U.Min(existingUserSession.MinTimestamp, newUserSession.MinTimestamp)
 					existingUserSession.MaxTimestamp = U.Max(existingUserSession.MaxTimestamp, newUserSession.MaxTimestamp)
-					// mer
-					for _, timestamp := range newUserSession.TimeStamps {
-						existingUserSession.TimeStamps = append(existingUserSession.TimeStamps, timestamp)
-					}
+					// Merging timestamp of same customer having 2 userIds.
+					existingUserSession.TimeStamps = append(existingUserSession.TimeStamps, newUserSession.TimeStamps...)
 					existingUserSession.WithinQueryPeriod = existingUserSession.WithinQueryPeriod || newUserSession.WithinQueryPeriod
 					newSessionsMap[userInfo.CoalUserID][attributionId] = existingUserSession
 					continue
@@ -947,7 +928,7 @@ func updateSessionsMapWithCoalesceID(attributedSessionsByUserId map[string]map[s
 // Maps the count distinct users session to campaign id and adds it to attributionData
 func addWebsiteVisitorsInfo(attributionData map[string]*model.AttributionData,
 	attributedSessionsByUserId map[string]map[string]model.UserSessionTimestamp, linkedEventsCount int) {
-	// creating an empty linked events row
+	// Creating an empty linked events row.
 	emptyLinkedEventRow := make([]float64, 0)
 	for i := 0; i < linkedEventsCount; i++ {
 		emptyLinkedEventRow = append(emptyLinkedEventRow, 0.0)
@@ -957,13 +938,13 @@ func addWebsiteVisitorsInfo(attributionData map[string]*model.AttributionData,
 	for userId, attributionIdMap := range attributedSessionsByUserId {
 		for attributionId, sessionTimestamp := range attributionIdMap {
 
-			// only count sessions that happened during attribution period
+			// Only count sessions that happened during attribution period.
 			if sessionTimestamp.WithinQueryPeriod {
 
 				if _, ok := attributionData[attributionId]; !ok {
 					attributionData[attributionId] = &model.AttributionData{}
 					if linkedEventsCount > 0 {
-						// init the linked events with 0.0 value
+						// Init the linked events with 0.0 value.
 						tempRow := emptyLinkedEventRow
 						attributionData[attributionId].LinkedEventsCount = tempRow
 					}
@@ -1058,7 +1039,7 @@ func (pg *Postgres) GetAdwordsCurrency(projectId uint64, customerAccountId strin
 		" WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ? " +
 		" ORDER BY timestamp DESC LIMIT 1"
 	logCtx := log.WithField("ProjectId", projectId)
-	// checking just for customerAccountIds[0], we are assuming that all accounts have same currency
+	// Checking just for customerAccountIds[0], we are assuming that all accounts have same currency.
 	rows, err := pg.ExecQueryWithContext(queryCurrency, []interface{}{projectId, customerAccountIds[0], 9, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {

@@ -54,7 +54,6 @@ func TestAttributionModelCompare(t *testing.T) {
 		t+5day			user2 ->session + event latest_campaign -> 123456
 	*/
 	timestamp := int64(1589068800)
-	day := int64(86400)
 
 	// Creating 3 users
 	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
@@ -72,13 +71,13 @@ func TestAttributionModelCompare(t *testing.T) {
 
 	// Events with +1 Days
 	errCode = createEventWithSession(project.ID, "event1", user1.ID,
-		timestamp+1*day, user1.PropertiesId, "111111")
+		timestamp+1*U.SECONDS_IN_A_DAY, user1.PropertiesId, "111111")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                          timestamp - 2*day,
-			To:                            timestamp + 3*day,
+			From:                          timestamp - 2*U.SECONDS_IN_A_DAY,
+			To:                            timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:                  10,
 			AttributionKey:                model.AttributionKeyCampaign,
 			AttributionKeyFilter:          []model.AttributionKeyFilter{},
@@ -99,8 +98,8 @@ func TestAttributionModelCompare(t *testing.T) {
 
 	t.Run("AttributionQueryCompareOutOfTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                          timestamp + 3*day,
-			To:                            timestamp + 3*day,
+			From:                          timestamp + 3*U.SECONDS_IN_A_DAY,
+			To:                            timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:                  10,
 			AttributionKey:                model.AttributionKeyCampaign,
 			AttributionKeyFilter:          []model.AttributionKeyFilter{},
@@ -120,17 +119,17 @@ func TestAttributionModelCompare(t *testing.T) {
 
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
-		user2.ID, timestamp+5*day, user2.PropertiesId, "222222")
+		user2.ID, timestamp+5*U.SECONDS_IN_A_DAY, user2.PropertiesId, "222222")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user3.ID, timestamp+5*day, user3.PropertiesId, "333333")
+		user3.ID, timestamp+5*U.SECONDS_IN_A_DAY, user3.PropertiesId, "333333")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
 			From:                          timestamp,
-			To:                            timestamp + 4*day,
+			To:                            timestamp + 4*U.SECONDS_IN_A_DAY,
 			LookbackDays:                  10,
 			AttributionKey:                model.AttributionKeyCampaign,
 			AttributionKeyFilter:          []model.AttributionKeyFilter{},
@@ -145,22 +144,22 @@ func TestAttributionModelCompare(t *testing.T) {
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(1), getConversionUserCount(result, "222222"))
-		assert.Equal(t, float64(1), getConversionUserCount(result, "333333"))
+		assert.Equal(t, int64(-1), getConversionUserCount(result, "222222"))
+		assert.Equal(t, int64(-1), getConversionUserCount(result, "333333"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(0), getCompareConversionUserCount(result, "222222"))
-		assert.Equal(t, float64(0), getCompareConversionUserCount(result, "333333"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "222222"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "333333"))
 		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
 	})
 
 	// linked event for user1
-	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*day, user1.PropertiesId, "1234567")
+	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*U.SECONDS_IN_A_DAY, user1.PropertiesId, "1234567")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                          timestamp + 4*day,
-			To:                            timestamp + 10*day,
+			From:                          timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:                            timestamp + 10*U.SECONDS_IN_A_DAY,
 			LookbackDays:                  20,
 			AttributionKey:                model.AttributionKeyCampaign,
 			AttributionKeyFilter:          []model.AttributionKeyFilter{},
@@ -203,7 +202,6 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 		t+8day -> session event
 	*/
 	timestamp := int64(1589068800)
-	day := int64(86400)
 
 	user1Properties := make(map[string]interface{})
 	user1Properties[U.UP_LATEST_CAMPAIGN] = 123456
@@ -213,7 +211,7 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user1)
 
-	_, errCode = createSession(project.ID, user1.ID, timestamp+4*day, "")
+	_, errCode = createSession(project.ID, user1.ID, timestamp+4*U.SECONDS_IN_A_DAY, "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	userEventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "event1"})
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -221,12 +219,12 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID, UserId: user1.ID,
-		Timestamp: timestamp + 3*day})
+		Timestamp: timestamp + 3*U.SECONDS_IN_A_DAY})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &model.AttributionQuery{
-		From:                          timestamp + 3*day,
-		To:                            timestamp + 10*day,
+		From:                          timestamp + 3*U.SECONDS_IN_A_DAY,
+		To:                            timestamp + 10*U.SECONDS_IN_A_DAY,
 		LookbackDays:                  2,
 		AttributionKey:                model.AttributionKeyCampaign,
 		AttributionKeyFilter:          []model.AttributionKeyFilter{},
@@ -242,12 +240,12 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	assert.Nil(t, err)
 
 	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID,
-		UserId: user1.ID, Timestamp: timestamp + 5*day})
+		UserId: user1.ID, Timestamp: timestamp + 5*U.SECONDS_IN_A_DAY})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	_, errCode = createSession(project.ID, user1.ID, timestamp+8*day, "campaign1")
+	_, errCode = createSession(project.ID, user1.ID, timestamp+8*U.SECONDS_IN_A_DAY, "campaign1")
 	assert.Equal(t, http.StatusCreated, errCode)
-	query.From = timestamp + 5*day
+	query.From = timestamp + 5*U.SECONDS_IN_A_DAY
 
 	//event beyond look back window
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
@@ -282,7 +280,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		CustomerAccountID: customerAccountId,
 		TypeAlias:         "campaign_performance_report",
 		Timestamp:         20200510,
-		Value:             &postgres.Jsonb{value},
+		Value:             &postgres.Jsonb{RawMessage: value},
 	}
 
 	status := store.GetStore().CreateAdwordsDocument(document)
@@ -297,7 +295,6 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		t+5day			user2 ->session + event latest_campaign -> 123456
 	*/
 	timestamp := int64(1589068800)
-	day := int64(86400)
 
 	// Creating 3 users
 	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
@@ -315,13 +312,13 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	// Events with +1 Days
 	errCode = createEventWithSession(project.ID, "event1", user1.ID,
-		timestamp+1*day, user1.PropertiesId, "111111")
+		timestamp+1*U.SECONDS_IN_A_DAY, user1.PropertiesId, "111111")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:           timestamp - 2*day,
-			To:             timestamp + 3*day,
+			From:           timestamp - 2*U.SECONDS_IN_A_DAY,
+			To:             timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
 			AttributionKey: model.AttributionKeyCampaign,
 			AttributionKeyFilter: []model.AttributionKeyFilter{
@@ -345,8 +342,8 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:           timestamp - 2*day,
-			To:             timestamp + 3*day,
+			From:           timestamp - 2*U.SECONDS_IN_A_DAY,
+			To:             timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
 			AttributionKey: model.AttributionKeyCampaign,
 			AttributionKeyFilter: []model.AttributionKeyFilter{
@@ -369,8 +366,8 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	})
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:           timestamp - 2*day,
-			To:             timestamp + 3*day,
+			From:           timestamp - 2*U.SECONDS_IN_A_DAY,
+			To:             timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
 			AttributionKey: model.AttributionKeyCampaign,
 			AttributionKeyFilter: []model.AttributionKeyFilter{
@@ -393,8 +390,8 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	})
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:           timestamp - 2*day,
-			To:             timestamp + 3*day,
+			From:           timestamp - 2*U.SECONDS_IN_A_DAY,
+			To:             timestamp + 3*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
 			AttributionKey: model.AttributionKeyCampaign,
 			AttributionKeyFilter: []model.AttributionKeyFilter{
@@ -418,17 +415,17 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
-		user2.ID, timestamp+5*day, user2.PropertiesId, "222222")
+		user2.ID, timestamp+5*U.SECONDS_IN_A_DAY, user2.PropertiesId, "222222")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user3.ID, timestamp+5*day, user3.PropertiesId, "333333")
+		user3.ID, timestamp+5*U.SECONDS_IN_A_DAY, user3.PropertiesId, "333333")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
 			From:           timestamp,
-			To:             timestamp + 4*day,
+			To:             timestamp + 4*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
 			AttributionKey: model.AttributionKeyCampaign,
 			AttributionKeyFilter: []model.AttributionKeyFilter{
@@ -457,7 +454,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
 			From:           timestamp,
-			To:             timestamp + 4*day,
+			To:             timestamp + 4*U.SECONDS_IN_A_DAY,
 			LookbackDays:   10,
 			AttributionKey: model.AttributionKeyCampaign,
 			AttributionKeyFilter: []model.AttributionKeyFilter{
@@ -484,13 +481,13 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 	})
 
 	// linked event for user1
-	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*day, user1.PropertiesId, "1234567")
+	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*U.SECONDS_IN_A_DAY, user1.PropertiesId, "1234567")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:           timestamp + 4*day,
-			To:             timestamp + 10*day,
+			From:           timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:             timestamp + 10*U.SECONDS_IN_A_DAY,
 			LookbackDays:   20,
 			AttributionKey: model.AttributionKeyCampaign,
 			AttributionKeyFilter: []model.AttributionKeyFilter{
@@ -539,8 +536,8 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:           timestamp + 4*day,
-			To:             timestamp + 10*day,
+			From:           timestamp + 4*U.SECONDS_IN_A_DAY,
+			To:             timestamp + 10*U.SECONDS_IN_A_DAY,
 			LookbackDays:   20,
 			AttributionKey: model.AttributionKeyCampaign,
 			AttributionKeyFilter: []model.AttributionKeyFilter{
