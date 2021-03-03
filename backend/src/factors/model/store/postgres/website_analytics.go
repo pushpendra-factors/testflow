@@ -1360,7 +1360,7 @@ func (pg *Postgres) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]
 	}
 
 	var cachePayloads []model.WebAnalyticsCachePayload
-	for _, rangeFunction := range U.QueryDateRangePresets {
+	for _, rangeFunction := range U.WebAnalyticsQueryDateRangePresets {
 		from, to := rangeFunction()
 
 		cachePayloads = append(cachePayloads, model.WebAnalyticsCachePayload{

@@ -1,0 +1,59 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: persistent-pool-highmem-16
+  name: pull-events-job
+spec:
+  schedule: "1 2 3 4 5" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: persistent-pool-highmem-16
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: persistent-pool-highmem-16
+          containers:
+          - name: pull-events-job
+            image: us.gcr.io/factors-production/pull-events-job:v1.8-577bcc3-706
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --bucket_name
+            - $(BUCKET_NAME)
+            - --local_disk_tmp_dir
+            - /tmp
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --model_type
+            - "monthly"
+            - --start_time
+            - "<unix_timestamp_start>"
+            - --end_time
+            - "<unix_timestamp_end>"
+            - --project_id
+            - "2"
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-bucket
+            - configMapRef:
+                name: config-postgres
+            - secretRef:
+                name: secret-postgres
+          restartPolicy: OnFailure
