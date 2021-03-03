@@ -219,7 +219,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	// 5. Add the performance information
 	currency, err := pg.AddPerformanceReportInfo(projectID, attributionData, query.From, query.To,
-		*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey)
+		*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey, query.Timezone)
 	if err != nil {
 		return nil, err
 	}
@@ -967,7 +967,7 @@ func getKey(id1 string, id2 string) string {
 // Adds channel data to attributionData based on attribution id. Key id with no matching channel
 // data is left with empty name parameter
 func (pg *Postgres) AddPerformanceReportInfo(projectId uint64, attributionData map[string]*model.AttributionData,
-	from, to int64, customerAccountId string, attributionKey string) (string, error) {
+	from, to int64, customerAccountId string, attributionKey string, timeZone string) (string, error) {
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId, "Range": fmt.Sprintf("%d - %d", from, to)})
 
 	customerAccountIds := strings.Split(customerAccountId, ",")
@@ -990,8 +990,8 @@ func (pg *Postgres) AddPerformanceReportInfo(projectId uint64, attributionData m
 	}
 
 	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{projectId, customerAccountIds, reportType,
-		U.GetDateOnlyFromTimestamp(from),
-		U.GetDateOnlyFromTimestamp(to)})
+		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
+		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return "", err
