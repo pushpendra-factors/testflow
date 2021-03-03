@@ -224,7 +224,7 @@ var adwordsInternalPropertiesToReportsInternal = map[string]string{
 	"keyword:name":               "criteria",
 	"keyword:status":             "status",
 	"keyword:approval_status":    approvalStatus,
-	"keyword:match_type":         matchType,
+	"keyword:match_type":         "keyword_match_type",
 	"keyword:first_position_cpc": firstPositionCpc,
 	"keyword:first_page_cpc":     firstPageCpc,
 	"keyword:is_negative":        isNegative,
@@ -1041,7 +1041,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 		if groupBy.Property == "id" {
 			expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
 		} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
-			expression = fmt.Sprintf("((value->>'%s'::float)/1000000 as %s", internalValue, externalValue)
+			expression = fmt.Sprintf("((value->>'%s')::float)/1000000 as %s", internalValue, externalValue)
 		} else {
 			expression = fmt.Sprintf("value->>'%s' as %s", internalValue, externalValue)
 		}
