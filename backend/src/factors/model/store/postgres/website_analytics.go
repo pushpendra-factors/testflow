@@ -136,14 +136,9 @@ func (pg *Postgres) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (
 		"ProjectID": projectID,
 	})
 
-	var dashboardUnits []model.DashboardUnit
-
-	db := C.GetServices().Db
-	err := db.
-		Where("project_id = ?", projectID).
-		Find(&dashboardUnits).Error
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get web analytics queries from dashboard units.")
+	dashboardUnits, errCode := pg.GetDashboardUnitsForProjectID(projectID)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get web analytics queries from dashboard units.")
 		return 0, nil, http.StatusInternalServerError
 	}
 
@@ -1360,7 +1355,7 @@ func (pg *Postgres) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]
 	}
 
 	var cachePayloads []model.WebAnalyticsCachePayload
-	for _, rangeFunction := range U.QueryDateRangePresets {
+	for _, rangeFunction := range U.WebAnalyticsQueryDateRangePresets {
 		from, to := rangeFunction()
 
 		cachePayloads = append(cachePayloads, model.WebAnalyticsCachePayload{

@@ -218,10 +218,26 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	addWebsiteVisitorsInfo(attributionData, sessions, len(query.LinkedEvents))
 
 	// 5. Add the performance information
-	currency, err := pg.AddPerformanceReportInfo(projectID, attributionData, query.From, query.To,
-		*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey)
+	currency, err := pg.AddAdwordsPerformanceReportInfo(projectID, attributionData, query.From, query.To,
+		*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey, query.Timezone)
 	if err != nil {
 		return nil, err
+	}
+
+	if projectSetting.IntFacebookAdAccount != "" {
+		err := pg.AddFacebookPerformanceReportInfo(projectID, attributionData, query.From, query.To,
+			projectSetting.IntFacebookAdAccount, query.AttributionKey, query.Timezone)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if projectSetting.IntLinkedinAdAccount != "" {
+		err := pg.AddLinkedinPerformanceReportInfo(projectID, attributionData, query.From, query.To,
+			projectSetting.IntLinkedinAdAccount, query.AttributionKey, query.Timezone)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	result := &model.QueryResult{}
@@ -653,11 +669,11 @@ func (pg *Postgres) getEventInformation(projectId uint64,
 }
 
 // Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
-func (pg *Postgres) GetLinkedFunnelEventUsers(projectId uint64, queryFrom, queryTo int64,
+func (pg *Postgres) GetLinkedFunnelEventUsers(projectID uint64, queryFrom, queryTo int64,
 	linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
 	userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error {
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	var usersHitConversion []string
 	for key := range userIDInfo {
 		usersHitConversion = append(usersHitConversion, key)
@@ -681,7 +697,7 @@ func (pg *Postgres) GetLinkedFunnelEventUsers(projectId uint64, queryFrom, query
 			queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND " +
 				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
 				" AND user_id = ANY (VALUES " + usersPlaceHolder + " ) "
-			qParams := []interface{}{projectId, queryFrom, queryTo}
+			qParams := []interface{}{projectID, queryFrom, queryTo}
 			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
 			// add event filter
@@ -715,7 +731,7 @@ func (pg *Postgres) GetLinkedFunnelEventUsers(projectId uint64, queryFrom, query
 		}
 
 		// Part-II - Filter the fetched users from Part-I base on user_properties
-		filteredUserIdList, err := pg.ApplyUserPropertiesFilter(projectId, userIDList, userIDInfo, linkedEvent.Properties)
+		filteredUserIdList, err := pg.ApplyUserPropertiesFilter(projectID, userIDList, userIDInfo, linkedEvent.Properties)
 		if err != nil {
 			logCtx.WithError(err).Error("error while applying user properties")
 			return err
@@ -731,10 +747,10 @@ func (pg *Postgres) GetLinkedFunnelEventUsers(projectId uint64, queryFrom, query
 }
 
 // Applies user properties filter on given set of users and returns only the filters ones those match
-func (pg *Postgres) ApplyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo map[string]model.UserInfo,
+func (pg *Postgres) ApplyUserPropertiesFilter(projectID uint64, userIDList []string, userIDInfo map[string]model.UserInfo,
 	goalEventProperties []model.QueryProperty) ([]string, error) {
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 
 	wStmt, wParams, err := getFilterSQLStmtForUserProperties(goalEventProperties)
 	if err != nil {
@@ -742,13 +758,13 @@ func (pg *Postgres) ApplyUserPropertiesFilter(projectId uint64, userIdList []str
 	}
 	// return the same list if there's no user_properties filter
 	if wStmt == "" {
-		return userIdList, nil
+		return userIDList, nil
 	}
 
 	var userPropertiesIds []string
 	// Use properties Ids to speed up the search from user_properties table
-	for _, userId := range userIdList {
-		userPropertiesIds = append(userPropertiesIds, userIdInfo[userId].PropertiesID)
+	for _, userID := range userIDList {
+		userPropertiesIds = append(userPropertiesIds, userIDInfo[userID].PropertiesID)
 	}
 
 	var filteredUserIdList []string
@@ -757,29 +773,29 @@ func (pg *Postgres) ApplyUserPropertiesFilter(projectId uint64, userIdList []str
 	for _, users := range userPropertiesIdsInBatches {
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
-		queryUserIdCoalId := "SELECT user_id FROM user_properties WHERE id = ANY (VALUES " + placeHolder + " ) "
+		queryUserIdCoalID := "SELECT user_id FROM user_properties WHERE id = ANY (VALUES " + placeHolder + " ) "
 		var qParams []interface{}
 		qParams = append(qParams, value...)
 		// add user_properties filter
 		if wStmt != "" {
-			queryUserIdCoalId = queryUserIdCoalId + " AND " + fmt.Sprintf("( %s )", wStmt)
+			queryUserIdCoalID = queryUserIdCoalID + " AND " + fmt.Sprintf("( %s )", wStmt)
 			qParams = append(qParams, wParams...)
 		}
-		rows, err := pg.ExecQueryWithContext(queryUserIdCoalId, qParams)
+		rows, err := pg.ExecQueryWithContext(queryUserIdCoalID, qParams)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
 			return nil, err
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var userId string
-			if err = rows.Scan(&userId); err != nil {
+			var userID string
+			if err = rows.Scan(&userID); err != nil {
 				logCtx.WithError(err).Error("SQL Parse failed")
 				continue
 			}
-			if _, ok := userIdHitGoalEventTimestamp[userId]; !ok {
-				filteredUserIdList = append(filteredUserIdList, userId)
-				userIdHitGoalEventTimestamp[userId] = true
+			if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
+				filteredUserIdList = append(filteredUserIdList, userID)
+				userIdHitGoalEventTimestamp[userID] = true
 			}
 		}
 	}
@@ -794,15 +810,15 @@ func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 
-	conversionEventNameIds := eventNameToIdList[goalEventName]
+	conversionEventNameIDs := eventNameToIdList[goalEventName]
 	placeHolder := "?"
-	for i := 0; i < len(conversionEventNameIds)-1; i++ {
+	for i := 0; i < len(conversionEventNameIDs)-1; i++ {
 		placeHolder += ",?"
 	}
 	queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND timestamp >= ? AND " +
 		" timestamp <=? AND events.event_name_id IN (" + placeHolder + ") "
 	qParams := []interface{}{projectID, conversionFrom, conversionTo}
-	qParams = append(qParams, conversionEventNameIds...)
+	qParams = append(qParams, conversionEventNameIDs...)
 
 	// add event filter
 	wStmt, wParams, err := getFilterSQLStmtForEventProperties(goalEventProperties)
@@ -823,15 +839,15 @@ func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
 	var userIDList []string
 	userIdHitGoalEventTimestamp := make(map[string]int64)
 	for rows.Next() {
-		var userId string
+		var userID string
 		var timestamp int64
-		if err = rows.Scan(&userId, &timestamp); err != nil {
+		if err = rows.Scan(&userID, &timestamp); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed")
 			continue
 		}
-		if _, ok := userIdHitGoalEventTimestamp[userId]; !ok {
-			userIDList = append(userIDList, userId)
-			userIdHitGoalEventTimestamp[userId] = timestamp
+		if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
+			userIDList = append(userIDList, userID)
+			userIdHitGoalEventTimestamp[userID] = timestamp
 		}
 	}
 
@@ -897,29 +913,29 @@ func lookbackAdjustedTo(to int64, lookbackDays int) int64 {
 }
 
 // updateSessionsMapWithCoalesceID Clones a new map replacing userId by coalUserId.
-func updateSessionsMapWithCoalesceID(attributedSessionsByUserId map[string]map[string]model.UserSessionTimestamp,
+func updateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[string]model.UserSessionTimestamp,
 	usersInfo map[string]model.UserInfo) map[string]map[string]model.UserSessionTimestamp {
 
 	newSessionsMap := make(map[string]map[string]model.UserSessionTimestamp)
-	for userId, attributionIdMap := range attributedSessionsByUserId {
-		userInfo := usersInfo[userId]
-		for attributionId, newUserSession := range attributionIdMap {
+	for userID, attributionIdMap := range attributedSessionsByUserID {
+		userInfo := usersInfo[userID]
+		for attributionID, newUserSession := range attributionIdMap {
 			if _, ok := newSessionsMap[userInfo.CoalUserID]; ok {
-				if existingUserSession, ok := newSessionsMap[userInfo.CoalUserID][attributionId]; ok {
+				if existingUserSession, ok := newSessionsMap[userInfo.CoalUserID][attributionID]; ok {
 					// Update the existing attribution first and last touch.
 					existingUserSession.MinTimestamp = U.Min(existingUserSession.MinTimestamp, newUserSession.MinTimestamp)
 					existingUserSession.MaxTimestamp = U.Max(existingUserSession.MaxTimestamp, newUserSession.MaxTimestamp)
 					// Merging timestamp of same customer having 2 userIds.
 					existingUserSession.TimeStamps = append(existingUserSession.TimeStamps, newUserSession.TimeStamps...)
 					existingUserSession.WithinQueryPeriod = existingUserSession.WithinQueryPeriod || newUserSession.WithinQueryPeriod
-					newSessionsMap[userInfo.CoalUserID][attributionId] = existingUserSession
+					newSessionsMap[userInfo.CoalUserID][attributionID] = existingUserSession
 					continue
 				}
-				newSessionsMap[userInfo.CoalUserID][attributionId] = newUserSession
+				newSessionsMap[userInfo.CoalUserID][attributionID] = newUserSession
 				continue
 			}
 			newSessionsMap[userInfo.CoalUserID] = make(map[string]model.UserSessionTimestamp)
-			newSessionsMap[userInfo.CoalUserID][attributionId] = newUserSession
+			newSessionsMap[userInfo.CoalUserID][attributionID] = newUserSession
 		}
 	}
 	return newSessionsMap
@@ -927,33 +943,33 @@ func updateSessionsMapWithCoalesceID(attributedSessionsByUserId map[string]map[s
 
 // Maps the count distinct users session to campaign id and adds it to attributionData
 func addWebsiteVisitorsInfo(attributionData map[string]*model.AttributionData,
-	attributedSessionsByUserId map[string]map[string]model.UserSessionTimestamp, linkedEventsCount int) {
+	attributedSessionsByUserID map[string]map[string]model.UserSessionTimestamp, linkedEventsCount int) {
 	// Creating an empty linked events row.
 	emptyLinkedEventRow := make([]float64, 0)
 	for i := 0; i < linkedEventsCount; i++ {
 		emptyLinkedEventRow = append(emptyLinkedEventRow, 0.0)
 	}
 
-	userIdAttributionIdVisit := make(map[string]bool)
-	for userId, attributionIdMap := range attributedSessionsByUserId {
-		for attributionId, sessionTimestamp := range attributionIdMap {
+	userIDAttributionIDVisit := make(map[string]bool)
+	for userID, attributionIDMap := range attributedSessionsByUserID {
+		for attributionID, sessionTimestamp := range attributionIDMap {
 
 			// Only count sessions that happened during attribution period.
 			if sessionTimestamp.WithinQueryPeriod {
 
-				if _, ok := attributionData[attributionId]; !ok {
-					attributionData[attributionId] = &model.AttributionData{}
+				if _, ok := attributionData[attributionID]; !ok {
+					attributionData[attributionID] = &model.AttributionData{}
 					if linkedEventsCount > 0 {
 						// Init the linked events with 0.0 value.
 						tempRow := emptyLinkedEventRow
-						attributionData[attributionId].LinkedEventsCount = tempRow
+						attributionData[attributionID].LinkedEventsCount = tempRow
 					}
 				}
-				if _, ok := userIdAttributionIdVisit[getKey(userId, attributionId)]; ok {
+				if _, ok := userIDAttributionIDVisit[getKey(userID, attributionID)]; ok {
 					continue
 				}
-				attributionData[attributionId].WebsiteVisitors += 1
-				userIdAttributionIdVisit[getKey(userId, attributionId)] = true
+				attributionData[attributionID].WebsiteVisitors += 1
+				userIDAttributionIDVisit[getKey(userID, attributionID)] = true
 			}
 		}
 	}
@@ -966,11 +982,25 @@ func getKey(id1 string, id2 string) string {
 
 // Adds channel data to attributionData based on attribution id. Key id with no matching channel
 // data is left with empty name parameter
-func (pg *Postgres) AddPerformanceReportInfo(projectId uint64, attributionData map[string]*model.AttributionData,
-	from, to int64, customerAccountId string, attributionKey string) (string, error) {
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectId, "Range": fmt.Sprintf("%d - %d", from, to)})
+//
+// # ADGroup
+// SELECT value->>'ad_group_id' AS ad_group_id,  value->>'ad_group_name' AS ad_group_name,
+// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
+// SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents where project_id = '399'
+// AND customer_account_id IN ('1475899910') AND type = '10' AND timestamp between '20210220' AND '20210303'
+// group by value->>'ad_group_id', ad_group_name LIMIT 5;
+//
+// # Campaign
+// SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name,
+// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
+// SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents where project_id = '399'
+// AND customer_account_id IN ('1475899910') AND type = '5' AND timestamp between '20210220' AND '20210303'
+// group by value->>'campaign_id', campaign_name LIMIT 5;
+func (pg *Postgres) AddAdwordsPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
+	from, to int64, customerAccountID string, attributionKey string, timeZone string) (string, error) {
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 
-	customerAccountIds := strings.Split(customerAccountId, ",")
+	customerAccountIDs := strings.Split(customerAccountID, ",")
 
 	reportType := model.AdwordsDocumentTypeAlias[model.CampaignPerformanceReport] // 5
 	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
@@ -989,9 +1019,9 @@ func (pg *Postgres) AddPerformanceReportInfo(projectId uint64, attributionData m
 			"group by value->>'ad_group_id', ad_group_name"
 	}
 
-	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{projectId, customerAccountIds, reportType,
-		U.GetDateOnlyFromTimestamp(from),
-		U.GetDateOnlyFromTimestamp(to)})
+	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
+		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
+		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return "", err
@@ -999,29 +1029,29 @@ func (pg *Postgres) AddPerformanceReportInfo(projectId uint64, attributionData m
 	defer rows.Close()
 	for rows.Next() {
 		var keyName string
-		var keyId string
+		var keyID string
 		var impressions float64
 		var clicks float64
 		var spend float64
-		if err = rows.Scan(&keyId, &keyName, &impressions, &clicks, &spend); err != nil {
+		if err = rows.Scan(&keyID, &keyName, &impressions, &clicks, &spend); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed")
 			continue
 		}
-		matchingId := ""
-		if _, keyIdFound := attributionData[keyId]; keyIdFound {
-			matchingId = keyId
+		matchingID := ""
+		if _, keyIDFound := attributionData[keyID]; keyIDFound {
+			matchingID = keyID
 		} else if _, keyNameFound := attributionData[keyName]; keyNameFound {
-			matchingId = keyName
+			matchingID = keyName
 		}
-		if matchingId != "" {
-			attributionData[matchingId].Name = keyName
-			attributionData[matchingId].Impressions = int(impressions)
-			attributionData[matchingId].Clicks = int(clicks)
-			attributionData[matchingId].Spend = spend
+		if matchingID != "" {
+			attributionData[matchingID].Name = keyName
+			attributionData[matchingID].Impressions += int(impressions)
+			attributionData[matchingID].Clicks += int(clicks)
+			attributionData[matchingID].Spend += spend
 		}
 	}
 
-	currency, err := pg.GetAdwordsCurrency(projectId, customerAccountId, from, to)
+	currency, err := pg.GetAdwordsCurrency(projectID, customerAccountID, from, to)
 	if err != nil {
 		return "", err
 	}
@@ -1029,18 +1059,18 @@ func (pg *Postgres) AddPerformanceReportInfo(projectId uint64, attributionData m
 }
 
 // Returns currency used for adwords customer_account_id
-func (pg *Postgres) GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error) {
+func (pg *Postgres) GetAdwordsCurrency(projectID uint64, customerAccountID string, from, to int64) (string, error) {
 
-	customerAccountIds := strings.Split(customerAccountId, ",")
-	if len(customerAccountIds) == 0 {
+	customerAccountIDs := strings.Split(customerAccountID, ",")
+	if len(customerAccountIDs) == 0 {
 		return "", errors.New("no ad-words customer account id found")
 	}
 	queryCurrency := "SELECT value->>'currency_code' AS currency FROM adwords_documents " +
 		" WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ? " +
 		" ORDER BY timestamp DESC LIMIT 1"
-	logCtx := log.WithField("ProjectId", projectId)
-	// Checking just for customerAccountIds[0], we are assuming that all accounts have same currency.
-	rows, err := pg.ExecQueryWithContext(queryCurrency, []interface{}{projectId, customerAccountIds[0], 9, U.GetDateOnlyFromTimestamp(from),
+	logCtx := log.WithField("ProjectId", projectID)
+	// Checking just for customerAccountIDs[0], we are assuming that all accounts have same currency.
+	rows, err := pg.ExecQueryWithContext(queryCurrency, []interface{}{projectID, customerAccountIDs[0], 9, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
 		logCtx.WithError(err).Error("failed to build meta for attribution query result")
@@ -1055,4 +1085,150 @@ func (pg *Postgres) GetAdwordsCurrency(projectId uint64, customerAccountId strin
 		}
 	}
 	return currency, nil
+}
+
+// Adds Facebook channel data to attributionData based on attribution id. Key id with no matching channel
+// data is left with empty name parameter
+// # ADGroup
+// SELECT value->>'adset_id' AS adset_id,  value->>'adset_name' AS adset_name, SUM((value->>'impressions')::float)
+// AS impressions, SUM((value->>'clicks')::float) AS clicks, SUM((value->>'spend')::float)/1000000 AS total_spend
+// FROM facebook_documents where project_id = '399' AND customer_ad_account_id IN ('act_367960820625667')
+// AND type = '6' AND timestamp between '20210220' AND '20210303' group by value->>'adset_id', adset_name LIMIT 5;
+//
+// # Campaign
+// SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name,
+// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
+// SUM((value->>'spend')::float)/1000000 AS total_spend FROM facebook_documents where project_id = '399'
+// AND customer_ad_account_id IN ('act_367960820625667') AND type = '5' AND timestamp between '20210220'
+// AND '20210303' group by value->>'campaign_id', campaign_name LIMIT 5;
+func (pg *Postgres) AddFacebookPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
+	from, to int64, customerAccountID string, attributionKey string, timeZone string) error {
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
+
+	customerAccountIDs := strings.Split(customerAccountID, ",")
+
+	reportType := facebookDocumentTypeAlias["campaign_insights"] // 5
+	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
+		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
+		"SUM((value->>'spend')::float) AS total_spend FROM facebook_documents " +
+		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
+		"group by value->>'campaign_id', campaign_name"
+
+	// AdGroup report for AttributionKey as AdGroup
+	if attributionKey == model.AttributionKeyAdgroup {
+		reportType = facebookDocumentTypeAlias["ad_set_insights"] // 5
+		performanceQuery = "SELECT value->>'adset_id' AS adset_id,  value->>'adset_name' AS adset_name, " +
+			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
+			"SUM((value->>'spend')::float) AS total_spend FROM facebook_documents " +
+			"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
+			"group by value->>'adset_id', adset_name"
+	}
+
+	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
+		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
+		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var keyName string
+		var keyID string
+		var impressions float64
+		var clicks float64
+		var spend float64
+		if err = rows.Scan(&keyID, &keyName, &impressions, &clicks, &spend); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed")
+			continue
+		}
+		matchingID := ""
+		if _, keyIdFound := attributionData[keyID]; keyIdFound {
+			matchingID = keyID
+		} else if _, keyNameFound := attributionData[keyName]; keyNameFound {
+			matchingID = keyName
+		}
+		if matchingID != "" {
+			// TODO (Anil) How do we resolve the conflict in same name ads across G/FB/Linkedin
+			attributionData[matchingID].Name = keyName
+			attributionData[matchingID].Impressions += int(impressions)
+			attributionData[matchingID].Clicks += int(clicks)
+			// TODO (Anil) Add currency or use conversion factor to set in default currency for G/FB/Linkedin
+			attributionData[matchingID].Spend += spend
+		}
+	}
+	return nil
+}
+
+// Adds Linkedin channel data to attributionData based on attribution id. Key id with no matching channel
+// data is left with empty name parameter
+// # ADGroup
+// SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name,
+// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
+// SUM((value->>'costInLocalCurrency')::float)/1000000 AS total_spend FROM linkedin_documents where
+// project_id = '399' AND customer_ad_account_id IN ('506157045') AND type = '6' AND timestamp
+// between '20210220' AND '20210303' group by value->>'campaign_id', campaign_name LIMIT 5;
+//
+// # Campaign
+// SELECT value->>'campaign_group_id' AS campaign_group_id,  value->>'campaign_group_name' AS campaign_group_name,
+// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
+// SUM((value->>'costInLocalCurrency')::float)/1000000 AS total_spend FROM linkedin_documents
+// where project_id = '399' AND customer_ad_account_id IN ('506157045') AND type = '5' AND
+// timestamp between '20210220' AND '20210303' group by value->>'campaign_group_id', campaign_group_name LIMIT 5;
+func (pg *Postgres) AddLinkedinPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
+	from, to int64, customerAccountID string, attributionKey string, timeZone string) error {
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
+
+	customerAccountIDs := strings.Split(customerAccountID, ",")
+
+	reportType := linkedinDocumentTypeAlias["campaign_group_insights"] // 5
+	performanceQuery := "SELECT value->>'campaign_group_id' AS campaign_group_id,  value->>'campaign_group_name' AS campaign_group_name, " +
+		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
+		"SUM((value->>'costInLocalCurrency')::float) AS total_spend FROM linkedin_documents " +
+		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
+		"group by value->>'campaign_group_id', campaign_group_name"
+
+	// AdGroup report for AttributionKey as AdGroup
+	if attributionKey == model.AttributionKeyAdgroup {
+		reportType = linkedinDocumentTypeAlias["campaign_insights"] // 6
+		performanceQuery = "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
+			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
+			"SUM((value->>'costInLocalCurrency')::float) AS total_spend FROM linkedin_documents " +
+			"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
+			"group by value->>'campaign_id', campaign_name"
+	}
+
+	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
+		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
+		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var keyName string
+		var keyID string
+		var impressions float64
+		var clicks float64
+		var spend float64
+		if err = rows.Scan(&keyID, &keyName, &impressions, &clicks, &spend); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed")
+			continue
+		}
+		matchingID := ""
+		if _, keyIdFound := attributionData[keyID]; keyIdFound {
+			matchingID = keyID
+		} else if _, keyNameFound := attributionData[keyName]; keyNameFound {
+			matchingID = keyName
+		}
+		if matchingID != "" {
+			attributionData[matchingID].Name = keyName
+			attributionData[matchingID].Impressions += int(impressions)
+			attributionData[matchingID].Clicks += int(clicks)
+			// TODO (Anil) Add currency or use conversion factor to set in default currency for G/FB/Linkedin
+			attributionData[matchingID].Spend += spend
+		}
+	}
+	return nil
 }

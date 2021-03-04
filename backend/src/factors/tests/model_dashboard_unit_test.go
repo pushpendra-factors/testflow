@@ -896,10 +896,7 @@ func TestCacheDashboardUnitsForProjectIDEventsGroupQuery(t *testing.T) {
 	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 
-	for key, rangeFunction := range U.QueryDateRangePresets {
-		if key == "TODAY" {
-			fmt.Println("RUNNING FOR TODAY")
-		}
+	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to := rangeFunction()
 		for unitID, queryMap := range dashboardUnitQueriesMap {
 			queryClass := queryMap["class"].(string)
@@ -985,10 +982,7 @@ func TestCacheDashboardUnitsForProjectIDChannelsGroupQuery(t *testing.T) {
 	updatedUnitsCount := store.GetStore().CacheDashboardUnitsForProjectID(project.ID, 1)
 	assert.Equal(t, len(dashboardQueriesStr), updatedUnitsCount)
 
-	for key, rangeFunction := range U.QueryDateRangePresets {
-		if key == "TODAY" {
-			fmt.Println("RUNNING FOR TODAY")
-		}
+	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to := rangeFunction()
 		for unitID, queryMap := range dashboardUnitQueriesMap {
 			queryClass := queryMap["class"].(string)
