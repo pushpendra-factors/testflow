@@ -18,6 +18,7 @@ type AttributionQuery struct {
 	From                          int64                      `json:"from"`
 	To                            int64                      `json:"to"`
 	QueryType                     string                     `json:"query_type"`
+	Timezone                      string                     `json:"time_zone"`
 }
 
 type AttributionQueryUnit struct {
