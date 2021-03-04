@@ -64,9 +64,13 @@ type Model interface {
 		goalEventProperties []model.QueryProperty, from, to int64,
 		eventNameToIdList map[string][]interface{}) (map[string]model.UserInfo,
 		map[string][]model.UserIDPropID, map[string]int64, error)
-	AddPerformanceReportInfo(projectId uint64, attributionData map[string]*model.AttributionData,
+	AddAdwordsPerformanceReportInfo(projectId uint64, attributionData map[string]*model.AttributionData,
 		from, to int64, customerAccountId string, attributionKey string, timeZone string) (string, error)
 	GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error)
+	AddFacebookPerformanceReportInfo(projectId uint64, attributionData map[string]*model.AttributionData,
+		from, to int64, customerAccountId string, attributionKey string, timeZone string) error
+	AddLinkedinPerformanceReportInfo(projectId uint64, attributionData map[string]*model.AttributionData,
+		from, to int64, customerAccountId string, attributionKey string, timeZone string) error
 
 	// bigquery_setting
 	CreateBigquerySetting(setting *model.BigquerySetting) (*model.BigquerySetting, int)
