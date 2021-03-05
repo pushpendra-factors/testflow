@@ -15,7 +15,7 @@ from wi_poc.src.feature_processor import get_criteria_filter, preselect_features
 from wi_poc.src.preprocessor import sanitize_data
 from wi_poc.src.counter import compute_base_counts, compute_match_counts
 from wi_poc.src.filterer import compute_pass_filters, decide_pass_filters, get_filter_params
-from wi_poc.src.metrics import compute_intermediate_metrics, compute_difference_metrics
+from wi_poc.src.metrics import compute_intermediate_metrics, compute_difference_metrics, compute_publishable_metrics
 
 
 def prepare_week_pair_params(project_id = None, wk1_key=DEFAULT_WK1_KEY, wk2_key=DEFAULT_WK2_KEY):
@@ -48,7 +48,7 @@ def format_criteria_name(criteria):
     name = '&'.join(name_components)
     name = name.replace('/', '_')
     return name
-    
+
 
 def store_insights(df, fr_df, out_folder, project_id, wk1_key, wk2_key, uoi, target):
     target_name = format_criteria_name(target)
@@ -63,6 +63,30 @@ def store_insights(df, fr_df, out_folder, project_id, wk1_key, wk2_key, uoi, tar
     df.to_csv(smart_open(out_file_path, 'w'))
     fr_df.to_csv(smart_open(frs_file_path, 'w'))
 
+
+def is_salesforce_feature(f):
+    return f.startswith('$sf_') or f.startswith('$salesforce_')
+
+
+def is_hubspot_feature(f):
+    return f.startswith('$hubspot_')
+
+
+def is_crm_feature(f):
+    return is_salesforce_feature(f) or is_hubspot_feature(f)
+
+
+def get_insight_type(fv):
+    f = fv.split('=')[0]
+    if is_crm_feature(f):
+        return 'distribution'
+    else:
+        return 'funnel'
+
+
+def add_insight_type(df):
+    df['insight_type'] = df.index.map(get_insight_type)
+    
 
 def generate_weekly_insights(project_id=DEFAULT_PROJECT_ID,
                              wk1_key=DEFAULT_WK1_KEY,
@@ -104,7 +128,7 @@ def generate_weekly_insights(project_id=DEFAULT_PROJECT_ID,
             fv_str = '{}={}'.format(f, v)
             f1, fm1, pf1, pfm1, crf1 = compute_match_counts(df1, target_df1, u1, m1, f, v, uoi)
             f2, fm2, pf2, pfm2, crf2 = compute_match_counts(df2, target_df2, u2, m2, f, v, uoi)
-            filters = compute_pass_filters(f1, f2, fm1, fm2, filter_params)
+            filters = compute_pass_filters(f1, f2, fm1, fm2, pf1, pf2, pfm1, pfm2, filter_params)
             pass_decision = decide_pass_filters(filters, filters_keys)
             if not pass_decision:
                 fr_stats[fv_str] = populate_filter_reject_stats(u1, u2, m1, m2,
@@ -117,9 +141,13 @@ def generate_weekly_insights(project_id=DEFAULT_PROJECT_ID,
                                 'crf1': crf1, 'crf2': crf2, 'pfm1': pfm1, 'pfm2': pfm2}
     df = pd.DataFrame(stat_dict).T
     fr_df = pd.DataFrame(fr_stats).T
-    if df.shape[0] > 0:
-        compute_intermediate_metrics(df)
-        compute_difference_metrics(df, difference_metric_names)
+    if df.shape[0] == 0:
+        print("Internal WI Error: Zero insights found.")
+        return
+    compute_intermediate_metrics(df)
+    add_insight_type(df)
+    compute_difference_metrics(df, difference_metric_names)
+    compute_publishable_metrics(df)
     store_insights(df, fr_df, DEFAULT_CLOUD_PATH, project_id,
                    wk1_key, wk2_key, uoi, target)
 
