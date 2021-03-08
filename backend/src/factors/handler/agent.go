@@ -494,7 +494,7 @@ func sendAgentResetPasswordEmail(agent *model.Agent) error {
 		return err
 	}
 	fe_host := C.GetProtocol() + C.GetAPPDomain()
-	link := fmt.Sprintf("%s/#/setpassword?token=%s", fe_host, authToken)
+	link := fmt.Sprintf("%s/setpassword?token=%s", fe_host, authToken)
 	log.WithField("link", link).Debug("Reset Password LInk")
 
 	log.WithField("email", agent.Email).Debug("Sending Agent Password Reset Email")
