@@ -845,6 +845,10 @@ func IsCampaignEvent(eventName string) bool {
 	return strings.HasPrefix(eventName, "$session[campaign")
 }
 
+func IsItreeCampaignEvent(eventName string) bool {
+	return strings.HasPrefix(eventName, "$session[campaign") || strings.HasPrefix(eventName, "$session[source") || strings.HasPrefix(eventName, "$session[medium")
+}
+
 // GetDashboardCacheResultExpiryInSeconds Returns expiry for cache based on query date range.
 func GetDashboardCacheResultExpiryInSeconds(from, to int64) float64 {
 	toStartOfDay := GetBeginningOfDayTimestampZ(to, TimeZoneStringIST)

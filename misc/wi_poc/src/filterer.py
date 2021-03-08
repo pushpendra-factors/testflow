@@ -44,6 +44,8 @@ def get_bucketed_filter_params(counts):
         return 0.10
     def bucket_fc_leads(n1_leads, n2_leads):
         return 0.10
+    def bucket_prev():
+        return 0.90
     u = min(counts['u1'], counts['u2'])
     m = min(counts['m1'], counts['m2'])
     cr = min(counts['cr1'], counts['cr2'])
@@ -51,7 +53,8 @@ def get_bucketed_filter_params(counts):
           'min_f': bucket_users(u), 'min_crf': bucket_rate(cr),
           'min_fc_f': bucket_fc_users(counts['u1'], counts['u2']),
           'min_fc_fm': bucket_fc_leads(counts['m1'], counts['m2']),
-          'min_fm': bucket_leads(m)}
+          'min_fm': bucket_leads(m),
+          'max_prev': bucket_prev()}
     return fp
 
 def get_filter_params(counts, mode=None):
@@ -62,7 +65,7 @@ def get_filter_params(counts, mode=None):
     return fp
 
 
-def compute_pass_filters(f1, f2, fm1, fm2, fp):
+def compute_pass_filters(f1, f2, fm1, fm2, pf1, pf2, pfm1, pfm2, fp):
     """
     Compute rule-based filters. For any filter, True means accept (pass),
     and False means reject (stop).
@@ -97,6 +100,7 @@ def compute_pass_filters(f1, f2, fm1, fm2, fp):
                             np.abs(fm1 - fm2) >= fp['min_fm']])
     filters['sixth'] = any([fm1 >= fp['min_fm1'],
                             fm2 >= fp['min_fm2']])
+    filters['max_prev'] = all([x <= fp['max_prev'] for x in [pf1, pf2, pfm1, pfm2]])
     return filters
 
 

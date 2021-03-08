@@ -365,7 +365,7 @@ func getLinkedEventColumnAsInterfaceList(spend float64, data []float64) []interf
 		if val != 0.0 {
 			cpc, _ = U.FloatRoundOffWithPrecision(spend/val, U.DefaultPrecision)
 		}
-		list = append(list, []interface{}{val, cpc})
+		list = append(list, val, cpc)
 	}
 	return list
 }
@@ -378,7 +378,7 @@ func getRowsByMaps(attributionData map[string]*model.AttributionData,
 	nonMatchingRow := []interface{}{"none", 0, 0, float64(0), int64(0), float64(0), float64(0),
 		float64(0), float64(0)}
 	for i := 0; i < len(linkedEvents); i++ {
-		nonMatchingRow = append(nonMatchingRow, []interface{}{0.0, 0.0})
+		nonMatchingRow = append(nonMatchingRow, 0.0, 0.0)
 	}
 	for key, data := range attributionData {
 		attributionIdName := data.Name

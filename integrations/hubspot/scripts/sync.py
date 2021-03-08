@@ -4,6 +4,7 @@ import requests
 import json
 import urllib
 import sys
+import time
 
 parser = OptionParser()
 parser.add_option("--env", dest="env", default="development")
@@ -17,6 +18,11 @@ DOC_TYPES = [ "contact", "company", "deal", "form", "form_submission" ]
 
 METRIC_TYPE_INCR = "incr"
 HEALTHCHECK_PING_ID = "87137001-b18b-474c-8bc5-63324baff2a8"
+
+API_RATE_LIMIT_TEN_SECONDLY_ROLLING = "TEN_SECONDLY_ROLLING"
+API_RATE_LIMIT_DAILY = "DAILY"
+API_ERROR_RATE_LIMIT = "RATE_LIMIT"
+RETRY_LIMIT = 10
 
 # Todo: Boilerplate, move this to a reusable module.
 def notify(env, source, message):
@@ -88,12 +94,12 @@ def build_properties_param_str(properties=[]):
         param_str = param_str + 'properties=' + prop
     return param_str
 
-def get_all_properties_by_doc_type(doc_type, api_key):
+def get_all_properties_by_doc_type(project_id,doc_type, api_key):
     url = "https://api.hubapi.com/properties/v1/"+doc_type+"/properties?"
     parameter_dict = { 'hapikey': api_key }
     parameters = urllib.parse.urlencode(parameter_dict)
     get_url = url + parameters
-    r = requests.get(url= get_url, headers = {})
+    r = get_with_fallback_retry(project_id, get_url)
     if not r.ok:
         log.error("Failure response %d from hubspot on get_properties_by_doc_type for doc type %s", r.status_code, doc_type)
         return [], r.ok
@@ -104,6 +110,29 @@ def get_all_properties_by_doc_type(doc_type, api_key):
         properties.append(contact_property["name"])
     return properties, r.ok
 
+def get_with_fallback_retry(project_id, get_url):
+    retries = 0
+    while True:
+        r = requests.get(url=get_url, headers = {})
+        if r.status_code != 429:
+            return r
+        res_json = r.json()
+        if res_json["errorType"] == API_ERROR_RATE_LIMIT:
+            if res_json["policyName"] == API_RATE_LIMIT_TEN_SECONDLY_ROLLING:
+                if retries > RETRY_LIMIT:
+                    log.error("Retry exhausted on %s for project_id %d.",API_RATE_LIMIT_TEN_SECONDLY_ROLLING,project_id)
+                    raise Exception("Retry exhausted with "+str(retries)+" retries")
+
+                log.warning("Hubspot API limit exceeed %s retry %d, retrying in 2 seconds",API_RATE_LIMIT_TEN_SECONDLY_ROLLING, retries)
+                retries += 1
+                time.sleep(2)
+                continue
+            elif res_json["policyName"] == API_RATE_LIMIT_DAILY:
+                raise Exception("Hubspot API daily rate limit exceeded")
+            else:
+                raise Exception("Unknown error occured on errorType RATE_LIMIT")
+        else:
+            raise Exception("Unknown error occured")
 
 def sync_contacts(project_id, api_key, sync_all=False):    
     if sync_all:
@@ -118,7 +147,7 @@ def sync_contacts(project_id, api_key, sync_all=False):
     has_more = True
     count = 0
     parameter_dict = { 'hapikey': api_key, 'count': PAGE_SIZE }
-    properties, ok = get_all_properties_by_doc_type("contacts", api_key)
+    properties, ok = get_all_properties_by_doc_type(project_id,"contacts", api_key)
     if not ok:
         log.error("Failure loading properties for project_id %d on sync_contacts", project_id)
         return
@@ -132,9 +161,7 @@ def sync_contacts(project_id, api_key, sync_all=False):
         get_url = get_url + '&' + properties_str
 
         log.warning("Downloading contacts for project_id %d from url %s.", project_id, get_url)
-        r = requests.get(url= get_url, headers = {})
-        if r.status_code == 429:
-            raise Exception("hubspot api rate limit exceeded for project "+str(project_id))
+        r = get_with_fallback_retry(project_id,get_url)
         if not r.ok:
             log.error("Failure response %d from hubspot on sync_contacts", r.status_code)
             break
@@ -174,7 +201,7 @@ def sync_deals(project_id, api_key, sync_all=False):
         # mandatory property needed on response, returns no properties if not given.
         properties = []
         if sync_all:
-            properties, ok = get_all_properties_by_doc_type("deals", api_key)
+            properties, ok = get_all_properties_by_doc_type(project_id,"deals", api_key)
             if not ok:
                 log.error("Failure loading properties for project_id %d on sync_deals", project_id)
                 break
@@ -190,9 +217,7 @@ def sync_deals(project_id, api_key, sync_all=False):
                 get_url = get_url + '&includeAssociations=true'
 
             log.warning("Downloading deals for project_id %d from url %s.", project_id, get_url)
-            r = requests.get(url= get_url, headers = {})
-            if r.status_code == 429: 
-                raise Exception("Hubspot API rate limit exceeded for project "+str(project_id))
+            r = get_with_fallback_retry(project_id, get_url)
             if not r.ok:
                 log.error("Failure response %d from hubspot on sync_deals", r.status_code)
                 break
@@ -225,7 +250,7 @@ def get_company_contacts(project_id, api_key, company_id):
     parameters = urllib.parse.urlencode(parameter_dict)
     get_url = url + parameters
     log.warning("Downloading company contacts from url %s.", get_url)
-    r = requests.get(url=get_url, headers = {})
+    r = get_with_fallback_retry(project_id, get_url)
     if r.status_code == 429: 
         log.error("Hubspot API rate limit exceeded for project "+str(project_id))
         return contacts
@@ -271,7 +296,7 @@ def sync_companies(project_id, api_key, sync_all=False):
 
         properties = []
         if sync_all:
-            properties, ok = get_all_properties_by_doc_type("companies", api_key)
+            properties, ok = get_all_properties_by_doc_type(project_id,"companies", api_key)
             if not ok:
                 log.error("Failure loading properties for project_id %d on sync_companies", project_id)
                 return
@@ -285,9 +310,7 @@ def sync_companies(project_id, api_key, sync_all=False):
                 get_url = get_url + '&' + build_properties_param_str(properties)
 
             log.warning("Downloading companies for project_id %d from url %s.", project_id, get_url)
-            r = requests.get(url= get_url, headers = {})
-            if r.status_code == 429:
-                raise Exception("Hubspot API rate limit exceeded for project "+str(project_id))
+            r = get_with_fallback_retry(project_id, get_url)
             if not r.ok:
                 log.error("Failure response %d from hubspot on sync_companies", r.status_code)
                 break
@@ -318,9 +341,7 @@ def sync_forms(project_id, api_key):
 
     count = 0
     log.warning("Downloading forms for project_id %d from url %s.", project_id, get_url)
-    r = requests.get(url=get_url, headers = {})
-    if r.status_code == 429:
-        raise Exception("Hubspot API rate limit exceeded for project %d", project_id)
+    r = get_with_fallback_retry(project_id, get_url)
     if not r.ok:
         log.error("Failure response %d from hubspot on sync_forms", r.status_code)
         return
@@ -363,9 +384,7 @@ def sync_form_submissions(project_id, api_key):
         
         count = 0
         log.warning("Downloading form submissions for project_id %d from url %s.", project_id, get_url)
-        r = requests.get(url=get_url, headers = {})
-        if r.status_code == 429:
-            raise Exception("Hubspot API rate limit exceeded for project "+str(project_id))
+        r = get_with_fallback_retry(project_id, get_url)
         if not r.ok:
             log.error("Failure response %d from hubspot on sync_form_submissions", r.status_code)
             return

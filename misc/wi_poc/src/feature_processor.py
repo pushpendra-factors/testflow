@@ -94,9 +94,24 @@ def get_criteria_filter(df, criteria=None):
         criteria_feat = [criteria_feat]
         criteria_val = [criteria_val]
         criteria_assert = [criteria_assert]
-    criteria_filters = [df[cf] == cv for cf, cv, ca in zip(criteria_feat, criteria_val, criteria_assert)]
-    criteria_filters = [(f if a else ~f) for f, a in zip(criteria_filters, criteria_assert)]
-    criteria_filter = functools.reduce(lambda x, y: x & y, criteria_filters)
+        criteria = (criteria_feat, criteria_val, criteria_assert)
+    criteria_compliant_users = set()
+    first_time_flag = True
+    for cf, cv, ca in zip(criteria_feat, criteria_val, criteria_assert):
+        this_criteria_filter = (df[cf].isna()) if cv is None else (df[cf]==cv)
+        users = set(df[this_criteria_filter]['uid'].unique())
+        if first_time_flag:
+            first_time_flag = False
+            if ca:
+                criteria_compliant_users.update(users)
+            else:
+                criteria_compliant_users.update(set(df[~df['uid'].isin(users)]['uid'].unique()))
+        else:
+            if ca:
+                criteria_compliant_users.intersection_update(users)
+            else:
+                criteria_compliant_users.difference_update(users)
+    criteria_filter = df['uid'].isin(criteria_compliant_users)
     return criteria_filter
 
 
@@ -249,6 +264,7 @@ def preselect_features(df1, df2, target,
     else:
         exp_feats = list(sorted(feats.difference({target_feat, DEFAULT_UID_FEAT})))
     return feats, target_compliant_fvs, exp_feats
+
 
 def compute_candidate_values(df1, df2, f, target_compliant_fvs):
     """
