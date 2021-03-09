@@ -19,6 +19,7 @@ type Queries struct {
 	CreatedByName string         `gorm:"-" json:"created_by_name"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
+	Settings      postgres.Jsonb `json:"settings"`
 }
 
 const (

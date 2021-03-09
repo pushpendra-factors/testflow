@@ -410,6 +410,7 @@ CREATE TABLE IF NOT EXISTS queries (
     project_id bigint,
     title text, -- Add trigram index for like queries.
     query json,
+    settings json,
     type int,
     is_deleted boolean NOT NULL DEFAULT FALSE,
     created_by text,

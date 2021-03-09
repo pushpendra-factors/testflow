@@ -215,8 +215,9 @@ func (pg *Postgres) UpdateSavedQuery(projectID uint64, queryID uint64, query *mo
 	if query.Title != "" {
 		updateFields["title"] = query.Title
 	}
-	if !U.IsEmptyPostgresJsonb(&query.Query) {
-		updateFields["query"] = query.Query
+
+	if !U.IsEmptyPostgresJsonb(&query.Settings) {
+		updateFields["settings"] = query.Settings
 	}
 
 	err := db.Model(&model.Queries{}).Where("project_id = ? AND id=? AND type=? AND is_deleted = ?",
