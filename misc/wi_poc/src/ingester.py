@@ -6,8 +6,9 @@ from wi_poc.src.preprocessor import sanitize_screen_size_params
 import pandas as pd
 from wi_poc.src.utils import merge_dict
 import os
+import time
 from wi_poc.src.defaults import DEFAULT_DEDUPLICATE_LOGIC, DEFAULT_PROJECT_ID,\
-    DEFAULT_MODEL_ID, DEFAULT_BASE
+    DEFAULT_MODEL_ID, DEFAULT_BASE, IZOOTO, DEFAULT_MERGE_UPR_LOGIC
 from wi_poc.src.config import DEFAULT_CLOUD_PATH
 
 def read_and_parse_weekly_data_without_upr_merge(events_file_path,
@@ -32,50 +33,123 @@ def read_and_parse_weekly_data_without_upr_merge(events_file_path,
     return df
 
 
-def wind_up_user(user_lines, series_list, merge_upr_flag, flatten_properties, deduplicate_logic):
+def is_salesforce_event(event_name):
+    return event_name.startswith('$sf_')
+
+
+def is_hubspot_event(event_name):
+    return event_name.startswith('$hubspot_')
+
+
+def is_crm_event(event_name):
+    return is_salesforce_event(event_name) or is_hubspot_event(event_name)
+
+
+def wind_up_user(user_lines, series_list, merge_upr_flag, flatten_properties, \
+        deduplicate_logic, counts, merge_upr_logic=DEFAULT_MERGE_UPR_LOGIC):
+    if contains_unsubscribe_event(user_lines):
+        counts['unsubscribe_users_removed'] += 1
+        return
+    if not contains_session_event(user_lines):
+        counts['no_session_users_removed'] += 1
+        return
     if merge_upr_flag:
-        final_upr = merge_dict([ul['upr'] for ul in user_lines], 'final')
+        upr_list = [ul['upr'] for ul in user_lines]
+        final_merged_upr = merge_dict(upr_list)
+        prev_upr = None
+        for ul in user_lines:
+            if merge_upr_logic == 'cumulative':
+                if is_crm_event(ul['en']):
+                    ul['upr'] = dict(merge_dict([prev_upr, ul['upr']]))
+                prev_upr = dict(ul['upr'])
+            elif merge_upr_logic == 'final':
+                ul['upr'] = dict(final_merged_upr)
     for ul in user_lines:
-        if merge_upr_flag:
-            ul['upr'] = dict(final_upr)
         if flatten_properties:
             ul = flatten_epr_upr(ul, deduplicate_logic)
         series_list.append(ul)
 
 
+def is_izooto(project_id):
+    if project_id is None:
+        return False
+    return project_id == IZOOTO
+
+def contains_event(user_lines, event='$session'):
+    return any([l['en'] == event for l in user_lines])
+
+def contains_unsubscribe_event(user_lines):
+    unsubscribe_event = 'www.izooto.com/campaign/unsubscribing-from-web-push-notifications'
+    return contains_event(user_lines, unsubscribe_event)
+
+def contains_session_event(user_lines):
+    session_event = '$session'
+    return contains_event(user_lines, session_event)
+
+def aggregate_user_lines(line, user_lines, project_id=None, counts=None):
+    # if line['en'] == '$session' and \
+    #     is_izooto(project_id) and \
+    #         contains_unsubscribe_event(user_lines): # If an unsubscribe event occurs for iZooto
+    #     counts['unsubscribe_users_removed'] += 1
+    #     user_lines[:] = [] # Makes an in-place change.
+    user_lines.append(line)
+
+
+def process_parsed_line(line, prev_uid, user_lines, series_list, merge_upr_flag,\
+                        flatten_properties, deduplicate_logic, project_id, counts):
+    start = time.time()
+    curr_uid = line['uid']
+    if curr_uid == prev_uid: # The same user is continuing
+        aggregate_user_lines(line, user_lines, project_id, counts)
+    else: # A new user started
+        # Be done with the previous user:
+        if prev_uid != -1:
+            wind_up_user(user_lines, series_list, 
+                            merge_upr_flag, flatten_properties, deduplicate_logic, counts)
+        # And start with the new user:
+        counts['users_encountered'] += 1
+        user_lines[:] = [line] # This changes the list in-place!
+        prev_uid = curr_uid
+    end = (time.time()-start)
+    if end > 1:
+        print("Time taken: {}".format(end))
+    return prev_uid
+
 def read_and_parse_weekly_data(events_file_path,
                                n_lines=None,
                                flatten_properties=True,
                                deduplicate_logic=DEFAULT_DEDUPLICATE_LOGIC,
-                               merge_upr_flag=True):
+                               merge_upr_flag=True,
+                               project_id = None,
+                               base = None):
     events_file_handle = smart_open(events_file_path, 'r')
     series_list = []
     pbar = tqdm(total=n_lines, desc='Read events') if n_lines else tqdm(desc='Read events')
     prev_uid = -1
-    curr_uid = -1
+    counts = {'read_line': 0,
+              'parse_success_line': 0,
+              'parse_failure_line': 0,
+              'unsubscribe_users_removed': 0,
+              'users_encountered': 0,
+              'no_session_users_removed': 0}
     user_lines = []
     while True:
         pbar.update()
         line = events_file_handle.readline()
+        counts['read_line'] += 1
         if not line:
             break
         try:
             line = json.loads(line)
+            counts['parse_success_line'] += 1
         except json.decoder.JSONDecodeError:
+            counts['parse_failure_line'] += 1
             print('ERROR PARSING: \n\n', line, '\n\n')
             continue
-        curr_uid = line['uid']
-        if curr_uid == prev_uid: # The same user is continuing
-            user_lines.append(line)
-        else: # A new user started
-            # Be done with the previous user:
-            if prev_uid != -1:
-                wind_up_user(user_lines, series_list, 
-                             merge_upr_flag, flatten_properties, deduplicate_logic)
-            # And start with the new user:
-            user_lines = [line]
-            prev_uid = curr_uid
+        prev_uid = process_parsed_line(line, prev_uid, user_lines, series_list, \
+            merge_upr_flag, flatten_properties, deduplicate_logic, project_id, counts)
     pbar.close()
+    print(counts)
     events_file_handle.close()
     df = pd.DataFrame(series_list)
     return df
@@ -121,7 +195,9 @@ def get_weekly_data(cloud_path=DEFAULT_CLOUD_PATH,
                                     n_lines,
                                     flatten_properties,
                                     deduplicate_logic,
-                                    merge_upr_flag)
+                                    merge_upr_flag,
+                                    project_id,
+                                    base)
     df = filter_for_base(df, base)
     if sanitize_screen_size:
         print('Sanitizing screen size...', end='')

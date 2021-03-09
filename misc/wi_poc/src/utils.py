@@ -16,22 +16,26 @@ def is_iterable(x):
     iter_types = [list, dict, set, tuple, frozenset]
     return any([isinstance(x, t) for t in iter_types])
 
-def merge_dict_pair(dict1, dict2, logic='final'):
+def merge_dict_pair(dict1, dict2):
     keys = set(dict1.keys()).union(set(dict2.keys()))
     merged_dict = {}
     for k in keys:
-        if logic == 'final':
-            try:
-                v = dict2[k]
-            except KeyError:
-                v = dict1[k]
+        try:
+            v = dict2[k]
+        except KeyError:
+            v = dict1[k]
         merged_dict[k] = v
     return merged_dict
         
-def merge_dict(seq_of_dict, logic='final'):
+def merge_dict(seq_of_dict):
+    seq_of_dict = [x for x in seq_of_dict if x is not None]
+    if len(seq_of_dict) == 0:
+        return {}
+    if len(seq_of_dict) == 1:
+        return seq_of_dict[0]
     merged_dict = dict(seq_of_dict[0])
     for d in seq_of_dict[1:]:
-        merged_dict = merge_dict_pair(merged_dict, d, logic)
+        merged_dict = merge_dict_pair(merged_dict, d)
     return merged_dict
 
 def smart_divide(x, y):
@@ -40,3 +44,18 @@ def smart_divide(x, y):
     if y == 0:
         return INFINITY
     return x * 1.0 / y
+
+def get_sign(x):
+    if x > 0:
+        return '+'
+    if x < 0:
+        return '-'
+    return ''
+
+def normalize_value(v, base_type=int, base_unit=''):
+    if base_unit == '%':
+        v *= 100
+    v = round(v, 2)
+    if base_type == int:
+        v = int(v)
+    return v

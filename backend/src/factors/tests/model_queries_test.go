@@ -26,33 +26,50 @@ func TestModelQuery(t *testing.T) {
 	t.Run("CreateQuery:SavedQuery:valid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		query, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{ProjectID: project.ID,
-			Title: rName1, Type: 2, CreatedBy: agent.UUID, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+			Title: rName1, Type: 2, CreatedBy: agent.UUID, Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+			Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 303}`)}})
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, query)
 		assert.Empty(t, errMsg)
 		queryId = query.ID
 	})
-	//No agentUUID for saved Query && empty title
+	// No agentUUID for saved Query && empty title.
 	t.Run("CreateQuery:SavedQuery:invalid", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		_, errCode, _ := store.GetStore().CreateQuery(project.ID, &model.Queries{ProjectID: project.ID,
-			Title: rName1, Type: 2, CreatedBy: "", Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+			Title: rName1, Type: 2, CreatedBy: "", Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+			Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 30}`)}})
 		assert.Equal(t, http.StatusBadRequest, errCode)
 
 		_, errCode, _ = store.GetStore().CreateQuery(project.ID, &model.Queries{ProjectID: project.ID,
-			Title: "", Type: 2, CreatedBy: agent.UUID, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+			Title: "", Type: 2, CreatedBy: agent.UUID, Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+			Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{"chart": "Line"}`)}})
 		assert.Equal(t, http.StatusBadRequest, errCode)
 	})
 	// Get Query test
 	query, errCode := store.GetStore().GetQueryWithQueryId(project.ID, queryId)
 	assert.Equal(t, http.StatusFound, errCode)
 
-	t.Run("UpdateSavedQuery:Valid", func(t *testing.T) {
+	t.Run("UpdateSavedQuery:ValidForTitle", func(t *testing.T) {
 		rName1 := U.RandomString(5)
-		query1, errCode := store.GetStore().UpdateSavedQuery(project.ID, queryId, &model.Queries{Title: rName1})
+		query1, errCode := store.GetStore().UpdateSavedQuery(project.ID, queryId, &model.Queries{Title: rName1,
+			Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 303}`)}})
 		assert.Equal(t, http.StatusAccepted, errCode)
 		assert.Equal(t, rName1, query1.Title)
 		assert.NotEqual(t, query1.Title, query.Title)
+		assert.Equal(t, query1.Settings, query.Settings)
+		assert.Equal(t, string((query1.Settings).RawMessage), string((query.Settings).RawMessage))
+	})
+
+	t.Run("UpdateSavedQuery:ValidForSetting", func(t *testing.T) {
+		rName1 := U.RandomString(5)
+		query1, errCode := store.GetStore().UpdateSavedQuery(project.ID, queryId, &model.Queries{Title: rName1,
+			Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{"size": 304}`)}})
+		assert.Equal(t, http.StatusAccepted, errCode)
+		assert.Equal(t, rName1, query1.Title)
+		assert.NotEqual(t, query1.Title, query.Title)
+		assert.NotEqual(t, query1.Settings, query.Settings)
+		assert.NotEqual(t, string((query1.Settings).RawMessage), string((query.Settings).RawMessage))
 	})
 
 	t.Run("UpdateSavedQuery:Invalid", func(t *testing.T) {
@@ -72,14 +89,16 @@ func TestModelQuery(t *testing.T) {
 	// test search query
 	rName1 := "Hello"
 	query1, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{ProjectID: project.ID,
-		Title: rName1, Type: model.QueryTypeSavedQuery, CreatedBy: agent.UUID, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		Title: rName1, Type: model.QueryTypeSavedQuery, CreatedBy: agent.UUID, Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+		Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, query1)
 	assert.Empty(t, errMsg)
 
 	rName2 := "World"
 	query2, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{ProjectID: project.ID,
-		Title: rName2, Type: model.QueryTypeDashboardQuery, CreatedBy: agent.UUID, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		Title: rName2, Type: model.QueryTypeDashboardQuery, CreatedBy: agent.UUID, Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+		Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, query2)
 	assert.Empty(t, errMsg)
@@ -100,7 +119,7 @@ func TestDeleteQuery(t *testing.T) {
 	dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
 		ProjectID: project.ID,
 		Type:      model.QueryTypeDashboardQuery,
-		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
+		Query:     postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
 	})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
@@ -111,7 +130,7 @@ func TestDeleteQuery(t *testing.T) {
 		Type:      model.QueryTypeSavedQuery,
 		CreatedBy: agent.UUID,
 		Title:     U.RandomString(5),
-		Query:     postgres.Jsonb{json.RawMessage(`{}`)},
+		Query:     postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
 	})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
@@ -162,13 +181,13 @@ func TestDeleteQueryWithDashboardUnit(t *testing.T) {
 	// Two Dashboard units with query type QueryTypeDashboardUnit.
 	dashboardUnit1, errCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,
 		&model.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: model.PresentationLine,
-			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{json.RawMessage(`{}`)}},
+			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}},
 		model.DashboardUnitWithQueryID)
 	assert.NotEmpty(t, dashboardUnit1)
 
 	dashboardUnit2, errCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,
 		&model.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: model.PresentationLine,
-			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{json.RawMessage(`{}`)}},
+			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}},
 		model.DashboardUnitWithQueryID)
 	assert.NotEmpty(t, dashboardUnit2)
 

@@ -499,16 +499,29 @@ export const DefaultDateRangeFormat = {
 const getFilters = (filters) => {
   const result = [];
   filters.forEach((filter) => {
-    filter.values.forEach((value, index) => {
+    if(filter.props[1] !== 'categorical') {
       result.push({
         en: filter.props[2],
-        lop: !index ? "AND" : "OR",
+        lop: "AND",
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
-        va: value,
+        va: filter.values,
       });
-    });
+    }
+
+    if(filter.props[1] === 'categorical') {
+      filter.values.forEach((value, index) => {
+        result.push({
+          en: filter.props[2],
+          lop: !index ? "AND" : "OR",
+          op: operatorMap[filter.operator],
+          pr: filter.props[0],
+          ty: filter.props[1],
+          va: value,
+        });
+      });
+    }
   });
   return result;
 };
@@ -516,16 +529,29 @@ const getFilters = (filters) => {
 const getFiltersTouchpoints = (filters, touchpoint) => {
   const result = [];
   filters.forEach((filter) => {
-    filter.values.forEach((value, index) => {
+    if(filter.props[1] !== 'categorical') {
       result.push({
         attribution_key: touchpoint,
-        lop: !index ? "AND" : "OR",
+        lop: "AND",
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
-        va: value,
+        va: filter.values,
       });
-    });
+    }
+
+    if(filter.props[1] === 'categorical') {
+      filter.values.forEach((value, index) => {
+        result.push({
+          attribution_key: touchpoint,
+          lop: !index ? "AND" : "OR",
+          op: operatorMap[filter.operator],
+          pr: filter.props[0],
+          ty: filter.props[1],
+          va: value,
+        });
+      });
+    }
   });
   return result;
 };
@@ -597,10 +623,11 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
   const filters = [];
   requestQuery.ce.pr.forEach((pr) => {
     if (pr.lop === "AND") {
+      let val = pr.ty === 'categorical'? [pr.va] : pr.va;
       filters.push({
         operator: reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
-        values: [pr.va],
+        values: val,
       });
     } else {
       filters[filters.length - 1].values.push(pr.va);

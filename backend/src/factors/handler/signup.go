@@ -96,7 +96,7 @@ func sendSignUpEmail(agent *model.Agent) error {
 	}
 
 	fe_host := C.GetProtocol() + C.GetAPPDomain()
-	link := fmt.Sprintf("%s/#/activate?token=%s", fe_host, authToken)
+	link := fmt.Sprintf("%s/activate?token=%s", fe_host, authToken)
 
 	log.WithField("link", link).Debug("Activation Link")
 

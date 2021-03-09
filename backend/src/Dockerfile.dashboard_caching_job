@@ -2,7 +2,7 @@ FROM golang:1.14-alpine AS builder
 
 WORKDIR /go/src/factors
 ADD /factors .
-RUN go build -o $GOPATH/bin/dashboardcachingjob $GOPATH/src/factors/scripts/run_cache_dashboard_queries.go
+RUN go build -o $GOPATH/bin/dashboardcachingjob $GOPATH/src/factors/scripts/run_cache_dashboard_queries/run_cache_dashboard_queries.go
 
 # Create stripped down version without go and source code
 FROM alpine:3.7
