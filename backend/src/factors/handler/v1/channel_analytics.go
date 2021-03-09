@@ -94,25 +94,28 @@ func GetChannelFilterValuesHandler(c *gin.Context) {
 // @Param query body model.ChannelGroupQueryV1 true "Query payload"
 // @Success 200 {string} json "{result:store.GetStore().ChannelResultGroupV1}"
 // @Router /{project_id}/v1/channels/query [post]
-func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+func ExecuteChannelQueryHandler(c *gin.Context) {
 	r := c.Request
 	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-	logCtx := log.WithField("reqId", reqID)
+	logCtx := log.WithField("req_id", reqID)
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		logCtx.Error("Query failed. Invalid project.")
-		return nil, http.StatusUnauthorized, INVALID_PROJECT, "Query failed. Invalid project.", true
+		c.AbortWithStatusJSON(http.StatusUnauthorized,
+			gin.H{"error": "Channel query failed. Invalid project."})
+		return
 	}
-	logCtx = logCtx.WithField("project_id", projectId).WithField("reqId", reqID)
 
+	logCtx = logCtx.WithField("project_id", projectId).WithField("req_id", reqID)
 	var queryPayload model.ChannelGroupQueryV1
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 
 	if err := decoder.Decode(&queryPayload); err != nil {
-		logCtx.WithError(err).Error("Query failed. Json decode failed.")
-		return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Json decode failed.", true
+		logCtx.WithError(err).Error("Channel query failed. Json decode failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "Channel executeQuery failed. Json decode failed."})
+		return
 	}
 	logCtx.Info("query:", queryPayload)
 
@@ -120,7 +123,8 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 	var commonQueryTo int64
 	if len(queryPayload.Queries) == 0 {
 		logCtx.Error("Query failed. Empty query group.")
-		return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Empty query group.", true
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Empty query group."})
+		return
 	} else {
 		// all group queries are run for same time duration, used in dashboard unit caching
 		commonQueryFrom = queryPayload.Queries[0].From
@@ -142,35 +146,31 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
 		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
-		if err != nil || dashboardId == 0 {
-			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
-			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardID.", true
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
 		}
 		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
-		if err != nil || unitId == 0 {
-			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
-			return nil, http.StatusBadRequest, INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
 		}
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, hardRefresh) {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqID, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
 		if shouldReturn {
-			if resCode == http.StatusOK {
-				return resMsg, resCode, "", "", false
-			}
+			c.AbortWithStatusJSON(resCode, resMsg)
+			return
 		}
 	}
 
 	var cacheResult model.ChannelResultGroupV1
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &queryPayload, cacheResult, isDashboardQueryRequest)
 	if shouldReturn {
-		if resCode == http.StatusOK {
-			return resMsg, resCode, "", "", false
-		}
-		logCtx.Error("Query failed. Error Processing/Fetching data from Query cache")
-		return nil, resCode, PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
+		c.AbortWithStatusJSON(resCode, resMsg)
+		return
 	}
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
@@ -180,16 +180,19 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 	// Run Channel Query
 	queryResult, errCode := store.GetStore().RunChannelGroupQuery(projectId, queryPayload.Queries, reqID)
 	if errCode != http.StatusOK {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Channel query failed. Execution failure."})
 		model.DeleteQueryCacheKey(projectId, &queryPayload)
-		logCtx.Error("Failed to process query from DB")
-		return nil, errCode, PROCESSING_FAILED, "Failed to process query from DB", true
+		return
 	}
 	model.SetQueryCacheResult(projectId, &queryPayload, queryResult)
 
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
 		model.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
-		return H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
+		c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{Result: queryResult, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
+		return
 	}
-	return queryResult, http.StatusOK, "", "", false
+
+	c.JSON(http.StatusOK, gin.H{"result": queryResult})
 }

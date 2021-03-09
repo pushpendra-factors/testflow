@@ -43,11 +43,6 @@ func (pg *Postgres) RunEventsGroupQuery(queriesOriginal []model.Query, projectId
 		}
 	}
 	waitGroup.Wait()
-	for _, result := range resultGroup.Results {
-		if result.Headers[0] == model.AliasError {
-			return resultGroup, http.StatusPartialContent
-		}
-	}
 	return resultGroup, http.StatusOK
 }
 
