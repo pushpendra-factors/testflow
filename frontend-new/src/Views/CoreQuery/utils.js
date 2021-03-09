@@ -623,10 +623,11 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
   const filters = [];
   requestQuery.ce.pr.forEach((pr) => {
     if (pr.lop === "AND") {
+      let val = pr.ty === 'categorical'? [pr.va] : pr.va;
       filters.push({
         operator: reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
-        values: [pr.va],
+        values: val,
       });
     } else {
       filters[filters.length - 1].values.push(pr.va);

@@ -205,7 +205,7 @@ func AgentInvite(c *gin.Context) {
 			return
 		}
 		fe_host := C.GetProtocol() + C.GetAPPDomain()
-		link = fmt.Sprintf("%s/#/activate?token=%s", fe_host, authToken)
+		link = fmt.Sprintf("%s/activate?token=%s", fe_host, authToken)
 		logCtx.WithField("link", link).Debugf("Verification LInk")
 	}
 
