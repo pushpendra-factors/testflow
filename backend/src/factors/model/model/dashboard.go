@@ -10,6 +10,7 @@ import (
 
 	cacheRedis "factors/cache/redis"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm/dialects/postgres"
 
 	log "github.com/sirupsen/logrus"
@@ -56,10 +57,9 @@ var DashboardTypes = []string{DashboardTypePrivate, DashboardTypeProjectVisible}
 const AgentProjectPersonalDashboardName = "My Dashboard"
 const AgentProjectPersonalDashboardDescription = "No Description"
 
-func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId, dashboardId, unitId uint64, from, to int64) (*DashboardCacheResult, int, error) {
+func GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId uint64, from, to int64) (*DashboardCacheResult, int, error) {
 	var cacheResult *DashboardCacheResult
 	logCtx := log.WithFields(log.Fields{
-		"reqId":    reqId,
 		"Method":   "GetCacheResultByDashboardIdAndUnitId",
 		"CacheKey": fmt.Sprintf("PID:%d:DID:%d:DUID:%d", projectId, dashboardId, unitId),
 	})
@@ -69,21 +69,21 @@ func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId, dashboardId, 
 
 	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to)
 	if err != nil {
-		return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to fetch cache key - " + err.Error())
+		return cacheResult, http.StatusBadRequest, err
 	}
 
-	result, status, err := cacheRedis.GetIfExistsPersistent(cacheKey)
-	if status == false {
-		if err == nil {
-			return cacheResult, http.StatusNotFound, nil
-		}
-		return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to get data from cache - " + err.Error())
+	result, err := cacheRedis.GetPersistent(cacheKey)
+	if err == redis.ErrNil {
+		return cacheResult, http.StatusNotFound, nil
+	} else if err != nil {
+		logCtx.WithError(err).Error("error doing Get from redis")
+		return cacheResult, http.StatusInternalServerError, err
 	}
 
 	err = json.Unmarshal([]byte(result), &cacheResult)
 	if err != nil {
 		logCtx.WithError(err).Errorf("Error decoding redis result %v", result)
-		return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to unmarshal cache response - " + err.Error())
+		return cacheResult, http.StatusInternalServerError, err
 	}
 
 	if cacheResult.RefreshedAt == 0 {

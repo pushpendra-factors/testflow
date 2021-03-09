@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"errors"
 	"factors/model/model"
 	"fmt"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	U "factors/util"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 // DashboardQueryResponsePayload Query query response with cache and refreshed_at.
@@ -76,18 +76,26 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload m
 				return getQueryCacheResponse(c, cacheResult, forDashboard)
 			} else {
 				// If not in Accepted state, return with error.
-				return true, http.StatusInternalServerError, errors.New("Query Cache: Failed to fetch from cache")
+				return true, http.StatusInternalServerError, gin.H{"error": "Failed executing query"}
 			}
 		}
 	}
-	return false, errCode, errors.New("Query Cache: Failed to fetch from cache")
+	return false, http.StatusNotFound, nil
 }
 
 // GetResponseIfCachedDashboardQuery Common function to fetch result from cache if present for dashboard query.
-func GetResponseIfCachedDashboardQuery(reqId string, projectID, dashboardID, unitID uint64, from, to int64) (bool, int, interface{}) {
-	cacheResult, errCode, err := model.GetCacheResultByDashboardIdAndUnitId(reqId, projectID, dashboardID, unitID, from, to)
+func GetResponseIfCachedDashboardQuery(projectID, dashboardID, unitID uint64, from, to int64) (bool, int, interface{}) {
+	cacheResult, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId(projectID, dashboardID, unitID, from, to)
 	if errCode == http.StatusFound && cacheResult != nil {
 		return true, http.StatusOK, DashboardQueryResponsePayload{Result: cacheResult.Result, Cache: true, RefreshedAt: cacheResult.RefreshedAt}
+	} else if errCode == http.StatusBadRequest {
+		return true, errCode, gin.H{"error": errMsg}
 	}
-	return false, errCode, err
+
+	if errCode != http.StatusNotFound {
+		log.WithFields(log.Fields{"project_id": projectID,
+			"dashboard_id": dashboardID, "dashboard_unit_id": unitID,
+		}).WithError(errMsg).Error("Failed to get GetCacheChannelResultByDashboardIdAndUnitId from cache.")
+	}
+	return false, http.StatusNotFound, nil
 }
