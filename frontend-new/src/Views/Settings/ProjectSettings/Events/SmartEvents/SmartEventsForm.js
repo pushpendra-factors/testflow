@@ -157,7 +157,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
           }
       }
 
-      const dataObjectConstants =  dataObjectSource === 'hubspot' ? ['contact', 'deal'] : ['account', 'contact', 'lead'] 
+      const dataObjectConstants =  dataObjectSource === 'hubspot' ? ['contact', 'deal'] : ['account', 'contact', 'lead', 'opportunity'] 
 
 
       const onSelectDataObjectChange = (value) =>{ 
