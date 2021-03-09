@@ -6,6 +6,6 @@ ADD /factors .
 ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
 
 ENV GOPATH /go
-RUN apt-get update -y && apt-get install -y ca-certificates && go build -o /go/bin/beamdashboardcaching /go/src/factors/scripts/run_beam_dashboard_caching.go
+RUN apt-get update -y && apt-get install -y ca-certificates && go build -o /go/bin/beamdashboardcaching /go/src/factors/scripts/run_beam_dashboard_caching/run_beam_dashboard_caching.go
 
 ENTRYPOINT ["/go/bin/beamdashboardcaching"]

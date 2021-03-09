@@ -27,9 +27,9 @@ import (
 // @Router /{project_id}/channels/query [post]
 func ChannelQueryHandler(c *gin.Context) {
 	r := c.Request
-
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	logCtx := log.WithFields(log.Fields{
-		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+		"reqId": reqId,
 	})
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -77,7 +77,7 @@ func ChannelQueryHandler(c *gin.Context) {
 	}
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(queryPayload.From, queryPayload.To, hardRefresh) {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
 		if shouldReturn {
 			c.AbortWithStatusJSON(resCode, resMsg)
 			return
