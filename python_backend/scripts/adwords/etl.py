@@ -6,7 +6,7 @@ import scripts
 from lib.data_services.factors_data_service import FactorsDataService
 from lib.utils.time import TimeUtil
 from lib.utils.healthchecks import HealthchecksUtil
-from scripts.adwords import STATUS_FAILED, STATUS_SKIPPED, etl_record_stats
+from scripts.adwords import STATUS_FAILED, STATUS_SKIPPED, etl_record_stats, HEALTHCHECKS_ADWORDS_SYNC_PING_ID
 from scripts.adwords.etl_config import EtlConfig
 from scripts.adwords.etl_parser import EtlParser
 from scripts.adwords.job_scheduler import JobScheduler
@@ -17,7 +17,7 @@ from scripts.adwords.jobs.reports_fetch_job import ReportsFetch
 # from .etl_parser import EtlParser
 # from .jobs.reports_fetch import ReportsFetch
 
-HEALTHCHECKS_ADWORDS_SYNC_PING_ID = "188cbf7c-0ea1-414b-bf5c-eee47c12a0c8"
+
 
 
 def setup(argv):

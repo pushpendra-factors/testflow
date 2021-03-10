@@ -50,6 +50,7 @@ func main() {
 
 	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
 	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
+	appOldDomain := flag.String("app_old_domain", "factors-dev.com:3000", "")
 
 	awsRegion := flag.String("aws_region", "us-east-1", "")
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
@@ -109,6 +110,7 @@ func main() {
 		DeviceDetectorPath:                      *deviceDetectorPath,
 		APIDomain:                               *apiDomain,
 		APPDomain:                               *appDomain,
+		APPOldDomain:                            *appOldDomain,
 		AWSKey:                                  *awsAccessKeyId,
 		AWSSecret:                               *awsSecretAccessKey,
 		AWSRegion:                               *awsRegion,

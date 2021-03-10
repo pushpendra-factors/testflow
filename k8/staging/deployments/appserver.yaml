@@ -92,6 +92,8 @@ spec:
           - $(API_DOMAIN)
           - --app_domain
           - $(APP_DOMAIN)
+          - --app_old_domain
+          - $(APP_OLD_HOST_URL)
           - --aws_region
           - $(AWS_REGION)
           - --aws_key

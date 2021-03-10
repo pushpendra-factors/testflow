@@ -82,6 +82,7 @@ type Configuration struct {
 	DeviceDetectorPath               string
 	APIDomain                        string
 	APPDomain                        string
+	APPOldDomain                     string
 	AWSRegion                        string
 	AWSKey                           string
 	AWSSecret                        string
@@ -843,6 +844,10 @@ func IsProduction() bool {
 
 func GetAPPDomain() string {
 	return configuration.APPDomain
+}
+
+func GetAPPOldDomain() string {
+	return configuration.APPOldDomain
 }
 
 func GetAPIDomain() string {
