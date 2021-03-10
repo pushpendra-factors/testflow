@@ -1375,8 +1375,8 @@ func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 			"location": {
 			  "city": "San Francisco",
 			  "country": "United States",
-			  "latitude": 40.2964197,
-			  "longitude": -76.9411617,
+			  "latitude": "40.2964197",
+			  "longitude": "-76.9411617",
 			  "speed": 0
 			},
 			"network": {
@@ -1401,9 +1401,9 @@ func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 			  "type": "dataxu"
 			},
 			"screen": {
-			  "width": 320,
-			  "height": 568,
-			  "density": 2
+			  "width": "320",
+			  "height": "568",
+			  "density": "2"
 			},
 			"groupId": "12345",
 			"timezone": "Europe/Amsterdam",
