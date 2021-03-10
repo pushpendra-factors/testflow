@@ -49,11 +49,11 @@ type App struct {
 }
 
 type Location struct {
-	City    string  `json:"city"`
-	Country string  `json:"country"`
-	Region  string  `json:"region"`
-	Lat     float64 `json:"latitude"`
-	Long    float64 `json:"longitude"`
+	City    string      `json:"city"`
+	Country string      `json:"country"`
+	Region  string      `json:"region"`
+	Lat     interface{} `json:"latitude"`
+	Long    interface{} `json:"longitude"`
 }
 
 type OS struct {
@@ -62,9 +62,12 @@ type OS struct {
 }
 
 type Screen struct {
-	Width   float64 `json:"width"`
-	Height  float64 `json:"height"`
-	Density float64 `json:"density"`
+	// Changed height to interface{} as part of hot-fix, as
+	// it is sent as string sometimes.
+	// https://github.com/Slashbit-Technologies/factors/issues/1600
+	Width   interface{} `json:"width"`
+	Height  interface{} `json:"height"`
+	Density interface{} `json:"density"`
 }
 
 type Network struct {
@@ -140,6 +143,17 @@ func GetURLFromPageEvent(event *Event) string {
 	return ""
 }
 
+func getPropertyValuesAsFloat64WithDefault(key string, value interface{}) float64 {
+	// TODO(Dinesh): Add check for empty interface{} and try not to convert if it is empty.
+	valueFloat64, err := U.GetPropertyValueAsFloat64(value)
+	if err != nil {
+		log.WithField("key", key).WithError(err).Error("Failed to property value to float.")
+		return 0
+	}
+
+	return valueFloat64
+}
+
 func fillGenericEventProperties(properties *U.PropertiesMap, event *Event) {
 	if event.Version != nil {
 		(*properties)[U.EP_SEGMENT_EVENT_VERSION] = *event.Version
@@ -150,11 +164,15 @@ func fillGenericEventProperties(properties *U.PropertiesMap, event *Event) {
 	if event.Channel != "" {
 		(*properties)[U.EP_SEGMENT_SOURCE_CHANNEL] = event.Channel
 	}
-	if event.Context.Location.Lat != 0 {
-		(*properties)[U.EP_LOCATION_LATITUDE] = event.Context.Location.Lat
+
+	latitude := getPropertyValuesAsFloat64WithDefault("latitude", event.Context.Location.Lat)
+	if latitude != 0 {
+		(*properties)[U.EP_LOCATION_LATITUDE] = latitude
 	}
-	if event.Context.Location.Long != 0 {
-		(*properties)[U.EP_LOCATION_LONGITUDE] = event.Context.Location.Long
+
+	longitude := getPropertyValuesAsFloat64WithDefault("longitude", event.Context.Location.Long)
+	if longitude != 0 {
+		(*properties)[U.EP_LOCATION_LONGITUDE] = longitude
 	}
 }
 
@@ -180,12 +198,17 @@ func fillGenericUserProperties(properties *U.PropertiesMap, event *Event) {
 	if event.Context.OS.Version != nil {
 		(*properties)[U.UP_OS_VERSION] = *event.Context.OS.Version
 	}
-	if event.Context.Screen.Width != 0 {
-		(*properties)[U.UP_SCREEN_WIDTH] = event.Context.Screen.Width
+
+	screenWidth := getPropertyValuesAsFloat64WithDefault("screen_width", event.Context.Screen.Width)
+	if screenWidth != 0 {
+		(*properties)[U.UP_SCREEN_WIDTH] = screenWidth
 	}
-	if event.Context.Screen.Height != 0 {
-		(*properties)[U.UP_SCREEN_HEIGHT] = event.Context.Screen.Height
+
+	screenHeight := getPropertyValuesAsFloat64WithDefault("screen_height", event.Context.Screen.Height)
+	if screenHeight != 0 {
+		(*properties)[U.UP_SCREEN_HEIGHT] = screenHeight
 	}
+
 }
 
 func fillMobileUserProperties(properties *U.PropertiesMap, event *Event) {
@@ -222,8 +245,10 @@ func fillMobileUserProperties(properties *U.PropertiesMap, event *Event) {
 	if event.Context.Network.Carrier != "" {
 		(*properties)[U.UP_NETWORK_CARRIER] = event.Context.Network.Carrier
 	}
-	if event.Context.Screen.Density != 0 {
-		(*properties)[U.UP_SCREEN_DENSITY] = event.Context.Screen.Density
+
+	density := getPropertyValuesAsFloat64WithDefault("screen_density", event.Context.Screen.Density)
+	if density != 0 {
+		(*properties)[U.UP_SCREEN_DENSITY] = density
 	}
 	if event.Context.Timezone != "" {
 		(*properties)[U.UP_TIMEZONE] = event.Context.Timezone
