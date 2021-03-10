@@ -1,8 +1,11 @@
 package tests
 
 import (
+	"factors/model/model"
+	"factors/model/store"
 	SDK "factors/sdk"
 	U "factors/util"
+	"net/http"
 	"testing"
 	"time"
 
@@ -10,19 +13,21 @@ import (
 )
 
 func TestGetPropertyTypeByKeyValue(t *testing.T) {
-	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyTypeByKeyValue("testKey", "10.24string"))
-	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyTypeByKeyValue("testKey", "10.24"))
-	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyTypeByKeyValue("testKey", 10.24))
-	assert.Equal(t, U.PropertyTypeUnknown, U.GetPropertyTypeByKeyValue("testKey", true))
-	assert.Equal(t, U.PropertyTypeUnknown, U.GetPropertyTypeByKeyValue("testKey", []string{"value1", "value2"}))
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.Equal(t, U.PropertyTypeCategorical, store.GetStore().GetPropertyTypeByKeyValue(project.ID, "event1", "testKey", "10.24string", false))
+	assert.Equal(t, U.PropertyTypeCategorical, store.GetStore().GetPropertyTypeByKeyValue(project.ID, "event1", "testKey", "10.24", false))
+	assert.Equal(t, U.PropertyTypeNumerical, store.GetStore().GetPropertyTypeByKeyValue(project.ID, "event1", "testKey", 10.24, false))
+	assert.Equal(t, U.PropertyTypeUnknown, store.GetStore().GetPropertyTypeByKeyValue(project.ID, "event1", "testKey", true, false))
+	assert.Equal(t, U.PropertyTypeUnknown, store.GetStore().GetPropertyTypeByKeyValue(project.ID, "event1", "testKey", []string{"value1", "value2"}, false))
 
 	// numerical property by name.
-	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyTypeByKeyValue(U.EP_PAGE_LOAD_TIME, "10.24"))
-	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyTypeByKeyValue(U.EP_PAGE_SPENT_TIME, 1234))
-	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyTypeByKeyValue(U.EP_REVENUE, "10"))
+	assert.Equal(t, U.PropertyTypeNumerical, store.GetStore().GetPropertyTypeByKeyValue(project.ID, "event1", U.EP_PAGE_LOAD_TIME, "10.24", false))
+	assert.Equal(t, U.PropertyTypeNumerical, store.GetStore().GetPropertyTypeByKeyValue(project.ID, "event1", U.EP_PAGE_SPENT_TIME, 1234, false))
+	assert.Equal(t, U.PropertyTypeNumerical, store.GetStore().GetPropertyTypeByKeyValue(project.ID, "event1", U.EP_REVENUE, "10", false))
 	// categorical property by name.
-	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyTypeByKeyValue(U.EP_CAMPAIGN, 10.24)) // This will be classified as numerical now since the default logic is removed
-	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyTypeByKeyValue(U.EP_CAMPAIGN_ID, "10.24"))
+	assert.Equal(t, U.PropertyTypeNumerical, store.GetStore().GetPropertyTypeByKeyValue(project.ID, "event1", U.EP_CAMPAIGN, 10.24, false)) // This will be classified as numerical now since the default logic is remov,falseed
+	assert.Equal(t, U.PropertyTypeCategorical, store.GetStore().GetPropertyTypeByKeyValue(project.ID, "event1", U.EP_CAMPAIGN_ID, "10.24", false))
 }
 
 func TestGetCleanPropertyValue(t *testing.T) {
@@ -75,4 +80,90 @@ func TestFillFirstEventUserPropertiesIfNotExist(t *testing.T) {
 	hourOfFirstEvent, _, _ := time.Unix(eventTimestamp, 0).Clock()
 	assert.NotNil(t, (newUserProperties)[U.UP_HOUR_OF_FIRST_EVENT])
 	assert.Equal(t, (newUserProperties)[U.UP_HOUR_OF_FIRST_EVENT], hourOfFirstEvent)
+}
+
+func TestPropertyDetails(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	eventName := "eventName1"
+	dateTimeProperty1 := "dt_property1"
+	dateTimeProperty2 := "dt_property2"
+	/*
+		Configured event property test
+	*/
+
+	propertyType := model.GetCachePropertiesType(project.ID, eventName, dateTimeProperty1, false)
+	assert.Equal(t, model.TypeMissingConfiguredProperties, propertyType)
+	propertyType = model.GetCachePropertiesType(project.ID, eventName, dateTimeProperty2, true)
+	assert.Equal(t, model.TypeMissingConfiguredProperties, propertyType)
+
+	// creating event property without registered event name
+	status := store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false)
+	assert.Equal(t, http.StatusBadRequest, status)
+
+	// creating event property with registered event name
+	_, status = store.GetStore().CreateOrGetEventName(&model.EventName{
+		ProjectId: project.ID,
+		Name:      eventName,
+		Type:      model.TYPE_USER_CREATED_EVENT_NAME,
+	})
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false)
+	assert.Equal(t, http.StatusCreated, status)
+	// duplicate configured property
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false)
+	assert.Equal(t, http.StatusConflict, status)
+
+	/*
+		Configured user property test
+	*/
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dateTimeProperty2, U.PropertyTypeDateTime, true)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dateTimeProperty2, U.PropertyTypeDateTime, true)
+	assert.Equal(t, http.StatusConflict, status)
+
+	// numerical property
+	numericalProperty1 := "num_property1"
+	numericalProperty2 := "num_property2"
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, numericalProperty1, U.PropertyTypeNumerical, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, numericalProperty1, U.PropertyTypeNumerical, false)
+	assert.Equal(t, http.StatusConflict, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numericalProperty2, U.PropertyTypeNumerical, true)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numericalProperty2, U.PropertyTypeNumerical, true)
+	assert.Equal(t, http.StatusConflict, status)
+
+	category := store.GetStore().GetPropertyTypeByKeyValue(project.ID, eventName, dateTimeProperty1, 123, false)
+	assert.Equal(t, U.PropertyTypeDateTime, category)
+	category = store.GetStore().GetPropertyTypeByKeyValue(project.ID, eventName, dateTimeProperty1, "123", false)
+	assert.Equal(t, U.PropertyTypeDateTime, category)
+
+	category = store.GetStore().GetPropertyTypeByKeyValue(project.ID, "", dateTimeProperty2, 123, true)
+	assert.Equal(t, U.PropertyTypeDateTime, category)
+	category = store.GetStore().GetPropertyTypeByKeyValue(project.ID, "", dateTimeProperty2, "123", true)
+	assert.Equal(t, U.PropertyTypeDateTime, category)
+
+	category = store.GetStore().GetPropertyTypeByKeyValue(project.ID, eventName, numericalProperty1, 123, false)
+	assert.Equal(t, U.PropertyTypeNumerical, category)
+	category = store.GetStore().GetPropertyTypeByKeyValue(project.ID, "", numericalProperty2, "123", true)
+	assert.Equal(t, U.PropertyTypeNumerical, category)
+
+	/*
+		Get from cache
+	*/
+	propertyType = model.GetCachePropertiesType(project.ID, eventName, dateTimeProperty1, false)
+	assert.Equal(t, model.TypeConfiguredDatetimeProperties, propertyType)
+	propertyType = model.GetCachePropertiesType(project.ID, "", dateTimeProperty2, true)
+	assert.Equal(t, model.TypeConfiguredDatetimeProperties, propertyType)
+
+	propertyType = model.GetCachePropertiesType(project.ID, eventName, numericalProperty1, false)
+	assert.Equal(t, model.TypeConfiguredNumericalProperties, propertyType)
+	propertyType = model.GetCachePropertiesType(project.ID, "", numericalProperty2, true)
+	assert.Equal(t, model.TypeConfiguredNumericalProperties, propertyType)
+
+	propertyType = model.GetCachePropertiesType(project.ID, eventName, "property2", false)
+	assert.Equal(t, model.TypeMissingConfiguredProperties, propertyType)
 }

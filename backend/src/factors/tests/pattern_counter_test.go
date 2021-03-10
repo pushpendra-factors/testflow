@@ -19,6 +19,8 @@ import (
 const INFHEX = 0x8000000000000000
 
 func TestCountPatterns(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
 	// Count A -> B -> C, Count:3, OncePerUserCount:2, UserCount:2
@@ -75,7 +77,7 @@ func TestCountPatterns(t *testing.T) {
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
 
-	erronFalse := P.CountPatterns(scanner, patterns, countOccurFlag)
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag)
 	assert.Nil(t, erronFalse)
 
 	// Test pABC output.
@@ -396,6 +398,8 @@ func TestGenLenThreeCandidateCyclic(t *testing.T) {
 }
 
 func TestCollectAndCountEventsWithProperties(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
 	// Count A -> B -> C, Count:3, OncePerUserCount:2, UserCount:2
@@ -528,7 +532,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		},
 		EventPropertiesInfoMap: &actualEventInfoMap,
 	}
-	_, err := P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
+	_, err = P.CollectPropertiesInfo(project.ID, scanner, &userAndEventsInfo)
 	assert.Nil(t, err)
 
 	expectedNumericKeys := map[string][]string{
@@ -609,7 +613,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	pC, _ := P.NewPattern([]string{"C"}, &userAndEventsInfo)
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
-	erronFalse := P.CountPatterns(scanner, patterns, countOccurFlag)
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag)
 	assert.Nil(t, erronFalse)
 
 	// A-B-C occurs twice PerUser with the following Generic Properties.
@@ -1041,6 +1045,9 @@ func TestGetEventNamesfromFile(t *testing.T) {
 }
 
 func TestCollectAndCountEventsWithPropertiesWithOccurenceFalse(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
 	// Count A -> B -> C, Count:3, OncePerUserCount:2, UserCount:2
@@ -1173,7 +1180,7 @@ func TestCollectAndCountEventsWithPropertiesWithOccurenceFalse(t *testing.T) {
 		},
 		EventPropertiesInfoMap: &actualEventInfoMap,
 	}
-	_, err := P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
+	_, err = P.CollectPropertiesInfo(project.ID, scanner, &userAndEventsInfo)
 	assert.Nil(t, err)
 
 	expectedNumericKeys := map[string][]string{
@@ -1254,7 +1261,7 @@ func TestCollectAndCountEventsWithPropertiesWithOccurenceFalse(t *testing.T) {
 	pC, _ := P.NewPattern([]string{"C"}, &userAndEventsInfo)
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
-	erronFalse := P.CountPatterns(scanner, patterns, countOccurFlag)
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag)
 	assert.Nil(t, erronFalse)
 
 	// A-B-C occurs twice PerUser with the following Generic Properties.
@@ -1675,6 +1682,8 @@ func TestCollectAndCountEventsWithPropertiesWithOccurenceFalse(t *testing.T) {
 }
 
 func TestCountPatternsWithOccurenceFalse(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
 	// Count A -> B -> C, Count:3, OncePerUserCount:2, UserCount:2
@@ -1732,7 +1741,7 @@ func TestCountPatternsWithOccurenceFalse(t *testing.T) {
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
 
-	erronFalse := P.CountPatterns(scanner, patterns, countOccurFlag)
+	erronFalse := P.CountPatterns(project.ID, scanner, patterns, countOccurFlag)
 	assert.Nil(t, erronFalse)
 
 	// Test pABC output.

@@ -33,6 +33,10 @@ func main() {
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
 	dryRunSmartEvent := flag.Bool("dry_run_smart_event", false, "Dry run mode for smart event creation")
+	propertiesTypeCacheSize := flag.Int("property_details_cache_size", 0, "Cache size for in memory property detail.")
+	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
+	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
+	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 
 	flag.Parse()
 
@@ -81,6 +85,7 @@ func main() {
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	C.InitSmartEventMode(config.DryRunCRMSmartEvent)
+	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	hubspotEnabledProjectSettings, errCode := store.GetStore().GetAllHubspotProjectSettings()

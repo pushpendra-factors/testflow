@@ -2,6 +2,7 @@ package pattern
 
 import (
 	Hist "factors/histogram"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
 	"math"
@@ -392,11 +393,11 @@ func clipCategoricalValue(catValue string) string {
 	return catValue[:MAX_CATEGORICAL_STRING_LENGTH]
 }
 
-func AddNumericAndCategoricalProperties(
+func AddNumericAndCategoricalProperties(projectID uint64, eventName string,
 	eventIndex int, properties map[string]interface{},
-	nMap map[string]float64, cMap map[string]string) {
+	nMap map[string]float64, cMap map[string]string, isUserProperty bool) {
 	for key, value := range properties {
-		propertyType := U.GetPropertyTypeByKeyValue(key, value)
+		propertyType := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, key, value, isUserProperty)
 		if propertyType == U.PropertyTypeNumerical {
 			numValue, _ := U.GetPropertyValueAsFloat64(value)
 			nMap[PatternPropertyKey(eventIndex, key)] = float64(numValue)
@@ -420,7 +421,7 @@ func AddNumericAndCategoricalProperties(
 // [U3: E1(T12) -> E5(T13)].
 // Further the distribution of timestamps, event properties and number of occurrences
 // are stored with the patterns.
-func (p *Pattern) CountForEvent(
+func (p *Pattern) CountForEvent(projectID uint64,
 	eventName string, eventTimestamp int64, eventProperties map[string]interface{},
 	userProperties map[string]interface{}, eventCardinality uint, userId string,
 	userJoinTimestamp int64, shouldCountOccurence bool) error {
@@ -479,10 +480,10 @@ func (p *Pattern) CountForEvent(
 
 	if eventName == p.EventNames[p.waitIndex] {
 		// Update seen properties.
-		AddNumericAndCategoricalProperties(
-			p.waitIndex, eventProperties, p.currentEPropertiesNMap, p.currentEPropertiesCMap)
-		AddNumericAndCategoricalProperties(
-			p.waitIndex, userProperties, p.currentUPropertiesNMap, p.currentUPropertiesCMap)
+		AddNumericAndCategoricalProperties(projectID, eventName,
+			p.waitIndex, eventProperties, p.currentEPropertiesNMap, p.currentEPropertiesCMap, false)
+		AddNumericAndCategoricalProperties(projectID, "",
+			p.waitIndex, userProperties, p.currentUPropertiesNMap, p.currentUPropertiesCMap, true)
 
 		p.waitIndex += 1
 

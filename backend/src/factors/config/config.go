@@ -40,6 +40,8 @@ import (
 	serviceEtcd "factors/services/etcd"
 	"factors/services/mailer"
 	serviceSes "factors/services/ses"
+
+	cache "github.com/hashicorp/golang-lru"
 )
 
 var initiated bool = false
@@ -111,6 +113,11 @@ type Configuration struct {
 	IsBeamPipeline                                 bool
 	AllowSmartEventRuleCreation                    bool
 	EnableSDKAndIntegrationRequestQueueDuplication bool
+	// non exported field, only access through function
+	propertiesTypeCacheSize                int
+	enablePropertyTypeFromDB               bool
+	whitelistedProjectIDPropertyTypeFromDB string
+	blacklistedProjectIDPropertyTypeFromDB string
 }
 
 type Services struct {
@@ -180,6 +187,96 @@ func (service *Services) removePatternServer(key string) {
 var configuration *Configuration
 var services *Services = nil
 
+// PropertiesTypeCache common cache with reset date
+type PropertiesTypeCache struct {
+	Cache         *cache.Cache `json:"cache"`
+	LastResetDate string       `json:"last_reset_date"`
+}
+
+var propertiesTypeCache *PropertiesTypeCache
+
+// InitPropertiesTypeCache initialze properties type LRU cache by fixed size
+func InitPropertiesTypeCache(enablePropertyTypeFromDB bool, propertiesTypeCacheSize int, whitelistedProjectIDPropertyTypeFromDB, blacklistedProjectIDPropertyTypeFromDB string) {
+	if !enablePropertyTypeFromDB || propertiesTypeCacheSize <= 0 || propertiesTypeCache != nil {
+		return
+	}
+
+	if (blacklistedProjectIDPropertyTypeFromDB == "" && whitelistedProjectIDPropertyTypeFromDB == "") ||
+		(blacklistedProjectIDPropertyTypeFromDB != "" && whitelistedProjectIDPropertyTypeFromDB != "") {
+		return
+	}
+
+	pCache, err := cache.New(propertiesTypeCacheSize)
+	if err != nil {
+		log.WithError(err).WithField("PropertiesTypeCacheSize",
+			propertiesTypeCacheSize).Fatal("Failed to initialize properties_type cache size.")
+		return
+	}
+	propertiesTypeCache = &PropertiesTypeCache{
+		Cache: pCache,
+	}
+
+	if blacklistedProjectIDPropertyTypeFromDB != "" {
+		configuration.blacklistedProjectIDPropertyTypeFromDB = blacklistedProjectIDPropertyTypeFromDB
+	} else {
+		configuration.whitelistedProjectIDPropertyTypeFromDB = whitelistedProjectIDPropertyTypeFromDB
+	}
+
+	configuration.enablePropertyTypeFromDB = enablePropertyTypeFromDB
+
+	propertiesTypeCache.LastResetDate = U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
+	log.Info("Properties_type cache initialized.")
+}
+
+// GetPropertiesTypeCache returns PropertiesTypeCache instance
+func GetPropertiesTypeCache() *PropertiesTypeCache {
+	return propertiesTypeCache
+}
+
+// ResetPropertyDetailsCacheByDate reset PropertiesTypeCache with date
+func ResetPropertyDetailsCacheByDate(timestamp int64) {
+	date := U.GetDateOnlyFromTimestamp(timestamp)
+	propertiesTypeCache.Cache.Purge()
+	propertiesTypeCache.LastResetDate = date
+}
+
+// IsEnabledPropertyDetailFromDB should allow property type check from DB.
+func IsEnabledPropertyDetailFromDB() bool {
+	return configuration.enablePropertyTypeFromDB
+}
+
+// IsEnabledPropertyDetailByProjectID enabled project_id for property type check from DB
+func IsEnabledPropertyDetailByProjectID(projectID uint64) bool {
+	if projectID == 0 || !IsEnabledPropertyDetailFromDB() {
+		return false
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+
+	if configuration.whitelistedProjectIDPropertyTypeFromDB == "*" {
+		return true
+	}
+
+	if configuration.whitelistedProjectIDPropertyTypeFromDB != "" {
+		projectIDs := strings.Split(configuration.whitelistedProjectIDPropertyTypeFromDB, ",")
+		for i := range projectIDs {
+			if projectIDs[i] == projectIDstr {
+				return true
+			}
+		}
+	}
+
+	if configuration.blacklistedProjectIDPropertyTypeFromDB != "" {
+		projectIDs := strings.Split(configuration.blacklistedProjectIDPropertyTypeFromDB, ",")
+		for i := range projectIDs {
+			if projectIDs[i] == projectIDstr {
+				return false
+			}
+		}
+	}
+
+	return false
+}
 func initLogging(collector *error_collector.Collector) {
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.JSONFormatter{})

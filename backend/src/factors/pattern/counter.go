@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"factors/model/store"
 	U "factors/util"
 
 	_ "github.com/jinzhu/gorm"
@@ -326,7 +327,7 @@ func PatternPropertyKey(patternIndex int, propertyName string) string {
 const max_SEEN_PROPERTIES = 10000
 const max_SEEN_PROPERTY_VALUES = 1000
 
-func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo) (*map[string]PropertiesCount, error) {
+func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo) (*map[string]PropertiesCount, error) {
 	lineNum := 0
 	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
 	eventInfoMap := userAndEventsInfo.EventPropertiesInfoMap
@@ -355,7 +356,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 				allProps[key] = PrVal
 			}
 
-			propertyType := U.GetPropertyTypeByKeyValue(key, value)
+			propertyType := store.GetStore().GetPropertyTypeByKeyValue(projectID, "", key, value, true)
 			if propertyType == U.PropertyTypeNumerical {
 				if len(userPropertiesInfo.NumericPropertyKeys) > maxProperties {
 					continue
@@ -395,7 +396,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 				PrVal := PropertiesCount{key, "EP", 1}
 				allProps[key] = PrVal
 			}
-			propertyType := U.GetPropertyTypeByKeyValue(key, value)
+			propertyType := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventDetails.EventName, key, value, false)
 			if propertyType == U.PropertyTypeNumerical {
 				if len(eInfo.NumericPropertyKeys) > maxProperties {
 					continue
@@ -423,7 +424,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 	return &allProps, nil
 }
 
-func ComputeAllUserPropertiesHistogram(scanner *bufio.Scanner, pattern *Pattern) error {
+func ComputeAllUserPropertiesHistogram(projectID uint64, scanner *bufio.Scanner, pattern *Pattern) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 	numEventsProcessed := 0
 	for scanner.Scan() {
@@ -446,7 +447,7 @@ func ComputeAllUserPropertiesHistogram(scanner *bufio.Scanner, pattern *Pattern)
 			nMap := make(map[string]float64)
 			cMap := make(map[string]string)
 			// Histogram of all user properties as seen in their first event is tracked.
-			AddNumericAndCategoricalProperties(0, userProperties, nMap, cMap)
+			AddNumericAndCategoricalProperties(projectID, eventDetails.EventName, 0, userProperties, nMap, cMap, true)
 			if err := pattern.PerUserUserNumericProperties.AddMap(nMap); err != nil {
 				return err
 			}
@@ -463,7 +464,7 @@ func ComputeAllUserPropertiesHistogram(scanner *bufio.Scanner, pattern *Pattern)
 	return nil
 }
 
-func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern, shouldCountOccurence bool) error {
+func CountPatterns(projectID uint64, scanner *bufio.Scanner, patterns []*Pattern, shouldCountOccurence bool) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 
 	numEventsProcessed := 0
@@ -509,7 +510,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern, shouldCountOccur
 
 		eventPatterns, _ := eventToPatternsMap[eventName]
 		for _, p := range eventPatterns {
-			if err := p.CountForEvent(eventName, eventTimestamp, eventProperties,
+			if err := p.CountForEvent(projectID, eventName, eventTimestamp, eventProperties,
 				userProperties, uint(eventCardinality), userId, userJoinTimestamp, shouldCountOccurence); err != nil {
 				log.WithFields(log.Fields{
 					"error":           err,

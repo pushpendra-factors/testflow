@@ -53,7 +53,7 @@ type patternProperties struct {
 	patternType string
 }
 
-func countPatternsWorker(filepath string,
+func countPatternsWorker(projectID uint64, filepath string,
 	patterns []*P.Pattern, wg *sync.WaitGroup, countOccurence bool) {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -63,12 +63,12 @@ func countPatternsWorker(filepath string,
 	scanner := bufio.NewScanner(file)
 	buf := make([]byte, P.MAX_PATTERN_BYTES)
 	scanner.Buffer(buf, P.MAX_PATTERN_BYTES)
-	P.CountPatterns(scanner, patterns, countOccurence)
+	P.CountPatterns(projectID, scanner, patterns, countOccurence)
 	file.Close()
 	wg.Done()
 }
 
-func countPatterns(filepath string, patterns []*P.Pattern, numRoutines int, countOccurence bool) {
+func countPatterns(projectID uint64, filepath string, patterns []*P.Pattern, numRoutines int, countOccurence bool) {
 	var wg sync.WaitGroup
 	numPatterns := len(patterns)
 	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
@@ -79,12 +79,12 @@ func countPatterns(filepath string, patterns []*P.Pattern, numRoutines int, coun
 		high := int(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
 		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
 		wg.Add(1)
-		go countPatternsWorker(filepath, patterns[low:high], &wg, countOccurence)
+		go countPatternsWorker(projectID, filepath, patterns[low:high], &wg, countOccurence)
 	}
 	wg.Wait()
 }
 
-func computeAllUserPropertiesHistogram(filepath string, pattern *P.Pattern) error {
+func computeAllUserPropertiesHistogram(projectID uint64, filepath string, pattern *P.Pattern) error {
 	file, err := os.Open(filepath)
 	if err != nil {
 		return err
@@ -95,7 +95,7 @@ func computeAllUserPropertiesHistogram(filepath string, pattern *P.Pattern) erro
 	const maxCapacity = 10 * 1024 * 1024
 	buf := make([]byte, maxCapacity)
 	scanner.Buffer(buf, maxCapacity)
-	return P.ComputeAllUserPropertiesHistogram(scanner, pattern)
+	return P.ComputeAllUserPropertiesHistogram(projectID, scanner, pattern)
 }
 
 // Removes all patterns with zero counts.
@@ -387,7 +387,7 @@ func getUniqueCandidates(allCandidates []*P.Pattern) []*P.Pattern {
 
 }
 
-func mineAndWriteLenOnePatterns(
+func mineAndWriteLenOnePatterns(projectID uint64,
 	eventNames []string, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool, campaignEvents []string) (
@@ -409,7 +409,7 @@ func mineAndWriteLenOnePatterns(
 		lenOnePatterns = append(lenOnePatterns, p)
 	}
 
-	countPatterns(filepath, lenOnePatterns, numRoutines, countOccurence)
+	countPatterns(projectID, filepath, lenOnePatterns, numRoutines, countOccurence)
 	filteredLenOnePatterns, patternsSize, err := filterAndCompressPatterns(
 		lenOnePatterns, maxModelSize, cumulativePatternsSize, 1, max_PATTERN_LENGTH)
 	if err != nil {
@@ -421,7 +421,7 @@ func mineAndWriteLenOnePatterns(
 	return filteredLenOnePatterns, patternsSize, nil
 }
 
-func mineAndWriteLenTwoPatterns(
+func mineAndWriteLenTwoPatterns(projectId uint64,
 	lenOnePatterns []*P.Pattern, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool,
@@ -442,7 +442,7 @@ func mineAndWriteLenTwoPatterns(
 	}
 
 	lenTwoPatterns = append(lenTwoPatterns, lenTwoPatternsRepeated...)
-	countPatterns(filepath, lenTwoPatterns, numRoutines, countOccurence)
+	countPatterns(projectId, filepath, lenTwoPatterns, numRoutines, countOccurence)
 	filteredLenTwoPatterns, patternsSize, err := filterAndCompressPatterns(
 		lenTwoPatterns, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
 	if err != nil {
@@ -524,7 +524,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	patternLen := 1
 	limitRoundOffFraction := 0.99
 
-	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(
+	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(projectId,
 		eventNames, filepath, userAndEventsInfo, numRoutines, chunkDir,
 		maxModelSize, cumulativePatternsSize, countOccurence, campEventsList)
 	if err != nil {
@@ -544,7 +544,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	if patternLen > max_PATTERN_LENGTH {
 		return nil
 	}
-	filteredPatterns, patternsSize, err = mineAndWriteLenTwoPatterns(
+	filteredPatterns, patternsSize, err = mineAndWriteLenTwoPatterns(projectId,
 		filteredPatterns, filepath, userAndEventsInfo,
 		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize, countOccurence, goalPatterns, campEventsList)
 	if err != nil {
@@ -573,7 +573,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		for _, patterns := range lenThreeSegmentedPatterns {
 			lenThreePatterns = append(lenThreePatterns, patterns...)
 		}
-		countPatterns(filepath, lenThreePatterns, numRoutines, countOccurence)
+		countPatterns(projectId, filepath, lenThreePatterns, numRoutines, countOccurence)
 		filteredPatterns, patternsSize, err = filterAndCompressPatterns(
 			lenThreePatterns, maxModelSize, cumulativePatternsSize,
 			patternLen, max_PATTERN_LENGTH)
@@ -607,7 +607,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		for _, patterns := range candidatePatternsMap {
 			candidatePatterns = append(candidatePatterns, patterns...)
 		}
-		countPatterns(filepath, candidatePatterns, numRoutines, countOccurence)
+		countPatterns(projectId, filepath, candidatePatterns, numRoutines, countOccurence)
 		filteredPatterns, patternsSize, err = filterAndCompressPatterns(
 			candidatePatterns, maxModelSize, cumulativePatternsSize,
 			patternLen, max_PATTERN_LENGTH)
@@ -641,7 +641,7 @@ func buildPropertiesInfoFromInput(projectId uint64, eventNames []string, filepat
 	if err != nil {
 		return nil, nil, err
 	}
-	allProperty, err := P.CollectPropertiesInfo(scanner, userAndEventsInfo)
+	allProperty, err := P.CollectPropertiesInfo(projectId, scanner, userAndEventsInfo)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1159,7 +1159,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build pattern with histogram of all active user properties.")
 		return "", 0, err
 	}
-	if err := computeAllUserPropertiesHistogram(tmpEventsFilepath, allActiveUsersPattern); err != nil {
+	if err := computeAllUserPropertiesHistogram(projectId, tmpEventsFilepath, allActiveUsersPattern); err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to compute user properties.")
 		return "", 0, err
 	}

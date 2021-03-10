@@ -76,6 +76,8 @@ func TestPatternFromFile(t *testing.T) {
 }
 
 func TestPatternCountEvents(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	// Count A -> B -> C
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
@@ -102,7 +104,7 @@ func TestPatternCountEvents(t *testing.T) {
 		cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
 
 		for i, event := range events {
-			err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+			err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 				make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(), countOccurFlag)
 			assert.Nil(t, err)
 			nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -117,7 +119,7 @@ func TestPatternCountEvents(t *testing.T) {
 		events = []string{"B", "A", "A", "C", "B", "Z", "C", "A", "B", "C"}
 		cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
 		for i, event := range events {
-			err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+			err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 				make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix(), countOccurFlag)
 			assert.Nil(t, err)
 			nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -198,6 +200,8 @@ func TestPatternCountEvents(t *testing.T) {
 }
 
 func TestPatternGetPerUserCount(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	// Count A -> B -> C
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
@@ -214,7 +218,7 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	events := []string{"F", "B", "A", "C", "B", "A", "B", "C"}
 	cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
 	for i, event := range events {
-		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(), countOccurFlag)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -228,7 +232,7 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	events = []string{"B", "A", "A", "C", "B", "Z", "C", "A", "B", "C"}
 	cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
 	for i, event := range events {
-		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix(), countOccurFlag)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -427,6 +431,8 @@ func TestPatternGetPerUserCount(t *testing.T) {
 }
 
 func TestPatternEdgeConditions(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	countOccurFlag := true
 
 	// Test NewPattern with empty array.
@@ -462,7 +468,7 @@ func TestPatternEdgeConditions(t *testing.T) {
 	assert.Nil(t, err)
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	eventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
-	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix(), countOccurFlag)
 	assert.NotNil(t, err)
 
@@ -473,15 +479,15 @@ func TestPatternEdgeConditions(t *testing.T) {
 	eventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	err = p.ResetForNewUser("user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
-	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix(), countOccurFlag)
 	assert.Nil(t, err)
 	// Wrong userId.
-	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user2", userCreatedTime.Unix(), countOccurFlag)
 	assert.NotNil(t, err)
 	// Wrong userCreatedTime. Error is ignored.
-	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", eventCreatedTime.Unix(), countOccurFlag)
 	assert.Nil(t, err)
 
@@ -512,16 +518,18 @@ func TestPatternEdgeConditions(t *testing.T) {
 	event2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:59:59Z")
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
-	err = p.CountForEvent("A", event1CreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "A", event1CreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), countOccurFlag)
 	assert.Nil(t, err)
-	err = p.CountForEvent("B", event2CreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "B", event2CreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), countOccurFlag)
 	assert.NotNil(t, err)
 
 }
 
 func TestAddNumericAndCategoricalProperties(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	properties := map[string]interface{}{
 		"catProperty":      "1",
 		"numProperty":      1,
@@ -532,7 +540,7 @@ func TestAddNumericAndCategoricalProperties(t *testing.T) {
 	}
 	nMap := make(map[string]float64)
 	cMap := make(map[string]string)
-	P.AddNumericAndCategoricalProperties(0, properties, nMap, cMap)
+	P.AddNumericAndCategoricalProperties(project.ID, "event1", 0, properties, nMap, cMap, false)
 	assert.Contains(t, cMap, "0.catProperty")
 	assert.Contains(t, nMap, "0.numProperty")
 	assert.Contains(t, nMap, "0.$qp_utm_campaign")
@@ -550,6 +558,8 @@ func TestAddNumericAndCategoricalProperties(t *testing.T) {
 }
 
 func TestPatternCountEventsOccurenceFalse(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	// Count A -> B -> C
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
@@ -574,7 +584,7 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 	cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
 
 	for i, event := range events {
-		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(), countOccurFlag)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -589,7 +599,7 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 	events = []string{"B", "A", "A", "C", "B", "Z", "C", "A", "B", "C"}
 	cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
 	for i, event := range events {
-		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix(), countOccurFlag)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -670,6 +680,8 @@ func TestPatternCountEventsOccurenceFalse(t *testing.T) {
 }
 
 func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	// Count A -> B -> C
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
@@ -687,7 +699,7 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 	events := []string{"F", "B", "A", "C", "B", "A", "B", "C"}
 	cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
 	for i, event := range events {
-		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(), countOccurFlag)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -701,7 +713,7 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 	events = []string{"B", "A", "A", "C", "B", "Z", "C", "A", "B", "C"}
 	cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
 	for i, event := range events {
-		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+		err = p.CountForEvent(project.ID, event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix(), countOccurFlag)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -900,6 +912,8 @@ func TestPatternGetPerUserCountWithOccurenceFalse(t *testing.T) {
 }
 
 func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	countOccurFlag := false
 
 	// Test NewPattern with empty array.
@@ -935,7 +949,7 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 	assert.Nil(t, err)
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	eventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
-	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix(), countOccurFlag)
 	assert.NotNil(t, err)
 
@@ -946,15 +960,15 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 	eventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	err = p.ResetForNewUser("user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
-	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix(), countOccurFlag)
 	assert.Nil(t, err)
 	// Wrong userId.
-	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user2", userCreatedTime.Unix(), countOccurFlag)
 	assert.NotNil(t, err)
 	// Wrong userCreatedTime. Error is ignored.
-	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", eventCreatedTime.Unix(), countOccurFlag)
 	assert.Nil(t, err)
 
@@ -985,10 +999,10 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 	event2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:59:59Z")
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
-	err = p.CountForEvent("A", event1CreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "A", event1CreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), countOccurFlag)
 	assert.Nil(t, err)
-	err = p.CountForEvent("B", event2CreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent(project.ID, "B", event2CreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), countOccurFlag)
 	assert.NotNil(t, err)
 

@@ -55,6 +55,10 @@ func main() {
 	workerConcurrency := flag.Int("worker_concurrency", 10, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+	propertiesTypeCacheSize := flag.Int("property_details_cache_size", 0, "Cache size for in memory property detail.")
+	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
+	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
+	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 	flag.Parse()
 
 	defer U.NotifyOnPanic(workerName, *env)
@@ -89,6 +93,8 @@ func main() {
 		return
 	}
 	defer C.SafeFlushAllCollectors()
+
+	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
 
 	// Register tasks on queueClient.
 	queueClient := C.GetServices().QueueClient

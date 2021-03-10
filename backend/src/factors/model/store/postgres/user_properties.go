@@ -22,7 +22,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (pg *Postgres) createUserPropertiesIfChanged(projectId uint64, userId string,
+func (pg *Postgres) createUserPropertiesIfChanged(projectID uint64, userId string,
 	currentPropertiesId string, newProperties *postgres.Jsonb, timestamp int64) (string, int) {
 
 	if U.IsEmptyPostgresJsonb(newProperties) {
@@ -41,7 +41,7 @@ func (pg *Postgres) createUserPropertiesIfChanged(projectId uint64, userId strin
 	if currentPropertiesId != "" {
 		var currentPropertiesRecord *model.UserProperties
 		currentPropertiesRecord, statusCode = pg.GetUserPropertiesRecord(
-			projectId, userId, currentPropertiesId)
+			projectID, userId, currentPropertiesId)
 
 		if statusCode == http.StatusInternalServerError {
 			log.WithField("current_properties_id", currentPropertiesId).Error(
@@ -71,7 +71,7 @@ func (pg *Postgres) createUserPropertiesIfChanged(projectId uint64, userId strin
 			// Using merged properties for equality check to achieve
 			// currentPropertiesMap {x: 1, y: 2} newPropertiesMap {x: 1} -> true
 			if reflect.DeepEqual(currentPropertiesMap, mergedPropertiesMap) {
-				UpdateCacheForUserProperties(userId, projectId, currentPropertiesMap, true)
+				pg.UpdateCacheForUserProperties(userId, projectID, currentPropertiesMap, true)
 				return currentPropertiesId, http.StatusNotModified
 			}
 			// If not equal, trigger user properties merge.
@@ -81,14 +81,14 @@ func (pg *Postgres) createUserPropertiesIfChanged(projectId uint64, userId strin
 		mergedPropertiesMap = newPropertiesMap
 	}
 
-	UpdateCacheForUserProperties(userId, projectId, mergedPropertiesMap, false)
+	pg.UpdateCacheForUserProperties(userId, projectID, mergedPropertiesMap, false)
 	// Overwrite only given values.
 	updatedPropertiesBytes, err := json.Marshal(mergedPropertiesMap)
 	if err != nil {
 		return "", http.StatusInternalServerError
 	}
 	if shouldMergeUserProperties {
-		newPropertiesID, errCode := pg.MergeUserPropertiesForUserID(projectId, userId,
+		newPropertiesID, errCode := pg.MergeUserPropertiesForUserID(projectID, userId,
 			postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, currentPropertiesId, timestamp, false, false)
 
 		// Return only if merge is successfull. Else do usual update.
@@ -97,7 +97,7 @@ func (pg *Postgres) createUserPropertiesIfChanged(projectId uint64, userId strin
 		}
 	}
 
-	return updateUserPropertiesForUser(projectId, userId,
+	return updateUserPropertiesForUser(projectID, userId,
 		postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, timestamp, false)
 }
 
@@ -187,15 +187,15 @@ func (pg *Postgres) BackFillUserDataInCacheFromDb(projectid uint64, currentDate 
 	logCtx.Info("Refresh Event Properties Cache Done !!!")
 }
 
-func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProperties map[string]interface{}, redundantProperty bool) {
+func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64, updatedProperties map[string]interface{}, redundantProperty bool) {
 	// If the cache is empty / cache is updated from more than 1 day - repopulate cache
 	logCtx := log.WithFields(log.Fields{
-		"project_id": projectid,
+		"project_id": projectID,
 	})
 	currentTime := U.TimeNow()
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 	// Store Last updated from DB in cache as a key. and check and refresh cache accordingly
-	usersCacheKey, err := model.GetUsersCachedCacheKey(projectid, currentTimeDatePart)
+	usersCacheKey, err := model.GetUsersCachedCacheKey(projectID, currentTimeDatePart)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get property cache key - getuserscachedcachekey")
 	}
@@ -216,7 +216,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	propertiesToIncr := make([]*cacheRedis.Key, 0)
 	valuesToIncr := make([]*cacheRedis.Key, 0)
 	for property, value := range updatedProperties {
-		category := U.GetPropertyTypeByKeyValue(property, value)
+		category := pg.GetPropertyTypeByKeyValue(projectID, "", property, value, true)
 		var propertyValue string
 		if category == U.PropertyTypeUnknown && reflect.TypeOf(value).Kind() == reflect.Bool {
 			category = U.PropertyTypeCategorical
@@ -225,7 +225,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		if reflect.TypeOf(value).Kind() == reflect.String {
 			propertyValue = value.(string)
 		}
-		propertyCategoryKey, err := model.GetUserPropertiesCategoryByProjectCacheKey(projectid, property, category, currentTimeDatePart)
+		propertyCategoryKey, err := model.GetUserPropertiesCategoryByProjectCacheKey(projectID, property, category, currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - property category")
 			return
@@ -233,7 +233,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 		if category == U.PropertyTypeCategorical {
 			if propertyValue != "" {
-				valueKey, err := model.GetValuesByUserPropertyCacheKey(projectid, property, propertyValue, currentTimeDatePart)
+				valueKey, err := model.GetValuesByUserPropertyCacheKey(projectID, property, propertyValue, currentTimeDatePart)
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to get cache key - values")
 					return
@@ -270,7 +270,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 
 	countsInCache := make([]cacheRedis.KeyCountTuple, 0)
 	if newPropertiesCount > 0 {
-		propertiesCountKey, err := model.GetUserPropertiesCategoryByProjectCountCacheKey(projectid, currentTimeDatePart)
+		propertiesCountKey, err := model.GetUserPropertiesCategoryByProjectCountCacheKey(projectID, currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - propertiesCount")
 			return
@@ -278,7 +278,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: propertiesCountKey, Count: newPropertiesCount})
 	}
 	if newValuesCount > 0 {
-		valuesCountKey, err := model.GetValuesByUserPropertyCountCacheKey(projectid, currentTimeDatePart)
+		valuesCountKey, err := model.GetValuesByUserPropertyCountCacheKey(projectID, currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - valuesCount")
 			return
