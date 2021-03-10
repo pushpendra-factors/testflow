@@ -859,11 +859,24 @@ func EventArrayToString(eventNames []string) string {
 }
 
 func IsEncodedEvent(eventName string) bool {
-	return U.IsCampaignEvent(eventName)
+	return U.IsItreeCampaignEvent(eventName)
 }
 
 func ExtractCampaignName(eventName string) string {
-	prefix := strings.Split(eventName, "$session[campaign:")
-	campaignName := strings.Split(prefix[1], "]")
-	return campaignName[0]
+	if strings.HasPrefix(eventName, "$session[campaign:") {
+		prefix := strings.Split(eventName, "$session[campaign:")
+		campaignName := strings.Split(prefix[1], "]")
+		return "Campaign = " + campaignName[0]
+	}
+	if strings.HasPrefix(eventName, "$session[source:") {
+		prefix := strings.Split(eventName, "$session[source:")
+		campaignName := strings.Split(prefix[1], "]")
+		return "Source = " + campaignName[0]
+	}
+	if strings.HasPrefix(eventName, "$session[medium:") {
+		prefix := strings.Split(eventName, "$session[medium:")
+		campaignName := strings.Split(prefix[1], "]")
+		return "Medium = " + campaignName[0]
+	}
+	return ""
 }

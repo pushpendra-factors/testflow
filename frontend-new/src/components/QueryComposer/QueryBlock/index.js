@@ -19,7 +19,7 @@ function QueryBlock({
   activeProject, groupBy, setGroupBy,
   delGroupBy, userProperties, eventProperties
 }) {
-  const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event && queries.length <= 1));
+  const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
   const [filterProps, setFilterProperties] = useState({

@@ -1,5 +1,5 @@
 import numpy as np
-from wi_poc.src.utils import smart_divide, frac_change
+from wi_poc.src.utils import smart_divide, frac_change, get_sign, normalize_value
 from wi_poc.src.defaults import DEFAULT_NEGATION_PREDICT_MODE, \
     DEFAULT_DIFFERENCE_METRIC_NAMES
 
@@ -32,6 +32,26 @@ def compute_intermediate_metrics(df, negation_predict_mode=DEFAULT_NEGATION_PRED
     elif negation_predict_mode == 'diff-based':
         df['notfm2_pred'] = df['m2_pred'] - df['fm2_pred']
 
+
+def compute_publishable_impact(x, metric1, metric2, base_type = int, base_unit=''):
+    v1 = normalize_value(x[metric1], base_type, base_unit)
+    v2 = normalize_value(x[metric2], base_type, base_unit)
+    imp = round(smart_divide(v2, v1 if v1 != 0 else 1), 2)
+    publishable_impact = "{i}x ({a}{u} -> {b}{u})".format(i=imp, a=v1, b=v2, u=base_unit)
+    return publishable_impact
+
+def compute_publishable_pc(x, metric1, metric2, base_type = int, base_unit=''):
+    v1 = normalize_value(x[metric1], base_type, base_unit)
+    v2 = normalize_value(x[metric2], base_type, base_unit)
+    pc = round(frac_change(v1, v2, False) * 100, 2)
+    sign = get_sign(pc)
+    publishable_pc = "{s}{p}% ({a}{u} -> {b}{u})".format(s=sign, p=np.abs(pc), a=v1, b=v2, u=base_unit)
+    return publishable_pc
+
+def compute_publishable_metrics(df):
+    df['Impact'] = df.apply(lambda x: compute_publishable_impact(x, 'fm1', 'fm2'), axis=1)
+    df['% change in scale'] = df.apply(lambda x: compute_publishable_pc(x, 'f1', 'f2'), axis=1)
+    df['% change in conversion rate'] = df.apply(lambda x: compute_publishable_pc(x, 'crf1', 'crf2', float, '%'), axis=1)
 
 def compute_difference_metrics(df, difference_metric_names=DEFAULT_DIFFERENCE_METRIC_NAMES):
     if 'delta_ratio' in difference_metric_names:

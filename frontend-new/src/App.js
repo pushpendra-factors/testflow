@@ -26,6 +26,12 @@ const Activate = lazy(() => import("./Views/Pages/Activate"));
 const FactorsInsights = lazy(() => import("./Views/Factors/FactorsInsights"));
 
 function App({ isAgentLoggedIn, agent_details }) {
+
+  if(window.location.origin.startsWith("https://tufte-prod.factors.ai")) {
+    window.location.replace("https://app.factors.ai/")
+  }
+
+
   useEffect(() => { 
 
  

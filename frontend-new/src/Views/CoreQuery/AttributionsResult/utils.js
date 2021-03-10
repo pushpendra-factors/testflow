@@ -186,6 +186,7 @@ export const getCompareTableColumns = (
       ),
       dataIndex: "conversion_compare",
       className: "text-center",
+      render: (obj) => renderComparCell(obj, "justify-center")
     });
     result[result.length - 1].children.push({
       title: (
@@ -202,15 +203,38 @@ export const getCompareTableColumns = (
       ),
       dataIndex: "cost_compare",
       className: "text-center",
+      render: (obj) => renderComparCell(obj, "justify-center")
     });
   }
   let linkedEventsColumns = [];
   if (linkedEvents.length) {
     linkedEventsColumns = linkedEvents.map((le) => {
       return {
-        title: `${le.label} - Users`,
-        dataIndex: le.label,
-      };
+        title: le.label,
+        className: "tableParentHeader",
+        children: [
+          {
+            title: (
+              <div className="flex flex-col items-center justify-ceneter">
+                <div>Users</div>
+              </div>
+            ),
+            dataIndex: le.label + " - Users",
+            className: "text-center",
+            render: (obj) => renderComparCell(obj, "justify-center")
+          },
+          {
+            title: (
+              <div className="flex flex-col items-center justify-ceneter">
+                <div>Cost per Conversion</div>
+              </div>
+            ),
+            dataIndex: le.label + " - CPC",
+            className: "text-center",
+            render: (obj) => renderComparCell(obj, "justify-center")
+          },
+        ],
+      }
     });
   }
   return [...result, ...linkedEventsColumns];
@@ -338,9 +362,29 @@ export const getTableColumns = (
   if (linkedEvents.length) {
     linkedEventsColumns = linkedEvents.map((le) => {
       return {
-        title: `${le.label} - Users`,
-        dataIndex: le.label,
-      };
+        title: le.label,
+        className: "tableParentHeader",
+        children: [
+          {
+            title: (
+              <div className="flex flex-col items-center justify-ceneter">
+                <div>Users</div>
+              </div>
+            ),
+            dataIndex: le.label + " - Users",
+            className: "text-center",
+          },
+          {
+            title: (
+              <div className="flex flex-col items-center justify-ceneter">
+                <div>Cost per Conversion</div>
+              </div>
+            ),
+            dataIndex: le.label + " - CPC",
+            className: "text-center",
+          },
+        ],
+      }
     });
   }
   return [...result, ...linkedEventsColumns];
@@ -390,13 +434,15 @@ export const getCompareTableData = (
       };
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
-          const eventIdx = headers.indexOf(`${le.label} - Users`);
-          resultantRow[le.label] = formatCount(row[eventIdx], 0);
+          const eventUsersIdx = headers.indexOf(`${le.label} - Users`);
+          const eventCPCIdx = headers.indexOf(`${le.label} - CPC`);
+          resultantRow[`${le.label} - Users`] = constrComparisionCellData(row, row2, eventUsersIdx);
+          resultantRow[`${le.label} - CPC`] = constrComparisionCellData(row, row2, eventCPCIdx);
         });
       }
       if (attribution_method_compare) {
-        resultantRow["conversion_compare"] = row[compareUsersIdx];
-        resultantRow["cost_compare"] = formatCount(row[compareCostIdx], 0);
+        resultantRow["conversion_compare"] = constrComparisionCellData(row, row2, [compareUsersIdx]);
+        resultantRow["cost_compare"] = constrComparisionCellData(row, row2, [compareCostIdx]);
       }
       return resultantRow;
     })
@@ -448,8 +494,10 @@ export const getTableData = (
       };
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
-          const eventIdx = headers.indexOf(`${le.label} - Users`);
-          resultantRow[le.label] = formatCount(row[eventIdx], 0);
+          const eventUsersIdx = headers.indexOf(`${le.label} - Users`);
+          const eventCPCIdx = headers.indexOf(`${le.label} - CPC`);
+          resultantRow[`${le.label} - Users`] = formatCount(row[eventUsersIdx], 0);
+          resultantRow[`${le.label} - CPC`] = formatCount(row[eventCPCIdx], 0);
         });
       }
       if (attribution_method_compare) {

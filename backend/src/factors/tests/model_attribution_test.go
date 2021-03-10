@@ -144,7 +144,7 @@ func TestAttributionModel(t *testing.T) {
 			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
 			AttributionKey:         model.AttributionKeyCampaign,
 			AttributionMethodology: model.AttributionMethodFirstTouch,
-			ConversionEvent:        model.QueryEventWithProperties{"event1", nil},
+			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
 			LookbackDays:           10,
 		}
 
@@ -967,7 +967,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				return
 			}
 			if tt.args.method == model.AttributionMethodLinear {
-				for key, _ := range tt.wantUsersAttribution {
+				for key := range tt.wantUsersAttribution {
 					if len(got[key]) != len(tt.wantUsersAttribution[key]) {
 						t.Errorf("applyAttribution() Failed LINEAR TOUCH got = %v, want %v", len(got[key]), len(tt.wantUsersAttribution[key]))
 					}

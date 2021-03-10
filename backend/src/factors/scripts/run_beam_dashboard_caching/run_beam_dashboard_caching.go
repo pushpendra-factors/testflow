@@ -119,7 +119,7 @@ func initConf(config *C.Configuration) {
 		// TODO(prateek): Check how a panic here will effect the pipeline.
 		log.WithError(err).Panic("Failed to initalize db.")
 	}
-	C.InitRedisConnection(config.RedisHost, config.RedisPort, true, 20, 5)
+	C.InitRedisConnection(config.RedisHost, config.RedisPort, true, 20, 0)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	C.KillDBQueriesOnExit()
 }

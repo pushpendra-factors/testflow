@@ -16,15 +16,16 @@ import (
 
 //SavedQueryRequestPayload is struct for post request to create saved query
 type SavedQueryRequestPayload struct {
-	Title string          `json:"title"`
-	Type  int             `json:"type"`
-	Query *postgres.Jsonb `json:"query"`
+	Title    string          `json:"title"`
+	Type     int             `json:"type"`
+	Query    *postgres.Jsonb `json:"query"`
+	Settings *postgres.Jsonb `json:"settings"`
 }
 
 // SavedQueryUpdatePayload is struct update
 type SavedQueryUpdatePayload struct {
-	Title string          `json:"title"`
-	Query *postgres.Jsonb `json:"query"`
+	Title    string          `json:"title"`
+	Settings *postgres.Jsonb `json:"settings"`
 }
 
 // GetQueriesHandler godoc
@@ -85,6 +86,7 @@ func CreateQueryHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid query. empty query."})
 		return
 	}
+
 	if requestPayload.Title == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid title. empty title"})
 		return
@@ -95,13 +97,20 @@ func CreateQueryHandler(c *gin.Context) {
 		return
 	}
 
-	query, errCode, errMsg := store.GetStore().CreateQuery(projectID,
-		&model.Queries{
-			Query:     *requestPayload.Query,
-			Title:     requestPayload.Title,
-			Type:      requestPayload.Type,
-			CreatedBy: agentUUID,
-		})
+	queryRequest := &model.Queries{
+		Query:     *requestPayload.Query,
+		Title:     requestPayload.Title,
+		Type:      requestPayload.Type,
+		CreatedBy: agentUUID,
+		// To support empty settings value.
+		Settings: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+	}
+
+	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {
+		queryRequest.Settings = *requestPayload.Settings
+	}
+
+	query, errCode, errMsg := store.GetStore().CreateQuery(projectID, queryRequest)
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, errMsg)
 		return
@@ -156,10 +165,10 @@ func UpdateSavedQueryHandler(c *gin.Context) {
 		query.Title = requestPayload.Title
 	}
 	query.Type = model.QueryTypeSavedQuery
-	if requestPayload.Query != nil && !U.IsEmptyPostgresJsonb(requestPayload.Query) {
-		query.Query = *requestPayload.Query
-	}
 
+	if requestPayload.Settings != nil && !U.IsEmptyPostgresJsonb(requestPayload.Settings) {
+		query.Settings = *requestPayload.Settings
+	}
 	_, errCode := store.GetStore().UpdateSavedQuery(projectID, queryID,
 		&query)
 	if errCode != http.StatusAccepted {

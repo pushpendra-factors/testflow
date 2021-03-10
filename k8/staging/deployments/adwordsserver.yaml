@@ -63,7 +63,7 @@ spec:
           - --api_host_url
           - $(DATA_SERVICE_HOST_URL)
           - --app_host_url
-          - $(APP_HOST_URL)
+          - $(APP_OLD_HOST_URL)
           - --oauth_secret
           - $(GOOGLE_OAUTH_SECRET)
           - --developer_token

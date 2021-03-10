@@ -1,6 +1,7 @@
 from wi_poc.src.weekly_insights import generate_weekly_insights
 import argparse
-from wi_poc.src.defaults import WKS, criteria_map, DEFAULT_WK1_KEY, DEFAULT_WK2_KEY
+from wi_poc.src.defaults import WKS, criteria_map, DEFAULT_WK1_KEY, DEFAULT_WK2_KEY, \
+    DEFAULT_BASE, DEFAULT_TARGET
 
 def parse_args():
     """
@@ -38,8 +39,8 @@ def main():
     wi_args = {'project_id': project_id,
                'wk1_key': wk1_key,
                'wk2_key': wk2_key,
-               'base': criteria_map[project_id]['base'],
-               'target': criteria_map[project_id]['target']}
+               'base': criteria_map.get(project_id, {}).get('base', DEFAULT_BASE),
+               'target': criteria_map.get(project_id, {}).get('target', DEFAULT_TARGET)}
     generate_weekly_insights(**wi_args, filter_params_mode='bucketed')
 
 if __name__ == '__main__':

@@ -88,9 +88,9 @@ type KLDistanceUnitInfo struct {
 	Fcr           float64
 }
 
-const MAX_SEQUENCE_CHILD_NODES = 50
-const MAX_PROPERTY_CHILD_NODES = 50
-const MAX_NODES_TO_EVALUATE = 300
+const MAX_SEQUENCE_CHILD_NODES = 100
+const MAX_PROPERTY_CHILD_NODES = 100
+const MAX_NODES_TO_EVALUATE = 500
 
 const NODE_TYPE_ROOT = 0
 const NODE_TYPE_SEQUENCE = 1               // A child node that differs from its parent by an event.
@@ -213,7 +213,7 @@ func (it *Itree) buildRootNode(reqId string, allActiveUsers *P.Pattern,
 	}
 	var fcp, fcr uint
 	if len(pattern.EventNames) == 1 {
-		fcp, _ = allActiveUsers.GetCount(patternConstraints, countType)
+		fcp, _ = allActiveUsers.GetCount([]P.EventConstraints{*startEventConstraints}, countType)
 		fcr, _ = pattern.GetCount(patternConstraints, countType)
 
 	} else if len(pattern.EventNames) == 2 {
@@ -701,6 +701,22 @@ func getPropertyNamesMapFromConstraints(
 	return &seenPropertyConstraints
 }
 
+func getPropertyTypeOfAddedConstraint(pcs P.EventConstraints) bool {
+	var isCat bool
+	for _, _ = range pcs.EPCategoricalConstraints {
+		isCat = true
+	}
+	for _, _ = range pcs.EPNumericConstraints {
+		isCat = false
+	}
+	for _, _ = range pcs.UPCategoricalConstraints {
+		isCat = true
+	}
+	for _, _ = range pcs.UPNumericConstraints {
+		isCat = false
+	}
+	return isCat
+}
 func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 	categoricalPropertyKeyValues []string,
 	nodeType int, maxNumProperties int, maxNumValues int,
@@ -1186,7 +1202,7 @@ func BuildNewItree(reqId,
 
 var debugCounts map[string]int
 
-func BuildNewItreeV1(reqId,
+func BuildNewItreeV1(reqId string,
 	startEvent string, startEventConstraints *P.EventConstraints,
 	endEvent string, endEventConstraints *P.EventConstraints,
 	patternWrapper PatternServiceWrapperInterface, countType string, debugKey string, debugParams map[string]string) (*Itree, error, interface{}) {
@@ -1271,13 +1287,13 @@ func BuildNewItreeV1(reqId,
 	itree.addNode(rootNode)
 	queue = append(queue, &LevelItreeNodeTuple{node: rootNode, level: 0})
 	numNodesEvaluated := 0
-
 	var debugData interface{}
 	var campaignNodesDuration, campaignNodesCount, sequenceNodesDuration, sequenceNodesCount, attributeNodesDuration, attributeNodesCount int
 	for len(queue) > 0 && numNodesEvaluated < MAX_NODES_TO_EVALUATE {
 		numNodesEvaluated++
 		parentNode := queue[0]
 		if parentNode.node.NodeType != NODE_TYPE_CAMPAIGN {
+
 			startDateTime := time.Now()
 			if attributeChildNodes, err, debugInfo := itree.buildAndAddPropertyChildNodesV1(reqId,
 				parentNode.node, allActiveUsersPattern, patternWrapper, countType, parentNode.level, debugKey, debugParams["PropertyName"], debugParams["PropertyValue"]); err != nil {
@@ -1372,11 +1388,36 @@ func extractProperty(constraint P.EventConstraints) map[string]string {
 }
 
 func extractProperties(parentNode *ItreeNode) ([]string, []string, []string, []string) {
+
+	type PropertyCountTuple struct {
+		Property string
+		Count    uint64
+	}
+	userPropertiesCount := make(map[string]uint64)
 	userCatProperties := make([]string, 0)
+	userCatPropertiesSorted := make([]string, 0)
+	userPropertiesCountTuple := make([]PropertyCountTuple, 0)
 	if parentNode.Pattern.PerUserUserCategoricalProperties != nil {
 		for _, template := range *parentNode.Pattern.PerUserUserCategoricalProperties.Template {
 			userCatProperties = append(userCatProperties, formatProperty(template.Name))
 		}
+	}
+	for _, bin := range parentNode.Pattern.PerUserUserCategoricalProperties.Bins {
+		for index, freqMap := range bin.FrequencyMaps {
+			userPropertiesCount[userCatProperties[index]] += freqMap.Count
+		}
+	}
+	for property, count := range userPropertiesCount {
+		userPropertiesCountTuple = append(userPropertiesCountTuple, PropertyCountTuple{
+			Property: property,
+			Count:    count,
+		})
+	}
+	sort.Slice(userPropertiesCountTuple, func(i, j int) bool {
+		return userPropertiesCountTuple[i].Count > userPropertiesCountTuple[j].Count
+	})
+	for _, property := range userPropertiesCountTuple {
+		userCatPropertiesSorted = append(userCatPropertiesSorted, property.Property)
 	}
 	userNumProperties := make([]string, 0)
 	if parentNode.Pattern.PerUserUserNumericProperties != nil {
@@ -1396,7 +1437,7 @@ func extractProperties(parentNode *ItreeNode) ([]string, []string, []string, []s
 			eventNumProperties = append(eventNumProperties, formatProperty(template.Name))
 		}
 	}
-	return userCatProperties, userNumProperties, eventCatProperties, eventNumProperties
+	return userCatPropertiesSorted, userNumProperties, eventCatProperties, eventNumProperties
 }
 
 func formatProperty(property string) string {
@@ -1414,7 +1455,6 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	// The ones that causes the highest gini drop when all users who have
 	// A->B->C with constraints are split by the additional constraint ck+1
 	// taking Y (with constraint if any) as the classification label.
-
 	parentPattern := parentNode.Pattern
 	parentConstraints := parentNode.PatternConstraints
 	baseProperty := extractProperty(parentConstraints[len(parentConstraints)-1])
@@ -1459,6 +1499,8 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	pLen = len(parentPattern.EventNames)
 	MAX_CAT_PROPERTIES_EVALUATED := 100
 	MAX_CAT_VALUES_EVALUATED := 100
+	CATEGORICAL_PROPERTY_REPETATION_THRESHOLD := int64(3)
+	NUMERICAL_PROPERTY_REPETATION_THRESHOLD := int64(1)
 	debugKey = fmt.Sprintf("itree_attribute_totaleventCategorical_level%v", level)
 	debugCounts[debugKey] = debugCounts[debugKey] + len(eventCatProperties)
 	debugKey = fmt.Sprintf("itree_attribute_totaleventNumerical_level%v", level)
@@ -1533,7 +1575,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	// Initialize seen properties with that of parent properties.
 	seenPropertyConstraints := getPropertyNamesMapFromConstraints(
 		parentNode.PatternConstraints)
-
+	seenPropertyConstraintsByCount := make(map[string]int64)
 	for _, cNode := range childNodes {
 		if cNode.InformationDrop <= 0.0 {
 			debugKey := fmt.Sprintf("filterreason:itree_attribute_informationdrop_level%v", level)
@@ -1543,9 +1585,11 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 		// Dedup repeated constraints on different values.
 		childPropertyConstraintsMap := getPropertyNamesMapFromConstraints(
 			[]P.EventConstraints{cNode.AddedConstraint})
+
+		isCat := getPropertyTypeOfAddedConstraint(cNode.AddedConstraint)
 		isDup := false
 		for childPropertyName, _ := range *childPropertyConstraintsMap {
-			if _, found := (*seenPropertyConstraints)[childPropertyName]; found {
+			if _, found := (*seenPropertyConstraints)[childPropertyName]; found || isCat && seenPropertyConstraintsByCount[childPropertyName] >= CATEGORICAL_PROPERTY_REPETATION_THRESHOLD || !isCat && seenPropertyConstraintsByCount[childPropertyName] >= NUMERICAL_PROPERTY_REPETATION_THRESHOLD {
 				isDup = true
 				break
 			}
@@ -1556,7 +1600,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 		it.addNode(cNode)
 		addedChildNodes = append(addedChildNodes, cNode)
 		for pc, _ := range *childPropertyConstraintsMap {
-			(*seenPropertyConstraints)[pc] = true
+			seenPropertyConstraintsByCount[pc]++
 		}
 		numAddedChildNodes++
 		// Only top MAX_PROPERTY_CHILD_NODES in order of drop in GiniImpurity are selected.
