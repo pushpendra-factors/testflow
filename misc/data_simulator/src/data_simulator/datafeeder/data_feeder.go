@@ -322,7 +322,7 @@ func AddCampaignCounter(events []operations.EventOutput, campaignCounter map[str
 func ProcessAdwordsDataFromEventsFiles(eventsExecutionDate time.Time, env *string, dataConfig *string, endpoint_staging *string, authToken_staging *string, events_staging []operations.EventOutput, endpoint_prod *string, authToken_prod *string, events_prod []operations.EventOutput) {
 
 	dateYesterday := eventsExecutionDate.AddDate(0, 0, -1).Format(constants.DATEFORMAT)
-	fileForYesterday := constants.LOCALOUTPUTFOLDER + "/" + "campaign_perf_report_done" + dateYesterday + ".marker"
+	fileForYesterday := "campaign_perf_report_done" + dateYesterday + ".marker"
 	if *env == "development" {
 
 		if utils.DoesFileExist(fileForYesterday) {
@@ -444,7 +444,7 @@ func ProcessAdwordsDataFromEventsFiles(eventsExecutionDate time.Time, env *strin
 	IngestAdwordsData(workingDateYesterday, projectIDStage, adwordsCustomerAccountIDStage, campaignCounterSTAGE, endpoint_staging, authToken_staging)
 	IngestAdwordsData(workingDateYesterday, projectIDProd, adwordsCustomerAccountIDProd, campaignCounterPROD, endpoint_prod, authToken_prod)
 
-	// create marker file for today's run
+	// create marker file for today's run (for yesterdays performance report)
 	if *env == "development" {
 		if !utils.CreateFile(fileForYesterday) {
 			Log.Debug.Printf("Couldn't create file %s", fileForYesterday)
