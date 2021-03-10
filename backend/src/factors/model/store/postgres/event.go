@@ -56,7 +56,7 @@ func (pg *Postgres) GetEventCountOfUsersByEventName(projectID uint64, userIDs []
 	return count, http.StatusFound
 }
 
-func (pg *Postgres) addEventDetailsToCache(projectId uint64, event *model.Event, isUpdateEventProperty bool) {
+func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event, isUpdateEventProperty bool) {
 	// TODO: Remove this check after enabling caching realtime.
 	blackListedForUpdate := make(map[string]bool)
 	blackListedForUpdate[U.EP_PAGE_SPENT_TIME] = true
@@ -65,9 +65,9 @@ func (pg *Postgres) addEventDetailsToCache(projectId uint64, event *model.Event,
 	eventsToIncr := make([]*cacheRedis.Key, 0)
 	propertiesToIncr := make([]*cacheRedis.Key, 0)
 	valuesToIncr := make([]*cacheRedis.Key, 0)
-	logCtx := log.WithField("project_id", projectId)
+	logCtx := log.WithField("project_id", projectID)
 
-	eventNameDetails, err := pg.GetEventNameFromEventNameId(event.EventNameId, projectId)
+	eventNameDetails, err := pg.GetEventNameFromEventNameId(event.EventNameId, projectID)
 	if err != nil {
 		logCtx.WithError(err).Info("Failed to get event name from id")
 		return
@@ -86,10 +86,10 @@ func (pg *Postgres) addEventDetailsToCache(projectId uint64, event *model.Event,
 
 	var eventNamesKey *cacheRedis.Key
 	if IsEventNameTypeSmartEvent(eventNameDetails.Type) {
-		eventNamesKey, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId,
+		eventNamesKey, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID,
 			eventName, currentTimeDatePart)
 	} else {
-		eventNamesKey, err = model.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId,
+		eventNamesKey, err = model.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID,
 			eventName, currentTimeDatePart)
 	}
 
@@ -104,7 +104,7 @@ func (pg *Postgres) addEventDetailsToCache(projectId uint64, event *model.Event,
 			continue
 		}
 		if !blackListedForUpdate[property] || !isUpdateEventProperty {
-			category := U.GetPropertyTypeByKeyValue(property, value)
+			category := pg.GetPropertyTypeByKeyValue(projectID, eventName, property, value, false)
 			var propertyValue string
 			if category == U.PropertyTypeUnknown && reflect.TypeOf(value).Kind() == reflect.Bool {
 				category = U.PropertyTypeCategorical
@@ -113,7 +113,7 @@ func (pg *Postgres) addEventDetailsToCache(projectId uint64, event *model.Event,
 			if reflect.TypeOf(value).Kind() == reflect.String {
 				propertyValue = value.(string)
 			}
-			propertyCategoryKey, err := model.GetPropertiesByEventCategoryCacheKey(projectId,
+			propertyCategoryKey, err := model.GetPropertiesByEventCategoryCacheKey(projectID,
 				eventName, property, category, currentTimeDatePart)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get cache key - property category")
@@ -122,7 +122,7 @@ func (pg *Postgres) addEventDetailsToCache(projectId uint64, event *model.Event,
 			propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 			if category == U.PropertyTypeCategorical {
 				if propertyValue != "" {
-					valueKey, err := model.GetValuesByEventPropertyCacheKey(projectId,
+					valueKey, err := model.GetValuesByEventPropertyCacheKey(projectID,
 						eventName, property, propertyValue, currentTimeDatePart)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to get cache key - values")
@@ -175,7 +175,7 @@ func (pg *Postgres) addEventDetailsToCache(projectId uint64, event *model.Event,
 	}
 	countsInCache := make([]cacheRedis.KeyCountTuple, 0)
 	if newEventCount > 0 {
-		eventsCountKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(projectId,
+		eventsCountKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(projectID,
 			currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - eventsCount")
@@ -185,7 +185,7 @@ func (pg *Postgres) addEventDetailsToCache(projectId uint64, event *model.Event,
 	}
 	if newPropertiesCount > 0 {
 		propertiesCountKey, err := model.GetPropertiesByEventCategoryCountCacheKey(
-			projectId, currentTimeDatePart)
+			projectID, currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - propertiesCount")
 			return
@@ -193,7 +193,7 @@ func (pg *Postgres) addEventDetailsToCache(projectId uint64, event *model.Event,
 		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: propertiesCountKey, Count: newPropertiesCount})
 	}
 	if newValuesCount > 0 {
-		valuesCountKey, err := model.GetValuesByEventPropertyCountCacheKey(projectId, currentTimeDatePart)
+		valuesCountKey, err := model.GetValuesByEventPropertyCountCacheKey(projectID, currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - valuesCount")
 			return

@@ -285,7 +285,7 @@ func eventToDb(event denEvent, project *model.Project) int {
 
 func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccurence bool, file *os.File) error {
 
-	patterns, err := getPatterns(file, shouldCountOccurence)
+	patterns, err := getPatterns(projectId, file, shouldCountOccurence)
 	if err != nil {
 		return err
 	}
@@ -402,7 +402,7 @@ func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccur
 	return nil
 }
 
-func getPatterns(file *os.File, countOccurence bool) ([]*P.Pattern, error) {
+func getPatterns(projectID uint64, file *os.File, countOccurence bool) ([]*P.Pattern, error) {
 
 	// A -> $session , B -> Fund Project , C -> View Project
 
@@ -429,7 +429,7 @@ func getPatterns(file *os.File, countOccurence bool) ([]*P.Pattern, error) {
 		return nil, err
 	}
 	scanner := bufio.NewScanner(file)
-	_, err = P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
+	_, err = P.CollectPropertiesInfo(projectID, scanner, &userAndEventsInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +444,7 @@ func getPatterns(file *os.File, countOccurence bool) ([]*P.Pattern, error) {
 		return nil, err
 	}
 	scanner = bufio.NewScanner(file)
-	err = P.CountPatterns(scanner, patterns, countOccurence)
+	err = P.CountPatterns(projectID, scanner, patterns, countOccurence)
 	if err != nil {
 		return nil, err
 	}
@@ -453,7 +453,7 @@ func getPatterns(file *os.File, countOccurence bool) ([]*P.Pattern, error) {
 
 func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, shouldCountOccurence bool, file *os.File) error {
 	//Test with event constraints
-	patterns, err := getPatterns(file, shouldCountOccurence)
+	patterns, err := getPatterns(projectId, file, shouldCountOccurence)
 	if err != nil {
 		return err
 	}

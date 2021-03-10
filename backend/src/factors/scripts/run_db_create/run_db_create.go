@@ -592,4 +592,26 @@ func main() {
 	} else {
 		log.Info("factors_goals table is associated with agents table.")
 	}
+
+	// Create property_details table.
+	if err := db.CreateTable(&model.PropertyDetail{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("property_details table creation failed.")
+	} else {
+		log.Info("Created configured properties table.")
+	}
+
+	// Add foreign key constraint
+	if err := db.Model(&model.PropertyDetail{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("property_details table association with projects table failed.")
+	} else {
+		log.Info("property_details table is associated with projects table.")
+	}
+
+	// Add foreign key constraint
+	if err := db.Model(&model.PropertyDetail{}).AddForeignKey("project_id, event_name_id", "event_names (project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("property_details table association with events table failed.")
+	} else {
+		log.Info("property_details table is associated with events table.")
+	}
+
 }

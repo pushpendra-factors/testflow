@@ -68,6 +68,7 @@ func TestMain(m *testing.M) {
 
 	C.InitQueueClient(config.RedisHost, config.RedisPort)
 
+	C.InitPropertiesTypeCache(true, 10000, "*", "")
 	if C.GetConfig().Env != C.DEVELOPMENT {
 		log.Fatal("Environment is not Development.")
 		os.Exit(1)

@@ -369,7 +369,6 @@ type Model interface {
 	GetDistinctCustomerUserIDSForProject(projectID uint64) ([]string, int)
 	GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string)
 	UpdateUserPropertiesByCurrentProperties(projectId uint64, id string, currentPropertiesId string, properties *postgres.Jsonb, updateTimestamp int64) (string, int)
-
 	// web_analytics
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *model.WebAnalyticsQueries, int)
 	CreateWebAnalyticsDefaultDashboardWithUnits(projectID uint64, agentUUID string) int
@@ -388,4 +387,9 @@ type Model interface {
 	// replication_metadata
 	GetReplicationMetadataByTable(tableName string) (*model.ReplicationMetadata, int)
 	CreateOrUpdateReplicationMetadataByTable(tableName string, lastRunAt *time.Time, count uint64) int
+
+	//properties_type
+	GetPropertyTypeByKeyValue(projectID uint64, eventName string, propertyKey string, propertyValue interface{}, isUserProperty bool) string
+	GetPropertyTypeFromDB(projectID uint64, eventName, propertyKey string, isUserProperty bool) (int, *model.PropertyDetail)
+	CreatePropertyDetails(projectID uint64, eventName, propertyKey, propertyType string, isUserProperty bool) int
 }

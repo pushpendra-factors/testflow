@@ -1330,35 +1330,36 @@ func isDateTimePropertyByName(propertyKey string) bool {
 	return false
 }
 
-func GetPropertyTypeByKeyValue(propertyKey string, propertyValue interface{}) string {
+func GetPropertyTypeByKeyORValue(projectID uint64, eventName string, propertyKey string, propertyValue interface{}, isUserProperty bool) (string, bool) {
 	// PropertyKey will be set to null if the pre-mentioned classfication behaviour need to be supressed
 	if propertyKey != "" {
+
 		if strings.HasPrefix(propertyKey, NAME_PREFIX) {
 			if isNumericalPropertyByName(propertyKey) {
-				return PropertyTypeNumerical
+				return PropertyTypeNumerical, true
 			}
 			if isCategoricalPropertyByName(propertyKey) {
-				return PropertyTypeCategorical
+				return PropertyTypeCategorical, true
 			}
 			if isDateTimePropertyByName(propertyKey) {
-				return PropertyTypeDateTime
+				return PropertyTypeDateTime, true
 			}
 		}
 		if IsPropertyNameContainsDateOrTime(propertyKey) {
 			_, status := ConvertDateTimeValueToNumber(propertyValue)
 			if status {
-				return PropertyTypeDateTime
+				return PropertyTypeDateTime, false
 			}
 		}
 	}
 
 	switch propertyValue.(type) {
 	case int, float64:
-		return PropertyTypeNumerical
+		return PropertyTypeNumerical, false
 	case string:
-		return PropertyTypeCategorical
+		return PropertyTypeCategorical, false
 	default:
-		return PropertyTypeUnknown
+		return PropertyTypeUnknown, false
 	}
 }
 
@@ -1503,39 +1504,6 @@ func FillHourDayAndTimestampEventProperty(properties *postgres.Jsonb, timestamp 
 	(*eventPropsJSON)[EP_HOUR_OF_DAY] = hr
 	(*eventPropsJSON)[EP_TIMESTAMP] = timestamp
 	return EncodeToPostgresJsonb(eventPropsJSON)
-}
-
-// ClassifyPropertiesType - Classifies type of properties as categorical and numerical
-// properties -> map[propertyKey]map[propertyValue]true
-func ClassifyPropertiesType(properties *map[string]map[interface{}]bool) (map[string][]string, error) {
-	numProperties := make([]string, 0, 0)
-	catProperties := make([]string, 0, 0)
-
-	for propertyKey, v := range *properties {
-		isNumericalProperty := true
-		for propertyValue := range v {
-			propertyType := GetPropertyTypeByKeyValue(propertyKey, propertyValue)
-			switch propertyType {
-			case PropertyTypeNumerical:
-			case PropertyTypeCategorical:
-				isNumericalProperty = false
-			default:
-				return nil, fmt.Errorf("unsupported type %s on property type classification %s - %s", propertyType, propertyKey, propertyValue)
-			}
-		}
-
-		if isNumericalProperty {
-			numProperties = append(numProperties, propertyKey)
-		} else {
-			catProperties = append(catProperties, propertyKey)
-		}
-	}
-
-	propsByType := make(map[string][]string, 0)
-	propsByType[PropertyTypeNumerical] = numProperties
-	propsByType[PropertyTypeCategorical] = catProperties
-
-	return propsByType, nil
 }
 
 // Moves datetime properties from numerical properties to type datetime.
