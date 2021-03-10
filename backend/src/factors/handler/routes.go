@@ -3,6 +3,7 @@ package handler
 import (
 	C "factors/config"
 	mid "factors/middleware"
+	U "factors/util"
 	"net/http"
 
 	IH "factors/handler/internal"
@@ -88,23 +89,23 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/user_properties", GetUserPropertiesHandler)
 	authRouteGroup.GET("/:project_id/user_properties/:property_name/values", GetUserPropertyValuesHandler)
 	authRouteGroup.POST("/:project_id/factor", FactorHandler)
-	authRouteGroup.POST("/:project_id/query", QueryHandler)
+	authRouteGroup.POST("/:project_id/query", responseWrapper(QueryHandler))
 	authRouteGroup.POST("/:project_id/channels/query", ChannelQueryHandler)
 
 	authRouteGroup.GET("/:project_id/channels/filter_values", GetChannelFilterValuesHandler)
 	authRouteGroup.GET("/:project_id/reports", GetReportsHandler)
 	authRouteGroup.GET("/:project_id/reports/:report_id", GetReportHandler)
-	authRouteGroup.POST("/:project_id/attribution/query", AttributionHandler)
+	authRouteGroup.POST("/:project_id/attribution/query", responseWrapper(AttributionHandler))
 
 	// /v1 API endpoints
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", EventsQueryHandler)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", responseWrapper(EventsQueryHandler))
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", CreateDashboardUnitForMultiDashboardsHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", CreateDashboardUnitsForMultipleQueriesHandler)
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id/units/multi/:unit_ids", DeleteMultiDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/dashboards/:dashboard_id", DeleteDashboardHandler)
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/channels/config", V1.GetChannelConfigHandler)
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/channels/filter_values", V1.GetChannelFilterValuesHandler)
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/channels/query", V1.ExecuteChannelQueryHandler)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/channels/query", responseWrapper(V1.ExecuteChannelQueryHandler))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_event", GetSmartEventFiltersHandler)
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_event", CreateSmartEventFilterHandler)
 	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_event", UpdateSmartEventFilterHandler)
@@ -277,4 +278,33 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.GET("/linkedin/project/settings",
 		IH.DataServiceLinkedinGetProjectSettings)
 
+}
+
+type Error struct {
+	Code           string `json:"code"`
+	DisplayMessage string `json:"display_message"`
+	Details        string `json:"details"`
+	TrackingId     string `json:"tracking_id"`
+}
+
+func responseWrapper(f func(c *gin.Context) (interface{}, int, string, string, bool)) gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		data, statusCode, errorCode, errMsg, isErr := f(c)
+		if isErr {
+			err := Error{
+				Code:           errorCode,
+				DisplayMessage: V1.ErrorMessages[errorCode],
+				Details:        "",
+				TrackingId:     U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+			}
+			if statusCode == http.StatusPartialContent {
+				c.JSON(statusCode, gin.H{"data": data, "error": errMsg, "err": err})
+				return
+			}
+			c.JSON(statusCode, gin.H{"error": errMsg, "err": err})
+			return
+		}
+		c.JSON(statusCode, data)
+	}
 }

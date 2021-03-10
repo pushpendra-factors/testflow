@@ -308,7 +308,7 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	}{}
 
 	//Cache should be empty
-	result, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId(project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
+	result, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, result)
 
@@ -333,15 +333,15 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	assert.Equal(t, false, decChannelResult.Cache)
 
 	// Cache should be set
-	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId(project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
+	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(query1.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
-	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId(project.ID, dashboardUnits[1].DashboardId, dashboardUnits[1].ID, from+500, to+500)
+	result, errCode, errMsg = model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[1].DashboardId, dashboardUnits[1].ID, from+500, to+500)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(query2.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
-	resultChannel, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId(project.ID, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3.From, query3.To)
+	resultChannel, errCode, errMsg := model.GetCacheResultByDashboardIdAndUnitId("", project.ID, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3.From, query3.To)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(989), resultChannel.Result.(map[string]interface{})["metrics"].(map[string]interface{})["clicks"])

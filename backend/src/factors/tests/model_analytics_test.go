@@ -2383,7 +2383,15 @@ func TestQueryCachingFailedCondition(t *testing.T) {
 		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, 0, 0, baseQuery, false, false)
 		assert.NotEmpty(t, w)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
-		assert.Equal(t, "{\"error\":\"Failed executing query\"}", w.Body.String())
+		type errorObj struct {
+			Err string `json:"error"`
+		}
+		var errData errorObj
+		decoder := json.NewDecoder(w.Body)
+		decoder.DisallowUnknownFields()
+		decoder.Decode(&errData)
+
+		assert.Equal(t, "Error Processing/Fetching data from Query cache", errData.Err)
 	}
 }
 
