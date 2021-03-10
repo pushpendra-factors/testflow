@@ -213,7 +213,11 @@ func (it *Itree) buildRootNode(reqId string, allActiveUsers *P.Pattern,
 	}
 	var fcp, fcr uint
 	if len(pattern.EventNames) == 1 {
-		fcp, _ = allActiveUsers.GetCount([]P.EventConstraints{*startEventConstraints}, countType)
+		if startEventConstraints != nil {
+			fcp, _ = allActiveUsers.GetCount([]P.EventConstraints{*startEventConstraints}, countType)
+		} else {
+			fcp, _ = allActiveUsers.GetCount([]P.EventConstraints{}, countType)
+		}
 		fcr, _ = pattern.GetCount(patternConstraints, countType)
 
 	} else if len(pattern.EventNames) == 2 {
@@ -1401,23 +1405,23 @@ func extractProperties(parentNode *ItreeNode) ([]string, []string, []string, []s
 		for _, template := range *parentNode.Pattern.PerUserUserCategoricalProperties.Template {
 			userCatProperties = append(userCatProperties, formatProperty(template.Name))
 		}
-	}
-	for _, bin := range parentNode.Pattern.PerUserUserCategoricalProperties.Bins {
-		for index, freqMap := range bin.FrequencyMaps {
-			userPropertiesCount[userCatProperties[index]] += freqMap.Count
+		for _, bin := range parentNode.Pattern.PerUserUserCategoricalProperties.Bins {
+			for index, freqMap := range bin.FrequencyMaps {
+				userPropertiesCount[userCatProperties[index]] += freqMap.Count
+			}
 		}
-	}
-	for property, count := range userPropertiesCount {
-		userPropertiesCountTuple = append(userPropertiesCountTuple, PropertyCountTuple{
-			Property: property,
-			Count:    count,
+		for property, count := range userPropertiesCount {
+			userPropertiesCountTuple = append(userPropertiesCountTuple, PropertyCountTuple{
+				Property: property,
+				Count:    count,
+			})
+		}
+		sort.Slice(userPropertiesCountTuple, func(i, j int) bool {
+			return userPropertiesCountTuple[i].Count > userPropertiesCountTuple[j].Count
 		})
-	}
-	sort.Slice(userPropertiesCountTuple, func(i, j int) bool {
-		return userPropertiesCountTuple[i].Count > userPropertiesCountTuple[j].Count
-	})
-	for _, property := range userPropertiesCountTuple {
-		userCatPropertiesSorted = append(userCatPropertiesSorted, property.Property)
+		for _, property := range userPropertiesCountTuple {
+			userCatPropertiesSorted = append(userCatPropertiesSorted, property.Property)
+		}
 	}
 	userNumProperties := make([]string, 0)
 	if parentNode.Pattern.PerUserUserNumericProperties != nil {

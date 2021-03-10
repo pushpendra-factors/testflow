@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	H "factors/handler/helpers"
+	V1 "factors/handler/v1"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -39,35 +40,38 @@ curl -i -H 'cookie: factors-sid=<COOKIE>' -H "Content-Type: application/json" -i
 // @Param query_group body model.QueryGroup true "Query group"
 // @Success 200 {string} json "{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}"
 // @Router /{project_id}/v1/query [post]
-func EventsQueryHandler(c *gin.Context) {
+func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	logCtx := log.WithFields(log.Fields{
-		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+		"reqId": reqId,
 	})
 
 	r := c.Request
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Query failed. Invalid project."})
-		return
+		logCtx.Error("Query failed. Invalid project.")
+		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Query failed. Invalid project.", true
 	}
 
+	logCtx = log.WithFields(log.Fields{
+		"reqId":     reqId,
+		"projectId": projectId,
+	})
 	var requestPayload model.QueryGroup
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestPayload); err != nil {
 		logCtx.WithError(err).Error("Query failed. Json decode failed.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Json decode failed."})
-		return
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 	}
 
 	var commonQueryFrom int64
 	var commonQueryTo int64
 	if len(requestPayload.Queries) == 0 {
 		logCtx.Error("Query failed. Empty query group.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Empty query group."})
-		return
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Empty query group.", true
 	} else {
 		// all group queries are run for same time duration, used in dashboard unit caching
 		commonQueryFrom = requestPayload.Queries[0].From
@@ -89,31 +93,36 @@ func EventsQueryHandler(c *gin.Context) {
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
 		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
+		if err != nil || dashboardId == 0 {
+			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
 		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
+		if err != nil || unitId == 0 {
+			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
 		}
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(commonQueryFrom, commonQueryTo, hardRefresh) {
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(reqId, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
+
 		if shouldReturn {
-			c.AbortWithStatusJSON(resCode, resMsg)
-			return
+			if resCode == http.StatusOK {
+				return resMsg, resCode, "", "", false
+			}
 		}
 	}
 
 	var cacheResult model.ResultGroup
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest)
 	if shouldReturn {
-		c.AbortWithStatusJSON(resCode, resMsg)
-		return
+		if resCode == http.StatusOK {
+			return resMsg, resCode, "", "", false
+		}
+		logCtx.Error("Query failed. Error Processing/Fetching data from Query cache")
+		return nil, resCode, V1.PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 	}
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
@@ -122,20 +131,22 @@ func EventsQueryHandler(c *gin.Context) {
 
 	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(requestPayload.Queries, projectId)
 	if errCode != http.StatusOK {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "group query failed to run"})
 		model.DeleteQueryCacheKey(projectId, &requestPayload)
-		return
+		logCtx.Error("Query failed. Failed to process query from DB")
+		if errCode == http.StatusPartialContent {
+			return resultGroup, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
+		}
+		return nil, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB", true
 	}
 	model.SetQueryCacheResult(projectId, &requestPayload, resultGroup)
 
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
 		model.SetCacheResultByDashboardIdAndUnitId(resultGroup, projectId, dashboardId, unitId, commonQueryFrom, commonQueryTo)
-		c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{
-			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
-		return
+		return H.DashboardQueryResponsePayload{
+			Result: resultGroup, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
 	}
-	c.JSON(http.StatusOK, resultGroup)
+	return resultGroup, http.StatusOK, "", "", false
 }
 
 // QueryHandler godoc
@@ -148,19 +159,20 @@ func EventsQueryHandler(c *gin.Context) {
 // @Param dashboard_unit_id query integer false "Dashboard Unit ID"
 // @Param query body handler.QueryRequestPayload true "Query payload"
 // @Success 200 {string} json "{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}"
-// @Router /{project_id}/query [post]
-func QueryHandler(c *gin.Context) {
+// @Router /{project_id}/query [pos(interface{}, int, string, string, bool)t]
+func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	logCtx := log.WithFields(log.Fields{
-		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+		"reqId": reqId,
 	})
 
 	r := c.Request
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Query failed. Invalid project."})
-		return
+		logCtx.Error("Query failed. Invalid project.")
+		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Query failed. Invalid project.", true
 	}
 
 	var requestPayload QueryRequestPayload
@@ -180,14 +192,14 @@ func QueryHandler(c *gin.Context) {
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
 		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
+		if err != nil || dashboardId == 0 {
+			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
 		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
+		if err != nil || unitId == 0 {
+			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
 		}
 	}
 
@@ -195,17 +207,17 @@ func QueryHandler(c *gin.Context) {
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestPayload); err != nil {
 		logCtx.WithError(err).Error("Query failed. Json decode failed.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Json decode failed."})
-		return
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed.", true
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
-			projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+			reqId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
 		if shouldReturn {
-			c.AbortWithStatusJSON(resCode, resMsg)
-			return
+			if resCode == http.StatusOK {
+				return resMsg, resCode, "", "", false
+			}
 		}
 	}
 
@@ -219,9 +231,13 @@ func QueryHandler(c *gin.Context) {
 	var cacheResult model.QueryResult
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest)
 	if shouldReturn {
-		c.AbortWithStatusJSON(resCode, resMsg)
-		return
+		if resCode == http.StatusOK {
+			return resMsg, resCode, "", "", false
+		}
+		logCtx.WithError(err).Error("Query failed. Error Processing/Fetching data from Query cache")
+		return nil, resCode, V1.PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 	}
+	logCtx.WithError(err).Info("Query failed. Error Processing/Fetching data from Query cache")
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
 	model.SetQueryCachePlaceholder(projectId, &requestPayload.Query)
@@ -229,16 +245,15 @@ func QueryHandler(c *gin.Context) {
 
 	result, errCode, errMsg := store.GetStore().Analyze(projectId, requestPayload.Query)
 	if errCode != http.StatusOK {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
 		model.DeleteQueryCacheKey(projectId, &requestPayload.Query)
-		return
+		logCtx.Error("Failed to process query from DB - " + errMsg)
+		return nil, errCode, V1.PROCESSING_FAILED, "Failed to process query from DB - " + errMsg, true
 	}
 	model.SetQueryCacheResult(projectId, &requestPayload.Query, result)
 
 	if isDashboardQueryRequest {
 		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
-		c.JSON(http.StatusOK, H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()})
-		return
+		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
 	}
-	c.JSON(http.StatusOK, result)
+	return result, http.StatusOK, "", "", false
 }

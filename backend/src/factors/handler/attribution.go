@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	H "factors/handler/helpers"
+	V1 "factors/handler/v1"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -31,17 +32,18 @@ type AttributionRequestPayload struct {
 // @Param query body handler.AttributionRequestPayload true "Query payload"
 // @Success 200 {string} json "{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}"
 // @Router /{project_id}/attribution/query [post]
-func AttributionHandler(c *gin.Context) {
+func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	r := c.Request
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
-	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Query failed. Invalid project."})
-		return
-	}
 	logCtx := log.WithFields(log.Fields{
-		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID), "project_id": projectId,
+		"reqId": reqId, "project_id": projectId,
 	})
+	if projectId == 0 {
+		logCtx.Error("Query failed. Invalid project.")
+		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Query failed. Invalid project.", true
+	}
 
 	var err error
 	var requestPayload AttributionRequestPayload
@@ -59,30 +61,31 @@ func AttributionHandler(c *gin.Context) {
 	isDashboardQueryRequest := dashboardIdParam != "" && unitIdParam != ""
 	if isDashboardQueryRequest {
 		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
+		if err != nil || dashboardId == 0 {
+			logCtx.WithError(err).Error("Query failed. Invalid DashboardID.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardID.", true
 		}
 		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
+		if err != nil || unitId == 0 {
+			logCtx.WithError(err).Error("Query failed. Invalid DashboardUnitID.")
+			return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Invalid DashboardUnitID.", true
 		}
 	}
 
 	hasFailed, errMsg, requestPayload := decodeAttributionPayload(r, logCtx)
 	if hasFailed {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"Error": errMsg})
-		return
+		logCtx.Error("Query failed. Json decode failed." + errMsg)
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Query failed. Json decode failed." + errMsg, true
 	}
 
 	// If refresh is passed, refresh only is Query.From is of today's beginning.
 	if isDashboardQueryRequest && !H.ShouldAllowHardRefresh(requestPayload.Query.From, requestPayload.Query.To, hardRefresh) {
 		shouldReturn, resCode, resMsg := H.GetResponseIfCachedDashboardQuery(
-			projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+			reqId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
 		if shouldReturn {
-			c.AbortWithStatusJSON(resCode, resMsg)
-			return
+			if resCode == http.StatusOK {
+				return resMsg, resCode, "", "", false
+			}
 		}
 	}
 
@@ -93,9 +96,13 @@ func AttributionHandler(c *gin.Context) {
 	}
 	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest)
 	if shouldReturn {
-		c.AbortWithStatusJSON(resCode, resMsg)
-		return
+		if resCode == http.StatusOK {
+			return resMsg, resCode, "", "", false
+		}
+		logCtx.WithError(err).Error("Query failed. Error Processing/Fetching data from Query cache")
+		return nil, resCode, V1.PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 	}
+	logCtx.WithError(err).Info("Query failed. Error Processing/Fetching data from Query cache")
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
 	model.SetQueryCachePlaceholder(projectId, &attributionQueryUnitPayload)
@@ -103,10 +110,9 @@ func AttributionHandler(c *gin.Context) {
 
 	result, err := store.GetStore().ExecuteAttributionQuery(projectId, requestPayload.Query)
 	if err != nil {
-		logCtx.WithError(err).Error("query execution failed")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Query execution failed"})
 		model.DeleteQueryCacheKey(projectId, &attributionQueryUnitPayload)
-		return
+		logCtx.WithError(err).Error("Failed to process query from DB")
+		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, err.Error(), true
 	}
 	model.SetQueryCacheResult(projectId, &attributionQueryUnitPayload, result)
 
@@ -114,7 +120,7 @@ func AttributionHandler(c *gin.Context) {
 		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
 			requestPayload.Query.From, requestPayload.Query.To)
 	}
-	c.JSON(http.StatusOK, result)
+	return result, http.StatusOK, "", "", false
 }
 
 // decodeAttributionPayload decodes attribution requestPayload for 2 json formats to support old and new
