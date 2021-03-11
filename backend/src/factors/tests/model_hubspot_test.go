@@ -2,7 +2,9 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
+	"factors/handler/helpers"
 	IntHubspot "factors/integration/Hubspot"
 	"factors/model/model"
 	"factors/model/store"
@@ -10,11 +12,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -562,4 +566,109 @@ func TestHubspotDocumentTimestamp(t *testing.T) {
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
+}
+
+func sendCreateHubspotDocumentRequest(projectID uint64, r *gin.Engine, agent *model.Agent, documentType string, documentValue *map[string]interface{}) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+		return nil
+	}
+
+	payload := map[string]interface{}{
+		"project_id": projectID,
+		"type_alias": documentType,
+		"value":      documentValue,
+	}
+
+	rb := U.NewRequestBuilder(http.MethodPost, "http://localhost:8089/data_service/hubspot/documents/add").
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		}).WithPostParams(payload)
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating request")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestHubspotAPINullCharacter(t *testing.T) {
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createdAt := fmt.Sprint(time.Now().AddDate(0, 0, -11).Unix())
+	cuid := U.RandomLowerAphaNumString(5)
+
+	jsonContactMap := map[string]interface{}{
+		"vid":     1,
+		"addedAt": createdAt,
+		"properties": map[string]map[string]interface{}{
+			"createdate":       {"value": createdAt},
+			"lastmodifieddate": {"value": createdAt},
+			"lifecyclestage":   {"value": "lead\u0000"}, // unicode null
+		},
+		"identity-profiles": []map[string]interface{}{
+			{
+				"vid": 1,
+				"identities": []map[string]interface{}{
+					{
+						"type":  "EMAIL",
+						"value": cuid,
+					},
+					{
+						"type":  "LEAD_GUID",
+						"value": "123-45",
+					},
+				},
+			},
+		},
+	}
+	w := sendCreateHubspotDocumentRequest(project.ID, r, agent, model.HubspotDocumentTypeNameContact, &jsonContactMap)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	document, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 1, len(document))
+
+	var contact IntHubspot.Contact
+	err = json.Unmarshal(document[0].Value.RawMessage, &contact)
+	assert.Nil(t, err)
+	assert.Equal(t, "lead ", contact.Properties["lifecyclestage"].Value)
+
+	updateDate := fmt.Sprint(time.Now().AddDate(0, 0, -10).Unix())
+	jsonContactMap["vid"] = 2
+	jsonContactMap["properties"] = map[string]map[string]interface{}{
+		"createdate":       {"value": createdAt},
+		"lastmodifieddate": {"value": updateDate},
+		"lifecyclestage":   {"value": "lead\x00"}, // utf null
+	}
+
+	w = sendCreateHubspotDocumentRequest(project.ID, r, agent, model.HubspotDocumentTypeNameContact, &jsonContactMap)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	document, status = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"2"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 1, len(document))
+
+	err = json.Unmarshal(document[0].Value.RawMessage, &contact)
+	assert.Nil(t, err)
+	assert.Equal(t, "lead ", contact.Properties["lifecyclestage"].Value)
+
+	// test GetFilteredNullCharacterBytes
+	alteredNullcharacterBytes := make([]byte, len(U.NullcharBytes)*2)
+	for i := 0; i < len(U.NullcharBytes); i++ {
+		alteredNullcharacterBytes[i*2] = 0x22
+		alteredNullcharacterBytes[i*2+1] = U.NullcharBytes[i]
+	}
+
+	newBytes := U.RemoveNullCharacterBytes(alteredNullcharacterBytes)
+	assert.Equal(t, alteredNullcharacterBytes, newBytes)
 }
