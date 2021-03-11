@@ -462,8 +462,13 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 	assert.Nil(t, err)
 
 	// should come in ordered for top 5
-	for i := range property1Values[:5] {
-		assert.Equal(t, fmt.Sprintf("%s_%d", property1, 4-i), property1Values[i])
+	for i := range property1Values[:6] {
+		if i == 0 {
+			assert.Equal(t, "$none", property1Values[i])
+			continue
+		}
+
+		assert.Equal(t, fmt.Sprintf("%s_%d", property1, 5-i), property1Values[i])
 	}
 }
 
