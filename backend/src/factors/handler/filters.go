@@ -127,6 +127,7 @@ func CreateSmartEventFilterHandler(c *gin.Context) {
 		return
 	}
 
+	model.HandleSmartEventNoneTypeValue(&requestPayload.FilterExpr)
 	eventName, errCode := store.GetStore().CreateOrGetCRMSmartEventFilterEventName(projectID,
 		&model.EventName{ProjectId: projectID, Name: requestPayload.EventName}, &requestPayload.FilterExpr)
 	if errCode != http.StatusCreated && errCode != http.StatusAccepted {
@@ -139,6 +140,7 @@ func CreateSmartEventFilterHandler(c *gin.Context) {
 		return
 	}
 
+	model.HandleSmartEventAnyTypeValue(&requestPayload.FilterExpr)
 	responsePayload := &APISmartEventFilterResponePayload{
 		ProjectID:   eventName.ProjectId,
 		EventNameID: eventName.ID,
@@ -205,9 +207,9 @@ func GetSmartEventFiltersHandler(c *gin.Context) {
 		return
 	}
 
-	var responsePayload []*APISmartEventFilterResponePayload
+	var responsePayload []APISmartEventFilterResponePayload
 	for i := 0; i < len(eventNames); i++ {
-		APISmartEventFilter := &APISmartEventFilterResponePayload{
+		APISmartEventFilter := APISmartEventFilterResponePayload{
 			ProjectID:   eventNames[i].ProjectId,
 			EventNameID: eventNames[i].ID,
 			EventName:   eventNames[i].Name,
@@ -215,6 +217,7 @@ func GetSmartEventFiltersHandler(c *gin.Context) {
 
 		decFilterExp, err := model.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
 		if err == nil {
+			model.HandleSmartEventAnyTypeValue(decFilterExp)
 			APISmartEventFilter.FilterExpr = *decFilterExp
 		} else {
 			log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed to decode smart event filter expression on GetSmartEventFiltersHandler.")
@@ -274,12 +277,14 @@ func UpdateSmartEventFilterHandler(c *gin.Context) {
 		return
 	}
 
+	model.HandleSmartEventNoneTypeValue(&requestPayload.FilterExpr)
 	eventName, status := store.GetStore().UpdateCRMSmartEventFilter(projectID, filterID, &model.EventName{Name: requestPayload.EventName}, &requestPayload.FilterExpr)
 	if status != http.StatusAccepted {
 		c.JSON(status, gin.H{"error": "Failed to update smart event name"})
 		return
 	}
 
+	model.HandleSmartEventAnyTypeValue(&requestPayload.FilterExpr)
 	responsePayload := &APISmartEventFilterResponePayload{
 		ProjectID:   eventName.ProjectId,
 		EventNameID: eventName.ID,

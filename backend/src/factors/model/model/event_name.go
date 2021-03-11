@@ -193,8 +193,6 @@ const (
 	LOGICAL_OP_AND = "AND"
 )
 
-const PROPERTY_VALUE_ANY = "value_any"
-
 // CRMFilterEvaluator evaluates a CRM filter on the properties provided. Can work in current properties or current and previous property mode
 func CRMFilterEvaluator(projectID uint64, currProperty, prevProperty *map[string]interface{},
 	filter *SmartCRMEventFilter, compareState string) bool {
@@ -331,14 +329,14 @@ func validateMatch(anyCurrMatch, anyPrevMatch bool, compareMode string, ruleSkip
 // comparisonOp is map of comparision operator  and its function
 var comparisonOp = map[string]func(interface{}, interface{}) bool{
 	COMPARE_EQUAL: func(rValue, pValue interface{}) bool {
-		if rValue == PROPERTY_VALUE_ANY { // should not be blank
+		if rValue == U.PROPERTY_VALUE_ANY { // should not be blank
 			return pValue != ""
 		}
 
 		return rValue == pValue
 	},
 	COMPARE_NOT_EQUAL: func(rValue, pValue interface{}) bool {
-		if rValue == PROPERTY_VALUE_ANY { // value not equal to anything
+		if rValue == U.PROPERTY_VALUE_ANY { // value not equal to anything
 			return pValue == ""
 		}
 
@@ -356,6 +354,58 @@ var comparisonOp = map[string]func(interface{}, interface{}) bool{
 	},
 	COMPARE_CONTAINS:     func(rValue, pValue interface{}) bool { return strings.Contains(pValue.(string), rValue.(string)) },
 	COMPARE_NOT_CONTAINS: func(rValue, pValue interface{}) bool { return !strings.Contains(pValue.(string), rValue.(string)) },
+}
+
+func toggleNoneOperator(operator string) string {
+	if operator == COMPARE_EQUAL {
+		return COMPARE_NOT_EQUAL
+	}
+
+	if operator == COMPARE_NOT_EQUAL {
+		return COMPARE_EQUAL
+	}
+
+	return operator
+}
+
+/*
+HandleSmartEventNoneTypeValue Convert $none to internal keyword for backend compatiblity
+
+We use PROPERTY_VALUE_ANY const in backend for CRM rule validation
+$none will be converted to ANY with logic
+value != $none  -->> value == PROPERTY_VALUE_ANY
+value == $none  ->-> value != PROPERTY_VALUE_ANY
+
+*/
+func HandleSmartEventNoneTypeValue(filterExpr *SmartCRMEventFilter) {
+	for _, filter := range filterExpr.Filters {
+		for k := range filter.Rules {
+			if filter.Rules[k].Value == PropertyValueNone {
+				filter.Rules[k].Operator = toggleNoneOperator(filter.Rules[k].Operator) // only toggle for equal and not equal. Other operator will be blocked on validation
+				filter.Rules[k].Value = U.PROPERTY_VALUE_ANY
+			}
+		}
+	}
+}
+
+/*
+HandleSmartEventAnyTypeValue convert internal to $none keyword for frontend compatiblity
+
+We use PROPERTY_VALUE_ANY const in backend for CRM rule validation
+ANY will be converted to $none with logic
+value == PROPERTY_VALUE_ANY -->> value != $none
+value != PROPERTY_VALUE_ANY -->> value == $none
+
+*/
+func HandleSmartEventAnyTypeValue(filterExpr *SmartCRMEventFilter) {
+	for _, filter := range filterExpr.Filters {
+		for k := range filter.Rules {
+			if filter.Rules[k].Value == U.PROPERTY_VALUE_ANY {
+				filter.Rules[k].Operator = toggleNoneOperator(filter.Rules[k].Operator) // only toggle for equal and not equal. Other operator will be blocked on validation
+				filter.Rules[k].Value = PropertyValueNone
+			}
+		}
+	}
 }
 
 func isValidSmartCRMFilterObjectType(smartCRMFilter *SmartCRMEventFilter) bool {
@@ -449,7 +499,7 @@ func IsValidSmartEventFilterExpr(smartCRMFilter *SmartCRMEventFilter) bool {
 				return false
 			}
 
-			if rule.Value == PROPERTY_VALUE_ANY && rule.Operator != COMPARE_EQUAL && rule.Operator != COMPARE_NOT_EQUAL {
+			if rule.Value == U.PROPERTY_VALUE_ANY && rule.Operator != COMPARE_EQUAL && rule.Operator != COMPARE_NOT_EQUAL {
 				return false
 			}
 		}

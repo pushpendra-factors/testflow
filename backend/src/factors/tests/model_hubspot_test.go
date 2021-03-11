@@ -179,12 +179,12 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 				Rules: []model.CRMFilterRule{
 					{
 						PropertyState: model.CurrentState,
-						Value:         model.PROPERTY_VALUE_ANY,
+						Value:         U.PROPERTY_VALUE_ANY,
 						Operator:      model.COMPARE_EQUAL,
 					},
 					{
 						PropertyState: model.PreviousState,
-						Value:         model.PROPERTY_VALUE_ANY,
+						Value:         U.PROPERTY_VALUE_ANY,
 						Operator:      model.COMPARE_NOT_EQUAL,
 					},
 				},
