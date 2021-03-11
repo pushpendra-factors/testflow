@@ -790,15 +790,25 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 			// Continue with the last session_id, if available. This will be true as
 			// first event will have max_timestamp (used as start_timestamp) where
 			// session_id is not null.
+			var existingSessionEvent *model.Event
 			if events[sessionStartIndex].SessionId != nil {
-				existingSessionEvent, errCode := pg.GetEventById(projectId,
-					*events[sessionStartIndex].SessionId)
-				if errCode != http.StatusFound {
+				var errCode int
+				existingSessionEvent, errCode = pg.GetEventById(projectId, *events[sessionStartIndex].SessionId)
+				if errCode == http.StatusNotFound {
+					// Log and continue with new session, if the session event is not found.
+					logCtx.WithField("session_id", events[sessionStartIndex].SessionId).
+						WithField("err_code", errCode).
+						Error("Failed to find the session event associated.")
+
+				} else if errCode != http.StatusFound {
 					logCtx.WithField("err_code", errCode).Error(
 						"Failed to get existing session using session id on add session.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
 						isLastEventToBeProcessed, http.StatusInternalServerError
 				}
+			}
+
+			if existingSessionEvent != nil {
 				sessionEvent = existingSessionEvent
 				isSessionContinued = true
 				sessionContinuedFlag = true
