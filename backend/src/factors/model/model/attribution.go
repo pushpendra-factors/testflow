@@ -104,8 +104,8 @@ var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "Websit
 
 type AttributionData struct {
 	Name                        string
-	Impressions                 int
-	Clicks                      int
+	Impressions                 int64
+	Clicks                      int64
 	Spend                       float64
 	WebsiteVisitors             int64
 	ConversionEventCount        float64
@@ -128,4 +128,37 @@ type UserIDPropID struct {
 type UserEventInfo struct {
 	CoalUserID string
 	EventName  string
+}
+
+// MergeDataRowsHavingSameKey merges rows having same key by adding each column value
+func MergeDataRowsHavingSameKey(rows [][]interface{}) [][]interface{} {
+
+	rowKeyMap := make(map[string][]interface{})
+	keyIndex := 0
+	for _, row := range rows {
+		key := row[keyIndex].(string)
+		if _, exists := rowKeyMap[key]; exists {
+			seenRow := rowKeyMap[key]
+			seenRow[1] = seenRow[1].(int64) + row[1].(int64)     // Impressions.
+			seenRow[2] = seenRow[2].(int64) + row[2].(int64)     // Clicks.
+			seenRow[3] = seenRow[3].(float64) + row[3].(float64) // Spend.
+			seenRow[4] = seenRow[4].(int64) + row[4].(int64)     // Website Visitors.
+			seenRow[5] = seenRow[5].(float64) + row[5].(float64) // Conversion.
+			seenRow[6] = seenRow[6].(float64) + row[6].(float64) // Conversion - CPC.
+			seenRow[7] = seenRow[7].(float64) + row[7].(float64) // Compare Conversion.
+			seenRow[8] = seenRow[8].(float64) + row[8].(float64) // Compare Conversion - CPC.
+			// Remaining linked funnel events & CPCs
+			for i := 9; i < len(seenRow); i++ {
+				seenRow[i] = seenRow[i].(float64) + row[i].(float64)
+			}
+			rowKeyMap[key] = seenRow
+		} else {
+			rowKeyMap[key] = row
+		}
+	}
+	resultRows := make([][]interface{}, 0)
+	for _, mapRow := range rowKeyMap {
+		resultRows = append(resultRows, mapRow)
+	}
+	return resultRows
 }

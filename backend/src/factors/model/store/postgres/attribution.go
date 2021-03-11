@@ -240,9 +240,13 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		}
 	}
 
+	// Merging same name key's into single row
+	dataRows := getRowsByMaps(attributionData, query.LinkedEvents, isCompare)
+	mergedDataRows := model.MergeDataRowsHavingSameKey(dataRows)
+
 	result := &model.QueryResult{}
 	addHeadersByAttributionKey(result, query)
-	result.Rows = getRowsByMaps(attributionData, query.LinkedEvents, isCompare)
+	result.Rows = mergedDataRows
 	result.Meta.Currency = currency
 	return result, nil
 }
@@ -375,10 +379,10 @@ func getRowsByMaps(attributionData map[string]*model.AttributionData,
 	linkedEvents []model.QueryEventWithProperties, isCompare bool) [][]interface{} {
 
 	rows := make([][]interface{}, 0)
-	nonMatchingRow := []interface{}{"none", 0, 0, float64(0), int64(0), float64(0), float64(0),
+	nonMatchingRow := []interface{}{"none", int64(0), int64(0), float64(0), int64(0), float64(0), float64(0),
 		float64(0), float64(0)}
 	for i := 0; i < len(linkedEvents); i++ {
-		nonMatchingRow = append(nonMatchingRow, 0.0, 0.0)
+		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0))
 	}
 	for key, data := range attributionData {
 		attributionIdName := data.Name
@@ -401,7 +405,7 @@ func getRowsByMaps(attributionData map[string]*model.AttributionData,
 					data.ConversionEventCompareCount, cpcCompare)
 			} else {
 				row = append(row, attributionIdName, data.Impressions, data.Clicks, data.Spend,
-					data.WebsiteVisitors, data.ConversionEventCount, cpc, 0.0, 0.0)
+					data.WebsiteVisitors, data.ConversionEventCount, cpc, float64(0), float64(0))
 			}
 			row = append(row, getLinkedEventColumnAsInterfaceList(row[3].(float64), data.LinkedEventsCount)...)
 			rows = append(rows, row)
@@ -485,7 +489,7 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 				logCtx.WithError(err).Error("SQL Parse failed")
 				continue
 			}
-			userIDToCoalUserIDMap[userID] = model.UserInfo{coalesceID, propertiesID, 0}
+			userIDToCoalUserIDMap[userID] = model.UserInfo{CoalUserID: coalesceID, PropertiesID: propertiesID}
 		}
 	}
 	return userIDToCoalUserIDMap, nil
@@ -947,7 +951,7 @@ func addWebsiteVisitorsInfo(attributionData map[string]*model.AttributionData,
 	// Creating an empty linked events row.
 	emptyLinkedEventRow := make([]float64, 0)
 	for i := 0; i < linkedEventsCount; i++ {
-		emptyLinkedEventRow = append(emptyLinkedEventRow, 0.0)
+		emptyLinkedEventRow = append(emptyLinkedEventRow, float64(0))
 	}
 
 	userIDAttributionIDVisit := make(map[string]bool)
@@ -1045,8 +1049,8 @@ func (pg *Postgres) AddAdwordsPerformanceReportInfo(projectID uint64, attributio
 		}
 		if matchingID != "" {
 			attributionData[matchingID].Name = keyName
-			attributionData[matchingID].Impressions += int(impressions)
-			attributionData[matchingID].Clicks += int(clicks)
+			attributionData[matchingID].Impressions += int64(impressions)
+			attributionData[matchingID].Clicks += int64(clicks)
 			attributionData[matchingID].Spend += spend
 		}
 	}
@@ -1151,8 +1155,8 @@ func (pg *Postgres) AddFacebookPerformanceReportInfo(projectID uint64, attributi
 		if matchingID != "" {
 			// TODO (Anil) How do we resolve the conflict in same name ads across G/FB/Linkedin
 			attributionData[matchingID].Name = keyName
-			attributionData[matchingID].Impressions += int(impressions)
-			attributionData[matchingID].Clicks += int(clicks)
+			attributionData[matchingID].Impressions += int64(impressions)
+			attributionData[matchingID].Clicks += int64(clicks)
 			// TODO (Anil) Add currency or use conversion factor to set in default currency for G/FB/Linkedin
 			attributionData[matchingID].Spend += spend
 		}
@@ -1224,8 +1228,8 @@ func (pg *Postgres) AddLinkedinPerformanceReportInfo(projectID uint64, attributi
 		}
 		if matchingID != "" {
 			attributionData[matchingID].Name = keyName
-			attributionData[matchingID].Impressions += int(impressions)
-			attributionData[matchingID].Clicks += int(clicks)
+			attributionData[matchingID].Impressions += int64(impressions)
+			attributionData[matchingID].Clicks += int64(clicks)
 			// TODO (Anil) Add currency or use conversion factor to set in default currency for G/FB/Linkedin
 			attributionData[matchingID].Spend += spend
 		}
