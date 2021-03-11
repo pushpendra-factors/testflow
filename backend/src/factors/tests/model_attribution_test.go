@@ -981,3 +981,41 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeDataRowsHavingSameKey(t *testing.T) {
+
+	rows := make([][]interface{}, 0)
+	row1 := []interface{}{"Campaign1", int64(1), int64(1), float64(1), int64(1), float64(1), float64(1),
+		float64(1), float64(1), float64(1), float64(1), float64(1), float64(1)}
+	row2 := []interface{}{"Campaign1", int64(1), int64(1), float64(1), int64(1), float64(1), float64(1),
+		float64(1), float64(1), float64(1), float64(1), float64(1), float64(1)}
+	rows = append(rows, row1, row2)
+
+	mergedRows := make([][]interface{}, 0)
+	row3 := []interface{}{"Campaign1", int64(2), int64(2), float64(2), int64(2), float64(2), float64(2),
+		float64(2), float64(2), float64(2), float64(2), float64(2), float64(2)}
+
+	mergedRows = append(mergedRows, row3)
+	type args struct {
+		rows [][]interface{}
+	}
+	tests := []struct {
+		name string
+		args args
+		want [][]interface{}
+	}{
+		{"SimpleX", args{rows}, mergedRows},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := model.MergeDataRowsHavingSameKey(tt.args.rows)
+			for rowNo, _ := range got {
+				for colNo, _ := range got[rowNo] {
+					if got[rowNo][colNo] != tt.want[rowNo][colNo] {
+						t.Errorf("MergeDataRowsHavingSameKey() = %v, want %v", got[rowNo][colNo], tt.want[rowNo][colNo])
+					}
+				}
+			}
+		})
+	}
+}

@@ -2,8 +2,10 @@ import sys
 
 import logging as log
 
+import scripts
 from lib.data_services.factors_data_service import FactorsDataService
 from lib.sns_notifier import SnsNotifier
+from lib.utils.healthchecks import HealthchecksUtil
 from lib.utils.time import TimeUtil
 from scripts.adwords.jobs.ad_groups_job import GetAdGroupsJob
 from scripts.adwords.jobs.ad_performance_reports_job import AdPerformanceReportsJob
@@ -16,7 +18,8 @@ from scripts.adwords.jobs.keywords_performance_report_job import KeywordPerforma
 from scripts.adwords.jobs.search_performance_reports_job import SeachPerformanceReportsJob
 from . import STATUS_FAILED, STATUS_SKIPPED, APP_NAME, etl_record_stats, CUSTOMER_ACCOUNT_PROPERTIES, CAMPAIGNS, ADS, \
     AD_GROUPS, CLICK_PERFORMANCE_REPORT, CAMPAIGN_PERFORMANCE_REPORT, AD_PERFORMANCE_REPORT, \
-    AD_GROUP_PERFORMANCE_REPORT, SEARCH_PERFORMANCE_REPORT, KEYWORD_PERFORMANCE_REPORT
+    AD_GROUP_PERFORMANCE_REPORT, SEARCH_PERFORMANCE_REPORT, KEYWORD_PERFORMANCE_REPORT, \
+    HEALTHCHECKS_ADWORDS_SYNC_PING_ID
 from .jobs.ad_group_performance_report_job import AdGroupPerformanceReportJob
 from .jobs.reports_fetch_job import ReportsFetch
 
@@ -154,7 +157,9 @@ class JobScheduler:
                 # Continue downloading other objects.
                 SnsNotifier.notify(env, APP_NAME,
                                    {"status": STATUS_FAILED, "exception": str_exception, "requests": etl_record_stats})
-
+                
+                HealthchecksUtil.ping_healthcheck(scripts.adwords.CONFIG.ADWORDS_APP.env,
+                                          HEALTHCHECKS_ADWORDS_SYNC_PING_ID,{"request": etl_record_stats.__dict__} , endpoint="/fail")
                 sys.exit(0)  # Use zero exit to avoid job retry.
 
             self.status["status"] = STATUS_FAILED
