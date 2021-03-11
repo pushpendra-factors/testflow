@@ -1,12 +1,7 @@
 .fa-dashboard--widget-card {
     background-color: $fa-color--white;
-    // position: relative;
     border-radius: 8px;
-    // margin: 10px;
-    // width: 100%; 
-    height: 360px;
     overflow: scroll;
-    // display: inline-block;
     border: thin solid $fa-color--mono-2;
     transition: all 0.3s;
 
@@ -111,6 +106,7 @@
 }
 
 .widget-card-top-div {
+    height: 386px;
     &:hover {
         .fa-widget-card--resize-container {
             visibility: visible;

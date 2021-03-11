@@ -3,7 +3,7 @@ import { SortData } from "../../utils/dataFormatter";
 export const cardClassNames = {
   1: 'w-full',
   0: 'w-1/2',
-  2: 'w-1/3'
+  2: 'w-1/4',
 };
 
 export const getRearrangedData = (units, dashboard) => {

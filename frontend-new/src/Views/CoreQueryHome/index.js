@@ -372,6 +372,7 @@ function CoreQuery({
                 {coreQueryoptions.map((item, index) => {
                   return (
                       <div
+                        key={index}
                         onClick={() => setQueryTypeTab(item)}
                         className={`fai--custom-card-new flex flex-col ${item.title == 'Templates' ? 'disabled' : null}`}
                       >

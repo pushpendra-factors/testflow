@@ -19,8 +19,14 @@
     &.fai-text__color--grey{
         color: $fa-color--mono-4;
     }
+    &.fai-text__color--grey-2{
+        color: $fa-color--mono-5;
+    }
     &.fai-text__color--grey-3{
         color: $fa-color--mono-3;
+    }
+    &.fai-text__color--grey-8{
+        color: $fa-color--mono-8;
     }
     &.fai-text__color--white{
         color: $fa-color--white;
@@ -74,6 +80,9 @@
     }
     &.fai-text__weight--normal,&.fai-text__weight--regular{
         font-weight: $font-weight--regular;
+    }
+    &.fai-text__weight--medium{
+        font-weight: $font-weight--medium;
     }
     &.fai-text__weight--bold{
         font-weight: $font-weight--bold;;

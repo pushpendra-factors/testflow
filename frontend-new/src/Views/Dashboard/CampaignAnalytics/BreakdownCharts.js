@@ -11,8 +11,10 @@ import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_LINECHART,
   CHART_TYPE_TABLE,
+  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  DASHBOARD_WIDGET_LINE_CHART_HEIGHT,
 } from "../../../utils/constants";
-import NoDataChart from 'Components/NoDataChart';
+import NoDataChart from '../../../components/NoDataChart';
 
 function BreakdownCharts({
   arrayMapper,
@@ -38,7 +40,7 @@ function BreakdownCharts({
     );
     setVisibleProperties(formattedData.slice(0, maxAllowedVisibleProperties));
     setChartsData(formattedData);
-  }, [data, arrayMapper, currentEventIndex, breakdown]);
+  }, [data, arrayMapper, currentEventIndex, breakdown, maxAllowedVisibleProperties]);
 
   if (!chartsData.length) {
     return (
@@ -68,9 +70,10 @@ function BreakdownCharts({
     chartContent = (
       <BarChart
         section={section}
-        height={250}
+        height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
         title={unit.id}
         chartData={visibleProperties}
+        cardSize={unit.cardSize}
       />
     );
   } else if (chartType === CHART_TYPE_LINECHART) {
@@ -103,7 +106,7 @@ function BreakdownCharts({
           isDecimalAllowed={false}
           cardSize={unit.cardSize}
           section={section}
-          height={225}
+          height={DASHBOARD_WIDGET_LINE_CHART_HEIGHT}
         />
       </>
     );

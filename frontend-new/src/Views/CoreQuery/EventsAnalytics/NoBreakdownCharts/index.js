@@ -8,7 +8,7 @@ import NoBreakdownTable from "./NoBreakdownTable";
 import SparkLineChart from "../../../../components/SparkLineChart";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
-import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA, DASHBOARD_MODAL } from "../../../../utils/constants";
+import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA, DASHBOARD_MODAL, CHART_TYPE_SPARKLINES, CHART_TYPE_LINECHART } from "../../../../utils/constants";
 
 function NoBreakdownCharts({
   queries,
@@ -57,7 +57,7 @@ function NoBreakdownCharts({
     </div>
   );
 
-  if (chartType === "sparklines") {
+  if (chartType === CHART_TYPE_SPARKLINES) {
     chart = (
       <SparkLineChart
         frequency={durationObj.frequency}
@@ -67,9 +67,10 @@ function NoBreakdownCharts({
         arrayMapper={arrayMapper}
         page={page}
         resultState={resultState}
+        section={section}
       />
     );
-  } else if (chartType === "linechart") {
+  } else if (chartType === CHART_TYPE_LINECHART) {
     chart = (
       <LineChart
         frequency={durationObj.frequency}

@@ -12,8 +12,9 @@ import {
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
   CHART_TYPE_TABLE,
+  CHART_TYPE_SPARKLINES,
 } from "../../../utils/constants";
-import NoDataChart from 'Components/NoDataChart';
+import NoDataChart from '../../../components/NoDataChart';
 
 function NoBreakdownCharts({
   queries,
@@ -70,7 +71,7 @@ function NoBreakdownCharts({
     );
   }
 
-  if (chartType === "sparklines") {
+  if (chartType === CHART_TYPE_SPARKLINES) {
     chartContent = (
       <SparkLineChart
         frequency={durationObj.frequency}
@@ -81,10 +82,12 @@ function NoBreakdownCharts({
         page={page}
         resultState={resultState}
         cardSize={unit.cardSize}
-        height={queries.length === 1 && unit.cardSize ? 180 : 100}
+        title={unit.id}
+        height={queries.length === 1 && unit.cardSize === 1 ? 180 : 100}
+        section={section}
       />
     );
-  } else if (chartType === "table") {
+  } else if (chartType === CHART_TYPE_TABLE) {
     chartContent = (
       <NoBreakdownTable
         data={chartsData}

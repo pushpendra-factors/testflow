@@ -14,6 +14,10 @@ import {
   ALL_USER_TYPE,
   EACH_USER_TYPE,
   TOTAL_USERS_CRITERIA,
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_LINECHART,
+  CHART_TYPE_TABLE,
+  CHART_TYPE_SPARKLINES,
 } from "../../utils/constants";
 
 export const labelsObj = {
@@ -24,10 +28,10 @@ export const labelsObj = {
 };
 
 export const presentationObj = {
-  pb: "barchart",
-  pl: "linechart",
-  pt: "table",
-  pc: "sparklines",
+  pb: CHART_TYPE_BARCHART,
+  pl: CHART_TYPE_LINECHART,
+  pt: CHART_TYPE_TABLE,
+  pc: CHART_TYPE_SPARKLINES,
 };
 
 export const initialState = { loading: false, error: false, data: null };

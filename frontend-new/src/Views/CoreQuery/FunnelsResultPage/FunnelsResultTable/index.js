@@ -13,6 +13,7 @@ function FunnelsResultTable({
   isWidgetModal,
   arrayMapper,
   reportTitle = "FunnelAnalysis",
+  durations
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState("");
@@ -35,7 +36,8 @@ function FunnelsResultTable({
     groups,
     arrayMapper,
     sorter,
-    searchText
+    searchText,
+    durations
   );
 
   const getCSVData = () => {

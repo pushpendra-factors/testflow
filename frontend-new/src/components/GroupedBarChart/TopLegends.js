@@ -1,6 +1,11 @@
 import React from "react";
 import { Text } from "../factorsComponents";
-import { linechart_legend_length } from "../../utils/constants";
+
+const legend_length = {
+  0:15,
+  1:40,
+  2:10
+}
 
 function TopLegends({
   colors,
@@ -23,8 +28,8 @@ function TopLegends({
             ></div>
             <div className="px-2">
               <Text mini type="paragraph">
-                {legend.length > linechart_legend_length
-                  ? legend.substr(0, linechart_legend_length) + "..."
+                {legend.length > legend_length[cardSize]
+                  ? legend.substr(0, legend_length[cardSize]) + "..."
                   : legend}
               </Text>
             </div>

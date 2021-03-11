@@ -649,7 +649,7 @@ function CoreQuery({
       );
     }
   };
-  console.log(queryOptions.date_range);
+  
   return (
     <>
       <Drawer

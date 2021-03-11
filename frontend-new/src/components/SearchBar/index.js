@@ -1,7 +1,6 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import SearchModal from './SearchModal';
 import { SVG } from '../factorsComponents';
-import styles from './index.module.scss';
 import { Input } from 'antd';
 import { useHistory } from 'react-router-dom';
 
@@ -18,17 +17,6 @@ function SearchBar({ setQueryToState }) {
   const handleClose = useCallback(() => {
     setVisible(false);
   }, []);
-
-
-  // useEffect(() => {
-  //   document.onkeydown = keydown;
-  //   function keydown(evt) {  
-  //     // cmd+K to trigger global search
-  //     if (evt.keyCode === 75) {   
-  //       setVisible(true); 
-  //     }
-  //   } 
-  // }, []);
 
 
   const handleQueryClick = useCallback((query) => {

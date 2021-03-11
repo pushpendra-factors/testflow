@@ -12,6 +12,9 @@ import {
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
   CHART_TYPE_TABLE,
+  CHART_TYPE_BARCHART,
+  DASHBOARD_WIDGET_LINE_CHART_HEIGHT,
+  DASHBOARD_WIDGET_MULTICOLORED_BAR_CHART_HEIGHT,
 } from "../../../utils/constants";
 // import BreakdownType from '../BreakdownType';
 
@@ -30,7 +33,7 @@ function MultipleEventsWithBreakdown({
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
-  const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
+  const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
     const appliedColors = generateColors(queries.length);
@@ -84,17 +87,18 @@ function MultipleEventsWithBreakdown({
   );
   const appliedColors = generateColors(visibleProperties.length);
 
-  if (chartType === "barchart") {
+  if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <BarChart
-        height={200}
         chartData={formatVisibleProperties(visibleProperties, queries)}
+        height={DASHBOARD_WIDGET_MULTICOLORED_BAR_CHART_HEIGHT}
         title={unit.id}
-        queries={queries}
+        cardSize={unit.cardSize}
         section={section}
+        queries={queries}
       />
     );
-  } else if (chartType === "table") {
+  } else if (chartType === CHART_TYPE_TABLE) {
     chartContent = (
       <MultipleEventsWithBreakdownTable
         data={chartsData}
@@ -128,7 +132,7 @@ function MultipleEventsWithBreakdown({
         arrayMapper={arrayMapper}
         cardSize={unit.cardSize}
         section={section}
-        height={225}
+        height={DASHBOARD_WIDGET_LINE_CHART_HEIGHT}
       />
     );
   }

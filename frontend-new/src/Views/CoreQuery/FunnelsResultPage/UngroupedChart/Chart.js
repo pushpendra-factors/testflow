@@ -1,391 +1,463 @@
-import React, { useRef, useCallback, useEffect } from "react";
+import React, { useRef, useCallback, useEffect, useMemo } from "react";
+import ReactDOMServer from "react-dom/server";
 import * as d3 from "d3";
-import styles from "./index.module.scss";
-import { checkForWindowSizeChange } from "../utils";
+import styles from "./styles.module.scss";
 import {
-  calculatePercentage,
+  BAR_CHART_XAXIS_TICK_LENGTH,
+  DASHBOARD_MODAL,
+  FUNNELS_COUNT,
+} from "../../../../utils/constants";
+import {
   generateColors,
+  calculatePercentage,
+  formatCount,
 } from "../../../../utils/dataFormatter";
-import { UNGROUPED_FUNNEL_TICK_LENGTH } from "../../../../utils/constants";
+import { getOverAllDuration, getStepDuration } from "../utils";
+import {
+  Text,
+  SVG,
+  Number as NumFormat,
+} from "../../../../components/factorsComponents";
+import LegendsCircle from "../../../../styles/components/LegendsCircle";
 
-function Chart({ chartData, title = "chart", cardSize = 1, arrayMapper, height: widgetHeight }) {
+function Chart({
+  chartData,
+  title = "chart",
+  cardSize = 1,
+  arrayMapper,
+  height: widgetHeight,
+  section,
+  durations,
+}) {
   const chartRef = useRef(null);
-  const tooltip = useRef(null);
-  const appliedColors = generateColors(chartData.length);
+  const tooltipRef = useRef(null);
 
-  const showTooltip = useCallback(
-    (d, i) => {
-      const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
-      nodes.forEach((node, index) => {
-        if (index !== i) {
-          d3.select(node).attr("class", "bar opaque");
-        }
-      });
+  const renderedData = chartData.slice(0, FUNNELS_COUNT[cardSize]);
+  const colors = generateColors(renderedData.length);
 
-      const nodePosition = d3.select(nodes[i]).node().getBoundingClientRect();
-      let left = nodePosition.x + nodePosition.width / 2;
-
-      // if user is hovering over the last bar
-      if (left + 200 >= document.documentElement.clientWidth) {
-        left = nodePosition.x + nodePosition.width / 2 - 200;
-      }
-
-      const scrollTop =
-        window.pageYOffset !== undefined
-          ? window.pageYOffset
-          : (
-              document.documentElement ||
-              document.body.parentNode ||
-              document.body
-            ).scrollTop;
-      const top = nodePosition.y + scrollTop;
-      const toolTipHeight = d3.select(".toolTip").node().getBoundingClientRect()
-        .height;
-
-      tooltip.current
-        .html(
-          `
-              <div>${arrayMapper[i].eventName}</div>
-              <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${d.netCount}</span> (${d.value}%)</div>
-            `
-        )
-        .style("opacity", 1)
-        .style("left", left + "px")
-        .style("top", top - toolTipHeight + 5 + "px");
-    },
-    [arrayMapper]
-  );
-
-  const hideTooltip = useCallback(() => {
-    const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
-    nodes.forEach((node) => {
-      d3.select(node).attr("class", "bar");
-    });
-    tooltip.current.style("opacity", 0);
-  }, []);
-
-  const showChangePercentage = useCallback(() => {
-    const barNodes = d3.select(chartRef.current).selectAll(".bar").nodes();
-    const xAxis = d3.select(chartRef.current).select(".axis.axis--x").node();
-    const scrollTop =
-      window.pageYOffset !== undefined
-        ? window.pageYOffset
-        : (
-            document.documentElement ||
-            document.body.parentNode ||
-            document.body
-          ).scrollTop;
-    barNodes.forEach((node, index) => {
-      const positionCurrentBar = node.getBoundingClientRect();
-      // show change percentages in grey polygon areas
-      if (index < barNodes.length - 1) {
-        const positionNextBar = barNodes[index + 1].getBoundingClientRect();
-        document.getElementById(`${title}-change${index}`).style.left =
-          positionCurrentBar.right + "px";
-        document.getElementById(`${title}-change${index}`).style.width =
-          positionNextBar.left - positionCurrentBar.right + "px";
-        document.getElementById(`${title}-change${index}`).style.top =
-          xAxis.getBoundingClientRect().top -
-          xAxis.getBoundingClientRect().height -
-          30 +
-          scrollTop +
-          "px";
-      }
-    });
-  }, [title]);
-
-  const showOverAllConversionPercentage = useCallback(() => {
-    // place percentage text in the chart
-    const barNodes = d3.select(chartRef.current).selectAll(".bar").nodes();
-    const lastBarNode = barNodes[barNodes.length - 1];
-    const lastBarPosition = lastBarNode.getBoundingClientRect();
-    const yGridLines = d3
-      .select(chartRef.current)
-      .select(".y.axis-grid")
-      .selectAll("g.tick")
-      .nodes();
-    const topGridLine = yGridLines[yGridLines.length - 1];
-    const secondLastGridLine = yGridLines[yGridLines.length - 2];
-    const top = topGridLine.getBoundingClientRect().y;
-    const height =
-      secondLastGridLine.getBoundingClientRect().y -
-      topGridLine.getBoundingClientRect().y;
-    const scrollTop =
-      window.pageYOffset !== undefined
-        ? window.pageYOffset
-        : (
-            document.documentElement ||
-            document.body.parentNode ||
-            document.body
-          ).scrollTop;
-    const conversionText = document.getElementById(`conversionText-${title}`);
-    conversionText.style.left = `${lastBarPosition.x}px`;
-    conversionText.style.height = `${height}px`;
-    conversionText.style.width = `${lastBarPosition.width}px`;
-    conversionText.style.top = `${top + scrollTop}px`;
-  }, [title]);
+  const overallDuration = useMemo(() => {
+    return getOverAllDuration(durations);
+  }, [durations]);
 
   const drawChart = useCallback(() => {
     const availableWidth = d3
       .select(chartRef.current)
       .node()
       .getBoundingClientRect().width;
+    const tooltip = d3.select(tooltipRef.current);
     d3.select(chartRef.current)
       .html("")
       .append("svg")
       .attr("width", availableWidth)
-      .attr("height", widgetHeight || 300)
-      .attr("id", `chart-${title}`);
-    const svg = d3.select(`#chart-${title}`);
-    const margin = {
-      top: 30,
-      right: 0,
-      bottom: 30,
-      left: 40,
+      .attr("height", widgetHeight || 420)
+      .attr("id", `funnel-ungrouped-svg-${title}`);
+    const svg = d3.select(`#funnel-ungrouped-svg-${title}`),
+      margin = {
+        top: 20,
+        right: 20,
+        bottom: 30,
+        left: 40,
+      },
+      width = +svg.attr("width") - margin.left - margin.right,
+      height = +svg.attr("height") - margin.top - margin.bottom,
+      g = svg
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    const x = d3.scaleBand().rangeRound([0, width]).padding(0.15);
+
+    const y = d3.scaleLinear().rangeRound([height, 0]);
+
+    const showTooltip = (d, index) => {
+      const label = arrayMapper.find((elem) => elem.mapper === d.event)
+        .eventName;
+
+      let padY = index ? 200 : 100;
+
+      if (section === DASHBOARD_MODAL) {
+        padY += 25;
+      }
+
+      let stepTime;
+
+      if (index) {
+        stepTime = getStepDuration(durations, index - 1, index);
+      }
+
+      tooltip
+        .style("left", d3.event.pageX - 50 + "px")
+        .style("top", d3.event.pageY - padY + "px")
+        .style("display", "inline-block")
+        .html(
+          ReactDOMServer.renderToString(
+            <>
+              <Text
+                type="title"
+                weight="medium"
+                color="grey-2"
+                lineHeight="small"
+                extraClass="text-xs mb-0"
+              >
+                {label}
+              </Text>
+              <div
+                className={`flex items-center mt-2 ${
+                  index ? "compareElem" : ""
+                }`}
+              >
+                <LegendsCircle extraClass="mr-1" color={colors[index]} />
+                <Text
+                  extraClass="mr-1 mb-0 text-base"
+                  lineHeight="medium"
+                  type="title"
+                  weight="bold"
+                >
+                  {d.netCount}
+                </Text>
+                <Text
+                  extraClass="mr-1 mb-0 text-base"
+                  lineHeight="medium"
+                  color="grey"
+                  type="title"
+                  weight="medium"
+                >
+                  ({d.value}%)
+                </Text>
+              </div>
+              {index ? (
+                <div className="pt-4">
+                  <div className="flex flex-col">
+                    <Text
+                      type="title"
+                      color="grey"
+                      weight="bold"
+                      extraClass="text-xs mb-0"
+                      lineHeight="small"
+                    >
+                      From previous step:
+                    </Text>
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="flex flex-col items-start">
+                      <div className="flex items-center">
+                        <SVG name="clock" fill="#8692A3" />
+                        <Text
+                          type="title"
+                          color="grey-2"
+                          weight="medium"
+                          extraClass="text-xs mb-0 ml-1 mt-1"
+                          lineHeight="1"
+                        >
+                          {stepTime}
+                        </Text>
+                      </div>
+                      <Text
+                        type="title"
+                        color="grey"
+                        weight="medium"
+                        extraClass="text-xs mb-0 mt-1"
+                      >
+                        TIME TAKEN
+                      </Text>
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <div className="flex items-center">
+                        <Text
+                          type="title"
+                          color="grey-2"
+                          weight="medium"
+                          extraClass="text-xs mb-0 mr-1"
+                          lineHeight="1"
+                        >
+                          {formatCount(
+                            100 -
+                              calculatePercentage(
+                                chartData[index].netCount,
+                                chartData[index - 1].netCount
+                              ),
+                            1
+                          )}
+                          %
+                        </Text>
+                        <SVG name="dropoff" fill="#8692A3" />
+                      </div>
+                      <Text
+                        type="title"
+                        color="grey"
+                        weight="medium"
+                        extraClass="text-xs mb-0 mt-1"
+                      >
+                        DROP-OFF
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )
+        );
     };
-    const width = +svg.attr("width") - margin.left - margin.right;
-    const height = +svg.attr("height") - margin.top - margin.bottom;
 
-    tooltip.current = d3
-      .select(chartRef.current)
-      .append("div")
-      .attr("class", "toolTip")
-      .style("opacity", 0)
-      .style("transition", "0.5s");
-    const xScale = d3
-      .scaleBand()
-      .rangeRound([0, width])
-      .paddingOuter(0.15)
-      .paddingInner(0.3)
-      .domain(chartData.map((d) => d.event));
+    const hideTooltip = (d) => {
+      tooltip.style("display", "none");
+    };
 
-    const yScale = d3.scaleLinear().rangeRound([height, 0]).domain([0, 100]);
+    x.domain(
+      renderedData.map(function (d) {
+        return d.event;
+      })
+    );
+    y.domain([
+      0,
+      d3.max(renderedData, function (d) {
+        return Number(d.value);
+      }),
+    ]);
+    const yAxisGrid = d3.axisLeft(y).tickSize(-width).tickFormat("").ticks(5);
 
-    const yAxisGrid = d3
-      .axisLeft(yScale)
-      .tickSize(-width)
-      .tickFormat("")
-      .ticks(5);
-
-    const g = svg
-      .append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
+    const infoDivHeight = 40;
+    const infoDivWidth = 56;
+    const overallInfoDivWidth = 75;
+    const overallInfoDivHeight = 75;
 
     g.append("g")
-      .attr("class", "y axis-grid")
+      .attr("class", "y-axis-grid")
       .call(yAxisGrid)
       .selectAll("line")
       .attr("stroke", "#E7E9ED");
 
     g.append("g")
-      .attr("class", "axis axis--x")
-      .attr("transform", `translate(0,${height})`)
+      .attr("class", "x-axis")
+      .attr("transform", "translate(0," + height + ")")
       .call(
-        d3.axisBottom(xScale).tickFormat((_, i) => {
-          if (arrayMapper[i].eventName.length > UNGROUPED_FUNNEL_TICK_LENGTH) {
+        d3.axisBottom(x).tickFormat((d) => {
+          const label = arrayMapper.find((elem) => elem.mapper === d).eventName;
+          if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
             return (
-              arrayMapper[i].eventName.substr(0, UNGROUPED_FUNNEL_TICK_LENGTH) + "..."
+              label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + "..."
             );
           }
-          return arrayMapper[i].eventName;
+          return label;
         })
       );
 
     g.append("g")
-      .attr("class", "axis axis--y")
+      .attr("class", "y-axis")
       .call(
         d3
-          .axisLeft(yScale)
+          .axisLeft(y)
           .tickFormat((d) => {
             return d + "%";
           })
           .ticks(5)
-      );
+      )
+      .append("text")
+      .attr("fill", "#000")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", "0.71em");
 
     g.selectAll(".bar")
-      .data(chartData)
+      .data(renderedData)
       .enter()
       .append("rect")
-      .attr("class", () => {
-        return "bar";
+      .attr("class", "bar")
+      .attr("fill", (_, i) => {
+        return colors[i];
       })
-      .attr("fill", (_, index) => {
-        return appliedColors[index];
+      .attr("x", function (d) {
+        return x(d.event);
       })
-      .attr("x", (d) => xScale(d.event))
-      .attr("y", (d) => yScale(d.value))
-      .attr("width", xScale.bandwidth())
-      .attr("height", (d) => height - yScale(d.value))
-      .on("mousemove", (d, i) => {
-        showTooltip(d, i);
+      .attr("y", function (d) {
+        return y(Number(d.value));
       })
-      .on("mouseout", () => {
+      .attr("width", x.bandwidth())
+      .attr("height", function (d) {
+        return height - y(Number(d.value));
+      })
+      .on("mousemove", function (d, index) {
+        showTooltip(d, index);
+      })
+      .on("mouseout", function () {
         hideTooltip();
       });
 
-    d3.select(chartRef.current)
-      .select(".axis.axis--x")
-      .selectAll(".tick")
-      .select("text")
-      .attr("dy", "16px");
-
-    g.selectAll(".text")
-      .data(chartData)
-      .enter()
-      .append("text")
-      .attr("class", "text")
-      .text(function (d) {
-        return d.netCount;
-      })
-      .attr("x", function (d) {
-        return xScale(d.event) + xScale.bandwidth() / 2;
-      })
-
-      .attr("y", function (d) {
-        const boundHeight = height >= 300 ? 200 : 175;
-        return yScale(d.value) < boundHeight ? yScale(d.value) + 20 : boundHeight + 20;
-      })
-      .attr("class", "font-bold")
-      .attr("fill", function (d) {
-        const boundHeight = height >= 300 ? 200 : 175;
-        return yScale(d.value) < boundHeight ? "white" : "black";
-      })
-      .attr("text-anchor", "middle");
-
-    g.selectAll(".vLine")
-      .data(chartData)
-      .enter()
-      .append("line")
-      .attr("class", "vLine")
-      .attr("x1", function (d) {
-        return xScale(d.event) + xScale.bandwidth();
-      })
-      .attr("y1", function () {
-        return 0;
-      })
-      .attr("x2", function (d) {
-        return xScale(d.event) + xScale.bandwidth();
-      })
-      .attr("y2", height)
-      .style("stroke-width", function (_, i) {
-        return i === chartData.length - 1 ? 1 : 0;
-      })
-      .style("stroke", "#B7BEC8")
-      .style("fill", "none");
-
-    // Add polygons
     g.selectAll(".area")
-      .data(chartData)
+      .data(renderedData)
       .enter()
       .append("polygon")
-      .attr("class", "area")
-      .text(function (d) {
-        return d.netCount;
+      .attr("fill", (_, i) => {
+        return `url(#funnel-ungrouped-gradient-${title}-${i})`;
       })
+      .attr("class", "area")
       .attr("points", (d, i, nodes) => {
-        if (i < nodes.length - 1) {
-          const dNext = d3.select(nodes[i + 1]).datum();
+        if (i > 0) {
+          const dPrev = d3.select(nodes[i - 1]).datum();
 
-          const x1 = xScale(d.event) + xScale.bandwidth();
-          const y1 = height;
+          const x1 = x(d.event);
+          const y1 = y(Number(d.value));
 
           const x2 = x1;
-          const y2 = yScale(d.value);
+          const y2 = y(Number(dPrev.value));
 
-          const x3 = xScale(dNext.event);
-          const y3 = yScale(dNext.value);
+          const x3 = x(d.event) + x.bandwidth();
+          const y3 = y2;
 
           const x4 = x3;
-          const y4 = height;
+          const y4 = y1;
 
           return `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4} ${x1},${y1}`;
         }
+      })
+      .on("mousemove", function (d, index) {
+        showTooltip(d, index);
+      })
+      .on("mouseout", function (d) {
+        hideTooltip();
       });
-  }, [chartData, showTooltip, hideTooltip, appliedColors, title, arrayMapper, widgetHeight]);
 
-  const displayChart = useCallback(() => {
-    drawChart();
-    showChangePercentage();
-    showOverAllConversionPercentage();
-  }, [drawChart, showChangePercentage, showOverAllConversionPercentage]);
-
-  useEffect(() => {
-    window.addEventListener("resize", () =>
-      checkForWindowSizeChange(displayChart)
-    );
-    return () => {
-      window.removeEventListener("resize", () =>
-        checkForWindowSizeChange(displayChart)
+    svg
+      .append("foreignObject")
+      .attr("x", () => {
+        return width - margin.right;
+      })
+      .attr("y", (d) => {
+        return y(100) + margin.top;
+      })
+      .attr("width", overallInfoDivWidth)
+      .attr("height", overallInfoDivHeight)
+      .append("xhtml:div")
+      .attr(
+        "class",
+        "overallInfoDiv flex flex-col flex-1 pt-2 justify-between items-center"
+      )
+      .html(
+        ReactDOMServer.renderToString(
+          <>
+            <Text
+              type="title"
+              color="grey-2"
+              weight="bold"
+              extraClass="mb-0 percent"
+            >
+              {chartData[chartData.length - 1].value}%
+            </Text>
+            <Text
+              type="title"
+              color="grey"
+              weight="medium"
+              extraClass="mb-0 duration"
+            >
+              {overallDuration}
+            </Text>
+            <Text
+              type="title"
+              extraClass="label w-full flex items-center justify-center mb-0"
+              weight="bold"
+              color="white"
+            >
+              OVERALL
+            </Text>
+          </>
+        )
       );
-    };
-  }, [displayChart]);
+
+    if (cardSize !== 2) {
+      g.selectAll(".infoDiv")
+        .data(renderedData)
+        .enter()
+        .append("foreignObject")
+        .attr("x", function (d) {
+          return x(d.event) + x.bandwidth() / 2 - infoDivWidth / 2;
+        })
+        .attr("y", (d) => {
+          if (y(0) - y(Number(d.value)) > infoDivHeight / 2) {
+            return y(Number(d.value)) - infoDivHeight / 2;
+          } else {
+            return y(Number(d.value)) - infoDivHeight;
+          }
+        })
+        .attr("width", infoDivWidth)
+        .attr("height", infoDivHeight)
+        .append("xhtml:div")
+        .attr(
+          "class",
+          "infoDiv flex flex-col items-center h-full justify-center bg-white"
+        )
+        .html((d, index) => {
+          return ReactDOMServer.renderToString(
+            <>
+              <Text
+                type="title"
+                weight="medium"
+                color="grey-2"
+                extraClass="text-xs mb-0 percent"
+              >
+                {index
+                  ? calculatePercentage(
+                      chartData[index].netCount,
+                      chartData[index - 1].netCount,
+                      1
+                    ) + "%"
+                  : "100%"}
+              </Text>
+              <Text
+                type="title"
+                weight="medium"
+                color="grey"
+                extraClass="text-xs mb-0 count"
+              >
+                <NumFormat shortHand={true} number={d.netCount} />
+              </Text>
+            </>
+          );
+        })
+        .on("mousemove", function (d, index) {
+          showTooltip(d, index);
+        })
+        .on("mouseout", function (d) {
+          hideTooltip();
+        });
+    }
+  }, [
+    arrayMapper,
+    cardSize,
+    chartData,
+    title,
+    widgetHeight,
+    renderedData,
+    colors,
+    overallDuration,
+    section,
+    durations,
+  ]);
 
   useEffect(() => {
-    displayChart();
-  }, [displayChart]);
-
-  const percentChanges = chartData.slice(1).map((elem, index) => {
-    return calculatePercentage(
-      chartData[index].netCount - elem.netCount,
-      chartData[index].netCount
-    );
-  });
+    drawChart();
+  }, [drawChart, cardSize]);
 
   return (
-    <div id={`${title}-ungroupedChart`} className="w-full ungrouped-chart">
-      <div
-        id={`conversionText-${title}`}
-        className="absolute flex items-center justify-end pr-1"
-      >
-        <div className={styles.conversionText}>
-          <div className="font-semibold flex justify-end">
-            {chartData[chartData.length - 1].value}%
-          </div>
-          {cardSize ? <div className="font-normal">Conversion</div> : null}
-        </div>
-      </div>
-
-      {percentChanges.map((change, index) => {
-        return (
-          <div
-            className={`absolute flex justify-center items-center ${styles.changePercents}`}
-            id={`${title}-change${index}`}
-            key={index}
-          >
-            <div className="flex items-center justify-center mr-1">
-              {cardSize ? (
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <g clipPath="url(#clip0)">
-                    <path
-                      d="M13.8306 19.0713C14.3815 19.0713 14.8281 18.6247 14.8281 18.0737C14.8281 17.5232 14.3822 17.0768 13.8316 17.0762L8.34395 17.0702L19.0708 6.34337C19.4613 5.95285 19.4613 5.31968 19.0708 4.92916C18.6802 4.53863 18.0471 4.53863 17.6565 4.92916L6.92974 15.656V10.1683C6.92974 9.6146 6.47931 9.16632 5.92565 9.16828C5.37474 9.17022 4.92863 9.61737 4.92863 10.1683L4.92862 18.0713C4.92863 18.6236 5.37634 19.0713 5.92863 19.0713L13.8306 19.0713Z"
-                      fill="#8692A3"
-                    />
-                  </g>
-                  <defs>
-                    <clipPath id="clip0">
-                      <rect width="24" height="24" fill="white" />
-                    </clipPath>
-                  </defs>
-                </svg>
-              ) : null}
-            </div>
-            <div
-              className={`leading-4 flex justify-center ${
-                !cardSize ? "text-xs" : ""
-              }`}
-            >
-              {change}%
-            </div>
-          </div>
-        );
-      })}
+    <div className="w-full">
       <div ref={chartRef} className={styles.ungroupedChart}></div>
+      <svg width="0" height="0">
+        <defs>
+          {colors.map((color, index) => {
+            return (
+              <linearGradient
+                key={index}
+                id={`funnel-ungrouped-gradient-${title}-${index}`}
+                x1=".5"
+                x2=".5"
+                y2="1"
+              >
+                <stop stopColor={color} stopOpacity="0.5" />
+                <stop offset="1" stopColor={color} stopOpacity="0.1" />
+              </linearGradient>
+            );
+          })}
+        </defs>
+      </svg>
+      <div ref={tooltipRef} className={styles.ungroupedFunnelTooltip}></div>
     </div>
   );
 }

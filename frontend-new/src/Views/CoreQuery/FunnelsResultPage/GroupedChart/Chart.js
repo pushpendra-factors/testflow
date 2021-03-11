@@ -1,447 +1,498 @@
-/* eslint-disable */
 import React, { useRef, useCallback, useEffect } from "react";
-import c3 from "c3";
 import * as d3 from "d3";
-import styles from "./index.module.scss";
-import { checkForWindowSizeChange } from "../utils";
+import ReactDOMServer from "react-dom/server";
+import styles from "./styles.module.scss";
 import {
   calculatePercentage,
   generateColors,
+  formatCount,
+  formatDuration,
 } from "../../../../utils/dataFormatter";
-import { REPORT_SECTION, DASHBOARD_WIDGET_SECTION } from "../../../../utils/constants";
-import DashboardWidgetLegends from "../../../../components/DashboardWidgetLegends";
+import {
+  REPORT_SECTION,
+  DASHBOARD_WIDGET_SECTION,
+  DASHBOARD_MODAL,
+  FUNNELS_COUNT,
+  BAR_CHART_XAXIS_TICK_LENGTH,
+} from "../../../../utils/constants";
+import ChartLegends from "./ChartLegends";
+import { Text, SVG } from "../../../../components/factorsComponents";
+import LegendsCircle from "../../../../styles/components/LegendsCircle";
 
 function Chart({
   eventsData,
   groups,
   chartData,
   title = "chart",
-  isWidgetModal,
   arrayMapper,
   height: widgetHeight,
   section,
-  cardSize,
+  cardSize = 1,
+  durations,
 }) {
-  const appliedColors = generateColors(chartData.length);
-  const chartColors = {};
-  chartData.forEach((elem, index) => {
-    chartColors[elem[0]] = appliedColors[index];
-  });
-
   const chartRef = useRef(null);
+  const tooltipRef = useRef(null);
+  const renderedData = chartData.slice(0, FUNNELS_COUNT[cardSize]);
+  const keys = Object.keys(renderedData[0]).slice(1);
+  const colors = generateColors(keys.length);
 
-  const getElemId = (key) => {
-    if (!isWidgetModal) {
-      return key;
-    } else {
-      return `modal-${key}`;
-    }
-  };
-
-  const showConverionRates = useCallback(() => {
-    const yGridLines = d3
-      .select(chartRef.current)
-      .select("g.c3-ygrids")
-      .selectAll("line")
-      .nodes();
-    let top, secondTop, height;
-    const topGridLine = yGridLines[yGridLines.length - 1];
-    const secondTopGridLine = yGridLines[yGridLines.length - 2];
-    top = topGridLine.getBoundingClientRect().y;
-    secondTop = secondTopGridLine.getBoundingClientRect().y;
-    height = secondTop - top;
-    const scrollTop =
-      window.pageYOffset !== undefined
-        ? window.pageYOffset
-        : (
-            document.documentElement ||
-            document.body.parentNode ||
-            document.body
-          ).scrollTop;
-
-    groups.forEach((elem) => {
-      document.getElementById(
-        getElemId(`${title}-conversion-text-${elem.name}`)
-      ).style.top = `${top + scrollTop}px`;
-      document.getElementById(
-        getElemId(`${title}-conversion-text-${elem.name}`)
-      ).style.height = `${height}px`;
-    });
-
-    d3.select(chartRef.current)
-      .select("g.c3-axis-x")
-      .selectAll("g.tick")
-      .nodes()
-      .forEach((elem, index) => {
-        const position = elem.getBoundingClientRect();
-        document.getElementById(
-          getElemId(`${title}-conversion-text-${groups[index].name}`)
-        ).style.left = `${position.x}px`;
-        const width =
-          document
-            .getElementById(getElemId(`${title}-${groups[index].name}`))
-            .getBoundingClientRect().x - position.x;
-        document.getElementById(
-          getElemId(`${title}-conversion-text-${groups[index].name}`)
-        ).style.width = `${width}px`;
-      });
-  }, [groups]);
-
-  const showVerticalGridLines = useCallback(() => {
-    const yGridLines = d3
-      .select(chartRef.current)
-      .select("g.c3-ygrids")
-      .selectAll("line")
-      .nodes();
-    let top, bottom, height;
-    const topGridLine = yGridLines[yGridLines.length - 1];
-    top = topGridLine.getBoundingClientRect().y;
-    const bottomGridLine = yGridLines[0];
-    bottom = bottomGridLine.getBoundingClientRect().y;
-    height = bottom - top;
-    const lastBarClassNmae = eventsData[eventsData.length - 1].name
-      .split(" ")
-      .join("-"); // this is an issue if someone disables the last legend item. Will figure out something for this.
-    const scrollTop =
-      window.pageYOffset !== undefined
-        ? window.pageYOffset
-        : (
-            document.documentElement ||
-            document.body.parentNode ||
-            document.body
-          ).scrollTop;
-    d3.select(chartRef.current)
-      .select(`g.c3-shapes-${lastBarClassNmae}`)
-      .selectAll("path")
-      .nodes()
-      .forEach((elem, index) => {
-        const position = elem.getBoundingClientRect();
-        const verticalLine = document.getElementById(
-          getElemId(`${title}-${groups[index].name}`)
-        );
-        verticalLine.style.left = `${position.x + position.width - 1}px`;
-        verticalLine.style.height = `${height}px`;
-        verticalLine.style.top = `${top + scrollTop}px`;
-      });
-  }, [groups, eventsData]);
+  const durationMetric = durations.metrics.find(
+    (elem) => elem.title === "MetaStepTimeInfo"
+  );
+  const firstEventIdx = durationMetric.headers.findIndex(
+    (elem) => elem === "step_0_1_time"
+  );
 
   const drawChart = useCallback(() => {
-    const chart = c3.generate({
-      size: {
-        height: widgetHeight || 300,
-      },
-      padding: {
+    const availableWidth = d3
+      .select(chartRef.current)
+      .node()
+      .getBoundingClientRect().width;
+    const tooltip = d3.select(tooltipRef.current);
+    d3.select(chartRef.current)
+      .html("")
+      .append("svg")
+      .attr("width", availableWidth)
+      .attr("height", widgetHeight || 420)
+      .attr("id", `funnel-grouped-svg-${title}`);
+    const svg = d3.select(`#funnel-grouped-svg-${title}`),
+      margin = {
+        top: 10,
+        right: 20,
+        bottom: 30,
         left: 40,
-        bottom: 16,
       },
-      bindto: chartRef.current,
-      data: {
-        columns: chartData,
-        type: "bar",
-        colors: chartColors,
-        onmouseover: (elemData) => {
-          // blur all the bars
-          d3.select(chartRef.current)
-            .selectAll(".c3-shapes")
-            .selectAll("path")
-            .style("opacity", "0.3");
+      width = +svg.attr("width") - margin.left - margin.right,
+      height = +svg.attr("height") - margin.top - margin.bottom,
+      g = svg
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-          let id = elemData.name;
-          if (!id) id = elemData.id;
+    const x0 = d3.scaleBand().rangeRound([0, width]).padding(0.25);
+    const x1 = d3.scaleBand().paddingInner(0.05);
+    const y = d3.scaleLinear().rangeRound([height, 0]);
+    const z = d3.scaleOrdinal().range(colors);
 
-          const searchedClass = `c3-target-${id.split(" ").join("-")}`;
-          let hoveredIndex;
+    x0.domain(
+      renderedData.map(function (d) {
+        return d.name;
+      })
+    );
+    x1.domain(keys).rangeRound([0, x0.bandwidth()]);
+    y.domain([
+      0,
+      d3.max(renderedData, function (d) {
+        return d3.max(keys, function (key) {
+          return Number(d[key]);
+        });
+      }),
+    ]).nice();
 
-          // style previous bar
+    const yAxisGrid = d3.axisLeft(y).tickSize(-width).tickFormat("").ticks(5);
 
-          const bars = d3
-            .select(chartRef.current)
-            .selectAll(".c3-chart-bar.c3-target")
-            .nodes();
+    const infoDivHeight = 45;
+    const infoDivWidth = 75;
 
-          bars.forEach((node, index) => {
-            if (
-              node.getAttribute("class").split(" ").indexOf(searchedClass) > -1
-            ) {
-              hoveredIndex = index;
-            }
-          });
+    const showTooltip = (data) => {
+      const currGrp = groups.find((g) => g.name === data.group);
+      const durationGrp = durationMetric.rows.find(
+        (elem) => elem.slice(0, firstEventIdx).join(",") === data.group
+      );
+      const firstEventData = eventsData[0];
+      const currEventData = eventsData.find((elem) => elem.name === data.key);
+      const prevEventData =
+        currEventData.index > 1
+          ? eventsData.find((elem) => elem.index === currEventData.index - 1)
+          : null;
 
-          if (hoveredIndex !== 0) {
-            d3.select(bars[hoveredIndex - 1])
-              .select(`.c3-shape-${elemData.index}`)
-              .style("opacity", 1);
-          }
+      let timeTaken;
 
-          // style hovered bar
-          d3.select(chartRef.current)
-            .selectAll(`.c3-shapes-${id.split(" ").join("-")}`)
-            .selectAll("path")
-            .nodes()
-            .forEach((node, index) => {
-              if (index === elemData.index) {
-                d3.select(node).style("opacity", 1);
-              } else {
-                d3.select(node).style("opacity", 0.3);
-              }
-            });
-        },
-        onmouseout: () => {
-          d3.select(chartRef.current)
-            .selectAll(".c3-shapes")
-            .selectAll("path")
-            .style("opacity", "1");
-        },
-      },
-      onrendered: () => {
-        d3.select(chartRef.current)
-          .select(".c3-axis.c3-axis-x")
-          .selectAll(".tick")
-          .select("tspan")
-          .attr("dy", "16px");
-      },
-      legend: {
-        show: false,
-      },
-      transition: {
-        duration: 1000,
-      },
-      bar: {
-        space: 0.05,
-        width: {
-          ratio: 0.7,
-        },
-      },
-      axis: {
-        x: {
-          type: "category",
-          tick: {
-            multiline: true,
-            multilineMax: 3,
-          },
-          categories: groups
-            .filter((elem) => elem.is_visible)
-            .map((elem) => elem.name),
-        },
-        y: {
-          max: 100,
-          tick: {
-            values: [0, 20, 40, 60, 80, 100],
-            format: (d) => {
-              if (d) {
-                return d + "%";
-              } else {
-                return d;
-              }
-            },
-          },
-        },
-      },
-      tooltip: {
-        grouped: false,
+      if (prevEventData) {
+        const durationIdx = durationMetric.headers.findIndex(
+          (elem) =>
+            elem ===
+            `step_${prevEventData.index - 1}_${prevEventData.index}_time`
+        );
+        timeTaken = durationGrp
+          ? formatDuration(Number(durationGrp[durationIdx]))
+          : "NA";
+      }
 
-        position: (d) => {
-          const bars = d3
-            .select(chartRef.current)
-            .select(`.c3-bars.c3-bars-${d[0].id.split(" ").join("-")}`)
-            .selectAll("path")
-            .nodes();
-          const nodePosition = d3
-            .select(bars[d[0].index])
-            .node()
-            .getBoundingClientRect();
-          let left = nodePosition.x + nodePosition.width / 2;
-          // if user is hovering over the last bar
-          if (left + 200 >= document.documentElement.clientWidth) {
-            left = nodePosition.x + nodePosition.width / 2 - 200;
-          }
+      let padY = prevEventData ? 250 : 200;
 
-          const top = nodePosition.y;
-          const toolTipHeight = d3
-            .select(".toolTip")
-            .node()
-            .getBoundingClientRect().height;
+      if (section === DASHBOARD_MODAL) {
+        padY += 25;
+      }
+      tooltip
+        .style("left", d3.event.pageX - 50 + "px")
+        .style("top", d3.event.pageY - padY + "px")
+        .style("display", "inline-block")
+        .html(
+          ReactDOMServer.renderToString(
+            <>
+              <div className="pb-3 groupInfo">
+                <Text
+                  type="title"
+                  weight="bold"
+                  color="grey-8"
+                  extraClass="mb-0"
+                >
+                  {data.group}
+                </Text>
+                <Text type="title" color="grey-2" extraClass="mb-0">
+                  {currGrp.value} Overall Conversion
+                </Text>
+              </div>
+              <div className="pt-3">
+                <Text
+                  type="title"
+                  color="grey"
+                  weight="bold"
+                  extraClass="text-xs mb-0"
+                  lineHeight="small"
+                >
+                  Between steps:
+                </Text>
+                {prevEventData ? (
+                  <div className={`flex items-center mt-1`}>
+                    <LegendsCircle
+                      extraClass="mr-1"
+                      color={colors[prevEventData.index - 1]}
+                    />
+                    <Text
+                      extraClass="mr-1 mb-0 text-base"
+                      lineHeight="medium"
+                      type="title"
+                      weight="bold"
+                    >
+                      {prevEventData.data[data.group]}
+                    </Text>
+                    <Text
+                      extraClass="mr-1 mb-0 text-base"
+                      lineHeight="medium"
+                      color="grey"
+                      type="title"
+                      weight="medium"
+                    >
+                      (
+                      {calculatePercentage(
+                        prevEventData.data[data.group],
+                        firstEventData.data[data.group]
+                      )}
+                      %)
+                    </Text>
+                  </div>
+                ) : null}
+                <div className={`flex items-center mt-1`}>
+                  <LegendsCircle
+                    extraClass="mr-1"
+                    color={colors[currEventData.index - 1]}
+                  />
+                  <Text
+                    extraClass="mr-1 mb-0 text-base"
+                    lineHeight="medium"
+                    type="title"
+                    weight="bold"
+                  >
+                    {currEventData.data[data.group]}
+                  </Text>
+                  <Text
+                    extraClass="mr-1 mb-0 text-base"
+                    lineHeight="medium"
+                    color="grey"
+                    type="title"
+                    weight="medium"
+                  >
+                    (
+                    {calculatePercentage(
+                      currEventData.data[data.group],
+                      firstEventData.data[data.group]
+                    )}
+                    %)
+                  </Text>
+                </div>
+                {prevEventData ? (
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="flex flex-col items-start">
+                      <div className="flex items-center">
+                        <SVG name="clock" fill="#8692A3" />
+                        <Text
+                          type="title"
+                          color="grey-2"
+                          weight="medium"
+                          extraClass="text-xs mb-0 ml-1 mt-1"
+                          lineHeight="1"
+                        >
+                          {timeTaken}
+                        </Text>
+                      </div>
+                      <Text
+                        type="title"
+                        color="grey"
+                        weight="medium"
+                        extraClass="text-xs mb-0 mt-1"
+                      >
+                        TIME TAKEN
+                      </Text>
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <div className="flex items-center">
+                        <Text
+                          type="title"
+                          color="grey-2"
+                          weight="medium"
+                          extraClass="text-xs mb-0 mr-1"
+                          lineHeight="1"
+                        >
+                          {formatCount(
+                            100 -
+                              calculatePercentage(
+                                currEventData.data[data.group],
+                                prevEventData.data[data.group]
+                              ),
+                            1
+                          )}
+                          %
+                        </Text>
+                        <SVG name="dropoff" fill="#8692A3" />
+                      </div>
+                      <Text
+                        type="title"
+                        color="grey"
+                        weight="medium"
+                        extraClass="text-xs mb-0 mt-1"
+                      >
+                        DROP-OFF
+                      </Text>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </>
+          )
+        );
+    };
 
-          return { top: top - toolTipHeight + 5, left };
-        },
+    const hideTooltip = (d) => {
+      tooltip.style("display", "none");
+    };
 
-        contents: (d) => {
-          const group = groups[d[0].index].name;
-          const eventIndex = eventsData.findIndex(
-            (elem) => elem.name === d[0].id
-          );
-          const event = eventsData.find((elem) => elem.name === d[0].id);
-          const eventWeightage = calculatePercentage(
-            event.data[group],
-            eventsData[0].data[group]
-          );
-          let eventsOutput;
-          if (!eventIndex) {
-            eventsOutput = `
-                                <div class="flex justify-between mt-2">
-                                    <div class="font-semibold leading-4" style="color:${
-                                      chartColors[event.name]
-                                    }">Event ${event.index}</div>
-                                    <div class="leading-4"><span class="font-semibold">${
-                                        group === "Overall" ? event.data["$no_group"] : event.data[group]
-                                    }</span> (${eventWeightage}%)</div>
-                                </div>
-                            `;
-          } else {
-            const prevEvent = eventsData[eventIndex - 1];
-            const prevEventWeightage = calculatePercentage(
-              prevEvent.data[group],
-              eventsData[0].data[group]
-            );
-            const difference = calculatePercentage(
-              prevEvent.data[group] - event.data[group],
-              prevEvent.data[group]
-            );
-            eventsOutput = `
-                                <div class="my-2">
-                                    <div class="flex justify-between">
-                                        <div class="font-semibold leading-4" style="color:${
-                                          chartColors[prevEvent.name]
-                                        }">Event ${prevEvent.index}</div>
-                                        <div class="leading-4"><span class="font-semibold">${
-                                            group === "Overall" ? prevEvent.data["$no_group"] : prevEvent.data[group]
-                                        }</span> (${prevEventWeightage}%)</div>
-                                    </div>
-                                    <div class="flex justify-between mt-2">
-                                        <div class="font-semibold leading-4" style="color:${
-                                          chartColors[event.name]
-                                        }">Event ${event.index}</div>
-                                        <div class="leading-4"><span class="font-semibold">${
-                                            group === "Overall" ? event.data["$no_group"] : event.data[group]
-                                        }</span> (${eventWeightage}%)</div>
-                                    </div>
-                                </div>
-                                <hr />
-                                <div class="mt-3 flex">
-                                    <div class="mr-2">
-                                        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path fillRule="evenodd" clipRule="evenodd" d="M1.87727 0.574039C1.61198 0.0896421 1.00424 -0.08798 0.51984 0.177309C0.0354429 0.442598 -0.142179 1.05034 0.12311 1.53473L4.5343 9.58922C4.79208 10.0599 5.37545 10.2432 5.85612 10.0045L9.15537 8.36627L12.3311 13.4015L10.5548 14.4155C10.1709 14.6347 10.2394 15.2077 10.6641 15.3302L14.6511 16.4801C14.9164 16.5566 15.1935 16.4035 15.27 16.1382L16.4529 12.037C16.5773 11.6057 16.1144 11.2417 15.7246 11.4642L14.0697 12.409L10.3653 6.53552C10.0916 6.10167 9.53412 5.94521 9.07471 6.17333L5.82702 7.78599L1.87727 0.574039Z" fill="#8692A3"/>
-                                        </svg>
-                                    </div>
-                                    <div>${difference}% drop from ${
-              prevEvent.index
-            }-${event.index}</div>
-                                </div>
-                            `;
-          }
-          return `
-                            <div class="toolTip">
-                                <div style="font-size:14px;color:#08172B;" class="font-semibold leading-5">${group}</div>
-                                <div class="mb-2">${
-                                  groups[d[0].index].conversion_rate
-                                } Overall Conversion</div>
-                                <hr />
-                                ${eventsOutput}
-                            </div>
-                        `;
-        },
-      },
-      grid: {
-        y: {
-          show: true,
-        },
-      },
-    });
-    if (section === REPORT_SECTION) {
-      d3.select(chartRef.current)
-        .insert("div", ".chart")
-        .attr("class", "legend flex flex-wrap justify-center items-center")
-        .selectAll("span")
-        .data(Object.values(arrayMapper.map((elem) => elem.mapper)))
+    g.append("g")
+      .attr("class", "y-axis-grid")
+      .call(yAxisGrid)
+      .selectAll("line")
+      .attr("stroke", "#E7E9ED");
+
+    const base = g
+      .append("g")
+      .selectAll("g")
+      .data(renderedData)
+      .enter()
+      .append("g")
+      .attr("transform", function (d) {
+        return "translate(" + x0(d.name) + ",0)";
+      });
+    base
+      .selectAll("rect")
+      .data(function (d) {
+        return keys.map(function (key) {
+          return { key: key, value: Number(d[key]), group: d.name };
+        });
+      })
+      .enter()
+      .append("rect")
+      .attr("x", function (d) {
+        return x1(d.key);
+      })
+      .attr("y", function (d) {
+        return y(d.value);
+      })
+      .attr("width", x1.bandwidth())
+      .attr("height", function (d) {
+        return height - y(d.value);
+      })
+      .attr("fill", function (d) {
+        return z(d.key);
+      })
+      .on("mousemove", (d) => {
+        showTooltip(d);
+      })
+      .on("mouseout", () => {
+        hideTooltip();
+      });
+
+    base
+      .selectAll(".area")
+      .data(function (d) {
+        return keys.map(function (key) {
+          return { key: key, value: Number(d[key]), group: d.name };
+        });
+      })
+      .enter()
+      .append("polygon")
+      .attr("fill", (_, i) => {
+        return `url(#funnel-grouped-gradient-${title}-${i})`;
+      })
+      .attr("class", "area")
+      .attr("points", (d, i, nodes) => {
+        if (i > 0) {
+          const dPrev = d3.select(nodes[i - 1]).datum();
+          const X1 = x1(d.key);
+          const Y1 = y(Number(d.value));
+
+          const X2 = X1;
+          const Y2 = y(Number(dPrev.value));
+
+          const X3 = x1(d.key) + x1.bandwidth();
+          const Y3 = Y2;
+
+          const X4 = X3;
+          const Y4 = Y1;
+
+          return `${X1},${Y1} ${X2},${Y2} ${X3},${Y3} ${X4},${Y4} ${X1},${Y1}`;
+        }
+      })
+      .on("mousemove", (d) => {
+        showTooltip(d);
+      })
+      .on("mouseout", () => {
+        hideTooltip();
+      });
+
+    if (cardSize !== 2) {
+      g.selectAll(".infoDiv")
+        .data(renderedData)
         .enter()
-        .append("span")
-        .attr("data-id", function (id) {
-          return id;
+        .append("foreignObject")
+        .attr("x", function (d, index) {
+          return x0(d.name) + x0.bandwidth() - infoDivWidth;
         })
-        .html(function (id) {
-          return `<div class="flex items-center cursor-pointer"><div style="background-color: ${chart.color(
-            id
-          )};width:16px;height:16px;border-radius:8px"></div>
-      <div class="px-2">${
-        arrayMapper.find((elem) => elem.mapper === id).eventName
-      }</div></div>`;
-        })
-        // .each(function (id) {
-        //   d3.select(this).style('background-color', chart.color(id));
-        // })
-        .on("mouseover", function (id) {
-          chart.focus(id);
-        })
-        .on("mouseout", function (id) {
-          chart.revert();
-        })
-        .on("click", function (id) {
-          chart.toggle(id);
+        .attr("y", 1)
+        .attr("width", infoDivWidth)
+        .attr("height", infoDivHeight)
+        .append("xhtml:div")
+        .attr(
+          "class",
+          "infoDiv flex flex-col items-center h-full justify-center bg-white w-full"
+        )
+        .html((d) => {
+          const durationGrp = durationMetric.rows.find(
+            (elem) => elem.slice(0, firstEventIdx).join(",") === d.name
+          );
+          const durationVals = durationGrp
+            ? durationGrp.slice(firstEventIdx)
+            : [];
+          let total = 0;
+          durationVals.forEach((val) => {
+            total += Number(val);
+          });
+          return ReactDOMServer.renderToString(
+            <>
+              <Text
+                type="title"
+                weight="medium"
+                color="grey-2"
+                extraClass="text-xs mb-0 percent"
+              >
+                {d[`event${keys.length}`]}%
+              </Text>
+              <Text
+                type="title"
+                weight="medium"
+                color="grey"
+                extraClass="text-xs mb-0 count"
+              >
+                {formatDuration(total)}
+              </Text>
+            </>
+          );
         });
     }
-  }, [chartColors, chartData, eventsData, groups, section]);
 
-  const displayChart = useCallback(() => {
-    drawChart();
-    showVerticalGridLines();
-    showConverionRates();
-  }, [drawChart, showVerticalGridLines, showConverionRates]);
-
-  useEffect(() => {
-    window.addEventListener(
-      "resize",
-      () => checkForWindowSizeChange(displayChart),
-      false
-    );
-    return () => {
-      window.removeEventListener(
-        "resize",
-        () => checkForWindowSizeChange(displayChart),
-        false
+    g.append("g")
+      .attr("class", "x-axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(
+        d3.axisBottom(x0).tickFormat((d) => {
+          const label = d;
+          if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
+            return (
+              label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + "..."
+            );
+          }
+          return label;
+        })
       );
-    };
-  }, [displayChart]);
+
+    g.append("g")
+      .attr("class", "y-axis")
+      .call(
+        d3
+          .axisLeft(y)
+          .tickFormat((d) => {
+            return d + "%";
+          })
+          .ticks(5)
+      );
+  }, [
+    colors,
+    keys,
+    renderedData,
+    title,
+    widgetHeight,
+    eventsData,
+    groups,
+    cardSize,
+    section,
+    durationMetric.headers,
+    durationMetric.rows,
+    firstEventIdx,
+  ]);
 
   useEffect(() => {
-    displayChart();
-  }, [displayChart]);
+    drawChart();
+  }, [drawChart, cardSize]);
 
   return (
-    <div className="grouped-chart">
-      {groups.map((elem) => {
-        return (
-          <div
-            className={`absolute border-l border-solid ${styles.verticalGridLines}`}
-            key={elem.name}
-            id={getElemId(`${title}-${elem.name}`)}
-          ></div>
-        );
-      })}
-      {groups.map((elem) => {
-        return (
-          <div
-            key={elem.name}
-            id={getElemId(`${title}-conversion-text-${elem.name}`)}
-            className="absolute z-10 leading-5 text-base flex justify-end pr-1"
-          >
-            <div style={{ fontSize: "14px" }} className={styles.conversionText}>
-              <div className="font-semibold flex justify-end">
-                {elem.conversion_rate}
-              </div>
-              <div>Conversion</div>
-            </div>
-          </div>
-        );
-      })}
+    <div className="w-full">
       {section === DASHBOARD_WIDGET_SECTION ? (
-        <DashboardWidgetLegends
+        <ChartLegends
+          colors={colors}
+          legends={keys}
           arrayMapper={arrayMapper}
           cardSize={cardSize}
-          colors={chartColors}
-          legends={arrayMapper.map((elem) => elem.eventName)}
+          section={section}
         />
       ) : null}
-      <div className={styles.groupedChart} ref={chartRef} />
+      <div ref={chartRef} className={styles.groupedChart}></div>
+      <svg width="0" height="0">
+        <defs>
+          {colors.map((color, index) => {
+            return (
+              <linearGradient
+                key={index}
+                id={`funnel-grouped-gradient-${title}-${index}`}
+                x1=".5"
+                x2=".5"
+                y2="1"
+              >
+                <stop stopColor={color} stopOpacity="0.5" />
+                <stop offset="1" stopColor={color} stopOpacity="0.1" />
+              </linearGradient>
+            );
+          })}
+        </defs>
+      </svg>
+      <div ref={tooltipRef} className={styles.groupedFunnelTooltip}></div>
+      {section === REPORT_SECTION || section === DASHBOARD_MODAL ? (
+        <ChartLegends
+          colors={colors}
+          legends={keys}
+          arrayMapper={arrayMapper}
+          cardSize={cardSize}
+          section={section}
+        />
+      ) : null}
     </div>
   );
 }

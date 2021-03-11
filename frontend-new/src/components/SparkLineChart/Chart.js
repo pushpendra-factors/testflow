@@ -4,7 +4,7 @@ import moment from 'moment';
 import styles from './index.module.scss';
 
 function SparkChart({
-  chartData, chartColor, page, event, frequency, height: widgetHeight
+  chartData, chartColor, page, event, frequency, height: widgetHeight, title = "chart"
 }) {
   const chartRef = useRef(null);
 
@@ -55,7 +55,7 @@ function SparkChart({
         .y0(height)
         .y1(function (d) { return y(d[event]); })
       )
-      .attr('fill', `url(#area-gradient-${chartColor.substr(1)}-${page})`)
+      .attr('fill', `url(#area-gradient-${chartColor.substr(1)}-${page}-${title})`)
       .attr('stroke-width', 1);
 
     // Add the line
@@ -70,7 +70,7 @@ function SparkChart({
       );
 
     svg.append('linearGradient')
-      .attr('id', `area-gradient-${chartColor.substr(1)}-${page}`)
+      .attr('id', `area-gradient-${chartColor.substr(1)}-${page}-${title}`)
       .attr('gradientUnits', 'userSpaceOnUse')
       .attr('x1', '0%').attr('y1', '0%')
       .attr('x2', '0%').attr('y2', '100%')
@@ -130,7 +130,7 @@ function SparkChart({
         .style('left', left + 'px')
         .style('top', d3.event.pageY - 40 + 'px');
     }
-  }, [bisectDate, chartData, chartColor, event, page, frequency, widgetHeight]);
+  }, [bisectDate, chartData, chartColor, event, page, frequency, widgetHeight, title]);
 
   useEffect(() => {
     drawChart();

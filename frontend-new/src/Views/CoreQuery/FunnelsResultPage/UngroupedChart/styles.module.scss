@@ -1,0 +1,72 @@
+.ungroupedChart {
+  :global(.infoDiv) {
+    border: 1px solid #e7e9ed;
+    border-radius: 6px;
+  }
+  :global(.overallInfoDiv) {
+    background-color: white;
+    border: 1px solid #e7e9ed;
+    box-sizing: border-box;
+    border-radius: 3px;
+  }
+  :global(.infoDiv .count) {
+    font-size: 12px;
+    line-height: 16px;
+  }
+  :global(.infoDiv .percent) {
+    font-size: 12px;
+    line-height: 18px;
+  }
+  :global(.overallInfoDiv .percent) {
+    font-size: 20px;
+    line-height: 24px;
+  }
+  :global(.overallInfoDiv .duration) {
+    font-size: 12px;
+    line-height: 18px;
+  }
+  :global(.overallInfoDiv .label) {
+    background-color: #3e516c;
+    font-size: 9px;
+    line-height: 9px;
+    letter-spacing: -0.01em;
+    padding: 3px;
+  }
+  :global(.x-axis path),
+  :global(.y-axis-grid path),
+  :global(.y-axis path),
+  :global(.y-axis .tick line),
+  :global(.x-axis .tick line) {
+    display: none;
+  }
+  :global(.x-axis .tick text) {
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 24px;
+    color: #3e516c;
+  }
+
+  :global(.y-axis .tick text) {
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 18px;
+    color: #3e516c;
+  }
+}
+
+.ungroupedFunnelTooltip {
+  position: absolute;
+  display: none;
+  width: 200px;
+  border: 1px solid #e7e9ed;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0.75rem 1rem;
+  box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+
+  :global(.compareElem) {
+    border-bottom: 1px solid #e7e9ed;
+    padding-bottom: 12px;
+  }
+}

@@ -18,7 +18,7 @@ import {
 } from "../../utils/constants";
 import Attributions from "./Attributions";
 import CampaignAnalytics from "./CampaignAnalytics";
-import NoDataChart from 'Components/NoDataChart';
+import NoDataChart from '../../components/NoDataChart';
 
 function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
   let content = null;
@@ -135,7 +135,6 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           events={events.map((elem) => elem.label)}
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
-          title={unit.id}
           unit={unit}
           setwidgetModal={setwidgetModal}
           arrayMapper={arrayMapper}
@@ -152,7 +151,6 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           events={events.map((elem) => elem.label)}
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
-          title={unit.id}
           unit={unit}
           setwidgetModal={setwidgetModal}
           arrayMapper={arrayMapper}
@@ -166,7 +164,6 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       content = (
         <Attributions
           unit={unit}
-          title={unit.id}
           resultState={resultState}
           setwidgetModal={setwidgetModal}
           attributionsState={attributionsState}
@@ -180,7 +177,6 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       content = (
         <CampaignAnalytics
           unit={unit}
-          title={unit.id}
           resultState={resultState}
           setwidgetModal={setwidgetModal}
           campaignState={campaignState}

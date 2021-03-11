@@ -2,16 +2,16 @@ import React, { useEffect, useState } from "react";
 import { generateUngroupedChartsData } from "../../CoreQuery/FunnelsResultPage/utils";
 import Chart from "../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart";
 import FunnelsResultTable from "../../CoreQuery/FunnelsResultPage/FunnelsResultTable";
-import { CHART_TYPE_BARCHART, CHART_TYPE_TABLE } from "../../../utils/constants";
+import { CHART_TYPE_BARCHART, CHART_TYPE_TABLE, DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT } from "../../../utils/constants";
 
 function UngroupedChart({
   resultState,
   queries,
-  title,
   chartType,
   setwidgetModal,
   unit,
   arrayMapper,
+  section
 }) {
   const [chartData, setChartData] = useState([]);
 
@@ -32,11 +32,13 @@ function UngroupedChart({
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <Chart
-        title={title}
+        title={unit.id}
         chartData={chartData}
         cardSize={unit.cardSize}
         arrayMapper={arrayMapper}
-        height={275}
+        height={DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT}
+        section={section}
+        durations={resultState.data.meta}
       />
     );
   } else {
@@ -47,6 +49,7 @@ function UngroupedChart({
         queries={queries}
         groups={[]}
         arrayMapper={arrayMapper}
+        durations={resultState.data.meta}
       />
     );
   }

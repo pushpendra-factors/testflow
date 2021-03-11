@@ -5,6 +5,7 @@ import BarLineChart from "../../../components/BarLineChart";
 import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_TABLE,
+  DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT,
 } from "../../../utils/constants";
 
 function SingleTouchPoint({
@@ -20,7 +21,7 @@ function SingleTouchPoint({
   unit,
   section,
 }) {
-  const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
+  const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
   const [visibleIndices, setVisibleIndices] = useState(
     Array.from(Array(maxAllowedVisibleProperties).keys())
@@ -46,7 +47,8 @@ function SingleTouchPoint({
         title={unit.id}
         chartData={chartsData}
         section={section}
-        height={225}
+        height={DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT}
+        cardSize={unit.cardSize}
       />
     );
   } else {

@@ -6,10 +6,11 @@ import { getMaxYpoint, getBarChartLeftMargin } from "./utils";
 import ChartLegends from "./ChartLegends";
 import { numberWithCommas } from "../../utils/dataFormatter";
 import {
-  BARCHART_TICK_LENGTH,
+  BAR_CHART_XAXIS_TICK_LENGTH,
   REPORT_SECTION,
   DASHBOARD_MODAL,
   DASHBOARD_WIDGET_SECTION,
+  BAR_COUNT,
 } from "../../utils/constants";
 import DashboardWidgetLegends from "../DashboardWidgetLegends";
 
@@ -21,22 +22,23 @@ function BarChart({
   section,
   cardSize = 1,
 }) {
+
   const tooltip = useRef(null);
   const chartRef = useRef(null);
 
-  const getLabel = (str, position = "tick") => {
+  const getLabel = useCallback((str, position = "tick") => {
     let label = str.split(";")[0];
     label = label
       .split(",")
       .filter((elem) => elem)
       .join(",");
 
-    const tickLength = BARCHART_TICK_LENGTH;
+    const tickLength = BAR_CHART_XAXIS_TICK_LENGTH[cardSize];
     if (label.length > tickLength && position === "tick") {
       return label.substr(0, tickLength) + "...";
     }
     return label;
-  };
+  }, [cardSize]);
 
   const showTooltip = useCallback((d, i) => {
     const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
@@ -78,7 +80,7 @@ function BarChart({
       .style("opacity", 1)
       .style("left", left + "px")
       .style("top", top - toolTipHeight + 5 + "px");
-  }, []);
+  }, [getLabel]);
 
   const hideTooltip = useCallback(() => {
     const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
@@ -124,7 +126,7 @@ function BarChart({
       .rangeRound([0, width])
       .paddingOuter(0.15)
       .paddingInner(0.1)
-      .domain(chartData.map((d) => d.label));
+      .domain(chartData.slice(0, BAR_COUNT[cardSize]).map((d) => d.label));
 
     const yScale = d3.scaleLinear().rangeRound([height, 0]).domain([0, max]);
 
@@ -165,7 +167,7 @@ function BarChart({
       );
 
     g.selectAll(".bar")
-      .data(chartData)
+      .data(chartData.slice(0, BAR_COUNT[cardSize]))
       .enter()
       .append("rect")
       .attr("class", () => {
@@ -196,7 +198,7 @@ function BarChart({
       .selectAll(".tick")
       .select("text")
       .attr("dy", "16px");
-  }, [chartData, showTooltip, hideTooltip, title, widgetHeight]);
+  }, [chartData, showTooltip, hideTooltip, title, widgetHeight, getLabel, cardSize]);
 
   const displayChart = useCallback(() => {
     drawChart();
@@ -215,14 +217,16 @@ function BarChart({
 
   useEffect(() => {
     displayChart();
-  }, [displayChart]);
+  }, [displayChart, cardSize]);
 
   let legendsMapper = [];
-  let legendColors = {}
+  let legendColors = {};
 
   if (queries && queries.length > 1 && section === DASHBOARD_WIDGET_SECTION) {
     legendsMapper = queries.map((q, index) => {
-      legendColors[`event${index + 1}`] = chartData.find(d=>d.eventIndex === index).color
+      legendColors[`event${index + 1}`] = chartData.find(
+        (d) => d.eventIndex === index
+      ).color;
       return {
         index,
         eventName: q,

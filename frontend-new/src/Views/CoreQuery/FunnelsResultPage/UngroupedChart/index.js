@@ -22,7 +22,12 @@ function UngroupedChart({ resultState, queries, section, arrayMapper }) {
 
   return (
     <div className="flex items-center justify-center flex-col">
-      <Chart chartData={chartData} arrayMapper={arrayMapper} />
+      <Chart
+        chartData={chartData}
+        arrayMapper={arrayMapper}
+        section={section}
+        durations={resultState.data.meta}
+      />
 
       <div className="mt-12 w-full">
         <FunnelsResultTable
@@ -32,6 +37,7 @@ function UngroupedChart({ resultState, queries, section, arrayMapper }) {
           queries={queries}
           groups={[]}
           arrayMapper={arrayMapper}
+          durations={resultState.data.meta}
         />
       </div>
     </div>
