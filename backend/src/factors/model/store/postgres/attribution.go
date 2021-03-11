@@ -244,6 +244,12 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	dataRows := getRowsByMaps(attributionData, query.LinkedEvents, isCompare)
 	mergedDataRows := model.MergeDataRowsHavingSameKey(dataRows)
 
+	// sort the rows by conversionEvent
+	conversionIndex := 5
+	sort.Slice(mergedDataRows, func(i, j int) bool {
+		return mergedDataRows[i][conversionIndex].(float64) > mergedDataRows[j][conversionIndex].(float64)
+	})
+
 	result := &model.QueryResult{}
 	addHeadersByAttributionKey(result, query)
 	result.Rows = mergedDataRows
@@ -412,10 +418,6 @@ func getRowsByMaps(attributionData map[string]*model.AttributionData,
 		}
 	}
 	rows = append(rows, nonMatchingRow)
-	// sort the rows by conversionEvent
-	sort.Slice(rows, func(i, j int) bool {
-		return rows[i][5].(float64) > rows[j][5].(float64)
-	})
 	return rows
 }
 
