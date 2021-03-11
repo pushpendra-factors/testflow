@@ -71,10 +71,13 @@ def create_document(project_id, doc_type, doc):
         "value": doc,
     }
 
+    start_time = time.time()
     response = requests.post(url, json=payload)
     if not response.ok:
         log.error("Failed to add response %s to hubspot warehouse with uri %s: %d.", 
             doc_type, uri, response.status_code)
+    end_time = time.time()
+    log.warning("Create_document took %d ms", end_time-start_time )
     
     return response
 
@@ -112,27 +115,39 @@ def get_all_properties_by_doc_type(project_id,doc_type, api_key):
 
 def get_with_fallback_retry(project_id, get_url):
     retries = 0
-    while True:
-        r = requests.get(url=get_url, headers = {})
-        if r.status_code != 429:
-            return r
-        res_json = r.json()
-        if res_json["errorType"] == API_ERROR_RATE_LIMIT:
-            if res_json["policyName"] == API_RATE_LIMIT_TEN_SECONDLY_ROLLING:
-                if retries > RETRY_LIMIT:
-                    log.error("Retry exhausted on %s for project_id %d.",API_RATE_LIMIT_TEN_SECONDLY_ROLLING,project_id)
-                    raise Exception("Retry exhausted with "+str(retries)+" retries")
+    start_time  = time.time()
+    try:
+        while True:
+            try:
+                r = requests.get(url=get_url, headers = {})
+                if r.status_code != 429:
+                    return r
+                res_json = r.json()
+                if res_json["errorType"] == API_ERROR_RATE_LIMIT:
+                    if res_json["policyName"] == API_RATE_LIMIT_TEN_SECONDLY_ROLLING:
+                        if retries > RETRY_LIMIT:
+                            log.error("Retry exhausted on %s for project_id %d.",API_RATE_LIMIT_TEN_SECONDLY_ROLLING,project_id)
+                            raise Exception("Retry exhausted with "+str(retries)+" retries "+res_json)
 
-                log.warning("Hubspot API limit exceeed %s retry %d, retrying in 2 seconds",API_RATE_LIMIT_TEN_SECONDLY_ROLLING, retries)
+                        log.warning("Hubspot API limit exceeed %s retry %d, retrying in 2 seconds",API_RATE_LIMIT_TEN_SECONDLY_ROLLING, retries)
+                        retries += 1
+                        time.sleep(2)
+                        continue
+                    elif res_json["policyName"] == API_RATE_LIMIT_DAILY:
+                        raise Exception("Hubspot API daily rate limit exceeded " + res_json)
+                    else:
+                        raise Exception("Unknown error occured on errorType RATE_LIMIT " + res_json)
+                else:
+                    raise Exception("Unknown error occured "+res_json)
+            except requests.exceptions.RequestException as e:
+                if retries > RETRY_LIMIT:
+                    raise Exception("Retry exhausted on connection error "+str(e)+ " , retries "+ str(retries))
+                log.warning("Connection error occured %s retry %d, retrying in %d seconds", str(e),retries, 2)
                 retries += 1
                 time.sleep(2)
-                continue
-            elif res_json["policyName"] == API_RATE_LIMIT_DAILY:
-                raise Exception("Hubspot API daily rate limit exceeded")
-            else:
-                raise Exception("Unknown error occured on errorType RATE_LIMIT")
-        else:
-            raise Exception("Unknown error occured")
+    finally:
+        end_time = time.time()
+        log.warning("Request took %d ms", end_time - start_time )
 
 def sync_contacts(project_id, api_key, sync_all=False):    
     if sync_all:
@@ -150,8 +165,9 @@ def sync_contacts(project_id, api_key, sync_all=False):
     properties, ok = get_all_properties_by_doc_type(project_id,"contacts", api_key)
     if not ok:
         log.error("Failure loading properties for project_id %d on sync_contacts", project_id)
-        return
+        return 0
 
+    contact_api_calls = 0
     while has_more:
         parameters = urllib.parse.urlencode(parameter_dict)
         get_url = url + parameters
@@ -165,6 +181,7 @@ def sync_contacts(project_id, api_key, sync_all=False):
         if not r.ok:
             log.error("Failure response %d from hubspot on sync_contacts", r.status_code)
             break
+        contact_api_calls +=1
         response_dict = json.loads(r.text)
 
         has_more = response_dict['has-more']
@@ -181,6 +198,7 @@ def sync_contacts(project_id, api_key, sync_all=False):
         create_all_documents(project_id, 'contact', docs)
         count = count + len(docs)
         log.warning("Downloaded and created %d contacts. total %d.", len(docs), count)
+    return contact_api_calls
 
 
 def sync_deals(project_id, api_key, sync_all=False):
@@ -194,6 +212,7 @@ def sync_deals(project_id, api_key, sync_all=False):
         ]
         log.warning("Downloading recently created or modified deals for project_id : "+ str(project_id) + ".")
 
+    deal_api_calls = 0
     for url in urls:
         count = 0
         parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
@@ -221,6 +240,7 @@ def sync_deals(project_id, api_key, sync_all=False):
             if not r.ok:
                 log.error("Failure response %d from hubspot on sync_deals", r.status_code)
                 break
+            deal_api_calls +=1
             response_dict = json.loads(r.text)
 
             # Need this check as has-more is not standard
@@ -238,6 +258,7 @@ def sync_deals(project_id, api_key, sync_all=False):
             create_all_documents(project_id, 'deal', docs)
             count = count + len(docs)
             log.warning("Downloaded and created %d deals. total %d.", len(docs), count)
+    return deal_api_calls
 
 
 def get_company_contacts(project_id, api_key, company_id):
@@ -267,9 +288,11 @@ def get_company_contacts(project_id, api_key, company_id):
 
 # Fills contacts for each company on docs.
 def fill_contacts_for_companies(project_id, api_key, docs):
+    company_contacts_api_calls = 0
     for doc in docs:
         company_id = doc.get("companyId")
         contacts = get_company_contacts(project_id, api_key, company_id)
+        company_contacts_api_calls +=1
         contactIds = []
 
         # Adding only contact ids as company contact list
@@ -280,7 +303,7 @@ def fill_contacts_for_companies(project_id, api_key, docs):
                 if vid == None: continue
                 contactIds.append(vid)
         doc["contactIds"] = contactIds
-    return docs
+    return docs, company_contacts_api_calls
 
 def sync_companies(project_id, api_key, sync_all=False):
     if sync_all:
@@ -290,6 +313,8 @@ def sync_companies(project_id, api_key, sync_all=False):
         urls = [ "https://api.hubapi.com/companies/v2/companies/recent/modified?" ] # both created and modified. 
         log.warning("Downloading recently created or modified companies for project_id : "+ str(project_id) + ".")
 
+    companies_api_calls = 0
+    companies_contacts_api_calls = 0
     for url in urls:
         count = 0
         parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
@@ -299,7 +324,7 @@ def sync_companies(project_id, api_key, sync_all=False):
             properties, ok = get_all_properties_by_doc_type(project_id,"companies", api_key)
             if not ok:
                 log.error("Failure loading properties for project_id %d on sync_companies", project_id)
-                return
+                return 0, 0
 
         has_more = True
         while has_more:
@@ -314,6 +339,7 @@ def sync_companies(project_id, api_key, sync_all=False):
             if not r.ok:
                 log.error("Failure response %d from hubspot on sync_companies", r.status_code)
                 break
+            companies_api_calls +=1
             response_dict = json.loads(r.text)
 
             # Need this check as has-more is not standard
@@ -328,10 +354,11 @@ def sync_companies(project_id, api_key, sync_all=False):
                 docs = response_dict['results']
             parameter_dict['offset']= response_dict['offset']
             # fills contact ids for each comapany under 'contactIds'.
-            fill_contacts_for_companies(project_id, api_key, docs)
+            _, companies_contacts_api_calls = fill_contacts_for_companies(project_id, api_key, docs)
             create_all_documents(project_id, 'company', docs)
             count = count + len(docs)
             log.warning("Downloaded and created %d companies. total %d.", len(docs), count)
+    return companies_api_calls, companies_contacts_api_calls
 
 def sync_forms(project_id, api_key):
     url = "https://api.hubapi.com/forms/v2/forms?"
@@ -452,11 +479,11 @@ def sync(project_id, api_key, doc_type, sync_all):
             raise Exception("invalid params on sync, project_id "+str(project_id)+", api_key "+str(api_key)+", doc_type "+str(doc_type)+", sync_all "+str(sync_all))            
         
         if doc_type == "contact":
-            sync_contacts(project_id, api_key, sync_all)
+            response["contact_api_calls"] = sync_contacts(project_id, api_key, sync_all)
         elif doc_type == "company":        
-            sync_companies(project_id, api_key, sync_all)
+            response["companies_api_calls"], response["companies_contacts_api_calls"] = sync_companies(project_id, api_key, sync_all)
         elif doc_type == "deal":
-            sync_deals(project_id, api_key, sync_all)
+            response["deal_api_calls"] = sync_deals(project_id, api_key, sync_all)
         elif doc_type == "form":
             sync_forms(project_id, api_key)
         elif doc_type == "form_submission":
