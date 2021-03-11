@@ -12,6 +12,8 @@ import {
   FREQUENCY_CRITERIA,
   CHART_TYPE_TABLE,
   CHART_TYPE_BARCHART,
+  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  DASHBOARD_WIDGET_LINE_CHART_HEIGHT,
 } from "../../../utils/constants";
 
 function SingleEventMultipleBreakdown({
@@ -29,7 +31,7 @@ function SingleEventMultipleBreakdown({
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
-  const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
+  const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
     const formattedData = formatData(resultState.data);
@@ -87,7 +89,14 @@ function SingleEventMultipleBreakdown({
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <div className="flex mt-4">
-        <BarChart section={section} height={250} title={unit.id} chartData={visibleProperties} />
+        <BarChart
+          chartData={visibleProperties}
+          height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
+          title={unit.id}
+          cardSize={unit.cardSize}
+          section={section}
+          queries={queries}
+        />
       </div>
     );
   } else if (chartType === CHART_TYPE_TABLE) {
@@ -123,7 +132,7 @@ function SingleEventMultipleBreakdown({
         }
         cardSize={unit.cardSize}
         section={section}
-        height={225}
+        height={DASHBOARD_WIDGET_LINE_CHART_HEIGHT}
       />
     );
   }

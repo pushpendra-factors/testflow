@@ -13,7 +13,9 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_TABLE,
 } from "../../../utils/constants";
-import NoDataChart from 'Components/NoDataChart';
+import NoDataChart from "../../../components/NoDataChart";
+import DashboardWidgetLegends from "../../../components/DashboardWidgetLegends";
+import { Text } from "../../../components/factorsComponents";
 
 function NoBreakdownCharts({
   chartType,
@@ -59,25 +61,26 @@ function NoBreakdownCharts({
     if (chartsData.length === 1) {
       chartContent = (
         <div
-          className={`flex items-center mt-4 flex-wrap justify-center ${
-            !unit.cardSize ? "flex-col" : ""
+          className={`flex items-center flex-wrap justify-center ${
+            unit.cardSize !== 1 ? "flex-col" : ""
           }`}
         >
-          <div className="w-1/4">
+          <div className={unit.cardSize === 1 ? "w-1/4" : "w-full"}>
             <ChartHeader
               bgColor="#4D7DB4"
               query={chartsData[0].name}
               total={numberWithCommas(chartsData[0].total)}
             />
           </div>
-          <div className="w-3/4">
+          <div className={unit.cardSize === 1 ? "w-3/4" : "w-full"}>
             <SparkChart
               frequency="date"
               page="campaigns"
               event={chartsData[0].mapper}
               chartData={chartsData[0].dataOverTime}
               chartColor="#4D7DB4"
-              height={unit.cardSize ? 180 : 100}
+              height={unit.cardSize === 1 ? 180 : 100}
+              title={unit.id}
             />
           </div>
         </div>
@@ -86,34 +89,94 @@ function NoBreakdownCharts({
 
     if (chartsData.length > 1) {
       const appliedColors = generateColors(chartsData.length);
+      const colors = {};
+      arrayMapper.forEach((elem, index) => {
+        colors[elem.mapper] = appliedColors[index];
+      });
       chartContent = (
-        <div className="flex items-center flex-wrap mt-4 justify-center">
-          {chartsData.map((chartData, index) => {
-            return (
-              <div
-                style={{ minWidth: "300px" }}
-                key={chartData.index}
-                className="w-1/3 mt-4 px-1"
-              >
-                <div className="flex flex-col">
-                  <ChartHeader
-                    total={numberWithCommas(chartData.total)}
-                    query={chartData.name}
-                    bgColor={appliedColors[index]}
-                  />
-                  <div className="mt-4">
+        <div
+          className={`flex items-center flex-wrap justify-center ${
+            !unit.cardSize ? "flex-col" : ""
+          }`}
+        >
+          {!unit.cardSize ? (
+            <DashboardWidgetLegends
+              arrayMapper={arrayMapper}
+              cardSize={unit.cardSize}
+              colors={colors}
+              legends={chartsData.map((c) => c.name)}
+            />
+          ) : null}
+          {chartsData.slice(0, 3).map((chartData, index) => {
+            if (unit.cardSize === 0) {
+              return (
+                <div className="flex items-center w-full justify-center">
+                  <Text
+                    extraClass="flex items-center w-1/4 justify-center"
+                    type={"title"}
+                    level={3}
+                    weight={"bold"}
+                  >
+                    {numberWithCommas(chartData.total)}
+                  </Text>
+                  <div className="w-2/3">
                     <SparkChart
                       frequency="date"
                       page="campaigns"
                       event={chartData.mapper}
                       chartData={chartData.dataOverTime}
                       chartColor={appliedColors[index]}
-                      height={100}
+                      height={40}
+                      title={unit.id}
                     />
                   </div>
                 </div>
-              </div>
-            );
+              );
+            } else if (unit.cardSize === 1) {
+              return (
+                <div
+                  style={{ minWidth: "300px" }}
+                  key={chartData.index}
+                  className="w-1/3 mt-4 px-1"
+                >
+                  <div className="flex flex-col">
+                    <ChartHeader
+                      total={numberWithCommas(chartData.total)}
+                      query={chartData.name}
+                      bgColor={appliedColors[index]}
+                    />
+                    <div className="mt-4">
+                      <SparkChart
+                        frequency="date"
+                        page="campaigns"
+                        event={chartData.mapper}
+                        chartData={chartData.dataOverTime}
+                        chartColor={appliedColors[index]}
+                        height={100}
+                        title={unit.id}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            } else {
+              return (
+                <div
+                  style={{ minWidth: "300px" }}
+                  key={chartData.index}
+                  className="w-1/3 mt-6 px-1"
+                >
+                  <div className="flex flex-col">
+                    <ChartHeader
+                      total={numberWithCommas(chartData.total)}
+                      query={chartData.name}
+                      bgColor={appliedColors[index]}
+                      smallFont={true}
+                    />
+                  </div>
+                </div>
+              );
+            }
           })}
         </div>
       );
@@ -149,9 +212,7 @@ function NoBreakdownCharts({
   }
 
   return (
-    <div
-      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
-    >
+    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
       {chartContent}
       {tableContent}
     </div>

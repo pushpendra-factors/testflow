@@ -14,7 +14,7 @@ function GroupedChart({
   breakdown,
   isWidgetModal,
   arrayMapper,
-  section
+  section,
 }) {
   const [groups, setGroups] = useState([]);
   const maxAllowedVisibleProperties = 5;
@@ -48,6 +48,7 @@ function GroupedChart({
         eventsData={eventsData}
         arrayMapper={arrayMapper}
         section={section}
+        durations={resultState.data.meta}
       />
 
       <div className="mt-12 w-full">
@@ -60,6 +61,7 @@ function GroupedChart({
           arrayMapper={arrayMapper}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
           isWidgetModal={section === DASHBOARD_MODAL}
+          durations={resultState.data.meta}
         />
       </div>
     </div>

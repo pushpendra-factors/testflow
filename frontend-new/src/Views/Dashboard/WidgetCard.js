@@ -108,14 +108,12 @@ function WidgetCard({
             ...equivalentQuery.breakdown.global,
           ];
 
-          if(unit.query.query.query_group.length === 1) {
+          if (unit.query.query.query_group.length === 1) {
             setResultState({
               ...initialState,
               data: result_group[0],
             });
-          } else if (
-            unit.query.query.query_group.length === 3
-          ) {
+          } else if (unit.query.query.query_group.length === 3) {
             const userData = formatApiData(result_group[0], result_group[1]);
             const sessionsData = result_group[2];
             const activeUsersData = calculateActiveUsersData(
@@ -127,9 +125,7 @@ function WidgetCard({
               ...initialState,
               data: activeUsersData,
             });
-          } else if (
-            unit.query.query.query_group.length === 4
-          ) {
+          } else if (unit.query.query.query_group.length === 4) {
             const eventsData = formatApiData(result_group[0], result_group[1]);
             const userData = formatApiData(result_group[2], result_group[3]);
             const frequencyData = calculateFrequencyData(
@@ -218,14 +214,12 @@ function WidgetCard({
 
   return (
     <div
-      className={`${unit.title.split(" ").join("-")} ${
-        unit.className
-      } py-4 px-2 flex widget-card-top-div`}
+      className={`${unit.title.split(" ").join("-")} ${unit.className} py-3 flex widget-card-top-div`}
     >
       <div
         id={`card-${unit.id}`}
         ref={cardRef}
-        className={"fa-dashboard--widget-card w-full flex"}
+        className={"fa-dashboard--widget-card h-full w-full flex"}
       >
         <div className={"py-5 flex justify-between items-start w-full"}>
           <div className={"w-full flex flex-1 flex-col h-full"}>
@@ -289,13 +283,23 @@ function WidgetCard({
       >
         <span className={"fa-widget-card--resize-contents"}>
           {unit.cardSize === 0 ? (
-            <a href="#!" onClick={changeCardSize.bind(this, 1)}>
-              <RightOutlined />
-            </a>
+            <>
+              <a href="#!" onClick={changeCardSize.bind(this, 1)}>
+                <RightOutlined />
+              </a>
+              <a href="#!" onClick={changeCardSize.bind(this, 2)}>
+                <LeftOutlined />
+              </a>
+            </>
           ) : null}
           {unit.cardSize === 1 ? (
             <a href="#!" onClick={changeCardSize.bind(this, 0)}>
               <LeftOutlined />
+            </a>
+          ) : null}
+          {unit.cardSize === 2 ? (
+            <a href="#!" onClick={changeCardSize.bind(this, 0)}>
+              <RightOutlined />
             </a>
           ) : null}
         </span>

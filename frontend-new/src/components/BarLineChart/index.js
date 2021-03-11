@@ -6,9 +6,10 @@ import { getMaxYpoint } from "../BarChart/utils";
 import ChartLegends from "./ChartLegends";
 import { formatCount } from "../../utils/dataFormatter";
 import {
-  BARCHART_TICK_LENGTH,
+  BAR_CHART_XAXIS_TICK_LENGTH,
   REPORT_SECTION,
   DASHBOARD_WIDGET_SECTION,
+  BARLINE_COUNT,
 } from "../../utils/constants";
 import TopLegends from "./TopLegends";
 
@@ -20,6 +21,7 @@ function BarLineChart({
   visibleIndices,
   height: widgetHeight,
   section,
+  cardSize = 1,
 }) {
   const chartRef = useRef(null);
   const tooltip = useRef(null);
@@ -115,9 +117,9 @@ function BarLineChart({
                 `
       );
       tooltip.current
-        .style("visibility", "visible")
-        .style("left", left + "px")
-        .style("top", top - toolTipHeight + 5 + "px");
+      .style("left", left + "px")
+      .style("top", top - toolTipHeight + 5 + "px")
+      .style("opacity", "1")
     },
     [responseHeaders, responseRows, title, visibleIndices]
   );
@@ -127,8 +129,7 @@ function BarLineChart({
     nodes.forEach((node) => {
       d3.select(node).attr("class", "bar");
     });
-    // tooltip.current.style("opacity", 0);
-    tooltip.current.style("visibility", "hidden");
+    tooltip.current.style("opacity", 0);
   }, []);
 
   const drawChart = useCallback(() => {
@@ -137,7 +138,7 @@ function BarLineChart({
       .select(chartRef.current)
       .append("div")
       .attr("class", "toolTip")
-      .style("visibility", "hidden")
+      .style("opacity", "0")
       .style("transition", "0.5s");
     const valuesLeft = [];
     chartData.forEach((cd) => {
@@ -148,13 +149,12 @@ function BarLineChart({
     chartData.forEach((cd) => {
       valuesRight.push(cd[1]);
     });
-    console.log(widgetHeight || 300);
     const maxRight = getMaxYpoint(Math.max(...valuesRight));
     const availableWidth = d3
       .select(chartRef.current)
       .node()
       .getBoundingClientRect().width;
-    const margin = { top: 20, right: 70, bottom: 40, left: 80 };
+      const margin = { top: 20, right: 70, bottom: 40, left: 80 };
     const svg = d3
       .select(chartRef.current)
       .append("svg")
@@ -167,7 +167,7 @@ function BarLineChart({
       .rangeRound([0, width])
       .padding(0.1)
       .domain(
-        chartData.map(function (d) {
+        chartData.slice(0, BARLINE_COUNT[cardSize]).map(function (d) {
           return d[0];
         })
       );
@@ -189,8 +189,8 @@ function BarLineChart({
       .attr("transform", "translate(0," + height + ")")
       .call(
         d3.axisBottom(xScale).tickFormat((label) => {
-          if (label.length > BARCHART_TICK_LENGTH) {
-            return label.substr(0, BARCHART_TICK_LENGTH) + "...";
+          if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
+            return label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + "...";
           }
           return label;
         })
@@ -223,7 +223,7 @@ function BarLineChart({
       .attr("class", styles.yAxisLables)
       .text("Cost per Conversion");
 
-    var bar = g.selectAll("rect").data(chartData).enter().append("g");
+    var bar = g.selectAll("rect").data(chartData.slice(0, BARLINE_COUNT[cardSize])).enter().append("g");
 
     // bar chart
     bar
@@ -277,7 +277,7 @@ function BarLineChart({
       .style("fill", "none")
       .style("stroke", "#D4787D")
       .style("stroke-width", 3)
-      .attr("d", line(chartData)); // 11. Calls the line generator
+      .attr("d", line(chartData.slice(0, BARLINE_COUNT[cardSize]))); // 11. Calls the line generator
 
     bar
       .append("circle") // Uses the enter().append() method
@@ -303,15 +303,15 @@ function BarLineChart({
       .on("mouseout", () => {
         hideTooltip();
       });
-  }, [chartData, hideTooltip, showTooltip, title, widgetHeight]);
+  }, [chartData, hideTooltip, showTooltip, title, widgetHeight, cardSize]);
 
   useEffect(() => {
     drawChart();
-  }, [drawChart]);
+  }, [drawChart, cardSize]);
 
   return (
     <div className="w-full bar-chart">
-      {section === DASHBOARD_WIDGET_SECTION ? <TopLegends /> : null}
+      {section === DASHBOARD_WIDGET_SECTION ? <TopLegends cardSize={cardSize} /> : null}
       <div className={barStyles.ungroupedChart} ref={chartRef}></div>
       {section === REPORT_SECTION ? <ChartLegends /> : null}
     </div>

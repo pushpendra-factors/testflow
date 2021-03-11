@@ -11,6 +11,9 @@ import {
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
   CHART_TYPE_TABLE,
+  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
+  CHART_TYPE_BARCHART,
+  DASHBOARD_WIDGET_LINE_CHART_HEIGHT,
 } from "../../../utils/constants";
 
 function SingleEventSingleBreakdown({
@@ -28,7 +31,7 @@ function SingleEventSingleBreakdown({
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
-  const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
+  const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
     const formattedData = formatData(resultState.data);
@@ -83,11 +86,18 @@ function SingleEventSingleBreakdown({
     );
   }
 
-  if (chartType === "barchart") {
+  if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <BarChart section={section} height={250} title={unit.id} chartData={visibleProperties} />
+      <BarChart
+        chartData={visibleProperties}
+        height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
+        title={unit.id}
+        cardSize={unit.cardSize}
+        section={section}
+        queries={queries}
+      />
     );
-  } else if (chartType === "table") {
+  } else if (chartType === CHART_TYPE_TABLE) {
     chartContent = (
       <SingleEventSingleBreakdownTable
         data={chartsData}
@@ -120,7 +130,7 @@ function SingleEventSingleBreakdown({
         arrayMapper={arrayMapper}
         cardSize={unit.cardSize}
         section={section}
-        height={225}
+        height={DASHBOARD_WIDGET_LINE_CHART_HEIGHT}
       />
     );
   }

@@ -806,12 +806,12 @@ func TestSameUserSmartEvent(t *testing.T) {
 				Rules: []model.CRMFilterRule{
 					{
 						PropertyState: model.CurrentState,
-						Value:         model.PROPERTY_VALUE_ANY,
+						Value:         U.PROPERTY_VALUE_ANY,
 						Operator:      model.COMPARE_EQUAL,
 					},
 					{
 						PropertyState: model.PreviousState,
-						Value:         model.PROPERTY_VALUE_ANY,
+						Value:         U.PROPERTY_VALUE_ANY,
 						Operator:      model.COMPARE_NOT_EQUAL,
 					},
 				},
@@ -1067,9 +1067,13 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	err = json.Unmarshal(jsonResponse, &property2Values)
 	assert.Nil(t, err)
-	for i := range property1Values[:5] {
-		assert.Equal(t, fmt.Sprintf("%s_%d", property1, 4-i), property1Values[i])
-		assert.Equal(t, fmt.Sprintf("%s_%d", property2, 4-i), property2Values[i])
+	for i := range property1Values[:6] {
+		if i == 0 {
+			assert.Equal(t, "$none", property1Values[i])
+			continue
+		}
+		assert.Equal(t, fmt.Sprintf("%s_%d", property1, 5-i), property1Values[i])
+		assert.Equal(t, fmt.Sprintf("%s_%d", property2, 5-i), property2Values[i])
 	}
 
 }

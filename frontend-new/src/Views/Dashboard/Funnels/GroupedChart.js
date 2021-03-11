@@ -11,7 +11,6 @@ function GroupedChart({
   resultState,
   queries,
   arrayMapper,
-  title,
   breakdown,
   chartType,
   unit,
@@ -19,7 +18,7 @@ function GroupedChart({
   section,
 }) {
   const [groups, setGroups] = useState([]);
-  const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
+  const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
     const formattedGroups = generateGroups(
@@ -49,11 +48,12 @@ function GroupedChart({
         chartData={chartData}
         groups={groups.filter((elem) => elem.is_visible)}
         eventsData={eventsData}
-        title={title}
+        title={unit.id}
         arrayMapper={arrayMapper}
         height={225}
         section={section}
         cardSize={unit.cardSize}
+        durations={resultState.data.meta}
       />
     );
   } else {
@@ -66,6 +66,7 @@ function GroupedChart({
         chartData={eventsData}
         arrayMapper={arrayMapper}
         maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+        durations={resultState.data.meta}
       />
     );
   }

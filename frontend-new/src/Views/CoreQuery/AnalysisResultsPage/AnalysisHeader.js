@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import styles from "./index.module.scss";
 import { SVG, Text } from "../../../components/factorsComponents";
-import { Button, Tooltip } from "antd";
+import { Button } from "antd";
 import moment from "moment";
 import { EVENT_BREADCRUMB } from "../../../utils/constants";
 import SaveQuery from "../../../components/SaveQuery";

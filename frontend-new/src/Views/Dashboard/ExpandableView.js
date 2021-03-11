@@ -1,7 +1,6 @@
 import React, { useEffect, useCallback, useState } from "react";
 import moment from "moment";
 import { Modal, Spin } from "antd";
-import styles from "./index.module.scss";
 import ActiveUnitContent from "./ActiveUnitContent";
 import {
   initialState,
@@ -14,7 +13,6 @@ import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
-  QUERY_TYPE_CAMPAIGN,
 } from "../../utils/constants";
 
 function ExpandableView({
@@ -147,7 +145,7 @@ function ExpandableView({
   if (widgetModalLoading) {
     content = (
       <div className="flex justify-center items-center w-full min-h-screen">
-        <Spin  />
+        <Spin />
       </div>
     );
   } else if (unit) {

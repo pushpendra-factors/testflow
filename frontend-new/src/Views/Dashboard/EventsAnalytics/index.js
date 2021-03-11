@@ -16,7 +16,6 @@ function EventsAnalytics({
   resultState,
   events,
   chartType,
-  title,
   unit,
   setwidgetModal,
   durationObj,

@@ -81,6 +81,8 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 	status.NoOfUsers = len(*userEventsMap)
 
 	var noOfEventsProcessedForSession, noOfSessionsCreated, noOfSessionsContinued, noOfUserPropertiesUpdates int
+	var minOfSessionAddedLastEventTimestamp int64
+
 	for userID, events := range *userEventsMap {
 		noOfProcessedEvents, noOfCreated, isContinuedFirst,
 			noOfUserPropUpdates, errCode := store.GetStore().AddSessionForUser(projectId, userID, events,
@@ -89,17 +91,11 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 			return status, http.StatusInternalServerError
 		}
 
-		currentNextSessionStartTimestamp, errCode := store.GetStore().GetNextSessionStartTimestampForProject(projectId)
-		if errCode != http.StatusFound {
-			return status, http.StatusInternalServerError
-		}
-
-		// Update the next_session_timestamp for project with session added oldest event across users.
-		if currentNextSessionStartTimestamp > events[len(events)-1].Timestamp {
-			errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(projectId, events[len(events)-1].Timestamp)
-			if errCode != http.StatusAccepted {
-				return status, http.StatusInternalServerError
-			}
+		lastEventTimestamp := events[len(events)-1].Timestamp
+		if minOfSessionAddedLastEventTimestamp == 0 {
+			minOfSessionAddedLastEventTimestamp = lastEventTimestamp
+		} else if lastEventTimestamp < minOfSessionAddedLastEventTimestamp {
+			minOfSessionAddedLastEventTimestamp = lastEventTimestamp
 		}
 
 		if isContinuedFirst {
@@ -109,6 +105,14 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 		noOfSessionsCreated = noOfSessionsCreated + noOfCreated
 		noOfEventsProcessedForSession = noOfEventsProcessedForSession + noOfProcessedEvents
 		noOfUserPropertiesUpdates = noOfUserPropertiesUpdates + noOfUserPropUpdates
+	}
+
+	// Update next sessions start timestamp with min of last session
+	// added event timestamp across all users for the project.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(
+		projectId, minOfSessionAddedLastEventTimestamp)
+	if errCode != http.StatusAccepted {
+		return status, http.StatusInternalServerError
 	}
 
 	status.NoOfSessionsCreated = noOfSessionsCreated

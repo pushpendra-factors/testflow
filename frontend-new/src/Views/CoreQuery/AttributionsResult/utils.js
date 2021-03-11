@@ -3,7 +3,7 @@ import { SortData, getTitleWithSorter, formatCount } from "../../../utils/dataFo
 import { ATTRIBUTION_METHODOLOGY } from "../../../utils/constants";
 import styles from './index.module.scss';
 
-import { SVG, Text } from 'factorsComponents';
+import { SVG } from '../../../components/factorsComponents';
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;

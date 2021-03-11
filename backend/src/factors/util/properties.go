@@ -484,6 +484,9 @@ const (
 	DateTimeBreakdownYearlyGranularity  = "year"
 )
 
+// PROPERTY_VALUE_ANY CRM Rule any value constant
+const PROPERTY_VALUE_ANY = "value_any"
+
 var NUMERICAL_PROPERTY_BY_NAME = [...]string{
 	EP_PAGE_LOAD_TIME,
 	EP_PAGE_SPENT_TIME,

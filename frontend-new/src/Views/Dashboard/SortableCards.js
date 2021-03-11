@@ -32,7 +32,7 @@ function SortableCards({
           "flex flex-col justify-center fa-dashboard--no-data-container items-center"
         }
       >
-        <img src="assets/images/no-data.png" className={"mb-8"} />
+        <img alt="no-data" src="assets/images/no-data.png" className={"mb-8"} />
         <Text type={"title"} level={5} weight={"bold"} extraClass={"m-0"}>
           Add widgets to start monitoring.
         </Text>
@@ -67,7 +67,7 @@ function SortableCards({
         savedQueries.findIndex(
           (sq) => sq.id === elem.query_id && sq.query.cl !== QUERY_TYPE_WEB
         ) > -1
-    )
+    ), [activeDashboardUnits, savedQueries]
   );
 
   const webAnalyticsUnits = useMemo(() =>
@@ -76,7 +76,7 @@ function SortableCards({
         savedQueries.findIndex(
           (sq) => sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_WEB
         ) > -1
-    )
+    ), [activeDashboardUnits, savedQueries]
   );
 
   if (activeUnits.length) {

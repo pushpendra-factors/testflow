@@ -86,5 +86,6 @@ func GetCRMObjectValuesByPropertyNameHandler(c *gin.Context) {
 		properties = store.GetStore().GetAllHubspotObjectValuesByPropertyName(projectID, objectType, propertyName)
 	}
 
+	properties = append([]interface{}{model.PropertyValueNone}, properties...)
 	c.JSON(http.StatusOK, properties)
 }

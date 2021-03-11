@@ -7,7 +7,6 @@ function Funnels({
   resultState,
   events,
   chartType,
-  title,
   unit,
   setwidgetModal,
   arrayMapper,
@@ -18,7 +17,6 @@ function Funnels({
       <UngroupedChart
         resultState={resultState}
         queries={events}
-        title={title}
         chartType={chartType}
         setwidgetModal={setwidgetModal}
         unit={unit}
@@ -34,7 +32,6 @@ function Funnels({
         breakdown={breakdown}
         chartType={chartType}
         unit={unit}
-        title={title}
         setwidgetModal={setwidgetModal}
         arrayMapper={arrayMapper}
         section={section}

@@ -1527,7 +1527,7 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 				Rules: []model.CRMFilterRule{
 					{
 						Operator:      model.COMPARE_EQUAL,
-						Value:         model.PROPERTY_VALUE_ANY,
+						Value:         U.PROPERTY_VALUE_ANY,
 						PropertyState: model.PreviousState,
 					},
 					{
@@ -1567,7 +1567,7 @@ func TestSmartCRMFilterAnyChange(t *testing.T) {
 				Rules: []model.CRMFilterRule{
 					{
 						Operator:      model.COMPARE_EQUAL,
-						Value:         model.PROPERTY_VALUE_ANY,
+						Value:         U.PROPERTY_VALUE_ANY,
 						PropertyState: model.CurrentState,
 					},
 					{
@@ -1669,4 +1669,89 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 		assert.Contains(t, responseSmartEventNames, fmt.Sprintf("Smart Event Name %d", i))
 	}
 
+}
+
+func TestHandleSmartEventRuleNoneTypeValue(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	// $none value
+	stringComp := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
+			{
+				Name: "email",
+				Rules: []model.CRMFilterRule{
+					{
+						PropertyState: model.CurrentState,
+						Value:         model.PropertyValueNone,
+						Operator:      model.COMPARE_NOT_EQUAL,
+					},
+					{
+						PropertyState: model.PreviousState,
+						Value:         model.PropertyValueNone,
+						Operator:      model.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	requestPayload := make(map[string]interface{})
+	requestPayload["name"] = "smartEventString"
+	requestPayload["expr"] = stringComp
+
+	w := sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+
+	var responsePayload H.APISmartEventFilterResponePayload
+	err = json.Unmarshal(jsonResponse, &responsePayload)
+	assert.Nil(t, err)
+	stringCompEventNameID := responsePayload.EventNameID
+	assert.NotEqual(t, 0, stringCompEventNameID)
+	rule := responsePayload.FilterExpr.Filters[0].Rules
+	assert.Equal(t, model.PropertyValueNone, rule[0].Value)
+	assert.Equal(t, model.PropertyValueNone, rule[1].Value)
+
+	assert.Equal(t, model.COMPARE_NOT_EQUAL, rule[0].Operator)
+	assert.Equal(t, model.COMPARE_EQUAL, rule[1].Operator)
+
+	// internal check
+	enSmartEvent, status := store.GetStore().GetSmartEventFilterEventNames(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+	smartEvent, err := model.GetDecodedSmartEventFilterExp(enSmartEvent[0].FilterExpr)
+	assert.Nil(t, err)
+	rule = smartEvent.Filters[0].Rules
+	assert.Equal(t, U.PROPERTY_VALUE_ANY, rule[0].Value)
+	assert.Equal(t, U.PROPERTY_VALUE_ANY, rule[1].Value)
+
+	assert.Equal(t, model.COMPARE_EQUAL, rule[0].Operator)
+	assert.Equal(t, model.COMPARE_NOT_EQUAL, rule[1].Operator)
+
+	// api check
+	w = sendGetSmartEventFilterReq(r, project.ID, agent)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+
+	var getresponsePayload []H.APISmartEventFilterResponePayload
+	err = json.Unmarshal(jsonResponse, &getresponsePayload)
+	assert.Nil(t, err)
+	stringCompEventNameID = getresponsePayload[0].EventNameID
+	assert.NotEqual(t, 0, stringCompEventNameID)
+	rule = getresponsePayload[0].FilterExpr.Filters[0].Rules
+	assert.Equal(t, model.PropertyValueNone, rule[0].Value)
+	assert.Equal(t, model.PropertyValueNone, rule[1].Value)
+
+	assert.Equal(t, model.COMPARE_NOT_EQUAL, rule[0].Operator)
+	assert.Equal(t, model.COMPARE_EQUAL, rule[1].Operator)
 }

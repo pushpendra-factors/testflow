@@ -10,6 +10,15 @@ $factorsDark: '#0E2647';
     color: $factorsDark;
 }
 
+.smallerTotalText {
+    font-family: $fontFamily;
+    font-weight: 600;
+    font-size: 24px;
+    line-height: 28px;
+    letter-spacing: -0.02em;
+    color: $factorsDark;
+}
+
 .eventCircle {
     width: 16px;
     height: 16px;

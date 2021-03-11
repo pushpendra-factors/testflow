@@ -1,6 +1,7 @@
 package util
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/json"
@@ -42,6 +43,10 @@ const (
 	DateRangePresetToday        = "TODAY"
 	DateRangePreset30Minutes    = "30MINS"
 )
+
+// NullcharBytes is null charater bytes, specific for golang json marhsal date
+var NullcharBytes = []byte{0x5c, 0x75, 0x30, 0x30, 0x30, 0x30} // \u0000
+var spaceBytes = []byte{0x20}
 
 // QueryDateRangePresets Presets available for querying in dashboard / core query etc.
 // TODO(prateek): Currently returns in IST. Change once timezone is added in project_settings.
@@ -122,6 +127,12 @@ func RandomLowerAphaNumString(n int) string {
 	return string(b)
 }
 
+// RemoveNullCharacterBytes return bytes by replacing null character bytes by space. Only works for json marshaled data
+func RemoveNullCharacterBytes(existingbytes []byte) []byte {
+	newBytes := bytes.ReplaceAll(existingbytes, NullcharBytes, spaceBytes)
+	return newBytes
+}
+
 func RandomUint64() uint64 {
 	return rand.Uint64()
 }
@@ -154,7 +165,7 @@ func IsNumber(num string) bool {
 }
 
 func IsEmail(str string) bool {
-	regexpEmail := regexp.MustCompile(`^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,4}$`)
+	regexpEmail := regexp.MustCompile(`^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,7}$`)
 	return regexpEmail.MatchString(str)
 }
 

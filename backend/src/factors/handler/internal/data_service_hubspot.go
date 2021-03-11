@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"factors/model/model"
 	"factors/model/store"
+	U "factors/util"
 	"net/http"
 	"strconv"
 
@@ -22,6 +23,15 @@ func DataServiceHubspotAddDocumentHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{"error": "Invalid request json."})
 		return
+	}
+
+	newBytes := U.RemoveNullCharacterBytes(hubspotDocument.Value.RawMessage)
+
+	if len(newBytes) != len(hubspotDocument.Value.RawMessage) {
+		log.WithFields(log.Fields{"document_id": hubspotDocument.ID, "project_id": hubspotDocument.ProjectId,
+			"raw_message":    string(hubspotDocument.Value.RawMessage),
+			"sliced_message": string(newBytes)}).Warn("Using new sliced bytes for null character.")
+		hubspotDocument.Value.RawMessage = newBytes
 	}
 
 	errCode := store.GetStore().CreateHubspotDocument(hubspotDocument.ProjectId, &hubspotDocument)

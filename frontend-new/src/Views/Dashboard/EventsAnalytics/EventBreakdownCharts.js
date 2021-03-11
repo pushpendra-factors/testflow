@@ -7,10 +7,18 @@ import {
   CHART_TYPE_TABLE,
   CHART_TYPE_BARCHART,
   CHART_TYPE_SPARKLINES,
+  DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
 } from "../../../utils/constants";
-import NoDataChart from 'Components/NoDataChart';
+import NoDataChart from "../../../components/NoDataChart";
 
-function EventBreakdownCharts({ resultState, breakdown, section, chartType, setwidgetModal, unit }) {
+function EventBreakdownCharts({
+  resultState,
+  breakdown,
+  section,
+  chartType,
+  setwidgetModal,
+  unit,
+}) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
   const maxAllowedVisibleProperties = 5;
@@ -36,7 +44,15 @@ function EventBreakdownCharts({ resultState, breakdown, section, chartType, setw
   let tableContent = null;
 
   if (chartType === CHART_TYPE_BARCHART) {
-    chartContent = <BarChart height={250} title={unit.id} section={section} chartData={visibleProperties} />;
+    chartContent = (
+      <BarChart
+        height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
+        title={unit.id}
+        section={section}
+        chartData={visibleProperties}
+        cardSize={unit.cardSize}
+      />
+    );
   } else if (chartType === CHART_TYPE_SPARKLINES) {
     chartContent = (
       <ChartHeader

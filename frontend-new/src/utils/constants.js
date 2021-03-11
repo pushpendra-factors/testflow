@@ -74,9 +74,44 @@ export const REPORT_SECTION = "reports";
 export const DASHBOARD_MODAL = "dashboard_modal";
 export const DASHBOARD_WIDGET_SECTION = "dashboardWidget";
 
-export const linechart_legend_length = 30;
+export const DASHBOARD_WIDGET_BAR_CHART_HEIGHT = 250;
+export const DASHBOARD_WIDGET_MULTICOLORED_BAR_CHART_HEIGHT = 200;
+export const DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT = 225;
+export const DASHBOARD_WIDGET_LINE_CHART_HEIGHT = 225;
+export const DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT = 250
+
+export const BAR_CHART_XAXIS_TICK_LENGTH = {
+  0: 15,
+  1: 25,
+  2: 5,
+};
+
+export const BAR_COUNT = {
+  0:3,
+  1:5,
+  2:2
+};
+
+export const BARLINE_COUNT = {
+  0:3,
+  1:5,
+  2:2
+};
+
+export const FUNNELS_COUNT = {
+  0:3,
+  1:5,
+  2:2
+};
 
 export const legend_counts = {
-  0:2,
+  0: 3,
   1: 5,
-}
+  2: 1,
+};
+
+export const charts_legend_length = {
+  0:15,
+  1:20,
+  2:10
+};
