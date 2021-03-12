@@ -8,7 +8,7 @@ import GroupSelect from '../../../components/QueryComposer/GroupSelect';
 import moment from 'moment';
 import { fetchGoalInsights} from 'Reducers/factors';
 
-function Header({factors_insight_rules, factors_models, fetchGoalInsights, activeProject, goal_insights, factors_insight_model}) {
+function Header({factors_insight_rules, factors_models, fetchGoalInsights, activeProject, goal_insights, factors_insight_model, savedName}) {
 
   const [showDateTime, setShowDateTime] = useState(false);
   const [dateTime, setDateTime] = useState(null);
@@ -45,7 +45,7 @@ function Header({factors_insight_rules, factors_models, fetchGoalInsights, activ
       return ( 
         <div className={'fa-container pb-5'}>
              <div className="flex flex-col justify-between border-bottom--thin-2 pb-4" style={{borderBottomWidth:'3px'}}> 
-                    <Text type={'title'} level={2} color={'grey'} weight={'bold'} color={'grey-3'} extraClass={'m-0 '}>{_.isEmpty(factors_insight_rules.name) ? 'Untitled Name' : factors_insight_rules.name }</Text>
+                    <Text type={'title'} level={2} color={'grey'} weight={'bold'} color={'grey-3'} extraClass={'m-0 '}>{_.isEmpty(factors_insight_rules.name) ? (savedName ? savedName : 'Untitled Name') : factors_insight_rules.name }</Text>
                     <div className="flex items-center">
                         <Badge count={'Goal'} className={'fa-custom-badge'} />
                         {factors_insight_rules.rule?.st_en?.na ? <>

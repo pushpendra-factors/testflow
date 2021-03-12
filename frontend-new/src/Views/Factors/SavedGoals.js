@@ -69,7 +69,7 @@ const SavedGoals = ({goals, fetchGoalInsights,  factors_models, agents, saveGoal
         okText: 'Yes',
         onOk() { 
           removeSavedGoal(goalValues.project_id, goalId).then(() => {
-            message.success('User removed!');
+            message.success('Goal Removed!');
             fetchFactorsGoals(goalValues.project_id);
           }).catch((err) => {
             message.error(err);

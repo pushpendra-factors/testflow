@@ -103,11 +103,11 @@ function Sidebar(props) {
   };
 
   useEffect(() => {
-    document.onkeydown = keydown;
-    function keydown(evt) {
-      // Shift+G to trigger grid debugger
-      if (evt.shiftKey && evt.keyCode === 71) { setVisible(!visible); }
-    }
+    // document.onkeydown = keydown;
+    // function keydown(evt) {
+    //   // Shift+G to trigger grid debugger
+    //   if (evt.shiftKey && evt.keyCode === 71) { setVisible(!visible); }
+    // }
     // Setting first project as active project if no-active project exisit in redux-persist/localStorage.
     if (_.isEmpty(props.active_project)) {
       props.setActiveProject(props.projects[0]);

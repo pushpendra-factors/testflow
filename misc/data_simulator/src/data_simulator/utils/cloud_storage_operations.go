@@ -12,9 +12,10 @@ import (
 	"google.golang.org/api/iterator"
 	"io"
 	"os"
+	"strings"
 )
 
-func DoesFileExistInCloud(bucketPath string, bucketName string, fileName string) bool {
+func DoesFileNameSubstrExistInCloud(bucketPath string, bucketName string, fileName string) bool {
 	_context := context.Background()
 	_storageClient, _err := storage.NewClient(_context)
 
@@ -35,7 +36,7 @@ func DoesFileExistInCloud(bucketPath string, bucketName string, fileName string)
 		if err != nil {
 			fmt.Errorf("%v", err)
 		}
-		if attrs.Name == fileName {
+		if strings.Contains(attrs.Name, fileName) {
 			return true
 		}
 	}

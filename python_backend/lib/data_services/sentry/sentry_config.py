@@ -1,6 +1,7 @@
 import sys
 
-from tornado.log import logging as log
+import logging as log
+
 from lib.config import Config
 
 
@@ -17,7 +18,11 @@ class SentryConfig(Config):
 
     @staticmethod
     def _validate(argv):
+        env = argv.env
         sentry_dsn = argv.sentry_dsn
+        if env != "production":
+            return
+
         if sentry_dsn == "":
             log.error("Option: sentry_dsn cannot be empty.")
             sys.exit(1)

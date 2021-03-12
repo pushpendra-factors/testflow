@@ -5,13 +5,14 @@ import { Link } from 'react-router-dom';
 import {saveGoalInsights} from 'Reducers/factors';
 import {connect} from 'react-redux';
 
-function Header({saveGoalInsights, activeProject, factors_insight_rules}) {
+function Header({saveGoalInsights, activeProject, factors_insight_rules, setSavedName}) {
   const { Header } = Layout;
 
 
   const [showSaveModal, setshowSaveModal] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
   const [isLoading, setisLoading] = useState(false);
+  
   const [form] = Form.useForm();
 
   const saveGoal = (payload) => {   
@@ -25,6 +26,7 @@ function Header({saveGoalInsights, activeProject, factors_insight_rules}) {
       saveGoalInsights(activeProject.id, factorsData).then(() => {
         setshowSaveModal(false);
         setisLoading(false);
+        setSavedName(payload.title);
         message.success('Saved successfully!');
       }).catch((err) => {
         const saveGoalErr = err?.data?.error ? err.data.error : `Oops! Something went wrong.`
