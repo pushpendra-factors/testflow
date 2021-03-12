@@ -469,6 +469,7 @@ func (pg *Postgres) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) int
 	}
 	adwordsDoc.Type = docType
 
+	log.Warn("Inside model adwords document - Add document. Before hierarchy")
 	adwordsDocID, campaignIDValue, adGroupIDValue, adIDValue,
 		keywordIDValue, err := getAdwordsIDAndHeirarchyColumnsByType(adwordsDoc.Type, adwordsDoc.Value)
 	if err != nil {
@@ -485,6 +486,7 @@ func (pg *Postgres) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) int
 	adwordsDoc.ID = adwordsDocID
 	currentTime := gorm.NowFunc()
 
+	log.Warn("Inside model adwords document - Add document. Before SQL insertion")
 	db := C.GetServices().Db
 	// TODO: Use gorm.Create method, instead of INSERT query string.
 	queryStr := "INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,campaign_id,ad_group_id,ad_id,keyword_id,value,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -501,6 +503,7 @@ func (pg *Postgres) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) int
 			return http.StatusInternalServerError
 		}
 	}
+	log.Warn("Inside model adwords document - Add document. After SQL insertion")
 	defer rows.Close()
 
 	return http.StatusCreated

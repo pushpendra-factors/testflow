@@ -1,6 +1,6 @@
 # TODO: Check the error handling.
 import requests
-from tornado.log import logging as log
+import logging as log
 
 from scripts.adwords.jobs.multiple_requests_fetch_job import MultipleRequestsFetchJob
 
@@ -54,6 +54,7 @@ class FactorsDataService:
 
     @classmethod
     def add_adwords_document(cls, project_id, customer_acc_id, doc, doc_type, timestamp):
+        log.warning("Calling the adwords data service - add documents.")
         url = cls.data_service_path + "/adwords/documents/add"
 
         payload = {
@@ -73,12 +74,14 @@ class FactorsDataService:
 
     @classmethod
     def add_all_adwords_documents(cls, project_id, customer_acc_id, docs, doc_type, timestamp):
+        log.warning("Calling the adwords data service - add all documents.")
         for doc in docs:
             cls.add_adwords_document(project_id, customer_acc_id,
                                      doc, doc_type, timestamp)
 
     @classmethod
     def add_all_adwords_documents_for_first_run(cls, project_id, customer_acc_id, docs, doc_type):
+        log.warning("Calling the adwords data service - add all documents first run.")
         for doc in docs:
             cls.add_adwords_document(project_id, customer_acc_id, doc, doc_type,
                                      doc[MultipleRequestsFetchJob.TIMESTAMP_FIELD])
