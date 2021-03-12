@@ -17,6 +17,7 @@ const FactorsInsights = ({ activeProject, goal_insights }) => {
   const [showModal, SetShowModal] = useState(false);
   const [SubInsightsData, setSubInsightsData] = useState(null);
   const [ParentData, setParentData] = useState(null);
+  const [savedName, setSavedName] = useState(null);
 
   const handleClose = () => {
     SetShowModal(false);
@@ -31,12 +32,12 @@ const FactorsInsights = ({ activeProject, goal_insights }) => {
     <>
            {!goal_insights ? <Spin size={'large'} className={'fa-page-loader'} /> :  <> 
             
-            <HeaderContents />
+            <HeaderContents setSavedName={setSavedName} />
 
            <div className={'fa-container mt-24'}>
                 <Row gutter={[24, 24]}>
                     <Col span={24}>
-                        <SubHeaderContents />
+                        <SubHeaderContents savedName={savedName} />
                      </Col>
                 </Row>
                 <Row gutter={[24, 24]}>
