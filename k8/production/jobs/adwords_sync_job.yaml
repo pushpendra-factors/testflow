@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: default-pool
+            nodePool: persistent-pool-highmem-16
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: default-pool
+            cloud.google.com/gke-nodepool: persistent-pool-highmem-16
           containers:
           - name: adwords-sync
             image: us.gcr.io/factors-staging/adwords-etl:v0.49-4bcdb5e2-644

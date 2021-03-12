@@ -12,7 +12,7 @@ import (
 
 func DataServiceAdwordsAddDocumentHandler(c *gin.Context) {
 	r := c.Request
-
+	log.Warn("Inside Adwords Handler - add document.")
 	var adwordsDocument model.AdwordsDocument
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
