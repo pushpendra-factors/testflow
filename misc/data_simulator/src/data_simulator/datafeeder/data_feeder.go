@@ -330,7 +330,7 @@ func ProcessAdwordsDataFromEventsFiles(eventsExecutionDate time.Time, env *strin
 			return
 		}
 	} else {
-		if utils.DoesFileExistInCloud(fmt.Sprintf("%s/%s", constants.PROCESSEDFILESCLOUD, constants.LOCALOUTPUTFOLDER),
+		if utils.DoesFileNameSubstrExistInCloud(fmt.Sprintf("%s/%s", constants.PROCESSEDFILESCLOUD, constants.LOCALOUTPUTFOLDER),
 			constants.BUCKETNAME, fileForYesterday) {
 			Log.Debug.Printf("Already processed at cloud for yesterday %s", fileForYesterday)
 			return
