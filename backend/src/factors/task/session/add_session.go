@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
+	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 )
@@ -22,9 +23,44 @@ const (
 	StatusFailed      = "failed"
 )
 
+type Status struct {
+	Status                       string `json:"status"`
+	EventsDownloadIntervalInMins int64  `json:"events_download_interval_in_mins"`
+	NoOfEvents                   int    `json:"no_of_events_downloaded"`
+	// count of after filter events. actual no.of events processed for session.
+	NoOfEventsProcessed       int `json:"no_of_events_processed"`
+	NoOfUsers                 int `json:"no_of_users"`
+	NoOfSessionsContinued     int `json:"no_of_sessions_continued"`
+	NoOfSessionsCreated       int `json:"no_of_sessions_created"`
+	NoOfUserPropertiesUpdates int `json:"no_of_user_properties_updates"`
+
+	// Used on user event worker.
+	SeenFailure bool       `json:"-"`
+	Lock        sync.Mutex `json:"-"`
+}
+
+func (s *Status) Set(noOfProcessedEvents, noOfCreated int, isContinuedFirst bool,
+	noOfUserPropUpdates int, seenFailure bool, status *Status) {
+
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
+
+	if seenFailure {
+		status.SeenFailure = seenFailure
+		return
+	}
+
+	if isContinuedFirst {
+		status.NoOfSessionsContinued++
+	}
+	status.NoOfSessionsCreated += noOfCreated
+	status.NoOfEventsProcessed += noOfProcessedEvents
+	status.NoOfUserPropertiesUpdates += noOfUserPropUpdates
+}
+
 // addSessionByProjectId - Adds session to all users of project.
 func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestamp,
-	endTimestamp, bufferTimeBeforeSessionCreateInSecs int64) (*Status, int) {
+	endTimestamp, bufferTimeBeforeSessionCreateInSecs int64, numUserRoutines int) (*Status, int) {
 
 	status := &Status{}
 
@@ -80,31 +116,45 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 	status.NoOfEvents = noOfEventsDownloaded
 	status.NoOfUsers = len(*userEventsMap)
 
-	var noOfEventsProcessedForSession, noOfSessionsCreated, noOfSessionsContinued, noOfUserPropertiesUpdates int
 	var minOfSessionAddedLastEventTimestamp int64
 
-	for userID, events := range *userEventsMap {
-		noOfProcessedEvents, noOfCreated, isContinuedFirst,
-			noOfUserPropUpdates, errCode := store.GetStore().AddSessionForUser(projectId, userID, events,
-			bufferTimeBeforeSessionCreateInSecs, sessionEventName.ID)
-		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+	userIDs := make([]string, 0, 0)
+	for userID := range *userEventsMap {
+		userIDs = append(userIDs, userID)
+	}
+	userIDChunks := U.GetStringListAsBatch(userIDs, numUserRoutines)
+
+	for ci := range userIDChunks {
+		var wg sync.WaitGroup
+		var minOfLastEventTimestampOfBatch int64
+
+		wg.Add(len(userIDChunks[ci]))
+		for ui, userID := range userIDChunks[ci] {
+			events := (*userEventsMap)[userIDChunks[ci][ui]]
+
+			// Min on the batch of users.
+			lastEventTimestamp := events[len(events)-1].Timestamp
+			if minOfLastEventTimestampOfBatch == 0 {
+				minOfLastEventTimestampOfBatch = lastEventTimestamp
+			} else if lastEventTimestamp < minOfLastEventTimestampOfBatch {
+				minOfLastEventTimestampOfBatch = lastEventTimestamp
+			}
+
+			go addSessionUserEventsWorker(projectId, userID, events, sessionEventName.ID,
+				bufferTimeBeforeSessionCreateInSecs, &wg, status)
+		}
+		wg.Wait() // Wait till all units of batch is processed.
+
+		if status.SeenFailure {
 			return status, http.StatusInternalServerError
 		}
 
-		lastEventTimestamp := events[len(events)-1].Timestamp
+		// Min among all users.
 		if minOfSessionAddedLastEventTimestamp == 0 {
-			minOfSessionAddedLastEventTimestamp = lastEventTimestamp
-		} else if lastEventTimestamp < minOfSessionAddedLastEventTimestamp {
-			minOfSessionAddedLastEventTimestamp = lastEventTimestamp
+			minOfSessionAddedLastEventTimestamp = minOfLastEventTimestampOfBatch
+		} else if minOfLastEventTimestampOfBatch < minOfSessionAddedLastEventTimestamp {
+			minOfSessionAddedLastEventTimestamp = minOfLastEventTimestampOfBatch
 		}
-
-		if isContinuedFirst {
-			noOfSessionsContinued++
-		}
-
-		noOfSessionsCreated = noOfSessionsCreated + noOfCreated
-		noOfEventsProcessedForSession = noOfEventsProcessedForSession + noOfProcessedEvents
-		noOfUserPropertiesUpdates = noOfUserPropertiesUpdates + noOfUserPropUpdates
 	}
 
 	// Update next sessions start timestamp with min of last session
@@ -115,12 +165,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 		return status, http.StatusInternalServerError
 	}
 
-	status.NoOfSessionsCreated = noOfSessionsCreated
-	status.NoOfSessionsContinued = noOfSessionsContinued
-	status.NoOfEventsProcessed = noOfEventsProcessedForSession
-	status.NoOfUserPropertiesUpdates = noOfUserPropertiesUpdates
-
-	if noOfSessionsCreated == 0 {
+	if status.NoOfSessionsCreated == 0 {
 		return status, http.StatusNotModified
 	}
 
@@ -160,31 +205,19 @@ func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList st
 	return allowedProjectIds, http.StatusFound
 }
 
-func setStatus(projectId uint64, statusMap *map[uint64]Status, status *Status,
+func setProjectStatus(projectId uint64, statusMap *map[uint64]Status, status *Status,
 	hasFailures *bool, isFailed bool, statusLock *sync.Mutex) {
 
-	defer (*statusLock).Unlock()
+	defer statusLock.Unlock()
+	statusLock.Lock()
 
-	(*statusLock).Lock()
 	(*statusMap)[projectId] = *status
 	*hasFailures = isFailed
 }
 
-type Status struct {
-	Status                       string `json:"status"`
-	EventsDownloadIntervalInMins int64  `json:"events_download_interval_in_mins"`
-	NoOfEvents                   int    `json:"no_of_events_downloaded"`
-	// count of after filter events. actual no.of events processed for session.
-	NoOfEventsProcessed       int `json:"no_of_events_processed"`
-	NoOfUsers                 int `json:"no_of_users"`
-	NoOfSessionsContinued     int `json:"no_of_sessions_continued"`
-	NoOfSessionsCreated       int `json:"no_of_sessions_created"`
-	NoOfUserPropertiesUpdates int `json:"no_of_user_properties_updates"`
-}
-
-func addSessionWorker(projectId uint64, maxLookbackTimestamp, startTimestamp, endTimestamp,
+func addSessionProjectWorker(projectId uint64, maxLookbackTimestamp, startTimestamp, endTimestamp,
 	bufferTimeBeforeSessionCreateInSecs int64, statusMap *map[uint64]Status,
-	hasFailures *bool, wg *sync.WaitGroup, statusLock *sync.Mutex) {
+	hasFailures *bool, wg *sync.WaitGroup, statusLock *sync.Mutex, numUserRoutines int) {
 
 	defer (*wg).Done()
 
@@ -192,7 +225,7 @@ func addSessionWorker(projectId uint64, maxLookbackTimestamp, startTimestamp, en
 
 	execStartTimestamp := U.TimeNowUnix()
 	status, errCode := addSessionByProjectId(projectId, maxLookbackTimestamp, startTimestamp,
-		endTimestamp, bufferTimeBeforeSessionCreateInSecs)
+		endTimestamp, bufferTimeBeforeSessionCreateInSecs, numUserRoutines)
 	logCtx = logCtx.WithField("time_taken_in_secs", U.TimeNowUnix()-execStartTimestamp).
 		WithField("status", status)
 	if errCode != http.StatusOK {
@@ -210,25 +243,46 @@ func addSessionWorker(projectId uint64, maxLookbackTimestamp, startTimestamp, en
 			logCtx.Error("Failed to add session.")
 		}
 
-		setStatus(projectId, statusMap, status, hasFailures, isFailed, statusLock)
+		setProjectStatus(projectId, statusMap, status, hasFailures, isFailed, statusLock)
 		return
 	}
 
 	logCtx.Info("Added session for project.")
 
 	status.Status = "success"
-	setStatus(projectId, statusMap, status, hasFailures, false, statusLock)
+	setProjectStatus(projectId, statusMap, status, hasFailures, false, statusLock)
+}
+
+func addSessionUserEventsWorker(projectID uint64, userID string, events []model.Event,
+	sessionEventNameID uint64, bufferTimeBeforeSessionCreateInSecs int64,
+	wg *sync.WaitGroup, status *Status) {
+	logCtx := log.WithField("project_id", projectID).WithField("user_id", userID)
+
+	defer wg.Done()
+
+	noOfProcessedEvents, noOfCreated, isContinuedFirst, noOfUserPropUpdates,
+		errCode := store.GetStore().AddSessionForUser(projectID, userID, events,
+		bufferTimeBeforeSessionCreateInSecs, sessionEventNameID)
+
+	var seenFailure bool
+	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+		logCtx.Error("Failure on add session to user events worker.")
+		seenFailure = true
+	}
+
+	status.Set(noOfProcessedEvents, noOfCreated, isContinuedFirst,
+		noOfUserPropUpdates, seenFailure, status)
 }
 
 func AddSession(projectIds []uint64, maxLookbackTimestamp, startTimestamp, endTimestamp,
-	bufferTimeBeforeSessionCreateInMins int64, numRoutines int) (map[uint64]Status, error) {
+	bufferTimeBeforeSessionCreateInMins int64, numProjectRoutines, numUserRoutines int) (map[uint64]Status, error) {
 
 	hasFailures := false
 	statusMap := make(map[uint64]Status, 0)
 	var statusLock sync.Mutex
 
-	if numRoutines == 0 {
-		numRoutines = 1
+	if numProjectRoutines == 0 {
+		numProjectRoutines = 1
 	}
 
 	// breaks list of projectIds into multiple
@@ -236,7 +290,7 @@ func AddSession(projectIds []uint64, maxLookbackTimestamp, startTimestamp, endTi
 	// go routines.
 	chunkProjectIds := make([][]uint64, 0, 0)
 	for i := 0; i < len(projectIds); {
-		next := i + numRoutines
+		next := i + numProjectRoutines
 		if next > len(projectIds) {
 			next = len(projectIds)
 		}
@@ -251,9 +305,9 @@ func AddSession(projectIds []uint64, maxLookbackTimestamp, startTimestamp, endTi
 		var wg sync.WaitGroup
 		wg.Add(len(chunkProjectIds[ci]))
 		for pi := range chunkProjectIds[ci] {
-			go addSessionWorker(chunkProjectIds[ci][pi], maxLookbackTimestamp, startTimestamp,
-				endTimestamp, bufferTimeBeforeSessionCreateInSecs,
-				&statusMap, &hasFailures, &wg, &statusLock)
+			go addSessionProjectWorker(chunkProjectIds[ci][pi], maxLookbackTimestamp, startTimestamp,
+				endTimestamp, bufferTimeBeforeSessionCreateInSecs, &statusMap, &hasFailures, &wg,
+				&statusLock, numUserRoutines)
 		}
 		wg.Wait()
 	}

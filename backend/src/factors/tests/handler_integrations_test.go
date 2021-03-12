@@ -897,7 +897,7 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		assert.NotEmpty(t, jsonResponseMap2["event_id"])
 		assert.NotEmpty(t, jsonResponseMap2["user_id"])
 
-		_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1)
+		_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 		assert.Nil(t, err)
 
 		event, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
