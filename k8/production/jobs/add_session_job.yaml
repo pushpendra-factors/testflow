@@ -42,8 +42,10 @@ spec:
             - $(REDIS_PORT)
             - --project_ids
             - "*"
-            - --num_routines
-            - $(ADD_SESSION_NUM_ROUTINES)
+            - --num_project_routines
+            - $(ADD_SESSION_PROJECT_ROUTINES)
+            - --num_user_routines
+            - $(ADD_SESSION_USER_ROUTINES)
             - --max_lookback_hours
             - $(ADD_SESSION_MAX_LOOKBACK_HOURS)
             - --start_timestamp

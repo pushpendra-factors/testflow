@@ -6,5 +6,6 @@ metadata:
     env: staging
     project: factors-staging
 data:
-  ADD_SESSION_NUM_ROUTINES: "10"
+  ADD_SESSION_PROJECT_ROUTINES: "2"
+  ADD_SESSION_USER_ROUTINES: "10"
   ADD_SESSION_MAX_LOOKBACK_HOURS: "24"

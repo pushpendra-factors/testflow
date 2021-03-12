@@ -31,7 +31,8 @@ func main() {
 	// Allowed list of projects to add session. Defaults to all (*), if not given.
 	projectIds := flag.String("project_ids", "*", "Allowed projects to create sessions offline.")
 	disabledProjectIds := flag.String("disabled_project_ids", "", "Disallowed projects to create sessions offline.")
-	numRoutines := flag.Int("num_routines", 1, "Number of routines to use.")
+	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level routines to use.")
+	numUserRoutines := flag.Int("num_user_routines", 1, "Number of user level routines to use.")
 	bufferTimeBeforeCreateSessionInMins := flag.Int64("buffer_time_in_mins", 30, "Buffer time to wait before processing an event for session.")
 
 	// Limits the start_timestamp to max lookback, if exceeds.
@@ -119,7 +120,8 @@ func main() {
 	}
 
 	statusMap, err := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
-		*startTimestamp, *endTimestamp, *bufferTimeBeforeCreateSessionInMins, *numRoutines)
+		*startTimestamp, *endTimestamp, *bufferTimeBeforeCreateSessionInMins,
+		*numProjectRoutines, *numUserRoutines)
 
 	modifiedStatusMap := make(map[uint64]session.Status, 0)
 
