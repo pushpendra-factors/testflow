@@ -21,3 +21,7 @@ KEYWORD_PERFORMANCE_REPORT = "keyword_performance_report"
 HEALTHCHECKS_ADWORDS_SYNC_PING_ID = "188cbf7c-0ea1-414b-bf5c-eee47c12a0c8"
 
 etl_record_stats = EtlRecordsStats()
+DEVELOPMENT = "development"
+TEST = "test"
+STAGING = "staging"
+PRODUCTION = "production"

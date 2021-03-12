@@ -6,6 +6,7 @@ from tornado import gen
 from tornado.log import logging as log
 
 import app
+from lib.adwords.cors import Cors
 from lib.adwords.oauth_service.authorisation_flow import AuthorisationFlow as AdwordsOauthService
 from lib.adwords.oauth_service.fetch_service import FetchService
 from lib.data_services.factors_data_service import FactorsDataService
@@ -83,7 +84,8 @@ class OAuthCallbackHandler(BaseHandler):
 class GetCustomerAccountsHandler(BaseHandler):
     # Todo: use set_default_headers and options as BaseHandler.
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Origin", app.CONFIG.ADWORDS_APP.get_app_host_url())
+        acceptable_domains = Cors.get_acceptable_domains(app.CONFIG.ADWORDS_APP.env)
+        self.set_header("Access-Control-Allow-Origin", acceptable_domains)
         self.set_header("Access-Control-Allow-Headers", "x-requested-with, Origin, Content-Type")
         self.set_header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
         self.set_header('Access-Control-Allow-Credentials', 'true')
