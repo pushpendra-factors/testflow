@@ -6,6 +6,7 @@ from lib.utils.time import TimeUtil
 from .base_job import BaseJob
 from .reports_fetch_job import ReportsFetch
 
+
 # Note: If the number of code paths exceed 7 in the subClasses. Move it to strategic pattern.
 
 
@@ -34,7 +35,8 @@ class MultipleRequestsFetchJob(BaseJob):
                 rows.append(doc)
             log.warning('Entities of %s were fetched at offset: %s', self.ENTITY_TYPE, selector['paging']['startIndex'])
         else:
-            log.warning('No more entities of %s were found at offset: %s', self.ENTITY_TYPE, selector['paging']['startIndex'])
+            log.warning('No more entities of %s were found at offset: %s', self.ENTITY_TYPE,
+                        selector['paging']['startIndex'])
 
         return rows, int(page['totalNumEntries'])
 
@@ -73,7 +75,8 @@ class MultipleRequestsFetchJob(BaseJob):
         return new_row
 
     def start(self):
-        service = FetchService(scripts.adwords.CONFIG.ADWORDS_OAUTH).get_service(self.SERVICE_NAME, self._refresh_token, self._customer_account_id)
+        service = FetchService(scripts.adwords.CONFIG.ADWORDS_OAUTH).get_service(self.SERVICE_NAME, self._refresh_token,
+                                                                                 self._customer_account_id)
         offset = 0
         selector = {
             'fields': self.FIELDS,

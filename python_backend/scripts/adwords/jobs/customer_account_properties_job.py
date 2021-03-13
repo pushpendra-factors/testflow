@@ -6,7 +6,7 @@ from .base_job import BaseJob
 
 
 class GetCustomerAccountPropertiesJob(BaseJob):
-    
+
     def __init__(self, next_info):
         super().__init__(next_info)
 
@@ -20,7 +20,8 @@ class GetCustomerAccountPropertiesJob(BaseJob):
 
         if current_account is None:
             log.error("Customer account not found on list of accounts. Failed to get properties.")
-            raise Exception("Failed to get properties. customer account"+str(self._customer_account_id)+" not found on list of account "+str(customer_accounts))
+            raise Exception("Failed to get properties. customer account" + str(
+                self._customer_account_id) + " not found on list of account " + str(customer_accounts))
 
         return current_account
 
