@@ -1,9 +1,9 @@
 import io
+import logging as log
+import operator
 from datetime import datetime
 
 from googleads import adwords
-import logging as log
-import operator
 
 import scripts
 from lib.adwords.oauth_service.fetch_service import FetchService
@@ -19,8 +19,6 @@ from .. import CAMPAIGNS, ADS, AD_GROUPS, CUSTOMER_ACCOUNT_PROPERTIES
 class ReportsFetch(BaseJob):
     QUERY_FIELDS = []
     REPORT = ''
-    WHERE_IN_COLUMN = 'CampaignStatus'
-    WHERE_IN_VALUES = ['ENABLED', 'PAUSED']
     MAX_LOOK_BACK_DAYS = 30
     DEFAULT_FLOAT = 0.000
     DEFAULT_NUMERATOR_FLOAT = 0.0
@@ -39,7 +37,8 @@ class ReportsFetch(BaseJob):
          OPERATION: operator.truediv},
         {OPERAND1: 'impressions', OPERAND2: 'search_top_impression_share', RESULT_FIELD: 'total_search_top_impression',
          OPERATION: operator.truediv},
-        {OPERAND1: 'impressions', OPERAND2: 'search_absolute_top_impression_share', RESULT_FIELD: 'total_search_absolute_top_impression',
+        {OPERAND1: 'impressions', OPERAND2: 'search_absolute_top_impression_share',
+         RESULT_FIELD: 'total_search_absolute_top_impression',
          OPERATION: operator.truediv},
         {OPERAND1: 'impressions', OPERAND2: 'search_budget_lost_absolute_top_impression_share',
          RESULT_FIELD: 'total_search_budget_lost_absolute_top_impression', OPERATION: operator.truediv},
@@ -73,7 +72,6 @@ class ReportsFetch(BaseJob):
         'impressions': None
     }
 
-
     def __init__(self, next_info):
         super().__init__(next_info)
 
@@ -86,11 +84,13 @@ class ReportsFetch(BaseJob):
         rows = []
         log.warning("Started Extract of job for Project Id: %s, Timestamp: %d, Doc Type: %s", self._project_id,
                     self._timestamp, self._doc_type)
+
         report_query = (adwords.ReportQueryBuilder()
                         .Select(*fields)
                         .From(self.REPORT)
-                        .Where(self.WHERE_IN_COLUMN).In(*self.WHERE_IN_VALUES)
+                        .Where('Impressions').GreaterThan(0)
                         .During(during).Build())
+
         log.warning("Completed Extract of job for Project Id: %s, Timestamp: %d, Doc Type: %s", self._project_id,
                     self._timestamp, self._doc_type)
 
@@ -126,7 +126,8 @@ class ReportsFetch(BaseJob):
             if field1_name in row and field2_name in row:
                 field1_value = ReportsFetch.get_transformed_values(field1_name, row.get(field1_name, ""))
                 field2_value = ReportsFetch.get_transformed_values(field2_name, row.get(field2_name, ""))
-                transformed_value = self.get_transformed_value_for_arithmetic_operator(row, field1_value, field2_value, operation)
+                transformed_value = self.get_transformed_value_for_arithmetic_operator(row, field1_value, field2_value,
+                                                                                       operation)
                 row[result_field_name] = transformed_value
         return row
 

@@ -25,3 +25,6 @@ DEVELOPMENT = "development"
 TEST = "test"
 STAGING = "staging"
 PRODUCTION = "production"
+
+ENABLED = "ENABLED"
+PAUSED = "PAUSED"
