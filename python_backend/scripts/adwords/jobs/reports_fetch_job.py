@@ -12,7 +12,7 @@ from lib.utils.format import FormatUtil
 from lib.utils.string import StringUtil
 from lib.utils.time import TimeUtil
 from .base_job import BaseJob
-from .. import CAMPAIGNS, ADS, AD_GROUPS, CUSTOMER_ACCOUNT_PROPERTIES
+from .. import CAMPAIGNS, ADS, AD_GROUPS, CUSTOMER_ACCOUNT_PROPERTIES, CLICK_PERFORMANCE_REPORT
 
 
 # Note: If the number of custom paths exceed 5 in the subClasses. Move it to strategic pattern.
@@ -85,7 +85,13 @@ class ReportsFetch(BaseJob):
         log.warning("Started Extract of job for Project Id: %s, Timestamp: %d, Doc Type: %s", self._project_id,
                     self._timestamp, self._doc_type)
 
-        report_query = (adwords.ReportQueryBuilder()
+        if self.REPORT == CLICK_PERFORMANCE_REPORT:
+            report_query = (adwords.ReportQueryBuilder()
+                            .Select(*fields)
+                            .From(self.REPORT)                            
+                            .During(during).Build())    
+        else:
+            report_query = (adwords.ReportQueryBuilder()
                         .Select(*fields)
                         .From(self.REPORT)
                         .Where('Impressions').GreaterThan(0)

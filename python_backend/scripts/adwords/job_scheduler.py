@@ -79,7 +79,10 @@ class JobScheduler:
         doc_type = self.doc_type
         try:
             if doc_type == CUSTOMER_ACCOUNT_PROPERTIES:
-                docs, req_count = GetCustomerAccountPropertiesJob(self.next_info).start()
+                # docs, req_count = GetCustomerAccountPropertiesJob(self.next_info).start()
+                self.status["status"] = STATUS_SKIPPED
+                self.status["message"] = "CustomerAccountProperties is skipped."
+                return self.status
 
             elif doc_type == CAMPAIGNS:
                 docs, req_count = GetCampaignsJob(self.next_info).start()
