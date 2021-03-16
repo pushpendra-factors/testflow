@@ -93,6 +93,8 @@ function CoreQuery({
     date_range: {},
   });
 
+  const [cmprAttrDurationObj, setcmprAttrDurationObj] = useState({});
+
   const [campaignState, setCampaignState] = useState({
     channel: "",
     select_metrics: [],
@@ -276,6 +278,8 @@ function CoreQuery({
         ...initialState
       })
     }
+
+    setcmprAttrDurationObj(cmprDuration);
     const query = getAttributionQuery(
       eventGoal,
       touchpoint,
@@ -677,6 +681,7 @@ function CoreQuery({
           querySaved={querySaved}
           setQuerySaved={setQuerySaved}
           durationObj={queryOptions.date_range}
+          cmprDuration={cmprAttrDurationObj}
           handleDurationChange={handleDurationChange}
           arrayMapper={arrayMapper}
           queryOptions={queryOptions}

@@ -16,6 +16,7 @@ from .. import CAMPAIGNS, ADS, AD_GROUPS, CUSTOMER_ACCOUNT_PROPERTIES, CLICK_PER
 
 
 # Note: If the number of custom paths exceed 5 in the subClasses. Move it to strategic pattern.
+# REPORT type is different from load ReportType. Eg - underscores.
 class ReportsFetch(BaseJob):
     QUERY_FIELDS = []
     REPORT = ''
@@ -85,7 +86,7 @@ class ReportsFetch(BaseJob):
         log.warning("Started Extract of job for Project Id: %s, Timestamp: %d, Doc Type: %s", self._project_id,
                     self._timestamp, self._doc_type)
 
-        if self.REPORT == CLICK_PERFORMANCE_REPORT:
+        if self.REPORT == "CLICK_PERFORMANCE_REPORT":
             report_query = (adwords.ReportQueryBuilder()
                             .Select(*fields)
                             .From(self.REPORT)                            

@@ -59,7 +59,7 @@ function AnalysisHeader({
         <Text type={'title'} level={7} extraClass={'m-0 mt-1'} color={'grey'} lineHeight={'small'} >
             {queryTitle
               ? `Reports / ${EVENT_BREADCRUMB[queryType]} / ${queryTitle}`
-              : `Reports / ${EVENT_BREADCRUMB[queryType]} / Untitled Analyis${" "}
+              : `Reports / ${EVENT_BREADCRUMB[queryType]} / Untitled Analysis${" "}
             ${moment().format("DD/MM/YYYY")}`} 
         </Text>
         </div>

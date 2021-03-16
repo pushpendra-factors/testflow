@@ -6,7 +6,9 @@ function AttributionsResult({
   resultState,
   compareResult,
   attributionsState,
-  section
+  section,
+  durationObj,
+  cmprDuration
 }) {
   let content = null;
 
@@ -18,6 +20,8 @@ function AttributionsResult({
         event={eventGoal.label}
         linkedEvents={linkedEvents}
         touchpoint={touchpoint}
+        durationObj={durationObj}
+        cmprDuration={cmprDuration}
         data={
           resultState.data.result ? resultState.data.result : resultState.data
         }

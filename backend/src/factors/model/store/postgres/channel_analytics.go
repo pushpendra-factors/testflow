@@ -319,7 +319,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 	var selectMetrics, columns []string
 
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
-		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, err := pg.getFacebookAndAdwordsSQLAndParametersV1(projectID, query, reqID, false)
+		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
 		if err != nil {
 			return make([]string, 0, 0), [][]interface{}{}, err
 		}
@@ -327,12 +327,13 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
 			selectMetrics = append(selectMetrics, value)
 		}
-		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads ORDER BY %s %s", joinWithComma(selectMetrics...),
-			adwordsSQL, facebookSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
+		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s UNION %s ) all_ads ORDER BY %s %s", joinWithComma(selectMetrics...),
+			adwordsSQL, facebookSQL, linkedinSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
+		unionParams = append(unionParams, linkedinParams...)
 		columns = append(adwordsSelectKeys, adwordsMetrics...)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
-		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, err := pg.getFacebookAndAdwordsSQLAndParametersV1(projectID, query, reqID, false)
+		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
 		if err != nil {
 			return make([]string, 0, 0), [][]interface{}{}, err
 		}
@@ -341,37 +342,44 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
 			selectMetrics = append(selectMetrics, value)
 		}
-		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s ) all_ads GROUP BY %s ORDER BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL,
+		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s UNION %s ) all_ads GROUP BY %s ORDER BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, linkedinSQL,
 			model.AliasDateTime, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
+		unionParams = append(unionParams, linkedinParams...)
 		columns = append(adwordsSelectKeys, adwordsMetrics...)
 	} else {
-		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, err := pg.getFacebookAndAdwordsSQLAndParametersV1(projectID, query, reqID, true)
+		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
 		if err != nil {
 			return make([]string, 0, 0), [][]interface{}{}, err
 		}
-		unionQuery = fmt.Sprintf("SELECT * FROM ( %s UNION %s ) all_ads ORDER BY %s %s;", adwordsSQL, facebookSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
+		unionQuery = fmt.Sprintf("SELECT * FROM ( %s UNION %s UNION %s ) all_ads ORDER BY %s %s;", adwordsSQL, facebookSQL, linkedinSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		unionParams = append(adwordsParams, facebookParams...)
+		unionParams = append(unionParams, linkedinParams...)
 		columns = append(adwordsSelectKeys, adwordsMetrics...)
 	}
 	_, resultMetrics, err := pg.ExecuteSQL(unionQuery, unionParams, logCtx)
 	return columns, resultMetrics, err
 }
 
-func (pg *Postgres) getFacebookAndAdwordsSQLAndParametersV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, error) {
+func (pg *Postgres) getIndividualChannelsSQLAndParametersV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, error) {
 	adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := pg.GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
 	facebookSQL, facebookParams, _, _, facebookErr := pg.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
+	linkedinSQL, linkedinParams, _, _, linkedinErr := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource)
 
 	if adwordsErr != nil {
-		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, adwordsErr
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, adwordsErr
 	}
 	if facebookErr != nil {
-		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, facebookErr
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, facebookErr
+	}
+	if linkedinErr != nil {
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, linkedinErr
 	}
 	adwordsSQL = fmt.Sprintf("( %s )", adwordsSQL[:len(adwordsSQL)-2])
 	facebookSQL = fmt.Sprintf("( %s )", facebookSQL[:len(facebookSQL)-2])
+	linkedinSQL = fmt.Sprintf("( %s )", linkedinSQL[:len(linkedinSQL)-2])
 
-	return adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, nil
+	return adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, nil
 }
 
 // GetChannelFilterValues - @Kark TODO v0

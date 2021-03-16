@@ -249,10 +249,11 @@ export default function FilterBlock({
     const newRange = [...selectedRngState];
     const newFilter = Object.assign({}, newFilterState);
     newRange[0] = range.selected;
+    const endRange = moment(newRange[0].endDate).endOf('day').toDate().getTime();
     setSelectedRngState(newRange);
     const rangeValue = {
       "fr": newRange[0].startDate.getTime(),
-      "to": newRange[0].endDate.getTime(),
+      "to": endRange,
       "ovp": false
     }
     newFilter[filterTypeState] = JSON.stringify(rangeValue);

@@ -127,3 +127,40 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 		return
 	}
 }
+
+// ShouldRefreshDashboardUnit Whether to force refresh dashboard unit irrespective of the cache and expiry.
+func ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID uint64, from, to int64, isWebAnalytics bool) bool {
+	// If todays range or last 30 mintes window, refresh on every trigger.
+	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) || U.Is30MinutesTimeRange(from, to) {
+		return true
+	}
+
+	var refreshedAt int64
+	if isWebAnalytics {
+		result, errCode := GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID, from, to)
+		if errCode != http.StatusFound {
+			return true
+		}
+		refreshedAt = result.RefreshedAt
+	} else {
+		result, errCode, _ := GetCacheResultByDashboardIdAndUnitId("", projectID, dashboardID, dashboardUnitID, from, to)
+		if errCode != http.StatusFound || result == nil {
+			return true
+		}
+		refreshedAt = result.RefreshedAt
+	}
+
+	toStartOfDay := U.GetBeginningOfDayTimestampZ(to, U.TimeZoneStringIST)
+	nowStartOfDay := U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST)
+
+	// If in last 2 days (mutable data range), check the RefreshedAt in Cache result.
+	// Skip, if RefreshedAt is for the same day to restrict force cache only once a day.
+	if nowStartOfDay > toStartOfDay && nowStartOfDay-toStartOfDay <= U.ImmutableDataEndDateBufferInSeconds {
+		refreshedAtDate := U.GetDateAsStringZ(refreshedAt, U.TimeZoneStringIST)
+		todaysDate := U.GetDateAsStringZ(U.TimeNowUnix(), U.TimeZoneStringIST)
+		if refreshedAtDate < todaysDate {
+			return true
+		}
+	}
+	return false
+}
