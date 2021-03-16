@@ -12,6 +12,8 @@ function AttributionsChart({
   linkedEvents,
   section,
   data2,
+  durationObj,
+  cmprDuration
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -44,6 +46,8 @@ function AttributionsChart({
           event={event}
           data={data}
           data2={data2}
+          durationObj={durationObj}
+          cmprDuration={cmprDuration}
           isWidgetModal={section === DASHBOARD_MODAL}
           visibleIndices={visibleIndices}
           setVisibleIndices={setVisibleIndices}

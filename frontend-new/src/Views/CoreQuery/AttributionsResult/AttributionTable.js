@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import moment from 'moment';
 import { getCompareTableColumns, getCompareTableData, getTableColumns, getTableData } from "./utils";
 import DataTable from "../../../components/DataTable";
 
@@ -15,6 +16,8 @@ function AttributionTable({
   touchpoint,
   linkedEvents,
   reportTitle = "Attributions",
+  durationObj,
+  cmprDuration
 }) {
   const [searchText, setSearchText] = useState("");
   const [sorter, setSorter] = useState({});
@@ -45,11 +48,42 @@ function AttributionTable({
     getCompareTableData(data, data2, event, searchText, sorter, attribution_method_compare, touchpoint, linkedEvents) 
     : null;
 
+  const constructCompareCSV = (rst) => {
+      const keys = Object.keys(rst);
+      const tbl = {};
+      keys.forEach((k, ind) => {
+        if(ind){
+          const firstDateString = {
+            from: moment(durationObj.from).toDate().toLocaleDateString(),
+            to: moment(durationObj.to).toDate().toLocaleDateString()
+          }
+          const secondDateString = {
+            from: moment(durationObj.from).toDate().toLocaleDateString(),
+            to: moment(durationObj.to).toDate().toLocaleDateString()
+          }
+          
+          tbl[`${k} (${firstDateString.from} to ${firstDateString.to})`] = rst[k].first;
+          tbl[`${k} (${secondDateString.from} to ${secondDateString.to})`] = rst[k].second;
+          tbl[`${k} Change`] = rst[k].change;
+        } else {
+          tbl[k] = rst[k];
+        }
+      })
+      return tbl;
+  }
+
   const getCSVData = () => {
+    const dt = cmrTableData ? cmrTableData : tableData;
     return {
       fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, ...rest }) => {
-        return rest;
+      data: dt.map(({ index, ...rest }) => {
+        let results;
+        if(cmrTableData) {
+          results = constructCompareCSV(rest);
+        } else {
+          results = rest;
+        }
+        return results;
       }),
     };
   };

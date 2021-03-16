@@ -38,6 +38,7 @@ function ReportContent({
   eventPage,
   section,
   onReportClose,
+  cmprDuration,
   runAttrCmprQuery,
   cmprResultState
 }) {
@@ -169,6 +170,8 @@ function ReportContent({
         <AttributionsResult
           resultState={resultState}
           compareResult={cmprResultState}
+          durationObj={durationObj}
+          cmprDuration={cmprDuration}
           attributionsState={attributionsState}
           section={section}
         />
