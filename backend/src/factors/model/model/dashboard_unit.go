@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
-	log "github.com/sirupsen/logrus"
 )
 
 type DashboardUnit struct {
@@ -61,24 +60,6 @@ func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, 
 		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:%d", dashboardID, unitID, from, to)
 	}
 	return cacheRedis.NewKey(projectID, prefix, suffix)
-}
-
-func IsDashboardUnitAlreadyCachedForRange(projectID, dashboardID, unitID uint64, from, to int64) bool {
-	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
-		// If from time is of today's beginning, refresh today's everytime a request is received.
-		return false
-	}
-	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID, from, to)
-	if err != nil {
-		log.WithError(err).Errorf("Failed to get cache key")
-		return false
-	}
-	exists, err := cacheRedis.ExistsPersistent(cacheKey)
-	if err != nil {
-		log.WithError(err).Errorf("Redis error on exists")
-		return false
-	}
-	return exists
 }
 
 const (

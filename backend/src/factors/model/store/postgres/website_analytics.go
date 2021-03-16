@@ -1392,7 +1392,7 @@ func (pg *Postgres) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnal
 	dashboardID := cachePayload.DashboardID
 	from, to := cachePayload.From, cachePayload.To
 	queries := cachePayload.Queries
-	if model.IsWebAnalyticsDashboardAlreadyCached(projectID, dashboardID, from, to) {
+	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, true) {
 		return http.StatusOK
 	}
 

@@ -398,3 +398,58 @@ func TestDeleteDashboard(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, errCode)
 
 }
+
+func TestShouldRefreshDashboardUnit(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	dashboardQuery, errCode, errMsg := store.GetStore().CreateQuery(project.ID, &model.Queries{
+		ProjectID: project.ID,
+		Type:      model.QueryTypeDashboardQuery,
+		Query:     postgres.Jsonb{RawMessage: json.RawMessage(`{}`)},
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+	assert.NotNil(t, dashboardQuery)
+
+	dashboard, errCode := store.GetStore().CreateDashboard(project.ID, agent.UUID,
+		&model.Dashboard{Name: U.RandomString(5), Type: model.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	dashboardUnit, errCode, errMsg := store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,
+		&model.DashboardUnit{DashboardId: dashboard.ID, Title: U.RandomString(5), Presentation: model.PresentationLine,
+			QueryId: dashboardQuery.ID, Query: postgres.Jsonb{RawMessage: json.RawMessage(`{}`)}},
+		model.DashboardUnitWithQueryID)
+	assert.NotEmpty(t, dashboardUnit)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Empty(t, errMsg)
+
+	// 30mins range. Should allow.
+	from, to := U.WebAnalyticsQueryDateRangePresets[U.DateRangePreset30Minutes]()
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, true))
+
+	// Todays range. Should allow.
+	from, to = U.QueryDateRangePresets[U.DateRangePresetToday]()
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, false))
+
+	// Yesterday's range. Should allow first time.
+	from, to = U.QueryDateRangePresets[U.DateRangePresetYesterday]()
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, false))
+
+	// Yesterday's range. Should not allow again on same day once cache is set.
+	from, to = U.QueryDateRangePresets[U.DateRangePresetYesterday]()
+	model.SetCacheResultForWebAnalyticsDashboard(&model.WebAnalyticsQueryResult{}, project.ID, dashboard.ID, from, to)
+	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, true))
+	model.SetCacheResultByDashboardIdAndUnitId("{}", project.ID, dashboard.ID, dashboardUnit.ID, from, to)
+	assert.False(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, false))
+
+	// More than 2 days old range. Should allow.
+	from, to = U.QueryDateRangePresets[U.DateRangePresetYesterday]()
+	from = from - 30*U.SECONDS_IN_A_DAY
+	to = to - 2*U.SECONDS_IN_A_DAY
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, 0, from, to, true))
+	assert.True(t, model.ShouldRefreshDashboardUnit(project.ID, dashboard.ID, dashboardUnit.ID, from, to, false))
+}

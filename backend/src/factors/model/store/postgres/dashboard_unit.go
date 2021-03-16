@@ -539,7 +539,7 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 		"DashboardUnitID": dashboardUnitID,
 		"FromTo":          fmt.Sprintf("%d-%d", from, to),
 	})
-	if model.IsDashboardUnitAlreadyCachedForRange(projectID, dashboardID, dashboardUnitID, from, to) {
+	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID, from, to, false) {
 		return http.StatusOK, ""
 	}
 	logCtx.Info("Starting to cache unit for date range")
