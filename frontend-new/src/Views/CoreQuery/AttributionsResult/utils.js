@@ -457,7 +457,7 @@ export const getCompareTableData = (
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
-const calcChangePerc = (val1, val2) => {
+export const calcChangePerc = (val1, val2) => {
   return formatCount(((val1 - val2) / val2 * 100), 1);
 }
 
