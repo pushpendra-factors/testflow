@@ -6,6 +6,7 @@ import (
 	C "factors/config"
 	"factors/metrics"
 	"factors/model/model"
+	"factors/util"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -1331,4 +1332,110 @@ func (pg *Postgres) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStor
 
 	logCtx.WithField("rows", rowCount).Info("Scanned all rows.")
 	return eventsWithoutProperties, propertiesByName, http.StatusFound
+}
+
+func (pg *Postgres) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int) {
+	logCtx := log.WithField("project_id", projectID).
+		WithField("start_timestamp", startTimestamp).
+		WithField("end_timestamp", endTimestamp)
+
+	var unusedSessions []string
+	if projectID == 0 || startTimestamp == 0 || endTimestamp == 0 {
+		logCtx.Error("Invalid params.")
+		return unusedSessions, http.StatusInternalServerError
+	}
+
+	if startTimestamp >= endTimestamp {
+		logCtx.Error("Start timestamp should not be greater or equal to end timestamp")
+		return unusedSessions, http.StatusInternalServerError
+	}
+
+	sessionEventName, errCode := pg.GetSessionEventName(projectID)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get session event_name.")
+		return unusedSessions, http.StatusInternalServerError
+	}
+
+	db := C.GetServices().Db
+	queryStmnt := "SELECT id, session_id, event_name_id FROM events WHERE project_id = ? AND timestamp BETWEEN ? AND ?"
+	rows, err := db.Raw(queryStmnt, projectID, startTimestamp, endTimestamp).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get events.")
+		return unusedSessions, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	usedSessionIDMap := make(map[string]bool, 0)
+	allSessionIDs := make([]string, 0, 0)
+	for rows.Next() {
+		var event model.Event
+		if err := db.ScanRows(rows, &event); err != nil {
+			logCtx.WithError(err).Error("Failed scanning event rows.")
+		}
+
+		// session_ids associated to event.
+		if event.SessionId != nil && *event.SessionId != "" &&
+			event.EventNameId != sessionEventName.ID {
+
+			usedSessionIDMap[*event.SessionId] = true
+		}
+
+		// all session events.
+		if event.EventNameId == sessionEventName.ID {
+			allSessionIDs = append(allSessionIDs, event.ID)
+		}
+	}
+
+	unusedSessionIDMap := make(map[string]bool, 0)
+	for i := range allSessionIDs {
+		if _, exists := usedSessionIDMap[allSessionIDs[i]]; !exists {
+			unusedSessionIDMap[allSessionIDs[i]] = true
+		}
+	}
+
+	unusedSessions = make([]string, len(unusedSessionIDMap), len(unusedSessionIDMap))
+	for sessionID := range unusedSessionIDMap {
+		unusedSessions = append(unusedSessions, sessionID)
+	}
+
+	return unusedSessions, http.StatusFound
+}
+
+func (pg *Postgres) DeleteEventsByIDsInBatchForJob(projectID, eventNameID uint64, ids []string, batchSize int) int {
+	logCtx := log.WithField("project_id", projectID).WithField("batch_size", batchSize)
+	if projectID == 0 || batchSize == 0 {
+		logCtx.Error("Invalid params.")
+		return http.StatusInternalServerError
+	}
+
+	batches := util.GetStringListAsBatch(ids, batchSize)
+	for i := range batches {
+		errCode := pg.DeleteEventByIDs(projectID, eventNameID, batches[i])
+		if errCode != http.StatusAccepted {
+			return errCode
+		}
+
+		// Logging for analysis, as this method used only on jobs.
+		logCtx.WithField("batch_count", i+1).Info("Deleted batch.")
+	}
+
+	return http.StatusAccepted
+}
+
+func (pg *Postgres) DeleteEventByIDs(projectID, eventNameID uint64, ids []string) int {
+	logCtx := log.WithField("project_id", projectID)
+
+	db := C.GetServices().Db
+	exec := db.Where("project_id = ? AND id = ANY(?)", projectID, pq.Array(ids)).Delete(&model.Event{})
+	if err := exec.Error; err != nil {
+		logCtx.WithError(err).Error("Failed to delete session events.")
+		return http.StatusInternalServerError
+	}
+
+	logCtx.WithField("no_of_ids", len(ids)).
+		WithField("ids", ids).
+		WithField("rows_affected", exec.RowsAffected).
+		Info("Deleted events by id.")
+
+	return http.StatusAccepted
 }

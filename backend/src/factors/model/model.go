@@ -175,6 +175,9 @@ type Model interface {
 	GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int)
 	GetAllEventsForSessionCreationAsUserEventsMap(projectId, sessionEventNameId uint64, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from, to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int)
+	GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int)
+	DeleteEventsByIDsInBatchForJob(projectID, eventNameID uint64, ids []string, batchSize int) int
+	DeleteEventByIDs(projectID, eventNameID uint64, ids []string) int
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
