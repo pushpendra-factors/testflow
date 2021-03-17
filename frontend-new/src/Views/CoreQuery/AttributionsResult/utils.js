@@ -1,9 +1,13 @@
 import React from "react";
-import { SortData, getTitleWithSorter, formatCount } from "../../../utils/dataFormatter";
+import {
+  SortData,
+  getTitleWithSorter,
+  formatCount,
+} from "../../../utils/dataFormatter";
 import { ATTRIBUTION_METHODOLOGY } from "../../../utils/constants";
-import styles from './index.module.scss';
+import styles from "./index.module.scss";
 
-import { SVG } from '../../../components/factorsComponents';
+import { SVG } from "../../../components/factorsComponents";
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;
@@ -42,9 +46,7 @@ export const formatGroupedData = (
   // const campaignIdx = headers.indexOf("Campaign");
   // const costIdx = headers.indexOf("Cost Per Conversion");
   // const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
-  let rows = data.rows.filter(
-    (_, index) => visibleIndices.indexOf(index) > -1
-  );
+  let rows = data.rows.filter((_, index) => visibleIndices.indexOf(index) > -1);
   rows = SortData(rows, userIdx, "descend");
   const chartData = [
     [`Conversions as Unique users (${attribution_method})`],
@@ -59,26 +61,31 @@ export const formatGroupedData = (
 
 const renderComparCell = (obj, xcl) => {
   let changeMetric = null;
-  if(obj.change) {
-    if(obj.change > 0 || obj.change < 0) {
+  if (obj.change) {
+    if (obj.change > 0 || obj.change < 0) {
       const change = Math.abs(obj.change);
       changeMetric = (
         <div className={`${styles.cmprCell__change} ${xcl}`}>
-          <SVG name={obj.change > 0 ? `arrowLift` : `arrowDown`} size={16}></SVG>
+          <SVG
+            name={obj.change > 0 ? `arrowLift` : `arrowDown`}
+            size={16}
+          ></SVG>
           <span>
-            {obj.change === 'Infinity' ? <>&#8734;</> : <>{change} &#37;</>} 
+            {obj.change === "Infinity" ? <>&#8734;</> : <>{change} &#37;</>}
           </span>
-        </div>  
-      )
-    } 
+        </div>
+      );
+    }
   }
-  
-  return (<div className={styles.cmprCell}>
-    <span className={styles.cmprCell__first}>{obj.first}</span>
-    <span className={styles.cmprCell__second}>{obj.second}</span>
-    {changeMetric}
-  </div>)
-}
+
+  return (
+    <div className={styles.cmprCell}>
+      <span className={styles.cmprCell__first}>{obj.first}</span>
+      <span className={styles.cmprCell__second}>{obj.second}</span>
+      {changeMetric}
+    </div>
+  );
+};
 
 export const getCompareTableColumns = (
   currentSorter,
@@ -102,7 +109,7 @@ export const getCompareTableColumns = (
         handleSorting
       ),
       dataIndex: "impressions",
-      render: renderComparCell
+      render: renderComparCell,
     },
     {
       title: getTitleWithSorter(
@@ -112,12 +119,12 @@ export const getCompareTableColumns = (
         handleSorting
       ),
       dataIndex: "clicks",
-      render: renderComparCell
+      render: renderComparCell,
     },
     {
       title: getTitleWithSorter("Spend", "spend", currentSorter, handleSorting),
       dataIndex: "spend",
-      render: renderComparCell
+      render: renderComparCell,
     },
     {
       title: getTitleWithSorter(
@@ -127,7 +134,7 @@ export const getCompareTableColumns = (
         handleSorting
       ),
       dataIndex: "visitors",
-      render: renderComparCell
+      render: renderComparCell,
     },
     {
       title: event,
@@ -148,7 +155,7 @@ export const getCompareTableColumns = (
           ),
           dataIndex: "conversion",
           className: "text-center",
-          render: (obj) => renderComparCell(obj, "justify-center")
+          render: (obj) => renderComparCell(obj, "justify-center"),
         },
         {
           title: (
@@ -165,7 +172,7 @@ export const getCompareTableColumns = (
           ),
           dataIndex: "cost",
           className: "text-center",
-          render: (obj) => renderComparCell(obj, "justify-center")
+          render: (obj) => renderComparCell(obj, "justify-center"),
         },
       ],
     },
@@ -186,7 +193,7 @@ export const getCompareTableColumns = (
       ),
       dataIndex: "conversion_compare",
       className: "text-center",
-      render: (obj) => renderComparCell(obj, "justify-center")
+      render: (obj) => renderComparCell(obj, "justify-center"),
     });
     result[result.length - 1].children.push({
       title: (
@@ -203,7 +210,7 @@ export const getCompareTableColumns = (
       ),
       dataIndex: "cost_compare",
       className: "text-center",
-      render: (obj) => renderComparCell(obj, "justify-center")
+      render: (obj) => renderComparCell(obj, "justify-center"),
     });
   }
   let linkedEventsColumns = [];
@@ -221,7 +228,7 @@ export const getCompareTableColumns = (
             ),
             dataIndex: le.label + " - Users",
             className: "text-center",
-            render: (obj) => renderComparCell(obj, "justify-center")
+            render: (obj) => renderComparCell(obj, "justify-center"),
           },
           {
             title: (
@@ -231,10 +238,10 @@ export const getCompareTableColumns = (
             ),
             dataIndex: le.label + " - CPC",
             className: "text-center",
-            render: (obj) => renderComparCell(obj, "justify-center")
+            render: (obj) => renderComparCell(obj, "justify-center"),
           },
         ],
-      }
+      };
     });
   }
   return [...result, ...linkedEventsColumns];
@@ -384,7 +391,7 @@ export const getTableColumns = (
             className: "text-center",
           },
         ],
-      }
+      };
     });
   }
   return [...result, ...linkedEventsColumns];
@@ -393,10 +400,10 @@ export const getTableColumns = (
 const constrComparisionCellData = (row, row2, index) => {
   return {
     first: formatCount(row[index], 1),
-    second: row2? formatCount(row2[index], 1) : NaN,
-    change: row2? calcChangePerc(row[index], row2[index]) : NaN
-  }
-}
+    second: row2 ? formatCount(row2[index], 1) : NaN,
+    change: row2 ? calcChangePerc(row[index], row2[index]) : NaN,
+  };
+};
 
 export const getCompareTableData = (
   data,
@@ -421,7 +428,9 @@ export const getCompareTableData = (
   const data2Rows = data2.rows;
   const result = data.rows
     .map((row, index) => {
-      const row2 = data2Rows.filter((r) => r[touchpointIdx] === row[touchpointIdx])[0];
+      const row2 = data2Rows.filter(
+        (r) => r[touchpointIdx] === row[touchpointIdx]
+      )[0];
       let resultantRow = {
         index,
         [touchpoint]: row[touchpointIdx],
@@ -436,13 +445,27 @@ export const getCompareTableData = (
         linkedEvents.forEach((le) => {
           const eventUsersIdx = headers.indexOf(`${le.label} - Users`);
           const eventCPCIdx = headers.indexOf(`${le.label} - CPC`);
-          resultantRow[`${le.label} - Users`] = constrComparisionCellData(row, row2, eventUsersIdx);
-          resultantRow[`${le.label} - CPC`] = constrComparisionCellData(row, row2, eventCPCIdx);
+          resultantRow[`${le.label} - Users`] = constrComparisionCellData(
+            row,
+            row2,
+            eventUsersIdx
+          );
+          resultantRow[`${le.label} - CPC`] = constrComparisionCellData(
+            row,
+            row2,
+            eventCPCIdx
+          );
         });
       }
       if (attribution_method_compare) {
-        resultantRow["conversion_compare"] = constrComparisionCellData(row, row2, [compareUsersIdx]);
-        resultantRow["cost_compare"] = constrComparisionCellData(row, row2, [compareCostIdx]);
+        resultantRow["conversion_compare"] = constrComparisionCellData(
+          row,
+          row2,
+          [compareUsersIdx]
+        );
+        resultantRow["cost_compare"] = constrComparisionCellData(row, row2, [
+          compareCostIdx,
+        ]);
       }
       return resultantRow;
     })
@@ -451,15 +474,36 @@ export const getCompareTableData = (
         row[touchpoint].toLowerCase().indexOf(searchText.toLowerCase()) > -1
     );
 
-  if (!currentSorter) {
-    return SortData(result, "conversion", "descend");
+  if (!currentSorter.key) {
+    result.sort((a, b) => {
+      return parseFloat(a["conversion"].first) <=
+        parseFloat(b["conversion"].first)
+        ? 1
+        : -1;
+    });
+  } else {
+    result.sort((a, b) => {
+      if (currentSorter.order === "ascend") {
+        return parseFloat(a[currentSorter.key].first) >=
+          parseFloat(b[currentSorter.key].first)
+          ? 1
+          : -1;
+      }
+      if (currentSorter.order === "descend") {
+        return parseFloat(a[currentSorter.key].first) <=
+          parseFloat(b[currentSorter.key].first)
+          ? 1
+          : -1;
+      }
+      return 0;
+    });
   }
-  return SortData(result, currentSorter.key, currentSorter.order);
+  return result;
 };
 
 export const calcChangePerc = (val1, val2) => {
-  return formatCount(((val1 - val2) / val2 * 100), 1);
-}
+  return formatCount(((val1 - val2) / val2) * 100, 1);
+};
 
 export const getTableData = (
   data,
@@ -496,7 +540,10 @@ export const getTableData = (
         linkedEvents.forEach((le) => {
           const eventUsersIdx = headers.indexOf(`${le.label} - Users`);
           const eventCPCIdx = headers.indexOf(`${le.label} - CPC`);
-          resultantRow[`${le.label} - Users`] = formatCount(row[eventUsersIdx], 0);
+          resultantRow[`${le.label} - Users`] = formatCount(
+            row[eventUsersIdx],
+            0
+          );
           resultantRow[`${le.label} - CPC`] = formatCount(row[eventCPCIdx], 0);
         });
       }
@@ -511,7 +558,7 @@ export const getTableData = (
         row[touchpoint].toLowerCase().indexOf(searchText.toLowerCase()) > -1
     );
 
-  if (!currentSorter) {
+  if (!currentSorter.key) {
     return SortData(result, "conversion", "descend");
   }
   return SortData(result, currentSorter.key, currentSorter.order);
