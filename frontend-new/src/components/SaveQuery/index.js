@@ -163,6 +163,10 @@ function SaveQuery({
           reqBody
         );
       }
+      notification.success({
+        message: "Report Saved Successfully",
+        duration: 5,
+      });
       dispatch({ type: QUERY_CREATED, payload: res.data });
       setQuerySaved(title);
       setApisCalled(false);
@@ -187,7 +191,7 @@ function SaveQuery({
     dashboardPresentation,
     selectedDashboards,
     queryType,
-    setQuerySaved
+    setQuerySaved,
   ]);
 
   let dashboardHelpText = "Create a dashboard widget for regular monitoring";
@@ -265,10 +269,10 @@ function SaveQuery({
   return (
     <>
       <Button
-        onClick={setVisible.bind(this, true)}   
+        onClick={setVisible.bind(this, true)}
         type="primary"
-        size={'large'}
-        icon={<SVG name={"save"} size={20} color={'white'} />}
+        size={"large"}
+        icon={<SVG name={"save"} size={20} color={"white"} />}
       >
         Save
       </Button>
@@ -289,7 +293,7 @@ function SaveQuery({
       >
         <div className="p-4">
           <Text extraClass="m-0" type={"title"} level={3} weight={"bold"}>
-            Save this Query
+            Create New Report
           </Text>
           <div className="pt-6">
             <Text

@@ -1,11 +1,16 @@
 import {
-  QUERIES_LOADING, QUERIES_LOADING_FAILED, QUERIES_LOADED, QUERY_CREATED, QUERY_DELETED
-} from './types';
+  QUERIES_LOADING,
+  QUERIES_LOADING_FAILED,
+  QUERIES_LOADED,
+  QUERY_CREATED,
+  QUERY_DELETED,
+  QUERIES_LOADING_STOPPED,
+} from "./types";
 
 const inititalState = {
   loading: false,
   error: false,
-  data: []
+  data: [],
 };
 
 export default function (state = inititalState, action) {
@@ -19,8 +24,13 @@ export default function (state = inititalState, action) {
     case QUERY_CREATED:
       return { ...inititalState, data: [action.payload, ...state.data] };
     case QUERY_DELETED:
-      var index = state.data.findIndex(d => d.id === action.payload);
-      return { ...inititalState, data: [...state.data.slice(0, index), ...state.data.slice(index + 1)] };
+      var index = state.data.findIndex((d) => d.id === action.payload);
+      return {
+        ...inititalState,
+        data: [...state.data.slice(0, index), ...state.data.slice(index + 1)],
+      };
+    case QUERIES_LOADING_STOPPED:
+      return { ...state, loading: false };
     default:
       return state;
   }

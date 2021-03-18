@@ -64,8 +64,11 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 	blackListedForUpdate[U.EP_PAGE_SCROLL_PERCENT] = true
 
 	eventsToIncr := make([]*cacheRedis.Key, 0)
+	eventsToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	propertiesToIncr := make([]*cacheRedis.Key, 0)
+	propertiesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	valuesToIncr := make([]*cacheRedis.Key, 0)
+	valuesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	logCtx := log.WithField("project_id", projectID)
 
 	eventNameDetails, err := pg.GetEventNameFromEventNameId(event.EventNameId, projectID)
@@ -86,12 +89,17 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 
 	var eventNamesKey *cacheRedis.Key
+	var eventNamesKeySortedSet *cacheRedis.Key
 	if IsEventNameTypeSmartEvent(eventNameDetails.Type) {
 		eventNamesKey, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID,
 			eventName, currentTimeDatePart)
+		eventNamesKeySortedSet, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
+				currentTimeDatePart)
 	} else {
 		eventNamesKey, err = model.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID,
 			eventName, currentTimeDatePart)
+		eventNamesKeySortedSet, err = model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
+				currentTimeDatePart)
 	}
 
 	if err != nil {
@@ -99,6 +107,10 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 		return
 	}
 	eventsToIncr = append(eventsToIncr, eventNamesKey)
+	eventsToIncrSortedSet = append(eventsToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
+		Key : eventNamesKeySortedSet,
+		Value: eventName,
+	})
 
 	for property, value := range eventProperties {
 		if value == nil {
@@ -116,31 +128,45 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 			}
 			propertyCategoryKey, err := model.GetPropertiesByEventCategoryCacheKey(projectID,
 				eventName, property, category, currentTimeDatePart)
+			propertyCategoryKeySortedSet, err := model.GetPropertiesByEventCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get cache key - property category")
 				return
 			}
 			propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
+			propertiesToIncrSortedSet = append(propertiesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
+				Key : propertyCategoryKeySortedSet,
+				Value: fmt.Sprintf("%s:%s:%s", eventName, category, property),
+			})
 			if category == U.PropertyTypeCategorical {
 				if propertyValue != "" {
 					valueKey, err := model.GetValuesByEventPropertyCacheKey(projectID,
 						eventName, property, propertyValue, currentTimeDatePart)
+					valueKeySortedSet, err := model.GetValuesByEventPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to get cache key - values")
 						return
 					}
 					valuesToIncr = append(valuesToIncr, valueKey)
+					valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
+						Key : valueKeySortedSet,
+						Value: fmt.Sprintf("%s:%s:%s", eventName, property, propertyValue),
+					})
 				}
 			}
 		}
 	}
 	begin := U.TimeNow()
 	keysToIncr := make([]*cacheRedis.Key, 0)
+	keysToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	if !isUpdateEventProperty {
 		keysToIncr = append(keysToIncr, eventsToIncr...)
+		keysToIncrSortedSet = append(keysToIncrSortedSet, eventsToIncrSortedSet...)
 	}
 	keysToIncr = append(keysToIncr, propertiesToIncr...)
 	keysToIncr = append(keysToIncr, valuesToIncr...)
+	keysToIncrSortedSet = append(keysToIncrSortedSet, propertiesToIncrSortedSet...)
+	keysToIncrSortedSet = append(keysToIncrSortedSet, valuesToIncrSortedSet...)
 	if len(keysToIncr) <= 0 {
 		return
 	}
@@ -153,6 +179,12 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 		return
 	}
 
+	if(C.IsSortedSetCachingAllowed()){
+		begin = U.TimeNow()
+		cacheRedis.ZincrPersistentBatch(keysToIncrSortedSet...)
+		end = U.TimeNow()
+		logCtx.WithField("TimeTaken", float64(end.Sub(begin).Milliseconds())).Info("ZINCR")
+	}
 	// The following code is to support/facilitate cleanup
 	newEventCount := int64(0)
 	newPropertiesCount := int64(0)

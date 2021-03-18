@@ -115,7 +115,7 @@ function Chart({
         );
         timeTaken = durationGrp
           ? formatDuration(Number(durationGrp[durationIdx]))
-          : "NA";
+          : "0s";
       }
 
       let padY = prevEventData ? 250 : 200;
@@ -137,22 +137,24 @@ function Chart({
                   color="grey-8"
                   extraClass="mb-0"
                 >
-                  {data.group}
+                  {data.group.includes("$no_group") ? "Overall" : data.group}
                 </Text>
                 <Text type="title" color="grey-2" extraClass="mb-0">
                   {currGrp.value} Overall Conversion
                 </Text>
               </div>
               <div className="pt-3">
-                <Text
-                  type="title"
-                  color="grey"
-                  weight="bold"
-                  extraClass="text-xs mb-0"
-                  lineHeight="small"
-                >
-                  Between steps:
-                </Text>
+                {prevEventData ? (
+                  <Text
+                    type="title"
+                    color="grey"
+                    weight="bold"
+                    extraClass="text-xs mb-0"
+                    lineHeight="small"
+                  >
+                    Between steps:
+                  </Text>
+                ) : null}
                 {prevEventData ? (
                   <div className={`flex items-center mt-1`}>
                     <LegendsCircle
@@ -414,7 +416,12 @@ function Chart({
       .attr("transform", "translate(0," + height + ")")
       .call(
         d3.axisBottom(x0).tickFormat((d) => {
-          const label = d;
+          let label;
+          if (d.includes("$no_group")) {
+            label = "Overall";
+          } else {
+            label = d;
+          }
           if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
             return (
               label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + "..."

@@ -564,6 +564,26 @@ func GetValuesByEventPropertyCacheKey(projectId uint64, event_name string, prope
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, event_name, property_name), fmt.Sprintf("%s:%s", date, value))
 }
 
+// For sortedsets
+func GetPropertiesByEventCategoryCacheKeySortedSet(projectId uint64, date string) (*cacheRedis.Key, error) {
+	prefix := "SS:EN:PC"
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s", prefix), fmt.Sprintf("%s", date))
+}
+func GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectId uint64, date string) (*cacheRedis.Key, error) {
+	prefix := "SS:EN"
+	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s", date))
+}
+
+func GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectId uint64, date string) (*cacheRedis.Key, error) {
+	prefix := "SS:EN:SE"
+	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s", date))
+}
+
+func GetValuesByEventPropertyCacheKeySortedSet(projectId uint64, date string) (*cacheRedis.Key, error) {
+	prefix := "SS:EN:PV"
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s", prefix), fmt.Sprintf("%s", date))
+}
+
 // Rollup keys
 func GetPropertiesByEventCategoryRollUpCacheKey(projectId uint64, event_name string, date string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:EN:PC"

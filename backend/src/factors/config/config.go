@@ -119,6 +119,7 @@ type Configuration struct {
 	enablePropertyTypeFromDB               bool
 	whitelistedProjectIDPropertyTypeFromDB string
 	blacklistedProjectIDPropertyTypeFromDB string
+	CacheSortedSet bool
 }
 
 type Services struct {
@@ -1154,4 +1155,8 @@ func PingHealthcheckForPanic(taskID, env, healthcheckID string) {
 
 func IsSDKAndIntegrationRequestQueueDuplicationEnabled() bool {
 	return configuration.EnableSDKAndIntegrationRequestQueueDuplication
+}
+
+func IsSortedSetCachingAllowed() bool {
+	return configuration.CacheSortedSet
 }
