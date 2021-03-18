@@ -879,5 +879,15 @@ func ExtractCampaignName(eventName string) string {
 		campaignName := strings.Split(prefix[1], "]")
 		return "Medium = " + campaignName[0]
 	}
+	if strings.HasPrefix(eventName, "$session[adgroup:") {
+		prefix := strings.Split(eventName, "$session[adgroup:")
+		campaignName := strings.Split(prefix[1], "]")
+		return "Adgroup = " + campaignName[0]
+	}
+	if strings.HasPrefix(eventName, "$session[initial_referrer:") {
+		prefix := strings.Split(eventName, "$session[initial_referrer:")
+		campaignName := strings.Split(prefix[1], "]")
+		return "Initial_Referrer = " + campaignName[0]
+	}
 	return ""
 }

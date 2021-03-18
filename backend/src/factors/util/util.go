@@ -857,7 +857,7 @@ func IsCampaignEvent(eventName string) bool {
 }
 
 func IsItreeCampaignEvent(eventName string) bool {
-	return strings.HasPrefix(eventName, "$session[campaign") || strings.HasPrefix(eventName, "$session[source") || strings.HasPrefix(eventName, "$session[medium")
+	return strings.HasPrefix(eventName, "$session[campaign") || strings.HasPrefix(eventName, "$session[source") || strings.HasPrefix(eventName, "$session[medium")  || strings.HasPrefix(eventName, "$session[adgroup") || strings.HasPrefix(eventName, "$session[initial_referrer")
 }
 
 // GetDashboardCacheResultExpiryInSeconds Returns expiry for cache based on query date range.
