@@ -117,7 +117,7 @@ export const generateTableColumns = (
         ? getTitleWithSorter(elem, elem, currentSorter, handleSorting)
         : elem,
       dataIndex: breakdown.length
-        ? `${arrayMapper[index].mapper}-${index}`
+        ? `${arrayMapper[index].mapper}`
         : `${elem}-${index}`,
       width: 150,
       className: index === queries.length - 1 ? tableStyles.lastColumn : "",
@@ -216,7 +216,7 @@ export const generateTableData = (
       const eventsData = {};
       let totalDuration = 0;
       data.forEach((d, idx) => {
-        eventsData[`${d.name}-${idx}`] = {
+        eventsData[`${d.name}`] = {
           percentage: calculatePercentage(d.data[group], data[0].data[group]),
           count: d.data[group],
         };
@@ -247,12 +247,17 @@ export const generateTableData = (
     if (currentSorter.key) {
       const sortKey = arrayMapper.find(
         (elem) => elem.eventName === currentSorter.key
-      );
-      return SortData(
-        result,
-        sortKey.mapper + "-" + sortKey.index,
-        currentSorter.order
-      );
+      ).mapper;
+      const { order } = currentSorter;
+      result.sort((a, b) => {
+        if (order === "ascend") {
+          return parseFloat(a[sortKey].count) >= parseFloat(b[sortKey].count) ? 1 : -1;
+        }
+        if (order === "descend") {
+          return parseFloat(a[sortKey].count) <= parseFloat(b[sortKey].count) ? 1 : -1;
+        }
+        return 0;
+      });
     }
     return result;
   }
