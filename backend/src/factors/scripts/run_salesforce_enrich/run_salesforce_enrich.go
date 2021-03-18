@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -48,6 +49,7 @@ func main() {
 	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
 	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
+	blacklistEnrichmentByProjectID := flag.String("blacklist_enrichment_by_project_id", "", "Blacklist enrichment by project_id.")
 
 	flag.Parse()
 	taskID := "salesforce_enrich"
@@ -129,6 +131,12 @@ func main() {
 		}
 	}
 
+	projectIDs := strings.Split(*blacklistEnrichmentByProjectID, ",")
+	blackListedProjectIDs := make(map[string]bool)
+	for i := range projectIDs {
+		blackListedProjectIDs[projectIDs[i]] = true
+	}
+
 	// salesforce enrich
 	salesforceEnabledProjects, status := store.GetStore().GetAllSalesforceProjectSettings()
 	if status != http.StatusFound {
@@ -137,7 +145,12 @@ func main() {
 
 	statusList := make([]IntSalesforce.Status, 0, 0)
 	for _, settings := range salesforceEnabledProjects {
+		if _, exist := blackListedProjectIDs[fmt.Sprintf("%d", settings.ProjectID)]; exist {
+			continue
+		}
+
 		status := IntSalesforce.Enrich(settings.ProjectID)
+
 		statusList = append(statusList, status...)
 	}
 
