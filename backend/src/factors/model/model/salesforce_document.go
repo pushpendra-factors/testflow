@@ -87,6 +87,7 @@ var SalesforceStandardDocumentType = []int{
 	SalesforceDocumentTypeAccount,
 	SalesforceDocumentTypeContact,
 	SalesforceDocumentTypeLead,
+	SalesforceDocumentTypeOpportunity,
 }
 
 var errorDuplicateRecord = errors.New("duplicate record")
