@@ -4,7 +4,10 @@ import {
   QUERIES_LOADED,
   QUERIES_LOADING_FAILED,
   QUERY_DELETED,
+  QUERIES_LOADING_STOPPED,
 } from "../types";
+import { notification } from "antd";
+import { getErrorMessage } from "../../utils/dataFormatter";
 const host = getHostUrl();
 
 export const getEventNames = (dispatch, projectId) => {
@@ -130,7 +133,12 @@ export const deleteQuery = async (dispatch, query) => {
     dispatch({ type: QUERY_DELETED, payload: query.id });
   } catch (err) {
     console.log(err);
-    dispatch({ type: QUERY_DELETED, payload: query.id });
+    dispatch({ type: QUERIES_LOADING_STOPPED });
+    notification.error({
+      message: "Something went wrong!",
+      description: getErrorMessage(err),
+      duration: 5,
+    });
   }
 };
 

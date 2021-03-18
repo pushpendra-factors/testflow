@@ -86,6 +86,13 @@ export const generateTableColumns = (
       className: tableStyles.groupColumn,
       fixed: "left",
       width: 100,
+      render: (d) => {
+        if (d.includes("$no_group")) {
+          return "Overall";
+        } else {
+          return d;
+        }
+      },
     },
     {
       title: "Total Conversion",

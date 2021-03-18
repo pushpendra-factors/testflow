@@ -175,38 +175,36 @@ export const getChartTypeMenuItems = (queryType, hasBreakdown) => {
   return menuItems;
 };
 
-export const nFormatter = (num, digits) => {
-  var si = [
-    { value: 1, symbol: "" },
-    { value: 1e3, symbol: "k" },
-    { value: 1e6, symbol: "M" },
-    { value: 1e9, symbol: "G" },
-    { value: 1e12, symbol: "T" },
-    { value: 1e15, symbol: "P" },
-    { value: 1e18, symbol: "E" },
-  ];
-  var rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
-  var i;
-  for (i = si.length - 1; i > 0; i--) {
-    if (num >= si[i].value) {
-      break;
-    }
-  }
-  return (num / si[i].value).toFixed(digits).replace(rx, "$1") + si[i].symbol;
-}
-
 export const formatDuration = (seconds) => {
   seconds = Number(seconds);
   if (seconds < 60) {
     return Math.floor(seconds) + "s";
   }
-  if(seconds < 3600) {
+  if (seconds < 3600) {
     const minutes = Math.floor(seconds / 60);
     const remains = Math.floor(seconds % 60);
     return `${minutes}m ${remains}s`;
   }
-  const hours = Math.floor(seconds / 3600);
-  const remains = seconds % 3600;
-  const minutes = Math.floor(remains / 60);
-  return `${hours}h ${minutes}m`;
-}
+  if (seconds < 86400) {
+    const hours = Math.floor(seconds / 3600);
+    const remains = seconds % 3600;
+    const minutes = Math.floor(remains / 60);
+    return `${hours}h ${minutes}m`;
+  }
+  const days = Math.floor(seconds / 86400);
+  const remains = seconds % 86400;
+  const hours = Math.floor(remains / 3600);
+  return `${days}d ${hours}h`;
+};
+
+export const getErrorMessage = (err) => {
+  if (err && typeof err.data === "string") {
+    return err.data;
+  }
+
+  if (err && err.data && err.data.error && typeof err.data.error === "string") {
+    return err.data.error;
+  }
+
+  return "Something went wrong!";
+};
