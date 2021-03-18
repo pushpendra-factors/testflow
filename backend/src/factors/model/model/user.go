@@ -86,6 +86,18 @@ func GetValuesByUserPropertyCacheKey(projectId uint64, property_name string, val
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), fmt.Sprintf("%s:%s", dateKey, value))
 }
 
+//sorted sets 
+func GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "SS:US:PC"
+	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s", dateKey))
+
+}
+
+func GetValuesByUserPropertyCacheKeySortedSet(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "SS:US:PV"
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s", prefix), fmt.Sprintf("%s", dateKey))
+}
+
 // Rollup cache keys
 func GetUserPropertiesCategoryByProjectRollUpCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:US:PC"

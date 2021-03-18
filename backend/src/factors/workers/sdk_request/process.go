@@ -42,6 +42,7 @@ func main() {
 	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
 	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
+	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	flag.Parse()
 
 	defer U.NotifyOnPanic(workerName, *env)
@@ -68,6 +69,7 @@ func main() {
 		SentryDSN:           *sentryDSN,
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *redisPortPersistent,
+		CacheSortedSet: 	 *cacheSortedSet,
 	}
 
 	err := C.InitQueueWorker(config)

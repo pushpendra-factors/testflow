@@ -213,8 +213,11 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 		return
 	}
 	keysToIncr := make([]*cacheRedis.Key, 0)
+	keysToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	propertiesToIncr := make([]*cacheRedis.Key, 0)
+	propertiesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	valuesToIncr := make([]*cacheRedis.Key, 0)
+	valuesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	for property, value := range updatedProperties {
 		category := pg.GetPropertyTypeByKeyValue(projectID, "", property, value, true)
 		var propertyValue string
@@ -230,7 +233,16 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 			logCtx.WithError(err).Error("Failed to get cache key - property category")
 			return
 		}
+		propertyCategoryKeySortedSet, err := model.GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectID, currentTimeDatePart)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get cache key - property category")
+			return
+		}
 		propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
+		propertiesToIncrSortedSet = append(propertiesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
+			Key : propertyCategoryKeySortedSet,
+			Value: fmt.Sprintf("%s:%s", category, property),
+		})
 		if category == U.PropertyTypeCategorical {
 			if propertyValue != "" {
 				valueKey, err := model.GetValuesByUserPropertyCacheKey(projectID, property, propertyValue, currentTimeDatePart)
@@ -238,12 +250,23 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 					logCtx.WithError(err).Error("Failed to get cache key - values")
 					return
 				}
+				valueKeySortedSet, err := model.GetValuesByUserPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to get cache key - values")
+					return
+				}
 				valuesToIncr = append(valuesToIncr, valueKey)
+				valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
+					Key : valueKeySortedSet,
+					Value: fmt.Sprintf("%s:%s", property, propertyValue),
+				})
 			}
 		}
 	}
 	keysToIncr = append(keysToIncr, propertiesToIncr...)
 	keysToIncr = append(keysToIncr, valuesToIncr...)
+	keysToIncrSortedSet = append(keysToIncrSortedSet, propertiesToIncrSortedSet...)
+	keysToIncrSortedSet = append(keysToIncrSortedSet, valuesToIncrSortedSet...)
 	begin = U.TimeNow()
 	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
 	end = U.TimeNow()
@@ -254,6 +277,12 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 		return
 	}
 
+	if(C.IsSortedSetCachingAllowed()){
+		begin = U.TimeNow()
+		cacheRedis.ZincrPersistentBatch(keysToIncrSortedSet...)
+		end = U.TimeNow()
+		logCtx.WithField("TimeTaken", float64(end.Sub(begin).Milliseconds())).Info("ZINCR")
+	}
 	// The following code is to support/facilitate cleanup
 	newPropertiesCount := int64(0)
 	newValuesCount := int64(0)

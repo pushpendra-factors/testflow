@@ -359,6 +359,57 @@ func incrBatch(persistent bool, keys []*Key) ([]int64, error) {
 
 	return counts, nil
 }
+
+type SortedSetKeyValueTuple struct {
+	Key *Key
+	Value string
+}
+func ZincrBatch(keys ...SortedSetKeyValueTuple) ([]int64, error) {
+	return zincrBatch(false, keys)
+}
+func ZincrPersistentBatch(keys ...SortedSetKeyValueTuple) ([]int64, error) {
+	return zincrBatch(true, keys)
+}
+
+func zincrBatch(persistent bool, keys []SortedSetKeyValueTuple) ([]int64, error) {
+	if len(keys) == 0 {
+		return nil, ErrorInvalidValues
+	}
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	err := redisConn.Send("MULTI")
+	if err != nil {
+		return nil, err
+
+	}
+	for _, key := range keys {
+		cKey, err := key.Key.Key()
+		if err != nil {
+			return nil, err
+		}
+		err = redisConn.Send("ZINCRBY", cKey , 1, key.Value)
+		if err != nil {
+			return nil, err
+		}
+	}
+	res, err := redis.Values(redisConn.Do("EXEC"))
+	if err != nil {
+		return nil, err
+	}
+	counts := make([]int64, 0)
+	if err := redis.ScanSlice(res, &counts); err != nil {
+		return nil, err
+	}
+
+	return counts, nil
+}
+
 func SetBatch(values map[*Key]string, expiryInSecs float64) error {
 	return setBatch(values, expiryInSecs, false)
 }
