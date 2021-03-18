@@ -1,9 +1,11 @@
+import React from "react";
 import moment from "moment";
 import {
   generateColors,
   SortData,
   getTitleWithSorter,
 } from "../../../../utils/dataFormatter";
+import { Number as NumFormat } from "../../../../components/factorsComponents";
 
 export const getBreakdownIndices = (data, breakdown) => {
   const result = breakdown.map((elem) => {
@@ -108,6 +110,9 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: elem.eventName,
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     };
   });
   return [...breakdownCols, ...eventCols];

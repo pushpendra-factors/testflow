@@ -1,10 +1,9 @@
 import React from "react";
 import ChartHeader from "./ChartHeader";
 import SparkChart from "./Chart";
-import { numberWithCommas } from "../../utils/dataFormatter";
 import { DASHBOARD_WIDGET_SECTION } from "../../utils/constants";
 import DashboardWidgetLegends from "../DashboardWidgetLegends";
-import { Text } from "../factorsComponents";
+import { Text, Number as NumFormat } from "../factorsComponents";
 
 function SparkLineChart({
   queries,
@@ -54,21 +53,20 @@ function SparkLineChart({
             (elem) => elem[0] === index
           );
           total = queryRow ? queryRow[2] : 0;
-          total =
-            total % 1 !== 0
-              ? parseFloat(total.toFixed(2))
-              : numberWithCommas(total);
-
+          
           if (cardSize === 0) {
             return (
-              <div className="flex items-center w-full justify-center">
+              <div
+                key={q + index}
+                className="flex items-center w-full justify-center"
+              >
                 <Text
                   extraClass="flex items-center w-1/4 justify-center"
                   type={"title"}
                   level={3}
                   weight={"bold"}
                 >
-                  {total}
+                  <NumFormat shortHand={true} number={total} />
                 </Text>
                 <div className="w-2/3">
                   <SparkChart
@@ -133,9 +131,7 @@ function SparkLineChart({
     );
   } else {
     let total = resultState.data.metrics.rows.find((elem) => elem[0] === 0)[2];
-    total =
-      total % 1 !== 0 ? parseFloat(total.toFixed(2)) : numberWithCommas(total);
-
+    
     return (
       <div
         className={`flex items-center justify-center w-full ${

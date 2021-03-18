@@ -7,7 +7,10 @@ import {
 import { ATTRIBUTION_METHODOLOGY } from "../../../utils/constants";
 import styles from "./index.module.scss";
 
-import { SVG } from "../../../components/factorsComponents";
+import {
+  SVG,
+  Number as NumFormat,
+} from "../../../components/factorsComponents";
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;
@@ -80,8 +83,8 @@ const renderComparCell = (obj, xcl) => {
 
   return (
     <div className={styles.cmprCell}>
-      <span className={styles.cmprCell__first}>{obj.first}</span>
-      <span className={styles.cmprCell__second}>{obj.second}</span>
+      <span className={styles.cmprCell__first}><NumFormat number={obj.first} /></span>
+      <span className={styles.cmprCell__second}><NumFormat number={obj.second} /></span>
       {changeMetric}
     </div>
   );
@@ -269,6 +272,9 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: "impressions",
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     },
     {
       title: getTitleWithSorter(
@@ -278,10 +284,16 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: "clicks",
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     },
     {
       title: getTitleWithSorter("Spend", "spend", currentSorter, handleSorting),
       dataIndex: "spend",
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     },
     {
       title: getTitleWithSorter(
@@ -291,6 +303,9 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: "visitors",
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     },
     {
       title: event,
@@ -311,6 +326,9 @@ export const getTableColumns = (
           ),
           dataIndex: "conversion",
           className: "text-center",
+          render: (d) => {
+            return <NumFormat number={d} />;
+          },
         },
         {
           title: (
@@ -327,6 +345,9 @@ export const getTableColumns = (
           ),
           dataIndex: "cost",
           className: "text-center",
+          render: (d) => {
+            return <NumFormat number={d} />;
+          },
         },
       ],
     },
@@ -347,6 +368,9 @@ export const getTableColumns = (
       ),
       dataIndex: "conversion_compare",
       className: "text-center",
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     });
     result[result.length - 1].children.push({
       title: (
@@ -363,6 +387,9 @@ export const getTableColumns = (
       ),
       dataIndex: "cost_compare",
       className: "text-center",
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     });
   }
   let linkedEventsColumns = [];
@@ -380,6 +407,9 @@ export const getTableColumns = (
             ),
             dataIndex: le.label + " - Users",
             className: "text-center",
+            render: (d)=>{
+              return <NumFormat number={d} /> 
+            }
           },
           {
             title: (
@@ -389,6 +419,9 @@ export const getTableColumns = (
             ),
             dataIndex: le.label + " - CPC",
             className: "text-center",
+            render: (d)=>{
+              return <NumFormat number={d} /> 
+            }
           },
         ],
       };

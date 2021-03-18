@@ -112,7 +112,7 @@ function Chart({
                   type="title"
                   weight="bold"
                 >
-                  {d.netCount}
+                  <NumFormat number={d.netCount} />
                 </Text>
                 <Text
                   extraClass="mr-1 mb-0 text-base"

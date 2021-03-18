@@ -1,5 +1,7 @@
+import React from "react";
 import moment from "moment";
 import { getTitleWithSorter, SortData } from "../../../../utils/dataFormatter";
+import { Number as NumFormat } from "../../../../components/factorsComponents";
 
 export const formatData = (data, arrayMapper) => {
   const result = [];
@@ -55,6 +57,9 @@ export const getTableColumns = (chartsData, currentSorter, handleSorting) => {
         handleSorting
       ),
       dataIndex: elem.name,
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     };
   });
   return [
@@ -109,6 +114,9 @@ export const getDateBaseTableColumns = (
       ),
       width: 100,
       dataIndex: moment(date).format(format),
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     };
   });
   return [

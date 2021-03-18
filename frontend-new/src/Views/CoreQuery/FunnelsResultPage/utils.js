@@ -6,7 +6,10 @@ import {
   getTitleWithSorter,
   formatDuration,
 } from "../../../utils/dataFormatter";
-import { SVG } from "../../../components/factorsComponents";
+import {
+  SVG,
+  Number as NumFormat,
+} from "../../../components/factorsComponents";
 
 const windowSize = {
   w: window.outerWidth,
@@ -118,6 +121,13 @@ export const generateTableColumns = (
         : `${elem}-${index}`,
       width: 150,
       className: index === queries.length - 1 ? tableStyles.lastColumn : "",
+      render: (d) => {
+        return (
+          <div>
+            <NumFormat number={d.count} /> ({d.percentage}%)
+          </div>
+        );
+      },
     });
     if (index < queries.length - 1) {
       eventColumns.push({
@@ -165,9 +175,10 @@ export const generateTableData = (
     const queryData = {};
     const overallDuration = getOverAllDuration(durations);
     queries.forEach((q, index) => {
-      queryData[
-        `${q}-${index}`
-      ] = `${data[index].netCount} (${data[index].value}%)`;
+      queryData[`${q}-${index}`] = {
+        percentage: data[index].value,
+        count: data[index].netCount,
+      };
       if (index < queries.length - 1) {
         queryData[`time[${index}-${index + 1}]`] = getStepDuration(
           durations,
@@ -205,11 +216,11 @@ export const generateTableData = (
       const eventsData = {};
       let totalDuration = 0;
       data.forEach((d, idx) => {
-        eventsData[`${d.name}-${idx}`] =
-          d.data[group] +
-          " (" +
-          calculatePercentage(d.data[group], data[0].data[group]) +
-          "%)";
+        eventsData[`${d.name}-${idx}`] = {
+          percentage: calculatePercentage(d.data[group], data[0].data[group]),
+          count: d.data[group],
+        };
+
         if (idx < data.length - 1) {
           const durationIdx = durationMetric.headers.findIndex(
             (elem) => elem === `step_${idx}_${idx + 1}_time`

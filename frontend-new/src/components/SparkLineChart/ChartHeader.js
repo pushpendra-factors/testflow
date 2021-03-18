@@ -1,5 +1,6 @@
 import React from "react";
 import styles from "./index.module.scss";
+import { Number as NumFormat } from "../factorsComponents";
 
 function ChartHeader({ total, query, bgColor, smallFont = false }) {
   return (
@@ -16,7 +17,7 @@ function ChartHeader({ total, query, bgColor, smallFont = false }) {
       <div
         className={`${smallFont ? styles.smallerTotalText : styles.totalText}`}
       >
-        {total}
+        <NumFormat shortHand={true} number={total} />
       </div>
     </div>
   );
