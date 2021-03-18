@@ -416,3 +416,21 @@ func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
 		assert.Equal(t, expectedCount, value)
 	}
 }
+
+func TestDeleteEventByIDs(t *testing.T) {
+	// Initialize a project, user and  the event.
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	start := time.Now()
+	newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: start.Unix()}
+	event, errCode := store.GetStore().CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = store.GetStore().DeleteEventByIDs(projectId, eventNameId, []string{event.ID})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	_, errCode = store.GetStore().GetEvent(projectId, userId, event.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+}

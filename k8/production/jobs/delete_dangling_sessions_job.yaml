@@ -1,0 +1,56 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: persistent-pool-highmem-16
+  name: delete-dangling-sessions-job
+spec:
+  schedule: "1 2 3 4 5" 
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: persistent-pool-highmem-16
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: persistent-pool-highmem-16
+          containers:
+          - name: delete-dangling-sessions-job
+            image: us.gcr.io/factors-production/delete-dangling-sessions-job:v0.03-xxx
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --project_id
+            - "1"
+            - --start_timestamp
+            - "0"
+            - --end_timestamp
+            - "0"
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-postgres
+            - secretRef:
+                name: secret-postgres
+            - secretRef:
+                name: secret-sentry
+          restartPolicy: OnFailure

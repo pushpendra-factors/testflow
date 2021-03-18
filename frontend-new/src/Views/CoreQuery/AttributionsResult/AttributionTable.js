@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import moment from 'moment';
-import { getCompareTableColumns, getCompareTableData, getTableColumns, getTableData } from "./utils";
+import { getCompareTableColumns, getCompareTableData, getTableColumns, getTableData, calcChangePerc } from "./utils";
 import DataTable from "../../../components/DataTable";
 
 function AttributionTable({
@@ -48,9 +48,22 @@ function AttributionTable({
     getCompareTableData(data, data2, event, searchText, sorter, attribution_method_compare, touchpoint, linkedEvents) 
     : null;
 
-  const constructCompareCSV = (rst) => {
+  const calcTotal = (rowTtl, tblItem) => {
+    if(rowTtl && tblItem !== NaN) {
+      return rowTtl + tblItem;
+    } else if (!rowTtl && tblItem === NaN) {
+      return rowTtl;
+    }else if (!rowTtl && !tblItem) {
+      return 0;
+    } else {
+      return tblItem;
+    }
+  }
+
+  const constructCompareCSV = (rst, totalRow) => {
       const keys = Object.keys(rst);
       const tbl = {};
+      
       keys.forEach((k, ind) => {
         if(ind){
           const firstDateString = {
@@ -58,33 +71,45 @@ function AttributionTable({
             to: moment(durationObj.to).toDate().toLocaleDateString()
           }
           const secondDateString = {
-            from: moment(durationObj.from).toDate().toLocaleDateString(),
-            to: moment(durationObj.to).toDate().toLocaleDateString()
+            from: moment(cmprDuration.from).toDate().toLocaleDateString(),
+            to: moment(cmprDuration.to).toDate().toLocaleDateString()
           }
-          
-          tbl[`${k} (${firstDateString.from} to ${firstDateString.to})`] = rst[k].first;
-          tbl[`${k} (${secondDateString.from} to ${secondDateString.to})`] = rst[k].second;
-          tbl[`${k} Change`] = rst[k].change;
+          const firstLabel = `${k} (${firstDateString.from} to ${firstDateString.to})`;
+          const secondLabel = `${k} (${secondDateString.from} to ${secondDateString.to})`;
+          const changeLabel = `${k} % Change`;
+          tbl[firstLabel] = rst[k].first;
+          tbl[secondLabel] = rst[k].second;
+          tbl[changeLabel] = rst[k].change;
+          totalRow[firstLabel] = calcTotal(totalRow[firstLabel], Number(rst[k].first));
+          totalRow[secondLabel] = calcTotal(totalRow[secondLabel], Number(rst[k].second));
+          totalRow[changeLabel] = calcChangePerc(totalRow[firstLabel], totalRow[secondLabel]);
         } else {
           tbl[k] = rst[k];
         }
       })
-      return tbl;
+      return [tbl,totalRow];
   }
 
   const getCSVData = () => {
     const dt = cmrTableData ? cmrTableData : tableData;
+    let dataTotal = {};
+    const mappedData = dt.map(({ index, ...rest }) => {
+      let results;
+      if(cmrTableData) {
+        [results, dataTotal] = constructCompareCSV(rest, dataTotal);
+      } else {
+        results = rest;
+      }
+      return results;
+    });
+
+    dataTotal[touchpoint] = "Total";
+    mappedData.push(dataTotal);
+
+
     return {
       fileName: `${reportTitle}.csv`,
-      data: dt.map(({ index, ...rest }) => {
-        let results;
-        if(cmrTableData) {
-          results = constructCompareCSV(rest);
-        } else {
-          results = rest;
-        }
-        return results;
-      }),
+      data: mappedData
     };
   };
 

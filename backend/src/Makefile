@@ -130,6 +130,13 @@ upload-add-session: export IMAGE_NAME=add-session-job
 upload-add-session: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/add-session-job:$(TAG)
 
+pack-delete-dangling-sessions:
+	docker build -t us.gcr.io/factors-$(ENV)/delete-dangling-sessions-job:$(TAG) -f Dockerfile.delete_dangling_sessions_job .
+
+upload-delete-dangling-sessions: export IMAGE_NAME=delete-dangling-sessions-job
+upload-delete-dangling-sessions: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/delete-dangling-sessions-job:$(TAG)
+
 pack-hubspot-enrich:
 	docker build -t us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG) -f Dockerfile.hubspot_enrich_job .
 
