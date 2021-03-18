@@ -1,0 +1,18 @@
+[
+  {
+    "attribution_key": "campaign_1",
+    "cost": 10,
+    "clicks": 100,
+    "impressions": 1000,
+    "visitor": 1,
+    "conversion": 1
+  },
+  {
+    "attribution_key": "campaign_2",
+    "cost": 20,
+    "clicks": 200,
+    "impressions": 2000,
+    "visitor": 1,
+    "conversion": 1
+  }
+]

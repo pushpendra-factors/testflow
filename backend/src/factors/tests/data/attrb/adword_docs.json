@@ -1,0 +1,26 @@
+[
+  {
+    "customer_acc_id": "temp_customerId",
+    "type_alias": "campaign_performance_report",
+    "timestamp": 20200510,
+    "value": {
+      "cost": "10",
+      "clicks": "1320",
+      "campaign_id": "10001",
+      "impressions": "3930",
+      "campaign_name": "campaign_1"
+    }
+  },
+  {
+    "customer_acc_id": "temp_customerId",
+    "type_alias": "campaign_performance_report",
+    "timestamp": 20200510,
+    "value": {
+      "cost": "10",
+      "clicks": "1320",
+      "campaign_id": "10002",
+      "impressions": "3930",
+      "campaign_name": "campaign_2"
+    }
+  }
+]
