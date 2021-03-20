@@ -16,7 +16,7 @@ import {
   BAR_CHART_XAXIS_TICK_LENGTH,
 } from "../../../../utils/constants";
 import ChartLegends from "./ChartLegends";
-import { Text, SVG } from "../../../../components/factorsComponents";
+import { Text, SVG, Number as NumFormat } from "../../../../components/factorsComponents";
 import LegendsCircle from "../../../../styles/components/LegendsCircle";
 
 function Chart({
@@ -167,7 +167,7 @@ function Chart({
                       type="title"
                       weight="bold"
                     >
-                      {prevEventData.data[data.group]}
+                      <NumFormat number={prevEventData.data[data.group]} />
                     </Text>
                     <Text
                       extraClass="mr-1 mb-0 text-base"
@@ -196,7 +196,7 @@ function Chart({
                     type="title"
                     weight="bold"
                   >
-                    {currEventData.data[data.group]}
+                    <NumFormat number={currEventData.data[data.group]} />
                   </Text>
                   <Text
                     extraClass="mr-1 mb-0 text-base"

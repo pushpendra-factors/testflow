@@ -5,7 +5,7 @@ import {
 } from "../../CoreQuery/CampaignAnalytics/NoBreakdownCharts/utils";
 import ChartHeader from "../../../components/SparkLineChart/ChartHeader";
 import SparkChart from "../../../components/SparkLineChart/Chart";
-import { generateColors, numberWithCommas } from "../../../utils/dataFormatter";
+import { generateColors } from "../../../utils/dataFormatter";
 import LineChart from "../../../components/LineChart";
 import NoBreakdownTable from "../../CoreQuery/CampaignAnalytics/NoBreakdownCharts/NoBreakdownTable";
 import {
@@ -15,7 +15,7 @@ import {
 } from "../../../utils/constants";
 import NoDataChart from "../../../components/NoDataChart";
 import DashboardWidgetLegends from "../../../components/DashboardWidgetLegends";
-import { Text } from "../../../components/factorsComponents";
+import { Text, Number as NumFormat } from "../../../components/factorsComponents";
 
 function NoBreakdownCharts({
   chartType,
@@ -69,7 +69,7 @@ function NoBreakdownCharts({
             <ChartHeader
               bgColor="#4D7DB4"
               query={chartsData[0].name}
-              total={numberWithCommas(chartsData[0].total)}
+              total={chartsData[0].total}
             />
           </div>
           <div className={unit.cardSize === 1 ? "w-3/4" : "w-full"}>
@@ -117,7 +117,7 @@ function NoBreakdownCharts({
                     level={3}
                     weight={"bold"}
                   >
-                    {numberWithCommas(chartData.total)}
+                    <NumFormat shortHand={true} number={chartData.total} />
                   </Text>
                   <div className="w-2/3">
                     <SparkChart
@@ -141,7 +141,7 @@ function NoBreakdownCharts({
                 >
                   <div className="flex flex-col">
                     <ChartHeader
-                      total={numberWithCommas(chartData.total)}
+                      total={chartData.total}
                       query={chartData.name}
                       bgColor={appliedColors[index]}
                     />
@@ -168,7 +168,7 @@ function NoBreakdownCharts({
                 >
                   <div className="flex flex-col">
                     <ChartHeader
-                      total={numberWithCommas(chartData.total)}
+                      total={chartData.total}
                       query={chartData.name}
                       bgColor={appliedColors[index]}
                       smallFont={true}

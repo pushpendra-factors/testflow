@@ -1,39 +1,45 @@
-import React from 'react';
-import moment from 'moment';
-import { labelsObj } from '../../utils';
-import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
+import React from "react";
+import moment from "moment";
+import { labelsObj } from "../../utils";
+import { SortData, getTitleWithSorter } from "../../../../utils/dataFormatter";
+import { Number as NumFormat } from "../../../../components/factorsComponents";
 
 export const getBreakdownTitle = (breakdown) => {
-  const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  const charArr = ["A", "B", "C", "D", "E", "F", "G", "H"];
   if (!breakdown.eventIndex) {
     return breakdown.property;
   }
   return (
     <div className="flex items-center">
       <div className="mr-1">{breakdown.property} of </div>
-      <div style={{ backgroundColor: '#3E516C' }} className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs">{charArr[breakdown.eventIndex - 1]}</div>
+      <div
+        style={{ backgroundColor: "#3E516C" }}
+        className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs"
+      >
+        {charArr[breakdown.eventIndex - 1]}
+      </div>
     </div>
   );
 };
 
 export const formatData = (data, queries, colors) => {
   const splittedData = {};
-  queries.forEach(query => {
+  queries.forEach((query) => {
     splittedData[query] = [];
   });
 
   const result = data.metrics.rows.map((d, index) => {
-    const str = d.slice(2, d.length - 1).join(',');
+    const str = d.slice(2, d.length - 1).join(",");
     const queryIndex = queries.findIndex((_, index) => index === d[0]);
     const dateRows = data.rows
-      .filter(row => {
-        const rowStr = row.slice(3, row.length - 1).join(',');
-        return ((row[0] === d[0]) && rowStr === str);
+      .filter((row) => {
+        const rowStr = row.slice(3, row.length - 1).join(",");
+        return row[0] === d[0] && rowStr === str;
       })
-      .map(row => {
+      .map((row) => {
         return {
           date: row[1],
-          value: row[row.length - 1]
+          value: row[row.length - 1],
         };
       });
     return {
@@ -43,19 +49,19 @@ export const formatData = (data, queries, colors) => {
       event: d[1],
       eventIndex: d[0],
       color: colors[queryIndex],
-      dateWise: dateRows
+      dateWise: dateRows,
     };
   });
 
-  const sortedData = SortData(result, 'value', 'descend');
+  const sortedData = SortData(result, "value", "descend");
   const maxIndices = [];
   queries.forEach((_, qIdx) => {
-    const idx = sortedData.findIndex(elem => elem.eventIndex === qIdx);
+    const idx = sortedData.findIndex((elem) => elem.eventIndex === qIdx);
     if (idx > -1) {
       maxIndices.push(idx);
     }
   });
-  const finalResult = maxIndices.map(m => {
+  const finalResult = maxIndices.map((m) => {
     return sortedData[m];
   });
   sortedData.forEach((sd, idx) => {
@@ -67,7 +73,7 @@ export const formatData = (data, queries, colors) => {
 };
 
 export const formatVisibleProperties = (data, queries) => {
-  const vp = data.map(d => {
+  const vp = data.map((d) => {
     return { ...d, label: `${d.label}; [${d.eventIndex}]` };
   });
   vp.sort((a, b) => {
@@ -81,99 +87,148 @@ export const formatVisibleProperties = (data, queries) => {
   return vp;
 };
 
-export const getTableColumns = (breakdown, currentSorter, handleSorting, page) => {
+export const getTableColumns = (
+  breakdown,
+  currentSorter,
+  handleSorting,
+  page
+) => {
   const result = [];
   result.push({
-    title: 'Event',
-    dataIndex: 'event'
+    title: "Event",
+    dataIndex: "event",
   });
   breakdown.forEach((b, index) => {
     result.push({
       title: getBreakdownTitle(b),
-      dataIndex: b.property + ';' + index
+      dataIndex: b.property + ";" + index,
     });
   });
   result.push({
-    title: getTitleWithSorter(labelsObj[page], 'Event Count', currentSorter, handleSorting),
-    dataIndex: 'Event Count'
+    title: getTitleWithSorter(
+      labelsObj[page],
+      "Event Count",
+      currentSorter,
+      handleSorting
+    ),
+    dataIndex: "Event Count",
+    render: (d) => {
+      return <NumFormat number={d} />;
+    },
   });
   return result;
 };
 
 export const getTableData = (data, breakdown, searchText, currentSorter) => {
-  const filteredData = data.filter(elem => elem.label.toLowerCase().includes(searchText.toLowerCase()) || elem.event.toLowerCase().includes(searchText.toLowerCase()));
+  const filteredData = data.filter(
+    (elem) =>
+      elem.label.toLowerCase().includes(searchText.toLowerCase()) ||
+      elem.event.toLowerCase().includes(searchText.toLowerCase())
+  );
   const result = [];
-  filteredData.forEach(d => {
+  filteredData.forEach((d) => {
     const breakdownValues = {};
     breakdown.forEach((b, index) => {
-      breakdownValues[b.property + ';' + index] = d.label.split(',')[index];
+      breakdownValues[b.property + ";" + index] = d.label.split(",")[index];
     });
     result.push({
-      ...d, 'Event Count': d.value, ...breakdownValues
+      ...d,
+      "Event Count": d.value,
+      ...breakdownValues,
     });
   });
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
-export const formatDataInLineChartFormat = (visibleProperties, arrayMapper, hiddenProperties) => {
+export const formatDataInLineChartFormat = (
+  visibleProperties,
+  arrayMapper,
+  hiddenProperties
+) => {
   const result = [];
-  const format = 'YYYY-MM-DD HH-mm';
-  const dates = visibleProperties[0].dateWise.map(elem => moment(elem.date).format(format));
-  result.push(['x', ...dates]);
+  const format = "YYYY-MM-DD HH-mm";
+  const dates = visibleProperties[0].dateWise.map((elem) =>
+    moment(elem.date).format(format)
+  );
+  result.push(["x", ...dates]);
   visibleProperties.forEach((v, index) => {
     const label = `${v.event},${v.label}`;
     if (hiddenProperties.indexOf(label) === -1) {
-      const values = v.dateWise.map(elem => elem.value);
-      const key = arrayMapper.find(m=>m.index === index).mapper;
+      const values = v.dateWise.map((elem) => elem.value);
+      const key = arrayMapper.find((m) => m.index === index).mapper;
       result.push([key, ...values]);
     }
   });
   return result;
 };
 
-export const getDateBasedColumns = (data, breakdown, currentSorter, handleSorting, frequency) => {
+export const getDateBasedColumns = (
+  data,
+  breakdown,
+  currentSorter,
+  handleSorting,
+  frequency
+) => {
   const breakdownColumns = breakdown.map((elem, index) => {
     return {
       title: getBreakdownTitle(elem),
-      dataIndex: elem.property + ';' + index,
-      fixed: 'left',
-      width: 200
+      dataIndex: elem.property + ";" + index,
+      fixed: "left",
+      width: 200,
     };
   });
-  let format = 'MMM D';
-  if (frequency === 'hour') {
-    format = 'h A, MMM D'
+  let format = "MMM D";
+  if (frequency === "hour") {
+    format = "h A, MMM D";
   }
-  const dateColumns = data[0].slice(1).map(elem => {
+  const dateColumns = data[0].slice(1).map((elem) => {
     return {
-      title: getTitleWithSorter(moment(elem).utc().format(format), moment(elem).utc().format(format), currentSorter, handleSorting),
+      title: getTitleWithSorter(
+        moment(elem).utc().format(format),
+        moment(elem).utc().format(format),
+        currentSorter,
+        handleSorting
+      ),
       width: 100,
-      dataIndex: moment(elem).utc().format(format)
+      dataIndex: moment(elem).utc().format(format),
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     };
   });
   const eventCol = {
-    title: 'Event',
-    dataIndex: 'Event',
-    fixed: 'left',
-    width: 200
+    title: "Event",
+    dataIndex: "Event",
+    fixed: "left",
+    width: 200,
   };
   return [eventCol, ...breakdownColumns, ...dateColumns];
 };
 
-export const getDateBasedTableData = (data, breakdown, currentSorter, searchText, frequency) => {
-  const filteredData = data.filter(elem => elem.label.toLowerCase().includes(searchText.toLowerCase()) || elem.event.toLowerCase().includes(searchText.toLowerCase()));
-  let format = 'MMM D';
-  if (frequency === 'hour') {
-    format = 'h A, MMM D'
+export const getDateBasedTableData = (
+  data,
+  breakdown,
+  currentSorter,
+  searchText,
+  frequency
+) => {
+  const filteredData = data.filter(
+    (elem) =>
+      elem.label.toLowerCase().includes(searchText.toLowerCase()) ||
+      elem.event.toLowerCase().includes(searchText.toLowerCase())
+  );
+  let format = "MMM D";
+  if (frequency === "hour") {
+    format = "h A, MMM D";
   }
-  const result = filteredData.map(d => {
+  const result = filteredData.map((d) => {
     const breakdownValues = {};
     breakdown.forEach((b, index) => {
-      breakdownValues[b.property + ';' + index] = d.label.split(',')[index];
+      breakdownValues[b.property + ";" + index] = d.label.split(",")[index];
     });
 
     const dateWiseValues = {};
-    d.dateWise.forEach(w => {
+    d.dateWise.forEach((w) => {
       const key = moment(w.date).format(format);
       dateWiseValues[key] = w.value;
     });
@@ -181,7 +236,7 @@ export const getDateBasedTableData = (data, breakdown, currentSorter, searchText
       index: d.index,
       Event: d.event,
       ...breakdownValues,
-      ...dateWiseValues
+      ...dateWiseValues,
     };
   });
   return SortData(result, currentSorter.key, currentSorter.order);

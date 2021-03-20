@@ -35,7 +35,7 @@ var FreePlan = Plan{
 	Name:             "Free",
 	Code:             FreePlanCode,
 	BasePrice:        0,
-	MaxNoOfAgents:    3,
+	MaxNoOfAgents:    10000,
 	DaysToRetainData: 90,
 
 	MonthlyNoOfEvents:     500000,
@@ -44,12 +44,13 @@ var FreePlan = Plan{
 	NoOfEventsInBatch:     100000,
 	PricePerBatch:         0,
 }
+
 var StartupPlan = Plan{
 	ID:               StartupPlanID,
 	Name:             "Startup",
 	Code:             StartupPlanCode,
 	BasePrice:        49,
-	MaxNoOfAgents:    100,
+	MaxNoOfAgents:    10000,
 	DaysToRetainData: 365,
 
 	MonthlyNoOfEvents:     5000000,

@@ -65,7 +65,24 @@ func (pg *Postgres) RunFunnelQuery(projectId uint64, query model.Query) (*model.
 
 	addQueryToResultMeta(result, query)
 
+	updatedMetaStepTimeInfoHeaders(result)
+
 	return result, http.StatusOK, "Successfully executed query"
+}
+
+// updatedMetaStepTimeInfoHeaders updates meta rows to match the result rows
+func updatedMetaStepTimeInfoHeaders(result *model.QueryResult) {
+
+	groupByKeyIdx := 0
+	// Update the row headers in MetaStepTimeInfo using result original group count
+	for idx := range result.Meta.MetaMetrics {
+		if result.Meta.MetaMetrics[idx].Title == MetaStepTimeInfo {
+			for rowIdx := range result.Meta.MetaMetrics[idx].Rows {
+				result.Meta.MetaMetrics[idx].Rows[rowIdx][groupByKeyIdx] = result.Rows[rowIdx][groupByKeyIdx]
+			}
+			break
+		}
+	}
 }
 
 // addStepTimeToMeta adds step time in result's meta metrics

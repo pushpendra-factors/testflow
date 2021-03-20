@@ -46,8 +46,8 @@ function FunnelsResultTable({
       data: tableData.map(({ index, ...rest }) => {
         if (breakdown.length) {
           arrayMapper.forEach((elem) => {
-            rest[elem.eventName] = rest[`${elem.mapper}-${elem.index}`];
-            delete rest[`${elem.mapper}-${elem.index}`];
+            rest[elem.eventName] = rest[`${elem.mapper}`].count;
+            delete rest[`${elem.mapper}`];
           });
         }
         return { ...rest };

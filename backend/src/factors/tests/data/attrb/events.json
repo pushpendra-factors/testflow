@@ -1,0 +1,14 @@
+[
+  {
+    "event_name": "$form_submitted",
+    "customer_user_id": "user1",
+    "timestamp": 1614538000,
+    "utm_campaign": "campaign_1"
+  },
+  {
+    "event_name": "$form_submitted",
+    "customer_user_id": "user2",
+    "timestamp": 1614539000,
+    "utm_campaign": "campaign_2"
+  }
+]

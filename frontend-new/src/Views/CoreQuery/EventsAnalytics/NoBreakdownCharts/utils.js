@@ -1,11 +1,9 @@
+import React from "react";
 import moment from "moment";
 import { SortData, getTitleWithSorter } from "../../../../utils/dataFormatter";
+import { Number as NumFormat } from "../../../../components/factorsComponents";
 
-export const getNoGroupingTableData = (
-  data,
-  currentSorter,
-  frequency
-) => {
+export const getNoGroupingTableData = (data, currentSorter, frequency) => {
   const clonedData = data.map((elem) => {
     const element = { ...elem };
     return element;
@@ -48,6 +46,9 @@ export const getColumns = (
     return {
       title: getTitleWithSorter(e, e, currentSorter, handleSorting),
       dataIndex: arrayMapper.find((elem) => elem.index === idx).mapper,
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     };
   });
   return [...result, ...eventColumns];
@@ -138,6 +139,9 @@ export const getDateBasedColumns = (
       ),
       width: 100,
       dataIndex: moment(elem.date).format(format),
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     };
   });
   return [...result, ...dateColumns];

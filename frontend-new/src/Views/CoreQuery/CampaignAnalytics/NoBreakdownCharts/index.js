@@ -4,7 +4,6 @@ import ChartHeader from "../../../../components/SparkLineChart/ChartHeader";
 import SparkChart from "../../../../components/SparkLineChart/Chart";
 import {
   generateColors,
-  numberWithCommas,
 } from "../../../../utils/dataFormatter";
 import LineChart from "../../../../components/LineChart";
 import NoBreakdownTable from "./NoBreakdownTable";
@@ -13,7 +12,7 @@ import {
   CHART_TYPE_LINECHART,
   DASHBOARD_MODAL,
 } from "../../../../utils/constants";
-import NoDataChart from 'Components/NoDataChart';
+import NoDataChart from '../../../../components/NoDataChart';
 
 function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
   const [chartsData, setChartsData] = useState([]);
@@ -51,7 +50,7 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
             <ChartHeader
               bgColor="#4D7DB4"
               query={chartsData[0].name}
-              total={numberWithCommas(chartsData[0].total)}
+              total={chartsData[0].total}
             />
           </div>
           <div className="w-3/4">
@@ -80,7 +79,7 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
               >
                 <div className="flex flex-col">
                   <ChartHeader
-                    total={numberWithCommas(chartData.total)}
+                    total={chartData.total}
                     query={chartData.name}
                     bgColor={appliedColors[index]}
                   />

@@ -1,32 +1,56 @@
-import moment from 'moment';
-import { labelsObj } from '../../utils';
-import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
+import React from "react";
+import moment from "moment";
+import { labelsObj } from "../../utils";
+import { SortData, getTitleWithSorter } from "../../../../utils/dataFormatter";
+import { Number as NumFormat } from "../../../../components/factorsComponents";
 
-export const getTableColumns = (events, breakdown, currentSorter, handleSorting, page) => {
-  const breakdownColumns = breakdown.map(e => {
+export const getTableColumns = (
+  events,
+  breakdown,
+  currentSorter,
+  handleSorting,
+  page
+) => {
+  const breakdownColumns = breakdown.map((e) => {
     return {
       title: e,
-      dataIndex: e
+      dataIndex: e,
     };
   });
 
-  const eventColumns = events.map(e => {
+  const eventColumns = events.map((e) => {
     return {
-      title: getTitleWithSorter(`${e}: ${labelsObj[page]}`, e, currentSorter, handleSorting),
-      dataIndex: e
+      title: getTitleWithSorter(
+        `${e}: ${labelsObj[page]}`,
+        e,
+        currentSorter,
+        handleSorting
+      ),
+      dataIndex: e,
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     };
   });
   return [...breakdownColumns, ...eventColumns];
 };
 
-export const getDataInTableFormat = (data, events, breakdown, searchText, currentSorter) => {
+export const getDataInTableFormat = (
+  data,
+  events,
+  breakdown,
+  searchText,
+  currentSorter
+) => {
   if (breakdown.length === 1 && events.length === 1) {
-    const filteredData = data.filter(d => d.label.toLowerCase().indexOf(searchText.toLowerCase()) > -1);
+    const filteredData = data.filter(
+      (d) => d.label.toLowerCase().indexOf(searchText.toLowerCase()) > -1
+    );
     const result = filteredData.map((d, index) => {
       return {
         index,
         [breakdown[0]]: d.label,
-        [events[0]]: d.value
+        [events[0]]: d.value,
       };
     });
     return SortData(result, currentSorter.key, currentSorter.order);
@@ -35,37 +59,44 @@ export const getDataInTableFormat = (data, events, breakdown, searchText, curren
 };
 
 export const formatData = (data) => {
-  const result = data.metrics.rows.map(elem => {
+  const result = data.metrics.rows.map((elem) => {
     return {
       label: elem[2],
-      value: elem[3]
+      value: elem[3],
     };
   });
-  return SortData(result, 'value', 'descend');
+  return SortData(result, "value", "descend");
 };
 
-export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hiddenProperties) => {
-  const visibleLabels = visibleProperties.map(v => v.label).filter(l => hiddenProperties.indexOf(l) === -1);
+export const formatDataInLineChartFormat = (
+  data,
+  visibleProperties,
+  mapper,
+  hiddenProperties
+) => {
+  const visibleLabels = visibleProperties
+    .map((v) => v.label)
+    .filter((l) => hiddenProperties.indexOf(l) === -1);
   const resultInObjFormat = {};
   const result = [];
-  data.rows.forEach(elem => {
+  data.rows.forEach((elem) => {
     if (visibleLabels.indexOf(elem[3]) > -1) {
       if (resultInObjFormat[elem[1]]) {
         resultInObjFormat[elem[1]][elem[3]] = elem[4];
       } else {
         resultInObjFormat[elem[1]] = {
-          [elem[3]]: elem[4]
+          [elem[3]]: elem[4],
         };
       }
     }
   });
-  result.push(['x']);
+  result.push(["x"]);
   const keysMapper = {};
-  visibleLabels.forEach(v => {
+  visibleLabels.forEach((v) => {
     result.push([mapper[v]]);
     keysMapper[v] = result.length - 1;
   });
-  const format = 'YYYY-MM-DD HH-mm';
+  const format = "YYYY-MM-DD HH-mm";
   for (const key in resultInObjFormat) {
     result[0].push(moment(key).format(format));
     for (const b in resultInObjFormat[key]) {
@@ -75,46 +106,70 @@ export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hid
   return result;
 };
 
-export const getDateBasedColumns = (data, breakdown, currentSorter, handleSorting, frequency) => {
+export const getDateBasedColumns = (
+  data,
+  breakdown,
+  currentSorter,
+  handleSorting,
+  frequency
+) => {
   const result = [
     {
       title: breakdown[0],
       dataIndex: breakdown[0],
-      fixed: 'left',
-      width: 200
-    }];
+      fixed: "left",
+      width: 200,
+    },
+  ];
 
-  let format = 'MMM D';
-  if (frequency === 'hour') {
-    format = 'h A, MMM D'
+  let format = "MMM D";
+  if (frequency === "hour") {
+    format = "h A, MMM D";
   }
 
-  const dateColumns = data[0].slice(1).map(elem => {
+  const dateColumns = data[0].slice(1).map((elem) => {
     return {
-      title: getTitleWithSorter(moment(elem).utc().format(format), moment(elem).utc().format(format), currentSorter, handleSorting),
+      title: getTitleWithSorter(
+        moment(elem).utc().format(format),
+        moment(elem).utc().format(format),
+        currentSorter,
+        handleSorting
+      ),
       width: 100,
-      dataIndex: moment(elem).utc().format(format)
+      dataIndex: moment(elem).utc().format(format),
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
     };
   });
   return [...result, ...dateColumns];
 };
 
-export const getDateBasedTableData = (labels, data, breakdown, searchText, currentSorter, frequency) => {
-  const filteredLabels = labels.filter(d => d.toLowerCase().indexOf(searchText.toLowerCase()) > -1);
-  let format = 'MMM D';
-  if (frequency === 'hour') {
-    format = 'h A, MMM D'
+export const getDateBasedTableData = (
+  labels,
+  data,
+  breakdown,
+  searchText,
+  currentSorter,
+  frequency
+) => {
+  const filteredLabels = labels.filter(
+    (d) => d.toLowerCase().indexOf(searchText.toLowerCase()) > -1
+  );
+  let format = "MMM D";
+  if (frequency === "hour") {
+    format = "h A, MMM D";
   }
   const result = filteredLabels.map((elem, index) => {
-    const entries = data.rows.filter(d => d[3] === elem);
+    const entries = data.rows.filter((d) => d[3] === elem);
     const obj = {
       index,
-      [breakdown[0]]: elem
+      [breakdown[0]]: elem,
     };
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       obj[moment(entry[1]).format(format)] = entry[4];
     });
     return obj;
   });
-  return SortData(result, currentSorter.key, currentSorter.order);;
+  return SortData(result, currentSorter.key, currentSorter.order);
 };
