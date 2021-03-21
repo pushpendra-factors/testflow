@@ -1,11 +1,8 @@
-from scripts.stats import EtlRecordsStats
-
 CONFIG = None
 APP_NAME = "adwords_sync"
 STATUS_FAILED = "failed"
 STATUS_SKIPPED = "skipped"
 PAGE_SIZE = 200
-
 
 CUSTOMER_ACCOUNT_PROPERTIES = "customer_account_properties"
 CAMPAIGNS = "campaigns"
@@ -18,9 +15,20 @@ AD_GROUP_PERFORMANCE_REPORT = "ad_group_performance_report"
 SEARCH_PERFORMANCE_REPORT = "search_performance_report"
 KEYWORD_PERFORMANCE_REPORT = "keyword_performance_report"
 
-HEALTHCHECKS_ADWORDS_SYNC_PING_ID = "188cbf7c-0ea1-414b-bf5c-eee47c12a0c8"
+EXTRACT_AND_LOAD = "extract_and_load"
+EXTRACT = "extract"
+LOAD = "load"
 
-etl_record_stats = EtlRecordsStats()
+FAILURE_MESSAGE = "Failures on sync."
+SUCCESS_MESSAGE = "Successfully synced."
+
+# metrics constants
+REQUEST_COUNT = "request_count"
+RECORDS_COUNT = "request_count"
+LATENCY_COUNT = "latency_count"
+EXTRACT_PHASE = "extract_phase"
+LOAD_PHASE = "load_phase"
+
 DEVELOPMENT = "development"
 TEST = "test"
 STAGING = "staging"

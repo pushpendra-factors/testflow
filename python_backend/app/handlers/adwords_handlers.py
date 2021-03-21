@@ -82,13 +82,12 @@ class OAuthCallbackHandler(BaseHandler):
 
 
 class GetCustomerAccountsHandler(BaseHandler):
-    # Todo: use set_default_headers and options as BaseHandler.
     def set_default_headers(self):
         acceptable_domains = Cors.get_acceptable_domains(app.CONFIG.ADWORDS_APP.env)
         self.set_header("Access-Control-Allow-Origin", acceptable_domains)
         self.set_header("Access-Control-Allow-Headers", "x-requested-with, Origin, Content-Type")
-        self.set_header('Access-Control-Allow-Methods', 'POST, GET, PUT, DELETE, OPTIONS')
-        self.set_header('Access-Control-Allow-Credentials', 'true')
+        self.set_header("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
+        self.set_header("Access-Control-Allow-Credentials", "true")
 
     @gen.coroutine
     def options(self):
@@ -143,7 +142,7 @@ class GetCustomerAccountsHandler(BaseHandler):
         for account in customer_accounts:
             resp_account = {}
 
-            # Manager account doesn't support reports download.
+            # Manager account doesn"t support reports download.
             # Skip listing it.
             try:
                 if account["canManageClients"]:

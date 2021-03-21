@@ -1,7 +1,5 @@
 import logging as log
 
-import scripts
-from lib.adwords.oauth_service.fetch_service import FetchService
 from .base_job import BaseJob
 
 
@@ -15,13 +13,13 @@ class GetCustomerAccountPropertiesJob(BaseJob):
 
         current_account = None
         for account in customer_accounts:
-            if str(account["customerId"]) == self._customer_account_id:
+            if str(account["customerId"]) == self._customer_acc_id:
                 current_account = account
 
         if current_account is None:
             log.error("Customer account not found on list of accounts. Failed to get properties.")
             raise Exception("Failed to get properties. customer account" + str(
-                self._customer_account_id) + " not found on list of account " + str(customer_accounts))
+                self._customer_acc_id) + " not found on list of account " + str(customer_accounts))
 
         return current_account
 
@@ -41,6 +39,7 @@ class GetCustomerAccountPropertiesJob(BaseJob):
         return [properties], 1
 
     def start(self):
-        customer_service = FetchService(scripts.adwords.CONFIG.ADWORDS_OAUTH).get_customer_accounts(self._refresh_token)
-        current_account = self.get_customer_account(customer_service)
-        return GetCustomerAccountPropertiesJob.get_response(current_account)
+        # customer_service = FetchService(scripts.adwords.CONFIG.ADWORDS_OAUTH).get_customer_accounts(self._refresh_token)
+        # current_account = self.get_customer_account(customer_service)
+        # return GetCustomerAccountPropertiesJob.get_response(current_account)
+        return

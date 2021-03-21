@@ -1,20 +1,81 @@
 import logging as log
 
+import scripts
+from lib.data_services.factors_data_service import FactorsDataService
+from scripts.adwords import EXTRACT_PHASE, LOAD_PHASE, SUCCESS_MESSAGE, EXTRACT, RECORDS_COUNT, LOAD, REQUEST_COUNT
 
-# IMP: Take care of status.
+
+# Note: If the number of custom paths exceed 5 in the subClasses. Move it to strategic pattern.
+
+
 class BaseJob:
     PAGE_SIZE = 200
+    PROCESS_JOB = True
 
     def __init__(self, next_info):
         self._project_id = next_info.get("project_id")
-        self._customer_account_id = next_info.get("customer_acc_id")
+        self._customer_acc_id = next_info.get("customer_acc_id")
         self._refresh_token = next_info.get("refresh_token")
-        self._timestamp = next_info.get("next_timestamp")
+        self._last_extract_timestamp = next_info.get("last_timestamp")
+        self._next_timestamp = next_info.get("next_timestamp")
+        self._extract_load_timestamps = next_info.get("extract_load_timestamps")
         self._doc_type = next_info.get("doc_type_alias")
-        # self._status = {"project_id": self._project_id, "timestamp": self._timestamp, "doc_type": self._doc_type,
-        #                 "status": "success"}
+        self._first_run = next_info.get("first_run")
 
     def start(self):
         log.warning("ETL for project: %s, cutomer_account_id: %s, document_type: %s, timestamp: %s",
-                    str(self._project_id), self._customer_acc_id, self._doc_type, str(self._timestamp))
-        """  Override this in the sub classes. """
+                    str(self._project_id), self._customer_acc_id, self._doc_type, str(self._next_timestamp))
+        self.execute()
+
+    # TODO handle error cases
+    def execute(self):
+        metrics_controller = scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller
+        if scripts.adwords.CONFIG.ADWORDS_APP.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
+            self.extract_and_load_task()
+        elif scripts.adwords.CONFIG.ADWORDS_APP.type_of_run == scripts.adwords.EXTRACT:
+            self.extract_task()
+        else:
+            self.transform_and_load_task(False)
+        metrics_controller.update_job_stats(self._project_id, self._customer_acc_id, self._doc_type, SUCCESS_MESSAGE)
+
+    def extract_and_load_task(self):
+        self.extract_task()
+        self.transform_and_load_task(True)
+
+    def extract_task(self):
+        """ Override this method to provide extract functionality. """
+        pass
+
+    def transform_and_load_task(self, ran_extract):
+        """ Override this method to provide transform and load functionality. """
+        pass
+
+    def add_records(self, records, timestamp):
+        if len(records) > 0:
+            if scripts.adwords.CONFIG.ADWORDS_APP.dry:
+                log.error("Dry run. Skipped add adwords documents to db.")
+                response = None
+            else:
+                response = FactorsDataService.add_all_adwords_documents(self._project_id, self._customer_acc_id, records,
+                                                             self._doc_type, timestamp)
+        else:
+            response = FactorsDataService.add_adwords_document(self._project_id, self._customer_acc_id, {}, self._doc_type,
+                                                    timestamp)
+        self.update_load_phase_metrics(LOAD, REQUEST_COUNT, self._project_id, self._doc_type, 1)
+        self.update_load_phase_metrics(LOAD, RECORDS_COUNT, self._project_id, self._doc_type, len(records))
+        return response
+
+    def log_status_of_job(self, job_type, status):
+        log.warning("%s %s of job for Project Id: %s, Timestamp: %d, Doc Type: %s", status, job_type, self._project_id,
+                    self._next_timestamp, self._doc_type)
+
+    @staticmethod
+    def update_extract_phase_metrics(task, metric_type, project_id, doc_type, value):
+        scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller.update_task_stats(task, EXTRACT_PHASE, metric_type,
+                                                                                project_id, doc_type, value)
+
+    # REQUESTS_COUNT - computed at job level not data service(add_adwords_doc) level
+    @staticmethod
+    def update_load_phase_metrics(task, metric_type, project_id, doc_type, value):
+        scripts.adwords.CONFIG.ADWORDS_APP.metrics_controller.update_task_stats(task, LOAD_PHASE, metric_type,
+                                                                                project_id, doc_type, value)

@@ -46,7 +46,7 @@ func DataServiceFacebookGetLastSyncInfoHandler(c *gin.Context) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
-		log.WithError(err).Error("Failed to decode Json request on facebook upsert document handler.")
+		log.WithError(err).Error("Failed to decode Json request on facebook last sync info document handler.")
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{"error": "Invalid request json."})
 		return

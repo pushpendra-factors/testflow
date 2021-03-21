@@ -5,6 +5,7 @@ from lib.adwords.config.etl.oauth_config import OauthConfig as AdwordsOauthConfi
 class EtlConfig:
     ADWORDS_APP = None
     ADWORDS_OAUTH = None
+
     # LOGGER = None
 
     @classmethod
@@ -22,11 +23,11 @@ class EtlConfig:
     # TODO: Set later
     # @classmethod
     # def build_logger(cls):
-    #     logger = logging.getLogger('etl')
+    #     logger = logging.getLogger("etl")
     #     logger.setLevel(logging.DEBUG)
     #     handler = logging.StreamHandler()
     #     handler.setLevel(logging.DEBUG)
-    #     formatter = logging.Formatter('%(created)f:%(levelname)s:%(name)s:%(module)s:%(message)s')
+    #     formatter = logging.Formatter("%(created)f:%(levelname)s:%(name)s:%(module)s:%(message)s")
     #     handler.setFormatter(formatter)
     #     logger.addHandler(handler)
     #     cls.LOGGER = logger

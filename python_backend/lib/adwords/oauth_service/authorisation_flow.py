@@ -2,20 +2,20 @@ import json
 from base64 import b64encode
 
 from google_auth_oauthlib.flow import Flow
-from googleads import oauth2, adwords
+from googleads import oauth2
 from tornado.log import logging as log
 
+from lib.adwords.config.oauth_config import OauthConfig as AdwordsOauthConfig
 from lib.data_services.factors_data_service import FactorsDataService
 from lib.exception.error_message_constant import MISSING_ARGUMENT_IN_JSON
 from lib.exception.oauth_callback_exceptions import OauthCallbackMissingParameter, OauthCallbackMissingRefreshToken
 from lib.oauth_service import OAuthService as BaseOauthService
-from lib.adwords.config.oauth_config import OauthConfig as AdwordsOauthConfig
 
 ADWORDS_CLIENT_USER_AGENT = "FactorsAI (https://www.factors.ai)"
 
 
 class AuthorisationFlow(BaseOauthService):
-    VERSION = 'v201809'
+    VERSION = "v201809"
 
     def initialise_flow(self):
         flow = Flow.from_client_config(self.CONFIG.secret_json, scopes=[oauth2.GetAPIScope("adwords")])

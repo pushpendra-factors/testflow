@@ -23,7 +23,7 @@ func TestGetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType(t *testing.T) 
 	errCode = store.GetStore().UpdateAgentIntAdwordsRefreshToken(agent.UUID, agentAdwordsToken)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	adwordsLastSyncInfo, errCode := store.GetStore().GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
+	adwordsLastSyncInfo, errCode := store.GetStore().GetAllAdwordsLastSyncInfoForAllProjects()
 	assert.Equal(t, http.StatusOK, errCode)
 	for _, alsi := range adwordsLastSyncInfo {
 		if alsi.ProjectId == project.ID {
@@ -45,7 +45,7 @@ func TestGetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType(t *testing.T) 
 	errCode = store.GetStore().UpdateAgentIntAdwordsRefreshToken(agent1.UUID, agentAdwordsToken1)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	adwordsLastSyncInfo1, errCode := store.GetStore().GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
+	adwordsLastSyncInfo1, errCode := store.GetStore().GetAllAdwordsLastSyncInfoForAllProjects()
 	assert.Equal(t, http.StatusOK, errCode)
 	for _, alsi := range adwordsLastSyncInfo1 {
 		if alsi.ProjectId == project.ID {

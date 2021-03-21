@@ -6,7 +6,7 @@ class StringUtil:
     @staticmethod
     def first_letter_to_lower(s):
         if len(s) == 0:
-            return ''
+            return ""
 
         f = s[0].lower()
         if len(s) == 1:
@@ -22,12 +22,12 @@ class StringUtil:
     def snake_to_pascal_case(fields):
         pascals = []
         for f in fields:
-            p = ''.join(x.capitalize() or '_' for x in f.split('_'))
+            p = "".join(x.capitalize() or "_" for x in f.split("_"))
             pascals.append(p)
 
         return pascals
 
     @staticmethod
     def camel_case_to_snake_case(s):
-        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', s)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+        s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", s)
+        return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()

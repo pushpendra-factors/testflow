@@ -7,7 +7,7 @@ class TimeUtil:
 
     @staticmethod
     def is_today(timestamp):
-        today_timestamp = int(time.strftime('%Y%m%d'))
+        today_timestamp = int(time.strftime("%Y%m%d"))
         return timestamp == today_timestamp
 
     @staticmethod
@@ -17,15 +17,15 @@ class TimeUtil:
 
         dt_year = str(dt.year)
         if len(dt_year) == 1:
-            dt_year = '0'+dt_year
+            dt_year = "0"+dt_year
 
         dt_month = str(dt.month)
         if len(dt_month) == 1:
-            dt_month = '0'+dt_month
+            dt_month = "0"+dt_month
 
         dt_day = str(dt.day)
         if len(dt_day) == 1:
-            dt_day = '0'+dt_day
+            dt_day = "0"+dt_day
 
         return int(dt_year+dt_month+dt_day)
 
@@ -33,7 +33,7 @@ class TimeUtil:
     def get_datetime_from_timestamp(timestamp):
         if timestamp is None:
             return
-        return datetime.strptime(str(timestamp), '%Y%m%d')
+        return datetime.strptime(str(timestamp), "%Y%m%d")
 
     @staticmethod
     def get_next_day_timestamp(timestamp):

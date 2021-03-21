@@ -238,12 +238,17 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.POST("/adwords/documents/add",
 		IH.DataServiceAdwordsAddDocumentHandler)
+	dataServiceRouteGroup.POST("/adwords/documents/add_multiple",
+		IH.DataServiceAdwordsAddMultipleDocumentsHandler)
 
 	dataServiceRouteGroup.POST("/adwords/add_refresh_token",
 		IntAdwordsAddRefreshTokenHandler)
 
 	dataServiceRouteGroup.POST("/adwords/get_refresh_token",
 		IntAdwordsGetRefreshTokenHandler)
+
+	dataServiceRouteGroup.GET("/adwords/documents/project_last_sync_info",
+		IH.DataServiceAdwordsGetLastSyncForProjectInfoHandler)
 
 	dataServiceRouteGroup.GET("/adwords/documents/last_sync_info",
 		IH.DataServiceAdwordsGetLastSyncInfoHandler)
