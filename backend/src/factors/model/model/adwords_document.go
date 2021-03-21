@@ -37,6 +37,10 @@ type AdwordsLastSyncInfo struct {
 	LastTimestamp     int64  `json:"last_timestamp"`
 }
 
+type AdwordsLastSyncInfoPayload struct {
+	ProjectId uint64 `json:"project_id"`
+}
+
 const (
 	CampaignPerformanceReport = "campaign_performance_report"
 	AdGroupPerformanceReport  = "ad_group_performance_report"

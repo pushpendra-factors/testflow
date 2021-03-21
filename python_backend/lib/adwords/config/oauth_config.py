@@ -21,7 +21,6 @@ class OauthConfig(Config):
         oauth_secret_json = json.loads(argv.oauth_secret.strip())
         cls._init(argv.host_url + CALLBACK_PATH, oauth_secret_json, argv.developer_token)
 
-    # TODO
     @staticmethod
     def _validate(argv):
         oauth_secret_str = argv.oauth_secret.strip()

@@ -1,8 +1,6 @@
 from optparse import OptionParser
 
 from lib.adwords.parse_options.app_parse_options import AppParserOptions as AdwordsParseOptions
-
-
 # TODO: we are not able to merge the parsed values. Hence moving the parsing functionality outside. This goes bad. Hence remodify.
 from lib.data_services.sentry.sentry_parse_options import SentryParseOptions
 

@@ -49,4 +49,4 @@ class AppConfig(Config):
 
     @classmethod
     def get_data_service_path(cls):
-        return cls.data_service_url + '/data_service'
+        return cls.data_service_url + "/data_service"

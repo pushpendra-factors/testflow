@@ -2,11 +2,10 @@
 import requests
 import logging as log
 
-from scripts.adwords.jobs.multiple_requests_fetch_job import MultipleRequestsFetchJob
-
 
 class FactorsDataService:
     data_service_path = None
+    BATCH_SIZE = 1000
 
     @classmethod
     def init(cls, config):
@@ -41,7 +40,7 @@ class FactorsDataService:
         return response
 
     @classmethod
-    def get_last_sync_infos(cls):
+    def get_last_sync_infos_for_all_projects(cls):
         url = cls.data_service_path + "/adwords/documents/last_sync_info"
 
         response = requests.get(url)
@@ -53,17 +52,31 @@ class FactorsDataService:
         return response.json()
 
     @classmethod
+    def get_last_sync_infos_for_project(cls, project_id):
+        url = cls.data_service_path + "/adwords/documents/project_last_sync_info"
+        payload = {
+            "project_id": project_id
+        }
+        response = requests.get(url, json=payload)
+        return response.json()
+
+    @classmethod
+    def add_all_adwords_documents(cls, project_id, customer_acc_id, docs, doc_type, timestamp):
+
+        for i in range(0, len(docs), cls.BATCH_SIZE):
+            batch = docs[i:i+cls.BATCH_SIZE]
+            response = cls.add_multiple_adwords_document(project_id, customer_acc_id,
+                                     batch, doc_type, timestamp)
+            if not response.ok:
+                return response
+
+        return response
+
+    @classmethod
     def add_adwords_document(cls, project_id, customer_acc_id, doc, doc_type, timestamp):
-        log.warning("Calling the adwords data service - add documents.")
         url = cls.data_service_path + "/adwords/documents/add"
 
-        payload = {
-            "project_id": project_id,
-            "customer_acc_id": customer_acc_id,
-            "type_alias": doc_type,
-            "value": doc,
-            "timestamp": timestamp,
-        }
+        payload = cls.get_payload_for_adwords(project_id, customer_acc_id, doc, doc_type, timestamp)
 
         response = requests.post(url, json=payload)
         if not response.ok:
@@ -73,15 +86,23 @@ class FactorsDataService:
         return response
 
     @classmethod
-    def add_all_adwords_documents(cls, project_id, customer_acc_id, docs, doc_type, timestamp):
-        log.warning("Calling the adwords data service - add all documents.")
-        for doc in docs:
-            cls.add_adwords_document(project_id, customer_acc_id,
-                                     doc, doc_type, timestamp)
+    def add_multiple_adwords_document(cls, project_id, customer_acc_id, docs, doc_type, timestamp):
+        url = cls.data_service_path + "/adwords/documents/add_multiple"
+        batch_of_payloads = [cls.get_payload_for_adwords(project_id, customer_acc_id,
+                                    doc, doc_type, timestamp) for doc in docs]
 
-    @classmethod
-    def add_all_adwords_documents_for_first_run(cls, project_id, customer_acc_id, docs, doc_type):
-        log.warning("Calling the adwords data service - add all documents first run.")
-        for doc in docs:
-            cls.add_adwords_document(project_id, customer_acc_id, doc, doc_type,
-                                     doc[MultipleRequestsFetchJob.TIMESTAMP_FIELD])
+        response = requests.post(url, json=batch_of_payloads)
+        if not response.ok:
+            log.error("Failed to add response %s to adwords warehouse: %d, %s",
+                      doc_type, response.status_code, response.text)
+        return response
+
+    @staticmethod
+    def get_payload_for_adwords(project_id, customer_acc_id, doc, doc_type, timestamp):
+        return {
+            "project_id": project_id,
+            "customer_acc_id": customer_acc_id,
+            "type_alias": doc_type,
+            "value": doc,
+            "timestamp": timestamp,
+        }

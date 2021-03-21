@@ -5,7 +5,7 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.tornado import TornadoIntegration
 
 
-# todo: disable development
+# TODO: Disable development
 # This is not capturing 400/no endpoint errors.
 class SentryDataService:
     CONFIG = None

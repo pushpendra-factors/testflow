@@ -34,18 +34,23 @@ type AdwordsDocument struct {
 }
 
 const (
-	campaignPerformanceReport      = "campaign_performance_report"
-	adGroupPerformanceReport       = "ad_group_performance_report"
-	adPerformanceReport            = "ad_performance_report"
-	keywordPerformanceReport       = "keyword_performance_report"
-	searchPerformanceReport        = "search_performance_report"
-	adwordsCampaign                = "campaign"
-	adwordsAdGroup                 = "ad_group"
-	adwordsAd                      = "ad"
-	adwordsKeyword                 = "keyword"
-	adwordsStringColumn            = "adwords"
-	errorDuplicateAdwordsDocument  = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
-	filterValueAll                 = "all"
+	campaignPerformanceReport       = "campaign_performance_report"
+	adGroupPerformanceReport        = "ad_group_performance_report"
+	adPerformanceReport             = "ad_performance_report"
+	keywordPerformanceReport        = "keyword_performance_report"
+	searchPerformanceReport         = "search_performance_report"
+	adwordsCampaign                 = "campaign"
+	adwordsAdGroup                  = "ad_group"
+	adwordsAd                       = "ad"
+	adwordsKeyword                  = "keyword"
+	adwordsStringColumn             = "adwords"
+	errorDuplicateAdwordsDocument   = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
+	filterValueAll                  = "all"
+	lastSyncInfoQueryForAllProjects = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
+		" " + "FROM adwords_documents GROUP BY project_id, customer_account_id, type"
+	lastSyncInfoForAProject = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
+		" " + "FROM adwords_documents WHERE project_id = ? GROUP BY project_id, customer_account_id, type"
+	insertAdwordsStr               = "INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,campaign_id,ad_group_id,ad_id,keyword_id,value,created_at,updated_at) VALUES "
 	adwordsFilterQueryStr          = "SELECT DISTINCT(value->>?) as filter_value FROM adwords_documents WHERE project_id = ? AND" + " " + "customer_account_id = ? AND type = ? AND value->>? IS NOT NULL LIMIT 5000"
 	staticWhereStatementForAdwords = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument            = " FROM adwords_documents "
@@ -427,7 +432,6 @@ func getAdwordsIDAndHeirarchyColumnsByType(docType int, valueJSON *postgres.Json
 	if len(*valueMap) == 0 {
 		return "", 0, 0, 0, 0, errorEmptyAdwordsDocument
 	}
-
 	idFieldName := getAdwordsIDFieldNameByType(docType)
 	id, exists := (*valueMap)[idFieldName]
 	if !exists {
@@ -453,29 +457,118 @@ func getAdwordsIDAndHeirarchyColumnsByType(docType int, valueJSON *postgres.Json
 
 // CreateAdwordsDocument ...
 func (pg *Postgres) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) int {
-	logCtx := log.WithField("customer_acc_id", adwordsDoc.CustomerAccountID).WithField(
-		"project_id", adwordsDoc.ProjectID)
+	status := validateAdwordsDocument(adwordsDoc)
+	if status != http.StatusOK {
+		return status
+	}
 
-	if adwordsDoc.CustomerAccountID == "" || adwordsDoc.TypeAlias == "" {
+	status = addColumnInformationForAdwordsDocument(adwordsDoc)
+	if status != http.StatusOK {
+		return status
+	}
+
+	db := C.GetServices().Db
+	dbc := db.Create(adwordsDoc)
+
+	if dbc.Error != nil {
+		if isDuplicateAdwordsDocumentError(dbc.Error) {
+			log.WithError(dbc.Error).Error("Failed to create an adwords doc. Duplicate.")
+			return http.StatusConflict
+		}
+	}
+
+	return http.StatusCreated
+}
+
+// CreateMultipleAdwordsDocument ...
+func (pg *Postgres) CreateMultipleAdwordsDocument(adwordsDocuments []model.AdwordsDocument) int {
+	status := validateAdwordsDocuments(adwordsDocuments)
+	if status != http.StatusOK {
+		return status
+	}
+	adwordsDocuments, status = addColumnInformationForAdwordsDocuments(adwordsDocuments)
+	if status != http.StatusOK {
+		return status
+	}
+
+	db := C.GetServices().Db
+
+	insertStatement := insertAdwordsStr
+	insertValuesStatement := make([]string, 0, 0)
+	insertValues := make([]interface{}, 0, 0)
+	for _, adwordsDoc := range adwordsDocuments {
+		insertValuesStatement = append(insertValuesStatement, fmt.Sprintf("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"))
+		insertValues = append(insertValues, adwordsDoc.ProjectID, adwordsDoc.CustomerAccountID,
+			adwordsDoc.Type, adwordsDoc.Timestamp, adwordsDoc.ID, adwordsDoc.CampaignID, adwordsDoc.AdGroupID, adwordsDoc.AdID, adwordsDoc.KeywordID, adwordsDoc.Value, adwordsDoc.CreatedAt, adwordsDoc.UpdatedAt)
+	}
+	insertStatement += joinWithComma(insertValuesStatement...)
+	rows, err := db.Raw(insertStatement, insertValues...).Rows()
+
+	if err != nil {
+		if isDuplicateAdwordsDocumentError(err) {
+			log.WithError(err).WithField("adwordsDocuments", adwordsDocuments).Error("Failed to create an adwords doc. Duplicate.")
+			return http.StatusConflict
+		} else {
+			log.WithError(err).WithField("adwordsDocuments", adwordsDocuments).Error(
+				"Failed to create an adwords doc. Continued inserting other docs.")
+			return http.StatusInternalServerError
+		}
+	}
+	defer rows.Close()
+
+	return http.StatusCreated
+}
+
+func validateAdwordsDocuments(adwordsDocuments []model.AdwordsDocument) int {
+	for index, _ := range adwordsDocuments {
+		status := validateAdwordsDocument(&adwordsDocuments[index])
+		if status != http.StatusOK {
+			log.WithField("index", index).Error("Failed in this index")
+			return status
+		}
+	}
+	return http.StatusOK
+}
+
+func validateAdwordsDocument(adwordsDocument *model.AdwordsDocument) int {
+	logCtx := log.WithField("customer_acc_id", adwordsDocument.CustomerAccountID).WithField(
+		"project_id", adwordsDocument.ProjectID)
+
+	if adwordsDocument.CustomerAccountID == "" || adwordsDocument.TypeAlias == "" {
 		logCtx.Error("Invalid adwords document.")
 		return http.StatusBadRequest
 	}
 
-	logCtx = logCtx.WithField("type_alias", adwordsDoc.TypeAlias)
-	docType, docTypeExists := model.AdwordsDocumentTypeAlias[adwordsDoc.TypeAlias]
+	logCtx = logCtx.WithField("type_alias", adwordsDocument.TypeAlias)
+	docType, docTypeExists := model.AdwordsDocumentTypeAlias[adwordsDocument.TypeAlias]
 	if !docTypeExists {
 		logCtx.Error("Invalid type alias.")
 		return http.StatusBadRequest
 	}
-	adwordsDoc.Type = docType
+	adwordsDocument.Type = docType
+	return http.StatusOK
+}
 
-	log.Warn("Inside model adwords document - Add document. Before hierarchy")
+// Assigning id, campaignId columns with values from json...
+func addColumnInformationForAdwordsDocuments(adwordsDocuments []model.AdwordsDocument) ([]model.AdwordsDocument, int) {
+	for index, _ := range adwordsDocuments {
+		status := addColumnInformationForAdwordsDocument(&adwordsDocuments[index])
+		if status != http.StatusOK {
+			log.WithField("index", index).Error("Failed in this index")
+			return adwordsDocuments, status
+		}
+	}
+	return adwordsDocuments, http.StatusOK
+}
+
+func addColumnInformationForAdwordsDocument(adwordsDocument *model.AdwordsDocument) int {
+	logCtx := log.WithField("customer_acc_id", adwordsDocument.CustomerAccountID).WithField(
+		"project_id", adwordsDocument.ProjectID)
 	adwordsDocID, campaignIDValue, adGroupIDValue, adIDValue,
-		keywordIDValue, err := getAdwordsIDAndHeirarchyColumnsByType(adwordsDoc.Type, adwordsDoc.Value)
+		keywordIDValue, err := getAdwordsIDAndHeirarchyColumnsByType(adwordsDocument.Type, adwordsDocument.Value)
 	if err != nil {
 		if err == errorEmptyAdwordsDocument {
-			// Using UUID to allow storing empty response.
-			// To avoid downloading reports again for the same timerange.
+			// Using UUID to allow storing empty response. To avoid downloading reports again for the same timerange.
 			adwordsDocID = U.GetUUID()
 		} else {
 			logCtx.WithError(err).Error("Failed to get id by adowords doc type.")
@@ -483,30 +576,16 @@ func (pg *Postgres) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) int
 		}
 	}
 
-	adwordsDoc.ID = adwordsDocID
 	currentTime := gorm.NowFunc()
+	adwordsDocument.ID = adwordsDocID
+	adwordsDocument.CampaignID = campaignIDValue
+	adwordsDocument.AdGroupID = adGroupIDValue
+	adwordsDocument.AdID = adIDValue
+	adwordsDocument.KeywordID = keywordIDValue
+	adwordsDocument.CreatedAt = currentTime
+	adwordsDocument.UpdatedAt = currentTime
 
-	log.Warn("Inside model adwords document - Add document. Before SQL insertion")
-	db := C.GetServices().Db
-	// TODO: Use gorm.Create method, instead of INSERT query string.
-	queryStr := "INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,campaign_id,ad_group_id,ad_id,keyword_id,value,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	rows, err := db.Raw(queryStr, adwordsDoc.ProjectID, adwordsDoc.CustomerAccountID,
-		adwordsDoc.Type, adwordsDoc.Timestamp, adwordsDoc.ID, campaignIDValue, adGroupIDValue, adIDValue, keywordIDValue, adwordsDoc.Value, currentTime, currentTime).Rows()
-	if err != nil {
-		if isDuplicateAdwordsDocumentError(err) {
-			logCtx.WithError(err).WithField("timestamp", adwordsDoc.Timestamp).WithField("id", adwordsDoc.ID).
-				WithField("createdAt", currentTime).Error("Failed to create an adwords doc. Duplicate.")
-			return http.StatusConflict
-		} else {
-			logCtx.WithError(err).WithField("id", adwordsDoc.ID).Error(
-				"Failed to create an adwords doc. Continued inserting other docs.")
-			return http.StatusInternalServerError
-		}
-	}
-	log.Warn("Inside model adwords document - Add document. After SQL insertion")
-	defer rows.Close()
-
-	return http.StatusCreated
+	return http.StatusOK
 }
 
 func getDocumentTypeAliasByType() map[int]string {
@@ -518,16 +597,41 @@ func getDocumentTypeAliasByType() map[int]string {
 	return documentTypeMap
 }
 
-// GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType - @TODO Kark v1
-func (pg *Postgres) GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType() ([]model.AdwordsLastSyncInfo, int) {
-	db := C.GetServices().Db
+func (pg *Postgres) GetAdwordsLastSyncInfoForProject(projectID uint64) ([]model.AdwordsLastSyncInfo, int) {
+	params := []interface{}{projectID}
+	adwordsLastSyncInfos, status := getAdwordsLastSyncInfo(lastSyncInfoForAProject, params)
+	if status != http.StatusOK {
+		return adwordsLastSyncInfos, status
+	}
+	adwordsSettings, errCode := pg.GetIntAdwordsProjectSettingsForProjectID(projectID)
+	if errCode != http.StatusOK {
+		return []model.AdwordsLastSyncInfo{}, errCode
+	}
 
+	return sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
+}
+
+// GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType - @TODO Kark v1
+func (pg *Postgres) GetAllAdwordsLastSyncInfoForAllProjects() ([]model.AdwordsLastSyncInfo, int) {
+	params := make([]interface{}, 0, 0)
+	adwordsLastSyncInfos, status := getAdwordsLastSyncInfo(lastSyncInfoQueryForAllProjects, params)
+	if status != http.StatusOK {
+		return adwordsLastSyncInfos, status
+	}
+
+	adwordsSettings, errCode := pg.GetAllIntAdwordsProjectSettings()
+	if errCode != http.StatusOK {
+		return []model.AdwordsLastSyncInfo{}, errCode
+	}
+
+	return sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
+}
+
+func getAdwordsLastSyncInfo(query string, params []interface{}) ([]model.AdwordsLastSyncInfo, int) {
+	db := C.GetServices().Db
 	adwordsLastSyncInfos := make([]model.AdwordsLastSyncInfo, 0, 0)
 
-	queryStr := "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
-		" " + "FROM adwords_documents GROUP BY project_id, customer_account_id, type"
-
-	rows, err := db.Raw(queryStr).Rows()
+	rows, err := db.Raw(query, params).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get last adwords documents by type for sync info.")
 		return adwordsLastSyncInfos, http.StatusInternalServerError
@@ -544,10 +648,11 @@ func (pg *Postgres) GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType() (
 		adwordsLastSyncInfos = append(adwordsLastSyncInfos, adwordsLastSyncInfo)
 	}
 
-	adwordsSettings, errCode := pg.GetAllIntAdwordsProjectSettings()
-	if errCode != http.StatusOK {
-		return []model.AdwordsLastSyncInfo{}, errCode
-	}
+	return adwordsLastSyncInfos, http.StatusOK
+}
+
+// This method handles adding additionalInformation to lastSyncInfo, Skipping inactive Projects and adding missed LastSync.
+func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, adwordsSettings []model.AdwordsProjectSettings) ([]model.AdwordsLastSyncInfo, int) {
 
 	adwordsSettingsByProjectAndCustomerAccount := make(map[uint64]map[string]*model.AdwordsProjectSettings, 0)
 

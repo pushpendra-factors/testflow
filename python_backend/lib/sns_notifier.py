@@ -1,10 +1,16 @@
 import requests
 from tornado.log import logging as log
 
+import scripts
+
+
 class SnsNotifier:
+    APP_NAME = "adwords_sync"
 
     @staticmethod
-    def notify(env, source, message):
+    def notify(message):
+        env = scripts.adwords.CONFIG.ADWORDS_APP.env
+        source = SnsNotifier.APP_NAME
         if env != "production":
             log.warning("Skipped notification for env %s payload %s", env, str(message))
             return

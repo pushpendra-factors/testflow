@@ -336,18 +336,35 @@ func (pg *Postgres) GetIntAdwordsRefreshTokenForProject(projectId uint64) (strin
 	return refreshToken, http.StatusFound
 }
 
-func (pg *Postgres) GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int) {
-	db := C.GetServices().Db
+func (pg *Postgres) GetIntAdwordsProjectSettingsForProjectID(projectID uint64) ([]model.AdwordsProjectSettings, int) {
 
-	adwordsProjectSettings := make([]model.AdwordsProjectSettings, 0, 0)
+	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
+		" " + "agents.int_adwords_refresh_token as refresh_token, project_settings.int_adwords_enabled_agent_uuid as agent_uuid" +
+		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_adwords_enabled_agent_uuid = agents.uuid" +
+		" " + "WHERE project_settings.project_id = ?" +
+		" " + "AND project_settings.int_adwords_customer_account_id IS NOT NULL" +
+		" " + "AND project_settings.int_adwords_enabled_agent_uuid IS NOT NULL "
+	params := []interface{}{projectID}
+
+	return pg.getIntAdwordsProjectSettings(queryStr, params)
+}
+
+func (pg *Postgres) GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int) {
 
 	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
 		" " + "agents.int_adwords_refresh_token as refresh_token, project_settings.int_adwords_enabled_agent_uuid as agent_uuid" +
 		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_adwords_enabled_agent_uuid = agents.uuid" +
 		" " + "WHERE project_settings.int_adwords_customer_account_id IS NOT NULL" +
 		" " + "AND project_settings.int_adwords_enabled_agent_uuid IS NOT NULL"
+	params := make([]interface{}, 0, 0)
 
-	rows, err := db.Raw(queryStr).Rows()
+	return pg.getIntAdwordsProjectSettings(queryStr, params)
+}
+
+func (pg *Postgres) getIntAdwordsProjectSettings(query string, params []interface{}) ([]model.AdwordsProjectSettings, int) {
+	db := C.GetServices().Db
+	adwordsProjectSettings := make([]model.AdwordsProjectSettings, 0, 0)
+	rows, err := db.Raw(query, params).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get all adwords project settings.")
 		return adwordsProjectSettings, http.StatusInternalServerError

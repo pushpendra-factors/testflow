@@ -14,7 +14,7 @@ class CsvUtil:
 
             for col in row:
                 col_striped = col.strip()
-                if col_striped != '--':
+                if col_striped != "--":
                     resp[headers[i]] = col_striped
                 i = i + 1
             
@@ -23,11 +23,9 @@ class CsvUtil:
 
         return resp_rows
 
-
-    # Note: This can cause errors if the first record doesnt have all the fields.
+    # Note: This can cause errors if the first record doesnt have all the fields. Requires file object.
     @staticmethod
-    def write_map_to_file(array_of_maps, field_path):
-        data_file = open(field_path, 'w+')
+    def write_map_to_file(array_of_maps, data_file):
         csv_writer = csv.writer(data_file)
         header_written = False
 
@@ -39,3 +37,17 @@ class CsvUtil:
                 header_written = True
             csv_writer.writerow(object.values())
         data_file.close()
+
+    @staticmethod
+    def read_csv(file):
+        reader = csv.reader(file)
+        return [row for row in reader]
+
+    @staticmethod
+    def unmarshall(csv_string):
+        if csv_string is None:
+            return []
+        lines = csv_string.splitlines()
+        reader = csv.reader(lines)
+        parsed_csv = list(reader)
+        return parsed_csv

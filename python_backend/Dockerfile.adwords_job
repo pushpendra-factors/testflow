@@ -13,4 +13,4 @@ RUN apk add --no-cache --virtual .build-deps gcc libc-dev libxslt-dev && \
     pip install -r requirements.txt && \
     apk del .build-deps
 
-ENTRYPOINT ["python", "./scripts/adwords/etl.py"]
+ENTRYPOINT ["python", "./scripts/adwords/pipeline_app.py"]

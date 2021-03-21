@@ -17,7 +17,9 @@ import (
 type Model interface {
 	// adwords_document
 	CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) int
-	GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType() ([]model.AdwordsLastSyncInfo, int)
+	CreateMultipleAdwordsDocument(adwordsDoc []model.AdwordsDocument) int
+	GetAdwordsLastSyncInfoForProject(projectID uint64) ([]model.AdwordsLastSyncInfo, int)
+	GetAllAdwordsLastSyncInfoForAllProjects() ([]model.AdwordsLastSyncInfo, int)
 	GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string) (map[string]model.CampaignInfo, error)
 	GetAdwordsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int)
 	GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
@@ -250,6 +252,7 @@ type Model interface {
 	GetProjectSettingByPrivateTokenWithCacheAndDefault(privateToken string) (*model.ProjectSetting, int)
 	UpdateProjectSettings(projectID uint64, settings *model.ProjectSetting) (*model.ProjectSetting, int)
 	GetIntAdwordsRefreshTokenForProject(projectID uint64) (string, int)
+	GetIntAdwordsProjectSettingsForProjectID(projectID uint64) ([]model.AdwordsProjectSettings, int)
 	GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int)
 	GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int)
 	GetFacebookEnabledProjectSettings() ([]model.FacebookProjectSettings, int)
