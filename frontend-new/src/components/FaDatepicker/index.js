@@ -120,6 +120,17 @@ const FaDatepicker = ({ placement,
             setdateString('Today');
             onSelect(newDateData);
         }
+        if (type == 'yesterday') {
+            let newDateData = {
+                ...dateData,
+                startDate: moment(today).subtract(1, 'days').startOf('day'),
+                endDate: moment(today).subtract(1, 'days').endOf('day'),
+                dateType:type,
+                dateString: 'Yesterday',
+            }
+            setdateString('Yesterday');
+            onSelect(newDateData);
+        }
         if (type == 'this_week') {
             const dateRng = getRangeByLabel('This Week');
             let startDate = dateRng.startDate;
@@ -197,6 +208,11 @@ const FaDatepicker = ({ placement,
                 <Menu.Item>
                     <a target="_blank" onClick={() => returnPreSetDate('today')}>
                         Today
+                </a>
+                </Menu.Item>
+                <Menu.Item>
+                    <a target="_blank" onClick={() => returnPreSetDate('yesterday')}>
+                        Yesterday
                 </a>
                 </Menu.Item>
                 <Menu.Item>
