@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	C "factors/config"
+	V1 "factors/handler/v1"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -136,6 +137,11 @@ func CreateSmartEventFilterHandler(c *gin.Context) {
 			return
 		}
 
+		if errCode == http.StatusConflict {
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "Duplicate rule or event_name."})
+			return
+		}
+
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating event_name failed"})
 		return
 	}
@@ -192,6 +198,8 @@ func GetFiltersHandler(c *gin.Context) {
 // @Produce json
 // @Param project_id path integer true "Project ID"
 // @Success 200 {array} handler.APISmartEventFilterResponePayload
+// @Param project_id path integer true "Project ID"
+// @Param type query string true "Smart event type"  Enums(crm)
 // @Router /{project_id}/v1/smart_event [get]
 func GetSmartEventFiltersHandler(c *gin.Context) {
 
@@ -201,7 +209,7 @@ func GetSmartEventFiltersHandler(c *gin.Context) {
 		return
 	}
 
-	eventNames, errCode := store.GetStore().GetSmartEventFilterEventNames(projectID)
+	eventNames, errCode := store.GetStore().GetSmartEventFilterEventNames(projectID, false)
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get smart event filters failed. Invalid project."})
 		return
@@ -236,6 +244,7 @@ func GetSmartEventFiltersHandler(c *gin.Context) {
 // @Accept  json
 // @Produce json
 // @Param filter_id query integer true "Filter ID"
+// @Param project_id path integer true "Project ID"
 // @Param filter body handler.APISmartEventFilterRequestPayload true "Update filter"
 // @Success 202 {object} handler.APISmartEventFilterResponePayload
 // @Param type query string true "Smart event type"  Enums(crm)
@@ -280,6 +289,10 @@ func UpdateSmartEventFilterHandler(c *gin.Context) {
 	model.HandleSmartEventNoneTypeValue(&requestPayload.FilterExpr)
 	eventName, status := store.GetStore().UpdateCRMSmartEventFilter(projectID, filterID, &model.EventName{Name: requestPayload.EventName}, &requestPayload.FilterExpr)
 	if status != http.StatusAccepted {
+		if status == http.StatusConflict {
+			c.JSON(status, gin.H{"error": "Duplicate rule."})
+		}
+
 		c.JSON(status, gin.H{"error": "Failed to update smart event name"})
 		return
 	}
@@ -294,6 +307,62 @@ func UpdateSmartEventFilterHandler(c *gin.Context) {
 
 	c.JSON(status, responsePayload)
 
+}
+
+// Test command: curl -H "Content-Type: application/json" -i -X DELETE http://localhost:8080/projects/1/v1/smart_event/type=crm&filter_id=537
+// DeleteSmartEventFilterHandler godoc
+// @Summary To delete an existing smart event filter.
+// @Tags V1ApiSmartEvent
+// @Accept  json
+// @Produce json
+// @Param filter_id query integer true "Filter ID"
+// @Param project_id path integer true "Project ID"
+// @Success 202 {object} handler.APISmartEventFilterResponePayload
+// @Param type query string true "Smart event type"  Enums(crm)
+// @Router /{project_id}/v1/smart_event [delete]
+func DeleteSmartEventFilterHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+
+	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, "Delete smart event_name filter failed. Invalid project.", true
+	}
+
+	eventType := c.Query("type")
+	if eventType != "crm" {
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Delete smart event_name filter failed. Invalid query type", true
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+		"reqId":      U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	filterID, err := strconv.ParseUint(c.Query("filter_id"), 10, 64)
+	if err != nil || filterID == 0 {
+		logCtx.WithFields(log.Fields{log.ErrorKey: err}).Error("Deleting smart event_name filter failed. filter_id parse failed.")
+		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Delete smart event_name filter failed. Invalid rule id", true
+	}
+
+	eventName, status := store.GetStore().DeleteSmartEventFilter(projectID, filterID)
+	if status != http.StatusAccepted {
+		logCtx.Error("Failed to delete smart event filter.")
+		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Delete smart event_name filter failed. Failed processing request.", true
+	}
+
+	filterExp, err := model.GetDecodedSmartEventFilterExp(eventName.FilterExpr)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to GetDecodedSmartEventFilterExp")
+		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Delete smart event_name filter failed. Failed processing request.", true
+	}
+
+	responsePayload := &APISmartEventFilterResponePayload{
+		ProjectID:   eventName.ProjectId,
+		EventNameID: eventName.ID,
+		EventName:   eventName.Name,
+		FilterExpr:  *filterExp,
+	}
+
+	return responsePayload, http.StatusAccepted, "", "", false
 }
 
 // Test command: curl -H "Content-Type: application/json" -i -X PUT http://localhost:8080/projects/1/filters/364 -d '{ "name": "updated_name" }'

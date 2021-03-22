@@ -193,6 +193,76 @@ const (
 	LOGICAL_OP_AND = "AND"
 )
 
+func isSameSourceAndObjectType(existingFilter *SmartCRMEventFilter, incomingFilter *SmartCRMEventFilter) bool {
+	if existingFilter.Source == incomingFilter.Source &&
+		existingFilter.ObjectType == incomingFilter.ObjectType &&
+		existingFilter.FilterEvaluationType == incomingFilter.FilterEvaluationType {
+		return true
+	}
+
+	return false
+}
+
+func checkDuplicatePropertyFilters(existingFilter, incomingFilter []PropertyFilter) bool {
+
+	if len(existingFilter) != len(incomingFilter) {
+		return false
+	}
+
+	existingRuleMap := make(map[string]bool)
+	for i := range existingFilter {
+
+		if len(existingFilter[i].Rules) < 1 { // FilterEvaluationType == any, doesn't require any specific rule
+			key := existingFilter[i].Name
+			existingRuleMap[key] = true
+			continue
+		}
+
+		for _, rule := range existingFilter[i].Rules {
+			key := fmt.Sprintf("%s:%s:%s:%s", existingFilter[i].Name, rule.PropertyState, rule.Operator, rule.Value)
+			existingRuleMap[key] = true
+		}
+	}
+
+	incomingRulesLen := 0
+	for i := range incomingFilter {
+
+		if len(incomingFilter[i].Rules) < 1 { // FilterEvaluationType == any, doesn't require any specific rule
+			key := existingFilter[i].Name
+			if _, exist := existingRuleMap[key]; !exist {
+				return false
+			}
+
+			continue
+		}
+
+		for _, rule := range incomingFilter[i].Rules {
+			key := fmt.Sprintf("%s:%s:%s:%s", incomingFilter[i].Name, rule.PropertyState, rule.Operator, rule.Value)
+			if _, exist := existingRuleMap[key]; !exist {
+				return false
+			}
+			incomingRulesLen++
+		}
+	}
+
+	if incomingRulesLen != len(existingRuleMap) {
+		return false
+	}
+
+	return true
+}
+
+// CheckSmartEventNameDuplicateFilter validates two smart event filter for duplicates.
+func CheckSmartEventNameDuplicateFilter(existingFilter *SmartCRMEventFilter, incomingFilter *SmartCRMEventFilter) bool {
+	if isSameSourceAndObjectType(existingFilter, incomingFilter) {
+		if checkDuplicatePropertyFilters(existingFilter.Filters, incomingFilter.Filters) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // CRMFilterEvaluator evaluates a CRM filter on the properties provided. Can work in current properties or current and previous property mode
 func CRMFilterEvaluator(projectID uint64, currProperty, prevProperty *map[string]interface{},
 	filter *SmartCRMEventFilter, compareState string) bool {

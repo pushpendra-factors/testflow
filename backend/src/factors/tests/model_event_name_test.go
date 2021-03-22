@@ -609,6 +609,31 @@ func sendCreateSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model
 	return w
 }
 
+func sendDeleteSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent, eventNameID uint64) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+		return nil
+	}
+
+	rb := U.NewRequestBuilder(http.MethodDelete, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s&filter_id=%d", projectId, "crm", eventNameID)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating request")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func sendGetSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
@@ -1727,7 +1752,7 @@ func TestHandleSmartEventRuleNoneTypeValue(t *testing.T) {
 	assert.Equal(t, model.COMPARE_EQUAL, rule[1].Operator)
 
 	// internal check
-	enSmartEvent, status := store.GetStore().GetSmartEventFilterEventNames(project.ID)
+	enSmartEvent, status := store.GetStore().GetSmartEventFilterEventNames(project.ID, false)
 	assert.Equal(t, http.StatusFound, status)
 	smartEvent, err := model.GetDecodedSmartEventFilterExp(enSmartEvent[0].FilterExpr)
 	assert.Nil(t, err)
@@ -1754,4 +1779,137 @@ func TestHandleSmartEventRuleNoneTypeValue(t *testing.T) {
 
 	assert.Equal(t, model.COMPARE_NOT_EQUAL, rule[0].Operator)
 	assert.Equal(t, model.COMPARE_EQUAL, rule[1].Operator)
+}
+
+func TestSmartEventRuleDeleteAPI(t *testing.T) {
+
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	/*
+		Duplicate rule on change rule array order
+	*/
+	stringComp := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
+			{
+				Name: "email",
+				Rules: []model.CRMFilterRule{
+					{
+						PropertyState: model.CurrentState,
+						Value:         model.PropertyValueNone,
+						Operator:      model.COMPARE_NOT_EQUAL,
+					},
+					{
+						PropertyState: model.PreviousState,
+						Value:         model.PropertyValueNone,
+						Operator:      model.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	eventName1 := "smartEventString"
+	requestPayload := make(map[string]interface{})
+	requestPayload["name"] = eventName1
+	requestPayload["expr"] = stringComp
+
+	w := sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+
+	var createResponsePayload H.APISmartEventFilterResponePayload
+	err = json.Unmarshal(jsonResponse, &createResponsePayload)
+	assert.Nil(t, err)
+
+	// change rule order should also cause conflict
+	stringComp.Filters[0].Rules = []model.CRMFilterRule{stringComp.Filters[0].Rules[1], stringComp.Filters[0].Rules[0]}
+	stringComp.Description = "salesforce contact rule order changed"
+	requestPayload["expr"] = stringComp
+	w = sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusConflict, w.Code)
+
+	/*
+		Deleted rule should be reused on same rule create
+	*/
+	eventNameID := createResponsePayload.EventNameID
+	w = sendDeleteSmartEventFilterReq(r, project.ID, agent, eventNameID)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+
+	w = sendGetSmartEventFilterReq(r, project.ID, agent)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	var responsePayload []H.APISmartEventFilterResponePayload
+	err = json.Unmarshal(jsonResponse, &responsePayload)
+	assert.Nil(t, err)
+	assert.Equal(t, 0, len(responsePayload))
+
+	w = sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &createResponsePayload)
+	assert.Nil(t, err)
+	assert.Equal(t, eventNameID, createResponsePayload.EventNameID)
+
+	/*
+		Update rule to existing rule should cause conflict
+	*/
+
+	// create new rule
+	stringComp = &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce contact",
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
+			{
+				Name: "phone_number",
+				Rules: []model.CRMFilterRule{
+					{
+						PropertyState: model.CurrentState,
+						Value:         model.PropertyValueNone,
+						Operator:      model.COMPARE_NOT_EQUAL,
+					},
+					{
+						PropertyState: model.PreviousState,
+						Value:         model.PropertyValueNone,
+						Operator:      model.COMPARE_EQUAL,
+					},
+				},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: "time",
+	}
+
+	eventName2 := "smartEventString2"
+	requestPayload = make(map[string]interface{})
+	requestPayload["name"] = eventName2
+	requestPayload["expr"] = stringComp
+
+	w = sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &createResponsePayload)
+	eventNameID = createResponsePayload.EventNameID
+
+	stringComp.Filters[0].Name = "email"
+	requestPayload = make(map[string]interface{})
+	requestPayload["name"] = eventName2
+	requestPayload["expr"] = stringComp
+
+	w = sendUpdateSmartEventFilterReq(r, project.ID, agent, &requestPayload, eventNameID)
+	assert.Equal(t, http.StatusConflict, w.Code)
 }
