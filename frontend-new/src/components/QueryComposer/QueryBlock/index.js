@@ -62,11 +62,11 @@ function QueryBlock({
             <div className={styles.query_block__event_selector}>
                    {isDDVisible
                      ? <div className={styles.query_block__event_selector__btn}><GroupSelect
-                  groupedProperties={eventOptions}
-                  placeholder="Select Event"
-                  optionClick={(group, val) => onChange(val[0])}
-                  onClickOutside={() => setDDVisible(false)}
-
+                    groupedProperties={eventOptions}
+                    placeholder="Select Event"
+                    optionClick={(group, val) => onChange(val[0])}
+                    onClickOutside={() => setDDVisible(false)}
+                    allowEmpty={true}
                   ></GroupSelect></div>
 
                      : null }

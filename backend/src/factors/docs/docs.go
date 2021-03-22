@@ -1145,7 +1145,7 @@ var doc = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.DashboardUnitsWebAnalyticsQuery"
+                            "$ref": "#/definitions/model.DashboardUnitsWebAnalyticsQuery"
                         }
                     }
                 ],
@@ -2508,7 +2508,7 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "{result:M.ChannelResultGroupV1}",
+                        "description": "{result:store.GetStore().ChannelResultGroupV1}",
                         "schema": {
                             "type": "string"
                         }
@@ -2528,6 +2528,51 @@ var doc = `{
                     "V1ApiSmartEvent"
                 ],
                 "summary": "To get crm object properties by source.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Source",
+                        "name": "crm_source",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Object type",
+                        "name": "object_type",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.CRMResponsePayload"
+                        }
+                    }
+                }
+            }
+        },
+        "/{project_id}/v1/crm/{crm_source}/{object_type}/properties/{property_name}/values": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1ApiSmartEvent"
+                ],
+                "summary": "To get crm object values by source and property name.",
                 "parameters": [
                     {
                         "type": "integer",
@@ -3270,6 +3315,23 @@ var doc = `{
                         "name": "project_id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "crm"
+                        ],
+                        "type": "string",
+                        "description": "Smart event type",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -3301,6 +3363,13 @@ var doc = `{
                         "description": "Filter ID",
                         "name": "filter_id",
                         "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -3374,6 +3443,52 @@ var doc = `{
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.APISmartEventFilterResponePayload"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "V1ApiSmartEvent"
+                ],
+                "summary": "To delete an existing smart event filter.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter ID",
+                        "name": "filter_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "crm"
+                        ],
+                        "type": "string",
+                        "description": "Smart event type",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
                         "schema": {
                             "$ref": "#/definitions/handler.APISmartEventFilterResponePayload"
                         }
@@ -3492,62 +3607,6 @@ var doc = `{
                 }
             }
         },
-        "handler.DashboardUnitWebAnalyticsCustomGroupQuery": {
-            "type": "object",
-            "properties": {
-                "gbp": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "metrics": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "unit_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "handler.DashboardUnitWebAnalyticsQueryName": {
-            "type": "object",
-            "properties": {
-                "query_name": {
-                    "type": "string"
-                },
-                "unit_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "handler.DashboardUnitsWebAnalyticsQuery": {
-            "type": "object",
-            "properties": {
-                "custom_group_units": {
-                    "description": "CustomGroupUnits - Customize query with group by properties and metrics.",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/handler.DashboardUnitWebAnalyticsCustomGroupQuery"
-                    }
-                },
-                "from": {
-                    "type": "integer"
-                },
-                "to": {
-                    "type": "integer"
-                },
-                "units": {
-                    "description": "Units - Supports redundant metric keys with different unit_ids.",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/handler.DashboardUnitWebAnalyticsQueryName"
-                    }
-                }
-            }
-        },
         "handler.FacebookAddAccessTokenPayload": {
             "type": "object",
             "properties": {
@@ -3619,6 +3678,9 @@ var doc = `{
                 "query": {
                     "type": "string"
                 },
+                "settings": {
+                    "type": "string"
+                },
                 "title": {
                     "type": "string"
                 },
@@ -3630,6 +3692,9 @@ var doc = `{
         "handler.SavedQueryUpdatePayload": {
             "type": "object",
             "properties": {
+                "settings": {
+                    "type": "string"
+                },
                 "title": {
                     "type": "string"
                 }
@@ -3670,6 +3735,9 @@ var doc = `{
                     "type": "boolean"
                 },
                 "exclude_bot": {
+                    "type": "boolean"
+                },
+                "int_drift": {
                     "type": "boolean"
                 }
             }
@@ -3756,6 +3824,12 @@ var doc = `{
                         "$ref": "#/definitions/model.QueryEventWithProperties"
                     }
                 },
+                "query_type": {
+                    "type": "string"
+                },
+                "time_zone": {
+                    "type": "string"
+                },
                 "to": {
                     "type": "integer"
                 }
@@ -3786,6 +3860,37 @@ var doc = `{
                 "value": {
                     "description": "value_any or property value",
                     "type": "object"
+                }
+            }
+        },
+        "model.ChannelFilterV1": {
+            "type": "object",
+            "properties": {
+                "condition": {
+                    "type": "string"
+                },
+                "logical_operator": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "property": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ChannelGroupBy": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "property": {
+                    "type": "string"
                 }
             }
         },
@@ -3844,7 +3949,7 @@ var doc = `{
                 "filters": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.FilterV1"
+                        "$ref": "#/definitions/model.ChannelFilterV1"
                     }
                 },
                 "fr": {
@@ -3856,7 +3961,7 @@ var doc = `{
                 "group_by": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.GroupBy"
+                        "$ref": "#/definitions/model.ChannelGroupBy"
                     }
                 },
                 "select_metrics": {
@@ -3885,6 +3990,9 @@ var doc = `{
                 "id": {
                     "description": "Composite primary key, id + project_id + agent_id.",
                     "type": "integer"
+                },
+                "is_deleted": {
+                    "type": "boolean"
                 },
                 "name": {
                     "type": "string"
@@ -3920,6 +4028,9 @@ var doc = `{
                 "id": {
                     "description": "Composite primary key, id + project_id.",
                     "type": "integer"
+                },
+                "is_deleted": {
+                    "type": "boolean"
                 },
                 "presentation": {
                     "type": "string"
@@ -3970,6 +4081,65 @@ var doc = `{
                 }
             }
         },
+        "model.DashboardUnitWebAnalyticsCustomGroupQuery": {
+            "type": "object",
+            "properties": {
+                "gbp": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "metrics": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "unit_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.DashboardUnitWebAnalyticsQueryName": {
+            "type": "object",
+            "properties": {
+                "query_name": {
+                    "type": "string"
+                },
+                "unit_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.DashboardUnitsWebAnalyticsQuery": {
+            "type": "object",
+            "properties": {
+                "cl": {
+                    "type": "string"
+                },
+                "custom_group_units": {
+                    "description": "CustomGroupUnits - Customize query with group by properties and metrics.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DashboardUnitWebAnalyticsCustomGroupQuery"
+                    }
+                },
+                "from": {
+                    "type": "integer"
+                },
+                "to": {
+                    "type": "integer"
+                },
+                "units": {
+                    "description": "Units - Supports redundant metric keys with different unit_ids.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DashboardUnitWebAnalyticsQueryName"
+                    }
+                }
+            }
+        },
         "model.FactorsGoal": {
             "type": "object",
             "properties": {
@@ -4002,59 +4172,6 @@ var doc = `{
                 },
                 "updated_at": {
                     "type": "string"
-                }
-            }
-        },
-        "model.FactorsGoalFilter": {
-            "type": "object",
-            "properties": {
-                "en_en_ft": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.KeyValueTuple"
-                    }
-                },
-                "en_us_ft": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.KeyValueTuple"
-                    }
-                },
-                "ft": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.KeyValueTuple"
-                    }
-                },
-                "st_en_ft": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.KeyValueTuple"
-                    }
-                },
-                "st_us_ft": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.KeyValueTuple"
-                    }
-                }
-            }
-        },
-        "model.FactorsGoalRule": {
-            "type": "object",
-            "properties": {
-                "en_en": {
-                    "type": "string"
-                },
-                "rule": {
-                    "type": "object",
-                    "$ref": "#/definitions/model.FactorsGoalFilter"
-                },
-                "st_en": {
-                    "type": "string"
-                },
-                "vs": {
-                    "type": "boolean"
                 }
             }
         },
@@ -4118,60 +4235,6 @@ var doc = `{
                     "type": "string"
                 },
                 "user_property_name": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.FilterV1": {
-            "type": "object",
-            "properties": {
-                "condition": {
-                    "type": "string"
-                },
-                "logical_operator": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "property": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.GroupBy": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "property": {
-                    "type": "string"
-                }
-            }
-        },
-        "model.KeyValueTuple": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "string"
-                },
-                "lower_bound": {
-                    "type": "number"
-                },
-                "operator": {
-                    "type": "boolean"
-                },
-                "property_type": {
-                    "type": "string"
-                },
-                "upper_bound": {
-                    "type": "number"
-                },
-                "vl": {
                     "type": "string"
                 }
             }
@@ -4243,6 +4306,9 @@ var doc = `{
                     "description": "Adwords integration settings.\nForeign key constraint int_adwords_enabled_agent_uuid -\u003e agents(uuid)\nTodo: Set int_adwords_enabled_agent_uuid, int_adwords_customer_account_id to NULL\nfor disabling adwords integration for the project.",
                     "type": "string"
                 },
+                "int_drift": {
+                    "type": "boolean"
+                },
                 "int_facebook_access_token": {
                     "type": "string"
                 },
@@ -4266,6 +4332,25 @@ var doc = `{
                 "int_hubspot_api_key": {
                     "type": "string"
                 },
+                "int_linkedin_access_token": {
+                    "type": "string"
+                },
+                "int_linkedin_access_token_expiry": {
+                    "type": "integer"
+                },
+                "int_linkedin_ad_account": {
+                    "description": "Linkedin related fields",
+                    "type": "string"
+                },
+                "int_linkedin_agent_uuid": {
+                    "type": "string"
+                },
+                "int_linkedin_refresh_token": {
+                    "type": "string"
+                },
+                "int_linkedin_refresh_token_expiry": {
+                    "type": "integer"
+                },
                 "int_salesforce_enabled_agent_uuid": {
                     "description": "Salesforce settings",
                     "type": "string"
@@ -4273,6 +4358,10 @@ var doc = `{
                 "int_segment": {
                     "description": "Segment integration settings.",
                     "type": "boolean"
+                },
+                "project_id": {
+                    "description": "Foreign key constraint project_id -\u003e projects(id)\nUsed project_id as primary key also, becase of 1-1 relationship.",
+                    "type": "integer"
                 },
                 "updated_at": {
                     "type": "string"
@@ -4323,6 +4412,9 @@ var doc = `{
                     "type": "integer"
                 },
                 "query": {
+                    "type": "string"
+                },
+                "settings": {
                     "type": "string"
                 },
                 "title": {
@@ -4423,6 +4515,10 @@ var doc = `{
                 },
                 "eni": {
                     "type": "integer"
+                },
+                "gbty": {
+                    "description": "With buckets or raw.",
+                    "type": "string"
                 },
                 "grn": {
                     "description": "currently used only for datetime - year/month/week/day/hour",
@@ -4873,6 +4969,10 @@ var doc = `{
                 "ip": {
                     "type": "string"
                 },
+                "library": {
+                    "type": "object",
+                    "$ref": "#/definitions/segment.Library"
+                },
                 "locale": {
                     "type": "string"
                 },
@@ -4996,6 +5096,14 @@ var doc = `{
                 }
             }
         },
+        "segment.Library": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "segment.Location": {
             "type": "object",
             "properties": {
@@ -5006,10 +5114,10 @@ var doc = `{
                     "type": "string"
                 },
                 "latitude": {
-                    "type": "number"
+                    "type": "object"
                 },
                 "longitude": {
-                    "type": "number"
+                    "type": "object"
                 },
                 "region": {
                     "type": "string"
@@ -5062,13 +5170,14 @@ var doc = `{
             "type": "object",
             "properties": {
                 "density": {
-                    "type": "number"
+                    "type": "object"
                 },
                 "height": {
-                    "type": "number"
+                    "type": "object"
                 },
                 "width": {
-                    "type": "number"
+                    "description": "Changed height to interface{} as part of hot-fix, as\nit is sent as string sometimes.\nhttps://github.com/Slashbit-Technologies/factors/issues/1600",
+                    "type": "object"
                 }
             }
         },
@@ -5125,7 +5234,7 @@ var doc = `{
                 },
                 "rule": {
                     "type": "object",
-                    "$ref": "#/definitions/model.FactorsGoalRule"
+                    "$ref": "#/definitions/v1.CreateGoalInputParams"
                 }
             }
         },
@@ -5137,6 +5246,25 @@ var doc = `{
             "properties": {
                 "event_name": {
                     "type": "string"
+                }
+            }
+        },
+        "v1.CreateGoalInputParams": {
+            "type": "object",
+            "properties": {
+                "en_en": {
+                    "type": "object",
+                    "$ref": "#/definitions/model.QueryEventWithProperties"
+                },
+                "gpr": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.QueryProperty"
+                    }
+                },
+                "st_en": {
+                    "type": "object",
+                    "$ref": "#/definitions/model.QueryEventWithProperties"
                 }
             }
         },
@@ -5211,7 +5339,7 @@ var doc = `{
                 },
                 "rule": {
                     "type": "object",
-                    "$ref": "#/definitions/model.FactorsGoalRule"
+                    "$ref": "#/definitions/v1.CreateGoalInputParams"
                 }
             }
         }

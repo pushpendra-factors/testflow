@@ -554,7 +554,7 @@ func DeleteMultiDashboardUnitHandler(c *gin.Context) {
 // @Produce json
 // @Param project_id path integer true "Project ID"
 // @Param dashboard_id path integer true "Dashboard ID"
-// @Param unit body handler.DashboardUnitsWebAnalyticsQuery true "Web analytics units"
+// @Param unit body model.DashboardUnitsWebAnalyticsQuery true "Web analytics units"
 // @Success 200 {string} json "{"result": "result", "cache": "true", "refreshed_at": "timestamp"}"
 // @Router /{project_id}/dashboard/{dashboard_id}/units/query/web_analytics [post]
 func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {

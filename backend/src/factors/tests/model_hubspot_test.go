@@ -396,7 +396,7 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 	assert.Equal(t, createdAt, hubspotDocument.Timestamp)
 
 	// 100 unique values
-	limit := 100
+	limit := 99
 	for i := 0; i < limit; i++ {
 		updatedAt = updatedAt + 100
 		value1 = fmt.Sprintf("%s_%d", property1, i)
@@ -676,4 +676,128 @@ func TestHubspotAPINullCharacter(t *testing.T) {
 
 	newBytes := U.RemoveNullCharacterBytes(alteredNullcharacterBytes)
 	assert.Equal(t, alteredNullcharacterBytes, newBytes)
+}
+
+func TestHubspotCreateActionUpdatedOnCreate(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	documentID := 1
+	createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
+	cuid := U.RandomLowerAphaNumString(5)
+
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	// document first created, should add updated document
+	jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdDate, createdDate, createdDate, "lead", cuid, "123-45")
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
+
+	//enrich job, create contact created and contact updated event
+	enrichStatus := IntHubspot.Sync(project.ID)
+	projectIndex := -1
+	for i := range enrichStatus {
+		if enrichStatus[i].ProjectId == project.ID {
+			projectIndex = i
+			break
+		}
+	}
+	assert.Equal(t, project.ID, enrichStatus[projectIndex].ProjectId)
+	assert.Equal(t, "success", enrichStatus[projectIndex].Status)
+
+	query := []model.Query{
+		{
+			From: createdDate/1000 - 500,
+			To:   createdDate/1000 + 500,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+				},
+				{
+					Name: U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondEachGivenEvent,
+		},
+		{
+			From: createdDate/1000 - 500,
+			To:   createdDate/1000 + 500,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+				},
+				{
+					Name: U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeEventsOccurrence,
+			EventsCondition: model.EventCondEachGivenEvent,
+		},
+	}
+
+	result, status := store.GetStore().RunEventsGroupQuery(query, project.ID)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, 2, len(result.Results[0].Rows))
+	for i := range result.Results { // two events, one on each
+		assert.Contains(t, []string{U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, U.EVENT_NAME_HUBSPOT_CONTACT_CREATED}, result.Results[i].Rows[0][1])
+		assert.Equal(t, int64(1), result.Results[i].Rows[0][2])
+	}
+
+	// One unique user
+	query = []model.Query{
+		{
+			From: createdDate/1000 - 500,
+			To:   createdDate/1000 + 500,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name: U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+				},
+				{
+					Name: U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAnyGivenEvent,
+		},
+	}
+
+	result, status = store.GetStore().RunEventsGroupQuery(query, project.ID)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, 1, len(result.Results[0].Rows))
+	assert.Equal(t, int64(1), result.Results[0].Rows[0][0])
 }

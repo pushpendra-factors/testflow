@@ -71,44 +71,6 @@ definitions:
       type:
         type: string
     type: object
-  handler.DashboardUnitWebAnalyticsCustomGroupQuery:
-    properties:
-      gbp:
-        items:
-          type: string
-        type: array
-      metrics:
-        items:
-          type: string
-        type: array
-      unit_id:
-        type: integer
-    type: object
-  handler.DashboardUnitWebAnalyticsQueryName:
-    properties:
-      query_name:
-        type: string
-      unit_id:
-        type: integer
-    type: object
-  handler.DashboardUnitsWebAnalyticsQuery:
-    properties:
-      custom_group_units:
-        description: CustomGroupUnits - Customize query with group by properties and
-          metrics.
-        items:
-          $ref: '#/definitions/handler.DashboardUnitWebAnalyticsCustomGroupQuery'
-        type: array
-      from:
-        type: integer
-      to:
-        type: integer
-      units:
-        description: Units - Supports redundant metric keys with different unit_ids.
-        items:
-          $ref: '#/definitions/handler.DashboardUnitWebAnalyticsQueryName'
-        type: array
-    type: object
   handler.FacebookAddAccessTokenPayload:
     properties:
       int_facebook_access_token:
@@ -155,6 +117,8 @@ definitions:
     properties:
       query:
         type: string
+      settings:
+        type: string
       title:
         type: string
       type:
@@ -162,6 +126,8 @@ definitions:
     type: object
   handler.SavedQueryUpdatePayload:
     properties:
+      settings:
+        type: string
       title:
         type: string
     type: object
@@ -188,6 +154,8 @@ definitions:
       auto_track:
         type: boolean
       exclude_bot:
+        type: boolean
+      int_drift:
         type: boolean
     type: object
   handler.updateProjectAgentParams:
@@ -245,6 +213,10 @@ definitions:
         items:
           $ref: '#/definitions/model.QueryEventWithProperties'
         type: array
+      query_type:
+        type: string
+      time_zone:
+        type: string
       to:
         type: integer
     type: object
@@ -268,6 +240,26 @@ definitions:
       value:
         description: value_any or property value
         type: object
+    type: object
+  model.ChannelFilterV1:
+    properties:
+      condition:
+        type: string
+      logical_operator:
+        type: string
+      name:
+        type: string
+      property:
+        type: string
+      value:
+        type: string
+    type: object
+  model.ChannelGroupBy:
+    properties:
+      name:
+        type: string
+      property:
+        type: string
     type: object
   model.ChannelGroupQueryV1:
     properties:
@@ -306,7 +298,7 @@ definitions:
         type: string
       filters:
         items:
-          $ref: '#/definitions/model.FilterV1'
+          $ref: '#/definitions/model.ChannelFilterV1'
         type: array
       fr:
         type: integer
@@ -314,7 +306,7 @@ definitions:
         type: object
       group_by:
         items:
-          $ref: '#/definitions/model.GroupBy'
+          $ref: '#/definitions/model.ChannelGroupBy'
         type: array
       select_metrics:
         items:
@@ -334,6 +326,8 @@ definitions:
       id:
         description: Composite primary key, id + project_id + agent_id.
         type: integer
+      is_deleted:
+        type: boolean
       name:
         type: string
       project_id:
@@ -358,6 +352,8 @@ definitions:
       id:
         description: Composite primary key, id + project_id.
         type: integer
+      is_deleted:
+        type: boolean
       presentation:
         type: string
       project_id:
@@ -391,6 +387,46 @@ definitions:
       title:
         type: string
     type: object
+  model.DashboardUnitWebAnalyticsCustomGroupQuery:
+    properties:
+      gbp:
+        items:
+          type: string
+        type: array
+      metrics:
+        items:
+          type: string
+        type: array
+      unit_id:
+        type: integer
+    type: object
+  model.DashboardUnitWebAnalyticsQueryName:
+    properties:
+      query_name:
+        type: string
+      unit_id:
+        type: integer
+    type: object
+  model.DashboardUnitsWebAnalyticsQuery:
+    properties:
+      cl:
+        type: string
+      custom_group_units:
+        description: CustomGroupUnits - Customize query with group by properties and
+          metrics.
+        items:
+          $ref: '#/definitions/model.DashboardUnitWebAnalyticsCustomGroupQuery'
+        type: array
+      from:
+        type: integer
+      to:
+        type: integer
+      units:
+        description: Units - Supports redundant metric keys with different unit_ids.
+        items:
+          $ref: '#/definitions/model.DashboardUnitWebAnalyticsQueryName'
+        type: array
+    type: object
   model.FactorsGoal:
     properties:
       created_at:
@@ -413,41 +449,6 @@ definitions:
         type: string
       updated_at:
         type: string
-    type: object
-  model.FactorsGoalFilter:
-    properties:
-      en_en_ft:
-        items:
-          $ref: '#/definitions/model.KeyValueTuple'
-        type: array
-      en_us_ft:
-        items:
-          $ref: '#/definitions/model.KeyValueTuple'
-        type: array
-      ft:
-        items:
-          $ref: '#/definitions/model.KeyValueTuple'
-        type: array
-      st_en_ft:
-        items:
-          $ref: '#/definitions/model.KeyValueTuple'
-        type: array
-      st_us_ft:
-        items:
-          $ref: '#/definitions/model.KeyValueTuple'
-        type: array
-    type: object
-  model.FactorsGoalRule:
-    properties:
-      en_en:
-        type: string
-      rule:
-        $ref: '#/definitions/model.FactorsGoalFilter'
-        type: object
-      st_en:
-        type: string
-      vs:
-        type: boolean
     type: object
   model.FactorsTrackedEvent:
     properties:
@@ -489,41 +490,6 @@ definitions:
       updated_at:
         type: string
       user_property_name:
-        type: string
-    type: object
-  model.FilterV1:
-    properties:
-      condition:
-        type: string
-      logical_operator:
-        type: string
-      name:
-        type: string
-      property:
-        type: string
-      value:
-        type: string
-    type: object
-  model.GroupBy:
-    properties:
-      name:
-        type: string
-      property:
-        type: string
-    type: object
-  model.KeyValueTuple:
-    properties:
-      key:
-        type: string
-      lower_bound:
-        type: number
-      operator:
-        type: boolean
-      property_type:
-        type: string
-      upper_bound:
-        type: number
-      vl:
         type: string
     type: object
   model.Project:
@@ -578,6 +544,8 @@ definitions:
           Todo: Set int_adwords_enabled_agent_uuid, int_adwords_customer_account_id to NULL
           for disabling adwords integration for the project.
         type: string
+      int_drift:
+        type: boolean
       int_facebook_access_token:
         type: string
       int_facebook_ad_account:
@@ -594,12 +562,30 @@ definitions:
         type: boolean
       int_hubspot_api_key:
         type: string
+      int_linkedin_access_token:
+        type: string
+      int_linkedin_access_token_expiry:
+        type: integer
+      int_linkedin_ad_account:
+        description: Linkedin related fields
+        type: string
+      int_linkedin_agent_uuid:
+        type: string
+      int_linkedin_refresh_token:
+        type: string
+      int_linkedin_refresh_token_expiry:
+        type: integer
       int_salesforce_enabled_agent_uuid:
         description: Salesforce settings
         type: string
       int_segment:
         description: Segment integration settings.
         type: boolean
+      project_id:
+        description: |-
+          Foreign key constraint project_id -> projects(id)
+          Used project_id as primary key also, becase of 1-1 relationship.
+        type: integer
       updated_at:
         type: string
     type: object
@@ -633,6 +619,8 @@ definitions:
         description: Foreign key queries(project_id) ref projects(id).
         type: integer
       query:
+        type: string
+      settings:
         type: string
       title:
         type: string
@@ -700,6 +688,9 @@ definitions:
         type: string
       eni:
         type: integer
+      gbty:
+        description: With buckets or raw.
+        type: string
       grn:
         description: currently used only for datetime - year/month/week/day/hour
         type: string
@@ -1010,6 +1001,9 @@ definitions:
         type: object
       ip:
         type: string
+      library:
+        $ref: '#/definitions/segment.Library'
+        type: object
       locale:
         type: string
       location:
@@ -1093,6 +1087,11 @@ definitions:
       user_id:
         type: string
     type: object
+  segment.Library:
+    properties:
+      name:
+        type: string
+    type: object
   segment.Location:
     properties:
       city:
@@ -1100,9 +1099,9 @@ definitions:
       country:
         type: string
       latitude:
-        type: number
+        type: object
       longitude:
-        type: number
+        type: object
       region:
         type: string
     type: object
@@ -1136,11 +1135,15 @@ definitions:
   segment.Screen:
     properties:
       density:
-        type: number
+        type: object
       height:
-        type: number
+        type: object
       width:
-        type: number
+        description: |-
+          Changed height to interface{} as part of hot-fix, as
+          it is sent as string sometimes.
+          https://github.com/Slashbit-Technologies/factors/issues/1600
+        type: object
     type: object
   util.PropertiesMap:
     additionalProperties: true
@@ -1177,7 +1180,7 @@ definitions:
       name:
         type: string
       rule:
-        $ref: '#/definitions/model.FactorsGoalRule'
+        $ref: '#/definitions/v1.CreateGoalInputParams'
         type: object
     type: object
   v1.CreateFactorsTrackedEventParams:
@@ -1186,6 +1189,19 @@ definitions:
         type: string
     required:
     - event_name
+    type: object
+  v1.CreateGoalInputParams:
+    properties:
+      en_en:
+        $ref: '#/definitions/model.QueryEventWithProperties'
+        type: object
+      gpr:
+        items:
+          $ref: '#/definitions/model.QueryProperty'
+        type: array
+      st_en:
+        $ref: '#/definitions/model.QueryEventWithProperties'
+        type: object
     type: object
   v1.CreateTrackeduserPropertyParams:
     properties:
@@ -1229,7 +1245,7 @@ definitions:
       name:
         type: string
       rule:
-        $ref: '#/definitions/model.FactorsGoalRule'
+        $ref: '#/definitions/v1.CreateGoalInputParams'
         type: object
     required:
     - id
@@ -1502,7 +1518,7 @@ paths:
         name: unit
         required: true
         schema:
-          $ref: '#/definitions/handler.DashboardUnitsWebAnalyticsQuery'
+          $ref: '#/definitions/model.DashboardUnitsWebAnalyticsQuery'
       produces:
       - application/json
       responses:
@@ -2400,7 +2416,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: '{result:M.ChannelResultGroupV1}'
+          description: '{result:store.GetStore().ChannelResultGroupV1}'
           schema:
             type: string
       summary: To run a channel query.
@@ -2435,6 +2451,36 @@ paths:
           schema:
             $ref: '#/definitions/handler.CRMResponsePayload'
       summary: To get crm object properties by source.
+      tags:
+      - V1ApiSmartEvent
+  /{project_id}/v1/crm/{crm_source}/{object_type}/properties/{property_name}/values:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Source
+        in: path
+        name: crm_source
+        required: true
+        type: string
+      - description: Object type
+        in: path
+        name: object_type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.CRMResponsePayload'
+      summary: To get crm object values by source and property name.
       tags:
       - V1ApiSmartEvent
   /{project_id}/v1/dashboards/{dashboard_id}:
@@ -2892,6 +2938,37 @@ paths:
       tags:
       - V1Api
   /{project_id}/v1/smart_event:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Filter ID
+        in: query
+        name: filter_id
+        required: true
+        type: integer
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Smart event type
+        enum:
+        - crm
+        in: query
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/handler.APISmartEventFilterResponePayload'
+      summary: To delete an existing smart event filter.
+      tags:
+      - V1ApiSmartEvent
     get:
       consumes:
       - application/json
@@ -2901,6 +2978,18 @@ paths:
         name: project_id
         required: true
         type: integer
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: integer
+      - description: Smart event type
+        enum:
+        - crm
+        in: query
+        name: type
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -2952,6 +3041,11 @@ paths:
       - description: Filter ID
         in: query
         name: filter_id
+        required: true
+        type: integer
+      - description: Project ID
+        in: path
+        name: project_id
         required: true
         type: integer
       - description: Update filter

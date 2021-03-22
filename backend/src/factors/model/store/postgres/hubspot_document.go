@@ -405,6 +405,20 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 		return http.StatusInternalServerError
 	}
 
+	if isNew { // create updated document for new user
+		updatedDocument := *document
+		updatedDocument.Action = model.HubspotDocumentActionUpdated
+		err = db.Create(&updatedDocument).Error
+		if err != nil {
+			if isDuplicateHubspotDocumentError(err) {
+				return http.StatusConflict
+			}
+
+			logCtx.WithError(err).Error("Failed to create updated hubspot document.")
+			return http.StatusInternalServerError
+		}
+	}
+
 	return http.StatusCreated
 }
 

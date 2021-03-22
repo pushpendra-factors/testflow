@@ -79,18 +79,71 @@ func (pg *Postgres) CreateOrGetFilterEventName(eventName *model.EventName) (*mod
 	return pg.CreateOrGetEventName(eventName)
 }
 
+func (pg *Postgres) checkDuplicateSmartEventFilter(projectID uint64, inFilterExpr *model.SmartCRMEventFilter) (*model.EventName, bool) {
+	eventNames, status := pg.GetSmartEventFilterEventNames(projectID, true)
+	if status == http.StatusNotFound {
+		return nil, false
+	}
+
+	for i := range eventNames {
+
+		exFilterExpr, err := model.GetDecodedSmartEventFilterExp(eventNames[i].FilterExpr)
+		if err != nil {
+			log.WithError(err).Error("Failed to GetDecodedSmartEventFilterExp")
+			continue
+		}
+
+		duplicate := model.CheckSmartEventNameDuplicateFilter(exFilterExpr, inFilterExpr)
+		if duplicate {
+			return &eventNames[i], true
+		}
+	}
+
+	return nil, false
+}
+
 // CreateOrGetCRMSmartEventFilterEventName creates a new CRM smart event filter.
 // Deleted event_name will be enabled if conflict found
 func (pg *Postgres) CreateOrGetCRMSmartEventFilterEventName(projectID uint64, eventName *model.EventName,
 	filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
 
-	if !model.IsValidSmartEventFilterExpr(filterExpr) || filterExpr == nil || eventName.Type != "" {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name": *eventName, "filter_exp": *filterExpr})
+	if !model.IsValidSmartEventFilterExpr(filterExpr) || filterExpr == nil || eventName.Type != "" ||
+		eventName.Name == "" {
+		logCtx.Error("Invalid fields.")
 		return nil, http.StatusBadRequest
+	}
+
+	dupEventName, duplicate := pg.checkDuplicateSmartEventFilter(projectID, filterExpr)
+	if duplicate { // re-enable the smart event name
+		if dupEventName.Deleted == true {
+			updateEventName := &model.EventName{
+				Name:    eventName.Name, // use new event name provided by api
+				Type:    getCRMSmartEventNameType(filterExpr.Source),
+				Deleted: true,
+			}
+
+			filterExpr, err := model.GetDecodedSmartEventFilterExp(dupEventName.FilterExpr)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to GetDecodedSmartEventFilterExp.")
+				return nil, http.StatusInternalServerError
+			}
+
+			updatedEventName, status := pg.updateCRMSmartEventFilter(projectID, dupEventName.ID, updateEventName.Type, updateEventName, filterExpr)
+			if status != http.StatusAccepted {
+				logCtx.Error("Failed to update deleted smart event filter.")
+				return nil, http.StatusInternalServerError
+			}
+
+			return updatedEventName, status
+		}
+
+		return nil, http.StatusConflict
 	}
 
 	enFilterExp, err := json.Marshal(filterExpr)
 	if err != nil {
-		log.WithError(err).Error("Failed to marshal filterExpr on CreateOrGetCRMSmartEventFilterEventName")
+		logCtx.WithError(err).Error("Failed to marshal filterExpr on CreateOrGetCRMSmartEventFilterEventName")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -99,9 +152,9 @@ func (pg *Postgres) CreateOrGetCRMSmartEventFilterEventName(projectID uint64, ev
 	eventName.Type = getCRMSmartEventNameType(filterExpr.Source)
 
 	_, status := pg.CreateOrGetEventName(eventName)
-	if status == http.StatusConflict && eventName.Deleted == true {
-		eventName.ProjectId = 0
-		_, status = pg.updateCRMSmartEventFilter(projectID, eventName.ID, eventName.Type, eventName, nil)
+	if status != http.StatusCreated {
+		logCtx.Error("Failed to CreateOrGetCRMSmartEventFilterEventName.")
+		return nil, http.StatusInternalServerError
 	}
 
 	return eventName, status
@@ -568,11 +621,16 @@ func (pg *Postgres) GetFilterEventNames(projectId uint64) ([]model.EventName, in
 }
 
 // GetSmartEventFilterEventNames returns a list of all smart events
-func (pg *Postgres) GetSmartEventFilterEventNames(projectID uint64) ([]model.EventName, int) {
+func (pg *Postgres) GetSmartEventFilterEventNames(projectID uint64, includeDeleted bool) ([]model.EventName, int) {
 	db := C.GetServices().Db
 
+	whereStmnt := "project_id = ? AND type IN(?)"
+	if !includeDeleted {
+		whereStmnt = whereStmnt + " AND deleted = 'false' "
+	}
+
 	var eventNames []model.EventName
-	if err := db.Where("project_id = ? AND type IN(?) AND deleted = 'false'",
+	if err := db.Where(whereStmnt,
 		projectID, []string{model.TYPE_CRM_SALESFORCE, model.TYPE_CRM_HUBSPOT}).Find(&eventNames).Error; err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting filter_event_names")
 
@@ -587,15 +645,20 @@ func (pg *Postgres) GetSmartEventFilterEventNames(projectID uint64) ([]model.Eve
 }
 
 // GetSmartEventFilterEventNameByID returns the smart event by event_name id
-func (pg *Postgres) GetSmartEventFilterEventNameByID(projectID, id uint64) (*model.EventName, int) {
+func (pg *Postgres) GetSmartEventFilterEventNameByID(projectID, id uint64, isDeleted bool) (*model.EventName, int) {
 	if id == 0 || projectID == 0 {
 		return nil, http.StatusBadRequest
+	}
+
+	whereStmnt := "project_id = ? AND type IN(?) AND id =? "
+	if !isDeleted {
+		whereStmnt = whereStmnt + " AND deleted = 'false' "
 	}
 
 	db := C.GetServices().Db
 
 	var eventName model.EventName
-	if err := db.Where("project_id = ? AND type IN(?) AND deleted = 'false' AND id = ?",
+	if err := db.Where(whereStmnt,
 		projectID, []string{model.TYPE_CRM_SALESFORCE, model.TYPE_CRM_HUBSPOT}, id).First(&eventName).Error; err != nil {
 		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting smart event filter_event_name")
 
@@ -605,6 +668,7 @@ func (pg *Postgres) GetSmartEventFilterEventNameByID(projectID, id uint64) (*mod
 	return &eventName, http.StatusFound
 }
 
+// IsEventNameTypeSmartEvent validates event name type
 func IsEventNameTypeSmartEvent(eventType string) bool {
 	return eventType == model.TYPE_CRM_HUBSPOT || eventType == model.TYPE_CRM_SALESFORCE
 }
@@ -691,15 +755,16 @@ func (pg *Postgres) UpdateEventName(projectId uint64, id uint64,
 func (pg *Postgres) updateCRMSmartEventFilter(projectID uint64, id uint64, nameType string,
 	eventName *model.EventName, filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
 
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name_id": id, "event_name_type": nameType})
 	// Validation
 	if id == 0 || projectID == 0 || eventName.ProjectId != 0 ||
 		!isValidName(eventName.Name, eventName.Type) {
-
+		logCtx.Error("Missing required Fields")
 		return nil, http.StatusBadRequest
 	}
 
 	// update not allowed for non CRM based smart event.
-	if nameType != model.TYPE_CRM_SALESFORCE && nameType != model.TYPE_CRM_HUBSPOT {
+	if !IsEventNameTypeSmartEvent(nameType) {
 		return nil, http.StatusBadRequest
 	}
 
@@ -708,6 +773,7 @@ func (pg *Postgres) updateCRMSmartEventFilter(projectID uint64, id uint64, nameT
 	}
 
 	if filterExpr != nil && !model.IsValidSmartEventFilterExpr(filterExpr) {
+		logCtx.WithField("filter_exp", *filterExpr).Error("Invalid smart event filter expression.")
 		return nil, http.StatusBadRequest
 	}
 
@@ -720,7 +786,7 @@ func (pg *Postgres) updateCRMSmartEventFilter(projectID uint64, id uint64, nameT
 	}
 
 	if filterExpr != nil {
-		prevEventName, status := pg.GetSmartEventFilterEventNameByID(projectID, id)
+		prevEventName, status := pg.GetSmartEventFilterEventNameByID(projectID, id, eventName.Deleted)
 		if status != http.StatusFound {
 			return nil, http.StatusBadRequest
 		}
@@ -784,9 +850,29 @@ func getCRMSmartEventNameType(source string) string {
 func (pg *Postgres) UpdateCRMSmartEventFilter(projectID uint64, id uint64, eventName *model.EventName,
 	filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
 
+	_, duplicate := pg.checkDuplicateSmartEventFilter(projectID, filterExpr)
+	if duplicate {
+		return nil, http.StatusConflict
+	}
+
 	eventName.Type = getCRMSmartEventNameType(filterExpr.Source)
 
 	return pg.updateCRMSmartEventFilter(projectID, id, eventName.Type, eventName, filterExpr)
+}
+
+// DeleteSmartEventFilter soft delete smart event name with filter expression
+func (pg *Postgres) DeleteSmartEventFilter(projectID uint64, id uint64) (*model.EventName, int) {
+	eventName, status := pg.GetSmartEventFilterEventNameByID(projectID, id, false)
+	if status != http.StatusFound {
+		return nil, http.StatusBadRequest
+	}
+
+	status = DeleteEventName(projectID, eventName.ID, eventName.Type)
+	if status != http.StatusAccepted {
+		return nil, http.StatusInternalServerError
+	}
+
+	return eventName, status
 }
 
 func (pg *Postgres) UpdateFilterEventName(projectId uint64, id uint64, eventName *model.EventName) (*model.EventName, int) {

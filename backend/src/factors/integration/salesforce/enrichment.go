@@ -677,7 +677,7 @@ func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmar
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
-	eventNames, errCode := store.GetStore().GetSmartEventFilterEventNames(projectID)
+	eventNames, errCode := store.GetStore().GetSmartEventFilterEventNames(projectID, false)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Error while GetSmartEventFilterEventNames")
 	}

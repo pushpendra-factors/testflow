@@ -159,7 +159,7 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 // @Param dashboard_unit_id query integer false "Dashboard Unit ID"
 // @Param query body handler.QueryRequestPayload true "Query payload"
 // @Success 200 {string} json "{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}"
-// @Router /{project_id}/query [pos(interface{}, int, string, string, bool)t]
+// @Router /{project_id}/query [post]
 func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 
 	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
