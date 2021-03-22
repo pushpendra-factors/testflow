@@ -5,7 +5,8 @@ import { SVG, Text } from 'factorsComponents';
 
 function GroupSelect({
   groupedProperties, placeholder,
-  optionClick, onClickOutside, extraClass
+  optionClick, onClickOutside, extraClass,
+  allowEmpty=false
 }) {
   const [groupCollapseState, setGroupCollapseState] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,8 +31,39 @@ function GroupSelect({
     setSearchTerm(userInput.currentTarget.value);
   };
 
+  const searchTermExists = (opts) => {
+    let termExists = false;
+
+    opts.forEach((grp) => {
+      grp.values.forEach((val) => {
+        if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
+          termExists = true;
+        }
+      })
+    })
+    return termExists;
+  }
+
+  const renderEmptyOpt = () => {
+    return (<div key={0} className={`fa-select-group-select--content`}>
+      <div className={styles.dropdown__filter_select__option_group_container_sec}>
+        <div className={`fa-select-group-select--options`}
+                        onClick={() => optionClick('', [searchTerm])} >
+                          <div>
+                            <Text level={7} type={'title'} extraClass={'mr-2'}>Select:</Text>
+                          </div> 
+                          <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>'{searchTerm}'</Text>
+                      </div>
+      </div>
+    </div>)
+  }
+
   const renderOptions = (options) => {
     const renderGroupedOptions = [];
+    if(allowEmpty && (options && !searchTermExists(options))) {
+      renderGroupedOptions.push(renderEmptyOpt());
+      return renderGroupedOptions;
+    }
     options.forEach((group, grpIndex) => {
       const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
       renderGroupedOptions.push(
@@ -62,7 +94,7 @@ function GroupSelect({
                               <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>{val[0]}</Text>
                           </div>
                         );
-                      }
+                      } 
                     });
                     return valuesOptions;
                   })()
