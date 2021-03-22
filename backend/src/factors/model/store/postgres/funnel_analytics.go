@@ -73,14 +73,18 @@ func (pg *Postgres) RunFunnelQuery(projectId uint64, query model.Query) (*model.
 // updatedMetaStepTimeInfoHeaders updates meta rows to match the result rows
 func updatedMetaStepTimeInfoHeaders(result *model.QueryResult) {
 
-	groupByKeyIdx := 0
 	// Update the row headers in MetaStepTimeInfo using result original group count
 	for idx := range result.Meta.MetaMetrics {
 		if result.Meta.MetaMetrics[idx].Title == MetaStepTimeInfo {
-			for rowIdx := range result.Meta.MetaMetrics[idx].Rows {
-				result.Meta.MetaMetrics[idx].Rows[rowIdx][groupByKeyIdx] = result.Rows[rowIdx][groupByKeyIdx]
+			for groupByKeyIdx, column := range result.Meta.MetaMetrics[idx].Headers {
+				if strings.HasPrefix(column, model.GroupKeyPrefix) {
+					for rowIdx := range result.Meta.MetaMetrics[idx].Rows {
+						result.Meta.MetaMetrics[idx].Rows[rowIdx][groupByKeyIdx] = result.Rows[rowIdx][groupByKeyIdx]
+					}
+				}
 			}
-			break
+			// Only one meta step time info, hence returning
+			return
 		}
 	}
 }
