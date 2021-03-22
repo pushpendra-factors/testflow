@@ -14,20 +14,7 @@ class TimeUtil:
     def get_timestamp_from_datetime(dt):
         if dt is None:
             return
-
-        dt_year = str(dt.year)
-        if len(dt_year) == 1:
-            dt_year = "0"+dt_year
-
-        dt_month = str(dt.month)
-        if len(dt_month) == 1:
-            dt_month = "0"+dt_month
-
-        dt_day = str(dt.day)
-        if len(dt_day) == 1:
-            dt_day = "0"+dt_day
-
-        return int(dt_year+dt_month+dt_day)
+        return int(dt.strftime('%Y%m%d'))
 
     @staticmethod
     def get_datetime_from_timestamp(timestamp):

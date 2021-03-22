@@ -95,6 +95,7 @@ class MetricsController:
     def publish_job_stats(cls):
         if cls.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
             cls.etl_stats["task_stats"] = cls.compare_load_and_extract()
+
         if cls.etl_stats["status"] == SUCCESS_MESSAGE:
             HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["success"])
         else:

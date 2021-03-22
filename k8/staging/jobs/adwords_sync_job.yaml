@@ -9,6 +9,7 @@ spec:
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
+  backoffLimit: 1
   jobTemplate:
     spec:
       template:

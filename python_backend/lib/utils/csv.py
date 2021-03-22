@@ -4,10 +4,9 @@ import csv
 class CsvUtil:
 
     @staticmethod
-    def csv_to_dict_list(headers, csv_list):
+    def csv_to_dict_list(headers, rows):
         resp_rows = []
 
-        rows = csv.reader(csv_list)
         for row in rows:
             resp = {}
             i = 0

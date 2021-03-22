@@ -72,27 +72,29 @@ class MultipleRequestsFetchJob(BaseJob):
             return
 
     def transform_and_load_task(self, ran_extract):
-        for timestamp in self._extract_load_timestamps:
-            # Extract Phase
-            self.log_status_of_job("load", "started")
-            start_time = datetime.now()
-            rows = self.read_for_load(ran_extract, timestamp)
-            end_time = datetime.now()
-            latency_metric = (end_time - start_time).total_seconds()
-            self.update_extract_phase_metrics(LOAD, REQUEST_COUNT, self._project_id, self._doc_type, 1)
-            self.update_extract_phase_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
+        if self.PROCESS_JOB:
+            for timestamp in self._extract_load_timestamps:
+                # Extract Phase
+                self.log_status_of_job("load", "started")
+                start_time = datetime.now()
+                rows = self.read_for_load(ran_extract, timestamp)
+                end_time = datetime.now()
+                latency_metric = (end_time - start_time).total_seconds()
+                self.update_extract_phase_metrics(LOAD, REQUEST_COUNT, self._project_id, self._doc_type, 1)
+                self.update_extract_phase_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
 
-            # Load Phase
-            start_time = datetime.now()
-            load_response = self.add_records(rows, timestamp)
-            if not load_response.ok:
+                # Load Phase
+                start_time = datetime.now()
+                load_response = self.add_records(rows, timestamp)
+                if load_response is None or not load_response.ok:
+                    self.log_status_of_job("load", "not completed")
+                    return
+
+                end_time = datetime.now()
+                latency_metric = (end_time - start_time).total_seconds()
+                self.update_load_phase_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
+                self.log_status_of_job("load", "completed")
                 return
-
-            end_time = datetime.now()
-            latency_metric = (end_time - start_time).total_seconds()
-            self.update_load_phase_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
-            self.log_status_of_job("load", "completed")
-            return
 
     def extract_entities(self, service, selector):
         more_pages = True

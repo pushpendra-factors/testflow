@@ -3,6 +3,9 @@ import json
 import requests
 import logging as log
 
+from lib.utils.json import JsonUtil
+
+
 class HealthChecksUtil:
     ADWORDS_SYNC_PING_ID = "188cbf7c-0ea1-414b-bf5c-eee47c12a0c8"
 
@@ -11,7 +14,7 @@ class HealthChecksUtil:
         if env != "production":
             return
 
-        message = json.dumps(message, indent=1)
+        message = json.dumps(message, indent=1, default=JsonUtil.serialize_sets)
         log.warning("HealthCheck ping for env %s payload %s", env, message)
         try:
             requests.post("https://hc-ping.com/" + HealthChecksUtil.ADWORDS_SYNC_PING_ID + endpoint,
