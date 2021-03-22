@@ -15,7 +15,7 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: factors-staging-node-pool
+            cloud.google.com/gke-nodepool: staging-node-pool-dataflow
           containers:
           - name: beam-dashboard-caching-job
             image: us.gcr.io/factors-staging/beam-dashboard-caching-job:v0.50-d5b8ae8

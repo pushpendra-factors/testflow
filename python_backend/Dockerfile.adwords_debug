@@ -8,8 +8,8 @@ WORKDIR /usr/local/var/factors
 COPY debug_start.sh requirements.txt ./
 
 RUN apk update && \
-    apk add --no-cache --virtual .build-deps gcc libc-dev libxslt-dev git && \
-    apk add --no-cache libxslt && \
+    apk add --no-cache --virtual .build-deps gcc libc-dev libxslt-dev libffi-dev && \
+    apk add --no-cache libxslt libffi && \
     pip install --no-cache-dir lxml>=3.5.0 && \
     pip install -r requirements.txt && \
     apk del .build-deps

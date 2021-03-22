@@ -14,7 +14,7 @@ class GoogleStorageFile:
         blob = self.bucket.get_blob(file_path)
         if blob is None:
             return None
-        return blob.download_as_string()
+        return blob.download_as_text()
 
     # Overriding the previously present file.
     def write(self, input_string, file_path):

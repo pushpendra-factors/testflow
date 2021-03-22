@@ -1,7 +1,7 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: beam-dashboard-caching-job
+  name: beam-dashboard-caching-job-now
 spec:
   schedule: "0 1/6 * * *" # In UTC. Every 6 hours.
   concurrencyPolicy: Forbid
@@ -15,10 +15,10 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-standard-dataflow
+            cloud.google.com/gke-nodepool: staging-node-pool-dataflow
           containers:
-          - name: beam-dashboard-caching-job
-            image: us.gcr.io/factors-production/beam-dashboard-caching-job:v0.50-d5b8ae8
+          - name: beam-dashboard-caching-job-now
+            image: us.gcr.io/factors-staging/beam-dashboard-caching-job-now:v0.50-d5b8ae8
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -56,9 +56,9 @@ spec:
             - --subnetwork
             - $(BEAM_SUBNETWORK)
             - --max_num_workers
-            - "10"
+            - "4"
             - --project_id
-            - "2"
+            - "*"
             envFrom:
             - configMapRef:
                 name: config-env

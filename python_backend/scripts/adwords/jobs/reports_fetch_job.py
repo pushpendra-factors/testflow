@@ -136,7 +136,8 @@ class ReportsFetch(BaseJob):
 
             transformed_rows = self.transform_entities(rows)
             load_response = self.add_records(transformed_rows, timestamp)
-            if not load_response.ok:
+            if load_response is None or not load_response.ok:
+                self.log_status_of_job("load", "not completed")
                 return
 
             end_time = datetime.now()
