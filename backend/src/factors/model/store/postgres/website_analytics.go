@@ -147,8 +147,8 @@ func (pg *Postgres) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (
 	}
 
 	// Build web analytics queries from dashboard units.
-	var webAnalyticsDashboardID uint64
 	namedQueries := make([]string, 0, 0)
+	webAnalyticsDashboardIDCandidates := make(map[uint64]int64)
 	customGroupQueries := make([]model.WebAnalyticsCustomGroupQuery, 0, 0)
 	for i := range dashboardUnits {
 		dunit := dashboardUnits[i]
@@ -205,12 +205,22 @@ func (pg *Postgres) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (
 				Error("Invalid web analytics query type on dashoard unit")
 			continue
 		}
-		webAnalyticsDashboardID = dunit.DashboardId
+		webAnalyticsDashboardIDCandidates[dunit.DashboardId]++
 	}
 
-	if webAnalyticsDashboardID == 0 {
+	if len(webAnalyticsDashboardIDCandidates) == 0 {
 		// No units found with cl='web'. Website analytics is not enabled for project.
 		return 0, nil, http.StatusNotFound
+	}
+
+	// Get the dashboardID with max web analytics type units.
+	var webAnalyticsDashboardID uint64
+	var maxCount int64
+	for did, count := range webAnalyticsDashboardIDCandidates {
+		if count > maxCount {
+			maxCount = count
+			webAnalyticsDashboardID = did
+		}
 	}
 
 	// Todo: Return all dashboard ids which has web
@@ -1355,7 +1365,7 @@ func (pg *Postgres) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([]
 	}
 
 	var cachePayloads []model.WebAnalyticsCachePayload
-	for _, rangeFunction := range U.WebAnalyticsQueryDateRangePresets {
+	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to := rangeFunction()
 
 		cachePayloads = append(cachePayloads, model.WebAnalyticsCachePayload{
@@ -1392,6 +1402,7 @@ func (pg *Postgres) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnal
 	dashboardID := cachePayload.DashboardID
 	from, to := cachePayload.From, cachePayload.To
 	queries := cachePayload.Queries
+	logCtx := log.WithFields(log.Fields{"did": dashboardID, "pid": projectID, "from": from, "to": to})
 	if !model.ShouldRefreshDashboardUnit(projectID, dashboardID, 0, from, to, true) {
 		return http.StatusOK
 	}
@@ -1403,11 +1414,16 @@ func (pg *Postgres) CacheWebsiteAnalyticsForDateRange(cachePayload model.WebAnal
 		To:                 to,
 	}
 
+	startTime := time.Now().Unix()
 	queryResult, errCode := pg.ExecuteWebAnalyticsQueries(
 		projectID, queriesWithTimeRange)
 	if errCode != http.StatusOK {
 		return http.StatusInternalServerError
 	}
+
+	timeTaken := time.Now().Unix() - startTime
+	timeTakenString := U.SecondsToHMSString(timeTaken)
+	logCtx.WithFields(log.Fields{"TimeTaken": timeTaken, "TimeTakenString": timeTakenString}).Info("Completed website analytics query.")
 
 	model.SetCacheResultForWebAnalyticsDashboard(queryResult, projectID, dashboardID, from, to)
 	return http.StatusOK
