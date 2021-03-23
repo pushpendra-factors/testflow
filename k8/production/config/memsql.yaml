@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-memsql
+  labels:
+    env: production
+    project: factors-production
+data:
+  MEMSQL_HOST: "localhost"
+  MEMSQL_PORT: "3306"
+  MEMSQL_DB: "autometa"

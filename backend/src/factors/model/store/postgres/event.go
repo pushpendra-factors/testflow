@@ -180,10 +180,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 	}
 
 	if(C.IsSortedSetCachingAllowed()){
-		begin = U.TimeNow()
 		cacheRedis.ZincrPersistentBatch(keysToIncrSortedSet...)
-		end = U.TimeNow()
-		logCtx.WithField("TimeTaken", float64(end.Sub(begin).Milliseconds())).Info("ZINCR")
 	}
 	// The following code is to support/facilitate cleanup
 	newEventCount := int64(0)

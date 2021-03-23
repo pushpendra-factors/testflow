@@ -16,23 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// AdwordsDocument ...
-type AdwordsDocument struct {
-	ProjectID         uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
-	CustomerAccountID string          `gorm:"primary_key:true;auto_increment:false" json:"customer_acc_id"`
-	TypeAlias         string          `gorm:"-" json:"type_alias"`
-	Type              int             `gorm:"primary_key:true;auto_increment:false" json:"-"`
-	Timestamp         int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
-	ID                string          `gorm:"primary_key:true;auto_increment:false" json:"id"`
-	CampaignID        int64           `json:"-"`
-	AdGroupID         int64           `json:"-"`
-	AdID              int64           `json:"-"`
-	KeywordID         int64           `json:"-"`
-	Value             *postgres.Jsonb `json:"value"`
-	CreatedAt         time.Time       `json:"created_at"`
-	UpdatedAt         time.Time       `json:"updated_at"`
-}
-
 const (
 	campaignPerformanceReport       = "campaign_performance_report"
 	adGroupPerformanceReport        = "ad_group_performance_report"

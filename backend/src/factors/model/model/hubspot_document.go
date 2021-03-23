@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"factors/util"
 	"strconv"
 	"time"
 
@@ -54,6 +55,40 @@ const (
 	HubspotDocumentTypeNameFormSubmission = "form_submission"
 )
 
+var (
+	hubspotDataTypeDatetime = map[string]bool{
+		"datetime": true,
+		"date":     true,
+	}
+
+	hubspotDataTypeNumerical = map[string]bool{
+		"number": true,
+	}
+
+	hubspotObjectType = map[string]string{
+		HubspotDocumentTypeNameCompany: "companies",
+		HubspotDocumentTypeNameContact: "contacts",
+		HubspotDocumentTypeNameDeal:    "deals",
+	}
+)
+
+// GetHubspotMappedDataType returns mapped factors data type
+func GetHubspotMappedDataType(dataType string) string {
+	if dataType == "" {
+		return ""
+	}
+
+	if _, exists := hubspotDataTypeDatetime[dataType]; exists {
+		return util.PropertyTypeDateTime
+	}
+
+	if _, exists := hubspotDataTypeNumerical[dataType]; exists {
+		return util.PropertyTypeNumerical
+	}
+
+	return util.PropertyTypeUnknown
+}
+
 // ReadHubspotTimestamp returns timestamp in int64 format. Warning - documents use milliseconds
 func ReadHubspotTimestamp(value interface{}) (int64, error) {
 	switch value.(type) {
@@ -96,6 +131,26 @@ func GetHubspotTypeAliasByType(typ int) string {
 		if typ == t {
 			return a
 		}
+	}
+
+	return ""
+}
+
+func GetHubspotAllowedObjects(projectID uint64) *map[string]string {
+	if projectID == 0 {
+		return nil
+	}
+
+	return &hubspotObjectType
+}
+
+func GetHubspotObjectTypeByDocumentType(docType string) string {
+	if docType == "" {
+		return ""
+	}
+
+	if objectType, exist := hubspotObjectType[docType]; exist {
+		return objectType
 	}
 
 	return ""

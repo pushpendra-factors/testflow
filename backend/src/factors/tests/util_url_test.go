@@ -99,3 +99,33 @@ func TestUtilIsBotUserAgent(t *testing.T) {
 	assert.True(t, U.IsBotUserAgent("facebookexternalhit/1.0 (+http://www.facebook.com/externalhit_uatext.php)"))
 	assert.True(t, U.IsBotUserAgent("ia_archiver (+http://www.alexa.com/site/help/webmasters; crawler@alexa.com)"))
 }
+
+func TestRemoveAllInvalidURLEscapeFromURL(t *testing.T) {
+	// 0 invalid escape
+	assert.Equal(
+		t,
+		"http://www.livspace.com/in/magazine/gallery-girls-bedroom-ideas/amp#aoh=16164287572386\u0026csi=0\u0026referrer=https://www.google.com\u0026amp_tf=From",
+		U.UnescapeAllInvalidURLEscapeFromURL("http://www.livspace.com/in/magazine/gallery-girls-bedroom-ideas/amp#aoh=16164287572386\u0026csi=0\u0026referrer=https://www.google.com\u0026amp_tf=From"),
+	)
+
+	// 1 invalid escape
+	assert.Equal(
+		t,
+		"http://www.livspace.com/in/magazine/gallery-girls-bedroom-ideas/amp#aoh=16164287572386\u0026csi=0\u0026referrer=https://www.google.com\u0026amp_tf=From 1$s",
+		U.UnescapeAllInvalidURLEscapeFromURL("http://www.livspace.com/in/magazine/gallery-girls-bedroom-ideas/amp#aoh=16164287572386\u0026csi=0\u0026referrer=https://www.google.com\u0026amp_tf=From %1$s"),
+	)
+
+	// 3 invalid escapes.
+	assert.Equal(
+		t,
+		"http://www.livspace.com/in/magazine/gallery-girls-bedroom-ideas/amp#aoh=16164287572386\u0026csi=0\u0026referrer=https://www.google.com\u0026amp_tf=From 1$s 1$s 1$s",
+		U.UnescapeAllInvalidURLEscapeFromURL("http://www.livspace.com/in/magazine/gallery-girls-bedroom-ideas/amp#aoh=16164287572386\u0026csi=0\u0026referrer=https://www.google.com\u0026amp_tf=From %1$s %1$s %1$s"),
+	)
+
+	// valid escape %3B and invalid escape together.
+	assert.Equal(
+		t,
+		"http://www.livspace.com/in/magazine/gallery-girls-bedroom-ideas/amp#aoh=16164287572386\u0026csi=0\u0026referrer=https://www.google.com\u0026amp_tf=From 1$s %3B",
+		U.UnescapeAllInvalidURLEscapeFromURL("http://www.livspace.com/in/magazine/gallery-girls-bedroom-ideas/amp#aoh=16164287572386\u0026csi=0\u0026referrer=https://www.google.com\u0026amp_tf=From %1$s %3B"),
+	)
+}

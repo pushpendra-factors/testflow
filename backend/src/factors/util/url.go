@@ -5,9 +5,12 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const URI_SLASH = "/"
+const maxInvalidEscapeRemovalLimit = 10
 
 var regex_URI_LAST_SLASH_SUFFIX = regexp.MustCompile("(/.+)(/[^/]+)/?$")
 
@@ -38,11 +41,68 @@ func ParseURLWithoutProtocol(parseURL string) (*url.URL, error) {
 	return url.Parse(fmt.Sprintf("dummy://%s", parseURL))
 }
 
+func getInvalidURLEscapeFromError(err error) string {
+	errorRegex := regexp.MustCompile("invalid URL escape \"(.*?)\"")
+	matches := errorRegex.FindStringSubmatch(err.Error())
+	if len(matches) < 2 {
+		return ""
+	}
+
+	return matches[1]
+}
+
+func hasInvalidURLEscape(parseURL string) (bool, string) {
+	_, err := url.Parse(parseURL)
+	if err == nil {
+		return false, ""
+	}
+
+	return isInvalidURLEscapeError(err), getInvalidURLEscapeFromError(err)
+}
+
+// UnescapeAllInvalidURLEscapeFromURL - Removes invalid escape characters
+// one by one upto max limit.
+func UnescapeAllInvalidURLEscapeFromURL(parseURL string) string {
+	validURL := parseURL
+
+	removedCount := 10
+	for exists, invalidEscape := hasInvalidURLEscape(validURL); exists; {
+		removeEscape := strings.ReplaceAll(invalidEscape, "%", "")
+		validURL = strings.ReplaceAll(validURL, invalidEscape, removeEscape)
+		exists, invalidEscape = hasInvalidURLEscape(validURL)
+
+		// Limit removal of invalid escapes.
+		if exists && removedCount == maxInvalidEscapeRemovalLimit {
+			log.WithField("url", parseURL).
+				Error("Max invalid escape removal reached.")
+			return validURL
+		}
+
+		removedCount++
+	}
+
+	return validURL
+}
+
+func isInvalidURLEscapeError(err error) bool {
+	return strings.Contains(err.Error(), "invalid URL escape")
+}
+
 func ParseURLStable(parseURL string) (*url.URL, error) {
 	if !hasProtocol(parseURL) {
 		return ParseURLWithoutProtocol(parseURL)
 	}
-	return url.Parse(parseURL)
+
+	parsedURL, err := url.Parse(parseURL)
+	if err != nil {
+		if isInvalidURLEscapeError(err) {
+			return url.Parse(UnescapeAllInvalidURLEscapeFromURL(parseURL))
+		}
+
+		return nil, err
+	}
+
+	return parsedURL, err
 }
 
 func TokenizeURI(uri string) []string {

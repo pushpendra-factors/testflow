@@ -98,7 +98,7 @@ func TestPropertyDetails(t *testing.T) {
 	assert.Equal(t, model.TypeMissingConfiguredProperties, propertyType)
 
 	// creating event property without registered event name
-	status := store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false)
+	status := store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false, false)
 	assert.Equal(t, http.StatusBadRequest, status)
 
 	// creating event property with registered event name
@@ -108,32 +108,32 @@ func TestPropertyDetails(t *testing.T) {
 		Type:      model.TYPE_USER_CREATED_EVENT_NAME,
 	})
 	assert.Equal(t, http.StatusCreated, status)
-	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false, false)
 	assert.Equal(t, http.StatusCreated, status)
 	// duplicate configured property
-	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false, false)
 	assert.Equal(t, http.StatusConflict, status)
 
 	/*
 		Configured user property test
 	*/
 
-	status = store.GetStore().CreatePropertyDetails(project.ID, "", dateTimeProperty2, U.PropertyTypeDateTime, true)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dateTimeProperty2, U.PropertyTypeDateTime, true, false)
 	assert.Equal(t, http.StatusCreated, status)
-	status = store.GetStore().CreatePropertyDetails(project.ID, "", dateTimeProperty2, U.PropertyTypeDateTime, true)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dateTimeProperty2, U.PropertyTypeDateTime, true, false)
 	assert.Equal(t, http.StatusConflict, status)
 
 	// numerical property
 	numericalProperty1 := "num_property1"
 	numericalProperty2 := "num_property2"
-	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, numericalProperty1, U.PropertyTypeNumerical, false)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, numericalProperty1, U.PropertyTypeNumerical, false, false)
 	assert.Equal(t, http.StatusCreated, status)
-	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, numericalProperty1, U.PropertyTypeNumerical, false)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, numericalProperty1, U.PropertyTypeNumerical, false, false)
 	assert.Equal(t, http.StatusConflict, status)
 
-	status = store.GetStore().CreatePropertyDetails(project.ID, "", numericalProperty2, U.PropertyTypeNumerical, true)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numericalProperty2, U.PropertyTypeNumerical, true, false)
 	assert.Equal(t, http.StatusCreated, status)
-	status = store.GetStore().CreatePropertyDetails(project.ID, "", numericalProperty2, U.PropertyTypeNumerical, true)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numericalProperty2, U.PropertyTypeNumerical, true, false)
 	assert.Equal(t, http.StatusConflict, status)
 
 	category := store.GetStore().GetPropertyTypeByKeyValue(project.ID, eventName, dateTimeProperty1, 123, false)
@@ -166,4 +166,50 @@ func TestPropertyDetails(t *testing.T) {
 
 	propertyType = model.GetCachePropertiesType(project.ID, eventName, "property2", false)
 	assert.Equal(t, model.TypeMissingConfiguredProperties, propertyType)
+}
+
+func TestOverwritePropertyDetails(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	eventName := "eventName1"
+	dateTimeProperty1 := "dt_property1"
+
+	// creating event property with registered event name
+	_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
+		ProjectId: project.ID,
+		Name:      eventName,
+		Type:      model.TYPE_USER_CREATED_EVENT_NAME,
+	})
+
+	assert.Equal(t, http.StatusCreated, status)
+
+	// create property details with overwrite
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false, true)
+	assert.Equal(t, http.StatusCreated, status)
+	_, propertyDetails := store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty1, false)
+	assert.Equal(t, U.PropertyTypeDateTime, propertyDetails.Type)
+	// overwrite configured property
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeNumerical, false, true)
+	assert.Equal(t, http.StatusAccepted, status)
+	_, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty1, false)
+	assert.Equal(t, U.PropertyTypeNumerical, propertyDetails.Type)
+
+	// delete property details if type is unknown
+	err = store.GetStore().CreateOrDeletePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeUnknown, false, true)
+	assert.Nil(t, err)
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty1, false)
+	assert.Equal(t, http.StatusNotFound, status)
+
+	// use CreateOrDeletePropertyDetails for creating new property details and overwrite test
+	err = store.GetStore().CreateOrDeletePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeDateTime, false, true)
+	assert.Nil(t, err)
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty1, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, U.PropertyTypeDateTime, propertyDetails.Type)
+
+	err = store.GetStore().CreateOrDeletePropertyDetails(project.ID, eventName, dateTimeProperty1, U.PropertyTypeNumerical, false, true)
+	assert.Nil(t, err)
+	status, propertyDetails = store.GetStore().GetPropertyTypeFromDB(project.ID, eventName, dateTimeProperty1, false)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, U.PropertyTypeNumerical, propertyDetails.Type)
 }

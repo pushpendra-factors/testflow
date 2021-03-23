@@ -22,17 +22,26 @@ type salesforceSyncStatus struct {
 }
 
 type salesforceJobStatus struct {
-	SyncStatus   salesforceSyncStatus   `json:"sync_status"`
-	EnrichStatus []IntSalesforce.Status `json:"enrich_status"`
+	SyncStatus           salesforceSyncStatus   `json:"sync_status"`
+	EnrichStatus         []IntSalesforce.Status `json:"enrich_status"`
+	PropertyDetailStatus []IntSalesforce.Status `json:"property_detail_status"`
 }
 
 func main() {
-	env := flag.String("env", "development", "")
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	env := flag.String("env", C.DEVELOPMENT, "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+
 	salesforceAppID := flag.String("salesforce_app_id", "", "")
 	salesforceAppSecret := flag.String("salesforce_app_secret", "", "")
 	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
@@ -77,6 +86,15 @@ func main() {
 			Password: *dbPass,
 			AppName:  taskID,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+			AppName:  taskID,
+		},
+		PrimaryDatastore:    *primaryDatastore,
 		APIDomain:           *apiDomain,
 		SentryDSN:           *sentryDSN,
 		SalesforceAppID:     *salesforceAppID,
@@ -98,7 +116,7 @@ func main() {
 	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
-	err := C.InitDB(config.DBInfo)
+	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"env": *env,
 			"host": *dbHost, "port": *dbPort}).Panic("Failed to initialize DB.")
@@ -114,6 +132,8 @@ func main() {
 	}
 
 	var syncStatus salesforceSyncStatus
+	var propertyDetailSyncStatus []IntSalesforce.Status
+	anyFailure := false
 	for pid, projectSettings := range syncInfo.ProjectSettings {
 		accessToken, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
 		if err != nil {
@@ -125,10 +145,18 @@ func main() {
 		for i := range objectStatus {
 			if objectStatus[i].Status != U.CRM_SYNC_STATUS_SUCCESS {
 				syncStatus.Failures = append(syncStatus.Failures, objectStatus[i])
+				anyFailure = true
 			} else {
 				syncStatus.Success = append(syncStatus.Success, objectStatus[i])
 			}
 		}
+
+		failure, propertyDetailSyncStatus := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, projectSettings.InstanceURL)
+		if failure {
+			anyFailure = true
+		}
+
+		propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailSyncStatus...)
 	}
 
 	projectIDs := strings.Split(*blacklistEnrichmentByProjectID, ",")
@@ -144,12 +172,16 @@ func main() {
 	}
 
 	statusList := make([]IntSalesforce.Status, 0, 0)
+
 	for _, settings := range salesforceEnabledProjects {
 		if _, exist := blackListedProjectIDs[fmt.Sprintf("%d", settings.ProjectID)]; exist {
 			continue
 		}
 
-		status := IntSalesforce.Enrich(settings.ProjectID)
+		status, failure := IntSalesforce.Enrich(settings.ProjectID)
+		if failure {
+			anyFailure = true
+		}
 
 		statusList = append(statusList, status...)
 	}
@@ -157,5 +189,12 @@ func main() {
 	var jobStatus salesforceJobStatus
 	jobStatus.SyncStatus = syncStatus
 	jobStatus.EnrichStatus = statusList
+	jobStatus.PropertyDetailStatus = propertyDetailSyncStatus
+
+	if anyFailure {
+		C.PingHealthcheckForFailure(healthcheckPingID, jobStatus)
+		return
+	}
+
 	C.PingHealthcheckForSuccess(healthcheckPingID, jobStatus)
 }

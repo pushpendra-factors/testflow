@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    layer: appserver-memsql
+    env: production
+    project: factors-production
+  name: appserver-memsql-service
+  namespace: default
+spec:    
+  ports:
+  - nodePort: 31076
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    layer: appserver-memsql
+  sessionAffinity: None
+  type: NodePort

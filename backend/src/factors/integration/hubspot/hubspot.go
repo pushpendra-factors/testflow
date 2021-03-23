@@ -3,6 +3,7 @@ package hubspot
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -72,13 +73,27 @@ type Company struct {
 	Properties map[string]Property `json:"properties"`
 }
 
+// PropertyDetail defination for hubspot properties api
+type PropertyDetail struct {
+	Name      string `json:"name"`
+	Label     string `json:"label"`
+	Type      string `json:"type"`
+	FieldType string `json:"fieldType"`
+}
+
 var syncOrderByType = [...]int{
 	model.HubspotDocumentTypeContact,
 	model.HubspotDocumentTypeCompany,
 	model.HubspotDocumentTypeDeal,
 }
 
-func getContactProperties(document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+var allowedEventNames = []string{
+	U.EVENT_NAME_HUBSPOT_CONTACT_CREATED,
+	U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED,
+	U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
+}
+
+func getContactProperties(projectID uint64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 	if document.Type != model.HubspotDocumentTypeContact {
 		return nil, nil, errors.New("invalid type")
 	}
@@ -111,18 +126,24 @@ func getContactProperties(document *model.HubspotDocument) (*map[string]interfac
 	}
 
 	for pkey, pvalue := range contact.Properties {
-		key := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 			model.HubspotDocumentTypeNameContact, pkey)
+		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, enKey, pvalue.Value)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectID, "property_key": enKey}).WithError(err).Error("Failed to get property value.")
+			continue
+		}
 
 		// give precedence to identity profiles, do not
 		// overwrite same key from forstore.GetStore().
-		if _, exists := enrichedProperties[key]; !exists {
-			enrichedProperties[key] = pvalue.Value
+		if _, exists := enrichedProperties[enKey]; !exists {
+			enrichedProperties[enKey] = value
 		}
 
 		if _, exists := properties[pkey]; !exists {
-			properties[pkey] = pvalue.Value
+			properties[pkey] = value
 		}
+
 	}
 
 	return &enrichedProperties, &properties, nil
@@ -231,10 +252,10 @@ func GetHubspotSmartEventPayload(projectID uint64, eventName, customerUserID, us
 		} else {
 
 			if docType == model.HubspotDocumentTypeContact {
-				_, prevProperties, err = getContactProperties(prevDoc)
+				_, prevProperties, err = getContactProperties(projectID, prevDoc)
 			}
 			if docType == model.HubspotDocumentTypeDeal {
-				_, prevProperties, err = getDealProperties(prevDoc)
+				_, prevProperties, err = getDealProperties(projectID, prevDoc)
 			}
 
 			if err != nil {
@@ -256,9 +277,27 @@ func GetHubspotSmartEventPayload(projectID uint64, eventName, customerUserID, us
 	return &crmSmartEvent, prevProperties, true
 }
 
-func getTimestampFromField(propertyName string, properties *map[string]interface{}) (int64, error) {
-	if timestamp, exists := (*properties)[propertyName]; exists {
-		return model.ReadHubspotTimestamp(timestamp)
+func getTimestampFromField(projectID uint64, propertyName string, properties *map[string]interface{}) (int64, error) {
+	if timestampInt, exists := (*properties)[propertyName]; exists {
+
+		if C.IsEnabledPropertyDetailFromDB() && C.IsEnabledPropertyDetailByProjectID(projectID) {
+			timestampStr := U.GetPropertyValueAsString(timestampInt)
+
+			if len(timestampStr) == 13 {
+				log.WithFields(log.Fields{"property_name": propertyName, "property_value": timestampStr}).Error("Timestamp not in seconds.")
+				timestamp, err := model.ReadHubspotTimestamp(timestampInt)
+				if timestamp > 0 {
+					return timestamp / 1000, err
+				}
+
+				return 0, err
+			}
+
+			return model.ReadHubspotTimestamp(timestampStr)
+		}
+
+		timestamp, err := model.ReadHubspotTimestamp(timestampInt)
+		return getEventTimestamp(timestamp), err
 	}
 
 	return 0, errors.New("field doest not exist")
@@ -301,13 +340,20 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 	if timestampReferenceField == model.TimestampReferenceTypeDocument {
 		smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp) + 1
 	} else {
-		fieldTimestamp, err := getTimestampFromField(timestampReferenceField, currentProperties)
+		fieldTimestamp, err := getTimestampFromField(projectID, timestampReferenceField, currentProperties)
 		if err != nil {
 			logCtx.WithField("timestamp_refrence_field", timestampReferenceField).
 				WithError(err).Errorf("Failed to get timestamp from reference field")
 			smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp) + 1 // use record timestamp if custom timestamp not available
 		} else {
-			smartEventTrackPayload.Timestamp = getEventTimestamp(fieldTimestamp)
+			if fieldTimestamp <= 0 {
+				logCtx.WithField("timestamp_refrence_field", timestampReferenceField).
+					WithError(err).Error("O timestamp from timestamp refrence field.")
+				smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp) + 1
+			} else {
+				smartEventTrackPayload.Timestamp = fieldTimestamp // make sure timestamp in seconds
+			}
+
 		}
 	}
 
@@ -325,11 +371,180 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 	return prevProperties
 }
 
+func GetHubspotPropertiesMeta(objectType string, apiKey string) ([]PropertyDetail, error) {
+	if objectType == "" || apiKey == "" {
+		return nil, errors.New("invalid parameters")
+	}
+
+	url := "https://" + "api.hubapi.com" + "/properties/v1/" + objectType + "/properties?hapikey=" + apiKey
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Timeout: 10 * time.Minute,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		var body interface{}
+		json.NewDecoder(resp.Body).Decode(&body)
+		return nil, fmt.Errorf("error while query data %s ", body)
+	}
+
+	var propertyDetails []PropertyDetail
+	err = json.NewDecoder(resp.Body).Decode(&propertyDetails)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return propertyDetails, nil
+}
+
+// CreateOrGetHubspotEventName makes sure event name exist
+func CreateOrGetHubspotEventName(projectID uint64) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	for i := range allowedEventNames {
+		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
+			ProjectId: projectID,
+			Name:      allowedEventNames[i],
+			Type:      model.TYPE_USER_CREATED_EVENT_NAME,
+		})
+
+		if status != http.StatusFound && status != http.StatusConflict && status != http.StatusCreated {
+			logCtx.Error("Failed to create event name on SyncDatetimeAndNumericalProperties.")
+			return http.StatusInternalServerError
+		}
+
+	}
+
+	return http.StatusOK
+}
+
+func syncHubspotPropertyByType(projectID uint64, doctTypeAlias string, fieldName, fieldType string) error {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doct_type_alias": doctTypeAlias, "field_name": fieldName, "field_type": fieldType})
+
+	if projectID == 0 || doctTypeAlias == "" || fieldName == "" || fieldType == "" {
+		logCtx.Error("Missing required fields.")
+		return errors.New("missing required fields")
+	}
+
+	pType := model.GetHubspotMappedDataType(fieldType)
+
+	enKey := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceHubspot,
+		doctTypeAlias,
+		U.GetPropertyValueAsString(fieldName),
+	)
+
+	if doctTypeAlias == model.HubspotDocumentTypeNameContact || doctTypeAlias == model.HubspotDocumentTypeNameCompany {
+		eventName := U.EVENT_NAME_HUBSPOT_CONTACT_CREATED
+		err := store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, pType, false, true)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).Error("Failed to create event property details.")
+			return errors.New("failed to create created event property details")
+		}
+
+		eventName = U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED
+		err = store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, pType, false, true)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).Error("Failed to create updated event property details.")
+			return errors.New("failed to create updated event property details")
+		}
+
+	} else if doctTypeAlias == model.HubspotDocumentTypeNameDeal {
+		eventName := U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED
+		err := store.GetStore().CreateOrDeletePropertyDetails(projectID, eventName, enKey, pType, false, true)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).Error("Failed to create event property details.")
+			return errors.New("failed to create deal event property details")
+		}
+	}
+
+	err := store.GetStore().CreateOrDeletePropertyDetails(projectID, "", enKey, pType, true, true)
+	if err != nil {
+		logCtx.WithFields(log.Fields{"enriched_property_key": enKey}).WithError(err).Error("Failed to create user property details.")
+		return errors.New("failed to user property details")
+	}
+
+	return nil
+}
+
+// SyncDatetimeAndNumericalProperties sync datetime and numerical properties to the property_details table
+func SyncDatetimeAndNumericalProperties(projectID uint64, apiKey string) (bool, []Status) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	if projectID == 0 || apiKey == "" {
+		logCtx.Error("Missing required field.")
+		return false, nil
+	}
+
+	status := CreateOrGetHubspotEventName(projectID)
+	if status != http.StatusOK {
+		logCtx.Error("Failed to CreateOrGetHubspotEventName.")
+		return true, nil
+	}
+
+	var allStatus []Status
+	anyFailures := false
+	for docType, objectType := range *model.GetHubspotAllowedObjects(projectID) {
+		propertiesMeta, err := GetHubspotPropertiesMeta(objectType, apiKey)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"object_type": objectType}).WithError(err).Error("Failed to sync datetime and numerical properties.")
+			continue
+		}
+
+		var status Status
+		status.ProjectId = projectID
+		status.Type = docType
+		docTypeFailure := false
+		for i := range propertiesMeta {
+			fieldType := U.GetPropertyValueAsString(propertiesMeta[i].Type)
+			if fieldType == "" {
+				logCtx.Error("Failed to get property type field.")
+				docTypeFailure = true
+				continue
+			}
+
+			fieldName := U.GetPropertyValueAsString(propertiesMeta[i].Name)
+			if fieldName == "" {
+				logCtx.Error("Failed to get property name field.")
+				docTypeFailure = true
+				continue
+			}
+
+			if failure := syncHubspotPropertyByType(projectID, docType, fieldName, fieldType); failure != nil {
+				docTypeFailure = true
+			}
+		}
+
+		if docTypeFailure {
+			status.Status = U.CRM_SYNC_STATUS_FAILURES
+			anyFailures = true
+		} else {
+			status.Status = U.CRM_SYNC_STATUS_FAILURES
+		}
+
+		allStatus = append(allStatus, status)
+	}
+
+	return anyFailures, allStatus
+}
+
 func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmartEventNames []HubspotSmartEventName) int {
 	logCtx := log.WithField("project_id",
 		projectID).WithField("document_id", document.ID)
 
-	enProperties, properties, err := getContactProperties(document)
+	enProperties, properties, err := getContactProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properites from hubspot contact.")
 		return http.StatusInternalServerError
@@ -654,7 +869,40 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 	return http.StatusOK
 }
 
-func getDealProperties(document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
+func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}) (interface{}, error) {
+	if value == nil || value == "" {
+		return nil, nil
+	}
+
+	if !C.IsEnabledPropertyDetailFromDB() || !C.IsEnabledPropertyDetailByProjectID(projectID) {
+		return value, nil
+	}
+
+	ptype := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, enKey, nil, false)
+
+	if ptype == U.PropertyTypeDateTime {
+		datetime, err := U.GetPropertyValueAsFloat64(value)
+		if err != nil {
+			return nil, errors.New("failed to get datetime property")
+		}
+
+		return getEventTimestamp(int64(datetime)), nil
+
+	}
+
+	if ptype == U.PropertyTypeNumerical {
+		num, err := U.GetPropertyValueAsFloat64(value)
+		if err != nil {
+			return nil, errors.New("failed to get numerical property")
+		}
+
+		return num, nil
+	}
+
+	return value, nil
+}
+
+func getDealProperties(projectID uint64, document *model.HubspotDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 
 	if document.Type != model.HubspotDocumentTypeDeal {
 		return nil, nil, errors.New("invalid type")
@@ -669,10 +917,17 @@ func getDealProperties(document *model.HubspotDocument) (*map[string]interface{}
 	enProperties := make(map[string]interface{}, 0)
 	properties := make(map[string]interface{})
 	for k, v := range deal.Properties {
-		key := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 			model.HubspotDocumentTypeNameDeal, k)
-		enProperties[key] = v.Value
-		properties[k] = v.Value
+		value, err := getHubspotMappedDataTypeValue(projectID, U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED, enKey, v.Value)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectID, "property_key": enKey}).WithError(err).Error("Failed to get property value.")
+			continue
+		}
+
+		enProperties[enKey] = value
+		properties[k] = value
+
 	}
 
 	return &enProperties, &properties, nil
@@ -693,7 +948,7 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 		return http.StatusInternalServerError
 	}
 
-	enProperties, properties, err := getDealProperties(document)
+	enProperties, properties, err := getDealProperties(projectID, document)
 	if err != nil {
 		logCtx.Error("Failed to get hubspot deal document properties")
 		return http.StatusInternalServerError
@@ -809,12 +1064,13 @@ type Status struct {
 }
 
 // Sync - Syncs hubspot documents in an order of type.
-func Sync(projectID uint64) []Status {
+func Sync(projectID uint64) ([]Status, bool) {
 	logCtx := log.WithField("project_id", projectID)
 
 	statusByProjectAndType := make([]Status, 0, 0)
 	hubspotSmartEventNames := GetHubspotSmartEventNames(projectID)
 
+	anyFailure := false
 	for i := range syncOrderByType {
 		logCtx = logCtx.WithField("type", syncOrderByType[i])
 
@@ -834,9 +1090,10 @@ func Sync(projectID uint64) []Status {
 			status.Status = U.CRM_SYNC_STATUS_SUCCESS
 		} else {
 			status.Status = U.CRM_SYNC_STATUS_FAILURES
+			anyFailure = true
 		}
 		statusByProjectAndType = append(statusByProjectAndType, status)
 	}
 
-	return statusByProjectAndType
+	return statusByProjectAndType, anyFailure
 }

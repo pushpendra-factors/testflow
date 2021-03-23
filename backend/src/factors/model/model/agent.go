@@ -7,7 +7,7 @@ import (
 )
 
 type Agent struct {
-	UUID string `gorm:"primary_key:true;type:varchar(255);default:uuid_generate_v4()" json:"uuid"`
+	UUID string `gorm:"primary_key:true;type:varchar(255)" json:"uuid"`
 
 	FirstName string `gorm:"type:varchar(100)" json:"first_name"`
 	LastName  string `gorm:"type:varchar(100)" json:"last_name"`

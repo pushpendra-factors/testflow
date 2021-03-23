@@ -16,11 +16,18 @@ import (
 func main() {
 	env := flag.String("env", "development", "")
 
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -62,6 +69,15 @@ func main() {
 			Password: *dbPass,
 			AppName:  taskID,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+			AppName:  taskID,
+		},
+		PrimaryDatastore:    *primaryDatastore,
 		RedisHost:           *redisHost,
 		RedisPort:           *redisPort,
 		RedisHostPersistent: *redisHostPersistent,
@@ -72,7 +88,7 @@ func main() {
 
 	C.InitConf(config.Env)
 
-	err := C.InitDB(config.DBInfo)
+	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"env": *env,
 			"host": *dbHost, "port": *dbPort}).Panic("Failed to initialize DB.")
@@ -94,10 +110,38 @@ func main() {
 	}
 
 	statusList := make([]IntHubspot.Status, 0, 0)
+	var propertyDetailSyncStatus []IntHubspot.Status
+	anyFailure := false
 	for _, settings := range hubspotEnabledProjectSettings {
-		status := IntHubspot.Sync(settings.ProjectId)
+		if C.IsEnabledPropertyDetailByProjectID(settings.ProjectId) {
+			log.Info(fmt.Sprintf("Starting sync property details for project %d", settings.ProjectId))
+
+			failure, propertyDetailStatus := IntHubspot.SyncDatetimeAndNumericalProperties(settings.ProjectId, settings.APIKey)
+			propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailStatus...)
+			if failure {
+				anyFailure = true
+			}
+
+			log.Info(fmt.Sprintf("Synced property details for project %d", settings.ProjectId))
+		}
+
+		status, failure := IntHubspot.Sync(settings.ProjectId)
+		if failure {
+			anyFailure = true
+		}
+
 		statusList = append(statusList, status...)
 	}
 
-	C.PingHealthcheckForSuccess(healthcheckPingID, statusList)
+	syncStatus := map[string]interface{}{
+		"document_sync":      statusList,
+		"property_type_sync": propertyDetailSyncStatus,
+	}
+
+	if anyFailure {
+		C.PingHealthcheckForFailure(healthcheckPingID, syncStatus)
+		return
+	}
+
+	C.PingHealthcheckForSuccess(healthcheckPingID, syncStatus)
 }

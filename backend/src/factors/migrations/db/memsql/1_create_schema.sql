@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS agents (
     password varchar(100),
     password_created_at timestamp(6),
     invited_by text,
-    is_deleted bool,
+    is_deleted boolean NOT NULL DEFAULT FALSE,
     last_logged_in_at datetime,
     login_count bigint,
     subscribe_newsletter bool,
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS bigquery_settings (
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
     PRIMARY KEY (project_id, id),
-    UNIQUE KEY (project, bq_project_id)
+    UNIQUE KEY (project_id, bq_project_id)
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
@@ -187,9 +187,8 @@ CREATE TABLE IF NOT EXISTS dashboard_units (
     presentation varchar(5),
     query json,
     query_id bigint,
-    description text,
     settings json,
-    is_deleted boolean,
+    is_deleted boolean NOT NULL DEFAULT FALSE,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
@@ -209,7 +208,7 @@ CREATE TABLE IF NOT EXISTS dashboards (
     units_position json,
     description text,
     type varchar(5),
-    is_deleted boolean,
+    is_deleted boolean NOT NULL DEFAULT FALSE,
     created_at timestamp(6),
     updated_at timestamp(6),
     SHARD KEY (project_id),
@@ -230,9 +229,9 @@ CREATE TABLE IF NOT EXISTS facebook_documents (
     type int,
     timestamp bigint,
     value json,
-    campaign_id bigint,
-    ad_set_id bigint,
-    ad_id bigint,
+    campaign_id text,
+    ad_set_id text,
+    ad_id text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
@@ -368,6 +367,12 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_facebook_agent_uuid text,
     int_facebook_user_id text,
     int_facebook_ad_account text,
+    int_linkedin_ad_account text,
+    int_linkedin_access_token text,
+    int_linkedin_access_token_expiry bigint,
+    int_linkedin_refresh_token text,
+    int_linkedin_refresh_token_expiry bigint,
+    int_linkedin_agent_uuid text,
     archive_enabled boolean NOT NULL DEFAULT FALSE,
     bigquery_enabled boolean NOT NULL DEFAULT FALSE,
     int_salesforce_enabled_agent_uuid text,
@@ -381,6 +386,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     -- Ref (project_id) -> projects(id)
     -- Ref (int_adwords_enabled_agent_uuid) -> agents(uuid)
     -- Ref (int_facebook_agent_uuid) -> agents(uuid)
+    -- Ref (int_linkedin_agent_uuid) -> agents(uuid)
     -- Ref (int_salesforce_enabled_agent_uuid) -> agents(uuid)
 );
 
@@ -395,7 +401,7 @@ CREATE TABLE IF NOT EXISTS projects (
     date_format text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
-    SHARD KEY (id),
+    jobs_metadata json,
     PRIMARY KEY (id),
     KEY (token),
     KEY (private_token)
@@ -484,7 +490,29 @@ CREATE TABLE IF NOT EXISTS reports (
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
     -- Ref (project_id, dashboard_id) -> dashboards(project_id, id)
-)
+);
+
+CREATE TABLE IF NOT EXISTS linkedin_documents (
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    customer_ad_account_id text NOT NULL,
+    type int NOT NULL,
+    timestamp bigint NOT NULL,
+    value json,
+    creative_id text,
+    campaign_group_id text,
+    campaign_id text,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS property_details(
+    project_id bigint NOT NULL,
+    event_name_id bigint null,
+    `key` text  NOT NULL,
+    `type` text  NOT NULL,
+    entity integer  NOT NULL
+);
 
 -- DOWN
 

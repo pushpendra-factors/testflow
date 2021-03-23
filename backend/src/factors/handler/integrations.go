@@ -74,10 +74,12 @@ func IntSegmentHandler(c *gin.Context) {
 	status, response := IntSegment.ReceiveEventWithQueue(token, &event,
 		C.GetSegmentRequestQueueAllowedTokens())
 
-	// send error on StatusInternalServerError (db unavailability and redis error),
-	// for segment to retry.
-	if status == http.StatusInternalServerError {
-		c.AbortWithStatus(status)
+	// send error on StatusInternalServerError.
+	// Possible when error from redis while queuing, if queue is enabled.
+	// Possible on multiple conditions when processing directly.
+	if status == http.StatusInternalServerError || status == http.StatusBadRequest {
+		c.AbortWithStatusJSON(status, response)
+		return
 	}
 
 	// Always send StatusOK for failure on direct processing.

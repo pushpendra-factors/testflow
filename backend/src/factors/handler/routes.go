@@ -24,7 +24,12 @@ const ROUTE_SDK_ADWORDS_ROOT = "/adwords_sdk_service"
 const ROUTE_VERSION_V1 = "/v1"
 
 func InitAppRoutes(r *gin.Engine) {
-	r.GET("/status", func(c *gin.Context) {
+	routePrefix := ""
+	if C.UseMemSQLDatabaseStore() {
+		routePrefix = "/mql"
+	}
+
+	r.GET(routePrefix+"/status", func(c *gin.Context) {
 		resp := map[string]string{
 			"status": "success",
 		}
@@ -37,27 +42,27 @@ func InitAppRoutes(r *gin.Engine) {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	r.POST("/accounts/signup", SignUp)
-	r.POST("/agents/signin", Signin)
-	r.GET("/agents/signout", Signout)
-	r.POST("/agents/forgotpassword", AgentGenerateResetPasswordLinkEmail)
-	r.POST("/agents/setpassword", mid.ValidateAgentSetPasswordRequest(), AgentSetPassword)
-	r.PUT("/agents/updatepassword", mid.SetLoggedInAgent(), UpdateAgentPassword)
-	r.POST("/agents/activate", mid.ValidateAgentActivationRequest(), AgentActivate)
-	r.GET("/agents/billing", mid.SetLoggedInAgent(), GetAgentBillingAccount)
-	r.PUT("/agents/billing", mid.SetLoggedInAgent(), UpdateAgentBillingAccount)
-	r.GET("/agents/info", mid.SetLoggedInAgent(), AgentInfo)
-	r.PUT("/agents/info", mid.SetLoggedInAgent(), UpdateAgentInfo)
+	r.POST(routePrefix+"/accounts/signup", SignUp)
+	r.POST(routePrefix+"/agents/signin", Signin)
+	r.GET(routePrefix+"/agents/signout", Signout)
+	r.POST(routePrefix+"/agents/forgotpassword", AgentGenerateResetPasswordLinkEmail)
+	r.POST(routePrefix+"/agents/setpassword", mid.ValidateAgentSetPasswordRequest(), AgentSetPassword)
+	r.PUT(routePrefix+"/agents/updatepassword", mid.SetLoggedInAgent(), UpdateAgentPassword)
+	r.POST(routePrefix+"/agents/activate", mid.ValidateAgentActivationRequest(), AgentActivate)
+	r.GET(routePrefix+"/agents/billing", mid.SetLoggedInAgent(), GetAgentBillingAccount)
+	r.PUT(routePrefix+"/agents/billing", mid.SetLoggedInAgent(), UpdateAgentBillingAccount)
+	r.GET(routePrefix+"/agents/info", mid.SetLoggedInAgent(), AgentInfo)
+	r.PUT(routePrefix+"/agents/info", mid.SetLoggedInAgent(), UpdateAgentInfo)
 
-	r.POST(ROUTE_PROJECTS_ROOT, mid.SetLoggedInAgent(), CreateProjectHandler)
+	r.POST(routePrefix+ROUTE_PROJECTS_ROOT, mid.SetLoggedInAgent(), CreateProjectHandler)
 
-	r.GET(ROUTE_PROJECTS_ROOT,
+	r.GET(routePrefix+ROUTE_PROJECTS_ROOT,
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		GetProjectsHandler)
 
 	// Auth route group with authentication an authorization middleware.
-	authRouteGroup := r.Group(ROUTE_PROJECTS_ROOT)
+	authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	authRouteGroup.Use(mid.SetLoggedInAgent())
 	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
 	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
@@ -125,7 +130,7 @@ func InitAppRoutes(r *gin.Engine) {
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/v1/agents", V1.GetProjectAgentsHandler)
-	r.GET(ROUTE_PROJECTS_ROOT_V1,
+	r.GET(routePrefix+"/"+ROUTE_PROJECTS_ROOT_V1,
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		V1.GetProjectsHandler)

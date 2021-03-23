@@ -54,7 +54,12 @@ func sendChannelAnalyticsQueryReq(r *gin.Engine, project_id uint64, agent *M.Age
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	url := fmt.Sprintf("http://localhost:8080/projects/%d/v1/channels/query", project_id)
+
+	datastorePrefix := ""
+	if C.UseMemSQLDatabaseStore() {
+		datastorePrefix = "/mql"
+	}
+	url := fmt.Sprintf("http://localhost:8080%s/projects/%d/v1/channels/query", datastorePrefix, project_id)
 	rb := U.NewRequestBuilder(http.MethodPost, url).
 		WithPostParams(channelQueryJSON).WithCookie(&http.Cookie{
 		Name:   C.GetFactorsCookieName(),
@@ -92,7 +97,7 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	campaignID1 := U.RandomNumericString(8)
+	campaignID1 := U.RandomNumericStringNonZeroStart(8)
 	campaignID1Float, _ := strconv.ParseFloat(campaignID1, 64)
 	value := map[string]interface{}{"spend": "100", "clicks": "50", "campaign_id": campaignID1, "impressions": "1000", "campaign_name": "Campaign_1", "account_currency": "USD"}
 	valueJSON, err := U.EncodeToPostgresJsonb(&value)
@@ -160,7 +165,11 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	assert.Equal(t, len(result.Result.Results[0].Headers), 5)
 	assert.Equal(t, len(result.Result.Results[0].Rows), 1)
 	assert.Equal(t, len(result.Result.Results[0].Rows[0]), 5)
-	assert.Equal(t, result.Result.Results[0].Rows[0][0], campaignID1Float)
+	if C.UseMemSQLDatabaseStore() {
+		assert.Equal(t, result.Result.Results[0].Rows[0][0], campaignID1)
+	} else {
+		assert.Equal(t, result.Result.Results[0].Rows[0][0], campaignID1Float)
+	}
 	assert.Equal(t, result.Result.Results[0].Rows[0][1], "Adgroup_1_1")
 	assert.Equal(t, result.Result.Results[0].Rows[0][2], float64(30))
 
@@ -297,13 +306,13 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 			"filters": [2]map[string]interface{}{{"name": "campaign", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "1"}, {"name": "ad_group", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "1"}},
 			"gbt":     "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
-			"filters": [2]map[string]interface{}{{"name": "campaign", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "2"}, {"name": "campaign", "property": "id", "condition": "EQUALS", "logical_operator": "AND", "value": "2"}},
+			"filters": [2]map[string]interface{}{{"name": "campaign", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "2"}, {"name": "campaign", "property": "id", "condition": "equals", "logical_operator": "AND", "value": "2"}},
 			"gbt":     "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
-			"filters": [2]map[string]interface{}{{"name": "campaign", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "2"}, {"name": "campaign", "property": "id", "condition": "EQUALS", "logical_operator": "AND", "value": "2"}},
+			"filters": [2]map[string]interface{}{{"name": "campaign", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "2"}, {"name": "campaign", "property": "id", "condition": "equals", "logical_operator": "AND", "value": "2"}},
 			"gbt":     "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
-			"filters": [2]map[string]interface{}{{"name": "ad_group", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "2"}, {"name": "campaign", "property": "status", "condition": "EQUALS", "logical_operator": "AND", "value": "enabled"}},
+			"filters": [2]map[string]interface{}{{"name": "ad_group", "property": "name", "condition": "contains", "logical_operator": "AND", "value": "2"}, {"name": "campaign", "property": "status", "condition": "equals", "logical_operator": "AND", "value": "enabled"}},
 			"gbt":     "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
@@ -329,7 +338,7 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 			"gbt":      "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
 			"group_by": [1]map[string]interface{}{{"name": "ad_group", "property": "name"}},
-			"filters":  [1]map[string]interface{}{{"name": "campaign", "property": "id", "condition": "EQUALS", "logical_operator": "AND", "value": "1"}},
+			"filters":  [1]map[string]interface{}{{"name": "campaign", "property": "id", "condition": "equals", "logical_operator": "AND", "value": "1"}},
 			"gbt":      "", "fr": 1611964800, "to": 1612310400}}, "cl": "channel_v1"},
 		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
 			"group_by": [2]map[string]interface{}{{"name": "campaign", "property": "id"}, {"name": "ad_group", "property": "name"}},
@@ -371,6 +380,11 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 		[]byte(`{"result":{"result_group":[{"headers":["search_click_share"],"rows":[[0]]}]}}`),
 		[]byte(`{"result":{"result_group":[{"headers":["ad_group_name","search_click_share"],"rows":[["agtest2",0],["agtest3",0],["agtest1",0.1]]}]}}`),
 		[]byte(`{"result":{"result_group":[{"headers":["keyword_quality_score","clicks"],"rows":[[0,307],["0.2",204],["0.1",101]]}]}}`),
+	}
+
+	if C.UseMemSQLDatabaseStore() {
+		successChannelResponse[3] = []byte(`{"result":{"result_group":[{"headers":["clicks","impressions","spend"],"rows":[[204,2004,0]]}]}}`)
+		successChannelResponse[15] = []byte(`{"result":{"result_group":[{"headers":["ad_group_name","search_click_share"],"rows":[["agtest1",0.1],["agtest2",0],["agtest3",0]]}]}}`)
 	}
 
 	for index, channelQuery := range successChannelQueries {
@@ -469,7 +483,8 @@ func TestExecuteChannelQueryHandlerForLinkedin(t *testing.T) {
 	if err := decoder.Decode(&result); err != nil {
 		assert.NotNil(t, nil, err)
 	}
-	expectedResult := resultStruct{
+	var expectedResult resultStruct
+	expectedResult = resultStruct{
 		Result: model.ChannelResultGroupV1{
 			Results: []model.ChannelQueryResultV1{
 				{
@@ -478,6 +493,18 @@ func TestExecuteChannelQueryHandlerForLinkedin(t *testing.T) {
 				},
 			},
 		},
+	}
+	if C.UseMemSQLDatabaseStore() {
+		expectedResult = resultStruct{
+			Result: model.ChannelResultGroupV1{
+				Results: []model.ChannelQueryResultV1{
+					{
+						Headers: []string{"campaign_id", "ad_group_name", "clicks", "impressions", "spend"},
+						Rows:    [][]interface{}{{campaignID1, "Adgroup_1_1", float64(30), float64(600), float64(30)}},
+					},
+				},
+			},
+		}
 	}
 	assert.Equal(t, result, expectedResult)
 
@@ -561,5 +588,22 @@ func TestExecuteChannelQueryHandlerForLinkedin(t *testing.T) {
 			},
 		},
 	}
+	if C.UseMemSQLDatabaseStore() {
+		expectedResult = resultStruct{
+			Result: model.ChannelResultGroupV1{
+				Results: []model.ChannelQueryResultV1{
+					{
+						Headers: []string{"campaign_name", "ad_group_id", "clicks", "impressions", "spend"},
+						Rows: [][]interface{}{
+							{"campaign_group_2", adgroupID2_2, float64(75), float64(500), float64(80)},
+							{"campaign_group_1", adgroupID1_1, float64(30), float64(600), float64(30)},
+							{"campaign_group_2", adgroupID2_1, float64(25), float64(1500), float64(120)},
+							{"campaign_group_1", adgroupID1_2, float64(20), float64(400), float64(70)}},
+					},
+				},
+			},
+		}
+	}
+
 	assert.Equal(t, result3, expectedResult)
 }

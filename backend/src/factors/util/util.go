@@ -115,6 +115,23 @@ func RandomNumericString(n int) string {
 	return string(b)
 }
 
+func RandomNumericStringNonZeroStart(n int) string {
+	rand.Seed(time.Now().UnixNano())
+
+	var letter = []rune("0123456789")
+	var letterNonZero = []rune("123456789")
+
+	b := make([]rune, n)
+	for i := range b {
+		if i == 0 {
+			b[i] = letter[rand.Intn(len(letterNonZero))]
+		} else {
+			b[i] = letter[rand.Intn(len(letter))]
+		}
+	}
+	return string(b)
+}
+
 func RandomLowerAphaNumString(n int) string {
 	rand.Seed(time.Now().UnixNano())
 
