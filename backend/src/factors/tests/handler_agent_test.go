@@ -260,7 +260,8 @@ func TestAPIAgentInvite(t *testing.T) {
 		authData, err := helpers.GetAuthData(td.Agent.Email, td.Agent.UUID, td.Agent.Salt, time.Second*1000)
 		assert.Nil(t, err)
 		w := sendAgentInviteRequest(emailToAdd, model.AGENT, td.Project.ID, authData, 100, r)
-		assert.Equal(t, http.StatusConflict, w.Code)
+		// Agent limit increased for all plans to 10k temporarily.
+		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 
 }

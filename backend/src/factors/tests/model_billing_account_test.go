@@ -104,6 +104,10 @@ func TestGetAgentsByProjectIDs(t *testing.T) {
 	assert.Equal(t, expAgentsUUID, resultAgentsUUID)
 }
 
+/*
+NOTE: TEMPORARILY COMMENTED. IT CREATES 10K AGENTS FOR TESTING FREE PLAN AGENTS LIMITS.
+ENABLE ONLY AFTER DECREASING FREE PLAN'S AGENTS BACK TO 2.
+
 func TestIsNewAgentCreationAllowed(t *testing.T) {
 	td, errCode := SetupTestData()
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -141,6 +145,7 @@ func TestIsNewAgentCreationAllowed(t *testing.T) {
 
 	assert.False(t, allowed)
 }
+*/
 
 func TestGetBillingAccountByProjectID(t *testing.T) {
 	td, errCode := SetupTestData()
