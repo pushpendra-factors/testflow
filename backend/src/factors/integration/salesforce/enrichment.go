@@ -45,33 +45,6 @@ func getUserIDFromLastestProperties(properties []model.UserProperties) string {
 	return properties[latestIndex].UserId
 }
 
-func getSalesforceMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}) (interface{}, error) {
-	if value == nil || value == "" {
-		return nil, nil
-	}
-
-	if !C.IsEnabledPropertyDetailFromDB() || !C.IsEnabledPropertyDetailByProjectID(projectID) {
-		return value, nil
-	}
-
-	ptype := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, enKey, nil, false)
-
-	if ptype == U.PropertyTypeDateTime {
-		return model.GetSalesforceDocumentTimestamp(value)
-	}
-
-	if ptype == U.PropertyTypeNumerical {
-		num, err := U.GetPropertyValueAsFloat64(value)
-		if err != nil {
-			return nil, errors.New("failed to get numerical property")
-		}
-
-		return num, nil
-	}
-
-	return value, nil
-}
-
 // GetSalesforceDocumentProperties return map of enriched properties
 func GetSalesforceDocumentProperties(projectID uint64, document *model.SalesforceDocument) (*map[string]interface{}, *map[string]interface{}, error) {
 	var enProperties map[string]interface{}
@@ -85,26 +58,14 @@ func GetSalesforceDocumentProperties(projectID uint64, document *model.Salesforc
 	enrichedProperties := make(map[string]interface{})
 	properties := make(map[string]interface{})
 
-	eventName := model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
-
 	for key, value := range enProperties {
-		if value == nil || value == "" {
-			continue
-		}
-
 		enKey := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.GetSalesforceAliasByDocType(document.Type), key)
-		enValue, err := getSalesforceMappedDataTypeValue(projectID, eventName, enKey, value)
-		if err != nil {
-			log.WithFields(log.Fields{"project_id": projectID, "property_key": enKey}).WithError(err).Error("Failed to get property value.")
-			continue
-		}
-
-		if _, exists := enrichedProperties[enKey]; !exists {
-			enrichedProperties[enKey] = enValue
+		if _, exists := enProperties[enKey]; !exists {
+			enrichedProperties[enKey] = value
 		}
 
 		if _, exists := properties[key]; !exists {
-			properties[key] = enValue
+			properties[key] = value
 		}
 	}
 
@@ -230,7 +191,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 			payload.UserId = user.ID
 		}
 
-		payload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentCreated)
+		payload.Name = model.GetSalesforceEventNameByAction(document, model.SalesforceDocumentCreated)
 		payload.Timestamp = createdTimestamp
 
 		status, response := SDK.Track(projectID, &payload, true, SDK.SourceSalesforce)
@@ -249,7 +210,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 
 	if document.Action == model.SalesforceDocumentCreated || document.Action == model.SalesforceDocumentUpdated {
 		payload := *trackPayload
-		payload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
+		payload.Name = model.GetSalesforceEventNameByAction(document, model.SalesforceDocumentUpdated)
 
 		if document.Action == model.SalesforceDocumentUpdated {
 
@@ -299,7 +260,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		payload := *trackPayload
 		payload.Timestamp = lastModifiedTimestamp
 		payload.UserId = userID
-		payload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentUpdated)
+		payload.Name = model.GetSalesforceEventNameByAction(document, model.SalesforceDocumentUpdated)
 		status, _ := SDK.Track(projectID, &payload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			return "", "", fmt.Errorf("updated event for different timestamp track failed for doc type %d", document.Type)
@@ -537,7 +498,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 	} else {
 		fieldTimestamp, err := getTimestampFromField(timestampReferenceField, currentProperties)
 		if err == nil {
-			smartEventTrackPayload.Timestamp = fieldTimestamp + 1
+			smartEventTrackPayload.Timestamp = fieldTimestamp
 		} else {
 			logCtx.WithField("timestamp_reference_field", timestampReferenceField).
 				WithError(err).Error("Failed to get timestamp from reference field")
@@ -630,6 +591,7 @@ func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforc
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
+
 	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
@@ -753,20 +715,19 @@ func GetSalesforceSmartEventNames(projectID uint64) *map[string][]SalesforceSmar
 }
 
 // Enrich sync salesforce documents to events
-func Enrich(projectID uint64) ([]Status, bool) {
+func Enrich(projectID uint64) []Status {
 
 	logCtx := log.WithField("project_id", projectID)
 
 	statusByProjectAndType := make([]Status, 0, 0)
 	if projectID == 0 {
-		return statusByProjectAndType, true
+		return statusByProjectAndType
 	}
 
 	allowedDocTypes := model.GetSalesforceDocumentTypeAlias(projectID)
 
 	salesforceSmartEventNames := GetSalesforceSmartEventNames(projectID)
 
-	anyFailure := false
 	for _, docType := range salesforceSyncOrderByType {
 		docTypeAlias := model.GetSalesforceAliasByDocType(docType)
 		if _, exist := allowedDocTypes[docTypeAlias]; !exist {
@@ -794,11 +755,9 @@ func Enrich(projectID uint64) ([]Status, bool) {
 			status.Status = U.CRM_SYNC_STATUS_SUCCESS
 		} else {
 			status.Status = U.CRM_SYNC_STATUS_FAILURES
-			anyFailure = true
 		}
-
 		statusByProjectAndType = append(statusByProjectAndType, status)
 	}
 
-	return statusByProjectAndType, anyFailure
+	return statusByProjectAndType
 }

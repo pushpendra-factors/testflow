@@ -53,6 +53,7 @@ class MetricsController:
         key = "{0}:{1}".format(customer_acc_id, refresh_token)
         cls.permission_error_cache[key] = message
 
+    # Phase - In memory or file.
     @classmethod
     def update_task_stats(cls, task, phase, metric_type, project_id, doc_type, value):
         if task == scripts.adwords.EXTRACT:
@@ -73,8 +74,8 @@ class MetricsController:
             cls.etl_stats["failures"][message].setdefault(doc_type, set())
             cls.etl_stats["failures"][message][doc_type].add(project_id)
         else:
-            cls.etl_stats["success"].setdefault(project_id, [])
-            cls.etl_stats["success"][project_id].append(customer_acc_id)
+            cls.etl_stats["success"].setdefault(project_id, set())
+            cls.etl_stats["success"][project_id].add(customer_acc_id)
 
     @classmethod
     def publish(cls):

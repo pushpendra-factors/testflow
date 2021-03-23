@@ -638,21 +638,11 @@ func (pg *Postgres) GetUserPropertiesByProject(projectID uint64, limit int, last
 		}
 	}
 
-	propertyDetailsStatus, propertyDetails := pg.GetAllPropertyDetailsByProjectID(projectID, "", true)
-
 	for _, v := range userPropertiesSorted {
-		category := v.Category
-
-		if propertyDetailsStatus == http.StatusFound {
-			if pType, exist := (*propertyDetails)[v.Name]; exist {
-				category = pType
-			}
+		if properties[v.Category] == nil {
+			properties[v.Category] = make([]string, 0)
 		}
-
-		if properties[category] == nil {
-			properties[category] = make([]string, 0)
-		}
-		properties[category] = append(properties[v.Category], v.Name)
+		properties[v.Category] = append(properties[v.Category], v.Name)
 	}
 
 	return properties, nil

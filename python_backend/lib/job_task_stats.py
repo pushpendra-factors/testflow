@@ -1,10 +1,11 @@
+import copy
 import json
 import logging as log
 
 from lib.sns_notifier import SnsNotifier
 from lib.utils.json import JsonUtil
-from scripts.adwords import REQUEST_COUNT, RECORDS_COUNT, LATENCY_COUNT, EXTRACT_PHASE, \
-    LOAD_PHASE
+from scripts.adwords import REQUEST_COUNT, RECORDS_COUNT, LATENCY_COUNT, TO_IN_MEMORY, \
+    TO_FILE
 
 
 class JobTaskStats:
@@ -19,8 +20,8 @@ class JobTaskStats:
 
     def __init__(self):
         self.task_stats = {
-            EXTRACT_PHASE: self.STATS.copy(),
-            LOAD_PHASE: self.STATS.copy()
+            TO_IN_MEMORY: copy.deepcopy(self.STATS),
+            TO_FILE: copy.deepcopy(self.STATS)
         }
 
     # Each type of run has reading from source and pushing to destination. Phase represents this.

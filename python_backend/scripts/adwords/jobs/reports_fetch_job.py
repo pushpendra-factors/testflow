@@ -93,8 +93,8 @@ class ReportsFetch(BaseJob):
         if self.REPORT == "CLICK_PERFORMANCE_REPORT":
             report_query = (adwords.ReportQueryBuilder()
                             .Select(*fields)
-                            .From(self.REPORT)                            
-                            .During(during).Build())    
+                            .From(self.REPORT)
+                            .During(during).Build())
         else:
             report_query = (adwords.ReportQueryBuilder()
                         .Select(*fields)
@@ -106,15 +106,15 @@ class ReportsFetch(BaseJob):
             skip_column_header=True, skip_report_summary=True)
         end_time = datetime.now()
         latency_metric = (end_time - start_time).total_seconds()
-        self.update_extract_phase_metrics(EXTRACT, REQUEST_COUNT, self._project_id, self._doc_type, 1)
-        self.update_extract_phase_metrics(EXTRACT, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
+        self.update_to_in_memory_metrics(EXTRACT, REQUEST_COUNT, self._project_id, self._doc_type, 1)
+        self.update_to_in_memory_metrics(EXTRACT, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
 
         # Load Phase
         start_time = datetime.now()
         self.write_after_extract(report)
         end_time = datetime.now()
         latency_metric = (end_time - start_time).total_seconds()
-        self.update_load_phase_metrics(EXTRACT, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
+        self.update_to_file_metrics(EXTRACT, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
         self.log_status_of_job("extract", "completed")
         return
 
@@ -126,8 +126,8 @@ class ReportsFetch(BaseJob):
             rows = self.read_for_load(ran_extract, timestamp)
             end_time = datetime.now()
             latency_metric = (end_time - start_time).total_seconds()
-            self.update_extract_phase_metrics(LOAD, REQUEST_COUNT, self._project_id, self._doc_type, 1)
-            self.update_extract_phase_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
+            self.update_to_in_memory_metrics(LOAD, REQUEST_COUNT, self._project_id, self._doc_type, 1)
+            self.update_to_in_memory_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
 
             # Load Phase
             start_time = datetime.now()
@@ -142,7 +142,7 @@ class ReportsFetch(BaseJob):
 
             end_time = datetime.now()
             latency_metric = (end_time - start_time).total_seconds()
-            self.update_load_phase_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
+            self.update_to_file_metrics(LOAD, LATENCY_COUNT, self._project_id, self._doc_type, latency_metric)
             self.log_status_of_job("load", "completed")
             return
 
@@ -172,8 +172,8 @@ class ReportsFetch(BaseJob):
         for timestamp in self._extract_load_timestamps:
             job_storage = scripts.adwords.CONFIG.ADWORDS_APP.job_storage
             job_storage.write(rows_string, timestamp, self._project_id, self._customer_acc_id, self._doc_type)
-            self.update_load_phase_metrics(EXTRACT, REQUEST_COUNT, self._project_id, self._doc_type, 1)
-            self.update_load_phase_metrics(EXTRACT, RECORDS_COUNT, self._project_id, self._doc_type, len(rows))
+            self.update_to_file_metrics(EXTRACT, REQUEST_COUNT, self._project_id, self._doc_type, 1)
+            self.update_to_file_metrics(EXTRACT, RECORDS_COUNT, self._project_id, self._doc_type, len(rows))
 
     def read_for_load(self, ran_extract, timestamp):
         if ran_extract:
