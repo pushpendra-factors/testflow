@@ -78,7 +78,7 @@ func IntSegmentHandler(c *gin.Context) {
 	// Possible when error from redis while queuing, if queue is enabled.
 	// Possible on multiple conditions when processing directly.
 	if status == http.StatusInternalServerError || status == http.StatusBadRequest {
-		c.AbortWithStatus(status)
+		c.AbortWithStatusJSON(status, response)
 		return
 	}
 

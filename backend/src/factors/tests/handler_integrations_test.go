@@ -64,7 +64,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	// Not enabled.
 	w := ServePostRequestWithHeaders(r, uri, []byte(`{"anonymousId": "ranon_2", "type": "random_type"}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	enable := true
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
@@ -73,7 +73,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	// Empty body.
 	w = ServePostRequestWithHeaders(r, uri, []byte(`{}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code) // status ok with error
+	assert.Equal(t, http.StatusBadRequest, w.Code) // status ok with error
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap map[string]interface{}
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
@@ -84,7 +84,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	// Invalid type.
 	w = ServePostRequestWithHeaders(r, uri, []byte(`{"anonymousId": "ranon_1", "type": "random_type", "timestamp": "2015-02-23T22:28:55.111Z"}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code) // status ok with error
+	assert.Equal(t, http.StatusBadRequest, w.Code) // status ok with error
 	jsonResponse1, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap1 map[string]interface{}
 	json.Unmarshal(jsonResponse1, &jsonResponseMap1)
@@ -97,7 +97,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	// Without both anonymousId and userId
 	w = ServePostRequestWithHeaders(r, uri, []byte(`{"type": "track"}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	// With only anonymousId
 	identifyPayloadWithoutUserId := `
@@ -242,7 +242,7 @@ func TestIntSegmentHandler(t *testing.T) {
 
 	w = ServePostRequestWithHeaders(r, uri, []byte(samplePayloadWithInvalidTimestamp),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 	jsonResponse2, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse2, &jsonResponseMap2)
 	assert.NotNil(t, jsonResponseMap2["error"])
@@ -1715,7 +1715,8 @@ func TestIntSegmentHandlerWithPayloadFromSegmentPlatform(t *testing.T) {
 
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
 			map[string]string{"Authorization": basicAuthToken})
-		assert.Equal(t, http.StatusOK, w.Code)
+		// Event type group is not supported yet.
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
 	t.Run("PlatformTestTrack:UserEnablesIntegrationPayload", func(t *testing.T) {
