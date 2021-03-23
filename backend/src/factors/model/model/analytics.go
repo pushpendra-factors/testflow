@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -565,4 +566,19 @@ func ExpandArrayWithIndividualValues(stmnt string, params []interface{}) (string
 		}
 	}
 	return newStmnt, newParams
+}
+
+func SanitizeStringSumToNumeric(result *QueryResult) {
+	stepIndices := make(map[string]int)
+	for i, header := range result.Headers {
+		if strings.HasPrefix(header, StepPrefix) {
+			stepIndices[header] = i
+		}
+	}
+
+	for i := range result.Rows {
+		for _, j := range stepIndices {
+			result.Rows[i][j] = U.SafeConvertToFloat64(result.Rows[i][j])
+		}
+	}
 }

@@ -34,11 +34,18 @@ func main() {
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "Bucket name for production")
 	localDiskTmpDirFlag := flag.String("tmp_dir", "/usr/local/var/factors/local_disk/tmp", "Local directory path for putting tmp files.")
 
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	flag.Parse()
 	taskID := "Script#JourneyMiningPOC"
@@ -68,11 +75,21 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  taskID,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+			AppName:  taskID,
+		},
+		PrimaryDatastore: *primaryDatastore,
 	}
 
 	C.InitConf(config.Env)
-	err := C.InitDB(config.DBInfo)
+	err := C.InitDB(*config)
 	if err != nil {
 		logCtx.WithError(err).Fatal("Failed to initialize DB")
 	}

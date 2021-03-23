@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
+	emoji "github.com/tmdvs/Go-Emoji-Utils"
 )
 
 // DBReadRows Creates [][]interface{} from sql result rows.
@@ -199,4 +202,32 @@ func IsPostgresUniqueIndexViolationError(indexName string, err error) bool {
 
 func IsPostgresUnsupportedUnicodeError(err error) bool {
 	return strings.Contains(err.Error(), "unsupported Unicode escape sequence")
+}
+
+// GormCleanupCallback Custom GORM Plugin for cleaning up field values.
+func GormCleanupCallback(scope *gorm.Scope) {
+	for _, field := range scope.Fields() {
+		switch field.Field.Type().String() {
+		case "string":
+			fieldValue := field.Field.Interface().(string)
+			err := field.Set(sanitizeStringValue(fieldValue))
+			if err != nil {
+				log.WithError(err).Error("Failed to cleanup string field value.")
+				return
+			}
+		case "postgres.Jsonb":
+			fieldValue := field.Field.Interface().(postgres.Jsonb)
+			jsonAsString := string(fieldValue.RawMessage)
+			fieldValue.RawMessage = []byte(sanitizeStringValue(jsonAsString))
+			err := field.Set(fieldValue)
+			if err != nil {
+				log.WithError(err).Error("Failed to cleanup postgres jsonb field value.")
+				return
+			}
+		}
+	}
+}
+
+func sanitizeStringValue(s string) string {
+	return emoji.RemoveAll(s)
 }

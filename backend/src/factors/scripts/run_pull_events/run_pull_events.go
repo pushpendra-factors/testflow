@@ -26,18 +26,25 @@ const (
 )
 
 func main() {
-	env := flag.String("env", "development", "")
+	env := flag.String("env", C.DEVELOPMENT, "")
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory.")
 	endTimeFlag := flag.Int64("end_time", time.Now().Unix(), "Pull events, interval end timestamp. defaults to current timestamp. Format is unix timestamp.")
 	modelTypeFlag := flag.String("model_type", "monthly", "Type of model for which to pull events, can be weekly or monthly. defaults to monthly.")
 	startTimeFlag := flag.Int64("start_time", 0, "Pull events, interval start timestamp. Format is unix timestamp.")
 
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
 
@@ -52,8 +59,9 @@ func main() {
 
 	defer util.NotifyOnPanic("Task#PullEvents", *env)
 
+	appName := "pull_events_job"
 	config := &C.Configuration{
-		AppName: "pull_events_job",
+		AppName: appName,
 		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
@@ -62,11 +70,20 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+			AppName:  appName,
+		},
+		PrimaryDatastore: *primaryDatastore,
 	}
 
 	C.InitConf(config.Env)
 	// Initialize configs and connections and close with defer.
-	err := C.InitDB(config.DBInfo)
+	err := C.InitDB(*config)
 	if err != nil {
 		log.Fatal("Failed to pull events. Init failed.")
 	}

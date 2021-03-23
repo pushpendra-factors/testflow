@@ -21,11 +21,19 @@ func main() {
 	numRoutinesForWebAnalyticsFlag := flag.Int("num_routines_for_web_analytics", 1,
 		"No.of routines to use for web analytics dashboard caching.")
 
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	onlyWebAnalytics := flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
 
@@ -63,13 +71,22 @@ func main() {
 			Password: *dbPass,
 			AppName:  taskID,
 		},
-		RedisHost: *redisHost,
-		RedisPort: *redisPort,
-		SentryDSN: *sentryDSN,
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+			AppName:  taskID,
+		},
+		PrimaryDatastore: *primaryDatastore,
+		RedisHost:        *redisHost,
+		RedisPort:        *redisPort,
+		SentryDSN:        *sentryDSN,
 	}
 	C.InitConf(config.Env)
 
-	err := C.InitDB(config.DBInfo)
+	err := C.InitDB(*config)
 	if err != nil {
 		logCtx.WithError(err).Panic("Failed to initialize DB")
 	}

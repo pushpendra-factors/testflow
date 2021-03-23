@@ -14,7 +14,7 @@ import (
 
 type Event struct {
 	// Composite primary key with project_id and uuid.
-	ID              string  `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
+	ID              string  `gorm:"primary_key:true;type:uuid" json:"id"`
 	CustomerEventId *string `json:"customer_event_id"`
 
 	// Below are the foreign key constraints added in creation script.

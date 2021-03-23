@@ -37,13 +37,20 @@ func getIds(str, delimiter string) ([]uint64, error) {
 // go run run_create_reports.go --env=development --build_for_projects=1,2,3,4  --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --aws_region=us-east-1 --aws_key=dummy --aws_secret=dummy --mail_reports=false
 func main() {
 
-	env := flag.String("env", "development", "")
+	env := flag.String("env", C.DEVELOPMENT, "")
 
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	awsRegion := flag.String("aws_region", "us-east-1", "")
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
@@ -87,8 +94,9 @@ func main() {
 		panic(err)
 	}
 
+	appName := "create_reports_job"
 	config := &C.Configuration{
-		AppName: "create_reports_job",
+		AppName: appName,
 		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
@@ -97,13 +105,22 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		EmailSender: "support@factors.ai",
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+			AppName:  appName,
+		},
+		PrimaryDatastore: *primaryDatastore,
+		EmailSender:      "support@factors.ai",
 	}
 
 	C.InitConf(config.Env)
 	C.InitSenderEmail(config.EmailSender)
 
-	err = C.InitDB(config.DBInfo)
+	err = C.InitDB(*config)
 	if err != nil {
 		log.Fatal("Failed to pull events. Init failed.")
 	}

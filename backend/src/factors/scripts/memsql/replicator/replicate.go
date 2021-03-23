@@ -74,15 +74,22 @@ var (
 )
 
 func main() {
-	env := flag.String("env", "development", "")
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	env := flag.String("env", C.DEVELOPMENT, "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLDSN := flag.String(
 		"memsql_dsn",
-		"root:dbfactors123@tcp(localhost:3306)/factors?charset=utf8mb4&parseTime=True&loc=Local",
+		fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			*memSQLUser, *memSQLPass, *memSQLHost, *memSQLPort, *memSQLName),
 		"",
 	)
 
@@ -130,7 +137,7 @@ func main() {
 	}
 	C.InitConf(config.Env)
 
-	err := C.InitDB(config.DBInfo)
+	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize db in add session.")
 	}

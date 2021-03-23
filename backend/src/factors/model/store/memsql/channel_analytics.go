@@ -1,0 +1,535 @@
+package memsql
+
+import (
+	C "factors/config"
+	"factors/model/model"
+	U "factors/util"
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	CAColumnImpressions                    = "impressions"
+	CAColumnClicks                         = "clicks"
+	CAColumnTotalCost                      = "total_cost"
+	CAColumnConversions                    = "conversions"
+	CAColumnAllConversions                 = "all_conversions"
+	CAColumnCostPerClick                   = "cost_per_click"
+	CAColumnConversionRate                 = "conversion_rate"
+	CAColumnCostPerConversion              = "cost_per_conversion"
+	CAColumnFrequency                      = "frequency"
+	CAColumnReach                          = "reach"
+	CAColumnInlinePostEngagement           = "inline_post_engagement"
+	CAColumnUniqueClicks                   = "unique_clicks"
+	CAColumnUniqueImpressions              = "approximateUniqueImpressions"
+	CAColumnName                           = "name"
+	CAColumnPlatform                       = "platform"
+	CAFilterCampaign                       = "campaign"
+	CAFilterAdGroup                        = "ad_group"
+	CAFilterAd                             = "ad"
+	CAFilterKeyword                        = "keyword"
+	CAFilterQuery                          = "query"
+	CAFilterAdset                          = "adset"
+	CAChannelGoogleAds                     = "google_ads"
+	CAChannelFacebookAds                   = "facebook_ads"
+	CAChannelLinkedinAds                   = "linkedin_ads"
+	CAAllChannelAds                        = "all_ads"
+	CAColumnValueAll                       = "all"
+	CAChannelGroupKey                      = "group_key"
+	innerJoinClause                        = " INNER JOIN "
+	channeAnalyticsLimit                   = " LIMIT 2500 "
+	source                                 = "source"
+	CAColumnLikes                          = "likes"
+	CAColumnFollows                        = "follows"
+	CAColumnConversionValueInLocalCurrency = "conversion_value_in_local_currency"
+	CAColumnTotalEngagement                = "total_engagements"
+	CAFilterCampaignGroup                  = "campaign_group"
+	CAFilterCreactive                      = "creative"
+	dateTruncateString                     = "date_trunc('%s', CONVERT_TZ(TO_DATE(%s, 'YYYYMMDD') '%s'))"
+	channelTimestamp                       = "timestamp"
+)
+
+var CAChannels = []string{
+	CAChannelGoogleAds,
+	CAChannelFacebookAds,
+	CAChannelLinkedinAds,
+	CAAllChannelAds,
+}
+
+var channelMetricsToOperation = map[string]string{
+	"impressions": "sum",
+	"clicks":      "sum",
+	"spend":       "sum",
+	"conversion":  "sum",
+}
+
+// CAFilters ...
+var CAFilters = []string{
+	CAFilterCampaign,
+	CAFilterAdGroup,
+	CAFilterAd,
+	CAFilterKeyword,
+	CAFilterQuery,
+	CAFilterAdset,
+	CAFilterCampaignGroup,
+	CAFilterCreactive,
+}
+
+// TODO: Move and fetch it from respective channels - allChannels, adwords etc.. because this is error prone.
+var selectableMetricsForAllChannels = []string{"impressions", "clicks", "spend"}
+var objectsForAllChannels = []string{CAFilterCampaign, CAFilterAdGroup}
+
+// PropertiesAndRelated - TODO Kark v1
+type PropertiesAndRelated struct {
+	typeOfProperty string // can be categorical or numerical
+}
+
+var allChannelsPropertyToRelated = map[string]PropertiesAndRelated{
+	"name": PropertiesAndRelated{
+		typeOfProperty: U.PropertyTypeCategorical,
+	},
+	"id": PropertiesAndRelated{
+		typeOfProperty: U.PropertyTypeCategorical,
+	},
+}
+
+// GetChannelConfig - @TODO Kark v1
+func (store *MemSQL) GetChannelConfig(channel string, reqID string) (*model.ChannelConfigResult, int) {
+	if !(isValidChannel(channel)) {
+		return &model.ChannelConfigResult{}, http.StatusBadRequest
+	}
+
+	var result *model.ChannelConfigResult
+	switch channel {
+	case CAAllChannelAds:
+		result = buildAllChannelConfig()
+	case CAChannelFacebookAds:
+		result = buildFbChannelConfig()
+	case CAChannelGoogleAds:
+		result = buildAdwordsChannelConfig()
+	case CAChannelLinkedinAds:
+		result = buildLinkedinChannelConfig()
+	}
+	return result, http.StatusOK
+}
+
+// @TODO Kark v0, v1
+func isValidFilterKey(filter string) bool {
+	for _, f := range CAFilters {
+		if filter == f {
+			return true
+		}
+	}
+
+	return false
+}
+
+// @TODO Kark v1
+func isValidChannel(channel string) bool {
+	for _, c := range CAChannels {
+		if channel == c {
+			return true
+		}
+	}
+
+	return false
+}
+
+// @TODO Kark v1
+func buildAllChannelConfig() *model.ChannelConfigResult {
+	properties := buildProperties(allChannelsPropertyToRelated)
+	objectsAndProperties := buildObjectsAndProperties(properties, objectsForAllChannels)
+
+	return &model.ChannelConfigResult{
+		SelectMetrics:        selectableMetricsForAllChannels,
+		ObjectsAndProperties: objectsAndProperties,
+	}
+}
+
+// @TODO Kark v1
+func buildObjectsAndProperties(properties []model.ChannelProperty,
+	filterObjectNames []string) []model.ChannelObjectAndProperties {
+
+	var objectsAndProperties []model.ChannelObjectAndProperties
+	for _, filterObjectName := range filterObjectNames {
+		var objectAndProperties model.ChannelObjectAndProperties
+		objectAndProperties.Name = filterObjectName
+		objectAndProperties.Properties = properties
+		objectsAndProperties = append(objectsAndProperties, objectAndProperties)
+	}
+	return objectsAndProperties
+}
+
+// @TODO Kark v1
+func buildProperties(propertiesAndRelated map[string]PropertiesAndRelated) []model.ChannelProperty {
+	var properties []model.ChannelProperty
+	for propertyName, propertyRelated := range propertiesAndRelated {
+		var property model.ChannelProperty
+		property.Name = propertyName
+		property.Type = propertyRelated.typeOfProperty
+		properties = append(properties, property)
+	}
+	return properties
+}
+
+// GetChannelFilterValuesV1 - TODO: Define the role of classes and encapsulation correctly.
+// Should request params to correct types be converted here - QueryAggregator responsibility?
+// Adwords - Keywords will fail currently.
+// @TODO Kark v1
+func (store *MemSQL) GetChannelFilterValuesV1(projectID uint64, channel, filterObject,
+	filterProperty string, reqID string) (model.ChannelFilterValues, int) {
+
+	var channelFilterValues model.ChannelFilterValues
+	if !isValidChannel(channel) || !isValidFilterKey(filterObject) {
+		return channelFilterValues, http.StatusBadRequest
+	}
+
+	var filterValues []interface{}
+	var errCode int
+	switch channel {
+	case CAAllChannelAds:
+		filterValues, errCode = store.GetAllChannelFilterValues(projectID, filterObject, filterProperty, reqID)
+	case CAChannelFacebookAds:
+		filterValues, errCode = store.GetFacebookFilterValues(projectID, filterObject, filterProperty, reqID)
+	case CAChannelGoogleAds:
+		filterValues, errCode = store.GetAdwordsFilterValues(projectID, filterObject, filterProperty, reqID)
+	case CAChannelLinkedinAds:
+		filterValues, errCode = store.GetLinkedinFilterValues(projectID, filterObject, filterProperty, reqID)
+	}
+
+	if errCode != http.StatusFound {
+		return channelFilterValues, http.StatusInternalServerError
+	}
+	channelFilterValues.FilterValues = filterValues
+
+	return channelFilterValues, http.StatusFound
+}
+
+// GetAllChannelFilterValues - @Kark TODO v1
+func (store *MemSQL) GetAllChannelFilterValues(projectID uint64, filterObject, filterProperty string, reqID string) ([]interface{}, int) {
+	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	adwordsSQL, adwordsParams, adwordsErr := store.GetAdwordsSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
+	facebookSQL, facebookParams, facebookErr := store.GetFacebookSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
+	linkedinSQL, linkedinParams, linkedinErr := store.GetLinkedinSQLQueryAndParametersForFilterValues(projectID, filterObject, filterProperty, reqID)
+
+	if adwordsErr != http.StatusFound {
+		return []interface{}{}, adwordsErr
+	}
+	if facebookErr != http.StatusFound {
+		return []interface{}{}, facebookErr
+	}
+	if linkedinErr != http.StatusFound {
+		return []interface{}{}, linkedinErr
+	}
+
+	unionQuery := "SELECT filter_value from ( " + adwordsSQL + " UNION " + facebookSQL + " UNION " + linkedinSQL + " ) all_ads LIMIT 5000"
+	unionParams := append(adwordsParams, facebookParams...)
+	unionParams = append(unionParams, linkedinParams...)
+	_, resultRows, _ := store.ExecuteSQL(unionQuery, unionParams, logCtx)
+
+	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
+}
+
+// RunChannelGroupQuery - @TODO Kark v1
+func (store *MemSQL) RunChannelGroupQuery(projectID uint64, queriesOriginal []model.ChannelQueryV1, reqID string) (model.ChannelResultGroupV1, int) {
+	queries := make([]model.ChannelQueryV1, 0, 0)
+	U.DeepCopy(&queriesOriginal, &queries)
+
+	var resultGroup model.ChannelResultGroupV1
+	resultGroup.Results = make([]model.ChannelQueryResultV1, len(queries))
+	var waitGroup sync.WaitGroup
+	count := 0
+	waitGroup.Add(U.MinInt(len(queries), AllowedGoroutines))
+	for index, query := range queries {
+		count++
+		go store.runSingleChannelQuery(projectID, query, &resultGroup, index, &waitGroup, reqID)
+		if count%AllowedGoroutines == 0 {
+			waitGroup.Wait()
+			waitGroup.Add(U.MinInt(len(queries)-count, AllowedGoroutines))
+		}
+	}
+	waitGroup.Wait()
+	return resultGroup, http.StatusOK
+}
+
+// @Kark TODO v1
+// TODO Handling errorcase.
+func (store *MemSQL) runSingleChannelQuery(projectID uint64, query model.ChannelQueryV1,
+	resultHolder *model.ChannelResultGroupV1, index int, waitGroup *sync.WaitGroup, reqID string) {
+
+	environment := C.GetConfig().Env
+	defer waitGroup.Done()
+	defer U.NotifyOnPanicWithError(environment, "app_server")
+	result, _ := store.ExecuteChannelQueryV1(projectID, &query, reqID)
+	(*resultHolder).Results[index] = *result
+}
+
+// ExecuteChannelQueryV1 - @Kark TODO v1
+// TODO error handling.
+func (store *MemSQL) ExecuteChannelQueryV1(projectID uint64, query *model.ChannelQueryV1,
+	reqID string) (*model.ChannelQueryResultV1, int) {
+
+	logCtx := log.WithField("req_id", reqID)
+	queryResult := &model.ChannelQueryResultV1{}
+	var columns []string
+	var resultMetrics [][]interface{}
+	status := http.StatusOK
+	var err error
+	if !(isValidChannel(query.Channel)) {
+		return queryResult, http.StatusBadRequest
+	}
+	switch query.Channel {
+	case CAAllChannelAds:
+		columns, resultMetrics, err = store.executeAllChannelsQueryV1(projectID, query, reqID)
+	case CAChannelFacebookAds:
+		columns, resultMetrics, err = store.ExecuteFacebookChannelQueryV1(projectID, query, reqID)
+	case CAChannelGoogleAds:
+		columns, resultMetrics, err = store.ExecuteAdwordsChannelQueryV1(projectID, query, reqID)
+	case CAChannelLinkedinAds:
+		columns, resultMetrics, err = store.ExecuteLinkedinChannelQueryV1(projectID, query, reqID)
+	}
+	if err != nil {
+		logCtx.Warn(query)
+		logCtx.WithError(err).Error("Failed in channel analytics with following error: ", err)
+		status = http.StatusBadRequest
+	}
+	resultMetrics = U.ConvertInternalToExternal(resultMetrics)
+	queryResult.Headers = columns
+	queryResult.Rows = resultMetrics
+
+	return queryResult, status
+}
+
+// This function relies on all the columns in all tables to be in same order.
+// Case 1: When there is no breakdown, there is just metrics being recalculated.
+// Case 2: When there is breakdown by date, there is regrouping by date.
+// Case 3: When there is breakdown by source and group.property, there is no requirement of regrouping in all channel.
+func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.ChannelQueryV1,
+	reqID string) ([]string, [][]interface{}, error) {
+
+	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
+	var unionQuery string
+	var unionParams []interface{}
+	var selectMetrics, columns []string
+
+	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
+		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
+		if err != nil {
+			return make([]string, 0, 0), [][]interface{}{}, err
+		}
+		for _, metric := range adwordsMetrics {
+			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
+			selectMetrics = append(selectMetrics, value)
+		}
+		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s UNION %s ) all_ads ORDER BY %s %s", joinWithComma(selectMetrics...),
+			adwordsSQL, facebookSQL, linkedinSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
+		unionParams = append(adwordsParams, facebookParams...)
+		unionParams = append(unionParams, linkedinParams...)
+		columns = append(adwordsSelectKeys, adwordsMetrics...)
+	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
+		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
+		if err != nil {
+			return make([]string, 0, 0), [][]interface{}{}, err
+		}
+		selectMetrics = append(selectMetrics, model.AliasDateTime)
+		for _, metric := range adwordsMetrics {
+			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
+			selectMetrics = append(selectMetrics, value)
+		}
+		unionQuery = fmt.Sprintf("SELECT %s FROM ( %s UNION %s UNION %s ) all_ads GROUP BY %s ORDER BY %s %s", joinWithComma(selectMetrics...), adwordsSQL, facebookSQL, linkedinSQL,
+			model.AliasDateTime, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
+		unionParams = append(adwordsParams, facebookParams...)
+		unionParams = append(unionParams, linkedinParams...)
+		columns = append(adwordsSelectKeys, adwordsMetrics...)
+	} else {
+		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
+		if err != nil {
+			return make([]string, 0, 0), [][]interface{}{}, err
+		}
+		unionQuery = fmt.Sprintf("SELECT * FROM ( %s UNION %s UNION %s ) all_ads ORDER BY %s %s;", adwordsSQL, facebookSQL, linkedinSQL, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
+		unionParams = append(adwordsParams, facebookParams...)
+		unionParams = append(unionParams, linkedinParams...)
+		columns = append(adwordsSelectKeys, adwordsMetrics...)
+	}
+	_, resultMetrics, err := store.ExecuteSQL(unionQuery, unionParams, logCtx)
+	return columns, resultMetrics, err
+}
+
+func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, error) {
+	adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := store.GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
+	facebookSQL, facebookParams, _, _, facebookErr := store.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
+	linkedinSQL, linkedinParams, _, _, linkedinErr := store.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource)
+
+	if adwordsErr != nil {
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, adwordsErr
+	}
+	if facebookErr != nil {
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, facebookErr
+	}
+	if linkedinErr != nil {
+		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, linkedinErr
+	}
+	adwordsSQL = fmt.Sprintf("( %s )", adwordsSQL[:len(adwordsSQL)-2])
+	facebookSQL = fmt.Sprintf("( %s )", facebookSQL[:len(facebookSQL)-2])
+	linkedinSQL = fmt.Sprintf("( %s )", linkedinSQL[:len(linkedinSQL)-2])
+
+	return adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, nil
+}
+
+// GetChannelFilterValues - @Kark TODO v0
+func (store *MemSQL) GetChannelFilterValues(projectID uint64, channel, filter string) ([]string, int) {
+	if !isValidChannel(channel) || !isValidFilterKey(filter) {
+		return []string{}, http.StatusBadRequest
+	}
+
+	// supports only adwords now.
+	docType, err := GetAdwordsDocumentTypeForFilterKey(filter)
+	if err != nil {
+		return []string{}, http.StatusInternalServerError
+	}
+
+	filterValues, errCode := store.GetAdwordsFilterValuesByType(projectID, docType)
+	if errCode != http.StatusFound {
+		return []string{}, http.StatusInternalServerError
+	}
+
+	return filterValues, http.StatusFound
+}
+
+// ExecuteChannelQuery - @Kark TODO v0
+func (store *MemSQL) ExecuteChannelQuery(projectID uint64,
+	queryOriginal *model.ChannelQuery) (*model.ChannelQueryResult, int) {
+
+	var query *model.ChannelQuery
+	U.DeepCopy(queryOriginal, &query)
+
+	if !isValidChannel(query.Channel) || !isValidFilterKey(query.FilterKey) ||
+		query.From == 0 || query.To == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	if query.Channel == "google_ads" {
+		result, errCode := store.ExecuteAdwordsChannelQuery(projectID, query)
+		if errCode != http.StatusOK {
+			log.WithField("project_id", projectID).Error("Failed to execute adwords channel query.")
+			return nil, http.StatusInternalServerError
+		}
+		return result, http.StatusOK
+	}
+	if query.Channel == "facebook_ads" {
+		result, errCode := store.ExecuteFacebookChannelQuery(projectID, query)
+		if errCode != http.StatusOK {
+			log.WithField("project_id", projectID).Error("Failed to execute facebook channel query.")
+			return nil, http.StatusInternalServerError
+		}
+		return result, http.StatusOK
+	}
+	if query.Channel == "linkedin_ads" {
+		result, errCode := store.ExecuteLinkedinChannelQuery(projectID, query)
+		if errCode != http.StatusOK {
+			log.WithField("project_id", projectID).Error("Failed to execute linkedin channel query.")
+			return nil, http.StatusInternalServerError
+		}
+		return result, http.StatusOK
+	}
+	return nil, http.StatusBadRequest
+}
+
+// Common Methods for facebook and adwords starts here.
+
+// Convert2DArrayTo1DArray ...
+// @Kark TODO v1
+func Convert2DArrayTo1DArray(inputArray [][]interface{}) []interface{} {
+	result := make([]interface{}, 0, 0)
+	for _, row := range inputArray {
+		result = append(result, row...)
+	}
+	return result
+}
+
+// format yyyymmdd
+func ChangeUnixTimestampToDate(timestamp int64) int64 {
+	time := time.Unix(timestamp, 0)
+	date, _ := strconv.ParseInt(time.Format("20060102"), 10, 64)
+	return date
+}
+
+// @Kark TODO v1
+func hasAllIDsOnlyInGroupBy(query *model.ChannelQueryV1) bool {
+	for _, groupBy := range query.GroupBy {
+		if !(strings.Contains(groupBy.Property, "id") || strings.Contains(groupBy.Property, "ID")) {
+			return false
+		}
+	}
+	return true
+}
+
+// @Kark TODO v1
+func appendSelectTimestampIfRequiredForChannels(stmnt string, groupByTimestamp string, timezone string) string {
+	if groupByTimestamp == "" {
+		return stmnt
+	}
+
+	return joinWithComma(stmnt, fmt.Sprintf("%s as %s",
+		getSelectTimestampByTypeForChannels(groupByTimestamp, timezone), model.AliasDateTime))
+}
+
+// @Kark TODO v1
+func getSelectTimestampByTypeForChannels(timestampType, timezone string) string {
+	var selectTz string
+	var selectStr string
+
+	if timezone == "" {
+		selectTz = model.DefaultTimezone
+	} else {
+		selectTz = timezone
+	}
+	if timestampType == model.GroupByTimestampHour {
+		selectStr = fmt.Sprintf(dateTruncateString, "hour", channelTimestamp, selectTz)
+	} else if timestampType == model.GroupByTimestampWeek {
+		selectStr = fmt.Sprintf(dateTruncateString, "week", channelTimestamp, selectTz)
+	} else if timestampType == model.GroupByTimestampMonth {
+		selectStr = fmt.Sprintf(dateTruncateString, "month", channelTimestamp, selectTz)
+	} else {
+		// defaults to GroupByTimestampDate.
+		selectStr = fmt.Sprintf(dateTruncateString, "day", channelTimestamp, selectTz)
+	}
+
+	return selectStr
+}
+
+// @Kark TODO v1
+func getOrderByClause(selectMetrics []string) string {
+	selectMetricsWithDesc := make([]string, 0, 0)
+	for _, selectMetric := range selectMetrics {
+		selectMetricsWithDesc = append(selectMetricsWithDesc, selectMetric+" DESC")
+	}
+	return joinWithComma(selectMetricsWithDesc...)
+}
+
+// ExecuteSQL - @Kark TODO v1
+func (store *MemSQL) ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error) {
+	rows, err := store.ExecQueryWithContext(sqlStatement, params)
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return nil, nil, err
+	}
+
+	defer rows.Close()
+	columns, resultRows, err := U.DBReadRows(rows)
+
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(resultRows) == 0 {
+		logCtx.Warn("Aggregate query returned zero rows: ", sqlStatement, params)
+		return nil, make([][]interface{}, 0, 0), nil
+	}
+	return columns, resultRows, nil
+}

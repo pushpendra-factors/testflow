@@ -1,0 +1,577 @@
+package memsql
+
+import (
+	"encoding/json"
+	cacheRedis "factors/cache/redis"
+	C "factors/config"
+	"factors/metrics"
+	"factors/model/model"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/gomodule/redigo/redis"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/jinzhu/gorm"
+)
+
+func (store *MemSQL) GetProjectSetting(projectId uint64) (*model.ProjectSetting, int) {
+	db := C.GetServices().Db
+	logCtx := log.WithField("project_id", projectId)
+
+	if valid := isValidProjectScope(projectId); !valid {
+		return nil, http.StatusBadRequest
+	}
+
+	var projectSetting model.ProjectSetting
+	if err := db.Where("project_id = ?", projectId).First(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting Project setting failed")
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+
+	return &projectSetting, http.StatusFound
+}
+
+type ProjectSettingChannelResponse struct {
+	Setting   *model.ProjectSetting
+	ErrorCode int
+}
+
+// GetProjectSettingByKeyWithTimeout - Get project_settings from db based on key,
+// gets timedout and returns StatusInternalServerError, if the query takes more than
+// the given duration. Returns default project_settings immediately, if the
+// config/flag use_default_project_setting_for_sdk is set to true.
+func (store *MemSQL) GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*model.ProjectSetting, int) {
+	if C.GetConfig().UseDefaultProjectSettingForSDK {
+		return getProjectSettingDefault(), http.StatusFound
+	}
+
+	// TODO(Dinesh): Use gorm db.WithContext and context.WithTimeout
+	// once gorm v2 is production ready and upgraded.
+	// Ref: https://gorm.io/docs/context.html
+	responseChannel := make(chan ProjectSettingChannelResponse, 1)
+	go func() {
+		settings, errCode := getProjectSettingByKey(key, value)
+		responseChannel <- ProjectSettingChannelResponse{
+			Setting:   settings,
+			ErrorCode: errCode,
+		}
+	}()
+
+	select {
+	case response := <-responseChannel:
+		return response.Setting, response.ErrorCode
+	case <-time.After(timeout):
+		// Tracking the info log on a chart.
+		log.WithField("tag", "get_settings_timeout").
+			WithField("project_key", key).
+			WithField("value", value).
+			Info("Get project_settings has timedout.")
+		metrics.Increment(metrics.IncrSDKGetSettingsTimeout)
+		return nil, http.StatusInternalServerError
+	}
+}
+
+// getProjectSettingByKey - Get project settings by a column on projects.
+func getProjectSettingByKey(key, value string) (*model.ProjectSetting, int) {
+	if key == "" || value == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	logCtx := log.WithField("key", key).WithField("value", value)
+
+	var setting model.ProjectSetting
+	db := C.GetServices().Db
+	whereKey := fmt.Sprintf("%s = ?", key)
+	err := db.Table("projects").Select("project_settings.*").Limit(1).Where(whereKey, value).Joins(
+		"LEFT JOIN project_settings ON projects.id=project_settings.project_id").Find(&setting).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get project settings by token.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return &setting, http.StatusFound
+}
+
+func getProjectSettingCacheKey(tokenKey, tokenValue string) (*cacheRedis.Key, error) {
+	// table_name:column_name
+	prefix := fmt.Sprintf("%s:%s", "project_settings", tokenKey)
+	return cacheRedis.NewKeyWithProjectUID(tokenValue, prefix, "")
+}
+
+func getCacheProjectSetting(tokenKey, tokenValue string) (*model.ProjectSetting, int) {
+	logCtx := log.WithField("token_value", tokenValue)
+
+	if tokenValue == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	key, err := getProjectSettingCacheKey(tokenKey, tokenValue)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to get project settings by token cache key on getCacheProjectSetting")
+		return nil, http.StatusInternalServerError
+	}
+
+	settingsJson, err := cacheRedis.Get(key)
+	if err != nil {
+		if err == redis.ErrNil {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error(
+			"Failed to get key from cache on getCacheProjectSetting.")
+		return nil, http.StatusInternalServerError
+	}
+
+	var settings model.ProjectSetting
+	err = json.Unmarshal([]byte(settingsJson), &settings)
+	if err != nil {
+		log.WithError(err).Error(
+			"Failed to unmarshal cached project settings on getCacheProjectSetting")
+		return nil, http.StatusInternalServerError
+	}
+
+	return &settings, http.StatusFound
+}
+
+func setCacheProjectSetting(tokenKey, tokenValue string, settings *model.ProjectSetting) int {
+	logCtx := log.WithField("token_value", tokenValue)
+
+	if tokenValue == "" || settings == nil {
+		return http.StatusBadRequest
+	}
+
+	settingsJson, err := json.Marshal(settings)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to marshal project settings on setCacheProjectSetting.")
+		return http.StatusInternalServerError
+	}
+
+	key, err := getProjectSettingCacheKey(tokenKey, tokenValue)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to get project settings by token cache key on setCacheProjectSetting")
+		return http.StatusInternalServerError
+	}
+
+	var expiryInSecs float64 = 60 * 60
+	err = cacheRedis.Set(key, string(settingsJson), expiryInSecs)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache on setCacheProjectSetting")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusCreated
+}
+
+func delCacheProjectSetting(tokenKey, tokenValue string) int {
+	logCtx := log.WithField("token_key", tokenKey)
+
+	if tokenValue == "" {
+		return http.StatusBadRequest
+	}
+
+	key, err := getProjectSettingCacheKey(tokenKey, tokenValue)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to get project settings by token cache key on delCacheProjectSetting")
+		return http.StatusInternalServerError
+	}
+
+	err = cacheRedis.Del(key)
+	if err != nil && err != redis.ErrNil {
+		logCtx.WithError(err).Error("Failed to del cache on delCacheProjectSetting")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func getProjectSettingDefault() *model.ProjectSetting {
+	enabled := true
+	return &model.ProjectSetting{
+		AutoTrack:       &enabled,
+		AutoFormCapture: &enabled,
+		ExcludeBot:      &enabled,
+		IntSegment:      &enabled,
+	}
+}
+
+// getProjectSettingByKeyWithDefault - Get from cache or db, if not use default.
+func (store *MemSQL) getProjectSettingByKeyWithDefault(tokenKey, tokenValue string) (*model.ProjectSetting, int) {
+	settings, errCode := getCacheProjectSetting(tokenKey, tokenValue)
+	if errCode == http.StatusFound {
+		return settings, http.StatusFound
+	}
+
+	settings, errCode = store.GetProjectSettingByKeyWithTimeout(tokenKey, tokenValue, time.Millisecond*30)
+	if errCode != http.StatusFound {
+		// Use default settings, if db failure.
+		// Do not cache default.
+		return getProjectSettingDefault(), http.StatusFound
+	}
+
+	// add to cache.
+	setCacheProjectSetting(tokenKey, tokenValue, settings)
+
+	return settings, http.StatusFound
+}
+
+func (store *MemSQL) GetProjectSettingByTokenWithCacheAndDefault(token string) (*model.ProjectSetting, int) {
+	return store.getProjectSettingByKeyWithDefault(model.ProjectSettingKeyToken, token)
+}
+
+func (store *MemSQL) GetProjectSettingByPrivateTokenWithCacheAndDefault(
+	privateToken string) (*model.ProjectSetting, int) {
+
+	return store.getProjectSettingByKeyWithDefault(
+		model.ProjectSettingKeyPrivateToken, privateToken)
+}
+
+func createProjectSetting(ps *model.ProjectSetting) (*model.ProjectSetting, int) {
+	db := C.GetServices().Db
+
+	if valid := isValidProjectScope(ps.ProjectId); !valid {
+		return nil, http.StatusBadRequest
+	}
+
+	if err := db.Create(ps).Error; err != nil {
+		log.WithFields(log.Fields{"model.ProjectSetting": ps}).WithError(
+			err).Error("Failed creating model.ProjectSetting.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return ps, http.StatusCreated
+}
+
+func (store *MemSQL) delAllProjectSettingsCacheForProject(projectId uint64) {
+	project, errCode := store.GetProject(projectId)
+	if errCode != http.StatusFound {
+		log.Error("Failed to get project on delAllProjectSettingsCacheKeys.")
+	}
+
+	// delete all project setting cache keys by respective
+	// token key and value.
+	delCacheProjectSetting(model.ProjectSettingKeyToken, project.Token)
+	delCacheProjectSetting(model.ProjectSettingKeyPrivateToken, project.PrivateToken)
+}
+
+func (store *MemSQL) UpdateProjectSettings(projectId uint64, settings *model.ProjectSetting) (*model.ProjectSetting, int) {
+	db := C.GetServices().Db
+
+	if projectId == 0 || settings == nil {
+		return nil, http.StatusBadRequest
+	}
+
+	if settings.IntAdwordsCustomerAccountId != nil {
+		var cleanAdwordsAccountIds []string
+		adwordsAccoundIds := strings.Split(*settings.IntAdwordsCustomerAccountId, ",")
+		for _, accountId := range adwordsAccoundIds {
+			adwordsCustomerAccountId := strings.Replace(
+				accountId, "-", "", -1)
+			adwordsCustomerAccountId = strings.TrimSpace(adwordsCustomerAccountId)
+			cleanAdwordsAccountIds = append(cleanAdwordsAccountIds, adwordsCustomerAccountId)
+		}
+		*settings.IntAdwordsCustomerAccountId = strings.Join(cleanAdwordsAccountIds, ",")
+	}
+
+	var updatedProjectSetting model.ProjectSetting
+	if err := db.Model(&updatedProjectSetting).Where("project_id = ?",
+		projectId).Updates(settings).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		log.WithFields(log.Fields{"model.ProjectSetting": settings}).WithError(
+			err).Error("Failed updating ProjectSettings.")
+		return nil, http.StatusInternalServerError
+	}
+
+	store.delAllProjectSettingsCacheForProject(projectId)
+
+	return &updatedProjectSetting, http.StatusAccepted
+}
+
+func (store *MemSQL) IsPSettingsIntShopifyEnabled(projectId uint64) bool {
+	return true
+}
+
+func (store *MemSQL) GetIntAdwordsRefreshTokenForProject(projectId uint64) (string, int) {
+	settings, errCode := store.GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		return "", errCode
+	}
+
+	if settings.IntAdwordsEnabledAgentUUID == nil || *settings.IntAdwordsEnabledAgentUUID == "" {
+		return "", http.StatusNotFound
+	}
+
+	logCtx := log.WithField("agent_uuid",
+		*settings.IntAdwordsEnabledAgentUUID).WithField("project_id", projectId)
+
+	agent, errCode := store.GetAgentByUUID(*settings.IntAdwordsEnabledAgentUUID)
+	if errCode != http.StatusFound {
+		logCtx.Error("Adwords enabled agent not found on agents table.")
+		return "", errCode
+	}
+
+	refreshToken := agent.IntAdwordsRefreshToken
+	if refreshToken == "" {
+		logCtx.Error("Adwords enabled agent refresh token is empty.")
+		return "", http.StatusInternalServerError
+	}
+
+	return refreshToken, http.StatusFound
+}
+
+func (store *MemSQL) GetIntAdwordsProjectSettingsForProjectID(projectID uint64) ([]model.AdwordsProjectSettings, int) {
+
+	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
+		" " + "agents.int_adwords_refresh_token as refresh_token, project_settings.int_adwords_enabled_agent_uuid as agent_uuid" +
+		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_adwords_enabled_agent_uuid = agents.uuid" +
+		" " + "WHERE project_settings.project_id = ?" +
+		" " + "AND project_settings.int_adwords_customer_account_id IS NOT NULL" +
+		" " + "AND project_settings.int_adwords_enabled_agent_uuid IS NOT NULL "
+	params := []interface{}{projectID}
+
+	return store.getIntAdwordsProjectSettings(queryStr, params)
+}
+
+func (store *MemSQL) GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int) {
+
+	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
+		" " + "agents.int_adwords_refresh_token as refresh_token, project_settings.int_adwords_enabled_agent_uuid as agent_uuid" +
+		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_adwords_enabled_agent_uuid = agents.uuid" +
+		" " + "WHERE project_settings.int_adwords_customer_account_id IS NOT NULL" +
+		" " + "AND project_settings.int_adwords_enabled_agent_uuid IS NOT NULL"
+	params := make([]interface{}, 0, 0)
+
+	return store.getIntAdwordsProjectSettings(queryStr, params)
+}
+
+func (store *MemSQL) getIntAdwordsProjectSettings(query string, params []interface{}) ([]model.AdwordsProjectSettings, int) {
+	db := C.GetServices().Db
+	adwordsProjectSettings := make([]model.AdwordsProjectSettings, 0, 0)
+	rows, err := db.Raw(query, params).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get all adwords project settings.")
+		return adwordsProjectSettings, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var adwordsSettings model.AdwordsProjectSettings
+		if err := db.ScanRows(rows, &adwordsSettings); err != nil {
+			log.WithError(err).Error("Failed to scan get all adwords project settings.")
+			return adwordsProjectSettings, http.StatusInternalServerError
+		}
+
+		adwordsProjectSettings = append(adwordsProjectSettings, adwordsSettings)
+	}
+
+	return adwordsProjectSettings, http.StatusOK
+}
+
+func (store *MemSQL) GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int) {
+	var hubspotProjectSettings []model.HubspotProjectSettings
+
+	db := C.GetServices().Db
+	err := db.Table("project_settings").Where(
+		"int_hubspot='true' AND int_hubspot_api_key IS NOT NULL ").Select(
+		"project_id, int_hubspot_api_key as api_key").Find(
+		&hubspotProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot project_settings.")
+		return hubspotProjectSettings, http.StatusInternalServerError
+	}
+
+	return hubspotProjectSettings, http.StatusFound
+}
+
+type shopifyInfoStruct struct {
+	apiKey    string
+	projectId uint64
+	hashEmail bool
+}
+
+var developmentShopifyInfo = map[string]shopifyInfoStruct{
+	"aravind-test123.myshopify.com": shopifyInfoStruct{
+		projectId: 2,
+		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
+		hashEmail: false,
+	},
+}
+var stagingShopifyInfo = map[string]shopifyInfoStruct{
+	"aravind-test123.myshopify.com": shopifyInfoStruct{
+		projectId: 21,
+		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
+		hashEmail: true,
+	},
+}
+var productionShopifyInfo = map[string]shopifyInfoStruct{
+	"aravind-test123.myshopify.com": shopifyInfoStruct{
+		projectId: 395,
+		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
+		hashEmail: false,
+	},
+	"quirksmith.myshopify.com": shopifyInfoStruct{
+		projectId: 401,
+		apiKey:    "8dd75ec8aded049912dffe8ecab9591606ac3b0ee389cf2a76b26be88854fff4",
+		hashEmail: true,
+	},
+	"flatheads.myshopify.com": shopifyInfoStruct{
+		projectId: 380,
+		apiKey:    "844e9cc7c7e673a9513827a8a89613970be27ef8ec67ab4da2e3c9202f1ec7d8",
+		hashEmail: true,
+	},
+	"azani.myshopify.com": shopifyInfoStruct{
+		projectId: 410,
+		apiKey:    "7fb11f1eacd53c1e8d0d254c5d2b23d2",
+		hashEmail: true,
+	},
+}
+
+func (store *MemSQL) GetProjectDetailsByShopifyDomain(
+	shopifyDomain string) (uint64, string, bool, int) {
+	var shopifyInfo map[string]shopifyInfoStruct
+	if C.IsDevelopment() {
+		shopifyInfo = developmentShopifyInfo
+	} else if C.IsStaging() {
+		shopifyInfo = stagingShopifyInfo
+	} else if C.IsProduction() {
+		shopifyInfo = productionShopifyInfo
+	}
+	if info, found := shopifyInfo[shopifyDomain]; found {
+		return info.projectId, info.apiKey, info.hashEmail, http.StatusFound
+	} else {
+		log.Error(fmt.Sprintf("Unknown shopify domain - %s", shopifyDomain))
+	}
+	return 0, "", false, http.StatusInternalServerError
+}
+
+func (store *MemSQL) GetFacebookEnabledProjectSettings() ([]model.FacebookProjectSettings, int) {
+	db := C.GetServices().Db
+
+	facebookProjectSettings := make([]model.FacebookProjectSettings, 0, 0)
+
+	err := db.Table("project_settings").Where("int_facebook_access_token IS NOT NULL AND int_facebook_access_token != ''").Find(&facebookProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
+		return facebookProjectSettings, http.StatusInternalServerError
+	}
+	return facebookProjectSettings, http.StatusOK
+}
+func (store *MemSQL) GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int) {
+	db := C.GetServices().Db
+
+	linkedinProjectSettings := make([]model.LinkedinProjectSettings, 0, 0)
+
+	err := db.Table("project_settings").Where("int_linkedin_refresh_token IS NOT NULL AND int_linkedin_refresh_token != ''").Find(&linkedinProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get linkedin enabled project settings for sync info.")
+		return linkedinProjectSettings, http.StatusInternalServerError
+	}
+	return linkedinProjectSettings, http.StatusOK
+}
+
+// GetArchiveEnabledProjectIDs Returns list of project ids which have archive enabled.
+func (store *MemSQL) GetArchiveEnabledProjectIDs() ([]uint64, int) {
+	var projectIDs []uint64
+	db := C.GetServices().Db
+
+	rows, err := db.Model(&model.ProjectSetting{}).Where("archive_enabled = true").Select("project_id").Rows()
+	if err != nil {
+		log.WithError(err).Error("Query failed for GetArchiveEnabledProjectIDs")
+		return projectIDs, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var projectID uint64
+		err = rows.Scan(&projectID)
+		if err != nil {
+			log.WithError(err).Error("Error while scanning")
+			continue
+		}
+		projectIDs = append(projectIDs, projectID)
+	}
+	return projectIDs, http.StatusFound
+}
+
+// GetBigqueryEnabledProjectIDs Returns list of project ids which have bigquery enabled.
+func (store *MemSQL) GetBigqueryEnabledProjectIDs() ([]uint64, int) {
+	var projectIDs []uint64
+	db := C.GetServices().Db
+
+	rows, err := db.Model(&model.ProjectSetting{}).Where("bigquery_enabled = true").Select("project_id").Rows()
+	if err != nil {
+		log.WithError(err).Error("Query failed for GetBigqueryEnabledProjectIDs")
+		return projectIDs, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var projectID uint64
+		err = rows.Scan(&projectID)
+		if err != nil {
+			log.WithError(err).Error("Error while scanning")
+			continue
+		}
+		projectIDs = append(projectIDs, projectID)
+	}
+	return projectIDs, http.StatusFound
+}
+
+// GetAllSalesforceProjectSettings return list of all enabled salesforce projects and their meta data
+func (store *MemSQL) GetAllSalesforceProjectSettings() ([]model.SalesforceProjectSettings, int) {
+	var salesforceProjectSettings []model.SalesforceProjectSettings
+
+	db := C.GetServices().Db
+	err := db.Table("project_settings").Where(
+		"int_salesforce_enabled_agent_uuid != '' AND int_salesforce_enabled_agent_uuid IS NOT NULL ").Joins(" left join agents on project_settings.int_salesforce_enabled_agent_uuid = agents.uuid").Select(
+		"project_id, int_salesforce_refresh_token as refresh_token, int_salesforce_instance_url as instance_url").Find(
+		&salesforceProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get salesforce project_settings.")
+		return salesforceProjectSettings, http.StatusInternalServerError
+	}
+
+	return salesforceProjectSettings, http.StatusFound
+}
+
+func (store *MemSQL) GetAdwordsEnabledProjectIDAndCustomerIDsFromProjectSettings() (map[uint64][]string, error) {
+	db := C.GetServices().Db
+
+	projectSettings := make([]model.ProjectSetting, 0, 0)
+	mapOfProjectToCustomerIds := make(map[uint64][]string)
+
+	err := db.Table("project_settings").Where("int_adwords_enabled_agent_uuid IS NOT NULL AND int_adwords_enabled_agent_uuid != ''").Find(&projectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
+		return mapOfProjectToCustomerIds, err
+	}
+	for _, projectSetting := range projectSettings {
+		projectID := projectSetting.ProjectId
+		if projectSetting.IntAdwordsCustomerAccountId != nil {
+			var cleanAdwordsAccountIds []string
+			adwordsAccoundIDs := strings.Split(*projectSetting.IntAdwordsCustomerAccountId, ",")
+			for _, accountID := range adwordsAccoundIDs {
+				adwordsCustomerAccountID := strings.Replace(accountID, "-", "", -1)
+				adwordsCustomerAccountID = strings.TrimSpace(adwordsCustomerAccountID)
+				cleanAdwordsAccountIds = append(cleanAdwordsAccountIds, adwordsCustomerAccountID)
+			}
+			mapOfProjectToCustomerIds[projectID] = cleanAdwordsAccountIds
+		}
+	}
+	return mapOfProjectToCustomerIds, nil
+}

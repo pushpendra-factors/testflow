@@ -40,11 +40,18 @@ func main() {
 	numActiveFactorsTrackedUserPropertiesLimit := flag.Int("max_user_properties", 50, "Max numbr of Tracked user properties")
 	numCampaignsLimit := flag.Int("max_campaigns_limit", -1, "Max number of campaigns")
 
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -70,8 +77,9 @@ func main() {
 	}
 
 	// init DB, etcd
+	appName := "build_seq_job"
 	config := &C.Configuration{
-		AppName:       "build_seq_job",
+		AppName:       appName,
 		Env:           *envFlag,
 		EtcdEndpoints: strings.Split(*etcd, ","),
 		DBInfo: C.DBConf{
@@ -80,7 +88,17 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  appName,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+			AppName:  appName,
+		},
+		PrimaryDatastore:    *primaryDatastore,
 		RedisHost:           *redisHost,
 		RedisPort:           *redisPort,
 		RedisHostPersistent: *redisHostPersistent,
@@ -90,7 +108,7 @@ func main() {
 	C.InitConf(config.Env)
 
 	// db is used by M.GetEventNames to build eventInfo.
-	err := C.InitDB(config.DBInfo)
+	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize DB")
 	}

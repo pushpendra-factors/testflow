@@ -16,12 +16,19 @@ import (
 )
 
 func main() {
-	env := flag.String("env", "development", "")
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	env := flag.String("env", C.DEVELOPMENT, "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -73,6 +80,15 @@ func main() {
 			Password: *dbPass,
 			AppName:  taskID,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+			AppName:  taskID,
+		},
+		PrimaryDatastore:    *primaryDatastore,
 		RedisHost:           *redisHost,
 		RedisPort:           *redisPort,
 		RedisHostPersistent: *redisHostPersistent,
@@ -85,7 +101,7 @@ func main() {
 	// Will allow all 50/50 connection to be idle on the pool.
 	// As we allow num_routines (per project) as per no.of db connections
 	// and will be used continiously.
-	err := C.InitDBWithMaxIdleAndMaxOpenConn(config.DBInfo, 50, 50)
+	err := C.InitDBWithMaxIdleAndMaxOpenConn(*config, 50, 50)
 	if err != nil {
 		log.WithError(err).Panic("Failed to initialize db in add session.")
 	}

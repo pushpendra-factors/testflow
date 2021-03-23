@@ -126,6 +126,10 @@ func Set(key *Key, value string, expiryInSecs float64) error {
 }
 
 func set(key *Key, value string, expiryInSecs float64, persistent bool) error {
+	// TODO(prateek): To be removed.
+	if preventWriteOperations() {
+		return nil
+	}
 	if key == nil {
 		return ErrorInvalidKey
 	}
@@ -253,6 +257,10 @@ func Del(keys ...*Key) error {
 }
 
 func del(persistent bool, keys ...*Key) error {
+	// TODO(prateek): To be removed.
+	if preventWriteOperations() {
+		return nil
+	}
 	var cKeys []interface{}
 
 	for _, key := range keys {
@@ -322,6 +330,10 @@ func IncrPersistentBatch(keys ...*Key) ([]int64, error) {
 	return incrBatch(true, keys)
 }
 func incrBatch(persistent bool, keys []*Key) ([]int64, error) {
+	// TODO(prateek): To be removed.
+	if preventWriteOperations() {
+		return []int64{}, nil
+	}
 	if len(keys) == 0 {
 		return nil, ErrorInvalidValues
 	}
@@ -419,6 +431,10 @@ func SetPersistentBatch(values map[*Key]string, expiryInSecs float64) error {
 }
 
 func setBatch(values map[*Key]string, expiryInSecs float64, persistent bool) error {
+	// TODO(prateek): To be removed.
+	if preventWriteOperations() {
+		return nil
+	}
 	if len(values) == 0 {
 		return ErrorInvalidValues
 	}
@@ -503,6 +519,10 @@ func PFAdd(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
 }
 
 func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool) (bool, error) {
+	// TODO(prateek): To be removed.
+	if preventWriteOperations() {
+		return false, nil
+	}
 	if cacheKey == nil {
 		return false, ErrorInvalidKey
 	}
@@ -588,6 +608,10 @@ func IncrByBatchPersistent(keys []KeyCountTuple) ([]int64, error) {
 }
 
 func incrByBatch(keys []KeyCountTuple, persistent bool) ([]int64, error) {
+	// TODO(prateek): To be removed.
+	if preventWriteOperations() {
+		return []int64{}, nil
+	}
 	if len(keys) == 0 {
 		return nil, ErrorInvalidValues
 	}
@@ -634,6 +658,10 @@ func DecrByBatchPersistent(keys map[*Key]int64) error {
 }
 
 func decrByBatch(keys map[*Key]int64, persistent bool) error {
+	// TODO(prateek): To be removed.
+	if preventWriteOperations() {
+		return nil
+	}
 	if len(keys) == 0 {
 		return ErrorInvalidValues
 	}
@@ -665,4 +693,12 @@ func decrByBatch(keys map[*Key]int64, persistent bool) error {
 	}
 	// TODO: Check for partial failures
 	return nil
+}
+
+func preventWriteOperations() bool {
+	// Allow write operations for test / development environment.
+	if C.GetConfig().Env == C.TEST || C.GetConfig().Env == C.DEVELOPMENT {
+		return false
+	}
+	return C.UseMemSQLDatabaseStore()
 }

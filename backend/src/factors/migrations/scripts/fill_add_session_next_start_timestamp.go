@@ -113,12 +113,19 @@ func getAndUpdateNextSessionStartTimestamp(projectID uint64, maxLookbackTimestam
 }
 
 func main() {
-	env := flag.String("env", "development", "")
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	env := flag.String("env", C.DEVELOPMENT, "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 	projectID := flag.Uint64("project_id", 0, "")
 
 	maxLookbackHours := flag.Int64("max_lookback_hours", 24, "")
@@ -130,8 +137,9 @@ func main() {
 		panic(err)
 	}
 
+	appName := "fill_session_next_start_timestamp"
 	config := &C.Configuration{
-		AppName: "fill_session_next_start_timestamp",
+		AppName: appName,
 		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
@@ -139,12 +147,22 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  appName,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+			AppName:  appName,
+		},
+		PrimaryDatastore: *primaryDatastore,
 	}
 
 	C.InitConf(*env)
 
-	err := C.InitDB(config.DBInfo)
+	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Panic("Failed to initialize db in add session.")
 	}

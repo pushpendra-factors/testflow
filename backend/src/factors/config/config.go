@@ -27,6 +27,7 @@ import (
 	D "github.com/gamebtc/devicedetector"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	geoip2 "github.com/oschwald/geoip2-golang"
 	log "github.com/sirupsen/logrus"
@@ -55,6 +56,33 @@ const PRODUCTION = "production"
 // in sync with other services which uses the cookie.
 const FactorsSessionCookieName = "factors-sid"
 
+// Datastore specific constants.
+const (
+	DatastoreTypePostgres = "postgres"
+	DatastoreTypeMemSQL   = "memsql"
+
+	// Change this variable to configure datastore type.
+	PrimaryDatastoreType = DatastoreTypePostgres
+)
+
+// MemSQLDefaultDBParams Default connection params for Postgres.
+var MemSQLDefaultDBParams = DBConf{
+	Host:     "localhost",
+	Port:     3306,
+	User:     "root",
+	Name:     "factors",
+	Password: "dbfactors123",
+}
+
+// PostgresDefaultDBParams Default connection params for MemSQL.
+var PostgresDefaultDBParams = DBConf{
+	Host:     "localhost",
+	Port:     5432,
+	User:     "autometa",
+	Name:     "autometa",
+	Password: "@ut0me7a",
+}
+
 type DBConf struct {
 	Host     string
 	Port     int
@@ -71,6 +99,7 @@ type Configuration struct {
 	Env                              string
 	Port                             int
 	DBInfo                           DBConf
+	MemSQLInfo                       DBConf
 	RedisHost                        string
 	RedisPort                        int
 	RedisHostPersistent              string
@@ -119,7 +148,8 @@ type Configuration struct {
 	enablePropertyTypeFromDB               bool
 	whitelistedProjectIDPropertyTypeFromDB string
 	blacklistedProjectIDPropertyTypeFromDB string
-	CacheSortedSet bool
+	PrimaryDatastore                       string
+	CacheSortedSet                         bool
 }
 
 type Services struct {
@@ -336,7 +366,7 @@ func initDeviceDetectorPath(deviceDetectorPath string) {
 func initServices(config *Configuration) error {
 	services = &Services{patternServers: make(map[string]string)}
 
-	err := InitDB(config.DBInfo)
+	err := InitDB(*config)
 	if err != nil {
 		return err
 	}
@@ -413,9 +443,16 @@ func InitEtcd(EtcdEndpoints []string) error {
 	return nil
 }
 
-func InitDBWithMaxIdleAndMaxOpenConn(dbConf DBConf,
+func InitDBWithMaxIdleAndMaxOpenConn(config Configuration,
 	maxOpenConns, maxIdleConns int) error {
+	if UseMemSQLDatabaseStore() {
+		return InitMemSQLDBWithMaxIdleAndMaxOpenConn(config.MemSQLInfo, maxOpenConns, maxIdleConns)
+	}
+	return InitPostgresDBWithMaxIdleAndMaxOpenConn(config.DBInfo, maxOpenConns, maxIdleConns)
+}
 
+func InitPostgresDBWithMaxIdleAndMaxOpenConn(dbConf DBConf,
+	maxOpenConns, maxIdleConns int) error {
 	if services == nil {
 		services = &Services{}
 	}
@@ -454,6 +491,55 @@ func InitDBWithMaxIdleAndMaxOpenConn(dbConf DBConf,
 	return nil
 }
 
+func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleConns int) error {
+	if services == nil {
+		services = &Services{}
+	}
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		dbConf.User, dbConf.Password, dbConf.Host, dbConf.Port, dbConf.Name)
+
+	memSQLDB, err := gorm.Open("mysql", dsn)
+	if err != nil {
+		log.WithError(err).Fatal("Failed connecting to memsql.")
+	}
+
+	// Removes emoji and cleans up string and postgres.Jsonb columns.
+	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
+
+	if IsDevelopment() {
+		memSQLDB.LogMode(true)
+	} else {
+		memSQLDB.LogMode(false)
+		memSQLDB.DB().SetMaxOpenConns(maxOpenConns)
+		memSQLDB.DB().SetMaxIdleConns(maxIdleConns)
+	}
+
+	log.Info("MemSQL Db Service initialized")
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+
+	services.Db = memSQLDB
+	configuration.DBInfo = dbConf
+	services.DBContext = &ctx
+	services.DBContextCancel = &cancel
+	return nil
+}
+
+// UseMemSQLDatabaseStore Returns true if memsql is configured as primary datastore.
+func UseMemSQLDatabaseStore() bool {
+	return GetPrimaryDatastore() == DatastoreTypeMemSQL
+}
+
+// GetPrimaryDatastore Returns memsql only if set in config. Defaults to postgres.
+func GetPrimaryDatastore() string {
+	if GetConfig().PrimaryDatastore == DatastoreTypeMemSQL {
+		return DatastoreTypeMemSQL
+	}
+	return DatastoreTypePostgres
+}
+
 // KillDBQueriesOnExit Uses context to kill any running queries when kill signal is received.
 func KillDBQueriesOnExit() {
 	c := make(chan os.Signal, 1)
@@ -469,9 +555,9 @@ func KillDBQueriesOnExit() {
 	}()
 }
 
-func InitDB(dbConf DBConf) error {
+func InitDB(config Configuration) error {
 	// default configuration.
-	return InitDBWithMaxIdleAndMaxOpenConn(dbConf, 50, 10)
+	return InitDBWithMaxIdleAndMaxOpenConn(config, 50, 10)
 }
 
 func InitRedisPersistent(host string, port int) {
@@ -740,7 +826,7 @@ func InitDataService(config *Configuration) error {
 
 	configuration = config
 
-	err := InitDB(config.DBInfo)
+	err := InitDB(*config)
 	if err != nil {
 		return err
 	}
@@ -760,7 +846,7 @@ func InitSDKService(config *Configuration) error {
 	configuration = config
 
 	// DB dependency for SDK project_settings.
-	if err := InitDB(config.DBInfo); err != nil {
+	if err := InitDB(*config); err != nil {
 		log.WithError(err).Error("Failed to initialize db on sdk_service.")
 	}
 
@@ -791,7 +877,7 @@ func InitQueueWorker(config *Configuration) error {
 
 	configuration = config
 
-	err := InitDB(config.DBInfo)
+	err := InitDB(*config)
 	if err != nil {
 		return err
 	}
