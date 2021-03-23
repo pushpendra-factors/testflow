@@ -518,6 +518,23 @@ func TestHubspotDocumentTimestamp(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
 
+	document, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 2, len(document))
+	createdIndex := -1
+	updatedIndex := -1
+	if document[0].Action == model.HubspotDocumentActionCreated {
+		createdIndex = 0
+		updatedIndex = 1
+	} else {
+		createdIndex = 1
+		updatedIndex = 0
+	}
+
+	assert.Equal(t, model.HubspotDocumentActionCreated, document[createdIndex].Action)
+	assert.Equal(t, model.HubspotDocumentActionUpdated, document[updatedIndex].Action)
+	assert.Greater(t, document[updatedIndex].CreatedAt.UnixNano(), document[createdIndex].CreatedAt.UnixNano())
+
 	// document updated
 	updatedTime := createdDate + 100
 	jsonContact = fmt.Sprintf(jsonContactModel, documentID, updatedTime, createdDate, updatedTime, "lead", cuid, "123-45")

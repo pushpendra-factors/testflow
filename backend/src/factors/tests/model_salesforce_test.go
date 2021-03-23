@@ -52,8 +52,8 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	assert.Contains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameLead)
 	assert.Equal(t, int64(0), syncInfo.LastSyncInfo[project.ID][model.SalesforceDocumentTypeNameLead])
 
-	//should not contain opportunity by default
-	assert.NotContains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameOpportunity)
+	//should contain opportunity by default
+	assert.Contains(t, syncInfo.LastSyncInfo[project.ID], model.SalesforceDocumentTypeNameOpportunity)
 
 	contactID := U.RandomLowerAphaNumString(5)
 	name := U.RandomLowerAphaNumString(5)

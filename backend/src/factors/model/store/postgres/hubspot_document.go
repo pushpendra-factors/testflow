@@ -373,7 +373,9 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 	isNew := errCode == http.StatusNotFound
 
 	var timestamp int64
+	var updatedDocument model.HubspotDocument // use for duplicating new document to updated document.
 	if isNew {
+		updatedDocument = *document
 		document.Action = model.HubspotDocumentActionCreated // created
 		timestamp, err = getHubspotDocumentCreatedTimestamp(document)
 	} else {
@@ -406,8 +408,8 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 	}
 
 	if isNew { // create updated document for new user
-		updatedDocument := *document
 		updatedDocument.Action = model.HubspotDocumentActionUpdated
+		updatedDocument.Timestamp = timestamp
 		err = db.Create(&updatedDocument).Error
 		if err != nil {
 			if isDuplicateHubspotDocumentError(err) {
