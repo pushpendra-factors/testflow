@@ -278,10 +278,7 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 	}
 
 	if(C.IsSortedSetCachingAllowed()){
-		begin = U.TimeNow()
 		cacheRedis.ZincrPersistentBatch(keysToIncrSortedSet...)
-		end = U.TimeNow()
-		logCtx.WithField("TimeTaken", float64(end.Sub(begin).Milliseconds())).Info("ZINCR")
 	}
 	// The following code is to support/facilitate cleanup
 	newPropertiesCount := int64(0)
