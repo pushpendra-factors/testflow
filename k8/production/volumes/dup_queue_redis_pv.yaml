@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: queue-redis-2-pv
+  name: dup-queue-redis-pv
 spec:
   capacity:
     storage: 100Gi
   accessModes:
     - ReadWriteOnce
   gcePersistentDisk:
-    pdName: factors-production-queue-redis-2-disk
+    pdName: factors-production-dup-queue-redis-disk
     fsType: ext4

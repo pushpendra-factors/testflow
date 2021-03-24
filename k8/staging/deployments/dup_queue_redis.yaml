@@ -1,12 +1,12 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    layer: queue-redis-2
+    layer: dup-queue-redis
     env: staging
     project: factors-staging
     nodePool: factors-staging-node-pool
-  name: queue-redis-2
+  name: dup-queue-redis
   namespace: default
 spec:
   progressDeadlineSeconds: 600
@@ -14,7 +14,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      layer: queue-redis-2
+      layer: dup-queue-redis
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -23,24 +23,24 @@ spec:
   template:
     metadata:      
       labels:
-        layer: queue-redis-2
+        layer: dup-queue-redis
         nodePool: factors-staging-node-pool
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: factors-staging-node-pool
       terminationGracePeriodSeconds: 30
       volumes:
-        - name: queue-redis-2-storage
+        - name: dup-queue-redis-storage
           persistentVolumeClaim:
-            claimName: queue-redis-2-pvc
+            claimName: dup-queue-redis-pvc
       containers:
-      - name: queue-redis-2
+      - name: dup-queue-redis
         image: us.gcr.io/factors-staging/queue-redis:v0.01-e3fc852-562
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379
         volumeMounts:
-        - name: queue-redis-2-storage
+        - name: dup-queue-redis-storage
           mountPath: "/usr/local/var/db/redis"
         resources:
           requests:

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: queue-redis-2-pvc
+  name: dup-queue-redis-pvc
 spec:
   accessModes:
     - "ReadWriteOnce"
@@ -9,4 +9,4 @@ spec:
   resources:
     requests:
       storage: "25Gi"
-  volumeName: queue-redis-2-pv
+  volumeName: dup-queue-redis-pv
