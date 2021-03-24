@@ -130,7 +130,7 @@ const RequestQueue = "sdk_request_queue"
 
 // RequestQueueDuplicate - Name of the secondary Queue which
 // will be queued with copy of tasks sent RequestQueue, if enabled.
-const RequestQueueDuplicate = "dup_sdk_request_queue"
+const RequestQueueDuplicate = "sdk_request_queue_2"
 
 // ProcessRequestTask - Name of the task which has been
 // queued to request queues.
@@ -1009,12 +1009,14 @@ func enqueueRequest(token, reqType string, reqPayload interface{}) error {
 		return nil
 	}
 
-	dupTaskSignature, err := util.CreateTaskSignatureForQueue(ProcessRequestTask,
+	duplicateTaskSignature, err := util.CreateTaskSignatureForQueue(ProcessRequestTask,
 		RequestQueueDuplicate, token, reqType, reqPayload)
 	if err != nil {
 		return err
 	}
-	_, err = queueClient.SendTask(dupTaskSignature)
+
+	duplicateQueueClient := C.GetServices().DuplicateQueueClient
+	_, err = duplicateQueueClient.SendTask(duplicateTaskSignature)
 	if err != nil {
 		// Log and return duplicate task queue failure.
 		// To avoid track failure response to the clients.

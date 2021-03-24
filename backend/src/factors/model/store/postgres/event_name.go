@@ -459,11 +459,19 @@ func (pg *Postgres) GetPropertiesByEvent(projectID uint64, eventName string, lim
 		}
 	}
 
+	propertyDetailsStatus, propertyDetails := pg.GetAllPropertyDetailsByProjectID(projectID, eventName, false)
 	for _, v := range eventPropertiesSorted {
-		if properties[v.Category] == nil {
-			properties[v.Category] = make([]string, 0)
+		category := v.Category
+		if propertyDetailsStatus == http.StatusFound {
+			if pType, exist := (*propertyDetails)[v.Name]; exist {
+				category = pType
+			}
 		}
-		properties[v.Category] = append(properties[v.Category], v.Name)
+
+		if properties[category] == nil {
+			properties[category] = make([]string, 0)
+		}
+		properties[category] = append(properties[category], v.Name)
 	}
 
 	return properties, nil

@@ -53,6 +53,9 @@ func main() {
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
 
+	duplicateQueueRedisHost := flag.String("dup_queue_redis_host", "localhost", "")
+	duplicateQueueRedisPort := flag.Int("dup_queue_redis_port", 6379, "")
+
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
@@ -101,14 +104,13 @@ func main() {
 			Password: *memSQLPass,
 			AppName:  appName,
 		},
-		PrimaryDatastore:                 *primaryDatastore,
 		GeolocationFile:                  *geoLocFilePath,
 		DeviceDetectorPath:               *deviceDetectorPath,
 		RedisHost:                        *redisHost,
 		RedisPort:                        *redisPort,
 		QueueRedisHost:                   *queueRedisHost,
 		QueueRedisPort:                   *queueRedisPort,
-		SentryDSN:                        *sentryDSN,
+		PrimaryDatastore:                 *primaryDatastore,
 		SDKRequestQueueProjectTokens:     C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
 		SegmentRequestQueueProjectTokens: C.GetTokensFromStringListAsString(*segmentRequestQueueProjectTokens),
 		RedisHostPersistent:              *redisHostPersistent,
@@ -117,6 +119,9 @@ func main() {
 		// List of tokens (public and private) to block SDK requests.
 		BlockedSDKRequestProjectTokens:                 C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
+		DuplicateQueueRedisHost:                        *duplicateQueueRedisHost,
+		DuplicateQueueRedisPort:                        *duplicateQueueRedisPort,
+		SentryDSN:                                      *sentryDSN,
 	}
 
 	err := C.InitSDKService(config)
@@ -126,7 +131,8 @@ func main() {
 	}
 	defer C.SafeFlushAllCollectors()
 
-	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
+	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize,
+		*whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
 
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)

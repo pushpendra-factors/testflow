@@ -19,7 +19,7 @@ var types = [...]string{
 
 const ProcessRequestTask = "process_integration_request"
 const RequestQueue = "integration_request_queue"
-const RequestQueueDuplicate = "dup_integration_request_queue"
+const RequestQueueDuplicate = "integration_request_queue_2"
 
 func isValidRequest(token, reqType string, reqPayload interface{}) bool {
 	if token == "" {
@@ -68,7 +68,8 @@ func EnqueueRequest(token, reqType string, reqPayload interface{}) error {
 		return err
 	}
 
-	_, err = queueClient.SendTask(dupTaskSignature)
+	duplicateQueueClient := C.GetServices().DuplicateQueueClient
+	_, err = duplicateQueueClient.SendTask(dupTaskSignature)
 	if err != nil {
 		// Log and return duplicate task queue failure.
 		log.WithField("token", token).WithField("payload", reqPayload).
