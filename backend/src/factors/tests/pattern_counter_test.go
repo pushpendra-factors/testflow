@@ -1869,3 +1869,41 @@ func TestGenSegmentsForRepeatedEvents(t *testing.T) {
 }
 
 // TODO(aravind): Add tests for genLenThreeSegmentedCandidates and genSegmentedCandidates in run_pattern_mine.go
+
+func TestGenCandidatesForGoals(t *testing.T) {
+
+	pA, _ := P.NewPattern([]string{"A", "C"}, nil)
+	pB, _ := P.NewPattern([]string{"B", "C"}, nil)
+
+	patt, err := P.GenCandidatesForGoals(pA, pB, nil)
+	assert.NotNil(t, patt, "Patterns cannot be empty")
+	assert.Nil(t, err)
+
+	pA, _ = P.NewPattern([]string{"A", "C"}, nil)
+	pB, _ = P.NewPattern([]string{"A", "C"}, nil)
+
+	patt, err = P.GenCandidatesForGoals(pA, pB, nil)
+	assert.Nil(t, patt, "Patterns should be empty")
+	assert.Nil(t, err)
+
+	pA, _ = P.NewPattern([]string{"A", "B", "C"}, nil)
+	pB, _ = P.NewPattern([]string{"A", "B", "C"}, nil)
+
+	patt, err = P.GenCandidatesForGoals(pA, pB, nil)
+	assert.Nil(t, patt, "Patterns should be empty")
+	assert.Nil(t, err)
+
+	pA, _ = P.NewPattern([]string{"A", "D", "C"}, nil)
+	pB, _ = P.NewPattern([]string{"B", "E", "C"}, nil)
+
+	patt, err = P.GenCandidatesForGoals(pA, pB, nil)
+	assert.NotNil(t, patt, "Patterns cannot be empty")
+	assert.Nil(t, err)
+
+	pA, _ = P.NewPattern([]string{"A", "D", "B", "C"}, nil)
+	pB, _ = P.NewPattern([]string{"B", "E", "K", "C"}, nil)
+	patt, err = P.GenCandidatesForGoals(pA, pB, nil)
+	assert.NotNil(t, patt, "Patterns cannot be empty")
+	assert.Nil(t, err)
+
+}

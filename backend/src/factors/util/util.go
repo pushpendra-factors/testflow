@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -186,14 +185,14 @@ func IsEmail(str string) bool {
 	return regexpEmail.MatchString(str)
 }
 
-func IsValidUrl(urlString string) bool {
+func IsValidUrl(tocheck string) bool {
 
-	_, err := url.Parse(urlString)
-	if err != nil {
+	r, _ := regexp.Compile("(^(http|https)://)?(www)?.com")
+	if strings.HasPrefix(tocheck, "$session") {
 		return false
 	}
-
-	return true
+	return r.MatchString(tocheck)
+	// return true
 }
 
 // GetEmailLowerCase returns email in lower case for consistency
@@ -871,6 +870,32 @@ func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 // IsCampaignEvent check if eventname is campaign Event
 func IsCampaignEvent(eventName string) bool {
 	return strings.HasPrefix(eventName, "$session[campaign")
+}
+
+// IsSourceEvent check if eventname is campaign Event
+func IsSourceEvent(eventName string) bool {
+	return strings.HasPrefix(eventName, "$session[source")
+}
+
+// IsMediumEvent check if eventname is campaign Event
+func IsMediumEvent(eventName string) bool {
+	return strings.HasPrefix(eventName, "$session[medium")
+}
+
+// IsReferrerEvent check if eventname is referrer Event
+func IsReferrerEvent(eventName string) bool {
+	return strings.HasPrefix(eventName, "$session[initial_referrer")
+}
+
+func IsAdgroupEvent(eventName string) bool {
+	return strings.HasPrefix(eventName, "$session[adgroup")
+}
+
+func IsCampaignAnalytics(eventName string) bool {
+	if IsCampaignEvent(eventName) == true || IsMediumEvent(eventName) == true || IsSourceEvent(eventName) == true || IsReferrerEvent(eventName) == true || IsAdgroupEvent(eventName) == true {
+		return true
+	}
+	return false
 }
 
 func IsItreeCampaignEvent(eventName string) bool {
