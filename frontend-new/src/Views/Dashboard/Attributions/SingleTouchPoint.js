@@ -37,6 +37,11 @@ function SingleTouchPoint({
   }
 
   let chartContent = null;
+
+  const legends = [
+    `Conversions as Unique users (${attribution_method})`,
+    "Cost per conversion",
+  ];
   
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
@@ -49,6 +54,7 @@ function SingleTouchPoint({
         section={section}
         height={DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT}
         cardSize={unit.cardSize}
+        legends={legends}
       />
     );
   } else {

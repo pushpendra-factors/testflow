@@ -1,6 +1,7 @@
 import React from "react";
+import { Text } from "../factorsComponents";
 
-function ChartLegends() {
+function ChartLegends({ legends }) {
   return (
     <div className="flex justify-center items-center">
       <div className="flex items-center mr-2">
@@ -13,11 +14,7 @@ function ChartLegends() {
             borderRadius: "8px",
           }}
         ></div>
-        <div
-          style={{ color: "#08172B", fontSize: "0.875rem", lineHeight: "1.25rem" }}
-        >
-          Conversions as Unique users (Last Touch)
-        </div>
+        <Text extraClass="mb-0 text-sm" type="title" color="grey-8">{legends[0]}</Text>
       </div>
       <div className="flex items-center mr-2">
         <div
@@ -28,11 +25,7 @@ function ChartLegends() {
             height: "4px",
           }}
         ></div>
-        <div
-          style={{ color: "#08172B", fontSize: "0.875rem", lineHeight: "1.25rem" }}
-        >
-          Cost per conversion
-        </div>
+        <Text extraClass="mb-0 text-sm" type="title" color="grey-8">{legends[1]}</Text>
       </div>
     </div>
   );

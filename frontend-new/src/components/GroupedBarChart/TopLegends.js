@@ -1,26 +1,28 @@
 import React from "react";
 import { Text } from "../factorsComponents";
+import { legend_counts } from "../../utils/constants";
 
 const legend_length = {
   0:15,
-  1:40,
+  1:50,
   2:10
 }
 
 function TopLegends({
   colors,
-  parentClassName = "flex justify-center mb-4 py-3",
+  legends,
+  parentClassName = "flex justify-center py-3",
   cardSize,
 }) {
-  const legends = Object.keys(colors);
+  let itemsCount = legend_counts[cardSize];
   return (
     <div className={parentClassName}>
-      {legends.map((legend, index) => {
+      {legends.slice(0, itemsCount).map((legend, index) => {
         return (
           <div key={legend + index} className="flex items-center">
             <div
               style={{
-                backgroundColor: Object.values(colors)[index],
+                backgroundColor: colors[index],
                 width: "16px",
                 height: "16px",
                 borderRadius: "8px",

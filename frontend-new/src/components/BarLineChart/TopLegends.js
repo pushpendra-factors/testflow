@@ -4,6 +4,7 @@ import { Text } from "../factorsComponents";
 function TopLegends({
   parentClassName = "flex justify-center mb-4 py-3",
   cardSize,
+  legends
 }) {
   return (
     <div className={parentClassName}>
@@ -18,7 +19,7 @@ function TopLegends({
         ></div>
         <div className="px-2">
           <Text mini type="paragraph">
-            Opportunities
+            {legends[0]}
           </Text>
         </div>
       </div>
@@ -34,7 +35,7 @@ function TopLegends({
           ></div>
           <div className="px-2">
             <Text mini type="paragraph">
-              Cost Per Conversion
+            {legends[1]}
             </Text>
           </div>
         </div>

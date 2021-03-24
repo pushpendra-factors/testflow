@@ -41,23 +41,24 @@ export const formatGroupedData = (
   event,
   visibleIndices,
   attribution_method,
-  attribution_method_compare
+  attribution_method_compare,
+  currMetricsValue
 ) => {
   const { headers } = data;
-  const userIdx = headers.indexOf(`${event} - Users`);
-  const compareUsersIdx = headers.indexOf(`Compare - Users`);
-  // const campaignIdx = headers.indexOf("Campaign");
-  // const costIdx = headers.indexOf("Cost Per Conversion");
-  // const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
+  const str = currMetricsValue ? `Cost Per Conversion` : `${event} - Users`;
+  const compareStr = currMetricsValue
+    ? `Compare Cost Per Conversion`
+    : `Compare - Users`;
+  const userIdx = headers.indexOf(str);
+  const compareUsersIdx = headers.indexOf(compareStr);
   let rows = data.rows.filter((_, index) => visibleIndices.indexOf(index) > -1);
   rows = SortData(rows, userIdx, "descend");
-  const chartData = [
-    [`Conversions as Unique users (${attribution_method})`],
-    [`Conversions as Unique users (${attribution_method_compare})`],
-  ];
-  rows.forEach((row) => {
-    chartData[0].push(row[userIdx]);
-    chartData[1].push(row[compareUsersIdx]);
+  const chartData = rows.map((row) => {
+    return {
+      name: row[0],
+      [attribution_method]: row[userIdx],
+      [attribution_method_compare]: row[compareUsersIdx],
+    };
   });
   return chartData;
 };
@@ -83,8 +84,12 @@ const renderComparCell = (obj, xcl) => {
 
   return (
     <div className={styles.cmprCell}>
-      <span className={styles.cmprCell__first}><NumFormat number={obj.first} /></span>
-      <span className={styles.cmprCell__second}><NumFormat number={obj.second} /></span>
+      <span className={styles.cmprCell__first}>
+        <NumFormat number={obj.first} />
+      </span>
+      <span className={styles.cmprCell__second}>
+        <NumFormat number={obj.second} />
+      </span>
       {changeMetric}
     </div>
   );
@@ -407,9 +412,9 @@ export const getTableColumns = (
             ),
             dataIndex: le.label + " - Users",
             className: "text-center",
-            render: (d)=>{
-              return <NumFormat number={d} /> 
-            }
+            render: (d) => {
+              return <NumFormat number={d} />;
+            },
           },
           {
             title: (
@@ -419,9 +424,9 @@ export const getTableColumns = (
             ),
             dataIndex: le.label + " - CPC",
             className: "text-center",
-            render: (d)=>{
-              return <NumFormat number={d} /> 
-            }
+            render: (d) => {
+              return <NumFormat number={d} />;
+            },
           },
         ],
       };
