@@ -67,7 +67,7 @@ func registerStructs() {
 	beam.RegisterType(reflect.TypeOf((*FB.CacheDashboardUnitDoFn)(nil)).Elem())
 
 	beam.RegisterType(reflect.TypeOf((*model.WebAnalyticsCachePayload)(nil)).Elem())
-	beam.RegisterType(reflect.TypeOf((*FB.GetWebAnalyticsCachePayloadsNowFn)(nil)).Elem())
+	beam.RegisterType(reflect.TypeOf((*FB.GetWebAnalyticsCachePayloadsFn)(nil)).Elem())
 	beam.RegisterType(reflect.TypeOf((*FB.CacheWebAnalyticsDoFn)(nil)).Elem())
 }
 
