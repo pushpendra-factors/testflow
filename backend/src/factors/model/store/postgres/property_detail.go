@@ -171,8 +171,8 @@ func (pg *Postgres) GetPropertyTypeByKeyValue(projectID uint64, eventName string
 		if propertyKey != "" {
 			if preConfigured, pType := pg.getPreConfiguredPropertyTypeByName(projectID, eventName, propertyKey, isUserProperty); preConfigured {
 				if _, err := U.GetPropertyValueAsFloat64(propertyValue); err != nil {
-					log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "is_user_property": isUserProperty}).
-						Error("Failed to convert configured property value.")
+					log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "property_value": propertyValue, "is_user_property": isUserProperty}).
+						WithError(err).Error("Failed to convert configured property value.")
 					return ""
 				}
 
