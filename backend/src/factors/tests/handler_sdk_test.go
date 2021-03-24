@@ -2293,10 +2293,11 @@ func TestSDKAndIntegrationRequestQueueingAndDuplication(t *testing.T) {
 	uri := "/sdk/event/track"
 
 	queueClient := C.GetServices().QueueClient
-
 	sdkQueueLengthPrev, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueue)
 	assert.Nil(t, err)
-	dupSDKQueueLengthPrev, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueueDuplicate)
+
+	duplicateQueueClient := C.GetServices().DuplicateQueueClient
+	dupSDKQueueLengthPrev, err := duplicateQueueClient.GetBroker().GetQueueLength(sdk.RequestQueueDuplicate)
 	assert.Nil(t, err)
 
 	w := ServePostRequestWithHeaders(r, uri, []byte(`{"event_name": "signup", "event_properties": {"mobile" : "true"}}`),

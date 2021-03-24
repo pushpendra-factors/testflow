@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: queue-redis-2-pv
+spec:
+  capacity:
+    storage: 25Gi
+  accessModes:
+    - ReadWriteOnce
+  gcePersistentDisk:
+    pdName: factors-staging-queue-redis-2-disk
+    fsType: ext4

@@ -82,6 +82,7 @@ func TestMain(m *testing.M) {
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	C.InitQueueClient(config.RedisHost, config.RedisPort)
+	C.InitDuplicateQueueClient(config.RedisHost, config.RedisPort)
 
 	C.InitPropertiesTypeCache(true, 10000, "*", "")
 	if C.GetConfig().Env != C.DEVELOPMENT {
