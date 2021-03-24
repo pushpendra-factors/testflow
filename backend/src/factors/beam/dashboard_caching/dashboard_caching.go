@@ -38,7 +38,7 @@ func initConf(config *C.Configuration) {
 
 	C.InitConf(config.Env)
 	C.SetIsBeamPipeline()
-	err := C.InitDBWithMaxIdleAndMaxOpenConn(config.DBInfo, 5, 2)
+	err := C.InitDBWithMaxIdleAndMaxOpenConn(*config, 5, 2)
 	if err != nil {
 		// TODO(prateek): Check how a panic here will effect the pipeline.
 		log.WithError(err).Panic("Failed to initalize db.")

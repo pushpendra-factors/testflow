@@ -1014,6 +1014,7 @@ func TestPatternFilterTopKpatternTypes(t *testing.T) {
 	topPageViewEvents := []string{"pgv1", "pgv2", "pgv3", "$sp4", "pgv5"}
 	topIEEvents := []string{"ie1", "ie2", "ie3", "ie4", "ie5"}
 	topSpecEvents := []string{"$sp1", "$sp2", "$sp3", "$sp4", "$sp5"}
+	topCampEvents := []string{"$session[campaign=1]", "$session[campaign=2]", "$session[campaign=3]", "$session[campaign=4]", "$session[campaign=5]"}
 
 	patterns := make([]*P.Pattern, 0)
 	eNT := make(map[string]string)
@@ -1024,29 +1025,33 @@ func TestPatternFilterTopKpatternTypes(t *testing.T) {
 		tmpPv, _ := P.NewPattern([]string{topPageViewEvents[idx]}, nil)
 		tmpIE, _ := P.NewPattern([]string{topIEEvents[idx]}, nil)
 		tmpSpec, _ := P.NewPattern([]string{topSpecEvents[idx]}, nil)
+		tmpCamp, _ := P.NewPattern([]string{topCampEvents[idx]}, nil)
 
 		tmpUC.PerUserCount = uint(idx)
 		tmpPv.PerUserCount = uint(idx)
 		tmpIE.PerUserCount = uint(idx)
 		tmpSpec.PerUserCount = uint(idx)
+		tmpCamp.PerUserCount = uint(idx)
 
 		patterns = append(patterns, tmpUC)
 		patterns = append(patterns, tmpPv)
 		patterns = append(patterns, tmpIE)
 		patterns = append(patterns, tmpSpec)
+		patterns = append(patterns, tmpCamp)
 
 		eNT[topUCevents[idx]] = model.TYPE_USER_CREATED_EVENT_NAME
 		eNT[topPageViewEvents[idx]] = model.TYPE_FILTER_EVENT_NAME
 		eNT[topIEEvents[idx]] = model.TYPE_INTERNAL_EVENT_NAME
 		eNT[topSpecEvents[idx]] = "specialEvents"
-
+		eNT[topCampEvents[idx]] = "CampaignEvents"
 	}
-
-	filterdPatterns := T.FilterTopKEventsOnTypes(patterns, eNT, 3, 3, 3, nil)
-	assert.Equal(t, 11, len(filterdPatterns)) //$sp4 is repeated
+	var ca T.CampaignEventLists
+	ca.CampaignList = []string{"$session[campaign=1]", "$session[campaign=2]", "$session[campaign=3]", "$session[campaign=4]", "$session[campaign=5]"}
+	filterdPatterns := T.FilterTopKEventsOnTypes(patterns, eNT, 3, 3, 3, ca)
+	assert.Equal(t, 16, len(filterdPatterns)) //$sp4 is repeated
 }
 
-func TestGenSegmentsForTopGoals(t *testing.T) {
+func TestGenCombinationPatternsEndingWithGoal(t *testing.T) {
 	var err bool
 	err = false
 	allEvents := []string{"uc1", "uc2", "pgv1", "pgv2", "ie1", "ie2", "$sp1", "$sp2"}
@@ -1069,7 +1074,7 @@ func TestGenSegmentsForTopGoals(t *testing.T) {
 		goalPatterns = append(goalPatterns, tmpGoal)
 
 	}
-	filterdPatterns, _, _ := P.GenSegmentsForTopGoals(allPatterns, nil, goalPatterns)
+	filterdPatterns, _, _ := P.GenCombinationPatternsEndingWithGoal(allPatterns, goalPatterns, nil)
 	for _, f := range filterdPatterns {
 		if f.EventNames[0] == f.EventNames[1] {
 			err = true
@@ -1077,7 +1082,7 @@ func TestGenSegmentsForTopGoals(t *testing.T) {
 		assert.Equal(t, err, false, "Both start and goal patterns are equal")
 	}
 
-	assert.Equal(t, 80, len(filterdPatterns), "total number of patterns")
+	assert.Equal(t, 40, len(filterdPatterns), "total number of patterns")
 }
 
 func TestGenRepeatedEventCandidates(t *testing.T) {
@@ -1107,5 +1112,228 @@ func TestGenRepeatedEventCandidates(t *testing.T) {
 	emptyPt, err := P.GenRepeatedEventCandidates(cycEvents, sp7, nil)
 	assert.Equal(t, 0, len(emptyPt))
 	assert.Nil(t, err, "Empty cyclic set with no error")
+
+}
+
+func TestGetTopURLs(t *testing.T) {
+	url1, _ := P.NewPattern([]string{"http://www.abc1.com"}, nil)
+	url2, _ := P.NewPattern([]string{"http://www.abc2.com"}, nil)
+	url3, _ := P.NewPattern([]string{"http://www.abc3.com"}, nil)
+	url4, _ := P.NewPattern([]string{"http://www.abc4.com"}, nil)
+	url5, _ := P.NewPattern([]string{"www.abc5.com"}, nil)
+	url6, _ := P.NewPattern([]string{"www.abc6.com"}, nil)
+	url7, _ := P.NewPattern([]string{"abc7.com"}, nil)
+
+	UD1, _ := P.NewPattern([]string{"UD1"}, nil)
+	UD2, _ := P.NewPattern([]string{"UD2"}, nil)
+	UD3, _ := P.NewPattern([]string{"UD3"}, nil)
+	p1, _ := P.NewPattern([]string{"$hub1"}, nil)
+	p2, _ := P.NewPattern([]string{"$hub2"}, nil)
+	p3, _ := P.NewPattern([]string{"$hub3"}, nil)
+
+	url1.PerUserCount = 1
+	url2.PerUserCount = 2
+	url3.PerUserCount = 3
+	url4.PerUserCount = 4
+	url5.PerUserCount = 5
+	url6.PerUserCount = 6
+	url7.PerUserCount = 6
+	UD1.PerUserCount = 14
+	UD2.PerUserCount = 12
+	UD3.PerUserCount = 10
+
+	urlPatterns := []*P.Pattern{url1, url2, url3, url4, url5, url6, url7, UD1, UD2, UD3, p1, p2, p3}
+	topk := 4
+	filteredPatterns := T.GetTopURLs(urlPatterns, topk)
+	assert.Equal(t, topk, len(filteredPatterns))
+	resPattern := []*P.Pattern{url7, url6, url4, url5}
+	assert.ElementsMatch(t, filteredPatterns, resPattern, "Not all top patterns found")
+
+}
+
+func TestGetTopUDE(t *testing.T) {
+	UD1, _ := P.NewPattern([]string{"UD1"}, nil)
+	UD2, _ := P.NewPattern([]string{"UD2"}, nil)
+	UD3, _ := P.NewPattern([]string{"UD3"}, nil)
+	UD4, _ := P.NewPattern([]string{"UD4"}, nil)
+	UD5, _ := P.NewPattern([]string{"UD5"}, nil)
+	UD6, _ := P.NewPattern([]string{"UD6"}, nil)
+
+	UD1.PerUserCount = 1
+	UD2.PerUserCount = 2
+	UD3.PerUserCount = 3
+	UD4.PerUserCount = 4
+	UD5.PerUserCount = 5
+	UD6.PerUserCount = 6
+
+	urlPatterns := []*P.Pattern{UD1, UD2, UD3, UD4, UD5, UD6}
+	topk := 3
+	eventNamesWithType := make(map[string]string, 0)
+	eventNamesWithType["UD1"] = "UC"
+	eventNamesWithType["UD2"] = "UC"
+	eventNamesWithType["UD3"] = "UC"
+	eventNamesWithType["UD4"] = "UC"
+	eventNamesWithType["UD5"] = "UC"
+	eventNamesWithType["UD6"] = "UC"
+	filteredPatterns := T.GetTopUDE(urlPatterns, eventNamesWithType, topk)
+	assert.Equal(t, topk, len(filteredPatterns))
+	resPattern := []*P.Pattern{UD6, UD5, UD4}
+	assert.ElementsMatch(t, filteredPatterns, resPattern, "Not all top patterns found")
+
+}
+
+func TestGetTopStandardPatterns(t *testing.T) {
+	p1, _ := P.NewPattern([]string{"$hub1"}, nil)
+	p2, _ := P.NewPattern([]string{"$hub2"}, nil)
+	p3, _ := P.NewPattern([]string{"$hub3"}, nil)
+	p4, _ := P.NewPattern([]string{"$hub4"}, nil)
+	p5, _ := P.NewPattern([]string{"$hub5"}, nil)
+	p6, _ := P.NewPattern([]string{"$hub6"}, nil)
+
+	p1.PerUserCount = 1
+	p2.PerUserCount = 2
+	p3.PerUserCount = 3
+	p4.PerUserCount = 4
+	p5.PerUserCount = 5
+	p6.PerUserCount = 6
+
+	stanPatterns := []*P.Pattern{p1, p2, p3, p4, p5, p6}
+	topk := 3
+	filteredPatterns := T.GetTopStandardPatterns(stanPatterns, topk)
+	assert.Equal(t, topk, len(filteredPatterns))
+	resPattern := []*P.Pattern{p6, p5, p4}
+	assert.ElementsMatch(t, filteredPatterns, resPattern, "Not all top patterns found")
+
+	topk = -1
+	filteredPatterns = T.GetTopStandardPatterns(stanPatterns, topk)
+	assert.Equal(t, len(stanPatterns), len(filteredPatterns))
+	resPattern = []*P.Pattern{p6, p5, p4, p3, p2, p1}
+	assert.ElementsMatch(t, filteredPatterns, resPattern, "Not all top patterns found")
+
+}
+
+func TestGetTopCampaigns(t *testing.T) {
+	p1, _ := P.NewPattern([]string{"$session[campaign=1]"}, nil)
+	p2, _ := P.NewPattern([]string{"$session[campaign=2]"}, nil)
+	p3, _ := P.NewPattern([]string{"$session[campaign=3]"}, nil)
+	p4, _ := P.NewPattern([]string{"$session[campaign=4]"}, nil)
+	p5, _ := P.NewPattern([]string{"$session[campaign=5]"}, nil)
+	p6, _ := P.NewPattern([]string{"$session[campaign=6]"}, nil)
+
+	p1.PerUserCount = 1
+	p2.PerUserCount = 2
+	p3.PerUserCount = 3
+	p4.PerUserCount = 4
+	p5.PerUserCount = 5
+	p6.PerUserCount = 6
+
+	urlPatterns := []*P.Pattern{p1, p2, p3, p4, p5, p6}
+	topk := 3
+	filteredPatterns := T.GetTopCampaigns(urlPatterns, topk)
+	assert.Equal(t, topk, len(filteredPatterns))
+	resPattern := []*P.Pattern{p6, p5, p4}
+	assert.ElementsMatch(t, filteredPatterns, resPattern, "Not all top patterns found")
+
+}
+
+func TestGenMissingJourneyPatterns(t *testing.T) {
+
+	p1, _ := P.NewPattern([]string{"a", "b", "c"}, nil)
+	p2, _ := P.NewPattern([]string{"a", "b", "d"}, nil)
+	p3, _ := P.NewPattern([]string{"a", "c", "e"}, nil)
+	p4, _ := P.NewPattern([]string{"a", "k", "e"}, nil)
+	q1, _ := P.NewPattern([]string{"a", "b"}, nil)
+	q2, _ := P.NewPattern([]string{"a", "c"}, nil)
+	q3, _ := P.NewPattern([]string{"a", "d"}, nil)
+
+	threeLen := []*P.Pattern{p1, p2, p3, p4}
+	twoLen := []*P.Pattern{q1, q2, q3}
+
+	pt, _ := T.GenMissingJourneyPatterns(threeLen, twoLen, nil)
+	assert.Equal(t, 1, len(pt), "not Counting all missing two Level")
+
+	pt, err := T.GenMissingJourneyPatterns(twoLen, threeLen, nil)
+	assert.NotNil(t, err, err)
+
+	p1, _ = P.NewPattern([]string{"a", "a", "c"}, nil)
+	p2, _ = P.NewPattern([]string{"a", "a", "d"}, nil)
+	p3, _ = P.NewPattern([]string{"a", "a", "e"}, nil)
+	p4, _ = P.NewPattern([]string{"a", "k", "e"}, nil)
+	q1, _ = P.NewPattern([]string{"a", "a"}, nil)
+	q2, _ = P.NewPattern([]string{"a", "k"}, nil)
+	q3, _ = P.NewPattern([]string{"a", "d"}, nil)
+
+	threeLen = []*P.Pattern{p1, p2, p3, p4}
+	twoLen = []*P.Pattern{q1, q2, q3}
+
+	pt, _ = T.GenMissingJourneyPatterns(threeLen, twoLen, nil)
+	assert.Equal(t, 0, len(pt), "not Counting all missing two Level")
+
+	p1, _ = P.NewPattern([]string{"a", "a"}, nil)
+	p2, _ = P.NewPattern([]string{"b", "b"}, nil)
+	p3, _ = P.NewPattern([]string{"c", "a"}, nil)
+	p4, _ = P.NewPattern([]string{"d", "e"}, nil)
+	q1, _ = P.NewPattern([]string{"a"}, nil)
+	q2, _ = P.NewPattern([]string{"b"}, nil)
+	q3, _ = P.NewPattern([]string{"c"}, nil)
+
+	twoLen = []*P.Pattern{p1, p2, p3, p4}
+	oneLen := []*P.Pattern{q1, q2, q3}
+
+	pt, _ = T.GenMissingJourneyPatterns(twoLen, oneLen, nil)
+	assert.Equal(t, 1, len(pt), "not Counting all missing two Level")
+
+}
+
+func TestGenRepeatedCombinations(t *testing.T) {
+
+	q1, _ := P.NewPattern([]string{"a", "e"}, nil)
+	q2, _ := P.NewPattern([]string{"b", "k"}, nil)
+	q3, _ := P.NewPattern([]string{"c", "d"}, nil)
+	q4, _ := P.NewPattern([]string{"d", "l"}, nil)
+
+	p1, _ := P.NewPattern([]string{"a", "a", "e"}, nil)
+	p2, _ := P.NewPattern([]string{"b", "b", "k"}, nil)
+	p3, _ := P.NewPattern([]string{"c", "c", "d"}, nil)
+	// p4, _ := P.NewPattern([]string{"d", "d", "l"}, nil)
+
+	lenTwoPatt := []*P.Pattern{q1, q2, q3, q4}
+	lenTwoMatch := []*P.Pattern{p1, p2, p3}
+	// lenTwofail := []*P.Pattern{q4}
+
+	repeaptedEvents := []string{"a", "b", "c"}
+	repeatedEventsMap := make(map[string]bool, 0)
+	repeatedEventsMap["a"] = true
+	repeatedEventsMap["b"] = true
+	repeatedEventsMap["c"] = true
+
+	pt, err := T.GenRepeatedCombinations(lenTwoPatt, nil, repeaptedEvents)
+	assert.Nil(t, err)
+
+	assert.ElementsMatch(t, pt, lenTwoMatch, "Not all repeated elemets found")
+}
+
+func TestGenInterMediateCombinations(t *testing.T) {
+
+	//result will be {"a","b","g"} {"b","a","g"}
+	q1, _ := P.NewPattern([]string{"a", "g"}, nil)
+	q2, _ := P.NewPattern([]string{"b", "g"}, nil)
+
+	lenTwoPatt := []*P.Pattern{q1, q2}
+
+	patts, err := T.GenInterMediateCombinations(lenTwoPatt, nil)
+	assert.Nil(t, err, "erorr is not nil")
+	assert.Equal(t, 2, len(patts), "number of patterns generated is not matched")
+	for _, v := range patts {
+		fmt.Println(v.EventNames)
+	}
+
+	var flagCount = true
+	for _, v := range patts {
+		if len(v.EventNames) != 3 {
+			flagCount = false
+		}
+	}
+	assert.True(t, flagCount, "len not equal to three")
 
 }

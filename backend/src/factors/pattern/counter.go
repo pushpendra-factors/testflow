@@ -215,8 +215,36 @@ func GenRepeatedEventCandidates(repeatedEvents []string, pt *Pattern, userAndEve
 
 }
 
+func GetPattEndWithGoal(combinationPatterns, goalPatterns []*Pattern) []*Pattern {
+	// Filter combination ending in goal or repeated event
+	goalsMap := make(map[string]bool, 0)
+	allGoals := make([]*Pattern, 0)
+	allEventsMap := make(map[string]bool, 0)
+	for _, v := range goalPatterns {
+		goalsMap[v.EventNames[0]] = true
+	}
+
+	for _, v := range combinationPatterns {
+
+		if allEventsMap[strings.Join(v.EventNames, "_")] == false {
+			if len(v.EventNames) != 2 {
+				log.WithField("Events", v.EventNames).Error("len of eventnames in pattern not equal to 2")
+			}
+
+			if goalsMap[v.EventNames[1]] == true {
+				allGoals = append(allGoals, v)
+			}
+
+			allEventsMap[strings.Join(v.EventNames, "_")] = true
+		}
+	}
+
+	return allGoals
+
+}
+
 //GenSegmentsForTopGoals form candidated with topK goal events
-func GenSegmentsForTopGoals(currentPatterns []*Pattern, userAndEventsInfo *UserAndEventsInfo, GoalPatterns []*Pattern) (
+func GenCombinationPatternsEndingWithGoal(currentPatterns, GoalPatterns []*Pattern, userAndEventsInfo *UserAndEventsInfo) (
 	// create pairs of (startPattern, GoalPattern) to count from events file
 	[]*Pattern, uint, error) {
 	numPatterns := len(currentPatterns)
@@ -256,8 +284,12 @@ func GenSegmentsForTopGoals(currentPatterns []*Pattern, userAndEventsInfo *UserA
 		}
 	}
 
+	lenTwoPatterns := candidatesMapToSlice(candidatesMap)
+	combinationGoalPatterns := GetPattEndWithGoal(lenTwoPatterns, GoalPatterns)
+	log.Info("number of patterns ending in goal : ", len(combinationGoalPatterns))
+
 	// removing max Candidates filtering condition
-	return candidatesMapToSlice(candidatesMap), currentMinCount, nil
+	return combinationGoalPatterns, currentMinCount, nil
 }
 
 //GenSegmentsForRepeatedEvents form candidated for repeated goal events
@@ -647,4 +679,79 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 		return nil, err
 	}
 	return candidatesMapToSlice(candidatesMap), nil
+}
+
+func GenCandidatesForGoals(patternA, patternB *Pattern,
+	userAndEventsInfo *UserAndEventsInfo) ([]*Pattern, error) {
+
+	// patterns := make(*P.Pattern, 0)
+	pattLen := len(patternA.EventNames)
+	var allPatterns []*Pattern
+	if len(patternA.EventNames) != len(patternB.EventNames) {
+		return nil, fmt.Errorf("len of patterns are not equal")
+	}
+	if (patternA.EventNames[pattLen-1]) != (patternB.EventNames[pattLen-1]) {
+		return nil, nil
+	}
+	tmpStringA := make([]string, pattLen+1)
+	tmpStringB := make([]string, pattLen+1)
+
+	allstrings := make([][]string, 0)
+	tmpStringA[pattLen] = patternA.EventNames[pattLen-1]
+	tmpStringB[pattLen] = patternB.EventNames[pattLen-1]
+
+	count := 0
+	for i := 0; i < pattLen; i++ {
+		if strings.Compare(patternA.EventNames[i], patternB.EventNames[i]) != 0 {
+			count++
+		}
+	}
+
+	if count == 1 {
+		for i := 0; i < len(patternA.EventNames)-1; i++ {
+
+			if strings.Compare(patternA.EventNames[i], patternB.EventNames[i]) == 0 {
+				tmpStringA[i] = patternA.EventNames[i]
+				tmpStringB[i] = patternB.EventNames[i]
+
+			} else {
+				tmpStringA[i] = patternA.EventNames[i]
+				tmpStringB[i] = patternB.EventNames[i]
+
+				tmpStringA[i+1] = patternB.EventNames[i]
+				tmpStringB[i+1] = patternA.EventNames[i]
+
+				for j := i + 2; j < pattLen+1; j++ {
+					tmpStringA[j] = patternA.EventNames[j-1]
+					tmpStringB[j] = patternB.EventNames[j-1]
+				}
+				tmpA := make([]string, pattLen+1)
+				tmpB := make([]string, pattLen+1)
+
+				for idx := 0; idx < pattLen+1; idx++ {
+					tmpA[idx] = tmpStringA[idx]
+					tmpB[idx] = tmpStringB[idx]
+
+				}
+
+				allstrings = append(allstrings, tmpA)
+				allstrings = append(allstrings, tmpB)
+
+			}
+		}
+
+		for _, tmpPattEventNames := range allstrings {
+			tmpPatt, err := NewPattern(tmpPattEventNames, userAndEventsInfo)
+			if err != nil {
+				return []*Pattern{}, fmt.Errorf("unable to generate new n+1 len Pattern")
+			}
+			allPatterns = append(allPatterns, tmpPatt)
+
+		}
+	} else {
+		log.Info("EventNames are not matching in more than One ", patternA.EventNames, patternB.EventNames)
+		return nil, nil
+	}
+	return allPatterns, nil
+
 }
