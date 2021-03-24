@@ -1051,7 +1051,7 @@ func TestPatternFilterTopKpatternTypes(t *testing.T) {
 	assert.Equal(t, 16, len(filterdPatterns)) //$sp4 is repeated
 }
 
-func TestGenSegmentsForTopGoals(t *testing.T) {
+func TestGenCombinationPatternsEndingWithGoal(t *testing.T) {
 	var err bool
 	err = false
 	allEvents := []string{"uc1", "uc2", "pgv1", "pgv2", "ie1", "ie2", "$sp1", "$sp2"}
@@ -1074,7 +1074,7 @@ func TestGenSegmentsForTopGoals(t *testing.T) {
 		goalPatterns = append(goalPatterns, tmpGoal)
 
 	}
-	filterdPatterns, _, _ := P.GenSegmentsForTopGoals(allPatterns, nil, goalPatterns)
+	filterdPatterns, _, _ := P.GenCombinationPatternsEndingWithGoal(allPatterns, goalPatterns, nil)
 	for _, f := range filterdPatterns {
 		if f.EventNames[0] == f.EventNames[1] {
 			err = true
@@ -1082,7 +1082,7 @@ func TestGenSegmentsForTopGoals(t *testing.T) {
 		assert.Equal(t, err, false, "Both start and goal patterns are equal")
 	}
 
-	assert.Equal(t, 80, len(filterdPatterns), "total number of patterns")
+	assert.Equal(t, 40, len(filterdPatterns), "total number of patterns")
 }
 
 func TestGenRepeatedEventCandidates(t *testing.T) {
