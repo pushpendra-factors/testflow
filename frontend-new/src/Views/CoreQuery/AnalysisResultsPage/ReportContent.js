@@ -40,7 +40,7 @@ function ReportContent({
   onReportClose,
   cmprDuration,
   runAttrCmprQuery,
-  cmprResultState
+  cmprResultState,
 }) {
   let content = null,
     queryDetail = null,
@@ -123,6 +123,15 @@ function ReportContent({
   if (queryType === QUERY_TYPE_ATTRIBUTION) {
     queryDetail = attributionsState.eventGoal.label;
     durationObj = attributionsState.date_range;
+    if (attributionsState.models.length === 2) {
+      metricsDropdown = (
+        <CampaignMetricsDropdown
+          metrics={["Conversions", "Cost Per Conversion"]}
+          currValue={currMetricsValue}
+          onChange={setCurrMetricsValue}
+        />
+      );
+    }
   }
 
   if (queryType === QUERY_TYPE_CAMPAIGN) {
@@ -174,6 +183,7 @@ function ReportContent({
           cmprDuration={cmprDuration}
           attributionsState={attributionsState}
           section={section}
+          currMetricsValue={currMetricsValue}
         />
       );
     }

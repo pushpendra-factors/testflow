@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import AttributionTable from "./AttributionTable";
 import { formatGroupedData } from "./utils";
 import GroupedBarChart from "../../../components/GroupedBarChart";
@@ -13,7 +13,10 @@ function GroupedAttributionsChart({
   touchpoint,
   linkedEvents,
   section,
-  data2
+  data2,
+  currMetricsValue,
+  durationObj,
+  cmprDuration
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -27,7 +30,8 @@ function GroupedAttributionsChart({
       event,
       visibleIndices,
       attribution_method,
-      attribution_method_compare
+      attribution_method_compare,
+      currMetricsValue
     );
     setChartsData(formattedData);
   }, [
@@ -36,32 +40,43 @@ function GroupedAttributionsChart({
     visibleIndices,
     attribution_method,
     attribution_method_compare,
+    currMetricsValue,
   ]);
-
-  const getCategories = useCallback(() => {
-    const { headers } = data;
-    const campaignIdx = headers.indexOf(touchpoint);
-    return data.rows
-      .filter((_, index) => visibleIndices.indexOf(index) > -1)
-      .map((row) => row[campaignIdx]);
-  }, [visibleIndices, data, touchpoint]);
 
   if (!chartsData.length) {
     return null;
   }
 
+  const allValues = [];
+
+  chartsData.forEach((cd) => {
+    allValues.push(cd[attribution_method]);
+    allValues.push(allValues.push(cd[attribution_method_compare]));
+  });
+
   const getColors = () => {
-    return {
-      [chartsData[0][0]]: "#4D7DB4",
-      [chartsData[1][0]]: "#4CBCBD",
-    };
+    return ["#4D7DB4", "#4CBCBD"];
   };
+
+  let legends, tooltipTitle;
+  if (currMetricsValue) {
+    legends = [
+      `Cost Per Conversion (${attribution_method})`,
+      `Cost Per Conversion (${attribution_method_compare})`,
+    ];
+    tooltipTitle = "Cost Per Conversion";
+  } else {
+    legends = [
+      `Conversions as Unique users (${attribution_method})`,
+      `Conversions as Unique users (${attribution_method_compare})`,
+    ];
+    tooltipTitle = "Conversions";
+  }
 
   return (
     <div className="flex items-center justify-center flex-col">
       <GroupedBarChart
         colors={getColors()}
-        categories={getCategories()}
         chartData={chartsData}
         visibleIndices={visibleIndices}
         responseRows={data.rows}
@@ -70,6 +85,9 @@ function GroupedAttributionsChart({
         method2={attribution_method_compare}
         event={event}
         section={section}
+        allValues={allValues}
+        legends={legends}
+        tooltipTitle={tooltipTitle}
       />
       <div className="mt-12 w-full">
         <AttributionTable
@@ -84,6 +102,8 @@ function GroupedAttributionsChart({
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
           attribution_method={attribution_method}
           attribution_method_compare={attribution_method_compare}
+          durationObj={durationObj}
+          cmprDuration={cmprDuration}
         />
       </div>
     </div>

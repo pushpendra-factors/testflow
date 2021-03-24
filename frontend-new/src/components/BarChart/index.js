@@ -22,65 +22,70 @@ function BarChart({
   section,
   cardSize = 1,
 }) {
-
   const tooltip = useRef(null);
   const chartRef = useRef(null);
 
-  const getLabel = useCallback((str, position = "tick") => {
-    let label = str.split(";")[0];
-    label = label
-      .split(",")
-      .filter((elem) => elem)
-      .join(",");
+  const getLabel = useCallback(
+    (str, position = "tick") => {
+      let label = str.split(";")[0];
+      label = label
+        .split(",")
+        .filter((elem) => elem)
+        .join(",");
 
-    const tickLength = BAR_CHART_XAXIS_TICK_LENGTH[cardSize];
-    if (label.length > tickLength && position === "tick") {
-      return label.substr(0, tickLength) + "...";
-    }
-    return label;
-  }, [cardSize]);
-
-  const showTooltip = useCallback((d, i) => {
-    const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
-    nodes.forEach((node, index) => {
-      if (index !== i) {
-        d3.select(node).attr("class", "bar opaque");
+      const tickLength = BAR_CHART_XAXIS_TICK_LENGTH[cardSize];
+      if (label.length > tickLength && position === "tick") {
+        return label.substr(0, tickLength) + "...";
       }
-    });
+      return label;
+    },
+    [cardSize]
+  );
 
-    const nodePosition = d3.select(nodes[i]).node().getBoundingClientRect();
-    let left = nodePosition.x + nodePosition.width / 2;
+  const showTooltip = useCallback(
+    (d, i) => {
+      const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
+      nodes.forEach((node, index) => {
+        if (index !== i) {
+          d3.select(node).attr("class", "bar opaque");
+        }
+      });
 
-    // if user is hovering over the last bar
-    if (left + 200 >= document.documentElement.clientWidth) {
-      left = nodePosition.x + nodePosition.width / 2 - 200;
-    }
+      const nodePosition = d3.select(nodes[i]).node().getBoundingClientRect();
+      let left = nodePosition.x + nodePosition.width / 2;
 
-    const scrollTop =
-      window.pageYOffset !== undefined
-        ? window.pageYOffset
-        : (
-            document.documentElement ||
-            document.body.parentNode ||
-            document.body
-          ).scrollTop;
-    const top = nodePosition.y + scrollTop;
-    const toolTipHeight = d3.select(".toolTip").node().getBoundingClientRect()
-      .height;
+      // if user is hovering over the last bar
+      if (left + 200 >= document.documentElement.clientWidth) {
+        left = nodePosition.x + nodePosition.width / 2 - 200;
+      }
 
-    tooltip.current
-      .html(
-        `
+      const scrollTop =
+        window.pageYOffset !== undefined
+          ? window.pageYOffset
+          : (
+              document.documentElement ||
+              document.body.parentNode ||
+              document.body
+            ).scrollTop;
+      const top = nodePosition.y + scrollTop;
+      const toolTipHeight = d3.select(".toolTip").node().getBoundingClientRect()
+        .height;
+
+      tooltip.current
+        .html(
+          `
                   <div>${getLabel(d.label, "tooltip")}</div>
                   <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${numberWithCommas(
                     d.value
                   )}</span></div>
                 `
-      )
-      .style("opacity", 1)
-      .style("left", left + "px")
-      .style("top", top - toolTipHeight + 5 + "px");
-  }, [getLabel]);
+        )
+        .style("opacity", 1)
+        .style("left", left + "px")
+        .style("top", top - toolTipHeight + 5 + "px");
+    },
+    [getLabel]
+  );
 
   const hideTooltip = useCallback(() => {
     const nodes = d3.select(chartRef.current).selectAll(".bar").nodes();
@@ -198,7 +203,15 @@ function BarChart({
       .selectAll(".tick")
       .select("text")
       .attr("dy", "16px");
-  }, [chartData, showTooltip, hideTooltip, title, widgetHeight, getLabel, cardSize]);
+  }, [
+    chartData,
+    showTooltip,
+    hideTooltip,
+    title,
+    widgetHeight,
+    getLabel,
+    cardSize,
+  ]);
 
   const displayChart = useCallback(() => {
     drawChart();

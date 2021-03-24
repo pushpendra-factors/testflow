@@ -1,142 +1,339 @@
 import React, { useRef, useEffect, useCallback } from "react";
-import c3 from "c3";
-import styles from "../../Views/CoreQuery/FunnelsResultPage/GroupedChart/index.module.scss";
-import { REPORT_SECTION, DASHBOARD_WIDGET_SECTION } from "../../utils/constants";
+import * as d3 from "d3";
+import ReactDOMServer from "react-dom/server";
+import styles from "./styles.module.scss";
+import {
+  REPORT_SECTION,
+  DASHBOARD_WIDGET_SECTION,
+  BAR_CHART_XAXIS_TICK_LENGTH,
+  DASHBOARD_MODAL,
+  FUNNELS_COUNT,
+} from "../../utils/constants";
 import TopLegends from "./TopLegends";
+import { getBarChartLeftMargin, getMaxYpoint } from "../BarChart/utils";
+import { Text, Number as NumFormat } from "../factorsComponents";
 
 function GroupedBarChart({
-  categories,
   chartData,
   colors,
   responseRows,
   responseHeaders,
-  visibleIndices,
   method1,
   method2,
-  event,
   height: widgetHeight,
   section,
-  cardSize
+  title = "chart",
+  cardSize = 1,
+  allValues,
+  legends,
+  tooltipTitle
 }) {
+  const renderedData = chartData.slice(0, FUNNELS_COUNT[cardSize]);
+  const keys = Object.keys(renderedData[0]).slice(1);
   const chartRef = useRef(null);
-  
+  const tooltipRef = useRef(null);
+
   const drawChart = useCallback(() => {
-    c3.generate({
-      size: {
-        height: widgetHeight || 300,
+    const max = getMaxYpoint(Math.max(...allValues));
+    const availableWidth = d3
+      .select(chartRef.current)
+      .node()
+      .getBoundingClientRect().width;
+    const tooltip = d3.select(tooltipRef.current);
+
+    const showTooltip = (data) => {
+      const impressionsIdx = responseHeaders.indexOf("Impressions");
+      const clicksIdx = responseHeaders.indexOf("Clicks");
+      const spendIdx = responseHeaders.indexOf("Spend");
+      const visitorsIdx = responseHeaders.indexOf("Website Visitors");
+      const row = responseRows.find((elem) => elem[0] === data.group);
+      let padY = 300;
+
+      if (section === DASHBOARD_MODAL) {
+        padY += 25;
+      }
+      tooltip
+        .style("left", d3.event.pageX - 50 + "px")
+        .style("top", d3.event.pageY - padY + "px")
+        .style("display", "inline-block")
+        .html(
+          ReactDOMServer.renderToString(
+            <>
+              <div className="pb-3 groupInfo">
+                <Text
+                  type="title"
+                  weight="bold"
+                  color="grey-8"
+                  extraClass="mb-0"
+                >
+                  {data.group}
+                </Text>
+              </div>
+              <div className="py-3 horizontal-border">
+                <Text
+                  type="title"
+                  weight="bold"
+                  color="grey"
+                  level={8}
+                  extraClass="uppercase leading-4 mb-0"
+                >
+                  {tooltipTitle}
+                </Text>
+                <div className="flex justify-between mt-2">
+                  <Text
+                    style={{ color: colors[0] }}
+                    type="title"
+                    extraClass="mb-0 leading-4"
+                    weight="bold"
+                    level={8}
+                  >
+                    {method1}
+                  </Text>
+                  <Text color="grey2" type="title" extraClass="mb-0">
+                    <NumFormat number={data[method1]} />
+                  </Text>
+                </div>
+                <div className="flex justify-between mt-2">
+                  <Text
+                    style={{ color: colors[1] }}
+                    type="title"
+                    extraClass="mb-0 leading-4"
+                    weight="bold"
+                    level={8}
+                  >
+                    {method2}
+                  </Text>
+                  <Text color="grey2" type="title" extraClass="mb-0">
+                    <NumFormat number={data[method2]} />
+                  </Text>
+                </div>
+              </div>
+              <div className="pt-3">
+                <div className="flex justify-between">
+                  <Text
+                    color="grey2"
+                    type="title"
+                    extraClass="mb-0 leading-4"
+                    level={8}
+                  >
+                    Impressions
+                  </Text>
+                  <Text
+                    color="grey2"
+                    type="title"
+                    extraClass="mb-0 leading-4"
+                    level={8}
+                  >
+                    <NumFormat number={row[impressionsIdx]} />
+                  </Text>
+                </div>
+                <div className="flex justify-between mt-2">
+                  <Text
+                    color="grey2"
+                    type="title"
+                    extraClass="mb-0 leading-4"
+                    level={8}
+                  >
+                    Clicks
+                  </Text>
+                  <Text
+                    color="grey2"
+                    type="title"
+                    extraClass="mb-0 leading-4"
+                    level={8}
+                  >
+                    <NumFormat number={row[clicksIdx]} />
+                  </Text>
+                </div>
+                <div className="flex justify-between mt-2">
+                  <Text
+                    color="grey2"
+                    type="title"
+                    extraClass="mb-0 leading-4"
+                    level={8}
+                  >
+                    Spend
+                  </Text>
+                  <Text
+                    color="grey2"
+                    type="title"
+                    extraClass="mb-0 leading-4"
+                    level={8}
+                  >
+                    <NumFormat number={row[spendIdx]} />
+                  </Text>
+                </div>
+                <div className="flex justify-between mt-2">
+                  <Text
+                    color="grey2"
+                    type="title"
+                    extraClass="mb-0 leading-4"
+                    level={8}
+                  >
+                    Visitors
+                  </Text>
+                  <Text
+                    color="grey2"
+                    type="title"
+                    extraClass="mb-0 leading-4"
+                    level={8}
+                  >
+                    <NumFormat number={row[visitorsIdx]} />
+                  </Text>
+                </div>
+              </div>
+            </>
+          )
+        );
+    };
+
+    const hideTooltip = (d) => {
+      tooltip.style("display", "none");
+    };
+
+    d3.select(chartRef.current)
+      .html("")
+      .append("svg")
+      .attr("width", availableWidth)
+      .attr("height", widgetHeight || 420)
+      .attr("id", `funnel-grouped-svg-${title}`);
+    const svg = d3.select(`#funnel-grouped-svg-${title}`),
+      margin = {
+        top: 10,
+        right: 20,
+        bottom: 30,
+        left: getBarChartLeftMargin(max),
       },
-      padding: {
-        left: 50,
-        bottom: 20,
-      },
-      bindto: chartRef.current,
-      data: {
-        columns: chartData,
-        type: "bar",
-        colors
-      },
-      legend: {
-        show: section === REPORT_SECTION,
-      },
-      transition: {
-        duration: 1000,
-      },
-      bar: {
-        space: 0.05,
-      },
-      axis: {
-        x: {
-          type: "category",
-          tick: {
-            multiline: true,
-            multilineMax: 3,
-          },
-          categories: categories,
-        },
-        y: {
-          tick: {
-            count: 5,
-            format(d) {
-              return parseInt(d);
-            },
-          },
-        },
-      },
-      grid: {
-        y: {
-          show: true,
-        },
-      },
-      tooltip: {
-        contents: (d) => {
-          const userIdx = responseHeaders.indexOf(`${event} - Users`);
-          const compareUsersIdx = responseHeaders.indexOf(`Compare - Users`);
-          const impressionsIdx = responseHeaders.indexOf("Impressions");
-          const clicksIdx = responseHeaders.indexOf("Clicks");
-          const spendIdx = responseHeaders.indexOf("Spend");
-          const visitorsIdx = responseHeaders.indexOf("Website Visitors");
-          const rowIndex = visibleIndices[d[0].index];
-          return `<div style="width:200px;border:1px solid #E7E9ED; border-radius: 12px; box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);" class="p-4 bg-white flex flex-col">
-										<div style="border-bottom: 1px solid #E7E9ED;">
-											<div class="pb-2" style="color: #3E516C;font-size: 14px;line-height: 24px;font-weight: 500;">${
-                        categories[d[0].index]
-                      }</div>
-										</div>
-										<div style="border-bottom: 1px solid #E7E9ED;" class="py-2">
-											<div style="font-weight: 600;font-size: 10px;line-height: 16px;color: #8692A3;">CONVERSIONS</div>
-											<div style="font-weight: 600;font-size: 12px;line-height: 16px;" class="mt-2 flex justify-between">
-												<div style="color: #4D7DB4;">${method1}</div>
-												<div style="color: #3E516C;">${responseRows[rowIndex][userIdx]}</div>
-											</div>
-											<div style="font-weight: 600;font-size: 12px;line-height: 16px;" class="mt-2 flex justify-between">
-												<div style="color: #4CBCBD;">${method2}</div>
-												<div style="color: #3E516C;">${responseRows[rowIndex][compareUsersIdx]}</div>
-											</div>
-										</div>
-										<div style="font-size: 12px;line-height: 18px;color: #3E516C;">
-											<div class="flex justify-between pt-2">
-												<div>Impressions</div>
-												<div>${responseRows[rowIndex][impressionsIdx]}</div>
-											</div>
-											<div class="flex justify-between pt-2">
-												<div>Clicks</div>
-												<div>${responseRows[rowIndex][clicksIdx]}</div>
-											</div>
-											<div class="flex justify-between pt-2">
-												<div>Spend</div>
-												<div>${responseRows[rowIndex][spendIdx]}</div>
-											</div>
-											<div class="flex justify-between pt-2">
-												<div>Visitors</div>
-												<div>${responseRows[rowIndex][visitorsIdx]}</div>
-											</div>
-										</div>
-									</div>`;
-        },
-      },
-    });
+      width = +svg.attr("width") - margin.left - margin.right,
+      height = +svg.attr("height") - margin.top - margin.bottom,
+      g = svg
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    const x0 = d3.scaleBand().rangeRound([0, width]).padding(0.25);
+    const x1 = d3.scaleBand().paddingInner(0.05);
+    const y = d3.scaleLinear().rangeRound([height, 0]);
+    const z = d3.scaleOrdinal().range(colors);
+
+    x0.domain(
+      renderedData.map(function (d) {
+        return d.name;
+      })
+    );
+    x1.domain(keys).rangeRound([0, x0.bandwidth()]);
+    y.domain([0, max]).nice();
+
+    const yAxisGrid = d3.axisLeft(y).tickSize(-width).tickFormat("").ticks(5);
+
+    g.append("g")
+      .attr("class", "y-axis-grid")
+      .call(yAxisGrid)
+      .selectAll("line")
+      .attr("stroke", "#E7E9ED");
+
+    const base = g
+      .append("g")
+      .selectAll("g")
+      .data(renderedData)
+      .enter()
+      .append("g")
+      .attr("transform", function (d) {
+        return "translate(" + x0(d.name) + ",0)";
+      });
+    base
+      .selectAll("rect")
+      .data(function (d) {
+        return keys.map(function (key) {
+          return {
+            key,
+            value: Number(d[key]),
+            group: d.name,
+            [method1]: d[method1],
+            [method2]: d[method2],
+          };
+        });
+      })
+      .enter()
+      .append("rect")
+      .attr("x", function (d) {
+        return x1(d.key);
+      })
+      .attr("y", function (d) {
+        return y(d.value);
+      })
+      .attr("width", x1.bandwidth())
+      .attr("height", function (d) {
+        return height - y(d.value);
+      })
+      .attr("fill", function (d) {
+        return z(d.key);
+      })
+      .on("mousemove", (d) => {
+        showTooltip(d);
+      })
+      .on("mouseout", () => {
+        hideTooltip();
+      });
+    g.append("g")
+      .attr("class", "x-axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(
+        d3.axisBottom(x0).tickFormat((d) => {
+          let label;
+          if (d.includes("$no_group")) {
+            label = "Overall";
+          } else {
+            label = d;
+          }
+          if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
+            return (
+              label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + "..."
+            );
+          }
+          return label;
+        })
+      );
+
+    g.append("g")
+      .attr("class", "y-axis")
+      .call(
+        d3
+          .axisLeft(y)
+          .tickFormat((d) => {
+            return d;
+          })
+          .ticks(5)
+          .tickSize(-width)
+      );
   }, [
-    categories,
-    chartData,
+    allValues,
+    cardSize,
     colors,
-    event,
+    keys,
     method1,
     method2,
+    renderedData,
     responseHeaders,
     responseRows,
-    visibleIndices,
     section,
-    widgetHeight
+    title,
+    widgetHeight,
   ]);
 
   useEffect(() => {
     drawChart();
-  }, [drawChart]);
+  }, [drawChart, cardSize]);
 
   return (
-    <div className={`w-full bar-chart ${styles.groupedChart}`}>
-      {section === DASHBOARD_WIDGET_SECTION ? <TopLegends cardSize={cardSize} colors={colors} /> : null}
-      <div ref={chartRef}></div>
+    <div className="w-full">
+      {section === DASHBOARD_WIDGET_SECTION ? (
+        <TopLegends legends={legends} cardSize={cardSize} colors={colors} />
+      ) : null}
+      <div ref={chartRef} className={styles.groupedChart}></div>
+      {section === REPORT_SECTION || section === DASHBOARD_MODAL ? (
+        <TopLegends legends={legends} cardSize={cardSize} colors={colors} />
+      ) : null}
+      <div ref={tooltipRef} className={styles.groupedChartTooltip}></div>
     </div>
   );
 }

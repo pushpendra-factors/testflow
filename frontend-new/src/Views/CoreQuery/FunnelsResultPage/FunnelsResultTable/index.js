@@ -13,7 +13,7 @@ function FunnelsResultTable({
   isWidgetModal,
   arrayMapper,
   reportTitle = "FunnelAnalysis",
-  durations
+  durations,
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState("");
@@ -44,12 +44,10 @@ function FunnelsResultTable({
     return {
       fileName: `${reportTitle}.csv`,
       data: tableData.map(({ index, ...rest }) => {
-        if (breakdown.length) {
-          arrayMapper.forEach((elem) => {
-            rest[elem.eventName] = rest[`${elem.mapper}`].count;
-            delete rest[`${elem.mapper}`];
-          });
-        }
+        arrayMapper.forEach((elem) => {
+          rest[elem.eventName] = rest[`${elem.mapper}`].count;
+          delete rest[`${elem.mapper}`];
+        });
         return { ...rest };
       }),
     };

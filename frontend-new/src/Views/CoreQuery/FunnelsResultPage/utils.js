@@ -116,9 +116,7 @@ export const generateTableColumns = (
       title: breakdown.length
         ? getTitleWithSorter(elem, elem, currentSorter, handleSorting)
         : elem,
-      dataIndex: breakdown.length
-        ? `${arrayMapper[index].mapper}`
-        : `${elem}-${index}`,
+      dataIndex: arrayMapper[index].mapper,
       width: 150,
       className: index === queries.length - 1 ? tableStyles.lastColumn : "",
       render: (d) => {
@@ -175,7 +173,7 @@ export const generateTableData = (
     const queryData = {};
     const overallDuration = getOverAllDuration(durations);
     queries.forEach((q, index) => {
-      queryData[`${q}-${index}`] = {
+      queryData[arrayMapper[index].mapper] = {
         percentage: data[index].value,
         count: data[index].netCount,
       };
