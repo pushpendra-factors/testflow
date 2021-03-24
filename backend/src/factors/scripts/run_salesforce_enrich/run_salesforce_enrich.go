@@ -22,8 +22,9 @@ type salesforceSyncStatus struct {
 }
 
 type salesforceJobStatus struct {
-	SyncStatus   salesforceSyncStatus   `json:"sync_status"`
-	EnrichStatus []IntSalesforce.Status `json:"enrich_status"`
+	SyncStatus           salesforceSyncStatus   `json:"sync_status"`
+	EnrichStatus         []IntSalesforce.Status `json:"enrich_status"`
+	PropertyDetailStatus []IntSalesforce.Status `json:"property_detail_status"`
 }
 
 func main() {
@@ -131,6 +132,8 @@ func main() {
 	}
 
 	var syncStatus salesforceSyncStatus
+	var propertyDetailSyncStatus []IntSalesforce.Status
+	anyFailure := false
 	for pid, projectSettings := range syncInfo.ProjectSettings {
 		accessToken, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
 		if err != nil {
@@ -142,10 +145,18 @@ func main() {
 		for i := range objectStatus {
 			if objectStatus[i].Status != U.CRM_SYNC_STATUS_SUCCESS {
 				syncStatus.Failures = append(syncStatus.Failures, objectStatus[i])
+				anyFailure = true
 			} else {
 				syncStatus.Success = append(syncStatus.Success, objectStatus[i])
 			}
 		}
+
+		failure, propertyDetailSyncStatus := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, projectSettings.InstanceURL)
+		if failure {
+			anyFailure = true
+		}
+
+		propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailSyncStatus...)
 	}
 
 	projectIDs := strings.Split(*blacklistEnrichmentByProjectID, ",")
@@ -161,12 +172,16 @@ func main() {
 	}
 
 	statusList := make([]IntSalesforce.Status, 0, 0)
+
 	for _, settings := range salesforceEnabledProjects {
 		if _, exist := blackListedProjectIDs[fmt.Sprintf("%d", settings.ProjectID)]; exist {
 			continue
 		}
 
-		status := IntSalesforce.Enrich(settings.ProjectID)
+		status, failure := IntSalesforce.Enrich(settings.ProjectID)
+		if failure {
+			anyFailure = true
+		}
 
 		statusList = append(statusList, status...)
 	}
@@ -174,5 +189,12 @@ func main() {
 	var jobStatus salesforceJobStatus
 	jobStatus.SyncStatus = syncStatus
 	jobStatus.EnrichStatus = statusList
+	jobStatus.PropertyDetailStatus = propertyDetailSyncStatus
+
+	if anyFailure {
+		C.PingHealthcheckForFailure(healthcheckPingID, jobStatus)
+		return
+	}
+
 	C.PingHealthcheckForSuccess(healthcheckPingID, jobStatus)
 }

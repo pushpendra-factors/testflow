@@ -110,10 +110,38 @@ func main() {
 	}
 
 	statusList := make([]IntHubspot.Status, 0, 0)
+	var propertyDetailSyncStatus []IntHubspot.Status
+	anyFailure := false
 	for _, settings := range hubspotEnabledProjectSettings {
-		status := IntHubspot.Sync(settings.ProjectId)
+		if C.IsEnabledPropertyDetailByProjectID(settings.ProjectId) {
+			log.Info(fmt.Sprintf("Starting sync property details for project %d", settings.ProjectId))
+
+			failure, propertyDetailStatus := IntHubspot.SyncDatetimeAndNumericalProperties(settings.ProjectId, settings.APIKey)
+			propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailStatus...)
+			if failure {
+				anyFailure = true
+			}
+
+			log.Info(fmt.Sprintf("Synced property details for project %d", settings.ProjectId))
+		}
+
+		status, failure := IntHubspot.Sync(settings.ProjectId)
+		if failure {
+			anyFailure = true
+		}
+
 		statusList = append(statusList, status...)
 	}
 
-	C.PingHealthcheckForSuccess(healthcheckPingID, statusList)
+	syncStatus := map[string]interface{}{
+		"document_sync":      statusList,
+		"property_type_sync": propertyDetailSyncStatus,
+	}
+
+	if anyFailure {
+		C.PingHealthcheckForFailure(healthcheckPingID, syncStatus)
+		return
+	}
+
+	C.PingHealthcheckForSuccess(healthcheckPingID, syncStatus)
 }

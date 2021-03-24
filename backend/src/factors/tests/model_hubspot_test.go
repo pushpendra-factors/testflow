@@ -8,6 +8,7 @@ import (
 	IntHubspot "factors/integration/Hubspot"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/task/event_user_cache"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -277,7 +278,7 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 	assert.Equal(t, createdDate.Unix()*1000, hubspotDocument.Timestamp)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus := IntHubspot.Sync(project.ID)
+	enrichStatus, _ := IntHubspot.Sync(project.ID)
 	projectIndex := -1
 	for i := range enrichStatus {
 		if enrichStatus[i].ProjectId == project.ID {
@@ -590,6 +591,210 @@ func TestHubspotDocumentTimestamp(t *testing.T) {
 	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
 }
 
+func TestHubspotPropertyDetails(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	refreshToken := U.RandomLowerAphaNumString(5)
+	instancURL := U.RandomLowerAphaNumString(5)
+	errCode := store.GetStore().UpdateAgentIntSalesforce(agent.UUID,
+		refreshToken,
+		instancURL,
+	)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	status := IntHubspot.CreateOrGetHubspotEventName(project.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	createdDate := time.Now().Unix()
+	eventNameCreated := U.EVENT_NAME_HUBSPOT_CONTACT_CREATED
+
+	// datetime property detail
+	eventNameUpdated := U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED
+	dtPropertyName1 := "last_visit"
+	dtPropertyValue1 := createdDate * 1000
+	dtPropertyName2 := "next_visit"
+	dtPropertyValue2 := createdDate * 1000
+
+	// numerical property detail
+	numPropertyName1 := "vists"
+	numPropertyValue1 := 15
+	numPropertyName2 := "views"
+	numPropertyValue2 := 10
+
+	// datetime property
+	dtEnKey1 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceHubspot,
+		model.HubspotDocumentTypeNameContact,
+		U.GetPropertyValueAsString(dtPropertyName1),
+	)
+	dtEnKey2 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceHubspot,
+		model.HubspotDocumentTypeNameContact,
+		U.GetPropertyValueAsString(dtPropertyName2),
+	)
+
+	// numerical property
+	numEnKey1 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceHubspot,
+		model.HubspotDocumentTypeNameContact,
+		U.GetPropertyValueAsString(numPropertyName1),
+	)
+	numEnKey2 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceHubspot,
+		model.HubspotDocumentTypeNameContact,
+		U.GetPropertyValueAsString(numPropertyName2),
+	)
+
+	// datetime property details
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, dtEnKey1, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, dtEnKey2, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey1, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey2, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, dtEnKey1, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, dtEnKey2, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// numerical property details
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, numEnKey1, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, numEnKey2, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numEnKey1, U.PropertyTypeNumerical, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numEnKey2, U.PropertyTypeNumerical, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, numEnKey1, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, numEnKey2, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// new document missing createddate should use fallback key
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		"createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" },
+		  "%s":{"value":"%d"},
+		  "%s":{"value":"%d"},
+		  "%s":{"value":"%d"},
+		  "%s":{"value":"%d"}
+		},
+		"identity-profiles": [
+		  {
+			"vid": %d,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	documentID := 2
+	cuid := U.RandomLowerAphaNumString(5)
+	updatedTime := createdDate*1000 + 100
+	jsonContact := fmt.Sprintf(jsonContactModel, documentID, createdDate*1000, createdDate*1000, updatedTime, "lead", dtPropertyName1, dtPropertyValue1, dtPropertyName2, dtPropertyValue2, numPropertyName1, numPropertyValue1, numPropertyName2, numPropertyValue2, documentID, cuid, "123-45")
+	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdDate*1000, hubspotDocument.Timestamp)
+
+	allStatus, _ := IntHubspot.Sync(project.ID)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
+	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
+	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, eventNameCreated, 2500, 1)
+	assert.Nil(t, err)
+	assert.Contains(t, properties[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2)
+	assert.Contains(t, properties[U.PropertyTypeNumerical], numEnKey1, numEnKey2)
+
+	properties, err = store.GetStore().GetUserPropertiesByProject(project.ID, 100, 10)
+	assert.Nil(t, err)
+	assert.Contains(t, properties[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2)
+	assert.Contains(t, properties[U.PropertyTypeNumerical], numEnKey1, numEnKey2)
+
+	query := model.Query{
+		From: createdDate - 500,
+		To:   updatedTime + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: "$hubspot_contact_created",
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: dtEnKey1,
+			},
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: dtEnKey2,
+			},
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: numEnKey1,
+			},
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: numEnKey2,
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+
+	result, status, _ := store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Contains(t, result.Headers, dtEnKey1, dtEnKey2, numEnKey1, numEnKey2)
+	count := 0
+	for i := range result.Headers[:len(result.Headers)-1] {
+		if result.Headers[i] == dtEnKey1 || result.Headers[i] == dtEnKey2 {
+			assert.Equal(t, fmt.Sprint(createdDate), result.Rows[0][i])
+			count++
+		}
+		if result.Headers[i] == numEnKey1 {
+			assert.Equal(t, fmt.Sprint(numPropertyValue1), result.Rows[0][i])
+			count++
+		}
+
+		if result.Headers[i] == numEnKey2 {
+			assert.Equal(t, fmt.Sprint(numPropertyValue2), result.Rows[0][i])
+			count++
+		}
+	}
+	assert.Equal(t, 4, count)
+}
+
 func sendCreateHubspotDocumentRequest(projectID uint64, r *gin.Engine, agent *model.Agent, documentType string, documentValue *map[string]interface{}) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -742,7 +947,7 @@ func TestHubspotCreateActionUpdatedOnCreate(t *testing.T) {
 	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus := IntHubspot.Sync(project.ID)
+	enrichStatus, _ := IntHubspot.Sync(project.ID)
 	projectIndex := -1
 	for i := range enrichStatus {
 		if enrichStatus[i].ProjectId == project.ID {

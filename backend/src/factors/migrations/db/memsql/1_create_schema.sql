@@ -372,7 +372,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_linkedin_access_token_expiry bigint,
     int_linkedin_refresh_token text,
     int_linkedin_refresh_token_expiry bigint,
-    int_linkedin_agent_uuid text;
+    int_linkedin_agent_uuid text,
     archive_enabled boolean NOT NULL DEFAULT FALSE,
     bigquery_enabled boolean NOT NULL DEFAULT FALSE,
     int_salesforce_enabled_agent_uuid text,
