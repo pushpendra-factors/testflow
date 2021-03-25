@@ -42,6 +42,10 @@ function LineChart({
     xAxisCount = 5;
   }
 
+  if (cardSize === 2 && xAxisCount > 2) {
+    xAxisCount = 2;
+  }
+
   const modVal = Math.ceil(xAxisValues.length / xAxisCount);
 
   const finalXaxisValues = [];
@@ -104,7 +108,7 @@ function LineChart({
       padding: {
         left: 50,
         bottom: (section === REPORT_SECTION || section === DASHBOARD_MODAL) ? 24 : 0,
-        right: 10,
+        right: cardSize !== 1 ? 20 : 10,
       },
       transition: {
         duration: 500,

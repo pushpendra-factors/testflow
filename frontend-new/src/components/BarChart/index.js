@@ -119,6 +119,8 @@ function BarChart({
     const width = +svg.attr("width") - margin.left - margin.right;
     const height = +svg.attr("height") - margin.top - margin.bottom;
 
+    const minBarHeight = 0.05 * height;
+
     tooltip.current = d3
       .select(chartRef.current)
       .append("div")
@@ -182,9 +184,17 @@ function BarChart({
         return d.color ? d.color : "#4D7DB4";
       })
       .attr("x", (d) => xScale(d.label))
-      .attr("y", (d) => yScale(d.value))
+      .attr("y", (d) => {
+        return height - yScale(d.value) > minBarHeight
+          ? yScale(d.value)
+          : height - minBarHeight;
+      })
       .attr("width", xScale.bandwidth())
-      .attr("height", (d) => height - yScale(d.value))
+      .attr("height", (d) => {
+        return height - yScale(d.value) > minBarHeight
+          ? height - yScale(d.value)
+          : minBarHeight;
+      })
       .on("mousemove", (d, i) => {
         showTooltip(d, i);
       })

@@ -175,6 +175,7 @@ function BarLineChart({
       .attr("height", widgetHeight || 300);
     const width = +svg.attr("width") - margin.left - margin.right;
     const height = +svg.attr("height") - margin.top - margin.bottom;
+    const minBarHeight = 0.05 * height;
     const xScale = d3
       .scaleBand()
       .rangeRound([0, width])
@@ -251,12 +252,16 @@ function BarLineChart({
         return xScale(d[0]);
       })
       .attr("y", function (d) {
-        return yScaleLeft(d[2]);
+        return height - yScaleLeft(d[2]) > minBarHeight
+            ? yScaleLeft(d[2])
+            : height - minBarHeight;
       })
       .attr("class", "bar")
       .attr("width", xScale.bandwidth())
       .attr("height", function (d) {
-        return height - yScaleLeft(d[2]);
+        return height - yScaleLeft(d[2]) > minBarHeight
+          ? height - yScaleLeft(d[2])
+          : minBarHeight;
       })
       .style("fill", "#4d7db4")
       .on("mousemove", (d, i) => {

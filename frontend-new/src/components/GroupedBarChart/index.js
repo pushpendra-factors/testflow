@@ -47,7 +47,7 @@ function GroupedBarChart({
       const spendIdx = responseHeaders.indexOf("Spend");
       const visitorsIdx = responseHeaders.indexOf("Website Visitors");
       const row = responseRows.find((elem) => elem[0] === data.group);
-      let padY = 300;
+      let padY = 325;
 
       if (section === DASHBOARD_MODAL) {
         padY += 25;
@@ -306,6 +306,7 @@ function GroupedBarChart({
           .tickSize(-width)
       );
   }, [
+    tooltipTitle,
     allValues,
     cardSize,
     colors,

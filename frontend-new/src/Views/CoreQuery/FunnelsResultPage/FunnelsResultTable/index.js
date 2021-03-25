@@ -44,8 +44,8 @@ function FunnelsResultTable({
     return {
       fileName: `${reportTitle}.csv`,
       data: tableData.map(({ index, ...rest }) => {
-        arrayMapper.forEach((elem) => {
-          rest[elem.eventName] = rest[`${elem.mapper}`].count;
+        arrayMapper.forEach((elem, index) => {
+          rest[`${elem.eventName}-${index}`] = rest[`${elem.mapper}`].count;
           delete rest[`${elem.mapper}`];
         });
         return { ...rest };
