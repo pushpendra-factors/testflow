@@ -291,8 +291,8 @@ function AddDashboard({
         okText={getOkText()}
         transitionName=""
         maskTransitionName=""
-        okButtonProps={{size:'large'}}
-        cancelButtonProps={{size:'large'}}
+        okButtonProps={{ size: "large" }}
+        cancelButtonProps={{ size: "large" }}
       >
         <div>
           <Row>
@@ -304,7 +304,7 @@ function AddDashboard({
                 size={"grey"}
                 extraClass={"m-0"}
               >
-                New Dashboard
+                {editDashboard ? "Edit Dashboard" : "New Dashboard"}
               </Text>
             </Col>
           </Row>

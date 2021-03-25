@@ -2,7 +2,6 @@ import React from "react";
 import tableStyles from "./FunnelsResultTable/index.module.scss";
 import {
   calculatePercentage,
-  SortData,
   getTitleWithSorter,
   formatDuration,
 } from "../../../utils/dataFormatter";
@@ -114,7 +113,7 @@ export const generateTableColumns = (
   queries.forEach((elem, index) => {
     eventColumns.push({
       title: breakdown.length
-        ? getTitleWithSorter(elem, elem, currentSorter, handleSorting)
+        ? getTitleWithSorter(elem, arrayMapper[index].mapper, currentSorter, handleSorting)
         : elem,
       dataIndex: arrayMapper[index].mapper,
       width: 150,
@@ -243,9 +242,7 @@ export const generateTableData = (
     });
 
     if (currentSorter.key) {
-      const sortKey = arrayMapper.find(
-        (elem) => elem.eventName === currentSorter.key
-      ).mapper;
+      const sortKey = currentSorter.key;
       const { order } = currentSorter;
       result.sort((a, b) => {
         if (order === "ascend") {

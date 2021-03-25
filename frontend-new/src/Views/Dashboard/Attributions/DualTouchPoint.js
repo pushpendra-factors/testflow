@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import AttributionTable from "../../CoreQuery/AttributionsResult/AttributionTable";
 import GroupedBarChart from "../../../components/GroupedBarChart";
 import { formatGroupedData } from "../../CoreQuery/AttributionsResult/utils";
