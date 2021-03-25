@@ -68,6 +68,7 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	propertiesTypeCacheSize := flag.Int("property_details_cache_size", 0, "Cache size for in memory property detail.")
 	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
+	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "",
 		"Allowed project id for property type check from db.")
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "",
@@ -112,6 +113,7 @@ func main() {
 			Password: *memSQLPass,
 			AppName:  workerName,
 		},
+		CacheSortedSet: 	 *cacheSortedSet,
 		PrimaryDatastore: *primaryDatastore,
 	}
 

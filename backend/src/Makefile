@@ -280,6 +280,20 @@ upload-cleanup-eventuser-cache: export IMAGE_NAME=cleanup-eventuser-cache-job
 upload-cleanup-eventuser-cache: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/cleanup-eventuser-cache-job:$(TAG)
 
+pack-cleanup-sortedset-cache: 
+	docker build -t us.gcr.io/factors-$(ENV)/cleanup-sortedset-cache-job:$(TAG) -f Dockerfile.cleanup_sortedset_cache_job .
+
+upload-cleanup-sortedset-cache: export IMAGE_NAME=cleanup-sortedset-cache-job
+upload-cleanup-sortedset-cache: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/cleanup-sortedset-cache-job:$(TAG)
+
+pack-rollup-sortedset-cache: 
+	docker build -t us.gcr.io/factors-$(ENV)/rollup-sortedset-cache-job:$(TAG) -f Dockerfile.rollup_sortedset_cache_job .
+
+upload-rollup-sortedset-cache: export IMAGE_NAME=rollup-sortedset-cache-job
+upload-rollup-sortedset-cache: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/rollup-sortedset-cache-job:$(TAG)
+
 pack-memsql-replicator:
 	docker build -t us.gcr.io/factors-$(ENV)/memsql-replicator:$(TAG) -f Dockerfile.memsql_replicator .
 

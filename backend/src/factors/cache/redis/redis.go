@@ -30,6 +30,15 @@ var (
 	ErrorPartialFailures = errors.New("Partial failures in Set")
 )
 
+func NewKeyWithOnlyPrefix(prefix string) (*Key, error) {
+
+	if prefix == "" {
+		return nil, ErrorInvalidPrefix
+	}
+
+	return &Key{Prefix: prefix}, nil
+}
+
 func NewKey(projectId uint64, prefix string, suffix string) (*Key, error) {
 	if projectId == 0 {
 		return nil, ErrorInvalidProject
@@ -95,6 +104,15 @@ func (key *Key) KeyWithAllProjectsSupport() (string, error) {
 	}
 	// key: i.e, event_names:user_last_event:pid:*:suffix
 	return fmt.Sprintf("%s:%s:%s", key.Prefix, projectScope, key.Suffix), nil
+}
+
+func (key *Key) KeyWithOnlyPrefix() (string, error) {
+	if key.Prefix == "" {
+		return "", ErrorInvalidPrefix
+	}
+
+	// key: i.e, event_names:user_last_event:pid:*:suffix
+	return fmt.Sprintf("%s", key.Prefix), nil
 }
 
 // KeyFromStringWithPid - Splits the cache key into prefix/suffix/projectid format
@@ -376,14 +394,14 @@ type SortedSetKeyValueTuple struct {
 	Key *Key
 	Value string
 }
-func ZincrBatch(keys ...SortedSetKeyValueTuple) ([]int64, error) {
-	return zincrBatch(false, keys)
+func ZincrBatch(OnlyPrefixKey bool, keys ...SortedSetKeyValueTuple) ([]int64, error) {
+	return zincrBatch(false, keys, OnlyPrefixKey)
 }
-func ZincrPersistentBatch(keys ...SortedSetKeyValueTuple) ([]int64, error) {
-	return zincrBatch(true, keys)
+func ZincrPersistentBatch(OnlyPrefixKey bool, keys ...SortedSetKeyValueTuple) ([]int64, error) {
+	return zincrBatch(true, keys, OnlyPrefixKey)
 }
 
-func zincrBatch(persistent bool, keys []SortedSetKeyValueTuple) ([]int64, error) {
+func zincrBatch(persistent bool, keys []SortedSetKeyValueTuple,  OnlyPrefixKey bool) ([]int64, error) {
 	if len(keys) == 0 {
 		return nil, ErrorInvalidValues
 	}
@@ -401,7 +419,13 @@ func zincrBatch(persistent bool, keys []SortedSetKeyValueTuple) ([]int64, error)
 
 	}
 	for _, key := range keys {
-		cKey, err := key.Key.Key()
+		var err error
+		var cKey string
+		if(OnlyPrefixKey == true){
+			cKey, err = key.Key.KeyWithOnlyPrefix()
+		} else {
+			cKey, err = key.Key.Key()
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -695,6 +719,103 @@ func decrByBatch(keys map[*Key]int64, persistent bool) error {
 	return nil
 }
 
+func Zcard(key *Key) (int64, error) {
+	return zcard(key, false)
+}
+func ZcardPersistent(key *Key) (int64, error) {
+	return zcard(key, true)
+}
+func zcard(key *Key, persistent bool) (int64, error) {
+	if key == nil {
+		return 0, ErrorInvalidKey
+	}
+
+	cKey, err := key.Key()
+	if err != nil {
+		return 0, err
+	}
+
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	return redis.Int64(redisConn.Do("ZCARD", cKey))
+}
+
+func ZrangeWithScores(OnlyPrefixKey bool,key *Key) (map[string]string, error){
+	return zrangeWithScores(OnlyPrefixKey, key, false)
+}
+func ZrangeWithScoresPersistent(OnlyPrefixKey bool,key *Key) (map[string]string, error){
+	return zrangeWithScores(OnlyPrefixKey, key, true)
+}
+func zrangeWithScores(OnlyPrefixKey bool,key *Key, persistent bool)(map[string]string, error){
+	if key == nil {
+		return nil, ErrorInvalidKey
+	}
+	var err error
+	var cKey string
+	if(OnlyPrefixKey == true){
+		cKey, err = key.KeyWithOnlyPrefix()
+	} else {
+		cKey, err = key.Key()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	values, err := redis.Values(redisConn.Do("ZRANGE", cKey, 0, -1, "WITHSCORES"))
+	if err != nil {
+		return nil, err
+	}
+	sortedSetValues := make([]string, 0)
+	_ = redis.ScanSlice(values, &sortedSetValues)
+
+	sortedSetMap := make(map[string]string)
+	for i := 0; i < len(sortedSetValues) ;  {
+		sortedSetMap[sortedSetValues[i]] = sortedSetValues[i+1]
+		i = i+2;
+	}
+	return sortedSetMap, nil
+}
+
+func ZRemRange(key *Key, startIndex int, endIndex int) (int64, error) {
+	return zRemRange(key, startIndex, endIndex, false)
+}
+func ZRemRangePersistent(key *Key, startIndex int, endIndex int) (int64, error) {
+	return zRemRange(key, startIndex, endIndex, true)
+}
+func zRemRange(key *Key, startIndex int, endIndex int, persistent bool) (int64, error) {
+	if key == nil {
+		return 0, ErrorInvalidKey
+	}
+
+	cKey, err := key.Key()
+	if err != nil {
+		return 0, err
+	}
+
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	return redis.Int64(redisConn.Do("ZREMRANGEBYRANK", cKey, startIndex, endIndex))
+}
 func preventWriteOperations() bool {
 	// Allow write operations for test / development environment.
 	if C.GetConfig().Env == C.TEST || C.GetConfig().Env == C.DEVELOPMENT {

@@ -150,8 +150,9 @@ type Configuration struct {
 	enablePropertyTypeFromDB               bool
 	whitelistedProjectIDPropertyTypeFromDB string
 	blacklistedProjectIDPropertyTypeFromDB string
+	CacheSortedSet bool
+	ProjectAnalyticsWhitelistedUUIds []string
 	PrimaryDatastore                       string
-	CacheSortedSet                         bool
 }
 
 type Services struct {
@@ -1283,4 +1284,26 @@ func IsSDKAndIntegrationRequestQueueDuplicationEnabled() bool {
 
 func IsSortedSetCachingAllowed() bool {
 	return configuration.CacheSortedSet
+}
+func GetUUIdsFromStringListAsString(stringList string) []string {
+	stringTokens := make([]string, 0, 0)
+
+	if stringList == "" {
+		return stringTokens
+	}
+
+	uuids := strings.Split(stringList, ",")
+	for _, uuid := range uuids {
+		stringTokens = append(stringTokens, strings.TrimSpace(uuid))
+	}
+
+	return stringTokens
+}
+func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
+	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
+		if(uuid == loggedInUUID){
+		return true
+		}
+	}
+	return false 
 }

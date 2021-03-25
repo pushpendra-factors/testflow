@@ -53,6 +53,7 @@ func main() {
 
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
+	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 
 	flag.Parse()
 
@@ -94,6 +95,7 @@ func main() {
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *redisPortPersistent,
 		SentryDSN:           *sentryDSN,
+		CacheSortedSet: 	 *cacheSortedSet,
 	}
 
 	C.InitConf(config.Env)
