@@ -1075,6 +1075,10 @@ var MandatoryDefaultUserPropertiesByType = map[string][]string{
 
 // isValidProperty - Validate property type.
 func isPropertyTypeValid(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
 	switch valueType := value.(type) {
 	case int:
 	case int32:
