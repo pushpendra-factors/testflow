@@ -1,0 +1,64 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: factors-staging-node-pool
+  name: rollup-sortedset-cache-job
+spec:
+  schedule: "0 */1 * * *" #On Trigger
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: factors-staging-node-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: rollup-sortedset-cache-job
+            image: us.gcr.io/factors-staging/rollup-sortedset-cache-job:v0.010-18d3217
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            - --gcp_project_id
+            - $(GCP_PROJECT_ID)
+            - --gcp_project_location
+            - $(GCP_PROJECT_LOCATION)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-postgres
+            - configMapRef:
+                name: config-redis
+            - configMapRef:
+                name: config-persistent-redis
+            - secretRef:
+                name: secret-postgres
+            - secretRef:
+                name: secret-aws
+            - secretRef:
+                name: secret-sentry
+          restartPolicy: OnFailure

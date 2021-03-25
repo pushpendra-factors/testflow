@@ -59,6 +59,7 @@ func main() {
 	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
 	blacklistEnrichmentByProjectID := flag.String("blacklist_enrichment_by_project_id", "", "Blacklist enrichment by project_id.")
+	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 
 	flag.Parse()
 	taskID := "salesforce_enrich"
@@ -104,6 +105,7 @@ func main() {
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *redisPortPersistent,
 		DryRunCRMSmartEvent: *dryRunSmartEvent,
+		CacheSortedSet: 	 *cacheSortedSet,
 	}
 
 	C.InitConf(config.Env)

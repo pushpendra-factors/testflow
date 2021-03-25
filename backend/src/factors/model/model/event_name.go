@@ -701,6 +701,20 @@ func GetValuesByEventPropertyCountCacheKey(projectId uint64, dateKey string) (*c
 
 }
 
+// Analytics Cache keys
+func UniqueEventNamesAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
+	prefix := "SS:A:EN"
+	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s",prefix, dateKey))
+}
+func UserCountAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
+	prefix := "SS:A:UC"
+	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s",prefix, dateKey))
+}
+func EventsCountAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
+	prefix := "SS:A:EC"
+	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s",prefix, dateKey))
+}
+
 // FillEventPropertiesByFilterExpr - Parses and fills event properties
 // from tokenized_event_uri using tokenized_filter_expr.
 func FillEventPropertiesByFilterExpr(eventProperties *U.PropertiesMap,
