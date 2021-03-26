@@ -645,11 +645,6 @@ func GenMissingJourneyPatterns(goal, journey []*P.Pattern, userAndEventsInfo *P.
 	}
 	mineLog.Info("Number of missing patterns :", len(allMissingPatt))
 
-	for _, v := range allMissingPatt {
-		if strings.Compare(v.EventNames[0], v.EventNames[1]) == 0 {
-			mineLog.Info("Missing Patterns : ", v.EventNames[0], " ", v.EventNames[1])
-		}
-	}
 	return allMissingPatt, nil
 }
 
@@ -1669,8 +1664,8 @@ func takeTopKspecialEvents(allPatterns []patternProperties, topK int) []patternP
 
 	allPatternsType := make([]patternProperties, 0)
 	for _, pt := range allPatterns {
-
-		if strings.HasPrefix(pt.pattern.EventNames[0], "$") == true {
+		ename := pt.pattern.EventNames[0]
+		if U.IsStandardEvent(ename) == true && U.IsCampaignAnalytics(ename) == false {
 			allPatternsType = append(allPatternsType, pt)
 		}
 	}

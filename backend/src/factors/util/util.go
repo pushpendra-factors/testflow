@@ -867,6 +867,11 @@ func (p PairList) Len() int           { return len(p) }
 func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
 func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
+// IsStandardEvent check if eventname is standard Event
+func IsStandardEvent(eventName string) bool {
+	return strings.HasPrefix(eventName, "$")
+}
+
 // IsCampaignEvent check if eventname is campaign Event
 func IsCampaignEvent(eventName string) bool {
 	return strings.HasPrefix(eventName, "$session[campaign")
@@ -899,7 +904,7 @@ func IsCampaignAnalytics(eventName string) bool {
 }
 
 func IsItreeCampaignEvent(eventName string) bool {
-	return strings.HasPrefix(eventName, "$session[campaign") || strings.HasPrefix(eventName, "$session[source") || strings.HasPrefix(eventName, "$session[medium")  || strings.HasPrefix(eventName, "$session[adgroup") || strings.HasPrefix(eventName, "$session[initial_referrer")
+	return strings.HasPrefix(eventName, "$session[campaign") || strings.HasPrefix(eventName, "$session[source") || strings.HasPrefix(eventName, "$session[medium") || strings.HasPrefix(eventName, "$session[adgroup") || strings.HasPrefix(eventName, "$session[initial_referrer")
 }
 
 // GetDashboardCacheResultExpiryInSeconds Returns expiry for cache based on query date range.

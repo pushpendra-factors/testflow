@@ -1048,7 +1048,13 @@ func TestPatternFilterTopKpatternTypes(t *testing.T) {
 	var ca T.CampaignEventLists
 	ca.CampaignList = []string{"$session[campaign=1]", "$session[campaign=2]", "$session[campaign=3]", "$session[campaign=4]", "$session[campaign=5]"}
 	filterdPatterns := T.FilterTopKEventsOnTypes(patterns, eNT, 3, 3, 3, ca)
-	assert.Equal(t, 16, len(filterdPatterns)) //$sp4 is repeated
+	for _, v := range filterdPatterns {
+		fmt.Println(v.EventNames)
+	}
+
+	// $sp4 is repeated hence count is reduced by 1 ,
+	// campaign type should not counted
+	assert.Equal(t, 11, len(filterdPatterns))
 }
 
 func TestGenCombinationPatternsEndingWithGoal(t *testing.T) {
