@@ -821,7 +821,7 @@ func (pg *Postgres) GetAdwordsSQLQueryAndParametersForFilterValues(projectID uin
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 	if customerAccountID == nil || len(*customerAccountID) == 0 {
-		logCtx.Error("adwords integration is not available.")
+		logCtx.Error(integrationNotAvailable)
 		return "", []interface{}{}, http.StatusInternalServerError
 	}
 
@@ -862,14 +862,17 @@ func (pg *Postgres) getAdwordsFilterValuesByType(projectID uint64, docType int, 
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 	if customerAccountID == nil || len(*customerAccountID) == 0 {
-		logCtx.Error("adwords Integration is not available.")
+		logCtx.Error(integrationNotAvailable)
 		return []interface{}{}, http.StatusInternalServerError
 	}
 
 	logCtx = log.WithField("doc_type", docType)
 	params := []interface{}{property, projectID, customerAccountID, docType, property}
-	_, resultRows, _ := pg.ExecuteSQL(adwordsFilterQueryStr, params, logCtx)
-
+	_, resultRows, err := pg.ExecuteSQL(adwordsFilterQueryStr, params, logCtx)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed in adwords with following error.")
+		return make([]interface{}, 0, 0), http.StatusInternalServerError
+	}
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
 }
 
@@ -896,32 +899,43 @@ func getAdwordsDocumentTypeForFilterKeyV1(filterObject string) int {
 // ExecuteAdwordsmodel.ChannelQueryV1 - @TODO Kark v1.
 // Job represents the meta data associated with particular object type. Reports represent data with metrics and few filters.
 // TODO - Duplicate code/flow in facebook and adwords.
-func (pg *Postgres) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, error) {
+func (pg *Postgres) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
-	sql, params, selectKeys, selectMetrics, err := pg.GetSQLQueryAndParametersForAdwordsQueryV1(
+	sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForAdwordsQueryV1(
 		projectID, query, reqID, fetchSource)
-	if err != nil {
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), err
+	if errCode != http.StatusOK {
+		return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
 	}
 	_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
 	columns := append(selectKeys, selectMetrics...)
-	return columns, resultMetrics, err
+	if err != nil {
+		logCtx.WithError(err).Error("Failed in adwords with following error.")
+		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+	}
+	return columns, resultMetrics, http.StatusOK
 }
 
 // GetSQLQueryAndParametersForAdwordsQueryV1 - @Kark TODO v1
 // TODO Understand null cases.
-func (pg *Postgres) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
+func (pg *Postgres) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, int) {
 	var selectMetrics []string
 	var selectKeys []string
 	var sql string
 	var params []interface{}
+	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	transformedQuery, customerAccountID, err := pg.transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
-	if err != nil {
-		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), err
+	if err != nil && err.Error() == integrationNotAvailable {
+		logCtx.WithError(err).Error("Failed in adwords analytics with following error.")
+		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}
+	if err != nil {
+		logCtx.WithError(err).Error("Failed in adwords analytics with following error.")
+		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
+	}
+
 	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
-	return sql, params, selectKeys, selectMetrics, nil
+	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
 // @Kark TODO v1
@@ -935,7 +949,7 @@ func (pg *Postgres) transFormRequestFieldsAndFetchRequiredFieldsForAdwords(proje
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 	if customerAccountID == nil || len(*customerAccountID) == 0 {
-		return &model.ChannelQueryV1{}, nil, errors.New("adwords document integration not available for this project.")
+		return &model.ChannelQueryV1{}, nil, errors.New(integrationNotAvailable)
 	}
 
 	transformedQuery, err = convertFromRequestToAdwordsSpecificRepresentation(query)
@@ -1370,14 +1384,19 @@ func GetAdwordsFilterPropertyKeyByType(docType int) (string, error) {
 
 // GetAdwordsFilterValuesByType - @TODO Kark v0
 func (pg *Postgres) GetAdwordsFilterValuesByType(projectID uint64, docType int) ([]string, int) {
+	logCtx := log.WithField("projectID", projectID)
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return []string{}, http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
+	if customerAccountID == nil || len(*customerAccountID) == 0 {
+		logCtx.Error(integrationNotAvailable)
+		return nil, http.StatusNotFound
+	}
 
 	db := C.GetServices().Db
-	logCtx := log.WithField("project_id", projectID).WithField("doc_type", docType)
+	logCtx = log.WithField("project_id", projectID).WithField("doc_type", docType)
 
 	filterValueKey, err := GetAdwordsFilterPropertyKeyByType(docType)
 	if err != nil {
