@@ -82,12 +82,17 @@ class OAuthCallbackHandler(BaseHandler):
 
 
 class GetCustomerAccountsHandler(BaseHandler):
+    # Not considering # for origin.
     def set_default_headers(self):
-        acceptable_domains = Cors.get_acceptable_domains(app.CONFIG.ADWORDS_APP.env)
-        self.set_header("Access-Control-Allow-Origin", acceptable_domains)
+        request_headers = self.request.headers
+        origin = request_headers.get('Origin')
+        cors = app.CONFIG.ADWORDS_APP.cors
         self.set_header("Access-Control-Allow-Headers", "x-requested-with, Origin, Content-Type")
         self.set_header("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
         self.set_header("Access-Control-Allow-Credentials", "true")
+        allowed_origin = Cors.get_cors_allowed_origin(origin)
+        if allowed_origin != None:
+            self.set_header("Access-Control-Allow-Origin", allowed_origin)
 
     @gen.coroutine
     def options(self):

@@ -1,3 +1,4 @@
+from lib.adwords.cors import Cors
 from lib.config import Config
 
 SESSION_COOKIE_NAME = "factors-sid"
@@ -17,6 +18,8 @@ class AppConfig(Config):
         cls.env = env
         cls.data_service_url = data_service_url
         cls.app_host_url = app_host_url
+        Cors.set_acceptable_origins(env)
+        cls.cors = Cors
 
     @classmethod
     def build(cls, argv):
