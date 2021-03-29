@@ -99,7 +99,7 @@ func main() {
 	}
 
 	C.InitConf(config.Env)
-
+	C.InitSortedSetCache(config.CacheSortedSet)
 	// Will allow all 50/50 connection to be idle on the pool.
 	// As we allow num_routines (per project) as per no.of db connections
 	// and will be used continiously.
