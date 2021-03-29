@@ -4,13 +4,7 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
-import { fetchProjectSettings } from 'Reducers/global';
-// import HubspotIntegration from './Hubspot';
-// import SegmentIntegration from './Segment';
-// import DriftIntegration from './Drift';
-// import GoogleAdWords from './GoogleAdWords';
-// import FacebookIntegration from './Facebook';
-// import SalesForceIntegration from './Salesforce';
+import { fetchProjectSettings } from 'Reducers/global'; 
 
 const HubspotIntegration = lazy(() => import("./Hubspot"));
 const SegmentIntegration = lazy(() => import("./Segment"));
@@ -70,10 +64,10 @@ const IntegrationCard = ({ item, index }) => {
       case 'Hubspot': return <HubspotIntegration setIsActive={setIsActive} />;
       case 'Segment': return <SegmentIntegration setIsActive={setIsActive} />;
       case 'Drift': return <DriftIntegration setIsActive={setIsActive} />;
-      case 'Google': return <GoogleAdWords setIsActive={setIsActive} />;
       case 'Facebook': return <FacebookIntegration setIsActive={setIsActive} />;
       case 'Salesforce': return <SalesForceIntegration setIsActive={setIsActive} />;
-      case 'LinkedIn': return <LinkedInIntegration setIsActive={setIsActive} />;
+      // case 'Google': return <GoogleAdWords setIsActive={setIsActive} />;
+      // case 'LinkedIn': return <LinkedInIntegration setIsActive={setIsActive} />;
       default: return <><Tag color="orange" style={{ marginTop: '8px' }}>Coming Soon</Tag> </>
     }
   }
