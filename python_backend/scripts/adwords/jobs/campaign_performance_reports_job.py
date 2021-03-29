@@ -11,7 +11,8 @@ class CampaignPerformanceReportsJob(ReportsFetch):
               # "budget_id",
               "campaign_name", "campaign_status",
               "campaign_trial_type", "start_date", "end_date", "interaction_types", "is_budget_explicitly_shared",
-              "url_custom_parameters", "labels"]
+              "url_custom_parameters", "labels",
+              "advertising_channel_type"]
 
     SEGMENTS = ["campaign_id"]
 

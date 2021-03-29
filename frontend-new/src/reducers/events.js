@@ -2,6 +2,16 @@ import { get, post, del } from '../utils/request';
 var host = BUILD_CONFIG.backend_host;
     host = (host[host.length - 1] === '/') ? host : host + '/';
 
+    const isDevelopment = () => {
+      return ENV === "development"
+  }
+  
+  const getAdwordsHostURL = () => {
+      // return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
+      return BUILD_CONFIG.backend_host;
+  }
+
+  
 
     const inititalState = {
         loading: false,
@@ -34,6 +44,23 @@ var host = BUILD_CONFIG.backend_host;
           case 'FETCH_SPECIFICPROPERTIESVALUE_REJECTED': {
             return { ...state, error: action.payload };
           } 
+          case "ENABLE_ADWORDS_FULFILLED": {
+            let enabledAgentUUID = action.payload.int_adwords_enabled_agent_uuid;
+            if (!enabledAgentUUID || enabledAgentUUID == "")
+              return state; 
+    
+            let _state = { ...state };
+            _state.currentProjectSettings = {
+              ...state.currentProjectSettings,
+              int_adwords_enabled_agent_uuid: enabledAgentUUID,
+            }
+            return _state;
+          }
+          case "FETCH_ADWORDS_CUSTOMER_ACCOUNTS_FULFILLED": {
+            let _state = { ...state }
+            _state.adwordsCustomerAccounts = [...action.payload.customer_accounts];
+            return _state;
+          }
           
         }
         return state;

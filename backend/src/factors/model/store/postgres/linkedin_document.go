@@ -405,6 +405,8 @@ func buildLinkedinChannelConfig() *model.ChannelConfigResult {
 		ObjectsAndProperties: objectsAndProperties,
 	}
 }
+
+// GetLinkedinFilterValues ...
 func (pg *Postgres) GetLinkedinFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
 	linkedinInternalFilterProperty, docType, err := getFilterRelatedInformationForLinkedin(requestFilterObject, requestFilterProperty)
 	if err != http.StatusOK {
@@ -435,20 +437,28 @@ func getFilterRelatedInformationForLinkedin(requestFilterObject string, requestF
 }
 
 func (pg *Postgres) getLinkedinFilterValuesByType(projectID uint64, docType int, property string, reqID string) ([]interface{}, int) {
-	logCtx := log.WithField("req_id", reqID)
+	logCtx := log.WithField("projectID", projectID).WithField("req_id", reqID)
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to fetch Project Setting in linkedin filter values.")
 		return []interface{}{}, http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntLinkedinAdAccount
-
+	if customerAccountID == "" || len(customerAccountID) == 0 {
+		logCtx.Error(integrationNotAvailable)
+		return []interface{}{}, http.StatusNotFound
+	}
 	logCtx = log.WithField("project_id", projectID).WithField("doc_type", docType).WithField("req_id", reqID)
 	params := []interface{}{property, projectID, customerAccountID, docType, property}
-	_, resultRows, _ := pg.ExecuteSQL(linkedinFilterQueryStr, params, logCtx)
-
+	_, resultRows, err := pg.ExecuteSQL(linkedinFilterQueryStr, params, logCtx)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed in linkedin analytics with following error")
+		return make([]interface{}, 0, 0), http.StatusInternalServerError
+	}
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
 }
+
+// GetLinkedinSQLQueryAndParametersForFilterValues ...
 func (pg *Postgres) GetLinkedinSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int) {
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	linkedinInternalFilterProperty, docType, err := getFilterRelatedInformationForLinkedin(requestFilterObject, requestFilterProperty)
@@ -458,40 +468,56 @@ func (pg *Postgres) GetLinkedinSQLQueryAndParametersForFilterValues(projectID ui
 	projectSetting, errCode := pg.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		logCtx.Error("failed to fetch Project Setting in linkedin filter values.")
-		return "", []interface{}{}, http.StatusInternalServerError
+		return "", make([]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntLinkedinAdAccount
+	if customerAccountID == "" || len(customerAccountID) == 0 {
+		logCtx.Error(integrationNotAvailable)
+		return "", nil, http.StatusNotFound
+	}
 	params := []interface{}{linkedinInternalFilterProperty, projectID, customerAccountID, docType, linkedinInternalFilterProperty}
 
 	return "(" + linkedinFilterQueryStr + ")", params, http.StatusFound
 }
 
-func (pg *Postgres) ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, error) {
+func (pg *Postgres) ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	fetchSource := false
 	logCtx := log.WithField("xreq_id", reqID)
-	sql, params, selectKeys, selectMetrics, err := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource)
-	if err != nil {
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), err
+	sql, params, selectKeys, selectMetrics, errCode := pg.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource)
+	if errCode != http.StatusOK {
+		return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
 	}
 	_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
 	columns := append(selectKeys, selectMetrics...)
-	return columns, resultMetrics, err
+	if err != nil {
+		logCtx.WithError(err).Error("Failed in linkedin analytics with following error")
+		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+	}
+	return columns, resultMetrics, http.StatusOK
 }
 
-func (pg *Postgres) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
+// GetSQLQueryAndParametersForLinkedinQueryV1 ...
+func (pg *Postgres) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, int) {
 	var selectMetrics []string
 	var sql string
 	var selectKeys []string
 	var params []interface{}
+	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	transformedQuery, customerAccountID, err := pg.transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID, *query, reqID)
-	if err != nil {
-		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), err
+	if err != nil && err.Error() == integrationNotAvailable {
+		logCtx.WithError(err).Error("Failed in Linkedin analytics with following error.")
+		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}
+	if err != nil {
+		logCtx.WithError(err).Error("Failed in Linkedin analytics with following error.")
+		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
+	}
+
 	sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryV1(transformedQuery, projectID, customerAccountID, fetchSource)
 	if err != nil {
-		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), err
+		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 	}
-	return sql, params, selectKeys, selectMetrics, nil
+	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
 func (pg *Postgres) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID uint64, query model.ChannelQueryV1, reqID string) (*model.ChannelQueryV1, string, error) {
@@ -504,7 +530,9 @@ func (pg *Postgres) transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(proj
 		return &model.ChannelQueryV1{}, "", errors.New("Project setting not found")
 	}
 	customerAccountID := projectSetting.IntLinkedinAdAccount
-
+	if customerAccountID == "" || len(customerAccountID) == 0 {
+		return &model.ChannelQueryV1{}, "", errors.New(integrationNotAvailable)
+	}
 	query, err = convertFromRequestToLinkedinSpecificRepresentation(query)
 	if err != nil {
 		logCtx.Warn("Request failed in validation: ", err)

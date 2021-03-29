@@ -2,9 +2,18 @@ from scripts.adwords import DEVELOPMENT, TEST, STAGING, PRODUCTION
 
 
 class Cors:
+    acceptable_origins = []
 
-    @staticmethod
-    def get_acceptable_domains(env):
+    @classmethod
+    def get_cors_allowed_origin(cls, request_origin):
+        if request_origin is None or len(request_origin) == 0:
+            return
+        for curr_origin in cls.acceptable_origins:
+            if request_origin == curr_origin: return request_origin
+        return
+
+    @classmethod
+    def set_acceptable_origins(cls, env):
         result_domains = []
         if env in (DEVELOPMENT, TEST):
             result_domains = ["http://factors-dev.com:3000"]
@@ -21,4 +30,5 @@ class Cors:
                 "https://tufte-prod.factors.ai",
                 "https://app-old.factors.ai"
             ]
-        return (", ").join(result_domains)
+        cls.acceptable_origins = result_domains
+        return

@@ -229,12 +229,12 @@ func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID u
 	projectSetting, errCode := store.GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		logCtx.Error("failed to fetch Project Setting in facebook filter values.")
-		return "", []interface{}{}, http.StatusInternalServerError
+		return "", make([]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		logCtx.Error("facebook integration is not available.")
-		return "", []interface{}{}, http.StatusInternalServerError
+		logCtx.Error(integrationNotAvailable)
+		return "", make([]interface{}, 0, 0), http.StatusNotFound
 	}
 	params := []interface{}{facebookInternalFilterProperty, projectID, customerAccountID,
 		docType, facebookInternalFilterProperty}
@@ -270,49 +270,63 @@ func (store *MemSQL) getFacebookFilterValuesByType(projectID uint64, docType int
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		logCtx.Error("facebook integration is not available.")
-		return []interface{}{}, http.StatusInternalServerError
+		logCtx.Error(integrationNotAvailable)
+		return nil, http.StatusNotFound
 	}
 	logCtx = logCtx.WithField("doc_type", docType)
 	params := []interface{}{property, projectID, customerAccountID, docType, property}
-	_, resultRows, _ := store.ExecuteSQL(facebookFilterQueryStr, params, logCtx)
-
+	_, resultRows, err := store.ExecuteSQL(facebookFilterQueryStr, params, logCtx)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed in facebook analytics with following error.")
+		return make([]interface{}, 0, 0), http.StatusInternalServerError
+	}
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
 }
 
 // ExecuteFacebookChannelQueryV1 - @Kark TODO v1
 // In this flow, Job represents the meta data associated with particular object type. Reports represent data with metrics and few filters.
 // TODO - Duplicate code/flow in facebook and adwords.
-func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, error) {
+func (store *MemSQL) ExecuteFacebookChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int) {
 	var fetchSource = false
 	logCtx := log.WithField("xreq_id", reqID)
-	sql, params, selectKeys, selectMetrics, err := store.GetSQLQueryAndParametersForFacebookQueryV1(projectID,
+	sql, params, selectKeys, selectMetrics, errCode := store.GetSQLQueryAndParametersForFacebookQueryV1(projectID,
 		query, reqID, fetchSource)
-	if err != nil {
-		return make([]string, 0, 0), make([][]interface{}, 0, 0), err
+	if errCode != http.StatusOK {
+		return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
 	}
 	_, resultMetrics, err := store.ExecuteSQL(sql, params, logCtx)
 	columns := append(selectKeys, selectMetrics...)
-	return columns, resultMetrics, err
+	if err != nil {
+		logCtx.WithError(err).Error("Failed in facebook analytics with following error")
+		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
+	}
+	return columns, resultMetrics, http.StatusOK
 }
 
 // GetSQLQueryAndParametersForFacebookQueryV1 ...
 func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64, query *model.ChannelQueryV1,
-	reqID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
+	reqID string, fetchSource bool) (string, []interface{}, []string, []string, int) {
 	var selectMetrics []string
 	var selectKeys []string
 	var sql string
 	var params []interface{}
+	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForFacebook(
 		projectID, *query, reqID)
-	if err != nil {
-		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), err
+	if err != nil && err.Error() == integrationNotAvailable {
+		logCtx.WithError(err).Error("Failed in facebook analytics with following error.")
+		return "", nil, make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}
+	if err != nil {
+		logCtx.WithError(err).Error("Failed in facebook analytics with following error.")
+		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
+	}
+
 	sql, params, selectKeys, selectMetrics, err = buildFacebookQueryV1(transformedQuery, projectID, customerAccountID, fetchSource)
 	if err != nil {
-		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), err
+		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 	}
-	return sql, params, selectKeys, selectMetrics, nil
+	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }
 
 func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForFacebook(projectID uint64,
@@ -327,7 +341,7 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForFacebook(pro
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		return &model.ChannelQueryV1{}, "", errors.New("facebook document integration not available for this project.")
+		return &model.ChannelQueryV1{}, "", errors.New(integrationNotAvailable)
 	}
 
 	transformedQuery, err = convertFromRequestToFacebookSpecificRepresentation(query)

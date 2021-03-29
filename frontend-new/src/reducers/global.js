@@ -83,6 +83,28 @@ export default function (state = defaultState, action) {
         projectSettingsError: action.payload.err,
       };
     }
+    case "ENABLE_FACEBOOK_USER_ID": {
+      let fbUserID = action.payload.int_facebook_user_id;
+
+      let _state = {...state};
+      _state.currentProjectSettings = {
+        ...state.currentProjectSettings,
+        int_facebook_user_id: fbUserID,
+      }
+      return _state;
+    }
+    case "ENABLE_SALESFORCE_FULFILLED": {
+      let enabledAgentUUID = action.payload.int_salesforce_enabled_agent_uuid;
+      if (!enabledAgentUUID || enabledAgentUUID == "")
+        return state;
+
+      let _state = { ...state };
+      _state.currentProjectSettings = {
+        ...state.currentProjectSettings,
+        int_salesforce_enabled_agent_uuid: enabledAgentUUID,
+      }
+      return _state;
+    }
     default:
       return state;
   }
@@ -233,4 +255,114 @@ export function udpateProjectDetails(projectId, payload) {
         });
     });
   };
+}
+
+
+export function addFacebookAccessToken(data) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      post(dispatch, host +"integrations/facebook/add_access_token", data)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({type:"ENABLE_FACEBOOK_USER_ID", payload: data})
+            resolve(r);
+          } else {
+            reject(r); 
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        })
+    })
+  }
+}
+
+export function enableSalesforceIntegration(projectId) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      let payload = {"project_id":projectId}
+      post(dispatch, host +"integrations/salesforce/enable", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "ENABLE_SALESFORCE_FULFILLED", payload: r.data })
+            resolve(r);
+          } else {
+            dispatch({ type:"ENABLE_SALESFORCE_REJECTED" });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"ENABLE_SALESFORCE_REJECTED", payload: err });
+          reject(err);
+        })
+    })
+  }
+}
+
+
+export function fetchSalesforceRedirectURL(projectId, agentUUID){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      let payload = {"project_id":projectId}
+
+      post(dispatch, host +"integrations/salesforce/auth", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "FETCH_SALESFORCE_REDIRECT_URL_FULFILLED", payload: r.data })
+            resolve(r);
+          } else {
+            dispatch({ type:"FETCH_SALESFORCE_REDIRECT_URL_REJECTED" });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"FETCH_SALESFORCE_REDIRECT_URL_REJECTED", payload: err });
+          reject(err);
+        })
+    })
+  }
+}
+
+
+export function enableAdwordsIntegration(projectId) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      let payload = { project_id: projectId.toString() }
+      post(dispatch, host + "integrations/adwords/enable", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "ENABLE_ADWORDS_FULFILLED", payload: r.data })
+            resolve(r);
+          } else {
+            dispatch({ type:"ENABLE_ADWORDS_REJECTED" });
+            reject(r); 
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"ENABLE_ADWORDS_REJECTED", payload: err });
+          reject(err);
+        })
+    })
+  }
+}
+
+export function fetchAdwordsCustomerAccounts(payload) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      post(dispatch, host +"adwords/get_customer_accounts", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "FETCH_ADWORDS_CUSTOMER_ACCOUNTS_FULFILLED", payload: r.data })
+            resolve(r.data);
+          } else {
+            dispatch({ type:"FETCH_ADWORDS_CUSTOMER_ACCOUNTS_REJECTED" });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"FETCH_ADWORDS_CUSTOMER_ACCOUNTS_REJECTED", payload: err });
+          reject(err);
+        })
+    })
+  }
 }
