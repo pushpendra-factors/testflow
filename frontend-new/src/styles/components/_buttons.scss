@@ -6,9 +6,10 @@
     // padding: 4px 12px; 
 
     // border: 1px solid transparent; 
-    border-color: #d9d9d9;
+    border-color: transparent;
 
-    background: $fa-color--white; 
+    // background: $fa-color--white; 
+    background: $fa-color--mono-1;  
     color: $fa-color--mono-5; 
     
     &:disabled{
