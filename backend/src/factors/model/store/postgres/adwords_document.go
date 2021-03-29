@@ -48,6 +48,7 @@ const (
 	isNegative                 = "is_negative"
 	topOfPageCpc               = "top_of_page_cpc"
 	qualityScore               = "quality_score"
+	advertisingChannelType     = "advertising_channel_type"
 
 	clicks                                     = "clicks"
 	clickThroughRate                           = "click_through_rate"
@@ -101,9 +102,10 @@ var objectsForAdwords = []string{adwordsCampaign, adwordsAdGroup, adwordsKeyword
 
 var mapOfObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
 	adwordsCampaign: {
-		"id":     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"id":                   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":                 PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"status":               PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		advertisingChannelType: PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 	},
 	adwordsAdGroup: {
 		"id":     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
@@ -160,6 +162,7 @@ var adwordsExtToInternal = map[string]string{
 	isNegative:                       isNegative,
 	topOfPageCpc:                     topOfPageCpc,
 	qualityScore:                     qualityScore,
+	advertisingChannelType:           advertisingChannelType,
 	impressions:                      impressions,
 	clicks:                           clicks,
 	"spend":                          "cost",
@@ -181,43 +184,45 @@ var adwordsExtToInternal = map[string]string{
 }
 
 var adwordsInternalPropertiesToJobsInternal = map[string]string{
-	"campaign:id":                "id",
-	"campaign:name":              "name",
-	"campaign:status":            "status",
-	"ad_group:id":                "id",
-	"ad_group:name":              "name",
-	"ad_group:status":            "status",
-	"ad:id":                      "ad_id",
-	"keyword:id":                 "id",
-	"keyword:name":               "criteria",
-	"keyword:status":             "status",
-	"keyword:approval_status":    approvalStatus,
-	"keyword:match_type":         "keyword_match_type",
-	"keyword:first_position_cpc": firstPositionCpc,
-	"keyword:first_page_cpc":     firstPageCpc,
-	"keyword:is_negative":        isNegative,
-	"keyword:top_of_page_cpc":    topOfPageCpc,
-	"keyword:quality_score":      qualityScore,
+	"campaign:id":                       "id",
+	"campaign:name":                     "name",
+	"campaign:status":                   "status",
+	"campaign:advertising_channel_type": advertisingChannelType,
+	"ad_group:id":                       "id",
+	"ad_group:name":                     "name",
+	"ad_group:status":                   "status",
+	"ad:id":                             "ad_id",
+	"keyword:id":                        "id",
+	"keyword:name":                      "criteria",
+	"keyword:status":                    "status",
+	"keyword:approval_status":           approvalStatus,
+	"keyword:match_type":                "keyword_match_type",
+	"keyword:first_position_cpc":        firstPositionCpc,
+	"keyword:first_page_cpc":            firstPageCpc,
+	"keyword:is_negative":               isNegative,
+	"keyword:top_of_page_cpc":           topOfPageCpc,
+	"keyword:quality_score":             qualityScore,
 }
 
 var adwordsInternalPropertiesToReportsInternal = map[string]string{
-	"campaign:id":                "campaign_id",
-	"campaign:name":              "campaign_name",
-	"campaign:status":            "campaign_status",
-	"ad_group:id":                "ad_group_id",
-	"ad_group:name":              "ad_group_name",
-	"ad_group:status":            "ad_group_status",
-	"ad:id":                      "ad_id",
-	"keyword:id":                 "keyword_id",
-	"keyword:name":               "criteria",
-	"keyword:status":             "status",
-	"keyword:approval_status":    approvalStatus,
-	"keyword:match_type":         "keyword_match_type",
-	"keyword:first_position_cpc": firstPositionCpc,
-	"keyword:first_page_cpc":     firstPageCpc,
-	"keyword:is_negative":        isNegative,
-	"keyword:top_of_page_cpc":    topOfPageCpc,
-	"keyword:quality_score":      qualityScore,
+	"campaign:id":                       "campaign_id",
+	"campaign:name":                     "campaign_name",
+	"campaign:status":                   "campaign_status",
+	"campaign:advertising_channel_type": advertisingChannelType,
+	"ad_group:id":                       "ad_group_id",
+	"ad_group:name":                     "ad_group_name",
+	"ad_group:status":                   "ad_group_status",
+	"ad:id":                             "ad_id",
+	"keyword:id":                        "keyword_id",
+	"keyword:name":                      "criteria",
+	"keyword:status":                    "status",
+	"keyword:approval_status":           approvalStatus,
+	"keyword:match_type":                "keyword_match_type",
+	"keyword:first_position_cpc":        firstPositionCpc,
+	"keyword:first_page_cpc":            firstPageCpc,
+	"keyword:is_negative":               isNegative,
+	"keyword:top_of_page_cpc":           topOfPageCpc,
+	"keyword:quality_score":             qualityScore,
 }
 
 var propertiesToBeDividedByMillion = map[string]struct{}{
