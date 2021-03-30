@@ -94,12 +94,12 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 		eventNamesKey, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID,
 			eventName, currentTimeDatePart)
 		eventNamesKeySortedSet, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
-				currentTimeDatePart)
+			currentTimeDatePart)
 	} else {
 		eventNamesKey, err = model.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID,
 			eventName, currentTimeDatePart)
 		eventNamesKeySortedSet, err = model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
-				currentTimeDatePart)
+			currentTimeDatePart)
 	}
 
 	if err != nil {
@@ -108,7 +108,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 	}
 	eventsToIncr = append(eventsToIncr, eventNamesKey)
 	eventsToIncrSortedSet = append(eventsToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
-		Key : eventNamesKeySortedSet,
+		Key:   eventNamesKeySortedSet,
 		Value: eventName,
 	})
 
@@ -135,7 +135,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 			}
 			propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 			propertiesToIncrSortedSet = append(propertiesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
-				Key : propertyCategoryKeySortedSet,
+				Key:   propertyCategoryKeySortedSet,
 				Value: fmt.Sprintf("%s:SS-EN-PC:%s:%s", eventName, category, property),
 			})
 			if category == U.PropertyTypeCategorical {
@@ -149,7 +149,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 					}
 					valuesToIncr = append(valuesToIncr, valueKey)
 					valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
-						Key : valueKeySortedSet,
+						Key:   valueKeySortedSet,
 						Value: fmt.Sprintf("%s:SS-EN-PC:%s:SS-EN-PV:%s", eventName, property, propertyValue),
 					})
 				}
@@ -179,7 +179,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 		return
 	}
 
-	if(C.IsSortedSetCachingAllowed()){
+	if C.IsSortedSetCachingAllowed() {
 		cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
 	}
 	// The following code is to support/facilitate cleanup
@@ -219,7 +219,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 			return
 		}
 		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
-			Key : uniqueEventsCountKey,
+			Key:   uniqueEventsCountKey,
 			Value: fmt.Sprintf("%v", projectID)})
 	}
 	if newPropertiesCount > 0 {
@@ -246,7 +246,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 			return
 		}
 		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
-			Key : totalEventsCountKey,
+			Key:   totalEventsCountKey,
 			Value: fmt.Sprintf("%v", projectID)})
 	}
 	if len(countsInCache) > 0 {
