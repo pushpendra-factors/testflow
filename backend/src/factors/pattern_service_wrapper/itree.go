@@ -12,6 +12,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"reflect"
 )
 
 type ItreeNode struct {
@@ -1300,7 +1301,7 @@ func BuildNewItreeV1(reqId string,
 
 			startDateTime := time.Now()
 			if attributeChildNodes, err, debugInfo := itree.buildAndAddPropertyChildNodesV1(reqId,
-				parentNode.node, allActiveUsersPattern, patternWrapper, countType, parentNode.level, debugKey, debugParams["PropertyName"], debugParams["PropertyValue"]); err != nil {
+				parentNode.node, allActiveUsersPattern, patternWrapper, countType, parentNode.level, debugKey, debugParams["PropertyName"], debugParams["PropertyValue"],startEventConstraints, endEventConstraints); err != nil {
 				log.Errorf(fmt.Sprintf("%s", err))
 				return nil, err, nil
 			} else {
@@ -1323,7 +1324,7 @@ func BuildNewItreeV1(reqId string,
 		if parentNode.node.NodeType == NODE_TYPE_SEQUENCE || parentNode.node.NodeType == NODE_TYPE_ROOT || parentNode.node.NodeType == NODE_TYPE_CAMPAIGN {
 			startDateTime := time.Now()
 			if sequenceChildNodes, err := itree.buildAndAddSequenceChildNodesV1(reqId, parentNode.node,
-				candidatePatterns, patternWrapper, allActiveUsersPattern, countType); err != nil {
+				candidatePatterns, patternWrapper, allActiveUsersPattern, countType, startEventConstraints, endEventConstraints); err != nil {
 				return nil, err, nil
 			} else {
 				endDateTime := time.Now()
@@ -1342,7 +1343,7 @@ func BuildNewItreeV1(reqId string,
 		if parentNode.node.NodeType == NODE_TYPE_CAMPAIGN || parentNode.node.NodeType == NODE_TYPE_ROOT {
 			startDateTime := time.Now()
 			if sequenceChildNodes, err := itree.buildAndAddCampaignChildNodesV1(reqId, parentNode.node,
-				candidatePatterns, patternWrapper, allActiveUsersPattern, countType); err != nil {
+				candidatePatterns, patternWrapper, allActiveUsersPattern, countType, startEventConstraints, endEventConstraints); err != nil {
 				return nil, nil, err
 			} else {
 				endDateTime := time.Now()
@@ -1450,7 +1451,8 @@ func formatProperty(property string) string {
 
 func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	parentNode *ItreeNode, allActiveUsersPattern *P.Pattern,
-	patternWrapper PatternServiceWrapperInterface, countType string, level int, debugKey string, debugPropertyName string, debugPropertyValue string) ([]*ItreeNode, error, interface{}) {
+	patternWrapper PatternServiceWrapperInterface, countType string, level int, debugKey string, debugPropertyName string, debugPropertyValue string,
+	startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints) ([]*ItreeNode, error, interface{}) {
 	// The top child nodes are obtained by adding constraints on the (N-1) event
 	// of parent pattern.
 	// i.e If parrent pattern is A -> B -> C -> Y with
@@ -1522,7 +1524,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	if pLen > 1 {
 		child := it.buildCategoricalPropertyChildNodesV1(reqId,
 			eventCatProperties, NODE_TYPE_EVENT_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
-			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
+			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType, startEventConstraints, endEventConstraints)
 		debugKey = fmt.Sprintf("itree_attribute_totaleventCategorical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
 		for _, node := range child {
@@ -1534,7 +1536,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	if pLen > 1 || countType == P.COUNT_TYPE_PER_USER {
 		child := it.buildCategoricalPropertyChildNodesV1(reqId,
 			userCatProperties, NODE_TYPE_USER_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
-			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
+			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType, startEventConstraints, endEventConstraints)
 		debugKey = fmt.Sprintf("itree_attribute_totaluserCategorical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
 		for _, node := range child {
@@ -1548,7 +1550,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	if pLen > 1 {
 		child := it.buildNumericalPropertyChildNodesV1(reqId,
 			eventNumProperties, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
-			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
+			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType, startEventConstraints, endEventConstraints)
 		debugKey = fmt.Sprintf("itree_attribute_totaleventNumerical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
 		for _, node := range child {
@@ -1560,7 +1562,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	if pLen > 1 || countType == P.COUNT_TYPE_PER_USER {
 		child := it.buildNumericalPropertyChildNodesV1(reqId,
 			userNumProperties, NODE_TYPE_USER_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
-			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType)
+			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp, countType, startEventConstraints, endEventConstraints)
 		debugKey = fmt.Sprintf("itree_attribute_totaluserNumerical_filtered_level%v", level)
 		debugCounts[debugKey] = debugCounts[debugKey] + len(child)
 		for _, node := range child {
@@ -1634,7 +1636,7 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 	nodeType int, maxNumProperties int, maxNumValues int,
 	parentNode *ItreeNode, patternWrapper PatternServiceWrapperInterface,
 	allActiveUsersPattern *P.Pattern, pLen int, fpr float64, fpp float64,
-	countType string) []*ItreeNode {
+	countType string, startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints) []*ItreeNode {
 	propertyChildNodes := []*ItreeNode{}
 	numP := 0
 	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
@@ -1691,7 +1693,7 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 
 			if cNode, err := it.buildChildNodeV1(reqId,
 				parentNode.Pattern, &constraintToAdd, nodeType,
-				parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp, countType); err != nil {
+				parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp, countType, startEventConstraints, endEventConstraints); err != nil {
 				log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
 				continue
 			} else {
@@ -1760,7 +1762,7 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 	parentNode *ItreeNode, candidatePattens []*P.Pattern,
 	patternWrapper PatternServiceWrapperInterface,
-	allActiveUsersPattern *P.Pattern, countType string) ([]*ItreeNode, error) {
+	allActiveUsersPattern *P.Pattern, countType string,startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints) ([]*ItreeNode, error) {
 
 	parentPattern := parentNode.Pattern
 	peLen := len(parentPattern.EventNames)
@@ -1807,7 +1809,7 @@ func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 		}
 		if cNode, err := it.buildChildNodeV1(reqId,
 			p, nil, NODE_TYPE_SEQUENCE,
-			parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp, countType); err != nil {
+			parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp, countType, startEventConstraints, endEventConstraints); err != nil {
 			log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
 			continue
 		} else {
@@ -1843,7 +1845,7 @@ func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 	parentNode *ItreeNode, candidatePattens []*P.Pattern,
 	patternWrapper PatternServiceWrapperInterface,
-	allActiveUsersPattern *P.Pattern, countType string) ([]*ItreeNode, error) {
+	allActiveUsersPattern *P.Pattern, countType string, startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints) ([]*ItreeNode, error) {
 
 	parentPattern := parentNode.Pattern
 	peLen := len(parentPattern.EventNames)
@@ -1896,7 +1898,7 @@ func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 		subPattersnCount++
 		if cNode, err := it.buildChildNodeV1(reqId,
 			p, nil, NODE_TYPE_CAMPAIGN,
-			parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp, countType); err != nil {
+			parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp, countType, startEventConstraints, endEventConstraints); err != nil {
 			log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
 			continue
 		} else {
@@ -1939,7 +1941,7 @@ func (it *Itree) buildChildNodeV1(reqId string,
 	nodeType int, parentIndex int,
 	patternWrapper PatternServiceWrapperInterface,
 	allActiveUsersPattern *P.Pattern,
-	fpr float64, fpp float64, countType string) (*ItreeNode, error) {
+	fpr float64, fpp float64, countType string, startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints) (*ItreeNode, error) {
 
 	parentNode := it.Nodes[parentIndex]
 	parentPattern := parentNode.Pattern
@@ -2077,10 +2079,81 @@ func (it *Itree) buildChildNodeV1(reqId string,
 				allUConstraints = []P.EventConstraints{
 					*constraintToAdd,
 				}
-				allUConstraints[0].EPCategoricalConstraints = append(allUConstraints[0].EPCategoricalConstraints, parentConstraints[0].EPCategoricalConstraints...)
-				allUConstraints[0].EPNumericConstraints = append(allUConstraints[0].EPNumericConstraints, parentConstraints[0].EPNumericConstraints...)
-				allUConstraints[0].UPCategoricalConstraints = append(allUConstraints[0].UPCategoricalConstraints, parentConstraints[0].UPCategoricalConstraints...)
-				allUConstraints[0].UPNumericConstraints = append(allUConstraints[0].UPNumericConstraints, parentConstraints[0].UPNumericConstraints...)
+				nonEndConstraints := P.EventConstraints{
+					EPNumericConstraints:     []P.NumericConstraint{},
+					EPCategoricalConstraints: []P.CategoricalConstraint{},
+					UPNumericConstraints:     []P.NumericConstraint{},
+					UPCategoricalConstraints: []P.CategoricalConstraint{},
+				}
+				for _, constraint := range parentConstraints[0].EPCategoricalConstraints{
+					toBeAdded := true
+					for _, endConstraint := range endEventConstraints.EPCategoricalConstraints{
+						if(reflect.DeepEqual(constraint, endConstraint)){
+							toBeAdded = false
+							break;	
+						} 
+					}
+					if( toBeAdded == true ){
+						nonEndConstraints.EPCategoricalConstraints = append(nonEndConstraints.EPCategoricalConstraints, constraint)	
+					}				
+				}
+				for _, constraint := range parentConstraints[0].EPNumericConstraints{
+					toBeAdded := true
+					for _, endConstraint := range endEventConstraints.EPNumericConstraints{
+						if(reflect.DeepEqual(constraint, endConstraint)){
+							toBeAdded = false
+							break;	
+						} 
+					}
+					if( toBeAdded == true ){
+						nonEndConstraints.EPNumericConstraints = append(nonEndConstraints.EPNumericConstraints, constraint)	
+					}				
+				}
+				for _, constraint := range parentConstraints[0].UPCategoricalConstraints{
+					toBeAdded := true
+					for _, endConstraint := range endEventConstraints.UPCategoricalConstraints{
+						if(reflect.DeepEqual(constraint, endConstraint)){
+							toBeAdded = false
+							break;	
+						} 
+					}
+					if( toBeAdded == true ){
+						nonEndConstraints.UPCategoricalConstraints = append(nonEndConstraints.UPCategoricalConstraints, constraint)	
+					}				
+				}
+				for _, constraint := range parentConstraints[0].UPNumericConstraints{
+					toBeAdded := true
+					for _, endConstraint := range endEventConstraints.UPNumericConstraints{
+						if(reflect.DeepEqual(constraint, endConstraint)){
+							toBeAdded = false
+							break;	
+						} 
+					}
+					if( toBeAdded == true ){
+						nonEndConstraints.UPNumericConstraints = append(nonEndConstraints.UPNumericConstraints, constraint)	
+					}				
+				}
+				// For patternLength = 1 we dont need to consider endevent constraints for fcp calculation we just need startEvent constraints 
+				if len(startEventConstraints.EPCategoricalConstraints) > 0 ||
+				len(startEventConstraints.EPNumericConstraints) > 0 ||
+				len(startEventConstraints.UPCategoricalConstraints) > 0 ||
+				len(startEventConstraints.UPNumericConstraints) > 0 {
+					allUConstraints[0].EPCategoricalConstraints = append(allUConstraints[0].EPCategoricalConstraints, startEventConstraints.EPCategoricalConstraints...)
+					allUConstraints[0].EPNumericConstraints = append(allUConstraints[0].EPNumericConstraints, startEventConstraints.EPNumericConstraints...)
+					allUConstraints[0].UPCategoricalConstraints = append(allUConstraints[0].UPCategoricalConstraints, startEventConstraints.UPCategoricalConstraints...)
+					allUConstraints[0].UPNumericConstraints = append(allUConstraints[0].UPNumericConstraints, startEventConstraints.UPNumericConstraints...)
+				}
+
+				if len(nonEndConstraints.EPCategoricalConstraints) > 0 ||
+				len(nonEndConstraints.EPNumericConstraints) > 0 ||
+				len(nonEndConstraints.UPCategoricalConstraints) > 0 ||
+				len(nonEndConstraints.UPNumericConstraints) > 0 {
+				allUConstraints[0].EPCategoricalConstraints = append(allUConstraints[0].EPCategoricalConstraints, nonEndConstraints.EPCategoricalConstraints...)
+				allUConstraints[0].EPNumericConstraints = append(allUConstraints[0].EPNumericConstraints, nonEndConstraints.EPNumericConstraints...)
+				allUConstraints[0].UPCategoricalConstraints = append(allUConstraints[0].UPCategoricalConstraints, nonEndConstraints.UPCategoricalConstraints...)
+				allUConstraints[0].UPNumericConstraints = append(allUConstraints[0].UPNumericConstraints, nonEndConstraints.UPNumericConstraints...)
+				}
+				// Take all the event constraints which are part of start and not part of end and remove those from calculating fcp
 			} else {
 				allUConstraints = []P.EventConstraints{
 					*constraintToAdd,
@@ -2160,7 +2233,7 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 	numericPropertyKeys []string, nodeType int, maxNumProperties int,
 	parentNode *ItreeNode, patternWrapper PatternServiceWrapperInterface,
 	allActiveUsersPattern *P.Pattern, pLen int, fpr float64, fpp float64,
-	countType string) []*ItreeNode {
+	countType string, startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints) []*ItreeNode {
 
 	parentPattern := parentNode.Pattern
 	propertyChildNodes := []*ItreeNode{}
@@ -2273,7 +2346,7 @@ func (it *Itree) buildNumericalPropertyChildNodesV1(reqId string,
 				if cNode, err := it.buildChildNodeV1(reqId,
 					parentPattern, &constraintToAdd, nodeType,
 					parentNode.Index, patternWrapper, allActiveUsersPattern,
-					fpr, fpp, countType); err != nil {
+					fpr, fpp, countType, startEventConstraints, endEventConstraints); err != nil {
 					log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
 					continue
 				} else {
