@@ -109,6 +109,7 @@ func main() {
 	}
 
 	C.InitConf(config.Env)
+	C.InitSortedSetCache(config.CacheSortedSet)
 	C.InitSalesforceConfig(config.SalesforceAppID, config.SalesforceAppSecret)
 	C.InitRedis(config.RedisHost, config.RedisPort)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)

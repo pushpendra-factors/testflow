@@ -964,9 +964,11 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 
 			sessionPropertiesMap := U.PropertiesMap{}
 			if _, exists := (*lastEventProperties)[U.EP_PAGE_RAW_URL]; exists {
+				logCtx.WithField("EventId", sessionEvent.ID).Info("Missing SP_LATEST_PAGE_RAW_URL")
 				sessionPropertiesMap[U.SP_LATEST_PAGE_RAW_URL] = (*lastEventProperties)[U.EP_PAGE_RAW_URL]
 			}
 			if _, exists := (*lastEventProperties)[U.EP_PAGE_URL]; exists {
+				logCtx.WithField("EventId", sessionEvent.ID).Info("Missing SP_LATEST_PAGE_URL")
 				sessionPropertiesMap[U.SP_LATEST_PAGE_URL] = (*lastEventProperties)[U.EP_PAGE_URL]
 			}
 

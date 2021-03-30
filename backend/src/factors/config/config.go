@@ -430,6 +430,10 @@ func InitConf(env string) {
 	}
 }
 
+func InitSortedSetCache(cacheSortedSet bool) {
+	configuration.CacheSortedSet = cacheSortedSet
+}
+
 func InitSalesforceConfig(salesforceAppId, salesforceAppSecret string) {
 	configuration.SalesforceAppID = salesforceAppId
 	configuration.SalesforceAppSecret = salesforceAppSecret

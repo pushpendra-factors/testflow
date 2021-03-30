@@ -116,7 +116,7 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 				eventPropertiesToCache := make(map[*cacheRedis.Key]string)
 				for eventName, properties := range propertiesMap {
 					eventPropertiesKey, _ := model.GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventName, currentTimeDatePart)
-					cacheEventPropertyObject := GetCachePropertyValueObject(properties, currentTimeDatePart)
+					cacheEventPropertyObject := GetCachePropertyObject(properties, currentTimeDatePart)
 					enEventPropertiesCache, err := json.Marshal(cacheEventPropertyObject)
 					if err != nil {
 						log.WithError(err).Error("Failed to marshall - event properties")

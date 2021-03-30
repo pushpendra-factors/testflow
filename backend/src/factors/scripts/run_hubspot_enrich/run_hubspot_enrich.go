@@ -89,6 +89,7 @@ func main() {
 	}
 
 	C.InitConf(config.Env)
+	C.InitSortedSetCache(config.CacheSortedSet)
 
 	err := C.InitDB(*config)
 	if err != nil {
