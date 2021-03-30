@@ -161,6 +161,13 @@ upload-salesforce-enrich: export IMAGE_NAME=salesforce-enrich-job
 upload-salesforce-enrich: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/salesforce-enrich-job:$(TAG)
 
+pack-backfill-salesforce-datetime-job:
+	docker build -t us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG) -f Dockerfile.backfill_salesforce_datetime_job .
+
+upload-backfill-salesforce-datetime-job: export IMAGE_NAME=backfill-salesforce-datetime-job
+upload-backfill-salesforce-datetime-job: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG)
+
 pack-sdk-request-worker:
 	docker build -t us.gcr.io/factors-$(ENV)/sdk-request-worker:$(TAG) -f Dockerfile.sdk_request_worker .
 

@@ -219,7 +219,7 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 			return
 		}
 		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
-			Key : uniqueEventsCountKey,
+			Key:   uniqueEventsCountKey,
 			Value: fmt.Sprintf("%v", projectID)})
 	}
 	if newPropertiesCount > 0 {
@@ -246,7 +246,7 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 			return
 		}
 		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
-			Key : totalEventsCountKey,
+			Key:   totalEventsCountKey,
 			Value: fmt.Sprintf("%v", projectID)})
 	}
 	if len(countsInCache) > 0 {
