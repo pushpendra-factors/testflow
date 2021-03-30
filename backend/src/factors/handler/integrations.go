@@ -53,13 +53,9 @@ func IntSegmentHandler(c *gin.Context) {
 	if err := json.NewDecoder(body).Decode(&event); err != nil {
 		logCtx.WithError(err).Error("Segment JSON decode failed")
 	}
+	logCtx.WithFields(log.Fields{"event": event}).Debug("Segment webhook request")
 
 	token := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_PRIVATE_TOKEN)
-
-	if(token == "wlmg8vgvldkx0s8noreidtxjnrt72muq"){
-		logCtx.WithFields(log.Fields{"event": event}).Info("Segment webhook request")
-	}
-
 	if C.IsBlockedSDKRequestProjectToken(token) {
 		c.AbortWithStatusJSON(http.StatusOK,
 			IntSegment.EventResponse{Error: "Request failed. Blocked."})
