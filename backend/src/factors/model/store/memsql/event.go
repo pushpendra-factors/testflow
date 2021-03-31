@@ -136,7 +136,7 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 			propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 			propertiesToIncrSortedSet = append(propertiesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
 				Key:   propertyCategoryKeySortedSet,
-				Value: fmt.Sprintf("%s:%s:%s", eventName, category, property),
+				Value: fmt.Sprintf("%s:SS-EN-PC:%s:%s", eventName, category, property),
 			})
 			if category == U.PropertyTypeCategorical {
 				if propertyValue != "" {
@@ -150,7 +150,7 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 					valuesToIncr = append(valuesToIncr, valueKey)
 					valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
 						Key:   valueKeySortedSet,
-						Value: fmt.Sprintf("%s:%s:%s", eventName, property, propertyValue),
+						Value: fmt.Sprintf("%s:SS-EN-PC:%s:SS-EN-PV:%s", eventName, property, propertyValue),
 					})
 				}
 			}
@@ -180,10 +180,7 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 	}
 
 	if C.IsSortedSetCachingAllowed() {
-		begin = U.TimeNow()
-		cacheRedis.ZincrPersistentBatch(keysToIncrSortedSet...)
-		end = U.TimeNow()
-		logCtx.WithField("TimeTaken", float64(end.Sub(begin).Milliseconds())).Info("ZINCR")
+		cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
 	}
 	// The following code is to support/facilitate cleanup
 	newEventCount := int64(0)
@@ -207,6 +204,7 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 		}
 	}
 	countsInCache := make([]cacheRedis.KeyCountTuple, 0)
+	analyticsKeysInCache := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	if newEventCount > 0 {
 		eventsCountKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(projectID,
 			currentTimeDatePart)
@@ -215,6 +213,14 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 			return
 		}
 		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: eventsCountKey, Count: newEventCount})
+		uniqueEventsCountKey, err := model.UniqueEventNamesAnalyticsCacheKey(currentTimeDatePart)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get cache key - uniqueEventsCountKey")
+			return
+		}
+		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
+			Key:   uniqueEventsCountKey,
+			Value: fmt.Sprintf("%v", projectID)})
 	}
 	if newPropertiesCount > 0 {
 		propertiesCountKey, err := model.GetPropertiesByEventCategoryCountCacheKey(
@@ -233,12 +239,29 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 		}
 		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: valuesCountKey, Count: newValuesCount})
 	}
+	if !isUpdateEventProperty {
+		totalEventsCountKey, err := model.EventsCountAnalyticsCacheKey(currentTimeDatePart)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get cache key - totalEventsCountKey")
+			return
+		}
+		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
+			Key:   totalEventsCountKey,
+			Value: fmt.Sprintf("%v", projectID)})
+	}
 	if len(countsInCache) > 0 {
 		begin := U.TimeNow()
 		_, err = cacheRedis.IncrByBatchPersistent(countsInCache)
 		end := U.TimeNow()
 		metrics.Increment(metrics.IncrEventUserCleanupCounter)
 		metrics.RecordLatency(metrics.LatencyEventUserCleanupCounter, float64(end.Sub(begin).Milliseconds()))
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to increment keys")
+			return
+		}
+	}
+	if len(analyticsKeysInCache) > 0 {
+		_, err = cacheRedis.ZincrPersistentBatch(true, analyticsKeysInCache...)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to increment keys")
 			return

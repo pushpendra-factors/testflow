@@ -645,11 +645,6 @@ func GenMissingJourneyPatterns(goal, journey []*P.Pattern, userAndEventsInfo *P.
 	}
 	mineLog.Info("Number of missing patterns :", len(allMissingPatt))
 
-	for _, v := range allMissingPatt {
-		if strings.Compare(v.EventNames[0], v.EventNames[1]) == 0 {
-			mineLog.Info("Missing Patterns : ", v.EventNames[0], " ", v.EventNames[1])
-		}
-	}
 	return allMissingPatt, nil
 }
 
@@ -1341,7 +1336,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 
 	var eventCountLocal = 0
 	for _, u := range epSortedList {
-		if epFilteredMap[u.Key] != true && eventCountLocal < numProp {
+		if epFilteredMap[u.Key] == false && eventCountLocal < numProp {
 			epFilteredMap[u.Key] = true
 			eventCountLocal++
 		}
@@ -1350,7 +1345,6 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 	for _, Eprop := range U.DISABLED_FACTORS_EVENT_PROPERTIES {
 		delete(epFilteredMap, Eprop)
 	}
-	mineLog.Info("Total Event properties count after filtering : ", len(epFilteredMap))
 	return upFilteredMap, epFilteredMap
 }
 
@@ -1428,7 +1422,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 
 	tmpEventsFilepath := efTmpPath + efTmpName
-	mineLog.Info("Successfuly downloaded events file from cloud.")
+	mineLog.Info("Successfuly downloaded events file from cloud.", tmpEventsFilepath, efTmpPath, efTmpName)
 	eventNames, eventNamesWithType, err := GetEventNamesAndType(tmpEventsFilepath, projectId)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
@@ -1436,11 +1430,33 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 
 	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
+
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return "", 0, err
 	}
 	userPropList, eventPropList := buildWhiteListProperties(projectId, allPropsMap, topKProperties)
+	userAndEventsInfo = FilterEventsInfo(userAndEventsInfo, userPropList, eventPropList)
+
+	userAndEventsInfoBytes, err := json.Marshal(userAndEventsInfo)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal events Info.")
+		return "", 0, err
+	}
+
+	if len(userAndEventsInfoBytes) > 249900000 {
+		// Limit is 250MB
+		errorString := fmt.Sprintf(
+			"Too big properties info, modelId: %d, modelType: %s, projectId: %d, numBytes: %d",
+			modelId, modelType, projectId, len(userAndEventsInfoBytes))
+		mineLog.Error(errorString)
+		return "", 0, fmt.Errorf(errorString)
+	}
+	err = writeEventInfoFile(projectId, modelId, bytes.NewReader(userAndEventsInfoBytes), (*cloudManager))
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events Info.")
+		return "", 0, err
+	}
 
 	mineLog.Info("Number of EventNames: ", len(eventNames))
 	mineLog.Info("Number of User Properties: ", len(userPropList))
@@ -1669,8 +1685,8 @@ func takeTopKspecialEvents(allPatterns []patternProperties, topK int) []patternP
 
 	allPatternsType := make([]patternProperties, 0)
 	for _, pt := range allPatterns {
-
-		if strings.HasPrefix(pt.pattern.EventNames[0], "$") == true {
+		ename := pt.pattern.EventNames[0]
+		if U.IsStandardEvent(ename) == true && U.IsCampaignAnalytics(ename) == false {
 			allPatternsType = append(allPatternsType, pt)
 		}
 	}
@@ -1870,6 +1886,49 @@ func GetTopURLs(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
 
 }
 
+func FilterEventsInfo(userAndEventsInfo *P.UserAndEventsInfo, userProp, eventProp map[string]bool) *P.UserAndEventsInfo {
+
+	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
+	eventPropertiesInfo := *userAndEventsInfo.EventPropertiesInfoMap
+
+	//delete both categorical and numerical properties for users
+	for propertyName, _ := range userPropertiesInfo.CategoricalPropertyKeyValues {
+
+		if userProp[propertyName] == false {
+			delete(userPropertiesInfo.CategoricalPropertyKeyValues, propertyName)
+		}
+	}
+
+	for propertyName, _ := range userPropertiesInfo.NumericPropertyKeys {
+
+		if userProp[propertyName] == false {
+			delete(userPropertiesInfo.NumericPropertyKeys, propertyName)
+		} else {
+		}
+
+	}
+
+	//delete both categorical and numerical properties for events
+	for _, property := range eventPropertiesInfo {
+
+		for k, _ := range property.CategoricalPropertyKeyValues {
+
+			if eventProp[k] == false {
+				delete(property.CategoricalPropertyKeyValues, k)
+			}
+		}
+
+		for k, _ := range property.NumericPropertyKeys {
+
+			if eventProp[k] == false {
+				delete(property.NumericPropertyKeys, k)
+			}
+		}
+	}
+
+	return userAndEventsInfo
+}
+
 func GetTopUDE(allPatterns []*P.Pattern, eventNamesWithType map[string]string, maxNum int) []*P.Pattern {
 
 	allUDE := make([]*P.Pattern, 0)
@@ -1921,84 +1980,59 @@ func GetTopStandardPatterns(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
 }
 
 func GetTopCampaigns(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
-
 	allCampaignPatterns := make([]*P.Pattern, 0)
-
 	for _, v := range allPatterns {
-
 		if U.IsCampaignEvent(v.EventNames[0]) {
 			allCampaignPatterns = append(allCampaignPatterns, v)
 		}
 	}
-
 	filteredCampaignPatterns := getTopPatterns(allCampaignPatterns, maxNum)
 	return filteredCampaignPatterns
-
 }
 
 //GetTopSourcePatterns get all top patterns with $session and source set
 func GetTopSourcePatterns(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
-
 	allCampaignPatterns := make([]*P.Pattern, 0)
-
 	for _, v := range allPatterns {
-
 		if U.IsSourceEvent(v.EventNames[0]) {
 			allCampaignPatterns = append(allCampaignPatterns, v)
 		}
 	}
-
 	filteredCampaignPatterns := getTopPatterns(allCampaignPatterns, maxNum)
 	return filteredCampaignPatterns
-
 }
 
 func GetTopMediumPatterns(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
-
 	allCampaignPatterns := make([]*P.Pattern, 0)
-
 	for _, v := range allPatterns {
-
 		if U.IsMediumEvent(v.EventNames[0]) {
 			allCampaignPatterns = append(allCampaignPatterns, v)
 		}
 	}
-
 	filteredCampaignPatterns := getTopPatterns(allCampaignPatterns, maxNum)
 	return filteredCampaignPatterns
-
 }
 
 func GetTopAdgroupPatterns(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
-
 	allCampaignPatterns := make([]*P.Pattern, 0)
-
 	for _, v := range allPatterns {
-
 		if U.IsAdgroupEvent(v.EventNames[0]) {
 			allCampaignPatterns = append(allCampaignPatterns, v)
 		}
 	}
-
 	filteredCampaignPatterns := getTopPatterns(allCampaignPatterns, maxNum)
 	return filteredCampaignPatterns
-
 }
 
 func GetTopReferrerPatterns(allPatterns []*P.Pattern, maxNum int) []*P.Pattern {
-
 	allCampaignPatterns := make([]*P.Pattern, 0)
-
 	for _, v := range allPatterns {
-
 		if U.IsReferrerEvent(v.EventNames[0]) {
 			allCampaignPatterns = append(allCampaignPatterns, v)
 		}
 	}
-
 	filteredCampaignPatterns := getTopPatterns(allCampaignPatterns, maxNum)
 	return filteredCampaignPatterns
-
 }
 
 func GetTopCampaignAnalyticsPatterns(allPatterns []*P.Pattern, cNum, refNum, medNum, srcNum, adgNum int) []*P.Pattern {

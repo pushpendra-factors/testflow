@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-api-memsql upload-api-memsql pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-beam-dashboard-caching-now upload-beam-dashboard-caching-now pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc pack-pull-events upload-pull-events test
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-api-memsql upload-api-memsql pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-beam-dashboard-caching-now upload-beam-dashboard-caching-now pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc pack-pull-events upload-pull-events test
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -126,13 +126,6 @@ upload-pull-events: export IMAGE_NAME=pull-events-job
 upload-pull-events: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/pull-events-job:$(TAG)
 
-pack-build-reports:
-	docker build -t us.gcr.io/factors-$(ENV)/build-reports-job:$(TAG) -f Dockerfile.build_reports .
-
-upload-build-reports: export IMAGE_NAME=build-reports-job
-upload-build-reports: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/build-reports-job:$(TAG)
-
 pack-add-session:
 	docker build -t us.gcr.io/factors-$(ENV)/add-session-job:$(TAG) -f Dockerfile.add_session_job .
 
@@ -160,6 +153,13 @@ pack-salesforce-enrich:
 upload-salesforce-enrich: export IMAGE_NAME=salesforce-enrich-job
 upload-salesforce-enrich: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/salesforce-enrich-job:$(TAG)
+
+pack-backfill-salesforce-datetime-job:
+	docker build -t us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG) -f Dockerfile.backfill_salesforce_datetime_job .
+
+upload-backfill-salesforce-datetime-job: export IMAGE_NAME=backfill-salesforce-datetime-job
+upload-backfill-salesforce-datetime-job: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/backfill-salesforce-datetime-job:$(TAG)
 
 pack-sdk-request-worker:
 	docker build -t us.gcr.io/factors-$(ENV)/sdk-request-worker:$(TAG) -f Dockerfile.sdk_request_worker .
@@ -279,6 +279,20 @@ pack-cleanup-eventuser-cache:
 upload-cleanup-eventuser-cache: export IMAGE_NAME=cleanup-eventuser-cache-job
 upload-cleanup-eventuser-cache: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/cleanup-eventuser-cache-job:$(TAG)
+
+pack-cleanup-sortedset-cache: 
+	docker build -t us.gcr.io/factors-$(ENV)/cleanup-sortedset-cache-job:$(TAG) -f Dockerfile.cleanup_sortedset_cache_job .
+
+upload-cleanup-sortedset-cache: export IMAGE_NAME=cleanup-sortedset-cache-job
+upload-cleanup-sortedset-cache: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/cleanup-sortedset-cache-job:$(TAG)
+
+pack-rollup-sortedset-cache: 
+	docker build -t us.gcr.io/factors-$(ENV)/rollup-sortedset-cache-job:$(TAG) -f Dockerfile.rollup_sortedset_cache_job .
+
+upload-rollup-sortedset-cache: export IMAGE_NAME=rollup-sortedset-cache-job
+upload-rollup-sortedset-cache: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/rollup-sortedset-cache-job:$(TAG)
 
 pack-memsql-replicator:
 	docker build -t us.gcr.io/factors-$(ENV)/memsql-replicator:$(TAG) -f Dockerfile.memsql_replicator .

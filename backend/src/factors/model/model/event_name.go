@@ -422,8 +422,24 @@ var comparisonOp = map[string]func(interface{}, interface{}) bool{
 		intpValue, _ := U.GetPropertyValueAsFloat64(pValue)
 		return intpValue < intRValue
 	},
-	COMPARE_CONTAINS:     func(rValue, pValue interface{}) bool { return strings.Contains(pValue.(string), rValue.(string)) },
-	COMPARE_NOT_CONTAINS: func(rValue, pValue interface{}) bool { return !strings.Contains(pValue.(string), rValue.(string)) },
+	COMPARE_CONTAINS: func(rValue, pValue interface{}) bool {
+		rValueStr := U.GetPropertyValueAsString(rValue)
+		pValueStr := U.GetPropertyValueAsString(pValue)
+		if rValueStr == "" || pValueStr == "" {
+			return false
+		}
+
+		return strings.Contains(pValueStr, rValueStr)
+	},
+	COMPARE_NOT_CONTAINS: func(rValue, pValue interface{}) bool {
+		rValueStr := U.GetPropertyValueAsString(rValue)
+		pValueStr := U.GetPropertyValueAsString(pValue)
+		if pValueStr == "" {
+			return true
+		}
+
+		return !strings.Contains(pValueStr, rValueStr)
+	},
 }
 
 func toggleNoneOperator(operator string) string {
@@ -683,6 +699,20 @@ func GetValuesByEventPropertyCountCacheKey(projectId uint64, dateKey string) (*c
 	prefix := "C:EN:PV"
 	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 
+}
+
+// Analytics Cache keys
+func UniqueEventNamesAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
+	prefix := "SS:A:EN"
+	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s",prefix, dateKey))
+}
+func UserCountAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
+	prefix := "SS:A:UC"
+	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s",prefix, dateKey))
+}
+func EventsCountAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
+	prefix := "SS:A:EC"
+	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s",prefix, dateKey))
 }
 
 // FillEventPropertiesByFilterExpr - Parses and fills event properties

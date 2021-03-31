@@ -102,7 +102,6 @@ func GetValuesByUserPropertyCacheKeySortedSet(projectId uint64, dateKey string) 
 func GetUserPropertiesCategoryByProjectRollUpCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:US:PC"
 	return cacheRedis.NewKey(projectId, prefix, dateKey)
-
 }
 
 func GetValuesByUserPropertyRollUpCacheKey(projectId uint64, property_name string, dateKey string) (*cacheRedis.Key, error) {

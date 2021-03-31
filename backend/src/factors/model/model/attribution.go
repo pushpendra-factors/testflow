@@ -130,6 +130,13 @@ type UserEventInfo struct {
 	EventName  string
 }
 
+const (
+	AdwordsClickReportType = 4
+	SecsInADay             = int64(86400)
+	LookbackCapInDays      = 180
+	UserBatchSize          = 3000
+)
+
 // MergeDataRowsHavingSameKey merges rows having same key by adding each column value
 func MergeDataRowsHavingSameKey(rows [][]interface{}) [][]interface{} {
 

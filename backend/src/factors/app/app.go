@@ -92,8 +92,10 @@ func main() {
 	factorsActiveTrackedUserPropertiesLimit := flag.Int("active_tracked_user_properties_limit",
 		50, "Active Tracked user properties limit per project")
 	allowSmartEventRuleCreation := flag.Bool("allow_smart_event_rule_creation", false, "Should allow smart event rule creation")
-	flag.Parse()
+	projectAnalyticsWhitelistedUUIds := flag.String("project_analytics_whitelisted_uuids",
+		"", "List of UUIDs whitelisted for project analytics API")
 
+	flag.Parse()
 	if *primaryDatastore == C.DatastoreTypeMemSQL {
 		appName = appName + "_memsql"
 	}
@@ -153,6 +155,7 @@ func main() {
 		ActiveFactorsTrackedEventsLimit:         *factorsActiveTrackedEventsLimit,
 		ActiveFactorsTrackedUserPropertiesLimit: *factorsActiveTrackedUserPropertiesLimit,
 		AllowSmartEventRuleCreation:             *allowSmartEventRuleCreation,
+		ProjectAnalyticsWhitelistedUUIds: C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
 	}
 
 	// Initialize configs and connections.

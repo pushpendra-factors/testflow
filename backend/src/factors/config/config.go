@@ -93,81 +93,85 @@ type DBConf struct {
 }
 
 type Configuration struct {
-	GCPProjectID                     string
-	GCPProjectLocation               string
-	AppName                          string
-	Env                              string
-	Port                             int
-	DBInfo                           DBConf
-	MemSQLInfo                       DBConf
-	RedisHost                        string
-	RedisPort                        int
-	RedisHostPersistent              string
-	RedisPortPersistent              int
-	QueueRedisHost                   string
-	QueueRedisPort                   int
-	EtcdEndpoints                    []string
-	GeolocationFile                  string
-	DeviceDetectorPath               string
-	APIDomain                        string
-	APPDomain                        string
-	APPOldDomain                     string
-	AWSRegion                        string
-	AWSKey                           string
-	AWSSecret                        string
-	Cookiename                       string
-	EmailSender                      string
-	ErrorReportingInterval           int
-	AdminLoginEmail                  string
-	AdminLoginToken                  string
-	FacebookAppID                    string
-	FacebookAppSecret                string
-	LinkedinClientID                 string
-	LinkedinClientSecret             string
-	SalesforceAppID                  string
-	SalesforceAppSecret              string
-	SentryDSN                        string
-	LoginTokenMap                    map[string]string
-	SkipTrackProjectIds              []uint64
-	SDKRequestQueueProjectTokens     []string
-	SegmentRequestQueueProjectTokens []string
-	UseDefaultProjectSettingForSDK   bool
-	BlockedSDKRequestProjectTokens   []string
-	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
-	CacheLookUpRangeProjects                       map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
-	LookbackWindowForEventUserCache                int
-	ActiveFactorsGoalsLimit                        int
-	ActiveFactorsTrackedEventsLimit                int
-	ActiveFactorsTrackedUserPropertiesLimit        int
-	DryRunCRMSmartEvent                            bool
-	IsBeamPipeline                                 bool
-	AllowSmartEventRuleCreation                    bool
+	GCPProjectID                                   string
+	GCPProjectLocation                             string
+	AppName                                        string
+	Env                                            string
+	Port                                           int
+	DBInfo                                         DBConf
+	MemSQLInfo                                     DBConf
+	RedisHost                                      string
+	RedisPort                                      int
+	RedisHostPersistent                            string
+	RedisPortPersistent                            int
+	QueueRedisHost                                 string
+	QueueRedisPort                                 int
+	DuplicateQueueRedisHost                        string
+	DuplicateQueueRedisPort                        int
 	EnableSDKAndIntegrationRequestQueueDuplication bool
+	EtcdEndpoints                                  []string
+	GeolocationFile                                string
+	DeviceDetectorPath                             string
+	APIDomain                                      string
+	APPDomain                                      string
+	APPOldDomain                                   string
+	AWSRegion                                      string
+	AWSKey                                         string
+	AWSSecret                                      string
+	Cookiename                                     string
+	EmailSender                                    string
+	ErrorReportingInterval                         int
+	AdminLoginEmail                                string
+	AdminLoginToken                                string
+	FacebookAppID                                  string
+	FacebookAppSecret                              string
+	LinkedinClientID                               string
+	LinkedinClientSecret                           string
+	SalesforceAppID                                string
+	SalesforceAppSecret                            string
+	SentryDSN                                      string
+	LoginTokenMap                                  map[string]string
+	SkipTrackProjectIds                            []uint64
+	SDKRequestQueueProjectTokens                   []string
+	SegmentRequestQueueProjectTokens               []string
+	UseDefaultProjectSettingForSDK                 bool
+	BlockedSDKRequestProjectTokens                 []string
+	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
+	CacheLookUpRangeProjects                map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
+	LookbackWindowForEventUserCache         int
+	ActiveFactorsGoalsLimit                 int
+	ActiveFactorsTrackedEventsLimit         int
+	ActiveFactorsTrackedUserPropertiesLimit int
+	DryRunCRMSmartEvent                     bool
+	IsBeamPipeline                          bool
+	AllowSmartEventRuleCreation             bool
 	// non exported field, only access through function
 	propertiesTypeCacheSize                int
 	enablePropertyTypeFromDB               bool
 	whitelistedProjectIDPropertyTypeFromDB string
 	blacklistedProjectIDPropertyTypeFromDB string
+	CacheSortedSet bool
+	ProjectAnalyticsWhitelistedUUIds []string
 	PrimaryDatastore                       string
-	CacheSortedSet                         bool
 }
 
 type Services struct {
-	Db                 *gorm.DB
-	DBContext          *context.Context
-	DBContextCancel    *context.CancelFunc
-	GeoLocation        *geoip2.Reader
-	Etcd               *serviceEtcd.EtcdClient
-	Redis              *redis.Pool
-	RedisPeristent     *redis.Pool
-	QueueClient        *machinery.Server
-	patternServersLock sync.RWMutex
-	patternServers     map[string]string
-	Mailer             maileriface.Mailer
-	ErrorCollector     *error_collector.Collector
-	DeviceDetector     *D.DeviceDetector
-	SentryHook         *logrus_sentry.SentryHook
-	MetricsExporter    *stackdriver.Exporter
+	Db                   *gorm.DB
+	DBContext            *context.Context
+	DBContextCancel      *context.CancelFunc
+	GeoLocation          *geoip2.Reader
+	Etcd                 *serviceEtcd.EtcdClient
+	Redis                *redis.Pool
+	RedisPeristent       *redis.Pool
+	QueueClient          *machinery.Server
+	DuplicateQueueClient *machinery.Server
+	patternServersLock   sync.RWMutex
+	patternServers       map[string]string
+	Mailer               maileriface.Mailer
+	ErrorCollector       *error_collector.Collector
+	DeviceDetector       *D.DeviceDetector
+	SentryHook           *logrus_sentry.SentryHook
+	MetricsExporter      *stackdriver.Exporter
 }
 
 // Healthchecks.io ping IDs for monitoring. Can be used anywhere in code to report error on job.
@@ -426,6 +430,10 @@ func InitConf(env string) {
 	}
 }
 
+func InitSortedSetCache(cacheSortedSet bool) {
+	configuration.CacheSortedSet = cacheSortedSet
+}
+
 func InitSalesforceConfig(salesforceAppId, salesforceAppSecret string) {
 	configuration.SalesforceAppID = salesforceAppId
 	configuration.SalesforceAppSecret = salesforceAppSecret
@@ -627,13 +635,13 @@ func initRedisConnection(host string, port int, persistent bool, maxActive, maxI
 	}
 }
 
-func InitQueueClient(redisHost string, redisPort int) error {
+func initQueueClientWithRedis(redisHost string, redisPort int) (*machinery.Server, error) {
 	if services == nil {
 		services = &Services{}
 	}
 
 	if redisHost == "" || redisPort == 0 {
-		return fmt.Errorf("invalid redis host %s port %d", redisHost, redisPort)
+		return nil, fmt.Errorf("invalid queue redis host %s port %d", redisHost, redisPort)
 	}
 
 	// format: redis://[password@]host[port][/db_num]
@@ -659,7 +667,11 @@ func InitQueueClient(redisHost string, redisPort int) error {
 		Debug:           !IsProduction(),
 	}
 
-	client, err := machinery.NewServer(config)
+	return machinery.NewServer(config)
+}
+
+func InitQueueClient(redisHost string, redisPort int) error {
+	client, err := initQueueClientWithRedis(redisHost, redisPort)
 	if err != nil {
 		return err
 	}
@@ -667,6 +679,24 @@ func InitQueueClient(redisHost string, redisPort int) error {
 	services.QueueClient = client
 
 	return nil
+}
+
+// InitDuplicateQueueClient - Initializes queue client with duplicate
+// queue's redis host and port.
+func InitDuplicateQueueClient(redisHost string, redisPort int) error {
+	client, err := initQueueClientWithRedis(redisHost, redisPort)
+	if err != nil {
+		return err
+	}
+
+	services.DuplicateQueueClient = client
+
+	return nil
+}
+
+// isQueueDuplicationEnabled - Conditions for enabling the queue duplication.
+func isQueueDuplicationEnabled() bool {
+	return configuration.EnableSDKAndIntegrationRequestQueueDuplication
 }
 
 // InitMetricsExporter Initialized Opencensus metrics exporter to collect metrics.
@@ -863,6 +893,13 @@ func InitSDKService(config *Configuration) error {
 		log.WithError(err).Fatal("Failed to initialize queue client on init sdk service.")
 	}
 
+	if isQueueDuplicationEnabled() {
+		err := InitDuplicateQueueClient(config.DuplicateQueueRedisHost, config.DuplicateQueueRedisPort)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to initialize duplicate queue client on init sdk service.")
+		}
+	}
+
 	InitSentryLogging(config.SentryDSN, config.AppName)
 	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 
@@ -886,10 +923,16 @@ func InitQueueWorker(config *Configuration) error {
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
 
-	// Todo: Use different redis instance for queue for production env.
 	err = InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initalize queue client on init queue worker.")
+	}
+
+	if isQueueDuplicationEnabled() {
+		err := InitDuplicateQueueClient(config.DuplicateQueueRedisHost, config.DuplicateQueueRedisPort)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to initialize duplicate queue client on init queue worker..")
+		}
 	}
 
 	InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
@@ -1245,4 +1288,26 @@ func IsSDKAndIntegrationRequestQueueDuplicationEnabled() bool {
 
 func IsSortedSetCachingAllowed() bool {
 	return configuration.CacheSortedSet
+}
+func GetUUIdsFromStringListAsString(stringList string) []string {
+	stringTokens := make([]string, 0, 0)
+
+	if stringList == "" {
+		return stringTokens
+	}
+
+	uuids := strings.Split(stringList, ",")
+	for _, uuid := range uuids {
+		stringTokens = append(stringTokens, strings.TrimSpace(uuid))
+	}
+
+	return stringTokens
+}
+func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
+	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
+		if(uuid == loggedInUUID){
+		return true
+		}
+	}
+	return false 
 }

@@ -372,7 +372,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_linkedin_access_token_expiry bigint,
     int_linkedin_refresh_token text,
     int_linkedin_refresh_token_expiry bigint,
-    int_linkedin_agent_uuid text;
+    int_linkedin_agent_uuid text,
     archive_enabled boolean NOT NULL DEFAULT FALSE,
     bigquery_enabled boolean NOT NULL DEFAULT FALSE,
     int_salesforce_enabled_agent_uuid text,
@@ -469,27 +469,6 @@ CREATE TABLE IF NOT EXISTS scheduled_tasks (
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
-);
-
-CREATE TABLE IF NOT EXISTS reports (
-    id bigint AUTO_INCREMENT,
-    project_id bigint,
-    dashboard_id bigint,
-    dashboard_name text,
-    type text,
-    start_time bigint,
-    end_time bigint,
-    invalid boolean,
-    contents json,
-    created_at timestamp(6) NOT NULL,
-    updated_at timestamp(6) NOT NULL,
-    SHARD KEY (project_id),
-    PRIMARY KEY (project_id, id),
-    KEY project_id_dashboard_id_type_start_time_end_time_idx(project_id, dashboard_id, type, start_time, end_time)
-
-    -- Required constraints.
-    -- Ref (project_id) -> projects(id)
-    -- Ref (project_id, dashboard_id) -> dashboards(project_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS linkedin_documents (

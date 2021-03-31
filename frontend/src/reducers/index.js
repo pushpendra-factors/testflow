@@ -4,7 +4,6 @@ import dashboards from "./dashboardsReducer";
 import factors from "./factorsReducer";
 import projects from "./projectsReducer";
 import agents from "./agentsReducer";
-import reports from "./reportsReducer";
 import query from "./queryReducer";
 
 export default combineReducers({
@@ -12,6 +11,5 @@ export default combineReducers({
   projects,
   factors,
   agents,
-  reports,
   query
 })

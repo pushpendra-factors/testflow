@@ -5,7 +5,7 @@ metadata:
     nodePool: persistent-pool-highmem-16
   name: adwords-sync-job
 spec:
-  schedule: "0 22 * * *" # In UTC
+  schedule: "0 00 * * *" # In UTC
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5

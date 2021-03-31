@@ -38,8 +38,8 @@ const EVENT_NAME_SALESFORCE_CONTACT_CREATED = "$sf_contact_created"
 const EVENT_NAME_SALESFORCE_CONTACT_UPDATED = "$sf_contact_updated"
 const EVENT_NAME_SALESFORCE_LEAD_CREATED = "$sf_lead_created"
 const EVENT_NAME_SALESFORCE_LEAD_UPDATED = "$sf_lead_updated"
-const EVENT_NAME_SALESFORCE_ACCOUNT_CREATED = "$sf_Account_created"
-const EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED = "$sf_Account_updated"
+const EVENT_NAME_SALESFORCE_ACCOUNT_CREATED = "$sf_account_created"
+const EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED = "$sf_account_updated"
 const EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED = "$sf_opportunity_created"
 const EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$sf_opportunity_updated"
 
@@ -1075,6 +1075,10 @@ var MandatoryDefaultUserPropertiesByType = map[string][]string{
 
 // isValidProperty - Validate property type.
 func isPropertyTypeValid(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
 	switch valueType := value.(type) {
 	case int:
 	case int32:

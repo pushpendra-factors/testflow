@@ -45,6 +45,36 @@ type SalesforceSyncInfo struct {
 // SalesforceRecord is map for fields and their values
 type SalesforceRecord map[string]interface{}
 
+var (
+	salesforceDataTypeDatetime = map[string]bool{
+		"datetime": true,
+		"date":     true,
+	}
+
+	salesforceDataTypeNumerical = map[string]bool{
+		"double": true,
+		"int":    true,
+		"long":   true,
+	}
+)
+
+// GetSalesforceMappedDataType returns mapped factors data type
+func GetSalesforceMappedDataType(dataType string) string {
+	if dataType == "" {
+		return ""
+	}
+
+	if _, exists := salesforceDataTypeDatetime[dataType]; exists {
+		return util.PropertyTypeDateTime
+	}
+
+	if _, exists := salesforceDataTypeNumerical[dataType]; exists {
+		return util.PropertyTypeNumerical
+	}
+
+	return util.PropertyTypeUnknown
+}
+
 func GetCRMEnrichPropertyKeyByType(source, typ, key string) string {
 	return util.NAME_PREFIX + getCRMPropertyKeyByType(source, typ, key)
 }
@@ -71,7 +101,8 @@ const (
 	SalesforceDocumentUpdated SalesforceAction = 2
 
 	// Standard template for salesforce date time
-	SalesforceDocumentTimeLayout = "2006-01-02T15:04:05.000-0700"
+	SalesforceDocumentDateTimeLayout = "2006-01-02T15:04:05.000-0700"
+	SalesforceDocumentDateLayout     = "2006-01-02"
 )
 
 // SalesforceDocumentTypeAlias maps document type to alias
@@ -126,17 +157,23 @@ func GetSalesforceDocumentTypeAlias(projectID uint64) map[string]int {
 	return docTypes
 }
 
-// GetSalesforceEventNameByAction creates event name by SalesforceAction and doc type name
-func GetSalesforceEventNameByAction(doc *SalesforceDocument, action SalesforceAction) string {
+// GetSalesforceEventNameByDocumentAndAction creates event name by SalesforceAction and doc type name
+func GetSalesforceEventNameByDocumentAndAction(doc *SalesforceDocument, action SalesforceAction) string {
 	typAlias := GetSalesforceAliasByDocType(doc.Type)
 
-	if typAlias != "" {
-		if action == SalesforceDocumentCreated {
-			return fmt.Sprintf("$sf_%s_created", typAlias)
-		}
-		if action == SalesforceDocumentUpdated {
-			return fmt.Sprintf("$sf_%s_updated", typAlias)
-		}
+	return GetSalesforceEventNameByAction(typAlias, action)
+}
+
+func GetSalesforceEventNameByAction(typAlias string, action SalesforceAction) string {
+	if typAlias == "" || action == 0 {
+		return ""
+	}
+
+	if action == SalesforceDocumentCreated {
+		return fmt.Sprintf("$sf_%s_created", typAlias)
+	}
+	if action == SalesforceDocumentUpdated {
+		return fmt.Sprintf("$sf_%s_updated", typAlias)
 	}
 
 	return ""
@@ -198,9 +235,19 @@ func GetSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 		return 0, errors.New("invalid timestamp")
 	}
 
-	t, err := time.Parse(SalesforceDocumentTimeLayout, timestampStr)
+	t, err := time.Parse(SalesforceDocumentDateTimeLayout, timestampStr)
 	if err != nil {
-		return 0, err
+		loc,err := time.LoadLocation(string(util.TimeZoneStringIST))
+		if err!=nil{
+			return 0, err
+		}
+
+		t, err := time.ParseInLocation(SalesforceDocumentDateLayout, timestampStr,loc)
+		if err != nil {
+			return 0, err
+		}
+
+		return t.Unix(), nil
 	}
 
 	return t.Unix(), nil

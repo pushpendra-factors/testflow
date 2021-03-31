@@ -44,7 +44,8 @@ func main() {
 	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
 	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
-
+	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
+	
 	flag.Parse()
 
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -84,9 +85,11 @@ func main() {
 		RedisPortPersistent: *redisPortPersistent,
 		SentryDSN:           *sentryDSN,
 		DryRunCRMSmartEvent: *dryRunSmartEvent,
+		CacheSortedSet: 	 *cacheSortedSet,
 	}
 
 	C.InitConf(config.Env)
+	C.InitSortedSetCache(config.CacheSortedSet)
 
 	err := C.InitDB(*config)
 	if err != nil {
@@ -110,10 +113,38 @@ func main() {
 	}
 
 	statusList := make([]IntHubspot.Status, 0, 0)
+	var propertyDetailSyncStatus []IntHubspot.Status
+	anyFailure := false
 	for _, settings := range hubspotEnabledProjectSettings {
-		status := IntHubspot.Sync(settings.ProjectId)
+		if C.IsEnabledPropertyDetailByProjectID(settings.ProjectId) {
+			log.Info(fmt.Sprintf("Starting sync property details for project %d", settings.ProjectId))
+
+			failure, propertyDetailStatus := IntHubspot.SyncDatetimeAndNumericalProperties(settings.ProjectId, settings.APIKey)
+			propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailStatus...)
+			if failure {
+				anyFailure = true
+			}
+
+			log.Info(fmt.Sprintf("Synced property details for project %d", settings.ProjectId))
+		}
+
+		status, failure := IntHubspot.Sync(settings.ProjectId)
+		if failure {
+			anyFailure = true
+		}
+
 		statusList = append(statusList, status...)
 	}
 
-	C.PingHealthcheckForSuccess(healthcheckPingID, statusList)
+	syncStatus := map[string]interface{}{
+		"document_sync":      statusList,
+		"property_type_sync": propertyDetailSyncStatus,
+	}
+
+	if anyFailure {
+		C.PingHealthcheckForFailure(healthcheckPingID, syncStatus)
+		return
+	}
+
+	C.PingHealthcheckForSuccess(healthcheckPingID, syncStatus)
 }

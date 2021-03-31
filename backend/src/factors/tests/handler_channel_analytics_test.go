@@ -91,9 +91,11 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	//inserting sample data in facebook, also testing data service endpoint facebook/documents/add
 	project, agent, _ := SetupProjectWithAgentDAO()
 	assert.NotNil(t, project)
-	customerAccountID := U.RandomNumericString(10)
+	customerAccountID1 := U.RandomNumericString(10)
+	customerAccountID2 := U.RandomNumericString(10)
+	customerAccountID3 := U.RandomNumericString(10)
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &M.ProjectSetting{
-		IntFacebookAdAccount: customerAccountID,
+		IntFacebookAdAccount: customerAccountID1 + "," + customerAccountID2,
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
@@ -103,7 +105,7 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	valueJSON, err := U.EncodeToPostgresJsonb(&value)
 	assert.Nil(t, err)
 
-	w := sendCreateFacebookDocumentReq(r, project.ID, customerAccountID, valueJSON, campaignID1, 20210205, "campaign_insights")
+	w := sendCreateFacebookDocumentReq(r, project.ID, customerAccountID1, valueJSON, campaignID1, 20210205, "campaign_insights")
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	campaignID2 := U.RandomNumericString(8)
@@ -111,7 +113,7 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	value = map[string]interface{}{"spend": "200", "clicks": "100", "campaign_id": campaignID2, "impressions": "2000", "campaign_name": "Campaign_2"}
 	valueJSON, err = U.EncodeToPostgresJsonb(&value)
 	assert.Nil(t, err)
-	w = sendCreateFacebookDocumentReq(r, project.ID, customerAccountID, valueJSON, campaignID2, 20210206, "campaign_insights")
+	w = sendCreateFacebookDocumentReq(r, project.ID, customerAccountID1, valueJSON, campaignID2, 20210206, "campaign_insights")
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	adgroupID1_1 := U.RandomNumericString(8)
@@ -119,7 +121,7 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	value = map[string]interface{}{"spend": "30", "clicks": "30", "adset_id": adgroupID1_1, "adset_name": "Adgroup_1_1", "campaign_id": campaignID1, "impressions": "600", "campaign_name": "Campaign_1", "account_currency": "USD"}
 	valueJSON, err = U.EncodeToPostgresJsonb(&value)
 	assert.Nil(t, err)
-	w = sendCreateFacebookDocumentReq(r, project.ID, customerAccountID, valueJSON, adgroupID1_1, 20210205, "ad_set_insights")
+	w = sendCreateFacebookDocumentReq(r, project.ID, customerAccountID2, valueJSON, adgroupID1_1, 20210205, "ad_set_insights")
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	adgroupID1_2 := U.RandomNumericString(8)
@@ -127,7 +129,7 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	value = map[string]interface{}{"spend": "70", "clicks": "20", "adset_id": adgroupID1_2, "adset_name": "Adgroup_1_2", "campaign_id": campaignID1, "impressions": "400", "campaign_name": "Campaign_1", "account_currency": "USD"}
 	valueJSON, err = U.EncodeToPostgresJsonb(&value)
 	assert.Nil(t, err)
-	w = sendCreateFacebookDocumentReq(r, project.ID, customerAccountID, valueJSON, adgroupID1_2, 20210205, "ad_set_insights")
+	w = sendCreateFacebookDocumentReq(r, project.ID, customerAccountID2, valueJSON, adgroupID1_2, 20210205, "ad_set_insights")
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	adgroupID2_1 := U.RandomNumericString(8)
@@ -135,7 +137,7 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	value = map[string]interface{}{"spend": "120", "clicks": "25", "adset_id": adgroupID2_1, "adset_name": "Adgroup_2_1", "campaign_id": campaignID2, "impressions": "1500", "campaign_name": "Campaign_2", "account_currency": "USD"}
 	valueJSON, err = U.EncodeToPostgresJsonb(&value)
 	assert.Nil(t, err)
-	w = sendCreateFacebookDocumentReq(r, project.ID, customerAccountID, valueJSON, adgroupID2_1, 20210206, "ad_set_insights")
+	w = sendCreateFacebookDocumentReq(r, project.ID, customerAccountID3, valueJSON, adgroupID2_1, 20210206, "ad_set_insights")
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	adgroupID2_2 := U.RandomNumericString(8)
@@ -143,7 +145,7 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	value = map[string]interface{}{"spend": "80", "clicks": "75", "adset_id": adgroupID1_2, "adset_name": "Adgroup_2_2", "campaign_id": campaignID2, "impressions": "500", "campaign_name": "Campaign_2", "account_currency": "USD"}
 	valueJSON, err = U.EncodeToPostgresJsonb(&value)
 	assert.Nil(t, err)
-	w = sendCreateFacebookDocumentReq(r, project.ID, customerAccountID, valueJSON, adgroupID2_2, 20210206, "ad_set_insights")
+	w = sendCreateFacebookDocumentReq(r, project.ID, customerAccountID2, valueJSON, adgroupID2_2, 20210206, "ad_set_insights")
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	//channel query test
@@ -172,6 +174,8 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	}
 	assert.Equal(t, result.Result.Results[0].Rows[0][1], "Adgroup_1_1")
 	assert.Equal(t, result.Result.Results[0].Rows[0][2], float64(30))
+	assert.Equal(t, result.Result.Results[0].Rows[0][3], float64(600))
+	assert.Equal(t, result.Result.Results[0].Rows[0][4], float64(30))
 
 	// filters : campaignID equals campaignID1, adGroupName contains 1_1
 	channelQuery = map[string]interface{}{"query_group": [1]map[string]interface{}{{"channel": "facebook_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
@@ -191,6 +195,8 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	assert.Equal(t, len(result1.Result.Results[0].Rows), 1)
 	assert.Equal(t, len(result1.Result.Results[0].Rows[0]), 3)
 	assert.Equal(t, result1.Result.Results[0].Rows[0][0], float64(30))
+	assert.Equal(t, result1.Result.Results[0].Rows[0][1], float64(600))
+	assert.Equal(t, result1.Result.Results[0].Rows[0][2], float64(30))
 
 	// filters : campaignID equals campaignID1, adGroupName contains 2_1, result should be 0 in result rows
 	channelQuery = map[string]interface{}{"query_group": [1]map[string]interface{}{{"channel": "facebook_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
@@ -210,6 +216,8 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 	assert.Equal(t, len(result2.Result.Results[0].Rows), 1)
 	assert.Equal(t, len(result2.Result.Results[0].Rows[0]), 3)
 	assert.Equal(t, result2.Result.Results[0].Rows[0][0], float64(0))
+	assert.Equal(t, result2.Result.Results[0].Rows[0][1], float64(0))
+	assert.Equal(t, result2.Result.Results[0].Rows[0][2], float64(0))
 
 	//groupBy: campaignName, adGroupID
 	channelQuery = map[string]interface{}{"query_group": [1]map[string]interface{}{{"channel": "facebook_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
@@ -226,8 +234,19 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 		assert.NotNil(t, nil, err)
 	}
 	assert.Equal(t, len(result3.Result.Results[0].Headers), 5)
-	assert.Equal(t, len(result3.Result.Results[0].Rows), 4)
+	assert.Equal(t, len(result3.Result.Results[0].Rows), 3)
 	assert.Equal(t, len(result3.Result.Results[0].Rows[0]), 5)
+	assert.Equal(t, result3.Result.Results[0].Rows[0][2], float64(75))
+	assert.Equal(t, result3.Result.Results[0].Rows[0][3], float64(500))
+	assert.Equal(t, result3.Result.Results[0].Rows[0][4], float64(80))
+
+	assert.Equal(t, result3.Result.Results[0].Rows[1][2], float64(30))
+	assert.Equal(t, result3.Result.Results[0].Rows[1][3], float64(600))
+	assert.Equal(t, result3.Result.Results[0].Rows[1][4], float64(30))
+
+	assert.Equal(t, result3.Result.Results[0].Rows[2][2], float64(20))
+	assert.Equal(t, result3.Result.Results[0].Rows[2][3], float64(400))
+	assert.Equal(t, result3.Result.Results[0].Rows[2][4], float64(70))
 }
 
 type MyStruct struct {

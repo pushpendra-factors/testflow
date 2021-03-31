@@ -383,34 +383,6 @@ func main() {
 		log.Info("project_billing_account_mappings table billing_account_id_project_id_idx sort index created.")
 	}
 
-	// Create reports table
-	if err := db.CreateTable(&model.DBReport{}).Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("reports table creation failed.")
-	} else {
-		log.Info("reports table creation failed.")
-	}
-
-	// Adding index on reports table.
-	if err := db.Exec("CREATE INDEX report_project_id_dashboard_id_type_st_et_unique_idx ON reports(project_id, dashboard_id, type, start_time, end_time);").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to create unique index report_project_id_dashboard_id_type_st_et_unique_idx(project_id, dashboard_id, type, start_time, end_time).")
-	} else {
-		log.Info("Created index on reports(project_id, dashboard_id, type, start_time, end_time).")
-	}
-
-	// Add foreign key constraints.
-	if err := db.Model(&model.DBReport{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("reports table association with projects table failed.")
-	} else {
-		log.Info("reports table is associated with projects table.")
-	}
-
-	// Add foreign key constraints dashboards(project_id, id).
-	if err := db.Model(&model.DBReport{}).AddForeignKey("project_id, dashboard_id", "dashboards(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("reports table association with dashboards table failed.")
-	} else {
-		log.Info("reports table is associated with dashboards table.")
-	}
-
 	// Create adwords document table
 	if err := db.CreateTable(&model.AdwordsDocument{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("adwords document table creation failed.")

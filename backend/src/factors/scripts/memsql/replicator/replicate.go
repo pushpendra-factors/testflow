@@ -53,7 +53,6 @@ const (
 	tableHubspotDocuments              = "hubspot_documents"
 	tableSalesforceDocuments           = "salesforce_documents"
 	tableQueries                       = "queries"
-	tableReports                       = "reports"
 	tableScheduledTasks                = "scheduled_tasks"
 )
 
@@ -794,8 +793,6 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.ScheduledTask{}
 	case tableQueries:
 		record = &model.Queries{}
-	case tableReports:
-		record = &model.Report{}
 
 	// Tables related to analytics.
 	case tableEvents:
@@ -1017,7 +1014,6 @@ func migrateAllTables(projectIDs []uint64) {
 		tableHubspotDocuments,
 		tableSalesforceDocuments,
 		tableQueries,
-		tableReports,
 		tableScheduledTasks,
 	}
 

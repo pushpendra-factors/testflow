@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import AttributionTable from "../../CoreQuery/AttributionsResult/AttributionTable";
 import GroupedBarChart from "../../../components/GroupedBarChart";
 import { formatGroupedData } from "../../CoreQuery/AttributionsResult/utils";
@@ -41,31 +41,35 @@ function DualTouchPoint({
     attribution_method_compare,
   ]);
 
-  const getCategories = useCallback(() => {
-    const { headers } = data;
-    const campaignIdx = headers.indexOf("Campaign");
-    return data.rows
-      .filter((_, index) => visibleIndices.indexOf(index) > -1)
-      .map((row) => row[campaignIdx]);
-  }, [visibleIndices, data]);
-
   if (!chartsData.length) {
     return null;
   }
 
+  const allValues = [];
+
+  chartsData.forEach((cd) => {
+    allValues.push(cd[attribution_method]);
+    allValues.push(
+      allValues.push(cd[attribution_method_compare])
+    );
+  });
+
   const getColors = () => {
-    return {
-      [chartsData[0][0]]: "#4D7DB4",
-      [chartsData[1][0]]: "#4CBCBD",
-    };
+    return ["#4D7DB4", "#4CBCBD"];
   };
+
+  const legends = [
+    `Conversions as Unique users (${attribution_method})`,
+    `Conversions as Unique users (${attribution_method_compare})`,
+  ];
+  
   let chartContent = null;
 
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <GroupedBarChart
+        title={unit.id}
         colors={getColors()}
-        categories={getCategories()}
         chartData={chartsData}
         visibleIndices={visibleIndices}
         responseRows={data.rows}
@@ -76,6 +80,9 @@ function DualTouchPoint({
         section={section}
         height={225}
         cardSize={unit.cardSize}
+        allValues={allValues}
+        legends={legends}
+        tooltipTitle="Conversions"
       />
     );
   } else {

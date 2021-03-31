@@ -8,6 +8,7 @@ import (
 	IntSalesforce "factors/integration/salesforce"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/task/event_user_cache"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -61,7 +62,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	createdDate := time.Now()
 
 	// salesforce record with created == updated
-	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentTimeLayout))
+	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument := &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -80,7 +81,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, status)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus := IntSalesforce.Enrich(project.ID)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
@@ -150,7 +151,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	updatedDate := createdDate.AddDate(0, 0, 1)
 
 	// salesforce record1 with created != updated
-	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","MobilePhone":1234567890,"CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), updatedDate.UTC().Format(model.SalesforceDocumentTimeLayout))
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","MobilePhone":1234567890,"CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), updatedDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -162,7 +163,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 
 	// salesforce record2 with created != updated same user
 	updatedDate = updatedDate.AddDate(0, 0, 1)
-	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), updatedDate.Format(model.SalesforceDocumentTimeLayout))
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), updatedDate.Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -176,7 +177,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, status)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus = IntSalesforce.Enrich(project.ID)
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
@@ -269,7 +270,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	createdAt := time.Now().AddDate(0, 0, -11)
 	updatedDate := createdAt.AddDate(0, 0, -11)
 	propertyDay := "Sunday"
-	jsonData := fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(model.SalesforceDocumentTimeLayout), updatedDate.Format(model.SalesforceDocumentTimeLayout))
+	jsonData := fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(model.SalesforceDocumentDateTimeLayout), updatedDate.Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument := &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -283,7 +284,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	createdAt = time.Now().AddDate(0, 0, -11)
 	updatedDate = createdAt.AddDate(0, 0, -10)
 	propertyDay = "Monday"
-	jsonData = fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(model.SalesforceDocumentTimeLayout), updatedDate.Format(model.SalesforceDocumentTimeLayout))
+	jsonData = fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(model.SalesforceDocumentDateTimeLayout), updatedDate.Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -297,7 +298,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	createdAt = time.Now().AddDate(0, 0, -11)
 	updatedDate = createdAt.AddDate(0, 0, -9)
 	propertyDay = "Tuesday"
-	jsonData = fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(model.SalesforceDocumentTimeLayout), updatedDate.Format(model.SalesforceDocumentTimeLayout))
+	jsonData = fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(model.SalesforceDocumentDateTimeLayout), updatedDate.Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -311,7 +312,7 @@ func TestSalesforceCRMSmartEvent(t *testing.T) {
 	createdAt = time.Now().AddDate(0, 0, -11)
 	updatedDate = createdAt.AddDate(0, 0, -8)
 	propertyDay = "Wednesday"
-	jsonData = fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(model.SalesforceDocumentTimeLayout), updatedDate.Format(model.SalesforceDocumentTimeLayout))
+	jsonData = fmt.Sprintf(`{"Id":"%s", "day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID, propertyDay, createdAt.UTC().Format(model.SalesforceDocumentDateTimeLayout), updatedDate.Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -453,7 +454,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	for i := 0; i < 6; i++ {
 		createdAt = time.Now().AddDate(0, 0, -20+i)
 		updatedDate = createdAt.AddDate(0, 0, -20+i)
-		jsonData := fmt.Sprintf(`{"Id":"%s", "character":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactIDs[i], characters[i], days[i], createdAt.UTC().Format(model.SalesforceDocumentTimeLayout), updatedDate.Format(model.SalesforceDocumentTimeLayout))
+		jsonData := fmt.Sprintf(`{"Id":"%s", "character":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactIDs[i], characters[i], days[i], createdAt.UTC().Format(model.SalesforceDocumentDateTimeLayout), updatedDate.Format(model.SalesforceDocumentDateTimeLayout))
 		salesforceDocument := &model.SalesforceDocument{
 			ProjectID: project.ID,
 			TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -466,7 +467,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 	}
 
 	updatedDate = updatedDate.AddDate(0, 0, -1)
-	jsonData := fmt.Sprintf(`{"Id":"%s", "character":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID1, "G", "Saturday", createdAt.UTC().Format(model.SalesforceDocumentTimeLayout), updatedDate.Format(model.SalesforceDocumentTimeLayout))
+	jsonData := fmt.Sprintf(`{"Id":"%s", "character":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactID1, "G", "Saturday", createdAt.UTC().Format(model.SalesforceDocumentDateTimeLayout), updatedDate.Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument := &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -479,7 +480,7 @@ func TestSalesforceLastSyncedDocument(t *testing.T) {
 
 	updatedDate = updatedDate.AddDate(0, 0, -1)
 	leadID1 := U.RandomLowerAphaNumString(5)
-	jsonData = fmt.Sprintf(`{"Id":"%s", "character":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, leadID1, "H", "Friday", createdAt.UTC().Format(model.SalesforceDocumentTimeLayout), updatedDate.Format(model.SalesforceDocumentTimeLayout))
+	jsonData = fmt.Sprintf(`{"Id":"%s", "character":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, leadID1, "H", "Friday", createdAt.UTC().Format(model.SalesforceDocumentDateTimeLayout), updatedDate.Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocument = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameLead,
@@ -726,7 +727,7 @@ func TestSameUserSmartEvent(t *testing.T) {
 
 	createdDate := time.Now()
 
-	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s","character":"B"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentTimeLayout))
+	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s","character":"B"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocumentPrev := &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -743,7 +744,7 @@ func TestSameUserSmartEvent(t *testing.T) {
 
 	currentProperties := make(map[string]interface{})
 	currentProperties["character"] = "I"
-	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s","character":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), createdDate.AddDate(0, 0, 1).UTC().Format(model.SalesforceDocumentTimeLayout), currentProperties["$salesforce_contact_character"])
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s","character":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.AddDate(0, 0, 1).UTC().Format(model.SalesforceDocumentDateTimeLayout), currentProperties["$salesforce_contact_character"])
 	currentSalesforceDocument := &model.SalesforceDocument{
 		ProjectID: project.ID,
 		Type:      model.SalesforceDocumentTypeContact,
@@ -872,7 +873,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	createdDate := time.Now()
 
 	// salesforce record
-	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s","Email":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), cuID)
+	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s","Email":"%s"}`, contactID, name, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), cuID)
 	salesforceDocument := &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameLead,
@@ -887,7 +888,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, status)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus := IntSalesforce.Enrich(project.ID)
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
 	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
@@ -987,7 +988,7 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 	documentID := U.RandomLowerAphaNumString(4)
 	createdDate := time.Now().AddDate(0, 0, -1)
 
-	jsonData := fmt.Sprintf(`{"Id":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentTimeLayout))
+	jsonData := fmt.Sprintf(`{"Id":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocumentPrev := &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -1001,7 +1002,7 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 		createdDate = createdDate.Add(10 * time.Second)
 		value1 := fmt.Sprintf("%s_%d", property1, i)
 		value2 := fmt.Sprintf("%s_%d", property2, i)
-		jsonData = fmt.Sprintf(`{"Id":"%s","%s":"%s", "%s":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, value1, property2, value2, createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentTimeLayout))
+		jsonData = fmt.Sprintf(`{"Id":"%s","%s":"%s", "%s":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, value1, property2, value2, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 		salesforceDocumentPrev := &model.SalesforceDocument{
 			ProjectID: project.ID,
 			TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -1034,7 +1035,7 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 			createdDate = createdDate.Add(10 * time.Second)
 			value1 := fmt.Sprintf("%s_%d", property1, i)
 			value2 := fmt.Sprintf("%s_%d", property2, i)
-			jsonData = fmt.Sprintf(`{"Id":"%s","%s":"%s", "%s":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, value1, property2, value2, createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentTimeLayout))
+			jsonData = fmt.Sprintf(`{"Id":"%s","%s":"%s", "%s":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, value1, property2, value2, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 			salesforceDocumentPrev := &model.SalesforceDocument{
 				ProjectID: project.ID,
 				TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -1047,7 +1048,7 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 
 	createdDate = createdDate.Add(10 * time.Second)
 	value3 := "val3"
-	jsonData = fmt.Sprintf(`{"Id":"%s","%s":"%s", "%s":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, value3, property2, value3, createdDate.UTC().Format(model.SalesforceDocumentTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentTimeLayout))
+	jsonData = fmt.Sprintf(`{"Id":"%s","%s":"%s", "%s":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, property1, value3, property2, value3, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
 	salesforceDocumentPrev = &model.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: model.SalesforceDocumentTypeNameContact,
@@ -1075,5 +1076,181 @@ func TestSalesforceObjectPropertiesAPI(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf("%s_%d", property1, 5-i), property1Values[i])
 		assert.Equal(t, fmt.Sprintf("%s_%d", property2, 5-i), property2Values[i])
 	}
+
+}
+
+func TestSalesforcePropertyDetails(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	refreshToken := U.RandomLowerAphaNumString(5)
+	instancURL := U.RandomLowerAphaNumString(5)
+	errCode := store.GetStore().UpdateAgentIntSalesforce(agent.UUID,
+		refreshToken,
+		instancURL,
+	)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	status := IntSalesforce.CreateOrGetSalesforceEventName(project.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	// creating event property without registered event name
+	createdDate := time.Now()
+	eventNameCreated := model.GetSalesforceEventNameByAction(model.SalesforceDocumentTypeNameLead, model.SalesforceDocumentCreated)
+
+	// datetime property detail
+	eventNameUpdated := model.GetSalesforceEventNameByAction(model.SalesforceDocumentTypeNameLead, model.SalesforceDocumentUpdated)
+	dtPropertyName1 := "last_visit"
+	dtPropertyValue1 := createdDate
+	dtPropertyName2 := "next_visit"
+	dtPropertyValue2 := createdDate.AddDate(0, 0, 1)
+
+	// numerical property detail
+	numPropertyName1 := "lead_vists"
+	numPropertyValue1 := 15
+	numPropertyName2 := "lead_views"
+	numPropertyValue2 := 10
+
+	// datetime property
+	dtEnKey1 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameLead,
+		U.GetPropertyValueAsString(dtPropertyName1),
+	)
+	dtEnKey2 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameLead,
+		U.GetPropertyValueAsString(dtPropertyName2),
+	)
+
+	// numerical property
+	numEnKey1 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameLead,
+		U.GetPropertyValueAsString(numPropertyName1),
+	)
+	numEnKey2 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameLead,
+		U.GetPropertyValueAsString(numPropertyName2),
+	)
+
+	// datetime property details
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, dtEnKey1, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, dtEnKey2, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey1, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey2, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, dtEnKey1, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, dtEnKey2, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// numerical property details
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, numEnKey1, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, numEnKey2, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numEnKey1, U.PropertyTypeNumerical, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", numEnKey2, U.PropertyTypeNumerical, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, numEnKey1, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameUpdated, numEnKey2, U.PropertyTypeNumerical, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	documentID := U.RandomLowerAphaNumString(4)
+	jsonData := fmt.Sprintf(`{"Id":"%s","%s":"%s", "%s":"%s","%s":"%d", "%s":"%d","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, dtPropertyName1, dtPropertyValue1.UTC().Format(model.SalesforceDocumentDateTimeLayout), dtPropertyName2, dtPropertyValue2.UTC().Format(model.SalesforceDocumentDateTimeLayout), numPropertyName1, numPropertyValue1, numPropertyName2, numPropertyValue2, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument := &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameLead,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	allStatus, _ := IntSalesforce.Enrich(project.ID)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
+	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
+	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, eventNameCreated, 2500, 1)
+	assert.Nil(t, err)
+	assert.Contains(t, properties[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2)
+	assert.Contains(t, properties[U.PropertyTypeNumerical], numEnKey1, numEnKey2)
+
+	properties, err = store.GetStore().GetUserPropertiesByProject(project.ID, 100, 10)
+	assert.Nil(t, err)
+	assert.Contains(t, properties[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2)
+	assert.Contains(t, properties[U.PropertyTypeNumerical], numEnKey1, numEnKey2)
+
+	query := model.Query{
+		From: createdDate.Unix() - 500,
+		To:   createdDate.Unix() + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: "$sf_lead_updated",
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: dtEnKey1,
+			},
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: dtEnKey2,
+			},
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: numEnKey1,
+			},
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: numEnKey2,
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+
+	result, status, _ := store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Contains(t, result.Headers, dtEnKey1, dtEnKey2, numEnKey1, numEnKey2)
+	count := 0
+	for i := range result.Headers[:len(result.Headers)-1] {
+		if result.Headers[i] == dtEnKey1 {
+			assert.Equal(t, fmt.Sprint(dtPropertyValue1.Unix()), result.Rows[0][i])
+			count++
+		}
+		if result.Headers[i] == dtEnKey2 {
+			assert.Equal(t, fmt.Sprint(dtPropertyValue2.Unix()), result.Rows[0][i])
+			count++
+		}
+
+		if result.Headers[i] == numEnKey1 {
+			assert.Equal(t, fmt.Sprint(numPropertyValue1), result.Rows[0][i])
+			count++
+		}
+
+		if result.Headers[i] == numEnKey2 {
+			assert.Equal(t, fmt.Sprint(numPropertyValue2), result.Rows[0][i])
+			count++
+		}
+	}
+	assert.Equal(t, 4, count)
 
 }

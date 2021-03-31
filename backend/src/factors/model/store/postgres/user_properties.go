@@ -212,6 +212,20 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 	if redundantProperty == true && isNewUser == false {
 		return
 	}
+	analyticsKeysInCache := make([]cacheRedis.SortedSetKeyValueTuple, 0)
+	if isNewUser {
+		uniqueUsersCountKey, err := model.UserCountAnalyticsCacheKey(
+			currentTimeDatePart)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get cache key - uniqueEventsCountKey")
+			return
+		}
+		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
+			Key : uniqueUsersCountKey,
+			Value: fmt.Sprintf("%v", projectID),
+		})
+
+	}
 	keysToIncr := make([]*cacheRedis.Key, 0)
 	keysToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	propertiesToIncr := make([]*cacheRedis.Key, 0)
@@ -258,7 +272,7 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 				valuesToIncr = append(valuesToIncr, valueKey)
 				valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
 					Key : valueKeySortedSet,
-					Value: fmt.Sprintf("%s:%s", property, propertyValue),
+					Value: fmt.Sprintf("%s:SS-US-PV:%s", property, propertyValue),
 				})
 			}
 		}
@@ -278,7 +292,7 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 	}
 
 	if(C.IsSortedSetCachingAllowed()){
-		cacheRedis.ZincrPersistentBatch(keysToIncrSortedSet...)
+		cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
 	}
 	// The following code is to support/facilitate cleanup
 	newPropertiesCount := int64(0)
@@ -317,6 +331,13 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 		end := U.TimeNow()
 		metrics.Increment(metrics.IncrEventUserCleanupCounter)
 		metrics.RecordLatency(metrics.LatencyEventUserCleanupCounter, float64(end.Sub(begin).Milliseconds()))
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to increment keys")
+			return
+		}
+	}
+	if len(analyticsKeysInCache) > 0 {
+		_, err = cacheRedis.ZincrPersistentBatch(true, analyticsKeysInCache...)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to increment keys")
 			return

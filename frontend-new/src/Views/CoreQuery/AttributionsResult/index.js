@@ -8,7 +8,8 @@ function AttributionsResult({
   attributionsState,
   section,
   durationObj,
-  cmprDuration
+  cmprDuration,
+  currMetricsValue
 }) {
   let content = null;
 
@@ -51,6 +52,9 @@ function AttributionsResult({
         attribution_method={models[0]}
         attribution_method_compare={models[1]}
         section={section}
+        currMetricsValue={currMetricsValue}
+        durationObj={durationObj}
+        cmprDuration={cmprDuration}
       />
     );
   }

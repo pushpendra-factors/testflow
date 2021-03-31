@@ -380,10 +380,6 @@ func TestDeleteDashboard(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
 
-	report, errCode := store.GetStore().CreateReport(&model.Report{DashboardID: dashboard.ID, ProjectID: project.ID})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, report)
-
 	// Delete a dashboard having units with queries and reports. All should get marked deleted.
 	errCode = store.GetStore().DeleteDashboard(project.ID, agent.UUID, dashboard.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
@@ -392,9 +388,6 @@ func TestDeleteDashboard(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, errCode)
 
 	_, errCode = store.GetStore().GetDashboardUnitByUnitID(dashboardUnit.ProjectID, dashboardUnit.ID)
-	assert.Equal(t, http.StatusNotFound, errCode)
-
-	_, errCode = store.GetStore().GetReportByID(report.ProjectID, report.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 
 }

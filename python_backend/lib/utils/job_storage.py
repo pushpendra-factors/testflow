@@ -26,7 +26,9 @@ class JobStorage:
 
         gs_bucket = prefix
         if dry:
-            gs_bucket = gs_bucket + "-tmp"
+            gs_bucket += "-tmp"
+        else:
+            gs_bucket += "-v2"
         return gs_bucket
 
     @classmethod

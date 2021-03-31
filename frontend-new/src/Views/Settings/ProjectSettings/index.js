@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Row, Col, Menu
 } from 'antd';
@@ -10,6 +10,7 @@ import IntegrationSettings from './IntegrationSettings';
 import Events from './Events';
 import { fetchSmartEvents } from 'Reducers/events';
 import { connect } from 'react-redux';
+import { useHistory, useLocation } from 'react-router-dom';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -21,26 +22,29 @@ const MenuTabs = {
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents }) {
-  const [selectedMenu, setSelectedMenu] = useState(MenuTabs.generalSettings);
-  // const [editPasswordModal, setPasswordModal] = useState(false);
-  // const [editDetailsModal, setDetailsModal] = useState(false);
-  // const [confirmLoading, setConfirmLoading] = useState(false);
+  const [selectedMenu, setSelectedMenu] = useState(MenuTabs.generalSettings); 
+  const history = useHistory();
+  let location = useLocation();
 
   const handleClick = (e) => {
     setSelectedMenu(e.key);
+    if(e.key == 'Integrations'){
+      history.push(`/settings/#${e.key.toLowerCase()}`); 
+    }
+    else{
+      history.push(`/settings`); 
+    }
+
     if (e.key === MenuTabs.Events) {
       fetchSmartEvents(activeProject.id);
     }
-  };
+  }; 
 
-  // const handleOk = () => {
-  //   setConfirmLoading(true);
-  //   setTimeout(() => {
-  //     setConfirmLoading(false);
-  //     setPasswordModal(false);
-  //     setDetailsModal(false);
-  //   }, 2000);
-  // };
+  useEffect(()=>{ 
+    if(location.hash == '#integrations'){
+      setSelectedMenu(MenuTabs.Integrations)
+    }
+  },[])
 
   return (
     <>
@@ -57,7 +61,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
 
             <Menu
               onClick={handleClick}
-              defaultSelectedKeys={MenuTabs.generalSettings}
+              defaultSelectedKeys={selectedMenu}
               mode="inline"
               className={'fa-settings--menu'}>
               <Menu.Item key={MenuTabs.generalSettings}>{MenuTabs.generalSettings}</Menu.Item>

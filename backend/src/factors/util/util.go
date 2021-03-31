@@ -867,6 +867,11 @@ func (p PairList) Len() int           { return len(p) }
 func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
 func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
+// IsStandardEvent check if eventname is standard Event
+func IsStandardEvent(eventName string) bool {
+	return strings.HasPrefix(eventName, "$")
+}
+
 // IsCampaignEvent check if eventname is campaign Event
 func IsCampaignEvent(eventName string) bool {
 	return strings.HasPrefix(eventName, "$session[campaign")
@@ -899,7 +904,7 @@ func IsCampaignAnalytics(eventName string) bool {
 }
 
 func IsItreeCampaignEvent(eventName string) bool {
-	return strings.HasPrefix(eventName, "$session[campaign") || strings.HasPrefix(eventName, "$session[source") || strings.HasPrefix(eventName, "$session[medium")  || strings.HasPrefix(eventName, "$session[adgroup") || strings.HasPrefix(eventName, "$session[initial_referrer")
+	return strings.HasPrefix(eventName, "$session[campaign") || strings.HasPrefix(eventName, "$session[source") || strings.HasPrefix(eventName, "$session[medium") || strings.HasPrefix(eventName, "$session[adgroup") || strings.HasPrefix(eventName, "$session[initial_referrer")
 }
 
 // GetDashboardCacheResultExpiryInSeconds Returns expiry for cache based on query date range.
@@ -946,4 +951,22 @@ func GetQueryCacheResultExpiryInSeconds(from, to int64) float64 {
 		}
 	}
 	return float64(CacheExpiryQueryMutableDataInSeconds)
+}
+
+func GetAggrAsFloat64(aggr interface{}) (float64, error) {
+	switch aggr.(type) {
+	case int:
+		return float64(aggr.(int)), nil
+	case int64:
+		return float64(aggr.(int64)), nil
+	case float32:
+		return float64(aggr.(float32)), nil
+	case float64:
+		return aggr.(float64), nil
+	case string:
+		aggrInt, err := strconv.ParseInt(aggr.(string), 10, 64)
+		return float64(aggrInt), err
+	default:
+		return float64(0), errors.New("invalid aggregate value type")
+	}
 }

@@ -13,7 +13,7 @@ function AttributionsChart({
   section,
   data2,
   durationObj,
-  cmprDuration
+  cmprDuration,
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -30,6 +30,11 @@ function AttributionsChart({
     return null;
   }
 
+  const legends = [
+    `Conversions as Unique users (${attribution_method})`,
+    "Cost per conversion",
+  ];
+
   return (
     <div className="flex items-center justify-center flex-col">
       <BarLineChart
@@ -38,6 +43,7 @@ function AttributionsChart({
         chartData={chartsData}
         visibleIndices={visibleIndices}
         section={section}
+        legends={legends}
       />
       <div className="mt-12 w-full">
         <AttributionTable

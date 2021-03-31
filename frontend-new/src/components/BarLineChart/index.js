@@ -4,7 +4,7 @@ import barStyles from "../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/in
 import * as d3 from "d3";
 import { getMaxYpoint } from "../BarChart/utils";
 import ChartLegends from "./ChartLegends";
-import { formatCount } from "../../utils/dataFormatter";
+import { formatCount, numberWithCommas } from "../../utils/dataFormatter";
 import {
   BAR_CHART_XAXIS_TICK_LENGTH,
   REPORT_SECTION,
@@ -22,6 +22,7 @@ function BarLineChart({
   height: widgetHeight,
   section,
   cardSize = 1,
+  legends
 }) {
   const chartRef = useRef(null);
   const tooltip = useRef(null);
@@ -89,37 +90,49 @@ function BarLineChart({
           <div style="font-weight: 600;font-size: 10px;line-height: 16px;color: #8692A3;">CONVERSIONS</div>
           <div style="font-weight: 600;font-size: 12px;line-height: 16px;" class="mt-2 flex justify-between">
             <div style="color: #4D7DB4">OPPORTUNITIES</div>
-            <div style="color: #3E516C;">${formatCount(d[2], 1)}</div>
+            <div style="color: #3E516C;">${numberWithCommas(
+              formatCount(d[2], 1)
+            )}</div>
           </div>
           <div style="font-weight: 600;font-size: 12px;line-height: 16px;" class="mt-2 flex justify-between">
             <div style="color: #D4787D">COST PER CONVERSION</div>
-            <div style="color: #3E516C;">${formatCount(d[1], 1)}</div>
+            <div style="color: #3E516C;">${numberWithCommas(
+              formatCount(d[1], 1)
+            )}</div>
           </div>
         </div>
         <div style="font-size: 12px;line-height: 18px;color: #3E516C;">
           <div class="flex justify-between pt-2">
             <div>Impressions</div>
-            <div>${formatCount(responseRows[rowIndex][impressionsIdx], 1)}</div>
+            <div>${numberWithCommas(
+              formatCount(responseRows[rowIndex][impressionsIdx], 1)
+            )}</div>
           </div>
           <div class="flex justify-between pt-2">
             <div>Clicks</div>
-            <div>${formatCount(responseRows[rowIndex][clicksIdx], 1)}</div>
+            <div>${numberWithCommas(
+              formatCount(responseRows[rowIndex][clicksIdx], 1)
+            )}</div>
           </div>
           <div class="flex justify-between pt-2">
             <div>Spend</div>
-            <div>${formatCount(responseRows[rowIndex][spendIdx], 1)}</div>
+            <div>${numberWithCommas(
+              formatCount(responseRows[rowIndex][spendIdx], 1)
+            )}</div>
           </div>
           <div class="flex justify-between pt-2">
             <div>Visitors</div>
-            <div>${formatCount(responseRows[rowIndex][visitorsIdx], 1)}</div>
+            <div>${numberWithCommas(
+              formatCount(responseRows[rowIndex][visitorsIdx], 1)
+            )}</div>
           </div>
         </div>
                 `
       );
       tooltip.current
-      .style("left", left + "px")
-      .style("top", top - toolTipHeight + 5 + "px")
-      .style("opacity", "1")
+        .style("left", left + "px")
+        .style("top", top - toolTipHeight + 5 + "px")
+        .style("opacity", "1");
     },
     [responseHeaders, responseRows, title, visibleIndices]
   );
@@ -154,7 +167,7 @@ function BarLineChart({
       .select(chartRef.current)
       .node()
       .getBoundingClientRect().width;
-      const margin = { top: 20, right: 70, bottom: 40, left: 80 };
+    const margin = { top: 20, right: 70, bottom: 40, left: 80 };
     const svg = d3
       .select(chartRef.current)
       .append("svg")
@@ -162,6 +175,7 @@ function BarLineChart({
       .attr("height", widgetHeight || 300);
     const width = +svg.attr("width") - margin.left - margin.right;
     const height = +svg.attr("height") - margin.top - margin.bottom;
+    const minBarHeight = 0.05 * height;
     const xScale = d3
       .scaleBand()
       .rangeRound([0, width])
@@ -190,7 +204,9 @@ function BarLineChart({
       .call(
         d3.axisBottom(xScale).tickFormat((label) => {
           if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
-            return label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + "...";
+            return (
+              label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + "..."
+            );
           }
           return label;
         })
@@ -223,7 +239,11 @@ function BarLineChart({
       .attr("class", styles.yAxisLables)
       .text("Cost per Conversion");
 
-    var bar = g.selectAll("rect").data(chartData.slice(0, BARLINE_COUNT[cardSize])).enter().append("g");
+    var bar = g
+      .selectAll("rect")
+      .data(chartData.slice(0, BARLINE_COUNT[cardSize]))
+      .enter()
+      .append("g");
 
     // bar chart
     bar
@@ -232,12 +252,16 @@ function BarLineChart({
         return xScale(d[0]);
       })
       .attr("y", function (d) {
-        return yScaleLeft(d[2]);
+        return height - yScaleLeft(d[2]) > minBarHeight
+            ? yScaleLeft(d[2])
+            : height - minBarHeight;
       })
       .attr("class", "bar")
       .attr("width", xScale.bandwidth())
       .attr("height", function (d) {
-        return height - yScaleLeft(d[2]);
+        return height - yScaleLeft(d[2]) > minBarHeight
+          ? height - yScaleLeft(d[2])
+          : minBarHeight;
       })
       .style("fill", "#4d7db4")
       .on("mousemove", (d, i) => {
@@ -311,9 +335,11 @@ function BarLineChart({
 
   return (
     <div className="w-full bar-chart">
-      {section === DASHBOARD_WIDGET_SECTION ? <TopLegends cardSize={cardSize} /> : null}
+      {section === DASHBOARD_WIDGET_SECTION ? (
+        <TopLegends legends={legends} cardSize={cardSize} />
+      ) : null}
       <div className={barStyles.ungroupedChart} ref={chartRef}></div>
-      {section === REPORT_SECTION ? <ChartLegends /> : null}
+      {section === REPORT_SECTION ? <ChartLegends legends={legends} /> : null}
     </div>
   );
 }

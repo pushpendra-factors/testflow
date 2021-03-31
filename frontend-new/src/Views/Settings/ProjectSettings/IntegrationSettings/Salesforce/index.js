@@ -1,0 +1,79 @@
+import React, { useState } from 'react';
+import { useEffect } from 'react';
+import {connect} from 'react-redux';
+import { fetchProjectSettings, udpateProjectSettings, enableSalesforceIntegration, fetchSalesforceRedirectURL } from 'Reducers/global';
+import {
+     Input, Button, message
+  } from 'antd';
+  import { Text } from 'factorsComponents';
+
+const SalesForceIntegration = ({
+    fetchProjectSettings,
+    udpateProjectSettings,
+    activeProject,
+    currentProjectSettings, 
+    setIsActive,
+    enableSalesforceIntegration,
+    fetchSalesforceRedirectURL
+}) =>{  
+    const [loading, setLoading] = useState(false);
+    const [showForm, setShowForm] = useState(false);
+
+    const isSalesforceEnabled = () => {
+        return currentProjectSettings && currentProjectSettings.int_salesforce_enabled_agent_uuid && currentProjectSettings.int_salesforce_enabled_agent_uuid != "";
+      }
+
+      
+useEffect(()=>{
+    fetchProjectSettings(activeProject.id).then(()=>{ 
+      if(isSalesforceEnabled()){
+        setIsActive(true);
+      }
+    })
+},[activeProject]);
+ 
+ 
+  const handleRedirectToURL = () =>{
+    fetchSalesforceRedirectURL(activeProject.id.toString())
+    .then((r)=>{
+      if (r.status == 307) {
+        window.location = r.data.redirectURL;
+      }
+    })
+  }
+
+  const  onClickEnableSalesforce = () => {
+    enableSalesforceIntegration(activeProject.id.toString())
+      .then((r) => {
+        if (r.status == 304) {
+          handleRedirectToURL();
+        }
+      });
+  }
+
+const isEnabled = isSalesforceEnabled();
+return (
+    <>  
+    <div className={'mt-4 flex'}>
+    {isEnabled && <>
+      <div className={'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'}>
+            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Account Connected</Text>
+            <Text type={'title'} level={7} color={'grey'}  extraClass={'m-0 mt-2'}>Salesforce sync is enabled</Text>
+      </div>
+    </>} 
+    {!isEnabled && <>
+    <Button type={'primary'} loading={loading} onClick={onClickEnableSalesforce}>Enable using Salesforce</Button> 
+    <Button className={'ml-2 '}>View documentation</Button> 
+    </>
+    }
+    </div>
+    </>
+)
+}
+
+const mapStateToProps = (state) => ({
+    activeProject: state.global.active_project,
+    currentProjectSettings: state.global.currentProjectSettings
+  });
+  
+export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings, enableSalesforceIntegration, fetchSalesforceRedirectURL })(SalesForceIntegration)

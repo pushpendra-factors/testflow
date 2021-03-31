@@ -23,10 +23,10 @@ type Model interface {
 	GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string) (map[string]model.CampaignInfo, error)
 	GetAdwordsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int)
 	GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
-	ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, error)
+	ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int)
 	ExecuteAdwordsChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
 	GetAdwordsFilterValuesByType(projectID uint64, docType int) ([]string, int)
-	GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error)
+	GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, int)
 	GetAdwordsChannelResultMeta(projectID uint64, customerAccountID string, query *model.ChannelQuery) (*model.ChannelQueryResultMeta, error)
 
 	// agent
@@ -53,9 +53,6 @@ type Model interface {
 
 	// attribution
 	ExecuteAttributionQuery(projectID uint64, query *model.AttributionQuery) (*model.QueryResult, error)
-	ApplyAttribution(method string, conversionEvent string, usersToBeAttributed []model.UserEventInfo,
-		userInitialSession map[string]map[string]model.UserSessionTimestamp, coalUserIdConversionTimestamp map[string]int64,
-		lookbackDays int, campaignFrom, campaignTo int64) (map[string][]string, map[string]map[string][]string, error)
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error)
 	GetLinkedFunnelEventUsers(projectId uint64, from, to int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
@@ -185,10 +182,10 @@ type Model interface {
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
 	GetFacebookSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
-	ExecuteFacebookChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, error)
+	ExecuteFacebookChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int)
 	GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]model.FacebookLastSyncInfo, int)
 	ExecuteFacebookChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
-	GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error)
+	GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, int)
 	GetFacebookMetricBreakdown(projectID uint64, customerAccountID string,
 		query *model.ChannelQuery) (*model.ChannelBreakdownResult, error)
 	GetFacebookChannelResult(projectID uint64, customerAccountID string,
@@ -197,10 +194,10 @@ type Model interface {
 	// linkedin document
 	CreateLinkedinDocument(projectID uint64, document *model.LinkedinDocument) int
 	GetLinkedinSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
-	ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, error)
+	ExecuteLinkedinChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int)
 	GetLinkedinLastSyncInfo(projectID uint64, CustomerAdAccountID string) ([]model.LinkedinLastSyncInfo, int)
 	ExecuteLinkedinChannelQuery(projectID uint64, query *model.ChannelQuery) (*model.ChannelQueryResult, int)
-	GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, error)
+	GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, int)
 
 	// funnel_analytics
 	RunFunnelQuery(projectID uint64, query model.Query) (*model.QueryResult, int, string)
@@ -290,14 +287,6 @@ type Model interface {
 	DeleteDashboardQuery(projectID uint64, queryID uint64) (int, string)
 	UpdateSavedQuery(projectID uint64, queryID uint64, query *model.Queries) (*model.Queries, int)
 	SearchQueriesWithProjectId(projectID uint64, searchString string) ([]model.Queries, int)
-
-	// report
-	CreateReport(report *model.Report) (*model.Report, int)
-	DeleteReportByDashboardID(projectID, dashboardID uint64) int
-	GetReportByID(projectID, id uint64) (*model.Report, int)
-	GetReportsByProjectID(projectID uint64) ([]*model.Report, int)
-	GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]*model.ReportDescription, int)
-	GenerateReport(projectID, dashboardID uint64, dashboardName string, reportType string, intervalBeforeThat, interval model.Interval) (*model.Report, int)
 
 	// salesforce_document
 	GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int)
@@ -398,5 +387,11 @@ type Model interface {
 	//properties_type
 	GetPropertyTypeByKeyValue(projectID uint64, eventName string, propertyKey string, propertyValue interface{}, isUserProperty bool) string
 	GetPropertyTypeFromDB(projectID uint64, eventName, propertyKey string, isUserProperty bool) (int, *model.PropertyDetail)
-	CreatePropertyDetails(projectID uint64, eventName, propertyKey, propertyType string, isUserProperty bool) int
+
+	// project_analytics
+	GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error)
+
+	CreatePropertyDetails(projectID uint64, eventName, propertyKey, propertyType string, isUserProperty bool, allowOverWrite bool) int
+	CreateOrDeletePropertyDetails(projectID uint64, eventName, enKey, pType string, isUserProperty, allowOverWrite bool) error
+	GetAllPropertyDetailsByProjectID(projectID uint64, eventName string, isUserProperty bool) (int, *map[string]string)
 }

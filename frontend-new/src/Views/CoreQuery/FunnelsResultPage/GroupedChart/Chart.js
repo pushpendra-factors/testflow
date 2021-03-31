@@ -16,7 +16,11 @@ import {
   BAR_CHART_XAXIS_TICK_LENGTH,
 } from "../../../../utils/constants";
 import ChartLegends from "./ChartLegends";
-import { Text, SVG, Number as NumFormat } from "../../../../components/factorsComponents";
+import {
+  Text,
+  SVG,
+  Number as NumFormat,
+} from "../../../../components/factorsComponents";
 import LegendsCircle from "../../../../styles/components/LegendsCircle";
 
 function Chart({
@@ -275,7 +279,8 @@ function Chart({
         );
     };
 
-    const hideTooltip = (d) => {
+    const hideTooltip = () => {
+      tooltip.html(null);
       tooltip.style("display", "none");
     };
 

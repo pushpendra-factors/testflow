@@ -1,4 +1,6 @@
+import React from 'react';
 import { formatCount } from "../../../utils/dataFormatter";
+import { Number as NumFormat } from "../../../components/factorsComponents";
 
 export const getWebAnalyticsTableData = (tableData, searchText) => {
   const { headers, rows } = tableData;
@@ -6,6 +8,9 @@ export const getWebAnalyticsTableData = (tableData, searchText) => {
     return {
       title: header,
       dataIndex: header,
+      render: (d) => {
+        return isNaN(d) ? d : <NumFormat number={d} />
+      },
     };
   });
 
@@ -47,10 +52,15 @@ export const getCardsDataInTableFormat = (units, data) => {
       result.columns.push({
         title: unit.title,
         dataIndex: unit.title,
+        render: (d) => {
+          return isNaN(d) ? d : <NumFormat number={d} />
+        },
       });
       try {
-        result.tableData[0][unit.title] = isNaN(data[unit.id].rows[0][0]) ? data[unit.id].rows[0][0] : formatCount(parseFloat(data[unit.id].rows[0][0]), 1);
-      } catch(err) {
+        result.tableData[0][unit.title] = isNaN(data[unit.id].rows[0][0])
+          ? data[unit.id].rows[0][0]
+          : formatCount(parseFloat(data[unit.id].rows[0][0]), 1);
+      } catch (err) {
         result.tableData[0][unit.title] = data[unit.id].rows[0];
       }
     }

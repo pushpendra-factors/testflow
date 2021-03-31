@@ -13,6 +13,7 @@ import (
 )
 
 const workerName = "integration_request_worker"
+const duplicateWorkerName = "duplicate_integration_request_worker"
 
 func ProcessRequest(token, reqType, reqPayload string) (float64, string, error) {
 	switch reqType {
@@ -51,6 +52,9 @@ func main() {
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
 
+	duplicateQueueRedisHost := flag.String("dup_queue_redis_host", "localhost", "")
+	duplicateQueueRedisPort := flag.Int("dup_queue_redis_port", 6379, "")
+
 	geoLocFilePath := flag.String("geo_loc_path",
 		"/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
 
@@ -64,8 +68,14 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	propertiesTypeCacheSize := flag.Int("property_details_cache_size", 0, "Cache size for in memory property detail.")
 	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
-	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
-	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
+	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
+	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "",
+		"Allowed project id for property type check from db.")
+	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "",
+		"Blocked project id for property type check from db.")
+	enableSDKAndIntegrationRequestQueueDuplication := flag.Bool("enable_sdk_and_integration_request_queue_duplication",
+		false, "Enables SDK and Integration request queue duplication.")
+
 	flag.Parse()
 
 	defer U.NotifyOnPanic(workerName, *env)
@@ -83,6 +93,18 @@ func main() {
 			Password: *dbPass,
 			AppName:  workerName,
 		},
+		RedisHost:               *redisHost,
+		RedisPort:               *redisPort,
+		QueueRedisHost:          *queueRedisHost,
+		QueueRedisPort:          *queueRedisPort,
+		DuplicateQueueRedisHost: *duplicateQueueRedisHost,
+		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
+		GeolocationFile:         *geoLocFilePath,
+		DeviceDetectorPath:      *deviceDetectorPath,
+		SentryDSN:               *sentryDSN,
+		RedisHostPersistent:     *redisHostPersistent,
+		RedisPortPersistent:     *redisPortPersistent,
+		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
 		MemSQLInfo: C.DBConf{
 			Host:     *memSQLHost,
 			Port:     *memSQLPort,
@@ -91,16 +113,8 @@ func main() {
 			Password: *memSQLPass,
 			AppName:  workerName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		QueueRedisHost:      *queueRedisHost,
-		QueueRedisPort:      *queueRedisPort,
-		GeolocationFile:     *geoLocFilePath,
-		DeviceDetectorPath:  *deviceDetectorPath,
-		SentryDSN:           *sentryDSN,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
+		CacheSortedSet: 	 *cacheSortedSet,
+		PrimaryDatastore: *primaryDatastore,
 	}
 
 	err := C.InitQueueWorker(config)
@@ -110,7 +124,23 @@ func main() {
 	}
 	defer C.SafeFlushAllCollectors()
 
-	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize, *whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
+	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize,
+		*whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
+
+	// Start worker with duplicate queue client, if enabled.
+	if C.IsSDKAndIntegrationRequestQueueDuplicationEnabled() {
+		duplicateQueueClient := C.GetServices().QueueClient
+		err = duplicateQueueClient.RegisterTask(Int.ProcessRequestTask, ProcessRequest)
+		if err != nil {
+			log.WithError(err).Fatal(
+				"Failed to register tasks on duplicate queue client in integration request worker.")
+		}
+
+		duplicateQueueWorker := duplicateQueueClient.NewCustomQueueWorker(duplicateWorkerName,
+			*workerConcurrency, Int.RequestQueueDuplicate)
+		duplicateQueueWorker.Launch()
+		return
+	}
 
 	// Register tasks on queueClient.
 	queueClient := C.GetServices().QueueClient

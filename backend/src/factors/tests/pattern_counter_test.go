@@ -1877,8 +1877,29 @@ func TestGenCandidatesForGoals(t *testing.T) {
 
 	patt, err := P.GenCandidatesForGoals(pA, pB, nil)
 	assert.NotNil(t, patt, "Patterns cannot be empty")
+	assert.Equal(t, 2, len(patt), "number of patterns generated should be 2")
 	assert.Nil(t, err)
+	res := [][]string{{"A", "B", "C"}, {"B", "A", "C"}}
+	var testVar2 [][]string
+	for _, v := range patt {
+		testVar2 = append(testVar2, v.EventNames)
+	}
+	assert.ElementsMatch(t, res, testVar2, "Elements are not matching")
 
+	pA, _ = P.NewPattern([]string{"A", "B", "D"}, nil)
+	pB, _ = P.NewPattern([]string{"A", "C", "D"}, nil)
+	patt, err = P.GenCandidatesForGoals(pA, pB, nil)
+	res = [][]string{{"A", "B", "C", "D"}, {"A", "C", "B", "D"}}
+	assert.NotNil(t, patt, "Patterns cannot be empty")
+	assert.Equal(t, 2, len(patt), "number of patterns generated should be 2")
+	assert.Nil(t, err)
+	var testVar3 [][]string
+	for _, v := range patt {
+		testVar3 = append(testVar3, v.EventNames)
+	}
+	assert.ElementsMatch(t, res, testVar3, "Elements are not matching")
+
+	// test cases that should give empty res for genCandidatesForGoal
 	pA, _ = P.NewPattern([]string{"A", "C"}, nil)
 	pB, _ = P.NewPattern([]string{"A", "C"}, nil)
 
@@ -1897,13 +1918,13 @@ func TestGenCandidatesForGoals(t *testing.T) {
 	pB, _ = P.NewPattern([]string{"B", "E", "C"}, nil)
 
 	patt, err = P.GenCandidatesForGoals(pA, pB, nil)
-	assert.NotNil(t, patt, "Patterns cannot be empty")
+	assert.Nil(t, patt, "Patterns should be empty")
 	assert.Nil(t, err)
 
 	pA, _ = P.NewPattern([]string{"A", "D", "B", "C"}, nil)
 	pB, _ = P.NewPattern([]string{"B", "E", "K", "C"}, nil)
 	patt, err = P.GenCandidatesForGoals(pA, pB, nil)
-	assert.NotNil(t, patt, "Patterns cannot be empty")
+	assert.Nil(t, patt, "Patterns should be empty")
 	assert.Nil(t, err)
 
 }

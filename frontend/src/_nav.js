@@ -17,11 +17,6 @@ const sideBarItems =
     icon: 'fa fa-code',
   },
   {
-    name: 'Reports',
-    url: '/reports',
-    icon: 'icon-pie-chart'
-  },
-  {
     name: 'Settings',
     url: '/settings',
     icon: 'icon-settings'
