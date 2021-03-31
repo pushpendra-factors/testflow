@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: config-build-reports-job
-  labels:
-    env: staging
-    project: factors-staging
-data:
-  MAIL_REPORTS: "false"

@@ -229,12 +229,12 @@ func addStepConversionPercentageToFunnel(result *model.QueryResult) error {
 				continue
 			}
 
-			prevCount, err := getAggrAsFloat64(result.Rows[ri][ci-1])
+			prevCount, err := U.GetAggrAsFloat64(result.Rows[ri][ci-1])
 			if err != nil {
 				return err
 			}
 
-			curCount, err := getAggrAsFloat64(result.Rows[ri][ci])
+			curCount, err := U.GetAggrAsFloat64(result.Rows[ri][ci])
 			if err != nil {
 				return err
 			}
@@ -243,13 +243,13 @@ func addStepConversionPercentageToFunnel(result *model.QueryResult) error {
 		}
 
 		// add overall conversion.
-		firstStepCount, err := getAggrAsFloat64(result.Rows[ri][stepIndexes[0]])
+		firstStepCount, err := U.GetAggrAsFloat64(result.Rows[ri][stepIndexes[0]])
 		if err != nil {
 			return err
 		}
 
 		lastIndex := stepIndexes[len(stepIndexes)-1]
-		lastStepCount, err := getAggrAsFloat64(result.Rows[ri][lastIndex])
+		lastStepCount, err := U.GetAggrAsFloat64(result.Rows[ri][lastIndex])
 		if err != nil {
 			return err
 		}

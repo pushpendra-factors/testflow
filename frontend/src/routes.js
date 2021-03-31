@@ -25,16 +25,6 @@ const Settings = Loadable({
   loading: Loading,
 })
 
-const Report = Loadable({
-  loader: () => import('./views/Report'),
-  loading: Loading,
-})
-
-const ReportsList = Loadable({
-  loader: () => import('./views/ReportsList'),
-  loading: Loading,
-})
-
 const SettingsSegment =  Loadable({
   loader: () => import('./views/Settings/Segment'),
   loading: Loading,
@@ -123,8 +113,6 @@ const routes = [
   { path: '/account_settings', name: 'AccountSettings', component: AccountSettings },
   { path: '/profile', name: 'Profile', component: Profile },
   { path: '/refresh', exact: true, name: 'Refresh', component: ReloadComponent },
-  { path: '/reports', exact: true, name: 'ReportsList', component: ReportsList },
-  { path: '/reports/:id', name: 'Report', component: Report },
 ];
 
 // routes only for email@factors.ai.
