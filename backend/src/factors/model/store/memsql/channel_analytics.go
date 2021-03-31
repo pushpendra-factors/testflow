@@ -359,7 +359,7 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 		columns = append(adwordsSelectKeys, adwordsMetrics...)
 	} else {
 		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
-		if err != http.StatusFound {
+		if err != http.StatusOK {
 			return make([]string, 0, 0), [][]interface{}{}, err
 		}
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)

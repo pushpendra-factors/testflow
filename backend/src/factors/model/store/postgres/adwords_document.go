@@ -821,7 +821,7 @@ func (pg *Postgres) GetAdwordsSQLQueryAndParametersForFilterValues(projectID uin
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 	if customerAccountID == nil || len(*customerAccountID) == 0 {
-		logCtx.Error(integrationNotAvailable)
+		logCtx.Info(integrationNotAvailable)
 		return "", []interface{}{}, http.StatusInternalServerError
 	}
 
@@ -862,7 +862,7 @@ func (pg *Postgres) getAdwordsFilterValuesByType(projectID uint64, docType int, 
 	}
 	customerAccountID := projectSetting.IntAdwordsCustomerAccountId
 	if customerAccountID == nil || len(*customerAccountID) == 0 {
-		logCtx.Error(integrationNotAvailable)
+		logCtx.Info(integrationNotAvailable)
 		return []interface{}{}, http.StatusInternalServerError
 	}
 
@@ -926,7 +926,7 @@ func (pg *Postgres) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, 
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	transformedQuery, customerAccountID, err := pg.transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
 	if err != nil && err.Error() == integrationNotAvailable {
-		logCtx.WithError(err).Error("Failed in adwords analytics with following error.")
+		logCtx.WithError(err).Info("Failed in adwords analytics with following error.")
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}
 	if err != nil {

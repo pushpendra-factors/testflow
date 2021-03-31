@@ -360,7 +360,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 		columns = append(adwordsSelectKeys, adwordsMetrics...)
 	} else {
 		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
-		if err != http.StatusFound {
+		if err != http.StatusOK {
 			return make([]string, 0, 0), [][]interface{}{}, err
 		}
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
@@ -370,6 +370,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 		finalQuery = fmt.Sprintf(CAUnionQuery3, joinWithWordInBetween("UNION", finalSQLs...), getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
 		columns = append(adwordsSelectKeys, adwordsMetrics...)
 	}
+	logCtx.Warn("Temporary log - channel analytics", finalQuery, finalParams)
 	_, resultMetrics, err := pg.ExecuteSQL(finalQuery, finalParams, logCtx)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed in channel analytics with following error.")

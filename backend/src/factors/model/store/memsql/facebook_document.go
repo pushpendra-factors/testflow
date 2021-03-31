@@ -233,7 +233,7 @@ func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID u
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		logCtx.Error(integrationNotAvailable)
+		logCtx.Info(integrationNotAvailable)
 		return "", make([]interface{}, 0, 0), http.StatusNotFound
 	}
 	params := []interface{}{facebookInternalFilterProperty, projectID, customerAccountID,
@@ -270,7 +270,7 @@ func (store *MemSQL) getFacebookFilterValuesByType(projectID uint64, docType int
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		logCtx.Error(integrationNotAvailable)
+		logCtx.Info(integrationNotAvailable)
 		return nil, http.StatusNotFound
 	}
 	logCtx = logCtx.WithField("doc_type", docType)
@@ -314,7 +314,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64
 	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForFacebook(
 		projectID, *query, reqID)
 	if err != nil && err.Error() == integrationNotAvailable {
-		logCtx.WithError(err).Error("Failed in facebook analytics with following error.")
+		logCtx.WithError(err).Info("Failed in facebook analytics with following error.")
 		return "", nil, make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}
 	if err != nil {
