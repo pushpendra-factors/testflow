@@ -401,6 +401,7 @@ CREATE TABLE IF NOT EXISTS projects (
     date_format text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
+    interaction_settings json,
     jobs_metadata json,
     PRIMARY KEY (id),
     KEY (token),
