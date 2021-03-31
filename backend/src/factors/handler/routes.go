@@ -99,8 +99,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/channels/query", ChannelQueryHandler)
 
 	authRouteGroup.GET("/:project_id/channels/filter_values", GetChannelFilterValuesHandler)
-	authRouteGroup.GET("/:project_id/reports", GetReportsHandler)
-	authRouteGroup.GET("/:project_id/reports/:report_id", GetReportHandler)
 	authRouteGroup.POST("/:project_id/attribution/query", responseWrapper(AttributionHandler))
 
 	// /v1 API endpoints
