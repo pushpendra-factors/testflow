@@ -37,16 +37,18 @@ func createProjectAndAddAdwordsDocument(t *testing.T, r *gin.Engine) (*M.Project
 
 	project, agent, _ := SetupProjectWithAgentDAO()
 	assert.NotNil(t, project)
-	customerAccountID := U.RandomString(10)
+	customerAccountID1 := U.RandomString(10)
+	customerAccountID2 := U.RandomString(10)
+	customerAccounts := customerAccountID1 + "," + customerAccountID2
 	_, statusCode := store.GetStore().UpdateProjectSettings(project.ID, &M.ProjectSetting{
-		IntAdwordsCustomerAccountId: &customerAccountID,
+		IntAdwordsCustomerAccountId: &customerAccounts,
 		IntAdwordsEnabledAgentUUID:  &agent.UUID,
 	})
 	assert.Equal(t, http.StatusAccepted, statusCode)
 	if statusCode != http.StatusAccepted {
 		return nil, "", nil, statusCode
 	}
-	return project, customerAccountID, agent, statusCode
+	return project, customerAccountID1, agent, statusCode
 }
 
 func sendCreateAdwordsDocumentReq(r *gin.Engine, projectID uint64, customerAccountID string, typeAlias string, timestamp int64, id int, valueJSON *postgres.Jsonb) *httptest.ResponseRecorder {

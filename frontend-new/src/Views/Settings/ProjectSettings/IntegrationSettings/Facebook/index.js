@@ -7,6 +7,7 @@ import {
 } from 'antd';
 import FacebookLogin from 'react-facebook-login';
 import { Text } from 'factorsComponents';
+import _ from 'lodash';
 
 const FacebookIntegration = ({
   fetchProjectSettings,
@@ -81,6 +82,11 @@ const FacebookIntegration = ({
     // }
   }
 
+  const convertToString = (e) => { 
+    let dataString = _.toString(e);
+    SetSelectAdAccount(dataString) 
+  } 
+
   const handleSubmit = e => {
     e.preventDefault();
     if (SelectAdAccount != "") {
@@ -141,12 +147,13 @@ const FacebookIntegration = ({
                 <Row className={'mt-6'}>
                   <Col span={24}>
                     <div className="w-full">
-                      <div className="w-full pb-2">
-                        <Select
+                      <div className="w-full pb-2"> 
+                           <Select
+                          mode="multiple"
+                          allowClear
                           className="w-full"
-                          placeholder={'Select Account'}
-                          value={SelectAdAccount}
-                          onChange={e => SetSelectAdAccount(e)}
+                          placeholder={'Select Account'} 
+                          onChange={e => convertToString(e) }
                           options={createSelectOpts(getAdAccountsOptSrc())}
                         />
                       </div>
@@ -181,6 +188,11 @@ const FacebookIntegration = ({
       }
     }
   }
+
+  // const apiData = [
+  //   {value: "act_506913550667906", label: "act_506913550667906"},
+  //   {value: "act_300992258107471", label: "act_300992258107471"}
+  // ]
 
 
   return (
