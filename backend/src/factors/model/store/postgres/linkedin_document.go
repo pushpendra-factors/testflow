@@ -445,7 +445,7 @@ func (pg *Postgres) getLinkedinFilterValuesByType(projectID uint64, docType int,
 	}
 	customerAccountID := projectSetting.IntLinkedinAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		logCtx.Error(integrationNotAvailable)
+		logCtx.Info(integrationNotAvailable)
 		return []interface{}{}, http.StatusNotFound
 	}
 	logCtx = log.WithField("project_id", projectID).WithField("doc_type", docType).WithField("req_id", reqID)
@@ -472,7 +472,7 @@ func (pg *Postgres) GetLinkedinSQLQueryAndParametersForFilterValues(projectID ui
 	}
 	customerAccountID := projectSetting.IntLinkedinAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		logCtx.Error(integrationNotAvailable)
+		logCtx.Info(integrationNotAvailable)
 		return "", nil, http.StatusNotFound
 	}
 	params := []interface{}{linkedinInternalFilterProperty, projectID, customerAccountID, docType, linkedinInternalFilterProperty}
@@ -505,7 +505,7 @@ func (pg *Postgres) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64,
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	transformedQuery, customerAccountID, err := pg.transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID, *query, reqID)
 	if err != nil && err.Error() == integrationNotAvailable {
-		logCtx.WithError(err).Error("Failed in Linkedin analytics with following error.")
+		logCtx.WithError(err).Info("Failed in Linkedin analytics with following error.")
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}
 	if err != nil {
