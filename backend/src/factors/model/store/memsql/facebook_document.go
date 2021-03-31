@@ -95,7 +95,7 @@ var errorEmptyFacebookDocument = errors.New("empty facebook document")
 const errorDuplicateFacebookDocument = "pq: duplicate key value violates unique constraint \"facebook_documents_pkey\""
 
 const facebookFilterQueryStr = "SELECT DISTINCT(JSON_EXTRACT_STRING(value, ?)) as filter_value FROM facebook_documents WHERE project_id = ? AND" +
-	" " + "customer_ad_account_id = ? AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
+	" " + "customer_ad_account_id IN (?) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
 
 const fromFacebooksDocument = " FROM facebook_documents "
 
@@ -236,7 +236,8 @@ func (store *MemSQL) GetFacebookSQLQueryAndParametersForFilterValues(projectID u
 		logCtx.Info(integrationNotAvailable)
 		return "", make([]interface{}, 0, 0), http.StatusNotFound
 	}
-	params := []interface{}{facebookInternalFilterProperty, projectID, customerAccountID,
+	customerAccountIDs := strings.Split(customerAccountID, ",")
+	params := []interface{}{facebookInternalFilterProperty, projectID, customerAccountIDs,
 		docType, facebookInternalFilterProperty}
 
 	return "(" + facebookFilterQueryStr + ")", params, http.StatusFound
@@ -273,8 +274,10 @@ func (store *MemSQL) getFacebookFilterValuesByType(projectID uint64, docType int
 		logCtx.Info(integrationNotAvailable)
 		return nil, http.StatusNotFound
 	}
+	customerAccountIDs := strings.Split(customerAccountID, ",")
+
 	logCtx = logCtx.WithField("doc_type", docType)
-	params := []interface{}{property, projectID, customerAccountID, docType, property}
+	params := []interface{}{property, projectID, customerAccountIDs, docType, property}
 	_, resultRows, err := store.ExecuteSQL(facebookFilterQueryStr, params, logCtx)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed in facebook analytics with following error.")
