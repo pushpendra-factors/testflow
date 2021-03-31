@@ -618,7 +618,7 @@ type FacebookAddAccessTokenPayload struct {
 	AccessToken string `json:"int_facebook_access_token"`
 	Email       string `json:"int_facebook_email"`
 	UserID      string `json:"int_facebook_user_id"`
-	AdAccount   string `json:"int_facebook_ad_account"`
+	AdAccounts  string `json:"int_facebook_ad_account"`
 }
 
 type FacebookLongLivedTokenResponse struct {
@@ -683,10 +683,11 @@ func IntFacebookAddAccessTokenHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
 		return
 	}
+
 	_, errCode = store.GetStore().UpdateProjectSettings(projectId, &model.ProjectSetting{
 		IntFacebookEmail: requestPayload.Email, IntFacebookAccessToken: newBody.AccessToken,
 		IntFacebookAgentUUID: &currentAgentUUID, IntFacebookUserID: requestPayload.UserID,
-		IntFacebookAdAccount: requestPayload.AdAccount})
+		IntFacebookAdAccount: requestPayload.AdAccounts})
 	if errCode != http.StatusAccepted {
 		log.WithField("project_id", projectId).Error("Failed to update project settings with facebook email and access token")
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed updating facebook email and access token in project settings"})
