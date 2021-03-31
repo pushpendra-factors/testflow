@@ -12,14 +12,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	AdwordsClickReportType = 4
-
-	SecsInADay        = int64(86400)
-	LookbackCapInDays = 180
-	UserBatchSize     = 3000
-)
-
 // Maps the {attribution key} to the session properties field
 func getQuerySessionProperty(attributionKey string) (string, error) {
 	if attributionKey == model.AttributionKeyCampaign {
@@ -287,7 +279,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 	}
 
 	// Attribution based on given attribution methodology.
-	userConversionHit, _, err := pg.ApplyAttribution(query.AttributionMethodology,
+	userConversionHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		query.ConversionEvent.Name, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
 		query.LookbackDays, query.From, query.To)
 	if err != nil {
@@ -297,7 +289,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 	attributionData := addUpConversionEventCount(userConversionHit)
 
 	// Attribution based on given attributionMethodologyCompare methodology.
-	userConversionCompareHit, _, err := pg.ApplyAttribution(query.AttributionMethodologyCompare,
+	userConversionCompareHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodologyCompare,
 		query.ConversionEvent.Name, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
 		query.LookbackDays, query.From, query.To)
 	if err != nil {
@@ -354,7 +346,7 @@ func (pg *Postgres) runAttribution(projectID uint64,
 	}
 
 	// 4. Apply attribution based on given attribution methodology
-	userConversionHit, userLinkedFEHit, err := pg.ApplyAttribution(query.AttributionMethodology,
+	userConversionHit, userLinkedFEHit, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodology,
 		goalEventName, usersToBeAttributed, sessions, coalUserIdConversionTimestamp,
 		query.LookbackDays, query.From, query.To)
 	if err != nil {
@@ -468,7 +460,7 @@ func addUpLinkedFunnelEventCount(linkedEvents []model.QueryEventWithProperties,
 // GetCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
 func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error) {
 
-	userIDsInBatches := U.GetStringListAsBatch(userIDs, UserBatchSize)
+	userIDsInBatches := U.GetStringListAsBatch(userIDs, model.UserBatchSize)
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 	userIDToCoalUserIDMap := make(map[string]model.UserInfo)
 	for _, users := range userIDsInBatches {
@@ -694,7 +686,7 @@ func (pg *Postgres) GetLinkedFunnelEventUsers(projectID uint64, queryFrom, query
 		}
 		var userIDList []string
 		userIDHitGoalEventTimestamp := make(map[string]int64)
-		userPropertiesIdsInBatches := U.GetStringListAsBatch(usersHitConversion, UserBatchSize)
+		userPropertiesIdsInBatches := U.GetStringListAsBatch(usersHitConversion, model.UserBatchSize)
 		for _, users := range userPropertiesIdsInBatches {
 
 			// add user batching
@@ -775,7 +767,7 @@ func (pg *Postgres) ApplyUserPropertiesFilter(projectID uint64, userIDList []str
 
 	var filteredUserIdList []string
 	userIdHitGoalEventTimestamp := make(map[string]bool)
-	userPropertiesIdsInBatches := U.GetStringListAsBatch(userPropertiesIds, UserBatchSize)
+	userPropertiesIdsInBatches := U.GetStringListAsBatch(userPropertiesIds, model.UserBatchSize)
 	for _, users := range userPropertiesIdsInBatches {
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
@@ -900,9 +892,9 @@ func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
 
 // lookbackAdjustedFrom Returns the effective From timestamp considering lookback days
 func lookbackAdjustedFrom(from int64, lookbackDays int) int64 {
-	lookbackDaysTimestamp := int64(lookbackDays) * SecsInADay
-	if LookbackCapInDays < lookbackDays {
-		lookbackDaysTimestamp = int64(LookbackCapInDays) * SecsInADay
+	lookbackDaysTimestamp := int64(lookbackDays) * model.SecsInADay
+	if model.LookbackCapInDays < lookbackDays {
+		lookbackDaysTimestamp = int64(model.LookbackCapInDays) * model.SecsInADay
 	}
 	validFrom := from - lookbackDaysTimestamp
 	return validFrom
@@ -910,9 +902,9 @@ func lookbackAdjustedFrom(from int64, lookbackDays int) int64 {
 
 // lookbackAdjustedTo Returns the effective To timestamp considering lookback days
 func lookbackAdjustedTo(to int64, lookbackDays int) int64 {
-	lookbackDaysTimestamp := int64(lookbackDays) * SecsInADay
-	if LookbackCapInDays < lookbackDays {
-		lookbackDaysTimestamp = int64(LookbackCapInDays) * SecsInADay
+	lookbackDaysTimestamp := int64(lookbackDays) * model.SecsInADay
+	if model.LookbackCapInDays < lookbackDays {
+		lookbackDaysTimestamp = int64(model.LookbackCapInDays) * model.SecsInADay
 	}
 	validTo := to + lookbackDaysTimestamp
 	return validTo

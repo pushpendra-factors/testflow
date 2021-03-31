@@ -672,6 +672,7 @@ func TestAttributionMethodologies(t *testing.T) {
 		userInitialSession            map[string]map[string]model.UserSessionTimestamp
 		coalUserIdConversionTimestamp map[string]int64
 		lookbackDays                  int
+		queryType                     string
 	}
 	tests := []struct {
 		name                        string
@@ -689,6 +690,7 @@ func TestAttributionMethodologies(t *testing.T) {
 				userSession,
 				coalUserIdConversionTimestamp,
 				lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp1, camp2, camp3}},
 			map[string]map[string][]string{},
@@ -700,7 +702,9 @@ func TestAttributionMethodologies(t *testing.T) {
 				conversionEvent,
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
-				coalUserIdConversionTimestamp, lookbackDays,
+				coalUserIdConversionTimestamp,
+				lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -712,7 +716,9 @@ func TestAttributionMethodologies(t *testing.T) {
 				conversionEvent,
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
-				coalUserIdConversionTimestamp, lookbackDays,
+				coalUserIdConversionTimestamp,
+				lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -720,7 +726,7 @@ func TestAttributionMethodologies(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := store.GetStore().ApplyAttribution(tt.args.method, tt.args.conversionEvent,
+			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession,
 				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays, int64(queryFrom), int64(queryTo))
 			if (err != nil) != tt.wantErr {
@@ -769,6 +775,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 		userInitialSession            map[string]map[string]model.UserSessionTimestamp
 		coalUserIdConversionTimestamp map[string]int64
 		lookbackDays                  int
+		queryType                     string
 	}
 	tests := []struct {
 		name                        string
@@ -784,6 +791,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp0, camp1, camp2, camp3}},
 			map[string]map[string][]string{},
@@ -796,6 +804,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp0}},
 			map[string]map[string][]string{},
@@ -808,6 +817,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -820,6 +830,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -832,6 +843,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -839,7 +851,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := store.GetStore().ApplyAttribution(tt.args.method, tt.args.conversionEvent,
+			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession,
 				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays,
 				int64(queryFrom), int64(queryTo))
@@ -889,6 +901,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 		userInitialSession            map[string]map[string]model.UserSessionTimestamp
 		coalUserIdConversionTimestamp map[string]int64
 		lookbackDays                  int
+		queryType                     string
 	}
 	tests := []struct {
 		name                        string
@@ -904,6 +917,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp1, camp2, camp3, camp4}},
 			map[string]map[string][]string{},
@@ -916,6 +930,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp4}},
 			map[string]map[string][]string{},
@@ -928,6 +943,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -940,6 +956,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -952,6 +969,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				[]model.UserEventInfo{{user1, conversionEvent}},
 				userSession,
 				coalUserIdConversionTimestamp, lookbackDays,
+				model.AttributionQueryTypeConversionBased,
 			},
 			map[string][]string{user1: {camp3}},
 			map[string]map[string][]string{},
@@ -959,7 +977,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := store.GetStore().ApplyAttribution(tt.args.method, tt.args.conversionEvent,
+			got, got1, err := model.ApplyAttribution(tt.args.queryType, tt.args.method, tt.args.conversionEvent,
 				tt.args.usersToBeAttributed, tt.args.userInitialSession,
 				tt.args.coalUserIdConversionTimestamp, tt.args.lookbackDays, int64(queryFrom), int64(queryTo))
 			if (err != nil) != tt.wantErr {
