@@ -291,14 +291,6 @@ type Model interface {
 	UpdateSavedQuery(projectID uint64, queryID uint64, query *model.Queries) (*model.Queries, int)
 	SearchQueriesWithProjectId(projectID uint64, searchString string) ([]model.Queries, int)
 
-	// report
-	CreateReport(report *model.Report) (*model.Report, int)
-	DeleteReportByDashboardID(projectID, dashboardID uint64) int
-	GetReportByID(projectID, id uint64) (*model.Report, int)
-	GetReportsByProjectID(projectID uint64) ([]*model.Report, int)
-	GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]*model.ReportDescription, int)
-	GenerateReport(projectID, dashboardID uint64, dashboardName string, reportType string, intervalBeforeThat, interval model.Interval) (*model.Report, int)
-
 	// salesforce_document
 	GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int)
 	GetSalesforceObjectPropertiesName(ProjectID uint64, objectType string) ([]string, []string)

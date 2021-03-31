@@ -952,3 +952,21 @@ func GetQueryCacheResultExpiryInSeconds(from, to int64) float64 {
 	}
 	return float64(CacheExpiryQueryMutableDataInSeconds)
 }
+
+func GetAggrAsFloat64(aggr interface{}) (float64, error) {
+	switch aggr.(type) {
+	case int:
+		return float64(aggr.(int)), nil
+	case int64:
+		return float64(aggr.(int64)), nil
+	case float32:
+		return float64(aggr.(float32)), nil
+	case float64:
+		return aggr.(float64), nil
+	case string:
+		aggrInt, err := strconv.ParseInt(aggr.(string), 10, 64)
+		return float64(aggrInt), err
+	default:
+		return float64(0), errors.New("invalid aggregate value type")
+	}
+}

@@ -335,13 +335,6 @@ func (store *MemSQL) DeleteDashboard(projectID uint64, agentUUID string, dashboa
 		}
 	}
 
-	// Removing any reports attached with this dashboard id.
-	errCode = store.DeleteReportByDashboardID(projectID, dashboardID)
-	if errCode != http.StatusAccepted {
-		log.WithFields(log.Fields{"project_id": projectID, "dashboard_id": dashboardID}).
-			Error("failed to report for dashboard")
-	}
-
 	// Delete the dashboard itself.
 	err := db.Model(&model.Dashboard{}).Where("id= ? AND project_id=?", dashboardID, projectID).
 		Update(map[string]interface{}{"is_deleted": true}).Error
