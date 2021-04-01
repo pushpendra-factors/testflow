@@ -325,7 +325,7 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 	var selectMetrics, columns []string
 
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
-		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
+		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
 		if err != http.StatusOK {
 			return make([]string, 0, 0), [][]interface{}{}, err
 		}
@@ -333,41 +333,41 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
 
-		for _, metric := range adwordsMetrics {
+		for _, metric := range commonMetrics {
 			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
 			selectMetrics = append(selectMetrics, value)
 		}
 		finalQuery = fmt.Sprintf(CAUnionQuery1, joinWithComma(selectMetrics...), joinWithWordInBetween("UNION", finalSQLs...),
-			getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
-		columns = append(adwordsSelectKeys, adwordsMetrics...)
+			getOrderByClause(commonMetrics), channeAnalyticsLimit)
+		columns = append(commonKeys, commonMetrics...)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
-		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
+		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
 		if err != http.StatusOK {
 			return make([]string, 0, 0), [][]interface{}{}, err
 		}
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
-		finalParams := append(adwordsParams, facebookParams...)
+		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
 
 		selectMetrics = append(selectMetrics, model.AliasDateTime)
-		for _, metric := range adwordsMetrics {
+		for _, metric := range commonMetrics {
 			value := fmt.Sprintf("%s(%s) as %s", channelMetricsToOperation[metric], metric, metric)
 			selectMetrics = append(selectMetrics, value)
 		}
 		finalQuery = fmt.Sprintf(CAUnionQuery2, joinWithComma(selectMetrics...), joinWithWordInBetween("UNION", finalSQLs...),
-			model.AliasDateTime, getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
-		columns = append(adwordsSelectKeys, adwordsMetrics...)
+			model.AliasDateTime, getOrderByClause(commonMetrics), channeAnalyticsLimit)
+		columns = append(commonKeys, commonMetrics...)
 	} else {
-		adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
+		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
 		if err != http.StatusOK {
 			return make([]string, 0, 0), [][]interface{}{}, err
 		}
 		finalSQLs := U.AppendNonNullValues(adwordsSQL, facebookSQL, linkedinSQL)
-		finalParams := append(adwordsParams, facebookParams...)
+		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
 
-		finalQuery = fmt.Sprintf(CAUnionQuery3, joinWithWordInBetween("UNION", finalSQLs...), getOrderByClause(adwordsMetrics), channeAnalyticsLimit)
-		columns = append(adwordsSelectKeys, adwordsMetrics...)
+		finalQuery = fmt.Sprintf(CAUnionQuery3, joinWithWordInBetween("UNION", finalSQLs...), getOrderByClause(commonMetrics), channeAnalyticsLimit)
+		columns = append(commonKeys, commonMetrics...)
 	}
 	_, resultMetrics, err := store.ExecuteSQL(finalQuery, finalParams, logCtx)
 	if err != nil {
@@ -379,8 +379,10 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 
 func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID uint64, query *model.ChannelQueryV1, reqID string, fetchSource bool) (string, []interface{}, []string, []string, string, []interface{}, string, []interface{}, int) {
 	adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, adwordsErr := store.GetSQLQueryAndParametersForAdwordsQueryV1(projectID, query, reqID, fetchSource)
-	facebookSQL, facebookParams, _, _, facebookErr := store.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
-	linkedinSQL, linkedinParams, _, _, linkedinErr := store.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource)
+	facebookSQL, facebookParams, facebookSelectKeys, facebookMetrics, facebookErr := store.GetSQLQueryAndParametersForFacebookQueryV1(projectID, query, reqID, fetchSource)
+	linkedinSQL, linkedinParams, linkedinSelectKeys, linkedinMetrics, linkedinErr := store.GetSQLQueryAndParametersForLinkedinQueryV1(projectID, query, reqID, fetchSource)
+	finalKeys := make([]string, 0, 0)
+	finalMetrics := make([]string, 0, 0)
 
 	if adwordsErr != http.StatusOK && adwordsErr != http.StatusNotFound {
 		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, adwordsErr
@@ -392,15 +394,21 @@ func (store *MemSQL) getIndividualChannelsSQLAndParametersV1(projectID uint64, q
 		return "", []interface{}{}, make([]string, 0, 0), make([]string, 0, 0), "", []interface{}{}, "", []interface{}{}, linkedinErr
 	}
 	if len(adwordsSQL) > 0 {
+		finalKeys = adwordsSelectKeys
+		finalMetrics = adwordsMetrics
 		adwordsSQL = fmt.Sprintf("( %s )", adwordsSQL[:len(adwordsSQL)-2])
 	}
 	if len(facebookSQL) > 0 {
+		finalKeys = facebookSelectKeys
+		finalMetrics = facebookMetrics
 		facebookSQL = fmt.Sprintf("( %s )", facebookSQL[:len(facebookSQL)-2])
 	}
 	if len(linkedinSQL) > 0 {
+		finalKeys = linkedinSelectKeys
+		finalMetrics = linkedinMetrics
 		linkedinSQL = fmt.Sprintf("( %s )", linkedinSQL[:len(linkedinSQL)-2])
 	}
-	return adwordsSQL, adwordsParams, adwordsSelectKeys, adwordsMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, http.StatusOK
+	return adwordsSQL, adwordsParams, finalKeys, finalMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, http.StatusOK
 }
 
 // GetChannelFilterValues - @Kark TODO v0
