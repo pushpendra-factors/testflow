@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
 	"factors/model/model"
 	"factors/model/store"
@@ -61,7 +62,12 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	retUser.UpdatedAt = time.Time{}
 	assert.Equal(t, user.ProjectId, retUser.ProjectId)
 	// id of null user_properties row. updated as user_properties_id.
-	assert.True(t, len(retUser.PropertiesId) > 0)
+	if C.IsUserPropertiesTableWriteDeprecated(projectId) {
+		assert.Empty(t, retUser.PropertiesId)
+	} else {
+		assert.NotEmpty(t, retUser.PropertiesId)
+	}
+	assert.NotEmpty(t, retUser.Properties)
 	// Test Get User with wrong project id.
 	retUser, errCode = store.GetStore().GetUser(projectId+1, user.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
@@ -227,10 +233,9 @@ func TestDBUpdateUserById(t *testing.T) {
 	// Test updating a field.
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
 	updateUser := &model.User{CustomerUserId: rCustomerUserId}
-	cuUpdatedUser, errCode := store.GetStore().UpdateUser(project.ID, user.ID,
+	_, errCode := store.GetStore().UpdateUser(project.ID, user.ID,
 		updateUser, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
-	assert.Equal(t, rCustomerUserId, cuUpdatedUser.CustomerUserId)
 	// Using already tested GetUser method to validate update.
 	gUser, gErrCode := store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, gErrCode)
@@ -241,12 +246,23 @@ func TestDBUpdateUserById(t *testing.T) {
 	assert.Equal(t, user.PropertiesId, gUser.PropertiesId)
 
 	segAid := "seg_aid_1"
-	_, errCode = store.GetStore().UpdateUser(project.ID, user.ID, &model.User{SegmentAnonymousId: segAid}, time.Now().Unix())
+	_, errCode = store.GetStore().UpdateUser(project.ID, user.ID, &model.User{SegmentAnonymousId: segAid,
+		Properties: postgres.Jsonb{json.RawMessage(`{"key": "value"}`)}}, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
 	gUser, gErrCode = store.GetStore().GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, gErrCode)
 	assert.Equal(t, segAid, gUser.SegmentAnonymousId)
 	assert.Equal(t, rCustomerUserId, gUser.CustomerUserId) // Should not update cuid.
+
+	// Test overwriting of user's properties with empty when not given.
+	segAid = "seg_aid_2"
+	_, errCode = store.GetStore().UpdateUser(project.ID, user.ID, &model.User{SegmentAnonymousId: segAid}, time.Now().Unix()+1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	gUser, gErrCode = store.GetStore().GetUser(project.ID, user.ID)
+	assert.NotEmpty(t, gUser.Properties)
+	propertiesMap, err := U.DecodePostgresJsonb(&gUser.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*propertiesMap)["key"], "value")
 
 	// Test updating ProjectId with other fields
 	rCustomerUserId = U.RandomLowerAphaNumString(15)
@@ -274,83 +290,81 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	assert.NotNil(t, user)
-	assert.True(t, len(user.PropertiesId) > 0)
+	assert.NotEmpty(t, user.Properties)
 
 	// No change on empty json
 	newProperties := &postgres.Jsonb{}
-	var oldPropertiesId, newPropertiesId string
-	newPropertiesId, status := store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	_, oldUpdatedProperties, status := store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusNotModified, status)
 
-	oldPropertiesId = newPropertiesId
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"country": "india", "age": 30.1, "paid": true}`))}
-	newPropertiesId, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	_, newUpdatedProperties, status := store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, status)
-	assert.NotEqual(t, oldPropertiesId, newPropertiesId)
+	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
 
-	oldPropertiesId = newPropertiesId
+	oldUpdatedProperties = newUpdatedProperties
 	// do not allow overwrite existing user properties from past timestamp.
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"country": "US", "age": 30.1, "paid": true}`))}
-	newPropertiesId, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix()-60)
-	assert.Equal(t, http.StatusNotModified, status)
-	assert.Equal(t, oldPropertiesId, newPropertiesId)
+	assert.Equal(t, status, http.StatusAccepted)
+	assert.Equal(t, oldUpdatedProperties, newUpdatedProperties)
 
-	oldPropertiesId = newPropertiesId
+	oldUpdatedProperties = newUpdatedProperties
 	// allow adding new keys from past timestamp.
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"country": "US", "age": 30.1, "paid": true, "past": true}`))}
-	newPropertiesId, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix()-60)
 	assert.Equal(t, http.StatusAccepted, status)
-	assert.NotEqual(t, oldPropertiesId, newPropertiesId)
+	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
 
-	oldPropertiesId = newPropertiesId
+	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"country": "india", "age": 30.1, "paid": true}`))}
-	newPropertiesId, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
-	assert.Equal(t, http.StatusNotModified, status)
-	assert.Equal(t, oldPropertiesId, newPropertiesId)
+	assert.Equal(t, status, http.StatusAccepted)
+	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
 
-	oldPropertiesId = newPropertiesId
+	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"age": 30.1, "paid": true, "country": "usa"}`))}
-	newPropertiesId, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, status)
-	assert.NotEqual(t, oldPropertiesId, newPropertiesId)
+	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
 
-	oldPropertiesId = newPropertiesId
+	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"device": "android"}`))}
-	newPropertiesId, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, status)
-	assert.NotEqual(t, oldPropertiesId, newPropertiesId)
+	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
 
-	oldPropertiesId = newPropertiesId
+	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"age": 30.1, "country": "usa", "device": "android", "paid": true}`))}
-	newPropertiesId, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
-	assert.Equal(t, http.StatusNotModified, status)
-	assert.Equal(t, oldPropertiesId, newPropertiesId)
+	assert.Equal(t, status, http.StatusAccepted)
+	assert.Equal(t, oldUpdatedProperties, newUpdatedProperties)
 
 	// New key should merge with existing keys.
-	oldPropertiesId = newPropertiesId
+	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"prop1": "value1"}`))}
-	newPropertiesId, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, status)
-	properties, status := store.GetStore().GetUserProperties(project.ID, user.ID, newPropertiesId)
+	user, status = store.GetStore().GetUser(project.ID, user.ID)
 	var propertiesMap map[string]interface{}
-	err = json.Unmarshal((*properties).RawMessage, &propertiesMap)
+	err = json.Unmarshal((user.Properties).RawMessage, &propertiesMap)
 	assert.Nil(t, err)
 	assert.Len(t, propertiesMap, 7) // including joinTime.
 	assert.Equal(t, "value1", propertiesMap["prop1"])
@@ -508,7 +522,6 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	for _, property := range props {
 		propertyMap[property.Key] = true
 	}
-	fmt.Println(props)
 	assert.Equal(t, propertyMap["prop1"], true)
 	assert.Equal(t, propertyMap["prop2"], true)
 	assert.Equal(t, propertyMap["prop3"], true)
@@ -521,7 +534,6 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	for _, property := range props {
 		propertyMap[property.Key] = true
 	}
-	fmt.Println(props)
 	user1Prop := propertyMap["prop1"] == true && propertyMap["prop2"] == true
 	user2Prop := propertyMap["prop3"] == true && propertyMap["prop4"] == true
 	assert.Equal(t, user1Prop || user2Prop, true)
@@ -693,9 +705,8 @@ func TestGetUserPropertiesAsMap(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 	assert.NotNil(t, user)
-	assert.True(t, len(user.PropertiesId) > 0)
+	assert.NotEmpty(t, user.Properties)
 
-	//Call get user function
 	userProperties, errCode := store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	decodedUserProperties, err := U.DecodePostgresJsonb(&user.Properties)

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	C "factors/config"
 	U "factors/util"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -18,7 +19,12 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
+	timestamp := U.TimeNowUnix() - 500
+
+	// Merge should be done on create itself as both users
+	// have same customerUserID.
 	customerUserID := getRandomEmail()
+	timestamp = timestamp + 1
 	user1, _ := store.GetStore().CreateUser(&model.User{
 		ID:             U.GetUUID(),
 		ProjectId:      project.ID,
@@ -33,8 +39,10 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$session_spent_time": 2.2,
 			"$latest_medium": "google"}`,
 		))},
+		JoinTimestamp: timestamp,
 	})
 
+	timestamp = timestamp + 1
 	user2, _ := store.GetStore().CreateUser(&model.User{
 		ID:             U.GetUUID(),
 		ProjectId:      project.ID,
@@ -49,33 +57,24 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$user_agent": "browser user agent",
 			"$latest_medium": ""}`, // Empty. Should not overwrite.
 		))},
+		JoinTimestamp: timestamp,
 	})
 
-	// Dryrun is set to true. Should not merge.
-	_, errCode := store.GetStore().MergeUserPropertiesForUserID(project.ID, user1.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), true, true)
-	assert.Equal(t, http.StatusNotModified, errCode)
 	user1DB, _ := store.GetStore().GetUser(project.ID, user1.ID)
 	user1PropertiesDB, _ := U.DecodePostgresJsonb(&user1DB.Properties)
 	user2DB, _ := store.GetStore().GetUser(project.ID, user2.ID)
 	user2PropertiesDB, _ := U.DecodePostgresJsonb(&user2DB.Properties)
-	// Both user properties must not be same.
-	assert.NotEqual(t, user1PropertiesDB, user2PropertiesDB)
-	// User property id must not change.
-	assert.Equal(t, user1.PropertiesId, user1DB.PropertiesId)
-	assert.Equal(t, user2.PropertiesId, user2DB.PropertiesId)
-
-	_, errCode = store.GetStore().MergeUserPropertiesForUserID(project.ID, user1.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), false, true)
-	assert.Equal(t, http.StatusCreated, errCode)
-	user1DB, _ = store.GetStore().GetUser(project.ID, user1.ID)
-	user1PropertiesDB, _ = U.DecodePostgresJsonb(&user1DB.Properties)
-	user2DB, _ = store.GetStore().GetUser(project.ID, user2.ID)
-	user2PropertiesDB, _ = U.DecodePostgresJsonb(&user2DB.Properties)
 
 	// Both user properties must be same.
 	assert.Equal(t, user1PropertiesDB, user2PropertiesDB)
-	// User property id must not be same after merge.
-	assert.NotEqual(t, user1.PropertiesId, user1DB.PropertiesId)
-	assert.NotEqual(t, user2.PropertiesId, user2DB.PropertiesId)
+	if C.IsUserPropertiesTableWriteDeprecated(project.ID) {
+		// user.properties_id should be empty as user_properties_table is deprecated.
+		assert.Empty(t, user1DB.PropertiesId)
+		assert.Empty(t, user2DB.PropertiesId)
+	} else {
+		assert.NotEmpty(t, user1DB.PropertiesId)
+		assert.NotEmpty(t, user2DB.PropertiesId)
+	}
 
 	// Property country must be canada and paid must be false.
 	assert.Equal(t, "canada", (*user1PropertiesDB)["country"])
@@ -108,7 +107,9 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	assert.Equal(t, "google", (*user2PropertiesDB)["$latest_medium"])
 
 	// Running merge again for the same customerID should not update user_properties.
-	_, errCode = store.GetStore().MergeUserPropertiesForUserID(project.ID, user1.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), false, true)
+	timestamp = timestamp + 1
+	_, _, errCode := store.GetStore().UpdateUserProperties(project.ID, user1.ID,
+		&postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{}`))}, timestamp)
 	assert.Equal(t, http.StatusNotModified, errCode) // StatusNotModified.
 	user1DBRetry, _ := store.GetStore().GetUser(project.ID, user1.ID)
 	user1PropertiesDBRetry, _ := U.DecodePostgresJsonb(&user1DBRetry.Properties)
@@ -123,9 +124,10 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 		cityValue := U.RandomLowerAphaNumString(5)
 		propertiesUpdate := postgres.Jsonb{RawMessage: json.RawMessage(
 			[]byte(fmt.Sprintf(`{"city": "%s"}`, cityValue)))}
-		store.GetStore().UpdateUserProperties(project.ID, user1.ID, &propertiesUpdate, U.TimeNowUnix())
+		timestamp = timestamp + 1
+		_, _, errCode := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &propertiesUpdate, timestamp)
+		assert.Equal(t, http.StatusAccepted, errCode)
 
-		_, errCode = store.GetStore().MergeUserPropertiesForUserID(project.ID, user1.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), false, true)
 		user1DB, _ = store.GetStore().GetUser(project.ID, user1.ID)
 		user1PropertiesDB, _ = U.DecodePostgresJsonb(&user1DB.Properties)
 		user2DB, _ = store.GetStore().GetUser(project.ID, user2.ID)
@@ -150,9 +152,10 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 		propertiesUpdate := postgres.Jsonb{RawMessage: json.RawMessage(
 			[]byte(fmt.Sprintf(`{"$page_count": %f, "$session_spent_time": %f}`,
 				previousPageCount+float64(i+1), previousSessionSpentTime+float64(i)+0.5)))}
-		store.GetStore().UpdateUserProperties(project.ID, user1.ID, &propertiesUpdate, U.TimeNowUnix())
+		timestamp = timestamp + 1
+		_, _, errCode := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &propertiesUpdate, timestamp)
+		assert.Equal(t, http.StatusAccepted, errCode)
 
-		_, errCode = store.GetStore().MergeUserPropertiesForUserID(project.ID, user1.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), false, true)
 		user1DB, _ = store.GetStore().GetUser(project.ID, user1.ID)
 		user1PropertiesDB, _ = U.DecodePostgresJsonb(&user1DB.Properties)
 		user2DB, _ = store.GetStore().GetUser(project.ID, user2.ID)
@@ -167,6 +170,7 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	// When a new non merged user is added, entire values must be added to all users.
 	previousPageCount = (*user1PropertiesDB)["$page_count"].(float64)
 	previousSessionSpentTime = (*user1PropertiesDB)["$session_spent_time"].(float64)
+	timestamp = timestamp + 1
 	user3, _ := store.GetStore().CreateUser(&model.User{
 		ID:             U.GetUUID(),
 		ProjectId:      project.ID,
@@ -175,9 +179,14 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$page_count": 15,
 			"$session_spent_time": 4.5}`,
 		))},
+		JoinTimestamp: timestamp,
 	})
+
 	// Call merge on user3.
-	_, errCode = store.GetStore().MergeUserPropertiesForUserID(project.ID, user3.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), false, true)
+	timestamp = timestamp + 1
+	_, _, errCode = store.GetStore().UpdateUserProperties(project.ID, user3.ID,
+		&postgres.Jsonb{RawMessage: json.RawMessage([]byte(fmt.Sprintf(`{"%s": "%s"}`,
+			U.RandomNumericString(4), U.RandomNumericString(4))))}, timestamp)
 	user1DB, _ = store.GetStore().GetUser(project.ID, user1.ID)
 	user1PropertiesDB, _ = U.DecodePostgresJsonb(&user1DB.Properties)
 	user2DB, _ = store.GetStore().GetUser(project.ID, user2.ID)
@@ -190,53 +199,6 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	assert.Equal(t, float64(previousSessionSpentTime+4.5), (*user1PropertiesDB)["$session_spent_time"])
 	assert.Equal(t, float64(previousSessionSpentTime+4.5), (*user2PropertiesDB)["$session_spent_time"])
 	assert.Equal(t, float64(previousSessionSpentTime+4.5), (*user3PropertiesDB)["$session_spent_time"])
-}
-
-func TestMergeUserPropertiesForProjectID(t *testing.T) {
-	project, err := SetupProjectReturnDAO()
-	assert.Nil(t, err)
-
-	customerUserID := getRandomEmail()
-	user1, _ := store.GetStore().CreateUser(&model.User{
-		ID:             U.GetUUID(),
-		ProjectId:      project.ID,
-		CustomerUserId: customerUserID,
-		Properties: postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{
-			"country": "india",
-			"age": 30,
-			"paid": true,
-			"gender": "m",
-			"$initial_campaign": "campaign1",
-			"$page_count": 10,
-			"$session_spent_time": 2.2}`,
-		))},
-	})
-
-	user2, _ := store.GetStore().CreateUser(&model.User{
-		ID:             U.GetUUID(),
-		ProjectId:      project.ID,
-		CustomerUserId: customerUserID,
-		Properties: postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{
-			"country": "canada",
-			"age": 30,
-			"paid": false,
-			"$initial_campaign": "campaign2",
-			"$page_count": 15,
-			"$session_spent_time": 4.4}`,
-		))},
-	})
-
-	errCode := store.GetStore().MergeUserPropertiesForProjectID(project.ID, false)
-	assert.Equal(t, http.StatusCreated, errCode)
-	user1DB, _ := store.GetStore().GetUser(project.ID, user1.ID)
-	user1PropertiesDB, _ := U.DecodePostgresJsonb(&user1DB.Properties)
-	user2DB, _ := store.GetStore().GetUser(project.ID, user2.ID)
-	user2PropertiesDB, _ := U.DecodePostgresJsonb(&user2DB.Properties)
-
-	// Both user properties must be same.
-	assert.Equal(t, user1PropertiesDB, user2PropertiesDB)
-	assert.NotEqual(t, user1.PropertiesId, user1DB.PropertiesId)
-	assert.NotEqual(t, user2.PropertiesId, user2DB.PropertiesId)
 }
 
 func TestSanitizeAddTypeProperties(t *testing.T) {

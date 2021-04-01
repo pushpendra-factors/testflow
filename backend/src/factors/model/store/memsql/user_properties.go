@@ -221,7 +221,7 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 			return
 		}
 		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
-			Key : uniqueUsersCountKey,
+			Key:   uniqueUsersCountKey,
 			Value: fmt.Sprintf("%v", projectID),
 		})
 
@@ -254,7 +254,7 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 		}
 		propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 		propertiesToIncrSortedSet = append(propertiesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
-			Key : propertyCategoryKeySortedSet,
+			Key:   propertyCategoryKeySortedSet,
 			Value: fmt.Sprintf("%s:%s", category, property),
 		})
 		if category == U.PropertyTypeCategorical {
@@ -271,7 +271,7 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 				}
 				valuesToIncr = append(valuesToIncr, valueKey)
 				valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
-					Key : valueKeySortedSet,
+					Key:   valueKeySortedSet,
 					Value: fmt.Sprintf("%s:SS-US-PV:%s", property, propertyValue),
 				})
 			}
@@ -291,7 +291,7 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 		return
 	}
 
-	if(C.IsSortedSetCachingAllowed()){
+	if C.IsSortedSetCachingAllowed() {
 		cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
 	}
 	// The following code is to support/facilitate cleanup
@@ -398,7 +398,7 @@ func (store *MemSQL) MergeUserPropertiesForUserID(projectID uint64, userID strin
 
 	// Users are returned in increasing order of created_at. For user_properties created at same unix time,
 	// older user order will help in ensuring the order while merging properties.
-	users, errCode := store.GetUsersByCustomerUserID(projectID, customerUserID)
+	users, errCode := store.getUsersForMergingPropertiesByCustomerUserID(projectID, customerUserID)
 	usersLength := len(users)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Error while getting users for customer_user_id")
@@ -408,16 +408,7 @@ func (store *MemSQL) MergeUserPropertiesForUserID(projectID uint64, userID strin
 		return currentPropertiesID, http.StatusNotAcceptable
 	} else if usersLength == 1 {
 		return currentPropertiesID, http.StatusNotAcceptable
-	} else if usersLength > 10 {
-		metrics.Increment(metrics.IncrUserPropertiesMergeMoreThan10)
 	}
-
-	if usersLength > model.MaxUsersForPropertiesMerge {
-		// If number of users to merge are more than max allowed, merge for oldest max/2 and latest max/2.
-		users = append(users[0:model.MaxUsersForPropertiesMerge/2],
-			users[usersLength-model.MaxUsersForPropertiesMerge/2:usersLength]...)
-	}
-	metrics.Increment(metrics.IncrUserPropertiesMergeCount)
 
 	initialPropertiesVisitedMap := make(map[string]bool)
 	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_INITIAL {
@@ -477,7 +468,11 @@ func (store *MemSQL) MergeUserPropertiesForUserID(projectID uint64, userID strin
 		}
 	}
 	// Handle merge for add type properties separately.
-	mergeAddTypeUserProperties(&mergedUserProperties, userPropertiesRecords)
+	userPropertiesToBeMerged := make([]postgres.Jsonb, 0, 0)
+	for i := range userPropertiesRecords {
+		userPropertiesToBeMerged = append(userPropertiesToBeMerged, userPropertiesRecords[i].Properties)
+	}
+	mergeAddTypeUserProperties(&mergedUserProperties, userPropertiesToBeMerged)
 
 	// Additional check for properties that can be added. If merge is triggered for users with same set of properties,
 	// value of properties that can be added will change after addition. Below check is to avoid update in such case.
@@ -619,10 +614,10 @@ func addValuesForProperty(oldValue interface{}, newValue float64, addOld bool) f
 //     1. Not set already from the one being updated.
 //     2. User property is not merged before i.e. $merge_timestamp is not set.
 //     3. Value is greater than the value already set. Add the difference then. (This should ideally not happen)
-func mergeAddTypeUserProperties(mergedProperties *map[string]interface{}, userPropertiesRecords []*model.UserProperties) {
+func mergeAddTypeUserProperties(mergedProperties *map[string]interface{}, existingProperties []postgres.Jsonb) {
 	// Last record in the array would be the latest one.
-	latestPropertiesRecord := userPropertiesRecords[len(userPropertiesRecords)-1]
-	latestPropertiesMap, err := U.DecodePostgresJsonb(&latestPropertiesRecord.Properties)
+	latestProperties := existingProperties[len(existingProperties)-1]
+	latestPropertiesMap, err := U.DecodePostgresJsonb(&latestProperties)
 	if err != nil {
 		log.WithError(err).Error("Failed to decode user property")
 		return
@@ -653,8 +648,8 @@ func mergeAddTypeUserProperties(mergedProperties *map[string]interface{}, userPr
 	}
 
 	// Loop over all records except last record.
-	for _, userPropertiesRecord := range userPropertiesRecords[:len(userPropertiesRecords)-1] {
-		userProperties, err := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	for _, userPropertiesRecord := range existingProperties[:len(existingProperties)-1] {
+		userProperties, err := U.DecodePostgresJsonb(&userPropertiesRecord)
 		if err != nil {
 			log.WithError(err).Error("Failed to decode user property")
 			return
@@ -1001,7 +996,19 @@ type LatestUserPropertiesFromSession struct {
 	Timestamp      int64
 }
 
+// UpdateUserPropertiesForSession - Updates total user properties and
+// latest user properties for session.
 func (store *MemSQL) UpdateUserPropertiesForSession(projectID uint64,
+	sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int {
+
+	if C.ShouldUseUserPropertiesTableForRead(projectID) {
+		return store.updateUserPropertiesForSessionV1(projectID, sessionUserPropertiesRecordMap)
+	}
+
+	return store.updateUserPropertiesForSessionV2(projectID, sessionUserPropertiesRecordMap)
+}
+
+func (store *MemSQL) updateUserPropertiesForSessionV1(projectID uint64,
 	sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int {
 
 	logCtx := log.WithField("project_id", projectID)
@@ -1104,7 +1111,7 @@ func (store *MemSQL) UpdateUserPropertiesForSession(projectID uint64,
 		}
 	}
 
-	errCode := store.updateLatestUserPropertiesForSessionIfNotUpdated(projectID,
+	errCode := store.updateLatestUserPropertiesForSessionIfNotUpdatedV1(projectID,
 		&updatedUserPropertiesRecord, updatedUsersByUserID,
 		&latestSessionUserPropertiesByUserID)
 	hasFailure = errCode != http.StatusAccepted
@@ -1116,7 +1123,7 @@ func (store *MemSQL) UpdateUserPropertiesForSession(projectID uint64,
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdated(projectID uint64,
+func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV1(projectID uint64,
 	updatedUserPropertiesIDMap *map[string]bool, sessionUsersByUserID map[string]*model.User,
 	latestSessionUserPropertiesByUserID *map[string]LatestUserPropertiesFromSession) int {
 	logCtx := log.WithField("project_id", projectID)
@@ -1155,6 +1162,161 @@ func (store *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdated(projectID 
 		if errCode != http.StatusAccepted {
 			logCtx.WithField("err_code", errCode).
 				Error("Failed to overwrite user properties record.")
+			hasFailure = true
+			continue
+		}
+	}
+
+	if hasFailure {
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func (store *MemSQL) updateUserPropertiesForSessionV2(projectID uint64,
+	sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int {
+
+	logCtx := log.WithField("project_id", projectID)
+	latestSessionUserPropertiesByUserID := make(map[string]LatestUserPropertiesFromSession, 0)
+	sessionUpdateUserIDs := map[string]bool{}
+
+	hasFailure := false
+	for eventID, sessionUserProperties := range *sessionUserPropertiesRecordMap {
+		logCtx.WithField("event_id", eventID)
+
+		userProperties := sessionUserProperties.EventUserProperties
+		isEmptyUserProperties := userProperties == nil || U.IsEmptyPostgresJsonb(userProperties)
+		if isEmptyUserProperties {
+			logCtx.WithField("user_properties", userProperties).Error("Empty user properties on event.")
+			hasFailure = true
+			continue
+		}
+
+		userPropertiesMap, err := U.DecodePostgresJsonb(userProperties)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to decode event user properties on UpdateUserPropertiesForSession.")
+			hasFailure = true
+			continue
+		}
+
+		var existingPageCount, existingTotalSpentTime float64
+		if existingPageCountValue, exists := (*userPropertiesMap)[U.UP_PAGE_COUNT]; exists {
+			existingPageCount, err = U.GetPropertyValueAsFloat64(existingPageCountValue)
+			if err != nil {
+				logCtx.WithError(err).
+					Error("Failed to convert page_count property value as float64.")
+			}
+		}
+
+		if existingTotalSpentTimeValue, exists := (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME]; exists {
+			existingTotalSpentTime, err = U.GetPropertyValueAsFloat64(existingTotalSpentTimeValue)
+			if err != nil {
+				logCtx.WithError(err).
+					Error("Failed to convert total_page_spent time property value as float64.")
+			}
+		}
+
+		newPageCount := existingPageCount + sessionUserProperties.SessionPageCount
+		newTotalSpentTime := existingTotalSpentTime + sessionUserProperties.SessionPageSpentTime
+		newSessionCount := sessionUserProperties.SessionCount
+
+		(*userPropertiesMap)[U.UP_PAGE_COUNT] = newPageCount
+		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = newTotalSpentTime
+		(*userPropertiesMap)[U.UP_SESSION_COUNT] = newSessionCount
+
+		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to encode user properties json after adding new session count.")
+			hasFailure = true
+			continue
+		}
+
+		errCode := store.OverwriteEventUserPropertiesByID(projectID, eventID, userPropertiesJsonb)
+		if errCode != http.StatusAccepted {
+			logCtx.WithField("err_code", errCode).Error("Failed to overwrite event user properties.")
+			hasFailure = true
+			continue
+		}
+
+		// Latest session based user properties state to be overwritten on
+		// latest user_properties_record of the user, if not added already
+		latestUserProperties := LatestUserPropertiesFromSession{
+			PageCount:      newPageCount,
+			TotalSpentTime: newTotalSpentTime,
+			SessionCount:   newSessionCount,
+			Timestamp:      sessionUserProperties.SessionEventTimestamp,
+		}
+		if _, exists := latestSessionUserPropertiesByUserID[sessionUserProperties.UserID]; !exists {
+			latestSessionUserPropertiesByUserID[sessionUserProperties.UserID] = latestUserProperties
+		} else {
+			if sessionUserProperties.SessionEventTimestamp >
+				latestSessionUserPropertiesByUserID[sessionUserProperties.UserID].Timestamp {
+				latestSessionUserPropertiesByUserID[sessionUserProperties.UserID] = latestUserProperties
+			}
+		}
+
+		sessionUpdateUserIDs[sessionUserProperties.UserID] = true
+	}
+
+	errCode := store.updateLatestUserPropertiesForSessionIfNotUpdatedV2(
+		projectID,
+		sessionUpdateUserIDs,
+		&latestSessionUserPropertiesByUserID,
+	)
+	hasFailure = errCode != http.StatusAccepted
+
+	if hasFailure {
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func (pg *MemSQL) updateLatestUserPropertiesForSessionIfNotUpdatedV2(
+	projectID uint64,
+	sessionUpdateUserIDs map[string]bool,
+	latestSessionUserPropertiesByUserID *map[string]LatestUserPropertiesFromSession,
+) int {
+
+	logCtx := log.WithField("project_id", projectID)
+
+	var hasFailure bool
+	for userID := range sessionUpdateUserIDs {
+		logCtx = logCtx.WithField("user_id", userID)
+
+		user, errCode := pg.GetUser(projectID, userID)
+		if errCode != http.StatusFound {
+			logCtx.WithField("err_code", errCode).Error("Failed to get user_properties by user_id.")
+			hasFailure = true
+			continue
+		}
+
+		sessionUserProperties, exists := (*latestSessionUserPropertiesByUserID)[userID]
+		if !exists {
+			logCtx.Error("Latest session user properties not found for user.")
+			hasFailure = true
+			continue
+		}
+
+		newUserProperties := map[string]interface{}{
+			U.UP_TOTAL_SPENT_TIME: sessionUserProperties.TotalSpentTime,
+			U.UP_PAGE_COUNT:       sessionUserProperties.PageCount,
+			U.UP_SESSION_COUNT:    sessionUserProperties.SessionCount,
+		}
+		userPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newUserProperties, true)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to add new user properites to existing user properites.")
+			hasFailure = true
+			continue
+		}
+
+		errCode = pg.OverwriteUserPropertiesByID(projectID, userID, userPropertiesJsonb, false, 0)
+		if errCode != http.StatusAccepted {
+			logCtx.WithField("err_code", errCode).Error("Failed to overwrite user properties record.")
 			hasFailure = true
 			continue
 		}

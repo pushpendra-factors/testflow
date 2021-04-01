@@ -45,6 +45,9 @@ type SessionUserProperties struct {
 	UserID                string
 	SessionEventTimestamp int64
 
+	// Current event user properties.
+	EventUserProperties *postgres.Jsonb
+
 	// Properties
 	SessionCount         uint64
 	SessionPageCount     float64

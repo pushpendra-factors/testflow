@@ -109,7 +109,8 @@ func assertUserMapsWithOffset(t *testing.T, expectedUsers []model.User, actualUs
 		assert.Equal(t, expectedUser.ID, actualUser.ID)
 		assert.Equal(t, expectedUser.ProjectId, actualUser.ProjectId)
 		assert.Equal(t, expectedUser.CustomerUserId, actualUser.CustomerUserId)
-		assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage([]byte(`null`))}, actualUser.Properties)
+		// Atleast join_time should be present on user_properites.
+		assert.NotEqual(t, postgres.Jsonb{RawMessage: json.RawMessage([]byte(`null`))}, actualUser.Properties)
 		assert.NotNil(t, actualUser.CreatedAt)
 		assert.NotNil(t, actualUser.UpdatedAt)
 	}

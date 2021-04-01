@@ -1,8 +1,10 @@
 package postgres
 
 import (
+	"database/sql"
 	"errors"
 	cacheRedis "factors/cache/redis"
+	"factors/config"
 	C "factors/config"
 	"factors/metrics"
 	"factors/model/model"
@@ -287,6 +289,23 @@ func (pg *Postgres) CreateEvent(event *model.Event) (*model.Event, int) {
 		event.ID = U.GetUUID()
 	}
 
+	// Use current properties of user, if user_properties is not provided.
+	if event.UserProperties == nil {
+		if C.IsOnTableUserPropertiesWriteAllowed(event.ProjectId) {
+			properties, errCode := pg.GetUserPropertiesByUserID(event.ProjectId, event.UserId)
+			if errCode != http.StatusFound {
+				logCtx.WithField("err_code", errCode).Error("Failed to get properties of user for event creation.")
+			}
+			event.UserProperties = properties
+		}
+	}
+
+	if !C.IsOnTableUserPropertiesWriteAllowed(event.ProjectId) {
+		// Reset user_properties, if not allowed on config,
+		// for controlled rollout.
+		event.UserProperties = nil
+	}
+
 	// Incrementing count based on EventNameId, not by EventName.
 	count, errCode := pg.GetEventCountOfUserByEventName(event.ProjectId, event.UserId, event.EventNameId)
 	if errCode == http.StatusInternalServerError {
@@ -304,22 +323,46 @@ func (pg *Postgres) CreateEvent(event *model.Event) (*model.Event, int) {
 	// Init properties updated timestamp with event timestamp.
 	event.PropertiesUpdatedTimestamp = event.Timestamp
 
-	//Adding the data to cache. Even if it fails, continue silent
+	// Adding the data to cache. Even if it fails, continue silent
 	pg.addEventDetailsToCache(event.ProjectId, event, false)
-	db := C.GetServices().Db
+
 	transTime := gorm.NowFunc()
-	rows, err := db.Raw("INSERT INTO events (id, customer_event_id,project_id,user_id,user_properties_id,session_id,event_name_id,count,properties,properties_updated_timestamp,timestamp,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING events.id",
-		event.ID, event.CustomerEventId, event.ProjectId, event.UserId, event.UserPropertiesId, event.SessionId, event.EventNameId, event.Count, event.Properties, event.PropertiesUpdatedTimestamp, event.Timestamp, transTime, transTime).Rows()
+	columnsInOrder := "id, customer_event_id, project_id, user_id, session_id, event_name_id," + " " +
+		"count, properties, properties_updated_timestamp, timestamp, created_at, updated_at"
+	paramsInOrder := []interface{}{event.ID, event.CustomerEventId, event.ProjectId, event.UserId,
+		event.SessionId, event.EventNameId, event.Count, event.Properties, event.PropertiesUpdatedTimestamp,
+		event.Timestamp, transTime, transTime}
+
+	// Conditinal columns added to the end of column list and params.
+	if event.UserPropertiesId != "" {
+		columnsInOrder = columnsInOrder + "," + "user_properties_id"
+		paramsInOrder = append(paramsInOrder, event.UserPropertiesId)
+	}
+	if event.UserProperties != nil {
+		columnsInOrder = columnsInOrder + "," + "user_properties"
+		paramsInOrder = append(paramsInOrder, event.UserProperties)
+	}
+
+	var columnsPlaceholder string
+	for i := range paramsInOrder {
+		columnsPlaceholder = columnsPlaceholder + "?"
+		if i < len(paramsInOrder)-1 {
+			columnsPlaceholder = columnsPlaceholder + ", "
+		}
+	}
+
+	db := C.GetServices().Db
+	statement := fmt.Sprintf("INSERT INTO events (%s) VALUES (%s) RETURNING events.id", columnsInOrder, columnsPlaceholder)
+	rows, err := db.Raw(statement, paramsInOrder...).Rows()
 	if err != nil {
 		if U.IsPostgresIntegrityViolationError(err) {
 			logCtx.WithError(err).Info("CreateEvent Failed. Constraint violation.")
 			return nil, http.StatusNotAcceptable
 		}
 
-		logCtx.WithFields(log.Fields{"event": &event}).WithError(err).Error("CreateEvent Failed")
+		logCtx.WithField("event", event).WithError(err).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
 	}
-	defer rows.Close()
 
 	var eventId string
 	for rows.Next() {
@@ -797,6 +840,10 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 	sessionContinuedFlag := false
 	isLastEventToBeProcessed := false
 
+	// user_properties_id would be the key till the user_properties table
+	// is permanantly deprecated and all the event level user_properties
+	// moved to event itself.
+	// map[id or user_properties_id of events] = session_user_properties
 	sessionUserPropertiesRecordMap := make(map[string]model.SessionUserProperties, 0)
 
 	// Use 2 moving cursor current, next. if diff(current, previous) > in-activity
@@ -874,27 +921,47 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 				logCtx = logCtx.WithField("event_id", firstEvent.ID)
 
 				var userPropertiesMap U.PropertiesMap
-				if firstEvent.UserPropertiesId != "" {
-					userProperties, errCode := pg.GetUserProperties(projectId, userId, firstEvent.UserPropertiesId)
-					if errCode != http.StatusFound {
-						logCtx.WithField("err_code", errCode).
-							WithField("user_properties_id", firstEvent.UserPropertiesId).
-							Error("Failed to get user properties of first event on session.")
-						return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
-							isLastEventToBeProcessed, http.StatusInternalServerError
-					}
+				if C.ShouldUseUserPropertiesTableForRead(projectId) {
+					// TODO(Dinesh): Remove the code block after permenant
+					// deprecation of user_properties table.
+					if firstEvent.UserPropertiesId != "" {
+						userProperties, errCode := pg.GetUserProperties(projectId, userId, firstEvent.UserPropertiesId)
+						if errCode != http.StatusFound {
+							logCtx.WithField("err_code", errCode).
+								WithField("user_properties_id", firstEvent.UserPropertiesId).
+								Error("Failed to get user properties of first event on session.")
+							return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+								isLastEventToBeProcessed, http.StatusInternalServerError
+						}
 
-					userPropertiesDecoded, err := U.DecodePostgresJsonb(userProperties)
-					if err != nil {
-						logCtx.WithField("user_properties_id", firstEvent.UserPropertiesId).
-							Error("Failed to decode user properties of first event on session.")
-						return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
-							isLastEventToBeProcessed, http.StatusInternalServerError
-					}
+						userPropertiesDecoded, err := U.DecodePostgresJsonb(userProperties)
+						if err != nil {
+							logCtx.WithField("user_properties_id", firstEvent.UserPropertiesId).
+								Error("Failed to decode user properties of first event on session.")
+							return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+								isLastEventToBeProcessed, http.StatusInternalServerError
+						}
 
-					userPropertiesMap = U.PropertiesMap(*userPropertiesDecoded)
+						userPropertiesMap = U.PropertiesMap(*userPropertiesDecoded)
+					} else {
+						logCtx.Error("Empty first event user_properties_id.")
+					}
 				} else {
-					logCtx.Error("Empty first event user_properties_id.")
+					isEmptyUserProperties := firstEvent.UserProperties == nil ||
+						U.IsEmptyPostgresJsonb(firstEvent.UserProperties)
+					if !isEmptyUserProperties {
+						userPropertiesDecoded, err := U.DecodePostgresJsonb(firstEvent.UserProperties)
+						if err != nil {
+							logCtx.WithField("user_properties", firstEvent.UserProperties).
+								Error("Failed to decode user properties of first event on session.")
+							return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+								isLastEventToBeProcessed, http.StatusInternalServerError
+						}
+
+						userPropertiesMap = U.PropertiesMap(*userPropertiesDecoded)
+					} else {
+						logCtx.Error("Empty first event user_properties.")
+					}
 				}
 
 				firstEventPropertiesDecoded, err := U.DecodePostgresJsonb(&firstEvent.Properties)
@@ -930,8 +997,11 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 					Timestamp: firstEvent.Timestamp - 1,
 					ProjectId: projectId,
 					UserId:    userId,
-					// UserPropertiesId - properties state at the time of first event of session.
+					// TODO(Dinesh): Remove UserPropertiesId after user_properties
+					// table is permanatly deprecated. The value will be empty
+					// when it is deprecated using flag.
 					UserPropertiesId: firstEvent.UserPropertiesId,
+					UserProperties:   firstEvent.UserProperties,
 					Properties:       *sessionPropertiesJsonb,
 				})
 
@@ -1008,17 +1078,24 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 			}
 
 			// associate user_properties state using session of the event.
-			sessionUserProperties := model.SessionUserProperties{
-				UserID:                userId,
-				SessionEventTimestamp: sessionEvent.Timestamp,
-
-				SessionCount:         sessionEvent.Count,
-				SessionPageCount:     onlyThisSessionPageCount,
-				SessionPageSpentTime: onlyThisSessionPageSpentTime,
-			}
-
 			for i := range eventsOfSession {
-				sessionUserPropertiesRecordMap[eventsOfSession[i].UserPropertiesId] = sessionUserProperties
+				var userPropertiesRefID string
+				if C.ShouldUseUserPropertiesTableForRead(projectId) {
+					userPropertiesRefID = eventsOfSession[i].UserPropertiesId
+				} else {
+					userPropertiesRefID = eventsOfSession[i].ID
+				}
+
+				sessionUserPropertiesRecordMap[userPropertiesRefID] = model.SessionUserProperties{
+					UserID:                userId,
+					SessionEventTimestamp: sessionEvent.Timestamp,
+
+					SessionCount:         sessionEvent.Count,
+					SessionPageCount:     onlyThisSessionPageCount,
+					SessionPageSpentTime: onlyThisSessionPageSpentTime,
+
+					EventUserProperties: eventsOfSession[i].UserProperties,
+				}
 			}
 
 			sessionStartIndex = i
@@ -1391,6 +1468,74 @@ func (pg *Postgres) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStor
 
 	logCtx.WithField("rows", rowCount).Info("Scanned all rows.")
 	return eventsWithoutProperties, propertiesByName, http.StatusFound
+}
+
+func (pg *Postgres) OverwriteEventUserPropertiesByID(projectID uint64,
+	id string, userProperties *postgres.Jsonb) int {
+
+	logCtx := log.WithField("project_id", projectID).WithField("id", id)
+
+	if projectID == 0 || id == "" {
+		logCtx.Error("Invalid values for arguments.")
+		return http.StatusBadRequest
+	}
+
+	if userProperties == nil || U.IsEmptyPostgresJsonb(userProperties) {
+		logCtx.Error("Failed to overwrite user_properties. Empty or nil properties.")
+		return http.StatusBadRequest
+	}
+
+	// Not updating the event_user_properties
+	db := C.GetServices().Db
+	err := db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectID, id).
+		Update("user_properties", userProperties).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to overwrite user properteis.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+// PullEventRowsForBuildSequenceJob - Function to pull events for factors model building sequentially.
+func (pg *Postgres) PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
+	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
+		" events.properties, users.join_timestamp, events.user_properties FROM events "+
+		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
+		"WHERE events.project_id = %d AND events.timestamp BETWEEN  %d AND %d "+
+		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d", projectID, startTime, endTime, model.EventsPullLimit+1)
+
+	if config.ShouldUseUserPropertiesTableForRead(projectID) {
+		rawQuery = fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
+			" events.properties, users.join_timestamp, user_properties.properties FROM events "+
+			"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
+			"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
+			"WHERE events.project_id = %d AND events.timestamp BETWEEN  %d AND %d "+
+			"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d", projectID, startTime, endTime, model.EventsPullLimit+1)
+	}
+
+	db := C.GetServices().Db
+	return db.Raw(rawQuery).Rows()
+}
+
+// PullEventsForArchivalJob - Function to pull events for archival.
+func (pg *Postgres) PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
+
+	rawQuery := fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
+		"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, events.user_properties FROM events "+
+		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
+		"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, startTime, endTime)
+
+	if config.ShouldUseUserPropertiesTableForRead(projectID) {
+		rawQuery = fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
+			"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, events.user_properties FROM events "+
+			"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
+			"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
+			"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, startTime, endTime)
+	}
+
+	db := C.GetServices().Db
+	return db.Raw(rawQuery).Rows()
 }
 
 func (pg *Postgres) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int) {

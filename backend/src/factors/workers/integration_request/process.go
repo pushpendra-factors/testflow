@@ -68,11 +68,15 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	propertiesTypeCacheSize := flag.Int("property_details_cache_size", 0, "Cache size for in memory property detail.")
 	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
+	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
+	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
+	ontableUserPropertiesWriteAllowedProjectIDs := flag.String("ontable_user_properties_allowed_projects",
+		"", "List of projects to enable writing to on-table user_properties column.")
+	deprecateUserPropertiesTableWriteProjectIDs := flag.String("deprecate_user_properties_table_write_projects",
+		"", "List of projects to stop writing to user_properties table.")
+	deprecateUserPropertiesTableReadProjectIDs := flag.String("deprecate_user_properties_table_read_projects",
+		"", "List of projects for which user_properties table read to be deprecated.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
-	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "",
-		"Allowed project id for property type check from db.")
-	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "",
-		"Blocked project id for property type check from db.")
 	enableSDKAndIntegrationRequestQueueDuplication := flag.Bool("enable_sdk_and_integration_request_queue_duplication",
 		false, "Enables SDK and Integration request queue duplication.")
 
@@ -93,17 +97,23 @@ func main() {
 			Password: *dbPass,
 			AppName:  workerName,
 		},
-		RedisHost:               *redisHost,
-		RedisPort:               *redisPort,
-		QueueRedisHost:          *queueRedisHost,
-		QueueRedisPort:          *queueRedisPort,
-		DuplicateQueueRedisHost: *duplicateQueueRedisHost,
-		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
-		GeolocationFile:         *geoLocFilePath,
-		DeviceDetectorPath:      *deviceDetectorPath,
-		SentryDSN:               *sentryDSN,
-		RedisHostPersistent:     *redisHostPersistent,
-		RedisPortPersistent:     *redisPortPersistent,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		QueueRedisHost:      *queueRedisHost,
+		QueueRedisPort:      *queueRedisPort,
+		GeolocationFile:     *geoLocFilePath,
+		DeviceDetectorPath:  *deviceDetectorPath,
+		SentryDSN:           *sentryDSN,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
+		// List of project to enable on-table user_properties write on events and users table.
+		OnTableUserPropertiesWriteAllowedProjects: *ontableUserPropertiesWriteAllowedProjectIDs,
+		// List of projects to stop writing to user_properties table.
+		DeprecateUserPropertiesTableWriteProjects: *deprecateUserPropertiesTableWriteProjectIDs,
+		// List of projects to use on-table user_properties for read.
+		DeprecateUserPropertiesTableReadProjects:       *deprecateUserPropertiesTableReadProjectIDs,
+		DuplicateQueueRedisHost:                        *duplicateQueueRedisHost,
+		DuplicateQueueRedisPort:                        *duplicateQueueRedisPort,
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
 		MemSQLInfo: C.DBConf{
 			Host:     *memSQLHost,
@@ -113,7 +123,7 @@ func main() {
 			Password: *memSQLPass,
 			AppName:  workerName,
 		},
-		CacheSortedSet: 	 *cacheSortedSet,
+		CacheSortedSet:   *cacheSortedSet,
 		PrimaryDatastore: *primaryDatastore,
 	}
 

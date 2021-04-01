@@ -865,7 +865,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	assert.NotNil(t, user)
 
 	properties := &postgres.Jsonb{RawMessage: []byte(`{"name":"user1","city":"bangalore"}`)}
-	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID, properties, firstPropTimestamp)
+	_, _, status = store.GetStore().UpdateUserProperties(project.ID, user.ID, properties, firstPropTimestamp)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	contactID := U.RandomLowerAphaNumString(7)

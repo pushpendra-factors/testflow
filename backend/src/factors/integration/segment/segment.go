@@ -535,7 +535,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 	case "identify":
 		// Identification happens on every call before type switch.
 		// Updates the user properties with the traits, here.
-		_, status := store.GetStore().UpdateUserProperties(project.ID, userID, &event.Traits, requestTimestamp)
+		_, _, status := store.GetStore().UpdateUserProperties(project.ID, userID, &event.Traits, requestTimestamp)
 		if status != http.StatusAccepted && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"user_properties": event.Traits,
 				"error_code": status}).Error("Segment event failure. Updating user_properties failed.")

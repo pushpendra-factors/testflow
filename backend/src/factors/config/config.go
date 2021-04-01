@@ -150,9 +150,15 @@ type Configuration struct {
 	enablePropertyTypeFromDB               bool
 	whitelistedProjectIDPropertyTypeFromDB string
 	blacklistedProjectIDPropertyTypeFromDB string
-	CacheSortedSet bool
-	ProjectAnalyticsWhitelistedUUIds []string
-	PrimaryDatastore                       string
+	// List of projects to start updating/creating on-table user_properties.
+	OnTableUserPropertiesWriteAllowedProjects string
+	// List of projects to stop writing to user_properties table.
+	DeprecateUserPropertiesTableWriteProjects string
+	// List of projects to use on-table user_properties for read.
+	DeprecateUserPropertiesTableReadProjects string
+	CacheSortedSet                           bool
+	ProjectAnalyticsWhitelistedUUIds         []string
+	PrimaryDatastore                         string
 }
 
 type Services struct {
@@ -1282,6 +1288,42 @@ func PingHealthcheckForPanic(taskID, env, healthcheckID string) {
 	}
 }
 
+func isProjectOnProjectsList(configProjectIDList string, projectID uint64) bool {
+	allProjectIDs, allowedProjectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(
+		configProjectIDList, "")
+
+	if allProjectIDs {
+		return true
+	}
+
+	_, exists := allowedProjectIDsMap[projectID]
+	return exists
+}
+
+// IsUserPropertiesTableWriteDeprecated - Deprecates user_properties table for
+// projects given and supports '*'.
+func IsUserPropertiesTableWriteDeprecated(projectID uint64) bool {
+	return isProjectOnProjectsList(configuration.DeprecateUserPropertiesTableWriteProjects, projectID)
+}
+
+// IsUserPropertiesTableReadDeprecated - Deprecates usage of user_properties
+// table for read, for given projects and supports '*'.
+func IsUserPropertiesTableReadDeprecated(projectID uint64) bool {
+	return isProjectOnProjectsList(configuration.DeprecateUserPropertiesTableReadProjects, projectID)
+}
+
+// ShouldUseUserPropertiesTableForRead - Allows usage of user_properties
+// table for read based on projects.
+func ShouldUseUserPropertiesTableForRead(projectID uint64) bool {
+	return !IsUserPropertiesTableReadDeprecated(projectID)
+}
+
+// IsOnTableUserPropertiesWriteAllowed - Enables on-table user_properties
+// write for users and events table..
+func IsOnTableUserPropertiesWriteAllowed(projectID uint64) bool {
+	return isProjectOnProjectsList(configuration.OnTableUserPropertiesWriteAllowedProjects, projectID)
+}
+
 func IsSDKAndIntegrationRequestQueueDuplicationEnabled() bool {
 	return configuration.EnableSDKAndIntegrationRequestQueueDuplication
 }
@@ -1289,6 +1331,7 @@ func IsSDKAndIntegrationRequestQueueDuplicationEnabled() bool {
 func IsSortedSetCachingAllowed() bool {
 	return configuration.CacheSortedSet
 }
+
 func GetUUIdsFromStringListAsString(stringList string) []string {
 	stringTokens := make([]string, 0, 0)
 
@@ -1303,11 +1346,12 @@ func GetUUIdsFromStringListAsString(stringList string) []string {
 
 	return stringTokens
 }
+
 func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 	for _, uuid := range configuration.ProjectAnalyticsWhitelistedUUIds {
-		if(uuid == loggedInUUID){
-		return true
+		if uuid == loggedInUUID {
+			return true
 		}
 	}
-	return false 
+	return false
 }

@@ -142,7 +142,9 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_LOAD_TIME])      // Should be default value.
 	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SCROLL_PERCENT]) // Should be default value.
 	assert.True(t, eventProperties[U.EP_IS_PAGE_VIEW].(bool))
-	assert.True(t, len(rEvent.UserPropertiesId) > 0)
+	if C.IsOnTableUserPropertiesWriteAllowed(project.ID) {
+		assert.NotNil(t, rEvent.UserProperties)
+	}
 	rUser, errCode := store.GetStore().GetUser(rEvent.ProjectId, rEvent.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rUser)
@@ -673,7 +675,6 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	user, errCode = store.GetStore().GetUser(project.ID, userID)
 	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, event.UserPropertiesId, user.PropertiesId)
 	// Should be the same user_properties state as there is no change.
 	assert.Equal(t, lastUserPropertiesID, user.PropertiesId)
 	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
@@ -712,8 +713,7 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	// state and attach it to the event.
 	user, errCode = store.GetStore().GetUser(project.ID, userID)
 	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotEqual(t, lastUserPropertiesID, user.PropertiesId)
-	assert.Equal(t, event.UserPropertiesId, user.PropertiesId)
+	assert.NotEmpty(t, event.Properties)
 	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	// Latest user properties state should should be updated to
@@ -1218,7 +1218,7 @@ func TestTrackHandlerWithFormSubmit(t *testing.T) {
 	assert.NotNil(t, responseMap["user_id"])
 	userId := responseMap["user_id"].(string)
 	userProperties := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
-	_, errCode := store.GetStore().UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
+	_, _, errCode := store.GetStore().UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
 	// form submit event name created.
 	formSubmitEventName, errCode := store.GetStore().GetEventName(U.EVENT_NAME_FORM_SUBMITTED, project.ID)
@@ -1502,10 +1502,10 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	assert.NotEqual(t, 0, metaData.Timestamp)
 }
 
-func assertEqualJoinTimePropertyOnAllRecords(t *testing.T, records []model.UserProperties, expectedJoinTime int64) {
-	for _, userProperties := range records {
+func assertEqualJoinTimePropertyOnAllRecords(t *testing.T, users []model.User, expectedJoinTime int64) {
+	for _, user := range users {
 		var propertiesMap map[string]interface{}
-		err := json.Unmarshal(userProperties.Properties.RawMessage, &propertiesMap)
+		err := json.Unmarshal(user.Properties.RawMessage, &propertiesMap)
 		assert.Nil(t, err)
 
 		assert.Contains(t, propertiesMap, U.UP_JOIN_TIME)
@@ -1524,10 +1524,10 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 	project, user1, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix() - 10})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix()})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// identify all users with same c_uid.
@@ -1539,12 +1539,11 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 		customerUserId, user2.ID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// all user properties of all users with same c_uid should have joinTime as min of joinTime
-	// among users.
-	userPropertiesRecords, errCode := store.GetStore().GetUserPropertyRecordsByUserId(project.ID, user1.ID)
+	// All the latest user properties of users with customer user id should have min of join_time.
+	userPropertiesRecords, errCode := store.GetStore().GetUsersByCustomerUserID(project.ID, customerUserId)
 	assert.Equal(t, errCode, http.StatusFound)
 	assertEqualJoinTimePropertyOnAllRecords(t, userPropertiesRecords, user1.JoinTimestamp)
-	userPropertiesRecords, errCode = store.GetStore().GetUserPropertyRecordsByUserId(project.ID, user2.ID)
+	userPropertiesRecords, errCode = store.GetStore().GetUsersByCustomerUserID(project.ID, customerUserId)
 	assert.Equal(t, errCode, http.StatusFound)
 	assertEqualJoinTimePropertyOnAllRecords(t, userPropertiesRecords, user1.JoinTimestamp)
 
@@ -1561,7 +1560,8 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
 		customerUserId, user3.ID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
-	userPropertiesRecords, errCode = store.GetStore().GetUserPropertyRecordsByUserId(project.ID, user3.ID)
+
+	userPropertiesRecords, errCode = store.GetStore().GetUsersByCustomerUserID(project.ID, customerUserId)
 	assert.Equal(t, errCode, http.StatusFound)
 	assertEqualJoinTimePropertyOnAllRecords(t, userPropertiesRecords, user1.JoinTimestamp)
 }
@@ -1870,57 +1870,41 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	assert.NotNil(t, event)
 	user, errCode := store.GetStore().GetUser(project.ID, event.UserId)
 	assert.NotNil(t, user)
-	latestUserProperitesIDBeforeUpdateEvent := user.PropertiesId
+	assert.NotEmpty(t, user.Properties)
 	// Trigger update event properties
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
 		eventId, 100)), map[string]string{"Authorization": project.Token})
+	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.Equal(t, http.StatusAccepted, w.Code)
 	event, _ = store.GetStore().GetEventById(project.ID, eventId)
 	assert.NotNil(t, event)
 	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
 	assert.NotNil(t, user)
-	latestUserProperitesIDAfterUpdateEvent := user.PropertiesId
-	// Latest user_properties_id of user, before and after
-	// update_event_properties should be same.
-	assert.Equal(t, latestUserProperitesIDBeforeUpdateEvent,
-		latestUserProperitesIDAfterUpdateEvent)
-	// Event user_properties_id should be the latest
-	// user_properties_id of user
-	assert.Equal(t, latestUserProperitesIDAfterUpdateEvent,
-		event.UserPropertiesId)
+	assert.NotEmpty(t, user.Properties)
 	// initial_user_properites should be added.
-	userPropertiesRecord, _ := store.GetStore().GetUserPropertiesRecord(project.ID,
-		event.UserId, event.UserPropertiesId)
-	assert.NotNil(t, userPropertiesRecord)
-	userProperties, _ := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	userProperties, _ := U.DecodePostgresJsonb(event.UserProperties)
 	assert.NotNil(t, userProperties)
 	assert.Equal(t, float64(100), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
 	assert.Equal(t, event.ID, (*userProperties)[U.UP_INITIAL_PAGE_EVENT_ID])
 	// Creating new user_properties state for the event user.
 	newUserPropertiesJson := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
-	newUserPropertiesID, _ := store.GetStore().UpdateUserProperties(project.ID, event.UserId, &newUserPropertiesJson, U.TimeNowUnix())
+	_, _, _ = store.GetStore().UpdateUserProperties(project.ID, event.UserId, &newUserPropertiesJson, U.TimeNowUnix())
 	// Trigger update event properties again after user properties update.
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
 		eventId, 200)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
-	assert.NotNil(t, user)
-	latestUserProperitesIDAfterUpdateEvent2 := user.PropertiesId
-	// Latest user_properties of user should be new.
-	assert.Equal(t, newUserPropertiesID, latestUserProperitesIDAfterUpdateEvent2)
 	// Event user_properties should be updated.
-	userPropertiesRecord, _ = store.GetStore().GetUserPropertiesRecord(project.ID,
-		event.UserId, event.UserPropertiesId)
-	assert.NotNil(t, userPropertiesRecord)
-	userProperties, _ = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	event, _ = store.GetStore().GetEventById(project.ID, eventId)
+	assert.NotNil(t, event)
+	userProperties, _ = U.DecodePostgresJsonb(event.UserProperties)
 	assert.NotNil(t, userProperties)
 	assert.Equal(t, float64(200), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
 	// Latest user_properites should also be updated.
-	userPropertiesRecord, _ = store.GetStore().GetUserPropertiesRecord(project.ID,
-		event.UserId, latestUserProperitesIDAfterUpdateEvent2)
-	assert.NotNil(t, userPropertiesRecord)
-	userProperties, _ = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
-	assert.NotNil(t, userProperties)
+	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
+	assert.NotNil(t, user)
+	assert.NotEmpty(t, user.Properties)
+	userProperties, _ = U.DecodePostgresJsonb(&user.Properties)
+	assert.NotEmpty(t, userProperties)
 	assert.Equal(t, float64(200), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
 
 	eventId, _ = getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
@@ -2167,10 +2151,6 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 	user2DBAfterAddProperties, _ := U.DecodePostgresJsonb(&user2DBAfterAdd.Properties)
 	// Merge must have got called and updated user2 as well.
 	assert.Equal(t, user1DBAfterAddProperties, user2DBAfterAddProperties)
-	// PropertyId must have got updated after new property add.
-	assert.NotEqual(t, user1.PropertiesId, user1DBAfterAdd.PropertiesId)
-	assert.NotEqual(t, user2.PropertiesId, user2DBAfterAdd.PropertiesId)
-	// New property revenue must be present in user properties.
 	assert.Equal(t, float64(42), (*user1DBAfterAddProperties)["revenue"])
 	assert.Equal(t, float64(42), (*user2DBAfterAddProperties)["revenue"])
 }
@@ -2228,9 +2208,6 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	user2DBProperties, _ = U.DecodePostgresJsonb(&user2DB.Properties)
 	// Merge must have got called and updated user2 as well.
 	assert.Equal(t, user1DBProperties, user2DBProperties)
-	// PropertyId must have got updated after new property add.
-	assert.NotEqual(t, user1.PropertiesId, user1DB.PropertiesId)
-	assert.NotEqual(t, user2.PropertiesId, user2DB.PropertiesId)
 
 	// Should not change on retry.
 	errCode, _ = SDK.IdentifyByToken(project.Token, identifyPayload)
@@ -2241,9 +2218,6 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	user2DBRetryProperties, _ := U.DecodePostgresJsonb(&user2DBRetry.Properties)
 	// Merge must have got called and updated user2 as well.
 	assert.Equal(t, user1DBRetryProperties, user2DBRetryProperties)
-	// PropertyId must have got updated after new property add.
-	assert.Equal(t, user1DB.PropertiesId, user1DBRetry.PropertiesId)
-	assert.Equal(t, user2DB.PropertiesId, user2DBRetry.PropertiesId)
 }
 
 func TestSDKTrackFirstEventUserProperties(t *testing.T) {
@@ -2263,7 +2237,6 @@ func TestSDKTrackFirstEventUserProperties(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, event)
 	assert.NotEmpty(t, event.UserId)
-	assert.NotEmpty(t, event.UserPropertiesId)
 
 	user, errCode := store.GetStore().GetUser(project.ID, event.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -2468,7 +2441,7 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 	timestamp := time.Now().Unix() - 500
 	propertiesPJson, err := U.EncodeToPostgresJsonb(&properties)
 	assert.Nil(t, err)
-	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID, propertiesPJson, timestamp)
+	_, _, status = store.GetStore().UpdateUserProperties(project.ID, user.ID, propertiesPJson, timestamp)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	// verify decoding properties

@@ -519,12 +519,10 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays0", func(t *testing.T) {
 		// continuation to previous users
-		user1NewPropertiesId, status := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*U.SECONDS_IN_A_DAY)
+		user1NewPropertiesId, _, status := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
 		assert.Equal(t, http.StatusAccepted, status)
-		user2NewPropertiesId, status := store.GetStore().UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*U.SECONDS_IN_A_DAY)
-		// Status should be not_modified as user1 and user2 belong to
-		// same customer_user and user_properties merged on first UpdateUserProperties.
-		assert.Equal(t, http.StatusNotModified, status)
+		user2NewPropertiesId, _, status := store.GetStore().UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		assert.True(t, status == http.StatusAccepted)
 		/*
 			t+3day -> first time $initial_campaign set with event for user1 and user2
 			t+6day -> session event for user1 and user2
@@ -625,7 +623,6 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	assert.Equal(t, float64(2), getConversionUserCount(result, "$none"))
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
-
 		// 3 days is out of query window, but should be considered as it falls under Engagement window
 		status := createEventWithSession(project.ID, "eventNewX", user1.ID, timestamp+5*U.SECONDS_IN_A_DAY, user1.PropertiesId, "12345")
 		assert.Equal(t, http.StatusCreated, status)

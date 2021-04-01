@@ -600,18 +600,28 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 	} else if document.Action == model.HubspotDocumentActionUpdated {
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED
 
-		userPropertiesRecords, errCode := store.GetStore().GetUserPropertiesRecordsByProperty(
-			projectID, model.UserPropertyHubspotContactLeadGUID, leadGUID)
-		if errCode != http.StatusFound {
-			logCtx.WithField("err_code", errCode).Error(
-				"Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
-			return http.StatusInternalServerError
-		}
+		if C.ShouldUseUserPropertiesTableForRead(projectID) {
+			userPropertiesRecords, errCode := store.GetStore().GetUserPropertiesRecordsByProperty(
+				projectID, model.UserPropertyHubspotContactLeadGUID, leadGUID)
+			if errCode != http.StatusFound {
+				logCtx.WithField("err_code", errCode).Error(
+					"Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
+				return http.StatusInternalServerError
+			}
 
-		// use the user_id of same lead_guid done
-		// contact created event.
-		userID = userPropertiesRecords[0].UserId
-		trackPayload.UserId = userID
+			// use the user_id of same lead_guid done
+			// contact created event.
+			userID = userPropertiesRecords[0].UserId
+		} else {
+			user, errCode := store.GetStore().GetUserByPropertyKey(
+				projectID, model.UserPropertyHubspotContactLeadGUID, leadGUID)
+			if errCode != http.StatusFound {
+				logCtx.WithField("err_code", errCode).Error(
+					"Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
+				return http.StatusInternalServerError
+			}
+			userID = user.ID
+		}
 
 		if customerUserID != "" {
 			status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
@@ -625,6 +635,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 			logCtx.Warning("Skipped user identification on hubspot contact sync. No customer_user_id on properties.")
 		}
 
+		trackPayload.UserId = userID
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithField("status", status).Error("Failed to track hubspot contact updated event.")
@@ -842,7 +853,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 				contactSyncEvent, errCode := store.GetStore().GetEventById(
 					projectID, contactDocument.SyncId)
 				if errCode == http.StatusFound {
-					_, errCode := store.GetStore().UpdateUserProperties(projectID,
+					_, _, errCode := store.GetStore().UpdateUserProperties(projectID,
 						contactSyncEvent.UserId, userPropertiesJsonb, time.Now().Unix())
 					if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 						logCtx.WithField("user_id", contactSyncEvent.UserId).Error(

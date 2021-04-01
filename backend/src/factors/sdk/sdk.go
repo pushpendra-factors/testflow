@@ -655,8 +655,9 @@ func Track(projectId uint64, request *TrackPayload,
 		response.Error = "Failed updating user properties."
 	}
 
-	userPropertiesId, errCode := store.GetStore().UpdateUserProperties(projectId, request.UserId,
-		&postgres.Jsonb{userPropsJSON}, request.Timestamp)
+	newUserPropertiesJSON := &postgres.Jsonb{userPropsJSON}
+	userPropertiesIDV1, userPropertiesV2, errCode := store.GetStore().UpdateUserProperties(
+		projectId, request.UserId, newUserPropertiesJSON, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		logCtx.WithField("err_code", errCode).
 			Error("Update user properties on track failed. DB update failed.")
@@ -664,13 +665,20 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 
 	event := &model.Event{
-		ID:               request.EventId,
-		EventNameId:      eventName.ID,
-		CustomerEventId:  request.CustomerEventId,
-		Timestamp:        request.Timestamp,
-		ProjectId:        projectId,
-		UserId:           request.UserId,
-		UserPropertiesId: userPropertiesId,
+		ID:              request.EventId,
+		EventNameId:     eventName.ID,
+		CustomerEventId: request.CustomerEventId,
+		Timestamp:       request.Timestamp,
+		ProjectId:       projectId,
+		UserId:          request.UserId,
+
+		// UserPropertiesId - Computed using user_properties table.
+		// Kept for backward compatability. Will be removed after
+		// deprecating user_properties table.
+		UserPropertiesId: userPropertiesIDV1,
+
+		// UserProperties - Computed using properties on users table.
+		UserProperties: userPropertiesV2,
 	}
 
 	// Property used as flag for skipping session on offline session worker.
@@ -1037,8 +1045,8 @@ func AddUserProperties(projectId uint64,
 			&AddUserPropertiesResponse{Error: "Add user properties failed"}
 	}
 
-	_, errCode = store.GetStore().UpdateUserPropertiesByCurrentProperties(projectId, user.ID,
-		user.PropertiesId, &postgres.Jsonb{propertiesJSON}, request.Timestamp)
+	_, _, errCode = store.GetStore().UpdateUserProperties(projectId, user.ID,
+		&postgres.Jsonb{propertiesJSON}, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return errCode,
 			&AddUserPropertiesResponse{Error: "Add user properties failed."}
@@ -1364,12 +1372,12 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
 
 	logCtx := log.WithField("project_id", projectID).WithField("event_id", eventID)
 
-	userPropertiesJsonb, errCode := store.GetStore().GetUserProperties(projectID, userID, userPropertiesID)
+	user, errCode := store.GetStore().GetUser(projectID, userID)
 	if errCode != http.StatusFound {
 		return errCode
 	}
 
-	userProperties, err := U.DecodePostgresJsonb(userPropertiesJsonb)
+	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to decode user_properties.")
 		return http.StatusBadRequest
@@ -1411,11 +1419,44 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
 		return http.StatusBadRequest
 	}
 
-	errCode = store.GetStore().OverwriteUserProperties(projectID, userID,
-		userPropertiesID, updateUserPropertiesJson)
+	var statusV1 int
+	if !C.IsUserPropertiesTableWriteDeprecated(projectID) {
+		statusV1 = store.GetStore().OverwriteUserProperties(projectID, userID,
+			userPropertiesID, updateUserPropertiesJson)
+	}
+
+	var statusV2 int
+	if C.IsOnTableUserPropertiesWriteAllowed(projectID) {
+		statusV2 = overwriteUserPropertiesOnTable(projectID, userID, eventID, updateUserPropertiesJson)
+	}
+
+	// Use statusV1 till deprecation.
+	if !C.IsUserPropertiesTableWriteDeprecated(projectID) {
+		return statusV1
+	}
+
+	return statusV2
+}
+
+func overwriteUserPropertiesOnTable(projectID uint64, userID string, eventID string,
+	updateUserPropertiesJson *postgres.Jsonb) int {
+
+	logCtx := log.WithField("project_id", projectID).
+		WithField("user_id", userID).WithField("eventID", eventID)
+
+	errCode := store.GetStore().OverwriteUserPropertiesByID(
+		projectID, userID, updateUserPropertiesJson, false, 0)
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("err_code", errCode).
-			Error("Failed to overwrite user_properties after adding initial user_properties.")
+			Error("Failed to overwrite user's properties with initial page properties.")
+		return errCode
+	}
+
+	errCode = store.GetStore().OverwriteEventUserPropertiesByID(
+		projectID, eventID, updateUserPropertiesJson)
+	if errCode != http.StatusAccepted {
+		logCtx.WithField("err_code", errCode).
+			Error("Failed to overwrite event's user properties with initial page properties.")
 		return errCode
 	}
 

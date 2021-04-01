@@ -21,12 +21,17 @@ type Event struct {
 	// project_id -> projects(id)
 	// (project_id, user_id) -> users(project_id, id)
 	// (project_id, event_name_id) -> event_names(project_id, id)
-	ProjectId        uint64  `gorm:"primary_key:true;" json:"project_id"`
-	UserId           string  `json:"user_id"`
-	UserPropertiesId string  `json:"user_properties_id"`
-	SessionId        *string `json:session_id`
-	EventNameId      uint64  `json:"event_name_id"`
-	Count            uint64  `json:"count"`
+	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	UserId    string `json:"user_id"`
+
+	// TODO(Dinesh): Remove user_properties_id column and field after
+	// user_properties table is permanantly deprecated.
+	UserPropertiesId string `json:"user_properties_id"`
+
+	UserProperties *postgres.Jsonb `json:"user_properties"`
+	SessionId      *string         `json:session_id`
+	EventNameId    uint64          `json:"event_name_id"`
+	Count          uint64          `json:"count"`
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties                 postgres.Jsonb `json:"properties,omitempty"`
 	PropertiesUpdatedTimestamp int64          `gorm:"not null;default:0" json:"properties_updated_timestamp,omitempty"`
@@ -57,6 +62,7 @@ const tableName = "events"
 
 const NewUserSessionInactivityInSeconds int64 = ThirtyMinutesInSeconds
 const ThirtyMinutesInSeconds int64 = 30 * 60
+const EventsPullLimit = 100000000
 
 func SetCacheUserLastEvent(projectId uint64, userId string, cacheEvent *CacheEvent) error {
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)

@@ -2,6 +2,7 @@ package memsql
 
 import (
 	"errors"
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -536,17 +537,20 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 			}
 		}
 		egSelect, egParams, egGroupKeys, groupByUserProperties := buildGroupKeyForStep(
-			&q.EventsWithProperties[i], q.GroupByProperties, i+1)
+			projectId, &q.EventsWithProperties[i], q.GroupByProperties, i+1)
 		if egSelect != "" {
 			addSelect = joinWithComma(addSelect, egSelect)
 		}
 		addParams = egParams
 		addJoinStatement := "JOIN users ON events.user_id=users.id"
-		if groupByUserProperties && !hasWhereEntity(q.EventsWithProperties[i], model.PropertyEntityUser) {
-			// If event has filter on user property, JOIN on user_properties is added in next step.
-			// Skip adding here to avoid duplication.
-			addJoinStatement += " JOIN user_properties ON events.user_id = user_properties.user_id AND events.user_properties_id=user_properties.id"
+		if C.ShouldUseUserPropertiesTableForRead(projectId) {
+			if groupByUserProperties && !hasWhereEntity(q.EventsWithProperties[i], model.PropertyEntityUser) {
+				// If event has filter on user property, JOIN on user_properties is added in next step.
+				// Skip adding here to avoid duplication.
+				addJoinStatement += " JOIN user_properties ON events.user_id = user_properties.user_id AND events.user_properties_id=user_properties.id"
+			}
 		}
+
 		var groupBy string
 		if i == 0 {
 			groupBy = "coal_user_id"
@@ -617,12 +621,14 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, model.PropertyEntityUser)
 	userGroupProps = removeEventSpecificUserGroupBys(userGroupProps)
-	ugSelect, ugParams, _ := buildGroupKeys(userGroupProps)
+	ugSelect, ugParams, _ := buildGroupKeys(projectId, userGroupProps)
 
 	propertiesJoinStmnt := ""
 	if hasGroupEntity(q.GroupByProperties, model.PropertyEntityUser) {
 		propertiesJoinStmnt = fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id", funnelSteps[0])
-		propertiesJoinStmnt = propertiesJoinStmnt + " " + "LEFT JOIN user_properties ON user_properties.user_id=users.id AND users.properties_id=user_properties.id"
+		if C.ShouldUseUserPropertiesTableForRead(projectId) {
+			propertiesJoinStmnt = propertiesJoinStmnt + " " + "LEFT JOIN user_properties ON user_properties.user_id=users.id AND users.properties_id=user_properties.id"
+		}
 	}
 
 	stepFunnelName := "funnel"
@@ -667,7 +673,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
 		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
 	} else {
-		_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
+		_, _, groupKeys := buildGroupKeys(projectId, q.GroupByProperties)
 		aggregateSelectKeys = groupKeys + ", "
 		aggregateFromName = stepFunnelName
 		aggregateGroupBys = groupKeys
@@ -727,7 +733,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 }
 
 // builds group keys for event properties for given step (event_with_properties).
-func buildGroupKeyForStep(eventWithProperties *model.QueryEventWithProperties,
+func buildGroupKeyForStep(projectID uint64, eventWithProperties *model.QueryEventWithProperties,
 	groupProps []model.QueryGroupByProperty, ewpIndex int) (string, []interface{}, string, bool) {
 
 	groupPropsByStep := make([]model.QueryGroupByProperty, 0, 0)
@@ -742,6 +748,6 @@ func buildGroupKeyForStep(eventWithProperties *model.QueryEventWithProperties,
 		}
 	}
 
-	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(groupPropsByStep)
+	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(projectID, groupPropsByStep)
 	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
 }

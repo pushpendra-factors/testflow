@@ -11,8 +11,10 @@ import (
 
 	"factors/filestore"
 	"factors/model/model"
+	"factors/model/store"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
+
 	U "factors/util"
 
 	"github.com/jinzhu/gorm"
@@ -20,23 +22,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const max_EVENTS = 100000000 // 100 million.
 var peLog = taskLog.WithField("prefix", "Task#PullEvents")
 
-func pullEventsForBuildSeq(db *gorm.DB, projectID uint64, startTime, endTime int64,
-	eventsFilePath string) (int, string, error) {
-
-	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
-		" events.properties, users.join_timestamp, user_properties.properties FROM events "+
-		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
-		"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
-		"WHERE events.project_id = %d AND events.timestamp BETWEEN  %d AND %d "+
-		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d", projectID, startTime, endTime, max_EVENTS+1)
-
-	rows, err := db.Raw(rawQuery).Rows()
+func pullEventsForBuildSeq(projectID uint64, startTime, endTime int64, eventsFilePath string) (int, string, error) {
+	rows, err := store.GetStore().PullEventRowsForBuildSequenceJob(projectID, startTime, endTime)
 	defer rows.Close()
 	if err != nil {
-		peLog.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
+		peLog.WithError(err).Error("SQL Query failed.")
 		return 0, "", err
 	}
 
@@ -126,9 +118,9 @@ func pullEventsForBuildSeq(db *gorm.DB, projectID uint64, startTime, endTime int
 		rowCount++
 	}
 
-	if rowCount > max_EVENTS {
+	if rowCount > model.EventsPullLimit {
 		// Todo(Dinesh): notify
-		return rowCount, eventsFilePath, fmt.Errorf("events count has exceeded the %d limit", max_EVENTS)
+		return rowCount, eventsFilePath, fmt.Errorf("events count has exceeded the %d limit", model.EventsPullLimit)
 	}
 
 	if rowCount > 0 {
@@ -140,17 +132,10 @@ func pullEventsForBuildSeq(db *gorm.DB, projectID uint64, startTime, endTime int
 	return rowCount, eventsFilePath, nil
 }
 
-// PullEventsForArchive Function to pull events for BigQuery sync.
-func PullEventsForArchive(db *gorm.DB, projectID uint64,
-	eventsFilePath, usersFilePath string, startTime, endTime int64) (int, string, string, error) {
+func PullEventsForArchive(projectID uint64, eventsFilePath, usersFilePath string,
+	startTime, endTime int64) (int, string, string, error) {
 
-	rawQuery := fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
-		"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, user_properties.properties FROM events "+
-		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
-		"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
-		"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, startTime, endTime)
-
-	rows, err := db.Raw(rawQuery).Rows()
+	rows, err := store.GetStore().PullEventRowsForArchivalJob(projectID, startTime, endTime)
 	defer rows.Close()
 	if err != nil {
 		peLog.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
@@ -263,8 +248,9 @@ func PullEventsForArchive(db *gorm.DB, projectID uint64,
 	return rowCount, eventsFilePath, usersFilePath, nil
 }
 
-func PullEvents(db *gorm.DB, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
-	projectId uint64, startTimestamp int64, endTimestamp int64) (uint64, int, error) {
+func PullEvents(db *gorm.DB, cloudManager *filestore.FileManager,
+	diskManager *serviceDisk.DiskDriver, projectId uint64, startTimestamp int64,
+	endTimestamp int64) (uint64, int, error) {
 
 	var err error
 
@@ -292,8 +278,7 @@ func PullEvents(db *gorm.DB, cloudManager *filestore.FileManager, diskManager *s
 	fPath, fName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
 	serviceDisk.MkdirAll(fPath) // create dir if not exist.
 	tmpEventsFile := fPath + fName
-	eventsCount, eventsFilePath, err := pullEventsForBuildSeq(db, projectId,
-		startTimestamp, endTimestamp, tmpEventsFile)
+	eventsCount, eventsFilePath, err := pullEventsForBuildSeq(projectId, startTimestamp, endTimestamp, tmpEventsFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Pull events failed. Pull and write events failed.")
 		return 0, 0, err
