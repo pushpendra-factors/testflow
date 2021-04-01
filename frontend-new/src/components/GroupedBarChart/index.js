@@ -47,13 +47,15 @@ function GroupedBarChart({
       const spendIdx = responseHeaders.indexOf("Spend");
       const visitorsIdx = responseHeaders.indexOf("Website Visitors");
       const row = responseRows.find((elem) => elem[0] === data.group);
-      let padY = 325;
+      let padY = 300;
+      let padX = 10;
 
       if (section === DASHBOARD_MODAL) {
         padY += 25;
+        padX = -10
       }
       tooltip
-        .style("left", d3.event.pageX - 50 + "px")
+        .style("left", d3.event.pageX + padX + "px")
         .style("top", d3.event.pageY - padY + "px")
         .style("display", "inline-block")
         .html(

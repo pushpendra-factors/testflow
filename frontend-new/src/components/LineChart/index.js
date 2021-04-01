@@ -207,6 +207,7 @@ function LineChart({
     frequency,
     height,
     section,
+    cardSize
   ]);
 
   const displayChart = useCallback(() => {

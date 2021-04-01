@@ -1,4 +1,5 @@
 import React from "react";
+import moment from "moment";
 import { QUERY_TYPE_CAMPAIGN, QUERY_TYPE_EVENT } from "./constants";
 
 const visualizationColors = [
@@ -26,7 +27,24 @@ export const calculatePercentage = (numerator, denominator, precision = 1) => {
   return result % 1 !== 0 ? result.toFixed(precision) : result;
 };
 
+const SortDataByDate = (arr, key, order) => {
+  const result = [...arr];
+  result.sort((a, b) => {
+    if (order === "ascend") {
+      return moment(a[key]).utc().unix() >= moment(b[key]).utc().unix() ? 1 : -1;
+    }
+    if (order === "descend") {
+      return moment(a[key]).utc().unix() <= moment(b[key]).utc().unix() ? 1 : -1;
+    }
+    return 0;
+  });
+  return result;
+};
+
 export const SortData = (arr, key, order) => {
+  if (key === "date") {
+    return SortDataByDate(arr, key, order);
+  }
   const result = [...arr];
   result.sort((a, b) => {
     if (order === "ascend") {
@@ -48,7 +66,7 @@ export const getTitleWithSorter = (
 ) => {
   return (
     <div className="flex items-center justify-between">
-      <div className="mr-2">{title}</div>
+      <div className="mr-2 break-all">{title}</div>
       <div className="flex flex-col items-center">
         {currentSorter.key === key && currentSorter.order === "ascend" ? (
           <div

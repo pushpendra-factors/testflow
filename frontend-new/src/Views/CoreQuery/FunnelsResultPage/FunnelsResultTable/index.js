@@ -1,5 +1,4 @@
 import React, { useCallback, useState } from "react";
-import styles from "./index.module.scss";
 import { generateTableColumns, generateTableData } from "../utils";
 import DataTable from "../../../../components/DataTable";
 
@@ -88,7 +87,6 @@ function FunnelsResultTable({
       setSearchText={setSearchText}
       columns={columns}
       rowSelection={breakdown.length ? rowSelection : null}
-      className={styles.funnelResultsTable}
       scroll={{ x: 250 }}
       getCSVData={getCSVData}
     />
