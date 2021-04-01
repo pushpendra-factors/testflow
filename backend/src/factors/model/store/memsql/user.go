@@ -91,7 +91,9 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 	}
 
 	user.PropertiesId = propertiesId
-	user.Properties = *properties
+	if properties != nil {
+		user.Properties = *properties
+	}
 
 	return user, nil
 }
