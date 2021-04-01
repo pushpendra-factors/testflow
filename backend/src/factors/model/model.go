@@ -158,7 +158,7 @@ type Model interface {
 	GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID uint64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
 
-	// event
+	// events
 	GetEventCountOfUserByEventName(projectID uint64, userId string, eventNameId uint64) (uint64, int)
 	GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID uint64) (uint64, int)
 	CreateEvent(event *model.Event) (*model.Event, int)
@@ -175,6 +175,9 @@ type Model interface {
 	GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int)
 	GetAllEventsForSessionCreationAsUserEventsMap(projectId, sessionEventNameId uint64, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from, to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int)
+	OverwriteEventUserPropertiesByID(projectID uint64, id string, properties *postgres.Jsonb) int
+	PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error)
+	PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error)
 	GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int)
 	DeleteEventsByIDsInBatchForJob(projectID, eventNameID uint64, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID, eventNameID uint64, ids []string) int
@@ -334,7 +337,6 @@ type Model interface {
 	SanitizeAddTypeProperties(projectID uint64, users []model.User, propertiesMap *map[string]interface{})
 	GetUserProperties(projectID uint64, userId string, id string) (*postgres.Jsonb, int)
 	GetUserPropertiesRecord(projectID uint64, userId string, id string) (*model.UserProperties, int)
-	GetUserPropertyRecordsByUserId(projectID uint64, userId string) ([]model.UserProperties, int)
 	OverwriteUserProperties(projectId uint64, userId string, id string, propertiesJsonb *postgres.Jsonb) int
 	GetUserPropertiesRecordsByProperty(projectId uint64, key string, value interface{}) ([]model.UserProperties, int)
 	UpdateUserPropertiesForSession(projectID uint64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int
@@ -345,18 +347,17 @@ type Model interface {
 
 	// user
 	CreateUser(user *model.User) (*model.User, int)
-	UpdateUser(projectID uint64, id string, user *model.User, updateTimestamp int64) (*model.User, int)
-	UpdateUserProperties(projectId uint64, id string, properties *postgres.Jsonb, updateTimestamp int64) (string, int)
+	CreateOrGetUser(projectID uint64, custUserId string) (*model.User, int)
+	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int)
+	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64) (*model.User, int)
+	GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int)
 	GetUser(projectID uint64, id string) (*model.User, int)
 	GetUsers(projectID uint64, offset uint64, limit uint64) ([]model.User, int)
 	GetUsersByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int)
 	GetUserLatestByCustomerUserId(projectID uint64, customerUserId string) (*model.User, int)
 	GetExistingCustomerUserID(projectID uint64, arrayCustomerUserID []string) (map[string]string, int)
 	GetUserBySegmentAnonymousId(projectID uint64, segAnonId string) (*model.User, int)
-	CreateOrGetUser(projectID uint64, custUserId string) (*model.User, int)
 	GetAllUserIDByCustomerUserID(projectID uint64, customerUserID string) ([]string, int)
-	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int)
-	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64) (*model.User, int)
 	GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error)
 	GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string, usersLimit, valuesLimit int, seedDate time.Time) ([]U.PropertyValue, string, error)
 	GetUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map[string][]string, error)
@@ -365,6 +366,13 @@ type Model interface {
 	GetDistinctCustomerUserIDSForProject(projectID uint64) ([]string, int)
 	GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string)
 	UpdateUserPropertiesByCurrentProperties(projectId uint64, id string, currentPropertiesId string, properties *postgres.Jsonb, updateTimestamp int64) (string, int)
+	UpdateUser(projectID uint64, id string, user *model.User, updateTimestamp int64) (*model.User, int)
+	UpdateUserProperties(projectId uint64, id string, properties *postgres.Jsonb, updateTimestamp int64) (string, *postgres.Jsonb, int)
+	UpdateUserPropertiesV2(projectID uint64, id string, newProperties *postgres.Jsonb, newUpdateTimestamp int64) (*postgres.Jsonb, int)
+	OverwriteUserPropertiesByID(projectID uint64, id string, properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64) int
+	OverwriteUserPropertiesByCustomerUserID(projectID uint64, customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int
+	GetUserByPropertyKey(projectID uint64, key string, value interface{}) (*model.User, int)
+
 	// web_analytics
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *model.WebAnalyticsQueries, int)
 	CreateWebAnalyticsDefaultDashboardWithUnits(projectID uint64, agentUUID string) int

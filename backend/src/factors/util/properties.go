@@ -1260,6 +1260,14 @@ func UnEscapeQueryParamProperties(properties *PropertiesMap) {
 	}
 }
 
+func GetDefinedMarketingProperties() []string {
+	props := []string{}
+	for _, marketingProperty := range DEFINED_MARKETING_PROPERTIES {
+		props = append(props, marketingProperty)
+	}
+	return props
+}
+
 func MapEventPropertiesToDefinedProperties(properties *PropertiesMap) (*PropertiesMap, bool) {
 	mappedProperties := make(PropertiesMap)
 

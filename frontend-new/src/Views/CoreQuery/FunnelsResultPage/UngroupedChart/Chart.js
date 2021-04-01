@@ -73,9 +73,11 @@ function Chart({
         .eventName;
 
       let padY = index ? 200 : 100;
+      let padX = 10;
 
       if (section === DASHBOARD_MODAL) {
         padY += 25;
+        padX = -10;
       }
 
       let stepTime;
@@ -85,7 +87,7 @@ function Chart({
       }
 
       tooltip
-        .style("left", d3.event.pageX - 50 + "px")
+        .style("left", d3.event.pageX + padX + "px")
         .style("top", d3.event.pageY - padY + "px")
         .style("display", "inline-block")
         .html(

@@ -89,7 +89,7 @@ function BarLineChart({
         <div style="border-bottom: 1px solid #E7E9ED;" class="py-2">
           <div style="font-weight: 600;font-size: 10px;line-height: 16px;color: #8692A3;">CONVERSIONS</div>
           <div style="font-weight: 600;font-size: 12px;line-height: 16px;" class="mt-2 flex justify-between">
-            <div style="color: #4D7DB4">OPPORTUNITIES</div>
+            <div style="color: #4D7DB4">CONVERSIONS</div>
             <div style="color: #3E516C;">${numberWithCommas(
               formatCount(d[2], 1)
             )}</div>

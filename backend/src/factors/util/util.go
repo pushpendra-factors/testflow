@@ -635,6 +635,22 @@ func GetStringListAsBatch(list []string, batchSize int) [][]string {
 	return batchList
 }
 
+func GetInterfaceListAsBatch(list []interface{}, batchSize int) [][]interface{} {
+	batchList := make([][]interface{}, 0, 0)
+	listLen := len(list)
+	for i := 0; i < listLen; {
+		next := i + batchSize
+		if next > listLen {
+			next = listLen
+		}
+
+		batchList = append(batchList, list[i:next])
+		i = next
+	}
+
+	return batchList
+}
+
 func GetSnakeCaseToTitleString(str string) (title string) {
 	if str == "" {
 		return

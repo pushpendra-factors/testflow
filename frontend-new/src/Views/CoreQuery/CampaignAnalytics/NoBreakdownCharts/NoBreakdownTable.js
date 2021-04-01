@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import moment from "moment";
 import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";
 import {
   getTableColumns,
@@ -27,15 +28,22 @@ function NoBreakdownTable({
   const getCSVData = () => {
     return {
       fileName: `${reportTitle}.csv`,
-      data: data.map(({ index, ...rest }) => {
+      data: data.map(({ index, date, ...rest }) => {
+        if (chartType === CHART_TYPE_SPARKLINES) {
+          let format = "MMM D, YYYY";
+          return {
+            date: moment(date).format(format),
+            ...rest,
+          };
+        }
         return rest;
       }),
     };
   };
 
   if (chartType === CHART_TYPE_SPARKLINES) {
-    columns = getTableColumns(chartsData, sorter, handleSorting);
-    data = getTableData(chartsData, frequency, sorter);
+    columns = getTableColumns(chartsData, frequency, sorter, handleSorting);
+    data = getTableData(chartsData, sorter);
   } else {
     columns = getDateBaseTableColumns(
       chartsData,

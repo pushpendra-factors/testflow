@@ -100,7 +100,7 @@ export const BARLINE_COUNT = {
 
 export const FUNNELS_COUNT = {
   0:3,
-  1:5,
+  1:6,
   2:2
 };
 

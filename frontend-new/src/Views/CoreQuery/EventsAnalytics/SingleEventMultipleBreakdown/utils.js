@@ -22,20 +22,33 @@ export const getTableColumns = (
   handleSorting,
   page
 ) => {
+  const dataIndices = [];
   const eventBreakdowns = breakdown
     .filter((elem) => elem.prop_category === "event")
     .map((elem) => {
+      let dataIndex = elem.property;
+      if (dataIndices.indexOf(dataIndex) > -1) {
+        const count = dataIndices.filter((i) => i === dataIndex);
+        dataIndex = elem.property + "-" + count;
+      }
+      dataIndices.push(elem.property);
       return {
         title: elem.property,
-        dataIndex: elem.property,
+        dataIndex,
       };
     });
   const userBreakdowns = breakdown
     .filter((elem) => elem.prop_category === "user")
     .map((elem) => {
+      let dataIndex = elem.property;
+      if (dataIndices.indexOf(dataIndex) > -1) {
+        const count = dataIndices.filter((i) => i === dataIndex).length;
+        dataIndex = elem.property + "-" + count;
+      }
+      dataIndices.push(elem.property);
       return {
         title: elem.property,
-        dataIndex: elem.property,
+        dataIndex,
       };
     });
   const valCol = {
@@ -65,11 +78,7 @@ export const getDataInTableFormat = (
   const result = filteredData.map((d, index) => {
     const obj = {};
     columns.slice(0, columns.length - 1).forEach((c, idx) => {
-      const keys = c.title.split(",");
-      const val = keys.map(() => {
-        return d.label.split(",")[idx];
-      });
-      obj[c.title] = val.join(",");
+      obj[c.dataIndex] = d.label.split(",")[idx];
     });
     return { ...obj, "Event Count": d.value, index };
   });
@@ -124,24 +133,33 @@ export const getDateBasedColumns = (
   handleSorting,
   frequency
 ) => {
+  const dataIndices = [];
   const eventBreakdowns = breakdown
     .filter((elem) => elem.prop_category === "event")
     .map((elem) => {
+      let dataIndex = elem.property;
+      if (dataIndices.indexOf(dataIndex) > -1) {
+        const count = dataIndices.filter((i) => i === dataIndex);
+        dataIndex = elem.property + "-" + count;
+      }
+      dataIndices.push(elem.property);
       return {
         title: elem.property,
-        dataIndex: elem.property,
-        fixed: "left",
-        width: 200,
+        dataIndex,
       };
     });
   const userBreakdowns = breakdown
     .filter((elem) => elem.prop_category === "user")
     .map((elem) => {
+      let dataIndex = elem.property;
+      if (dataIndices.indexOf(dataIndex) > -1) {
+        const count = dataIndices.filter((i) => i === dataIndex).length;
+        dataIndex = elem.property + "-" + count;
+      }
+      dataIndices.push(elem.property);
       return {
         title: elem.property,
-        dataIndex: elem.property,
-        fixed: "left",
-        width: 200,
+        dataIndex,
       };
     });
   let format = "MMM D";
@@ -188,14 +206,8 @@ export const getDateBasedTableData = (
     const obj = {
       index,
     };
-    let idx = -1;
-    columns.slice(0, columns.length - 1).forEach((c) => {
-      const keys = c.title.split(",");
-      const val = keys.map((_) => {
-        idx++;
-        return elem.split(",")[idx];
-      });
-      obj[c.title] = val.join(",");
+    columns.slice(0, columns.length - 1).forEach((c, idx) => {
+      obj[c.dataIndex] = elem.split(",")[idx];
     });
     entries.forEach((entry) => {
       obj[moment(entry[1]).format(format)] = entry[entry.length - 1];

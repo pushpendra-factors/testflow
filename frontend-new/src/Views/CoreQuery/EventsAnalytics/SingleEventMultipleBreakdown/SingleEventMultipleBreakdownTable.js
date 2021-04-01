@@ -49,12 +49,6 @@ function SingleEventMultipleBreakdownTable({
     return {
       fileName: `${reportTitle}.csv`,
       data: tableData.map(({ index, ...rest }) => {
-        // if (breakdown.length) {
-        //   arrayMapper.forEach((elem) => {
-        //     rest[elem.eventName] = rest[`${elem.mapper}-${elem.index}`];
-        //     delete rest[`${elem.mapper}-${elem.index}`];
-        //   });
-        // }
         return { ...rest };
       }),
     };
@@ -88,7 +82,7 @@ function SingleEventMultipleBreakdownTable({
   tableData.forEach((elem) => {
     const variableColumns = nonDatecolumns.slice(0, nonDatecolumns.length - 1);
     const val = variableColumns.map((v) => {
-      return elem[v.title];
+      return elem[v.dataIndex];
     });
     if (visibleLabels.indexOf(val.join(",")) > -1) {
       selectedRowKeys.push(elem.index);

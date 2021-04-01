@@ -63,13 +63,13 @@ export const formatGroupedData = (
   return chartData;
 };
 
-const renderComparCell = (obj, xcl) => {
+const renderComparCell = (obj) => {
   let changeMetric = null;
   if (obj.change) {
     if (obj.change > 0 || obj.change < 0) {
       const change = Math.abs(obj.change);
       changeMetric = (
-        <div className={`${styles.cmprCell__change} ${xcl}`}>
+        <div className={`${styles.cmprCell__change}`}>
           <SVG
             name={obj.change > 0 ? `arrowLift` : `arrowDown`}
             size={16}
@@ -149,8 +149,8 @@ export const getCompareTableColumns = (
       className: "tableParentHeader",
       children: [
         {
-          title: (
-            <div className="flex flex-col items-center justify-ceneter">
+          title: getTitleWithSorter(
+            <div className="flex flex-col items-start justify-ceneter">
               <div>Conversion</div>
               <div style={{ fontSize: "10px", color: "#8692A3" }}>
                 {
@@ -159,15 +159,17 @@ export const getCompareTableColumns = (
                   ).text
                 }
               </div>
-            </div>
+            </div>,
+            "conversion",
+            currentSorter,
+            handleSorting
           ),
           dataIndex: "conversion",
-          className: "text-center",
-          render: (obj) => renderComparCell(obj, "justify-center"),
+          render: renderComparCell,
         },
         {
-          title: (
-            <div className="flex flex-col items-center justify-ceneter">
+          title: getTitleWithSorter(
+            <div className="flex flex-col items-start justify-ceneter">
               <div>Cost per Conversion</div>
               <div style={{ fontSize: "10px", color: "#8692A3" }}>
                 {
@@ -176,19 +178,21 @@ export const getCompareTableColumns = (
                   ).text
                 }
               </div>
-            </div>
+            </div>,
+            "cost",
+            currentSorter,
+            handleSorting
           ),
           dataIndex: "cost",
-          className: "text-center",
-          render: (obj) => renderComparCell(obj, "justify-center"),
+          render: renderComparCell,
         },
       ],
     },
   ];
   if (attribution_method_compare) {
     result[result.length - 1].children.push({
-      title: (
-        <div className="flex flex-col items-center justify-ceneter">
+      title: getTitleWithSorter(
+        <div className="flex flex-col items-start justify-ceneter">
           <div>Conversion</div>
           <div style={{ fontSize: "10px", color: "#8692A3" }}>
             {
@@ -197,15 +201,17 @@ export const getCompareTableColumns = (
               ).text
             }
           </div>
-        </div>
+        </div>,
+        "conversion_compare",
+        currentSorter,
+        handleSorting
       ),
       dataIndex: "conversion_compare",
-      className: "text-center",
-      render: (obj) => renderComparCell(obj, "justify-center"),
+      render: renderComparCell,
     });
     result[result.length - 1].children.push({
-      title: (
-        <div className="flex flex-col items-center justify-ceneter">
+      title: getTitleWithSorter(
+        <div className="flex flex-col items-start justify-ceneter">
           <div>Cost per Conversion</div>
           <div style={{ fontSize: "10px", color: "#8692A3" }}>
             {
@@ -214,11 +220,12 @@ export const getCompareTableColumns = (
               ).text
             }
           </div>
-        </div>
+        </div>,
+        currentSorter,
+        handleSorting
       ),
       dataIndex: "cost_compare",
-      className: "text-center",
-      render: (obj) => renderComparCell(obj, "justify-center"),
+      render: renderComparCell,
     });
   }
   let linkedEventsColumns = [];
@@ -229,24 +236,28 @@ export const getCompareTableColumns = (
         className: "tableParentHeader",
         children: [
           {
-            title: (
-              <div className="flex flex-col items-center justify-ceneter">
+            title: getTitleWithSorter(
+              <div className="flex flex-col items-start justify-ceneter">
                 <div>Users</div>
-              </div>
+              </div>,
+              le.label + " - Users",
+              currentSorter,
+              handleSorting
             ),
             dataIndex: le.label + " - Users",
-            className: "text-center",
-            render: (obj) => renderComparCell(obj, "justify-center"),
+            render: renderComparCell,
           },
           {
-            title: (
-              <div className="flex flex-col items-center justify-ceneter">
+            title: getTitleWithSorter(
+              <div className="flex flex-col items-start justify-ceneter">
                 <div>Cost per Conversion</div>
-              </div>
+              </div>,
+              le.label + " - CPC",
+              currentSorter,
+              handleSorting
             ),
             dataIndex: le.label + " - CPC",
-            className: "text-center",
-            render: (obj) => renderComparCell(obj, "justify-center"),
+            render: renderComparCell,
           },
         ],
       };
@@ -317,8 +328,8 @@ export const getTableColumns = (
       className: "tableParentHeader",
       children: [
         {
-          title: (
-            <div className="flex flex-col items-center justify-ceneter">
+          title: getTitleWithSorter(
+            <div className="flex flex-col items-start justify-center">
               <div>Conversion</div>
               <div style={{ fontSize: "10px", color: "#8692A3" }}>
                 {
@@ -327,17 +338,19 @@ export const getTableColumns = (
                   ).text
                 }
               </div>
-            </div>
+            </div>,
+            "conversion",
+            currentSorter,
+            handleSorting
           ),
           dataIndex: "conversion",
-          className: "text-center",
           render: (d) => {
             return <NumFormat number={d} />;
           },
         },
         {
-          title: (
-            <div className="flex flex-col items-center justify-ceneter">
+          title: getTitleWithSorter(
+            <div className="flex flex-col items-start justify-ceneter">
               <div>Cost per Conversion</div>
               <div style={{ fontSize: "10px", color: "#8692A3" }}>
                 {
@@ -346,10 +359,12 @@ export const getTableColumns = (
                   ).text
                 }
               </div>
-            </div>
+            </div>,
+            "cost",
+            currentSorter,
+            handleSorting
           ),
           dataIndex: "cost",
-          className: "text-center",
           render: (d) => {
             return <NumFormat number={d} />;
           },
@@ -359,8 +374,8 @@ export const getTableColumns = (
   ];
   if (attribution_method_compare) {
     result[result.length - 1].children.push({
-      title: (
-        <div className="flex flex-col items-center justify-ceneter">
+      title: getTitleWithSorter(
+        <div className="flex flex-col items-start justify-ceneter">
           <div>Conversion</div>
           <div style={{ fontSize: "10px", color: "#8692A3" }}>
             {
@@ -369,17 +384,19 @@ export const getTableColumns = (
               ).text
             }
           </div>
-        </div>
+        </div>,
+        "conversion_compare",
+        currentSorter,
+        handleSorting
       ),
       dataIndex: "conversion_compare",
-      className: "text-center",
       render: (d) => {
         return <NumFormat number={d} />;
       },
     });
     result[result.length - 1].children.push({
-      title: (
-        <div className="flex flex-col items-center justify-ceneter">
+      title: getTitleWithSorter(
+        <div className="flex flex-col items-start justify-ceneter">
           <div>Cost per Conversion</div>
           <div style={{ fontSize: "10px", color: "#8692A3" }}>
             {
@@ -388,10 +405,12 @@ export const getTableColumns = (
               ).text
             }
           </div>
-        </div>
+        </div>,
+        "cost_compare",
+        currentSorter,
+        handleSorting
       ),
       dataIndex: "cost_compare",
-      className: "text-center",
       render: (d) => {
         return <NumFormat number={d} />;
       },
@@ -405,25 +424,29 @@ export const getTableColumns = (
         className: "tableParentHeader",
         children: [
           {
-            title: (
-              <div className="flex flex-col items-center justify-ceneter">
+            title: getTitleWithSorter(
+              <div className="flex flex-col items-start justify-ceneter">
                 <div>Users</div>
-              </div>
+              </div>,
+              le.label + " - Users",
+              currentSorter,
+              handleSorting
             ),
             dataIndex: le.label + " - Users",
-            className: "text-center",
             render: (d) => {
               return <NumFormat number={d} />;
             },
           },
           {
-            title: (
-              <div className="flex flex-col items-center justify-ceneter">
+            title: getTitleWithSorter(
+              <div className="flex flex-col items-start justify-ceneter">
                 <div>Cost per Conversion</div>
-              </div>
+              </div>,
+              le.label + " - CPC",
+              currentSorter,
+              handleSorting
             ),
             dataIndex: le.label + " - CPC",
-            className: "text-center",
             render: (d) => {
               return <NumFormat number={d} />;
             },

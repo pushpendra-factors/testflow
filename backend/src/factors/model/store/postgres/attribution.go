@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"errors"
+	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -699,7 +700,7 @@ func (pg *Postgres) GetLinkedFunnelEventUsers(projectID uint64, queryFrom, query
 			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
 			// add event filter
-			wStmt, wParams, err := getFilterSQLStmtForEventProperties(linkedEvent.Properties)
+			wStmt, wParams, err := getFilterSQLStmtForEventProperties(projectID, linkedEvent.Properties)
 			if err != nil {
 				return err
 			}
@@ -750,7 +751,7 @@ func (pg *Postgres) ApplyUserPropertiesFilter(projectID uint64, userIDList []str
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 
-	wStmt, wParams, err := getFilterSQLStmtForUserProperties(goalEventProperties)
+	wStmt, wParams, err := getFilterSQLStmtForUserProperties(projectID, goalEventProperties)
 	if err != nil {
 		return nil, err
 	}
@@ -771,7 +772,14 @@ func (pg *Postgres) ApplyUserPropertiesFilter(projectID uint64, userIDList []str
 	for _, users := range userPropertiesIdsInBatches {
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
-		queryUserIdCoalID := "SELECT user_id FROM user_properties WHERE id = ANY (VALUES " + placeHolder + " ) "
+
+		userPropertiesRefTable := "events"
+		if C.ShouldUseUserPropertiesTableForRead(projectID) {
+			userPropertiesRefTable = "user_properties"
+		}
+		queryUserIdCoalID := fmt.Sprintf("SELECT user_id FROM %s", userPropertiesRefTable) + " " +
+			"WHERE id = ANY (VALUES " + placeHolder + " ) "
+
 		var qParams []interface{}
 		qParams = append(qParams, value...)
 		// add user_properties filter
@@ -819,7 +827,7 @@ func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
 	qParams = append(qParams, conversionEventNameIDs...)
 
 	// add event filter
-	wStmt, wParams, err := getFilterSQLStmtForEventProperties(goalEventProperties)
+	wStmt, wParams, err := getFilterSQLStmtForEventProperties(projectID, goalEventProperties) // query.ConversionEvent.Properties)
 	if err != nil {
 		return nil, nil, nil, err
 	}

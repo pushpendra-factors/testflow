@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -179,6 +178,7 @@ func main() {
 func UpdatePropertyOnAllUserPropertyRecordsIfPropertyNotExist(projectId uint64, userId string,
 	property string, value interface{}) int {
 
+	/* NOTE: GetUserPropertyRecordsByUserId IS DEPRECATED. NOT USED ON PRODUCTION.
 	userPropertyRecords, errCode := store.GetStore().GetUserPropertyRecordsByUserId(projectId, userId)
 	if errCode == http.StatusInternalServerError {
 		return errCode
@@ -227,4 +227,6 @@ func UpdatePropertyOnAllUserPropertyRecordsIfPropertyNotExist(projectId uint64, 
 	}
 
 	return http.StatusAccepted
+	*/
+
 }

@@ -47,7 +47,11 @@ export const formatDataInLineChartFormat = (chartsData) => {
   return result;
 };
 
-export const getTableColumns = (chartsData, currentSorter, handleSorting) => {
+export const getTableColumns = (chartsData, frequency, currentSorter, handleSorting) => {
+  let format = "MMM D, YYYY";
+  if (frequency === "hour") {
+    format = "h A, MMM D";
+  }
   const result = chartsData.map((elem) => {
     return {
       title: getTitleWithSorter(
@@ -64,18 +68,17 @@ export const getTableColumns = (chartsData, currentSorter, handleSorting) => {
   });
   return [
     {
-      title: "Date",
+      title: getTitleWithSorter("Date", "date", currentSorter, handleSorting),
       dataIndex: "date",
+      render: (d) => {
+        return moment(d).format(format)
+      },
     },
     ...result,
   ];
 };
 
-export const getTableData = (chartsData, frequency, currentSorter) => {
-  let format = "MMM D, YYYY";
-  if (frequency === "hour") {
-    format = "h A, MMM D";
-  }
+export const getTableData = (chartsData, currentSorter) => {
   const dates = chartsData[0].dataOverTime.map((d) => d.date);
   const columns = chartsData.map((elem) => elem.name);
   const result = dates.map((date, dateIndex) => {
@@ -86,7 +89,7 @@ export const getTableData = (chartsData, frequency, currentSorter) => {
     });
     return {
       index: dateIndex,
-      date: moment(date).format(format),
+      date,
       ...colVals,
     };
   });

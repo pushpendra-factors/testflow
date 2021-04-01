@@ -5,13 +5,17 @@ import (
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
+	"factors/metrics"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"reflect"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/imdario/mergo"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -36,38 +40,58 @@ func (pg *Postgres) createUserWithError(user *model.User) (*model.User, error) {
 		user.ID = U.GetUUID()
 	}
 
+	// Add join timestamp before creation.
+	// Increamenting count based on EventNameId, not by EventName.
+	if user.JoinTimestamp <= 0 {
+		// Default to 60 seconds earlier than now, so that
+		// if event is also created simultaneously
+		// user join is earlier.
+		user.JoinTimestamp = time.Now().Unix() - 60
+	}
+	if user.PropertiesUpdatedTimestamp <= 0 {
+		// Initializing properties updated timestamp at time of creation.
+		user.PropertiesUpdatedTimestamp = user.JoinTimestamp
+	}
+	// adds join timestamp to user properties.
+	newUserProperties := map[string]interface{}{
+		U.UP_JOIN_TIME: user.JoinTimestamp,
+	}
+
+	// Add identification properties, if available.
 	// Prioritize identity properties if customer_user_id is provided
 	if user.CustomerUserId != "" {
-		identityProperties, err := model.GetIdentifiedUserPropertiesAsJsonb(user.CustomerUserId)
+		identityProperties, err := model.GetIdentifiedUserProperties(user.CustomerUserId)
 		if err != nil {
 			return nil, errors.New("failed to get identity properties")
 		}
 
-		propertiesMap, err := U.DecodePostgresJsonb(identityProperties)
-		if err != nil {
-			return nil, errors.New("failed to decode identity properties")
+		// add identity properties to new properties.
+		for k, v := range identityProperties {
+			newUserProperties[k] = v
 		}
-
-		properties, err := U.AddToPostgresJsonb(&user.Properties, *propertiesMap, true)
-		if err != nil {
-			return nil, errors.New("failed to add identity properties on user properties")
-		}
-		user.Properties = *properties
 	}
 
+	newUserPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newUserProperties, true)
+	if err != nil {
+		return nil, err
+	}
+
+	// Discourage direct properties update. Update always through
+	// UpdateUserProperties method. Setting empty JSON intentionally,
+	// to keep the assumption of not null of properties after create.
+	user.Properties = postgres.Jsonb{json.RawMessage("{}")}
 	db := C.GetServices().Db
 	if err := db.Create(user).Error; err != nil {
 		return nil, err
 	}
 
-	propertiesId, errCode := pg.UpdateUserPropertiesByCurrentProperties(user.ProjectId, user.ID,
-		user.PropertiesId, &user.Properties, user.JoinTimestamp)
+	propertiesId, properties, errCode := pg.UpdateUserProperties(user.ProjectId, user.ID, newUserPropertiesJsonb, user.JoinTimestamp)
 	if errCode == http.StatusInternalServerError {
 		return nil, errors.New("failed to update user properties")
 	}
 
-	// assign propertiesId with created propertiesId.
 	user.PropertiesId = propertiesId
+	user.Properties = *properties
 
 	return user, nil
 }
@@ -105,7 +129,8 @@ func (pg *Postgres) CreateUser(user *model.User) (*model.User, int) {
 }
 
 // UpdateUser updates user fields by Id.
-func (pg *Postgres) UpdateUser(projectId uint64, id string, user *model.User, updateTimestamp int64) (*model.User, int) {
+func (pg *Postgres) UpdateUser(projectId uint64, id string,
+	user *model.User, updateTimestamp int64) (*model.User, int) {
 
 	// Todo(Dinesh): Move to validations.
 	// Ref: https://github.com/qor/validations
@@ -124,16 +149,24 @@ func (pg *Postgres) UpdateUser(projectId uint64, id string, user *model.User, up
 		return nil, http.StatusBadRequest
 	}
 
+	// Discourage direct properties update.
+	// Update always through UpdateUserProperties method.
+	userProperties := user.Properties
+	// Properties column will not be added as part update
+	// when set with empty postgres jsonb as value. Tested.
+	user.Properties = postgres.Jsonb{}
+
 	var updatedUser model.User
+
 	db := C.GetServices().Db
-	if err := db.Model(&updatedUser).Where("project_id = ?", projectId).Where("id = ?",
+	if err := db.Model(&model.User{}).Where("project_id = ?", projectId).Where("id = ?",
 		cleanId).Updates(user).Error; err != nil {
 
 		log.WithFields(log.Fields{"user": user}).WithError(err).Error("Failed updating fields by user_id")
 		return nil, http.StatusInternalServerError
 	}
 
-	_, errCode := pg.UpdateUserProperties(projectId, id, &user.Properties, updateTimestamp)
+	_, _, errCode := pg.UpdateUserProperties(projectId, id, &userProperties, updateTimestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return nil, http.StatusInternalServerError
 	}
@@ -143,18 +176,348 @@ func (pg *Postgres) UpdateUser(projectId uint64, id string, user *model.User, up
 
 // UpdateUserProperties only if there is a change in properties values.
 func (pg *Postgres) UpdateUserProperties(projectId uint64, id string,
-	properties *postgres.Jsonb, updateTimestamp int64) (string, int) {
+	newProperties *postgres.Jsonb, updateTimestamp int64) (string, *postgres.Jsonb, int) {
 
-	currentPropertiesId, status := getUserPropertiesId(projectId, id)
-	if status != http.StatusFound {
-		return "", status
+	var userPropertiesID string
+	var userProperties *postgres.Jsonb
+
+	// TODO(Dinesh): Remove the block of code after deprecating user_properties
+	// table permanantly. Kept this for backward compatability of data.
+	var statusV1 int
+	if !C.IsUserPropertiesTableWriteDeprecated(projectId) {
+		currentPropertiesId, status := getUserPropertiesId(projectId, id)
+		if status != http.StatusFound {
+			return "", userProperties, status
+		}
+
+		userPropertiesID, statusV1 = pg.UpdateUserPropertiesByCurrentProperties(projectId, id,
+			currentPropertiesId, newProperties, updateTimestamp)
 	}
 
-	return pg.UpdateUserPropertiesByCurrentProperties(projectId, id,
-		currentPropertiesId, properties, updateTimestamp)
+	var statusV2 int
+	if C.IsOnTableUserPropertiesWriteAllowed(projectId) {
+		userProperties, statusV2 = pg.UpdateUserPropertiesV2(projectId, id, newProperties, updateTimestamp)
+	}
+
+	if !C.IsUserPropertiesTableWriteDeprecated(projectId) {
+		// Return status of V1 till deprecation.
+		return userPropertiesID, userProperties, statusV1
+	}
+
+	return userPropertiesID, userProperties, statusV2
 }
 
-// UpdateUser
+func (pg *Postgres) mergeNewPropertiesWithCurrentUserProperties(projectID uint64, userID string,
+	currentProperties *postgres.Jsonb, currentUpdateTimestamp int64,
+	newProperties *postgres.Jsonb, newUpdateTimestamp int64,
+) (*postgres.Jsonb, int) {
+	logCtx := log.WithField("project_id", projectID)
+
+	var newPropertiesMap map[string]interface{}
+	err := json.Unmarshal((*newProperties).RawMessage, &newPropertiesMap)
+	if err != nil {
+		logCtx.WithError(err).WithField("new_properties", newPropertiesMap).
+			Error("Failed to unmarshal new properties of user.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(newPropertiesMap) == 0 {
+		return nil, http.StatusNotModified
+	}
+
+	if currentProperties == nil {
+		logCtx.WithField("current_properties", currentProperties).
+			Error("User properties of existing user is empty.")
+		return nil, http.StatusInternalServerError
+	}
+
+	// Initialize merged user properties with current user_properties.
+	var mergedPropertiesMap map[string]interface{}
+	err = json.Unmarshal((*currentProperties).RawMessage, &mergedPropertiesMap)
+	if err != nil {
+		logCtx.WithError(err).WithField("current_properties", currentProperties).
+			Error("Failed to unmarshal current properties of user.")
+		return nil, http.StatusInternalServerError
+	}
+
+	var currentPropertiesMap map[string]interface{}
+	json.Unmarshal((*currentProperties).RawMessage, &currentPropertiesMap)
+
+	// Overwrite the keys only, if the update is future, else only add new keys.
+	if newUpdateTimestamp >= currentUpdateTimestamp {
+		mergo.Merge(&mergedPropertiesMap, newPropertiesMap, mergo.WithOverride)
+
+		// For fixing the meta identifier object which was a string earlier and changed to JSON.
+		// Mergo doesn't consider change in datatype as change in the same key.
+		if _, exists := newPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY]; exists {
+			mergedPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY] = newPropertiesMap[U.UP_META_OBJECT_IDENTIFIER_KEY]
+		}
+	} else {
+		mergo.Merge(&mergedPropertiesMap, newPropertiesMap)
+	}
+
+	// Using merged properties for equality check to achieve
+	// currentPropertiesMap {x: 1, y: 2} newPropertiesMap {x: 1} -> true
+	if reflect.DeepEqual(currentPropertiesMap, mergedPropertiesMap) {
+		if len(currentPropertiesMap) > len(mergedPropertiesMap) {
+			pg.UpdateCacheForUserProperties(userID, projectID, currentPropertiesMap, true)
+			return currentProperties, http.StatusNotModified
+		}
+	}
+
+	pg.UpdateCacheForUserProperties(userID, projectID, mergedPropertiesMap, false)
+	mergedPropertiesJSON, err := U.EncodeToPostgresJsonb(&mergedPropertiesMap)
+	if err != nil {
+		logCtx.Error("Failed to marshal new properties merged to current user properties.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return mergedPropertiesJSON, http.StatusOK
+}
+
+func mergeUserPropertiesByCustomerUserID(projectID uint64, users []model.User) (*map[string]interface{}, int) {
+	logCtx := log.WithField("project_id", projectID).WithField("users", users)
+	usersLength := len(users)
+	if usersLength == 0 {
+		logCtx.Error("No users for merging the user_properties.")
+		return nil, http.StatusInternalServerError
+	}
+
+	initialPropertiesVisitedMap := make(map[string]bool)
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_INITIAL {
+		initialPropertiesVisitedMap[property] = false
+	}
+
+	// Order the properties before merging the properties to
+	// ensure the precendence of value.
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].PropertiesUpdatedTimestamp < users[j].PropertiesUpdatedTimestamp
+	})
+
+	mergedUserProperties := make(map[string]interface{})
+	mergedUserPropertiesValues := make(map[string][]interface{})
+	var mergedUpdatedTimestamp int64
+	for i := range users {
+		user := users[i]
+		userProperties, err := U.DecodePostgresJsonb(&user.Properties)
+		if err != nil {
+			logCtx.WithField("user_properties", user.Properties).
+				Error("Failed to decode user properties on merge.")
+			return &mergedUserProperties, http.StatusInternalServerError
+		}
+		if user.PropertiesUpdatedTimestamp > mergedUpdatedTimestamp {
+			mergedUpdatedTimestamp = user.PropertiesUpdatedTimestamp
+		}
+
+		for property := range *userProperties {
+			mergedUserPropertiesValues[property] = append(mergedUserPropertiesValues[property], (*userProperties)[property])
+			isAlreadySet, isInitialProperty := initialPropertiesVisitedMap[property]
+			if isInitialProperty {
+				if !isAlreadySet {
+					// For initial properties, set only once for earliest user.
+					mergedUserProperties[property] = (*userProperties)[property]
+					initialPropertiesVisitedMap[property] = true
+				}
+			} else if !U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) &&
+				!isEmptyPropertyValue((*userProperties)[property]) {
+				// For all other properties, overwrite with the latest user property.
+				mergedUserProperties[property] = (*userProperties)[property]
+			}
+		}
+	}
+
+	// Handle merge for add type properties separately.
+	userPropertiesToBeMerged := make([]postgres.Jsonb, 0, 0)
+	for i := range users {
+		userPropertiesToBeMerged = append(userPropertiesToBeMerged, users[i].Properties)
+	}
+	mergeAddTypeUserProperties(&mergedUserProperties, userPropertiesToBeMerged)
+
+	// Additional check for properties that can be added. If merge is triggered for users with same set of properties,
+	// value of properties that can be added will change after addition. Below check is to avoid update in such case.
+	if !anyPropertyChanged(mergedUserPropertiesValues, len(users)) {
+		logCtx.Infof("Skipping merge as none of the properties changed %s", mergedUserPropertiesValues)
+		return &mergedUserProperties, http.StatusOK
+	}
+	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
+
+	// Disabled temporary sanitization.
+	// pg.SanitizeAddTypeProperties(projectID, users, &mergedUserProperties)
+
+	return &mergedUserProperties, http.StatusOK
+}
+
+func (pg *Postgres) getUsersForMergingPropertiesByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int) {
+	logCtx := log.WithField("project_id", projectID).WithField("customer_user_id", customerUserID)
+
+	if projectID == 0 || customerUserID == "" {
+		logCtx.Error("Invalid values for arguments.")
+		return []model.User{}, http.StatusBadRequest
+	}
+
+	// Users are returned in increasing order of created_at. For user_properties created at same unix time,
+	// older user order will help in ensuring the order while merging properties.
+	users, errCode := pg.GetUsersByCustomerUserID(projectID, customerUserID)
+	if errCode == http.StatusInternalServerError || errCode == http.StatusNotFound {
+		return users, errCode
+	}
+
+	usersLength := len(users)
+	if usersLength > 10 {
+		metrics.Increment(metrics.IncrUserPropertiesMergeMoreThan10)
+	}
+
+	if usersLength > model.MaxUsersForPropertiesMerge {
+		// If number of users to merge are more than max allowed, merge for oldest max/2 and latest max/2.
+		users = append(users[0:model.MaxUsersForPropertiesMerge/2],
+			users[usersLength-model.MaxUsersForPropertiesMerge/2:usersLength]...)
+	}
+	metrics.Increment(metrics.IncrUserPropertiesMergeCount)
+
+	return users, http.StatusFound
+}
+
+// UpdateUserPropertiesV2 - Merge new properties with the existing properties of user and also
+// merge the properties of user with same customer_user_id, then updates properties on users table.
+func (pg *Postgres) UpdateUserPropertiesV2(projectID uint64, id string,
+	newProperties *postgres.Jsonb, newUpdateTimestamp int64) (*postgres.Jsonb, int) {
+	logCtx := log.WithField("project_id", projectID).WithField("id", id).
+		WithField("new_properties", newProperties).WithField("new_update_timestamp", newUpdateTimestamp)
+
+	newProperties = U.SanitizePropertiesJsonb(newProperties)
+
+	user, errCode := pg.GetUser(projectID, id)
+	if errCode != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	newPropertiesMergedJSON, errCode := pg.mergeNewPropertiesWithCurrentUserProperties(projectID, id,
+		&user.Properties, user.PropertiesUpdatedTimestamp, newProperties, newUpdateTimestamp)
+	if errCode == http.StatusNotModified {
+		return &user.Properties, http.StatusNotModified
+	}
+	if errCode != http.StatusOK {
+		logCtx.Error("Failed merging current properties with new properties on update_properties v2.")
+		return nil, http.StatusInternalServerError
+	}
+
+	// Skip merge by customer_user_id, if customer_user_id is not available.
+	if user.CustomerUserId == "" {
+		errCode = pg.OverwriteUserPropertiesByID(projectID, id, newPropertiesMergedJSON, true, newUpdateTimestamp)
+		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+			return nil, http.StatusInternalServerError
+		}
+
+		return newPropertiesMergedJSON, http.StatusAccepted
+	}
+
+	users, errCode := pg.getUsersForMergingPropertiesByCustomerUserID(projectID, user.CustomerUserId)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get user by customer_user_id for merging user properties.")
+		return &user.Properties, http.StatusInternalServerError
+	}
+
+	// Skip merge by customer_user_id, if only the current user has the customer_user_id.
+	if len(users) == 1 {
+		errCode = pg.OverwriteUserPropertiesByID(projectID, id, newPropertiesMergedJSON, true, newUpdateTimestamp)
+		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+			return nil, http.StatusInternalServerError
+		}
+
+		return newPropertiesMergedJSON, http.StatusAccepted
+	}
+
+	// Update the merged properties to the current user's object before passing it on
+	// for merging by customer user id. The merge method orders by updated timestamp
+	// before merging.
+	for i := range users {
+		if users[i].ID == id {
+			users[i].Properties = *newPropertiesMergedJSON
+			users[i].PropertiesUpdatedTimestamp = newUpdateTimestamp
+		}
+	}
+
+	mergedByCustomerUserIDMap, errCode := mergeUserPropertiesByCustomerUserID(projectID, users)
+	if errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
+	}
+	mergedByCustomerUserIDJSON, err := U.EncodeToPostgresJsonb(mergedByCustomerUserIDMap)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to marshal user properties merged by customer_user_id")
+		return nil, http.StatusInternalServerError
+	}
+
+	errCode = pg.OverwriteUserPropertiesByCustomerUserID(projectID, user.CustomerUserId,
+		mergedByCustomerUserIDJSON, newUpdateTimestamp)
+	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+		return nil, http.StatusInternalServerError
+	}
+
+	return mergedByCustomerUserIDJSON, http.StatusAccepted
+}
+
+// OverwriteUserPropertiesByCustomerUserID - Update the properties column value
+// of all users which has the given customer_user_id, with given properties JSON.
+func (pg *Postgres) OverwriteUserPropertiesByCustomerUserID(projectID uint64,
+	customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int {
+	logCtx := log.WithField("project_id", projectID).WithField("customer_user_id", customerUserID)
+
+	if properties == nil {
+		logCtx.Error("Failed to overwrite properties. Nil properties.")
+		return http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&model.User{}).
+		Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
+		Update(map[string]interface{}{
+			"properties":                   properties,
+			"properties_updated_timestamp": updateTimestamp,
+		}).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to overwrite user properteis.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func (pg *Postgres) OverwriteUserPropertiesByID(projectID uint64, id string,
+	properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64) int {
+
+	logCtx := log.WithField("project_id", projectID).WithField("id", id).
+		WithField("update_timestamp", updateTimestamp)
+
+	if projectID == 0 || id == "" {
+		logCtx.Error("Failed to overwrite properties. Empty or nil properties.")
+		return http.StatusBadRequest
+	}
+
+	if properties == nil {
+		logCtx.Error("Failed to overwrite properties. Empty or nil properties.")
+		return http.StatusBadRequest
+	}
+
+	if withUpdateTimestamp && updateTimestamp == 0 {
+		logCtx.Error("Invalid update_timestamp.")
+		return http.StatusBadRequest
+	}
+
+	update := map[string]interface{}{"properties": properties}
+	if updateTimestamp > 0 {
+		update["properties_updated_timestamp"] = updateTimestamp
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&model.User{}).Where("project_id = ? AND id = ?", projectID, id).Update(update).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to overwrite user properteis.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
 func (pg *Postgres) UpdateUserPropertiesByCurrentProperties(projectId uint64, id string,
 	currentPropertiesId string, properties *postgres.Jsonb, updateTimestamp int64) (string, int) {
 
@@ -219,12 +582,14 @@ func (pg *Postgres) GetUser(projectId uint64, id string) (*model.User, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	if user.PropertiesId != "" {
-		properties, errCode := pg.GetUserProperties(projectId, id, user.PropertiesId)
-		if errCode != http.StatusFound {
-			return nil, errCode
+	if C.ShouldUseUserPropertiesTableForRead(projectId) {
+		if user.PropertiesId != "" {
+			properties, errCode := pg.GetUserProperties(projectId, id, user.PropertiesId)
+			if errCode != http.StatusFound {
+				return nil, errCode
+			}
+			user.Properties = *properties
 		}
-		user.Properties = *properties
 	}
 
 	return &user, http.StatusFound
@@ -252,7 +617,10 @@ func (pg *Postgres) GetUsersByCustomerUserID(projectID uint64, customerUserID st
 	})
 
 	var users []model.User
-	if err := db.Order("created_at ASC").Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).Find(&users).Error; err != nil {
+	if err := db.Order("created_at ASC").
+		Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
+		Find(&users).Error; err != nil {
+
 		logCtx.WithError(err).Error("Failed to get users for customer_user_id")
 		return nil, http.StatusInternalServerError
 	}
@@ -533,21 +901,34 @@ func (pg *Postgres) CreateOrGetAMPUser(projectId uint64, ampUserId string, times
 	return user, http.StatusCreated
 }
 
-//GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
+// GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
 func (pg *Postgres) GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error) {
 	properties := make([]U.Property, 0)
 	db := C.GetServices().Db
 	startTime := seedDate.AddDate(0, 0, -7).Unix()
 	endTime := seedDate.Unix()
 	logCtx := log.WithField("project_id", projectID)
-	queryStr := " WITH recent_users AS (SELECT DISTINCT ON(user_id) user_id, user_properties_id FROM events " +
-		"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?) " +
-		"SELECT json_object_keys(user_properties.properties::json) AS key, COUNT(*) AS count, MAX(updated_timestamp) as last_seen FROM recent_users " +
-		"LEFT OUTER JOIN user_properties ON recent_users.user_properties_id = user_properties.id  " +
-		"WHERE user_properties.project_id = ? AND user_properties.properties != 'null' GROUP BY key ORDER BY count DESC LIMIT ?;"
 
-	rows, err := db.Raw(queryStr, projectID, startTime, endTime, usersLimit, projectID, propertyLimit).Rows()
+	var queryParams []interface{}
+	queryStmnt := "WITH recent_user_events AS (SELECT DISTINCT ON(user_id) user_id, user_properties, timestamp FROM events" + " " +
+		"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?)" + " " +
+		"SELECT json_object_keys(user_properties::json) AS key, COUNT(*) AS count, MAX(timestamp) as last_seen FROM recent_user_events" + " " +
+		"WHERE user_properties != 'null' GROUP BY key ORDER BY count DESC LIMIT ?;"
 
+	queryParams = make([]interface{}, 0, 0)
+	queryParams = append(queryParams, projectID, startTime, endTime, usersLimit, propertyLimit)
+
+	if C.ShouldUseUserPropertiesTableForRead(projectID) {
+		queryStmnt = " WITH recent_users AS (SELECT DISTINCT ON(user_id) user_id, user_properties_id FROM events " +
+			"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?) " +
+			"SELECT json_object_keys(user_properties.properties::json) AS key, COUNT(*) AS count, MAX(updated_timestamp) as last_seen FROM recent_users " +
+			"LEFT OUTER JOIN user_properties ON recent_users.user_properties_id = user_properties.id  " +
+			"WHERE user_properties.project_id = ? AND user_properties.properties != 'null' GROUP BY key ORDER BY count DESC LIMIT ?;"
+		queryParams = make([]interface{}, 0, 0)
+		queryParams = append(queryParams, projectID, startTime, endTime, usersLimit, projectID, propertyLimit)
+	}
+
+	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get recent user property keys.")
 		return nil, err
@@ -573,14 +954,26 @@ func (pg *Postgres) GetRecentUserPropertyValuesWithLimits(projectID uint64, prop
 	startTime := seedDate.AddDate(0, 0, -7).Unix()
 	endTime := seedDate.Unix()
 	db := C.GetServices().Db
-	queryStmnt := " WITH recent_users AS (SELECT DISTINCT ON(user_id) user_id, user_properties_id FROM events " +
-		"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?) " +
-		"SELECT user_properties.properties->? AS value, COUNT(*) AS count, MAX(updated_timestamp) AS last_seen, MAX(jsonb_typeof(user_properties.properties->?)) AS value_type FROM recent_users " +
-		"LEFT JOIN user_properties ON recent_users.user_properties_id = user_properties.id WHERE user_properties.project_id = ? " +
-		"AND user_properties.properties != 'null' AND user_properties.properties->? IS NOT NULL GROUP BY value limit ?;"
 
-	queryParams := make([]interface{}, 0, 0)
-	queryParams = append(queryParams, projectID, startTime, endTime, usersLimit, propertyKey, propertyKey, projectID, propertyKey, valuesLimit)
+	var queryParams []interface{}
+	queryStmnt := " WITH recent_user_events AS (SELECT DISTINCT ON(user_id) user_id, user_properties, timestamp FROM events" + " " +
+		"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?)" + " " +
+		"SELECT user_properties->? AS value, COUNT(*) AS count, MAX(timestamp) AS last_seen, MAX(jsonb_typeof(user_properties->?)) AS value_type FROM recent_user_events" + " " +
+		"WHERE user_properties != 'null' AND user_properties->? IS NOT NULL GROUP BY value limit ?;"
+
+	queryParams = make([]interface{}, 0, 0)
+	queryParams = append(queryParams, projectID, startTime, endTime, usersLimit, propertyKey, propertyKey, propertyKey, valuesLimit)
+
+	if C.ShouldUseUserPropertiesTableForRead(projectID) {
+		queryStmnt = " WITH recent_users AS (SELECT DISTINCT ON(user_id) user_id, user_properties_id FROM events " +
+			"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?) " +
+			"SELECT user_properties.properties->? AS value, COUNT(*) AS count, MAX(updated_timestamp) AS last_seen, MAX(jsonb_typeof(user_properties.properties->?)) AS value_type FROM recent_users " +
+			"LEFT JOIN user_properties ON recent_users.user_properties_id = user_properties.id WHERE user_properties.project_id = ? " +
+			"AND user_properties.properties != 'null' AND user_properties.properties->? IS NOT NULL GROUP BY value limit ?;"
+
+		queryParams = make([]interface{}, 0, 0)
+		queryParams = append(queryParams, projectID, startTime, endTime, usersLimit, propertyKey, propertyKey, projectID, propertyKey, valuesLimit)
+	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_key": propertyKey, "values_limit": valuesLimit})
 
@@ -848,4 +1241,54 @@ func (pg *Postgres) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId ui
 		}
 	}
 	return nil
+}
+
+func (pg *Postgres) GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int) {
+	logCtx := log.WithField("project_id", projectID).WithField("user_id", id)
+
+	if projectID == 0 || id == "" {
+		logCtx.Error("Invalid values on arguments.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	var user model.User
+	if err := db.Model(&model.User{}).Where("project_id = ? AND id = ?", projectID, id).
+		Select("properties").Find(&user).Error; err != nil {
+
+		logCtx.WithError(err).Error("Failed to get properties of user.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if U.IsEmptyPostgresJsonb(&user.Properties) {
+		logCtx.WithField("properties", user.Properties).Error("Empty or nil properties for user.")
+		return nil, http.StatusNotFound
+	}
+
+	return &user.Properties, http.StatusFound
+}
+
+// GetUserByPropertyKey - Returns first user which has the
+// given property with value. No specific order.
+func (pg *Postgres) GetUserByPropertyKey(projectID uint64,
+	key string, value interface{}) (*model.User, int) {
+
+	logCtx := log.WithField("project_id", projectID).WithField(
+		"key", key).WithField("value", value)
+
+	db := C.GetServices().Db
+	var user model.User
+	// $$$ is a gorm alias for ? jsonb operator.
+	err := db.Limit(1).Where("project_id=?", projectID).Where(
+		"properties->? $$$ ?", key, value).Find(&user).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get user id by key.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return &user, http.StatusFound
 }

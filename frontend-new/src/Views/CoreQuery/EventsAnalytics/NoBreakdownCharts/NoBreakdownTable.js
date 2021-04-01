@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import moment from "moment";
 import DataTable from "../../../../components/DataTable";
 import {
   getNoGroupingTableData,
@@ -6,9 +7,7 @@ import {
   getDateBasedColumns,
   getNoGroupingTablularDatesBasedData,
 } from "./utils";
-import {
-  CHART_TYPE_SPARKLINES,
-} from "../../../../utils/constants";
+import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";
 
 function NoBreakdownTable({
   data,
@@ -35,12 +34,14 @@ function NoBreakdownTable({
   let selectedRowKeys;
 
   if (chartType === CHART_TYPE_SPARKLINES) {
-    columns = getColumns(events, arrayMapper, sorter, handleSorting);
-    tableData = getNoGroupingTableData(
-      data,
+    columns = getColumns(
+      events,
+      arrayMapper,
+      durationObj.frequency,
       sorter,
-      durationObj.frequency
+      handleSorting
     );
+    tableData = getNoGroupingTableData(data, arrayMapper, sorter);
   } else {
     columns = getDateBasedColumns(
       data,
@@ -83,7 +84,17 @@ function NoBreakdownTable({
   const getCSVData = () => {
     return {
       fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, ...rest }) => {
+      data: tableData.map(({ index, date, ...rest }) => {
+        if (chartType === CHART_TYPE_SPARKLINES) {
+          let format = "MMM D, YYYY";
+          if (durationObj.frequency === "hour") {
+            format = "h A, MMM D";
+          }
+          return {
+            date: moment(date).format(format),
+            ...rest,
+          };
+        }
         return rest;
       }),
     };

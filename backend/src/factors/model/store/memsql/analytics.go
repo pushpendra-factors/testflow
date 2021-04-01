@@ -78,13 +78,37 @@ func getOp(OpStr string) string {
 	return v
 }
 
-func getPropertyEntityField(entityName string) string {
-	if entityName == model.PropertyEntityUser {
-		return "user_properties.properties"
-	} else if entityName == model.PropertyEntityEvent {
+func getPropertyEntityField(projectID uint64, groupProp model.QueryGroupByProperty) string {
+	if groupProp.Entity == model.PropertyEntityUser {
+		if C.ShouldUseUserPropertiesTableForRead(projectID) {
+			return "user_properties.properties"
+		}
+
+		// Use event level user properties for event level group by.
+		if isEventLevelGroupBy(groupProp) {
+			return "events.user_properties"
+		}
+
+		return "users.properties"
+	} else if groupProp.Entity == model.PropertyEntityEvent {
 		return "events.properties"
 	}
 
+	return ""
+}
+
+func getPropertyEntityFieldForFilter(projectID uint64, entityName string) string {
+	if entityName == model.PropertyEntityUser {
+		return "user_properties.properties"
+		if C.ShouldUseUserPropertiesTableForRead(projectID) {
+			return "user_properties.properties"
+		}
+
+		// Filtering is supported only with event level user_properties.
+		return "events.user_properties"
+	} else if entityName == model.PropertyEntityEvent {
+		return "events.properties"
+	}
 	return ""
 }
 
@@ -100,7 +124,7 @@ func isValidLogicalOp(op string) bool {
 	return op == "AND" || op == "OR"
 }
 
-func buildWhereFromProperties(properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
 
 	pLen := len(properties)
 	if pLen == 0 {
@@ -128,7 +152,7 @@ func buildWhereFromProperties(properties []model.QueryProperty) (rStmnt string, 
 				return rStmnt, rParams, errors.New("invalid logical op on where condition")
 			}
 
-			propertyEntity := getPropertyEntityField(p.Entity)
+			propertyEntity := getPropertyEntityFieldForFilter(projectID, p.Entity)
 			propertyOp := getOp(p.Operator)
 
 			if p.Value != model.PropertyValueNone {
@@ -204,17 +228,17 @@ func buildWhereFromProperties(properties []model.QueryProperty) (rStmnt string, 
 }
 
 // returns SQL query condition to address conditions only on events.properties
-func getFilterSQLStmtForEventProperties(properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+func getFilterSQLStmtForEventProperties(projectID uint64, properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
 
-		propertyEntity := getPropertyEntityField(p.Entity)
+		propertyEntity := getPropertyEntityFieldForFilter(projectID, p.Entity)
 		if propertyEntity == "events.properties" {
 			filteredProperty = append(filteredProperty, p)
 		}
 	}
-	wStmt, wParams, err := buildWhereFromProperties(filteredProperty)
+	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty)
 	if err != nil {
 		return "", nil, err
 	}
@@ -222,17 +246,26 @@ func getFilterSQLStmtForEventProperties(properties []model.QueryProperty) (rStmn
 }
 
 // returns SQL query condition to address conditions only on user_properties.properties
-func getFilterSQLStmtForUserProperties(properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+func getFilterSQLStmtForUserProperties(projectID uint64, properties []model.QueryProperty) (rStmnt string, rParams []interface{}, err error) {
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
 
-		propertyEntity := getPropertyEntityField(p.Entity)
-		if propertyEntity == "user_properties.properties" {
+		propertyEntity := getPropertyEntityFieldForFilter(projectID, p.Entity)
+
+		if C.ShouldUseUserPropertiesTableForRead(projectID) {
+			if propertyEntity == "user_properties.properties" {
+				filteredProperty = append(filteredProperty, p)
+			}
+
+			continue
+		}
+
+		if propertyEntity == "events.user_properties" {
 			filteredProperty = append(filteredProperty, p)
 		}
 	}
-	wStmt, wParams, err := buildWhereFromProperties(filteredProperty)
+	wStmt, wParams, err := buildWhereFromProperties(projectID, filteredProperty)
 	if err != nil {
 		return "", nil, err
 	}
@@ -258,8 +291,8 @@ ELSE date_trunc('day', to_timestamp((events.properties->>'check_Timestamp')::num
 WHERE events.project_id='1' AND timestamp>='1602527400' AND timestamp<='1602576868' AND events.event_name_id IN
 (SELECT id FROM event_names WHERE project_id='1' AND name='factors-dev.com:3000/#/settings') GROUP BY _group_key_0 ORDER BY count DESC LIMIT 100
 */
-func getNoneHandledGroupBySelect(groupProp model.QueryGroupByProperty, groupKey string) (string, []interface{}) {
-	entityField := getPropertyEntityField(groupProp.Entity)
+func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByProperty, groupKey string) (string, []interface{}) {
+	entityField := getPropertyEntityField(projectID, groupProp)
 	var groupSelect string
 	groupSelectParams := make([]interface{}, 0)
 	if groupProp.Type != U.PropertyTypeDateTime {
@@ -279,7 +312,7 @@ func getNoneHandledGroupBySelect(groupProp model.QueryGroupByProperty, groupKey 
 // How to use?
 // select user_properties.properties->>'age' as gk_1, events.properties->>'category' as gk_2 from events
 // group by gk_1, gk_2
-func buildGroupKeys(groupProps []model.QueryGroupByProperty) (groupSelect string,
+func buildGroupKeys(projectID uint64, groupProps []model.QueryGroupByProperty) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
 
 	groupSelectParams = make([]interface{}, 0)
@@ -287,14 +320,14 @@ func buildGroupKeys(groupProps []model.QueryGroupByProperty) (groupSelect string
 	for i, v := range groupProps {
 		// Order of group is preserved as received.
 		gKey := groupKeyByIndex(v.Index)
-		noneSelect, noneParams := getNoneHandledGroupBySelect(v, gKey)
-		groupSelect = groupSelect + noneSelect
+		noneHandledSelect, noneHandledSelectParams := getNoneHandledGroupBySelect(projectID, v, gKey)
+		groupSelect = groupSelect + noneHandledSelect
 		groupKeys = groupKeys + gKey
 		if i < len(groupProps)-1 {
 			groupSelect = groupSelect + ", "
 			groupKeys = groupKeys + ", "
 		}
-		groupSelectParams = append(groupSelectParams, noneParams...)
+		groupSelectParams = append(groupSelectParams, noneHandledSelectParams...)
 	}
 
 	return groupSelect, groupSelectParams, groupKeys
@@ -418,10 +451,11 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 	}
 
 	rStmnt := "SELECT " + addSelecStmnt + " FROM events" + " " + addJoinStmnt
-
-	// join user property, if user_property present on event with properties list.
-	if hasWhereEntity(qep, model.PropertyEntityUser) {
-		rStmnt = appendStatement(rStmnt, "LEFT JOIN user_properties ON events.user_id = user_properties.user_id AND events.user_properties_id=user_properties.id")
+	if C.ShouldUseUserPropertiesTableForRead(projectId) {
+		// join user property, if user_property present on event with properties list.
+		if hasWhereEntity(qep, model.PropertyEntityUser) {
+			rStmnt = appendStatement(rStmnt, "LEFT JOIN user_properties ON events.user_id = user_properties.user_id AND events.user_properties_id=user_properties.id")
+		}
 	}
 
 	var fromTimestamp string
@@ -455,7 +489,7 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 	*qParams = append(*qParams, to, projectId, qep.Name)
 
 	// mergeCond for whereProperties can also be 'OR'.
-	wStmnt, wParams, err := buildWhereFromProperties(qep.Properties)
+	wStmnt, wParams, err := buildWhereFromProperties(projectId, qep.Properties)
 	if err != nil {
 		return err
 	}
@@ -534,16 +568,18 @@ func hasGroupEntity(props []model.QueryGroupByProperty, entity string) bool {
 	return false
 }
 
-func addJoinLatestUserPropsQuery(groupProps []model.QueryGroupByProperty, refStepName string, stepName string,
-	qStmnt *string, qParams *[]interface{}, addSelect string) string {
+func addJoinLatestUserPropsQuery(projectID uint64, groupProps []model.QueryGroupByProperty,
+	refStepName string, stepName string, qStmnt *string, qParams *[]interface{}, addSelect string) string {
 
-	groupSelect, gSelectParams, gKeys := buildGroupKeys(groupProps)
+	groupSelect, gSelectParams, gKeys := buildGroupKeys(projectID, groupProps)
 
 	rStmnt := "SELECT " + joinWithComma(groupSelect, addSelect) + " from " + refStepName +
 		" " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
 
-	if hasGroupEntity(groupProps, model.PropertyEntityUser) {
-		rStmnt = rStmnt + " " + " LEFT JOIN user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id"
+	if C.ShouldUseUserPropertiesTableForRead(projectID) {
+		if hasGroupEntity(groupProps, model.PropertyEntityUser) {
+			rStmnt = rStmnt + " " + " LEFT JOIN user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id"
+		}
 	}
 
 	if stepName != "" {

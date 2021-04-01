@@ -12,9 +12,13 @@ function ChartLegends({
   arrayMapper,
   cardSize = 1,
   section,
-  parentClassName = "flex justify-center py-3",
+  parentClassName = "flex justify-center py-3 flex-wrap",
 }) {
-  let itemsCount = legend_counts[cardSize];
+  let itemsCount = arrayMapper.length;
+  if (section === DASHBOARD_WIDGET_SECTION) {
+    itemsCount = legend_counts[cardSize];
+  }
+
   return (
     <div className={parentClassName}>
       {legends.slice(0, itemsCount).map((legend, index) => {
@@ -27,7 +31,7 @@ function ChartLegends({
           label = label.substr(0, charts_legend_length[cardSize]) + "...";
         }
         return (
-          <div key={legend} className="flex items-center">
+          <div key={legend} className="flex items-center mt-2">
             <div
               style={{
                 backgroundColor: colors[index],

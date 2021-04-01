@@ -43,7 +43,7 @@ func generateUniqueToken() (token string, err error) {
 			return token, nil
 		}
 	}
-	return "", fmt.Errorf("Token generation failed after %d attempts.", TOKEN_GEN_RETRY_LIMIT)
+	return "", fmt.Errorf("token generation failed after %d attempts", TOKEN_GEN_RETRY_LIMIT)
 }
 
 func createProject(project *model.Project) (*model.Project, int) {
@@ -68,6 +68,15 @@ func createProject(project *model.Project) (*model.Project, int) {
 			Error("Failed to marshal jobs metadata on create project.")
 	} else {
 		project.JobsMetadata = jobsMetadataJsonb
+	}
+
+	// Initialize interaction settings.
+	settingsJsonb, err := U.EncodeStructTypeToPostgresJsonb(model.DefaultMarketingPropertiesMap())
+	if err != nil {
+		// Log error and continue to create project.
+		logCtx.WithError(err).Error("Failed to marshal InteractionSettings on create project.")
+	} else {
+		project.InteractionSettings = *settingsJsonb
 	}
 
 	// Add project token before create.
@@ -115,6 +124,11 @@ func (pg *Postgres) UpdateProject(projectId uint64, project *model.Project) int 
 	if project.TimeZone != "" {
 		updateFields["time_zone"] = project.TimeZone
 	}
+
+	if !U.IsEmptyPostgresJsonb(&project.InteractionSettings) {
+		updateFields["interaction_settings"] = project.InteractionSettings
+	}
+
 	err := db.Model(&model.Project{}).Where("id = ?", projectId).Update(updateFields).Error
 	if err != nil {
 		logCtx.WithError(err).Error(
@@ -149,7 +163,7 @@ func (pg *Postgres) createProjectDependencies(projectID uint64, agentUUID string
 	return http.StatusCreated
 }
 
-// CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
+// CreateProjectWithDependencies separate create method with dependencies to avoid breaking tests.
 func (pg *Postgres) CreateProjectWithDependencies(project *model.Project, agentUUID string,
 	agentRole uint64, billingAccountID uint64) (*model.Project, int) {
 

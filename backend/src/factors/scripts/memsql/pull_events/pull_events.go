@@ -60,9 +60,8 @@ func pullEventsFlat(db *gorm.DB, projectID uint64, startTime, endTime int64) {
 
 	queryExecStartTime := U.TimeNowUnix()
 	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
-		" events.properties, users.join_timestamp, user_properties.properties FROM events "+
+		" events.properties, users.join_timestamp, events.user_properties FROM events "+
 		"LEFT JOIN event_names ON events.event_name_id=event_names.id LEFT JOIN users ON events.user_id = users.id "+
-		"LEFT JOIN user_properties ON events.user_id = user_properties.user_id AND events.user_properties_id = user_properties.id "+
 		"WHERE events.project_id = %d AND events.timestamp BETWEEN  %d AND %d "+
 		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp", projectID, startTime, endTime)
 

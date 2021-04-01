@@ -363,30 +363,35 @@ func TestAnalyticsFunnelQueryWithFilterConditionNumericalProperty(t *testing.T) 
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotEmpty(t, user.ID)
 
-	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	timestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	startTimestamp := timestamp
 
 	payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 5}, "user_properties": {"value": 5}}`,
-		"s0", startTimestamp)
+		"s0", timestamp)
 	w := ServePostRequestWithHeaders(r, uri, []byte(payload1),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
+	timestamp = timestamp + 10
 	payload1 = fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 100}, "user_properties": {"value": "string"}}`,
-		"s0", startTimestamp+10)
+		"s0", timestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload1),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
+	timestamp = timestamp + 10
 	payload1 = fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": "string"}, "user_properties": {"value": 200}}`,
-		"s0", startTimestamp+10)
+		"s0", timestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload1),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
+	timestamp = timestamp + 10
 	payload1 = fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 1000}, "user_properties": {"value": 2000}}`,
-		"s0", startTimestamp+10)
+		"s0", timestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload1),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
+	timestamp = timestamp + 10
 	payload1 = fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 1}, "user_properties": {"value": 2000}}`,
-		"s0", startTimestamp+10)
+		"s0", timestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload1),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -425,7 +430,6 @@ func TestAnalyticsFunnelQueryWithFilterConditionNumericalProperty(t *testing.T) 
 
 	assert.Equal(t, "count", result.Headers[0])
 	assert.Equal(t, int64(4), result.Rows[0][0])
-
 }
 
 func TestInsightsAnalyticsQueryGroupingMultipleFilters(t *testing.T) {

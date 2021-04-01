@@ -3,33 +3,41 @@ import moment from "moment";
 import { SortData, getTitleWithSorter } from "../../../../utils/dataFormatter";
 import { Number as NumFormat } from "../../../../components/factorsComponents";
 
-export const getNoGroupingTableData = (data, currentSorter, frequency) => {
+export const getNoGroupingTableData = (data, arrayMapper, currentSorter) => {
   const clonedData = data.map((elem) => {
     const element = { ...elem };
     return element;
   });
 
-  let format = "MMM D, YYYY";
-  if (frequency === "hour") {
-    format = "h A, MMM D";
-  }
-
   const result = clonedData.map((elem, index) => {
     return {
       index,
       ...elem,
-      date: moment(elem.date).format(format),
+      date: elem.date,
     };
   });
+  if (currentSorter.key) {
+    const sortMapper = arrayMapper.find(
+      (elem) => elem.eventName === currentSorter.key
+    );
+    if (sortMapper) {
+      return SortData(result, sortMapper.mapper, currentSorter.order);
+    }
+  }
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
 export const getColumns = (
   events,
   arrayMapper,
+  frequency,
   currentSorter,
   handleSorting
 ) => {
+  let format = "MMM D, YYYY";
+  if (frequency === "hour") {
+    format = "h A, MMM D";
+  }
   const result = [
     {
       title: "",
@@ -37,8 +45,11 @@ export const getColumns = (
       width: 37,
     },
     {
-      title: "Date",
+      title: getTitleWithSorter("Date", "date", currentSorter, handleSorting),
       dataIndex: "date",
+      render: (d) => {
+        return moment(d).format(format);
+      },
     },
   ];
 

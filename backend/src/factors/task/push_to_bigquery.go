@@ -143,8 +143,8 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 
 		pbLog.Infof("Stating to pull events to file %s", tmpEventsFile)
 
-		rowCount, eventsFilePath, usersFilePath, err := PullEventsForArchive(
-			db, projectID, tmpEventsFile, tmpUsersFile, batch.StartTime, batch.EndTime)
+		rowCount, eventsFilePath, usersFilePath, err := PullEventsForArchive(projectID,
+			tmpEventsFile, tmpUsersFile, batch.StartTime, batch.EndTime)
 		taskDetails.EventCount = int64(rowCount)
 		if err != nil {
 			pbLog.WithError(err).Error("Failed to pull events for archival")

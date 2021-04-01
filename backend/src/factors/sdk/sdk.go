@@ -524,8 +524,8 @@ func Track(projectId uint64, request *TrackPayload,
 	// Event Properties
 	clientIP := request.ClientIP
 	U.UnEscapeQueryParamProperties(&request.EventProperties)
-	definedEventProperties, hasDefinedMarketingProperty := U.MapEventPropertiesToDefinedProperties(
-		&request.EventProperties)
+	definedEventProperties, hasDefinedMarketingProperty := MapEventPropertiesToProjectDefinedProperties(projectId,
+		logCtx, &request.EventProperties)
 	eventProperties := U.GetValidatedEventProperties(definedEventProperties)
 	if ip, ok := (*eventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
 		clientIP = ip.(string)
@@ -655,8 +655,9 @@ func Track(projectId uint64, request *TrackPayload,
 		response.Error = "Failed updating user properties."
 	}
 
-	userPropertiesId, errCode := store.GetStore().UpdateUserProperties(projectId, request.UserId,
-		&postgres.Jsonb{userPropsJSON}, request.Timestamp)
+	newUserPropertiesJSON := &postgres.Jsonb{userPropsJSON}
+	userPropertiesIDV1, userPropertiesV2, errCode := store.GetStore().UpdateUserProperties(
+		projectId, request.UserId, newUserPropertiesJSON, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		logCtx.WithField("err_code", errCode).
 			Error("Update user properties on track failed. DB update failed.")
@@ -664,13 +665,20 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 
 	event := &model.Event{
-		ID:               request.EventId,
-		EventNameId:      eventName.ID,
-		CustomerEventId:  request.CustomerEventId,
-		Timestamp:        request.Timestamp,
-		ProjectId:        projectId,
-		UserId:           request.UserId,
-		UserPropertiesId: userPropertiesId,
+		ID:              request.EventId,
+		EventNameId:     eventName.ID,
+		CustomerEventId: request.CustomerEventId,
+		Timestamp:       request.Timestamp,
+		ProjectId:       projectId,
+		UserId:          request.UserId,
+
+		// UserPropertiesId - Computed using user_properties table.
+		// Kept for backward compatability. Will be removed after
+		// deprecating user_properties table.
+		UserPropertiesId: userPropertiesIDV1,
+
+		// UserProperties - Computed using properties on users table.
+		UserProperties: userPropertiesV2,
 	}
 
 	// Property used as flag for skipping session on offline session worker.
@@ -701,6 +709,69 @@ func Track(projectId uint64, request *TrackPayload,
 	response.Message = "User event tracked successfully."
 	response.CustomerEventId = request.CustomerEventId
 	return http.StatusOK, response
+}
+
+type Rank struct {
+	Rank  int
+	Value string
+}
+
+func MapEventPropertiesToProjectDefinedProperties(projectID uint64, logCtx *log.Entry, properties *U.PropertiesMap) (*U.PropertiesMap, bool) {
+
+	mappedProperties := make(U.PropertiesMap)
+
+	project, errCode := store.GetStore().GetProject(projectID)
+	if errCode != http.StatusFound {
+		logCtx.WithField("projectID", projectID).WithField("err_code", errCode).Error("failed to fetch project")
+	}
+
+	interactionSettings := model.InteractionSettings{}
+
+	err := U.DecodePostgresJsonbToStructType(&project.InteractionSettings, &interactionSettings)
+	if err == nil {
+		logCtx.WithField("projectID", projectID).WithField("err", err).Error("failed to Decode Postgres Jsonb")
+		interactionSettings = model.DefaultMarketingPropertiesMap()
+	}
+
+	ApplyRanking(interactionSettings, properties, &mappedProperties)
+	return &mappedProperties, U.HasDefinedMarketingProperty(&mappedProperties)
+}
+
+func ApplyRanking(interactionSettings model.InteractionSettings, properties *U.PropertiesMap, mappedProperties *U.PropertiesMap) {
+
+	// build a reverse map. Value = Standard Property; Rank = Key's value
+	reverseMarketingTouchPoints := make(map[string]Rank)
+	for k, v := range interactionSettings.UTMMappings {
+		for rank, userDefinedTouchPoint := range v {
+			// lower the rank, higher the priority
+			reverseMarketingTouchPoints[userDefinedTouchPoint] = Rank{rank, k}
+		}
+	}
+
+	// the rank tracker
+	rankTracker := make(map[string]int)
+	for k, v := range *properties {
+		var property string
+		if _, stdKeyExists := reverseMarketingTouchPoints[k]; stdKeyExists {
+			if _, rankExists := rankTracker[reverseMarketingTouchPoints[k].Value]; rankExists {
+				newRank := reverseMarketingTouchPoints[k].Rank
+				existingRank := rankTracker[reverseMarketingTouchPoints[k].Value]
+				if newRank > existingRank {
+					// found a lower ranked query param
+					continue
+				}
+				property = reverseMarketingTouchPoints[k].Value
+				rankTracker[reverseMarketingTouchPoints[k].Value] = newRank
+			} else {
+				property = reverseMarketingTouchPoints[k].Value
+				rankTracker[reverseMarketingTouchPoints[k].Value] = reverseMarketingTouchPoints[k].Rank
+			}
+		} else {
+			property = k
+
+		}
+		(*mappedProperties)[property] = v
+	}
 }
 
 func isUserAlreadyIdentifiedBySDKRequest(projectID uint64, userID string) bool {
@@ -979,8 +1050,8 @@ func AddUserProperties(projectId uint64,
 			&AddUserPropertiesResponse{Error: "Add user properties failed"}
 	}
 
-	_, errCode = store.GetStore().UpdateUserPropertiesByCurrentProperties(projectId, user.ID,
-		user.PropertiesId, &postgres.Jsonb{propertiesJSON}, request.Timestamp)
+	_, _, errCode = store.GetStore().UpdateUserProperties(projectId, user.ID,
+		&postgres.Jsonb{propertiesJSON}, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return errCode,
 			&AddUserPropertiesResponse{Error: "Add user properties failed."}
@@ -1306,12 +1377,12 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
 
 	logCtx := log.WithField("project_id", projectID).WithField("event_id", eventID)
 
-	userPropertiesJsonb, errCode := store.GetStore().GetUserProperties(projectID, userID, userPropertiesID)
+	user, errCode := store.GetStore().GetUser(projectID, userID)
 	if errCode != http.StatusFound {
 		return errCode
 	}
 
-	userProperties, err := U.DecodePostgresJsonb(userPropertiesJsonb)
+	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to decode user_properties.")
 		return http.StatusBadRequest
@@ -1353,11 +1424,44 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
 		return http.StatusBadRequest
 	}
 
-	errCode = store.GetStore().OverwriteUserProperties(projectID, userID,
-		userPropertiesID, updateUserPropertiesJson)
+	var statusV1 int
+	if !C.IsUserPropertiesTableWriteDeprecated(projectID) {
+		statusV1 = store.GetStore().OverwriteUserProperties(projectID, userID,
+			userPropertiesID, updateUserPropertiesJson)
+	}
+
+	var statusV2 int
+	if C.IsOnTableUserPropertiesWriteAllowed(projectID) {
+		statusV2 = overwriteUserPropertiesOnTable(projectID, userID, eventID, updateUserPropertiesJson)
+	}
+
+	// Use statusV1 till deprecation.
+	if !C.IsUserPropertiesTableWriteDeprecated(projectID) {
+		return statusV1
+	}
+
+	return statusV2
+}
+
+func overwriteUserPropertiesOnTable(projectID uint64, userID string, eventID string,
+	updateUserPropertiesJson *postgres.Jsonb) int {
+
+	logCtx := log.WithField("project_id", projectID).
+		WithField("user_id", userID).WithField("eventID", eventID)
+
+	errCode := store.GetStore().OverwriteUserPropertiesByID(
+		projectID, userID, updateUserPropertiesJson, false, 0)
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("err_code", errCode).
-			Error("Failed to overwrite user_properties after adding initial user_properties.")
+			Error("Failed to overwrite user's properties with initial page properties.")
+		return errCode
+	}
+
+	errCode = store.GetStore().OverwriteEventUserPropertiesByID(
+		projectID, eventID, updateUserPropertiesJson)
+	if errCode != http.StatusAccepted {
+		logCtx.WithField("err_code", errCode).
+			Error("Failed to overwrite event's user properties with initial page properties.")
 		return errCode
 	}
 

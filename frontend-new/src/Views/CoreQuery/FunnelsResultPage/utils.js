@@ -1,5 +1,4 @@
 import React from "react";
-import tableStyles from "./FunnelsResultTable/index.module.scss";
 import {
   calculatePercentage,
   getTitleWithSorter,
@@ -48,6 +47,7 @@ export const generateGroupedChartsData = (
       });
     }
   });
+  console.log(result);
   return result;
 };
 
@@ -85,7 +85,6 @@ export const generateTableColumns = (
     {
       title: breakdown.length ? "Grouping" : "Users",
       dataIndex: "Grouping",
-      className: tableStyles.groupColumn,
       fixed: "left",
       width: 100,
       render: (d) => {
@@ -99,8 +98,6 @@ export const generateTableColumns = (
     {
       title: "Total Conversion",
       dataIndex: "Conversion",
-      className: tableStyles.conversionColumn,
-      fixed: "left",
       width: 100,
     },
     {
@@ -113,11 +110,15 @@ export const generateTableColumns = (
   queries.forEach((elem, index) => {
     eventColumns.push({
       title: breakdown.length
-        ? getTitleWithSorter(elem, arrayMapper[index].mapper, currentSorter, handleSorting)
+        ? getTitleWithSorter(
+            elem,
+            arrayMapper[index].mapper,
+            currentSorter,
+            handleSorting
+          )
         : elem,
       dataIndex: arrayMapper[index].mapper,
-      width: 150,
-      className: index === queries.length - 1 ? tableStyles.lastColumn : "",
+      width: 200,
       render: (d) => {
         return (
           <div>
@@ -134,13 +135,13 @@ export const generateTableColumns = (
               &mdash;
             </div>
             <SVG name="clock" />
-            <div className="text-base" style={{ color: "#8692A3" }}>
+            <div className="text-base" style={{ color: "#8692A3", marginTop: '2px' }}>
               &rarr;
             </div>
           </div>
         ),
         dataIndex: `time[${index}-${index + 1}]`,
-        width: 50,
+        width: 75,
       });
     }
   });
@@ -246,10 +247,14 @@ export const generateTableData = (
       const { order } = currentSorter;
       result.sort((a, b) => {
         if (order === "ascend") {
-          return parseFloat(a[sortKey].count) >= parseFloat(b[sortKey].count) ? 1 : -1;
+          return parseFloat(a[sortKey].count) >= parseFloat(b[sortKey].count)
+            ? 1
+            : -1;
         }
         if (order === "descend") {
-          return parseFloat(a[sortKey].count) <= parseFloat(b[sortKey].count) ? 1 : -1;
+          return parseFloat(a[sortKey].count) <= parseFloat(b[sortKey].count)
+            ? 1
+            : -1;
         }
         return 0;
       });
