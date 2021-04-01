@@ -130,7 +130,7 @@ export GOPATH=$PATH_TO_FACTORS/factors/backend
 
 * Create tables
 ```
-cd $PATH_TO_FACTORS/factors/backend/src/factors/scripts
+cd $PATH_TO_FACTORS/factors/backend/src/factors/scripts/run_db_create
 go run run_db_create.go
 ```
 
