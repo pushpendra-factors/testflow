@@ -71,7 +71,7 @@ func createProject(project *model.Project) (*model.Project, int) {
 	}
 
 	// Initialize interaction settings.
-	settingsJsonb, err := U.EncodeStructTypeToPostgresJsonb(model.GetDefinedMarketingPropertiesMap())
+	settingsJsonb, err := U.EncodeStructTypeToPostgresJsonb(model.DefaultMarketingPropertiesMap())
 	if err != nil {
 		// Log error and continue to create project.
 		logCtx.WithError(err).Error("Failed to marshal InteractionSettings on create project.")

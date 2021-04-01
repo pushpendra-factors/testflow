@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/base64"
 	"encoding/json"
+	"factors/sdk"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -2040,4 +2041,71 @@ func TestSegmentEventWithQueue(t *testing.T) {
 		&event, []string{project.PrivateToken})
 	assert.Equal(t, http.StatusOK, status)
 	assert.Empty(t, response.Error)
+}
+
+func TestApplyRanking(t *testing.T) {
+
+	type args struct {
+		InteractionSettings model.InteractionSettings
+		Properties          *U.PropertiesMap
+		MappedProperties    *U.PropertiesMap
+	}
+
+	// Test 1
+	iS1 := model.InteractionSettings{}
+	iS1.UTMMappings = make(map[string][]string)
+	iS1.UTMMappings["$utm_campaign"] = []string{"$utm_campaign1", "$utm_campaign2"}
+	iS1.UTMMappings["$utm_source"] = []string{"$utm_source1", "$utm_source2"}
+	p1 := U.PropertiesMap{}
+	p1["$utm_campaign1"] = "Campaign Rank 1"
+	p1["$utm_campaign2"] = "Campaign Rank 2"
+	p1["$utm_source1"] = "Source Rank 1"
+	p1["$utm_source2"] = "Source Rank 2"
+	p1["$utm_random_tag"] = "Random Value"
+	mP1 := U.PropertiesMap{}
+	arg1 := args{InteractionSettings: iS1, Properties: &p1, MappedProperties: &mP1}
+	cM1 := make(map[string]string)
+	cM1["$utm_campaign"] = "Campaign Rank 1"
+	cM1["$utm_source"] = "Source Rank 1"
+	cM1["$utm_random_tag"] = "Random Value"
+
+	// Test 2
+	iS2 := model.InteractionSettings{}
+	iS2.UTMMappings = make(map[string][]string)
+	iS2.UTMMappings["$utm_campaign"] = []string{"$utm_campaign1", "$utm_campaign2", "$utm_campaign3", "$utm_campaign4", "$utm_campaign5"}
+	iS2.UTMMappings["$utm_source"] = []string{"$utm_source1", "$utm_source2", "$utm_source3", "$utm_source4"}
+	p2 := U.PropertiesMap{}
+	p2["$utm_campaign1"] = "Campaign Rank 1"
+	p2["$utm_campaign2"] = "Campaign Rank 2"
+	p2["$utm_campaign5"] = "Campaign Rank 5"
+	p2["$utm_source4"] = "Source Rank 4"
+	p2["$utm_random_tag1"] = "Random Value1"
+	p2["$utm_random_tag2"] = "Random Value2"
+	mP2 := U.PropertiesMap{}
+	arg2 := args{InteractionSettings: iS2, Properties: &p2, MappedProperties: &mP2}
+	cM2 := make(map[string]string)
+	cM2["$utm_campaign"] = "Campaign Rank 1"
+	cM2["$utm_source"] = "Source Rank 4"
+	cM2["$utm_random_tag1"] = "Random Value1"
+	cM2["$utm_random_tag2"] = "Random Value2"
+
+	tests := []struct {
+		name     string
+		args     args
+		mappings map[string]string
+	}{
+		{"Ranking test 1", arg1, cM1},
+		{"Ranking test 2", arg2, cM2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sdk.ApplyRanking(tt.args.InteractionSettings, tt.args.Properties, tt.args.MappedProperties)
+
+			for k, v := range tt.mappings {
+				if (*tt.args.MappedProperties)[k] != v {
+					t.Errorf("ApplyRanking() not matching key = %v, value %v", k, v)
+				}
+			}
+		})
+	}
 }

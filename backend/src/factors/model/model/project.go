@@ -35,8 +35,8 @@ type InteractionSettings struct {
 	UTMMappings map[string][]string `json:"utm_mapping"`
 }
 
-// GetDefinedMarketingPropertiesMap returns default query params and order (utm then qp) for various event properties.
-func GetDefinedMarketingPropertiesMap() InteractionSettings {
+// DefaultMarketingPropertiesMap returns default query params and order (utm then qp) for various event properties.
+func DefaultMarketingPropertiesMap() InteractionSettings {
 
 	interactionSettings := InteractionSettings{}
 	interactionSettings.UTMMappings = make(map[string][]string)
@@ -50,9 +50,9 @@ func GetDefinedMarketingPropertiesMap() InteractionSettings {
 	interactionSettings.UTMMappings[U.EP_SOURCE] = []string{U.QUERY_PARAM_UTM_PREFIX + "source"}
 	interactionSettings.UTMMappings[U.EP_MEDIUM] = []string{U.QUERY_PARAM_UTM_PREFIX + "medium"}
 	interactionSettings.UTMMappings[U.EP_KEYWORD] = []string{U.QUERY_PARAM_UTM_PREFIX + "keyword", U.QUERY_PARAM_UTM_PREFIX + "key_word"}
-	interactionSettings.UTMMappings[U.EP_CONTENT] = []string{U.QUERY_PARAM_UTM_PREFIX + "content"}
-	interactionSettings.UTMMappings[U.EP_GCLID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "gclid"}
-	interactionSettings.UTMMappings[U.EP_FBCLIID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "fbclid"}
+	interactionSettings.UTMMappings[U.EP_CONTENT] = []string{U.QUERY_PARAM_UTM_PREFIX + "content", U.QUERY_PARAM_UTM_PREFIX + "utm_content"}
+	interactionSettings.UTMMappings[U.EP_GCLID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "gclid", U.QUERY_PARAM_PROPERTY_PREFIX + "utm_gclid"}
+	interactionSettings.UTMMappings[U.EP_FBCLIID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "fbclid", U.QUERY_PARAM_PROPERTY_PREFIX + "utm_fbclid"}
 
 	interactionSettings.UTMMappings[U.EP_TERM] = []string{U.QUERY_PARAM_UTM_PREFIX + "term"}
 	interactionSettings.UTMMappings[U.EP_KEYWORD_MATCH_TYPE] = []string{U.QUERY_PARAM_UTM_PREFIX + "matchtype", U.QUERY_PARAM_UTM_PREFIX + "match_type"}

@@ -730,8 +730,14 @@ func MapEventPropertiesToProjectDefinedProperties(projectID uint64, logCtx *log.
 	err := U.DecodePostgresJsonbToStructType(&project.InteractionSettings, &interactionSettings)
 	if err == nil {
 		logCtx.WithField("projectID", projectID).WithField("err", err).Error("failed to Decode Postgres Jsonb")
-		interactionSettings = model.GetDefinedMarketingPropertiesMap()
+		interactionSettings = model.DefaultMarketingPropertiesMap()
 	}
+
+	ApplyRanking(interactionSettings, properties, &mappedProperties)
+	return &mappedProperties, U.HasDefinedMarketingProperty(&mappedProperties)
+}
+
+func ApplyRanking(interactionSettings model.InteractionSettings, properties *U.PropertiesMap, mappedProperties *U.PropertiesMap) {
 
 	// build a reverse map. Value = Standard Property; Rank = Key's value
 	reverseMarketingTouchPoints := make(map[string]Rank)
@@ -764,9 +770,8 @@ func MapEventPropertiesToProjectDefinedProperties(projectID uint64, logCtx *log.
 			property = k
 
 		}
-		mappedProperties[property] = v
+		(*mappedProperties)[property] = v
 	}
-	return &mappedProperties, U.HasDefinedMarketingProperty(&mappedProperties)
 }
 
 func isUserAlreadyIdentifiedBySDKRequest(projectID uint64, userID string) bool {
