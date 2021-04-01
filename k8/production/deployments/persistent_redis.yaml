@@ -1,11 +1,11 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     layer: persistent-redis
     env: production
     project: factors-production
-    nodePool: persistent-redis-pool1
+    nodePool: persistent-redis-pool2
   name: persistent-redis
   namespace: default
 spec:
@@ -24,28 +24,28 @@ spec:
     metadata:      
       labels:
         layer: persistent-redis
-        nodePool: persistent-redis-pool1
+        nodePool: persistent-redis-pool2
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-redis-pool1
+        cloud.google.com/gke-nodepool: persistent-redis-pool2
       terminationGracePeriodSeconds: 30
       volumes:
-        - name: persistent-redis-storage
+        - name: persistent-redis-storage-new
           persistentVolumeClaim:
-            claimName: persistent-redis-pvc
+            claimName: persistent-redis-pvc-new
       containers:
       - name: persistent-redis
-        image: us.gcr.io/factors-production/persistent-redis:v0.01-19b627a
+        image: us.gcr.io/factors-production/persistent-redis:v0.02-487dd3b
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379
         volumeMounts:
-        - name: persistent-redis-storage
+        - name: persistent-redis-storage-new
           mountPath: "/usr/local/var/db/redis"
         resources:
           requests:
-            memory: "77G"
-            cpu: "10"
+            memory: 122"G"
+            cpu: "20"
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         securityContext: {}
