@@ -540,14 +540,14 @@ func TransformQueryPlaceholdersForContext(stmnt string) string {
 // ExpandArrayWithIndividualValues Converts query string ...value IN (?) with array param to ...value IN (?, ?).
 // Expands array param to the params values. To support array param in sql.DB.Query.
 func ExpandArrayWithIndividualValues(stmnt string, params []interface{}) (string, []interface{}) {
-	tmp_count := 0
+	placeholdersCount := 0
 	for _, c := range stmnt {
 		if c == '?' {
-			tmp_count += 1
+			placeholdersCount += 1
 		}
 	}
-	if len(params) != tmp_count {
-		log.Warn("Temporary Log - Db", stmnt, params)
+	if len(params) != placeholdersCount {
+		log.WithField("stmnt", stmnt).WithField("params", params).Error("Parameters mismatch: ")
 	}
 	var newStmnt string
 	var newParams []interface{}
