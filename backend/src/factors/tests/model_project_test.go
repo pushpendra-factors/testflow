@@ -31,6 +31,20 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.True(t, project.UpdatedAt.After(start))
 	assert.Equal(t, project.CreatedAt, project.UpdatedAt)
 
+	// Test update
+	interactionSettings := model.InteractionSettings{}
+	interactionSettings.UTMMappings = make(map[string][]string)
+	interactionSettings.UTMMappings["Hello"] = []string{"World"}
+	val, _ := U.EncodeStructTypeToPostgresJsonb(interactionSettings)
+	errCode = store.GetStore().UpdateProject(project.ID,
+		&model.Project{InteractionSettings: *val})
+	assert.Equal(t, errCode, 0)
+	getProject, errCode := store.GetStore().GetProject(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	valUpdated := model.InteractionSettings{}
+	_ = U.DecodePostgresJsonbToStructType(&getProject.InteractionSettings, &valUpdated)
+	assert.Equal(t, valUpdated.UTMMappings["Hello"], []string{"World"})
+
 	// Test token is overwritten and cannot be provided.
 	previousProjectId := project.ID
 	// Random Token.
@@ -46,7 +60,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.True(t, project.UpdatedAt.After(start))
 	assert.Equal(t, project.CreatedAt, project.UpdatedAt)
 	// Test Get Project on the created one.
-	getProject, errCode := store.GetStore().GetProject(project.ID)
+	getProject, errCode = store.GetStore().GetProject(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(project.CreatedAt.Sub(getProject.CreatedAt).Seconds()) < 0.1)
@@ -142,6 +156,7 @@ func TestCreateDefaultProjectForAgent(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, project)
 		assert.Equal(t, model.DefaultProjectName, project.Name)
+		assert.NotNil(t, project.InteractionSettings)
 	})
 
 	t.Run("CreateDefaultProjectForAgent:AgentAlreadyWithProject", func(t *testing.T) {

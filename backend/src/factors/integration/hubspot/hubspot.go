@@ -878,7 +878,7 @@ func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, va
 		return value, nil
 	}
 
-	ptype := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, enKey, nil, false)
+	ptype := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, enKey, value, false)
 
 	if ptype == U.PropertyTypeDateTime {
 		datetime, err := U.GetPropertyValueAsFloat64(value)

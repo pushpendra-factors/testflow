@@ -524,8 +524,8 @@ func Track(projectId uint64, request *TrackPayload,
 	// Event Properties
 	clientIP := request.ClientIP
 	U.UnEscapeQueryParamProperties(&request.EventProperties)
-	definedEventProperties, hasDefinedMarketingProperty := U.MapEventPropertiesToDefinedProperties(
-		&request.EventProperties)
+	definedEventProperties, hasDefinedMarketingProperty := MapEventPropertiesToProjectDefinedProperties(projectId,
+		logCtx, &request.EventProperties)
 	eventProperties := U.GetValidatedEventProperties(definedEventProperties)
 	if ip, ok := (*eventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
 		clientIP = ip.(string)
@@ -701,6 +701,64 @@ func Track(projectId uint64, request *TrackPayload,
 	response.Message = "User event tracked successfully."
 	response.CustomerEventId = request.CustomerEventId
 	return http.StatusOK, response
+}
+
+type Rank struct {
+	Rank  int
+	Value string
+}
+
+func MapEventPropertiesToProjectDefinedProperties(projectID uint64, logCtx *log.Entry, properties *U.PropertiesMap) (*U.PropertiesMap, bool) {
+
+	mappedProperties := make(U.PropertiesMap)
+
+	project, errCode := store.GetStore().GetProject(projectID)
+	if errCode != http.StatusFound {
+		logCtx.WithField("projectID", projectID).WithField("err_code", errCode).Error("failed to fetch project")
+	}
+
+	interactionSettings := model.InteractionSettings{}
+
+	err := U.DecodePostgresJsonbToStructType(&project.InteractionSettings, &interactionSettings)
+	if err == nil {
+		logCtx.WithField("projectID", projectID).WithField("err", err).Error("failed to Decode Postgres Jsonb")
+		interactionSettings = model.GetDefinedMarketingPropertiesMap()
+	}
+
+	// build a reverse map. Value = Standard Property; Rank = Key's value
+	reverseMarketingTouchPoints := make(map[string]Rank)
+	for k, v := range interactionSettings.UTMMappings {
+		for rank, userDefinedTouchPoint := range v {
+			// lower the rank, higher the priority
+			reverseMarketingTouchPoints[userDefinedTouchPoint] = Rank{rank, k}
+		}
+	}
+
+	// the rank tracker
+	rankTracker := make(map[string]int)
+	for k, v := range *properties {
+		var property string
+		if _, stdKeyExists := reverseMarketingTouchPoints[k]; stdKeyExists {
+			if _, rankExists := rankTracker[reverseMarketingTouchPoints[k].Value]; rankExists {
+				newRank := reverseMarketingTouchPoints[k].Rank
+				existingRank := rankTracker[reverseMarketingTouchPoints[k].Value]
+				if newRank > existingRank {
+					// found a lower ranked query param
+					continue
+				}
+				property = reverseMarketingTouchPoints[k].Value
+				rankTracker[reverseMarketingTouchPoints[k].Value] = newRank
+			} else {
+				property = reverseMarketingTouchPoints[k].Value
+				rankTracker[reverseMarketingTouchPoints[k].Value] = reverseMarketingTouchPoints[k].Rank
+			}
+		} else {
+			property = k
+
+		}
+		mappedProperties[property] = v
+	}
+	return &mappedProperties, U.HasDefinedMarketingProperty(&mappedProperties)
 }
 
 func isUserAlreadyIdentifiedBySDKRequest(projectID uint64, userID string) bool {
