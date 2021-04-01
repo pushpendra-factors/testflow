@@ -45,6 +45,6 @@ class JobTaskStats:
         return False
 
     def publish(self):
+        SnsNotifier.notify(self.task_stats)
         task_stats = json.dumps(self.task_stats)
-        SnsNotifier.notify(task_stats)
         log.warning("Metrics for the job Tasks: %s", task_stats)
