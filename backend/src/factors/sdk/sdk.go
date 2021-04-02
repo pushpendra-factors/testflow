@@ -728,8 +728,11 @@ func MapEventPropertiesToProjectDefinedProperties(projectID uint64, logCtx *log.
 	interactionSettings := model.InteractionSettings{}
 
 	err := U.DecodePostgresJsonbToStructType(&project.InteractionSettings, &interactionSettings)
-	if err == nil {
+	if err != nil && err.Error() != "Empty jsonb object" {
 		logCtx.WithField("projectID", projectID).WithField("err", err).Error("failed to Decode Postgres Jsonb")
+	}
+	// use default settings in case not provided
+	if interactionSettings.UTMMappings == nil {
 		interactionSettings = model.DefaultMarketingPropertiesMap()
 	}
 
