@@ -187,7 +187,7 @@ cd $GOPATH/bin
 * Download and install Nodejs. https://nodejs.org/en/download/
 ```
 export PATH_TO_FACTORS=~/repos
-cd $PATH_TO_FACTORS/factors/frontend
+cd $PATH_TO_FACTORS/factors/frontend-new
 brew install node
 npm install
 npm run dev

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 
@@ -2105,6 +2106,42 @@ func TestApplyRanking(t *testing.T) {
 				if (*tt.args.MappedProperties)[k] != v {
 					t.Errorf("ApplyRanking() not matching key = %v, value %v", k, v)
 				}
+			}
+		})
+	}
+}
+
+func TestMapEventPropertiesToProjectDefinedProperties(t *testing.T) {
+	type args struct {
+		projectID  uint64
+		logCtx     *log.Entry
+		properties *U.PropertiesMap
+	}
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	logCtx := log.WithField("project_id", project.ID)
+	props := U.PropertiesMap{}
+	props["$campaign"] = "$utm_campaign"
+	props["$ad_group"] = "$utm_adgroup"
+
+	tests := []struct {
+		name  string
+		args  args
+		want  *U.PropertiesMap
+		want1 bool
+	}{
+		{"Test1", args{project.ID, logCtx, &props}, &props, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := sdk.MapEventPropertiesToProjectDefinedProperties(tt.args.projectID, tt.args.logCtx, tt.args.properties)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("MapEventPropertiesToProjectDefinedProperties() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("MapEventPropertiesToProjectDefinedProperties() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
 	}
