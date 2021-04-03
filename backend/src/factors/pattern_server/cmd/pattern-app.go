@@ -165,7 +165,7 @@ func main() {
 		panic(err)
 	}
 
-	C.InitConf(*env)
+	C.InitConf(&C.Configuration{Env: *env})
 	C.InitSentryLogging(*sentryDSN, "pattern_server")
 	defer C.SafeFlushAllCollectors()
 

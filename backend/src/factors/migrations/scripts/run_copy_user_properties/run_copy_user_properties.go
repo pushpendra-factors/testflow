@@ -469,7 +469,7 @@ func main() {
 		},
 		SentryDSN: *sentryDSN,
 	}
-	C.InitConf(config.Env)
+	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
 	err := C.InitDB(*config)

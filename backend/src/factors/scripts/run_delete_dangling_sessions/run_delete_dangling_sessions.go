@@ -122,8 +122,8 @@ func main() {
 		SentryDSN: *sentryDSN,
 	}
 
-	C.InitConf(config.Env)
-	err := C.InitDB(config.DBInfo)
+	C.InitConf(config)
+	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Panic("Failed to initialize db in add session.")
 		return

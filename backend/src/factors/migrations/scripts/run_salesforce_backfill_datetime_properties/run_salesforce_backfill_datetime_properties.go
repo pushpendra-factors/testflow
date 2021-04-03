@@ -83,7 +83,7 @@ func main() {
 		RedisPortPersistent: *redisPortPersistent,
 	}
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
 	err := C.InitDB(*config)

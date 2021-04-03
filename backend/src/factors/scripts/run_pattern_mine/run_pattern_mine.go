@@ -92,7 +92,7 @@ func main() {
 		PrimaryDatastore: *primaryDatastore,
 	}
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
 
 	// db is used by M.GetEventNames to build eventInfo.
 	err := C.InitDB(*config)

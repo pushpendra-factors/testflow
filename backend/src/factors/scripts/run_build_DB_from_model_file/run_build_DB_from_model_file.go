@@ -107,7 +107,7 @@ func main() {
 
 	// Setup.
 	// Initialize configs and connections.
-	C.InitConf(config.Env)
+	C.InitConf(config)
 
 	err := C.InitDB(*config)
 	if err != nil {
@@ -269,7 +269,7 @@ func eventToDb(event denEvent, project *model.Project) int {
 		return err
 	}
 
-	userPropertiesId, errCode := store.GetStore().UpdateUserProperties(project.ID,
+	userPropertiesId, _, errCode := store.GetStore().UpdateUserProperties(project.ID,
 		user.ID, event.UserProperties, event.UserJoinTimestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return errCode

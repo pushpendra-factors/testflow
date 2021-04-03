@@ -76,7 +76,7 @@ func main() {
 
 	// Setup.
 	// Initialize configs and connections.
-	C.InitConf(config.Env)
+	C.InitConf(config)
 
 	var err error
 	err = C.InitDB(*config)

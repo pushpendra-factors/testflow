@@ -79,7 +79,7 @@ func main() {
 		},
 		PrimaryDatastore: *primaryDatastore,
 	}
-	C.InitConf(config.Env)
+	C.InitConf(config)
 	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize DB")
