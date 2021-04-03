@@ -79,7 +79,7 @@ func main() {
 		SentryDSN:           *sentryDSN,
 	}
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
 
 	// Cache dependency for requests not using queue.
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)

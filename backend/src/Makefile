@@ -312,6 +312,12 @@ pack-memsql-fill-user-properties:
 upload-memsql-fill-user-properties:
 	docker push us.gcr.io/factors-$(ENV)/memsql-fill-user-properties-job:$(TAG)
 
+pack-copy-user-properties-migration:
+	docker build -t us.gcr.io/factors-$(ENV)/copy-user-properties-migration:$(TAG) -f Dockerfile.copy_user_properties_migration .
+
+upload-copy-user-properties-migration:
+	docker push us.gcr.io/factors-$(ENV)/copy-user-properties-migration:$(TAG)
+
 notify-deployment:
 	$(GOPATH)/src/factors/scripts/notify_deployment.sh
 

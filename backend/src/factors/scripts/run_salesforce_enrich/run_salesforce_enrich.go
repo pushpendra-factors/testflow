@@ -120,7 +120,7 @@ func main() {
 		CacheSortedSet:                           *cacheSortedSet,
 	}
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
 	C.InitSortedSetCache(config.CacheSortedSet)
 	C.InitSalesforceConfig(config.SalesforceAppID, config.SalesforceAppSecret)
 	C.InitRedis(config.RedisHost, config.RedisPort)

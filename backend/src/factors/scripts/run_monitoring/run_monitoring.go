@@ -82,7 +82,7 @@ func main() {
 		QueueRedisPort:   *queueRedisPort,
 	}
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
 	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Panic("Failed to initalize db.")

@@ -54,7 +54,7 @@ func main() {
 		},
 		PrimaryDatastore: *primaryDatastore,
 	}
-	C.InitConf(config.Env)
+	C.InitConf(config)
 	// Initialize configs and connections.
 	err := C.InitDB(*config)
 	if err != nil {

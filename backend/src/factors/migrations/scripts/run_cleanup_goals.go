@@ -107,7 +107,7 @@ func main() {
 		SentryDSN:        *sentryDSN,
 	}
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
 	err := C.InitDBWithMaxIdleAndMaxOpenConn(*config, 50, 50)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize db in add session.")

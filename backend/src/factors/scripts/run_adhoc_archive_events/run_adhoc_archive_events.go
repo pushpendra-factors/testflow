@@ -84,9 +84,8 @@ func main() {
 		// List of projects to use on-table user_properties for read.
 		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 		PrimaryDatastore:                         *primaryDatastore,
-		SentryDSN:                                *sentryDSN,
 	}
-	C.InitConf(config.Env)
+	C.InitConf(config)
 
 	err := C.InitDB(*config)
 	if err != nil {

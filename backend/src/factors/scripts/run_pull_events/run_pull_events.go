@@ -48,6 +48,9 @@ func main() {
 
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
 
+	deprecateUserPropertiesTableReadProjectIDs := flag.String("deprecate_user_properties_table_read_projects",
+		"", "List of projects for which user_properties table read to be deprecated.")
+
 	flag.Parse()
 
 	if *env != "development" &&
@@ -79,9 +82,12 @@ func main() {
 			AppName:  appName,
 		},
 		PrimaryDatastore: *primaryDatastore,
+		// List of projects to use on-table user_properties for read.
+		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 	}
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
+
 	// Initialize configs and connections and close with defer.
 	err := C.InitDB(*config)
 	if err != nil {

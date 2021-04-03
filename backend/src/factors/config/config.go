@@ -430,10 +430,17 @@ func initCookieInfo(env string) {
 	configuration.Cookiename = cookieName
 }
 
-func InitConf(env string) {
-	configuration = &Configuration{
-		Env: env,
+func InitConf(c *Configuration) {
+	if c == nil {
+		log.Fatal("Invalid configuration.")
 	}
+
+	if c.Env == "" {
+		log.WithField("config", c).
+			Fatal("Environment not provided on config intialization.")
+	}
+
+	configuration = c
 }
 
 func InitSortedSetCache(cacheSortedSet bool) {
@@ -1276,7 +1283,7 @@ func PingHealthcheckForPanic(taskID, env, healthcheckID string) {
 	if pe := recover(); pe != nil {
 		if configuration == nil {
 			// In case panic happens before conf is initialized.
-			InitConf(env)
+			InitConf(&Configuration{Env: env})
 		}
 		panicMessage := map[string]interface{}{"panic_error": pe, "stacktrace": string(debug.Stack())}
 		PingHealthcheckForFailure(healthcheckID, panicMessage)

@@ -57,6 +57,8 @@ func main() {
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+	deprecateUserPropertiesTableReadProjectIDs := flag.String("deprecate_user_properties_table_read_projects",
+		"", "List of projects for which user_properties table read to be deprecated.")
 
 	flag.Parse()
 
@@ -98,14 +100,15 @@ func main() {
 			Password: *memSQLPass,
 			AppName:  appName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
+		PrimaryDatastore:                         *primaryDatastore,
+		RedisHost:                                *redisHost,
+		RedisPort:                                *redisPort,
+		RedisHostPersistent:                      *redisHostPersistent,
+		RedisPortPersistent:                      *redisPortPersistent,
+		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 	}
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
 
 	// db is used by M.GetEventNames to build eventInfo.
 	err := C.InitDB(*config)

@@ -89,7 +89,7 @@ func main() {
 		SentryDSN:           *sentryDSN,
 	}
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
 
 	// Will allow all 50/50 connection to be idle on the pool.
 	// As we allow num_routines (per project) as per no.of db connections

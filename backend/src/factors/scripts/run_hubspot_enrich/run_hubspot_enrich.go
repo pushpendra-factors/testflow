@@ -100,7 +100,7 @@ func main() {
 		CacheSortedSet:                           *cacheSortedSet,
 	}
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
 	C.InitSortedSetCache(config.CacheSortedSet)
 
 	err := C.InitDB(*config)

@@ -36,7 +36,7 @@ func initConf(config *C.Configuration) {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetReportCaller(true)
 
-	C.InitConf(config.Env)
+	C.InitConf(config)
 	C.SetIsBeamPipeline()
 	err := C.InitDBWithMaxIdleAndMaxOpenConn(*config, 5, 2)
 	if err != nil {

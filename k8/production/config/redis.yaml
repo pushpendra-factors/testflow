@@ -8,3 +8,5 @@ metadata:
 data:
   REDIS_HOST: "localhost"
   REDIS_PORT: "6379"
+  REDIS_HOST_2: "localhost"
+  REDIS_PORT_2: "1379"

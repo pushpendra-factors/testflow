@@ -1,0 +1,18 @@
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: "redis-service-2"
+  namespace: "default"
+  labels:
+    env: "staging"
+    layer: "redis-2"
+    project: "factors-staging"
+spec:
+  ports:
+  - protocol: "TCP"
+    port: 1379 # Using different port.
+    targetPort: 6379
+  selector:
+    layer: "redis-2"
+  sessionAffinity: None
+  type: "ClusterIP"

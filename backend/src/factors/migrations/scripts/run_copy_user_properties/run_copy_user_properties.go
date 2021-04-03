@@ -420,6 +420,8 @@ func migrateAllTables(projectIDs []uint64) {
 	select {} // Keeps main routine alive forever.
 }
 
+const appName = "copy_user_properties_migration"
+
 func main() {
 	env := flag.String("env", "development", "")
 	dbHost := flag.String("db_host", "localhost", "")
@@ -431,7 +433,11 @@ func main() {
 	projectIDStringList := flag.String("project_ids", "", "")
 	pageSize := flag.Int("page_size", 0, "No.of records per page.")
 	routines := flag.Int("routines", 10, "No.of parallel routines to use for each page.")
+
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+
 	flag.Parse()
+	defer util.NotifyOnPanic("copy_user_properties_migration", *env)
 
 	if *env != "development" &&
 		*env != "staging" &&
@@ -452,7 +458,8 @@ func main() {
 	migrationRoutines = *routines
 
 	config := &C.Configuration{
-		Env: *env,
+		Env:     *env,
+		AppName: appName,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -460,10 +467,12 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		SentryDSN: *sentryDSN,
 	}
-	C.InitConf(config.Env)
+	C.InitConf(config)
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
-	err := C.InitDB(config.DBInfo)
+	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize db.")
 	}
