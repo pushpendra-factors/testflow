@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,19 +18,26 @@ import (
 )
 
 const (
-	campaignPerformanceReport       = "campaign_performance_report"
-	adGroupPerformanceReport        = "ad_group_performance_report"
-	adPerformanceReport             = "ad_performance_report"
-	keywordPerformanceReport        = "keyword_performance_report"
-	searchPerformanceReport         = "search_performance_report"
-	adwordsCampaign                 = "campaign"
-	adwordsAdGroup                  = "ad_group"
-	adwordsAd                       = "ad"
-	adwordsKeyword                  = "keyword"
-	adwordsStringColumn             = "adwords"
-	errorDuplicateAdwordsDocument   = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
-	filterValueAll                  = "all"
-	lastSyncInfoQueryForAllProjects = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
+	campaignPerformanceReport                         = "campaign_performance_report"
+	adGroupPerformanceReport                          = "ad_group_performance_report"
+	adPerformanceReport                               = "ad_performance_report"
+	keywordPerformanceReport                          = "keyword_performance_report"
+	searchPerformanceReport                           = "search_performance_report"
+	adwordsCampaign                                   = "campaign"
+	adwordsAdGroup                                    = "ad_group"
+	adwordsAd                                         = "ad"
+	adwordsKeyword                                    = "keyword"
+	adwordsStringColumn                               = "adwords"
+	errorDuplicateAdwordsDocument                     = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
+	filterValueAll                                    = "all"
+	fromSmartProperties                               = " FROM smart_properties "
+	adwordsDocuments                                  = "adwords_documents"
+	smartProperties                                   = "smart_properties"
+	adwordsSelectQueryForSmartPropertiesStr           = "SELECT project_id, customer_account_id, value, timestamp, campaign_id, ad_group_id, keyword_id "
+	smartPropertiesCampaignStaticFilter               = " campaign.object_type = 1 "
+	smartPropertiesAdGroupStaticFilter                = " ad_group.object_type = 2 "
+	staticWhereStatementForAdwordsWithSmartProperties = "WHERE adwords_documents.project_id = ? AND adwords_documents.customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
+	lastSyncInfoQueryForAllProjects                   = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
 		" " + "FROM adwords_documents GROUP BY project_id, customer_account_id, type"
 	lastSyncInfoForAProject = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
 		" " + "FROM adwords_documents WHERE project_id = ? GROUP BY project_id, customer_account_id, type"
@@ -76,6 +84,7 @@ const (
 	totalSearchRankLostAbsoluteTopImpression   = "total_search_rank_lost_absolute_top_impression"
 	totalSearchRankLostImpression              = "total_search_rank_lost_impression"
 	totalSearchRankLostTopImpression           = "total_search_rank_lost_top_impression"
+	adwordsSmartProperties                     = "smart_properties"
 )
 
 var selectableMetricsForAdwords = []string{
@@ -767,8 +776,8 @@ func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, 
 }
 
 // @TODO Kark v1
-func buildAdwordsChannelConfig() *model.ChannelConfigResult {
-	adwordsObjectsAndProperties := buildObjectAndPropertiesForAdwords(objectsForAdwords)
+func (pg *Postgres) buildAdwordsChannelConfig(projectID uint64) *model.ChannelConfigResult {
+	adwordsObjectsAndProperties := pg.buildObjectAndPropertiesForAdwords(projectID, objectsForAdwords)
 	selectMetrics := append(selectableMetricsForAllChannels, selectableMetricsForAdwords...)
 	objectsAndProperties := append(adwordsObjectsAndProperties)
 	return &model.ChannelConfigResult{
@@ -777,14 +786,31 @@ func buildAdwordsChannelConfig() *model.ChannelConfigResult {
 	}
 }
 
-func buildObjectAndPropertiesForAdwords(objects []string) []model.ChannelObjectAndProperties {
+func (pg *Postgres) buildObjectAndPropertiesForAdwords(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
 	for _, currentObject := range objects {
+		// to do: check if normal properties present then only smart properties will be there
 		propertiesAndRelated, isPresent := mapOfObjectsToPropertiesAndRelated[currentObject]
 		var currentProperties []model.ChannelProperty
 		if isPresent {
+			if C.IsShowSmartPropertiesAllowed(projectID) {
+				smartProperties := pg.GetSmartPropertiesAndRelated(projectID, currentObject, "adwords")
+				if smartProperties != nil {
+					for key, value := range smartProperties {
+						propertiesAndRelated[key] = value
+					}
+				}
+			}
 			currentProperties = buildProperties(propertiesAndRelated)
 		} else {
+			if C.IsShowSmartPropertiesAllowed(projectID) {
+				smartProperties := pg.GetSmartPropertiesAndRelated(projectID, currentObject, "adwords")
+				if smartProperties != nil {
+					for key, value := range smartProperties {
+						allChannelsPropertyToRelated[key] = value
+					}
+				}
+			}
 			currentProperties = buildProperties(allChannelsPropertyToRelated)
 		}
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
@@ -792,8 +818,24 @@ func buildObjectAndPropertiesForAdwords(objects []string) []model.ChannelObjectA
 	return objectsAndProperties
 }
 
+type LatestTimestamp struct {
+	Timestamp int64 `json:"timestamp"`
+}
+
+type SmartProperties struct {
+	Name string `json:"name"`
+}
+
 // GetAdwordsFilterValues - @TODO Kark v1
 func (pg *Postgres) GetAdwordsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
+	_, isPresent := adwordsExtToInternal[requestFilterProperty]
+	if !isPresent {
+		filterValues, errCode := pg.getSmartPropertiesFilterValues(projectID, requestFilterObject, requestFilterProperty, "adwords", reqID)
+		if errCode != http.StatusFound {
+			return []interface{}{}, http.StatusInternalServerError
+		}
+		return filterValues, http.StatusFound
+	}
 	adwordsInternalFilterProperty, docType, err := getFilterRelatedInformationForAdwords(requestFilterObject, requestFilterProperty)
 	if err != http.StatusOK {
 		return make([]interface{}, 0, 0), http.StatusBadRequest
@@ -801,6 +843,38 @@ func (pg *Postgres) GetAdwordsFilterValues(projectID uint64, requestFilterObject
 	filterValues, errCode := pg.getAdwordsFilterValuesByType(projectID, docType, adwordsInternalFilterProperty, reqID)
 	if errCode != http.StatusFound {
 		return []interface{}{}, http.StatusInternalServerError
+	}
+
+	return filterValues, http.StatusFound
+}
+func (pg *Postgres) getSmartPropertiesFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, source string, reqID string) ([]interface{}, int) {
+	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID).WithField("smart_property_name", requestFilterProperty)
+	objectType, isExists := smartPropertiesRulesTypeAlias[requestFilterObject]
+	if !isExists {
+		logCtx.Error("Invalid filter object")
+		return make([]interface{}, 0, 0), http.StatusBadRequest
+	}
+	smartPropertiesRule := model.SmartPropertiesRules{}
+	filterValues := make([]interface{}, 0, 0)
+	db := C.GetServices().Db
+	err := db.Table("smart_properties_rules").Where("project_id = ? AND type = ? AND name = ?", projectID, objectType, requestFilterProperty).Find(&smartPropertiesRule).Error
+	if err != nil {
+		return make([]interface{}, 0, 0), http.StatusNotFound
+	}
+	propertiesValueMap := make(map[string]bool)
+	var rules []model.Rule
+	err = U.DecodePostgresJsonbToStructType(smartPropertiesRule.Rules, &rules)
+	if err != nil {
+		return make([]interface{}, 0, 0), http.StatusNotFound
+	}
+
+	for _, rule := range rules {
+		if rule.Source == "all" || rule.Source == source {
+			propertiesValueMap[rule.Value] = true
+		}
+	}
+	for key, _ := range propertiesValueMap {
+		filterValues = append(filterValues, key)
 	}
 
 	return filterValues, http.StatusFound
@@ -908,6 +982,7 @@ func (pg *Postgres) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.
 	if errCode != http.StatusOK {
 		return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
 	}
+	// to do : remove follwing
 	_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
 	columns := append(selectKeys, selectMetrics...)
 	if err != nil {
@@ -933,6 +1008,11 @@ func (pg *Postgres) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, 
 	if err != nil {
 		logCtx.WithError(err).Error("Failed in adwords analytics with following error.")
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
+	}
+	isSmartPropertyPresent := checkSmartProperties(query.Filters, query.GroupBy)
+	if isSmartPropertyPresent {
+		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertiesV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
+		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
 
 	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
@@ -1045,13 +1125,17 @@ func getAdwordsSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.
 	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	for _, requestGroupBy := range sortedGroupBys {
 		var resultGroupBy model.ChannelGroupBy
-		groupByObject, isPresent := adwordsExtToInternal[requestGroupBy.Object]
-		if !isPresent {
-			return make([]model.ChannelGroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
+		if requestGroupBy.Object == adwordsSmartProperties {
+			resultGroupBys = append(resultGroupBys, resultGroupBy)
+		} else {
+			groupByObject, isPresent := adwordsExtToInternal[requestGroupBy.Object]
+			if !isPresent {
+				return make([]model.ChannelGroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
+			}
+			resultGroupBy = requestGroupBy
+			resultGroupBy.Object = groupByObject
+			resultGroupBys = append(resultGroupBys, resultGroupBy)
 		}
-		resultGroupBy = requestGroupBy
-		resultGroupBy.Object = groupByObject
-		resultGroupBys = append(resultGroupBys, resultGroupBy)
 	}
 	return resultGroupBys, nil
 }
@@ -1114,6 +1198,227 @@ func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID uint64, cu
 	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
 	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource)
+}
+
+func buildAdwordsSimpleQueryWithSmartPropertiesV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, []string) {
+	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
+	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
+	return getSQLAndParamsForAdwordsWithSmartPropertiesV2(query, projectID, query.From, query.To, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource)
+}
+
+func getSQLAndParamsForAdwordsWithSmartPropertiesV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
+	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
+	computeHigherOrderMetricsHere := !fetchSource
+	customerAccountIDs := strings.Split(customerAccountID, ",")
+	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
+	filterPropertiesStatement := ""
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	toFetchImpressionsForHigherOrderMetric := false
+
+	finalParams := make([]interface{}, 0, 0)
+	finalWhereStatement := ""
+	finalGroupByKeys := make([]string, 0, 0)
+	finalGroupByStatement := ""
+	finalSelectKeys := make([]string, 0, 0)
+	finalSelectStatement := ""
+	finalOrderByKeys := make([]string, 0, 0)
+	finalOrderByStatement := ""
+	resultantSQLStatement := ""
+
+	smartPropertiesCampaignGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	smartPropertiesAdGroupGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	adwordsGroupBys := make([]model.ChannelGroupBy, 0, 0)
+
+	for _, groupBy := range query.GroupBy {
+		_, isPresent := smartPropertiesDisallowedNames[groupBy.Property]
+		if !isPresent {
+			if groupBy.Object == "campaign" {
+				smartPropertiesCampaignGroupBys = append(smartPropertiesCampaignGroupBys, groupBy)
+			} else {
+				smartPropertiesAdGroupGroupBys = append(smartPropertiesAdGroupGroupBys, groupBy)
+			}
+		} else {
+			adwordsGroupBys = append(adwordsGroupBys, groupBy)
+		}
+	}
+	// Group By
+	dimensions := fields{}
+	if fetchSource {
+		internalValue := adwordsStringColumn
+		externalValue := source
+		expression := fmt.Sprintf("'%s' as %s", internalValue, externalValue)
+		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+		dimensions.values = append(dimensions.values, externalValue)
+	}
+	for _, groupBy := range adwordsGroupBys {
+		key := groupBy.Object + ":" + groupBy.Property
+		internalValue := adwordsInternalPropertiesToReportsInternal[key]
+		externalValue := groupBy.Object + "_" + groupBy.Property
+		var expression string
+		if groupBy.Property == "id" {
+			expression = fmt.Sprintf("%s as %s", internalValue, externalValue)
+		} else if _, ok := propertiesToBeDividedByMillion[groupBy.Property]; ok {
+			expression = fmt.Sprintf("((value->>'%s')::float)/1000000 as %s", internalValue, externalValue)
+		} else {
+			expression = fmt.Sprintf("value->>'%s' as %s", internalValue, externalValue)
+		}
+		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+		dimensions.values = append(dimensions.values, externalValue)
+	}
+	for _, groupBy := range smartPropertiesCampaignGroupBys {
+		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("campaign.properties->>'%s'", groupBy.Property), "campaign_"+groupBy.Property)
+		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+		dimensions.values = append(dimensions.values, "campaign_"+groupBy.Property)
+	}
+	for _, groupBy := range smartPropertiesAdGroupGroupBys {
+		expression := fmt.Sprintf(`%s as "%s"`, fmt.Sprintf("ad_group.properties->>'%s'", groupBy.Property), "ad_group_"+groupBy.Property)
+		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+		dimensions.values = append(dimensions.values, "ad_group_"+groupBy.Property)
+	}
+	if isGroupByTimestamp {
+		internalValue := getSelectTimestampByTypeForChannels(query.GetGroupByTimestamp(), query.Timezone)
+		externalValue := model.AliasDateTime
+		expression := fmt.Sprintf("%s as %s", internalValue, externalValue)
+		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
+		dimensions.values = append(dimensions.values, externalValue)
+	}
+
+	// select Keys
+	// TODO Later: Issue for conversion_rate or click_through_rate nonHigherOrder as they dont have impressions.
+	metrics := fields{}
+	for _, selectMetric := range query.SelectMetrics {
+		var internalValue, externalValue string
+		_, isNotHigherOrderMetric := nonHigherOrderMetrics[selectMetric]
+		if isNotHigherOrderMetric || !computeHigherOrderMetricsHere {
+			internalValue = adwordsInternalMetricsToAllRep[selectMetric].nonHigherOrderExpression
+			externalValue = adwordsInternalMetricsToAllRep[selectMetric].externalValue
+		} else {
+			internalValue = adwordsInternalMetricsToAllRep[selectMetric].higherOrderExpression
+			externalValue = adwordsInternalMetricsToAllRep[selectMetric].externalValue
+		}
+		expression := fmt.Sprintf("%s as %s", internalValue, externalValue)
+		metrics.selectExpressions = append(metrics.selectExpressions, expression)
+		metrics.values = append(metrics.values, externalValue)
+	}
+
+	for _, selectMetric := range query.SelectMetrics {
+		_, isNonHigherOrderMetric := nonHigherOrderMetrics[selectMetric]
+		if selectMetric == impressions {
+			toFetchImpressionsForHigherOrderMetric = false
+			break
+		} else if !isNonHigherOrderMetric && !computeHigherOrderMetricsHere {
+			toFetchImpressionsForHigherOrderMetric = true
+		}
+	}
+
+	if toFetchImpressionsForHigherOrderMetric {
+		internalValue := adwordsInternalMetricsToAllRep[impressions].nonHigherOrderExpression
+		externalValue := adwordsInternalMetricsToAllRep[impressions].externalValue
+		expression := fmt.Sprintf("%s as %s", internalValue, externalValue)
+		metrics.selectExpressions = append(metrics.selectExpressions, expression)
+		metrics.values = append(metrics.values, externalValue)
+	}
+
+	// Filters
+	filterPropertiesStatement, filterParams := getFilterPropertiesForAdwordsReportsAndSmartProperties(query.Filters)
+	filterStatementForSmartPropertiesGroupBy := getFilterStatementForSmartPropertiesGroupBy(smartPropertiesCampaignGroupBys, smartPropertiesAdGroupGroupBys)
+	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperties, filterPropertiesStatement, filterStatementForSmartPropertiesGroupBy)
+	finalParams = append(finalParams, staticWhereParams...)
+	finalParams = append(finalParams, filterParams...)
+
+	finalGroupByKeys = dimensions.values
+	if len(finalGroupByKeys) != 0 {
+		finalGroupByStatement = " GROUP BY " + joinWithComma(finalGroupByKeys...)
+	}
+
+	// orderBy
+	finalOrderByKeys = appendSuffix("DESC", metrics.values...)
+	if len(finalOrderByKeys) != 0 {
+		finalOrderByStatement = " ORDER BY " + joinWithComma(finalOrderByKeys...)
+	}
+
+	finalSelectKeys = append(finalSelectKeys, dimensions.selectExpressions...)
+	finalSelectKeys = append(finalSelectKeys, metrics.selectExpressions...)
+	finalSelectStatement = "SELECT " + joinWithComma(finalSelectKeys...)
+
+	fromStatement := getAdwordsFromStatementWithJoins(query.Filters, query.GroupBy)
+	// finalSQL
+	resultantSQLStatement = finalSelectStatement + fromStatement + finalWhereStatement +
+		finalGroupByStatement + finalOrderByStatement + channeAnalyticsLimit
+
+	return resultantSQLStatement, finalParams, dimensions.values, metrics.values
+}
+func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
+	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertiesWithTypeAndSource(filters, groupBys, "adwords")
+	fromStatement := fromAdwordsDocument
+	if isPresentAdGroupSmartProperty {
+		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = adwords_documents.project_id and ad_group.object_id = ad_group_id::text "
+	}
+	if isPresentCampaignSmartProperty {
+		fromStatement += "inner join smart_properties campaign on campaign.project_id = adwords_documents.project_id and campaign.object_id = campaign_id::text "
+	}
+	return fromStatement
+}
+func checkSmartPropertiesWithTypeAndSource(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy, source string) (bool, bool) {
+	campaignProperty := false
+	adGroupProperty := false
+	for _, filter := range filters {
+		_, isPresent := adwordsExtToInternal[filter.Property]
+		if !isPresent {
+			switch source {
+			case "adwords":
+				if filter.Object == adwordsCampaign {
+					campaignProperty = true
+				}
+				if filter.Object == adwordsAdGroup {
+					adGroupProperty = true
+				}
+			case "facebook":
+				if filter.Object == adwordsCampaign {
+					campaignProperty = true
+				}
+				if filter.Object == "ad_set" {
+					adGroupProperty = true
+				}
+			case "linkedin":
+				if filter.Object == "campaign_group" {
+					campaignProperty = true
+				}
+				if filter.Object == adwordsCampaign {
+					adGroupProperty = true
+				}
+			}
+		}
+	}
+	for _, groupBy := range groupBys {
+		_, isPresent := adwordsExtToInternal[groupBy.Property]
+		if !isPresent {
+			switch source {
+			case "adwords":
+				if groupBy.Object == adwordsCampaign {
+					campaignProperty = true
+				}
+				if groupBy.Object == adwordsAdGroup {
+					adGroupProperty = true
+				}
+			case "facebook":
+				if groupBy.Object == adwordsCampaign {
+					campaignProperty = true
+				}
+				if groupBy.Object == "ad_set" {
+					adGroupProperty = true
+				}
+			case "linkedin":
+				if groupBy.Object == "campaign_group" {
+					campaignProperty = true
+				}
+				if groupBy.Object == adwordsCampaign {
+					adGroupProperty = true
+				}
+			}
+		}
+	}
+	return campaignProperty, adGroupProperty
 }
 
 func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
@@ -1266,6 +1571,86 @@ func getFilterPropertiesForAdwordsReports(filters []model.ChannelFilterV1) (stri
 		}
 	}
 	return resultStatement + ")", params
+}
+func getFilterPropertiesForAdwordsReportsAndSmartProperties(filters []model.ChannelFilterV1) (string, []interface{}) {
+	resultStatement := ""
+	var filterValue string
+	params := make([]interface{}, 0, 0)
+	if len(filters) == 0 {
+		return resultStatement, params
+	}
+	campaignFilter := ""
+	adGroupFilter := ""
+	for index, filter := range filters {
+		currentFilterStatement := ""
+		currentFilterProperty := ""
+		if filter.LogicalOp == "" {
+			filter.LogicalOp = "AND"
+		}
+		filterOperator := getOp(filter.Condition)
+		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
+			filterValue = fmt.Sprintf("%%%s%%", filter.Value)
+		} else {
+			filterValue = filter.Value
+		}
+		_, isPresent := adwordsExtToInternal[filter.Property]
+		if isPresent {
+			key := fmt.Sprintf("%s:%s", filter.Object, filter.Property)
+			currentFilterProperty = adwordsInternalPropertiesToReportsInternal[key]
+			if strings.Contains(filter.Property, ("id")) {
+				currentFilterStatement = fmt.Sprintf("%s.%s %s ?", adwordsDocuments, currentFilterProperty, filterOperator)
+			} else {
+				currentFilterStatement = fmt.Sprintf("%s.value->>'%s' %s ?", adwordsDocuments, currentFilterProperty, filterOperator)
+			}
+			params = append(params, filterValue)
+			if index == 0 {
+				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
+			} else {
+				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
+			}
+		} else {
+			currentFilterStatement = fmt.Sprintf("%s.properties->>'%s' %s '%s'", filter.Object, filter.Property, filterOperator, filterValue)
+			if index == 0 {
+				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
+			} else {
+				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
+			}
+			if filter.Object == "campaign" {
+				campaignFilter = smartPropertiesCampaignStaticFilter
+			} else {
+				adGroupFilter = smartPropertiesAdGroupStaticFilter
+			}
+		}
+	}
+	if campaignFilter != "" {
+		resultStatement += (" AND " + campaignFilter)
+	}
+	if adGroupFilter != "" {
+		resultStatement += (" AND " + adGroupFilter)
+	}
+
+	return resultStatement + ")", params
+}
+func getFilterStatementForSmartPropertiesGroupBy(smartPropertiesCampaignGroupBys []model.ChannelGroupBy, smartPropertiesAdGroupGroupBys []model.ChannelGroupBy) string {
+	resultStatement := ""
+	for _, smartPropertiesGroupBy := range smartPropertiesCampaignGroupBys {
+		if resultStatement == "" {
+			resultStatement += fmt.Sprintf("( campaign.properties->>'%s' IS NOT NULL ", smartPropertiesGroupBy.Property)
+		} else {
+			resultStatement += fmt.Sprintf("AND campaign.properties->>'%s' IS NOT NULL ", smartPropertiesGroupBy.Property)
+		}
+	}
+	for _, smartPropertiesGroupBy := range smartPropertiesAdGroupGroupBys {
+		if resultStatement == "" {
+			resultStatement += fmt.Sprintf("( ad_group.properties->>'%s' IS NOT NULL ", smartPropertiesGroupBy.Property)
+		} else {
+			resultStatement += fmt.Sprintf("AND ad_group.properties->>'%s' IS NOT NULL ", smartPropertiesGroupBy.Property)
+		}
+	}
+	if resultStatement == "" {
+		return resultStatement
+	}
+	return resultStatement + ")"
 }
 
 // @TODO Kark v0
@@ -1617,4 +2002,48 @@ func (pg *Postgres) getAdwordsMetricsBreakdown(projectID uint64, customerAccount
 	}
 
 	return &model.ChannelBreakdownResult{Headers: resultHeaders, Rows: resultRows}, nil
+}
+
+func (pg *Postgres) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
+	db := C.GetServices().Db
+
+	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0, 0)
+	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0, 0)
+
+	to, err := strconv.ParseUint(time.Now().Format("20060102"), 10, 64)
+	if err != nil {
+		log.Error("Failed to parse to timestamp")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+
+	from, err := strconv.ParseUint(time.Now().AddDate(0, 0, -days).Format("20060102"), 10, 64)
+	if err != nil {
+		log.Error("Failed to parse from timestamp")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+
+	// to do : select keys, revisit
+	adGroupQueryStr := "select ad_group_id::text, campaign_id::text, value->>'name' as ad_group_name, " +
+		"value->>'campaign_name' as campaign_name from adwords_documents where type = 3 AND project_id = ? " +
+		"and (ad_group_id, timestamp) in (select ad_group_id, max(timestamp) from adwords_documents where type = 3" +
+		" AND project_id = ? AND timestamp between ? and ? group by ad_group_id)"
+
+	campaignGroupQueryStr := "select campaign_id::text, value->>'name' as campaign_name from adwords_documents where type = 1 AND " +
+		"project_id = ? and (campaign_id, timestamp) in (select campaign_id, max(timestamp) from adwords_documents where type = 1 " +
+		"and project_id = ? and timestamp BETWEEN ? and ? group by campaign_id)"
+
+	err = db.Raw(adGroupQueryStr, projectID, projectID, from, to).Find(&channelDocumentsAdGroup).Error
+	if err != nil {
+		errString := fmt.Sprintf("failed to get last %d ad_group meta for adwords", days)
+		log.Error(errString)
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+
+	err = db.Raw(campaignGroupQueryStr, projectID, projectID, from, to).Find(&channelDocumentsCampaign).Error
+	if err != nil {
+		errString := fmt.Sprintf("failed to get last %d campaign meta for adwords", days)
+		log.Error(errString)
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	return channelDocumentsCampaign, channelDocumentsAdGroup
 }

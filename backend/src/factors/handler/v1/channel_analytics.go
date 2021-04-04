@@ -41,7 +41,7 @@ func GetChannelConfigHandler(c *gin.Context) {
 		return
 	}
 
-	result, httpStatus := store.GetStore().GetChannelConfig(channel, reqID)
+	result, httpStatus := store.GetStore().GetChannelConfig(projectId, channel, reqID)
 
 	c.JSON(httpStatus, gin.H{"result": result})
 }

@@ -100,6 +100,8 @@ func main() {
 		"", "List of projects for which user_properties table read to be deprecated.")
 	projectAnalyticsWhitelistedUUIds := flag.String("project_analytics_whitelisted_uuids",
 		"", "List of UUIDs whitelisted for project analytics API")
+	showSmartPropertiesAllowedProjectIDs := flag.String("show_smart_properties_allowed_projects",
+		"", "List of projects to show smart properties in channel configs.")
 
 	flag.Parse()
 	if *primaryDatastore == C.DatastoreTypeMemSQL {
@@ -167,6 +169,7 @@ func main() {
 		DeprecateUserPropertiesTableWriteProjects: *deprecateUserPropertiesTableWriteProjectIDs,
 		// List of projects to use on-table user_properties for read.
 		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
+		ShowSmartPropertiesAllowedProjectIDs:     *showSmartPropertiesAllowedProjectIDs,
 		ProjectAnalyticsWhitelistedUUIds:         C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
 	}
 

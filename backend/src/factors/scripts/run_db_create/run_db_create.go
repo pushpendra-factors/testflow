@@ -425,6 +425,20 @@ func main() {
 		log.Info("project_settings table is associated with agents table.")
 	}
 
+	// Create linkedin documents table
+	if err := db.CreateTable(&model.LinkedinDocument{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("linkedin_documents table creation failed.")
+	} else {
+		log.Info("created linkedin documents table.")
+	}
+
+	// Add foreign key constraints agents(uuid).
+	if err := db.Model(&model.ProjectSetting{}).AddForeignKey("int_linkedin_agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_settings table association with agents table failed.")
+	} else {
+		log.Info("project_settings table is associated with agents table.")
+	}
+
 	// Create salesforce_documents documents table
 	if err := db.CreateTable(&model.SalesforceDocument{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("salesforce_documents table creation failed.")
@@ -599,6 +613,20 @@ func main() {
 		log.WithFields(log.Fields{"err": err}).Error("property_details table association with events table failed.")
 	} else {
 		log.Info("property_details table is associated with events table.")
+	}
+
+	// Create smart_properties_rules table
+	if err := db.CreateTable(&model.SmartPropertiesRules{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("smart_properties_rules table creation failed.")
+	} else {
+		log.Info("Created smart properties rules table.")
+	}
+
+	// Create smart_properties table
+	if err := db.CreateTable(&model.SmartProperties{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("smart_properties table creation failed.")
+	} else {
+		log.Info("Created smart properties table.")
 	}
 
 }
