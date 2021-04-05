@@ -167,17 +167,37 @@ func (store *MemSQL) GetPropertyTypeByKeyValue(projectID uint64, eventName strin
 
 	enabledPropertyTypeCheckFromDB := C.IsEnabledPropertyDetailFromDB() && C.IsEnabledPropertyDetailByProjectID(projectID)
 
-	if enabledPropertyTypeCheckFromDB {
-		if propertyKey != "" {
-			if preConfigured, pType := store.getPreConfiguredPropertyTypeByName(projectID, eventName, propertyKey, isUserProperty); preConfigured {
-				if _, err := U.GetPropertyValueAsFloat64(propertyValue); err != nil {
-					log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "is_user_property": isUserProperty}).
-						Error("Failed to convert configured property value.")
-					return ""
+	if enabledPropertyTypeCheckFromDB && propertyKey != "" {
+		if preConfigured, pType := store.getPreConfiguredPropertyTypeByName(projectID, eventName, propertyKey, isUserProperty); preConfigured {
+
+			if pType == U.PropertyTypeDateTime {
+				err := model.ValidateDateTimeProperty(propertyKey, propertyValue)
+
+				if err != nil {
+					if err == model.ErrorUsingSalesforceDatetimeTemplate {
+						log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "property_value": propertyValue, "is_user_property": isUserProperty}).
+							Warn(err)
+						return pType
+					}
+
+					log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "property_value": propertyValue, "is_user_property": isUserProperty}).
+						WithError(err).Error("Failed to convert configured property value.")
+					return U.PropertyTypeUnknown
 				}
 
 				return pType
 			}
+
+			if pType == U.PropertyTypeNumerical {
+				if _, err := U.GetPropertyValueAsFloat64(propertyValue); err != nil {
+					log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "property_value": propertyValue, "is_user_property": isUserProperty}).
+						WithError(err).Error("Failed to convert numerical property value.")
+					return U.PropertyTypeUnknown
+				}
+
+				return pType
+			}
+
 		}
 	}
 

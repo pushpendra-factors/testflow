@@ -46,7 +46,7 @@ func getSalesforceMappedDataTypeValue(projectID uint64, eventName, enKey string,
 		return value, nil
 	}
 
-	ptype := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, enKey, nil, false)
+	ptype := store.GetStore().GetPropertyTypeByKeyValue(projectID, eventName, enKey, value, false)
 
 	if ptype == U.PropertyTypeDateTime {
 		return model.GetSalesforceDocumentTimestamp(value)

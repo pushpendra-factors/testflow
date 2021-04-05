@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	U "factors/util"
 
@@ -55,7 +56,7 @@ func GetConfiguredEventPropertiesTypeCacheKey(projectID uint64, eventName, prope
 
 // GetNonConfiguredEventPropertiesTypeCacheKey return non configured property type cache key
 func GetNonConfiguredEventPropertiesTypeCacheKey(projectID uint64, eventName, propertyName string) string {
-	if projectID == 0 || propertyName == "" {
+	if projectID == 0 || propertyName == "" || eventName == "" {
 		return ""
 	}
 
@@ -216,4 +217,30 @@ func SetCachePropertiesType(projectID uint64, eventName, propertyName, propertyT
 
 	propertiesTypeCache.Cache.Add(cacheKey, nil)
 	return nil
+}
+
+// ErrorUsingSalesforceDatetimeTemplate property value contains salesforece datetime template. Remove this check once no warning found
+var ErrorUsingSalesforceDatetimeTemplate error = errors.New("salesforce datetime template detected")
+
+// ValidateDateTimeProperty validates value by using known key and its value logic
+func ValidateDateTimeProperty(key string, value interface{}) error {
+	if key == "" || value == nil || value == "" {
+		return nil
+	}
+
+	_, err := U.GetPropertyValueAsFloat64(value)
+	if err == nil {
+		return nil
+	}
+
+	if strings.HasPrefix(key, U.SALESFORCE_PROPERTY_PREFIX) {
+		_, err := GetSalesforceDocumentTimestamp(value) // make sure timezone info is loaded to the container
+		if err != nil {
+			return err
+		}
+
+		return ErrorUsingSalesforceDatetimeTemplate
+	}
+
+	return errors.New("invalid value for datetime property")
 }
