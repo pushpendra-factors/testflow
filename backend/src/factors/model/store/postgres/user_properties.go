@@ -223,7 +223,7 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 			return
 		}
 		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
-			Key : uniqueUsersCountKey,
+			Key:   uniqueUsersCountKey,
 			Value: fmt.Sprintf("%v", projectID),
 		})
 
@@ -256,7 +256,7 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 		}
 		propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 		propertiesToIncrSortedSet = append(propertiesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
-			Key : propertyCategoryKeySortedSet,
+			Key:   propertyCategoryKeySortedSet,
 			Value: fmt.Sprintf("%s:%s", category, property),
 		})
 		if category == U.PropertyTypeCategorical {
@@ -273,7 +273,7 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 				}
 				valuesToIncr = append(valuesToIncr, valueKey)
 				valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
-					Key : valueKeySortedSet,
+					Key:   valueKeySortedSet,
 					Value: fmt.Sprintf("%s:SS-US-PV:%s", property, propertyValue),
 				})
 			}
@@ -293,7 +293,7 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 		return
 	}
 
-	if(C.IsSortedSetCachingAllowed()){
+	if C.IsSortedSetCachingAllowed() {
 		cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
 	}
 	// The following code is to support/facilitate cleanup
@@ -885,7 +885,7 @@ func (pg *Postgres) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID u
 
 	formSubmitUserProperties := getUserPropertiesFromFormSubmitEventProperties(formSubmitProperties)
 
-	orderedIdentifierType := model.GetIdentifierPrecendenceOrderByProjecrtID(projectID)
+	orderedIdentifierType := model.GetIdentifierPrecendenceOrderByProjectID(projectID)
 
 	if len(orderedIdentifierType) < 1 {
 		logCtx.Error("Failed getting project configured form submit identifiers.")

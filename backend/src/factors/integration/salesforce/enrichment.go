@@ -9,6 +9,7 @@ import (
 
 	C "factors/config"
 	SDK "factors/sdk"
+	"factors/util"
 	U "factors/util"
 
 	"factors/model/model"
@@ -22,15 +23,6 @@ type Status struct {
 	ProjectID uint64 `json:"project_id"`
 	Type      string `json:"type"`
 	Status    string `json:"status"`
-}
-
-var possiblePhoneField = []string{
-	"mobilephone",
-	"mobilephone__c",
-	"phone",
-	"phone__c",
-	"mobile__c",
-	"personmobilephone",
 }
 
 var salesforceSyncOrderByType = [...]int{
@@ -157,33 +149,37 @@ func getSalesforceAccountID(document *model.SalesforceDocument) (string, error) 
 	return accountID, nil
 }
 
-func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}, docTypeAlias string) (string, string) {
+func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}, docTypeAlias string, salesforceProjectIdentificationFieldStore *map[uint64]map[string][]string) (string, string) {
 
-	for _, phoneField := range possiblePhoneField {
-		if phoneNo, ok := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docTypeAlias, phoneField)]; ok {
-			phoneStr, err := U.GetValueAsString(phoneNo)
-			if err != nil || phoneStr == "" {
-				continue
+	identifiers := model.GetIdentifierPrecendenceOrderByProjectID(projectID)
+	for _, indentityType := range identifiers {
+
+		if indentityType == model.IdentificationTypePhone {
+			possiblePhoneField := model.GetSalesforcePhoneFieldByProjectIDAndObjectName(projectID, docTypeAlias, salesforceProjectIdentificationFieldStore)
+			for _, phoneField := range possiblePhoneField {
+				if phoneNo, ok := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docTypeAlias, phoneField)]; ok {
+					phoneStr, err := U.GetValueAsString(phoneNo)
+					if err != nil || len(phoneStr) < 5 {
+						continue
+					}
+
+					return store.GetStore().GetUserIdentificationPhoneNumber(projectID, phoneStr)
+				}
 			}
+		} else if indentityType == model.IdentificationTypeEmail {
+			possibleEmailField := model.GetSalesforceEmailFieldByProjectIDAndObjectName(projectID, docTypeAlias, salesforceProjectIdentificationFieldStore)
+			for _, emailField := range possibleEmailField {
+				if email, ok := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docTypeAlias, emailField)].(string); ok && email != "" && util.IsEmail(email) {
+					existingEmail, errCode := store.GetStore().GetExistingCustomerUserID(projectID, []string{email})
+					if errCode == http.StatusFound {
+						return email, existingEmail[email]
+					}
 
-			return store.GetStore().GetUserIdentificationPhoneNumber(projectID, phoneStr)
-		}
-	}
-
-	possibleEmailField := []string{
-		"Email",
-		"Email__c",
-		"PersonEmail",
-	}
-
-	for _, emailField := range possibleEmailField {
-		if email, ok := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, docTypeAlias, emailField)].(string); ok && email != "" {
-			existingEmail, errCode := store.GetStore().GetExistingCustomerUserID(projectID, []string{email})
-			if errCode == http.StatusFound {
-				return email, existingEmail[email]
+					return email, ""
+				}
 			}
-
-			return email, ""
+		} else {
+			log.WithFields(log.Fields{"project_id": projectID, "identity_type": indentityType, "doc_type": docTypeAlias}).Error("Invalid identifier type")
 		}
 	}
 
@@ -323,6 +319,7 @@ func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesfo
 	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
+		return http.StatusInternalServerError
 	}
 
 	trackPayload := &SDK.TrackPayload{
@@ -331,7 +328,7 @@ func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesfo
 		UserProperties:  *enProperties,
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	if customerUserID == "" {
 		logCtx.Error("Skipping user identification on salesforce account sync. No customer_user_id on properties.")
 	}
@@ -397,6 +394,7 @@ func enrichContact(projectID uint64, document *model.SalesforceDocument, salesfo
 	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
+		return http.StatusInternalServerError
 	}
 
 	trackPayload := &SDK.TrackPayload{
@@ -405,7 +403,7 @@ func enrichContact(projectID uint64, document *model.SalesforceDocument, salesfo
 		UserProperties:  *enProperties,
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	if customerUserID == "" {
 		logCtx.Error("Skipping user identification on salesforce contact sync. No customer_user_id on properties.")
 	}
@@ -503,7 +501,7 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType})
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType, "user_id": userID, "customer_user_id": customerUserID, "smart_event_rule": salesforceSmartEventName})
 	if projectID == 0 || currentProperties == nil || docType == 0 || userID == "" || lastModifiedTimestamp == 0 {
 		logCtx.Error("Missing required fields.")
 		return prevProperties
@@ -573,6 +571,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
+		return http.StatusInternalServerError
 	}
 
 	trackPayload := &SDK.TrackPayload{
@@ -582,7 +581,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 	}
 
 	var eventID string
-	customerUserID, userID := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, userID := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	if customerUserID != "" {
 		trackPayload.UserId = userID
 		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
@@ -633,6 +632,7 @@ func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforc
 	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
+		return http.StatusInternalServerError
 	}
 
 	trackPayload := &SDK.TrackPayload{
@@ -641,7 +641,7 @@ func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforc
 		UserProperties:  *enProperties,
 	}
 
-	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	if customerUserID == "" {
 		logCtx.Error("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
 	}

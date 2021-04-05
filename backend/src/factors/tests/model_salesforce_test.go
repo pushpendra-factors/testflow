@@ -1254,3 +1254,147 @@ func TestSalesforcePropertyDetails(t *testing.T) {
 	assert.Equal(t, 4, count)
 
 }
+
+func TestSalesforceIndentification(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	// custom field. Will always have priority
+	testIndentificationField := map[string][]string{
+		model.SalesforceDocumentTypeNameLead:        {"MobilePhone"},
+		model.SalesforceDocumentTypeNameOpportunity: {"Mobile__c"},
+	}
+
+	SalesforceProjectIdentificationFieldStore := map[uint64]map[string][]string{
+		project.ID: testIndentificationField,
+	}
+
+	/*
+		Email Identification
+	*/
+	// Should return standard email field
+	emailFields := model.GetSalesforceEmailFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameAccount, &SalesforceProjectIdentificationFieldStore)
+	assert.Equal(t, 1, len(emailFields))
+	assert.Equal(t, "PersonEmail", emailFields[0])
+	emailFields = model.GetSalesforceEmailFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameContact, &SalesforceProjectIdentificationFieldStore)
+	assert.Equal(t, 1, len(emailFields))
+	assert.Equal(t, "Email", emailFields[0])
+
+	// Custom field will always have priority
+	emailFields = model.GetSalesforceEmailFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameLead, &SalesforceProjectIdentificationFieldStore)
+	assert.Equal(t, 2, len(emailFields))
+	assert.Equal(t, "MobilePhone", emailFields[0])
+	assert.Equal(t, "Email", emailFields[1])
+	emailFields = model.GetSalesforceEmailFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameOpportunity, &SalesforceProjectIdentificationFieldStore)
+	assert.Equal(t, 1, len(emailFields))
+	assert.Equal(t, "Mobile__c", emailFields[0])
+
+	/*
+		Phone Identification
+	*/
+	// Should return standard email field
+	phoneFields := model.GetSalesforcePhoneFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameAccount, &SalesforceProjectIdentificationFieldStore)
+	assert.Equal(t, 2, len(phoneFields))
+	assert.Equal(t, "Phone", phoneFields[0])
+	assert.Equal(t, "PersonMobilePhone", phoneFields[1])
+	phoneFields = model.GetSalesforcePhoneFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameContact, &SalesforceProjectIdentificationFieldStore)
+	assert.Equal(t, "Phone", phoneFields[0])
+	assert.Equal(t, "MobilePhone", phoneFields[1])
+
+	// Custom field will always have priority
+	phoneFields = model.GetSalesforcePhoneFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameLead, &SalesforceProjectIdentificationFieldStore)
+	assert.Equal(t, 3, len(phoneFields))
+	assert.Equal(t, "MobilePhone", phoneFields[0])
+	assert.Equal(t, "Phone", phoneFields[1])
+	assert.Equal(t, "MobilePhone", phoneFields[2])
+	phoneFields = model.GetSalesforcePhoneFieldByProjectIDAndObjectName(project.ID, model.SalesforceDocumentTypeNameOpportunity, &SalesforceProjectIdentificationFieldStore)
+	assert.Equal(t, 1, len(phoneFields))
+	assert.Equal(t, "Mobile__c", phoneFields[0])
+
+	documentID := U.RandomLowerAphaNumString(4)
+	emailAccount := getRandomEmail()
+	emailContact := getRandomEmail()
+	emailLead := getRandomEmail()
+	emailOpportunity := getRandomEmail()
+	createdDate := time.Now()
+	number := U.RandomUint64()
+	// Use default field
+	jsonDataAccount := fmt.Sprintf(`{"Id":"%s","PersonEmail":"%s","Phone":%d,"CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailAccount, number, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument := &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameAccount,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonDataAccount))},
+	}
+
+	status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	jsonDataContact := fmt.Sprintf(`{"Id":"%s","Email":"%s","MobilePhone":%d,"CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailContact, number, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument = &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonDataContact))},
+	}
+
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	jsonDataLead := fmt.Sprintf(`{"Id":"%s","Email":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailLead, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument = &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameLead,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonDataLead))},
+	}
+
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+
+	// No identification as not standard field
+	jsonDataOpportunity := fmt.Sprintf(`{"Id":"%s","Email__c":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailOpportunity, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument = &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameOpportunity,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonDataOpportunity))},
+	}
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	allStatus, _ := IntSalesforce.Enrich(project.ID)
+	for i := range allStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
+	}
+
+	query := model.Query{
+		From: createdDate.Unix() - 500,
+		To:   createdDate.Unix() + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: U.EVENT_NAME_SALESFORCE_CONTACT_CREATED,
+			}, {
+				Name: U.EVENT_NAME_SALESFORCE_LEAD_CREATED,
+			}, {
+				Name: U.EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+			}, {
+				Name: U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityUser,
+				Property: U.UP_USER_ID,
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+
+	result, _, _ := store.GetStore().Analyze(project.ID, query)
+	EventUserIDMap := make(map[string]string)
+	for i := range result.Rows {
+		EventUserIDMap[result.Rows[i][0].(string)] = result.Rows[i][1].(string)
+		assert.Equal(t, int64(1), result.Rows[i][2])
+	}
+
+	assert.Equal(t, "$none", EventUserIDMap[U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED])
+	assert.Equal(t, emailContact, EventUserIDMap[U.EVENT_NAME_SALESFORCE_CONTACT_CREATED])
+	assert.Equal(t, emailAccount, EventUserIDMap[U.EVENT_NAME_SALESFORCE_ACCOUNT_CREATED])
+	assert.Equal(t, emailLead, EventUserIDMap[U.EVENT_NAME_SALESFORCE_LEAD_CREATED])
+}

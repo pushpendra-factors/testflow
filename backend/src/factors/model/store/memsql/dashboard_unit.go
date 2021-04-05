@@ -14,31 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func isValidDashboardUnit(dashboardUnit *model.DashboardUnit) (bool, string) {
-	if dashboardUnit.DashboardId == 0 {
-		return false, "Invalid dashboard"
-	}
-
-	if dashboardUnit.Title == "" {
-		return false, "Invalid title"
-	}
-
-	validPresentation := false
-	for _, p := range model.DashboardUnitPresentations {
-		if p == dashboardUnit.Presentation {
-			validPresentation = true
-			break
-		}
-	}
-	if !validPresentation {
-		return false, "Invalid presentation"
-	}
-
-	// Todo(Dinesh): Validate query based on query class here.
-
-	return true, ""
-}
-
 // CreateDashboardUnitForMultipleDashboards creates multiple dashboard units each for given
 // list of dashboards
 func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64,
@@ -104,7 +79,7 @@ func (store *MemSQL) CreateDashboardUnit(projectId uint64, agentUUID string, das
 
 	updateDashboardUnitSettingsAndPresentation(dashboardUnit)
 
-	valid, errMsg := isValidDashboardUnit(dashboardUnit)
+	valid, errMsg := model.IsValidDashboardUnit(dashboardUnit)
 	if !valid {
 		return nil, http.StatusBadRequest, errMsg
 	}

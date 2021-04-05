@@ -1,6 +1,6 @@
 --UP
 CREATE TABLE public.smart_properties_rules (
-    uuid character varying(255) NOT NULL DEFAULT uuid_generate_v4(),
+    id character varying(255) NOT NULL DEFAULT uuid_generate_v4(),
     project_id bigint NOT NULL,
     type_alias text,
     type bigint NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE public.smart_properties_rules (
     is_deleted bool DEFAULT FALSE,
     created_at timestamp with time zone,
     updated_at timestamp with time zone,
-    CONSTRAINT smart_properties_rules_primary_key PRIMARY KEY (project_id, uuid)
+    CONSTRAINT smart_properties_rules_primary_key PRIMARY KEY (project_id, id)
 )
 WITH (
     OIDS = FALSE
