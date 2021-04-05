@@ -124,7 +124,7 @@ func (pg *Postgres) checkIfRuleNameAlreadyPresentWhileUpdate(projectID uint64, n
 	db := C.GetServices().Db
 	smartPropertiesRules := make([]model.SmartPropertiesRules, 0, 0)
 	err := db.Model(&model.SmartPropertiesRules{}).
-		Where("project_id = ? AND is_deleted != ? AND name = ? AND uuid != ? AND type = ?", projectID, true, name, ruleID, objectType).
+		Where("project_id = ? AND is_deleted != ? AND name = ? AND id != ? AND type = ?", projectID, true, name, ruleID, objectType).
 		Find(&smartPropertiesRules).Error
 	if err != nil || len(smartPropertiesRules) == 0 {
 		return http.StatusNotFound
@@ -217,7 +217,7 @@ func (pg *Postgres) UpdateSmartPropertiesRules(projectID uint64, ruleID string, 
 	}
 
 	db := C.GetServices().Db
-	err := db.Table("smart_properties_rules").Where("project_id = ? AND uuid = ?", projectID, ruleID).Updates(updatedFields).Error
+	err := db.Table("smart_properties_rules").Where("project_id = ? AND id = ?", projectID, ruleID).Updates(updatedFields).Error
 	if err != nil {
 		if isDuplicateSmartPropertiesRulesError(err) {
 			logCtx.WithError(err).WithField("project_id", smartPropertiesRulesDoc.ProjectID).Warn(
@@ -301,7 +301,7 @@ func (pg *Postgres) GetSmartPropertiesRule(projectID uint64, ruleID string) (mod
 		return model.SmartPropertiesRules{}, http.StatusBadRequest
 	}
 	db := C.GetServices().Db
-	err := db.Table("smart_properties_rules").Where("project_id = ? AND is_deleted != ? AND uuid = ?", projectID, true, ruleID).Find(&smartPropertiesRule).Error
+	err := db.Table("smart_properties_rules").Where("project_id = ? AND is_deleted != ? AND id = ?", projectID, true, ruleID).Find(&smartPropertiesRule).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error(err)
 		return model.SmartPropertiesRules{}, http.StatusNotFound
@@ -319,7 +319,7 @@ func (pg *Postgres) DeleteSmartPropertiesRules(projectID uint64, ruleID string) 
 		return http.StatusBadRequest
 	}
 	db := C.GetServices().Db
-	err := db.Table("smart_properties_rules").Where("project_id = ? AND uuid = ?", projectID, ruleID).Updates(map[string]interface{}{"is_deleted": true, "picked": false, "updated_at": time.Now().UTC()}).Error
+	err := db.Table("smart_properties_rules").Where("project_id = ? AND id = ?", projectID, ruleID).Updates(map[string]interface{}{"is_deleted": true, "picked": false, "updated_at": time.Now().UTC()}).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error(err)
 		return http.StatusInternalServerError
