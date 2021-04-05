@@ -13,7 +13,7 @@ const (
 )
 
 type SmartPropertiesRules struct {
-	UUID        string          `gorm:"primary_key:true;type:varchar(255)" json:"uuid"`
+	ID          string          `gorm:"primary_key:true;type:varchar(255)" json:"id"`
 	ProjectID   uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	TypeAlias   string          `json:"type_alias"`
 	Type        int             `json:"type"`

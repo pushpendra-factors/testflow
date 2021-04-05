@@ -884,7 +884,7 @@ func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID 
 
 	formSubmitUserProperties := getUserPropertiesFromFormSubmitEventProperties(formSubmitProperties)
 
-	orderedIdentifierType := model.GetIdentifierPrecendenceOrderByProjecrtID(projectID)
+	orderedIdentifierType := model.GetIdentifierPrecendenceOrderByProjectID(projectID)
 
 	if len(orderedIdentifierType) < 1 {
 		logCtx.Error("Failed getting project configured form submit identifiers.")

@@ -73,6 +73,9 @@ var DashboardUnitPresentations = [...]string{
 	PresentationTable,
 	PresentationCard,
 	PresentationFunnel,
+	PresentationStack,
+	PresentationArea,
+	PresentationHorizontalBar,
 }
 
 const (
@@ -88,4 +91,27 @@ func GetUnitType(presentation string) string {
 	}
 
 	return UnitChart
+}
+
+func IsValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
+	if dashboardUnit.DashboardId == 0 {
+		return false, "Invalid dashboard"
+	}
+
+	if dashboardUnit.Title == "" {
+		return false, "Invalid title"
+	}
+
+	validPresentation := false
+	for _, p := range DashboardUnitPresentations {
+		if p == dashboardUnit.Presentation {
+			validPresentation = true
+			break
+		}
+	}
+	if !validPresentation {
+		return false, "Invalid presentation"
+	}
+	// Todo(Dinesh): Validate query based on query class here.
+	return true, ""
 }
