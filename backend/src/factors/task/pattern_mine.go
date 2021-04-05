@@ -38,6 +38,7 @@ const max_SEGMENTS = 25000
 const max_EVENT_NAMES = 250
 const top_K = 5
 const topK_patterns = 5
+const topK_campaigns = 5
 const topKProperties = 20
 const keventsSpecial = 5
 const keventsURL = 10
@@ -695,7 +696,6 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	if err != nil {
 		return fmt.Errorf("Error to creating intermediate Patterns", err)
 	}
-
 	generatedThreeRepeatedPatterns, err := GenRepeatedCombinations(filteredTwoPatterns, userAndEventsInfo, repeatedEvents)
 	if err != nil {
 		return fmt.Errorf("Error to creating Repeated intermediate Patterns", err)
@@ -717,12 +717,17 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		if err != nil {
 			return err
 		}
+
+		lenThreeCampaign, err := GenCampaignThreeLenCombinations(filteredTwoPatterns, goalPatterns, userAndEventsInfo, topK_campaigns)
 		lenThreePatterns := []*P.Pattern{}
 		for _, patterns := range lenThreeSegmentedPatterns {
 			lenThreePatterns = append(lenThreePatterns, patterns...)
 		}
+
 		lenThreePatterns = MergePatterns(lenThreePatterns, generatedThreePatterns)
 		lenThreePatterns = MergePatterns(lenThreePatterns, generatedThreeRepeatedPatterns)
+		lenThreePatterns = MergePatterns(lenThreePatterns, lenThreeCampaign)
+
 		countPatterns(projectId, filepath, lenThreePatterns, numRoutines, countOccurence)
 		filteredThreePatterns, patternsSize, err := filterAndCompressPatterns(
 			lenThreePatterns, maxModelSize, cumulativePatternsSize,
@@ -2145,4 +2150,50 @@ func GenRepeatedCombinations(lenTwoPatt []*P.Pattern, userAndEventsInfo *P.UserA
 
 	}
 	return allPatterns, nil
+}
+
+// GenCampaignThreeLenCombinations Generate three Len events with only campaign events and goal
+func GenCampaignThreeLenCombinations(lenTwoPatt, goalPatterns []*P.Pattern, userAndEventsInfo *P.UserAndEventsInfo, numTopK int) ([]*P.Pattern, error) {
+
+	patternsMap := make(map[string][]*P.Pattern)
+	allPatternsList := make([]*P.Pattern, 0)
+
+	for _, pt := range lenTwoPatt {
+		if len(pt.EventNames) == 2 {
+			startEventName := pt.EventNames[0]
+			goalEventName := pt.EventNames[1]
+			if U.IsCampaignEvent(startEventName) {
+				patternsMap[goalEventName] = append(patternsMap[goalEventName], pt)
+			}
+		}
+	}
+	// for each goal get top k campaigns and create comabinations within topK and goal
+	for key, val := range patternsMap {
+		goalName := key
+		targetPatt := getTopPatterns(val, numTopK)
+		mineLog.Info("Three len Campaign Events goal Event : ", goalName, len(targetPatt))
+
+		if len(targetPatt) > 1 {
+			for idx_a := 0; idx_a < len(targetPatt); idx_a++ {
+				for idx_b := 0; idx_b < len(targetPatt); idx_b++ {
+
+					event_a := targetPatt[idx_a].EventNames[0]
+					event_b := targetPatt[idx_b].EventNames[0]
+					event_c := goalName
+
+					if strings.Compare(event_a, event_b) != 0 {
+						p, err := P.NewPattern([]string{event_a, event_b, event_c}, userAndEventsInfo)
+						if err != nil {
+							return []*P.Pattern{}, fmt.Errorf("campaign Pattern initialization failed")
+						}
+
+						allPatternsList = append(allPatternsList, p)
+						mineLog.Info("Three len Campaign Events : ", p.EventNames)
+					}
+				}
+			}
+		}
+	}
+
+	return allPatternsList, nil
 }
