@@ -93,7 +93,7 @@ func TestAPICreateProject(t *testing.T) {
 		assert.NotNil(t, jsonResponseMap["created_at"].(string))
 		assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 		assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
-		assert.Equal(t, 10, len(jsonResponseMap))
+		assert.Equal(t, 11, len(jsonResponseMap))
 	})
 }
 
@@ -121,7 +121,7 @@ func TestAPIEditProject(t *testing.T) {
 		assert.NotNil(t, jsonResponseMap["created_at"].(string))
 		assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 		assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
-		assert.Equal(t, 10, len(jsonResponseMap))
+		assert.Equal(t, 11, len(jsonResponseMap))
 		w = sendEditProjectRequest(r, uint64(jsonResponseMap["id"].(float64)), projectName, agent)
 		assert.Equal(t, http.StatusCreated, w.Code)
 		jsonResponse, _ = ioutil.ReadAll(w.Body)
@@ -136,6 +136,6 @@ func TestAPIEditProject(t *testing.T) {
 		assert.NotEqual(t, 0, len(jsonResponseMap["private_token"].(string))) // Todo: should be removed from response.
 		assert.NotNil(t, jsonResponseMap["created_at"].(string))
 		assert.NotNil(t, jsonResponseMap["updated_at"].(string))
-		assert.Equal(t, 10, len(jsonResponseMap))
+		assert.Equal(t, 11, len(jsonResponseMap))
 	})
 }
