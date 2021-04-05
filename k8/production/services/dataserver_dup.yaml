@@ -1,0 +1,17 @@
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: "dataserver-service-dup"
+  namespace: "default"
+  labels:
+    env: "production"
+    layer: "dataserver-dup"
+    project: "factors-production"
+spec:
+  ports:
+  - protocol: "TCP"
+    port: 80
+    targetPort: 8020
+  selector:
+    layer: "dataserver-dup"
+  type: "ClusterIP"
