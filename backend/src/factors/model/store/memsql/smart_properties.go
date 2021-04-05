@@ -117,7 +117,7 @@ func (store *MemSQL) CreateSmartPropertiesFromChannelDocumentAndRule(smartProper
 		properties := make(map[string]interface{})
 		rulesRef := make(map[string]interface{})
 		properties[smartPropertiesRule.Name] = rule.Value
-		rulesRef[smartPropertiesRule.UUID] = smartPropertiesRule.Name
+		rulesRef[smartPropertiesRule.ID] = smartPropertiesRule.Name
 		propertiesJson, err := json.Marshal(&properties)
 		if err != nil {
 			return http.StatusInternalServerError
@@ -173,7 +173,7 @@ func getUpdatedSmartPropertiesObjectForExistingSmartProperties(smartPropertiesRu
 	}
 
 	properties[smartPropertiesRule.Name] = rule.Value
-	rulesRef[smartPropertiesRule.UUID] = smartPropertiesRule.Name
+	rulesRef[smartPropertiesRule.ID] = smartPropertiesRule.Name
 	propertiesJson, err := json.Marshal(&properties)
 	if err != nil {
 		return model.SmartProperties{}, http.StatusInternalServerError
