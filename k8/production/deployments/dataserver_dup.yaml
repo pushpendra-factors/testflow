@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    layer: dataserver-dup
+    env: production
+    project: factors-production
+    nodePool: persistent-pool-standard
+  name: dataserver-dup
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 4
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: dataserver-dup
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: dataserver-dup
+        nodePool: persistent-pool-standard
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: persistent-pool-standard
+      containers:
+      - name: dataserver-dup
+        image: us.gcr.io/factors-production/data-server:4ab1185-1718
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8089
+        volumeMounts:
+        - name: workdir
+          mountPath: /usr/local/var/factors
+        resources:
+          requests:
+            memory: "100M"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        securityContext: {}
+        readinessProbe:
+          tcpSocket:
+            port: 8089
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8089
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        args:
+          - --env
+          - $(ENV)
+          - --port
+          - "8089"
+          - --db_host
+          - $(DB_HOST_CLONE)
+          - --db_port
+          - $(DB_PORT)
+          - --db_name
+          - $(POSTGRES_DB)
+          - --db_user
+          - $(POSTGRES_USER)
+          - --db_pass
+          - $(POSTGRES_PASSWORD)
+          - --redis_host
+          - $(REDIS_HOST_2)
+          - --redis_port
+          - $(REDIS_PORT_2)
+          - --sentry_dsn
+          - $(SENTRY_DSN)
+          - --gcp_project_id
+          - $(GCP_PROJECT_ID)
+          - --gcp_project_location
+          - $(GCP_PROJECT_LOCATION)
+        envFrom:
+        - configMapRef:
+            name: config-env
+        - configMapRef:
+            name: config-postgres
+        - configMapRef:
+          name: config-redis
+        - secretRef:
+            name: secret-postgres
+        - secretRef:
+            name: secret-sentry
+      volumes:
+      - name: workdir
+        emptyDir: {}

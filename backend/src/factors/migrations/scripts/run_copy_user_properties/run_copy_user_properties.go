@@ -472,7 +472,7 @@ func main() {
 	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
-	err := C.InitDB(*config)
+	err := C.InitDBWithMaxIdleAndMaxOpenConn(*config, 900, 250)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize db.")
 	}

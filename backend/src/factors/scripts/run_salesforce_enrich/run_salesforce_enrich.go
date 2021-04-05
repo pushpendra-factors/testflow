@@ -66,6 +66,7 @@ func main() {
 		"", "List of projects for which user_properties table read to be deprecated.")
 	blacklistEnrichmentByProjectID := flag.String("blacklist_enrichment_by_project_id", "", "Blacklist enrichment by project_id.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
+	syncOnly := flag.Bool("sync_only", false, "Run only sync.")
 
 	flag.Parse()
 	taskID := "salesforce_enrich"
@@ -174,36 +175,38 @@ func main() {
 		propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailSyncStatus...)
 	}
 
-	projectIDs := strings.Split(*blacklistEnrichmentByProjectID, ",")
-	blackListedProjectIDs := make(map[string]bool)
-	for i := range projectIDs {
-		blackListedProjectIDs[projectIDs[i]] = true
-	}
-
-	// salesforce enrich
-	salesforceEnabledProjects, status := store.GetStore().GetAllSalesforceProjectSettings()
-	if status != http.StatusFound {
-		log.Panic("No projects enabled salesforce integration.")
-	}
-
-	statusList := make([]IntSalesforce.Status, 0, 0)
-
-	for _, settings := range salesforceEnabledProjects {
-		if _, exist := blackListedProjectIDs[fmt.Sprintf("%d", settings.ProjectID)]; exist {
-			continue
-		}
-
-		status, failure := IntSalesforce.Enrich(settings.ProjectID)
-		if failure {
-			anyFailure = true
-		}
-
-		statusList = append(statusList, status...)
-	}
-
 	var jobStatus salesforceJobStatus
+	if !*syncOnly {
+		projectIDs := strings.Split(*blacklistEnrichmentByProjectID, ",")
+		blackListedProjectIDs := make(map[string]bool)
+		for i := range projectIDs {
+			blackListedProjectIDs[projectIDs[i]] = true
+		}
+
+		// salesforce enrich
+		salesforceEnabledProjects, status := store.GetStore().GetAllSalesforceProjectSettings()
+		if status != http.StatusFound {
+			log.Panic("No projects enabled salesforce integration.")
+		}
+
+		statusList := make([]IntSalesforce.Status, 0, 0)
+
+		for _, settings := range salesforceEnabledProjects {
+			if _, exist := blackListedProjectIDs[fmt.Sprintf("%d", settings.ProjectID)]; exist {
+				continue
+			}
+
+			status, failure := IntSalesforce.Enrich(settings.ProjectID)
+			if failure {
+				anyFailure = true
+			}
+
+			statusList = append(statusList, status...)
+		}
+		jobStatus.EnrichStatus = statusList
+	}
+
 	jobStatus.SyncStatus = syncStatus
-	jobStatus.EnrichStatus = statusList
 	jobStatus.PropertyDetailStatus = propertyDetailSyncStatus
 
 	if anyFailure {

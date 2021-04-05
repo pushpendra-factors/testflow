@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool
+    nodePool: up-migration-pool1
   name: copy-user-properties-migration
 spec:
   schedule: "1 2 3 4 5"
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool
+            nodePool: up-migration-pool1
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool
+            cloud.google.com/gke-nodepool: up-migration-pool1
           containers:
           - name: copy-user-properties-migration
             image: us.gcr.io/factors-production/copy-user-properties-migration:859291fb0-1542
@@ -43,7 +43,7 @@ spec:
             - --page_size
             - "10000"
             - --routines
-            - "10"
+            - "100"
             envFrom:
             - configMapRef:
                 name: config-env
@@ -53,4 +53,8 @@ spec:
                 name: secret-sentry
             - secretRef:
                 name: secret-postgres
+            resources:
+              requests:
+                cpu: 23000
+                memory: 10G
           restartPolicy: OnFailure
