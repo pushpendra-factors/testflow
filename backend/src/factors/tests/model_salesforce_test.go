@@ -854,7 +854,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	cuID := U.RandomLowerAphaNumString(5)
+	cuID := getRandomEmail()
 	firstPropTimestamp := time.Now().Unix()
 	user, status := store.GetStore().CreateUser(&model.User{
 		ProjectId:      project.ID,
