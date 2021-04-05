@@ -22,11 +22,14 @@ const (
 	QueryClassAttribution = "attribution"
 	QueryClassWeb         = "web"
 
-	PresentationLine   = "pl"
-	PresentationBar    = "pb"
-	PresentationTable  = "pt"
-	PresentationCard   = "pc"
-	PresentationFunnel = "pf"
+	PresentationLine          = "pl"
+	PresentationBar           = "pb"
+	PresentationTable         = "pt"
+	PresentationCard          = "pc"
+	PresentationFunnel        = "pf"
+	PresentationStack         = "ps"
+	PresentationArea          = "pa"
+	PresentationHorizontalBar = "ph"
 )
 
 const (

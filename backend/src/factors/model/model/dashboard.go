@@ -130,7 +130,7 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 
 // ShouldRefreshDashboardUnit Whether to force refresh dashboard unit irrespective of the cache and expiry.
 func ShouldRefreshDashboardUnit(projectID, dashboardID, dashboardUnitID uint64, from, to int64, isWebAnalytics bool) bool {
-	// If todays range or last 30 mintes window, refresh on every trigger.
+	// If today's range or last 30 minutes window, refresh on every trigger.
 	if U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) || U.Is30MinutesTimeRange(from, to) {
 		return true
 	}
