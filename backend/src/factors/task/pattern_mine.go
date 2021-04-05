@@ -1112,9 +1112,6 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 					return CampaignEventLists{}, err
 				}
 
-				if len(campEventsMap) < 5 {
-					mineLog.Info("campaign event", lineWrite)
-				}
 			}
 		}
 
@@ -1266,6 +1263,8 @@ func GetEventNamesAndType(tmpEventsFilePath string, projectId uint64) ([]string,
 	return eventNames, eventNamesWithType, nil
 }
 
+// buildWhiteListProperties build user and event properties from db ,
+// if not available in DB, use counting logic to choose topk properties
 func buildWhiteListProperties(projectId uint64, allProperty map[string]P.PropertiesCount, numProp int) (map[string]bool, map[string]bool) {
 
 	userPropertiesMap := make(map[string]int)
@@ -1294,12 +1293,10 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 			upFilteredMap[v.UserPropertyName] = true
 		}
 	} else {
+
+		// if the DB is not populated , based on counting logic
+		// populate the DB and use the user properties
 		upSortedList := U.RankByWordCount(userPropertiesMap)
-
-		for _, v := range U.WHITELIST_FACTORS_USER_PROPERTIES {
-			upFilteredMap[v] = true
-		}
-
 		var userPropertiesCount = 0
 		for _, u := range upSortedList {
 			if upFilteredMap[u.Key] != true && userPropertiesCount < numProp {
@@ -1329,11 +1326,6 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 	// delete based on disables properties
 
 	epSortedList := U.RankByWordCount(eventPropertiesMap)
-
-	for _, v := range U.WHITELIST_FACTORS_EVENT_PROPERTIES {
-		epFilteredMap[v] = true
-	}
-
 	var eventCountLocal = 0
 	for _, u := range epSortedList {
 		if epFilteredMap[u.Key] == false && eventCountLocal < numProp {
@@ -1760,12 +1752,7 @@ func GetAllRepeatedEvents(eventNames []string, campaignAnalyticsList CampaignEve
 	// all
 	CyclicEvents := make([]string, 0)
 	eventSet := make(map[string]bool)
-	whiteListRepeatedEventMap := make(map[string]bool)
 
-	for _, v := range U.WHITELIST_FACTORS_REPEATED_EVENTS {
-		whiteListRepeatedEventMap[v] = true
-	}
-	mineLog.Info("White List of repeated Events", whiteListRepeatedEventMap)
 	for _, v := range eventNames {
 
 		if strings.HasPrefix(v, "$") {
@@ -1774,14 +1761,6 @@ func GetAllRepeatedEvents(eventNames []string, campaignAnalyticsList CampaignEve
 				eventSet[v] = true
 			}
 		}
-
-		if whiteListRepeatedEventMap[v] == true {
-			if eventSet[v] == false {
-				CyclicEvents = append(CyclicEvents, v)
-				eventSet[v] = true
-			}
-		}
-
 	}
 
 	for _, ce := range campaignAnalyticsList.CampaignList {
