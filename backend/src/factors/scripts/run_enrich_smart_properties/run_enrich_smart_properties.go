@@ -41,7 +41,7 @@ func main() {
 			Password: *dbPass,
 		},
 	}
-	C.InitConf(config.Env)
+	C.InitConf(config)
 	// Initialize configs and connections and close with defer.
 	err := C.InitDB(*config)
 	if err != nil {
