@@ -61,7 +61,7 @@ func EnrichSmartPropertiesForChangedRulesForProject(projectID uint64) int {
 		}
 
 		smartPropertiesRule.Picked = true
-		errMsg, errCode := store.GetStore().UpdateSmartPropertiesRules(smartPropertiesRule.ProjectID, smartPropertiesRule.UUID, smartPropertiesRule)
+		errMsg, errCode := store.GetStore().UpdateSmartPropertiesRules(smartPropertiesRule.ProjectID, smartPropertiesRule.ID, smartPropertiesRule)
 		if errCode != http.StatusAccepted {
 			log.WithFields(log.Fields{"errMsg": errMsg, "smart_properties_rule": smartPropertiesRule}).Error("failed to update smart properties rule.")
 			continue
@@ -319,7 +319,7 @@ func CheckFilter(value string, condition string, filterValue string) bool {
 }
 
 func deleteSmartPropertiesFromRule(smartPropertiesRule model.SmartPropertiesRules) (int, int, int) {
-	noOfUpdatedRecords, noOfEvaluatedRecords, errCode := store.GetStore().DeleteSmartPropertiesByRuleID(smartPropertiesRule.ProjectID, smartPropertiesRule.UUID)
+	noOfUpdatedRecords, noOfEvaluatedRecords, errCode := store.GetStore().DeleteSmartPropertiesByRuleID(smartPropertiesRule.ProjectID, smartPropertiesRule.ID)
 	if errCode != http.StatusAccepted {
 		return noOfUpdatedRecords, noOfEvaluatedRecords, errCode
 	}

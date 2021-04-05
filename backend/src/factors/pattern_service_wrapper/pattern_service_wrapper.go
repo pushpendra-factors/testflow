@@ -933,7 +933,7 @@ func Factor(reqId string, projectId uint64, startEvent string,
 	}
 	iPatternNodes := []*ItreeNode{}
 	if itree, err := BuildNewItree(reqId, startEvent, startEventConstraints,
-		endEvent, endEventConstraints, pw, countType); err != nil {
+		endEvent, endEventConstraints, pw, countType, projectId); err != nil {
 		log.Error(err)
 		return FactorGraphResults{}, err
 	} else {
@@ -1176,7 +1176,7 @@ func FactorV1(reqId string, projectId uint64, startEvent string,
 	iPatternNodesUnsorted := []*ItreeNode{}
 	var debugData interface{}
 	if itree, err, debugInfo := BuildNewItreeV1(reqId, startEvent, startEventConstraints,
-		endEvent, endEventConstraints, pw, countType, debugKey, debugParams); err != nil {
+		endEvent, endEventConstraints, pw, countType, debugKey, debugParams, projectId); err != nil {
 		log.Error(err)
 		return Factors{}, err, nil
 	} else {
