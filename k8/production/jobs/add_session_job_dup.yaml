@@ -2,8 +2,8 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: factors-staging-node-pool
-  name: add-session-job
+    nodePool: persistent-pool-highmem-16
+  name: add-session-job-dup
 spec:
   schedule: "*/30 * * * *" # every 30 minutes
   concurrencyPolicy: Forbid
@@ -15,37 +15,33 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: factors-staging-node-pool
+            nodePool: persistent-pool-highmem-16
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: factors-staging-node-pool
+            cloud.google.com/gke-nodepool: persistent-pool-highmem-16
           containers:
-          - name: add-session-job
-            image: us.gcr.io/factors-staging/add-session-job:859291fb0-1542
+          - name: add-session-job-dup
+            image: us.gcr.io/factors-production/add-session-job:xxx
             imagePullPolicy: IfNotPresent
             args:
             - --env
             - $(ENV)
             - --db_host
-            - $(DB_HOST)
+            - $(DB_HOST_CLONE)
             - --db_port
             - $(DB_PORT)
             - --db_name
             - $(POSTGRES_DB)
             - --db_user
             - $(POSTGRES_USER)
-            - --redis_host
-            - $(REDIS_HOST)
-            - --redis_port
-            - $(REDIS_PORT)
             - --db_pass
             - $(POSTGRES_PASSWORD)
+            - --redis_host
+            - $(REDIS_HOST_2)
+            - --redis_port
+            - $(REDIS_PORT_2)
             - --project_ids
             - "*"
-            - --num_project_routines
-            - $(ADD_SESSION_PROJECT_ROUTINES)
-            - --num_user_routines
-            - $(ADD_SESSION_USER_ROUTINES)
             - --num_project_routines
             - $(ADD_SESSION_PROJECT_ROUTINES)
             - --num_user_routines
@@ -57,15 +53,19 @@ spec:
             - --end_timestamp
             - "0"
             - --redis_host_ps
-            - $(PERSISTENT_REDIS_HOST)
+            - $(REDIS_HOST_2)
             - --redis_port_ps
-            - $(PERSISTENT_REDIS_PORT)
+            - $(REDIS_PORT_2)
             - --sentry_dsn
             - $(SENTRY_DSN)
             - --gcp_project_id
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
+            - --ontable_user_properties_allowed_projects
+            - "*"
+            - --deprecate_user_properties_table_read_projects
+            - "*"
             envFrom:
             - configMapRef:
                 name: config-env

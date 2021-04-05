@@ -105,7 +105,7 @@ var allChannelsPropertyToRelated = map[string]PropertiesAndRelated{
 }
 
 // GetChannelConfig - @TODO Kark v1
-func (pg *Postgres) GetChannelConfig(channel string, reqID string) (*model.ChannelConfigResult, int) {
+func (pg *Postgres) GetChannelConfig(projectID uint64, channel string, reqID string) (*model.ChannelConfigResult, int) {
 	if !(isValidChannel(channel)) {
 		return &model.ChannelConfigResult{}, http.StatusBadRequest
 	}
@@ -115,11 +115,11 @@ func (pg *Postgres) GetChannelConfig(channel string, reqID string) (*model.Chann
 	case CAAllChannelAds:
 		result = buildAllChannelConfig()
 	case CAChannelFacebookAds:
-		result = buildFbChannelConfig()
+		result = pg.buildFbChannelConfig(projectID)
 	case CAChannelGoogleAds:
-		result = buildAdwordsChannelConfig()
+		result = pg.buildAdwordsChannelConfig(projectID)
 	case CAChannelLinkedinAds:
-		result = buildLinkedinChannelConfig()
+		result = pg.buildLinkedinChannelConfig(projectID)
 	}
 	return result, http.StatusOK
 }
@@ -429,7 +429,7 @@ func (pg *Postgres) GetChannelFilterValues(projectID uint64, channel, filter str
 		return []string{}, http.StatusInternalServerError
 	}
 
-	return filterValues, http.StatusFound
+	return filterValues, http.StatusBadRequest
 }
 
 // ExecuteChannelQuery - @Kark TODO v0
@@ -562,4 +562,37 @@ func (pg *Postgres) ExecuteSQL(sqlStatement string, params []interface{}, logCtx
 		return nil, make([][]interface{}, 0, 0), nil
 	}
 	return columns, resultRows, nil
+}
+
+func (pg *Postgres) GetSmartPropertiesAndRelated(projectID uint64, object string, source string) map[string]PropertiesAndRelated {
+	db := C.GetServices().Db
+	var smartPropertiesRules []model.SmartPropertiesRules
+	object_type, isPresent := smartPropertiesRulesTypeAlias[object]
+	if !isPresent {
+		return nil
+	}
+	err := db.Table("smart_properties_rules").Where("project_id = ? AND type = ? and is_deleted = ?", projectID, object_type, false).Find(&smartPropertiesRules).Error
+	if err != nil {
+		log.Error("Failed to get smart property filters from DB")
+	}
+
+	if len(smartPropertiesRules) == 0 {
+		return nil
+	}
+	smartPropertiesFilterConfig := make(map[string]PropertiesAndRelated)
+	for _, smartPropertiesRule := range smartPropertiesRules {
+		var rules []model.Rule
+		err := U.DecodePostgresJsonbToStructType(smartPropertiesRule.Rules, &rules)
+		if err != nil {
+			continue
+		}
+		for _, rule := range rules {
+			if rule.Source == "all" || rule.Source == source {
+				smartPropertiesFilterConfig[smartPropertiesRule.Name] = PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical}
+				break
+			}
+		}
+	}
+
+	return smartPropertiesFilterConfig
 }

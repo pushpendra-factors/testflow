@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -34,8 +36,8 @@ var facebookDocumentTypeAlias = map[string]int{
 var objectAndPropertyToValueInFacebookReportsMapping = map[string]string{
 	"campaign:name": "JSON_EXTRACT_STRING(value, 'campaign_name')",
 	"ad_set:name":   "JSON_EXTRACT_STRING(value, 'adset_name')",
-	"campaign:id":   "CONVERT(campaign_id, DECIMAL)",
-	"ad_set:id":     "ad_set_id",
+	"campaign:id":   "campaign_id::bigint",
+	"ad_set:id":     "ad_set_id::bigint",
 	"ad:id":         "id",
 }
 
@@ -46,10 +48,14 @@ var objectToValueInFacebookJobsMapping = map[string]string{
 	"ad_set:id":     "ad_set_id",
 	"ad:id":         "ad_id",
 }
+var objectAndKeyInFacebookToPropertyMapping = map[string]string{
+	"campaign:name": "campaign_name",
+	"ad_group:name": "adset_name",
+}
 var objectToValueInFacebookFiltersMapping = map[string]string{
 	"campaign:name": "JSON_EXTRACT_STRING(value, 'campaign_name')",
 	"ad_set:name":   "JSON_EXTRACT_STRING(value, 'adset_name')",
-	"campaign:id":   "CONVERT(campaign_id, DECIMAL)",
+	"campaign:id":   "campaign_id",
 	"ad_set:id":     "ad_set_id",
 	"ad:id":         "ad_id",
 }
@@ -87,6 +93,10 @@ var facebookInternalRepresentationToExternalRepresentation = map[string]string{
 	"ad_set:id":     "ad_group_id",
 	"ad:id":         "ad_id",
 }
+var facebookObjectMapForSmartProperties = map[string]string{
+	"campaign": "campaign",
+	"ad_set":   "ad_group",
+}
 
 const platform = "platform"
 
@@ -97,9 +107,12 @@ const errorDuplicateFacebookDocument = "pq: duplicate key value violates unique 
 const facebookFilterQueryStr = "SELECT DISTINCT(JSON_EXTRACT_STRING(value, ?)) as filter_value FROM facebook_documents WHERE project_id = ? AND" +
 	" " + "customer_ad_account_id IN (?) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
 
-const fromFacebooksDocument = " FROM facebook_documents "
+const fromFacebookDocuments = " FROM facebook_documents "
 
 const staticWhereStatementForFacebook = "WHERE project_id = ? AND customer_ad_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
+const staticWhereStatementForFacebookWithSmartProperties = "WHERE facebook_documents.project_id = ? AND facebook_documents.customer_ad_account_id IN ( ? ) AND facebook_documents.type = ? AND facebook_documents.timestamp between ? AND ? "
+
+var objectsForFacebook = []string{adwordsCampaign, adwordsAdGroup}
 
 func isDuplicateFacebookDocumentError(err error) bool {
 	return err.Error() == errorDuplicateFacebookDocument
@@ -190,9 +203,9 @@ func getFacebookDocumentTypeAliasByType() map[int]string {
 }
 
 // @TODO Kark v1
-func buildFbChannelConfig() *model.ChannelConfigResult {
-	properties := buildProperties(allChannelsPropertyToRelated)
-	objectsAndProperties := buildObjectsAndProperties(properties, objectsForAllChannels)
+func (store *MemSQL) buildFbChannelConfig(projectID uint64) *model.ChannelConfigResult {
+	facebookObjectsAndProperties := store.buildObjectAndPropertiesForFacebook(projectID, objectsForFacebook)
+	objectsAndProperties := append(facebookObjectsAndProperties)
 
 	return &model.ChannelConfigResult{
 		SelectMetrics:        selectableMetricsForAllChannels,
@@ -200,10 +213,34 @@ func buildFbChannelConfig() *model.ChannelConfigResult {
 	}
 }
 
+func (store *MemSQL) buildObjectAndPropertiesForFacebook(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
+	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
+	for _, currentObject := range objects {
+		smartProperties := store.GetSmartPropertiesAndRelated(projectID, currentObject, "facebook")
+		var currentProperties []model.ChannelProperty
+		if smartProperties != nil {
+			for key, value := range smartProperties {
+				allChannelsPropertyToRelated[key] = value
+			}
+		}
+		currentProperties = buildProperties(allChannelsPropertyToRelated)
+		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
+	}
+	return objectsAndProperties
+}
+
 // GetFacebookFilterValues - @TODO Kark v1
 func (store *MemSQL) GetFacebookFilterValues(projectID uint64, requestFilterObject string,
 	requestFilterProperty string, reqID string) ([]interface{}, int) {
 
+	_, isPresent := smartPropertiesDisallowedNames[requestFilterProperty]
+	if !isPresent {
+		filterValues, errCode := store.getSmartPropertiesFilterValues(projectID, requestFilterObject, requestFilterProperty, "facebook", reqID)
+		if errCode != http.StatusFound {
+			return []interface{}{}, http.StatusInternalServerError
+		}
+		return filterValues, http.StatusFound
+	}
 	facebookInternalFilterProperty, docType, err := getFilterRelatedInformationForFacebook(
 		requestFilterObject, requestFilterProperty)
 	if err != http.StatusOK {
@@ -323,6 +360,14 @@ func (store *MemSQL) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64
 	if err != nil {
 		logCtx.WithError(err).Error("Failed in facebook analytics with following error.")
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
+	}
+	isSmartPropertyPresent := checkSmartProperties(query.Filters, query.GroupBy)
+	if isSmartPropertyPresent {
+		sql, params, selectKeys, selectMetrics, err = buildFacebookQueryWithSmartPropertiesV1(transformedQuery, projectID, customerAccountID, fetchSource)
+		if err != nil {
+			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
+		}
+		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
 
 	sql, params, selectKeys, selectMetrics, err = buildFacebookQueryV1(transformedQuery, projectID, customerAccountID, fetchSource)
@@ -451,7 +496,119 @@ func buildFacebookQueryV1(query *model.ChannelQueryV1, projectID uint64, custome
 		fetchSource)
 	return sql, params, selectKeys, selectMetrics, nil
 }
+func buildFacebookQueryWithSmartPropertiesV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
+	lowestHierarchyLevel := getLowestHierarchyLevelForFacebook(query)
+	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromFacebookReportsWithSmartProperties(query, projectID, query.From, query.To, customerAccountID, facebookDocumentTypeAlias[lowestHierarchyReportLevel],
+		fetchSource)
+	return sql, params, selectKeys, selectMetrics, nil
+}
 
+func getSQLAndParamsFromFacebookReportsWithSmartProperties(query *model.ChannelQueryV1, projectID uint64, from, to int64, facebookAccountIDs string,
+	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
+	customerAccountIDs := strings.Split(facebookAccountIDs, ",")
+	selectQuery := "SELECT "
+	selectMetrics := make([]string, 0, 0)
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	groupByStatement := ""
+	groupByKeysWithoutTimestamp := make([]string, 0, 0)
+	selectKeys := make([]string, 0, 0)
+	finalSelectKeys := make([]string, 0, 0)
+	responseSelectKeys := make([]string, 0, 0)
+	responseSelectMetrics := make([]string, 0, 0)
+
+	smartPropertiesCampaignGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	smartPropertiesAdGroupGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	facebookGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	// Group By
+	for _, groupBy := range query.GroupBy {
+		_, isPresent := smartPropertiesDisallowedNames[groupBy.Property]
+		if !isPresent {
+			if groupBy.Object == adwordsCampaign {
+				smartPropertiesCampaignGroupBys = append(smartPropertiesCampaignGroupBys, groupBy)
+				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("campaign_%s", groupBy.Property))
+			} else {
+				smartPropertiesAdGroupGroupBys = append(smartPropertiesAdGroupGroupBys, groupBy)
+				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("ad_group_%s", groupBy.Property))
+			}
+		} else {
+			key := groupBy.Object + ":" + groupBy.Property
+			groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, facebookInternalRepresentationToExternalRepresentation[key])
+			facebookGroupBys = append(facebookGroupBys, groupBy)
+		}
+	}
+	if isGroupByTimestamp {
+		groupByStatement = joinWithComma(append(groupByKeysWithoutTimestamp, model.AliasDateTime)...)
+	} else {
+		groupByStatement = joinWithComma(groupByKeysWithoutTimestamp...)
+	}
+
+	// SelectKeys
+	if fetchSource {
+		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("'%s' as %s", facebookStringColumn, source))
+		responseSelectKeys = append(responseSelectKeys, source)
+	}
+
+	for _, groupBy := range facebookGroupBys {
+		key := groupBy.Object + ":" + groupBy.Property
+		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInFacebookReportsMapping[key], facebookInternalRepresentationToExternalRepresentation[key])
+		selectKeys = append(selectKeys, value)
+		responseSelectKeys = append(responseSelectKeys, facebookInternalRepresentationToExternalRepresentation[key])
+	}
+	for _, groupBy := range smartPropertiesCampaignGroupBys {
+		value := fmt.Sprintf("campaign.JSON_EXTRACT_STRING(properties, '%s') as campaign_%s", groupBy.Property, groupBy.Property)
+		selectKeys = append(selectKeys, value)
+		responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
+	}
+	for _, groupBy := range smartPropertiesAdGroupGroupBys {
+		value := fmt.Sprintf("ad_group.JSON_EXTRACT_STRING(properties, '%s') as ad_group_%s", groupBy.Property, groupBy.Property)
+		selectKeys = append(selectKeys, value)
+		responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
+	}
+
+	finalSelectKeys = append(finalSelectKeys, selectKeys...)
+	if isGroupByTimestamp {
+		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("%s as %s",
+			getSelectTimestampByTypeForChannels(query.GetGroupByTimestamp(), query.Timezone), model.AliasDateTime))
+		responseSelectKeys = append(responseSelectKeys, model.AliasDateTime)
+	}
+
+	for _, selectMetric := range query.SelectMetrics {
+		value := fmt.Sprintf("%s as %s", facebookMetricsToAggregatesInReportsMapping[selectMetric], facebookInternalRepresentationToExternalRepresentation[selectMetric])
+		selectMetrics = append(selectMetrics, value)
+
+		value = facebookInternalRepresentationToExternalRepresentation[selectMetric]
+		responseSelectMetrics = append(responseSelectMetrics, value)
+	}
+
+	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
+	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
+	whereConditionForFilters := getFacebookFiltersWhereStatementWithSmartProperties(query.Filters, smartPropertiesCampaignGroupBys, smartPropertiesAdGroupGroupBys)
+	filterStatementForSmartPropertiesGroupBy := getFilterStatementForSmartPropertiesGroupBy(smartPropertiesCampaignGroupBys, smartPropertiesAdGroupGroupBys)
+	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForFacebookWithSmartProperties, whereConditionForFilters, filterStatementForSmartPropertiesGroupBy)
+
+	fromStatement := getFacebookFromStatementWithJoins(query.Filters, query.GroupBy)
+	resultSQLStatement := selectQuery + fromStatement + finalFilterStatement
+	if len(groupByStatement) != 0 {
+		resultSQLStatement += " GROUP BY " + groupByStatement
+	}
+	resultSQLStatement += " " + orderByQuery + channeAnalyticsLimit + ";"
+	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
+
+	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
+}
+
+func getFacebookFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
+	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertiesWithTypeAndSource(filters, groupBys, "facebook")
+	fromStatement := fromFacebookDocuments
+	if isPresentAdGroupSmartProperty {
+		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = facebook_documents.project_id and ad_group.object_id = ad_set_id "
+	}
+	if isPresentCampaignSmartProperty {
+		fromStatement += "inner join smart_properties campaign on campaign.project_id = facebook_documents.project_id and campaign.object_id = campaign_id "
+	}
+	return fromStatement
+}
 func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, facebookAccountIDs string,
 	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
 	customerAccountIDs := strings.Split(facebookAccountIDs, ",")
@@ -508,7 +665,7 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID u
 	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
 	whereConditionForFilters := getFacebookFiltersWhereStatement(query.Filters)
 
-	resultSQLStatement := selectQuery + fromFacebooksDocument + staticWhereStatementForFacebook + whereConditionForFilters
+	resultSQLStatement := selectQuery + fromFacebookDocuments + staticWhereStatementForFacebook + whereConditionForFilters
 	if len(groupByStatement) != 0 {
 		resultSQLStatement += "GROUP BY " + groupByStatement
 	}
@@ -516,7 +673,6 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID u
 	staticWhereParams := []interface{}{projectID, customerAccountIDs, docType, from, to}
 	return resultSQLStatement, staticWhereParams, responseSelectKeys, responseSelectMetrics
 }
-
 func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	resultStatement := ""
 	var filterValue string
@@ -527,7 +683,7 @@ func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 		}
 		filterOperator := getOp(filter.Condition)
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%s", filter.Value)
+			filterValue = fmt.Sprintf("%%%s%%", filter.Value)
 		} else {
 			filterValue = filter.Value
 		}
@@ -539,6 +695,57 @@ func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 		}
 	}
 	return resultStatement
+}
+
+func getFacebookFiltersWhereStatementWithSmartProperties(filters []model.ChannelFilterV1, smartPropertiesCampaignGroupBys []model.ChannelGroupBy, smartPropertiesAdGroupGroupBys []model.ChannelGroupBy) string {
+	resultStatement := ""
+	var filterValue string
+	campaignFilter := ""
+	adGroupFilter := ""
+	for index, filter := range filters {
+		currentFilterStatement := ""
+		if filter.LogicalOp == "" {
+			filter.LogicalOp = "AND"
+		}
+		filterOperator := getOp(filter.Condition)
+		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
+			filterValue = fmt.Sprintf("%%%s%%", filter.Value)
+		} else {
+			filterValue = filter.Value
+		}
+		_, isPresent := smartPropertiesDisallowedNames[filter.Property]
+		if isPresent {
+			currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectToValueInFacebookFiltersMapping[filter.Object+":"+filter.Property], filterOperator, filterValue)
+			if index == 0 {
+				resultStatement = " AND " + currentFilterStatement
+			} else {
+				resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
+			}
+		} else {
+			currentFilterStatement = fmt.Sprintf("%s.JSON_EXTRACT_STRING(properties, '%s') %s '%s'", facebookObjectMapForSmartProperties[filter.Object], filter.Property, filterOperator, filterValue)
+			if index == 0 {
+				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
+			} else {
+				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
+			}
+			if filter.Object == "campaign" {
+				campaignFilter = smartPropertiesCampaignStaticFilter
+			} else {
+				adGroupFilter = smartPropertiesAdGroupStaticFilter
+			}
+		}
+	}
+
+	if campaignFilter != "" {
+		resultStatement += (" AND " + campaignFilter)
+	}
+	if adGroupFilter != "" {
+		resultStatement += (" AND " + adGroupFilter)
+	}
+	if resultStatement == "" {
+		return resultStatement
+	}
+	return resultStatement + ")"
 }
 
 // @TODO Kark v1
@@ -798,4 +1005,101 @@ func (store *MemSQL) GetFacebookChannelResult(projectID uint64, customerAccountI
 
 	queryResult.Metrics = &metricKvs
 	return queryResult, nil
+}
+
+func (store *MemSQL) GetLatestMetaForFacebook(projectID uint64, objectType int) []model.ChannelDocumentsWithFields {
+	channelDocuments := make([]model.ChannelDocumentsWithFields, 0, 0)
+	var docType int
+	if objectType == 1 {
+		docType = 1
+	}
+	if objectType == 2 {
+		docType = 3
+	}
+	db := C.GetServices().Db
+	var latestTimestamp LatestTimestamp
+	err := db.Table("facebook_documents").Select("MAX(timestamp) AS timestamp").Where("project_id = ? AND type = ?", projectID, docType).Find(&latestTimestamp).Error
+	if err != nil {
+		log.Error("Failed to get latest timestamp for meta fetch for facebook from db")
+		return channelDocuments
+	}
+	if objectType == 1 {
+		channelDocuments = store.GetLatestMetaForFacebookCampaign(projectID, docType, latestTimestamp.Timestamp)
+	}
+	if objectType == 2 {
+		channelDocuments = store.GetLatestMetaForFacebookAdGroup(projectID, docType, latestTimestamp.Timestamp)
+	}
+	return channelDocuments
+}
+
+func (store *MemSQL) GetLatestMetaForFacebookAdGroup(projectID uint64, docType int, timestamp int64) []model.ChannelDocumentsWithFields {
+	channelDocuments := make([]model.ChannelDocumentsWithFields, 0, 0)
+	db := C.GetServices().Db
+
+	queryStr := "WITH ad_group_meta AS (SELECT JSON_EXTRACT_STRING(value, 'name') as ad_group_name, ad_set_id as ad_group_id, campaign_id from facebook_documents where project_id= ? and type = 3 and timestamp= ?)," +
+		" campaign_meta AS (SELECT JSON_EXTRACT_STRING(value, 'name') as campaign_name, campaign_id from facebook_documents where project_id= ?  and type = 1 and timestamp= ?) " +
+		"select ad_group_name, campaign_name, ad_group_id, ad_group_meta.campaign_id from ad_group_meta left join campaign_meta on ad_group_meta.campaign_id = campaign_meta.campaign_id"
+	err := db.Raw(queryStr, projectID, timestamp, projectID, timestamp).Find(&channelDocuments).Error
+	if err != nil {
+		log.Error("Failed to get latest meta for facebook from db")
+		return make([]model.ChannelDocumentsWithFields, 0, 0)
+	}
+	return channelDocuments
+}
+func (store *MemSQL) GetLatestMetaForFacebookCampaign(projectID uint64, docType int, timestamp int64) []model.ChannelDocumentsWithFields {
+	channelDocuments := make([]model.ChannelDocumentsWithFields, 0, 0)
+	db := C.GetServices().Db
+
+	err := db.Table("facebook_documents").Select("campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name").Where("project_id = ? AND type = ? AND timestamp = ?", projectID, docType, timestamp).Find(&channelDocuments).Error
+	if err != nil {
+		log.Error("Failed to get latest meta for facebook from db")
+		return make([]model.ChannelDocumentsWithFields, 0, 0)
+	}
+	return channelDocuments
+}
+
+func (store *MemSQL) GetLatestMetaForFacebookForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
+	db := C.GetServices().Db
+
+	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0, 0)
+	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0, 0)
+
+	to, err := strconv.ParseUint(time.Now().Format("20060102"), 10, 64)
+	if err != nil {
+		log.Error("Failed to parse to timestamp")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+
+	from, err := strconv.ParseUint(time.Now().AddDate(0, 0, -days).Format("20060102"), 10, 64)
+	if err != nil {
+		log.Error("Failed to parse from timestamp")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+
+	adGroupQueryStr := "WITH ad_group AS (select ad_set_id as ad_group_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, campaign_id " +
+		"from facebook_documents where type = 3 AND project_id = ? AND (ad_set_id, timestamp) in (select ad_set_id, max(timestamp) " +
+		"from facebook_documents where type = 3 AND project_id = ? AND timestamp between ? and ? group by ad_set_id))" +
+		", campaign as (select campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from facebook_documents where type = 1 AND project_id = ? " +
+		"and (campaign_id, timestamp) in (select campaign_id, max(timestamp) from facebook_documents where type = 1 and project_id = ? " +
+		"and timestamp BETWEEN ? and ? group by campaign_id)) select ad_group_id, ad_group_name, ad_group.campaign_id, " +
+		"campaign_name from ad_group join campaign on ad_group.campaign_id = campaign.campaign_id"
+
+	campaignGroupQueryStr := "select campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from facebook_documents where type = 1 AND " +
+		"project_id = ? and (campaign_id, timestamp) in (select campaign_id, max(timestamp) from facebook_documents where type = 1 " +
+		"and project_id = ? and timestamp BETWEEN ? and ? group by campaign_id)"
+
+	err = db.Raw(adGroupQueryStr, projectID, projectID, from, to, projectID, projectID, from, to).Find(&channelDocumentsAdGroup).Error
+	if err != nil {
+		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
+		log.Error(errString)
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+
+	err = db.Raw(campaignGroupQueryStr, projectID, projectID, from, to).Find(&channelDocumentsCampaign).Error
+	if err != nil {
+		errString := fmt.Sprintf("failed to get last %d campaign meta for facebook", days)
+		log.Error(errString)
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	return channelDocumentsCampaign, channelDocumentsAdGroup
 }

@@ -1282,7 +1282,7 @@ func (pg *Postgres) GetUserByPropertyKey(projectID uint64,
 	var user model.User
 	// $$$ is a gorm alias for ? jsonb operator.
 	err := db.Limit(1).Where("project_id=?", projectID).Where(
-		"properties->? $$$ ?", key, value).Find(&user).Error
+		"properties->>? = ?", key, value).Find(&user).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound

@@ -887,3 +887,20 @@ func TestIdentificationOrderPrecedence(t *testing.T) {
 	assert.Equal(t, phone, (*propertiesMap)[U.UP_PHONE])
 	assert.Equal(t, email1, (*propertiesMap)[U.UP_EMAIL])
 }
+
+func TestGetUserByPropertyKey(t *testing.T) {
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+
+	errCode := store.GetStore().OverwriteUserPropertiesByID(project.ID, user.ID,
+		&postgres.Jsonb{RawMessage: json.RawMessage([]byte(
+			`{"$hubspot_contact_lead_guid": "xxx"}`))}, false, 0)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	leadUser, errCode := store.GetStore().GetUserByPropertyKey(project.ID,
+		model.UserPropertyHubspotContactLeadGUID, "xxx")
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, user.ID, leadUser.ID)
+}

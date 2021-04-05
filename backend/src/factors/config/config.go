@@ -156,6 +156,7 @@ type Configuration struct {
 	DeprecateUserPropertiesTableWriteProjects string
 	// List of projects to use on-table user_properties for read.
 	DeprecateUserPropertiesTableReadProjects string
+	ShowSmartPropertiesAllowedProjectIDs     string
 	CacheSortedSet                           bool
 	ProjectAnalyticsWhitelistedUUIds         []string
 	PrimaryDatastore                         string
@@ -1329,6 +1330,9 @@ func ShouldUseUserPropertiesTableForRead(projectID uint64) bool {
 // write for users and events table..
 func IsOnTableUserPropertiesWriteAllowed(projectID uint64) bool {
 	return isProjectOnProjectsList(configuration.OnTableUserPropertiesWriteAllowedProjects, projectID)
+}
+func IsShowSmartPropertiesAllowed(projectID uint64) bool {
+	return isProjectOnProjectsList(configuration.ShowSmartPropertiesAllowedProjectIDs, projectID)
 }
 
 func IsSDKAndIntegrationRequestQueueDuplicationEnabled() bool {
