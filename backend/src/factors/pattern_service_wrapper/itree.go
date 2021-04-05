@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 	"time"
-
+	"factors/model/store"
 	log "github.com/sirupsen/logrus"
 	"reflect"
 )
@@ -106,6 +106,18 @@ const OTHER_PROPERTY_VALUES_LABEL = "Other"
 const NONE_PROPERTY_VALUES_LABEL = "None"
 
 var log2Value float64 = math.Log(2)
+
+var BLACKLISTED_JOURNEYS = map[string][]string{
+	"$hubspot_contact_created" : []string{"$hubspot_contact_updated", "ANY_CRM"},
+	"$sf_opportunity_created" : []string{"$sf_opportunity_updated", "ANY_CRM"},
+	"$sf_lead_created" : []string{"$sf_lead_updated", "ANY_CRM"},
+}
+
+var BLACKLISTED_PROPERTIES = map[string][]string {
+	"$hubspot_contact_created" : []string{"$hubspot_"},
+	"$sf_opportunity_created" : []string{"$salesforce_"},
+	"$sf_lead_created" : []string{"$salesforce_"},
+}
 
 func log2(x float64) float64 {
 	if x == 0 {
@@ -569,7 +581,40 @@ func (it *Itree) addNode(node *ItreeNode) int {
 	return node.Index
 }
 
-func isChildSequence(parent []string, child []string) bool {
+
+func isChildSequenceBlacklisted(projectId uint64, ToBeAdded string, preSequence []string, goalEvent string) bool {
+	// If goalEvent has restrictions
+	// check what all events are in blacklisting and then check the ToBeadded event and then decide
+	// If ToBeadded is in restrictions
+	// check what all are there in the presequence, then decide if it has to be added
+
+	// Get All CRM events in a map[string]bool
+	events, _ := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, 8)
+	crmEvents := make(map[string]bool)
+	for _, event := range events[U.SmartEvent]{
+		crmEvents[event] = true
+	}
+	preSequenceMap := make(map[string]bool)
+	for _, eventName := range preSequence {
+		preSequenceMap[eventName] = true
+	}
+
+	for _, blacklisted := range BLACKLISTED_JOURNEYS[goalEvent] {
+		if(ToBeAdded == blacklisted){
+			return true
+		}
+		if(blacklisted == "ANY_CRM" && crmEvents[ToBeAdded] == true){
+			return true
+		}
+	}
+	for _, blacklisted := range BLACKLISTED_JOURNEYS[ToBeAdded] {
+		if(preSequenceMap[blacklisted] == true){
+			return true
+		}
+	}
+	return false
+}
+func isChildSequence(parent []string, child []string, projectId uint64) bool {
 	// ABY and ABCY is true.
 	// ABY and ACBY is false.
 	// ABY and BCY is false.
@@ -598,13 +643,20 @@ func isChildSequence(parent []string, child []string) bool {
 		// Parent and child should differ only at the end.
 		return false
 	}
+	preSeq := make([]string, 0)
+	if(pLen > 1){
+		preSeq = parent[0:pLen-1]
+	}
+	if(isChildSequenceBlacklisted(projectId, child[cLen-2], preSeq, parent[pLen-1])){
+		return false
+	}
 	return true
 }
 
 func (it *Itree) buildAndAddSequenceChildNodes(reqId string,
 	parentNode *ItreeNode, candidatePattens []*P.Pattern,
 	patternWrapper PatternServiceWrapperInterface,
-	allActiveUsersPattern *P.Pattern, countType string) ([]*ItreeNode, error) {
+	allActiveUsersPattern *P.Pattern, countType string, projectId uint64) ([]*ItreeNode, error) {
 
 	parentPattern := parentNode.Pattern
 	peLen := len(parentPattern.EventNames)
@@ -646,7 +698,7 @@ func (it *Itree) buildAndAddSequenceChildNodes(reqId string,
 		return childNodes, nil
 	}
 	for _, p := range candidatePattens {
-		if !isChildSequence(parentNode.Pattern.EventNames, p.EventNames) {
+		if !isChildSequence(parentNode.Pattern.EventNames, p.EventNames, projectId) {
 			continue
 		}
 
@@ -1121,10 +1173,10 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 	return addedChildNodes, nil
 }
 
-func BuildNewItree(reqId,
+func BuildNewItree(reqId, 
 	startEvent string, startEventConstraints *P.EventConstraints,
 	endEvent string, endEventConstraints *P.EventConstraints,
-	patternWrapper PatternServiceWrapperInterface, countType string) (*Itree, error) {
+	patternWrapper PatternServiceWrapperInterface, countType string, projectId uint64) (*Itree, error) {
 	if endEvent == "" {
 		return nil, fmt.Errorf("Missing end event")
 	}
@@ -1189,7 +1241,7 @@ func BuildNewItree(reqId,
 		}
 
 		if sequenceChildNodes, err := itree.buildAndAddSequenceChildNodes(reqId, parentNode,
-			candidatePatterns, patternWrapper, allActiveUsersPattern, countType); err != nil {
+			candidatePatterns, patternWrapper, allActiveUsersPattern, countType, projectId); err != nil {
 			return nil, err
 		} else {
 			// Only sequenceChildNodes are explored further.
@@ -1210,7 +1262,7 @@ var debugCounts map[string]int
 func BuildNewItreeV1(reqId string,
 	startEvent string, startEventConstraints *P.EventConstraints,
 	endEvent string, endEventConstraints *P.EventConstraints,
-	patternWrapper PatternServiceWrapperInterface, countType string, debugKey string, debugParams map[string]string) (*Itree, error, interface{}) {
+	patternWrapper PatternServiceWrapperInterface, countType string, debugKey string, debugParams map[string]string, projectId uint64) (*Itree, error, interface{}) {
 	if endEvent == "" {
 		return nil, fmt.Errorf("Missing end event"), nil
 	}
@@ -1324,7 +1376,7 @@ func BuildNewItreeV1(reqId string,
 		if parentNode.node.NodeType == NODE_TYPE_SEQUENCE || parentNode.node.NodeType == NODE_TYPE_ROOT || parentNode.node.NodeType == NODE_TYPE_CAMPAIGN {
 			startDateTime := time.Now()
 			if sequenceChildNodes, err := itree.buildAndAddSequenceChildNodesV1(reqId, parentNode.node,
-				candidatePatterns, patternWrapper, allActiveUsersPattern, countType, startEventConstraints, endEventConstraints); err != nil {
+				candidatePatterns, patternWrapper, allActiveUsersPattern, countType, startEventConstraints, endEventConstraints, projectId); err != nil {
 				return nil, err, nil
 			} else {
 				endDateTime := time.Now()
@@ -1343,7 +1395,7 @@ func BuildNewItreeV1(reqId string,
 		if parentNode.node.NodeType == NODE_TYPE_CAMPAIGN || parentNode.node.NodeType == NODE_TYPE_ROOT {
 			startDateTime := time.Now()
 			if sequenceChildNodes, err := itree.buildAndAddCampaignChildNodesV1(reqId, parentNode.node,
-				candidatePatterns, patternWrapper, allActiveUsersPattern, countType, startEventConstraints, endEventConstraints); err != nil {
+				candidatePatterns, patternWrapper, allActiveUsersPattern, countType, startEventConstraints, endEventConstraints, projectId); err != nil {
 				return nil, nil, err
 			} else {
 				endDateTime := time.Now()
@@ -1631,6 +1683,14 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 	return addedChildNodes, nil, nil
 }
 
+func isPropertyGoalEventBlacklisted(goalEvent string, propertyName string) bool {
+	for _, propertyPrefix := range BLACKLISTED_PROPERTIES[goalEvent] {
+		if(strings.HasPrefix(propertyName, propertyPrefix)){
+			return true
+		}
+	}
+	return false
+}
 func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 	categoricalPropertyKeys []string,
 	nodeType int, maxNumProperties int, maxNumValues int,
@@ -1641,6 +1701,9 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 	numP := 0
 	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
 	for _, propertyName := range categoricalPropertyKeys {
+		if(isPropertyGoalEventBlacklisted(parentNode.Pattern.EventNames[len(parentNode.Pattern.EventNames)-1], propertyName)){
+			continue
+		}
 		if numP > maxNumProperties {
 			break
 		}
@@ -1762,7 +1825,7 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 	parentNode *ItreeNode, candidatePattens []*P.Pattern,
 	patternWrapper PatternServiceWrapperInterface,
-	allActiveUsersPattern *P.Pattern, countType string,startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints) ([]*ItreeNode, error) {
+	allActiveUsersPattern *P.Pattern, countType string,startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints, projectId uint64) ([]*ItreeNode, error) {
 
 	parentPattern := parentNode.Pattern
 	peLen := len(parentPattern.EventNames)
@@ -1804,7 +1867,7 @@ func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 		return childNodes, nil
 	}
 	for _, p := range candidatePattens {
-		if !isChildSequence(parentNode.Pattern.EventNames, p.EventNames) || P.IsEncodedEvent(p.EventNames[len(p.EventNames)-2]) {
+		if !isChildSequence(parentNode.Pattern.EventNames, p.EventNames, projectId) || P.IsEncodedEvent(p.EventNames[len(p.EventNames)-2]) {
 			continue
 		}
 		if cNode, err := it.buildChildNodeV1(reqId,
@@ -1845,7 +1908,7 @@ func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 	parentNode *ItreeNode, candidatePattens []*P.Pattern,
 	patternWrapper PatternServiceWrapperInterface,
-	allActiveUsersPattern *P.Pattern, countType string, startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints) ([]*ItreeNode, error) {
+	allActiveUsersPattern *P.Pattern, countType string, startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints, projectId uint64) ([]*ItreeNode, error) {
 
 	parentPattern := parentNode.Pattern
 	peLen := len(parentPattern.EventNames)
@@ -1889,7 +1952,7 @@ func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 	subPattersnCount := 0
 	filteredPatternsCount := 0
 	for _, p := range candidatePattens {
-		if !isChildSequence(parentNode.Pattern.EventNames, p.EventNames) || !P.IsEncodedEvent(p.EventNames[len(p.EventNames)-2]) {
+		if !isChildSequence(parentNode.Pattern.EventNames, p.EventNames, projectId) || !P.IsEncodedEvent(p.EventNames[len(p.EventNames)-2]) {
 			continue
 		}
 		if P.ExtractCampaignName(p.EventNames[len(p.EventNames)-2]) == "" {
