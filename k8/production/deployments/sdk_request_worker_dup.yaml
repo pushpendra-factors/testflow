@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    layer: sdk-request-worker
+    layer: sdk-request-worker-dup
     env: production
     project: factors-production
     nodePool: persistent-pool-standard
-  name: sdk-request-worker
+  name: sdk-request-worker-dup
   namespace: default
 spec:
   progressDeadlineSeconds: 600
@@ -14,7 +14,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      layer: sdk-request-worker
+      layer: sdk-request-worker-dup
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -23,14 +23,14 @@ spec:
   template:
     metadata:      
       labels:
-        layer: sdk-request-worker
+        layer: sdk-request-worker-dup
         nodePool: persistent-pool-standard
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: persistent-pool-standard
       containers:
-      - name: sdk-request-worker
-        image: us.gcr.io/factors-production/sdk-request-worker:v1.13-1d6b430-721
+      - name: sdk-request-worker-dup
+        image: us.gcr.io/factors-production/sdk-request-worker:f75aa8d27-1806
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors/config
@@ -46,7 +46,7 @@ spec:
           - --env
           - $(ENV)
           - --db_host
-          - $(DB_HOST)
+          - $(DB_HOST_CLONE)
           - --db_port
           - $(DB_PORT)
           - --db_name
@@ -56,29 +56,40 @@ spec:
           - --db_pass
           - $(POSTGRES_PASSWORD)
           - --redis_host
-          - $(REDIS_HOST)
+          - $(REDIS_HOST_2)
           - --redis_port
-          - $(REDIS_PORT)
+          - $(REDIS_PORT_2)
+          - --redis_host_ps
+          - $(REDIS_HOST_2)
+          - --redis_port_ps
+          - $(REDIS_PORT_2)
           - --queue_redis_host
           - $(QUEUE_REDIS_HOST)
           - --queue_redis_port
           - $(QUEUE_REDIS_PORT)
+          - --dup_queue_redis_host
+          - $(DUP_QUEUE_REDIS_HOST)
+          - --dup_queue_redis_port
+          - $(DUP_QUEUE_REDIS_PORT)
           - --geo_loc_path
           - $(GEO_LOC_FILE_PATH)
           - --email_sender
           - $(EMAIL_SENDER)
           - --worker_concurrency
           - "10"
+          - --device_detector_path
+          - $(DEVICE_DETECTOR_DATA_PATH)
           - --sentry_dsn
           - $(SENTRY_DSN)
-          - --redis_host_ps
-          - $(PERSISTENT_REDIS_HOST)
-          - --redis_port_ps
-          - $(PERSISTENT_REDIS_PORT)
           - --gcp_project_id
           - $(GCP_PROJECT_ID)
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
+          - --ontable_user_properties_allowed_projects
+          - "*"
+          - --deprecate_user_properties_table_read_projects
+          - "*"
+          - --enable_sdk_and_integration_request_queue_duplication
         envFrom:
         - configMapRef:
             name: config-appserver

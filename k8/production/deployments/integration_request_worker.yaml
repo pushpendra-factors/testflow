@@ -59,11 +59,13 @@ spec:
           - --redis_port
           - $(REDIS_PORT)
           - --queue_redis_host
-          - $(PERSISTENT_REDIS_HOST)
+          - $(QUEUE_REDIS_HOST)
           - --queue_redis_port
-          - $(PERSISTENT_REDIS_PORT)
+          - $(QUEUE_REDIS_PORT)
           - --geo_loc_path
           - $(GEO_LOC_FILE_PATH)
+          - --email_sender
+          - $(EMAIL_SENDER)
           - --worker_concurrency
           - "10"
           - --sentry_dsn
@@ -93,6 +95,8 @@ spec:
             name: secret-postgres
         - secretRef:
             name: secret-sentry
+        - configMapRef:
+            name: config-queue-redis
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine
