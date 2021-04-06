@@ -37,3 +37,7 @@ type FacebookLastSyncInfoPayload struct {
 	ProjectId           string `json:"project_id"`
 	CustomerAdAccountId string `json:"account_id"`
 }
+
+const (
+	FacebookSpecificError = "Failed in facebook with the following error."
+)

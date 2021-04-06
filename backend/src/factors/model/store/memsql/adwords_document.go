@@ -936,7 +936,7 @@ func (store *MemSQL) getAdwordsFilterValuesByType(projectID uint64, docType int,
 	params := []interface{}{property, projectID, customerAccountID, docType, property}
 	_, resultRows, err := store.ExecuteSQL(adwordsFilterQueryStr, params, logCtx)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed in adwords with following error.")
+		logCtx.WithError(err).WithField("query", adwordsFilterQueryStr).WithField("params", params).Error(model.AdwordsSpecificError)
 		return make([]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
@@ -977,7 +977,7 @@ func (store *MemSQL) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model
 	_, resultMetrics, err := store.ExecuteSQL(sql, params, logCtx)
 	columns := append(selectKeys, selectMetrics...)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed in adwords with following error.")
+		logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.AdwordsSpecificError)
 		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	return columns, resultMetrics, http.StatusOK
@@ -993,11 +993,11 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForAdwords(projectID, *query, reqID)
 	if err != nil && err.Error() == integrationNotAvailable {
-		logCtx.WithError(err).Info("Failed in adwords analytics with following error.")
+		logCtx.WithError(err).Info(model.AdwordsSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}
 	if err != nil {
-		logCtx.WithError(err).Error("Failed in adwords analytics with following error.")
+		logCtx.WithError(err).Error(model.AdwordsSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperties(query.Filters, query.GroupBy)

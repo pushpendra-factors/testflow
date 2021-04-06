@@ -547,7 +547,7 @@ func getOrderByClause(selectMetrics []string) string {
 func (store *MemSQL) ExecuteSQL(sqlStatement string, params []interface{}, logCtx *log.Entry) ([]string, [][]interface{}, error) {
 	rows, err := store.ExecQueryWithContext(sqlStatement, params)
 	if err != nil {
-		logCtx.WithError(err).Error("SQL Query failed")
+		logCtx.WithError(err).WithField("query", sqlStatement).WithField("params", params).Error("SQL Query failed.")
 		return nil, nil, err
 	}
 

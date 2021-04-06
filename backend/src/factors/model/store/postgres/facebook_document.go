@@ -319,7 +319,7 @@ func (pg *Postgres) getFacebookFilterValuesByType(projectID uint64, docType int,
 	params := []interface{}{property, projectID, customerAccountIDs, docType, property}
 	_, resultRows, err := pg.ExecuteSQL(facebookFilterQueryStr, params, logCtx)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed in facebook analytics with following error.")
+		logCtx.WithError(err).WithField("query", facebookFilterQueryStr).WithField("params", params).Error(model.FacebookSpecificError)
 		return make([]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
@@ -339,7 +339,7 @@ func (pg *Postgres) ExecuteFacebookChannelQueryV1(projectID uint64, query *model
 	_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
 	columns := append(selectKeys, selectMetrics...)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed in facebook analytics with following error")
+		logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.FacebookSpecificError)
 		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	return columns, resultMetrics, http.StatusOK
@@ -356,11 +356,11 @@ func (pg *Postgres) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64,
 	transformedQuery, customerAccountID, err := pg.transFormRequestFieldsAndFetchRequiredFieldsForFacebook(
 		projectID, *query, reqID)
 	if err != nil && err.Error() == integrationNotAvailable {
-		logCtx.WithError(err).Error("Failed in facebook analytics with following error.")
+		logCtx.WithError(err).Info(model.FacebookSpecificError)
 		return "", nil, make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}
 	if err != nil {
-		logCtx.WithError(err).Error("Failed in facebook analytics with following error.")
+		logCtx.WithError(err).Error(model.FacebookSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperties(query.Filters, query.GroupBy)

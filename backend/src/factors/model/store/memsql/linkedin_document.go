@@ -490,7 +490,7 @@ func (store *MemSQL) getLinkedinFilterValuesByType(projectID uint64, docType int
 	params := []interface{}{property, projectID, customerAccountID, docType, property}
 	_, resultRows, err := store.ExecuteSQL(linkedinFilterQueryStr, params, logCtx)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed in linkedin analytics with following error")
+		logCtx.WithError(err).WithField("query", linkedinFilterQueryStr).WithField("params", params).Error(model.LinkedinSpecificError)
 		return make([]interface{}, 0, 0), http.StatusInternalServerError
 	}
 
@@ -528,7 +528,7 @@ func (store *MemSQL) ExecuteLinkedinChannelQueryV1(projectID uint64, query *mode
 	_, resultMetrics, err := store.ExecuteSQL(sql, params, logCtx)
 	columns := append(selectKeys, selectMetrics...)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed in linkedin analytics with following error")
+		logCtx.WithError(err).WithField("query", sql).WithField("params", params).Error(model.LinkedinSpecificError)
 		return make([]string, 0, 0), make([][]interface{}, 0, 0), http.StatusInternalServerError
 	}
 	return columns, resultMetrics, http.StatusOK
@@ -542,11 +542,11 @@ func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64
 	logCtx := log.WithField("project_id", projectID).WithField("req_id", reqID)
 	transformedQuery, customerAccountID, err := store.transFormRequestFieldsAndFetchRequiredFieldsForLinkedin(projectID, *query, reqID)
 	if err != nil && err.Error() == integrationNotAvailable {
-		logCtx.WithError(err).Info("Failed in Linkedin analytics with following error.")
+		logCtx.WithError(err).Info(model.LinkedinSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusNotFound
 	}
 	if err != nil {
-		logCtx.WithError(err).Error("Failed in Linkedin analytics with following error.")
+		logCtx.WithError(err).Error(model.LinkedinSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperties(query.Filters, query.GroupBy)
