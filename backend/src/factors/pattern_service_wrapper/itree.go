@@ -1989,9 +1989,6 @@ func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 
 	addedChildNodes := []*ItreeNode{}
 	for _, cNode := range childNodes {
-		if cNode.InformationDrop <= 0.0 {
-			continue
-		}
 		it.addNode(cNode)
 		addedChildNodes = append(addedChildNodes, cNode)
 	}
