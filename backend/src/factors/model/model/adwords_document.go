@@ -51,6 +51,7 @@ const (
 	AdwordsAd                 = "ad"
 	AdwordsKeyword            = "keyword"
 	AdwordsStringColumn       = "adwords"
+	AdwordsSpecificError      = "Failed in adwords with following error."
 )
 
 // AdwordsDocumentTypeAlias ...

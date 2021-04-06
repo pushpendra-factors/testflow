@@ -33,3 +33,7 @@ type LinkedinLastSyncInfo struct {
 	DocumentTypeAlias   string `json:"type_alias"`
 	LastTimestamp       int64  `json:"last_timestamp"`
 }
+
+const (
+	LinkedinSpecificError = "Failed in linkedin with the error."
+)
