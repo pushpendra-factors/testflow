@@ -77,6 +77,24 @@ func (pg *Postgres) GetProjectSettingByKeyWithTimeout(key, value string, timeout
 	}
 }
 
+// EnableBigqueryArchivalForProject To enable archival and bigquery in project_settings.
+func (pg *Postgres) EnableBigqueryArchivalForProject(projectID uint64) int {
+	db := C.GetServices().Db
+	logCtx := log.WithField("project_id", projectID)
+
+	if valid := isValidProjectScope(projectID); !valid {
+		return http.StatusBadRequest
+	}
+
+	if err := db.Model(model.ProjectSetting{}).Where("project_id = ?", projectID).
+		Updates(map[string]interface{}{"archive_enabled": true, "bigquery_enabled": true}).Error; err != nil {
+		logCtx.WithError(err).Error("Failed to update project_settings for bigquery archival")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
 // getProjectSettingByKey - Get project settings by a column on projects.
 func getProjectSettingByKey(key, value string) (*model.ProjectSetting, int) {
 	if key == "" || value == "" {

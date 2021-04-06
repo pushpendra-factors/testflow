@@ -7,6 +7,8 @@ import (
 
 	"factors/model/model"
 	U "factors/util"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // GetNextArchivalBatches Returns a list of EventsArchivalBatch from the give startTime to 1 day before.
@@ -30,7 +32,9 @@ func (store *MemSQL) GetNextArchivalBatches(projectID uint64, startTime int64, m
 	}
 
 	if startTime > endTime.Unix() {
-		return eventsArchivalBatches, fmt.Errorf("Invalid startTime value %v for endTime %v", startTime, endTime)
+		// Start time > end of yesterday's time. No batches to be processed.
+		log.WithFields(log.Fields{"project_id": projectID, "start": startTime, "end": endTime.Unix()}).Info("Invalid date range")
+		return eventsArchivalBatches, nil
 	}
 
 	batchTime := time.Unix(startTime, 0).UTC()

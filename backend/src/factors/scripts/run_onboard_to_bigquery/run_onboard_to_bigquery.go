@@ -109,6 +109,11 @@ func main() {
 			pbLog.Fatalf("Bigquery configuration details missing for adding new project")
 		}
 
+		pbLog.Info("Enabling archival and biguqery in project_settings")
+		if errCode := store.GetStore().EnableBigqueryArchivalForProject(*projectIDFlag); errCode != http.StatusAccepted {
+			pbLog.Fatal("Error enabling archival and biguqery in project_settings")
+		}
+
 		credentialsReader, err := cloudManager.Get(fileDir, *bigqueryCredentialsFileFlag)
 		if err != nil {
 			pbLog.WithError(err).Fatal("Error reading credentials file")
