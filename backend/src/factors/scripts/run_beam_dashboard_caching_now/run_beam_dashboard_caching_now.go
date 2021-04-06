@@ -47,6 +47,9 @@ var (
 
 	projectIDs        = flag.String("project_id", "3", "Project ids to run for. * for all.")
 	excludeProjectIDs = flag.String("exclude_project_id", "", "Comma separated project ids to exclude for the run")
+
+	deprecateUserPropertiesTableReadProjectIDs = flag.String("deprecate_user_properties_table_read_projects",
+		"", "List of projects for which user_properties table read to be deprecated.")
 )
 
 func registerStructs() {
@@ -79,9 +82,10 @@ func main() {
 			Password: *dbPass,
 			AppName:  appName,
 		},
-		RedisHost: *redisHost,
-		RedisPort: *redisPort,
-		SentryDSN: *sentryDSN,
+		RedisHost:                                *redisHost,
+		RedisPort:                                *redisPort,
+		SentryDSN:                                *sentryDSN,
+		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 	}
 	beam.PipelineOptions.Set("HealthchecksPingID", "be2f00de-57e1-401b-b2c9-9df305c3f528")
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))
