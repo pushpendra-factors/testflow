@@ -263,6 +263,7 @@ type Model interface {
 	GetAllSalesforceProjectSettings() ([]model.SalesforceProjectSettings, int)
 	IsPSettingsIntShopifyEnabled(projectId uint64) bool
 	GetProjectDetailsByShopifyDomain(shopifyDomain string) (uint64, string, bool, int)
+	EnableBigqueryArchivalForProject(projectID uint64) int
 
 	// project
 	UpdateProject(projectID uint64, project *model.Project) int

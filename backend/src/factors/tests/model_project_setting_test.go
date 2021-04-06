@@ -97,3 +97,23 @@ func TestGetProjectSettingByKeyWithTimeout(t *testing.T) {
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotNil(t, projectSetting)
 }
+
+func TestEnableBigqueryArchivalForProject(t *testing.T) {
+	project, _ := SetupProjectReturnDAO()
+	assert.NotNil(t, project)
+
+	projectSetting, errCode := store.GetStore().GetProjectSetting(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, projectSetting)
+	assert.False(t, *projectSetting.BigqueryEnabled)
+	assert.False(t, *projectSetting.ArchiveEnabled)
+
+	errCode = store.GetStore().EnableBigqueryArchivalForProject(project.ID)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	projectSetting, errCode = store.GetStore().GetProjectSetting(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, projectSetting)
+	assert.True(t, *projectSetting.BigqueryEnabled)
+	assert.True(t, *projectSetting.ArchiveEnabled)
+}
