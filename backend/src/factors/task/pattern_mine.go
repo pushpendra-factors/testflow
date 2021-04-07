@@ -1097,7 +1097,7 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 			var campEvent P.CounterEventFormat
 			campEventId, ok := eventDetails.EventProperties[U.EP_CAMPAIGN].(string)
 			if ok == false {
-				mineLog.Info("Error in converting string : ", eventDetails.EventProperties[U.EP_CAMPAIGN])
+				mineLog.Info("Error in converting string : ", " CAMPAIGN ", eventDetails.EventProperties[U.EP_CAMPAIGN])
 			}
 			if len(campEventId) > 0 {
 				cmpEvent := eventDetails.EventName + "[campaign:" + campEventId + "]"
@@ -1124,7 +1124,7 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 			var mediumEvent P.CounterEventFormat
 			mediumEventId, ok := eventDetails.EventProperties[U.EP_MEDIUM].(string)
 			if ok == false {
-				mineLog.Info("Error in converting string : ", eventDetails.EventProperties[U.EP_MEDIUM])
+				mineLog.Info("Error in converting string : ", " MEDIUM ", eventDetails.EventProperties[U.EP_MEDIUM])
 			}
 			if len(mediumEventId) > 0 {
 				medEvent := eventDetails.EventName + "[medium:" + mediumEventId + "]"
@@ -1150,7 +1150,7 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 			var sourceEvent P.CounterEventFormat
 			sourceEventId, ok := eventDetails.EventProperties[U.EP_SOURCE].(string)
 			if ok == false {
-				mineLog.Info("Error in converting string : ", eventDetails.EventProperties[U.EP_SOURCE])
+				mineLog.Info("Error in converting string : ", " SOURCE ", eventDetails.EventProperties[U.EP_SOURCE])
 			}
 			medEvent := eventDetails.EventName + "[source:" + sourceEventId + "]"
 			sourceEvent.EventName = medEvent
@@ -1175,7 +1175,7 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 			var referrerEvent P.CounterEventFormat
 			sourceEventId, ok := eventDetails.EventProperties[U.SP_INITIAL_REFERRER].(string)
 			if ok == false {
-				mineLog.Info("Error in converting string : ", eventDetails.EventProperties[U.SP_INITIAL_REFERRER])
+				mineLog.Info("Error in converting string : ", " INITIAL_REFERRER ", eventDetails.EventProperties[U.SP_INITIAL_REFERRER])
 			}
 			if len(sourceEventId) > 0 {
 				medEvent := eventDetails.EventName + "[initial_referrer:" + sourceEventId + "]"
@@ -1202,7 +1202,7 @@ func rewriteEventsFile(tmpEventsFilePath string, tmpPath string, userPropMap, ev
 			var AdgroupEvent P.CounterEventFormat
 			sourceEventId, ok := eventDetails.EventProperties[U.EP_ADGROUP].(string)
 			if ok == false {
-				mineLog.Info("Error in converting string : ", eventDetails.EventProperties[U.EP_ADGROUP])
+				mineLog.Info("Error in converting string : ", " EP_ADGROUP ", eventDetails.EventProperties[U.EP_ADGROUP])
 			}
 			if len(sourceEventId) > 0 {
 				medEvent := eventDetails.EventName + "[adgroup:" + sourceEventId + "]"
@@ -1295,7 +1295,11 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 		mineLog.WithFields(log.Fields{"user properties": userPropertiesList}).Info("Number of User properties from db :", len(userPropertiesList))
 
 		for _, v := range userPropertiesList {
-			upFilteredMap[v.UserPropertyName] = true
+			if _, ok := userPropertiesMap[v.UserPropertyName]; ok {
+				upFilteredMap[v.UserPropertyName] = true
+			} else {
+				mineLog.Info("Missing user property in events File ", v.UserPropertyName)
+			}
 		}
 	} else {
 
@@ -1304,7 +1308,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 		upSortedList := U.RankByWordCount(userPropertiesMap)
 		var userPropertiesCount = 0
 		for _, u := range upSortedList {
-			if upFilteredMap[u.Key] != true && userPropertiesCount < numProp {
+			if upFilteredMap[u.Key] != true {
 				upFilteredMap[u.Key] = true
 				userPropertiesCount++
 			}
@@ -1333,7 +1337,7 @@ func buildWhiteListProperties(projectId uint64, allProperty map[string]P.Propert
 	epSortedList := U.RankByWordCount(eventPropertiesMap)
 	var eventCountLocal = 0
 	for _, u := range epSortedList {
-		if epFilteredMap[u.Key] == false && eventCountLocal < numProp {
+		if epFilteredMap[u.Key] == false {
 			epFilteredMap[u.Key] = true
 			eventCountLocal++
 		}

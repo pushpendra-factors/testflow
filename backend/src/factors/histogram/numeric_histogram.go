@@ -146,7 +146,7 @@ func (h *NumericHistogramStruct) AddMap(keyValues map[string]float64) error {
 	for k, _ := range keyValues {
 		if _, ok := seenKeys[k]; !ok {
 			return fmt.Errorf(fmt.Sprintf(
-				"Unexpected key %s in %v", k, keyValues))
+				"Unexpected key %s in %v ,seenValues   %v", k, keyValues,seenKeys ))
 		}
 	}
 	return h.Add(vec)

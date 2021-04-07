@@ -356,7 +356,7 @@ func PatternPropertyKey(patternIndex int, propertyName string) string {
 }
 
 // Collects event info for the events initilaized in userAndEventsInfo.
-const max_SEEN_PROPERTIES = 10000
+const max_SEEN_PROPERTIES = 20000
 const max_SEEN_PROPERTY_VALUES = 1000
 
 func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo) (*map[string]PropertiesCount, error) {
@@ -366,6 +366,9 @@ func CollectPropertiesInfo(projectID uint64, scanner *bufio.Scanner, userAndEven
 	numUniqueEvents := len(*eventInfoMap)
 	maxProperties := max_SEEN_PROPERTIES / (int(float64(numUniqueEvents)/150.0) + 1)
 	maxPropertyValues := max_SEEN_PROPERTY_VALUES / (int(float64(numUniqueEvents)/150.0) + 1)
+
+	log.Info("Maximum Properties ", maxProperties, " ")
+	log.Info("Maximum Properties Values ", maxPropertyValues, " ")
 
 	allProps := make(map[string]PropertiesCount)
 
