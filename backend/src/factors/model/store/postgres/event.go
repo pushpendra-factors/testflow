@@ -65,11 +65,8 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 	blackListedForUpdate[U.EP_PAGE_SPENT_TIME] = true
 	blackListedForUpdate[U.EP_PAGE_SCROLL_PERCENT] = true
 
-	eventsToIncr := make([]*cacheRedis.Key, 0)
 	eventsToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
-	propertiesToIncr := make([]*cacheRedis.Key, 0)
 	propertiesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
-	valuesToIncr := make([]*cacheRedis.Key, 0)
 	valuesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	logCtx := log.WithField("project_id", projectID)
 
@@ -90,16 +87,11 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 	currentTime := U.TimeNow()
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 
-	var eventNamesKey *cacheRedis.Key
 	var eventNamesKeySortedSet *cacheRedis.Key
 	if IsEventNameTypeSmartEvent(eventNameDetails.Type) {
-		eventNamesKey, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID,
-			eventName, currentTimeDatePart)
 		eventNamesKeySortedSet, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 			currentTimeDatePart)
 	} else {
-		eventNamesKey, err = model.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID,
-			eventName, currentTimeDatePart)
 		eventNamesKeySortedSet, err = model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 			currentTimeDatePart)
 	}
@@ -108,7 +100,6 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 		logCtx.WithError(err).Error("Failed to get cache key - events")
 		return
 	}
-	eventsToIncr = append(eventsToIncr, eventNamesKey)
 	eventsToIncrSortedSet = append(eventsToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
 		Key:   eventNamesKeySortedSet,
 		Value: eventName,
@@ -128,28 +119,22 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 			if reflect.TypeOf(value).Kind() == reflect.String {
 				propertyValue = value.(string)
 			}
-			propertyCategoryKey, err := model.GetPropertiesByEventCategoryCacheKey(projectID,
-				eventName, property, category, currentTimeDatePart)
 			propertyCategoryKeySortedSet, err := model.GetPropertiesByEventCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get cache key - property category")
 				return
 			}
-			propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 			propertiesToIncrSortedSet = append(propertiesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
 				Key:   propertyCategoryKeySortedSet,
 				Value: fmt.Sprintf("%s:SS-EN-PC:%s:%s", eventName, category, property),
 			})
 			if category == U.PropertyTypeCategorical {
 				if propertyValue != "" {
-					valueKey, err := model.GetValuesByEventPropertyCacheKey(projectID,
-						eventName, property, propertyValue, currentTimeDatePart)
 					valueKeySortedSet, err := model.GetValuesByEventPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to get cache key - values")
 						return
 					}
-					valuesToIncr = append(valuesToIncr, valueKey)
 					valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
 						Key:   valueKeySortedSet,
 						Value: fmt.Sprintf("%s:SS-EN-PC:%s:SS-EN-PV:%s", eventName, property, propertyValue),
@@ -159,20 +144,16 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 		}
 	}
 	begin := U.TimeNow()
-	keysToIncr := make([]*cacheRedis.Key, 0)
 	keysToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	if !isUpdateEventProperty {
-		keysToIncr = append(keysToIncr, eventsToIncr...)
 		keysToIncrSortedSet = append(keysToIncrSortedSet, eventsToIncrSortedSet...)
 	}
-	keysToIncr = append(keysToIncr, propertiesToIncr...)
-	keysToIncr = append(keysToIncr, valuesToIncr...)
 	keysToIncrSortedSet = append(keysToIncrSortedSet, propertiesToIncrSortedSet...)
 	keysToIncrSortedSet = append(keysToIncrSortedSet, valuesToIncrSortedSet...)
-	if len(keysToIncr) <= 0 {
+	if len(keysToIncrSortedSet) <= 0 {
 		return
 	}
-	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
+	counts, err := cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
 	end := U.TimeNow()
 	metrics.Increment(metrics.IncrEventCacheCounter)
 	metrics.RecordLatency(metrics.LatencyEventCache, float64(end.Sub(begin).Milliseconds()))
@@ -181,40 +162,16 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 		return
 	}
 
-	if C.IsSortedSetCachingAllowed() {
-		cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
-	}
-	// The following code is to support/facilitate cleanup
 	newEventCount := int64(0)
-	newPropertiesCount := int64(0)
-	newValuesCount := int64(0)
 	index := 0
 	if len(counts) > 0 {
 		if counts[index] == 1 && !isUpdateEventProperty {
 			newEventCount++
 			index++
 		}
-		for _, value := range counts[index : len(propertiesToIncr)+index] {
-			if value == 1 {
-				newPropertiesCount++
-			}
-		}
-		for _, value := range counts[len(propertiesToIncr)+index : len(propertiesToIncr)+len(valuesToIncr)+index] {
-			if value == 1 {
-				newValuesCount++
-			}
-		}
 	}
 	analyticsKeysInCache := make([]cacheRedis.SortedSetKeyValueTuple, 0)
-	countsInCache := make([]cacheRedis.KeyCountTuple, 0)
 	if newEventCount > 0 {
-		eventsCountKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(projectID,
-			currentTimeDatePart)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache key - eventsCount")
-			return
-		}
-		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: eventsCountKey, Count: newEventCount})
 		uniqueEventsCountKey, err := model.UniqueEventNamesAnalyticsCacheKey(currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - uniqueEventsCountKey")
@@ -223,23 +180,6 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
 			Key:   uniqueEventsCountKey,
 			Value: fmt.Sprintf("%v", projectID)})
-	}
-	if newPropertiesCount > 0 {
-		propertiesCountKey, err := model.GetPropertiesByEventCategoryCountCacheKey(
-			projectID, currentTimeDatePart)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache key - propertiesCount")
-			return
-		}
-		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: propertiesCountKey, Count: newPropertiesCount})
-	}
-	if newValuesCount > 0 {
-		valuesCountKey, err := model.GetValuesByEventPropertyCountCacheKey(projectID, currentTimeDatePart)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache key - valuesCount")
-			return
-		}
-		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: valuesCountKey, Count: newValuesCount})
 	}
 	if !isUpdateEventProperty {
 		totalEventsCountKey, err := model.EventsCountAnalyticsCacheKey(currentTimeDatePart)
@@ -251,17 +191,6 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 			Key:   totalEventsCountKey,
 			Value: fmt.Sprintf("%v", projectID)})
 	}
-	if len(countsInCache) > 0 {
-		begin := U.TimeNow()
-		_, err = cacheRedis.IncrByBatchPersistent(countsInCache)
-		end := U.TimeNow()
-		metrics.Increment(metrics.IncrEventUserCleanupCounter)
-		metrics.RecordLatency(metrics.LatencyEventUserCleanupCounter, float64(end.Sub(begin).Milliseconds()))
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to increment keys")
-			return
-		}
-	}
 	if len(analyticsKeysInCache) > 0 {
 		_, err = cacheRedis.ZincrPersistentBatch(true, analyticsKeysInCache...)
 		if err != nil {
@@ -270,7 +199,6 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 		}
 	}
 }
-
 func (pg *Postgres) CreateEvent(event *model.Event) (*model.Event, int) {
 	logCtx := log.WithField("project_id", event.ProjectId)
 
@@ -1518,7 +1446,7 @@ func (pg *Postgres) PullEventRowsForBuildSequenceJob(projectID uint64, startTime
 	return db.Raw(rawQuery).Rows()
 }
 
-// PullEventsForArchivalJob - Function to pull events for archival.
+// PullEventRowsForArchivalJob - Function to pull events for archival.
 func (pg *Postgres) PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
 
 	rawQuery := fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
@@ -1528,7 +1456,7 @@ func (pg *Postgres) PullEventRowsForArchivalJob(projectID uint64, startTime, end
 
 	if config.ShouldUseUserPropertiesTableForRead(projectID) {
 		rawQuery = fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
-			"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, events.user_properties FROM events "+
+			"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, user_properties.properties FROM events "+
 			"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
 			"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
 			"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, startTime, endTime)

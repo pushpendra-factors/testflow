@@ -185,19 +185,21 @@ func PullEventsForArchive(projectID uint64, eventsFilePath, usersFilePath string
 			peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil event properties.")
 		}
 
-		var userPropertiesMap *map[string]interface{}
+		var eventPropertiesString, userPropertiesString []byte
 		if userProperties != nil {
+			var userPropertiesMap *map[string]interface{}
 			userPropertiesMap, err = U.DecodePostgresJsonb(userProperties)
 			if err != nil {
 				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
 				return 0, "", "", err
 			}
+			userPropertiesString, _ = json.Marshal(model.SanitizeUserProperties(*userPropertiesMap))
 		} else {
 			peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil user properties.")
+			userPropertiesString = []byte("")
 		}
 
-		eventPropertiesString, _ := json.Marshal(model.SanitizeEventProperties(*eventPropertiesMap))
-		userPropertiesString, _ := json.Marshal(model.SanitizeUserProperties(*userPropertiesMap))
+		eventPropertiesString, _ = json.Marshal(model.SanitizeEventProperties(*eventPropertiesMap))
 		event := model.ArchiveEventTableFormat{
 			EventID:           eventID,
 			UserID:            userID,

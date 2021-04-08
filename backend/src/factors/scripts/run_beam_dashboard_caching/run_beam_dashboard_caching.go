@@ -57,6 +57,9 @@ var (
 	excludeProjectIDs = flag.String("exclude_project_id", "", "Comma separated project ids to exclude for the run")
 	onlyWebAnalytics  = flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
 	skipWebAnalytics  = flag.Bool("skip_web_analytics", false, "Skip the web analytics and run other.")
+
+	deprecateUserPropertiesTableReadProjectIDs = flag.String("deprecate_user_properties_table_read_projects",
+		"", "List of projects for which user_properties table read to be deprecated.")
 )
 
 func registerStructs() {
@@ -230,10 +233,11 @@ func main() {
 			Password: *memSQLPass,
 			AppName:  appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		RedisHost:        *redisHost,
-		RedisPort:        *redisPort,
-		SentryDSN:        *sentryDSN,
+		PrimaryDatastore:                         *primaryDatastore,
+		RedisHost:                                *redisHost,
+		RedisPort:                                *redisPort,
+		SentryDSN:                                *sentryDSN,
+		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 	}
 	beam.PipelineOptions.Set("HealthchecksPingID", "ecb259b9-4ff8-4825-b989-81d47bd34d93")
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))

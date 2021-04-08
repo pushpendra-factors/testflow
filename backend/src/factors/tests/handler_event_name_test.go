@@ -132,8 +132,8 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Test events ingested via sdk/track call
-	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
-	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
+	rollBackWindow :=  1
+	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
 	w = sendGetEventNamesExactRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)

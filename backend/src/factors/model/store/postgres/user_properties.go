@@ -228,11 +228,8 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 		})
 
 	}
-	keysToIncr := make([]*cacheRedis.Key, 0)
 	keysToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
-	propertiesToIncr := make([]*cacheRedis.Key, 0)
 	propertiesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
-	valuesToIncr := make([]*cacheRedis.Key, 0)
 	valuesToIncrSortedSet := make([]cacheRedis.SortedSetKeyValueTuple, 0)
 	for property, value := range updatedProperties {
 		category := pg.GetPropertyTypeByKeyValue(projectID, "", property, value, true)
@@ -244,34 +241,22 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 		if reflect.TypeOf(value).Kind() == reflect.String {
 			propertyValue = value.(string)
 		}
-		propertyCategoryKey, err := model.GetUserPropertiesCategoryByProjectCacheKey(projectID, property, category, currentTimeDatePart)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache key - property category")
-			return
-		}
 		propertyCategoryKeySortedSet, err := model.GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectID, currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - property category")
 			return
 		}
-		propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 		propertiesToIncrSortedSet = append(propertiesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
 			Key:   propertyCategoryKeySortedSet,
 			Value: fmt.Sprintf("%s:%s", category, property),
 		})
 		if category == U.PropertyTypeCategorical {
 			if propertyValue != "" {
-				valueKey, err := model.GetValuesByUserPropertyCacheKey(projectID, property, propertyValue, currentTimeDatePart)
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to get cache key - values")
-					return
-				}
 				valueKeySortedSet, err := model.GetValuesByUserPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to get cache key - values")
 					return
 				}
-				valuesToIncr = append(valuesToIncr, valueKey)
 				valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
 					Key:   valueKeySortedSet,
 					Value: fmt.Sprintf("%s:SS-US-PV:%s", property, propertyValue),
@@ -279,64 +264,16 @@ func (pg *Postgres) UpdateCacheForUserProperties(userId string, projectID uint64
 			}
 		}
 	}
-	keysToIncr = append(keysToIncr, propertiesToIncr...)
-	keysToIncr = append(keysToIncr, valuesToIncr...)
 	keysToIncrSortedSet = append(keysToIncrSortedSet, propertiesToIncrSortedSet...)
 	keysToIncrSortedSet = append(keysToIncrSortedSet, valuesToIncrSortedSet...)
 	begin = U.TimeNow()
-	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
+	_, err = cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
 	end = U.TimeNow()
 	metrics.Increment(metrics.IncrUserCacheCounter)
 	metrics.RecordLatency(metrics.LatencyUserCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to increment keys")
 		return
-	}
-
-	if C.IsSortedSetCachingAllowed() {
-		cacheRedis.ZincrPersistentBatch(false, keysToIncrSortedSet...)
-	}
-	// The following code is to support/facilitate cleanup
-	newPropertiesCount := int64(0)
-	newValuesCount := int64(0)
-	for _, value := range counts[0:len(propertiesToIncr)] {
-		if value == 1 {
-			newPropertiesCount++
-		}
-	}
-	for _, value := range counts[len(propertiesToIncr) : len(propertiesToIncr)+len(valuesToIncr)] {
-		if value == 1 {
-			newValuesCount++
-		}
-	}
-
-	countsInCache := make([]cacheRedis.KeyCountTuple, 0)
-	if newPropertiesCount > 0 {
-		propertiesCountKey, err := model.GetUserPropertiesCategoryByProjectCountCacheKey(projectID, currentTimeDatePart)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache key - propertiesCount")
-			return
-		}
-		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: propertiesCountKey, Count: newPropertiesCount})
-	}
-	if newValuesCount > 0 {
-		valuesCountKey, err := model.GetValuesByUserPropertyCountCacheKey(projectID, currentTimeDatePart)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache key - valuesCount")
-			return
-		}
-		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: valuesCountKey, Count: newValuesCount})
-	}
-	if len(countsInCache) > 0 {
-		begin := U.TimeNow()
-		_, err = cacheRedis.IncrByBatchPersistent(countsInCache)
-		end := U.TimeNow()
-		metrics.Increment(metrics.IncrEventUserCleanupCounter)
-		metrics.RecordLatency(metrics.LatencyEventUserCleanupCounter, float64(end.Sub(begin).Milliseconds()))
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to increment keys")
-			return
-		}
 	}
 	if len(analyticsKeysInCache) > 0 {
 		_, err = cacheRedis.ZincrPersistentBatch(true, analyticsKeysInCache...)

@@ -171,8 +171,8 @@ func createProjectAgentEvents(r *gin.Engine) (uint64, *model.Agent) {
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
 		})
-	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
-	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
+	rollBackWindow :=  1
+	event_user_cache.DoRollUpSortedSet( &rollBackWindow)
 	C.GetConfig().ActiveFactorsGoalsLimit = 50
 	C.GetConfig().ActiveFactorsTrackedUserPropertiesLimit = 50
 	C.GetConfig().ActiveFactorsTrackedEventsLimit = 50

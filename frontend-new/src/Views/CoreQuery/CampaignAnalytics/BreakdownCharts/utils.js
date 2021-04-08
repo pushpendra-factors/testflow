@@ -95,10 +95,12 @@ export const getTableColumns = (
   handleSorting
 ) => {
   const breakdownIndices = getBreakdownIndices(data, breakdown);
-  const breakdownCols = breakdownIndices.map((b) => {
+  const breakdownCols = breakdownIndices.map((b, index) => {
     return {
       title: data.result_group[1].headers[b],
       dataIndex: data.result_group[1].headers[b],
+      fixed: index < 2 ? "left" : "",
+      width: 150
     };
   });
   const eventCols = arrayMapper.map((elem) => {
@@ -110,6 +112,7 @@ export const getTableColumns = (
         handleSorting
       ),
       dataIndex: elem.eventName,
+      width: 150,
       render: (d) => {
         return <NumFormat number={d} />;
       },
