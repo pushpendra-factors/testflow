@@ -228,6 +228,21 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, errCode)
 		assert.Nil(t, dashboardUnit)
 	})
+
+	t.Run("CreateDashboardUnit:DisallowAddingToWebAnalytics", func(t *testing.T) {
+		rName := U.RandomString(5)
+		dashboard, errCode := store.GetStore().CreateDashboard(
+			project.ID, agent.UUID, &model.Dashboard{Name: rName, Type: model.DashboardTypeProjectVisible, Class: model.DashboardClassWebsiteAnalytics})
+		assert.NotNil(t, dashboard)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Equal(t, rName, dashboard.Name)
+
+		rTitle := U.RandomString(5)
+		dashboardUnit, errCode, _ := store.GetStore().CreateDashboardUnit(project.ID, agent2.UUID, &model.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rTitle, Presentation: model.PresentationLine, Query: postgres.Jsonb{json.RawMessage(`{}`)}}, model.DashboardUnitForNoQueryID)
+		assert.Equal(t, http.StatusForbidden, errCode)
+		assert.Nil(t, dashboardUnit)
+	})
 }
 
 func TestCreateMultipleDashboardUnits(t *testing.T) {

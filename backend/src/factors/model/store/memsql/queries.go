@@ -37,7 +37,9 @@ func (store *MemSQL) GetALLQueriesWithProjectId(projectID uint64) ([]model.Queri
 	db := C.GetServices().Db
 
 	queries := make([]model.Queries, 0, 0)
-	err := db.Table("queries").Select("*").Where("project_id = ? AND is_deleted = ?", projectID, "false").Order("created_at DESC").Find(&queries).Error
+	err := db.Table("queries").Select("*").
+		Where("project_id = ? AND is_deleted = ?", projectID, "false").
+		Order("created_at DESC").Find(&queries).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error("Failed to fetch rows from queries table for project")
 		return queries, http.StatusInternalServerError

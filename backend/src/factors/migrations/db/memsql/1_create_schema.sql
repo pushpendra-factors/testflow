@@ -211,6 +211,7 @@ CREATE TABLE IF NOT EXISTS dashboards (
     units_position json,
     description text,
     type varchar(5),
+    class text,
     is_deleted boolean NOT NULL DEFAULT FALSE,
     created_at timestamp(6),
     updated_at timestamp(6),

@@ -33,11 +33,14 @@ func (pg *Postgres) CreateQuery(projectId uint64, query *model.Queries) (*model.
 	return query, http.StatusCreated, ""
 }
 
+// GetALLQueriesWithProjectId Get all queries for Saved Reports.
 func (pg *Postgres) GetALLQueriesWithProjectId(projectID uint64) ([]model.Queries, int) {
 	db := C.GetServices().Db
 
 	queries := make([]model.Queries, 0, 0)
-	err := db.Table("queries").Select("*").Where("project_id = ? AND is_deleted = ?", projectID, "false").Order("created_at DESC").Find(&queries).Error
+	err := db.Table("queries").Select("*").
+		Where("project_id = ? AND is_deleted = ?", projectID, "false").
+		Order("created_at DESC").Find(&queries).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error("Failed to fetch rows from queries table for project")
 		return queries, http.StatusInternalServerError

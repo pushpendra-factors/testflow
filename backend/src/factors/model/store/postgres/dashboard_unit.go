@@ -69,6 +69,11 @@ func (pg *Postgres) CreateMultipleDashboardUnits(requestPayload []model.Dashboar
 
 func (pg *Postgres) CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *model.DashboardUnit,
 	queryType string) (*model.DashboardUnit, int, string) {
+	return pg.CreateDashboardUnitForDashboardClass(projectId, agentUUID, dashboardUnit, queryType, model.DashboardClassUserCreated)
+}
+
+func (pg *Postgres) CreateDashboardUnitForDashboardClass(projectId uint64, agentUUID string, dashboardUnit *model.DashboardUnit,
+	queryType, dashboardClass string) (*model.DashboardUnit, int, string) {
 
 	db := C.GetServices().Db
 
@@ -88,6 +93,11 @@ func (pg *Postgres) CreateDashboardUnit(projectId uint64, agentUUID string, dash
 	if !hasAccess {
 		return nil, http.StatusForbidden, "Unauthorized to access dashboard"
 	}
+
+	if dashboard.Class != dashboardClass {
+		return nil, http.StatusForbidden, fmt.Sprintf("Restricted access to dashboard class '%s'", dashboard.Class)
+	}
+
 	// Todo (Anil) remove this query creation after we move to new UI completely.
 	if dashboardUnit.QueryId == 0 {
 		query, errCode, errMsg := pg.CreateQuery(projectId,
