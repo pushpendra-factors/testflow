@@ -63,7 +63,7 @@ function WebsiteAnalytics({
         type: DASHBOARD_LAST_REFRESHED,
         payload: lastRefesh
       });
-  }, [lastRefesh]);
+  }, [lastRefesh, dispatch]);
 
   if (resultState.loading) {
     return (

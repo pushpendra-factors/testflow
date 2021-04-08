@@ -1,8 +1,9 @@
 import React from "react";
 import { Text } from "../factorsComponents";
+import { charts_legend_length } from "../../utils/constants";
 
 function TopLegends({
-  parentClassName = "flex justify-center mb-4 py-3",
+  parentClassName = "flex justify-center py-3",
   cardSize,
   legends
 }) {
@@ -19,7 +20,9 @@ function TopLegends({
         ></div>
         <div className="px-2">
           <Text mini type="paragraph">
-            {legends[0]}
+            {legends[0].length > charts_legend_length[cardSize] && cardSize !== 1
+                  ? legends[0].substr(0, charts_legend_length[cardSize]) + "..."
+                  : legends[0]}
           </Text>
         </div>
       </div>

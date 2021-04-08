@@ -119,7 +119,7 @@ function App({ isAgentLoggedIn, agent_details }) {
       })();
 
     }
-  }, []);
+  }, [agent_details]);
 
   return (
     <div className="App">
