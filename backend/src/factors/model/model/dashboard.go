@@ -24,6 +24,7 @@ type Dashboard struct {
 	Name          string          `gorm:"not null" json:"name"`
 	Description   string          `json:"description"`
 	Type          string          `gorm:"type:varchar(5);not null" json:"type"`
+	Class         string          `json:"class"`
 	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
 	IsDeleted     bool            `gorm:"not null;default:false" json:"is_deleted"`
 	CreatedAt     time.Time       `json:"created_at"`
@@ -49,6 +50,9 @@ const DashboardCachingDurationInSeconds = 32 * 24 * 60 * 60 // 32 days.
 const (
 	DashboardTypePrivate        = "pr"
 	DashboardTypeProjectVisible = "pv"
+
+	DashboardClassUserCreated      = "user_created"
+	DashboardClassWebsiteAnalytics = "web"
 )
 
 var DashboardTypes = []string{DashboardTypePrivate, DashboardTypeProjectVisible}

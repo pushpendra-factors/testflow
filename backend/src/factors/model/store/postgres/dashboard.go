@@ -41,6 +41,10 @@ func (pg *Postgres) CreateDashboard(projectId uint64, agentUUID string, dashboar
 		return nil, http.StatusBadRequest
 	}
 
+	if dashboard.Class == "" {
+		dashboard.Class = model.DashboardClassUserCreated
+	}
+
 	dashboard.ProjectId = projectId
 	dashboard.AgentUUID = agentUUID
 

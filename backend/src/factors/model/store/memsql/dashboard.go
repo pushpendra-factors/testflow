@@ -41,6 +41,10 @@ func (store *MemSQL) CreateDashboard(projectId uint64, agentUUID string, dashboa
 		return nil, http.StatusBadRequest
 	}
 
+	if dashboard.Class == "" {
+		dashboard.Class = model.DashboardClassUserCreated
+	}
+
 	dashboard.ProjectId = projectId
 	dashboard.AgentUUID = agentUUID
 

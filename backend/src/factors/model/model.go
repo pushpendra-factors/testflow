@@ -97,6 +97,7 @@ type Model interface {
 
 	// dashboard_unit
 	CreateDashboardUnit(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit, queryType string) (*model.DashboardUnit, int, string)
+	CreateDashboardUnitForDashboardClass(projectID uint64, agentUUID string, dashboardUnit *model.DashboardUnit, queryType, dashboardClass string) (*model.DashboardUnit, int, string)
 	CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64, agentUUID string, unitPayload model.DashboardUnitRequestPayload) ([]*model.DashboardUnit, int, string)
 	CreateMultipleDashboardUnits(requestPayload []model.DashboardUnitRequestPayload, projectId uint64, agentUUID string, dashboardId uint64) ([]*model.DashboardUnit, int, string)
 	GetDashboardUnitsForProjectID(projectID uint64) ([]model.DashboardUnit, int)

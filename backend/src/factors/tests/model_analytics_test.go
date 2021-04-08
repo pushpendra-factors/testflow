@@ -2316,6 +2316,7 @@ func TestQueryCaching(t *testing.T) {
 	customerAccountID := U.RandomLowerAphaNumString(5)
 	store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountID,
+		IntFacebookAdAccount:        customerAccountID,
 	})
 
 	errCode = store.GetStore().CreateWebAnalyticsDefaultDashboardWithUnits(project.ID, agent.UUID)

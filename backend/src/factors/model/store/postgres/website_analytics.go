@@ -267,14 +267,14 @@ func (pg *Postgres) addWebAnalyticsDefaultDashboardUnits(projectId uint64,
 		}
 
 		// creating dashboard unit for query created just above
-		_, errCode, errMsg = pg.CreateDashboardUnit(projectId, agentUUID,
+		_, errCode, errMsg = pg.CreateDashboardUnitForDashboardClass(projectId, agentUUID,
 			&model.DashboardUnit{
 				DashboardId:  dashboardId,
 				Title:        U.GetSnakeCaseToTitleString(queryName),
 				Query:        postgres.Jsonb{json.RawMessage(`{}`)},
 				Presentation: presentation,
 				QueryId:      query.ID,
-			}, model.DashboardUnitForNoQueryID)
+			}, model.DashboardUnitForNoQueryID, model.DashboardClassWebsiteAnalytics)
 
 		if errCode != http.StatusCreated {
 			logCtx.WithField("err_msg", errMsg).WithField("query_name", queryName).
@@ -294,8 +294,9 @@ func (pg *Postgres) CreateWebAnalyticsDefaultDashboardWithUnits(projectId uint64
 	logCtx := log.WithField("project_id", projectId).WithField("agent_uuid", agentUUID)
 
 	dashboard, errCode := pg.CreateDashboard(projectId, agentUUID, &model.Dashboard{
-		Name: model.DefaultDashboardWebsiteAnalytics,
-		Type: model.DashboardTypeProjectVisible,
+		Name:  model.DefaultDashboardWebsiteAnalytics,
+		Type:  model.DashboardTypeProjectVisible,
+		Class: model.DashboardClassWebsiteAnalytics,
 	})
 	if errCode != http.StatusCreated {
 		logCtx.Error("Failed to create web analytics default dashboard.")
