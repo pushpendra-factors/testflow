@@ -559,8 +559,8 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
-	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
-	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
+	rollBackWindow := 1
+	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
 	// with limit.
 	getEventNames1, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)
@@ -575,7 +575,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 		})
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
+	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
 	getEventNames2, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
 	assert.Equal(t, nil, err)
 	assert.Len(t, getEventNames2[U.MostRecent], 2)
@@ -1683,8 +1683,8 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, status)
 	}
 
-	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
-	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
+	rollBackWindow :=  1
+	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
 
 	getEventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)

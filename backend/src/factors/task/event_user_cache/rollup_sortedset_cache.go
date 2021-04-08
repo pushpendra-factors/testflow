@@ -154,11 +154,11 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 					value := split2[1]
 					if(propertyValues[eventName] == nil){
 						propertyValues[eventName] = make(map[string]map[string]string)
-						if(propertyValues[eventName][property] == nil){
-							propertyValues[eventName][property] = make(map[string]string)
-						}
-						propertyValues[eventName][property][value] = count
 					}
+					if(propertyValues[eventName][property] == nil){
+						propertyValues[eventName][property] = make(map[string]string)
+					}
+					propertyValues[eventName][property][value] = count
 				}
 				eventPropertyValuesToCache := make(map[*cacheRedis.Key]string)
 				for eventName, propertyValue := range propertyValues {

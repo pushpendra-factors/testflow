@@ -730,8 +730,8 @@ func TestHubspotPropertyDetails(t *testing.T) {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
 
-	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
-	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
+	rollBackWindow :=  1
+	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
 	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, eventNameCreated, 2500, 1)
 	assert.Nil(t, err)
 	assert.Contains(t, properties[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2)
