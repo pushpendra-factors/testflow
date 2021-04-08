@@ -1518,7 +1518,7 @@ func (pg *Postgres) PullEventRowsForBuildSequenceJob(projectID uint64, startTime
 	return db.Raw(rawQuery).Rows()
 }
 
-// PullEventsForArchivalJob - Function to pull events for archival.
+// PullEventRowsForArchivalJob - Function to pull events for archival.
 func (pg *Postgres) PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
 
 	rawQuery := fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
@@ -1528,7 +1528,7 @@ func (pg *Postgres) PullEventRowsForArchivalJob(projectID uint64, startTime, end
 
 	if config.ShouldUseUserPropertiesTableForRead(projectID) {
 		rawQuery = fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
-			"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, events.user_properties FROM events "+
+			"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, user_properties.properties FROM events "+
 			"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
 			"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
 			"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, startTime, endTime)
