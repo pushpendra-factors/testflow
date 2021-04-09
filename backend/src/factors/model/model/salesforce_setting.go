@@ -4,6 +4,7 @@ package model
 var (
 	designcafeLeadsAllowedFields = map[string]bool{
 		"Id":                                 true,
+		"IsDeleted":                          true,
 		"LastName":                           true,
 		"Salutation":                         true,
 		"Company":                            true,
@@ -102,6 +103,7 @@ var (
 
 	designcafeOpportunityAllowedFields = map[string]bool{
 		"Id":                             true, // require for identification purpose
+		"IsDeleted":                      true,
 		"Name":                           true,
 		"StageName":                      true,
 		"Amount":                         true,
@@ -110,6 +112,7 @@ var (
 		"Type":                           true,
 		"LeadSource":                     true,
 		"IsWon":                          true,
+		"OwnerId":                        true,
 		"CreatedDate":                    true,
 		"LastModifiedDate":               true,
 		"Budget_Confirmed__c":            true,
