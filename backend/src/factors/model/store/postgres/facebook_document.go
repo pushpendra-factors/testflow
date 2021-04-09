@@ -364,7 +364,7 @@ func (pg *Postgres) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64,
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperties(query.Filters, query.GroupBy)
-	if isSmartPropertyPresent {
+	if C.IsShowSmartPropertiesAllowed(projectID) && isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics, err = buildFacebookQueryWithSmartPropertiesV1(transformedQuery, projectID, customerAccountID, fetchSource)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
