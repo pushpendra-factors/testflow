@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: default-pool
+    nodePool: persistent-pool
   name: backfill-salesforce-datetime-job
 spec:
   schedule: "0 20 * * *" # In UTC
@@ -14,13 +14,13 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: default-pool
+            nodePool: persistent-pool
         spec:
           nodeSelector:
             cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: backfill-salesforce-datetime-job
-            image: us.gcr.io/factors-production/backfill-salesforce-datetime-job:v0.00
+            image: us.gcr.io/factors-production/backfill-salesforce-datetime-job:9cde06c-1766
             imagePullPolicy: IfNotPresent
             args:
             - --env
