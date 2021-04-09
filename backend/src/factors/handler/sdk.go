@@ -60,7 +60,6 @@ func SDKTrackHandler(c *gin.Context) {
 	var request SDK.TrackPayload
 
 	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil {
 		logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
@@ -110,7 +109,6 @@ func SDKBulkEventHandler(c *gin.Context) {
 
 	var sdkTrackPayloads []SDK.TrackPayload
 	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&sdkTrackPayloads); err != nil {
 		logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
@@ -181,7 +179,6 @@ func SDKIdentifyHandler(c *gin.Context) {
 	var request SDK.IdentifyPayload
 
 	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil {
 		logCtx.WithError(err).Error("Identification failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
@@ -222,7 +219,6 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 
 	var request SDK.AddUserPropertiesPayload
 	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil {
 		logCtx.WithError(err).Error("Add user properties failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
@@ -299,7 +295,6 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 
 	var request SDK.UpdateEventPropertiesPayload
 	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil {
 		logCtx.WithError(err).Error("Update event properties failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.UpdateEventPropertiesResponse{

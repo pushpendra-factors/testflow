@@ -1001,7 +1001,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperties(query.Filters, query.GroupBy)
-	if isSmartPropertyPresent {
+	if C.IsShowSmartPropertiesAllowed(projectID) && isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertiesV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
