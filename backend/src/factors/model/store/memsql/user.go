@@ -1209,9 +1209,20 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 		return nil, http.StatusInternalServerError
 	}
 
-	errCode = store.OverwriteUserPropertiesByCustomerUserID(projectID, user.CustomerUserId,
-		mergedByCustomerUserIDJSON, newUpdateTimestamp)
-	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+	// Overwrite filtered users with same customer_user_id, with the newly
+	// merged user_properties by customer_user_id.
+	var hasFailure bool
+	for _, user := range users {
+		errCode = store.OverwriteUserPropertiesByID(projectID, user.ID,
+			mergedByCustomerUserIDJSON, true, newUpdateTimestamp)
+		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+			logCtx.WithField("user_id", user.ID).WithField("merged_user_proeprties", mergedByCustomerUserIDJSON).
+				Error("Failed to update merged user properties on user.")
+			hasFailure = true
+		}
+	}
+
+	if hasFailure {
 		return nil, http.StatusInternalServerError
 	}
 
