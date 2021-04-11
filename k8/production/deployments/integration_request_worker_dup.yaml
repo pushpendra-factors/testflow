@@ -30,7 +30,7 @@ spec:
         cloud.google.com/gke-nodepool: persistent-pool-standard
       containers:
       - name: integration-request-worker-dup
-        image: us.gcr.io/factors-production/integration-request-worker:f75aa8d27-1806
+        image: us.gcr.io/factors-production/integration-request-worker:61f0c0941
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors/config
@@ -87,6 +87,7 @@ spec:
           - --deprecate_user_properties_table_read_projects
           - "*"
           - --enable_sdk_and_integration_request_queue_duplication
+          - --cache_with_sorted_set
         envFrom:
         - configMapRef:
             name: config-appserver

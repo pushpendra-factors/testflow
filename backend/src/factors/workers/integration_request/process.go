@@ -139,7 +139,7 @@ func main() {
 
 	// Start worker with duplicate queue client, if enabled.
 	if C.IsSDKAndIntegrationRequestQueueDuplicationEnabled() {
-		duplicateQueueClient := C.GetServices().QueueClient
+		duplicateQueueClient := C.GetServices().DuplicateQueueClient
 		err = duplicateQueueClient.RegisterTask(Int.ProcessRequestTask, ProcessRequest)
 		if err != nil {
 			log.WithError(err).Fatal(

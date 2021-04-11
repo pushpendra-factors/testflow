@@ -30,17 +30,13 @@ spec:
         cloud.google.com/gke-nodepool: persistent-pool-standard
       containers:
       - name: sdk-request-worker-dup
-        image: us.gcr.io/factors-production/sdk-request-worker:f75aa8d27-1806
+        image: us.gcr.io/factors-production/sdk-request-worker:ca0606c-1814
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors/config
         imagePullPolicy: IfNotPresent
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-        resources:
-          requests:
-            memory: "100M"
-            cpu: "0.5"
         securityContext: {}
         args:
           - --env
@@ -76,7 +72,7 @@ spec:
           - --email_sender
           - $(EMAIL_SENDER)
           - --worker_concurrency
-          - "10"
+          - "20"
           - --device_detector_path
           - $(DEVICE_DETECTOR_DATA_PATH)
           - --sentry_dsn
@@ -90,6 +86,7 @@ spec:
           - --deprecate_user_properties_table_read_projects
           - "*"
           - --enable_sdk_and_integration_request_queue_duplication
+          - --cache_with_sorted_set
         envFrom:
         - configMapRef:
             name: config-appserver

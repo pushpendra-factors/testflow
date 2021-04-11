@@ -449,9 +449,19 @@ func (pg *Postgres) UpdateUserPropertiesV2(projectID uint64, id string,
 		return nil, http.StatusInternalServerError
 	}
 
-	errCode = pg.OverwriteUserPropertiesByCustomerUserID(projectID, user.CustomerUserId,
-		mergedByCustomerUserIDJSON, newUpdateTimestamp)
-	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+	// Overwrite filtered users with same customer_user_id, with the newly
+	// merged user_properties by customer_user_id.
+	var hasFailure bool
+	for _, user := range users {
+		errCode = pg.OverwriteUserPropertiesByID(projectID, user.ID,
+			mergedByCustomerUserIDJSON, true, newUpdateTimestamp)
+		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+			logCtx.WithField("user_id", user.ID).Error("Failed to update merged user properties on user.")
+			hasFailure = true
+		}
+	}
+
+	if hasFailure {
 		return nil, http.StatusInternalServerError
 	}
 

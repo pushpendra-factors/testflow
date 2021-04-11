@@ -1639,13 +1639,18 @@ func TestSDKAddUserPropertiesHandler(t *testing.T) {
 	uniqueName = U.RandomLowerAphaNumString(16)
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "project_id": "99999999", "properties": {"name": "%s"}}`, user.ID, uniqueName)),
 		map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	user, errCode := store.GetStore().GetUser(project.ID, user.ID)
+	assert.Equal(t, user.ProjectId, project.ID)
+	assert.NotEqual(t, user.ProjectId, "99999999")
+	assert.Equal(t, http.StatusOK, w.Code)
 
 	// Test bad payload - updating project_id as new user.
 	uniqueName = U.RandomLowerAphaNumString(16)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"project_id": "99999999", "properties": {"name": "%s"}}`, uniqueName)),
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"project_id": "99999999", "properties": {"name": "%s"}}`, uniqueName)),
 		map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, user.ProjectId, project.ID)
+	assert.Equal(t, http.StatusOK, w.Code)
 
 	// Non exiting user id.
 	uniqueName = U.RandomLowerAphaNumString(16)
