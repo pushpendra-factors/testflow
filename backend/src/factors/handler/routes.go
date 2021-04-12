@@ -118,9 +118,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/crm/:crm_source/:object_type/properties/:property_name/values", GetCRMObjectValuesByPropertyNameHandler)
 	// smart Properties
 
-	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_properties", responseWrapper(CreateSmartPropertyRulesHandler))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/config/:object_type", responseWrapper(GetSmartPropertyRulesConfigHandler))
-	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties", responseWrapper(GetSmartPropertyRulesHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules", responseWrapper(CreateSmartPropertyRulesHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules", responseWrapper(GetSmartPropertyRulesHandler))
 	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", responseWrapper(GetSmartPropertyRuleByRuleIDHandler))
 	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", responseWrapper(UpdateSmartPropertyRulesHandler))
 	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/smart_properties/rules/:rule_id", responseWrapper(DeleteSmartPropertyRulesHandler))
