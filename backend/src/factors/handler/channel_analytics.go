@@ -89,7 +89,7 @@ func ChannelQueryHandler(c *gin.Context) {
 		Class: model.QueryClassChannel,
 		Query: &queryPayload,
 	}
-	shouldReturn, resCode, _ := H.GetResponseIfCachedQuery(c, projectId, &channelQueryUnitPayload, cacheResult, isDashboardQueryRequest)
+	shouldReturn, resCode, _ := H.GetResponseIfCachedQuery(c, projectId, &channelQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId)
 	if shouldReturn {
 		c.AbortWithStatusJSON(resCode, gin.H{"error": "Error Processing/Fetching data from Query cache"})
 		return

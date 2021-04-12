@@ -45,6 +45,7 @@ function GroupSelect({
   }
 
   const renderEmptyOpt = () => {
+    if(!searchTerm.length) return null;
     return (<div key={0} className={`fa-select-group-select--content`}>
       <div className={styles.dropdown__filter_select__option_group_container_sec}>
         <div className={`fa-select-group-select--options`}
@@ -60,10 +61,6 @@ function GroupSelect({
 
   const renderOptions = (options) => {
     const renderGroupedOptions = [];
-    if(allowEmpty && (options && !searchTermExists(options))) {
-      renderGroupedOptions.push(renderEmptyOpt());
-      return renderGroupedOptions;
-    }
     options.forEach((group, grpIndex) => {
       const collState = groupCollapseState[grpIndex] || searchTerm.length > 0;
       renderGroupedOptions.push(
@@ -104,6 +101,9 @@ function GroupSelect({
             </div>
       );
     });
+    if(allowEmpty) {
+      renderGroupedOptions.push(renderEmptyOpt());
+    }
     return renderGroupedOptions;
   };
 

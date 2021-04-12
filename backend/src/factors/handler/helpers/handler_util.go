@@ -12,6 +12,7 @@ import (
 	U "factors/util"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 // DashboardQueryResponsePayload Query query response with cache and refreshed_at.
@@ -54,7 +55,7 @@ func SleepIfHeaderSet(c *gin.Context) {
 
 // GetResponseIfCachedQuery Returns response for the query is cached.
 func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload model.BaseQuery,
-	resultContainer interface{}, forDashboard bool) (bool, int, interface{}) {
+	resultContainer interface{}, forDashboard bool, reqID string) (bool, int, interface{}) {
 
 	// Don't return from cache when using MemSQL.
 	// TODO(prateek): To be removed once stable in production.
@@ -62,6 +63,11 @@ func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload m
 		model.DeleteQueryCacheKey(projectID, requestPayload)
 		return false, http.StatusNotFound, nil
 	}
+
+	cacheKey, _ := requestPayload.GetQueryCacheRedisKey(projectID)
+	cacheKeyString, _ := cacheKey.Key()
+	log.WithField("req_id", reqID).WithField("key", cacheKeyString).Info("Query cache key")
+
 	cacheResult, errCode := model.GetQueryResultFromCache(projectID, requestPayload, &resultContainer)
 	if errCode == http.StatusFound {
 		return getQueryCacheResponse(c, cacheResult, forDashboard)
