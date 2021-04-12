@@ -1,6 +1,7 @@
 package smart_properties
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	"net/http"
