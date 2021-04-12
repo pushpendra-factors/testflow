@@ -581,17 +581,23 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 	}
 
 	var eventID string
+	var eventUserID string
 	customerUserID, userID := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	if customerUserID != "" {
-		trackPayload.UserId = userID
-		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
+		if userID != "" {
+			trackPayload.UserId = userID
+			eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
+		} else {
+			eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
+		}
+
 		if err != nil {
 			logCtx.WithError(err).Error(
 				"Failed to track salesforce opportunity event.")
 			return http.StatusInternalServerError
 		}
 	} else {
-		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
+		eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
 		if err != nil {
 			logCtx.WithError(err).Error(
 				"Failed to track salesforce opportunity event.")
@@ -599,6 +605,10 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 		}
 
 		logCtx.Error("Skipped user identification on salesforce opportunity sync. No customer_user_id on properties.")
+	}
+
+	if userID == "" {
+		userID = eventUserID
 	}
 
 	// ALways us lastmodified timestamp for updated properties. Error handling already done during event creation
