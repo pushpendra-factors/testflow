@@ -2,6 +2,7 @@ package main
 
 import (
 	C "factors/config"
+	Const "factors/constants"
 	H "factors/handler"
 	mid "factors/middleware"
 	U "factors/util"
@@ -204,6 +205,7 @@ func main() {
 	}
 	H.InitAppRoutes(r)
 	H.InitIntRoutes(r)
+	Const.SetSmartPropertiesReservedNames()
 
 	C.KillDBQueriesOnExit()
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))

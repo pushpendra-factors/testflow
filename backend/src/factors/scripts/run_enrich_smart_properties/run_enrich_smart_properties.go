@@ -20,6 +20,7 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	dryRunSmartProperties := flag.Bool("dry_run_smart_properties", false, "Dry run mode for smart properties job")
 	projectIDs := flag.String("project_ids", "", "Projects for which the smart properties are to be populated")
 
 	flag.Parse()
@@ -29,6 +30,9 @@ func main() {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
 	}
+	taskID := "enrich_smart_properties_job"
+	healthcheckPingID := C.HealthCheckSmartPropertiesPingID
+	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
 
 	config := &C.Configuration{
 		AppName: "enrich_smart_properties_job",
@@ -40,8 +44,10 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		DryRunSmartProperties: *dryRunSmartProperties,
 	}
 	C.InitConf(config)
+	C.InitSmartPropertiesMode(config.DryRunSmartProperties)
 	// Initialize configs and connections and close with defer.
 	err := C.InitDB(*config)
 	if err != nil {
@@ -50,34 +56,112 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
+	syncStatusFailures := make([]SP.Status, 0)
+	syncStatusSuccesses := make([]SP.Status, 0)
+
 	projectIDMap := util.GetIntBoolMapFromStringList(projectIDs)
 	if len(projectIDMap) > 0 {
 		for projectID, _ := range projectIDMap {
-			errCode := SP.EnrichSmartPropertiesForChangedRulesForProject(projectID)
+			errCode := SP.EnrichSmartPropertyForChangedRulesForProject(projectID)
 			if errCode != http.StatusOK {
-				log.Error("smart properties enrichment for rule changes failed for project ", projectID)
+				errMsg := "smart properties enrichment for rule changes failed for project "
+				log.Error(errMsg, projectID)
+				syncStatusFailure := SP.Status{
+					ProjectID: projectID,
+					ErrCode:   errCode,
+					ErrMsg:    errMsg,
+					Type:      SP.Rule_change,
+				}
+				syncStatusFailures = append(syncStatusFailures, syncStatusFailure)
+			} else {
+				syncStatusSuccess := SP.Status{
+					ProjectID: projectID,
+					ErrCode:   errCode,
+					ErrMsg:    "",
+					Type:      SP.Rule_change,
+				}
+				syncStatusSuccesses = append(syncStatusSuccesses, syncStatusSuccess)
 			}
-			errCode = SP.EnrichSmartPropertiesForCurrentDayForProject(projectID)
+			errCode = SP.EnrichSmartPropertyForCurrentDayForProject(projectID)
 			if errCode != http.StatusOK {
-				log.Error("smart properties enrichment for current day's data failed for project ", projectID)
+				errMsg := "smart properties enrichment for current day's data failed for project "
+				log.Error(errMsg, projectID)
+				syncStatusFailure := SP.Status{
+					ProjectID: projectID,
+					ErrCode:   errCode,
+					ErrMsg:    errMsg,
+					Type:      SP.Current_day,
+				}
+				syncStatusFailures = append(syncStatusFailures, syncStatusFailure)
+			} else {
+				syncStatusSuccess := SP.Status{
+					ProjectID: projectID,
+					ErrCode:   errCode,
+					ErrMsg:    "",
+					Type:      SP.Current_day,
+				}
+				syncStatusSuccesses = append(syncStatusSuccesses, syncStatusSuccess)
 			}
 		}
 	} else {
-		projectIDs, errCode := store.GetStore().GetProjectIDsHavingSmartPropertiesRules()
+		projectIDs, errCode := store.GetStore().GetProjectIDsHavingSmartPropertyRules()
 		if errCode != http.StatusFound {
 			log.Warn("Failed to get any projects with smart properties rules")
 		}
 		for _, projectID := range projectIDs {
-			errCode := SP.EnrichSmartPropertiesForChangedRulesForProject(projectID)
+			errCode := SP.EnrichSmartPropertyForChangedRulesForProject(projectID)
 			if errCode != http.StatusOK {
-				log.Error("smart properties enrichment for rule changes failed for project ", projectID)
+				errMsg := "smart properties enrichment for rule changes failed for project "
+				log.Error(errMsg, projectID)
+				syncStatusFailure := SP.Status{
+					ProjectID: projectID,
+					ErrCode:   errCode,
+					ErrMsg:    errMsg,
+					Type:      SP.Rule_change,
+				}
+				syncStatusFailures = append(syncStatusFailures, syncStatusFailure)
+			} else {
+				syncStatusSuccess := SP.Status{
+					ProjectID: projectID,
+					ErrCode:   errCode,
+					ErrMsg:    "",
+					Type:      SP.Rule_change,
+				}
+				syncStatusSuccesses = append(syncStatusSuccesses, syncStatusSuccess)
 			}
-			errCode = SP.EnrichSmartPropertiesForCurrentDayForProject(projectID)
+			errCode = SP.EnrichSmartPropertyForCurrentDayForProject(projectID)
 			if errCode != http.StatusOK {
-				log.Error("smart properties enrichment for current day's data failed for project ", projectID)
+				errMsg := "smart properties enrichment for current day's data failed for project "
+				log.Error(errMsg, projectID)
+				syncStatusFailure := SP.Status{
+					ProjectID: projectID,
+					ErrCode:   errCode,
+					ErrMsg:    errMsg,
+					Type:      SP.Current_day,
+				}
+				syncStatusFailures = append(syncStatusFailures, syncStatusFailure)
+			} else {
+				syncStatusSuccess := SP.Status{
+					ProjectID: projectID,
+					ErrCode:   errCode,
+					ErrMsg:    "",
+					Type:      SP.Current_day,
+				}
+				syncStatusSuccesses = append(syncStatusSuccesses, syncStatusSuccess)
 			}
 		}
 	}
 
 	log.Warn("End of enrich smart property job")
+	syncStatus := map[string]interface{}{
+		"Success": syncStatusSuccesses,
+		"Failure": syncStatusFailures,
+	}
+	if !*dryRunSmartProperties {
+		if len(syncStatusFailures) > 0 {
+			C.PingHealthcheckForFailure(healthcheckPingID, syncStatus)
+			return
+		}
+		C.PingHealthcheckForSuccess(healthcheckPingID, syncStatus)
+	}
 }

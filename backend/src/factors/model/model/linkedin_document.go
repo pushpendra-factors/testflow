@@ -35,5 +35,63 @@ type LinkedinLastSyncInfo struct {
 }
 
 const (
+	LinkedinCampaignGroup = "campaign_group"
+	LinkedinCampaign      = "campaign"
+	LinkedinCreative      = "creative"
+	LinkedinStringColumn  = "linkedin"
+)
+
+var ObjectToValueInLinkedinJobsMapping = map[string]string{
+	"campaign_group:name": "campaign_group_name",
+	"campaign:name":       "campaign_group_name",
+	"ad_group:name":       "campaign_name",
+	"campaign_group:id":   "campaign_group_id",
+	"campaign:id":         "campaign_id",
+	"creative:id":         "creative_id",
+}
+var ObjectAndKeyInLinkedinToPropertyMapping = map[string]string{
+	"campaign:name": "campaign_group_name",
+	"ad_group:name": "campaign_name",
+}
+var LinkedinExternalRepresentationToInternalRepresentation = map[string]string{
+	"name":        "name",
+	"id":          "id",
+	"impressions": "impressions",
+	"clicks":      "clicks",
+	"spend":       "spend",
+	"conversion":  "conversionValueInLocalCurrency",
+	"campaign":    "campaign_group",
+	"ad_group":    "campaign",
+	"ad":          "creative",
+}
+
+var LinkedinInternalRepresentationToExternalRepresentation = map[string]string{
+	"impressions":         "impressions",
+	"clicks":              "clicks",
+	"spend":               "spend",
+	"conversions":         "conversion",
+	"campaign_group:name": "campaign_name",
+	"campaign:name":       "ad_group_name",
+	"campaign_group:id":   "campaign_id",
+	"campaign:id":         "ad_group_id",
+	"creative:id":         "ad_id",
+}
+var LinkedinInternalGroupByRepresentation = map[string]string{
+	"impressions":         "impressions",
+	"clicks":              "clicks",
+	"spend":               "spend",
+	"conversions":         "conversion",
+	"campaign_group:name": "campaign_name",
+	"campaign:name":       "ad_group_name",
+	"campaign_group:id":   "campaign_group_id",
+	"campaign:id":         "campaign_id",
+	"creative:id":         "creative_id",
+}
+var LinkedinObjectMapForSmartProperty = map[string]string{
+	"campaign_group": "campaign",
+	"campaign":       "ad_group",
+}
+
+const (
 	LinkedinSpecificError = "Failed in linkedin with the error."
 )

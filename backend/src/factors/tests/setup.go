@@ -180,6 +180,22 @@ func SetupProjectWithAgentDAO() (*model.Project, *model.Agent, error) {
 	}
 	return project, agent, nil
 }
+func SetupProjectWithAdminAgentDAO() (*model.Project, *model.Agent, error) {
+	project, err := SetupProjectReturnDAO()
+	if err != nil {
+		return nil, nil, err
+	}
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+1343545")
+	if errCode != http.StatusCreated {
+		return nil, nil, fmt.Errorf("Agent Creation failed.")
+	}
+	_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent.UUID, Role: model.ADMIN})
+	if errCode != http.StatusCreated {
+		return nil, nil, fmt.Errorf("ProjectAgentMapping Creation failed.")
+	}
+	return project, agent, nil
+}
 
 type testData struct {
 	Agent          *model.Agent

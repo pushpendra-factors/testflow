@@ -3,6 +3,7 @@ package postgres
 import (
 	"errors"
 	C "factors/config"
+	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -14,13 +15,6 @@ import (
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	linkedinCampaignGroup = "campaign_group"
-	linkedinCampaign      = "campaign"
-	linkedinCreative      = "creative"
-	linkedinStringColumn  = "linkedin"
 )
 
 var linkedinDocumentTypeAlias = map[string]int{
@@ -41,19 +35,6 @@ var objectAndPropertyToValueInLinkedinReportsMapping = map[string]string{
 	"campaign:name":       "value->>'campaign_name'",
 }
 
-var objectToValueInLinkedinJobsMapping = map[string]string{
-	"campaign_group:name": "campaign_group_name",
-	"campaign:name":       "campaign_group_name",
-	"ad_group:name":       "campaign_name",
-	"campaign_group:id":   "campaign_group_id",
-	"campaign:id":         "campaign_id",
-	"creative:id":         "creative_id",
-}
-var objectAndKeyInLinkedinToPropertyMapping = map[string]string{
-	"campaign:name": "campaign_group_name",
-	"ad_group:name": "campaign_name",
-}
-
 // TODO check
 var linkedinMetricsToAggregatesInReportsMapping = map[string]string{
 	"impressions": "SUM((value->>'impressions')::float)",
@@ -63,40 +44,7 @@ var linkedinMetricsToAggregatesInReportsMapping = map[string]string{
 	// "cost_per_click": "average_cost",
 	// "conversion_rate": "conversion_rate"
 }
-var linkedinExternalRepresentationToInternalRepresentation = map[string]string{
-	"name":        "name",
-	"id":          "id",
-	"impressions": "impressions",
-	"clicks":      "clicks",
-	"spend":       "spend",
-	"conversion":  "conversionValueInLocalCurrency",
-	"campaign":    "campaign_group",
-	"ad_group":    "campaign",
-	"ad":          "creative",
-}
 
-var linkedinInternalRepresentationToExternalRepresentation = map[string]string{
-	"impressions":         "impressions",
-	"clicks":              "clicks",
-	"spend":               "spend",
-	"conversions":         "conversion",
-	"campaign_group:name": "campaign_name",
-	"campaign:name":       "ad_group_name",
-	"campaign_group:id":   "campaign_id",
-	"campaign:id":         "ad_group_id",
-	"creative:id":         "ad_id",
-}
-var linkedinInternalGroupByRepresentation = map[string]string{
-	"impressions":         "impressions",
-	"clicks":              "clicks",
-	"spend":               "spend",
-	"conversions":         "conversion",
-	"campaign_group:name": "campaign_name",
-	"campaign:name":       "ad_group_name",
-	"campaign_group:id":   "campaign_group_id",
-	"campaign:id":         "campaign_id",
-	"creative:id":         "creative_id",
-}
 var objectToValueInLinkedinFiltersMapping = map[string]string{
 	"campaign:name":       "value->>'campaign_name'",
 	"campaign_group:name": "value->>'campaign_group_name'",
@@ -116,11 +64,6 @@ var mapOfTypeToLinkedinJobCTEAlias = map[string]string{
 	"campaign_group": "campaign_group_cte",
 }
 
-var linkedinObjectMapForSmartProperties = map[string]string{
-	"campaign_group": "campaign",
-	"campaign":       "ad_group",
-}
-
 const errorDuplicateLinkedinDocument = "pq: duplicate key value violates unique constraint \"linkedin_documents_pkey\""
 
 var errorEmptyLinkedinDocument = errors.New("empty linked document")
@@ -131,9 +74,9 @@ const linkedinFilterQueryStr = "SELECT DISTINCT(value->>?) as filter_value FROM 
 const fromLinkedinDocuments = " FROM linkedin_documents "
 
 const staticWhereStatementForLinkedin = "WHERE project_id = ? AND customer_ad_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
-const staticWhereStatementForLinkedinWithSmartProperties = "WHERE linkedin_documents.project_id = ? AND linkedin_documents.customer_ad_account_id IN ( ? ) AND linkedin_documents.type = ? AND linkedin_documents.timestamp between ? AND ? "
+const staticWhereStatementForLinkedinWithSmartProperty = "WHERE linkedin_documents.project_id = ? AND linkedin_documents.customer_ad_account_id IN ( ? ) AND linkedin_documents.type = ? AND linkedin_documents.timestamp between ? AND ? "
 
-var objectsForLinkedin = []string{adwordsCampaign, adwordsAdGroup}
+var objectsForLinkedin = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
 
 func getLinkedinDocumentTypeAliasByType() map[int]string {
 	documentTypeMap := make(map[int]string, 0)
@@ -426,9 +369,9 @@ func (pg *Postgres) buildObjectAndPropertiesForLinkedin(projectID uint64, object
 	for _, currentObject := range objects {
 		var currentProperties []model.ChannelProperty
 		if C.IsShowSmartPropertiesAllowed(projectID) {
-			smartProperties := pg.GetSmartPropertiesAndRelated(projectID, currentObject, "linkedin")
-			if smartProperties != nil {
-				for key, value := range smartProperties {
+			smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "linkedin")
+			if smartProperty != nil {
+				for key, value := range smartProperty {
 					allChannelsPropertyToRelated[key] = value
 				}
 			}
@@ -441,9 +384,9 @@ func (pg *Postgres) buildObjectAndPropertiesForLinkedin(projectID uint64, object
 
 // GetLinkedinFilterValues ...
 func (pg *Postgres) GetLinkedinFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
-	_, isPresent := smartPropertiesDisallowedNames[requestFilterProperty]
+	_, isPresent := Const.SmartPropertyReservedNames[requestFilterProperty]
 	if !isPresent {
-		filterValues, errCode := pg.getSmartPropertiesFilterValues(projectID, requestFilterObject, requestFilterProperty, "linkedin", reqID)
+		filterValues, errCode := pg.getSmartPropertyFilterValues(projectID, requestFilterObject, requestFilterProperty, "linkedin", reqID)
 		if errCode != http.StatusFound {
 			return []interface{}{}, http.StatusInternalServerError
 		}
@@ -462,12 +405,12 @@ func (pg *Postgres) GetLinkedinFilterValues(projectID uint64, requestFilterObjec
 }
 
 func getFilterRelatedInformationForLinkedin(requestFilterObject string, requestFilterProperty string) (string, int, int) {
-	linkedinInternalFilterObject, isPresent := linkedinExternalRepresentationToInternalRepresentation[requestFilterObject]
+	linkedinInternalFilterObject, isPresent := model.LinkedinExternalRepresentationToInternalRepresentation[requestFilterObject]
 	if !isPresent {
 		log.Error("Invalid linkedin filter object.")
 		return "", 0, http.StatusBadRequest
 	}
-	linkedinInternalFilterProperty, isPresent := linkedinExternalRepresentationToInternalRepresentation[requestFilterProperty]
+	linkedinInternalFilterProperty, isPresent := model.LinkedinExternalRepresentationToInternalRepresentation[requestFilterProperty]
 	if !isPresent {
 		log.Error("Invalid linkedin filter property.")
 		return "", 0, http.StatusBadRequest
@@ -553,9 +496,9 @@ func (pg *Postgres) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64,
 		logCtx.WithError(err).Error(model.LinkedinSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
-	isSmartPropertyPresent := checkSmartProperties(query.Filters, query.GroupBy)
+	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
 	if C.IsShowSmartPropertiesAllowed(projectID) && isSmartPropertyPresent {
-		sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryWithSmartPropertiesV1(transformedQuery, projectID, customerAccountID, fetchSource)
+		sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
 		}
@@ -611,7 +554,7 @@ func convertFromRequestToLinkedinSpecificRepresentation(query model.ChannelQuery
 func getLinkedinSpecificMetrics(requestSelectMetrics []string) ([]string, error) {
 	resultMetrics := make([]string, 0, 0)
 	for _, requestMetric := range requestSelectMetrics {
-		metric, isPresent := linkedinExternalRepresentationToInternalRepresentation[requestMetric]
+		metric, isPresent := model.LinkedinExternalRepresentationToInternalRepresentation[requestMetric]
 		if !isPresent {
 			return make([]string, 0, 0), errors.New("Invalid metric found for document type")
 		}
@@ -623,7 +566,7 @@ func getLinkedinSpecificMetrics(requestSelectMetrics []string) ([]string, error)
 // @Kark TODO v1
 func getLinkedinSpecificFilters(requestFilters []model.ChannelFilterV1) ([]model.ChannelFilterV1, error) {
 	for index, requestFilter := range requestFilters {
-		filterObject, isPresent := linkedinExternalRepresentationToInternalRepresentation[requestFilter.Object]
+		filterObject, isPresent := model.LinkedinExternalRepresentationToInternalRepresentation[requestFilter.Object]
 		if !isPresent {
 			return make([]model.ChannelFilterV1, 0, 0), errors.New("Invalid filter key found for document type")
 		}
@@ -635,7 +578,7 @@ func getLinkedinSpecificFilters(requestFilters []model.ChannelFilterV1) ([]model
 // @Kark TODO v1
 func getLinkedinSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.ChannelGroupBy, error) {
 	for index, requestGroupBy := range requestGroupBys {
-		groupByObject, isPresent := linkedinExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
+		groupByObject, isPresent := model.LinkedinExternalRepresentationToInternalRepresentation[requestGroupBy.Object]
 		if !isPresent {
 			return make([]model.ChannelGroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
 		}
@@ -644,10 +587,10 @@ func getLinkedinSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model
 	return requestGroupBys, nil
 }
 
-func buildLinkedinQueryWithSmartPropertiesV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
+func buildLinkedinQueryWithSmartPropertyV1(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, fetchSource bool) (string, []interface{}, []string, []string, error) {
 	lowestHierarchyLevel := getLowestHierarchyLevelForLinkedin(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_insights"
-	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinWithSmartPropertiesReports(query, projectID, query.From, query.To, customerAccountID, linkedinDocumentTypeAlias[lowestHierarchyReportLevel],
+	sql, params, selectKeys, selectMetrics := getSQLAndParamsFromLinkedinWithSmartPropertyReports(query, projectID, query.From, query.To, customerAccountID, linkedinDocumentTypeAlias[lowestHierarchyReportLevel],
 		fetchSource)
 	return sql, params, selectKeys, selectMetrics, nil
 }
@@ -658,7 +601,7 @@ func buildLinkedinQueryV1(query *model.ChannelQueryV1, projectID uint64, custome
 		fetchSource)
 	return sql, params, selectKeys, selectMetrics, nil
 }
-func getSQLAndParamsFromLinkedinWithSmartPropertiesReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, linkedinAccountIDs string,
+func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQueryV1, projectID uint64, from, to int64, linkedinAccountIDs string,
 	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
 	customerAccountIDs := strings.Split(linkedinAccountIDs, ",")
 	selectQuery := "SELECT "
@@ -671,23 +614,23 @@ func getSQLAndParamsFromLinkedinWithSmartPropertiesReports(query *model.ChannelQ
 	responseSelectKeys := make([]string, 0, 0)
 	responseSelectMetrics := make([]string, 0, 0)
 
-	smartPropertiesCampaignGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	smartPropertiesAdGroupGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	smartPropertyCampaignGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	smartPropertyAdGroupGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	linkedinGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	// Group By
 	for _, groupBy := range query.GroupBy {
-		_, isPresent := smartPropertiesDisallowedNames[groupBy.Property]
+		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
 		if !isPresent {
 			if groupBy.Object == "campaign_group" {
-				smartPropertiesCampaignGroupBys = append(smartPropertiesCampaignGroupBys, groupBy)
+				smartPropertyCampaignGroupBys = append(smartPropertyCampaignGroupBys, groupBy)
 				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("campaign_%s", groupBy.Property))
 			} else {
-				smartPropertiesAdGroupGroupBys = append(smartPropertiesAdGroupGroupBys, groupBy)
+				smartPropertyAdGroupGroupBys = append(smartPropertyAdGroupGroupBys, groupBy)
 				groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, fmt.Sprintf("ad_group_%s", groupBy.Property))
 			}
 		} else {
 			key := groupBy.Object + ":" + groupBy.Property
-			groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, linkedinInternalGroupByRepresentation[key])
+			groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, model.LinkedinInternalGroupByRepresentation[key])
 			linkedinGroupBys = append(linkedinGroupBys, groupBy)
 		}
 	}
@@ -699,22 +642,22 @@ func getSQLAndParamsFromLinkedinWithSmartPropertiesReports(query *model.ChannelQ
 
 	// SelectKeys
 	if fetchSource {
-		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("'%s' as %s", linkedinStringColumn, source))
+		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("'%s' as %s", model.LinkedinStringColumn, source))
 		responseSelectKeys = append(responseSelectKeys, source)
 	}
 
 	for _, groupBy := range linkedinGroupBys {
 		key := groupBy.Object + ":" + groupBy.Property
-		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], linkedinInternalRepresentationToExternalRepresentation[key])
+		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
 		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, linkedinInternalRepresentationToExternalRepresentation[key])
+		responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
 	}
-	for _, groupBy := range smartPropertiesCampaignGroupBys {
+	for _, groupBy := range smartPropertyCampaignGroupBys {
 		value := fmt.Sprintf("campaign.properties->>'%s' as campaign_%s", groupBy.Property, groupBy.Property)
 		selectKeys = append(selectKeys, value)
 		responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("campaign_%s", groupBy.Property))
 	}
-	for _, groupBy := range smartPropertiesAdGroupGroupBys {
+	for _, groupBy := range smartPropertyAdGroupGroupBys {
 		value := fmt.Sprintf("ad_group.properties->>'%s' as ad_group_%s", groupBy.Property, groupBy.Property)
 		selectKeys = append(selectKeys, value)
 		responseSelectKeys = append(responseSelectKeys, fmt.Sprintf("ad_group_%s", groupBy.Property))
@@ -728,18 +671,18 @@ func getSQLAndParamsFromLinkedinWithSmartPropertiesReports(query *model.ChannelQ
 	}
 
 	for _, selectMetric := range query.SelectMetrics {
-		value := fmt.Sprintf("%s as %s", linkedinMetricsToAggregatesInReportsMapping[selectMetric], linkedinInternalRepresentationToExternalRepresentation[selectMetric])
+		value := fmt.Sprintf("%s as %s", linkedinMetricsToAggregatesInReportsMapping[selectMetric], model.LinkedinInternalRepresentationToExternalRepresentation[selectMetric])
 		selectMetrics = append(selectMetrics, value)
 
-		value = linkedinInternalRepresentationToExternalRepresentation[selectMetric]
+		value = model.LinkedinInternalRepresentationToExternalRepresentation[selectMetric]
 		responseSelectMetrics = append(responseSelectMetrics, value)
 	}
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
-	whereConditionForFilters := getLinkedinFiltersWhereStatementWithSmartProperties(query.Filters, smartPropertiesCampaignGroupBys, smartPropertiesAdGroupGroupBys)
-	filterStatementForSmartPropertiesGroupBy := getFilterStatementForSmartPropertiesGroupBy(smartPropertiesCampaignGroupBys, smartPropertiesAdGroupGroupBys)
-	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForLinkedinWithSmartProperties, whereConditionForFilters, filterStatementForSmartPropertiesGroupBy)
+	whereConditionForFilters := getLinkedinFiltersWhereStatementWithSmartProperty(query.Filters, smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
+	filterStatementForSmartPropertyGroupBy := getFilterStatementForSmartPropertyGroupBy(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
+	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForLinkedinWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
 
 	fromStatement := getLinkedinFromStatementWithJoins(query.Filters, query.GroupBy)
 	resultSQLStatement := selectQuery + fromStatement + finalFilterStatement
@@ -753,7 +696,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertiesReports(query *model.ChannelQ
 }
 
 func getLinkedinFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
-	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertiesWithTypeAndSource(filters, groupBys, "linkedin")
+	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertyWithTypeAndSource(filters, groupBys, "linkedin")
 	fromStatement := fromLinkedinDocuments
 	if isPresentAdGroupSmartProperty {
 		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = linkedin_documents.project_id and ad_group.object_id = campaign_id "
@@ -780,7 +723,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 	// Group By
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
-		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, linkedinInternalGroupByRepresentation[key])
+		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, model.LinkedinInternalGroupByRepresentation[key])
 	}
 	if isGroupByTimestamp {
 		groupByStatement = joinWithComma(append(groupByKeysWithoutTimestamp, model.AliasDateTime)...)
@@ -790,15 +733,15 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 
 	// SelectKeys
 	if fetchSource {
-		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("'%s' as %s", linkedinStringColumn, source))
+		finalSelectKeys = append(finalSelectKeys, fmt.Sprintf("'%s' as %s", model.LinkedinStringColumn, source))
 		responseSelectKeys = append(responseSelectKeys, source)
 	}
 
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
-		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], linkedinInternalRepresentationToExternalRepresentation[key])
+		value := fmt.Sprintf("%s as %s", objectAndPropertyToValueInLinkedinReportsMapping[key], model.LinkedinInternalRepresentationToExternalRepresentation[key])
 		selectKeys = append(selectKeys, value)
-		responseSelectKeys = append(responseSelectKeys, linkedinInternalRepresentationToExternalRepresentation[key])
+		responseSelectKeys = append(responseSelectKeys, model.LinkedinInternalRepresentationToExternalRepresentation[key])
 	}
 
 	finalSelectKeys = append(finalSelectKeys, selectKeys...)
@@ -809,10 +752,10 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 	}
 
 	for _, selectMetric := range query.SelectMetrics {
-		value := fmt.Sprintf("%s as %s", linkedinMetricsToAggregatesInReportsMapping[selectMetric], linkedinInternalRepresentationToExternalRepresentation[selectMetric])
+		value := fmt.Sprintf("%s as %s", linkedinMetricsToAggregatesInReportsMapping[selectMetric], model.LinkedinInternalRepresentationToExternalRepresentation[selectMetric])
 		selectMetrics = append(selectMetrics, value)
 
-		value = linkedinInternalRepresentationToExternalRepresentation[selectMetric]
+		value = model.LinkedinInternalRepresentationToExternalRepresentation[selectMetric]
 		responseSelectMetrics = append(responseSelectMetrics, value)
 	}
 
@@ -852,7 +795,7 @@ func getLinkedinFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 	}
 	return resultStatement
 }
-func getLinkedinFiltersWhereStatementWithSmartProperties(filters []model.ChannelFilterV1, smartPropertiesCampaignGroupBys []model.ChannelGroupBy, smartPropertiesAdGroupGroupBys []model.ChannelGroupBy) string {
+func getLinkedinFiltersWhereStatementWithSmartProperty(filters []model.ChannelFilterV1, smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {
 	resultStatement := ""
 	var filterValue string
 	campaignFilter := ""
@@ -868,7 +811,7 @@ func getLinkedinFiltersWhereStatementWithSmartProperties(filters []model.Channel
 		} else {
 			filterValue = filter.Value
 		}
-		_, isPresent := smartPropertiesDisallowedNames[filter.Property]
+		_, isPresent := Const.SmartPropertyReservedNames[filter.Property]
 		if isPresent {
 			currentFilterStatement = fmt.Sprintf("%s %s '%s' ", objectToValueInLinkedinFiltersMapping[filter.Object+":"+filter.Property], filterOperator, filterValue)
 			if index == 0 {
@@ -877,16 +820,16 @@ func getLinkedinFiltersWhereStatementWithSmartProperties(filters []model.Channel
 				resultStatement = fmt.Sprintf("%s %s %s ", resultStatement, filter.LogicalOp, currentFilterStatement)
 			}
 		} else {
-			currentFilterStatement = fmt.Sprintf("%s.properties->>'%s' %s '%s'", linkedinObjectMapForSmartProperties[filter.Object], filter.Property, filterOperator, filterValue)
+			currentFilterStatement = fmt.Sprintf("%s.properties->>'%s' %s '%s'", model.LinkedinObjectMapForSmartProperty[filter.Object], filter.Property, filterOperator, filterValue)
 			if index == 0 {
 				resultStatement = fmt.Sprintf("(%s", currentFilterStatement)
 			} else {
 				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
 			}
 			if filter.Object == "campaign_group" {
-				campaignFilter = smartPropertiesCampaignStaticFilter
+				campaignFilter = smartPropertyCampaignStaticFilter
 			} else {
-				adGroupFilter = smartPropertiesAdGroupStaticFilter
+				adGroupFilter = smartPropertyAdGroupStaticFilter
 			}
 		}
 	}
@@ -916,26 +859,27 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 
 	// Check if present
 	for _, objectName := range objectNames {
-		if objectName == linkedinCreative {
-			return linkedinCreative
+		if objectName == model.LinkedinCreative {
+			return model.LinkedinCreative
 		}
 	}
 
 	for _, objectName := range objectNames {
-		if objectName == linkedinCampaign {
-			return linkedinCampaign
+		if objectName == model.LinkedinCampaign {
+			return model.LinkedinCampaign
 		}
 	}
 
 	for _, objectName := range objectNames {
-		if objectName == linkedinCampaignGroup {
-			return linkedinCampaignGroup
+		if objectName == model.LinkedinCampaignGroup {
+			return model.LinkedinCampaignGroup
 		}
 	}
 
-	return linkedinCampaignGroup
+	return model.LinkedinCampaignGroup
 }
 
+// Since we dont have a way to store raw format, we are going with the approach of joins on query.
 func (pg *Postgres) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	db := C.GetServices().Db
 

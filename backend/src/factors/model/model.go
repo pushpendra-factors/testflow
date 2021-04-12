@@ -395,22 +395,22 @@ type Model interface {
 	CreateOrUpdateReplicationMetadataByTable(tableName string, lastRunAt *time.Time, count uint64) int
 
 	// smart_properties
-	GetSmartPropertiesRulesConfig(projectID uint64, objectType string) (model.SmartPropertiesRulesConfig, int)
-	CreateSmartPropertiesRules(projectID uint64, smartProperties *model.SmartPropertiesRules) (string, int)
-	GetSmartPropertiesRules(projectID uint64) ([]model.SmartPropertiesRules, int)
-	GetAllChangedSmartPropertiesRulesForProject(projectID uint64) ([]model.SmartPropertiesRules, int)
-	GetSmartPropertiesRule(projectID uint64, ruleID string) (model.SmartPropertiesRules, int)
-	DeleteSmartPropertiesRules(projectID uint64, ruleID string) int
-	UpdateSmartPropertiesRules(projectID uint64, ruleID string, smartPropertiesDoc model.SmartPropertiesRules) (string, int)
-	GetProjectIDsHavingSmartPropertiesRules() ([]uint64, int)
+	GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int)
+	CreateSmartPropertyRules(projectID uint64, smartProperty *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int)
+	GetSmartPropertyRules(projectID uint64) ([]model.SmartPropertyRules, int)
+	GetAllChangedSmartPropertyRulesForProject(projectID uint64) ([]model.SmartPropertyRules, int)
+	GetSmartPropertyRule(projectID uint64, ruleID string) (model.SmartPropertyRules, int)
+	DeleteSmartPropertyRules(projectID uint64, ruleID string) int
+	UpdateSmartPropertyRules(projectID uint64, ruleID string, smartPropertyDoc model.SmartPropertyRules) (model.SmartPropertyRules, string, int)
+	GetProjectIDsHavingSmartPropertyRules() ([]uint64, int)
 	GetLatestMetaForAdwordsForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	GetLatestMetaForFacebookForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
 	GetLatestMetaForLinkedinForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields)
-	CreateSmartPropertiesFromChannelDocumentAndRule(smartPropertiesRule *model.SmartPropertiesRules, rule model.Rule,
+	BuildAndCreateSmartPropertyFromChannelDocumentAndRule(smartPropertyRule *model.SmartPropertyRules, rule model.Rule,
 		channelDocument model.ChannelDocumentsWithFields, source string) int
-	DeleteSmartPropertiesByRuleID(projectID uint64, ruleID string) (int, int, int)
+	DeleteSmartPropertyByRuleID(projectID uint64, ruleID string) (int, int, int)
 	GetSmartPropertyByProjectIDAndObjectIDAndObjectType(projectID uint64, objectID string, objectType int) (model.SmartProperties, int)
-	GetSmartPropertiesByProjectIDAndSourceAndObjectType(projectID uint64, source string, objectType int) ([]model.SmartProperties, int)
+	GetSmartPropertyByProjectIDAndSourceAndObjectType(projectID uint64, source string, objectType int) ([]model.SmartProperties, int)
 	DeleteSmartPropertyByProjectIDAndSourceAndObjectID(projectID uint64, source string, objectID string) int
 
 	//properties_type

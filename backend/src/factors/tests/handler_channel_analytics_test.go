@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	C "factors/config"
+	Const "factors/constants"
 	H "factors/handler"
 	"factors/handler/helpers"
 	"factors/model/model"
@@ -87,6 +88,7 @@ func TestExecuteChannelQueryHandlerForFacebook(t *testing.T) {
 
 	a := gin.Default()
 	H.InitAppRoutes(a)
+	Const.SetSmartPropertiesReservedNames()
 
 	//inserting sample data in facebook, also testing data service endpoint facebook/documents/add
 	project, agent, _ := SetupProjectWithAgentDAO()
@@ -258,6 +260,7 @@ type MyStruct struct {
 func TestChannelQueryHandlerForAdwords(t *testing.T) {
 	r := gin.Default()
 	H.InitDataServiceRoutes(r)
+	Const.SetSmartPropertiesReservedNames()
 
 	a := gin.Default()
 	H.InitAppRoutes(a)
@@ -437,6 +440,7 @@ func assertIfResponseIsEqualToExpected(t *testing.T, responseBody *bytes.Buffer,
 func TestExecuteChannelQueryHandlerForLinkedin(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
+	Const.SetSmartPropertiesReservedNames()
 
 	//inserting sample data in linkedin, also testing data service endpoint linkedin/documents/add
 	project, agent, _ := SetupProjectWithAgentDAO()

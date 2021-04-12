@@ -143,6 +143,7 @@ type Configuration struct {
 	ActiveFactorsTrackedEventsLimit         int
 	ActiveFactorsTrackedUserPropertiesLimit int
 	DryRunCRMSmartEvent                     bool
+	DryRunSmartProperties                   bool
 	IsBeamPipeline                          bool
 	AllowSmartEventRuleCreation             bool
 	// non exported field, only access through function
@@ -193,6 +194,7 @@ const (
 	HealthcheckMonitoringJobPingID           = "18db44be-c193-4f11-84e5-5ff144e272e9"
 	HealthcheckSalesforceEnrichPingID        = "e56175aa-3407-4595-bb94-d8325952b224"
 	HealthcheckYourstoryAddPropertiesPingID  = "acf7faab-c56f-415e-aa10-ca2aa9246172"
+	HealthCheckSmartPropertiesPingID         = "ead84671-b84c-481b-bfa5-59403d626652"
 	HealthcheckBeamDashboardCachingPingID    = "ecb259b9-4ff8-4825-b989-81d47bd34d93"
 	HealthcheckBeamDashboardCachingNowPingID = "be2f00de-57e1-401b-b2c9-9df305c3f528"
 
@@ -731,6 +733,11 @@ func InitSmartEventMode(mode bool) {
 	configuration.DryRunCRMSmartEvent = mode
 }
 
+// initializes smart properties mode
+func InitSmartPropertiesMode(mode bool) {
+	configuration.DryRunSmartProperties = mode
+}
+
 // SetIsBeamPipeline Sets variable to indicate that the job is running from a beam pipeline.
 func SetIsBeamPipeline() {
 	configuration.IsBeamPipeline = true
@@ -1045,6 +1052,11 @@ func GetFactorsSenderEmail() string {
 // IsDryRunCRMSmartEvent checks if dry run flag is set
 func IsDryRunCRMSmartEvent() bool {
 	return configuration.DryRunCRMSmartEvent
+}
+
+// IsDryRunSmartProperties checks if dry run flag is set
+func IsDryRunSmartProperties() bool {
+	return configuration.DryRunSmartProperties
 }
 
 func GetCookieDomian() string {

@@ -564,35 +564,35 @@ func (store *MemSQL) ExecuteSQL(sqlStatement string, params []interface{}, logCt
 	return columns, resultRows, nil
 }
 
-func (store *MemSQL) GetSmartPropertiesAndRelated(projectID uint64, object string, source string) map[string]PropertiesAndRelated {
+func (store *MemSQL) GetSmartPropertyAndRelated(projectID uint64, object string, source string) map[string]PropertiesAndRelated {
 	db := C.GetServices().Db
-	var smartPropertiesRules []model.SmartPropertiesRules
-	object_type, isPresent := smartPropertiesRulesTypeAlias[object]
+	var smartPropertyRules []model.SmartPropertyRules
+	object_type, isPresent := smartPropertyRulesTypeAliasToType[object]
 	if !isPresent {
 		return nil
 	}
-	err := db.Table("smart_properties_rules").Where("project_id = ? AND type = ? and is_deleted = ?", projectID, object_type, false).Find(&smartPropertiesRules).Error
+	err := db.Table("smart_property_rules").Where("project_id = ? AND type = ? and is_deleted = ?", projectID, object_type, false).Find(&smartPropertyRules).Error
 	if err != nil {
 		log.Error("Failed to get smart property filters from DB")
 	}
 
-	if len(smartPropertiesRules) == 0 {
+	if len(smartPropertyRules) == 0 {
 		return nil
 	}
-	smartPropertiesFilterConfig := make(map[string]PropertiesAndRelated)
-	for _, smartPropertiesRule := range smartPropertiesRules {
+	smartPropertyFilterConfig := make(map[string]PropertiesAndRelated)
+	for _, smartPropertyRule := range smartPropertyRules {
 		var rules []model.Rule
-		err := U.DecodePostgresJsonbToStructType(smartPropertiesRule.Rules, &rules)
+		err := U.DecodePostgresJsonbToStructType(smartPropertyRule.Rules, &rules)
 		if err != nil {
 			continue
 		}
 		for _, rule := range rules {
 			if rule.Source == "all" || rule.Source == source {
-				smartPropertiesFilterConfig[smartPropertiesRule.Name] = PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical}
+				smartPropertyFilterConfig[smartPropertyRule.Name] = PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical}
 				break
 			}
 		}
 	}
 
-	return smartPropertiesFilterConfig
+	return smartPropertyFilterConfig
 }
