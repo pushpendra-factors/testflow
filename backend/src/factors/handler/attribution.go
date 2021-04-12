@@ -94,7 +94,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		Class: model.QueryClassAttribution,
 		Query: requestPayload.Query,
 	}
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &attributionQueryUnitPayload, cacheResult, isDashboardQueryRequest, reqId)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return resMsg, resCode, "", "", false

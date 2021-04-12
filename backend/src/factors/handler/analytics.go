@@ -116,7 +116,7 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	}
 
 	var cacheResult model.ResultGroup
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, isDashboardQueryRequest, reqId)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return resMsg, resCode, "", "", false
@@ -229,7 +229,7 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	}
 
 	var cacheResult model.QueryResult
-	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest)
+	shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload.Query, cacheResult, isDashboardQueryRequest, reqId)
 	if shouldReturn {
 		if resCode == http.StatusOK {
 			return resMsg, resCode, "", "", false

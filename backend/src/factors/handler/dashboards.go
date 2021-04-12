@@ -560,6 +560,7 @@ func DeleteMultiDashboardUnitHandler(c *gin.Context) {
 func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)})
 
+	reqID := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized,
@@ -607,7 +608,7 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		// build map[unit_id]result and respond.
 
 		var cacheResult model.WebAnalyticsQueryResult
-		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, true)
+		shouldReturn, resCode, resMsg := H.GetResponseIfCachedQuery(c, projectId, &requestPayload, cacheResult, true, reqID)
 		if shouldReturn && !hardRefresh {
 			if resCode == http.StatusInternalServerError {
 				c.AbortWithStatusJSON(resCode, resMsg)
