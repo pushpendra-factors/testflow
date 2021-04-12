@@ -153,7 +153,7 @@ func (pg *Postgres) GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (
 	for i := range dashboardUnits {
 		dunit := dashboardUnits[i]
 
-		savedQuery, errCode := pg.GetDashboardQueryWithQueryId(projectID, dunit.QueryId)
+		savedQuery, errCode := pg.GetQueryWithQueryId(projectID, dunit.QueryId)
 		if errCode != http.StatusFound {
 			logCtx.Errorf("Failed to fetch query from query_id %d", dunit.QueryId)
 			continue
