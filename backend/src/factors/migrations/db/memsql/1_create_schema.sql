@@ -497,7 +497,32 @@ CREATE TABLE IF NOT EXISTS property_details(
     `type` text  NOT NULL,
     entity integer  NOT NULL
 );
+CREATE TABLE IF NOT EXISTS smart_property_rules (
+    id text,
+    project_id bigint NOT NULL,
+    type bigint NOT NULL,
+    description text,
+    name text NOT NULL,
+    rules jsonb NOT NULL,
+    evaluation_status int NOT NULL,
+    is_deleted bool DEFAULT FALSE,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    PRIMARY KEY (project_id, id)
+)
 
+CREATE TABLE IF NOT EXISTS smart_properties (
+    project_id bigint NOT NULL,
+    source text NOT NULL,
+    object_id text NOT NULL,
+    object_type bigint NOT NULL,
+    object_property jsonb NOT NULL,
+    properties jsonb NOT NULL,
+    rules_ref jsonb NOT NULL,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    PRIMARY KEY (project_id, object_id, object_type, source)
+)
 -- DOWN
 
 -- DROP DATABASE factors;
