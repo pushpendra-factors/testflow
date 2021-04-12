@@ -397,6 +397,7 @@ const renderFilterBlock = () => {
                               {!showDropDown && !event1 && <Button onClick={()=>setShowDropDown(true)} type={'text'} size={'large'}><SVG name={'plus'} size={14} color={'grey'} extraClass={'mr-2'}/>{eventCount === 2 ? 'Add First event': 'Add an event'}</Button> }
                               { showDropDown && <>
                                 <GroupSelect 
+                                  allowEmpty={true}
                                   groupedProperties={TrackedEventNames ? [
                                     {             
                                     label: 'MOST RECENT',
@@ -445,6 +446,7 @@ const renderFilterBlock = () => {
                           { showDropDown2 && <>
 
                             <GroupSelect 
+                              allowEmpty={true}
                                groupedProperties={TrackedEventNames ? [
                                 {             
                                 label: 'MOST RECENT',
