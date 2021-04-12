@@ -1,7 +1,11 @@
 import React from "react";
 import moment from "moment";
 import { labelsObj } from "../../utils";
-import { SortData, getTitleWithSorter } from "../../../../utils/dataFormatter";
+import {
+  SortData,
+  getTitleWithSorter,
+  generateColors,
+} from "../../../../utils/dataFormatter";
 import { Number as NumFormat } from "../../../../components/factorsComponents";
 
 export const getTableColumns = (
@@ -172,4 +176,59 @@ export const getDateBasedTableData = (
     return obj;
   });
   return SortData(result, currentSorter.key, currentSorter.order);
+};
+
+export const formatDataInStackedAreaFormat = (
+  data,
+  visibleLabels,
+  arrayMapper
+) => {
+  if (
+    !data.headers ||
+    !data.headers.length ||
+    !data.rows ||
+    !data.rows.length
+  ) {
+    return {
+      categories: [],
+      data: [],
+    };
+  }
+  const colors = generateColors(visibleLabels.length);
+  const dateIndex = data.headers.findIndex((h) => h === "datetime");
+  const countIndex = data.headers.findIndex((h) => h === "count");
+  const eventIndex = data.headers.findIndex((h) => h === "event_name");
+  const breakdownIndex = eventIndex + 1;
+  let differentDates = new Set();
+  data.rows.forEach((row) => {
+    differentDates.add(row[dateIndex]);
+  });
+  differentDates = Array.from(differentDates);
+  const resultantData = visibleLabels.map((name, index) => {
+    const data = differentDates.map(() => {
+      return 0;
+    });
+    return {
+      name,
+      data,
+      color: colors[index],
+      marker: {
+        enabled: false,
+      },
+    };
+  });
+
+  data.rows.forEach((row) => {
+    const breakdownJoin = row.slice(breakdownIndex, countIndex).join(",");
+    const bIdx = visibleLabels.indexOf(breakdownJoin);
+    if (bIdx > -1) {
+      const idx = differentDates.indexOf(row[dateIndex]);
+      resultantData[bIdx].data[idx] = row[countIndex];
+    }
+  });
+
+  return {
+    categories: differentDates,
+    data: resultantData,
+  };
 };

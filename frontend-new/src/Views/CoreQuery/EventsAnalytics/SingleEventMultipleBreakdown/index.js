@@ -1,10 +1,21 @@
-import React, { useState, useEffect } from "react";
-import { formatData, formatDataInLineChartFormat } from "./utils";
-import BarChart from "../../../../components/BarChart";
-import LineChart from "../../../../components/LineChart";
-import SingleEventMultipleBreakdownTable from "./SingleEventMultipleBreakdownTable";
-import { generateColors } from "../../../../utils/dataFormatter";
-import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA, DASHBOARD_MODAL } from "../../../../utils/constants";
+import React, { useState, useEffect } from 'react';
+import {
+  formatData,
+  formatDataInLineChartFormat,
+  formatDataInStackedAreaFormat,
+} from './utils';
+import BarChart from '../../../../components/BarChart';
+import LineChart from '../../../../components/LineChart';
+import SingleEventMultipleBreakdownTable from './SingleEventMultipleBreakdownTable';
+import { generateColors } from '../../../../utils/dataFormatter';
+import {
+  ACTIVE_USERS_CRITERIA,
+  FREQUENCY_CRITERIA,
+  DASHBOARD_MODAL,
+  CHART_TYPE_STACKED_AREA,
+  CHART_TYPE_BARCHART,
+} from '../../../../utils/constants';
+import StackedAreaChart from '../../../../components/StackedAreaChart';
 
 function SingleEventMultipleBreakdown({
   queries,
@@ -14,7 +25,7 @@ function SingleEventMultipleBreakdown({
   chartType,
   durationObj,
   title,
-  section
+  section,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -61,7 +72,7 @@ function SingleEventMultipleBreakdown({
 
   let chart = null;
   const table = (
-    <div className="mt-12 w-full">
+    <div className='mt-12 w-full'>
       <SingleEventMultipleBreakdownTable
         isWidgetModal={section === DASHBOARD_MODAL}
         data={chartsData}
@@ -79,8 +90,25 @@ function SingleEventMultipleBreakdown({
     </div>
   );
 
-  if (chartType === "barchart") {
-    chart = <BarChart section={section} title={title} chartData={visibleProperties} />;
+  if (chartType === CHART_TYPE_BARCHART) {
+    chart = (
+      <BarChart section={section} title={title} chartData={visibleProperties} />
+    );
+  } else if (chartType === CHART_TYPE_STACKED_AREA) {
+    const { categories, data } = formatDataInStackedAreaFormat(
+      resultState.data,
+      visibleLabels,
+      arrayMapper
+    );
+    chart = (
+      <div className='w-full'>
+        <StackedAreaChart
+          frequency={durationObj.frequency}
+          categories={categories}
+          data={data}
+        />
+      </div>
+    );
   } else {
     chart = (
       <LineChart
@@ -92,7 +120,9 @@ function SingleEventMultipleBreakdown({
         eventsMapper={mapper}
         setHiddenEvents={setHiddenProperties}
         hiddenEvents={hiddenProperties}
-        isDecimalAllowed={page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA}
+        isDecimalAllowed={
+          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
+        }
         arrayMapper={arrayMapper}
         section={section}
       />
@@ -100,7 +130,7 @@ function SingleEventMultipleBreakdown({
   }
 
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       {chart}
       {table}
     </div>

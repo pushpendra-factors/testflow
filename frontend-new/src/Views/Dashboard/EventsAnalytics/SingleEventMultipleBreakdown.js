@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   formatData,
   formatDataInLineChartFormat,
+  formatDataInStackedAreaFormat
 } from "../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/utils";
 import BarChart from "../../../components/BarChart";
 import LineChart from "../../../components/LineChart";
@@ -14,7 +15,10 @@ import {
   CHART_TYPE_BARCHART,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
   DASHBOARD_WIDGET_LINE_CHART_HEIGHT,
+  CHART_TYPE_STACKED_AREA,
+  DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
 } from "../../../utils/constants";
+import StackedAreaChart from "../../../components/StackedAreaChart";
 
 function SingleEventMultipleBreakdown({
   resultState,
@@ -115,6 +119,22 @@ function SingleEventMultipleBreakdown({
         durationObj={durationObj}
       />
     );
+  } else if(chartType === CHART_TYPE_STACKED_AREA) {
+    const { categories, data } = formatDataInStackedAreaFormat(
+      resultState.data,
+      visibleLabels,
+      arrayMapper
+    );
+    chartContent = (
+      <StackedAreaChart
+        frequency={durationObj.frequency}
+        categories={categories}
+        data={data}
+        height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
+        legendsPosition="top"
+        cardSize={unit.cardSize}
+      />
+    )
   } else {
     chartContent = (
       <LineChart
