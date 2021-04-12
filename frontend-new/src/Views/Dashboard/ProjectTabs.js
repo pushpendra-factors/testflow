@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Tabs, Button, Spin, Select } from "antd";
-import { SVG } from "../../components/factorsComponents";
+import { Tabs, Button, Spin, Select } from "antd"; 
 import { useSelector, useDispatch } from "react-redux";
 import {
   fetchActiveDashboardUnits,
@@ -13,6 +12,8 @@ import ExpandableView from "./ExpandableView";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import styles from "./index.module.scss";
 import NoDataChart from 'Components/NoDataChart';
+import { SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import {ErrorBoundary} from 'react-error-boundary';
 
 const { TabPane } = Tabs;
 
@@ -187,21 +188,23 @@ function ProjectTabs({
         <NoDataChart />
       </div>
     );
-  }
+  } 
 
   if (dashboards.data.length) {
     return (
       <>
+       <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Dashboard Error'} subtitle={'We are facing trouble loading dashboards. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
         <Tabs
           onChange={handleTabChange}
           activeKey={getActiveKey()}
           className={"fa-tabs--dashboard"}
           tabBarExtraContent={operations}
-        >
+        > 
           {dashboards.data.map((d, index) => {
             return (
               <TabPane tab={getTabName(d, index)} key={d.id}>
                 <div className={"fa-container mt-4 min-h-screen"}>
+                  <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Dashboard Widget Error'} subtitle={'We are facing trouble loading dashboard widgets. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
                   <DashboardSubMenu
                     durationObj={durationObj}
                     handleDurationChange={handleDurationChange}
@@ -217,6 +220,7 @@ function ProjectTabs({
                     refreshClicked={refreshClicked}
                     setRefreshClicked={setRefreshClicked}
                   />
+                  </ErrorBoundary>
                 </div>
               </TabPane>
             );
@@ -240,6 +244,8 @@ function ProjectTabs({
           cancelText="Cancel"
           confirmLoading={deleteApiCalled}
         />
+
+      </ErrorBoundary>
       </>
     );
   }

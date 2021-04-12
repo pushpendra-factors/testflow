@@ -3,6 +3,7 @@ package memsql
 import (
 	"errors"
 	C "factors/config"
+	Const "factors/constants"
 	"factors/model/model"
 	"fmt"
 	"net/http"
@@ -19,26 +20,15 @@ import (
 )
 
 const (
-	campaignPerformanceReport                         = "campaign_performance_report"
-	adGroupPerformanceReport                          = "ad_group_performance_report"
-	adPerformanceReport                               = "ad_performance_report"
-	keywordPerformanceReport                          = "keyword_performance_report"
-	searchPerformanceReport                           = "search_performance_report"
-	adwordsCampaign                                   = "campaign"
-	adwordsAdGroup                                    = "ad_group"
-	adwordsAd                                         = "ad"
-	adwordsKeyword                                    = "keyword"
-	adwordsStringColumn                               = "adwords"
-	errorDuplicateAdwordsDocument                     = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
-	filterValueAll                                    = "all"
-	fromSmartProperties                               = " FROM smart_properties "
-	adwordsDocuments                                  = "adwords_documents"
-	smartProperties                                   = "smart_properties"
-	adwordsSelectQueryForSmartPropertiesStr           = "SELECT project_id, customer_account_id, value, timestamp, campaign_id, ad_group_id, keyword_id "
-	smartPropertiesCampaignStaticFilter               = " campaign.object_type = 1 "
-	smartPropertiesAdGroupStaticFilter                = " ad_group.object_type = 1 "
-	staticWhereStatementForAdwordsWithSmartProperties = "WHERE adwords_documents.project_id = ? AND adwords_documents.customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
-	lastSyncInfoQueryForAllProjects                   = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
+	errorDuplicateAdwordsDocument                   = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
+	filterValueAll                                  = "all"
+	fromSmartProperty                               = " FROM smart_properties "
+	adwordsDocuments                                = "adwords_documents"
+	adwordsSelectQueryForSmartPropertyStr           = "SELECT project_id, customer_account_id, value, timestamp, campaign_id, ad_group_id, keyword_id "
+	smartPropertyCampaignStaticFilter               = " campaign.object_type = 1 "
+	smartPropertyAdGroupStaticFilter                = " ad_group.object_type = 2 "
+	staticWhereStatementForAdwordsWithSmartProperty = "WHERE adwords_documents.project_id = ? AND adwords_documents.customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
+	lastSyncInfoQueryForAllProjects                 = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
 		" " + "FROM adwords_documents GROUP BY project_id, customer_account_id, type"
 	lastSyncInfoForAProject = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
 		" " + "FROM adwords_documents WHERE project_id = ? GROUP BY project_id, customer_account_id, type"
@@ -47,193 +37,62 @@ const (
 	staticWhereStatementForAdwords = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument            = " FROM adwords_documents "
 
-	impressions                = "impressions"
 	shareHigherOrderExpression = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
 	sumOfFloatExp              = "sum((JSON_EXTRACT_STRING(value, '%s')))"
-	approvalStatus             = "approval_status"
-	matchType                  = "match_type"
-	firstPositionCpc           = "first_position_cpc"
-	firstPageCpc               = "first_page_cpc"
-	isNegative                 = "is_negative"
-	topOfPageCpc               = "top_of_page_cpc"
-	qualityScore               = "quality_score"
-
-	clicks                                     = "clicks"
-	clickThroughRate                           = "click_through_rate"
-	conversion                                 = "conversion"
-	conversionRate                             = "conversion_rate"
-	costPerClick                               = "cost_per_click"
-	costPerConversion                          = "cost_per_conversion"
-	searchImpressionShare                      = "search_impression_share"
-	searchClickShare                           = "search_click_share"
-	searchTopImpressionShare                   = "search_top_impression_share"
-	searchAbsoluteTopImpressionShare           = "search_absolute_top_impression_share"
-	searchBudgetLostAbsoluteTopImpressionShare = "search_budget_lost_absolute_top_impression_share"
-	searchBudgetLostImpressionShare            = "search_budget_lost_impression_share"
-	searchBudgetLostTopImpressionShare         = "search_budget_lost_top_impression_share"
-	searchRankLostAbsoluteTopImpressionShare   = "search_rank_lost_absolute_top_impression_share"
-	searchRankLostImpressionShare              = "search_rank_lost_impression_share"
-	searchRankLostTopImpressionShare           = "search_rank_lost_top_impression_share"
-	totalSearchImpression                      = "total_search_impression"
-	totalSearchClick                           = "total_search_click"
-	totalSearchTopImpression                   = "total_search_top_impression"
-	totalSearchAbsoluteTopImpression           = "total_search_absolute_top_impression"
-	totalSearchBudgetLostAbsoluteTopImpression = "total_search_budget_lost_absolute_top_impression"
-	totalSearchBudgetLostImpression            = "total_search_budget_lost_impression"
-	totalSearchBudgetLostTopImpression         = "total_search_budget_lost_top_impression"
-	totalSearchRankLostAbsoluteTopImpression   = "total_search_rank_lost_absolute_top_impression"
-	totalSearchRankLostImpression              = "total_search_rank_lost_impression"
-	totalSearchRankLostTopImpression           = "total_search_rank_lost_top_impression"
-	adwordsSmartProperties                     = "smart_properties"
 )
 
 var selectableMetricsForAdwords = []string{
-	conversion,
-	clickThroughRate,
-	conversionRate,
-	costPerClick,
-	costPerConversion,
-	searchImpressionShare,
-	searchClickShare,
-	searchTopImpressionShare,
-	searchAbsoluteTopImpressionShare,
-	searchBudgetLostAbsoluteTopImpressionShare,
-	searchBudgetLostImpressionShare,
-	searchBudgetLostTopImpressionShare,
-	searchRankLostAbsoluteTopImpressionShare,
-	searchRankLostImpressionShare,
-	searchRankLostTopImpressionShare,
+	model.Conversion,
+	model.ClickThroughRate,
+	model.ConversionRate,
+	model.CostPerClick,
+	model.CostPerConversion,
+	model.SearchImpressionShare,
+	model.SearchClickShare,
+	model.SearchTopImpressionShare,
+	model.SearchAbsoluteTopImpressionShare,
+	model.SearchBudgetLostAbsoluteTopImpressionShare,
+	model.SearchBudgetLostImpressionShare,
+	model.SearchBudgetLostTopImpressionShare,
+	model.SearchRankLostAbsoluteTopImpressionShare,
+	model.SearchRankLostImpressionShare,
+	model.SearchRankLostTopImpressionShare,
 }
 
 var errorEmptyAdwordsDocument = errors.New("empty adwords document")
 
-var objectsForAdwords = []string{adwordsCampaign, adwordsAdGroup, adwordsKeyword}
+var objectsForAdwords = []string{model.AdwordsCampaign, model.AdwordsAdGroup, model.AdwordsKeyword}
 
 var mapOfObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
-	adwordsCampaign: {
+	model.AdwordsCampaign: {
+		"id":                         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":                       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"status":                     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		model.AdvertisingChannelType: PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	},
+	model.AdwordsAdGroup: {
 		"id":     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 		"name":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 		"status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 	},
-	adwordsAdGroup: {
-		"id":     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	model.AdwordsKeyword: {
+		"id":                   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":                 PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"status":               PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		model.ApprovalStatus:   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		model.MatchType:        PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		model.FirstPositionCpc: PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		model.FirstPageCpc:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		model.IsNegative:       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		model.TopOfPageCpc:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		model.QualityScore:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 	},
-	adwordsKeyword: {
-		"id":             PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":           PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"status":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		approvalStatus:   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		matchType:        PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		firstPositionCpc: PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		firstPageCpc:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		isNegative:       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		topOfPageCpc:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		qualityScore:     PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
-}
-
-// AdwordsDocumentTypeAlias ...
-var AdwordsDocumentTypeAlias = map[string]int{
-	"campaigns":                   1,
-	"ads":                         2,
-	"ad_groups":                   3,
-	"click_performance_report":    4,
-	campaignPerformanceReport:     5,
-	adPerformanceReport:           6,
-	searchPerformanceReport:       7,
-	keywordPerformanceReport:      8,
-	"customer_account_properties": 9,
-	adGroupPerformanceReport:      10,
-}
-
-/*
-	Map from request Params to Internal Representation is needed, so that validation of params and operating within adwords context becomes easy.
-	Map from Internal Representation to Representation within Report/Job as field values can vary.
-	Map from Internal Representation to External Representation is needed to expose right column names and also to perform clear operations like union or join.
-		We can follow the same representation of external even during cte formation, though used in internal context.
-	We might all above complicated transformations in api if we merge all document types i.e.facebook, linkedin etc...
-*/
-var adwordsExtToInternal = map[string]string{
-	"campaign":                       "campaign",
-	"ad_group":                       "ad_group",
-	"ad":                             "ad",
-	"name":                           "name",
-	"keyword":                        "keyword",
-	"id":                             "id",
-	"status":                         "status",
-	approvalStatus:                   approvalStatus,
-	matchType:                        matchType,
-	firstPositionCpc:                 firstPositionCpc,
-	firstPageCpc:                     firstPageCpc,
-	isNegative:                       isNegative,
-	topOfPageCpc:                     topOfPageCpc,
-	qualityScore:                     qualityScore,
-	impressions:                      impressions,
-	clicks:                           clicks,
-	"spend":                          "cost",
-	conversion:                       "conversions",
-	clickThroughRate:                 clickThroughRate,
-	conversionRate:                   conversionRate,
-	costPerClick:                     costPerClick,
-	costPerConversion:                costPerConversion,
-	searchImpressionShare:            searchImpressionShare,
-	searchClickShare:                 searchClickShare,
-	searchTopImpressionShare:         searchTopImpressionShare,
-	searchAbsoluteTopImpressionShare: searchAbsoluteTopImpressionShare,
-	searchBudgetLostAbsoluteTopImpressionShare: searchBudgetLostAbsoluteTopImpressionShare,
-	searchBudgetLostImpressionShare:            searchBudgetLostImpressionShare,
-	searchBudgetLostTopImpressionShare:         searchBudgetLostTopImpressionShare,
-	searchRankLostAbsoluteTopImpressionShare:   searchRankLostAbsoluteTopImpressionShare,
-	searchRankLostImpressionShare:              searchRankLostImpressionShare,
-	searchRankLostTopImpressionShare:           searchRankLostTopImpressionShare,
-}
-
-var adwordsInternalPropertiesToJobsInternal = map[string]string{
-	"campaign:id":                "id",
-	"campaign:name":              "name",
-	"campaign:status":            "status",
-	"ad_group:id":                "id",
-	"ad_group:name":              "name",
-	"ad_group:status":            "status",
-	"ad:id":                      "ad_id",
-	"keyword:id":                 "id",
-	"keyword:name":               "criteria",
-	"keyword:status":             "status",
-	"keyword:approval_status":    approvalStatus,
-	"keyword:match_type":         "keyword_match_type",
-	"keyword:first_position_cpc": firstPositionCpc,
-	"keyword:first_page_cpc":     firstPageCpc,
-	"keyword:is_negative":        isNegative,
-	"keyword:top_of_page_cpc":    topOfPageCpc,
-	"keyword:quality_score":      qualityScore,
-}
-
-var adwordsInternalPropertiesToReportsInternal = map[string]string{
-	"campaign:id":                "campaign_id",
-	"campaign:name":              "campaign_name",
-	"campaign:status":            "campaign_status",
-	"ad_group:id":                "ad_group_id",
-	"ad_group:name":              "ad_group_name",
-	"ad_group:status":            "ad_group_status",
-	"ad:id":                      "ad_id",
-	"keyword:id":                 "keyword_id",
-	"keyword:name":               "criteria",
-	"keyword:status":             "status",
-	"keyword:approval_status":    approvalStatus,
-	"keyword:match_type":         "keyword_match_type",
-	"keyword:first_position_cpc": firstPositionCpc,
-	"keyword:first_page_cpc":     firstPageCpc,
-	"keyword:is_negative":        isNegative,
-	"keyword:top_of_page_cpc":    topOfPageCpc,
-	"keyword:quality_score":      qualityScore,
 }
 
 var propertiesToBeDividedByMillion = map[string]struct{}{
-	topOfPageCpc:     {},
-	firstPositionCpc: {},
-	firstPageCpc:     {},
+	model.TopOfPageCpc:     {},
+	model.FirstPositionCpc: {},
+	model.FirstPageCpc:     {},
 }
 
 type metricsAndRelated struct {
@@ -244,116 +103,116 @@ type metricsAndRelated struct {
 }
 
 var nonHigherOrderMetrics = map[string]struct{}{
-	impressions:   {},
-	clicks:        {},
-	"cost":        {},
-	"conversions": {},
+	model.Impressions: {},
+	model.Clicks:      {},
+	"cost":            {},
+	"conversions":     {},
 }
 
 // Same structure is being used for internal operations and external.
 var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
-	impressions: {
-		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'impressions'))",
-		externalValue:            impressions,
+	model.Impressions: {
+		nonHigherOrderExpression: "sum((value->>'impressions')::float)",
+		externalValue:            model.Impressions,
 		externalOperation:        "sum",
 	},
-	clicks: {
-		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'clicks'))",
-		externalValue:            clicks,
+	model.Clicks: {
+		nonHigherOrderExpression: "sum((value->>'clicks')::float)",
+		externalValue:            model.Clicks,
 		externalOperation:        "sum",
 	},
 	"cost": {
-		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000",
+		nonHigherOrderExpression: "sum((value->>'cost')::float)/1000000",
 		externalValue:            "spend",
 		externalOperation:        "sum",
 	},
 	"conversions": {
-		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'conversions'))",
-		externalValue:            conversion,
+		nonHigherOrderExpression: "sum((value->>'conversions')::float)",
+		externalValue:            model.Conversion,
 		externalOperation:        "sum",
 	},
-	clickThroughRate: {
-		higherOrderExpression:    "sum(JSON_EXTRACT_STRING(value, 'clicks'))*100/NULLIF(sum(JSON_EXTRACT_STRING(value, 'impressions')), 0)",
-		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'clicks'))*100",
-		externalValue:            clickThroughRate,
+	model.ClickThroughRate: {
+		higherOrderExpression:    "sum((value->>'clicks')::float)*100/NULLIF(sum((value->>'impressions')::float), 0)",
+		nonHigherOrderExpression: "sum((value->>'clicks')::float)*100",
+		externalValue:            model.ClickThroughRate,
 		externalOperation:        "sum",
 	},
-	conversionRate: {
-		higherOrderExpression:    "sum(JSON_EXTRACT_STRING(value, 'conversions'))*100/NULLIF(sum(JSON_EXTRACT_STRING(value, 'clicks')), 0)",
-		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'conversions'))*100",
-		externalValue:            conversionRate,
+	model.ConversionRate: {
+		higherOrderExpression:    "sum((value->>'conversions')::float)*100/NULLIF(sum((value->>'clicks')::float), 0)",
+		nonHigherOrderExpression: "sum((value->>'conversions')::float)*100",
+		externalValue:            model.ConversionRate,
 		externalOperation:        "sum",
 	},
-	costPerClick: {
-		higherOrderExpression:    "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)/NULLIF(sum(JSON_EXTRACT_STRING(value, 'clicks')), 0)",
-		nonHigherOrderExpression: "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)",
-		externalValue:            costPerClick,
+	model.CostPerClick: {
+		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'clicks')::float), 0)",
+		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
+		externalValue:            model.CostPerClick,
 		externalOperation:        "sum",
 	},
-	costPerConversion: {
-		higherOrderExpression:    "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)/NULLIF(sum(JSON_EXTRACT_STRING(value, 'conversions')), 0)",
-		nonHigherOrderExpression: "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)",
-		externalValue:            costPerConversion,
+	model.CostPerConversion: {
+		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'conversions')::float), 0)",
+		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
+		externalValue:            model.CostPerConversion,
 		externalOperation:        "sum",
 	},
-	searchImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchImpressionShare, impressions, searchImpressionShare, totalSearchImpression),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchImpression),
-		externalValue:            searchImpressionShare,
+	model.SearchImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchImpressionShare, model.Impressions, model.SearchImpressionShare, model.TotalSearchImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchImpression),
+		externalValue:            model.SearchImpressionShare,
 		externalOperation:        "sum",
 	},
-	searchClickShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchClickShare, impressions, searchClickShare, totalSearchClick),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchClick),
-		externalValue:            searchClickShare,
+	model.SearchClickShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchClickShare, model.Impressions, model.SearchClickShare, model.TotalSearchClick),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchClick),
+		externalValue:            model.SearchClickShare,
 		externalOperation:        "sum",
 	},
-	searchTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchTopImpressionShare, impressions, searchTopImpressionShare, totalSearchTopImpression),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchTopImpression),
-		externalValue:            searchTopImpressionShare,
+	model.SearchTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchTopImpressionShare, model.Impressions, model.SearchTopImpressionShare, model.TotalSearchTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchTopImpression),
+		externalValue:            model.SearchTopImpressionShare,
 		externalOperation:        "sum",
 	},
-	searchAbsoluteTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchAbsoluteTopImpressionShare, impressions, searchAbsoluteTopImpressionShare, totalSearchAbsoluteTopImpression),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchAbsoluteTopImpression),
-		externalValue:            searchAbsoluteTopImpressionShare,
+	model.SearchAbsoluteTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchAbsoluteTopImpressionShare, model.Impressions, model.SearchAbsoluteTopImpressionShare, model.TotalSearchAbsoluteTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchAbsoluteTopImpression),
+		externalValue:            model.SearchAbsoluteTopImpressionShare,
 		externalOperation:        "sum",
 	},
-	searchBudgetLostAbsoluteTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchBudgetLostAbsoluteTopImpressionShare, impressions, searchBudgetLostAbsoluteTopImpressionShare, totalSearchBudgetLostAbsoluteTopImpression),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchBudgetLostAbsoluteTopImpression),
-		externalValue:            searchBudgetLostAbsoluteTopImpressionShare,
+	model.SearchBudgetLostAbsoluteTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchBudgetLostAbsoluteTopImpressionShare, model.Impressions, model.SearchBudgetLostAbsoluteTopImpressionShare, model.TotalSearchBudgetLostAbsoluteTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchBudgetLostAbsoluteTopImpression),
+		externalValue:            model.SearchBudgetLostAbsoluteTopImpressionShare,
 		externalOperation:        "sum",
 	},
-	searchBudgetLostImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchBudgetLostImpressionShare, impressions, searchBudgetLostImpressionShare, totalSearchBudgetLostImpression),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchBudgetLostImpression),
-		externalValue:            searchBudgetLostImpressionShare,
+	model.SearchBudgetLostImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchBudgetLostImpressionShare, model.Impressions, model.SearchBudgetLostImpressionShare, model.TotalSearchBudgetLostImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchBudgetLostImpression),
+		externalValue:            model.SearchBudgetLostImpressionShare,
 		externalOperation:        "sum",
 	},
-	searchBudgetLostTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchBudgetLostTopImpressionShare, impressions, searchBudgetLostTopImpressionShare, totalSearchBudgetLostTopImpression),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchBudgetLostTopImpression),
-		externalValue:            searchBudgetLostTopImpressionShare,
+	model.SearchBudgetLostTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchBudgetLostTopImpressionShare, model.Impressions, model.SearchBudgetLostTopImpressionShare, model.TotalSearchBudgetLostTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchBudgetLostTopImpression),
+		externalValue:            model.SearchBudgetLostTopImpressionShare,
 		externalOperation:        "sum",
 	},
-	searchRankLostAbsoluteTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchRankLostAbsoluteTopImpressionShare, impressions, searchRankLostAbsoluteTopImpressionShare, totalSearchRankLostAbsoluteTopImpression),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchRankLostAbsoluteTopImpression),
-		externalValue:            searchRankLostAbsoluteTopImpressionShare,
+	model.SearchRankLostAbsoluteTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchRankLostAbsoluteTopImpressionShare, model.Impressions, model.SearchRankLostAbsoluteTopImpressionShare, model.TotalSearchRankLostAbsoluteTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchRankLostAbsoluteTopImpression),
+		externalValue:            model.SearchRankLostAbsoluteTopImpressionShare,
 		externalOperation:        "sum",
 	},
-	searchRankLostImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchRankLostImpressionShare, impressions, searchRankLostImpressionShare, totalSearchRankLostImpression),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchRankLostImpression),
-		externalValue:            searchRankLostImpressionShare,
+	model.SearchRankLostImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchRankLostImpressionShare, model.Impressions, model.SearchRankLostImpressionShare, model.TotalSearchRankLostImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchRankLostImpression),
+		externalValue:            model.SearchRankLostImpressionShare,
 		externalOperation:        "sum",
 	},
-	searchRankLostTopImpressionShare: {
-		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, searchRankLostTopImpressionShare, impressions, searchRankLostTopImpressionShare, totalSearchRankLostTopImpression),
-		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, totalSearchRankLostTopImpression),
-		externalValue:            searchRankLostTopImpressionShare,
+	model.SearchRankLostTopImpressionShare: {
+		higherOrderExpression:    fmt.Sprintf(shareHigherOrderExpression, model.SearchRankLostTopImpressionShare, model.Impressions, model.SearchRankLostTopImpressionShare, model.TotalSearchRankLostTopImpression),
+		nonHigherOrderExpression: fmt.Sprintf(sumOfFloatExp, model.TotalSearchRankLostTopImpression),
+		externalValue:            model.SearchRankLostTopImpressionShare,
 		externalOperation:        "sum",
 	},
 }
@@ -438,7 +297,7 @@ func getAdwordsIDAndHeirarchyColumnsByType(docType int, valueJSON *postgres.Json
 	if err != nil {
 		return "", 0, 0, 0, 0, err
 	}
-	if docType == AdwordsDocumentTypeAlias[keywordPerformanceReport] || docType == AdwordsDocumentTypeAlias[searchPerformanceReport] {
+	if docType == model.AdwordsDocumentTypeAlias[model.KeywordPerformanceReport] || docType == model.AdwordsDocumentTypeAlias[model.SearchPerformanceReport] {
 		idStr = U.GetUUID()
 	}
 
@@ -787,19 +646,24 @@ func (store *MemSQL) buildObjectAndPropertiesForAdwords(projectID uint64, object
 	for _, currentObject := range objects {
 		// to do: check if normal properties present then only smart properties will be there
 		propertiesAndRelated, isPresent := mapOfObjectsToPropertiesAndRelated[currentObject]
-		smartProperties := store.GetSmartPropertiesAndRelated(projectID, currentObject, "adwords")
 		var currentProperties []model.ChannelProperty
 		if isPresent {
-			if smartProperties != nil {
-				for key, value := range smartProperties {
-					propertiesAndRelated[key] = value
+			if C.IsShowSmartPropertiesAllowed(projectID) {
+				smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "adwords")
+				if smartProperty != nil {
+					for key, value := range smartProperty {
+						propertiesAndRelated[key] = value
+					}
 				}
 			}
 			currentProperties = buildProperties(propertiesAndRelated)
 		} else {
-			if smartProperties != nil {
-				for key, value := range smartProperties {
-					allChannelsPropertyToRelated[key] = value
+			if C.IsShowSmartPropertiesAllowed(projectID) {
+				smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "adwords")
+				if smartProperty != nil {
+					for key, value := range smartProperty {
+						allChannelsPropertyToRelated[key] = value
+					}
 				}
 			}
 			currentProperties = buildProperties(allChannelsPropertyToRelated)
@@ -813,15 +677,11 @@ type LatestTimestamp struct {
 	Timestamp int64 `json:"timestamp"`
 }
 
-type SmartProperties struct {
-	Name string `json:"name"`
-}
-
 // GetAdwordsFilterValues - @TODO Kark v1
 func (store *MemSQL) GetAdwordsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int) {
-	_, isPresent := adwordsExtToInternal[requestFilterProperty]
+	_, isPresent := model.AdwordsExtToInternal[requestFilterProperty]
 	if !isPresent {
-		filterValues, errCode := store.getSmartPropertiesFilterValues(projectID, requestFilterObject, requestFilterProperty, "adwords", reqID)
+		filterValues, errCode := store.getSmartPropertyFilterValues(projectID, requestFilterObject, requestFilterProperty, "adwords", reqID)
 		if errCode != http.StatusFound {
 			return []interface{}{}, http.StatusInternalServerError
 		}
@@ -838,23 +698,23 @@ func (store *MemSQL) GetAdwordsFilterValues(projectID uint64, requestFilterObjec
 
 	return filterValues, http.StatusFound
 }
-func (store *MemSQL) getSmartPropertiesFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, source string, reqID string) ([]interface{}, int) {
+func (store *MemSQL) getSmartPropertyFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, source string, reqID string) ([]interface{}, int) {
 	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID).WithField("smart_property_name", requestFilterProperty)
-	objectType, isExists := smartPropertiesRulesTypeAlias[requestFilterObject]
+	objectType, isExists := smartPropertyRulesTypeAliasToType[requestFilterObject]
 	if !isExists {
 		logCtx.Error("Invalid filter object")
 		return make([]interface{}, 0, 0), http.StatusBadRequest
 	}
-	smartPropertiesRule := model.SmartPropertiesRules{}
+	smartPropertyRule := model.SmartPropertyRules{}
 	filterValues := make([]interface{}, 0, 0)
 	db := C.GetServices().Db
-	err := db.Table("smart_properties_rules").Where("project_id = ? AND type = ? AND name = ?", projectID, objectType, requestFilterProperty).Find(&smartPropertiesRule).Error
+	err := db.Table("smart_property_rules").Where("project_id = ? AND type = ? AND name = ?", projectID, objectType, requestFilterProperty).Find(&smartPropertyRule).Error
 	if err != nil {
 		return make([]interface{}, 0, 0), http.StatusNotFound
 	}
 	propertiesValueMap := make(map[string]bool)
 	var rules []model.Rule
-	err = U.DecodePostgresJsonbToStructType(smartPropertiesRule.Rules, &rules)
+	err = U.DecodePostgresJsonbToStructType(smartPropertyRule.Rules, &rules)
 	if err != nil {
 		return make([]interface{}, 0, 0), http.StatusNotFound
 	}
@@ -896,20 +756,20 @@ func (store *MemSQL) GetAdwordsSQLQueryAndParametersForFilterValues(projectID ui
 }
 
 func getFilterRelatedInformationForAdwords(requestFilterObject string, requestFilterProperty string) (string, int, int) {
-	adwordsInternalFilterObject, isPresent := adwordsExtToInternal[requestFilterObject]
+	adwordsInternalFilterObject, isPresent := model.AdwordsExtToInternal[requestFilterObject]
 	if !isPresent {
 		log.Error("Invalid adwords filter object.")
 		return "", 0, http.StatusBadRequest
 	}
 	docType := getAdwordsDocumentTypeForFilterKeyV1(adwordsInternalFilterObject)
 
-	adwordsInternalFilterProperty, isPresent := adwordsExtToInternal[requestFilterProperty]
+	adwordsInternalFilterProperty, isPresent := model.AdwordsExtToInternal[requestFilterProperty]
 	if !isPresent {
 		log.Error("Invalid adwords filter property.")
 		return "", 0, http.StatusBadRequest
 	}
 	keyForJobInternalRepresentation := fmt.Sprintf("%s:%s", adwordsInternalFilterObject, adwordsInternalFilterProperty)
-	adwordsInternalPropertyOfJob, isPresent := adwordsInternalPropertiesToJobsInternal[keyForJobInternalRepresentation]
+	adwordsInternalPropertyOfJob, isPresent := model.AdwordsInternalPropertiesToJobsInternal[keyForJobInternalRepresentation]
 	if !isPresent {
 		log.Error("Invalid adwords filter property for given object type.")
 		return "", 0, http.StatusBadRequest
@@ -1000,9 +860,9 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 		logCtx.WithError(err).Error(model.AdwordsSpecificError)
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
-	isSmartPropertyPresent := checkSmartProperties(query.Filters, query.GroupBy)
+	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
 	if C.IsShowSmartPropertiesAllowed(projectID) && isSmartPropertyPresent {
-		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertiesV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
+		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
 	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
@@ -1060,7 +920,7 @@ func convertFromRequestToAdwordsSpecificRepresentation(query model.ChannelQueryV
 func getAdwordsSpecificMetrics(requestSelectMetrics []string) ([]string, error) {
 	resultMetrics := make([]string, 0, 0)
 	for _, requestMetric := range requestSelectMetrics {
-		metric, isPresent := adwordsExtToInternal[requestMetric]
+		metric, isPresent := model.AdwordsExtToInternal[requestMetric]
 		if !isPresent {
 			return make([]string, 0, 0), errors.New("Invalid metric key found for document type")
 		}
@@ -1074,7 +934,7 @@ func getAdwordsSpecificFilters(requestFilters []model.ChannelFilterV1) ([]model.
 	resultFilters := make([]model.ChannelFilterV1, 0, 0)
 	for _, requestFilter := range requestFilters {
 		var resultFilter model.ChannelFilterV1
-		filterObject, isPresent := adwordsExtToInternal[requestFilter.Object]
+		filterObject, isPresent := model.AdwordsExtToInternal[requestFilter.Object]
 		if !isPresent {
 			return make([]model.ChannelFilterV1, 0, 0), errors.New("Invalid filter key found for document type")
 		}
@@ -1115,10 +975,10 @@ func getAdwordsSpecificGroupBy(requestGroupBys []model.ChannelGroupBy) ([]model.
 	resultGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	for _, requestGroupBy := range sortedGroupBys {
 		var resultGroupBy model.ChannelGroupBy
-		if requestGroupBy.Object == adwordsSmartProperties {
+		if requestGroupBy.Object == model.AdwordsSmartProperty {
 			resultGroupBys = append(resultGroupBys, resultGroupBy)
 		} else {
-			groupByObject, isPresent := adwordsExtToInternal[requestGroupBy.Object]
+			groupByObject, isPresent := model.AdwordsExtToInternal[requestGroupBy.Object]
 			if !isPresent {
 				return make([]model.ChannelGroupBy, 0, 0), errors.New("Invalid groupby key found for document type")
 			}
@@ -1187,16 +1047,16 @@ ORDER BY impressions DESC, clicks DESC LIMIT 2500 ;
 func buildAdwordsSimpleQueryV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, []string) {
 	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
-	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource)
+	return getSQLAndParamsForAdwordsV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource)
 }
 
-func buildAdwordsSimpleQueryWithSmartPropertiesV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, []string) {
+func buildAdwordsSimpleQueryWithSmartPropertyV2(query *model.ChannelQueryV1, projectID uint64, customerAccountID string, reqID string, fetchSource bool) (string, []interface{}, []string, []string) {
 	lowestHierarchyLevel := getLowestHierarchyLevelForAdwords(query)
 	lowestHierarchyReportLevel := lowestHierarchyLevel + "_performance_report"
-	return getSQLAndParamsForAdwordsWithSmartPropertiesV2(query, projectID, query.From, query.To, customerAccountID, AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource)
+	return getSQLAndParamsForAdwordsWithSmartPropertyV2(query, projectID, query.From, query.To, customerAccountID, model.AdwordsDocumentTypeAlias[lowestHierarchyReportLevel], fetchSource)
 }
 
-func getSQLAndParamsForAdwordsWithSmartPropertiesV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
+func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
 	docType int, fetchSource bool) (string, []interface{}, []string, []string) {
 	computeHigherOrderMetricsHere := !fetchSource
 	customerAccountIDs := strings.Split(customerAccountID, ",")
@@ -1215,17 +1075,17 @@ func getSQLAndParamsForAdwordsWithSmartPropertiesV2(query *model.ChannelQueryV1,
 	finalOrderByStatement := ""
 	resultantSQLStatement := ""
 
-	smartPropertiesCampaignGroupBys := make([]model.ChannelGroupBy, 0, 0)
-	smartPropertiesAdGroupGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	smartPropertyCampaignGroupBys := make([]model.ChannelGroupBy, 0, 0)
+	smartPropertyAdGroupGroupBys := make([]model.ChannelGroupBy, 0, 0)
 	adwordsGroupBys := make([]model.ChannelGroupBy, 0, 0)
 
 	for _, groupBy := range query.GroupBy {
-		_, isPresent := smartPropertiesDisallowedNames[groupBy.Property]
+		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
 		if !isPresent {
 			if groupBy.Object == "campaign" {
-				smartPropertiesCampaignGroupBys = append(smartPropertiesCampaignGroupBys, groupBy)
+				smartPropertyCampaignGroupBys = append(smartPropertyCampaignGroupBys, groupBy)
 			} else {
-				smartPropertiesAdGroupGroupBys = append(smartPropertiesAdGroupGroupBys, groupBy)
+				smartPropertyAdGroupGroupBys = append(smartPropertyAdGroupGroupBys, groupBy)
 			}
 		} else {
 			adwordsGroupBys = append(adwordsGroupBys, groupBy)
@@ -1234,7 +1094,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertiesV2(query *model.ChannelQueryV1,
 	// Group By
 	dimensions := fields{}
 	if fetchSource {
-		internalValue := adwordsStringColumn
+		internalValue := model.AdwordsStringColumn
 		externalValue := source
 		expression := fmt.Sprintf("'%s' as %s", internalValue, externalValue)
 		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
@@ -1242,7 +1102,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertiesV2(query *model.ChannelQueryV1,
 	}
 	for _, groupBy := range adwordsGroupBys {
 		key := groupBy.Object + ":" + groupBy.Property
-		internalValue := adwordsInternalPropertiesToReportsInternal[key]
+		internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
 		externalValue := groupBy.Object + "_" + groupBy.Property
 		var expression string
 		if groupBy.Property == "id" {
@@ -1255,12 +1115,12 @@ func getSQLAndParamsForAdwordsWithSmartPropertiesV2(query *model.ChannelQueryV1,
 		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 		dimensions.values = append(dimensions.values, externalValue)
 	}
-	for _, groupBy := range smartPropertiesCampaignGroupBys {
+	for _, groupBy := range smartPropertyCampaignGroupBys {
 		expression := fmt.Sprintf(`%s as %s`, fmt.Sprintf("campaign.JSON_EXTRACT_STRING(properties, '%s')", groupBy.Property), "campaign_"+groupBy.Property)
 		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 		dimensions.values = append(dimensions.values, "campaign_"+groupBy.Property)
 	}
-	for _, groupBy := range smartPropertiesAdGroupGroupBys {
+	for _, groupBy := range smartPropertyAdGroupGroupBys {
 		expression := fmt.Sprintf(`%s as "%s"`, fmt.Sprintf("ad_group.JSON_EXTRACT_STRING(properties, '%s')", groupBy.Property), "ad_group_"+groupBy.Property)
 		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
 		dimensions.values = append(dimensions.values, "ad_group_"+groupBy.Property)
@@ -1293,7 +1153,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertiesV2(query *model.ChannelQueryV1,
 
 	for _, selectMetric := range query.SelectMetrics {
 		_, isNonHigherOrderMetric := nonHigherOrderMetrics[selectMetric]
-		if selectMetric == impressions {
+		if selectMetric == model.Impressions {
 			toFetchImpressionsForHigherOrderMetric = false
 			break
 		} else if !isNonHigherOrderMetric && !computeHigherOrderMetricsHere {
@@ -1302,17 +1162,17 @@ func getSQLAndParamsForAdwordsWithSmartPropertiesV2(query *model.ChannelQueryV1,
 	}
 
 	if toFetchImpressionsForHigherOrderMetric {
-		internalValue := adwordsInternalMetricsToAllRep[impressions].nonHigherOrderExpression
-		externalValue := adwordsInternalMetricsToAllRep[impressions].externalValue
+		internalValue := adwordsInternalMetricsToAllRep[model.Impressions].nonHigherOrderExpression
+		externalValue := adwordsInternalMetricsToAllRep[model.Impressions].externalValue
 		expression := fmt.Sprintf("%s as %s", internalValue, externalValue)
 		metrics.selectExpressions = append(metrics.selectExpressions, expression)
 		metrics.values = append(metrics.values, externalValue)
 	}
 
 	// Filters
-	filterPropertiesStatement, filterParams := getFilterPropertiesForAdwordsReportsAndSmartProperties(query.Filters)
-	filterStatementForSmartPropertiesGroupBy := getFilterStatementForSmartPropertiesGroupBy(smartPropertiesCampaignGroupBys, smartPropertiesAdGroupGroupBys)
-	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperties, filterPropertiesStatement, filterStatementForSmartPropertiesGroupBy)
+	filterPropertiesStatement, filterParams := getFilterPropertiesForAdwordsReportsAndSmartProperty(query.Filters)
+	filterStatementForSmartPropertyGroupBy := getFilterStatementForSmartPropertyGroupBy(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
+	finalWhereStatement = joinWithWordInBetween("AND", staticWhereStatementForAdwordsWithSmartProperty, filterPropertiesStatement, filterStatementForSmartPropertyGroupBy)
 	finalParams = append(finalParams, staticWhereParams...)
 	finalParams = append(finalParams, filterParams...)
 
@@ -1339,7 +1199,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertiesV2(query *model.ChannelQueryV1,
 	return resultantSQLStatement, finalParams, dimensions.values, metrics.values
 }
 func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) string {
-	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertiesWithTypeAndSource(filters, groupBys, "adwords")
+	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertyWithTypeAndSource(filters, groupBys, "adwords")
 	fromStatement := fromAdwordsDocument
 	if isPresentAdGroupSmartProperty {
 		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = adwords_documents.project_id and ad_group.object_id = ad_group_id::text "
@@ -1348,67 +1208,6 @@ func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 		fromStatement += "inner join smart_properties campaign on campaign.project_id = adwords_documents.project_id and campaign.object_id = campaign_id::text "
 	}
 	return fromStatement
-}
-func checkSmartPropertiesWithTypeAndSource(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy, source string) (bool, bool) {
-	campaignProperty := false
-	adGroupProperty := false
-	for _, filter := range filters {
-		_, isPresent := adwordsExtToInternal[filter.Property]
-		if !isPresent {
-			switch source {
-			case "adwords":
-				if filter.Object == adwordsCampaign {
-					campaignProperty = true
-				}
-				if filter.Object == adwordsAdGroup {
-					adGroupProperty = true
-				}
-			case "facebook":
-				if filter.Object == adwordsCampaign {
-					campaignProperty = true
-				}
-				if filter.Object == "ad_set" {
-					adGroupProperty = true
-				}
-			case "linkedin":
-				if filter.Object == "campaign_group" {
-					campaignProperty = true
-				}
-				if filter.Object == adwordsCampaign {
-					adGroupProperty = true
-				}
-			}
-		}
-	}
-	for _, groupBy := range groupBys {
-		_, isPresent := adwordsExtToInternal[groupBy.Property]
-		if !isPresent {
-			switch source {
-			case "adwords":
-				if groupBy.Object == adwordsCampaign {
-					campaignProperty = true
-				}
-				if groupBy.Object == adwordsAdGroup {
-					adGroupProperty = true
-				}
-			case "facebook":
-				if groupBy.Object == adwordsCampaign {
-					campaignProperty = true
-				}
-				if groupBy.Object == "ad_set" {
-					adGroupProperty = true
-				}
-			case "linkedin":
-				if groupBy.Object == "campaign_group" {
-					campaignProperty = true
-				}
-				if groupBy.Object == adwordsCampaign {
-					adGroupProperty = true
-				}
-			}
-		}
-	}
-	return campaignProperty, adGroupProperty
 }
 
 func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, from, to int64, customerAccountID string,
@@ -1433,7 +1232,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	// Group By
 	dimensions := fields{}
 	if fetchSource {
-		internalValue := adwordsStringColumn
+		internalValue := model.AdwordsStringColumn
 		externalValue := source
 		expression := fmt.Sprintf("'%s' as %s", internalValue, externalValue)
 		dimensions.selectExpressions = append(dimensions.selectExpressions, expression)
@@ -1441,7 +1240,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	}
 	for _, groupBy := range query.GroupBy {
 		key := groupBy.Object + ":" + groupBy.Property
-		internalValue := adwordsInternalPropertiesToReportsInternal[key]
+		internalValue := model.AdwordsInternalPropertiesToReportsInternal[key]
 		externalValue := groupBy.Object + "_" + groupBy.Property
 		var expression string
 		if groupBy.Property == "id" {
@@ -1482,7 +1281,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 
 	for _, selectMetric := range query.SelectMetrics {
 		_, isNonHigherOrderMetric := nonHigherOrderMetrics[selectMetric]
-		if selectMetric == impressions {
+		if selectMetric == model.Impressions {
 			toFetchImpressionsForHigherOrderMetric = false
 			break
 		} else if !isNonHigherOrderMetric && !computeHigherOrderMetricsHere {
@@ -1491,8 +1290,8 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	}
 
 	if toFetchImpressionsForHigherOrderMetric {
-		internalValue := adwordsInternalMetricsToAllRep[impressions].nonHigherOrderExpression
-		externalValue := adwordsInternalMetricsToAllRep[impressions].externalValue
+		internalValue := adwordsInternalMetricsToAllRep[model.Impressions].nonHigherOrderExpression
+		externalValue := adwordsInternalMetricsToAllRep[model.Impressions].externalValue
 		expression := fmt.Sprintf("%s as %s", internalValue, externalValue)
 		metrics.selectExpressions = append(metrics.selectExpressions, expression)
 		metrics.values = append(metrics.values, externalValue)
@@ -1547,7 +1346,7 @@ func getFilterPropertiesForAdwordsReports(filters []model.ChannelFilterV1) (stri
 			filterValue = filter.Value
 		}
 		key := fmt.Sprintf("%s:%s", filter.Object, filter.Property)
-		currentFilterProperty = adwordsInternalPropertiesToReportsInternal[key]
+		currentFilterProperty = model.AdwordsInternalPropertiesToReportsInternal[key]
 		if strings.Contains(filter.Property, ("id")) {
 			currentFilterStatement = fmt.Sprintf("%s %s ?", currentFilterProperty, filterOperator)
 		} else {
@@ -1562,7 +1361,7 @@ func getFilterPropertiesForAdwordsReports(filters []model.ChannelFilterV1) (stri
 	}
 	return resultStatement + ")", params
 }
-func getFilterPropertiesForAdwordsReportsAndSmartProperties(filters []model.ChannelFilterV1) (string, []interface{}) {
+func getFilterPropertiesForAdwordsReportsAndSmartProperty(filters []model.ChannelFilterV1) (string, []interface{}) {
 	resultStatement := ""
 	var filterValue string
 	params := make([]interface{}, 0, 0)
@@ -1583,10 +1382,10 @@ func getFilterPropertiesForAdwordsReportsAndSmartProperties(filters []model.Chan
 		} else {
 			filterValue = filter.Value
 		}
-		_, isPresent := adwordsExtToInternal[filter.Property]
+		_, isPresent := model.AdwordsExtToInternal[filter.Property]
 		if isPresent {
 			key := fmt.Sprintf("%s:%s", filter.Object, filter.Property)
-			currentFilterProperty = adwordsInternalPropertiesToReportsInternal[key]
+			currentFilterProperty = model.AdwordsInternalPropertiesToReportsInternal[key]
 			if strings.Contains(filter.Property, ("id")) {
 				currentFilterStatement = fmt.Sprintf("%s.%s %s ?", adwordsDocuments, currentFilterProperty, filterOperator)
 			} else {
@@ -1606,9 +1405,9 @@ func getFilterPropertiesForAdwordsReportsAndSmartProperties(filters []model.Chan
 				resultStatement = fmt.Sprintf("%s %s %s", resultStatement, filter.LogicalOp, currentFilterStatement)
 			}
 			if filter.Object == "campaign" {
-				campaignFilter = smartPropertiesCampaignStaticFilter
+				campaignFilter = smartPropertyCampaignStaticFilter
 			} else {
-				adGroupFilter = smartPropertiesAdGroupStaticFilter
+				adGroupFilter = smartPropertyAdGroupStaticFilter
 			}
 		}
 	}
@@ -1621,20 +1420,20 @@ func getFilterPropertiesForAdwordsReportsAndSmartProperties(filters []model.Chan
 
 	return resultStatement + ")", params
 }
-func getFilterStatementForSmartPropertiesGroupBy(smartPropertiesCampaignGroupBys []model.ChannelGroupBy, smartPropertiesAdGroupGroupBys []model.ChannelGroupBy) string {
+func getFilterStatementForSmartPropertyGroupBy(smartPropertyCampaignGroupBys []model.ChannelGroupBy, smartPropertyAdGroupGroupBys []model.ChannelGroupBy) string {
 	resultStatement := ""
-	for _, smartPropertiesGroupBy := range smartPropertiesCampaignGroupBys {
+	for _, smartPropertyGroupBy := range smartPropertyCampaignGroupBys {
 		if resultStatement == "" {
-			resultStatement += fmt.Sprintf("( campaign.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertiesGroupBy.Property)
+			resultStatement += fmt.Sprintf("( campaign.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertyGroupBy.Property)
 		} else {
-			resultStatement += fmt.Sprintf("AND campaign.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertiesGroupBy.Property)
+			resultStatement += fmt.Sprintf("AND campaign.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertyGroupBy.Property)
 		}
 	}
-	for _, smartPropertiesGroupBy := range smartPropertiesAdGroupGroupBys {
+	for _, smartPropertyGroupBy := range smartPropertyAdGroupGroupBys {
 		if resultStatement == "" {
-			resultStatement += fmt.Sprintf("( ad_group.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertiesGroupBy.Property)
+			resultStatement += fmt.Sprintf("( ad_group.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertyGroupBy.Property)
 		} else {
-			resultStatement += fmt.Sprintf("AND ad_group.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertiesGroupBy.Property)
+			resultStatement += fmt.Sprintf("AND ad_group.JSON_EXTRACT_STRING(properties, '%s') IS NOT NULL ", smartPropertyGroupBy.Property)
 		}
 	}
 	if resultStatement == "" {
@@ -1729,7 +1528,7 @@ func (store *MemSQL) ExecuteAdwordsChannelQuery(projectID uint64, query *model.C
 	// sort only if the impression is there as column
 	impressionsIndex := 0
 	for _, key := range queryResult.MetricsBreakdown.Headers {
-		if key == impressions {
+		if key == model.Impressions {
 			// sort the rows by impressions count in descending order
 			sort.Slice(queryResult.MetricsBreakdown.Rows, func(i, j int) bool {
 				return queryResult.MetricsBreakdown.Rows[i][impressionsIndex].(float64) > queryResult.MetricsBreakdown.Rows[j][impressionsIndex].(float64)

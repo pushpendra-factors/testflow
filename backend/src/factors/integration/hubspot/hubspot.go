@@ -531,7 +531,7 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, apiKey string) (bool, 
 			status.Status = U.CRM_SYNC_STATUS_FAILURES
 			anyFailures = true
 		} else {
-			status.Status = U.CRM_SYNC_STATUS_FAILURES
+			status.Status = U.CRM_SYNC_STATUS_SUCCESS
 		}
 
 		allStatus = append(allStatus, status)
@@ -904,7 +904,15 @@ func getHubspotMappedDataTypeValue(projectID uint64, eventName, enKey string, va
 	if ptype == U.PropertyTypeNumerical {
 		num, err := U.GetPropertyValueAsFloat64(value)
 		if err != nil {
-			return nil, errors.New("failed to get numerical property")
+
+			// try removing comma separated number
+			cleanedValue := strings.ReplaceAll(U.GetPropertyValueAsString(value), ",", "")
+			num, err := U.GetPropertyValueAsFloat64(cleanedValue)
+			if err != nil {
+				return nil, err
+			}
+
+			return num, nil
 		}
 
 		return num, nil

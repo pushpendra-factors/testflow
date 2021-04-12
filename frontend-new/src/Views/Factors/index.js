@@ -3,8 +3,7 @@ import Header from '../AppLayout/Header';
 import SearchBar from '../../components/SearchBar';
 import {
   Row, Col, Button, Spin
-} from 'antd';
-import { Text, SVG } from 'factorsComponents'; 
+} from 'antd'; 
 import ConfigureDP from './ConfigureDP';
 import CreateGoalDrawer from './CreateGoalDrawer';
 import { fetchFactorsGoals, fetchFactorsModels, fetchGoalInsights, saveGoalInsightRules, fetchFactorsTrackedEvents, fetchFactorsTrackedUserProperties } from 'Reducers/factors';
@@ -14,6 +13,8 @@ import { fetchProjectAgents } from 'Reducers/agentActions';
 import _, { isEmpty } from 'lodash'; 
 import { useHistory } from 'react-router-dom';
 import SavedGoals from './SavedGoals'; 
+import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import {ErrorBoundary} from 'react-error-boundary';
 
 const suggestionList = [
   {
@@ -78,6 +79,8 @@ const Factors = ({
   
   return (
     <>
+    <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Explain Error '} subtitle={'We are facing trouble loading Explain. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
+
     {fetchingIngishts ? <Spin size={'large'} className={'fa-page-loader'} /> : 
     <>
         <Header>
@@ -145,7 +148,7 @@ const Factors = ({
 
     </>
     }
-
+  </ErrorBoundary>
     </>
   );
 };

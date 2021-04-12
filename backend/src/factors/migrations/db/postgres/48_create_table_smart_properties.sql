@@ -17,7 +17,7 @@ WITH (
 )
 TABLESPACE pg_default;
 
-ALTER TABLE public.smart_properties OWNER to autometa;
+ALTER TABLE public.smart_properties OWNER to postgres;
 
 -- DOWN
 -- DROP TABLE smart_properties;

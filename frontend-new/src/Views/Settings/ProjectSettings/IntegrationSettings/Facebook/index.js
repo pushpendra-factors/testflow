@@ -6,8 +6,9 @@ import {
   Button, message, Select, Modal, Row, Col, Input
 } from 'antd';
 import FacebookLogin from 'react-facebook-login';
-import { Text } from 'factorsComponents';
+import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import _ from 'lodash';
+import {ErrorBoundary} from 'react-error-boundary';
 
 const FacebookIntegration = ({
   fetchProjectSettings,
@@ -197,6 +198,7 @@ const FacebookIntegration = ({
 
   return (
     <>
+    <ErrorBoundary fallback={<FaErrorComp subtitle={'Facing issues with Facebook integrations'} />} onError={FaErrorLog}> 
       <div className={'mt-4 flex w-6/12'}>
         {formComponent()}
       </div>
@@ -205,6 +207,7 @@ const FacebookIntegration = ({
         {renderFacebookLogin()}
         <Button className={'ml-2 '}>View documentation</Button>
       </div>}
+    </ErrorBoundary>
     </>
   )
 }

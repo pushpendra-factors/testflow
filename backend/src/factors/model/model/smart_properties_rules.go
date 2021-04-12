@@ -12,18 +12,23 @@ const (
 	DELETED = "deleted"
 )
 
-type SmartPropertiesRules struct {
-	ID          string          `gorm:"primary_key:true;type:varchar(255)" json:"id"`
-	ProjectID   uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
-	TypeAlias   string          `json:"type_alias"`
-	Type        int             `json:"type"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Rules       *postgres.Jsonb `json:"rules"`
-	IsDeleted   bool            `json:"is_deleted"`
-	Picked      bool            `json:"picked"`
-	CreatedAt   time.Time       `json:"created_at"`
-	UpdatedAt   time.Time       `json:"updated_at"`
+var EvaluationStatusMap = map[string]int{
+	"not_picked": 0,
+	"picked":     1,
+}
+
+type SmartPropertyRules struct {
+	ID               string          `gorm:"primary_key:true;type:varchar(255)" json:"id"`
+	ProjectID        uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	TypeAlias        string          `gorm:"-" json:"type_alias"`
+	Type             int             `json:"type"`
+	Name             string          `json:"name"`
+	Description      string          `json:"description"`
+	Rules            *postgres.Jsonb `json:"rules"`
+	IsDeleted        bool            `json:"is_deleted"`
+	EvaluationStatus int             `json:"evaluation_status"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }
 
 type Rule struct {
@@ -32,7 +37,7 @@ type Rule struct {
 	Filters []ChannelFilterV1 `json:"filters"`
 }
 
-type SmartPropertiesRulesConfig struct {
+type SmartPropertyRulesConfig struct {
 	Name    string   `json:"name"`
 	Sources []Source `json:"sources"`
 }

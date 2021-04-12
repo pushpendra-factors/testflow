@@ -6,6 +6,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -190,9 +191,14 @@ func (pg *Postgres) GetPropertyTypeByKeyValue(projectID uint64, eventName string
 
 			if pType == U.PropertyTypeNumerical {
 				if _, err := U.GetPropertyValueAsFloat64(propertyValue); err != nil {
-					log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "property_value": propertyValue, "is_user_property": isUserProperty}).
-						WithError(err).Error("Failed to convert numerical property value.")
-					return U.PropertyTypeUnknown
+					// try removing comma separated number
+					cleanedValue := strings.ReplaceAll(U.GetPropertyValueAsString(propertyValue), ",", "")
+					if _, err := U.GetPropertyValueAsFloat64(cleanedValue); err != nil {
+						log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "property_value": propertyValue, "is_user_property": isUserProperty}).
+							WithError(err).Error("Failed to convert numerical property value.")
+						return U.PropertyTypeUnknown
+					}
+
 				}
 
 				return pType

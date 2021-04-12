@@ -615,9 +615,9 @@ func main() {
 		log.Info("property_details table is associated with events table.")
 	}
 
-	// Create smart_properties_rules table
-	if err := db.CreateTable(&model.SmartPropertiesRules{}).Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("smart_properties_rules table creation failed.")
+	// Create smart_property_rules table
+	if err := db.CreateTable(&model.SmartPropertyRules{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("smart_property_rules table creation failed.")
 	} else {
 		log.Info("Created smart properties rules table.")
 	}

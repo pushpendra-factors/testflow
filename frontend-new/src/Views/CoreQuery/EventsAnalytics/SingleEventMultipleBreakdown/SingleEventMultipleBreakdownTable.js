@@ -6,6 +6,7 @@ import {
   getDateBasedTableData,
 } from "./utils";
 import DataTable from "../../../../components/DataTable";
+import { CHART_TYPE_LINECHART, CHART_TYPE_STACKED_AREA } from "../../../../utils/constants";
 
 function SingleEventMultipleBreakdownTable({
   originalData,
@@ -54,7 +55,7 @@ function SingleEventMultipleBreakdownTable({
     };
   };
 
-  if (chartType === "linechart") {
+  if (chartType === CHART_TYPE_LINECHART || chartType === CHART_TYPE_STACKED_AREA ) {
     tableData = getDateBasedTableData(
       data.map((elem) => elem.label),
       originalData,

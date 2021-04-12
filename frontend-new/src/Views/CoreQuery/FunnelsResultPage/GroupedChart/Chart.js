@@ -127,7 +127,7 @@ function Chart({
 
       if (section === DASHBOARD_MODAL) {
         padY += 25;
-        padX = -10
+        padX = -10;
       }
       tooltip
         .style("left", d3.event.pageX + padX + "px")

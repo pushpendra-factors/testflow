@@ -211,7 +211,12 @@ function SaveQuery({
 
     if (queryType === QUERY_TYPE_EVENT) {
       if (requestQuery[0].ec === constantObj[EACH_USER_TYPE]) {
-        secondOption = <Radio value="pl">Display Line Chart</Radio>;
+        secondOption = (
+          <>
+            <Radio value="pl">Display Line Chart</Radio>
+            <Radio value="pa">Display Stacked Area Chart</Radio>
+          </>
+        );
         if (!requestQuery[0].gbp.length) {
           firstOption = <Radio value="pc">Display Spark Line Chart</Radio>;
         }
@@ -226,7 +231,12 @@ function SaveQuery({
     }
 
     if (queryType === QUERY_TYPE_CAMPAIGN) {
-      secondOption = <Radio value="pl">Display Line Chart</Radio>;
+      secondOption = (
+        <>
+          <Radio value="pl">Display Line Chart</Radio>
+          <Radio value="pa">Display Stacked Area Chart</Radio>
+        </>
+      );
       if (!requestQuery.query_group[0].group_by.length) {
         firstOption = <Radio value="pc">Display Spark Line Chart</Radio>;
       }
@@ -280,7 +290,7 @@ function SaveQuery({
       <Modal
         centered={true}
         visible={visible}
-        width={700}
+        width={900}
         title={null}
         onOk={handleSave}
         onCancel={handleSaveCancel}

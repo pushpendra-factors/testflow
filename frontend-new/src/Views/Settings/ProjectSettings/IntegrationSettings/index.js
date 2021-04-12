@@ -2,7 +2,7 @@ import React, { useState, useEffect, lazy } from 'react';
 import {
   Row, Col, Tag, Avatar, Skeleton, Button
 } from 'antd';
-import { Text, SVG } from 'factorsComponents';
+import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { connect } from 'react-redux';
 import { fetchProjectSettings } from 'Reducers/global'; 
 
@@ -13,6 +13,7 @@ const GoogleAdWords = lazy(() => import("./GoogleAdWords"));
 const FacebookIntegration = lazy(() => import("./Facebook"));
 const SalesForceIntegration = lazy(() => import("./Salesforce"));
 const LinkedInIntegration = lazy(() => import("./LinkedIn"));
+import {ErrorBoundary} from 'react-error-boundary'
 
 const IntegrationProviderData = [
   {
@@ -108,9 +109,9 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
     }); 
   },[activeProject]);
 
-
   return (
     <>
+    <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Integrations Error'} subtitle={'We are facing some issues with the integrations. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
       <div className={'mb-10 pl-4'}>
         <Row>
           <Col span={12}>
@@ -130,8 +131,8 @@ function IntegrationSettings({ currentProjectSettings, activeProject, fetchProje
         </Row>
 
       </div>
-    </>
-
+      </ErrorBoundary>
+    </> 
   );
 }
 

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	C "factors/config"
+	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
@@ -12,89 +13,52 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var smartPropertiesRulesTypeAlias = map[string]int{
+var smartPropertyRulesTypeAliasToType = map[string]int{
 	"campaign": 1,
 	"ad_group": 2,
 }
-var sourceSmartProperties = map[string]bool{
+
+var sourceSmartProperty = map[string]bool{
 	"all":      true,
 	"adwords":  true,
 	"facebook": true,
 	"linkedin": true,
 }
-var smartPropertiesDisallowedNames = map[string]bool{
-	"campaign":                       true,
-	"ad_group":                       true,
-	"ad_set":                         true,
-	"adset":                          true,
-	"creative":                       true,
-	"campaign_group":                 true,
-	"ad":                             true,
-	"name":                           true,
-	"keyword":                        true,
-	"id":                             true,
-	"status":                         true,
-	approvalStatus:                   true,
-	matchType:                        true,
-	firstPositionCpc:                 true,
-	firstPageCpc:                     true,
-	isNegative:                       true,
-	topOfPageCpc:                     true,
-	qualityScore:                     true,
-	impressions:                      true,
-	clicks:                           true,
-	"spend":                          true,
-	conversion:                       true,
-	clickThroughRate:                 true,
-	conversionRate:                   true,
-	costPerClick:                     true,
-	costPerConversion:                true,
-	searchImpressionShare:            true,
-	searchClickShare:                 true,
-	searchTopImpressionShare:         true,
-	searchAbsoluteTopImpressionShare: true,
-	searchBudgetLostAbsoluteTopImpressionShare: true,
-	searchBudgetLostImpressionShare:            true,
-	searchBudgetLostTopImpressionShare:         true,
-	searchRankLostAbsoluteTopImpressionShare:   true,
-	searchRankLostImpressionShare:              true,
-	searchRankLostTopImpressionShare:           true,
-}
 
 // to do: @ashhar make it similar to channels fields ASAP
 var mapOfObjectAndProperty = map[string]map[string]map[string]PropertiesAndRelated{
-	adwordsCampaign: {
-		adwordsCampaign: {
+	model.AdwordsCampaign: {
+		model.AdwordsCampaign: {
 			"name": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 		},
 	},
-	adwordsAdGroup: {
-		adwordsCampaign: {
+	model.AdwordsAdGroup: {
+		model.AdwordsCampaign: {
 			"name": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 		},
-		adwordsAdGroup: {
+		model.AdwordsAdGroup: {
 			"name": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 		},
 	},
 }
 
-var smartPropertiesObjects = []string{adwordsCampaign, adwordsAdGroup}
-var smartPropertiesSources = []string{"all", "facebook", "adwords", "linkedin"}
+var smartPropertyObjects = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
+var smartPropertySources = []string{"all", "facebook", "adwords", "linkedin"}
 
-const errorDuplicateSmartPropertiesRules = "pq: duplicate key value violates unique constraint \"smart_properties_rules_primary_key\""
+const errorDuplicateSmartPropertyRules = "pq: duplicate key value violates unique constraint \"smart_property_rules_primary_key\""
 
-func isDuplicateSmartPropertiesRulesError(err error) bool {
-	return err.Error() == errorDuplicateSmartPropertiesRules
+func isDuplicateSmartPropertyRulesError(err error) bool {
+	return err.Error() == errorDuplicateSmartPropertyRules
 }
 
-func (pg *Postgres) GetSmartPropertiesRulesConfig(projectID uint64, objectType string) (model.SmartPropertiesRulesConfig, int) {
-	var result model.SmartPropertiesRulesConfig
+func (pg *Postgres) GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int) {
+	var result model.SmartPropertyRulesConfig
 	sources := make([]model.Source, 0, 0)
 	objectAndProperty, isExists := mapOfObjectAndProperty[objectType]
 	if !isExists {
 		return result, http.StatusBadRequest
 	}
-	for _, sourceName := range smartPropertiesSources {
+	for _, sourceName := range smartPropertySources {
 		objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
 		for objectName, property := range objectAndProperty {
 			currentProperties := buildProperties(property)
@@ -111,126 +75,133 @@ func (pg *Postgres) GetSmartPropertiesRulesConfig(projectID uint64, objectType s
 }
 func (pg *Postgres) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, name string, objectType int) int {
 	db := C.GetServices().Db
-	smartPropertiesRules := make([]model.SmartPropertiesRules, 0, 0)
-	err := db.Model(&model.SmartPropertiesRules{}).
+	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
+	err := db.Model(&model.SmartPropertyRules{}).
 		Where("project_id = ? AND is_deleted != ? AND name = ? AND type = ?", projectID, true, name, objectType).
-		Find(&smartPropertiesRules).Error
-	if err != nil || len(smartPropertiesRules) == 0 {
+		Find(&smartPropertyRules).Error
+	if err != nil || len(smartPropertyRules) == 0 {
 		return http.StatusNotFound
 	}
 	return http.StatusFound
 }
 func (pg *Postgres) checkIfRuleNameAlreadyPresentWhileUpdate(projectID uint64, name string, ruleID string, objectType int) int {
 	db := C.GetServices().Db
-	smartPropertiesRules := make([]model.SmartPropertiesRules, 0, 0)
-	err := db.Model(&model.SmartPropertiesRules{}).
+	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
+	err := db.Model(&model.SmartPropertyRules{}).
 		Where("project_id = ? AND is_deleted != ? AND name = ? AND id != ? AND type = ?", projectID, true, name, ruleID, objectType).
-		Find(&smartPropertiesRules).Error
-	if err != nil || len(smartPropertiesRules) == 0 {
+		Find(&smartPropertyRules).Error
+	if err != nil || len(smartPropertyRules) == 0 {
 		return http.StatusNotFound
 	}
 	return http.StatusFound
 }
-func validateSmartPropertiesRules(projectID uint64, smartPropertiesRulesDoc *model.SmartPropertiesRules) (string, bool) {
+func validateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.SmartPropertyRules) (string, bool) {
 	if projectID == 0 {
 		return "Invalid project ID.", false
 	}
 
-	if smartPropertiesRulesDoc.Name == "" {
+	if smartPropertyRulesDoc.Name == "" {
 		return "Empty name for rule.", false
 	}
-	if smartPropertiesDisallowedNames[strings.ToLower(smartPropertiesRulesDoc.Name)] {
+	if Const.SmartPropertyReservedNames[strings.ToLower(smartPropertyRulesDoc.Name)] {
 		return "Entered Name is not allowed.", false
 	}
-	if strings.Contains(smartPropertiesRulesDoc.Name, " ") {
+	if strings.Contains(smartPropertyRulesDoc.Name, " ") {
 		return "Space in property name is not allowed.", false
 	}
 
-	isValidRules := validationRules(smartPropertiesRulesDoc.Rules)
+	isValidRules := validationRules(smartPropertyRulesDoc.Rules)
 	if !isValidRules {
 		return "Invalid rule conditions or empty rules object.", false
 	}
 	return "", true
 }
 
-func (pg *Postgres) CreateSmartPropertiesRules(projectID uint64, smartPropertiesRulesDoc *model.SmartPropertiesRules) (string, int) {
-	logCtx := log.WithField("project_id", smartPropertiesRulesDoc.ProjectID)
+func (pg *Postgres) CreateSmartPropertyRules(projectID uint64, smartPropertyRulesDoc *model.SmartPropertyRules) (*model.SmartPropertyRules, string, int) {
+	logCtx := log.WithField("project_id", smartPropertyRulesDoc.ProjectID)
 
-	errMsg, isValidRule := validateSmartPropertiesRules(projectID, smartPropertiesRulesDoc)
+	errMsg, isValidRule := validateSmartPropertyRules(projectID, smartPropertyRulesDoc)
 	if !isValidRule {
 		logCtx.Error(errMsg)
-		return errMsg, http.StatusBadRequest
+		return &model.SmartPropertyRules{}, errMsg, http.StatusBadRequest
 	}
 
-	logCtx = logCtx.WithField("type_alias", smartPropertiesRulesDoc.TypeAlias)
-	objectType, typeExists := smartPropertiesRulesTypeAlias[smartPropertiesRulesDoc.TypeAlias]
+	logCtx = logCtx.WithField("type_alias", smartPropertyRulesDoc.TypeAlias)
+	objectType, typeExists := smartPropertyRulesTypeAliasToType[smartPropertyRulesDoc.TypeAlias]
 	if !typeExists {
 		logCtx.Error("Invalid type alias.")
-		return "Invalid type alias.", http.StatusBadRequest
+		return &model.SmartPropertyRules{}, "Invalid type alias.", http.StatusBadRequest
 	}
-	errCode := pg.checkIfRuleNameAlreadyPresentWhileCreate(projectID, smartPropertiesRulesDoc.Name, objectType)
+
+	errCode := pg.checkIfRuleNameAlreadyPresentWhileCreate(projectID, smartPropertyRulesDoc.Name, objectType)
 	if errCode == http.StatusFound {
-		return "Name already present.", http.StatusBadRequest
+		return &model.SmartPropertyRules{}, "Name already present.", http.StatusBadRequest
 	}
-	smartPropertiesRulesDoc.Type = objectType
-	smartPropertiesRulesDoc.Picked = false
+	smartPropertyRule := model.SmartPropertyRules{
+		ProjectID:   projectID,
+		Type:        objectType,
+		Name:        smartPropertyRulesDoc.Name,
+		Description: smartPropertyRulesDoc.Description,
+		Rules:       smartPropertyRulesDoc.Rules,
+		CreatedAt:   time.Now().UTC(),
+		UpdatedAt:   time.Now().UTC(),
+	}
 	db := C.GetServices().Db
-	err := db.Create(&smartPropertiesRulesDoc).Error
+	err := db.Create(&smartPropertyRule).Error
 	if err != nil {
-		if isDuplicateSmartPropertiesRulesError(err) {
-			logCtx.WithError(err).WithField("project_id", smartPropertiesRulesDoc.ProjectID).Warn(
+		if isDuplicateSmartPropertyRulesError(err) {
+			logCtx.WithError(err).WithField("project_id", smartPropertyRulesDoc.ProjectID).Warn(
 				"Failed to create rule object. Duplicate.")
-			return "Duplicate Rule", http.StatusConflict
+			return &model.SmartPropertyRules{}, "Duplicate Rule", http.StatusConflict
 		}
-		logCtx.WithError(err).WithField("project_id", smartPropertiesRulesDoc.ProjectID).Error(
+		logCtx.WithError(err).WithField("project_id", smartPropertyRulesDoc.ProjectID).Error(
 			"Failed to create rule object.")
-		return "Internal server error", http.StatusInternalServerError
+		return &model.SmartPropertyRules{}, "Internal server error", http.StatusInternalServerError
 	}
-	return "", http.StatusCreated
+	return &smartPropertyRule, "", http.StatusCreated
 }
-func (pg *Postgres) UpdateSmartPropertiesRules(projectID uint64, ruleID string, smartPropertiesRulesDoc model.SmartPropertiesRules) (string, int) {
-	logCtx := log.WithField("project_id", smartPropertiesRulesDoc.ProjectID)
+func (pg *Postgres) UpdateSmartPropertyRules(projectID uint64, ruleID string, smartPropertyRulesDoc model.SmartPropertyRules) (model.SmartPropertyRules, string, int) {
+	logCtx := log.WithField("project_id", smartPropertyRulesDoc.ProjectID)
 
-	errMsg, isValidRule := validateSmartPropertiesRules(projectID, &smartPropertiesRulesDoc)
+	errMsg, isValidRule := validateSmartPropertyRules(projectID, &smartPropertyRulesDoc)
 	if !isValidRule {
 		logCtx.Error(errMsg)
-		return errMsg, http.StatusBadRequest
+		return model.SmartPropertyRules{}, errMsg, http.StatusBadRequest
 	}
 
-	logCtx = logCtx.WithField("type_alias", smartPropertiesRulesDoc.TypeAlias)
-	objectType, typeExists := smartPropertiesRulesTypeAlias[smartPropertiesRulesDoc.TypeAlias]
+	logCtx = logCtx.WithField("type_alias", smartPropertyRulesDoc.TypeAlias)
+	objectType, typeExists := smartPropertyRulesTypeAliasToType[smartPropertyRulesDoc.TypeAlias]
 	if !typeExists {
 		logCtx.Error("Invalid type alias.")
-		return "Invalid type alias.", http.StatusBadRequest
+		return model.SmartPropertyRules{}, "Invalid type alias.", http.StatusBadRequest
 	}
-	errCode := pg.checkIfRuleNameAlreadyPresentWhileUpdate(projectID, smartPropertiesRulesDoc.Name, ruleID, objectType)
-	if errCode == http.StatusFound {
-		return "Name already present.", http.StatusBadRequest
+	errCode := pg.checkIfRuleNameAlreadyPresentWhileUpdate(projectID, smartPropertyRulesDoc.Name, ruleID, objectType)
+	if errCode == http.StatusFound && !smartPropertyRulesDoc.IsDeleted {
+		return model.SmartPropertyRules{}, "Name already present.", http.StatusBadRequest
 	}
 	updatedFields := map[string]interface{}{
-		"rules":       smartPropertiesRulesDoc.Rules,
-		"type":        objectType,
-		"picked":      smartPropertiesRulesDoc.Picked,
-		"name":        smartPropertiesRulesDoc.Name,
-		"description": smartPropertiesRulesDoc.Description,
-		"updated_at":  time.Now().UTC(),
+		"rules":             smartPropertyRulesDoc.Rules,
+		"type":              objectType,
+		"evaluation_status": smartPropertyRulesDoc.EvaluationStatus,
+		"name":              smartPropertyRulesDoc.Name,
+		"description":       smartPropertyRulesDoc.Description,
+		"updated_at":        time.Now().UTC(),
 	}
 
 	db := C.GetServices().Db
-	err := db.Table("smart_properties_rules").Where("project_id = ? AND id = ?", projectID, ruleID).Updates(updatedFields).Error
+	err := db.Table("smart_property_rules").Where("project_id = ? AND id = ?", projectID, ruleID).Updates(updatedFields).Error
 	if err != nil {
-		if isDuplicateSmartPropertiesRulesError(err) {
-			logCtx.WithError(err).WithField("project_id", smartPropertiesRulesDoc.ProjectID).Warn(
+		if isDuplicateSmartPropertyRulesError(err) {
+			logCtx.WithError(err).WithField("project_id", smartPropertyRulesDoc.ProjectID).Warn(
 				"Failed to update rule object. Duplicate.")
-			return "Duplicate Rule", http.StatusConflict
+			return model.SmartPropertyRules{}, "Duplicate Rule", http.StatusConflict
 		}
-		logCtx.WithError(err).WithField("project_id", smartPropertiesRulesDoc.ProjectID).Error(
+		logCtx.WithError(err).WithField("project_id", smartPropertyRulesDoc.ProjectID).Error(
 			"Failed to update rule object.")
-		return "Internal server error", http.StatusInternalServerError
+		return model.SmartPropertyRules{}, "Internal server error", http.StatusInternalServerError
 	}
-	return "", http.StatusAccepted
+	return smartPropertyRulesDoc, "", http.StatusAccepted
 }
-
 func validationRules(rulesJsonb *postgres.Jsonb) bool {
 	var rules []model.Rule
 	err := U.DecodePostgresJsonbToStructType(rulesJsonb, &rules)
@@ -244,7 +215,7 @@ func validationRules(rulesJsonb *postgres.Jsonb) bool {
 		if rule.Value == "" {
 			return false
 		}
-		_, existsSource := sourceSmartProperties[rule.Source]
+		_, existsSource := sourceSmartProperty[rule.Source]
 		if !existsSource {
 			return false
 		}
@@ -255,7 +226,7 @@ func validationRules(rulesJsonb *postgres.Jsonb) bool {
 			if filter.Value == "" {
 				return false
 			}
-			_, objectTypeExists := smartPropertiesRulesTypeAlias[filter.Object]
+			_, objectTypeExists := smartPropertyRulesTypeAliasToType[filter.Object]
 			if !objectTypeExists {
 				return false
 			}
@@ -264,52 +235,52 @@ func validationRules(rulesJsonb *postgres.Jsonb) bool {
 	return true
 }
 
-func (pg *Postgres) GetSmartPropertiesRules(projectID uint64) ([]model.SmartPropertiesRules, int) {
-	smartPropertiesRules := make([]model.SmartPropertiesRules, 0, 0)
+func (pg *Postgres) GetSmartPropertyRules(projectID uint64) ([]model.SmartPropertyRules, int) {
+	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
-		return make([]model.SmartPropertiesRules, 0, 0), http.StatusBadRequest
+		return make([]model.SmartPropertyRules, 0, 0), http.StatusBadRequest
 	}
 	db := C.GetServices().Db
-	err := db.Table("smart_properties_rules").Where("project_id = ? AND is_deleted != ?", projectID, true).Find(&smartPropertiesRules).Error
+	err := db.Table("smart_property_rules").Where("project_id = ? AND is_deleted != ?", projectID, true).Find(&smartPropertyRules).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error(err)
-		return make([]model.SmartPropertiesRules, 0, 0), http.StatusNotFound
+		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
 	}
-	return smartPropertiesRules, http.StatusFound
+	return smartPropertyRules, http.StatusFound
 }
 
-func (pg *Postgres) GetAllChangedSmartPropertiesRulesForProject(projectID uint64) ([]model.SmartPropertiesRules, int) {
-	smartPropertiesRules := make([]model.SmartPropertiesRules, 0, 0)
+func (pg *Postgres) GetAllChangedSmartPropertyRulesForProject(projectID uint64) ([]model.SmartPropertyRules, int) {
+	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
 	db := C.GetServices().Db
-	err := db.Table("smart_properties_rules").Where("project_id = ? AND picked = ?", projectID, false).Find(&smartPropertiesRules).Error
+	err := db.Table("smart_property_rules").Where("project_id = ? AND evaluation_status != ?", projectID, model.EvaluationStatusMap["picked"]).Order("updated_at asc").Find(&smartPropertyRules).Error
 	if err != nil {
 		log.Error(err)
-		return make([]model.SmartPropertiesRules, 0, 0), http.StatusNotFound
+		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
 	}
-	return smartPropertiesRules, http.StatusFound
+	return smartPropertyRules, http.StatusFound
 }
 
-func (pg *Postgres) GetSmartPropertiesRule(projectID uint64, ruleID string) (model.SmartPropertiesRules, int) {
-	var smartPropertiesRule model.SmartPropertiesRules
+func (pg *Postgres) GetSmartPropertyRule(projectID uint64, ruleID string) (model.SmartPropertyRules, int) {
+	var smartPropertyRule model.SmartPropertyRules
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
-		return model.SmartPropertiesRules{}, http.StatusBadRequest
+		return model.SmartPropertyRules{}, http.StatusBadRequest
 	}
 	if ruleID == "" {
 		log.Error("Invalid rule ID.")
-		return model.SmartPropertiesRules{}, http.StatusBadRequest
+		return model.SmartPropertyRules{}, http.StatusBadRequest
 	}
 	db := C.GetServices().Db
-	err := db.Table("smart_properties_rules").Where("project_id = ? AND is_deleted != ? AND id = ?", projectID, true, ruleID).Find(&smartPropertiesRule).Error
+	err := db.Table("smart_property_rules").Where("project_id = ? AND is_deleted != ? AND id = ?", projectID, true, ruleID).Find(&smartPropertyRule).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error(err)
-		return model.SmartPropertiesRules{}, http.StatusNotFound
+		return model.SmartPropertyRules{}, http.StatusNotFound
 	}
-	return smartPropertiesRule, http.StatusFound
+	return smartPropertyRule, http.StatusFound
 }
 
-func (pg *Postgres) DeleteSmartPropertiesRules(projectID uint64, ruleID string) int {
+func (pg *Postgres) DeleteSmartPropertyRules(projectID uint64, ruleID string) int {
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
 		return http.StatusBadRequest
@@ -319,7 +290,7 @@ func (pg *Postgres) DeleteSmartPropertiesRules(projectID uint64, ruleID string) 
 		return http.StatusBadRequest
 	}
 	db := C.GetServices().Db
-	err := db.Table("smart_properties_rules").Where("project_id = ? AND id = ?", projectID, ruleID).Updates(map[string]interface{}{"is_deleted": true, "picked": false, "updated_at": time.Now().UTC()}).Error
+	err := db.Table("smart_property_rules").Where("project_id = ? AND id = ?", projectID, ruleID).Updates(map[string]interface{}{"is_deleted": true, "evaluation_status": model.EvaluationStatusMap["not_picked"], "updated_at": time.Now().UTC()}).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error(err)
 		return http.StatusInternalServerError
@@ -327,10 +298,10 @@ func (pg *Postgres) DeleteSmartPropertiesRules(projectID uint64, ruleID string) 
 	return http.StatusAccepted
 }
 
-func (pg *Postgres) GetProjectIDsHavingSmartPropertiesRules() ([]uint64, int) {
+func (pg *Postgres) GetProjectIDsHavingSmartPropertyRules() ([]uint64, int) {
 	db := C.GetServices().Db
 	var projectIDs []uint64
-	rows, err := db.Table("smart_properties_rules").Select("DISTINCT(project_id)").Rows()
+	rows, err := db.Table("smart_property_rules").Select("DISTINCT(project_id)").Rows()
 	if err != nil {
 		return make([]uint64, 0), http.StatusInternalServerError
 	}

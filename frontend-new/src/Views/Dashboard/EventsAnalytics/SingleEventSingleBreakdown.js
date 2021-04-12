@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import {
   formatData,
   formatDataInLineChartFormat,
+  formatDataInStackedAreaFormat,
 } from "../../CoreQuery/EventsAnalytics/SingleEventSingleBreakdown/utils";
 import BarChart from "../../../components/BarChart";
 import SingleEventSingleBreakdownTable from "../../CoreQuery/EventsAnalytics/SingleEventSingleBreakdown/SingleEventSingleBreakdownTable";
 import LineChart from "../../../components/LineChart";
+import StackedAreaChart from "../../../components/StackedAreaChart";
 import { generateColors } from "../../../utils/dataFormatter";
 import {
   ACTIVE_USERS_CRITERIA,
@@ -14,6 +16,8 @@ import {
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
   CHART_TYPE_BARCHART,
   DASHBOARD_WIDGET_LINE_CHART_HEIGHT,
+  CHART_TYPE_STACKED_AREA,
+  DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
 } from "../../../utils/constants";
 
 function SingleEventSingleBreakdown({
@@ -71,7 +75,6 @@ function SingleEventSingleBreakdown({
   const appliedColors = generateColors(visibleProperties.length);
 
   let chartContent = null;
-
   let tableContent = null;
 
   if (chartType === CHART_TYPE_TABLE) {
@@ -113,6 +116,22 @@ function SingleEventSingleBreakdown({
         durationObj={durationObj}
       />
     );
+  } else if (chartType === CHART_TYPE_STACKED_AREA) {
+    const { categories, data } = formatDataInStackedAreaFormat(
+      resultState.data,
+      visibleLabels,
+      arrayMapper
+    );
+    chartContent = (
+      <StackedAreaChart
+        frequency={durationObj.frequency}
+        categories={categories}
+        data={data}
+        height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
+        legendsPosition="top"
+        cardSize={unit.cardSize}
+      />
+    );
   } else {
     chartContent = (
       <LineChart
@@ -136,7 +155,7 @@ function SingleEventSingleBreakdown({
   }
 
   return (
-    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
+    <div className={`w-full px-6 flex flex-1 flex-col justify-center`}>
       {chartContent}
       {tableContent}
     </div>

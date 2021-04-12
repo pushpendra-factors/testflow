@@ -6,6 +6,7 @@ import {
   getDateBasedColumns,
   getDateBasedTableData,
 } from "./utils";
+import { CHART_TYPE_LINECHART, CHART_TYPE_STACKED_AREA } from "../../../../utils/constants";
 
 function SingleEventSingleBreakdownTable({
   data,
@@ -48,7 +49,7 @@ function SingleEventSingleBreakdownTable({
   let columns;
   let tableData;
 
-  if (chartType === "linechart") {
+  if (chartType === CHART_TYPE_LINECHART || chartType === CHART_TYPE_STACKED_AREA) {
     columns = getDateBasedColumns(
       lineChartData,
       appliedBreakdown,

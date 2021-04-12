@@ -3,6 +3,7 @@ package memsql
 import (
 	"encoding/json"
 	C "factors/config"
+	Const "factors/constants"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -14,66 +15,66 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const errorDuplicateSmartProperties = "pq: duplicate key value violates unique constraint \"smart_properties_primary_key\""
+const errorDuplicateSmartProperty = "pq: duplicate key value violates unique constraint \"smart_properties_primary_key\""
 
-func isDuplicateSmartPropertiesError(err error) bool {
-	return err.Error() == errorDuplicateSmartProperties
+func isDuplicateSmartPropertyError(err error) bool {
+	return err.Error() == errorDuplicateSmartProperty
 }
 
-func (store *MemSQL) CreateSmartProperties(smartPropertiesDoc *model.SmartProperties) int {
-	logCtx := log.WithField("project_id", smartPropertiesDoc.ProjectID)
+func (store *MemSQL) CreateSmartProperty(smartPropertyDoc *model.SmartProperties) int {
+	logCtx := log.WithField("project_id", smartPropertyDoc.ProjectID)
 
-	if smartPropertiesDoc.ProjectID == 0 {
+	if smartPropertyDoc.ProjectID == 0 {
 		logCtx.Error("Invalid project ID.")
 		return http.StatusBadRequest
 	}
 
 	db := C.GetServices().Db
-	err := db.Create(&smartPropertiesDoc).Error
+	err := db.Create(&smartPropertyDoc).Error
 	if err != nil {
-		if isDuplicateSmartPropertiesError(err) {
-			logCtx.WithError(err).WithField("project_id", smartPropertiesDoc.ProjectID).Error(
+		if isDuplicateSmartPropertyError(err) {
+			logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
 				"Failed to create smart properties. Duplicate.")
 			return http.StatusConflict
 		}
-		logCtx.WithError(err).WithField("project_id", smartPropertiesDoc.ProjectID).Error(
+		logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
 			"Failed to create smart properties.")
 		return http.StatusInternalServerError
 	}
 	return http.StatusCreated
 }
-func (store *MemSQL) UpdateSmartProperties(smartPropertiesDoc *model.SmartProperties) int {
-	logCtx := log.WithField("project_id", smartPropertiesDoc.ProjectID)
+func (store *MemSQL) UpdateSmartProperty(smartPropertyDoc *model.SmartProperties) int {
+	logCtx := log.WithField("project_id", smartPropertyDoc.ProjectID)
 
-	if smartPropertiesDoc.ProjectID == 0 {
+	if smartPropertyDoc.ProjectID == 0 {
 		logCtx.Error("Invalid project ID.")
 		return http.StatusBadRequest
 	}
 
 	db := C.GetServices().Db
-	err := db.Save(&smartPropertiesDoc).Error
+	err := db.Save(&smartPropertyDoc).Error
 	if err != nil {
-		if isDuplicateSmartPropertiesError(err) {
-			logCtx.WithError(err).WithField("project_id", smartPropertiesDoc.ProjectID).Error(
+		if isDuplicateSmartPropertyError(err) {
+			logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
 				"Failed to update smart properties. Duplicate.")
 			return http.StatusConflict
 		}
-		logCtx.WithError(err).WithField("project_id", smartPropertiesDoc.ProjectID).Error(
+		logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
 			"Failed to update smart properties.")
 		return http.StatusInternalServerError
 	}
 	return http.StatusAccepted
 }
-func (store *MemSQL) GetSmartPropertiesByProjectIDAndSourceAndObjectType(projectID uint64, source string, objectType int) ([]model.SmartProperties, int) {
+func (store *MemSQL) GetSmartPropertyByProjectIDAndSourceAndObjectType(projectID uint64, source string, objectType int) ([]model.SmartProperties, int) {
 	db := C.GetServices().Db
-	smartProperties := []model.SmartProperties{}
-	err := db.Table("smart_properties").Where("project_id = ? AND source = ? AND object_type = ?", projectID, source, objectType).Find(&smartProperties).Error
+	smartProperty := []model.SmartProperties{}
+	err := db.Table("smart_properties").Where("project_id = ? AND source = ? AND object_type = ?", projectID, source, objectType).Find(&smartProperty).Error
 	if err != nil && err.Error() == "record not found" {
-		return smartProperties, http.StatusNotFound
+		return smartProperty, http.StatusNotFound
 	} else if err != nil && err.Error() != "record not found" {
-		return smartProperties, http.StatusInternalServerError
+		return smartProperty, http.StatusInternalServerError
 	} else {
-		return smartProperties, http.StatusFound
+		return smartProperty, http.StatusFound
 	}
 }
 func (store *MemSQL) DeleteSmartPropertyByProjectIDAndSourceAndObjectID(projectID uint64, source string, objectID string) int {
@@ -87,20 +88,20 @@ func (store *MemSQL) DeleteSmartPropertyByProjectIDAndSourceAndObjectID(projectI
 
 func (store *MemSQL) GetSmartPropertyByProjectIDAndObjectIDAndObjectType(projectID uint64, objectID string, objectType int) (model.SmartProperties, int) {
 	db := C.GetServices().Db
-	smartProperties := model.SmartProperties{}
-	err := db.Table("smart_properties").Where("project_id = ? AND object_id = ? AND object_type = ?", projectID, objectID, objectType).Find(&smartProperties).Error
+	smartProperty := model.SmartProperties{}
+	err := db.Table("smart_properties").Where("project_id = ? AND object_id = ? AND object_type = ?", projectID, objectID, objectType).Find(&smartProperty).Error
 	if err != nil && err.Error() == "record not found" {
-		return smartProperties, http.StatusNotFound
+		return smartProperty, http.StatusNotFound
 	} else if err != nil && err.Error() != "record not found" {
-		return smartProperties, http.StatusInternalServerError
+		return smartProperty, http.StatusInternalServerError
 	} else {
-		return smartProperties, http.StatusFound
+		return smartProperty, http.StatusFound
 	}
 }
-func (store *MemSQL) CreateSmartPropertiesFromChannelDocumentAndRule(smartPropertiesRule *model.SmartPropertiesRules, rule model.Rule,
+func (store *MemSQL) BuildAndCreateSmartPropertyFromChannelDocumentAndRule(smartPropertyRule *model.SmartPropertyRules, rule model.Rule,
 	channelDocument model.ChannelDocumentsWithFields, source string) int {
 	var objectID string
-	if smartPropertiesRule.Type == 1 {
+	if smartPropertyRule.Type == 1 {
 		objectID = channelDocument.CampaignID
 	} else {
 		objectID = channelDocument.AdGroupID
@@ -111,13 +112,13 @@ func (store *MemSQL) CreateSmartPropertiesFromChannelDocumentAndRule(smartProper
 	}
 	objectPropertiesJsonb := &postgres.Jsonb{objectPropertiesJson}
 
-	smartProperty, errCode := store.GetSmartPropertyByProjectIDAndObjectIDAndObjectType(smartPropertiesRule.ProjectID, objectID, smartPropertiesRule.Type)
+	smartProperty, errCode := store.GetSmartPropertyByProjectIDAndObjectIDAndObjectType(smartPropertyRule.ProjectID, objectID, smartPropertyRule.Type)
 	switch errCode {
 	case http.StatusNotFound:
 		properties := make(map[string]interface{})
 		rulesRef := make(map[string]interface{})
-		properties[smartPropertiesRule.Name] = rule.Value
-		rulesRef[smartPropertiesRule.ID] = smartPropertiesRule.Name
+		properties[smartPropertyRule.Name] = rule.Value
+		rulesRef[smartPropertyRule.ID] = smartPropertyRule.Name
 		propertiesJson, err := json.Marshal(&properties)
 		if err != nil {
 			return http.StatusInternalServerError
@@ -129,9 +130,9 @@ func (store *MemSQL) CreateSmartPropertiesFromChannelDocumentAndRule(smartProper
 			return http.StatusInternalServerError
 		}
 		rulesRefJsonb := &postgres.Jsonb{rulesRefJson}
-		smartProperties := model.SmartProperties{
-			ProjectID:      smartPropertiesRule.ProjectID,
-			ObjectType:     smartPropertiesRule.Type,
+		smartProperty := model.SmartProperties{
+			ProjectID:      smartPropertyRule.ProjectID,
+			ObjectType:     smartPropertyRule.Type,
 			ObjectID:       objectID,
 			ObjectProperty: objectPropertiesJsonb,
 			Properties:     propertiesJsonb,
@@ -140,14 +141,14 @@ func (store *MemSQL) CreateSmartPropertiesFromChannelDocumentAndRule(smartProper
 			CreatedAt:      time.Now().UTC(),
 			UpdatedAt:      time.Now().UTC(),
 		}
-		return store.CreateSmartProperties(&smartProperties)
+		return store.CreateSmartProperty(&smartProperty)
 
 	case http.StatusFound:
-		updatedSmartProperty, errCodeGet := getUpdatedSmartPropertiesObjectForExistingSmartProperties(smartPropertiesRule, objectID, objectPropertiesJsonb, rule, smartProperty, source)
+		updatedSmartProperty, errCodeGet := getUpdatedSmartPropertyObjectForExistingSmartProperty(smartPropertyRule, objectID, objectPropertiesJsonb, rule, smartProperty, source)
 		if errCodeGet != http.StatusFound {
 			return errCodeGet
 		}
-		errCodeUpdate := store.UpdateSmartProperties(&updatedSmartProperty)
+		errCodeUpdate := store.UpdateSmartProperty(&updatedSmartProperty)
 		if errCodeUpdate != http.StatusAccepted {
 			return errCodeUpdate
 		} else {
@@ -159,7 +160,7 @@ func (store *MemSQL) CreateSmartPropertiesFromChannelDocumentAndRule(smartProper
 	}
 }
 
-func getUpdatedSmartPropertiesObjectForExistingSmartProperties(smartPropertiesRule *model.SmartPropertiesRules, objectID string,
+func getUpdatedSmartPropertyObjectForExistingSmartProperty(smartPropertyRule *model.SmartPropertyRules, objectID string,
 	objectPropertiesJsonb *postgres.Jsonb, rule model.Rule, smartProperty model.SmartProperties, source string) (model.SmartProperties, int) {
 	properties := make(map[string]interface{})
 	rulesRef := make(map[string]interface{})
@@ -172,8 +173,8 @@ func getUpdatedSmartPropertiesObjectForExistingSmartProperties(smartPropertiesRu
 		return model.SmartProperties{}, http.StatusInternalServerError
 	}
 
-	properties[smartPropertiesRule.Name] = rule.Value
-	rulesRef[smartPropertiesRule.ID] = smartPropertiesRule.Name
+	properties[smartPropertyRule.Name] = rule.Value
+	rulesRef[smartPropertyRule.ID] = smartPropertyRule.Name
 	propertiesJson, err := json.Marshal(&properties)
 	if err != nil {
 		return model.SmartProperties{}, http.StatusInternalServerError
@@ -186,25 +187,25 @@ func getUpdatedSmartPropertiesObjectForExistingSmartProperties(smartPropertiesRu
 	}
 	rulesRefJsonb := &postgres.Jsonb{rulesRefJson}
 
-	smartProperties := model.SmartProperties{
-		ProjectID:      smartPropertiesRule.ProjectID,
-		ObjectType:     smartPropertiesRule.Type,
+	updatedSmartProperty := model.SmartProperties{
+		ProjectID:      smartPropertyRule.ProjectID,
+		ObjectType:     smartPropertyRule.Type,
 		ObjectID:       objectID,
 		ObjectProperty: objectPropertiesJsonb,
 		Properties:     propertiesJsonb,
 		RulesRef:       rulesRefJsonb,
 		Source:         source,
-		CreatedAt:      smartPropertiesRule.CreatedAt,
+		CreatedAt:      smartPropertyRule.CreatedAt,
 		UpdatedAt:      time.Now().UTC(),
 	}
-	return smartProperties, http.StatusFound
+	return updatedSmartProperty, http.StatusFound
 }
 
-func (store *MemSQL) DeleteSmartPropertiesByRuleID(projectID uint64, ruleID string) (int, int, int) {
+func (store *MemSQL) DeleteSmartPropertyByRuleID(projectID uint64, ruleID string) (int, int, int) {
 	db := C.GetServices().Db
-	smartProperties := make([]model.SmartProperties, 0, 0)
+	smartProperty := make([]model.SmartProperties, 0, 0)
 
-	err := db.Table("smart_properties").Where("project_id = ? AND rules_ref->>? IS NOT NULL", projectID, ruleID).Find(&smartProperties).Error
+	err := db.Table("smart_properties").Where("project_id = ? AND rules_ref->>? IS NOT NULL", projectID, ruleID).Find(&smartProperty).Error
 	if err != nil {
 		if err.Error() == "record not found" {
 			return 0, 0, http.StatusAccepted
@@ -215,7 +216,7 @@ func (store *MemSQL) DeleteSmartPropertiesByRuleID(projectID uint64, ruleID stri
 	}
 	recordsEvaluated := 0
 	recordsUpdated := 0
-	for _, smartProperty := range smartProperties {
+	for _, smartProperty := range smartProperty {
 		recordsEvaluated += 1
 		properties := make(map[string]interface{})
 		rulesRef := make(map[string]interface{})
@@ -272,18 +273,79 @@ func (store *MemSQL) DeleteSmartPropertiesByRuleID(projectID uint64, ruleID stri
 	return recordsUpdated, recordsEvaluated, http.StatusAccepted
 }
 
-func checkSmartProperties(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) bool {
+func checkSmartProperty(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) bool {
 	for _, filter := range filters {
-		_, isPresent := smartPropertiesDisallowedNames[filter.Property]
+		_, isPresent := Const.SmartPropertyReservedNames[filter.Property]
 		if !isPresent {
 			return true
 		}
 	}
 	for _, groupBy := range groupBys {
-		_, isPresent := smartPropertiesDisallowedNames[groupBy.Property]
+		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
 		if !isPresent {
 			return true
 		}
 	}
 	return false
+}
+func checkSmartPropertyWithTypeAndSource(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy, source string) (bool, bool) {
+	campaignProperty := false
+	adGroupProperty := false
+	for _, filter := range filters {
+		_, isPresent := Const.SmartPropertyReservedNames[filter.Property]
+		if !isPresent {
+			switch source {
+			case "adwords":
+				if filter.Object == model.AdwordsCampaign {
+					campaignProperty = true
+				}
+				if filter.Object == model.AdwordsAdGroup {
+					adGroupProperty = true
+				}
+			case "facebook":
+				if filter.Object == model.AdwordsCampaign {
+					campaignProperty = true
+				}
+				if filter.Object == "ad_set" {
+					adGroupProperty = true
+				}
+			case "linkedin":
+				if filter.Object == "campaign_group" {
+					campaignProperty = true
+				}
+				if filter.Object == model.AdwordsCampaign {
+					adGroupProperty = true
+				}
+			}
+		}
+	}
+	for _, groupBy := range groupBys {
+		_, isPresent := Const.SmartPropertyReservedNames[groupBy.Property]
+		if !isPresent {
+			switch source {
+			case "adwords":
+				if groupBy.Object == model.AdwordsCampaign {
+					campaignProperty = true
+				}
+				if groupBy.Object == model.AdwordsAdGroup {
+					adGroupProperty = true
+				}
+			case "facebook":
+				if groupBy.Object == model.AdwordsCampaign {
+					campaignProperty = true
+				}
+				if groupBy.Object == "ad_set" {
+					adGroupProperty = true
+				}
+			case "linkedin":
+				if groupBy.Object == "campaign_group" {
+					campaignProperty = true
+				}
+				if groupBy.Object == model.AdwordsCampaign {
+					adGroupProperty = true
+				}
+			}
+		}
+	}
+	return campaignProperty, adGroupProperty
 }
