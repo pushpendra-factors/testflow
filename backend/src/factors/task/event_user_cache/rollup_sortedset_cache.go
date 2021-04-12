@@ -94,12 +94,11 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 				enEventCache, err := json.Marshal(eventNamesRollupObj)
 				if err != nil {
 					log.WithError(err).Error("Failed to marshall event names")
-					return nil
+					continue
 				}
 				err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 				if err != nil {
 					log.WithError(err).Error("Failed to set cache")
-					return nil
 				}
 
 				// event properties
@@ -115,33 +114,37 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 				}
 				eventPropertiesToCache := make(map[*cacheRedis.Key]string)
 				for eventName, properties := range propertiesMap {
-					eventPropertiesKey, _ := model.GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventName, currentTimeDatePart)
-					cacheEventPropertyObject := GetCachePropertyObject(properties, currentTimeDatePart)
-					enEventPropertiesCache, err := json.Marshal(cacheEventPropertyObject)
-					if err != nil {
-						log.WithError(err).Error("Failed to marshall - event properties")
-						return nil
+					if(len(properties) > 0) {
+						eventPropertiesKey, _ := model.GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventName, currentTimeDatePart)
+						cacheEventPropertyObject := GetCachePropertyObject(properties, currentTimeDatePart)
+						enEventPropertiesCache, err := json.Marshal(cacheEventPropertyObject)
+						if err != nil {
+							log.WithError(err).Error("Failed to marshall - event properties")
+							continue
+						}
+						eventPropertiesToCache[eventPropertiesKey] = string(enEventPropertiesCache)
 					}
-					eventPropertiesToCache[eventPropertiesKey] = string(enEventPropertiesCache)
 				}
-				err = cacheRedis.SetPersistentBatch(eventPropertiesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
-				if err != nil {
-					log.WithError(err).Error("Failed to set cache")
-					return nil
+				if(len(eventPropertiesToCache) > 0){
+					err = cacheRedis.SetPersistentBatch(eventPropertiesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+					if err != nil {
+						log.WithError(err).Error("Failed to set cache")
+					}
 				}
 
 				// user properties 
-				userPropertiesRollupObj := GetCachePropertyObject(userProperties, currentTimeDatePart)
-				userPropertiesKey, err := model.GetUserPropertiesCategoryByProjectRollUpCacheKey(projectID, currentTimeDatePart)
-				usPropertyCache, err := json.Marshal(userPropertiesRollupObj)
-				if err != nil {
-					log.WithError(err).Error("Failed to marshall user properties")
-					return nil
-				}
-				err = cacheRedis.SetPersistent(userPropertiesKey, string(usPropertyCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
-				if err != nil {
-					log.WithError(err).Error("Failed to set cache")
-					return nil
+				if(len(properties) > 0) {
+					userPropertiesRollupObj := GetCachePropertyObject(userProperties, currentTimeDatePart)
+					userPropertiesKey, err := model.GetUserPropertiesCategoryByProjectRollUpCacheKey(projectID, currentTimeDatePart)
+					usPropertyCache, err := json.Marshal(userPropertiesRollupObj)
+					if err != nil {
+						log.WithError(err).Error("Failed to marshall user properties")
+						continue
+					}
+					err = cacheRedis.SetPersistent(userPropertiesKey, string(usPropertyCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+					if err != nil {
+						log.WithError(err).Error("Failed to set cache")
+					}
 				}
 
 				// event property values
@@ -163,20 +166,23 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 				eventPropertyValuesToCache := make(map[*cacheRedis.Key]string)
 				for eventName, propertyValue := range propertyValues {
 					for property, values := range propertyValue {
-						eventPropertyValuesKey, _ := model.GetValuesByEventPropertyRollUpCacheKey(projectID, eventName, property, currentTimeDatePart)
-						cacheEventPropertyValueObject := GetCachePropertyValueObject(values, currentTimeDatePart)
-						enEventPropertyValuesCache, err := json.Marshal(cacheEventPropertyValueObject)
-						if err != nil {
-							log.WithError(err).Error("Failed to marshall - property values")
-							return nil
+						if(len(values) > 0) {
+							eventPropertyValuesKey, _ := model.GetValuesByEventPropertyRollUpCacheKey(projectID, eventName, property, currentTimeDatePart)
+							cacheEventPropertyValueObject := GetCachePropertyValueObject(values, currentTimeDatePart)
+							enEventPropertyValuesCache, err := json.Marshal(cacheEventPropertyValueObject)
+							if err != nil {
+								log.WithError(err).Error("Failed to marshall - property values")
+								continue
+							}
+							eventPropertyValuesToCache[eventPropertyValuesKey] = string(enEventPropertyValuesCache)
 						}
-						eventPropertyValuesToCache[eventPropertyValuesKey] = string(enEventPropertyValuesCache)
 					}
 				}
-				err = cacheRedis.SetPersistentBatch(eventPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
-				if err != nil {
-					log.WithError(err).Error("Failed to set cache")
-					return nil
+				if(len(eventPropertyValuesToCache) > 0){
+					err = cacheRedis.SetPersistentBatch(eventPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+					if err != nil {
+						log.WithError(err).Error("Failed to set cache")
+					}
 				}
 
 				// user property values
@@ -193,20 +199,22 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 				}
 				userPropertyValuesToCache := make(map[*cacheRedis.Key]string)
 				for property, values := range userPropertyValues {
+					if(len(values) > 0){
 						userPropertyValuesKey, _ := model.GetValuesByUserPropertyRollUpCacheKey(projectID, property, currentTimeDatePart)
 						cacheUserPropertyValueObject := GetCachePropertyValueObject(values, currentTimeDatePart)
 						usEventPropertyValuesCache, err := json.Marshal(cacheUserPropertyValueObject)
 						if err != nil {
 							log.WithError(err).Error("Failed to marshall - user property values")
-							return nil
+							continue
 						}
 						userPropertyValuesToCache[userPropertyValuesKey] = string(usEventPropertyValuesCache)
-					
+					}
 				}
-				err = cacheRedis.SetPersistentBatch(userPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
-				if err != nil {
-					log.WithError(err).Error("Failed to set cache")
-					return nil
+				if(len(userPropertyValuesToCache) > 0){
+					err = cacheRedis.SetPersistentBatch(userPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+					if err != nil {
+						log.WithError(err).Error("Failed to set cache")
+					}
 				}
 				if(isCurrentDay == false){
 					err = cacheRedis.DelPersistent(eventNamesSmartKeySortedSet, 
