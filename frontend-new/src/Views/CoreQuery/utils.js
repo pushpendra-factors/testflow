@@ -18,6 +18,8 @@ import {
   CHART_TYPE_LINECHART,
   CHART_TYPE_TABLE,
   CHART_TYPE_SPARKLINES,
+  CHART_TYPE_STACKED_AREA,
+  CHART_TYPE_STACKED_BAR,
 } from "../../utils/constants";
 
 export const labelsObj = {
@@ -32,6 +34,8 @@ export const presentationObj = {
   pl: CHART_TYPE_LINECHART,
   pt: CHART_TYPE_TABLE,
   pc: CHART_TYPE_SPARKLINES,
+  pa: CHART_TYPE_STACKED_AREA,
+  ps: CHART_TYPE_STACKED_BAR,
 };
 
 export const initialState = { loading: false, error: false, data: null };
@@ -503,7 +507,7 @@ export const DefaultDateRangeFormat = {
 const getFilters = (filters) => {
   const result = [];
   filters.forEach((filter) => {
-    if(filter.props[1] !== 'categorical') {
+    if (filter.props[1] !== "categorical") {
       result.push({
         en: filter.props[2],
         lop: "AND",
@@ -514,7 +518,7 @@ const getFilters = (filters) => {
       });
     }
 
-    if(filter.props[1] === 'categorical') {
+    if (filter.props[1] === "categorical") {
       filter.values.forEach((value, index) => {
         result.push({
           en: filter.props[2],
@@ -533,7 +537,7 @@ const getFilters = (filters) => {
 const getFiltersTouchpoints = (filters, touchpoint) => {
   const result = [];
   filters.forEach((filter) => {
-    if(filter.props[1] !== 'categorical') {
+    if (filter.props[1] !== "categorical") {
       result.push({
         attribution_key: touchpoint,
         lop: "AND",
@@ -544,7 +548,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
       });
     }
 
-    if(filter.props[1] === 'categorical') {
+    if (filter.props[1] === "categorical") {
       filter.values.forEach((value, index) => {
         result.push({
           attribution_key: touchpoint,
@@ -570,16 +574,18 @@ export const getAttributionQuery = (
   linkedEvents,
   dateRange = {}
 ) => {
-
   //attribution_key_f Filters
   //query_type conv_time, interact_time [ConversionBased,EngagementBased];
 
   const eventFilters = getFilters(eventGoal.filters);
   let touchPointFiltersQuery = [];
-  if(touchpointFilters.length) {
-    touchPointFiltersQuery = getFiltersTouchpoints(touchpointFilters, touchpoint);
+  if (touchpointFilters.length) {
+    touchPointFiltersQuery = getFiltersTouchpoints(
+      touchpointFilters,
+      touchpoint
+    );
   }
-  
+
   const query = {
     cl: QUERY_TYPE_ATTRIBUTION,
     meta: {
@@ -627,7 +633,7 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
   const filters = [];
   requestQuery.ce.pr.forEach((pr) => {
     if (pr.lop === "AND") {
-      let val = pr.ty === 'categorical'? [pr.va] : pr.va;
+      let val = pr.ty === "categorical" ? [pr.va] : pr.va;
       filters.push({
         operator: reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
@@ -646,9 +652,8 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
         props: [pr.pr, pr.ty, pr.en],
         values: [pr.va],
       });
-    })
+    });
   }
-  
 
   const result = {
     queryType: QUERY_TYPE_ATTRIBUTION,

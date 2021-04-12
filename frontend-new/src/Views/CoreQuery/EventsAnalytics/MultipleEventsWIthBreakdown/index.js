@@ -3,6 +3,7 @@ import {
   formatData,
   formatVisibleProperties,
   formatDataInLineChartFormat,
+  formatDataInStackedAreaFormat,
 } from "./utils";
 import BarChart from "../../../../components/BarChart";
 import MultipleEventsWithBreakdownTable from "./MultipleEventsWithBreakdownTable";
@@ -12,7 +13,10 @@ import {
   ACTIVE_USERS_CRITERIA,
   FREQUENCY_CRITERIA,
   DASHBOARD_MODAL,
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_STACKED_AREA,
 } from "../../../../utils/constants";
+import StackedAreaChart from "../../../../components/StackedAreaChart";
 
 function MultipleEventsWithBreakdown({
   queries,
@@ -87,8 +91,7 @@ function MultipleEventsWithBreakdown({
   );
 
   const appliedColors = generateColors(visibleProperties.length);
-
-  if (chartType === "barchart") {
+  if (chartType === CHART_TYPE_BARCHART) {
     chart = (
       <BarChart
         section={section}
@@ -96,6 +99,21 @@ function MultipleEventsWithBreakdown({
         queries={queries}
         title={title}
       />
+    );
+  } else if (chartType === CHART_TYPE_STACKED_AREA) {
+    const { categories, data } = formatDataInStackedAreaFormat(
+      resultState.data,
+      visibleLabels,
+      arrayMapper
+    );
+    chart = (
+      <div className="w-full">
+        <StackedAreaChart
+          frequency={durationObj.frequency}
+          categories={categories}
+          data={data}
+        />
+      </div>
     );
   } else {
     chart = (

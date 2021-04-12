@@ -1,10 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { formatData, formatDataInLineChartFormat } from "./utils";
+import {
+  formatData,
+  formatDataInLineChartFormat,
+  formatDataInStackedAreaFormat,
+} from "./utils";
 import BarChart from "../../../../components/BarChart";
 import SingleEventSingleBreakdownTable from "./SingleEventSingleBreakdownTable";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
-import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA, DASHBOARD_MODAL } from "../../../../utils/constants";
+import {
+  ACTIVE_USERS_CRITERIA,
+  FREQUENCY_CRITERIA,
+  DASHBOARD_MODAL,
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_STACKED_AREA,
+} from "../../../../utils/constants";
+import StackedAreaChart from "../../../../components/StackedAreaChart";
 
 function SingleEventSingleBreakdown({
   queries,
@@ -14,7 +25,7 @@ function SingleEventSingleBreakdown({
   chartType,
   durationObj,
   title,
-  section
+  section,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -79,8 +90,25 @@ function SingleEventSingleBreakdown({
     </div>
   );
 
-  if (chartType === "barchart") {
-    chart = <BarChart section={section} title={title} chartData={visibleProperties} />;
+  if (chartType === CHART_TYPE_BARCHART) {
+    chart = (
+      <BarChart section={section} title={title} chartData={visibleProperties} />
+    );
+  } else if (chartType === CHART_TYPE_STACKED_AREA) {
+    const { categories, data } = formatDataInStackedAreaFormat(
+      resultState.data,
+      visibleLabels,
+      arrayMapper
+    );
+    chart = (
+      <div className="w-full">
+        <StackedAreaChart
+          frequency={durationObj.frequency}
+          categories={categories}
+          data={data}
+        />
+      </div>
+    );
   } else {
     chart = (
       <LineChart
@@ -92,7 +120,9 @@ function SingleEventSingleBreakdown({
         eventsMapper={mapper}
         setHiddenEvents={setHiddenProperties}
         hiddenEvents={hiddenProperties}
-        isDecimalAllowed={page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA}
+        isDecimalAllowed={
+          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
+        }
         arrayMapper={arrayMapper}
         section={section}
       />

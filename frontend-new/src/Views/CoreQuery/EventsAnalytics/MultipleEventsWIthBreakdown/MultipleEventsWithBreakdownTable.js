@@ -6,6 +6,7 @@ import {
   getDateBasedTableData,
 } from "./utils";
 import DataTable from "../../../../components/DataTable";
+import { CHART_TYPE_LINECHART, CHART_TYPE_STACKED_AREA } from "../../../../utils/constants";
 
 function MultipleEventsWithBreakdownTable({
   chartType,
@@ -47,7 +48,7 @@ function MultipleEventsWithBreakdownTable({
     };
   };
 
-  if (chartType === "linechart") {
+  if (chartType === CHART_TYPE_LINECHART || chartType === CHART_TYPE_STACKED_AREA) {
     columns = getDateBasedColumns(
       lineChartData,
       breakdown,

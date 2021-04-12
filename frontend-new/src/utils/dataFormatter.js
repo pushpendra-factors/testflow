@@ -176,6 +176,10 @@ export const getChartTypeMenuItems = (queryType, hasBreakdown) => {
           key: "linechart",
           name: "Line Chart",
         },
+        {
+          key: "stackedareachart",
+          name: "Stacked Area Chart",
+        },
       ];
     } else {
       menuItems = [

@@ -29,6 +29,8 @@ export const ATTRIBUTION_METHODOLOGY = [
   },
 ];
 
+export const CHART_TYPE_STACKED_AREA = "stackedareachart";
+export const CHART_TYPE_STACKED_BAR = "stackedbar";
 export const CHART_TYPE_SPARKLINES = "sparklines";
 export const CHART_TYPE_BARCHART = "barchart";
 export const CHART_TYPE_LINECHART = "linechart";
@@ -75,10 +77,11 @@ export const DASHBOARD_MODAL = "dashboard_modal";
 export const DASHBOARD_WIDGET_SECTION = "dashboardWidget";
 
 export const DASHBOARD_WIDGET_BAR_CHART_HEIGHT = 250;
+export const DASHBOARD_WIDGET_AREA_CHART_HEIGHT = 225;
 export const DASHBOARD_WIDGET_MULTICOLORED_BAR_CHART_HEIGHT = 200;
 export const DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT = 225;
 export const DASHBOARD_WIDGET_LINE_CHART_HEIGHT = 225;
-export const DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT = 250
+export const DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT = 250;
 
 export const BAR_CHART_XAXIS_TICK_LENGTH = {
   0: 15,
@@ -87,21 +90,21 @@ export const BAR_CHART_XAXIS_TICK_LENGTH = {
 };
 
 export const BAR_COUNT = {
-  0:3,
-  1:5,
-  2:2
+  0: 3,
+  1: 5,
+  2: 2,
 };
 
 export const BARLINE_COUNT = {
-  0:3,
-  1:5,
-  2:2
+  0: 3,
+  1: 5,
+  2: 2,
 };
 
 export const FUNNELS_COUNT = {
-  0:3,
-  1:6,
-  2:2
+  0: 3,
+  1: 6,
+  2: 2,
 };
 
 export const legend_counts = {
@@ -111,7 +114,9 @@ export const legend_counts = {
 };
 
 export const charts_legend_length = {
-  0:15,
-  1:20,
-  2:10
+  0: 15,
+  1: 20,
+  2: 10,
 };
+
+export const high_charts_default_spacing = [20, 10, 15, 10];
