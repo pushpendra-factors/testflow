@@ -202,7 +202,10 @@ func (f *reportJobSummaryCombineFn) ExtractOutput(a jobStatsAccumulator) {
 
 // TODO(prateek): Check a way to add handling for panic and worker errors.
 func main() {
+	appName := "beam_dashboard_caching"
+
 	flag.Parse()
+	defer C.PingHealthcheckForPanic(appName, *env, C.HealthcheckBeamDashboardCachingPingID)
 	registerStructs()
 	beam.Init()
 
@@ -213,7 +216,6 @@ func main() {
 	// Creating a pipeline.
 	p, s := beam.NewPipelineWithRoot()
 
-	appName := "beam_dashboard_caching"
 	config := &C.Configuration{
 		AppName: appName,
 		Env:     *env,
@@ -239,7 +241,7 @@ func main() {
 		SentryDSN:                                *sentryDSN,
 		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 	}
-	beam.PipelineOptions.Set("HealthchecksPingID", "ecb259b9-4ff8-4825-b989-81d47bd34d93")
+	beam.PipelineOptions.Set("HealthchecksPingID", C.HealthcheckBeamDashboardCachingPingID)
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))
 
 	// Create initial PCollection for the projectIDs string passed to be processed.
