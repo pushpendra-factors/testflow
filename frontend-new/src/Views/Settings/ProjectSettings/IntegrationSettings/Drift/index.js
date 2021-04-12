@@ -5,6 +5,8 @@ import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import {
   Button, message
   } from 'antd'; 
+  import { FaErrorComp, FaErrorLog } from 'factorsComponents';
+  import {ErrorBoundary} from 'react-error-boundary'
 
 const DriftIntegration = ({
     fetchProjectSettings,
@@ -62,6 +64,7 @@ const enableDrift = () => {
 
 return ( 
     <>
+    <ErrorBoundary fallback={<FaErrorComp subtitle={'Facing issues with Facebook integrations'} />} onError={FaErrorLog}>
     <div className={'mt-4 flex'}>
     {
         currentProjectSettings?.int_drift ? <Button loading={loading} onClick={()=>onDisconnect()}>Disable</Button> : 
@@ -69,6 +72,7 @@ return (
     }
         <Button className={'ml-2 '}>View documentation</Button> 
     </div>
+    </ErrorBoundary>
     </>
 )
 }

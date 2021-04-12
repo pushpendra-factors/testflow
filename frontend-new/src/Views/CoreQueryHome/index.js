@@ -1,6 +1,7 @@
 /* eslint-disable */
-import React, { useCallback, useState, useEffect } from "react";
-import { Text, SVG } from "../../components/factorsComponents";
+import React, { useCallback, useState, useEffect } from "react"; 
+import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import {ErrorBoundary} from 'react-error-boundary';
 import { Row, Col, Table, Avatar, Button, Dropdown, Menu, Tag } from "antd";
 import { MoreOutlined } from "@ant-design/icons";
 import Header from "../AppLayout/Header";
@@ -335,6 +336,7 @@ function CoreQuery({
 
   return (
     <>
+    <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Analyse LP Error'} subtitle={'We are facing trouble loading Analyse landing page. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
       <ConfirmationModal
         visible={deleteModal}
         confirmationText="Are you sure you want to delete this query?"
@@ -438,6 +440,7 @@ function CoreQuery({
           </Col>
         </Row>
       </div>
+    </ErrorBoundary>
     </>
   );
 }

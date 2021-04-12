@@ -4,9 +4,10 @@ import {connect} from 'react-redux';
 import { fetchProjectSettings, udpateProjectSettings, enableSalesforceIntegration, fetchSalesforceRedirectURL } from 'Reducers/global';
 import {
      Input, Button, message
-  } from 'antd';
-  import { Text } from 'factorsComponents';
-
+  } from 'antd'; 
+  import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
+  import {ErrorBoundary} from 'react-error-boundary';
+  
 const SalesForceIntegration = ({
     fetchProjectSettings,
     udpateProjectSettings,
@@ -53,7 +54,8 @@ useEffect(()=>{
 
 const isEnabled = isSalesforceEnabled();
 return (
-    <>  
+    <> 
+    <ErrorBoundary fallback={<FaErrorComp subtitle={'Facing issues with Salesforce integrations'} />} onError={FaErrorLog}>  
     <div className={'mt-4 flex'}>
     {isEnabled && <>
       <div className={'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'}>
@@ -67,6 +69,7 @@ return (
     </>
     }
     </div>
+    </ErrorBoundary>
     </>
 )
 }

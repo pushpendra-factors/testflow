@@ -3,13 +3,13 @@ import { connect } from 'react-redux';
 import {
     Button, message, Select, Modal, Row, Col, Input, Checkbox, Skeleton
 } from 'antd';
-const ADWORDS_REDIRECT_URI = "/adwords/auth/redirect";
-import { Text } from 'factorsComponents';
+const ADWORDS_REDIRECT_URI = "/adwords/v1/auth/redirect"; 
 import { enableAdwordsIntegration, fetchAdwordsCustomerAccounts, udpateProjectSettings, fetchProjectSettings } from 'Reducers/global';
 const isDevelopment = () => {
     return ENV === "development"
 }
-
+import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import {ErrorBoundary} from 'react-error-boundary'
 const getAdwordsHostURL = () => {
     // return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
     return BUILD_CONFIG.backend_host;
@@ -199,7 +199,9 @@ const GoogleIntegration = ({
     } 
     return (
         <>
+                <ErrorBoundary fallback={<FaErrorComp subtitle={'Facing issues with GoogleAdWords integrations'} />} onError={FaErrorLog}>
 
+                
 
             <div className={'mt-4 flex w-full'}>
                 {currentProjectSettings?.int_adwords_customer_account_id && <>
@@ -268,6 +270,8 @@ const GoogleIntegration = ({
                     </Col>
                 </Row>
             </Modal>
+
+            </ErrorBoundary>
         </>
     )
 }

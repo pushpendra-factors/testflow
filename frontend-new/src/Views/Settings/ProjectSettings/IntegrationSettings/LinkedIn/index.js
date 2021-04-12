@@ -4,8 +4,9 @@ import { connect } from 'react-redux';
 import { fetchProjectSettings, udpateProjectSettings, addFacebookAccessToken } from 'Reducers/global';
 import {
     Button, message, Select, Modal, Row, Col, Input
-} from 'antd'; 
-import { Text } from 'factorsComponents';
+} from 'antd';  
+import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import {ErrorBoundary} from 'react-error-boundary';
 
 const LinkedInIntegration = ({
     fetchProjectSettings,
@@ -246,6 +247,7 @@ const LinkedInIntegration = ({
 
     return (
         <>
+            <ErrorBoundary fallback={<FaErrorComp subtitle={'Facing issues with LinkedIn integrations'} />} onError={FaErrorLog}> 
             <div className={'mt-4 flex w-6/12'}>
                 {formComponent()}
             </div>
@@ -254,6 +256,7 @@ const LinkedInIntegration = ({
                 {renderLinkedinLogin()}
                 <Button className={'ml-2 '}>View documentation</Button>
             </div>}
+            </ErrorBoundary>
         </>
     )
 }

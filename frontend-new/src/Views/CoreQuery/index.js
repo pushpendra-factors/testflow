@@ -6,8 +6,9 @@ import QueryComposer from "../../components/QueryComposer";
 import AttrQueryComposer from "../../components/AttrQueryComposer";
 import CampQueryComposer from "../../components/CampQueryComposer";
 import CoreQueryHome from "../CoreQueryHome";
-import { Drawer, Button } from "antd";
-import { SVG, Text } from "../../components/factorsComponents";
+import { Drawer, Button } from "antd"; 
+import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import {ErrorBoundary} from 'react-error-boundary';
 import {
   deleteGroupByForEvent,
   getCampaignConfigData,
@@ -656,6 +657,8 @@ function CoreQuery({
   
   return (
     <>
+    <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Analyse Error'} subtitle={'We are facing trouble loading Analyse. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
+      
       <Drawer
         title={title()}
         placement="left"
@@ -666,9 +669,12 @@ function CoreQuery({
         width={"600px"}
         className={"fa-drawer"}
       >
+        <ErrorBoundary fallback={<FaErrorComp subtitle={'Facing issues with Query Builder'} />} onError={FaErrorLog}> 
         {renderQueryComposer()}
+        </ErrorBoundary>
       </Drawer>
 
+      
       {showResult ? (
         <AnalysisResultsPage
           queryType={queryType}
@@ -705,6 +711,7 @@ function CoreQuery({
           setBreakdownType={setBreakdownType}
         />
       )}
+      </ErrorBoundary>
     </>
   );
 }

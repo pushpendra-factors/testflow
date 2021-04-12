@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Row, Col, Menu
-} from 'antd';
-import { Text } from 'factorsComponents';
+} from 'antd'; 
 import BasicSettings from './BasicSettings';
 import SDKSettings from './SDKSettings';
 import UserSettings from './UserSettings';
@@ -11,6 +10,8 @@ import Events from './Events';
 import { fetchSmartEvents } from 'Reducers/events';
 import { connect } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
+import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import {ErrorBoundary} from 'react-error-boundary';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -48,7 +49,9 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
 
   return (
     <>
+ <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Settings Error'} subtitle={'We are facing trouble loading project settings. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
 
+ 
       <div className={'fa-container'}>
         <Row gutter={[24, 24]} justify={'center'} className={'pt-16 pb-2 m-0 '}>
           <Col span={20}>
@@ -81,7 +84,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
           </Col>
         </Row>
       </div>
-
+      </ErrorBoundary>
     </>
 
   );

@@ -5,7 +5,9 @@ import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import {
     Row, Col, Modal, Input, Form, Button, notification, message
   } from 'antd';
-  import { Text } from 'factorsComponents';
+  import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
+  import {ErrorBoundary} from 'react-error-boundary'
+
 
 const HubspotIntegration = ({
     fetchProjectSettings,
@@ -79,8 +81,13 @@ const onReset = () => {
     seterrorInfo(null);
   };
 
+
+  
+
 return (
     <>
+    <ErrorBoundary fallback={<FaErrorComp subtitle={'Facing issues with Hubspot integrations'} />} onError={FaErrorLog}>
+  
     <Modal
         visible={showForm}
         zIndex={1020}
@@ -150,6 +157,7 @@ return (
     }
         <Button className={'ml-2 '}>View documentation</Button> 
     </div>
+    </ErrorBoundary>
     </>
 )
 }
