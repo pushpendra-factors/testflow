@@ -9,6 +9,7 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"factors/task/event_user_cache"
+	"factors/util"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -1022,4 +1023,227 @@ func TestHubspotCreateActionUpdatedOnCreate(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 1, len(result.Results[0].Rows))
 	assert.Equal(t, int64(1), result.Results[0].Rows[0][0])
+}
+
+func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	documentID := 1
+	createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
+	lastModifiedDate := createdDate + 100
+
+	email := getRandomEmail()
+
+	// First contact created with createdate in document timestamp
+	contact := IntHubspot.Contact{
+		Vid: int64(documentID),
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", createdDate)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", lastModifiedDate)},
+			"lifecyclestage":   {Value: "lead"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: email,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err := json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdDate, hubspotDocument.Timestamp)
+
+	// updated contact with lifecyclestage to customer, to_customer_timestamp is set
+	toCustomerTimestamp := lastModifiedDate + 100
+	contact = IntHubspot.Contact{
+		Vid: int64(documentID),
+		Properties: map[string]IntHubspot.Property{
+			"createdate":            {Value: fmt.Sprintf("%d", createdDate)},
+			"lastmodifieddate":      {Value: fmt.Sprintf("%d", toCustomerTimestamp-1)},
+			"lifecyclestage":        {Value: "customer"},
+			"to_customer_timestamp": {Value: fmt.Sprintf("%d", toCustomerTimestamp)},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: email,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, toCustomerTimestamp-1, hubspotDocument.Timestamp)
+
+	// updated contact with lifecyclestage to junk, to_junk_time is missing
+	toJunkTimestamp := toCustomerTimestamp + 500
+	contact = IntHubspot.Contact{
+		Vid: int64(documentID),
+		Properties: map[string]IntHubspot.Property{
+			"createdate":            {Value: fmt.Sprintf("%d", createdDate)},
+			"lastmodifieddate":      {Value: fmt.Sprintf("%d", toJunkTimestamp-1)},
+			"lifecyclestage":        {Value: "junk"},
+			"to_customer_timestamp": {Value: fmt.Sprintf("%d", toCustomerTimestamp)},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: email,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, toJunkTimestamp-1, hubspotDocument.Timestamp)
+
+	smartEventRule := &model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceHubspot,
+		ObjectType:           model.HubspotDocumentTypeNameContact,
+		Description:          "hubspot contact",
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
+			{
+				Name: "lifecyclestage",
+				Rules: []model.CRMFilterRule{
+					{
+						PropertyState: model.CurrentState,
+						Value:         "lead",
+						Operator:      model.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: model.PreviousState,
+						Value:         "lead",
+						Operator:      model.COMPARE_NOT_EQUAL,
+					},
+				},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: model.TimestampReferenceTypeDocument,
+	}
+
+	eventNameLifecycleStageLead := "lifecyclestage_lead"
+	requestPayload := make(map[string]interface{})
+	requestPayload["name"] = eventNameLifecycleStageLead
+	requestPayload["expr"] = smartEventRule
+
+	w := sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	smartEventRule.Filters[0].Rules[0].Value = "customer" // current
+	smartEventRule.Filters[0].Rules[1].Value = "customer" // previous
+	smartEventRule.TimestampReferenceField = "to_customer_timestamp"
+	eventNameLifecycleStageCustomer := "lifecyclestage_customer"
+	requestPayload = make(map[string]interface{})
+	requestPayload["name"] = eventNameLifecycleStageCustomer
+	requestPayload["expr"] = smartEventRule
+
+	w = sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	smartEventRule.Filters[0].Rules[0].Value = "junk"       // current
+	smartEventRule.Filters[0].Rules[1].Value = "junk"       // previous
+	smartEventRule.TimestampReferenceField = "to_junk_time" // doest not exist, should use lastmodified timestamp
+	eventNameLifecycleStageJunk := "lifecyclestage_junk"
+	requestPayload = make(map[string]interface{})
+	requestPayload["name"] = eventNameLifecycleStageJunk
+	requestPayload["expr"] = smartEventRule
+
+	w = sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	//enrich job, create contact created and contact updated event
+	enrichStatus, _ := IntHubspot.Sync(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectId)
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[0].Status)
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[1].Status)
+	assert.Equal(t, util.CRM_SYNC_STATUS_SUCCESS, enrichStatus[2].Status)
+
+	query := model.Query{
+		From: createdDate/1000 - 500,
+		To:   toJunkTimestamp/1000 + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: eventNameLifecycleStageLead,
+			},
+			{
+				Name: eventNameLifecycleStageCustomer,
+			},
+			{
+				Name: eventNameLifecycleStageJunk,
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: util.EP_TIMESTAMP,
+			},
+		},
+	}
+
+	result, status, _ := store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, 3, len(result.Rows))
+	eventNameTimestamp := make(map[string]int64)
+	for i := range result.Rows {
+		timestamp, _ := util.GetPropertyValueAsFloat64(result.Rows[i][1])
+		eventNameTimestamp[result.Rows[i][0].(string)] = int64(timestamp)
+	}
+	assert.Equal(t, lastModifiedDate/1000+1, eventNameTimestamp[eventNameLifecycleStageLead]) // timestamp+1
+	assert.Equal(t, toCustomerTimestamp/1000, eventNameTimestamp[eventNameLifecycleStageCustomer])
+	assert.Equal(t, (toJunkTimestamp-1)/1000+1, eventNameTimestamp[eventNameLifecycleStageJunk]) // timestamp+1
 }

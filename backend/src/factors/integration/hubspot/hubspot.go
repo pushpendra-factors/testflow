@@ -303,14 +303,14 @@ func getTimestampFromField(projectID uint64, propertyName string, properties *ma
 	return 0, errors.New("field doest not exist")
 }
 
-// TrackHubspotSmartEvent valids hubspot current properties with CRM smart filter and creates a event
-func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}, recordTimestamp int64) *map[string]interface{} {
+// TrackHubspotSmartEvent validates hubspot current properties with CRM smart filter and creates a event
+func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmartEventName, eventID, customerUserID, userID string, docType int, currentProperties, prevProperties *map[string]interface{}, defaultTimestamp int64) *map[string]interface{} {
 	var valid bool
 	var smartEventPayload *model.CRMSmartEvent
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "doc_type": docType})
 
-	if projectID == 0 || userID == "" || docType == 0 || currentProperties == nil || recordTimestamp == 0 {
+	if projectID == 0 || userID == "" || docType == 0 || currentProperties == nil || defaultTimestamp == 0 {
 		logCtx.Error("Missing required fields.")
 		return prevProperties
 	}
@@ -338,18 +338,18 @@ func TrackHubspotSmartEvent(projectID uint64, hubspotSmartEventName *HubspotSmar
 
 	timestampReferenceField := hubspotSmartEventName.Filter.TimestampReferenceField
 	if timestampReferenceField == model.TimestampReferenceTypeDocument {
-		smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp) + 1
+		smartEventTrackPayload.Timestamp = getEventTimestamp(defaultTimestamp) + 1
 	} else {
 		fieldTimestamp, err := getTimestampFromField(projectID, timestampReferenceField, currentProperties)
 		if err != nil {
 			logCtx.WithField("timestamp_refrence_field", timestampReferenceField).
 				WithError(err).Errorf("Failed to get timestamp from reference field")
-			smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp) + 1 // use record timestamp if custom timestamp not available
+			smartEventTrackPayload.Timestamp = getEventTimestamp(defaultTimestamp) + 1 // use record timestamp if custom timestamp not available
 		} else {
 			if fieldTimestamp <= 0 {
 				logCtx.WithField("timestamp_refrence_field", timestampReferenceField).
 					WithError(err).Error("O timestamp from timestamp refrence field.")
-				smartEventTrackPayload.Timestamp = getEventTimestamp(recordTimestamp) + 1
+				smartEventTrackPayload.Timestamp = getEventTimestamp(defaultTimestamp) + 1
 			} else {
 				smartEventTrackPayload.Timestamp = fieldTimestamp // make sure timestamp in seconds
 			}
@@ -648,9 +648,17 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		return http.StatusInternalServerError
 	}
 
+	var defaultSmartEventTimestamp int64
+	if timestamp, err := model.GetHubspotDocumentUpdatedTimestamp(document); err != nil {
+		logCtx.WithError(err).Warn("Failed to get last modified timestamp for smart event. Using document timestamp")
+		defaultSmartEventTimestamp = document.Timestamp
+	} else {
+		defaultSmartEventTimestamp = timestamp
+	}
+
 	var prevProperties *map[string]interface{}
 	for i := range hubspotSmartEventNames {
-		prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, customerUserID, userID, document.Type, properties, prevProperties, document.Timestamp)
+		prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], eventID, customerUserID, userID, document.Type, properties, prevProperties, defaultSmartEventTimestamp)
 	}
 
 	// Mark as synced, if customer_user_id not present or present and identified.
@@ -1021,10 +1029,18 @@ func syncDeal(projectID uint64, document *model.HubspotDocument, hubspotSmartEve
 			return http.StatusInternalServerError
 		}
 
+		var defaultSmartEventTimestamp int64
+		if timestamp, err := model.GetHubspotDocumentUpdatedTimestamp(document); err != nil {
+			logCtx.WithError(err).Warn("Failed to get last modified timestamp for smart event. Using document timestamp")
+			defaultSmartEventTimestamp = document.Timestamp
+		} else {
+			defaultSmartEventTimestamp = timestamp
+		}
+
 		eventID = response.EventId
 		var prevProperties *map[string]interface{}
 		for i := range hubspotSmartEventNames {
-			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, "", userID, document.Type, properties, prevProperties, document.Timestamp)
+			prevProperties = TrackHubspotSmartEvent(projectID, &hubspotSmartEventNames[i], response.EventId, "", userID, document.Type, properties, prevProperties, defaultSmartEventTimestamp)
 		}
 	}
 
