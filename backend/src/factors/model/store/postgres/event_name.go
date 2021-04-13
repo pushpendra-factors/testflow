@@ -249,7 +249,7 @@ func isValidName(name string, typ string) bool {
 
 func (pg *Postgres) GetEventName(name string, projectId uint64) (*model.EventName, int) {
 	// Input Validation. (ID is to be auto generated)
-	if name == "" || projectId == 0 {
+	if name == "" || name == "null" || projectId == 0 {
 		log.Error("GetEventName Failed. Missing name or projectId")
 		return nil, http.StatusBadRequest
 	}
