@@ -18,10 +18,13 @@ import { fetchProjects } from "../../reducers/agentActions";
 import { fetchQueries } from "../../reducers/coreQuery/services";
 import { fetchDashboards } from "../../reducers/dashboard/services";
 import PageSuspenseLoader from "../../components/SuspenseLoaders/PageSuspenseLoader";
+import retryDynamicImport from 'Utils/dynamicImport';
+import { FaErrorComp, FaErrorLog } from 'factorsComponents';
+import {ErrorBoundary} from 'react-error-boundary';
 
-const CoreQuery = lazy(() => import("../CoreQuery"));
-const Dashboard = lazy(() => import("../Dashboard"));
-const Factors = lazy(() => import("../Factors"));
+const CoreQuery = lazy(()=>retryDynamicImport(() => import("../CoreQuery")));
+const Dashboard = lazy(()=>retryDynamicImport(() => import("../Dashboard")));
+const Factors = lazy(()=>retryDynamicImport(() => import("../Factors")));
 
 function AppLayout({ fetchProjects }) {
   const [dataLoading, setDataLoading] = useState(true);
@@ -70,6 +73,7 @@ function AppLayout({ fetchProjects }) {
         <Spin size={"large"} className={"fa-page-loader"} />
       ) : (
         <Layout>
+          <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Bundle Error:01'} subtitle={ "We are facing trouble loading App Bundles. Drop us a message on the in-app chat."} />} onError={FaErrorLog}> 
           {!show_analytics_result ? <Sidebar /> : null}
           <Layout className={contentClassName}>
             <Content className="bg-white min-h-screen">
@@ -92,6 +96,7 @@ function AppLayout({ fetchProjects }) {
               </Suspense>
             </Content>
           </Layout>
+          </ErrorBoundary>
         </Layout>
       )}
     </>

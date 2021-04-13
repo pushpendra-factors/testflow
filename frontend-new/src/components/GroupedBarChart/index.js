@@ -38,7 +38,7 @@ function GroupedBarChart({
     const availableWidth = d3
       .select(chartRef.current)
       .node()
-      .getBoundingClientRect().width;
+      ?.getBoundingClientRect().width;
     const tooltip = d3.select(tooltipRef.current);
 
     const showTooltip = (data) => {

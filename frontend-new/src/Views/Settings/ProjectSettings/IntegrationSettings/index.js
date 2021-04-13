@@ -1,19 +1,19 @@
-import React, { useState, useEffect, lazy } from 'react';
-import {
-  Row, Col, Tag, Avatar, Skeleton, Button
-} from 'antd';
-import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
-import { connect } from 'react-redux';
-import { fetchProjectSettings } from 'Reducers/global'; 
+import React, { useState, useEffect, lazy } from "react";
+import { Row, Col, Tag, Avatar, Skeleton, Button } from "antd";
+import { Text, SVG, FaErrorComp, FaErrorLog } from "factorsComponents";
+import { connect } from "react-redux";
+import { fetchProjectSettings } from "Reducers/global";
+import retryDynamicImport from 'Utils/dynamicImport';
 
-const HubspotIntegration = lazy(() => import("./Hubspot"));
-const SegmentIntegration = lazy(() => import("./Segment"));
-const DriftIntegration = lazy(() => import("./Drift"));
-const GoogleAdWords = lazy(() => import("./GoogleAdWords"));
-const FacebookIntegration = lazy(() => import("./Facebook"));
-const SalesForceIntegration = lazy(() => import("./Salesforce"));
-const LinkedInIntegration = lazy(() => import("./LinkedIn"));
-import {ErrorBoundary} from 'react-error-boundary'
+const HubspotIntegration = lazy(()=>retryDynamicImport(() => import("./Hubspot")));
+const SegmentIntegration = lazy(()=>retryDynamicImport(() => import("./Segment")));
+const DriftIntegration = lazy(()=>retryDynamicImport(() => import("./Drift")));
+const GoogleAdWords = lazy(()=>retryDynamicImport(() => import("./GoogleAdWords")));
+const FacebookIntegration = lazy(()=>retryDynamicImport(() => import("./Facebook")));
+const SalesForceIntegration = lazy(()=>retryDynamicImport(() => import("./Salesforce")));
+const LinkedInIntegration = lazy(()=>retryDynamicImport(() => import("./LinkedIn")));
+
+import { ErrorBoundary } from "react-error-boundary";
 
 const IntegrationProviderData = [
   {
@@ -79,9 +79,15 @@ const IntegrationCard = ({ item, index }) => {
 
   return (
     <div key={index} className="fa-intergration-card">
-      <div className={'flex justify-between'}>
-        <div className={'flex'}>
-          <Avatar size={40} shape={'square'} icon={<SVG name={item.icon} size={40} color={'purple'} />} style={{ backgroundColor: '#F5F6F8' }} />
+      <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Bundle Error:02'} subtitle={ "We are facing trouble loading App Bundles. Drop us a message on the in-app chat."} />} onError={FaErrorLog}> 
+      <div className={"flex justify-between"}>
+        <div className={"flex"}>
+          <Avatar
+            size={40}
+            shape={"square"}
+            icon={<SVG name={item.icon} size={40} color={"purple"} />}
+            style={{ backgroundColor: "#F5F6F8" }}
+          />
         </div>
         <div className={'flex flex-col justify-start items-start ml-4 w-full'}>
           <div className={'flex items-center'}>
@@ -97,6 +103,7 @@ const IntegrationCard = ({ item, index }) => {
           </div>
         }
       </div>
+      </ErrorBoundary>
     </div>
   );
 };
