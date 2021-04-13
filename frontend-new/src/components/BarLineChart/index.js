@@ -45,7 +45,7 @@ function BarLineChart({
               document.body
             ).scrollTop;
       if (chartType === "bar") {
-        nodePosition = d3.select(nodes[i]).node().getBoundingClientRect();
+        nodePosition = d3.select(nodes[i]).node()?.getBoundingClientRect();
         left = nodePosition.x + nodePosition.width / 2;
         // // if user is hovering over the last bar
         if (left + 200 >= document.documentElement.clientWidth) {
@@ -62,7 +62,7 @@ function BarLineChart({
         nodePosition = d3
           .select(`#${identifier}`)
           .node()
-          .getBoundingClientRect();
+          ?.getBoundingClientRect();
         left = nodePosition.x + 20;
         if (left + 200 >= document.documentElement.clientWidth) {
           left = nodePosition.x + nodePosition.width / 2 - 200;
@@ -76,7 +76,7 @@ function BarLineChart({
       const visitorsIdx = responseHeaders.indexOf("Website Visitors");
       const rowIndex = visibleIndices[i];
 
-      const toolTipHeight = d3.select(".toolTip").node().getBoundingClientRect()
+      const toolTipHeight = d3.select(".toolTip").node()?.getBoundingClientRect()
         .height;
 
       tooltip.current.html(
@@ -166,7 +166,7 @@ function BarLineChart({
     const availableWidth = d3
       .select(chartRef.current)
       .node()
-      .getBoundingClientRect().width;
+      ?.getBoundingClientRect().width;
     const margin = { top: 20, right: 70, bottom: 40, left: 80 };
     const svg = d3
       .select(chartRef.current)

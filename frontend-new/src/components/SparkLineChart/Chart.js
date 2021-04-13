@@ -26,7 +26,7 @@ function SparkChart({
       bottom: 30,
       left: 10,
     };
-    const width = d3.select(chartRef.current).node().getBoundingClientRect()
+    const width = d3.select(chartRef.current).node()?.getBoundingClientRect()
       .width;
     const height = widgetHeight || 180;
 

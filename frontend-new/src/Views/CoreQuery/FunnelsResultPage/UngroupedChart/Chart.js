@@ -43,7 +43,7 @@ function Chart({
     const availableWidth = d3
       .select(chartRef.current)
       .node()
-      .getBoundingClientRect().width;
+      ?.getBoundingClientRect().width;
     const tooltip = d3.select(tooltipRef.current);
     d3.select(chartRef.current)
       .html("")

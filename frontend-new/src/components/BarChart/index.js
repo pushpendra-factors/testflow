@@ -51,7 +51,7 @@ function BarChart({
         }
       });
 
-      const nodePosition = d3.select(nodes[i]).node().getBoundingClientRect();
+      const nodePosition = d3.select(nodes[i]).node()?.getBoundingClientRect();
       let left = nodePosition.x + nodePosition.width / 2;
 
       // if user is hovering over the last bar
@@ -68,7 +68,7 @@ function BarChart({
               document.body
             ).scrollTop;
       const top = nodePosition.y + scrollTop;
-      const toolTipHeight = d3.select(".toolTip").node().getBoundingClientRect()
+      const toolTipHeight = d3.select(".toolTip").node()?.getBoundingClientRect()
         .height;
 
       tooltip.current
@@ -99,7 +99,7 @@ function BarChart({
     const availableWidth = d3
       .select(chartRef.current)
       .node()
-      .getBoundingClientRect().width;
+      ?.getBoundingClientRect().width;
     d3.select(chartRef.current)
       .html("")
       .append("svg")

@@ -1206,6 +1206,10 @@ func (pg *Postgres) GetDistinctCustomerUserIDSForProject(projectID uint64) ([]st
 
 // GetUserIdentificationPhoneNumber tries various patterns of phone number if exist in db and return the phone no based on priority
 func (pg *Postgres) GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string) {
+	if len(phoneNo) < 5 {
+		return "", ""
+	}
+
 	pPhoneNo := U.GetPossiblePhoneNumber(phoneNo)
 	existingPhoneNo, errCode := pg.GetExistingCustomerUserID(projectID, pPhoneNo)
 	if errCode == http.StatusFound {

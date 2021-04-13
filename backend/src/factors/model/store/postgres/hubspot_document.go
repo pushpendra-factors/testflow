@@ -16,11 +16,6 @@ import (
 	U "factors/util"
 )
 
-var errorInvalidHubspotDocumentType = errors.New("invalid document type")
-var errorFailedToGetCreatedAtFromHubspotDocument = errors.New("failed to get created_at from document")
-var errorFailedToGetUpdatedAtFromHubspotDocument = errors.New("failed to get updated_at from document")
-var errorUsingFallbackKey = errors.New("using fallback key from document")
-
 const error_DuplicateHubspotDocument = "pq: duplicate key value violates unique constraint \"hubspot_documents_pkey\""
 
 func isDuplicateHubspotDocumentError(err error) bool {
@@ -29,7 +24,7 @@ func isDuplicateHubspotDocumentError(err error) bool {
 
 func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 	if document.Type == 0 {
-		return "", errorInvalidHubspotDocumentType
+		return "", model.ErrorHubspotInvalidHubspotDocumentType
 	}
 
 	documentMap, err := U.DecodePostgresJsonb(document.Value)
@@ -132,208 +127,6 @@ func (pg *Postgres) GetHubspotDocumentByTypeAndActions(projectId uint64, ids []s
 	return documents, http.StatusFound
 }
 
-func getTimestampFromPropertiesByKey(propertiesMap map[string]interface{}, key string) (int64, error) {
-	propertyValue, exists := propertiesMap[key]
-	if !exists || propertyValue == nil {
-		return 0, errors.New("failed to get timestamp from property key")
-	}
-
-	propertyValueMap := propertyValue.(map[string]interface{})
-	timestampValue, exists := propertyValueMap["timestamp"]
-	if !exists || timestampValue == nil {
-		return 0, errors.New("timestamp key not exist on property map")
-	}
-
-	timestamp, err := model.ReadHubspotTimestamp(timestampValue)
-	if err != nil || timestamp == 0 {
-		return 0, errors.New("failed to read hubspot timestamp value")
-	}
-
-	return timestamp, nil
-}
-
-func getHubspotDocumentCreatedTimestamp(document *model.HubspotDocument) (int64, error) {
-	if document.Type == 0 {
-		return 0, errorInvalidHubspotDocumentType
-	}
-
-	value, err := U.DecodePostgresJsonb(document.Value)
-	if err != nil {
-		return 0, err
-	}
-
-	if document.Type == model.HubspotDocumentTypeCompany {
-		properties, exists := (*value)["properties"]
-		if !exists || properties == nil {
-			return 0, errorFailedToGetCreatedAtFromHubspotDocument
-		}
-		propertiesMap := properties.(map[string]interface{})
-
-		createdAt, err := getTimestampFromPropertiesByKey(propertiesMap, "name")
-		if err != nil {
-			createdAt, err = getTimestampFromPropertiesByKey(propertiesMap, "createdate")
-			if err != nil {
-				return 0, err
-			}
-		}
-
-		return createdAt, nil
-	}
-
-	if document.Type == model.HubspotDocumentTypeDeal {
-		properties, exists := (*value)["properties"]
-		if !exists || properties == nil {
-			return 0, errorFailedToGetCreatedAtFromHubspotDocument
-		}
-		propertiesMap := properties.(map[string]interface{})
-
-		hsCreateDate, exists := propertiesMap["hs_createdate"]
-		if exists {
-			hsCreateDateMap := hsCreateDate.(map[string]interface{})
-			createdAtValue, exists := hsCreateDateMap["value"]
-			if exists && createdAtValue != nil {
-				createdAt, err := model.ReadHubspotTimestamp(createdAtValue)
-				if err != nil || createdAt == 0 {
-					return 0, errorFailedToGetCreatedAtFromHubspotDocument
-				}
-
-				return createdAt, nil
-			}
-		}
-
-		createdAt, err := getTimestampFromPropertiesByKey(propertiesMap, "dealname")
-		if err != nil {
-			return 0, err
-		}
-
-		return createdAt, nil
-	}
-
-	var createdAtKey string
-	if document.Type == model.HubspotDocumentTypeContact {
-		createdAtKey = "createdate"
-	} else if document.Type == model.HubspotDocumentTypeForm {
-		createdAtKey = "createdAt"
-	} else if document.Type == model.HubspotDocumentTypeFormSubmission {
-		createdAtKey = "submittedAt"
-	} else {
-		return 0, errorFailedToGetCreatedAtFromHubspotDocument
-	}
-
-	if document.Type == model.HubspotDocumentTypeContact {
-
-		var hubspotDocumentProperties HubspotDocumentProperties
-		err := json.Unmarshal(document.Value.RawMessage, &hubspotDocumentProperties)
-		if err != nil {
-			return 0, errors.New("Failed to unmarshal document properties")
-		}
-
-		createdAtStr, exist := hubspotDocumentProperties.Properties[createdAtKey]
-		if exist {
-			createdAt, err := model.ReadHubspotTimestamp(createdAtStr.Value)
-			if err != nil {
-				return 0, err
-			}
-			return createdAt, nil
-		}
-
-		createdAtKey = "addedAt"
-		createdAtInt, exists := (*value)[createdAtKey]
-		if !exists {
-			return 0, errorFailedToGetCreatedAtFromHubspotDocument
-		}
-
-		createdAt, err := model.ReadHubspotTimestamp(createdAtInt)
-		if err != nil || createdAt == 0 {
-			log.WithFields(log.Fields{"document_id": document.ID}).Warn("Failed to read addedAt from contact document.")
-			return 0, errorFailedToGetCreatedAtFromHubspotDocument
-		}
-
-		return createdAt, errorUsingFallbackKey
-	}
-
-	createdAtInt, exists := (*value)[createdAtKey]
-	if !exists || createdAtInt == nil {
-		return 0, errorFailedToGetCreatedAtFromHubspotDocument
-	}
-
-	createdAt, err := model.ReadHubspotTimestamp(createdAtInt)
-	if err != nil || createdAt == 0 {
-		return 0, errorFailedToGetCreatedAtFromHubspotDocument
-	}
-
-	return createdAt, nil
-}
-
-func getHubspotDocumentUpdatedTimestamp(document *model.HubspotDocument) (int64, error) {
-	if document.Type == 0 {
-		return 0, errorInvalidHubspotDocumentType
-	}
-
-	value, err := U.DecodePostgresJsonb(document.Value)
-	if err != nil {
-		return 0, err
-	}
-
-	// property nested value.
-	var propertyUpdateAtKey string
-	if document.Type == model.HubspotDocumentTypeCompany ||
-		document.Type == model.HubspotDocumentTypeDeal {
-
-		propertyUpdateAtKey = "hs_lastmodifieddate"
-	} else if document.Type == model.HubspotDocumentTypeContact {
-		propertyUpdateAtKey = "lastmodifieddate"
-	}
-	if propertyUpdateAtKey != "" {
-		properties, exists := (*value)["properties"]
-		if !exists || properties == nil {
-			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
-		}
-		propertiesMap := properties.(map[string]interface{})
-
-		propertyUpdateAt, exists := propertiesMap[propertyUpdateAtKey]
-		if !exists || propertyUpdateAt == nil {
-			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
-		}
-
-		propertyUpdateAtMap := propertyUpdateAt.(map[string]interface{})
-		value, exists := propertyUpdateAtMap["value"]
-		if !exists || value == nil {
-			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
-		}
-
-		updatedAt, err := model.ReadHubspotTimestamp(value)
-		if err != nil || updatedAt == 0 {
-			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
-		}
-
-		return updatedAt, nil
-	}
-
-	// direct values.
-	var updatedAtKey string
-	if document.Type == model.HubspotDocumentTypeForm {
-		updatedAtKey = "updatedAt"
-	} else if document.Type == model.HubspotDocumentTypeFormSubmission {
-		updatedAtKey = "submittedAt"
-	}
-	if updatedAtKey != "" {
-		updatedAtInt, exists := (*value)[updatedAtKey]
-		if !exists || updatedAtInt == nil {
-			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
-		}
-
-		updatedAt, err := model.ReadHubspotTimestamp(updatedAtInt)
-		if err != nil || updatedAt == 0 {
-			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
-		}
-
-		return updatedAt, nil
-	}
-
-	return 0, errorFailedToGetUpdatedAtFromHubspotDocument
-}
-
 func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.HubspotDocument) int {
 	logCtx := log.WithField("project_id", document.ProjectId)
 
@@ -355,13 +148,13 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 		return http.StatusBadRequest
 	}
 
-	documentId, err := getHubspotDocumentId(document)
+	documentID, err := getHubspotDocumentId(document)
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to get id for hubspot document on create.")
 		return http.StatusInternalServerError
 	}
-	document.ID = documentId
+	document.ID = documentID
 
 	logCtx = logCtx.WithField("type", document.Type).WithField("value", document.Value)
 
@@ -377,16 +170,16 @@ func (pg *Postgres) CreateHubspotDocument(projectId uint64, document *model.Hubs
 	if isNew {
 		updatedDocument = *document
 		document.Action = model.HubspotDocumentActionCreated // created
-		timestamp, err = getHubspotDocumentCreatedTimestamp(document)
+		timestamp, err = model.GetHubspotDocumentCreatedTimestamp(document)
 	} else {
 		document.Action = model.HubspotDocumentActionUpdated // updated
 		// Any update on the entity would create a new hubspot document.
 		// i.e, deal will be synced after updating a created deal with a
 		// contact or a company.
-		timestamp, err = getHubspotDocumentUpdatedTimestamp(document)
+		timestamp, err = model.GetHubspotDocumentUpdatedTimestamp(document)
 	}
 	if err != nil {
-		if err != errorUsingFallbackKey {
+		if err != model.ErrorHubspotUsingFallbackKey {
 			logCtx.WithField("action", document.Action).WithError(err).Error(
 				"Failed to get timestamp from hubspot document on create.")
 			return http.StatusInternalServerError
@@ -559,16 +352,6 @@ func (pg *Postgres) GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, i
 	return &documents[0], http.StatusFound
 }
 
-// HubspotProperty only holds the value for hubspot document properties
-type HubspotProperty struct {
-	Value string `json:"value"`
-}
-
-// HubspotDocumentProperties only holds the properties object of the doucment
-type HubspotDocumentProperties struct {
-	Properties map[string]HubspotProperty `json:"properties"`
-}
-
 func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []model.HubspotDocument, propertyName string, limit int) []interface{} {
 	if len(hubspotDocuments) < 1 || propertyName == "" {
 		return nil
@@ -576,7 +359,7 @@ func getHubspotDocumentValuesByPropertyNameAndLimit(hubspotDocuments []model.Hub
 
 	valuesAggregate := make(map[interface{}]int)
 	for i := range hubspotDocuments {
-		var docProperties HubspotDocumentProperties
+		var docProperties model.HubspotDocumentProperties
 		err := json.Unmarshal((hubspotDocuments[i].Value).RawMessage, &docProperties)
 		if err != nil {
 			log.WithFields(log.Fields{"document_id": hubspotDocuments[i].ID}).WithError(err).Error("Failed to unmarshal hubspot document on getAllHubspotDocumentPropertiesValue")
@@ -612,7 +395,7 @@ func getHubspotDocumentPropertiesNameByType(hubspotDocuments []model.HubspotDocu
 	currentTimestamp := U.TimeNowUnix() * 1000
 
 	for i := range hubspotDocuments {
-		var docProperties HubspotDocumentProperties
+		var docProperties model.HubspotDocumentProperties
 		err := json.Unmarshal((hubspotDocuments[i].Value).RawMessage, &docProperties)
 		if err != nil {
 			log.WithError(err).Error("Failed to unmarshal hubspot document on GetHubspotObjectProperties")

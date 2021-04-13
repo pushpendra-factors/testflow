@@ -15,15 +15,18 @@ import {
 } from "react-router-dom";
 import PageSuspenseLoader from "./components/SuspenseLoaders/PageSuspenseLoader";
 import * as Sentry from "@sentry/react";
-import LogRocket from 'logrocket';
+import LogRocket from "logrocket";
+import retryDynamicImport from 'Utils/dynamicImport';
+import { FaErrorComp, FaErrorLog } from 'factorsComponents';
+import {ErrorBoundary} from 'react-error-boundary';
 
-const AppLayout = lazy(() => import("./Views/AppLayout"));
-const Login = lazy(() => import("./Views/Pages/Login"));
-const ForgotPassword = lazy(() => import("./Views/Pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("./Views/Pages/ResetPassword"));
-const SignUp = lazy(() => import("./Views/Pages/SignUp"));
-const Activate = lazy(() => import("./Views/Pages/Activate"));
-const FactorsInsights = lazy(() => import("./Views/Factors/FactorsInsights"));
+const AppLayout = lazy(()=>retryDynamicImport(() => import("./Views/AppLayout")));
+const Login = lazy(()=>retryDynamicImport(() => import("./Views/Pages/Login")));
+const ForgotPassword = lazy(()=>retryDynamicImport(() => import("./Views/Pages/ForgotPassword")));
+const ResetPassword = lazy(()=>retryDynamicImport(() => import("./Views/Pages/ResetPassword")));
+const SignUp = lazy(()=>retryDynamicImport(() => import("./Views/Pages/SignUp")));
+const Activate = lazy(()=>retryDynamicImport(() => import("./Views/Pages/Activate")));
+const FactorsInsights = lazy(()=>retryDynamicImport(() => import("./Views/Factors/FactorsInsights")));
 
 function App({ isAgentLoggedIn, agent_details }) {
 
@@ -123,6 +126,7 @@ function App({ isAgentLoggedIn, agent_details }) {
 
   return (
     <div className="App">
+       <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Bundle Error'} subtitle={ "We are facing trouble loading App Bundles. Drop us a message on the in-app chat."} />} onError={FaErrorLog}> 
       <Suspense fallback={<PageSuspenseLoader />}>
         <Router>
           <Switch>
@@ -164,6 +168,7 @@ function App({ isAgentLoggedIn, agent_details }) {
           </Switch>
         </Router>
       </Suspense>
+      </ErrorBoundary>
     </div>
   );
 }
