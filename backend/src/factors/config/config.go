@@ -161,6 +161,8 @@ type Configuration struct {
 	CacheSortedSet                           bool
 	ProjectAnalyticsWhitelistedUUIds         []string
 	PrimaryDatastore                         string
+	// Flag for enabling only the /mql routes for secondary env testing.
+	EnableMQLAPI bool
 }
 
 type Services struct {
@@ -1379,4 +1381,8 @@ func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 		}
 	}
 	return false
+}
+
+func EnableMQLAPI() bool {
+	return configuration.EnableMQLAPI
 }

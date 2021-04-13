@@ -3,15 +3,40 @@ package main
 import (
 	C "factors/config"
 	"factors/model/store"
+	U "factors/util"
 	"flag"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	IntHubspot "factors/integration/hubspot"
 
 	log "github.com/sirupsen/logrus"
 )
+
+type SyncStatus struct {
+	Status     []IntHubspot.Status
+	HasFailure bool
+	Lock       sync.Mutex
+}
+
+func (s *SyncStatus) AddSyncStatus(status []IntHubspot.Status, hasFailure bool) {
+	s.Lock.Lock()
+	defer s.Lock.Unlock()
+
+	s.Status = append(s.Status, status...)
+	if hasFailure {
+		s.HasFailure = hasFailure
+	}
+}
+
+func syncWorker(projectID uint64, wg *sync.WaitGroup, syncStatus *SyncStatus) {
+	defer wg.Done()
+
+	status, hasFailure := IntHubspot.Sync(projectID)
+	syncStatus.AddSyncStatus(status, hasFailure)
+}
 
 func main() {
 	env := flag.String("env", "development", "")
@@ -51,6 +76,8 @@ func main() {
 	deprecateUserPropertiesTableReadProjectIDs := flag.String("deprecate_user_properties_table_read_projects",
 		"", "List of projects for which user_properties table read to be deprecated.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
+
+	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
 
 	flag.Parse()
 
@@ -124,9 +151,10 @@ func main() {
 		log.Panic("No projects enabled hubspot integration.")
 	}
 
-	statusList := make([]IntHubspot.Status, 0, 0)
 	var propertyDetailSyncStatus []IntHubspot.Status
 	anyFailure := false
+
+	projectIDs := make([]uint64, 0, 0)
 	for _, settings := range hubspotEnabledProjectSettings {
 		if C.IsEnabledPropertyDetailByProjectID(settings.ProjectId) {
 			log.Info(fmt.Sprintf("Starting sync property details for project %d", settings.ProjectId))
@@ -140,23 +168,33 @@ func main() {
 			log.Info(fmt.Sprintf("Synced property details for project %d", settings.ProjectId))
 		}
 
-		status, failure := IntHubspot.Sync(settings.ProjectId)
-		if failure {
-			anyFailure = true
-		}
-
-		statusList = append(statusList, status...)
+		projectIDs = append(projectIDs, settings.ProjectId)
 	}
 
-	syncStatus := map[string]interface{}{
-		"document_sync":      statusList,
+	// Runs enrichment for list of project_ids as batch using go routines.
+	batches := U.GetUint64ListAsBatch(projectIDs, *numProjectRoutines)
+	syncStatus := SyncStatus{}
+	for bi := range batches {
+		batch := batches[bi]
+
+		var wg sync.WaitGroup
+		for pi := range batch {
+			wg.Add(1)
+			go syncWorker(batch[pi], &wg, &syncStatus)
+		}
+		wg.Wait()
+	}
+	anyFailure = anyFailure || syncStatus.HasFailure
+
+	jobStatus := map[string]interface{}{
+		"document_sync":      syncStatus.Status,
 		"property_type_sync": propertyDetailSyncStatus,
 	}
 
 	if anyFailure {
-		C.PingHealthcheckForFailure(healthcheckPingID, syncStatus)
+		C.PingHealthcheckForFailure(healthcheckPingID, jobStatus)
 		return
 	}
 
-	C.PingHealthcheckForSuccess(healthcheckPingID, syncStatus)
+	C.PingHealthcheckForSuccess(healthcheckPingID, jobStatus)
 }

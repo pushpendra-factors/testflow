@@ -25,7 +25,7 @@ const ROUTE_VERSION_V1 = "/v1"
 
 func InitAppRoutes(r *gin.Engine) {
 	routePrefix := ""
-	if C.UseMemSQLDatabaseStore() {
+	if C.UseMemSQLDatabaseStore() || C.EnableMQLAPI() {
 		routePrefix = "/mql"
 	}
 
