@@ -103,6 +103,7 @@ func main() {
 		"", "List of UUIDs whitelisted for project analytics API")
 	showSmartPropertiesAllowedProjectIDs := flag.String("show_smart_properties_allowed_projects",
 		"", "List of projects to show smart properties in channel configs.")
+	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
 
 	flag.Parse()
 	if *primaryDatastore == C.DatastoreTypeMemSQL {
@@ -172,6 +173,7 @@ func main() {
 		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 		ShowSmartPropertiesAllowedProjectIDs:     *showSmartPropertiesAllowedProjectIDs,
 		ProjectAnalyticsWhitelistedUUIds:         C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
+		EnableMQLAPI:                             *enableMQLAPI,
 	}
 
 	// Initialize configs and connections.
