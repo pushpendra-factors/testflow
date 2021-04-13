@@ -870,6 +870,10 @@ func (store *MemSQL) GetDistinctCustomerUserIDSForProject(projectID uint64) ([]s
 
 // GetUserIdentificationPhoneNumber tries various patterns of phone number if exist in db and return the phone no based on priority
 func (store *MemSQL) GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string) {
+	if len(phoneNo) < 5 {
+		return "", ""
+	}
+
 	pPhoneNo := U.GetPossiblePhoneNumber(phoneNo)
 	existingPhoneNo, errCode := store.GetExistingCustomerUserID(projectID, pPhoneNo)
 	if errCode == http.StatusFound {

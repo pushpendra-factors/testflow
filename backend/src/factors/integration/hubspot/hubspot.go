@@ -161,36 +161,25 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 	}
 
 	// identify using phone if exist on properties.
-	phoneInt, phoneExists := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
+	phoneInt := properties[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceHubspot,
 		model.HubspotDocumentTypeNameContact, "phone")]
-	if phoneExists || phoneInt != nil {
+	if phoneInt != nil {
 		phone := U.GetPropertyValueAsString(phoneInt)
-		if phone != "" {
-			identifiedPhone, _ := store.GetStore().GetUserIdentificationPhoneNumber(projectID, phone)
-			if identifiedPhone != "" {
-				return identifiedPhone
-			}
+		identifiedPhone, _ := store.GetStore().GetUserIdentificationPhoneNumber(projectID, phone)
+		if identifiedPhone != "" {
+			return identifiedPhone
 		}
+
 	}
 
 	// other possible phone keys.
-	var phoneKey string
 	for key := range properties {
 		hasPhone := strings.Index(key, "phone")
-		if hasPhone > -1 && phoneKey == "" {
-			phoneKey = key
-		}
-	}
-
-	if phoneKey != "" {
-		phoneInt = properties[phoneKey]
-		if phoneInt != nil {
-			phone := U.GetPropertyValueAsString(phoneInt)
-			if phone != "" {
-				identifiedPhone, _ := store.GetStore().GetUserIdentificationPhoneNumber(projectID, phone)
-				if identifiedPhone != "" {
-					return identifiedPhone
-				}
+		if hasPhone > -1 {
+			phone := U.GetPropertyValueAsString(properties[key])
+			identifiedPhone, _ := store.GetStore().GetUserIdentificationPhoneNumber(projectID, phone)
+			if identifiedPhone != "" {
+				return identifiedPhone
 			}
 		}
 	}
