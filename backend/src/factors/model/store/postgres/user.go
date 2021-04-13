@@ -338,7 +338,6 @@ func mergeUserPropertiesByCustomerUserID(projectID uint64, users []model.User) (
 	// Additional check for properties that can be added. If merge is triggered for users with same set of properties,
 	// value of properties that can be added will change after addition. Below check is to avoid update in such case.
 	if !anyPropertyChanged(mergedUserPropertiesValues, len(users)) {
-		logCtx.Infof("Skipping merge as none of the properties changed %s", mergedUserPropertiesValues)
 		return &mergedUserProperties, http.StatusOK
 	}
 	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
