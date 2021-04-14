@@ -17,6 +17,10 @@ var smartPropertyRulesTypeAliasToType = map[string]int{
 	"campaign": 1,
 	"ad_group": 2,
 }
+var smartPropertyRulesTypeToTypeAlias = map[int]string{
+	1: "campaign",
+	2: "ad_group",
+}
 
 var sourceSmartProperty = map[string]bool{
 	"all":      true,
@@ -158,6 +162,12 @@ func (pg *Postgres) CreateSmartPropertyRules(projectID uint64, smartPropertyRule
 			"Failed to create rule object.")
 		return &model.SmartPropertyRules{}, "Internal server error", http.StatusInternalServerError
 	}
+	objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
+	if !typeAliasExists {
+		logCtx.Error("Invalid type alias.")
+		return &model.SmartPropertyRules{}, "Invalid type return from db.", http.StatusBadRequest
+	}
+	smartPropertyRule.TypeAlias = objectTypeAlias
 	return &smartPropertyRule, "", http.StatusCreated
 }
 func (pg *Postgres) UpdateSmartPropertyRules(projectID uint64, ruleID string, smartPropertyRulesDoc model.SmartPropertyRules) (model.SmartPropertyRules, string, int) {
@@ -236,16 +246,23 @@ func validationRules(rulesJsonb *postgres.Jsonb) bool {
 }
 
 func (pg *Postgres) GetSmartPropertyRules(projectID uint64) ([]model.SmartPropertyRules, int) {
-	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
+	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
-		return make([]model.SmartPropertyRules, 0, 0), http.StatusBadRequest
+		return make([]model.SmartPropertyRules, 0), http.StatusBadRequest
 	}
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND is_deleted != ?", projectID, true).Find(&smartPropertyRules).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error(err)
-		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
+		return make([]model.SmartPropertyRules, 0), http.StatusNotFound
+	}
+	for index, smartPropertyRule := range smartPropertyRules {
+		objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
+		if !typeAliasExists {
+			return []model.SmartPropertyRules{}, http.StatusBadRequest
+		}
+		smartPropertyRules[index].TypeAlias = objectTypeAlias
 	}
 	return smartPropertyRules, http.StatusFound
 }
@@ -277,6 +294,12 @@ func (pg *Postgres) GetSmartPropertyRule(projectID uint64, ruleID string) (model
 		log.WithField("project_id", projectID).Error(err)
 		return model.SmartPropertyRules{}, http.StatusNotFound
 	}
+	objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
+	if !typeAliasExists {
+		return model.SmartPropertyRules{}, http.StatusBadRequest
+	}
+	smartPropertyRule.TypeAlias = objectTypeAlias
+
 	return smartPropertyRule, http.StatusFound
 }
 

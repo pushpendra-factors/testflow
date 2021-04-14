@@ -17,6 +17,11 @@ var smartPropertyRulesTypeAliasToType = map[string]int{
 	"campaign": 1,
 	"ad_group": 2,
 }
+var smartPropertyRulesTypeToTypeAlias = map[int]string{
+	1: "campaign",
+	2: "ad_group",
+}
+
 var sourceSmartProperty = map[string]bool{
 	"all":      true,
 	"adwords":  true,
@@ -157,6 +162,12 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 			"Failed to create rule object.")
 		return &model.SmartPropertyRules{}, "Internal server error", http.StatusInternalServerError
 	}
+	objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
+	if !typeAliasExists {
+		logCtx.Error("Invalid type alias.")
+		return &model.SmartPropertyRules{}, "Invalid type return from db.", http.StatusBadRequest
+	}
+	smartPropertyRule.TypeAlias = objectTypeAlias
 	return &smartPropertyRule, "", http.StatusCreated
 }
 func (store *MemSQL) UpdateSmartPropertyRules(projectID uint64, ruleID string, smartPropertyRulesDoc model.SmartPropertyRules) (model.SmartPropertyRules, string, int) {
@@ -251,6 +262,13 @@ func (store *MemSQL) GetSmartPropertyRules(projectID uint64) ([]model.SmartPrope
 		log.WithField("project_id", projectID).Error(err)
 		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
 	}
+	for index, smartPropertyRule := range smartPropertyRules {
+		objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
+		if !typeAliasExists {
+			return []model.SmartPropertyRules{}, http.StatusBadRequest
+		}
+		smartPropertyRules[index].TypeAlias = objectTypeAlias
+	}
 	return smartPropertyRules, http.StatusFound
 }
 
@@ -281,6 +299,12 @@ func (store *MemSQL) GetSmartPropertyRule(projectID uint64, ruleID string) (mode
 		log.WithField("project_id", projectID).Error(err)
 		return model.SmartPropertyRules{}, http.StatusNotFound
 	}
+	objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
+	if !typeAliasExists {
+		return model.SmartPropertyRules{}, http.StatusBadRequest
+	}
+	smartPropertyRule.TypeAlias = objectTypeAlias
+
 	return smartPropertyRule, http.StatusFound
 }
 
