@@ -32,7 +32,7 @@ func sendCreateSmartPropertyReq(r *gin.Engine, project_id uint64, agent *model.A
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	url := "http://localhost:8080/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/v1/smart_properties"
+	url := "http://localhost:8080/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/v1/smart_properties/rules"
 	rb := U.NewRequestBuilder(http.MethodPost, url).
 		WithPostParams(payload).
 		WithCookie(&http.Cookie{
@@ -56,7 +56,7 @@ func sendGetSmartPropertyRulesReq(r *gin.Engine, projectID uint64, agent *model.
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	url := "http://localhost:8080/projects/" + strconv.FormatUint(uint64(projectID), 10) + "/v1/smart_properties"
+	url := "http://localhost:8080/projects/" + strconv.FormatUint(uint64(projectID), 10) + "/v1/smart_properties/rules"
 	rb := U.NewRequestBuilder(http.MethodGet, url).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -154,7 +154,7 @@ func TestSmartPropertyHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
-	project, agent, _ := SetupProjectWithAdminAgentDAO()
+	project, agent, _ := SetupProjectWithAgentDAO()
 	assert.NotNil(t, project)
 
 	name1 := U.RandomString(8)
