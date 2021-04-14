@@ -127,6 +127,33 @@ func (store *MemSQL) GetHubspotDocumentByTypeAndActions(projectId uint64, ids []
 	return documents, http.StatusFound
 }
 
+func (store *MemSQL) GetSyncedHubspotDocumentWithUserIDByFilter(projectId uint64,
+	id string, docType, action int) (*model.HubspotDocument, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "type": docType, "action": action})
+
+	var document model.HubspotDocument
+	if projectId == 0 || id == "" || docType == 0 || action == 0 {
+		logCtx.Error("Failed to get hubspot document. Invalid params.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	err := db.Limit(1).
+		Where("project_id = ? AND id = ? AND type = ? AND action = ? AND synced=true AND user_id IS NOT NULL",
+			projectId, id, docType, action).Find(&document).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get hubspot document with user_id.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return &document, http.StatusFound
+}
+
 func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.HubspotDocument) int {
 	logCtx := log.WithField("project_id", document.ProjectId)
 
