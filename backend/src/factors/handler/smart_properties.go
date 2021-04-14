@@ -54,15 +54,6 @@ func CreateSmartPropertyRulesHandler(c *gin.Context) (interface{}, int, string, 
 	if projectId == 0 {
 		return nil, http.StatusUnauthorized, V1.INVALID_PROJECT, V1.ErrorMessages[V1.INVALID_PROJECT], true
 	}
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-
-	projectAgentMapping, errCode := store.GetStore().GetProjectAgentMapping(projectId, loggedInAgentUUID)
-	if errCode != http.StatusFound {
-		return nil, http.StatusUnauthorized, V1.INVALID_INPUT, "Project agent mapping not found", true
-	}
-	if projectAgentMapping.Role != model.ADMIN {
-		return nil, http.StatusUnauthorized, V1.INVALID_INPUT, "Non-admin agent", true
-	}
 
 	r := c.Request
 
@@ -103,16 +94,6 @@ func UpdateSmartPropertyRulesHandler(c *gin.Context) (interface{}, int, string, 
 	if ruleID == "" {
 		log.Error("UpdateSmartProperty Failed. RuleID parse failed.")
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "RuleID parse failed", true
-	}
-
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-
-	projectAgentMapping, errCode := store.GetStore().GetProjectAgentMapping(projectID, loggedInAgentUUID)
-	if errCode != http.StatusFound {
-		return nil, http.StatusUnauthorized, V1.INVALID_INPUT, "Project agent mapping not found", true
-	}
-	if projectAgentMapping.Role != model.ADMIN {
-		return nil, http.StatusUnauthorized, V1.INVALID_INPUT, "Non-admin agent", true
 	}
 
 	r := c.Request
@@ -206,17 +187,7 @@ func DeleteSmartPropertyRulesHandler(c *gin.Context) (interface{}, int, string, 
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "RuleID parse failed", true
 	}
 
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-
-	projectAgentMapping, errCode := store.GetStore().GetProjectAgentMapping(projectID, loggedInAgentUUID)
-	if errCode != http.StatusFound {
-		return nil, http.StatusUnauthorized, V1.INVALID_INPUT, "Project agent mapping not found", true
-	}
-	if projectAgentMapping.Role != model.ADMIN {
-		return nil, http.StatusUnauthorized, V1.INVALID_INPUT, "Non-admin agent", true
-	}
-
-	errCode = store.GetStore().DeleteSmartPropertyRules(projectID, ruleID)
+	errCode := store.GetStore().DeleteSmartPropertyRules(projectID, ruleID)
 	if errCode != http.StatusAccepted {
 		return nil, errCode, V1.PROCESSING_FAILED, "Failed to delete smart property rule", true
 	}

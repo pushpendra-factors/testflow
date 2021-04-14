@@ -1,0 +1,38 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: persistent-pool-standard
+  name: cleanup-dangling-keys-job
+spec:
+  schedule: "1 2 3 4 5" #On Trigger
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: persistent-pool-standard
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: persistent-pool-standard
+          containers:
+          - name: cleanup-dangling-keys-job
+            image: us.gcr.io/factors-production/cleanup-dangling-keys-job:v0.1
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-persistent-redis
+          restartPolicy: OnFailure

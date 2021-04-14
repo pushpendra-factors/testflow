@@ -294,6 +294,13 @@ upload-cleanup-sortedset-cache: export IMAGE_NAME=cleanup-sortedset-cache-job
 upload-cleanup-sortedset-cache: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/cleanup-sortedset-cache-job:$(TAG)
 
+pack-cleanup-dangling-keys: 
+	docker build -t us.gcr.io/factors-$(ENV)/cleanup-dangling-keys-job:$(TAG) -f Dockerfile.cleanup_dangling_keys_job .
+
+upload-cleanup-dangling-keys: export IMAGE_NAME=cleanup-dangling-keys-job
+upload-cleanup-dangling-keys: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/cleanup-dangling-keys-job:$(TAG)
+
 pack-rollup-sortedset-cache: 
 	docker build -t us.gcr.io/factors-$(ENV)/rollup-sortedset-cache-job:$(TAG) -f Dockerfile.rollup_sortedset_cache_job .
 
