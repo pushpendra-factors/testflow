@@ -1192,6 +1192,9 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 		return newPropertiesMergedJSON, http.StatusAccepted
 	}
 
+	// map[user_id]map[property]value
+	userPropertiesOriginalValues := make(map[string]map[string]interface{}, 0)
+
 	// Update the merged properties to the current user's object before passing it on
 	// for merging by customer user id. The merge method orders by updated timestamp
 	// before merging.
@@ -1200,27 +1203,61 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 			users[i].Properties = *newPropertiesMergedJSON
 			users[i].PropertiesUpdatedTimestamp = newUpdateTimestamp
 		}
+
+		// Create a map of original values to overwrite, as part of
+		// skipping user properties merge by customer user_id.
+		userPropertiesMap, err := U.DecodePostgresJsonb(&users[i].Properties)
+		if err != nil {
+			logCtx.WithField("user_id", users[i].ID).Error("Failed to decode existing user_properties.")
+			continue
+		}
+
+		for _, property := range model.UserPropertiesToSkipOnMergeByCustomerUserID {
+			if _, exists := (*userPropertiesMap)[property]; exists {
+				if _, userExists := userPropertiesOriginalValues[users[i].ID]; !userExists {
+					userPropertiesOriginalValues[users[i].ID] = make(map[string]interface{}, 0)
+				}
+				userPropertiesOriginalValues[users[i].ID][property] = (*userPropertiesMap)[property]
+			}
+		}
 	}
 
 	mergedByCustomerUserIDMap, errCode := mergeUserPropertiesByCustomerUserID(projectID, users)
 	if errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
 	}
-	mergedByCustomerUserIDJSON, err := U.EncodeToPostgresJsonb(mergedByCustomerUserIDMap)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to marshal user properties merged by customer_user_id")
-		return nil, http.StatusInternalServerError
-	}
 
 	// Overwrite filtered users with same customer_user_id, with the newly
 	// merged user_properties by customer_user_id.
 	var hasFailure bool
+	var mergedPropertiesOfUserJSON *postgres.Jsonb
 	for _, user := range users {
+		// Overwrite the merged user_properites with original values.
+		mergedPropertiesAfterSkipMap := *mergedByCustomerUserIDMap
+		if _, userExists := userPropertiesOriginalValues[user.ID]; userExists {
+			for _, property := range model.UserPropertiesToSkipOnMergeByCustomerUserID {
+				mergedPropertiesAfterSkipMap[property] = userPropertiesOriginalValues[user.ID][property]
+			}
+		}
+
+		mergedPropertiesAfterSkipJSON, err := U.EncodeToPostgresJsonb(&mergedPropertiesAfterSkipMap)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to marshal user properties merged by customer_user_id")
+			return nil, http.StatusInternalServerError
+		}
+
+		if user.ID == id {
+			// Merged user_properties by customer_user_id and original values of
+			// properties for user to return.
+			// This makes sure the event level user_properties also contain event user's
+			// properties original values are preserved. i.e $hubspot_contact_lead_guid.
+			mergedPropertiesOfUserJSON = mergedPropertiesAfterSkipJSON
+		}
+
 		errCode = store.OverwriteUserPropertiesByID(projectID, user.ID,
-			mergedByCustomerUserIDJSON, true, newUpdateTimestamp)
+			mergedPropertiesAfterSkipJSON, true, newUpdateTimestamp)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-			logCtx.WithField("user_id", user.ID).WithField("merged_user_proeprties", mergedByCustomerUserIDJSON).
-				Error("Failed to update merged user properties on user.")
+			logCtx.WithField("user_id", user.ID).Error("Failed to update merged user properties on user.")
 			hasFailure = true
 		}
 	}
@@ -1229,7 +1266,7 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 		return nil, http.StatusInternalServerError
 	}
 
-	return mergedByCustomerUserIDJSON, http.StatusAccepted
+	return mergedPropertiesOfUserJSON, http.StatusAccepted
 }
 
 // OverwriteUserPropertiesByCustomerUserID - Update the properties column value
