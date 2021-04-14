@@ -56,6 +56,11 @@ type SessionUserProperties struct {
 
 // indexed hubspot user property.
 const UserPropertyHubspotContactLeadGUID = "$hubspot_contact_lead_guid"
+
+var UserPropertiesToSkipOnMergeByCustomerUserID = [...]string{
+	UserPropertyHubspotContactLeadGUID,
+}
+
 const MaxUsersForPropertiesMerge = 100
 
 var ErrDifferentEmailSeen error = errors.New("different_email_seen_for_customer_user_id")

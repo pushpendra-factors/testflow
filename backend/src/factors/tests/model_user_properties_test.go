@@ -37,7 +37,8 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$initial_campaign": "campaign1",
 			"$page_count": 10,
 			"$session_spent_time": 2.2,
-			"$latest_medium": "google"}`,
+			"$latest_medium": "google",
+			"$hubspot_contact_lead_guid": "lead-guid1"}`,
 		))},
 		JoinTimestamp: timestamp,
 	})
@@ -55,7 +56,8 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$page_count": 15,
 			"$session_spent_time": 4.4,
 			"$user_agent": "browser user agent",
-			"$latest_medium": ""}`, // Empty. Should not overwrite.
+			"$latest_medium": "",
+			"$hubspot_contact_lead_guid": "lead-guid2"}`, // Empty. Should not overwrite.
 		))},
 		JoinTimestamp: timestamp,
 	})
@@ -65,8 +67,6 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	user2DB, _ := store.GetStore().GetUser(project.ID, user2.ID)
 	user2PropertiesDB, _ := U.DecodePostgresJsonb(&user2DB.Properties)
 
-	// Both user properties must be same.
-	assert.Equal(t, user1PropertiesDB, user2PropertiesDB)
 	if C.IsUserPropertiesTableWriteDeprecated(project.ID) {
 		// user.properties_id should be empty as user_properties_table is deprecated.
 		assert.Empty(t, user1DB.PropertiesId)
@@ -81,6 +81,18 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	assert.Equal(t, false, (*user1PropertiesDB)["paid"])
 	assert.Equal(t, float64(30), (*user1PropertiesDB)["age"])
 	assert.Equal(t, "browser user agent", (*user1PropertiesDB)["$user_agent"])
+	// Hubspot contact lead guid should not be considered on user_properties merge.
+	assert.Equal(t, "lead-guid1", (*user1PropertiesDB)[model.UserPropertyHubspotContactLeadGUID])
+	assert.Equal(t, "lead-guid2", (*user2PropertiesDB)[model.UserPropertyHubspotContactLeadGUID])
+
+	// Remove the skipped properties on merge to check equality of others.
+	for _, k := range model.UserPropertiesToSkipOnMergeByCustomerUserID {
+		delete(*user2PropertiesDB, k)
+		delete(*user1PropertiesDB, k)
+	}
+	// Both user properties must be same.
+	assert.Equal(t, user1PropertiesDB, user2PropertiesDB)
+
 	// All properties must be present.
 	for _, prop := range [...]string{"country", "age", "paid", "gender", "$initial_campaign", "$page_count",
 		"$session_spent_time", "$user_agent", "$latest_medium"} {

@@ -299,11 +299,15 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	assert.Equal(t, http.StatusNotModified, status)
 
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
-		`{"country": "india", "age": 30.1, "paid": true}`))}
+		`{"country": "india", "age": 30.1, "paid": true, "$hubspot_contact_lead_guid": "lead-guid1"}`))}
 	_, newUpdatedProperties, status := store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, status)
 	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
+	newUpdatedPropertiesMap, err := U.DecodePostgresJsonb(newUpdatedProperties)
+	assert.Nil(t, err)
+	assert.Equal(t, "india", (*newUpdatedPropertiesMap)["country"])
+	assert.Equal(t, "lead-guid1", (*newUpdatedPropertiesMap)[model.UserPropertyHubspotContactLeadGUID])
 
 	oldUpdatedProperties = newUpdatedProperties
 	// do not allow overwrite existing user properties from past timestamp.
@@ -341,11 +345,17 @@ func TestDBUpdateUserProperties(t *testing.T) {
 
 	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
-		`{"device": "android"}`))}
+		`{"device": "android", "$hubspot_contact_lead_guid": "lead-guid2"}`))}
 	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, status)
 	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
+	newUpdatedPropertiesMap, err = U.DecodePostgresJsonb(newUpdatedProperties)
+	assert.Nil(t, err)
+	assert.Equal(t, "usa", (*newUpdatedPropertiesMap)["country"])
+	assert.Equal(t, "android", (*newUpdatedPropertiesMap)["device"])
+	// Property should be skipped on merge. Should be same as earlier.
+	assert.Equal(t, "lead-guid2", (*newUpdatedPropertiesMap)[model.UserPropertyHubspotContactLeadGUID])
 
 	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
@@ -366,7 +376,7 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	var propertiesMap map[string]interface{}
 	err = json.Unmarshal((user.Properties).RawMessage, &propertiesMap)
 	assert.Nil(t, err)
-	assert.Len(t, propertiesMap, 7) // including joinTime.
+	assert.Len(t, propertiesMap, 8) // including joinTime.
 	assert.Equal(t, "value1", propertiesMap["prop1"])
 }
 
