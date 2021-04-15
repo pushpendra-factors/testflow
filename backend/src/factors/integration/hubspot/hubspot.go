@@ -621,8 +621,9 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 					logCtx.WithField("err_code", errCode).Error("Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
 					return http.StatusInternalServerError
 				}
+			} else {
+				userID = user.ID
 			}
-			userID = user.ID
 		}
 
 		if customerUserID != "" {
