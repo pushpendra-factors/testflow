@@ -126,11 +126,11 @@ const (
 
 // RequestQueue - Name of the primary queue which will
 // be queued with sdk requests.
-const RequestQueue = "sdk_request_queue"
+const RequestQueue = "sdk_request_queue_2"
 
 // RequestQueueDuplicate - Name of the secondary Queue which
 // will be queued with copy of tasks sent RequestQueue, if enabled.
-const RequestQueueDuplicate = "sdk_request_queue_2"
+const RequestQueueDuplicate = "sdk_request_queue"
 
 // ProcessRequestTask - Name of the task which has been
 // queued to request queues.

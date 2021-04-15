@@ -18,8 +18,8 @@ var types = [...]string{
 }
 
 const ProcessRequestTask = "process_integration_request"
-const RequestQueue = "integration_request_queue"
-const RequestQueueDuplicate = "integration_request_queue_2"
+const RequestQueue = "integration_request_queue_2"
+const RequestQueueDuplicate = "integration_request_queue"
 
 func isValidRequest(token, reqType string, reqPayload interface{}) bool {
 	if token == "" {
