@@ -605,11 +605,25 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 			user, errCode := store.GetStore().GetUserByPropertyKey(
 				projectID, model.UserPropertyHubspotContactLeadGUID, leadGUID)
 			if errCode != http.StatusFound {
-				logCtx.WithField("err_code", errCode).Error(
-					"Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
-				return http.StatusInternalServerError
+				if errCode == http.StatusNotFound {
+					// Added below fallback for getting user_id by contact create synced for same document.
+					// This is not the ideal scenario. Ideally the user_id should be availble one-one on users table.
+					lastSyncedDocument, errCode := store.GetStore().GetSyncedHubspotDocumentWithUserIDByFilter(projectID,
+						document.ID, model.HubspotDocumentTypeContact, model.HubspotDocumentActionCreated)
+					if errCode == http.StatusFound && lastSyncedDocument.UserId != "" {
+						logCtx.Error("Failed to get user with given lead_guid on contact updated event. Using user_id on contact created document.")
+						userID = lastSyncedDocument.UserId
+					} else {
+						logCtx.Error("Failed to get user with given lead_guid on contact updated event. Not able to get user by last contact create document too.")
+						return http.StatusInternalServerError
+					}
+				} else {
+					logCtx.WithField("err_code", errCode).Error("Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
+					return http.StatusInternalServerError
+				}
+			} else {
+				userID = user.ID
 			}
-			userID = user.ID
 		}
 
 		if customerUserID != "" {
