@@ -90,7 +90,7 @@ type Campaign struct {
 }
 
 type Context struct {
-	Campaign  Campaign `json:"campaign"`
+	Campaign  interface{} `json:"campaign"`
 	IP        string   `json:"ip"`
 	Location  Location `json:"location"`
 	Page      Page     `json:"page"`
@@ -283,21 +283,38 @@ func fillWebEventProperties(properties *U.PropertiesMap, event *Event) {
 		(*properties)[U.EP_REFERRER_URL] = referrerURL.Host + referrerURL.Path + U.GetPathAppendableURLHash(referrerURL.Fragment)
 	}
 
-	if event.Context.Campaign.Name != "" {
-		(*properties)[U.EP_CAMPAIGN] = event.Context.Campaign.Name
-	}
-	if event.Context.Campaign.Source != "" {
-		(*properties)[U.EP_SOURCE] = event.Context.Campaign.Source
-	}
-	if event.Context.Campaign.Medium != "" {
-		(*properties)[U.EP_MEDIUM] = event.Context.Campaign.Medium
-	}
-	if event.Context.Campaign.Term != "" {
-		(*properties)[U.EP_KEYWORD] = event.Context.Campaign.Term
-	}
-	if event.Context.Campaign.Content != "" {
-		(*properties)[U.EP_CONTENT] = event.Context.Campaign.Content
-	}
+	campaign := make(map[string]interface{})
+	if(event.Context.Campaign != nil){
+		campaignType := fmt.Sprintf("%T", event.Context.Campaign)
+		if(campaignType == "map[string]interface {}"){
+			campaign = event.Context.Campaign.(map[string]interface{})
+			value, ok := campaign["name"]
+			valueType := fmt.Sprintf("%T", value)
+			if ok && valueType == "string" && value.(string) != "" {
+				(*properties)[U.EP_CAMPAIGN] = value.(string)
+			}
+			value, ok = campaign["medium"]
+			valueType = fmt.Sprintf("%T", value)
+			if ok && valueType == "string" && value.(string) != "" {
+				(*properties)[U.EP_MEDIUM] = value.(string)
+			}
+			value, ok = campaign["source"]
+			valueType = fmt.Sprintf("%T", value)
+			if ok && valueType == "string" && value.(string) != "" {
+				(*properties)[U.EP_SOURCE] = value.(string)
+			}
+			value, ok = campaign["term"]
+			valueType = fmt.Sprintf("%T", value)
+			if ok && valueType == "string" && value.(string) != "" {
+				(*properties)[U.EP_KEYWORD] = value.(string)
+			}
+			value, ok = campaign["content"]
+			valueType = fmt.Sprintf("%T", value)
+			if ok && valueType == "string" && value.(string) != "" {
+				(*properties)[U.EP_CONTENT] = value.(string)
+			}
+		}
+	}	
 }
 
 func fillWebUserProperties(properties *U.PropertiesMap, event *Event) {}

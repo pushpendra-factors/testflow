@@ -7,6 +7,7 @@ import QueriesReducer from './queries';
 import DashboardReducer from './dashboard';
 import factors from './factors';
 import events from './events';
+import settingsReducer from './settings';
 
 const rootReducer = combineReducers({
   global: GlobalReducer,
@@ -15,6 +16,7 @@ const rootReducer = combineReducers({
   analyticsQuery: AnalyticsReducer,
   dashboard: DashboardReducer,
   queries: QueriesReducer,
+  settings: settingsReducer,
   factors,
   events
 });

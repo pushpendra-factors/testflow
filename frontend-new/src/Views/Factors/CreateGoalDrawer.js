@@ -67,7 +67,7 @@ const operatorMap = {
   "=": "equals",
   "!=": "notEqual",
   contains: "contains",
-  "not contains": "notContains",
+  "does not contain": "notContains",
   "<": "lesserThan",
   "<=": "lesserThanOrEqual",
   ">": "greaterThan",

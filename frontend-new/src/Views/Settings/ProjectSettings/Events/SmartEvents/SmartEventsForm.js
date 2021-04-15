@@ -62,7 +62,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
             'GREATER THAN',
             'LESS THAN',
             'CONTAINS',
-            'NOT CONTAINS',
+            'DOES NOT CONTAIN',
             ];
 
       const operatorsCurrMenu = (

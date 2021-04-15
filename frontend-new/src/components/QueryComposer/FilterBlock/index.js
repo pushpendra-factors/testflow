@@ -14,7 +14,7 @@ const defaultOpProps = {
     '=',
     '!=',
     'contains',
-    'not contains'
+    'does not contain'
   ],
   "numerical": [
     '=',
@@ -136,7 +136,7 @@ export default function FilterBlock({
     }
     setSearchTerm(userInput.currentTarget.value);
 
-    if((newFilterState.operator === 'contains' || newFilterState.operator === 'not contains') && filterTypeState === 'values') {
+    if((newFilterState.operator === 'contains' || newFilterState.operator === 'does not contains') && filterTypeState === 'values') {
       const newFilter = Object.assign({}, newFilterState);
       newFilter[filterTypeState][0] ? newFilter[filterTypeState][0] =  newFilter[filterTypeState][0] + userInput.currentTarget.value : newFilter[filterTypeState][0] =  userInput.currentTarget.value;
       setNewFilterState(newFilter);

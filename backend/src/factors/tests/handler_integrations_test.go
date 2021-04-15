@@ -1688,6 +1688,14 @@ func TestIntSegmentHandlerWithPayloadFromSegmentPlatform(t *testing.T) {
 			"event": "Signed up",
 			"properties": {
 				"referrer": "paid"
+			},
+			"context": {
+				"campaign": {
+					"source": "Newsletter",
+					"medium": "email",
+					"term": "tps reports",
+					"content": "image link"
+				  }
 			}
 		}
 		`
