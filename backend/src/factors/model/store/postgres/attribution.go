@@ -282,9 +282,16 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 			EventName: query.ConversionEvent.Name})
 	}
 
-	err = pg.GetLinkedFunnelEventUsers(projectID, conversionFrom, conversionTo,
-		linkedEvents, eventNameToIDList, userIDToInfoConverted,
-		&usersToBeAttributed)
+	if C.ShouldUseUserPropertiesTableForRead(projectID) {
+		err = pg.GetLinkedFunnelEventUsers(projectID, conversionFrom, conversionTo,
+			linkedEvents, eventNameToIDList, userIDToInfoConverted,
+			&usersToBeAttributed)
+	} else {
+		err = pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo,
+			linkedEvents, eventNameToIDList, userIDToInfoConverted,
+			&usersToBeAttributed)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -359,8 +366,14 @@ func (pg *Postgres) runAttribution(projectID uint64,
 			EventName: goalEventName})
 	}
 
-	err = pg.GetLinkedFunnelEventUsers(projectID, conversionFrom, conversionTo, query.LinkedEvents,
-		eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
+	if C.ShouldUseUserPropertiesTableForRead(projectID) {
+		err = pg.GetLinkedFunnelEventUsers(projectID, conversionFrom, conversionTo, query.LinkedEvents,
+			eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
+	} else {
+		err = pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents,
+			eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -686,7 +699,90 @@ func (pg *Postgres) getEventInformation(projectId uint64,
 	return sessionEventNameId, eventNameToId, nil
 }
 
-// Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
+// GetLinkedFunnelEventUsersFilter Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
+func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
+	linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
+	userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error {
+
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
+	var usersHitConversion []string
+	for key := range userIDInfo {
+		usersHitConversion = append(usersHitConversion, key)
+	}
+
+	for _, linkedEvent := range linkedEvents {
+		// Part I - Fetch Users base on Event Hit satisfying events.properties
+		linkedEventNameIDs := eventNameToId[linkedEvent.Name]
+		eventsPlaceHolder := "?"
+		for i := 0; i < len(linkedEventNameIDs)-1; i++ {
+			eventsPlaceHolder += ",?"
+		}
+		var userIDList []string
+		userIDHitGoalEventTimestamp := make(map[string]int64)
+		userPropertiesIdsInBatches := U.GetStringListAsBatch(usersHitConversion, model.UserBatchSize)
+		for _, users := range userPropertiesIdsInBatches {
+
+			// add user batching
+			usersPlaceHolder := U.GetValuePlaceHolder(len(users))
+			value := U.GetInterfaceList(users)
+			queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND " +
+				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
+				" AND user_id = ANY (VALUES " + usersPlaceHolder + " ) "
+			qParams := []interface{}{projectID, queryFrom, queryTo}
+			qParams = append(qParams, linkedEventNameIDs...)
+			qParams = append(qParams, value...)
+
+			// add event filter
+			wStmtEvent, wParamsEvent, err := getFilterSQLStmtForEventProperties(projectID, linkedEvent.Properties) // query.ConversionEvent.Properties)
+			if err != nil {
+				return err
+			}
+			if wStmtEvent != "" {
+				queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmtEvent)
+				qParams = append(qParams, wParamsEvent...)
+			}
+
+			// add user filter
+			wStmtUser, wParamsUser, err := getFilterSQLStmtForUserProperties(projectID, linkedEvent.Properties) // query.ConversionEvent.Properties)
+			if err != nil {
+				return err
+			}
+			if wStmtUser != "" {
+				queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmtUser)
+				qParams = append(qParams, wParamsUser...)
+			}
+
+			// fetch query results
+			rows, err := pg.ExecQueryWithContext(queryEventHits, qParams)
+			if err != nil {
+				logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
+				return err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				var userID string
+				var timestamp int64
+				if err = rows.Scan(&userID, &timestamp); err != nil {
+					logCtx.WithError(err).Error("SQL Parse failed")
+					continue
+				}
+				if _, ok := userIDHitGoalEventTimestamp[userID]; !ok {
+					userIDList = append(userIDList, userID)
+					userIDHitGoalEventTimestamp[userID] = timestamp
+				}
+			}
+		}
+
+		// Part-III add the filtered users with eventId usersToBeAttributed
+		for _, userId := range userIDList {
+			*usersToBeAttributed = append(*usersToBeAttributed,
+				model.UserEventInfo{CoalUserID: userIDInfo[userId].CoalUserID, EventName: linkedEvent.Name})
+		}
+	}
+	return nil
+}
+
+// GetLinkedFunnelEventUsers Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
 func (pg *Postgres) GetLinkedFunnelEventUsers(projectID uint64, queryFrom, queryTo int64,
 	linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
 	userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error {
