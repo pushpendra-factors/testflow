@@ -7,6 +7,7 @@ import SDKSettings from './SDKSettings';
 import UserSettings from './UserSettings';
 import IntegrationSettings from './IntegrationSettings';
 import Events from './Events';
+import Properties from './PropertySettings';
 import { fetchSmartEvents } from 'Reducers/events';
 import { connect } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -19,7 +20,8 @@ const MenuTabs = {
   Users: 'Users',
   Integrations: 'Integrations',
   EventAlias: 'Event Alias',
-  Events:'Events'
+  Events:'Events',
+  Properties: 'Properties'
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents }) {
@@ -72,6 +74,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
               <Menu.Item key={MenuTabs.Users}>{MenuTabs.Users}</Menu.Item>
               <Menu.Item key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item>
               <Menu.Item key={MenuTabs.Events}>{MenuTabs.Events}</Menu.Item>
+              {activeProject.id === 446 ? <Menu.Item key={MenuTabs.Properties}>{MenuTabs.Properties}</Menu.Item> : null}
             </Menu>
 
           </Col>
@@ -81,6 +84,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
             {selectedMenu === MenuTabs.Users && <UserSettings /> }
             {selectedMenu === MenuTabs.Integrations && <IntegrationSettings /> }
             {selectedMenu === MenuTabs.Events && <Events /> }
+            {(selectedMenu === MenuTabs.Properties && activeProject.id === 446) && <Properties />}
           </Col>
         </Row>
       </div>

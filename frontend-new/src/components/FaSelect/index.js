@@ -4,7 +4,7 @@ import { SVG } from 'factorsComponents';
 
 const FaSelect = ({ options, delOption, 
     optionClick, delOptionClick,
-    onClickOutside }) => {
+    onClickOutside, extraClass }) => {
 
 
     const renderOptions = () => {
@@ -33,7 +33,7 @@ const FaSelect = ({ options, delOption,
         
 
     return (<>
-            <div className={`${styles.dropdown__select} fa-select fa-select--group-select`}>
+            <div className={`${styles.dropdown__select} fa-select fa-select--group-select ${extraClass}`}>
             <div className={styles.dropdown__select__content}>
                 {renderOptions()}
             </div>
