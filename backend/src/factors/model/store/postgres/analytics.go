@@ -132,17 +132,21 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 	}
 
 	groupedProperties := make(map[string][]model.QueryProperty)
+	propertyKeys := make([]string, 0, 0)
 	for _, p := range properties {
 		// Use Entity.Property as key to distinguish same property filter on user and event entity.
 		propertyKey := p.Entity + "." + p.Property
+		if _, exists := groupedProperties[propertyKey]; !exists {
+			propertyKeys = append(propertyKeys, propertyKey)
+		}
 		groupedProperties[propertyKey] = append(groupedProperties[propertyKey], p)
 	}
 
 	rParams = make([]interface{}, 0, 0)
 	groupIndex := 0
-	for _, groupProperties := range groupedProperties {
+	for _, propertyKey := range propertyKeys {
 		var groupStmnt string
-		for i, p := range groupProperties {
+		for i, p := range groupedProperties[propertyKey] {
 			// defaults logic op if not given.
 			if p.LogicalOp == "" {
 				p.LogicalOp = "AND"
@@ -215,7 +219,7 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 		if groupIndex == 0 {
 			rStmnt = fmt.Sprintf("(%s)", groupStmnt)
 		} else {
-			logicalOp := groupProperties[0].LogicalOp
+			logicalOp := groupedProperties[propertyKey][0].LogicalOp
 			if logicalOp == "" {
 				logicalOp = "AND"
 			}

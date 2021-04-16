@@ -80,6 +80,7 @@ const (
 	CacheExpiryWeeklyRangeInSeconds = 6 * 7 * SECONDS_IN_A_DAY // 6 Weeks.
 	CacheExpiryDefaultInSeconds     = 62 * SECONDS_IN_A_DAY    // 62 Days.
 
+	CacheExpiryQueryMaxInSeconds            = 2 * SECONDS_IN_A_DAY
 	CacheExpiryQueryTodaysDataInSeconds     = 10 * 60      // 10 minutes.
 	CacheExpiryDashboardTodaysDataInSeconds = 12 * 60 * 60 // 12 hours.
 	CacheExpiryDashboard30MinutesInSeconds  = 12 * 60 * 60 // 12 hours.
@@ -973,15 +974,7 @@ func GetQueryCacheResultExpiryInSeconds(from, to int64) float64 {
 		return float64(CacheExpiryQueryTodaysDataInSeconds)
 	} else if nowStartOfDay > toStartOfDay && nowStartOfDay-toStartOfDay > ImmutableDataEndDateBufferInSeconds {
 		// Data can be assumed to be immutable here after buffer (2) days.
-		if to-from == (7*SECONDS_IN_A_DAY - 1) {
-			// Weekly range.
-			return float64(CacheExpiryWeeklyRangeInSeconds)
-		} else if to-from > (27*SECONDS_IN_A_DAY - 1) {
-			// Monthly range. Set no expiry.
-			return 0
-		} else {
-			return float64(CacheExpiryDefaultInSeconds)
-		}
+		return float64(CacheExpiryQueryMaxInSeconds)
 	}
 	return float64(CacheExpiryQueryMutableDataInSeconds)
 }

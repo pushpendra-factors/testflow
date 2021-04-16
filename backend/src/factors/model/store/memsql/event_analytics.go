@@ -1686,7 +1686,10 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps, stepsToKeysMap := addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams)
+	steps, stepsToKeysMap, err := addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams)
+	if err != nil {
+		return qStmnt, qParams, err
+	}
 	totalGroupKeys := 0
 	for _, val := range stepsToKeysMap {
 		totalGroupKeys = totalGroupKeys + len(val)
@@ -1765,7 +1768,7 @@ AND ( events.properties->>'$source' = 'google' AND user_properties.properties->>
 ORDER BY event_id, _group_key_2, events.timestamp ASC),
 */
 func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
-	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string) {
+	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string, error) {
 
 	var commonSelect string
 	var commonOrderBy string
@@ -1815,15 +1818,19 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 			}
 
 		}
-		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
+
+		err := addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy)
+		if err != nil {
+			return steps, stepsToKeysMap, err
+		}
 
 		if i < len(q.EventsWithProperties)-1 {
 			*qStmnt = *qStmnt + ","
 		}
 	}
 
-	return steps, stepsToKeysMap
+	return steps, stepsToKeysMap, nil
 }
 
 /*
