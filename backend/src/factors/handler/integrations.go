@@ -722,7 +722,7 @@ func IntLinkedinAuthHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload."})
 		return
 	}
-	redirectURI := url.QueryEscape(C.GetAPPOldDomain())
+	redirectURI := url.QueryEscape(C.GetProtocol() + C.GetAPPDomain())
 	urloauth := "https://www.linkedin.com/oauth/v2/accessToken?grant_type=authorization_code&code=" + linkedinCode.Code + "&redirect_uri=" + redirectURI + "&client_id=" + C.GetLinkedinClientID() + "&client_secret=" + C.GetLinkedinClientSecret()
 	resp, err := http.Get(urloauth)
 	if err != nil {

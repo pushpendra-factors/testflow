@@ -40,6 +40,14 @@ func assertKeysExistAndNotEmpty(t *testing.T, obj map[string]interface{}, keys [
 // expected event properties from segment.
 var genericEventProps = []string{U.EP_LOCATION_LATITUDE, U.EP_LOCATION_LONGITUDE, U.EP_SEGMENT_EVENT_VERSION,
 	U.EP_SEGMENT_SOURCE_LIBRARY, U.EP_SEGMENT_SOURCE_CHANNEL}
+var queryParamCustomEventProps = []string{
+	// Gets converted from $qp_gclid to $gclid
+	"$gclid",
+	U.QUERY_PARAM_PROPERTY_PREFIX + "hsa_ad", U.QUERY_PARAM_PROPERTY_PREFIX + "hsa_mt",
+	U.QUERY_PARAM_PROPERTY_PREFIX + "hsa_grp", U.QUERY_PARAM_PROPERTY_PREFIX + "hsa_src",
+	U.QUERY_PARAM_PROPERTY_PREFIX + "hsa_kw", U.QUERY_PARAM_PROPERTY_PREFIX + "hsa_tgt",
+}
+
 var webEventProps = []string{U.EP_PAGE_RAW_URL, U.EP_PAGE_DOMAIN, U.EP_PAGE_URL, U.EP_PAGE_TITLE,
 	U.EP_REFERRER, U.EP_REFERRER_DOMAIN, U.EP_REFERRER_URL, U.EP_CAMPAIGN, U.EP_SOURCE,
 	U.EP_MEDIUM, U.EP_KEYWORD, U.EP_CONTENT}
@@ -1422,7 +1430,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	json.Unmarshal(eventPropertiesBytes1.([]byte), &eventPropertiesMap1)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap1, genericEventProps)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap1, webEventProps)
-	// Check event properties added.
+	// Check user properties added.
 	retUser, errCode = store.GetStore().GetUser(project.ID, retEvent1.UserId)
 	assert.NotNil(t, retUser)
 	userPropertiesBytes1, err := retUser.Properties.Value()
@@ -1431,6 +1439,152 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	assertKeysExistAndNotEmpty(t, userPropertiesMap1, genericUserProps)
 	assertKeysExistAndNotEmpty(t, userPropertiesMap1, webUserProps)
 	assertKeysExistAndNotEmpty(t, userPropertiesMap1, mobileUserProps)
+}
+
+func TestIntSegmentHandlerWithTrackEventQueryParam(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/integrations/segment"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	enable := true
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{IntSegment: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// Inconsistent datatype tested with App(build, version),
+	// OS(version) and Event(version) as numbers.
+	sampleTrackPayload := `
+	{
+		"_metadata": {
+		  "bundled": [
+			"Segment.io"
+		  ],
+		  "unbundled": [
+			
+		  ]
+		},
+		"anonymousId": "80444c7e-1580-4d3c-a77a-2f3427ed7d97",
+		"channel": "client",
+		"context": {
+			"active": true,
+			"app": {
+			  "name": "InitechGlobal",
+			  "version": 5.6,
+			  "build": 1.1,
+			  "namespace": "com.production.segment"
+			},
+			"campaign": {
+			  "name": "TPS Innovation Newsletter",
+			  "source": "Newsletter",
+			  "medium": "email",
+			  "term": "tps reports",
+			  "content": "image link"
+			},
+			"device": {
+			  "id": "B5372DB0-C21E-11E4-8DFC-AA07A5B093DB",
+			  "advertisingId": "7A3CBEA0-BDF5-11E4-8DFC-AA07A5B093DB",
+			  "adTrackingEnabled": true,
+			  "manufacturer": "Apple",
+			  "model": "iPhone7,2",
+			  "name": "maguro",
+			  "type": "ios",
+			  "token": "ff15bc0c20c4aa6cd50854ff165fd265c838e5405bfeb9571066395b8c9da449"
+			},
+			"ip": "8.8.8.8",
+			"library": {
+			  "name": "analytics.js",
+			  "version": "2.11.1"
+			},
+			"locale": "nl-NL",
+			"location": {
+			  "city": "San Francisco",
+			  "country": "United States",
+			  "latitude": 40.2964197,
+			  "longitude": -76.9411617,
+			  "speed": 0
+			},
+			"network": {
+			  "bluetooth": false,
+			  "carrier": "T-Mobile NL",
+			  "cellular": true,
+			  "wifi": false
+			},
+			"os": {
+			  "name": "iPhone OS",
+			  "version": 2.4
+			},
+			"page": {
+			  "path": "/academy/",
+			  "referrer": "https://google.com",
+			  "search": "",
+			  "title": "Analytics Academy",
+			  "url": "https://segment.com/academy/"
+			},
+			"referrer": {
+			  "id": "ABCD582CDEFFFF01919",
+			  "type": "dataxu"
+			},
+			"screen": {
+			  "width": 320,
+			  "height": 568,
+			  "density": 2
+			},
+			"groupId": "12345",
+			"timezone": "Europe/Amsterdam",
+			"userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1"
+		},
+		"integrations": {},
+		"messageId": "ajs-19c084e2f80e70cf62bb62509e79b37e",
+		"originalTimestamp": "2019-01-08T16:22:06.053Z",
+		"projectId": "Zzft38QJhB",
+		"properties": {
+		  "path": "/segment.test.html",
+		  "referrer": "",
+		  "search": "?a=10",
+		  "title": "Segment Test",
+		  "url": "https://razorpay.com/payment-gateway/?utm_adgroup=brandsearch_pg&utm_gclid=CjwKCAjwpKCDBhBPEiwAFgBzj5QyErMraz21WgrieRNwPldornr4kTxsat61RkmbhGvTxq9i6gVqPxoCMOUQAvD_BwE&utm_source=google&utm_medium=cpc&utm_campaign=brandsearch&utm_term=%2Brazorpay%20%2Bpayment%20%2Bgateway&hsa_src=g&hsa_ad=430853792879&hsa_kw=%2Brazorpay%20%2Bpayment%20%2Bgateway&hsa_mt=b&hsa_acc=9786800965&hsa_net=adwords&hsa_ver=3&hsa_grp=89425684048&hsa_tgt=aud-368450393986:kwd-421310893176&hsa_cam=400139470&gclid=CjwKCAjwpKCDBhBPEiwAFgBzj5QyErMraz21WgrieRNwPldornr4kTxsat61RkmbhGvTxq9i6gVqPxoCMOUQAvD_BwE"
+		},
+		"receivedAt": "2019-01-08T16:21:54.106Z",
+		"sentAt": "2019-01-08T16:22:06.058Z",
+		"timestamp": "2019-01-08T16:21:54.101Z",
+		"event": "click_1",
+		"type": "track",
+		"userId": "",
+		"version": 3.1
+	  }
+	`
+
+	w := ServePostRequestWithHeaders(r, uri, []byte(sampleTrackPayload),
+		map[string]string{"Authorization": project.PrivateToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse2, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap2 map[string]interface{}
+	json.Unmarshal(jsonResponse2, &jsonResponseMap2)
+	assert.Nil(t, jsonResponseMap2["error"])
+	assert.NotNil(t, jsonResponseMap2["event_id"])
+	// Check event properties added.
+	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	eventPropertiesBytes, err := retEvent.Properties.Value()
+	var eventPropertiesMap map[string]interface{}
+	json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+	assertKeysExistAndNotEmpty(t, eventPropertiesMap, genericEventProps)
+	assertKeysExistAndNotEmpty(t, eventPropertiesMap, webEventProps)
+	assertKeysExistAndNotEmpty(t, eventPropertiesMap, queryParamCustomEventProps)
+
+	// Check user properties added.
+	retUser, errCode := store.GetStore().GetUser(project.ID, retEvent.UserId)
+	assert.NotNil(t, retUser)
+	userPropertiesBytes, err := retUser.Properties.Value()
+	var userPropertiesMap map[string]interface{}
+	json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap)
+	assertKeysExistAndNotEmpty(t, userPropertiesMap, genericUserProps)
+	assertKeysExistAndNotEmpty(t, userPropertiesMap, webUserProps)
+	assertKeysExistAndNotEmpty(t, userPropertiesMap, mobileUserProps)
+
 }
 
 func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
@@ -1562,7 +1716,7 @@ func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 	var eventPropertiesMap map[string]interface{}
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, genericEventProps)
-	// Check event properties added.
+	// Check user properties added.
 	retUser, errCode := store.GetStore().GetUser(project.ID, retEvent.UserId)
 	assert.NotNil(t, retUser)
 	userPropertiesBytes, err := retUser.Properties.Value()

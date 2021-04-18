@@ -73,6 +73,7 @@ func main() {
 
 	if *modelType != T.ModelTypeAll &&
 		*modelType != T.ModelTypeWeekly &&
+		*modelType != T.ModelTypeQuarterly &&
 		*modelType != T.ModelTypeMonthly {
 		err := fmt.Errorf("modelType [ %s ] not recognised", *modelType)
 		panic(err)

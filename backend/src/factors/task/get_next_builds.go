@@ -14,14 +14,16 @@ import (
 )
 
 const (
-	ModelTypeMonth = "m"
-	ModelTypeWeek  = "w"
+	ModelTypeMonth   = "m"
+	ModelTypeWeek    = "w"
+	ModelTypeQuarter = "q"
 )
 
 const (
-	ModelTypeAll     = "all"
-	ModelTypeWeekly  = "weekly"
-	ModelTypeMonthly = "monthly"
+	ModelTypeAll       = "all"
+	ModelTypeWeekly    = "weekly"
+	ModelTypeMonthly   = "monthly"
+	ModelTypeQuarterly = "quarterly"
 )
 const OneSec = 1
 
@@ -74,6 +76,10 @@ func floorTimestampByType(modelType string, timestamp int64) int64 {
 		return now.New(time.Unix(timestamp, 0).UTC()).BeginningOfMonth().Unix()
 	}
 
+	if modelType == ModelTypeQuarter {
+		return now.New(time.Unix(timestamp, 0).UTC()).BeginningOfQuarter().Unix()
+	}
+
 	gnbLog.Error("Unknown floor timestamp type.")
 	return 0
 }
@@ -85,6 +91,10 @@ func ceilTimestampByType(modelType string, timestamp int64) int64 {
 
 	if modelType == ModelTypeMonth {
 		return now.New(time.Unix(timestamp, 0).UTC()).EndOfMonth().Unix()
+	}
+
+	if modelType == ModelTypeQuarter {
+		return now.New(time.Unix(timestamp, 0).UTC()).EndOfQuarter().Unix()
 	}
 
 	gnbLog.Error("Unknown ceil timestamp type.")
@@ -213,6 +223,10 @@ func addNextIntervalsForProjectByModelType(builds *[]Build, projectID uint64, la
 		addNextIntervalsForProjectByType(builds, projectID, ModelTypeMonth,
 			lastBuildEndTimestampByType[ModelTypeMonth], startTimestamp, endTimestamp)
 		break
+	case ModelTypeQuarterly:
+		addNextIntervalsForProjectByType(builds, projectID, ModelTypeQuarter,
+			lastBuildEndTimestampByType[ModelTypeQuarter], startTimestamp, endTimestamp)
+		break
 	default:
 		log.WithField("project_id", projectID).WithField("type", modelType).
 			Error("Invalid model type on addNextIntervalsForProjectByModelType.")
@@ -234,6 +248,9 @@ func addPendingIntervalsForProjectByModelType(builds *[]Build, projectID uint64,
 		break
 	case ModelTypeMonthly:
 		addPendingIntervalsForProjectByType(builds, projectID, ModelTypeMonth, startTimestamp, endTimestamp)
+		break
+	case ModelTypeQuarterly:
+		addPendingIntervalsForProjectByType(builds, projectID, ModelTypeQuarter, startTimestamp, endTimestamp)
 		break
 	default:
 		log.WithField("project_id", projectID).WithField("type", modelType).

@@ -122,3 +122,32 @@ func getUserLastEventCacheKey(projectId uint64, userId string) (*cacheRedis.Key,
 	prefix := fmt.Sprintf("%s:%s", tableName, cacheIndexUserLastEvent)
 	return cacheRedis.NewKey(projectId, prefix, suffix)
 }
+
+// AreMarketingPropertiesMatching This method compares given event's marketing props with another event conservatively.
+// If new props exist in 2nd event, return false.
+func AreMarketingPropertiesMatching(event1 Event, event2 Event) bool {
+
+	eventProp, err := U.DecodePostgresJsonb(&event1.Properties)
+	// In case of error, return not matched.
+	if err != nil {
+		return false
+	}
+	lastSessionProp, err := U.DecodePostgresJsonb(&event2.Properties)
+	if err != nil {
+		return false
+	}
+
+	for _, marketingProperty := range U.DEFINED_MARKETING_PROPERTIES {
+		val1, exists1 := (*eventProp)[marketingProperty]
+		val2, exists2 := (*lastSessionProp)[marketingProperty]
+		// 2nd event has additional property
+		if exists2 && !exists1 {
+			return false
+		}
+		// Exists but a different property
+		if exists1 && exists2 && val1 != val2 {
+			return false
+		}
+	}
+	return true
+}
