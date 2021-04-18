@@ -764,12 +764,14 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 	sessionStartIndex := 0
 	sessionEndIndex := 0
 
+	isMatchingMktPropsOn := false
+	hasMismatchInBetween := false
 	noOfSessionsCreated := 0
 	sessionContinuedFlag := false
 	isLastEventToBeProcessed := false
 
 	// user_properties_id would be the key till the user_properties table
-	// is permanantly deprecated and all the event level user_properties
+	// is permanently deprecated and all the event level user_properties
 	// moved to event itself.
 	// map[id or user_properties_id of events] = session_user_properties
 	sessionUserPropertiesRecordMap := make(map[string]model.SessionUserProperties, 0)
@@ -781,41 +783,75 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 		hasMarketingProperty, err := doesEventIsPageViewAndHasMarketingProperty(events[i])
 		if err != nil {
 			logCtx.WithError(err).
-				Error("Failed to check marketing prperty on event properties.")
+				Error("Failed to check marketing property on event properties.")
 			return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
 				isLastEventToBeProcessed, http.StatusInternalServerError
 		}
 
 		isNewSessionRequired := (i == 0 && len(events) == 1) ||
-			(i > 0 && ((events[i].Timestamp - events[i-1].Timestamp) > model.NewUserSessionInactivityInSeconds))
+			(i+1 < len(events) && ((events[i+1].Timestamp - events[i].Timestamp) > model.NewUserSessionInactivityInSeconds))
+
 		// Balance events on the list after creating session for the previous set.
 		isLastSetOfEvents := i == len(events)-1
 
-		isStartingWthMarketingProperty := i == 0 && len(events) > 1 && hasMarketingProperty
+		// This checks if the first event is having session and can we continue with that or not
+		// It will do i++; continue; if session can be continued
+		isStartingWthMarketingProperty := i == 0 && len(events) > 1 && hasMarketingProperty && (*events[i]).SessionId != nil && !isNewSessionRequired
 		if isStartingWthMarketingProperty {
 			i++
 			continue
 		}
+		backMatch := false
+		forwardMatch := false
+		// Skip or Continue adding this event to the session
+		if !isNewSessionRequired && (*events[i]).SessionId == nil {
+			// Backward properties matching case
+			if i-1 >= 0 && model.AreMarketingPropertiesMatching(*events[i-1], *events[i]) {
+				hasMarketingProperty = false
+				isMatchingMktPropsOn = true
+				backMatch = true
+			} else {
+				hasMismatchInBetween = true
+				backMatch = false
+			}
+			// Default case for first element
+			if i == 0 {
+				backMatch = true
+			}
+			// Forward properties matching case
+			if i+1 < len(events) && model.AreMarketingPropertiesMatching(*events[i], *events[i+1]) {
+				// continue with the next event in case next one has the same matching properties
+				forwardMatch = true
+				i++
+				continue
+			} else {
+				forwardMatch = false
+			}
+		}
 
-		if hasMarketingProperty || isNewSessionRequired || isLastSetOfEvents {
+		if (hasMarketingProperty || isNewSessionRequired || isLastSetOfEvents || (backMatch && !forwardMatch)) && !(!backMatch && forwardMatch && i < len(events)-1) {
 			var sessionEvent *model.Event
 			var isSessionContinued bool
 
-			if i > 0 {
-				sessionEndIndex = i - 1
-			}
+			sessionEndIndex = i
 
 			// Skip the associating previous session to last event, If it satisfies
 			// new session condition. Instead of manipulating cursor, setting the
-			// isLastEventToBeProcessed as true, to process it seperately.
+			// isLastEventToBeProcessed as true, to process it separately.
 			if isLastSetOfEvents {
 				if !(hasMarketingProperty || isNewSessionRequired) {
 					sessionEndIndex = i
 				} else {
-					if len(events) > 1 {
+					if len(events) > 1 && (sessionStartIndex != sessionEndIndex) {
 						isLastEventToBeProcessed = true
 					}
 				}
+			}
+
+			// End condition for same marketing prop events.
+			if i == len(events)-1 && isMatchingMktPropsOn && !hasMismatchInBetween {
+				sessionEndIndex = i
+				isLastEventToBeProcessed = false
 			}
 
 			// Continue with the last session_id, if available. This will be true as
@@ -850,7 +886,7 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 
 				var userPropertiesMap U.PropertiesMap
 				if C.ShouldUseUserPropertiesTableForRead(projectId) {
-					// TODO(Dinesh): Remove the code block after permenant
+					// TODO(Dinesh): Remove the code block after permanent
 					// deprecation of user_properties table.
 					if firstEvent.UserPropertiesId != "" {
 						userProperties, errCode := pg.GetUserProperties(projectId, userId, firstEvent.UserPropertiesId)
@@ -926,7 +962,7 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 					ProjectId: projectId,
 					UserId:    userId,
 					// TODO(Dinesh): Remove UserPropertiesId after user_properties
-					// table is permanatly deprecated. The value will be empty
+					// table is permanently deprecated. The value will be empty
 					// when it is deprecated using flag.
 					UserPropertiesId: firstEvent.UserPropertiesId,
 					UserProperties:   firstEvent.UserProperties,
@@ -938,7 +974,8 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 						0, isLastEventToBeProcessed, errCode
 				}
-
+				isMatchingMktPropsOn = false
+				hasMismatchInBetween = false
 				sessionEvent = newSessionEvent
 				noOfSessionsCreated++
 			}
@@ -977,7 +1014,8 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 
 			if isSessionContinued {
 				// Using db query, since previous session continued, we don't have all the events of the session.
-				sessionPageCount, sessionPageSpentTime, onlyThisSessionPageCount, onlyThisSessionPageSpentTime, errCode = getPageCountAndTimeSpentForContinuedSession(
+				sessionPageCount, sessionPageSpentTime, onlyThisSessionPageCount,
+					onlyThisSessionPageSpentTime, errCode = getPageCountAndTimeSpentForContinuedSession(
 					projectId, userId, sessionEvent, events[sessionStartIndex:sessionEndIndex+1])
 				if errCode == http.StatusInternalServerError {
 					logCtx.Error("Failed to get page count and spent time of session on add session.")
@@ -1025,10 +1063,8 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 					EventUserProperties: eventsOfSession[i].UserProperties,
 				}
 			}
-
-			sessionStartIndex = i
+			sessionStartIndex = i + 1
 		}
-
 		i++
 	}
 

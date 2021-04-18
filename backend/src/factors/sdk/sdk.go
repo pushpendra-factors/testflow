@@ -521,6 +521,13 @@ func Track(projectId uint64, request *TrackPayload,
 		return eventNameErrCode, &TrackResponse{Error: "Tracking failed. Creating event_name failed."}
 	}
 
+	// Parsing URL params for all the event sources
+	pageURL := getURLFromPageEvent(request.EventProperties)
+	parsedPageURL, err := U.ParseURLStable(pageURL)
+	if err == nil {
+		_ = U.FillPropertiesFromURL(&request.EventProperties, parsedPageURL)
+	}
+
 	// Event Properties
 	clientIP := request.ClientIP
 	U.UnEscapeQueryParamProperties(&request.EventProperties)
@@ -530,6 +537,7 @@ func Track(projectId uint64, request *TrackPayload,
 	if ip, ok := (*eventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
 		clientIP = ip.(string)
 	}
+
 	// Added IP to event properties for internal usage.
 	(*eventProperties)[U.EP_INTERNAL_IP] = clientIP
 	U.SanitizeProperties(eventProperties)
@@ -642,7 +650,7 @@ func Track(projectId uint64, request *TrackPayload,
 		}
 	}
 
-	err := U.FillFirstEventUserPropertiesIfNotExist(existingUserProperties, userProperties, request.Timestamp)
+	err = U.FillFirstEventUserPropertiesIfNotExist(existingUserProperties, userProperties, request.Timestamp)
 	if err != nil {
 		logCtx.WithError(err).
 			Error("Failed to fill day of first event user_properties on track.")
@@ -655,7 +663,7 @@ func Track(projectId uint64, request *TrackPayload,
 		response.Error = "Failed updating user properties."
 	}
 
-	newUserPropertiesJSON := &postgres.Jsonb{userPropsJSON}
+	newUserPropertiesJSON := &postgres.Jsonb{RawMessage: userPropsJSON}
 	userPropertiesIDV1, userPropertiesV2, errCode := store.GetStore().UpdateUserProperties(
 		projectId, request.UserId, newUserPropertiesJSON, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
@@ -673,7 +681,7 @@ func Track(projectId uint64, request *TrackPayload,
 		UserId:          request.UserId,
 
 		// UserPropertiesId - Computed using user_properties table.
-		// Kept for backward compatability. Will be removed after
+		// Kept for backward compatibility. Will be removed after
 		// deprecating user_properties table.
 		UserPropertiesId: userPropertiesIDV1,
 
@@ -694,7 +702,7 @@ func Track(projectId uint64, request *TrackPayload,
 	if err != nil {
 		return http.StatusBadRequest, &TrackResponse{Error: "Tracking failed. Invalid properties."}
 	}
-	event.Properties = postgres.Jsonb{eventPropsJSON}
+	event.Properties = postgres.Jsonb{RawMessage: eventPropsJSON}
 
 	createdEvent, errCode := store.GetStore().CreateEvent(event)
 	if errCode == http.StatusNotAcceptable {
@@ -709,6 +717,27 @@ func Track(projectId uint64, request *TrackPayload,
 	response.Message = "User event tracked successfully."
 	response.CustomerEventId = request.CustomerEventId
 	return http.StatusOK, response
+}
+
+func getURLFromPageEvent(properties U.PropertiesMap) string {
+
+	url, exists := properties["url"]
+	if exists && url != nil {
+		return url.(string)
+	}
+	url, exists = properties["$page_raw_url"]
+	if exists && url != nil {
+		return url.(string)
+	}
+	url, exists = properties["URL"]
+	if exists && url != nil {
+		return url.(string)
+	}
+	url, exists = properties["page_url"]
+	if exists && url != nil {
+		return url.(string)
+	}
+	return ""
 }
 
 type Rank struct {
