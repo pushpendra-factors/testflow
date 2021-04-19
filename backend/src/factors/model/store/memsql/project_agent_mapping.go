@@ -10,8 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const error_Duplicate_project_agent_mapping_error = "pq: duplicate key value violates unique constraint \"project_agent_mappings_pkey\""
-
 // Add Check
 // Project should not have more than 100 Agents
 func createProjectAgentMapping(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int) {
@@ -26,7 +24,7 @@ func createProjectAgentMapping(pam *model.ProjectAgentMapping) (*model.ProjectAg
 	db := C.GetServices().Db
 
 	if err := db.Create(pam).Error; err != nil {
-		if err.Error() == error_Duplicate_project_agent_mapping_error {
+		if IsDuplicateRecordError(err) {
 			return nil, http.StatusFound
 		}
 		log.WithError(err).Error("CreateProjectAgentMapping Failed.")

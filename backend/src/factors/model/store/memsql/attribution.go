@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"database/sql"
 	"errors"
 	C "factors/config"
 	"factors/model/model"
@@ -513,7 +514,7 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 			var propertiesID string
 
 			if err = rows.Scan(&userID, &coalesceID, &propertiesID); err != nil {
-				logCtx.WithError(err).Error("SQL Parse failed")
+				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 				continue
 			}
 			userIDToCoalUserIDMap[userID] = model.UserInfo{CoalUserID: coalesceID, PropertiesID: propertiesID}
@@ -571,7 +572,7 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId uint
 		var gclID string
 		var timestamp int64
 		if err = rows.Scan(&userID, &attributionId, &gclID, &timestamp); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
 		// apply filter at extracting session level itself
@@ -587,7 +588,7 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId uint
 
 		// Override GCLID based campaign info if presents
 		if gclID != model.PropertyValueNone {
-			attributionIdBasedOnGclID := getGCLIDAttributionValue(gclIDBasedCampaign, gclID, attributionEventKey)
+			attributionIdBasedOnGclID := model.GetGCLIDAttributionValue(gclIDBasedCampaign, gclID, attributionEventKey)
 			// In cases where GCLID is present in events, but not in adwords report (as users tend to bookmark expired URLs),
 			// fallback is attributionId
 			if attributionIdBasedOnGclID != model.PropertyValueNone {
@@ -619,23 +620,6 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId uint
 		}
 	}
 	return attributedSessionsByUserId, userIdsWithSession, nil
-}
-
-// Returns the matching value for GCLID, if not found returns $none
-func getGCLIDAttributionValue(gclIDBasedCampaign map[string]model.CampaignInfo, gclID string, attributionKey string) string {
-
-	if value, ok := gclIDBasedCampaign[gclID]; ok {
-		switch attributionKey {
-		case U.EP_ADGROUP:
-			return value.AdgroupName
-		case U.EP_CAMPAIGN:
-			return value.CampaignName
-		default:
-			// No enrichment for Source and Keyword via GCLID
-			return model.PropertyValueNone
-		}
-	}
-	return model.PropertyValueNone
 }
 
 // Returns the concatenated list of conversion event + funnel events names
@@ -763,7 +747,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom
 				var userID string
 				var timestamp int64
 				if err = rows.Scan(&userID, &timestamp); err != nil {
-					logCtx.WithError(err).Error("SQL Parse failed")
+					logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 					continue
 				}
 				if _, ok := userIDHitGoalEventTimestamp[userID]; !ok {
@@ -834,7 +818,7 @@ func (store *MemSQL) GetLinkedFunnelEventUsers(projectID uint64, queryFrom, quer
 				var userID string
 				var timestamp int64
 				if err = rows.Scan(&userID, &timestamp); err != nil {
-					logCtx.WithError(err).Error("SQL Parse failed")
+					logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 					continue
 				}
 				if _, ok := userIDHitGoalEventTimestamp[userID]; !ok {
@@ -908,7 +892,7 @@ func (store *MemSQL) ApplyUserPropertiesFilter(projectID uint64, userIDList []st
 		for rows.Next() {
 			var userID string
 			if err = rows.Scan(&userID); err != nil {
-				logCtx.WithError(err).Error("SQL Parse failed")
+				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 				continue
 			}
 			if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
@@ -972,7 +956,7 @@ func (store *MemSQL) GetConvertedUsersWithFilter(projectID uint64, goalEventName
 		var userID string
 		var timestamp int64
 		if err = rows.Scan(&userID, &timestamp); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
 		if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
@@ -1059,7 +1043,7 @@ func (store *MemSQL) GetConvertedUsers(projectID uint64, goalEventName string,
 		var userID string
 		var timestamp int64
 		if err = rows.Scan(&userID, &timestamp); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
 		if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
@@ -1202,18 +1186,18 @@ func getKey(id1 string, id2 string) string {
 // data is left with empty name parameter
 //
 // # ADGroup
-// SELECT value->>'ad_group_id' AS ad_group_id,  value->>'ad_group_name' AS ad_group_name,
-// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
-// SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents where project_id = '399'
+// SELECT JSON_EXTRACT_STRING(value, ad_group_id) AS ad_group_id,  JSON_EXTRACT_STRING(value, ad_group_name) AS ad_group_name,
+// SUM((JSON_EXTRACT_STRING(value, impressions))) AS impressions, SUM((JSON_EXTRACT_STRING(value, clicks))) AS clicks,
+// SUM((JSON_EXTRACT_STRING(value, cost)))/1000000 AS total_cost FROM adwords_documents where project_id = '399'
 // AND customer_account_id IN ('1475899910') AND type = '10' AND timestamp between '20210220' AND '20210303'
-// group by value->>'ad_group_id', ad_group_name LIMIT 5;
+// group by JSON_EXTRACT_STRING(value, ad_group_id), ad_group_name LIMIT 5;
 //
 // # Campaign
-// SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name,
-// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
-// SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents where project_id = '399'
+// SELECT JSON_EXTRACT_STRING(value, campaign_id) AS campaign_id,  JSON_EXTRACT_STRING(value, campaign_name) AS campaign_name,
+// SUM((JSON_EXTRACT_STRING(value, impressions))) AS impressions, SUM((JSON_EXTRACT_STRING(value, clicks))) AS clicks,
+// SUM((JSON_EXTRACT_STRING(value, cost)))/1000000 AS total_cost FROM adwords_documents where project_id = '399'
 // AND customer_account_id IN ('1475899910') AND type = '5' AND timestamp between '20210220' AND '20210303'
-// group by value->>'campaign_id', campaign_name LIMIT 5;
+// group by JSON_EXTRACT_STRING(value, campaign_id), campaign_name LIMIT 5;
 func (store *MemSQL) AddAdwordsPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
 	from, to int64, customerAccountID string, attributionKey string, timeZone string) (string, error) {
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
@@ -1221,20 +1205,30 @@ func (store *MemSQL) AddAdwordsPerformanceReportInfo(projectID uint64, attributi
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 
 	reportType := model.AdwordsDocumentTypeAlias[model.CampaignPerformanceReport] // 5
-	performanceQuery := "SELECT value::campaign_id AS campaign_id,  value::campaign_name AS campaign_name, " +
+	performanceQuery := "SELECT JSON_EXTRACT_STRING(value, 'campaign_id') AS campaign_id, JSON_EXTRACT_STRING(value, 'campaign_name') AS campaign_name, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'cost'))/1000000 AS total_cost FROM adwords_documents " +
 		"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by value::campaign_id, campaign_name"
+		"group by campaign_id, campaign_name"
 
 	// AdGroup report for AttributionKey as AdGroup
 	if attributionKey == model.AttributionKeyAdgroup {
 		reportType = model.AdwordsDocumentTypeAlias[model.AdGroupPerformanceReport] // 10
-		performanceQuery = "SELECT value::ad_group_id AS ad_group_id,  value::ad_group_name AS ad_group_name, " +
+		performanceQuery = "SELECT JSON_EXTRACT_STRING(value, 'ad_group_id') AS ad_group_id,  JSON_EXTRACT_STRING(value, 'ad_group_name') AS ad_group_name, " +
 			"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
 			"SUM(JSON_EXTRACT_STRING(value, 'cost'))/1000000 AS total_cost FROM adwords_documents " +
 			"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-			"group by value::ad_group_id, ad_group_name"
+			"group by ad_group_id, ad_group_name"
+	}
+
+	// Keyword report for AttributionKey as keyword
+	if attributionKey == model.AttributionKeyKeyword {
+		reportType = model.AdwordsDocumentTypeAlias[model.KeywordPerformanceReport] // 8
+		performanceQuery = "SELECT JSON_EXTRACT_STRING(value, 'id') AS id,  JSON_EXTRACT_STRING(value, 'criteria') AS criteria, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'cost'))/1000000 AS total_cost FROM adwords_documents " +
+			"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
+			"group by id, criteria"
 	}
 
 	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
@@ -1246,15 +1240,38 @@ func (store *MemSQL) AddAdwordsPerformanceReportInfo(projectID uint64, attributi
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var keyNameNull sql.NullString
+		var keyIDNull sql.NullString
+		var impressionsNull sql.NullFloat64
+		var clicksNull sql.NullFloat64
+		var spendNull sql.NullFloat64
+		if err = rows.Scan(&keyIDNull, &keyNameNull, &impressionsNull, &clicksNull, &spendNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+		if !keyNameNull.Valid || !keyIDNull.Valid {
+			continue
+		}
 		var keyName string
 		var keyID string
 		var impressions float64
 		var clicks float64
 		var spend float64
-		if err = rows.Scan(&keyID, &keyName, &impressions, &clicks, &spend); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
-			continue
+		impressions = 0
+		clicks = 0
+		spend = 0
+		keyName = keyNameNull.String
+		keyID = keyIDNull.String
+		if impressionsNull.Valid {
+			impressions = impressionsNull.Float64
 		}
+		if clicksNull.Valid {
+			clicks = clicksNull.Float64
+		}
+		if spendNull.Valid {
+			spend = spendNull.Float64
+		}
+
 		matchingID := ""
 		if _, keyIDFound := attributionData[keyID]; keyIDFound {
 			matchingID = keyID
@@ -1283,7 +1300,7 @@ func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID stri
 	if len(customerAccountIDs) == 0 {
 		return "", errors.New("no ad-words customer account id found")
 	}
-	queryCurrency := "SELECT value::currency_code AS currency FROM adwords_documents " +
+	queryCurrency := "SELECT JSON_EXTRACT_STRING(value, 'currency_code') AS currency FROM adwords_documents " +
 		" WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ? " +
 		" ORDER BY timestamp DESC LIMIT 1"
 	logCtx := log.WithField("ProjectId", projectID)
@@ -1298,7 +1315,7 @@ func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID stri
 	var currency string
 	for rows.Next() {
 		if err = rows.Scan(&currency); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
+			logCtx.WithError(err).Error("SQL Parse failed.")
 			return "", err
 		}
 	}
@@ -1309,17 +1326,17 @@ func (store *MemSQL) GetAdwordsCurrency(projectID uint64, customerAccountID stri
 // Key id with no matching channel
 // data is left with empty name parameter
 // # ADGroup
-// SELECT value->>'adset_id' AS adset_id,  value->>'adset_name' AS adset_name, SUM((value->>'impressions')::float)
-// AS impressions, SUM((value->>'clicks')::float) AS clicks, SUM((value->>'spend')::float)/1000000 AS total_spend
+// SELECT JSON_EXTRACT_STRING(value, adset_id) AS adset_id,  JSON_EXTRACT_STRING(value, adset_name) AS adset_name, SUM((JSON_EXTRACT_STRING(value, impressions)))
+// AS impressions, SUM((JSON_EXTRACT_STRING(value, clicks))) AS clicks, SUM((JSON_EXTRACT_STRING(value, spend)))/1000000 AS total_spend
 // FROM facebook_documents where project_id = '399' AND customer_ad_account_id IN ('act_367960820625667')
-// AND type = '6' AND timestamp between '20210220' AND '20210303' group by value->>'adset_id', adset_name LIMIT 5;
+// AND type = '6' AND timestamp between '20210220' AND '20210303' group by JSON_EXTRACT_STRING(value, adset_id), adset_name LIMIT 5;
 //
 // # Campaign
-// SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name,
-// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
-// SUM((value->>'spend')::float)/1000000 AS total_spend FROM facebook_documents where project_id = '399'
+// SELECT JSON_EXTRACT_STRING(value, campaign_id) AS campaign_id,  JSON_EXTRACT_STRING(value, campaign_name) AS campaign_name,
+// SUM((JSON_EXTRACT_STRING(value, impressions))) AS impressions, SUM((JSON_EXTRACT_STRING(value, clicks))) AS clicks,
+// SUM((JSON_EXTRACT_STRING(value, spend)))/1000000 AS total_spend FROM facebook_documents where project_id = '399'
 // AND customer_ad_account_id IN ('act_367960820625667') AND type = '5' AND timestamp between '20210220'
-// AND '20210303' group by value->>'campaign_id', campaign_name LIMIT 5;
+// AND '20210303' group by JSON_EXTRACT_STRING(value, campaign_id), campaign_name LIMIT 5;
 func (store *MemSQL) AddFacebookPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
 	from, to int64, customerAccountID string, attributionKey string, timeZone string) error {
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
@@ -1327,20 +1344,20 @@ func (store *MemSQL) AddFacebookPerformanceReportInfo(projectID uint64, attribut
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 
 	reportType := facebookDocumentTypeAlias["campaign_insights"] // 5
-	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
-		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-		"SUM((value->>'spend')::float) AS total_spend FROM facebook_documents " +
+	performanceQuery := "SELECT JSON_EXTRACT_STRING(value, 'campaign_id') AS campaign_id,  JSON_EXTRACT_STRING(value, 'campaign_name') AS campaign_name, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_spend FROM facebook_documents " +
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by value->>'campaign_id', campaign_name"
+		"group by campaign_id, campaign_name"
 
 	// AdGroup report for AttributionKey as AdGroup
 	if attributionKey == model.AttributionKeyAdgroup {
 		reportType = facebookDocumentTypeAlias["ad_set_insights"] // 5
-		performanceQuery = "SELECT value->>'adset_id' AS adset_id,  value->>'adset_name' AS adset_name, " +
-			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-			"SUM((value->>'spend')::float) AS total_spend FROM facebook_documents " +
+		performanceQuery = "SELECT JSON_EXTRACT_STRING(value, 'adset_id') AS adset_id,  JSON_EXTRACT_STRING(value, 'adset_name') AS adset_name, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_spend FROM facebook_documents " +
 			"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-			"group by value->>'adset_id', adset_name"
+			"group by adset_id, adset_name"
 	}
 
 	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
@@ -1352,15 +1369,38 @@ func (store *MemSQL) AddFacebookPerformanceReportInfo(projectID uint64, attribut
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var keyNameNull sql.NullString
+		var keyIDNull sql.NullString
+		var impressionsNull sql.NullFloat64
+		var clicksNull sql.NullFloat64
+		var spendNull sql.NullFloat64
+		if err = rows.Scan(&keyIDNull, &keyNameNull, &impressionsNull, &clicksNull, &spendNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+		if !keyNameNull.Valid || !keyIDNull.Valid {
+			continue
+		}
 		var keyName string
 		var keyID string
 		var impressions float64
 		var clicks float64
 		var spend float64
-		if err = rows.Scan(&keyID, &keyName, &impressions, &clicks, &spend); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
-			continue
+		impressions = 0
+		clicks = 0
+		spend = 0
+		keyName = keyNameNull.String
+		keyID = keyIDNull.String
+		if impressionsNull.Valid {
+			impressions = impressionsNull.Float64
 		}
+		if clicksNull.Valid {
+			clicks = clicksNull.Float64
+		}
+		if spendNull.Valid {
+			spend = spendNull.Float64
+		}
+
 		matchingID := ""
 		if _, keyIdFound := attributionData[keyID]; keyIdFound {
 			matchingID = keyID
@@ -1383,18 +1423,18 @@ func (store *MemSQL) AddFacebookPerformanceReportInfo(projectID uint64, attribut
 // Key id with no matching channel
 // data is left with empty name parameter
 // # ADGroup
-// SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name,
-// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
-// SUM((value->>'costInLocalCurrency')::float)/1000000 AS total_spend FROM linkedin_documents where
+// SELECT JSON_EXTRACT_STRING(value, campaign_id) AS campaign_id,  JSON_EXTRACT_STRING(value, campaign_name) AS campaign_name,
+// SUM((JSON_EXTRACT_STRING(value, impressions))) AS impressions, SUM((JSON_EXTRACT_STRING(value, clicks))) AS clicks,
+// SUM((JSON_EXTRACT_STRING(value, costInLocalCurrency)))/1000000 AS total_spend FROM linkedin_documents where
 // project_id = '399' AND customer_ad_account_id IN ('506157045') AND type = '6' AND timestamp
-// between '20210220' AND '20210303' group by value->>'campaign_id', campaign_name LIMIT 5;
+// between '20210220' AND '20210303' group by JSON_EXTRACT_STRING(value, campaign_id), campaign_name LIMIT 5;
 //
 // # Campaign
-// SELECT value->>'campaign_group_id' AS campaign_group_id,  value->>'campaign_group_name' AS campaign_group_name,
-// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
-// SUM((value->>'costInLocalCurrency')::float)/1000000 AS total_spend FROM linkedin_documents
+// SELECT JSON_EXTRACT_STRING(value, campaign_group_id) AS campaign_group_id,  JSON_EXTRACT_STRING(value, campaign_group_name) AS campaign_group_name,
+// SUM((JSON_EXTRACT_STRING(value, impressions))) AS impressions, SUM((JSON_EXTRACT_STRING(value, clicks))) AS clicks,
+// SUM((JSON_EXTRACT_STRING(value, costInLocalCurrency)))/1000000 AS total_spend FROM linkedin_documents
 // where project_id = '399' AND customer_ad_account_id IN ('506157045') AND type = '5' AND
-// timestamp between '20210220' AND '20210303' group by value->>'campaign_group_id', campaign_group_name LIMIT 5;
+// timestamp between '20210220' AND '20210303' group by JSON_EXTRACT_STRING(value, campaign_group_id), campaign_group_name LIMIT 5;
 func (store *MemSQL) AddLinkedinPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
 	from, to int64, customerAccountID string, attributionKey string, timeZone string) error {
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
@@ -1402,20 +1442,20 @@ func (store *MemSQL) AddLinkedinPerformanceReportInfo(projectID uint64, attribut
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 
 	reportType := linkedinDocumentTypeAlias["campaign_group_insights"] // 5
-	performanceQuery := "SELECT value->>'campaign_group_id' AS campaign_group_id,  value->>'campaign_group_name' AS campaign_group_name, " +
-		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-		"SUM((value->>'costInLocalCurrency')::float) AS total_spend FROM linkedin_documents " +
+	performanceQuery := "SELECT JSON_EXTRACT_STRING(value, 'campaign_group_id') AS campaign_group_id,  JSON_EXTRACT_STRING(value, 'campaign_group_name') AS campaign_group_name, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM((JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency')) AS total_spend FROM linkedin_documents " +
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by value->>'campaign_group_id', campaign_group_name"
+		"group by campaign_group_id, campaign_group_name"
 
 	// AdGroup report for AttributionKey as AdGroup
 	if attributionKey == model.AttributionKeyAdgroup {
 		reportType = linkedinDocumentTypeAlias["campaign_insights"] // 6
-		performanceQuery = "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
-			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-			"SUM((value->>'costInLocalCurrency')::float) AS total_spend FROM linkedin_documents " +
+		performanceQuery = "SELECT JSON_EXTRACT_STRING(value, 'campaign_id') AS campaign_id,  JSON_EXTRACT_STRING(value, 'campaign_name') AS campaign_name, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency')) AS total_spend FROM linkedin_documents " +
 			"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-			"group by value->>'campaign_id', campaign_name"
+			"group by campaign_id, campaign_name"
 	}
 
 	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
@@ -1427,15 +1467,38 @@ func (store *MemSQL) AddLinkedinPerformanceReportInfo(projectID uint64, attribut
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var keyNameNull sql.NullString
+		var keyIDNull sql.NullString
+		var impressionsNull sql.NullFloat64
+		var clicksNull sql.NullFloat64
+		var spendNull sql.NullFloat64
+		if err = rows.Scan(&keyIDNull, &keyNameNull, &impressionsNull, &clicksNull, &spendNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+		if !keyNameNull.Valid || !keyIDNull.Valid {
+			continue
+		}
 		var keyName string
 		var keyID string
 		var impressions float64
 		var clicks float64
 		var spend float64
-		if err = rows.Scan(&keyID, &keyName, &impressions, &clicks, &spend); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
-			continue
+		impressions = 0
+		clicks = 0
+		spend = 0
+		keyName = keyNameNull.String
+		keyID = keyIDNull.String
+		if impressionsNull.Valid {
+			impressions = impressionsNull.Float64
 		}
+		if clicksNull.Valid {
+			clicks = clicksNull.Float64
+		}
+		if spendNull.Valid {
+			spend = spendNull.Float64
+		}
+
 		matchingID := ""
 		if _, keyIdFound := attributionData[keyID]; keyIdFound {
 			matchingID = keyID

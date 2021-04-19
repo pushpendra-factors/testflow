@@ -5,6 +5,8 @@ import { SVG, Text } from 'factorsComponents';
 import { Button, Tooltip, Input } from 'antd';
 import GroupSelect from '../../../../../components/QueryComposer/GroupSelect';
 import FaSelect from '../../../../../components/FaSelect';
+import {operatorMap, reverseOperatorMap} from '../utils';
+
 
 const defaultOpProps = {
     "categorical": [
@@ -31,7 +33,7 @@ function PropertyFilter({activeProject, propOpts = [], filter, insertFilter}) {
     const [propState, setPropState] = useState({});
     const [propSelectOpen, setPropSelectOpen] = useState(false);
 
-    const [operatorState, setOperatorState] = useState("=");
+    const [operatorState, setOperatorState] = useState("equals");
     const [operSelectOpen, setOperSelectOpen] = useState(false);
 
     const [valueState, setValueState] = useState('');
@@ -52,12 +54,12 @@ function PropertyFilter({activeProject, propOpts = [], filter, insertFilter}) {
             category: prop[1]
         })
         setPropSelectOpen(false);
-        setOperatorState("=");
+        setOperatorState("equals");
         setValueState("");
     }
 
     const operatorSelect = (op) => {
-        setOperatorState(op[0]);
+        setOperatorState(operatorMap[op[0]]);
         setOperSelectOpen(false);
         setValueState("");
     }
@@ -107,7 +109,7 @@ function PropertyFilter({activeProject, propOpts = [], filter, insertFilter}) {
             <Button 
                 className={`fa-button--truncate`} 
                 type="link" 
-                onClick={() => setOperSelectOpen(!operSelectOpen)}> {operatorState? operatorState : 'Select Operator'} 
+                onClick={() => setOperSelectOpen(!operSelectOpen)}> {operatorState? reverseOperatorMap[operatorState] : 'Select Operator'} 
             </Button>
 
             {operSelectOpen && 

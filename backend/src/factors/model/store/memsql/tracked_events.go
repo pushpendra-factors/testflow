@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -122,11 +123,11 @@ func (store *MemSQL) DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (
 func (store *MemSQL) GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int) {
 	db := C.GetServices().Db
 
-	queryStr := "WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = ? LIMIT ?) " +
-		"SELECT tracked_events.*, event_names.name FROM tracked_events LEFT JOIN event_names " +
-		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = ?;"
+	queryStr := fmt.Sprintf("WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = ? LIMIT %d) "+
+		"SELECT tracked_events.*, event_names.name FROM tracked_events LEFT JOIN event_names "+
+		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = ?;", 10000)
 	params := make([]interface{}, 0)
-	params = append(params, ProjectID, 10000, ProjectID)
+	params = append(params, ProjectID, ProjectID)
 	trackedEvents := make([]model.FactorsTrackedEventInfo, 0)
 	rows, err := db.Raw(queryStr, params...).Rows()
 	if err != nil {
@@ -149,11 +150,11 @@ func (store *MemSQL) GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]mo
 func (store *MemSQL) GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int) {
 	db := C.GetServices().Db
 
-	queryStr := "WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = ? AND is_active = true LIMIT ?) " +
-		"SELECT tracked_events.*, event_names.name FROM tracked_events LEFT JOIN event_names " +
-		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = ?;"
+	queryStr := fmt.Sprintf("WITH tracked_events AS( SELECT * FROM factors_tracked_events WHERE project_id = ? AND is_active = true LIMIT %d) "+
+		"SELECT tracked_events.*, event_names.name FROM tracked_events LEFT JOIN event_names "+
+		"ON tracked_events.event_name_id = event_names.id AND event_names.project_id = ?;", 10000)
 	params := make([]interface{}, 0)
-	params = append(params, ProjectID, 10000, ProjectID)
+	params = append(params, ProjectID, ProjectID)
 	trackedEvents := make([]model.FactorsTrackedEventInfo, 0)
 	rows, err := db.Raw(queryStr, params...).Rows()
 	if err != nil {

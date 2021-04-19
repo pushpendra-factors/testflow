@@ -99,7 +99,6 @@ func getPropertyEntityField(projectID uint64, groupProp model.QueryGroupByProper
 
 func getPropertyEntityFieldForFilter(projectID uint64, entityName string) string {
 	if entityName == model.PropertyEntityUser {
-		return "user_properties.properties"
 		if C.ShouldUseUserPropertiesTableForRead(projectID) {
 			return "user_properties.properties"
 		}
@@ -172,7 +171,7 @@ func buildWhereFromProperties(projectID uint64, properties []model.QueryProperty
 					rParams = append(rParams, p.Property, dateTimeValue.From, p.Property, dateTimeValue.To)
 				} else if p.Type == U.PropertyTypeNumerical {
 					// convert to float for numerical properties.
-					pStmnt = fmt.Sprintf("CASE WHEN JSON_GET_TYPE(JSON_EXTRACT_JSON(%s, ?)) = 'double' THEN  JSON_EXTRACT_JSON(%s, ?) %s ? ELSE false END", propertyEntity, propertyEntity, propertyOp)
+					pStmnt = fmt.Sprintf("CASE WHEN JSON_GET_TYPE(JSON_EXTRACT_JSON(%s, ?)) = 'double' THEN  JSON_EXTRACT_DOUBLE(%s, ?) %s ? ELSE false END", propertyEntity, propertyEntity, propertyOp)
 					rParams = append(rParams, p.Property, p.Property, p.Value)
 				} else {
 					// categorical property type.
@@ -304,7 +303,7 @@ func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByP
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
 	} else {
-		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s, ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '' THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '0' THEN '%s' ELSE  date_trunc('%s', to_timestamp(to_number((JSON_EXTRACT_STRING(%s, ?)),'9999999999'))::timestamp) END AS %s",
+		groupSelect = fmt.Sprintf("CASE WHEN JSON_EXTRACT_STRING(%s, ?) IS NULL THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '' THEN '%s' WHEN JSON_EXTRACT_STRING(%s, ?) = '0' THEN '%s' ELSE  date_trunc('%s', FROM_UNIXTIME(CONVERT(JSON_EXTRACT_STRING(%s, ?),DECIMAL(10)))) END AS %s",
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, groupProp.Granularity, entityField, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
 	}
@@ -378,8 +377,8 @@ func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, group
 		// Adding very small 0.00001 to the lower bound so that while bucketing lbound comes in
 		// first bucket instead of 2nd bucket.
 		boundsStepName := groupKey + "_bounds"
-		boundsStatement := fmt.Sprintf("SELECT percentile_disc(%.2f) WITHIN GROUP(ORDER BY CONVERT(%s, DECIMAL)) + 0.00001 AS lbound, "+
-			"percentile_disc(%.2f) WITHIN GROUP(ORDER BY CONVERT(%s, DECIMAL)) AS ubound FROM %s "+
+		boundsStatement := fmt.Sprintf("SELECT percentile_disc(%.2f) WITHIN GROUP(ORDER BY CONVERT(%s, DECIMAL(20,2))) + 0.00001 AS lbound, "+
+			"percentile_disc(%.2f) WITHIN GROUP(ORDER BY CONVERT(%s, DECIMAL(20,2))) AS ubound FROM %s "+
 			"WHERE %s != '%s' AND %s != '' AND %s RLIKE ? ", model.NumericalLowerBoundPercentile, groupKey, model.NumericalUpperBoundPercentile,
 			groupKey, refStepName, groupKey, model.PropertyValueNone, groupKey, groupKey)
 		*qParams = append(*qParams, NumericalValuePostgresRegex)
@@ -393,15 +392,15 @@ func appendNumericalBucketingSteps(qStmnt *string, qParams *[]interface{}, group
 		// Adding width_bucket for each record, keeping -1 for $none.
 		// TODO(prateek): Add a UDF if required in case NTILE is working well.
 		bucketKey := groupKey + "_bucket"
-		stepBucket := fmt.Sprintf("CASE WHEN %s = '%s' THEN -1 WHEN %s = '' THEN -1 WHEN CONVERT(%s, DECIMAL) < %s.lbound THEN 0"+
-			" WHEN CONVERT(%s, DECIMAL) >= %s.ubound THEN %d ELSE NTILE(%d) OVER (ORDER BY CONVERT(%s, DECIMAL) ASC) END AS %s, ",
+		stepBucket := fmt.Sprintf("CASE WHEN %s = '%s' THEN -1 WHEN %s = '' THEN -1 WHEN CONVERT(%s, DECIMAL(20,2)) < %s.lbound THEN 0"+
+			" WHEN CONVERT(%s, DECIMAL(20,2)) >= %s.ubound THEN %d ELSE NTILE(%d) OVER (ORDER BY CONVERT(%s, DECIMAL(20,2)) ASC) END AS %s, ",
 			groupKey, model.PropertyValueNone, groupKey, groupKey, boundsStepName,
 			groupKey, boundsStepName, model.NumericalGroupByBuckets-1, model.NumericalGroupByBuckets-2, groupKey, bucketKey)
 
 		// Creating bucket string to be used in group by. Also, replacing NaN-Nan to $none.
 		aggregateSelectKeys = aggregateSelectKeys + fmt.Sprintf(
-			"COALESCE(NULLIF(concat(round(min(CONVERT(%s, DECIMAL)), 1), '%s', round(max(CONVERT(%s, DECIMAL)), 1)), 'NaN%sNaN'), '%s') AS %s, ",
-			groupKey, model.NumericalGroupBySeparator, groupKey, model.NumericalGroupBySeparator, model.PropertyValueNone, groupKey)
+			"COALESCE(NULLIF(concat(CASE WHEN %s = 'NaN' THEN 'NaN' ELSE round(min(CONVERT(%s, DECIMAL(20,2))), 1) END, '%s', CASE WHEN %s = 'NaN' THEN 'NaN' ELSE round(max(CONVERT(%s, DECIMAL(20,2))), 1) END), 'NaN%sNaN'), '%s') AS %s, ",
+			groupKey, groupKey, model.NumericalGroupBySeparator, groupKey, groupKey, model.NumericalGroupBySeparator, model.PropertyValueNone, groupKey)
 		bucketedSelect = bucketedSelect + noneToNaN + stepBucket
 		boundStepNames = append(boundStepNames, boundsStepName)
 		aggregateGroupBys = append(aggregateGroupBys, bucketKey)
@@ -622,6 +621,12 @@ func removeEventSpecificUserGroupBys(groupBys []model.QueryGroupByProperty) []mo
 func appendOrderByAggr(qStmnt string) string {
 	return fmt.Sprintf("%s ORDER BY %s DESC", qStmnt, model.AliasAggr)
 }
+
+func appendOrderByAggrAndGroupKeys(projectID uint64, qStmnt string, groupBys []model.QueryGroupByProperty) string {
+	_, _, groupKeys := buildGroupKeys(projectID, groupBys)
+	return joinWithComma(fmt.Sprintf("%s ORDER BY %s DESC", qStmnt, model.AliasAggr), groupKeys)
+}
+
 func appendOrderByEventNameAndAggr(qStmnt string) string {
 	return fmt.Sprintf("%s ORDER BY event_name, %s DESC", qStmnt, model.AliasAggr)
 }
@@ -999,7 +1004,7 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 	// For query: ...where id in ($1) where $1 is passed as a slice, convert to pq.Array()
 	stmnt, params = model.ExpandArrayWithIndividualValues(stmnt, params)
 	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST {
-		log.WithFields(log.Fields{"Query": stmnt, "Params": params}).Info("Exec query with context")
+		log.WithFields(log.Fields{"Query": U.DBDebugPreparedStatement(stmnt, params)}).Info("Exec query with context")
 	}
 
 	return db.DB().QueryContext(*C.GetServices().DBContext, stmnt, params...)

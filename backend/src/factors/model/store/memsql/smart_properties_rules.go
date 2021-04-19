@@ -49,12 +49,6 @@ var mapOfObjectAndProperty = map[string]map[string]map[string]PropertiesAndRelat
 var smartPropertyObjects = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
 var smartPropertySources = []string{"all", "facebook", "adwords", "linkedin"}
 
-const errorDuplicateSmartPropertyRules = "pq: duplicate key value violates unique constraint \"smart_property_rules_primary_key\""
-
-func isDuplicateSmartPropertyRulesError(err error) bool {
-	return err.Error() == errorDuplicateSmartPropertyRules
-}
-
 func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int) {
 	var result model.SmartPropertyRulesConfig
 	sources := make([]model.Source, 0, 0)
@@ -126,14 +120,14 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 
 	errMsg, isValidRule := validateSmartPropertyRules(projectID, smartPropertyRulesDoc)
 	if !isValidRule {
-		logCtx.Error(errMsg)
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn(errMsg)
 		return &model.SmartPropertyRules{}, errMsg, http.StatusBadRequest
 	}
 
 	logCtx = logCtx.WithField("type_alias", smartPropertyRulesDoc.TypeAlias)
 	objectType, typeExists := smartPropertyRulesTypeAliasToType[smartPropertyRulesDoc.TypeAlias]
 	if !typeExists {
-		logCtx.Error("Invalid type alias.")
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn("Invalid type alias.")
 		return &model.SmartPropertyRules{}, "Invalid type alias.", http.StatusBadRequest
 	}
 
@@ -142,6 +136,7 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 		return &model.SmartPropertyRules{}, "Name already present.", http.StatusBadRequest
 	}
 	smartPropertyRule := model.SmartPropertyRules{
+		ID:          U.GetUUID(),
 		ProjectID:   projectID,
 		Type:        objectType,
 		Name:        smartPropertyRulesDoc.Name,
@@ -153,7 +148,7 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 	db := C.GetServices().Db
 	err := db.Create(&smartPropertyRule).Error
 	if err != nil {
-		if isDuplicateSmartPropertyRulesError(err) {
+		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).WithField("project_id", smartPropertyRulesDoc.ProjectID).Warn(
 				"Failed to create rule object. Duplicate.")
 			return &model.SmartPropertyRules{}, "Duplicate Rule", http.StatusConflict
@@ -164,7 +159,7 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 	}
 	objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
 	if !typeAliasExists {
-		logCtx.Error("Invalid type alias.")
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn("Invalid type")
 		return &model.SmartPropertyRules{}, "Invalid type return from db.", http.StatusBadRequest
 	}
 	smartPropertyRule.TypeAlias = objectTypeAlias
@@ -175,14 +170,14 @@ func (store *MemSQL) UpdateSmartPropertyRules(projectID uint64, ruleID string, s
 
 	errMsg, isValidRule := validateSmartPropertyRules(projectID, &smartPropertyRulesDoc)
 	if !isValidRule {
-		logCtx.Error(errMsg)
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn(errMsg)
 		return model.SmartPropertyRules{}, errMsg, http.StatusBadRequest
 	}
 
 	logCtx = logCtx.WithField("type_alias", smartPropertyRulesDoc.TypeAlias)
 	objectType, typeExists := smartPropertyRulesTypeAliasToType[smartPropertyRulesDoc.TypeAlias]
 	if !typeExists {
-		logCtx.Error("Invalid type alias.")
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn("Invalid type alias.")
 		return model.SmartPropertyRules{}, "Invalid type alias.", http.StatusBadRequest
 	}
 	errCode := store.checkIfRuleNameAlreadyPresentWhileUpdate(projectID, smartPropertyRulesDoc.Name, ruleID, objectType)
@@ -201,7 +196,7 @@ func (store *MemSQL) UpdateSmartPropertyRules(projectID uint64, ruleID string, s
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND id = ?", projectID, ruleID).Updates(updatedFields).Error
 	if err != nil {
-		if isDuplicateSmartPropertyRulesError(err) {
+		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).WithField("project_id", smartPropertyRulesDoc.ProjectID).Warn(
 				"Failed to update rule object. Duplicate.")
 			return model.SmartPropertyRules{}, "Duplicate Rule", http.StatusConflict
@@ -259,7 +254,7 @@ func (store *MemSQL) GetSmartPropertyRules(projectID uint64) ([]model.SmartPrope
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND is_deleted != ?", projectID, true).Find(&smartPropertyRules).Error
 	if err != nil {
-		log.WithField("project_id", projectID).Error(err)
+		log.WithField("project_id", projectID).Warn(err)
 		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
 	}
 	for index, smartPropertyRule := range smartPropertyRules {
@@ -277,7 +272,7 @@ func (store *MemSQL) GetAllChangedSmartPropertyRulesForProject(projectID uint64)
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND evaluation_status != ?", projectID, model.EvaluationStatusMap["picked"]).Find(&smartPropertyRules).Error
 	if err != nil {
-		log.Error(err)
+		log.WithField("project_id", projectID).Warn(err)
 		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
 	}
 	return smartPropertyRules, http.StatusFound
@@ -296,7 +291,7 @@ func (store *MemSQL) GetSmartPropertyRule(projectID uint64, ruleID string) (mode
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND is_deleted != ? AND id = ?", projectID, true, ruleID).Find(&smartPropertyRule).Error
 	if err != nil {
-		log.WithField("project_id", projectID).Error(err)
+		log.WithField("project_id", projectID).Warn(err)
 		return model.SmartPropertyRules{}, http.StatusNotFound
 	}
 	objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]

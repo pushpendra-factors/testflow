@@ -112,9 +112,9 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, eventNameCreated, result.Rows[0][0])
-	assert.Equal(t, int64(1), result.Rows[0][1])
+	assert.Equal(t, float64(1), result.Rows[0][1])
 	assert.Equal(t, eventNameUpdate, result.Rows[1][0])
-	assert.Equal(t, int64(1), result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][1])
 
 	query = model.Query{
 		From: createdDate.Unix() - 500,
@@ -138,7 +138,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	// test using query
 	result, errCode, _ = store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, errCode)
-	assert.Equal(t, int64(1), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][0])
 
 	/*
 		salesforce record1 with createdDate != updatedDate
@@ -205,7 +205,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	// test using query
 	result, errCode, _ = store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, errCode)
-	assert.Equal(t, int64(1), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][0])
 
 	// query count of events
 	query = model.Query{
@@ -231,9 +231,9 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	result, errCode, _ = store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, eventNameCreated, result.Rows[0][0])
-	assert.Equal(t, int64(1), result.Rows[0][1])
+	assert.Equal(t, float64(1), result.Rows[0][1])
 	assert.Equal(t, eventNameUpdate, result.Rows[1][0])
-	assert.Equal(t, int64(3), result.Rows[1][1])
+	assert.Equal(t, float64(3), result.Rows[1][1])
 
 	query.GroupByProperties = []model.QueryGroupByProperty{
 		{
@@ -792,8 +792,8 @@ func TestSameUserSmartEvent(t *testing.T) {
 	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, result)
-	assert.Equal(t, int64(1), result.Rows[0][0])
-	assert.Equal(t, int64(1), result.Rows[0][1])
+	assert.Equal(t, float64(1), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
 
 	// no previous record will ruturn true for all not equal to any value
 	filter = model.SmartCRMEventFilter{
@@ -921,7 +921,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "city", result.Headers[0])
 	assert.Equal(t, "bangalore", result.Rows[1][0])
-	assert.Equal(t, int64(1), result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][1])
 
 	query = model.Query{
 		From: createdDate.Unix() - 500,
@@ -949,7 +949,7 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 	result, status, _ = store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, cuID, result.Rows[1][0])
-	assert.Equal(t, int64(1), result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][1])
 }
 
 func sendGetCRMObjectValuesByPropertyNameReq(r *gin.Engine, projectID uint64, agent *model.Agent, objectSource, objectType, propertyName string) *httptest.ResponseRecorder {
@@ -960,7 +960,7 @@ func sendGetCRMObjectValuesByPropertyNameReq(r *gin.Engine, projectID uint64, ag
 		return nil
 	}
 
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/v1/crm/%s/%s/properties/%s/values", projectID, objectSource, objectType, propertyName)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/crm/%s/%s/properties/%s/values", projectID, objectSource, objectType, propertyName)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -1390,7 +1390,7 @@ func TestSalesforceIndentification(t *testing.T) {
 	EventUserIDMap := make(map[string]string)
 	for i := range result.Rows {
 		EventUserIDMap[result.Rows[i][0].(string)] = result.Rows[i][1].(string)
-		assert.Equal(t, int64(1), result.Rows[i][2])
+		assert.Equal(t, float64(1), result.Rows[i][2])
 	}
 
 	assert.Equal(t, "$none", EventUserIDMap[U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED])

@@ -533,7 +533,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 			if q.EventsWithProperties[i].Name != "$session" {
 				addSelect = addSelect + ", events.session_id as session_id"
 			} else {
-				addSelect = addSelect + ", events.id::text as session_id"
+				addSelect = addSelect + ", events.id as session_id"
 			}
 		}
 		egSelect, egParams, egGroupKeys, groupByUserProperties := buildGroupKeyForStep(
@@ -576,13 +576,15 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 
 		stepXToYSelect := fmt.Sprintf("%s.coal_user_id, FIRST(%s.user_id, FROM_UNIXTIME(%s.timestamp)) as user_id, FIRST(%s.timestamp, FROM_UNIXTIME(%s.timestamp)) as timestamp, %s", stepName, stepName, stepName, stepName, stepName, stepName)
 		if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent) && i < int(q.SessionEndEvent) {
-			stepXToYSelect = fmt.Sprintf("DISTINCT ON(%s.coal_user_id) %s.coal_user_id, %s.user_id,%s.timestamp, %s.session_id, %s", stepName, stepName, stepName, stepName, stepName, stepName)
+			stepXToYSelect = fmt.Sprintf("%s.coal_user_id, FIRST(%s.user_id, FROM_UNIXTIME(%s.timestamp)) as user_id, FIRST(%s.timestamp, FROM_UNIXTIME(%s.timestamp)) as timestamp,"+
+				" FIRST(%s.session_id, FROM_UNIXTIME(%s.timestamp)) as session_id, FIRST(%s, FROM_UNIXTIME(%s.timestamp)) as %s",
+				stepName, stepName, stepName, stepName, stepName, stepName, stepName, stepName, stepName, stepName)
 		}
 
 		if egGroupKeys != "" {
 			stepXToYSelect = joinWithComma(stepXToYSelect, egGroupKeys)
 		}
-		joinTimeSelect = joinWithComma(joinTimeSelect, fmt.Sprintf("%s.timestamp AS %s_timestamp", stepName, stepName))
+		joinTimeSelect = joinWithComma(joinTimeSelect, fmt.Sprintf("FIRST(%s.timestamp, FROM_UNIXTIME(%s.timestamp)) AS %s_timestamp", stepName, stepName, stepName))
 		stepXToYSelect = joinWithComma(stepXToYSelect, joinTimeSelect)
 		// re-init joinTimeSelect
 		joinTimeSelect = ""

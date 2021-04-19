@@ -16,12 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const error_duplicateFactorsGoalName string = "pq: duplicate key value violates unique constraint \"name_projectid_unique_idx\""
-
-func isDuplicateName(err error) bool {
-	return err.Error() == error_duplicateFactorsGoalName
-}
-
 // GetAllFactorsGoals - get all the goals for a project
 func (store *MemSQL) GetAllFactorsGoals(ProjectID uint64) ([]model.FactorsGoal, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
@@ -100,7 +94,7 @@ func (store *MemSQL) CreateFactorsGoal(ProjectID uint64, Name string, Rule model
 		}
 	}
 	if err := db.Create(&goal).Error; err != nil {
-		if isDuplicateName(err) {
+		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).Error("Duplicate name")
 			return 0, http.StatusConflict, "duplicate name"
 		}
@@ -112,23 +106,27 @@ func (store *MemSQL) CreateFactorsGoal(ProjectID uint64, Name string, Rule model
 
 func isDulplicateFactorsGoalRule(ProjectID uint64, Rule model.FactorsGoalRule) bool {
 	db := C.GetServices().Db
-
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
-	ruleJSON, err := json.Marshal(Rule)
-	if err != nil {
-		logCtx.WithError(err).Error("FactorsGoal rule marshall failed")
-		return true
-	}
-	ruleJsonb := postgres.Jsonb{ruleJSON}
 
-	var goal model.FactorsGoal
-	if err := db.Where("rule = ?", ruleJsonb).Where("project_id = ?", ProjectID).Where("is_active =?", true).Take(&goal).Error; err != nil {
+	var goals []model.FactorsGoal
+	if err := db.Where("project_id = ?", ProjectID).
+		Where("is_active =?", true).
+		Where("JSON_EXTRACT_STRING(rule, 'st_en') = ? AND JSON_EXTRACT_STRING(rule, 'en_en') = ?", Rule.StartEvent, Rule.EndEvent).
+		Take(&goals).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return false
 		}
 	}
-	if goal.IsActive == true {
-		return true
+
+	for _, goal := range goals {
+		var resGoal model.FactorsGoalRule
+		if err := U.DecodePostgresJsonbToStructType(&goal.Rule, &resGoal); err != nil {
+			logCtx.WithError(err).Error("Failed to decode goal rule")
+			continue
+		}
+		if U.AreEqualStructs(resGoal, Rule) {
+			return true
+		}
 	}
 	return false
 }

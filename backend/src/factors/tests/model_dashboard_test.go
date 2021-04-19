@@ -389,7 +389,6 @@ func TestDeleteDashboard(t *testing.T) {
 
 	_, errCode = store.GetStore().GetDashboardUnitByUnitID(dashboardUnit.ProjectID, dashboardUnit.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
-
 }
 
 func TestShouldRefreshDashboardUnit(t *testing.T) {

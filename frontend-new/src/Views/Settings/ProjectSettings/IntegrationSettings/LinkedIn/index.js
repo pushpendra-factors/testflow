@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useEffect } from 'react';
 import { connect } from 'react-redux';
-import { fetchProjectSettings, udpateProjectSettings, addFacebookAccessToken } from 'Reducers/global';
+import { fetchProjectSettings, udpateProjectSettings, addLinkedinAccessToken } from 'Reducers/global';
 import {
     Button, message, Select, Modal, Row, Col, Input
 } from 'antd';  
@@ -14,7 +14,7 @@ const LinkedInIntegration = ({
     activeProject,
     currentProjectSettings,
     setIsActive,
-    addFacebookAccessToken
+    addLinkedinAccessToken
 }) => {
     const [loading, setLoading] = useState(false);
     const [FbResponse, SetFbResponse] = useState(null);
@@ -54,38 +54,42 @@ const LinkedInIntegration = ({
                 body: JSON.stringify({
                     'code': code
                 })
-            }).then(response => {
+            }).then(response => { 
                 if (!response.ok) {
                     throw Error;
                 }
                 return response;
-            }).then(response => {
-                if (!response?.status >= 400) {
-                    response.json().then(e => {
+            }).then(response => { 
+                if (response.status < 400) {
+                    response.json().then(e => { 
                         setOauthResponse(e)
                         fetch(getHostURL() + '/integrations/linkedin/ad_accounts', {
                             method: 'POST',
                             body: JSON.stringify({
-                                'access_token': oauthResponse['access_token']
+                                'access_token': e?.access_token
                             })
                         }
-                        ).then(response => {
+                        ).then(response => { 
                             if (!response.ok) {
                                 throw Error;
                             }
                             return response;
-                        }).then(response => { 
+                        }).then(response => {  
                             response.json().then(res => {
                                 let jsonRes = JSON.parse(res)
                                 let adAccountsNew = getAdAccounts(jsonRes.elements)
-                                SetAdAccounts(adAccountsNew);
+                                SetAdAccounts(adAccountsNew); 
                                 localStorage.removeItem('Linkedin_code');
                                 localStorage.removeItem('Linkedin_state');
+                                setShowForm(true);
                             });
                         }).catch((err) => {
                             message.error('Failed to fetch linkedin/ad_accounts');
                         });
                     })
+                }
+                else{
+                    console.log("Failed to fetch linkedin/ad_accounts!!")
                 }
             }).catch((err) => {
                 message.error('Failed to fetch linkedin/auth');
@@ -118,19 +122,14 @@ const LinkedInIntegration = ({
             return (
                 <a href={href} className='ant-btn ant-btn-primary'> Enable using LinkedIn </a>
             )
-        }
-        // else {
-        //     return (
-        //         <div>Logged In</div>
-        //     )
-        // }
+        } 
     }
 
     const handleSubmit = e => {
-        e.preventDefault();
+        e.preventDefault(); 
         if (SelectedAdAccount != "") {
             const data = {
-                "int_linkedin_ad_account": SelectedAdAccount.value,
+                "int_linkedin_ad_account": SelectedAdAccount,
                 "int_linkedin_refresh_token": oauthResponse["refresh_token"],
                 "int_linkedin_refresh_token_expiry": oauthResponse["refresh_token_expires_in"],
                 "project_id": activeProject.id.toString(),
@@ -185,10 +184,10 @@ const LinkedInIntegration = ({
                                         <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Choose your LinkedIn Ad account to sync reports with Factors for performance reporting</Text>
                                     </Col>
                                 </Row>
+                                            <form onSubmit={e => handleSubmit(e)} className="w-full">
                                 <Row className={'mt-6'}>
                                     <Col span={24}>
                                         <div className="w-full">
-                                            <form onSubmit={e => handleSubmit(e)} className="w-full">
                                                 <div className="w-full pb-2">
                                                     <Select
                                                         className="w-full"
@@ -197,7 +196,6 @@ const LinkedInIntegration = ({
                                                         options={createSelectOpts(getAdAccountsOptSrc())}
                                                     />
                                                 </div>
-                                            </form>
                                         </div>
                                     </Col>
                                 </Row>
@@ -208,6 +206,7 @@ const LinkedInIntegration = ({
                                         </div>
                                     </Col>
                                 </Row>
+                                            </form>
                             </div>
                         </Modal>
 
@@ -266,4 +265,4 @@ const mapStateToProps = (state) => ({
     currentProjectSettings: state.global.currentProjectSettings
 });
 
-export default connect(mapStateToProps, { addFacebookAccessToken, fetchProjectSettings, udpateProjectSettings })(LinkedInIntegration)
+export default connect(mapStateToProps, { addLinkedinAccessToken, fetchProjectSettings, udpateProjectSettings })(LinkedInIntegration)

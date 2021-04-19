@@ -23,7 +23,7 @@ import (
 
 func sendSignInRequest(email, password string, r *gin.Engine) *httptest.ResponseRecorder {
 
-	rb := U.NewRequestBuilder(http.MethodPost, "/agents/signin").
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/agents/signin").
 		WithHeader("Content-Type", "application/json").
 		WithPostParams(map[string]string{"email": email, "password": password})
 
@@ -76,7 +76,7 @@ func TestAPIAgentSignout(t *testing.T) {
 	H.InitAppRoutes(r)
 	w := httptest.NewRecorder()
 
-	rb := U.NewRequestBuilder(http.MethodGet, "/agents/signout").
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, "/agents/signout").
 		WithHeader("Content-Type", "application/json")
 
 	req, err := rb.Build()
@@ -96,7 +96,7 @@ func TestAPIAgentSignout(t *testing.T) {
 func sendAgentInviteRequest(email string, role int64, projectId uint64,
 	authData string, exp int, r *gin.Engine) *httptest.ResponseRecorder {
 
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/agents/invite", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/agents/invite", projectId)).
 		WithHeader("Content-Type", "application/json").
 		WithPostParams(map[string]interface{}{
 			"email": email,
@@ -271,7 +271,7 @@ func sendProjectAgentRemoveRequest(r *gin.Engine, projectId uint64, agentToRemov
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/agents/remove", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/agents/remove", projectId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -294,7 +294,7 @@ func sendProjectAgentEditRequest(r *gin.Engine, projectId uint64, agentToRemoveU
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/agents/update", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/agents/update", projectId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -481,7 +481,7 @@ func TestAPIUpdateAgentInProject(t *testing.T) {
 }
 func sendAgentVerifyRequest(r *gin.Engine, authData, password, firstName, lastName string) *httptest.ResponseRecorder {
 
-	rb := U.NewRequestBuilder(http.MethodPost, "/agents/activate").
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/agents/activate").
 		WithHeader("Content-Type", "application/json").
 		WithPostParams(map[string]interface{}{
 			"first_name": firstName,
@@ -546,7 +546,7 @@ func TestAPIAgentVerify(t *testing.T) {
 
 func sendAgentResetPasswordEmailReq(r *gin.Engine, email string) *httptest.ResponseRecorder {
 
-	rb := U.NewRequestBuilder(http.MethodPost, "/agents/forgotpassword").
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/agents/forgotpassword").
 		WithHeader("Content-Type", "application/json").
 		WithPostParams(map[string]interface{}{
 			"email": email,
@@ -588,7 +588,7 @@ func TestAPIAgentGenerateResetPasswordEmail(t *testing.T) {
 
 func sendAgentSetPasswordRequest(r *gin.Engine, authData, password string) *httptest.ResponseRecorder {
 
-	rb := U.NewRequestBuilder(http.MethodPost, "/agents/setpassword").
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/agents/setpassword").
 		WithHeader("Content-Type", "application/json").
 		WithPostParams(map[string]interface{}{
 			"password": password,
@@ -660,7 +660,7 @@ func sendGetProjectAgentsRequest(r *gin.Engine, projectId uint64, agent *model.A
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/agents", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/agents", projectId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -682,7 +682,7 @@ func sendGetProjectAgentsV1Request(r *gin.Engine, projectId uint64, agent *model
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/v1/agents", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/agents", projectId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -732,7 +732,7 @@ func sendGetAgentBillingAccountRequest(r *gin.Engine, agent *model.Agent) *httpt
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := U.NewRequestBuilder(http.MethodGet, "/agents/billing").
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, "/agents/billing").
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -780,7 +780,7 @@ func sendUpdateAgentBillingAccountRequest(r *gin.Engine, orgName, billingAddr, p
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := U.NewRequestBuilder(http.MethodPut, "/agents/billing").
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, "/agents/billing").
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,

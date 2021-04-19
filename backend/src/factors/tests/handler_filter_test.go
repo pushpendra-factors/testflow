@@ -7,7 +7,6 @@ import (
 	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
-	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,7 +24,7 @@ func sendCreateFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent, na
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/filters", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/filters", projectId)).
 		WithPostParams(map[string]string{
 			"name": name,
 			"expr": expr,
@@ -157,7 +156,7 @@ func sendGetFilterRequest(projectId uint64, agent *model.Agent, r *gin.Engine) *
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/filters", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/filters", projectId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -225,7 +224,7 @@ func sendUpdateFilterReq(r *gin.Engine, projectId, filterId uint64, agent *model
 		params["expr"] = *expr
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/filters/%d", projectId, filterId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/filters/%d", projectId, filterId)).
 		WithPostParams(params).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -298,7 +297,7 @@ func sendDeleteFilterReq(r *gin.Engine, projectId, fileterId uint64, agent *mode
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodDelete, fmt.Sprintf("/projects/%d/filters/%d", projectId, fileterId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/filters/%d", projectId, fileterId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,

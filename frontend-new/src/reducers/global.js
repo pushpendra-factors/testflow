@@ -277,6 +277,25 @@ export function addFacebookAccessToken(data) {
   }
 }
 
+export function addLinkedinAccessToken(data) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      post(dispatch, host +"integrations/linkedin/add_access_token", data)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({type:"ENABLE_LINKEDIN_AD_ACCOUNT", payload: data})
+            resolve(r);
+          } else {
+            reject(r); 
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        })
+    })
+  }
+}
+
 export function enableSalesforceIntegration(projectId) {
   return function(dispatch){
     return new Promise((resolve, reject) => {

@@ -997,7 +997,7 @@ func (pg *Postgres) ExecQueryWithContext(stmnt string, params []interface{}) (*s
 	db := C.GetServices().Db
 
 	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST {
-		fmt.Println("Query: ", U.DBDebugPreparedStatement(stmnt, params))
+		log.WithField("Query", U.DBDebugPreparedStatement(stmnt, params)).Info("Exec query with context")
 	}
 
 	// For query: ...where id in ($1) where $1 is passed as a slice, convert to pq.Array()

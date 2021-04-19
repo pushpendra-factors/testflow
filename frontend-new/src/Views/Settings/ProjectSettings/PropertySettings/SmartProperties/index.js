@@ -10,6 +10,8 @@ import {SmartPropertyClass, PropertyRule, FilterClass} from './utils';
 import {fetchSmartPropertiesConfig, addSmartProperty, updateSmartProperty} from 'Reducers/settings/middleware';
 import PropetyValueModal from '../PropetyValueModal';
 
+import {operatorMap, reverseOperatorMap} from '../utils';
+
 const { Option, OptGroup } = Select;
 
 function SmartProperties ({activeProject, 
@@ -45,7 +47,7 @@ function SmartProperties ({activeProject,
     
             <Button 
                 className={`fa-button--truncate ml-4`} 
-                disabled={true}> {obj?.condition} 
+                disabled={true}> {reverseOperatorMap[obj?.condition]} 
             </Button>
     
             <Button 
@@ -199,6 +201,7 @@ function SmartProperties ({activeProject,
             if(formState !== 'add') {
                 updateForm(smrtProp);
             } else {
+                delete smrtProp.id;
                 createForm(smrtProp)
             }
             

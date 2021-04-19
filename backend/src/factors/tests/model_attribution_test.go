@@ -493,7 +493,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 	// Lookback is 0. There should be no attribution.
-	// Attribuiton Time: 1589068798, Conversion Time: 1589068800, diff = 2 secs
+	// Attribution Time: 1589068798, Conversion Time: 1589068800, diff = 2 secs
 	assert.Equal(t, float64(0), getConversionUserCount(result, "$none"))
 
 	customerUserId := U.RandomLowerAphaNumString(15)
@@ -549,9 +549,8 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		assert.Nil(t, err)
 		// The attribution didn't happen in the query period. First touch is on 3rd day and which
 		// is not between 4th to 7th (query period). Hence count is 0.
-		assert.Equal(t, float64(0), getConversionUserCount(result, "12345"))
+		assert.Equal(t, float64(1), getConversionUserCount(result, "12345"))
 	})
-
 }
 
 func TestAttributionEngagementWithUserIdentification(t *testing.T) {
@@ -656,9 +655,9 @@ func TestAttributionMethodologies(t *testing.T) {
 	queryTo := 1000
 	userSession := make(map[string]map[string]model.UserSessionTimestamp)
 	userSession[user1] = make(map[string]model.UserSessionTimestamp)
-	userSession[user1][camp1] = model.UserSessionTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
-	userSession[user1][camp2] = model.UserSessionTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
-	userSession[user1][camp3] = model.UserSessionTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
+	userSession[user1][camp1] = model.UserSessionTimestamp{MinTimestamp: 105, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
+	userSession[user1][camp2] = model.UserSessionTimestamp{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}}
+	userSession[user1][camp3] = model.UserSessionTimestamp{MinTimestamp: 50, MaxTimestamp: 100, TimeStamps: []int64{50, 100}}
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 150
 	lookbackDays := 1
@@ -689,7 +688,7 @@ func TestAttributionMethodologies(t *testing.T) {
 				lookbackDays,
 				model.AttributionQueryTypeConversionBased,
 			},
-			map[string][]string{user1: {camp1, camp2, camp3}},
+			map[string][]string{user1: {camp1, camp2, camp3, camp3}},
 			map[string]map[string][]string{},
 			false},
 
@@ -717,7 +716,7 @@ func TestAttributionMethodologies(t *testing.T) {
 				lookbackDays,
 				model.AttributionQueryTypeConversionBased,
 			},
-			map[string][]string{user1: {camp3}},
+			map[string][]string{user1: {camp2}},
 			map[string]map[string][]string{},
 			false},
 	}
@@ -758,10 +757,10 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 	queryTo := 1000
 	userSession := make(map[string]map[string]model.UserSessionTimestamp)
 	userSession[user1] = make(map[string]model.UserSessionTimestamp)
-	userSession[user1][camp0] = model.UserSessionTimestamp{MinTimestamp: 10, MaxTimestamp: 40}
-	userSession[user1][camp1] = model.UserSessionTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
-	userSession[user1][camp2] = model.UserSessionTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
-	userSession[user1][camp3] = model.UserSessionTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
+	userSession[user1][camp0] = model.UserSessionTimestamp{MinTimestamp: 10, MaxTimestamp: 40, TimeStamps: []int64{10, 40}}
+	userSession[user1][camp1] = model.UserSessionTimestamp{MinTimestamp: 100, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
+	userSession[user1][camp2] = model.UserSessionTimestamp{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}}
+	userSession[user1][camp3] = model.UserSessionTimestamp{MinTimestamp: 50, MaxTimestamp: 100, TimeStamps: []int64{50, 100}}
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 150
 	lookbackDays := 1
@@ -790,7 +789,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
 			},
-			map[string][]string{user1: {camp0, camp1, camp2, camp3}},
+			map[string][]string{user1: {camp0, camp0, camp1, camp2, camp3, camp3}},
 			map[string]map[string][]string{},
 			false},
 
@@ -816,7 +815,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
 			},
-			map[string][]string{user1: {camp3}},
+			map[string][]string{user1: {camp2}},
 			map[string]map[string][]string{},
 			false},
 
@@ -842,7 +841,7 @@ func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
 			},
-			map[string][]string{user1: {camp3}},
+			map[string][]string{user1: {camp2}},
 			map[string]map[string][]string{},
 			false},
 	}
@@ -884,10 +883,10 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 	queryTo := 1000
 	userSession := make(map[string]map[string]model.UserSessionTimestamp)
 	userSession[user1] = make(map[string]model.UserSessionTimestamp)
-	userSession[user1][camp1] = model.UserSessionTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
-	userSession[user1][camp2] = model.UserSessionTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
-	userSession[user1][camp3] = model.UserSessionTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
-	userSession[user1][camp4] = model.UserSessionTimestamp{MinTimestamp: 10, MaxTimestamp: 400}
+	userSession[user1][camp1] = model.UserSessionTimestamp{MinTimestamp: 100, MaxTimestamp: 200, TimeStamps: []int64{100, 200}}
+	userSession[user1][camp2] = model.UserSessionTimestamp{MinTimestamp: 150, MaxTimestamp: 300, TimeStamps: []int64{150, 300}}
+	userSession[user1][camp3] = model.UserSessionTimestamp{MinTimestamp: 50, MaxTimestamp: 100, TimeStamps: []int64{50, 100}}
+	userSession[user1][camp4] = model.UserSessionTimestamp{MinTimestamp: 10, MaxTimestamp: 400, TimeStamps: []int64{10, 400}}
 	coalUserIdConversionTimestamp := make(map[string]int64)
 	coalUserIdConversionTimestamp[user1] = 150
 	lookbackDays := 1
@@ -916,7 +915,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
 			},
-			map[string][]string{user1: {camp1, camp2, camp3, camp4}},
+			map[string][]string{user1: {camp1, camp2, camp3, camp3, camp4}},
 			map[string]map[string][]string{},
 			false},
 
@@ -942,7 +941,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
 			},
-			map[string][]string{user1: {camp3}},
+			map[string][]string{user1: {camp2}},
 			map[string]map[string][]string{},
 			false},
 
@@ -968,7 +967,7 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 				coalUserIdConversionTimestamp, lookbackDays,
 				model.AttributionQueryTypeConversionBased,
 			},
-			map[string][]string{user1: {camp3}},
+			map[string][]string{user1: {camp2}},
 			map[string]map[string][]string{},
 			false},
 	}

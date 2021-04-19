@@ -32,8 +32,8 @@ func sendCreateSmartPropertyReq(r *gin.Engine, project_id uint64, agent *model.A
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	url := "http://localhost:8080/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/v1/smart_properties/rules"
-	rb := U.NewRequestBuilder(http.MethodPost, url).
+	url := "/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/v1/smart_properties/rules"
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, url).
 		WithPostParams(payload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -56,8 +56,8 @@ func sendGetSmartPropertyRulesReq(r *gin.Engine, projectID uint64, agent *model.
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	url := "http://localhost:8080/projects/" + strconv.FormatUint(uint64(projectID), 10) + "/v1/smart_properties/rules"
-	rb := U.NewRequestBuilder(http.MethodGet, url).
+	url := "/projects/" + strconv.FormatUint(uint64(projectID), 10) + "/v1/smart_properties/rules"
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, url).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -78,8 +78,8 @@ func sendGetSmartPropertyRuleReq(r *gin.Engine, projectID uint64, ruleID string,
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	url := "http://localhost:8080/projects/" + strconv.FormatUint(uint64(projectID), 10) + "/v1/smart_properties/rules/" + ruleID
-	rb := U.NewRequestBuilder(http.MethodGet, url).
+	url := "/projects/" + strconv.FormatUint(uint64(projectID), 10) + "/v1/smart_properties/rules/" + ruleID
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, url).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -108,8 +108,8 @@ func sendUpdateSmartPropertyReq(r *gin.Engine, project_id uint64, ruleID string,
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	url := "http://localhost:8080/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/v1/smart_properties/rules/" + ruleID
-	rb := U.NewRequestBuilder(http.MethodPut, url).
+	url := "/projects/" + strconv.FormatUint(uint64(project_id), 10) + "/v1/smart_properties/rules/" + ruleID
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, url).
 		WithPostParams(payload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -133,8 +133,8 @@ func sendDeleteSmartPropertyRuleReq(r *gin.Engine, projectID uint64, ruleID stri
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	url := "http://localhost:8080/projects/" + strconv.FormatUint(uint64(projectID), 10) + "/v1/smart_properties/rules/" + ruleID
-	rb := U.NewRequestBuilder(http.MethodDelete, url).
+	url := "/projects/" + strconv.FormatUint(uint64(projectID), 10) + "/v1/smart_properties/rules/" + ruleID
+	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, url).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,

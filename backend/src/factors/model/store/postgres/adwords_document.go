@@ -587,21 +587,30 @@ func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, ad
 	return selectedLastSyncInfos, http.StatusOK
 }
 
-// GetGCLIDBasedCampaignInfo - It returns GCLID based campaign info ( Adgroup, Campaign and Ad) for given time range and adwords account
+// GetGCLIDBasedCampaignInfo - It returns GCLID based campaign info ( Adgroup, Campaign, AdId and KeywordId) for given time range and adwords account
 func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string) (map[string]model.CampaignInfo, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectID": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	adGroupNameCase := "CASE WHEN value->>'ad_group_name' IS NULL THEN ? " +
 		" WHEN value->>'ad_group_name' = '' THEN ? ELSE value->>'ad_group_name' END AS ad_group_name"
+	adGroupIDCase := "CASE WHEN value->>'ad_group_id' IS NULL THEN ? " +
+		" WHEN value->>'ad_group_id' = '' THEN ? ELSE value->>'ad_group_id' END AS ad_group_id"
 	campaignNameCase := "CASE WHEN value->>'campaign_name' IS NULL THEN ? " +
 		" WHEN value->>'campaign_name' = '' THEN ? ELSE value->>'campaign_name' END AS campaign_name"
+	campaignIDCase := "CASE WHEN value->>'campaign_id' IS NULL THEN ? " +
+		" WHEN value->>'campaign_id' = '' THEN ? ELSE value->>'campaign_id' END AS campaign_id"
 	adIDCase := "CASE WHEN value->>'creative_id' IS NULL THEN ? " +
 		" WHEN value->>'creative_id' = '' THEN ? ELSE value->>'creative_id' END AS creative_id"
+	keywordIDCase := "CASE WHEN value->>'criteria_id' IS NULL THEN ? " +
+		" WHEN value->>'criteria_id' = '' THEN ? ELSE value->>'criteria_id' END AS criteria_id"
 
-	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + campaignNameCase + ", " + adIDCase +
+	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + adGroupIDCase + ", " + campaignNameCase + ", " +
+		campaignIDCase + ", " + adIDCase + ", " + keywordIDCase +
 		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
-	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
+	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone,
+		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
+		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
@@ -613,16 +622,22 @@ func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, 
 	for rows.Next() {
 		var gclID string
 		var adgroupName string
+		var adgroupID string
 		var campaignName string
+		var campaignID string
 		var adID string
-		if err = rows.Scan(&gclID, &adgroupName, &campaignName, &adID); err != nil {
+		var keywordID string
+		if err = rows.Scan(&gclID, &adgroupName, &adgroupID, &campaignName, &campaignID, &adID, &keywordID); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed")
 			continue
 		}
 		gclIDBasedCampaign[gclID] = model.CampaignInfo{
 			AdgroupName:  adgroupName,
+			AdgroupID:    adgroupID,
 			CampaignName: campaignName,
+			CampaignID:   campaignID,
 			AdID:         adID,
+			KeywordID:    keywordID,
 		}
 	}
 	return gclIDBasedCampaign, nil

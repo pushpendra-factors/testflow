@@ -317,7 +317,7 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "city", result.Headers[0])
 	assert.Equal(t, "bangalore", result.Rows[1][0])
-	assert.Equal(t, int64(1), result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][1])
 
 	query = model.Query{
 		From: createdDate.Unix() - 500,
@@ -345,7 +345,7 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 	result, status, _ = store.GetStore().Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, cuID, result.Rows[1][0])
-	assert.Equal(t, int64(1), result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][1])
 }
 
 func TestHubspotObjectPropertiesAPI(t *testing.T) {
@@ -731,7 +731,7 @@ func TestHubspotPropertyDetails(t *testing.T) {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
 
-	rollBackWindow :=  1
+	rollBackWindow := 1
 	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
 	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, eventNameCreated, 2500, 1)
 	assert.Nil(t, err)
@@ -997,7 +997,7 @@ func TestHubspotCreateActionUpdatedOnCreate(t *testing.T) {
 	assert.Equal(t, 2, len(result.Results[0].Rows))
 	for i := range result.Results { // two events, one on each
 		assert.Contains(t, []string{U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED, U.EVENT_NAME_HUBSPOT_CONTACT_CREATED}, result.Results[i].Rows[0][1])
-		assert.Equal(t, int64(1), result.Results[i].Rows[0][2])
+		assert.Equal(t, float64(1), result.Results[i].Rows[0][2])
 	}
 
 	// One unique user
@@ -1022,7 +1022,7 @@ func TestHubspotCreateActionUpdatedOnCreate(t *testing.T) {
 	result, status = store.GetStore().RunEventsGroupQuery(query, project.ID)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, 1, len(result.Results[0].Rows))
-	assert.Equal(t, int64(1), result.Results[0].Rows[0][0])
+	assert.Equal(t, float64(1), result.Results[0].Rows[0][0])
 }
 
 func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {

@@ -9,7 +9,6 @@ import (
 	"factors/model/store"
 	"factors/task/event_user_cache"
 	TaskSession "factors/task/session"
-	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -52,7 +51,7 @@ func sendGetEventNamesExactRequest(projectId uint64, agent *model.Agent, r *gin.
 }
 
 func buildEventNameRequest(projectId uint64, requestType, cookieData string) (*http.Request, error) {
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/event_names?type=%s", projectId, requestType)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/event_names?type=%s", projectId, requestType)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,

@@ -234,7 +234,7 @@ func (store *MemSQL) SearchQueriesWithProjectId(projectID uint64, searchString s
 	db := C.GetServices().Db
 
 	var queries []model.Queries
-	err := db.Table("queries").Where("project_id = ? AND title ILIKE ? AND is_deleted= ?", projectID, "%"+searchString+"%", "false").Find(&queries).Error
+	err := db.Table("queries").Where("project_id = ? AND title RLIKE ? AND is_deleted= ?", projectID, searchString, "false").Find(&queries).Error
 	if err != nil || len(queries) == 0 {
 		return nil, http.StatusNotFound
 	}

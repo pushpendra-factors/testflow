@@ -47,6 +47,8 @@ func DBReadRows(rows *sql.Rows) ([]string, [][]interface{}, error) {
 				} else {
 					return cols, nil, errors.New("failed reading row. invalid bytes")
 				}
+			case int, int32, int64, float32:
+				resultRow = append(resultRow, SafeConvertToFloat64(*val))
 			default:
 				resultRow = append(resultRow, *val)
 			}

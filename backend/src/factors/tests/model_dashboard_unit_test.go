@@ -1118,7 +1118,7 @@ func sendAnalyticsQueryReqWithHeader(r *gin.Engine, queryClass string, projectID
 		requestURL = fmt.Sprintf("/projects/%d/%s?refresh=%v",
 			projectID, queryURL, refresh)
 	}
-	rb := U.NewRequestBuilder(http.MethodPost, requestURL).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, requestURL).
 		WithPostParams(queryPayload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),

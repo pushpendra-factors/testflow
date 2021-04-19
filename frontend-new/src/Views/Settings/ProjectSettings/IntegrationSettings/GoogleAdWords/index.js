@@ -44,7 +44,14 @@ const GoogleIntegration = ({
 
     const getRedirectURL = () => {
         let host = getAdwordsHostURL();
-        return host + ADWORDS_REDIRECT_URI + "?pid=" + activeProject?.id + "&aid=" + agent_details?.uuid;
+        let url =  host + ADWORDS_REDIRECT_URI + "?pid=" + activeProject?.id + "&aid=" + agent_details?.uuid;
+        fetch(url).then(response => response.json()).then((response)=>{
+            console.log('getRedirectURL success', response);
+            return response.url
+        }).catch((err)=>{
+            console.log('getRedirectURL for googleAds failed', err);
+            return false
+        })
     }
     useEffect(() => {
         if (isIntAdwordsEnabled()) {

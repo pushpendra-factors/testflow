@@ -51,7 +51,7 @@ const (
 	CAColumnTotalEngagement                = "total_engagements"
 	CAFilterCampaignGroup                  = "campaign_group"
 	CAFilterCreactive                      = "creative"
-	dateTruncateString                     = "date_trunc('%s', CONVERT_TZ(TO_DATE(%s, 'YYYYMMDD') '%s'))"
+	dateTruncateString                     = "date_trunc('%s', CONVERT_TZ(TO_DATE(%s, 'YYYYMMDD'), 'UTC', '%s'))"
 	CAUnionFilterQuery                     = "SELECT filter_value from ( %s ) all_ads LIMIT 2500"
 	CAUnionQuery1                          = "SELECT %s FROM ( %s ) all_ads ORDER BY %s %s"
 	CAUnionQuery2                          = "SELECT %s FROM ( %s ) all_ads GROUP BY %s ORDER BY %s %s"
@@ -521,14 +521,14 @@ func getSelectTimestampByTypeForChannels(timestampType, timezone string) string 
 		selectTz = timezone
 	}
 	if timestampType == model.GroupByTimestampHour {
-		selectStr = fmt.Sprintf(dateTruncateString, "hour", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
+		selectStr = fmt.Sprintf(dateTruncateString, "hour", channelTimestamp, selectTz)
 	} else if timestampType == model.GroupByTimestampWeek {
-		selectStr = fmt.Sprintf(dateTruncateString, "week", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
+		selectStr = fmt.Sprintf(dateTruncateString, "week", channelTimestamp, selectTz)
 	} else if timestampType == model.GroupByTimestampMonth {
-		selectStr = fmt.Sprintf(dateTruncateString, "month", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
+		selectStr = fmt.Sprintf(dateTruncateString, "month", channelTimestamp, selectTz)
 	} else {
 		// defaults to GroupByTimestampDate.
-		selectStr = fmt.Sprintf(dateTruncateString, "day", channelTimestamp, channelTimestamp, channelTimestamp, selectTz, selectTz)
+		selectStr = fmt.Sprintf(dateTruncateString, "day", channelTimestamp, selectTz)
 	}
 
 	return selectStr

@@ -13,16 +13,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// TODO: Make index name a constant and read it
-const error_Duplicate_email_error = "pq: duplicate key value violates unique constraint \"agent_email_unique_idx\""
-
-func createAgent(agent *model.Agent) (*model.Agent, int) {
+func (store *MemSQL) createAgent(agent *model.Agent) (*model.Agent, int) {
 	if agent.Email == "" {
 		log.Error("CreateAgent Failed. Email not provided.")
 		return nil, http.StatusBadRequest
 	}
 
 	agent.Email = strings.ToLower(agent.Email)
+	// Unique (email) constraint.
+	if _, errCode := store.GetAgentByEmail(agent.Email); errCode == http.StatusFound {
+		return nil, http.StatusBadRequest
+	}
 
 	// Adding random string as salt before create.
 	if agent.Salt == "" {
@@ -35,10 +36,6 @@ func createAgent(agent *model.Agent) (*model.Agent, int) {
 
 	db := C.GetServices().Db
 	if err := db.Create(agent).Error; err != nil {
-		if err.Error() == error_Duplicate_email_error {
-			log.WithError(err).Error("CreateAgent Failed, duplicate email")
-			return nil, http.StatusBadRequest
-		}
 		log.WithError(err).Error("CreateAgent Failed")
 		return nil, http.StatusInternalServerError
 	}
@@ -53,7 +50,7 @@ func (store *MemSQL) CreateAgentWithDependencies(params *model.CreateAgentParams
 
 	resp := &model.CreateAgentResponse{}
 
-	agent, errCode := createAgent(params.Agent)
+	agent, errCode := store.createAgent(params.Agent)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}

@@ -237,7 +237,6 @@ func QueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 		logCtx.WithError(err).Error("Query failed. Error Processing/Fetching data from Query cache")
 		return nil, resCode, V1.PROCESSING_FAILED, "Error Processing/Fetching data from Query cache", true
 	}
-	logCtx.WithError(err).Info("Query failed. Error Processing/Fetching data from Query cache")
 
 	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
 	model.SetQueryCachePlaceholder(projectId, &requestPayload.Query)

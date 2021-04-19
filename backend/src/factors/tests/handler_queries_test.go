@@ -27,7 +27,7 @@ func sendCreateQueryReq(r *gin.Engine, projectId uint64, agent *model.Agent, que
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/queries", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/queries", projectId)).
 		WithPostParams(query).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -51,7 +51,7 @@ func sendGetSavedQueriesReq(r *gin.Engine, projectId uint64, agent *model.Agent)
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/queries", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/queries", projectId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -75,7 +75,7 @@ func sendUpdateSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, ag
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/queries/%d", projectId, queryId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/queries/%d", projectId, queryId)).
 		WithPostParams(query).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -100,7 +100,7 @@ func sendDeleteSavedQueryReq(r *gin.Engine, projectId uint64, queryId uint64, ag
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodDelete, fmt.Sprintf("/projects/%d/queries/%d", projectId, queryId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/queries/%d", projectId, queryId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -122,7 +122,7 @@ func sendSearchQueryReq(r *gin.Engine, projectId uint64, searchString string, ag
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/queries/search?query=%s", projectId, searchString)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/queries/search?query=%s", projectId, searchString)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,

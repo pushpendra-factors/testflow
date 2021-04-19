@@ -6,7 +6,6 @@ import (
 	H "factors/handler"
 	"factors/handler/helpers"
 	"factors/model/model"
-	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -25,7 +24,7 @@ func sendGetProjectSettingsReq(r *gin.Engine, projectId uint64, agent *model.Age
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/settings", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/settings", projectId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -80,7 +79,7 @@ func sendUpdateProjectSettingReq(r *gin.Engine, projectId uint64, agent *model.A
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/settings", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/settings", projectId)).
 		WithPostParams(params).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),

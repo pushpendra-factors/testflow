@@ -16,12 +16,6 @@ import (
 	U "factors/util"
 )
 
-const error_DuplicateHubspotDocument = "pq: duplicate key value violates unique constraint \"hubspot_documents_pkey\""
-
-func isDuplicateHubspotDocumentError(err error) bool {
-	return err.Error() == error_DuplicateHubspotDocument
-}
-
 func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 	if document.Type == 0 {
 		return "", model.ErrorHubspotInvalidHubspotDocumentType
@@ -193,7 +187,9 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 	isNew := errCode == http.StatusNotFound
 
 	var timestamp int64
+	var updatedDocument model.HubspotDocument // use for duplicating new document to updated document.
 	if isNew {
+		updatedDocument = *document
 		document.Action = model.HubspotDocumentActionCreated // created
 		timestamp, err = model.GetHubspotDocumentCreatedTimestamp(document)
 	} else {
@@ -217,7 +213,7 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 	db := C.GetServices().Db
 	err = db.Create(document).Error
 	if err != nil {
-		if isDuplicateHubspotDocumentError(err) {
+		if IsDuplicateRecordError(err) {
 			return http.StatusConflict
 		}
 
@@ -226,11 +222,11 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 	}
 
 	if isNew { // create updated document for new user
-		updatedDocument := *document
 		updatedDocument.Action = model.HubspotDocumentActionUpdated
+		updatedDocument.Timestamp = timestamp
 		err = db.Create(&updatedDocument).Error
 		if err != nil {
-			if isDuplicateHubspotDocumentError(err) {
+			if IsDuplicateRecordError(err) {
 				return http.StatusConflict
 			}
 
@@ -363,7 +359,7 @@ func (store *MemSQL) GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, 
 
 	db := C.GetServices().Db
 	err := db.Limit(1).Where(
-		"project_id=? AND id=? AND type=? AND synced=true AND value->'properties'->'dealstage'->>'value'=?",
+		"project_id=? AND id=? AND type=? AND synced=true AND JSON_EXTRACT_STRING(value, 'properties', 'dealstage', 'value')=?",
 		projectId, id, model.HubspotDocumentTypeDeal, stage).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get hubspot synced deal by id and stage.")

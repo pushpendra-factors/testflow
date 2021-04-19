@@ -723,7 +723,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 		refStepName := stepNameByIndex(i)
 		steps = append(steps, refStepName)
 
-		var stepSelect, stepOrderBy string
+		var stepSelect, stepOrderBy, stepGroupBy string
 		var stepParams []interface{}
 		var groupByUserProperties bool
 		var stepGroupSelect, stepGroupKeys string
@@ -739,6 +739,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 		if stepGroupSelect != "" {
 			stepSelect = fmt.Sprintf(eventSelect, ", "+stepGroupSelect)
 			stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+stepGroupKeys)
+			stepGroupBy = joinWithComma(commonGroupBy, stepGroupKeys)
 			stepParams = stepGroupParams
 			stepsToKeysMap[refStepName] = strings.Split(stepGroupKeys, ",")
 		} else {
@@ -746,6 +747,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 			if commonOrderBy != "" {
 				stepOrderBy = fmt.Sprintf(commonOrderBy, "")
 			}
+			stepGroupBy = commonGroupBy
 		}
 
 		addJoinStmnt := "JOIN users ON events.user_id=users.id"
@@ -758,7 +760,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 		}
 
 		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
-			"", refStepName, stepSelect, stepParams, addJoinStmnt, commonGroupBy, stepOrderBy)
+			"", refStepName, stepSelect, stepParams, addJoinStmnt, stepGroupBy, stepOrderBy)
 
 		if i < len(q.EventsWithProperties)-1 {
 			*qStmnt = *qStmnt + ","

@@ -13,21 +13,40 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/lib/pq"
 
 	log "github.com/sirupsen/logrus"
 )
 
-const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
 const eventsLimitForProperites = 50000
 const OneDayInSeconds int64 = 24 * 60 * 60
 
-func isDuplicateCustomerEventIdError(err error) bool {
-	return err.Error() == error_Duplicate_event_customerEventID
+func satisfiesEventConstraints(event model.Event) int {
+	logCtx := log.WithFields(log.Fields{
+		"method":     "satisfiesEventsConstaints",
+		"project_id": event.ProjectId,
+		"event_id":   event.ID,
+	})
+
+	// Unique (project_id, customer_event_id)
+	if event.CustomerEventId != nil && *event.CustomerEventId != "" {
+		_, errCode := getEventsByCustomerEventID(event.ProjectId, *event.CustomerEventId)
+		if errCode == http.StatusFound {
+			logCtx.WithField("customer_event_id", event.CustomerEventId).Warn("Event exists with customer event id")
+			return http.StatusNotAcceptable
+		}
+	}
+
+	if !U.IsValidUUID(event.ID) {
+		logCtx.Error("Invalid value for event ID")
+		// Internal server error error same as returned from Postgres on uuid voilation from DB side.
+		return http.StatusInternalServerError
+	}
+	return http.StatusOK
 }
 
 func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId string, eventNameId uint64) (uint64, int) {
@@ -49,8 +68,8 @@ func (store *MemSQL) GetEventCountOfUsersByEventName(projectID uint64, userIDs [
 	var count uint64
 
 	db := C.GetServices().Db
-	if err := db.Model(&model.Event{}).Where("project_id = ? AND user_id = ANY(?) AND event_name_id = ?",
-		projectID, pq.Array(userIDs), eventNameID).Count(&count).Error; err != nil {
+	if err := db.Model(&model.Event{}).Where("project_id = ? AND user_id IN (?) AND event_name_id = ?",
+		projectID, userIDs, eventNameID).Count(&count).Error; err != nil {
 		log.WithFields(log.Fields{"projectId": projectID, "userId": userIDs}).WithError(err).Error(
 			"Failed to get count of event for users by event_name_id")
 		return 0, http.StatusInternalServerError
@@ -280,27 +299,20 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		}
 	}
 
+	errCode = satisfiesEventConstraints(*event)
+	if errCode != http.StatusOK {
+		return nil, errCode
+	}
+
 	db := C.GetServices().Db
-	statement := fmt.Sprintf("INSERT INTO events (%s) VALUES (%s) RETURNING events.id", columnsInOrder, columnsPlaceholder)
+	statement := fmt.Sprintf("INSERT INTO events (%s) VALUES (%s)", columnsInOrder, columnsPlaceholder)
 	rows, err := db.Raw(statement, paramsInOrder...).Rows()
 	if err != nil {
-		if U.IsPostgresIntegrityViolationError(err) {
-			logCtx.WithError(err).Info("CreateEvent Failed. Constraint violation.")
-			return nil, http.StatusNotAcceptable
-		}
-
 		logCtx.WithField("event", event).WithError(err).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
 	}
+	defer rows.Close()
 
-	var eventId string
-	for rows.Next() {
-		if err = rows.Scan(&eventId); err != nil {
-			log.WithError(err).Error("CreateEvent Failed. Failed to read event id.")
-			return nil, http.StatusInternalServerError
-		}
-	}
-	event.ID = eventId
 	event.CreatedAt = transTime
 	event.UpdatedAt = transTime
 
@@ -309,9 +321,32 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	return event, http.StatusCreated
 }
 
+// getEventsByCustomerEventID Get events by projectID and customerEventID.
+func getEventsByCustomerEventID(projectID uint64, customerEventID string) ([]model.Event, int) {
+	db := C.GetServices().Db
+
+	var events []model.Event
+	if err := db.Where("project_id = ?", projectID).Where("customer_event_id = ?", customerEventID).Find(&events).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		log.WithFields(log.Fields{"projectId": projectID}).WithError(err).Error(
+			"Getttng event failed on GetEventByCustomerEventID")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return nil, http.StatusNotFound
+	}
+	return events, http.StatusFound
+}
+
 func (store *MemSQL) GetEvent(projectId uint64, userId string, id string) (*model.Event, int) {
 	db := C.GetServices().Db
 
+	if !U.IsValidUUID(id) {
+		return nil, http.StatusInternalServerError
+	}
 	var event model.Event
 	if err := db.Where("id = ?", id).Where("project_id = ?", projectId).Where("user_id = ?", userId).First(&event).Error; err != nil {
 		log.WithFields(log.Fields{"projectId": projectId, "userId": userId}).WithError(err).Error(
@@ -371,33 +406,60 @@ func (store *MemSQL) GetRecentEventPropertyKeysWithLimits(projectID uint64, even
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "eventName": eventName, "starttime": starttime, "endtime": endtime, "eventsLimit": eventsLimit})
 	properties := make([]U.Property, 0)
 
-	queryStr := "SELECT distinct(json_object_keys(properties::json)) AS key, " +
-		" " + "COUNT(*) AS count,  " +
-		" " + "MAX(timestamp) as last_seen" +
+	queryStr := "SELECT properties, " +
+		" " + "timestamp as last_seen" +
 		" " + "FROM events  " +
 		" " + "WHERE project_id = ? AND event_name_id IN ( " +
 		" " + "	SELECT id FROM event_names WHERE project_id = ? AND name = ? " +
 		" " + ") " +
-		" " + "AND timestamp > ? AND timestamp <= ? AND properties != 'null' " +
-		" " + "GROUP BY key ORDER BY count DESC LIMIT ?"
+		" " + "AND timestamp > ? AND timestamp <= ? AND properties != 'null' AND properties IS NOT NULL"
 
 	db := C.GetServices().Db
-	rows, err := db.Raw(queryStr, projectID, projectID, eventName, starttime, endtime, eventsLimit).Rows()
+	rows, err := db.Raw(queryStr, projectID, projectID, eventName, starttime, endtime).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get event properties.")
 		return nil, err
 	}
 	defer rows.Close()
 
+	propertiesCounts := make(map[string]map[string]int64)
 	for rows.Next() {
-		var property U.Property
-		if err := db.ScanRows(rows, &property); err != nil {
+		var lastSeen int64
+		var eventProperties postgres.Jsonb
+		if err := rows.Scan(&eventProperties, &lastSeen); err != nil {
 			logCtx.WithError(err).Error("Failed scanning rows on GetRecentEventPropertyKeysWithLimits")
 			return properties, err
 		}
-		properties = append(properties, property)
+		propertiesMap, err := U.DecodePostgresJsonbAsPropertiesMap(&eventProperties)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to decode properties on GetRecentEventPropertyKeysWithLimits")
+			return properties, err
+		}
+
+		for key := range *propertiesMap {
+			if _, found := propertiesCounts[key]; found {
+				propertiesCounts[key]["count"]++
+				propertiesCounts[key]["last_seen"] = U.Max(propertiesCounts[key]["last_seen"], lastSeen)
+			} else {
+				propertiesCounts[key] = map[string]int64{
+					"count":     1,
+					"last_seen": lastSeen,
+				}
+			}
+		}
 	}
-	return properties, nil
+
+	for propertyKey := range propertiesCounts {
+		properties = append(properties, U.Property{
+			Key:      propertyKey,
+			LastSeen: uint64(propertiesCounts[propertyKey]["last_seen"]),
+			Count:    propertiesCounts[propertyKey]["count"]})
+	}
+
+	sort.Slice(properties, func(i, j int) bool {
+		return properties[i].Count > properties[j].Count
+	})
+	return properties[:U.MinInt(eventsLimit, len(properties))], nil
 }
 
 // GetRecentEventPropertyValuesWithLimits This method gets all the recent 'limit' property values from DB for a given project/event/property
@@ -408,13 +470,13 @@ func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID uint64, ev
 		"valuesLimit": valuesLimit, "rowsLimit": rowsLimit, "starttime": starttime, "endtime": endtime})
 
 	values := make([]U.PropertyValue, 0)
-	queryStr := "SELECT value, COUNT(*) AS count, MAX(timestamp) AS last_seen, json_typeof(value::json) AS value_type FROM" +
-		" " + "(SELECT properties->? AS value, timestamp FROM events WHERE project_id = ? AND event_name_id IN" +
-		" " + "(SELECT id FROM event_names WHERE project_id = ? AND name = ?) AND timestamp > ? AND timestamp <= ? AND properties->? IS NOT NULL LIMIT ?)" +
-		" " + "AS property_values GROUP BY value ORDER BY count DESC LIMIT ?"
+	queryStr := fmt.Sprintf("SELECT value, COUNT(*) AS count, MAX(timestamp) AS last_seen, JSON_GET_TYPE(value) AS value_type FROM"+
+		" "+"(SELECT JSON_EXTRACT_STRING(properties, ?) AS value, timestamp FROM events WHERE project_id = ? AND event_name_id IN"+
+		" "+"(SELECT id FROM event_names WHERE project_id = ? AND name = ?) AND timestamp > ? AND timestamp <= ? AND JSON_EXTRACT_STRING(properties, ?) IS NOT NULL LIMIT %d)"+
+		" "+"AS property_values GROUP BY value ORDER BY count DESC LIMIT %d", rowsLimit, valuesLimit)
 
 	rows, err := db.Raw(queryStr, property, projectID, projectID, eventName,
-		starttime, endtime, property, rowsLimit, valuesLimit).Rows()
+		starttime, endtime, property).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get recent property values.")
 		return nil, "", err
@@ -473,6 +535,12 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id string,
 		"properties":                   updatedPostgresJsonb,
 		"properties_updated_timestamp": propertiesLastUpdatedAt,
 	}
+
+	errCode = satisfiesEventConstraints(*event)
+	if errCode != http.StatusOK {
+		return errCode
+	}
+
 	err = db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id).Update(updatedFields).Error
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectId, "id": id,
@@ -1091,9 +1159,9 @@ func (store *MemSQL) GetDatesForNextEventsArchivalBatch(projectID uint64, startT
 	countByDates := make(map[string]int64)
 
 	rows, err := db.Model(&model.Event{}).
-		Where("project_id = ? AND timestamp BETWEEN ? AND (extract(epoch from current_date::timestamp at time zone 'UTC') - 1)", projectID, startTime).
-		Group("date(to_timestamp(timestamp) at time zone 'UTC')").
-		Select("date(to_timestamp(timestamp) at time zone 'UTC'), count(*)").Rows()
+		Where("project_id = ? AND timestamp BETWEEN ? AND (UNIX_TIMESTAMP(CURRENT_DATE()) - 1)", projectID, startTime).
+		Group("date(FROM_UNIXTIME(timestamp))").
+		Select("date(FROM_UNIXTIME(timestamp)), count(*)").Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get dates for next event batches")
 		return countByDates, http.StatusInternalServerError
@@ -1222,11 +1290,11 @@ func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId, se
 	// Ordered by timestamp, created_at to fix the order for events with same
 	// timestamp, as event timestamp is in seconds. This fixes the invalid first
 	// event used for enrichment.
-	excludeSkipSessionCondition := fmt.Sprintf("(JSON_EXTRACT_STRING(properties, '%s') IS NULL OR JSON_EXTRACT_STRING(properties, '%s') = ?)",
+	excludeSkipSessionCondition := fmt.Sprintf("(JSON_EXTRACT_STRING(properties, '%s') IS NULL OR JSON_EXTRACT_STRING(properties, '%s') = 'f')",
 		U.EP_SKIP_SESSION, U.EP_SKIP_SESSION)
 	if err := db.Order("timestamp, created_at ASC").
 		Where("project_id = ? AND event_name_id != ? AND timestamp BETWEEN ? AND ?"+" AND "+excludeSkipSessionCondition,
-			projectId, sessionEventNameId, startTimestamp, endTimestamp, false).
+			projectId, sessionEventNameId, startTimestamp, endTimestamp).
 		Find(&events).Error; err != nil {
 
 		logCtx.WithError(err).Error("Failed to get all events of project.")
@@ -1527,7 +1595,7 @@ func (store *MemSQL) DeleteEventByIDs(projectID, eventNameID uint64, ids []strin
 	logCtx := log.WithField("project_id", projectID)
 
 	db := C.GetServices().Db
-	exec := db.Where("project_id = ? AND id = ANY(?)", projectID, pq.Array(ids)).Delete(&model.Event{})
+	exec := db.Where("project_id = ? AND id IN (?)", projectID, ids).Delete(&model.Event{})
 	if err := exec.Error; err != nil {
 		logCtx.WithError(err).Error("Failed to delete session events.")
 		return http.StatusInternalServerError

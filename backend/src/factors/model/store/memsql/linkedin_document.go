@@ -28,9 +28,9 @@ var linkedinDocumentTypeAlias = map[string]int{
 }
 
 var objectAndPropertyToValueInLinkedinReportsMapping = map[string]string{
-	"campaign_group:id":   "CONVERT(campaign_group_id, DECIMAL)",
-	"creative:id":         "CONVERT(creative_id, DECIMAL)",
-	"campaign:id":         "CONVERT(campaign_id, DECIMAL)",
+	"campaign_group:id":   "campaign_group_id",
+	"creative:id":         "creative_id",
+	"campaign:id":         "campaign_id",
 	"campaign_group:name": "JSON_EXTRACT_STRING(value, 'campaign_group_name')",
 	"campaign:name":       "JSON_EXTRACT_STRING(value, 'campaign_name')",
 }
@@ -63,8 +63,6 @@ var mapOfTypeToLinkedinJobCTEAlias = map[string]string{
 	"campaign":       "campaign_cte",
 	"campaign_group": "campaign_group_cte",
 }
-
-const errorDuplicateLinkedinDocument = "pq: duplicate key value violates unique constraint \"linkedin_documents_pkey\""
 
 var errorEmptyLinkedinDocument = errors.New("empty linked document")
 
@@ -128,10 +126,6 @@ func (store *MemSQL) GetLinkedinLastSyncInfo(projectID uint64, CustomerAdAccount
 	return linkedinLastSyncInfos, http.StatusOK
 }
 
-func isDuplicateLinkedinDocumentError(err error) bool {
-	return err.Error() == errorDuplicateLinkedinDocument
-}
-
 // CreatelinkedinDocument ...
 func (store *MemSQL) CreateLinkedinDocument(projectID uint64, document *model.LinkedinDocument) int {
 	logCtx := log.WithField("customer_acc_id", document.CustomerAdAccountID).WithField(
@@ -166,7 +160,7 @@ func (store *MemSQL) CreateLinkedinDocument(projectID uint64, document *model.Li
 	db := C.GetServices().Db
 	err := db.Create(&document).Error
 	if err != nil {
-		if isDuplicateLinkedinDocumentError(err) {
+		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).WithField("id", document.ID).Error(
 				"Failed to create an linkedin doc. Duplicate.")
 			return http.StatusConflict
@@ -781,7 +775,7 @@ func getLinkedinFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 		}
 		filterOperator := getOp(filter.Condition)
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%%%s%%", filter.Value)
+			filterValue = fmt.Sprintf("%s", filter.Value)
 		} else {
 			filterValue = filter.Value
 		}
@@ -806,7 +800,7 @@ func getLinkedinFiltersWhereStatementWithSmartProperty(filters []model.ChannelFi
 		}
 		filterOperator := getOp(filter.Condition)
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%%%s%%", filter.Value)
+			filterValue = fmt.Sprintf("%s", filter.Value)
 		} else {
 			filterValue = filter.Value
 		}

@@ -176,7 +176,7 @@ func translateNullToZeroOnFunnelResult(result *model.QueryResult) {
 	for i := range result.Rows {
 		for _, ci := range percentageIndexes {
 			if result.Rows[i][ci] == nil {
-				result.Rows[i][ci] = 0
+				result.Rows[i][ci] = float64(0)
 			}
 		}
 	}

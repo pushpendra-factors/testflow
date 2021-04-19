@@ -233,7 +233,7 @@ func (pg *Postgres) GetFacebookSQLQueryAndParametersForFilterValues(projectID ui
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		logCtx.Error(integrationNotAvailable)
+		logCtx.Info(integrationNotAvailable)
 		return "", make([]interface{}, 0, 0), http.StatusNotFound
 	}
 	customerAccountIDs := strings.Split(customerAccountID, ",")
@@ -271,7 +271,7 @@ func (pg *Postgres) getFacebookFilterValuesByType(projectID uint64, docType int,
 	}
 	customerAccountID := projectSetting.IntFacebookAdAccount
 	if customerAccountID == "" || len(customerAccountID) == 0 {
-		logCtx.Error(integrationNotAvailable)
+		logCtx.Info(integrationNotAvailable)
 		return nil, http.StatusNotFound
 	}
 	customerAccountIDs := strings.Split(customerAccountID, ",")
