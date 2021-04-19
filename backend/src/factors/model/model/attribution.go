@@ -91,6 +91,9 @@ const (
 
 	AttributionQueryTypeConversionBased = "ConversionBased"
 	AttributionQueryTypeEngagementBased = "EngagementBased"
+
+	SortASC  = "ASC"
+	SortDESC = "DESC"
 )
 
 type UserSessionTimestamp struct {
@@ -168,4 +171,29 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}) [][]interface{} {
 		resultRows = append(resultRows, mapRow)
 	}
 	return resultRows
+}
+
+// GetGCLIDAttributionValue Returns the matching value for GCLID, if not found returns $none
+func GetGCLIDAttributionValue(gclIDBasedCampaign map[string]CampaignInfo, gclID string, attributionKey string) string {
+
+	if value, ok := gclIDBasedCampaign[gclID]; ok {
+		switch attributionKey {
+		case U.EP_ADGROUP:
+			if value.AdgroupName != PropertyValueNone {
+				return value.AdgroupName
+			}
+			return value.AdgroupID
+		case U.EP_CAMPAIGN:
+			if value.CampaignName != PropertyValueNone {
+				return value.CampaignName
+			}
+			return value.CampaignID
+		case U.EP_KEYWORD:
+			return value.KeywordID
+		default:
+			// No enrichment for Source via GCLID
+			return PropertyValueNone
+		}
+	}
+	return PropertyValueNone
 }

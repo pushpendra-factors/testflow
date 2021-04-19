@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"database/sql"
 	"errors"
 	C "factors/config"
 	"factors/model/model"
@@ -513,7 +514,7 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 			var propertiesID string
 
 			if err = rows.Scan(&userID, &coalesceID, &propertiesID); err != nil {
-				logCtx.WithError(err).Error("SQL Parse failed")
+				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 				continue
 			}
 			userIDToCoalUserIDMap[userID] = model.UserInfo{CoalUserID: coalesceID, PropertiesID: propertiesID}
@@ -571,7 +572,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 		var gclID string
 		var timestamp int64
 		if err = rows.Scan(&userID, &attributionId, &gclID, &timestamp); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
 		// apply filter at extracting session level itself
@@ -587,7 +588,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 
 		// Override GCLID based campaign info if presents
 		if gclID != model.PropertyValueNone {
-			attributionIdBasedOnGclID := getGCLIDAttributionValue(gclIDBasedCampaign, gclID, attributionEventKey)
+			attributionIdBasedOnGclID := model.GetGCLIDAttributionValue(gclIDBasedCampaign, gclID, attributionEventKey)
 			// In cases where GCLID is present in events, but not in adwords report (as users tend to bookmark expired URLs),
 			// fallback is attributionId
 			if attributionIdBasedOnGclID != model.PropertyValueNone {
@@ -619,23 +620,6 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 		}
 	}
 	return attributedSessionsByUserId, userIdsWithSession, nil
-}
-
-// Returns the matching value for GCLID, if not found returns $none
-func getGCLIDAttributionValue(gclIDBasedCampaign map[string]model.CampaignInfo, gclID string, attributionKey string) string {
-
-	if value, ok := gclIDBasedCampaign[gclID]; ok {
-		switch attributionKey {
-		case U.EP_ADGROUP:
-			return value.AdgroupName
-		case U.EP_CAMPAIGN:
-			return value.CampaignName
-		default:
-			// No enrichment for Source and Keyword via GCLID
-			return model.PropertyValueNone
-		}
-	}
-	return model.PropertyValueNone
 }
 
 // Returns the concatenated list of conversion event + funnel events names
@@ -763,7 +747,7 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 				var userID string
 				var timestamp int64
 				if err = rows.Scan(&userID, &timestamp); err != nil {
-					logCtx.WithError(err).Error("SQL Parse failed")
+					logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 					continue
 				}
 				if _, ok := userIDHitGoalEventTimestamp[userID]; !ok {
@@ -834,7 +818,7 @@ func (pg *Postgres) GetLinkedFunnelEventUsers(projectID uint64, queryFrom, query
 				var userID string
 				var timestamp int64
 				if err = rows.Scan(&userID, &timestamp); err != nil {
-					logCtx.WithError(err).Error("SQL Parse failed")
+					logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 					continue
 				}
 				if _, ok := userIDHitGoalEventTimestamp[userID]; !ok {
@@ -908,7 +892,7 @@ func (pg *Postgres) ApplyUserPropertiesFilter(projectID uint64, userIDList []str
 		for rows.Next() {
 			var userID string
 			if err = rows.Scan(&userID); err != nil {
-				logCtx.WithError(err).Error("SQL Parse failed")
+				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 				continue
 			}
 			if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
@@ -972,7 +956,7 @@ func (pg *Postgres) GetConvertedUsersWithFilter(projectID uint64, goalEventName 
 		var userID string
 		var timestamp int64
 		if err = rows.Scan(&userID, &timestamp); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
 		if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
@@ -1059,7 +1043,7 @@ func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
 		var userID string
 		var timestamp int64
 		if err = rows.Scan(&userID, &timestamp); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
 		if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
@@ -1237,6 +1221,16 @@ func (pg *Postgres) AddAdwordsPerformanceReportInfo(projectID uint64, attributio
 			"group by value->>'ad_group_id', ad_group_name"
 	}
 
+	// Keyword report for AttributionKey as keyword
+	if attributionKey == model.AttributionKeyKeyword {
+		reportType = model.AdwordsDocumentTypeAlias[model.KeywordPerformanceReport] // 8
+		performanceQuery = "SELECT value->>'id' AS id,  value->>'criteria' AS criteria, " +
+			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
+			"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents " +
+			"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
+			"group by value->>'id', criteria"
+	}
+
 	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
 		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
 		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
@@ -1246,15 +1240,38 @@ func (pg *Postgres) AddAdwordsPerformanceReportInfo(projectID uint64, attributio
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var keyNameNull sql.NullString
+		var keyIDNull sql.NullString
+		var impressionsNull sql.NullFloat64
+		var clicksNull sql.NullFloat64
+		var spendNull sql.NullFloat64
+		if err = rows.Scan(&keyIDNull, &keyNameNull, &impressionsNull, &clicksNull, &spendNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+		if !keyNameNull.Valid || !keyIDNull.Valid {
+			continue
+		}
 		var keyName string
 		var keyID string
 		var impressions float64
 		var clicks float64
 		var spend float64
-		if err = rows.Scan(&keyID, &keyName, &impressions, &clicks, &spend); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
-			continue
+		impressions = 0
+		clicks = 0
+		spend = 0
+		keyName = keyNameNull.String
+		keyID = keyIDNull.String
+		if impressionsNull.Valid {
+			impressions = impressionsNull.Float64
 		}
+		if clicksNull.Valid {
+			clicks = clicksNull.Float64
+		}
+		if spendNull.Valid {
+			spend = spendNull.Float64
+		}
+
 		matchingID := ""
 		if _, keyIDFound := attributionData[keyID]; keyIDFound {
 			matchingID = keyID
@@ -1298,7 +1315,7 @@ func (pg *Postgres) GetAdwordsCurrency(projectID uint64, customerAccountID strin
 	var currency string
 	for rows.Next() {
 		if err = rows.Scan(&currency); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
+			logCtx.WithError(err).Error("SQL Parse failed.")
 			return "", err
 		}
 	}
@@ -1352,15 +1369,38 @@ func (pg *Postgres) AddFacebookPerformanceReportInfo(projectID uint64, attributi
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var keyNameNull sql.NullString
+		var keyIDNull sql.NullString
+		var impressionsNull sql.NullFloat64
+		var clicksNull sql.NullFloat64
+		var spendNull sql.NullFloat64
+		if err = rows.Scan(&keyIDNull, &keyNameNull, &impressionsNull, &clicksNull, &spendNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+		if !keyNameNull.Valid || !keyIDNull.Valid {
+			continue
+		}
 		var keyName string
 		var keyID string
 		var impressions float64
 		var clicks float64
 		var spend float64
-		if err = rows.Scan(&keyID, &keyName, &impressions, &clicks, &spend); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
-			continue
+		impressions = 0
+		clicks = 0
+		spend = 0
+		keyName = keyNameNull.String
+		keyID = keyIDNull.String
+		if impressionsNull.Valid {
+			impressions = impressionsNull.Float64
 		}
+		if clicksNull.Valid {
+			clicks = clicksNull.Float64
+		}
+		if spendNull.Valid {
+			spend = spendNull.Float64
+		}
+
 		matchingID := ""
 		if _, keyIdFound := attributionData[keyID]; keyIdFound {
 			matchingID = keyID
@@ -1427,15 +1467,38 @@ func (pg *Postgres) AddLinkedinPerformanceReportInfo(projectID uint64, attributi
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var keyNameNull sql.NullString
+		var keyIDNull sql.NullString
+		var impressionsNull sql.NullFloat64
+		var clicksNull sql.NullFloat64
+		var spendNull sql.NullFloat64
+		if err = rows.Scan(&keyIDNull, &keyNameNull, &impressionsNull, &clicksNull, &spendNull); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+		if !keyNameNull.Valid || !keyIDNull.Valid {
+			continue
+		}
 		var keyName string
 		var keyID string
 		var impressions float64
 		var clicks float64
 		var spend float64
-		if err = rows.Scan(&keyID, &keyName, &impressions, &clicks, &spend); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
-			continue
+		impressions = 0
+		clicks = 0
+		spend = 0
+		keyName = keyNameNull.String
+		keyID = keyIDNull.String
+		if impressionsNull.Valid {
+			impressions = impressionsNull.Float64
 		}
+		if clicksNull.Valid {
+			clicks = clicksNull.Float64
+		}
+		if spendNull.Valid {
+			spend = spendNull.Float64
+		}
+
 		matchingID := ""
 		if _, keyIdFound := attributionData[keyID]; keyIdFound {
 			matchingID = keyID

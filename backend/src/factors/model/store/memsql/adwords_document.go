@@ -590,15 +590,24 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 	logCtx := log.WithFields(log.Fields{"ProjectID": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	adGroupNameCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'ad_group_name') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'ad_group_name') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'ad_group_name') END AS ad_group_name"
+	adGroupIDCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'ad_group_id') IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(value, 'ad_group_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'ad_group_id') END AS ad_group_id"
 	campaignNameCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'campaign_name')  IS NULL THEN ? " +
-		" WHEN JSON_EXTRACT_STRING(value, 'campaign_name')  = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'campaign_name') END AS campaign_name"
+		" WHEN JSON_EXTRACT_STRING(value, 'campaign_name') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'campaign_name') END AS campaign_name"
+	campaignIDCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'campaign_id') IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(value, 'campaign_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'campaign_id') END AS campaign_id"
 	adIDCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'creative_id') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'creative_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'creative_id') END AS creative_id"
+	keywordIDCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'criteria_id') IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(value, 'criteria_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'criteria_id') END AS criteria_id"
 
-	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + campaignNameCase + ", " + adIDCase +
+	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + adGroupIDCase + ", " + campaignNameCase + ", " +
+		campaignIDCase + ", " + adIDCase + ", " + keywordIDCase +
 		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
-	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
+	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone,
+		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
+		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
@@ -610,16 +619,22 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 	for rows.Next() {
 		var gclID string
 		var adgroupName string
+		var adgroupID string
 		var campaignName string
+		var campaignID string
 		var adID string
-		if err = rows.Scan(&gclID, &adgroupName, &campaignName, &adID); err != nil {
+		var keywordID string
+		if err = rows.Scan(&gclID, &adgroupName, &adgroupID, &campaignName, &campaignID, &adID, &keywordID); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed")
 			continue
 		}
 		gclIDBasedCampaign[gclID] = model.CampaignInfo{
 			AdgroupName:  adgroupName,
+			AdgroupID:    adgroupID,
 			CampaignName: campaignName,
+			CampaignID:   campaignID,
 			AdID:         adID,
+			KeywordID:    keywordID,
 		}
 	}
 	return gclIDBasedCampaign, nil
@@ -1574,7 +1589,7 @@ func (store *MemSQL) GetAdwordsFilterValuesByType(projectID uint64, docType int)
 		return []string{}, http.StatusBadRequest
 	}
 
-	queryStr := "SELECT DISTINCTJSON_EXTRACT_STRING(value, ?) as filter_value FROM adwords_documents WHERE project_id = ? AND" +
+	queryStr := "SELECT DISTINCT JSON_EXTRACT_STRING(value, ?) as filter_value FROM adwords_documents WHERE project_id = ? AND" +
 		" " + "customer_account_id = ? AND type = ? LIMIT 5000"
 	rows, err := db.Raw(queryStr, filterValueKey, projectID, customerAccountID, docType).Rows()
 	if err != nil {

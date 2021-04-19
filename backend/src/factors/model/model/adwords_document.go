@@ -24,8 +24,11 @@ type AdwordsDocument struct {
 
 type CampaignInfo struct {
 	AdgroupName  string
+	AdgroupID    string
 	CampaignName string
+	CampaignID   string
 	AdID         string
+	KeywordID    string
 }
 
 type AdwordsLastSyncInfo struct {
