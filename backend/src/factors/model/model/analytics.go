@@ -124,9 +124,8 @@ const (
 	DateRangePreset2MinInSeconds  int64  = 2 * 60
 	DateRangePreset30MinInSeconds int64  = 30 * 60
 
-	QueryCachePlaceholderExpirySeconds     float64 = 2 * 60 * 60       // 2 Hours.
-	QueryCacheImmutableResultExpirySeconds float64 = 30 * 24 * 60 * 60 // 30 Days.
-	QueryCacheMutableResultExpirySeconds   float64 = 10 * 60           // 10 Minutes.
+	QueryCachePlaceholderExpirySeconds   float64 = 2 * 60 * 60 // 2 Hours.
+	QueryCacheMutableResultExpirySeconds float64 = 10 * 60     // 10 Minutes.
 
 	QueryCacheRequestInvalidatedCacheHeader string = "Invalidate-Cache"
 	QueryCacheRequestSleepHeader            string = "QuerySleepSeconds"
@@ -360,11 +359,10 @@ func getQueryCacheRedisKeySuffix(hashString string, from, to int64) string {
 }
 
 func getQueryCacheResultExpiry(from, to int64) float64 {
-	if to-from == DateRangePreset2MinInSeconds || to-from == DateRangePreset30MinInSeconds ||
-		U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) {
+	if to-from == DateRangePreset2MinInSeconds || to-from == DateRangePreset30MinInSeconds {
 		return QueryCacheMutableResultExpirySeconds
 	}
-	return QueryCacheImmutableResultExpirySeconds
+	return U.GetQueryCacheResultExpiryInSeconds(from, to)
 }
 
 type QueryResult struct {

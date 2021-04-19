@@ -866,13 +866,6 @@ func getQueryCacheRedisKeySuffix(hashString string, from, to int64) string {
 	return fmt.Sprintf("%s:from:%d:to:%d", hashString, from, to)
 }
 
-func getQueryCacheResultExpiry(from, to int64) float64 {
-	if to-from == DateRangePreset2MinInSeconds || to-from == DateRangePreset30MinInSeconds {
-		return QueryCacheMutableResultExpirySeconds
-	}
-	return U.GetQueryCacheResultExpiryInSeconds(from, to)
-}
-
 // GetQueryResultFromCache To get value from cache for a particular query payload.
 // resultContainer to be passed by reference.
 func GetQueryResultFromCache(projectID uint64, query model.BaseQuery, resultContainer interface{}) (model.QueryCacheResult, int) {
