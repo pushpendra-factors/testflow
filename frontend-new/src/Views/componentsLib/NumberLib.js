@@ -9,7 +9,7 @@ const CheckBoxLib = () =>{
 
   const NumberList = [  
     {number: 100.1234, suffix: '', prefix: '', shortHand: false, info: 'Decimal'}, 
-    {number: 10000, suffix: '', prefix: '', shortHand: false, info: false},
+    {number: 1000000, suffix: '', prefix: '', shortHand: false, info: false},
     {number: 12345, suffix: '', prefix: '$', shortHand: false, info: 'Prefix $'},
     {number: 123456, suffix: '$', prefix: '', shortHand: false, info: 'Suffix $'},
     {number: 123456.123, suffix: '%', prefix: '', shortHand: false, info: 'Suffix % + Decimal'},
