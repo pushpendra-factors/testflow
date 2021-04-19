@@ -10,6 +10,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+
 	"reflect"
 	"sort"
 	"strings"
@@ -22,8 +23,33 @@ import (
 )
 
 const usersLimitForProperties = 50000
-const uniqueIndexProjectIdAmpUserId = "users_project_id_amp_user_idx"
-const uniqueIndexProjectIdSegmentAnonymousId = "users_project_id_segment_anonymous_uidx"
+
+func satisfiesUserConstraints(user model.User) int {
+	// Unique (project_id, segment_anonymous_id) constraint.
+	logCtx := log.WithFields(log.Fields{
+		"method":     "satisfiesUserConstraints",
+		"project_id": user.ProjectId,
+		"id":         user.ID,
+	})
+	if user.SegmentAnonymousId != "" {
+		_, errCode := getUserBySegmentAnonymousId(user.ProjectId, user.SegmentAnonymousId)
+		if errCode == http.StatusFound {
+			logCtx.WithField("seg_anon_id", user.SegmentAnonymousId).Error("segment anonymous id constraint violation")
+			return http.StatusBadRequest
+		}
+	}
+
+	// Unique (project_id, amp_user_id) constraint.
+	if user.AMPUserId != "" {
+		_, errCode := getUserByAMPUserId(user.ProjectId, user.AMPUserId)
+		if errCode == http.StatusFound {
+			logCtx.WithField("amp_user_id", user.AMPUserId).Error("amp user id constraint violation")
+			return http.StatusBadRequest
+		}
+	}
+
+	return http.StatusOK
+}
 
 // createUserWithError - Returns error during create to match
 // with constraint errors.
@@ -107,7 +133,7 @@ func (store *MemSQL) CreateUser(user *model.User) (*model.User, int) {
 		return newUser, http.StatusCreated
 	}
 
-	if U.IsPostgresIntegrityViolationError(err) {
+	if U.IsPostgresIntegrityViolationError(err) || IsDuplicateRecordError(err) {
 		if user.ID != "" {
 			// Multiple requests trying to create user at the
 			// same time should not lead failure permanently,
@@ -156,8 +182,11 @@ func (store *MemSQL) UpdateUser(projectId uint64, id string,
 	userProperties := user.Properties
 	user.Properties = postgres.Jsonb{}
 
-	var updatedUser model.User
+	if errCode := satisfiesUserConstraints(*user); errCode != http.StatusOK {
+		return nil, errCode
+	}
 
+	var updatedUser model.User
 	db := C.GetServices().Db
 	if err := db.Model(&model.User{}).Where("project_id = ?", projectId).Where("id = ?",
 		cleanId).Updates(user).Error; err != nil {
@@ -363,7 +392,11 @@ func (store *MemSQL) GetExistingCustomerUserID(projectId uint64, arrayCustomerUs
 	return customerUserIDMap, http.StatusFound
 }
 
-func (store *MemSQL) GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*model.User, int) {
+func (store *MemSQL) GetUserBySegmentAnonymousId(projectID uint64, segAnonID string) (*model.User, int) {
+	return getUserBySegmentAnonymousId(projectID, segAnonID)
+}
+
+func getUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*model.User, int) {
 	db := C.GetServices().Db
 
 	var users []model.User
@@ -458,6 +491,7 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 	var user *model.User
 	var errCode int
 	// fetch user by seg_aid, if given.
+	// Unique (project_id, segment_anonymous_id) constraint.
 	if segAnonId != "" {
 		user, errCode = store.GetUserBySegmentAnonymousId(projectId, segAnonId)
 		if errCode == http.StatusInternalServerError ||
@@ -493,18 +527,6 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 
 		user, err := store.createUserWithError(cUser)
 		if err != nil {
-			// Get and return error is duplicate error.
-			if U.IsPostgresUniqueIndexViolationError(
-				uniqueIndexProjectIdSegmentAnonymousId, err) {
-
-				user, errCode := store.GetUserBySegmentAnonymousId(projectId, segAnonId)
-				if errCode != http.StatusFound {
-					return nil, errCode
-				}
-
-				return user, http.StatusFound
-			}
-
 			logCtx.WithError(err).Error(
 				"Failed to create user by segment anonymous id on CreateOrGetSegmentUser")
 			return nil, http.StatusInternalServerError
@@ -558,6 +580,7 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 	logCtx := log.WithField("project_id",
 		projectId).WithField("amp_user_id", ampUserId)
 
+	// Unique (project_id, amp_user_id) constraint.
 	user, errCode := getUserByAMPUserId(projectId, ampUserId)
 	if errCode == http.StatusInternalServerError {
 		return nil, errCode
@@ -570,16 +593,6 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 	user, err := store.createUserWithError(&model.User{ProjectId: projectId,
 		AMPUserId: ampUserId, JoinTimestamp: timestamp})
 	if err != nil {
-		// Get and return error is duplicate error.
-		if U.IsPostgresUniqueIndexViolationError(uniqueIndexProjectIdAmpUserId, err) {
-			user, errCode := getUserByAMPUserId(projectId, ampUserId)
-			if errCode != http.StatusFound {
-				return nil, errCode
-			}
-
-			return user, http.StatusFound
-		}
-
 		logCtx.WithError(err).Error(
 			"Failed to create user by amp user id on CreateOrGetAMPUser")
 		return nil, http.StatusInternalServerError
@@ -595,23 +608,24 @@ func (store *MemSQL) GetRecentUserPropertyKeysWithLimits(projectID uint64, users
 	startTime := seedDate.AddDate(0, 0, -7).Unix()
 	endTime := seedDate.Unix()
 	logCtx := log.WithField("project_id", projectID)
+
 	var queryParams []interface{}
-	queryStmnt := "WITH recent_user_events AS (SELECT DISTINCT ON(user_id) user_id, user_properties, timestamp FROM events" + " " +
-		"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?)" + " " +
-		"SELECT json_object_keys(user_properties::json) AS key, COUNT(*) AS count, MAX(timestamp) as last_seen FROM recent_user_events" + " " +
-		"WHERE user_properties != 'null' GROUP BY key ORDER BY count DESC LIMIT ?;"
+	queryStmnt := fmt.Sprintf("WITH recent_user_events AS (SELECT user_id, FIRST(user_properties, FROM_UNIXTIME(events.timestamp)) AS user_properties, FIRST(timestamp, FROM_UNIXTIME(events.timestamp)) AS timestamp FROM events"+" "+
+		"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? GROUP BY user_id ORDER BY user_id, timestamp DESC LIMIT %d)"+" "+
+		"SELECT user_properties, timestamp as last_seen FROM recent_user_events"+" "+
+		"WHERE user_properties != 'null' AND user_properties IS NOT NULL;", usersLimit)
 
 	queryParams = make([]interface{}, 0, 0)
-	queryParams = append(queryParams, projectID, startTime, endTime, usersLimit, propertyLimit)
+	queryParams = append(queryParams, projectID, startTime, endTime)
 
 	if C.ShouldUseUserPropertiesTableForRead(projectID) {
-		queryStmnt = " WITH recent_users AS (SELECT DISTINCT ON(user_id) user_id, user_properties_id FROM events " +
-			"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?) " +
-			"SELECT json_object_keys(user_properties.properties::json) AS key, COUNT(*) AS count, MAX(updated_timestamp) as last_seen FROM recent_users " +
-			"LEFT OUTER JOIN user_properties ON recent_users.user_properties_id = user_properties.id  " +
-			"WHERE user_properties.project_id = ? AND user_properties.properties != 'null' GROUP BY key ORDER BY count DESC LIMIT ?;"
+		queryStmnt = fmt.Sprintf(" WITH recent_users AS (SELECT user_id, FIRST(user_properties_id, FROM_UNIXTIME(events.timestamp)) AS user_properties_id FROM events "+
+			"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? GROUP BY user_id ORDER BY user_id, timestamp DESC LIMIT %d) "+
+			"SELECT user_properties.properties, updated_timestamp as last_seen FROM recent_users "+
+			"LEFT OUTER JOIN user_properties ON recent_users.user_properties_id = user_properties.id  "+
+			"WHERE user_properties.project_id = ? AND user_properties.properties != 'null' AND user_properties.properties IS NOT NULL;", usersLimit)
 		queryParams = make([]interface{}, 0, 0)
-		queryParams = append(queryParams, projectID, startTime, endTime, usersLimit, projectID, propertyLimit)
+		queryParams = append(queryParams, projectID, startTime, endTime, projectID)
 	}
 
 	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
@@ -621,16 +635,45 @@ func (store *MemSQL) GetRecentUserPropertyKeysWithLimits(projectID uint64, users
 	}
 	defer rows.Close()
 
+	propertiesCounts := make(map[string]map[string]int64)
 	for rows.Next() {
-		var property U.Property
-		if err := db.ScanRows(rows, &property); err != nil {
+		var lastSeen int64
+		var properties postgres.Jsonb
+		if err := rows.Scan(&properties, &lastSeen); err != nil {
 			logCtx.WithError(err).Error("Failed scanning rows on GetRecentUserPropertyKeysWithLimits")
 			return nil, err
 		}
-		properties = append(properties, property)
+		propertiesMap, err := U.DecodePostgresJsonbAsPropertiesMap(&properties)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to decode properties on GetRecentUserPropertyKeysWithLimits")
+			return nil, err
+		}
+
+		for key := range *propertiesMap {
+			if _, found := propertiesCounts[key]; found {
+				propertiesCounts[key]["count"]++
+				propertiesCounts[key]["last_seen"] = U.Max(propertiesCounts[key]["last_seen"], lastSeen)
+			} else {
+				propertiesCounts[key] = map[string]int64{
+					"count":     1,
+					"last_seen": lastSeen,
+				}
+			}
+		}
 	}
 
-	return properties, nil
+	for propertyKey := range propertiesCounts {
+		properties = append(properties, U.Property{
+			Key:      propertyKey,
+			LastSeen: uint64(propertiesCounts[propertyKey]["last_seen"]),
+			Count:    propertiesCounts[propertyKey]["count"]})
+	}
+
+	sort.Slice(properties, func(i, j int) bool {
+		return properties[i].Count > properties[j].Count
+	})
+
+	return properties[:U.MinInt(propertyLimit, len(properties))], nil
 }
 
 //GetRecentUserPropertyValuesWithLimits This method gets all the recent 'limit' property values from DB for a given project/property
@@ -641,23 +684,24 @@ func (store *MemSQL) GetRecentUserPropertyValuesWithLimits(projectID uint64, pro
 	endTime := seedDate.Unix()
 
 	var queryParams []interface{}
-	queryStmnt := " WITH recent_user_events AS (SELECT DISTINCT ON(user_id) user_id, user_properties, timestamp FROM events" + " " +
-		"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?)" + " " +
-		"SELECT user_properties->? AS value, COUNT(*) AS count, MAX(timestamp) AS last_seen, MAX(jsonb_typeof(user_properties->?)) AS value_type FROM recent_user_events" + " " +
-		"WHERE user_properties != 'null' AND user_properties->? IS NOT NULL GROUP BY value limit ?;"
+	queryStmnt := fmt.Sprintf(" WITH recent_user_events AS (SELECT user_id, user_properties, timestamp FROM events"+" "+
+		"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT %d)"+" "+
+		"SELECT JSON_EXTRACT_STRING(user_properties, ?) AS value, COUNT(*) AS count, MAX(timestamp) AS last_seen, MAX(JSON_GET_TYPE(JSON_EXTRACT_STRING(user_properties, ?))) AS value_type FROM recent_user_events"+" "+
+		"WHERE user_properties != 'null' AND JSON_EXTRACT_STRING(user_properties, ?) IS NOT NULL GROUP BY value limit %d;", usersLimit, valuesLimit)
 
 	queryParams = make([]interface{}, 0, 0)
-	queryParams = append(queryParams, projectID, startTime, endTime, usersLimit, propertyKey, propertyKey, propertyKey, valuesLimit)
+	queryParams = append(queryParams, projectID, startTime, endTime, propertyKey, propertyKey, propertyKey)
 
 	if C.ShouldUseUserPropertiesTableForRead(projectID) {
-		queryStmnt = " WITH recent_users AS (SELECT DISTINCT ON(user_id) user_id, user_properties_id FROM events " +
-			"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?) " +
-			"SELECT user_properties.properties->? AS value, COUNT(*) AS count, MAX(updated_timestamp) AS last_seen, MAX(jsonb_typeof(user_properties.properties->?)) AS value_type FROM recent_users " +
-			"LEFT JOIN user_properties ON recent_users.user_properties_id = user_properties.id WHERE user_properties.project_id = ? " +
-			"AND user_properties.properties != 'null' AND user_properties.properties->? IS NOT NULL GROUP BY value limit ?;"
+		queryStmnt = fmt.Sprintf(" WITH recent_users AS (SELECT user_id, FIRST(user_properties_id, FROM_UNIXTIME(events.timestamp)) AS user_properties_id FROM events "+
+			"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? GROUP BY user_id ORDER BY user_id, timestamp DESC LIMIT %d) "+
+			"SELECT JSON_EXTRACT_STRING(user_properties.properties, ?) AS value, COUNT(*) AS count, MAX(updated_timestamp) AS last_seen, MAX(JSON_GET_TYPE(JSON_EXTRACT_STRING(user_properties.properties, ?))) AS value_type FROM recent_users "+
+			"LEFT JOIN user_properties ON recent_users.user_properties_id = user_properties.id WHERE user_properties.project_id = ? "+
+			"AND user_properties.properties != 'null' AND JSON_EXTRACT_STRING(user_properties.properties, ?) IS NOT NULL GROUP BY value limit %d;",
+			usersLimit, valuesLimit)
 
 		queryParams = make([]interface{}, 0, 0)
-		queryParams = append(queryParams, projectID, startTime, endTime, usersLimit, propertyKey, propertyKey, projectID, propertyKey, valuesLimit)
+		queryParams = append(queryParams, projectID, startTime, endTime, propertyKey, propertyKey, projectID, propertyKey)
 	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_key": propertyKey, "values_limit": valuesLimit})
@@ -960,7 +1004,7 @@ func (store *MemSQL) GetUserByPropertyKey(projectID uint64,
 	var user model.User
 	// $$$ is a gorm alias for ? jsonb operator.
 	err := db.Limit(1).Where("project_id=?", projectID).Where(
-		"properties->? $$$ ?", key, value).Find(&user).Error
+		"JSON_EXTRACT_STRING(properties, ?) = ?", key, value).Find(&user).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound

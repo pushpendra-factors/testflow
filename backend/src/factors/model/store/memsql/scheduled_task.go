@@ -30,6 +30,10 @@ func (store *MemSQL) CreateScheduledTask(task *model.ScheduledTask) int {
 		return http.StatusBadRequest
 	}
 
+	if task.ID == "" {
+		task.ID = U.GetUUID()
+	}
+
 	db := C.GetServices().Db
 	err = db.Create(&task).Error
 	if err != nil {
@@ -112,7 +116,7 @@ func (store *MemSQL) GetScheduledTaskLastRunTimestamp(projectID uint64, taskType
 
 	row := db.Model(&model.ScheduledTask{}).
 		Where("project_id = ? AND task_type = ? AND task_status = ?", projectID, taskType, model.TASK_STATUS_SUCCESS).
-		Select("MAX((task_details->>'to_timestamp')::bigint)").Row()
+		Select("MAX(JSON_EXTRACT_STRING(task_details, 'to_timestamp'))").Row()
 	err := row.Scan(&maxTaskStartTime)
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) || maxTaskStartTime.Valid {
@@ -132,9 +136,9 @@ func (store *MemSQL) GetArchivalFileNamesForProject(projectID uint64, startTime,
 	fileNames := make([]string, 0, 0)
 	userFileNames := make([]string, 0, 0)
 	rows, err := db.Model(&model.ScheduledTask{}).
-		Where("project_id = ? AND task_type = ? AND (task_details->>'file_created')::bool=true"+
-			" AND (task_details->>'from_timestamp')::bigint between ? AND ?", projectID, model.TASK_TYPE_EVENTS_ARCHIVAL, startTime.Unix(), endTime.Unix()).
-		Select("task_details->>'filepath', task_details->>'users_filepath'").Rows()
+		Where("project_id = ? AND task_type = ? AND JSON_EXTRACT_STRING(task_details, 'file_created')='true'"+
+			" AND JSON_EXTRACT_STRING(task_details, 'from_timestamp') between ? AND ?", projectID, model.TASK_TYPE_EVENTS_ARCHIVAL, startTime.Unix(), endTime.Unix()).
+		Select("JSON_EXTRACT_STRING(task_details, 'filepath'), JSON_EXTRACT_STRING(task_details, 'users_filepath')").Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get archived file paths")
 		return fileNames, userFileNames, http.StatusInternalServerError
@@ -172,9 +176,10 @@ func (store *MemSQL) GetNewArchivalFileNamesAndEndTimeForProject(projectID uint6
 	}
 
 	rows, err := db.Model(&model.ScheduledTask{}).
-		Where("project_id = ? AND task_type = ? AND (task_details->>'file_created')::bool=true"+
-			" AND (task_details->>'from_timestamp')::bigint between ? AND ?", projectID, model.TASK_TYPE_EVENTS_ARCHIVAL, startTime, endTime).
-		Select("id, task_details->>'filepath', task_details->>'users_filepath', task_details->>'from_timestamp', task_details->>'to_timestamp'").Rows()
+		Where("project_id = ? AND task_type = ? AND JSON_EXTRACT_STRING(task_details, 'file_created')='true'"+
+			" AND JSON_EXTRACT_STRING(task_details, 'from_timestamp') between ? AND ?", projectID, model.TASK_TYPE_EVENTS_ARCHIVAL, startTime, endTime).
+		Select("id, JSON_EXTRACT_STRING(task_details, 'filepath'), JSON_EXTRACT_STRING(task_details, 'users_filepath')," +
+			" JSON_EXTRACT_STRING(task_details, 'from_timestamp'), JSON_EXTRACT_STRING(task_details, 'to_timestamp')").Rows()
 	if err != nil {
 		log.WithError(err).Error("Query failed to get filenames")
 		return fileNameEndTimeMap, http.StatusInternalServerError
@@ -222,9 +227,9 @@ func (store *MemSQL) GetCompletedArchivalBatches(projectID uint64, startTime, en
 	completedBatches := make(map[int64]int64)
 
 	rows, err := db.Model(&model.ScheduledTask{}).
-		Where("project_id = ? AND task_status = ? AND task_type = ? AND (task_details->>'from_timestamp')::bigint BETWEEN ? AND ?",
+		Where("project_id = ? AND task_status = ? AND task_type = ? AND JSON_EXTRACT_STRING(task_details, 'from_timestamp') BETWEEN ? AND ?",
 			projectID, model.TASK_STATUS_SUCCESS, model.TASK_TYPE_EVENTS_ARCHIVAL, startTime.Unix(), endTime.Unix()).
-		Select("task_details->>'from_timestamp', task_details->>'to_timestamp'").Rows()
+		Select("JSON_EXTRACT_STRING(task_details, 'from_timestamp'), JSON_EXTRACT_STRING(task_details, 'to_timestamp')").Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get completed archival tasks")
 		return completedBatches, http.StatusInternalServerError
@@ -252,9 +257,9 @@ func filterCompletedBigqueryTasks(allTasksMap map[int64]map[string]interface{}, 
 	}
 
 	rows, err := db.Model(&model.ScheduledTask{}).
-		Where("project_id = ? AND task_status = ? AND task_type = ? AND task_details->>'archival_task_id' in (?)",
+		Where("project_id = ? AND task_status = ? AND task_type = ? AND JSON_EXTRACT_STRING(task_details, 'archival_task_id') in (?)",
 			projectID, model.TASK_STATUS_SUCCESS, model.TASK_TYPE_BIGQUERY_UPLOAD, archivalTaskIDs).
-		Select("task_details->>'archival_task_id'").Rows()
+		Select("JSON_EXTRACT_STRING(task_details, 'archival_task_id')").Rows()
 	if err != nil {
 		log.WithError(err).Errorf("Failed to get completed bigquery tasks list")
 		return pendingTasksMap, err

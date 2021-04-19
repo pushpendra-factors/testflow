@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"testing"
 	"time"
 
@@ -87,7 +88,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
-		assert.Equal(t, int64(5), result.Rows[0][0])
+		assert.Equal(t, float64(5), result.Rows[0][0])
 
 		// Query count of events: page_spent_time > 11
 		query2 := model.Query{
@@ -118,7 +119,7 @@ func TestEventAnalyticsQuery(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result2)
 		assert.Equal(t, "count", result2.Headers[0])
-		assert.Equal(t, int64(15), result2.Rows[0][0])
+		assert.Equal(t, float64(15), result2.Rows[0][0])
 
 	})
 }
@@ -227,7 +228,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
-		assert.Equal(t, int64(2), result.Rows[0][0])
+		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		//unique user count should return 2 for s0 to s1 with fliter property2
 		query.EventsWithProperties[0].Properties[0].Value = "B"
@@ -235,7 +236,7 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
-		assert.Equal(t, int64(2), result.Rows[0][0])
+		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query = model.Query{
 			From: startTimestamp,
@@ -267,9 +268,9 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, "$initial_source", result.Headers[0])
 		assert.Equal(t, "count", result.Headers[1])
 		assert.Equal(t, "B", result.Rows[0][0])
-		assert.Equal(t, int64(2), result.Rows[0][1])
+		assert.Equal(t, float64(2), result.Rows[0][1])
 		assert.Equal(t, "A", result.Rows[1][0])
-		assert.Equal(t, int64(1), result.Rows[1][1])
+		assert.Equal(t, float64(1), result.Rows[1][1])
 	})
 	t.Run("AnalyticsEventsQueryUniqueUserWithEventPropertyFilterAndBreakdown", func(t *testing.T) {
 		query := model.Query{
@@ -303,14 +304,14 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
-		assert.Equal(t, int64(2), result.Rows[0][0])
+		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query.EventsWithProperties[0].Properties[0].Value = "4321"
 		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
-		assert.Equal(t, int64(2), result.Rows[0][0])
+		assert.Equal(t, float64(2), result.Rows[0][0])
 
 		query = model.Query{
 			From: startTimestamp,
@@ -331,18 +332,19 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 					EventNameIndex: 1,
 				},
 			},
-			Class: model.QueryClassEvents,
-
+			Class:           model.QueryClassEvents,
 			Type:            model.QueryTypeUniqueUsers,
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, "$campaign_id", result.Headers[0])
-		assert.Equal(t, "1234", result.Rows[0][0])
-		assert.Equal(t, int64(2), result.Rows[0][1])
-		assert.Equal(t, "4321", result.Rows[1][0])
+		expectedKeys := []string{"1234", "4321"}
+		actualKeys := []string{result.Rows[0][0].(string), result.Rows[1][0].(string)}
+		sort.Strings(actualKeys)
+		assert.Equal(t, expectedKeys, actualKeys)
+		assert.Equal(t, float64(2), result.Rows[0][1])
 		// Counting all occurrences instead of first. So for user1, both 4321 and 1234 will be counted.
-		assert.Equal(t, int64(2), result.Rows[1][1])
+		assert.Equal(t, float64(2), result.Rows[1][1])
 	})
 
 	t.Run("AnalyticsEventsQueryEventOccurrenceWithCountEventOccurrences", func(t *testing.T) {
@@ -384,9 +386,9 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "count", result.Headers[1])
 		assert.Equal(t, "s0", result.Rows[0][0])
-		assert.Equal(t, int64(2), result.Rows[0][1])
+		assert.Equal(t, float64(2), result.Rows[0][1])
 		assert.Equal(t, "s1", result.Rows[1][0])
-		assert.Equal(t, int64(3), result.Rows[1][1])
+		assert.Equal(t, float64(3), result.Rows[1][1])
 
 		query.GroupByProperties = []model.QueryGroupByProperty{
 			model.QueryGroupByProperty{
@@ -401,15 +403,15 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, "$initial_source", result.Headers[1])
 		assert.Equal(t, "s0", result.Rows[0][0])
 		assert.Equal(t, "B", result.Rows[0][1])
-		assert.Equal(t, int64(2), result.Rows[0][2])
+		assert.Equal(t, float64(2), result.Rows[0][2])
 
 		assert.Equal(t, "s1", result.Rows[1][0])
 		assert.Equal(t, "B", result.Rows[1][1])
-		assert.Equal(t, int64(2), result.Rows[1][2])
+		assert.Equal(t, float64(2), result.Rows[1][2])
 
 		assert.Equal(t, "s1", result.Rows[2][0])
 		assert.Equal(t, "A", result.Rows[2][1])
-		assert.Equal(t, int64(1), result.Rows[2][2])
+		assert.Equal(t, float64(1), result.Rows[2][2])
 
 		//Count should be same as when done with user property = 5
 		query.EventsWithProperties[0].Properties[0].Entity = model.PropertyEntityEvent
@@ -421,9 +423,9 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, "event_name", result.Headers[0])
 		assert.Equal(t, "count", result.Headers[1])
 		assert.Equal(t, "s0", result.Rows[0][0])
-		assert.Equal(t, int64(2), result.Rows[0][1])
+		assert.Equal(t, float64(2), result.Rows[0][1])
 		assert.Equal(t, "s1", result.Rows[1][0])
-		assert.Equal(t, int64(3), result.Rows[1][1])
+		assert.Equal(t, float64(3), result.Rows[1][1])
 	})
 
 	// Test for event filter on user property and group by user property at the same event.
@@ -755,7 +757,7 @@ func sendEventsQueryHandler(r *gin.Engine, projectId uint64, agent *model.Agent,
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
 	}
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/v1/query", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/query", projectId)).
 		WithPostParams(queryGroup).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -878,14 +880,14 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, "event_index", result.Headers[0])
 		if result.Rows[0][1] == "s1" {
-			assert.Equal(t, int64(3), result.Rows[0][2])
+			assert.Equal(t, float64(3), result.Rows[0][2])
 		} else {
-			assert.Equal(t, int64(2), result.Rows[0][2])
+			assert.Equal(t, float64(2), result.Rows[0][2])
 		}
 		if result.Rows[1][1] == "s1" {
-			assert.Equal(t, int64(3), result.Rows[1][2])
+			assert.Equal(t, float64(3), result.Rows[1][2])
 		} else {
-			assert.Equal(t, int64(2), result.Rows[1][2])
+			assert.Equal(t, float64(2), result.Rows[1][2])
 		}
 	})
 
@@ -921,11 +923,11 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "datetime", result.Headers[0])
 		if result.Headers[1] == "s0" {
-			assert.Equal(t, int64(2), result.Rows[0][1])
-			assert.Equal(t, int64(3), result.Rows[0][2])
+			assert.Equal(t, float64(2), result.Rows[0][1])
+			assert.Equal(t, float64(3), result.Rows[0][2])
 		} else {
-			assert.Equal(t, int64(3), result.Rows[0][1])
-			assert.Equal(t, int64(2), result.Rows[0][2])
+			assert.Equal(t, float64(3), result.Rows[0][1])
+			assert.Equal(t, float64(2), result.Rows[0][2])
 		}
 	})
 }

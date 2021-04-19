@@ -1,8 +1,7 @@
 package tests
 
 import (
-	"bytes"
-	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
 	"factors/model/store"
@@ -97,32 +96,32 @@ func TestSignUp(t *testing.T) {
 
 func sendSignUpRequest(email string, phone string, r *gin.Engine) *httptest.ResponseRecorder {
 	params := map[string]string{"email": email, "phone": phone}
-	jsonValue, err := json.Marshal(params)
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/accounts/signup").
+		WithHeader("Content-Type", "application/json").
+		WithPostParams(params)
+
+	req, err := rb.Build()
 	if err != nil {
-		log.WithError(err).Error("Error Creating json params")
+		log.WithError(err).Error("Error Creating Signin Req")
 	}
+
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("POST", "/accounts/signup", bytes.NewBuffer(jsonValue))
-	if err != nil {
-		log.WithError(err).Error("Error Creating Signup Req")
-	}
-	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	return w
 }
 
 func sendSignUpRequestWithAdditionalDetails(email string, phone string, r *gin.Engine) *httptest.ResponseRecorder {
 	params := map[string]interface{}{"email": email, "phone": phone, "first_name": "first_name", "last_name": "last_name", "company_url": "app.factors.ai", "subscribe_newsletter": true}
-	jsonValue, err := json.Marshal(params)
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, "/accounts/signup").
+		WithHeader("Content-Type", "application/json").
+		WithPostParams(params)
+
+	req, err := rb.Build()
 	if err != nil {
-		log.WithError(err).Error("Error Creating json params")
+		log.WithError(err).Error("Error Creating Signin Req")
 	}
+
 	w := httptest.NewRecorder()
-	req, err := http.NewRequest("POST", "/accounts/signup", bytes.NewBuffer(jsonValue))
-	if err != nil {
-		log.WithError(err).Error("Error Creating Signup Req")
-	}
-	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	return w
 }

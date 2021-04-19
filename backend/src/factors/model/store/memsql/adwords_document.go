@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	errorDuplicateAdwordsDocument                   = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
 	filterValueAll                                  = "all"
 	fromSmartProperty                               = " FROM smart_properties "
 	adwordsDocuments                                = "adwords_documents"
@@ -112,46 +111,46 @@ var nonHigherOrderMetrics = map[string]struct{}{
 // Same structure is being used for internal operations and external.
 var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 	model.Impressions: {
-		nonHigherOrderExpression: "sum((value->>'impressions')::float)",
+		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'impressions'))",
 		externalValue:            model.Impressions,
 		externalOperation:        "sum",
 	},
 	model.Clicks: {
-		nonHigherOrderExpression: "sum((value->>'clicks')::float)",
+		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'clicks'))",
 		externalValue:            model.Clicks,
 		externalOperation:        "sum",
 	},
 	"cost": {
-		nonHigherOrderExpression: "sum((value->>'cost')::float)/1000000",
+		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000",
 		externalValue:            "spend",
 		externalOperation:        "sum",
 	},
 	"conversions": {
-		nonHigherOrderExpression: "sum((value->>'conversions')::float)",
+		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'conversions'))",
 		externalValue:            model.Conversion,
 		externalOperation:        "sum",
 	},
 	model.ClickThroughRate: {
-		higherOrderExpression:    "sum((value->>'clicks')::float)*100/NULLIF(sum((value->>'impressions')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'clicks')::float)*100",
+		higherOrderExpression:    "sum(JSON_EXTRACT_STRING(value, 'clicks'))*100/NULLIF(sum(JSON_EXTRACT_STRING(value, 'impressions')), 0)",
+		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'clicks'))*100",
 		externalValue:            model.ClickThroughRate,
 		externalOperation:        "sum",
 	},
 	model.ConversionRate: {
-		higherOrderExpression:    "sum((value->>'conversions')::float)*100/NULLIF(sum((value->>'clicks')::float), 0)",
-		nonHigherOrderExpression: "sum((value->>'conversions')::float)*100",
+		higherOrderExpression:    "sum(JSON_EXTRACT_STRING(value, 'conversions'))*100/NULLIF(sum(JSON_EXTRACT_STRING(value, 'clicks')), 0)",
+		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'conversions'))*100",
 		externalValue:            model.ConversionRate,
 		externalOperation:        "sum",
 	},
 	model.CostPerClick: {
-		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'clicks')::float), 0)",
-		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
+		higherOrderExpression:    "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)/NULLIF(sum(JSON_EXTRACT_STRING(value, 'clicks')), 0)",
+		nonHigherOrderExpression: "(sum((value, 'cost'))/1000000)",
 		externalValue:            model.CostPerClick,
 		externalOperation:        "sum",
 	},
 	model.CostPerConversion: {
-		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'conversions')::float), 0)",
-		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
+		higherOrderExpression:    "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)/NULLIF(sum(JSON_EXTRACT_STRING(value, 'conversions')), 0)",
+		nonHigherOrderExpression: "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)",
 		externalValue:            model.CostPerConversion,
 		externalOperation:        "sum",
 	},
@@ -220,10 +219,6 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 type fields struct {
 	selectExpressions []string
 	values            []string
-}
-
-func isDuplicateAdwordsDocumentError(err error) bool {
-	return err.Error() == errorDuplicateAdwordsDocument
 }
 
 func getAdwordsIDFieldNameByType(docType int) string {
@@ -323,7 +318,7 @@ func (store *MemSQL) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) in
 	dbc := db.Create(adwordsDoc)
 
 	if dbc.Error != nil {
-		if isDuplicateAdwordsDocumentError(dbc.Error) {
+		if IsDuplicateRecordError(dbc.Error) {
 			log.WithError(dbc.Error).Error("Failed to create an adwords doc. Duplicate.")
 			return http.StatusConflict
 		}
@@ -357,7 +352,7 @@ func (store *MemSQL) CreateMultipleAdwordsDocument(adwordsDocuments []model.Adwo
 	rows, err := db.Raw(insertStatement, insertValues...).Rows()
 
 	if err != nil {
-		if isDuplicateAdwordsDocumentError(err) {
+		if IsDuplicateRecordError(err) {
 			log.WithError(err).WithField("adwordsDocuments", adwordsDocuments).Error("Failed to create an adwords doc. Duplicate.")
 			return http.StatusConflict
 		} else {
@@ -595,8 +590,8 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 	logCtx := log.WithFields(log.Fields{"ProjectID": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	adGroupNameCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'ad_group_name') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'ad_group_name') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'ad_group_name') END AS ad_group_name"
-	campaignNameCase := "CASE JSON_EXTRACT_STRING(value, 'campaign_name')  IS NULL THEN ? " +
-		" JSON_EXTRACT_STRING(value, 'campaign_name')  = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'campaign_name') END AS campaign_name"
+	campaignNameCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'campaign_name')  IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(value, 'campaign_name')  = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'campaign_name') END AS campaign_name"
 	adIDCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'creative_id') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'creative_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'creative_id') END AS creative_id"
 
@@ -1202,10 +1197,10 @@ func getAdwordsFromStatementWithJoins(filters []model.ChannelFilterV1, groupBys 
 	isPresentCampaignSmartProperty, isPresentAdGroupSmartProperty := checkSmartPropertyWithTypeAndSource(filters, groupBys, "adwords")
 	fromStatement := fromAdwordsDocument
 	if isPresentAdGroupSmartProperty {
-		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = adwords_documents.project_id and ad_group.object_id = ad_group_id::text "
+		fromStatement += "inner join smart_properties ad_group on ad_group.project_id = adwords_documents.project_id and ad_group.object_id = ad_group_id "
 	}
 	if isPresentCampaignSmartProperty {
-		fromStatement += "inner join smart_properties campaign on campaign.project_id = adwords_documents.project_id and campaign.object_id = campaign_id::text "
+		fromStatement += "inner join smart_properties campaign on campaign.project_id = adwords_documents.project_id and campaign.object_id = campaign_id "
 	}
 	return fromStatement
 }
@@ -1341,7 +1336,7 @@ func getFilterPropertiesForAdwordsReports(filters []model.ChannelFilterV1) (stri
 		}
 		filterOperator := getOp(filter.Condition)
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%%%s%%", filter.Value)
+			filterValue = fmt.Sprintf("%s", filter.Value)
 		} else {
 			filterValue = filter.Value
 		}
@@ -1378,7 +1373,7 @@ func getFilterPropertiesForAdwordsReportsAndSmartProperty(filters []model.Channe
 		}
 		filterOperator := getOp(filter.Condition)
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%%%s%%", filter.Value)
+			filterValue = fmt.Sprintf("%s", filter.Value)
 		} else {
 			filterValue = filter.Value
 		}
@@ -1389,7 +1384,7 @@ func getFilterPropertiesForAdwordsReportsAndSmartProperty(filters []model.Channe
 			if strings.Contains(filter.Property, ("id")) {
 				currentFilterStatement = fmt.Sprintf("%s.%s %s ?", adwordsDocuments, currentFilterProperty, filterOperator)
 			} else {
-				currentFilterStatement = fmt.Sprintf("%s.JSON_EXTRACT_STRING(value, '%s') %s ?", adwordsDocuments, currentFilterProperty, filterOperator)
+				currentFilterStatement = fmt.Sprintf("JSON_EXTRACT_STRING(%s.value, '%s') %s ?", adwordsDocuments, currentFilterProperty, filterOperator)
 			}
 			params = append(params, filterValue)
 			if index == 0 {
@@ -1641,7 +1636,7 @@ func (store *MemSQL) getAdwordsMetricsQuery(projectID uint64, customerAccountID 
 		" " + "SUM(JSON_EXTRACT_STRING(value, 'cost'))/1000000 as %s, SUM(JSON_EXTRACT_STRING(value, 'conversions')) as %s," +
 		" " + "SUM(JSON_EXTRACT_STRING(value, 'all_conversions')) as %s," +
 		" " + "SUM(JSON_EXTRACT_STRING(value, 'cost'))/NULLIF(SUM(JSON_EXTRACT_STRING(value, 'clicks')), 0)/1000000 as %s," +
-		" " + "SUM(JSON_EXTRACT_STRING(value, 'clicks') * regexp_replaceJSON_EXTRACT_STRING(value, 'conversion_rate', ?, ''))/NULLIF(SUM(JSON_EXTRACT_STRING(value, 'clicks')), 0) as %s," +
+		" " + "SUM(JSON_EXTRACT_STRING(value, 'clicks') * regexp_replace(value, 'conversion_rate', ?, ''))/NULLIF(SUM(JSON_EXTRACT_STRING(value, 'clicks')), 0) as %s," +
 		" " + "SUM(JSON_EXTRACT_STRING(value, 'cost'))/NULLIF(SUM(JSON_EXTRACT_STRING(value, 'conversions')), 0)/1000000 as %s"
 	selectCols := fmt.Sprintf(selectColstWithoutAlias, CAColumnImpressions, CAColumnClicks,
 		CAColumnTotalCost, CAColumnConversions, CAColumnAllConversions,
@@ -1812,12 +1807,12 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 	}
 
 	// to do : select keys, revisit
-	adGroupQueryStr := "select ad_group_id::text, campaign_id::text, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, " +
+	adGroupQueryStr := "select ad_group_id, campaign_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, " +
 		"JSON_EXTRACT_STRING(value, 'campaign_name') as campaign_name from adwords_documents where type = 3 AND project_id = ? " +
 		"and (ad_group_id, timestamp) in (select ad_group_id, max(timestamp) from adwords_documents where type = 3" +
 		" AND project_id = ? AND timestamp between ? and ? group by ad_group_id)"
 
-	campaignGroupQueryStr := "select campaign_id::text, JSON_EXTRACT_STRING(value, 'name') as campaign_name from adwords_documents where type = 1 AND " +
+	campaignGroupQueryStr := "select campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from adwords_documents where type = 1 AND " +
 		"project_id = ? and (campaign_id, timestamp) in (select campaign_id, max(timestamp) from adwords_documents where type = 1 " +
 		"and project_id = ? and timestamp BETWEEN ? and ? group by campaign_id)"
 

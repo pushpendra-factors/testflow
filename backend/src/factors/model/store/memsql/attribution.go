@@ -1327,20 +1327,20 @@ func (store *MemSQL) AddFacebookPerformanceReportInfo(projectID uint64, attribut
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 
 	reportType := facebookDocumentTypeAlias["campaign_insights"] // 5
-	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
-		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-		"SUM((value->>'spend')::float) AS total_spend FROM facebook_documents " +
+	performanceQuery := "SELECT JSON_EXTRACT_STRING(value, 'campaign_id') AS campaign_id, JSON_EXTRACT_STRING(value, 'campaign_name') AS campaign_name, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_spend FROM facebook_documents " +
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by value->>'campaign_id', campaign_name"
+		"group by JSON_EXTRACT_STRING(value, 'campaign_id'), campaign_name"
 
 	// AdGroup report for AttributionKey as AdGroup
 	if attributionKey == model.AttributionKeyAdgroup {
 		reportType = facebookDocumentTypeAlias["ad_set_insights"] // 5
-		performanceQuery = "SELECT value->>'adset_id' AS adset_id,  value->>'adset_name' AS adset_name, " +
-			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-			"SUM((value->>'spend')::float) AS total_spend FROM facebook_documents " +
+		performanceQuery = "SELECT JSON_EXTRACT_STRING(value, 'adset_id') AS adset_id, JSON_EXTRACT_STRING(value, 'adset_name') AS adset_name, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'spend')) AS total_spend FROM facebook_documents " +
 			"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-			"group by value->>'adset_id', adset_name"
+			"group by JSON_EXTRACT_STRING(value, 'adset_id'), adset_name"
 	}
 
 	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
@@ -1402,20 +1402,20 @@ func (store *MemSQL) AddLinkedinPerformanceReportInfo(projectID uint64, attribut
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 
 	reportType := linkedinDocumentTypeAlias["campaign_group_insights"] // 5
-	performanceQuery := "SELECT value->>'campaign_group_id' AS campaign_group_id,  value->>'campaign_group_name' AS campaign_group_name, " +
-		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-		"SUM((value->>'costInLocalCurrency')::float) AS total_spend FROM linkedin_documents " +
+	performanceQuery := "SELECT JSON_EXTRACT_STRING(value, 'campaign_group_id') AS campaign_group_id, JSON_EXTRACT_STRING(value, 'campaign_group_name') AS campaign_group_name, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency')) AS total_spend FROM linkedin_documents " +
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by value->>'campaign_group_id', campaign_group_name"
+		"group by JSON_EXTRACT_STRING(value, 'campaign_group_id'), campaign_group_name"
 
 	// AdGroup report for AttributionKey as AdGroup
 	if attributionKey == model.AttributionKeyAdgroup {
 		reportType = linkedinDocumentTypeAlias["campaign_insights"] // 6
-		performanceQuery = "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
-			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-			"SUM((value->>'costInLocalCurrency')::float) AS total_spend FROM linkedin_documents " +
+		performanceQuery = "SELECT JSON_EXTRACT_STRING(value, 'campaign_id') AS campaign_id,  JSON_EXTRACT_STRING(value, 'campaign_name') AS campaign_name, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+			"SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency')) AS total_spend FROM linkedin_documents " +
 			"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-			"group by value->>'campaign_id', campaign_name"
+			"group by JSON_EXTRACT_STRING(value, 'campaign_id'), campaign_name"
 	}
 
 	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,

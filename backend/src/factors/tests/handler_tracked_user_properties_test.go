@@ -18,7 +18,6 @@ import (
 	"factors/model/store"
 
 	V1 "factors/handler/v1"
-	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -71,7 +70,7 @@ func sendCreateTrackedUserProperty(r *gin.Engine, request V1.CreateTrackeduserPr
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/v1/factors/tracked_user_property", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/factors/tracked_user_property", projectID)).
 		WithPostParams(request).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -94,7 +93,7 @@ func sendGetAllTrackedUserPropertyRequest(r *gin.Engine, agent *model.Agent, pro
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
 	}
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/v1/factors/tracked_user_property", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/factors/tracked_user_property", projectID)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -115,7 +114,7 @@ func sendRemoveTrackedUserPropertyRequest(r *gin.Engine, agent *model.Agent, pro
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodDelete, fmt.Sprintf("/projects/%d/v1/factors/tracked_user_property/remove", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/v1/factors/tracked_user_property/remove", projectID)).
 		WithPostParams(request).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),

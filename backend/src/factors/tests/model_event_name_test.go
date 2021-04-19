@@ -515,6 +515,21 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 }
 
+func TestNonFilterEventUniquenessConstraint(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// Test successful create eventName.
+	eventName1, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{Name: "test_event", ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, eventName1)
+
+	// Creating another event with same name should fail.
+	eventName2, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{Name: "test_event", ProjectId: project.ID})
+	assert.Equal(t, http.StatusConflict, errCode)
+	assert.NotEmpty(t, eventName2)
+}
+
 func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	r := gin.Default()
 	project, err := SetupProjectReturnDAO()
@@ -591,7 +606,7 @@ func sendCreateSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model
 		return nil
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s", projectId, "crm")).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s", projectId, "crm")).
 		WithPostParams(enPayload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -617,7 +632,7 @@ func sendDeleteSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model
 		return nil
 	}
 
-	rb := U.NewRequestBuilder(http.MethodDelete, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s&filter_id=%d", projectId, "crm", eventNameID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s&filter_id=%d", projectId, "crm", eventNameID)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -642,7 +657,7 @@ func sendGetSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Ag
 		return nil
 	}
 
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/v1/smart_event", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/smart_event", projectId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -666,7 +681,7 @@ func sendUpdateSmartEventFilterReq(r *gin.Engine, projectID uint64, agent *model
 		return nil
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s&filter_id=%d", projectID, "crm", filterID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s&filter_id=%d", projectID, "crm", filterID)).
 		WithPostParams(enPayload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -1683,7 +1698,7 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, status)
 	}
 
-	rollBackWindow :=  1
+	rollBackWindow := 1
 	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
 
 	getEventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)

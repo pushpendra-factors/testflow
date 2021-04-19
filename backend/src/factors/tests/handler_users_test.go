@@ -7,7 +7,6 @@ import (
 	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
-	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -36,7 +35,7 @@ func sendGetUserReq(r *gin.Engine, projectId uint64, agent *model.Agent, offset,
 		qP["limit"] = fmt.Sprintf("%d", *limit)
 	}
 
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/users", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/users", projectId)).
 		WithHeader("Content-Type", "application/json").
 		WithQueryParams(qP).
 		WithCookie(&http.Cookie{

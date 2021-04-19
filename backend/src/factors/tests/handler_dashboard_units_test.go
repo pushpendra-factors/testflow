@@ -26,7 +26,7 @@ func sendCreateDashboardUnitReq(r *gin.Engine, projectId uint64, agent *model.Ag
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/dashboards/%d/units", projectId, dashboardId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/dashboards/%d/units", projectId, dashboardId)).
 		WithPostParams(dashboardUnit).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -50,7 +50,7 @@ func sendGetDashboardUnitResult(r *gin.Engine, projectId uint64, agent *model.Ag
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/query?dashboard_id=%d&dashboard_unit_id=%d", projectId, dashboardId, dashboardUnitId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/query?dashboard_id=%d&dashboard_unit_id=%d", projectId, dashboardId, dashboardUnitId)).
 		WithPostParams(query).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -74,7 +74,7 @@ func sendGetDashboardUnitChannelResult(r *gin.Engine, projectId uint64, agent *m
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/channels/query?dashboard_id=%d&dashboard_unit_id=%d", projectId, dashboardId, dashboardUnitId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/channels/query?dashboard_id=%d&dashboard_unit_id=%d", projectId, dashboardId, dashboardUnitId)).
 		WithPostParams(query).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),

@@ -15,12 +15,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// TODO: Make index name a constant and read it
-// error constants
-const error_DUPLICATE_FILTER_EXPR = "pq: duplicate key value violates unique constraint \"project_filter_expr_unique_idx\""
-
-func isDuplicateFilterExprError(err error) bool {
-	return err.Error() == error_DUPLICATE_FILTER_EXPR
+func satisfiesEventNameConstraints(eventName model.EventName) int {
+	// Unique (project_id, name, type) WHERE type != 'FE'.
+	_, errCode := getNonFilterEventsByName(eventName.ProjectId, eventName.Name)
+	if errCode == http.StatusFound {
+		return http.StatusConflict
+	}
+	return http.StatusOK
 }
 
 func (store *MemSQL) CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int) {
@@ -44,13 +45,10 @@ func (store *MemSQL) CreateOrGetEventName(eventName *model.EventName) (*model.Ev
 	// Checks new record or not.
 	if !eventName.CreatedAt.IsZero() {
 		return eventName, http.StatusConflict
+	} else if errCode := satisfiesEventNameConstraints(*eventName); errCode != http.StatusOK {
+		return nil, errCode
 	} else if err := db.Create(eventName).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to create event_name.")
-
-		if isDuplicateFilterExprError(err) {
-			return nil, http.StatusBadRequest
-		}
-
 		return nil, http.StatusInternalServerError
 	}
 
@@ -602,6 +600,24 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 	return cacheEventNames, nil
 }
 
+func getNonFilterEventsByName(projectID uint64, eventName string) ([]model.EventName, int) {
+	db := C.GetServices().Db
+
+	var eventNames []model.EventName
+	if err := db.Where("project_id = ? AND type != ? AND name = ? AND deleted = 'false'",
+		projectID, model.TYPE_FILTER_EVENT_NAME, eventName).Find(&eventNames).Error; err != nil {
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).Error("Failed getting filter_events_by_name")
+
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(eventNames) == 0 {
+		return eventNames, http.StatusNotFound
+	}
+
+	return eventNames, http.StatusFound
+}
+
 func (store *MemSQL) GetFilterEventNames(projectId uint64) ([]model.EventName, int) {
 	db := C.GetServices().Db
 
@@ -733,6 +749,10 @@ func (store *MemSQL) UpdateEventName(projectId uint64, id uint64,
 	updateFields := map[string]interface{}{}
 	updateFields["name"] = eventName.Name
 
+	if errCode := satisfiesEventNameConstraints(*eventName); errCode != http.StatusOK {
+		return nil, errCode
+	}
+
 	query := db.Model(&updatedEventName).Where(
 		"project_id = ? AND id = ? AND type = ?",
 		projectId, id, nameType).Updates(updateFields)
@@ -814,6 +834,10 @@ func (store *MemSQL) updateCRMSmartEventFilter(projectID uint64, id uint64, name
 			updateFields["filter_expr"] = enFilterExp
 		}
 
+	}
+
+	if errCode := satisfiesEventNameConstraints(*eventName); errCode != http.StatusOK {
+		return nil, errCode
 	}
 
 	var updatedEventName model.EventName

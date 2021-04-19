@@ -49,12 +49,6 @@ var mapOfObjectAndProperty = map[string]map[string]map[string]PropertiesAndRelat
 var smartPropertyObjects = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
 var smartPropertySources = []string{"all", "facebook", "adwords", "linkedin"}
 
-const errorDuplicateSmartPropertyRules = "pq: duplicate key value violates unique constraint \"smart_property_rules_primary_key\""
-
-func isDuplicateSmartPropertyRulesError(err error) bool {
-	return err.Error() == errorDuplicateSmartPropertyRules
-}
-
 func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int) {
 	var result model.SmartPropertyRulesConfig
 	sources := make([]model.Source, 0, 0)
@@ -142,6 +136,7 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 		return &model.SmartPropertyRules{}, "Name already present.", http.StatusBadRequest
 	}
 	smartPropertyRule := model.SmartPropertyRules{
+		ID:          U.GetUUID(),
 		ProjectID:   projectID,
 		Type:        objectType,
 		Name:        smartPropertyRulesDoc.Name,
@@ -153,7 +148,7 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 	db := C.GetServices().Db
 	err := db.Create(&smartPropertyRule).Error
 	if err != nil {
-		if isDuplicateSmartPropertyRulesError(err) {
+		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).WithField("project_id", smartPropertyRulesDoc.ProjectID).Warn(
 				"Failed to create rule object. Duplicate.")
 			return &model.SmartPropertyRules{}, "Duplicate Rule", http.StatusConflict
@@ -201,7 +196,7 @@ func (store *MemSQL) UpdateSmartPropertyRules(projectID uint64, ruleID string, s
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND id = ?", projectID, ruleID).Updates(updatedFields).Error
 	if err != nil {
-		if isDuplicateSmartPropertyRulesError(err) {
+		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).WithField("project_id", smartPropertyRulesDoc.ProjectID).Warn(
 				"Failed to update rule object. Duplicate.")
 			return model.SmartPropertyRules{}, "Duplicate Rule", http.StatusConflict

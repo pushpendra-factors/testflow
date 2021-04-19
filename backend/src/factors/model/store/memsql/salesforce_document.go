@@ -227,7 +227,7 @@ func (store *MemSQL) CreateSalesforceDocumentByAction(projectID uint64, document
 	db := C.GetServices().Db
 	err = db.Create(document).Error
 	if err != nil {
-		if U.IsPostgresUniqueIndexViolationError("salesforce_documents_pkey", err) {
+		if IsDuplicateRecordError(err) {
 			return http.StatusConflict
 		}
 

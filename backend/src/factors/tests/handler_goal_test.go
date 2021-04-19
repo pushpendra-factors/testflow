@@ -9,7 +9,6 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"factors/task/event_user_cache"
-	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -28,7 +27,7 @@ func sendCreateFactorsGoalRequest(r *gin.Engine, request V1.CreateFactorsGoalPar
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/v1/factors/goals", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/factors/goals", projectID)).
 		WithPostParams(request).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -51,7 +50,7 @@ func sendGetAllFactorsGoalsRequest(r *gin.Engine, agent *model.Agent, projectID 
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
 	}
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/v1/factors/goals", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/factors/goals", projectID)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -71,7 +70,7 @@ func sendSearchFactorsGoalsRequest(r *gin.Engine, agent *model.Agent, projectID 
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
 	}
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/v1/factors/goals/search", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/factors/goals/search", projectID)).
 		WithPostParams(request).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -93,7 +92,7 @@ func sendRemoveFactorsGoalRequest(r *gin.Engine, agent *model.Agent, projectID u
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodDelete, fmt.Sprintf("/projects/%d/v1/factors/goals/remove", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/v1/factors/goals/remove", projectID)).
 		WithPostParams(request).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -117,7 +116,7 @@ func sendUpdateFactorsGoalRequest(r *gin.Engine, agent *model.Agent, projectID u
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/v1/factors/goals/update", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/v1/factors/goals/update", projectID)).
 		WithPostParams(request).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),

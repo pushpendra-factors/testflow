@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS agents (
     password_created_at timestamp(6),
     invited_by text,
     is_deleted boolean NOT NULL DEFAULT FALSE,
-    last_logged_in_at datetime,
+    last_logged_in_at timestamp(6), -- Milliseconds precision required.
     login_count bigint,
     subscribe_newsletter bool,
     int_adwords_refresh_token text,
@@ -310,7 +310,7 @@ CREATE TABLE IF NOT EXISTS hubspot_documents (
 	project_id bigint,
     type int,
     action int,
-    timestamp timestamp(6),
+    timestamp bigint,
     value json,
     synced boolean NOT NULL DEFAULT FALSE,
     sync_id text,
@@ -497,32 +497,33 @@ CREATE TABLE IF NOT EXISTS property_details(
     `type` text  NOT NULL,
     entity integer  NOT NULL
 );
+
 CREATE TABLE IF NOT EXISTS smart_property_rules (
     id text,
     project_id bigint NOT NULL,
     type bigint NOT NULL,
     description text,
     name text NOT NULL,
-    rules jsonb NOT NULL,
+    rules json NOT NULL,
     evaluation_status int NOT NULL,
     is_deleted bool DEFAULT FALSE,
-    created_at timestamp with time zone,
-    updated_at timestamp with time zone,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
     PRIMARY KEY (project_id, id)
-)
+);
 
 CREATE TABLE IF NOT EXISTS smart_properties (
     project_id bigint NOT NULL,
     source text NOT NULL,
     object_id text NOT NULL,
     object_type bigint NOT NULL,
-    object_property jsonb NOT NULL,
-    properties jsonb NOT NULL,
-    rules_ref jsonb NOT NULL,
-    created_at timestamp with time zone,
-    updated_at timestamp with time zone,
+    object_property json NOT NULL,
+    properties json NOT NULL,
+    rules_ref json NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
     PRIMARY KEY (project_id, object_id, object_type, source)
-)
+);
 -- DOWN
 
 -- DROP DATABASE factors;

@@ -60,9 +60,6 @@ const FactorsSessionCookieName = "factors-sid"
 const (
 	DatastoreTypePostgres = "postgres"
 	DatastoreTypeMemSQL   = "memsql"
-
-	// Change this variable to configure datastore type.
-	PrimaryDatastoreType = DatastoreTypePostgres
 )
 
 // MemSQLDefaultDBParams Default connection params for Postgres.
@@ -566,6 +563,18 @@ func GetPrimaryDatastore() string {
 		return DatastoreTypeMemSQL
 	}
 	return DatastoreTypePostgres
+}
+
+// GetRoutesURLPrefix Prefix for urls supported on memsql. Returns /mql if memsql is enabled.
+func GetRoutesURLPrefix() string {
+	if UseMemSQLDatabaseStore() {
+		return "/mql"
+	}
+	return ""
+}
+
+func NewRequestBuilderWithPrefix(methodType, URL string) *U.RequestBuilder {
+	return U.NewRequestBuilder(methodType, GetRoutesURLPrefix()+URL)
 }
 
 // KillDBQueriesOnExit Uses context to kill any running queries when kill signal is received.

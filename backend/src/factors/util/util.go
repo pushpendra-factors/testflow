@@ -273,6 +273,11 @@ func GetUUID() string {
 	return uuid.New().String()
 }
 
+func IsValidUUID(id string) bool {
+	_, err := uuid.Parse(id)
+	return err == nil
+}
+
 // StringSliceDiff Returns sliceA - sliceB set of elements.
 func StringSliceDiff(sliceA, sliceB []string) []string {
 	if len(sliceA) == 0 || len(sliceB) == 0 {
@@ -888,6 +893,15 @@ func GenerateHashStringForStruct(queryPayload interface{}) (string, error) {
 func DeepCopy(a, b interface{}) {
 	byt, _ := json.Marshal(a)
 	json.Unmarshal(byt, b)
+}
+
+// AreEqualStructs To compare if two struct are equal by marshalling.
+func AreEqualStructs(a, b interface{}) bool {
+	bytesA, _ := json.Marshal(a)
+	bytesB, _ := json.Marshal(b)
+	fmt.Println(string(bytesA))
+	fmt.Println(string(bytesB))
+	return string(bytesA) == string(bytesB)
 }
 
 type Pair struct {

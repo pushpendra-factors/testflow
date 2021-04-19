@@ -15,12 +15,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const errorDuplicateSmartProperty = "pq: duplicate key value violates unique constraint \"smart_properties_primary_key\""
-
-func isDuplicateSmartPropertyError(err error) bool {
-	return err.Error() == errorDuplicateSmartProperty
-}
-
 func (store *MemSQL) CreateSmartProperty(smartPropertyDoc *model.SmartProperties) int {
 	logCtx := log.WithField("project_id", smartPropertyDoc.ProjectID)
 
@@ -32,7 +26,7 @@ func (store *MemSQL) CreateSmartProperty(smartPropertyDoc *model.SmartProperties
 	db := C.GetServices().Db
 	err := db.Create(&smartPropertyDoc).Error
 	if err != nil {
-		if isDuplicateSmartPropertyError(err) {
+		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
 				"Failed to create smart properties. Duplicate.")
 			return http.StatusConflict
@@ -54,7 +48,7 @@ func (store *MemSQL) UpdateSmartProperty(smartPropertyDoc *model.SmartProperties
 	db := C.GetServices().Db
 	err := db.Save(&smartPropertyDoc).Error
 	if err != nil {
-		if isDuplicateSmartPropertyError(err) {
+		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
 				"Failed to update smart properties. Duplicate.")
 			return http.StatusConflict

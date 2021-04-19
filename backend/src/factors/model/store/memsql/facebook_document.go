@@ -37,8 +37,8 @@ var facebookDocumentTypeAlias = map[string]int{
 var objectAndPropertyToValueInFacebookReportsMapping = map[string]string{
 	"campaign:name": "JSON_EXTRACT_STRING(value, 'campaign_name')",
 	"ad_set:name":   "JSON_EXTRACT_STRING(value, 'adset_name')",
-	"campaign:id":   "CONVERT(campaign_id, DECIMAL)",
-	"ad_set:id":     "CONVERT(ad_set_id, DECIMAL)",
+	"campaign:id":   "campaign_id",
+	"ad_set:id":     "ad_set_id",
 	"ad:id":         "id",
 }
 
@@ -64,8 +64,6 @@ const platform = "platform"
 
 var errorEmptyFacebookDocument = errors.New("empty facebook document")
 
-const errorDuplicateFacebookDocument = "pq: duplicate key value violates unique constraint \"facebook_documents_pkey\""
-
 const facebookFilterQueryStr = "SELECT DISTINCT(JSON_EXTRACT_STRING(value, ?)) as filter_value FROM facebook_documents WHERE project_id = ? AND" +
 	" " + "customer_ad_account_id IN (?) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
 
@@ -75,10 +73,6 @@ const staticWhereStatementForFacebook = "WHERE project_id = ? AND customer_ad_ac
 const staticWhereStatementForFacebookWithSmartProperty = "WHERE facebook_documents.project_id = ? AND facebook_documents.customer_ad_account_id IN ( ? ) AND facebook_documents.type = ? AND facebook_documents.timestamp between ? AND ? "
 
 var objectsForFacebook = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
-
-func isDuplicateFacebookDocumentError(err error) bool {
-	return err.Error() == errorDuplicateFacebookDocument
-}
 
 // CreateFacebookDocument ...
 func (store *MemSQL) CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int {
@@ -114,7 +108,7 @@ func (store *MemSQL) CreateFacebookDocument(projectID uint64, document *model.Fa
 	db := C.GetServices().Db
 	err := db.Create(&document).Error
 	if err != nil {
-		if isDuplicateFacebookDocumentError(err) {
+		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).WithField("id", document.ID).WithField("platform", document.Platform).Error(
 				"Failed to create an facebook doc. Duplicate.")
 			return http.StatusConflict
@@ -647,7 +641,7 @@ func getFacebookFiltersWhereStatement(filters []model.ChannelFilterV1) string {
 		}
 		filterOperator := getOp(filter.Condition)
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%%%s%%", filter.Value)
+			filterValue = fmt.Sprintf("%s", filter.Value)
 		} else {
 			filterValue = filter.Value
 		}
@@ -673,7 +667,7 @@ func getFacebookFiltersWhereStatementWithSmartProperty(filters []model.ChannelFi
 		}
 		filterOperator := getOp(filter.Condition)
 		if filter.Condition == model.ContainsOpStr || filter.Condition == model.NotContainsOpStr {
-			filterValue = fmt.Sprintf("%%%s%%", filter.Value)
+			filterValue = fmt.Sprintf("%s", filter.Value)
 		} else {
 			filterValue = filter.Value
 		}

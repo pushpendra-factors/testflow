@@ -6,6 +6,7 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -57,8 +58,9 @@ func TestModelQuery(t *testing.T) {
 		assert.Equal(t, http.StatusAccepted, errCode)
 		assert.Equal(t, rName1, query1.Title)
 		assert.NotEqual(t, query1.Title, query.Title)
-		assert.Equal(t, query1.Settings, query.Settings)
-		assert.Equal(t, string((query1.Settings).RawMessage), string((query.Settings).RawMessage))
+		querySettings, _ := U.DecodePostgresJsonb(&query.Settings)
+		query1Settings, _ := U.DecodePostgresJsonb(&query1.Settings)
+		assert.True(t, reflect.DeepEqual(query1Settings, querySettings))
 	})
 
 	t.Run("UpdateSavedQuery:ValidForSetting", func(t *testing.T) {

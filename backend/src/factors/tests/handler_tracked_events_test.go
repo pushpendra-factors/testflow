@@ -19,7 +19,6 @@ import (
 	H "factors/handler"
 
 	V1 "factors/handler/v1"
-	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -72,7 +71,7 @@ func sendCreateFactorsTrackedEvent(r *gin.Engine, request V1.CreateFactorsTracke
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/v1/factors/tracked_event", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/factors/tracked_event", projectID)).
 		WithPostParams(request).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -95,7 +94,7 @@ func sendGetAllFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, pro
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
 	}
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/v1/factors/tracked_event", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/factors/tracked_event", projectID)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -116,7 +115,7 @@ func sendRemoveFactorsTrackedEventRequest(r *gin.Engine, agent *model.Agent, pro
 		log.WithError(err).Error("Error creating cookie data.")
 	}
 
-	rb := U.NewRequestBuilder(http.MethodDelete, fmt.Sprintf("/projects/%d/v1/factors/tracked_event/remove", projectID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/v1/factors/tracked_event/remove", projectID)).
 		WithPostParams(request).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),

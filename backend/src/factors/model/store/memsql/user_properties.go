@@ -223,7 +223,7 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 			return
 		}
 		analyticsKeysInCache = append(analyticsKeysInCache, cacheRedis.SortedSetKeyValueTuple{
-			Key : uniqueUsersCountKey,
+			Key:   uniqueUsersCountKey,
 			Value: fmt.Sprintf("%v", projectID),
 		})
 
@@ -247,7 +247,7 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 			return
 		}
 		propertiesToIncrSortedSet = append(propertiesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
-			Key : propertyCategoryKeySortedSet,
+			Key:   propertyCategoryKeySortedSet,
 			Value: fmt.Sprintf("%s:%s", category, property),
 		})
 		if category == U.PropertyTypeCategorical {
@@ -258,7 +258,7 @@ func (store *MemSQL) UpdateCacheForUserProperties(userId string, projectID uint6
 					return
 				}
 				valuesToIncrSortedSet = append(valuesToIncrSortedSet, cacheRedis.SortedSetKeyValueTuple{
-					Key : valueKeySortedSet,
+					Key:   valueKeySortedSet,
 					Value: fmt.Sprintf("%s:SS-US-PV:%s", property, propertyValue),
 				})
 			}
@@ -915,7 +915,7 @@ func (store *MemSQL) GetUserPropertiesRecordsByProperty(projectId uint64,
 	var userProperties []model.UserProperties
 	// $$$ is a gorm alias for ? jsonb operator.
 	err := db.Order("created_at").Where("project_id=?", projectId).Where(
-		"properties->? $$$ ?", key, value).Find(&userProperties).Error
+		"JSON_EXTRACT_STRING(properties, ?) = ?", key, value).Find(&userProperties).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get user properties by key.")
 		return nil, http.StatusInternalServerError

@@ -1912,7 +1912,7 @@ func GetCategoryType(propertyName string, values []PropertyValue) string {
 		if value.ValueType == "string" {
 			valueType[PropertyTypeCategorical]++
 		}
-		if value.ValueType == "number" {
+		if value.ValueType == "number" || value.ValueType == "double" {
 			valueType[PropertyTypeNumerical]++
 		}
 	}

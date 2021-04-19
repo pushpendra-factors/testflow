@@ -56,12 +56,8 @@ func sendChannelAnalyticsQueryReq(r *gin.Engine, project_id uint64, agent *M.Age
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	datastorePrefix := ""
-	if C.UseMemSQLDatabaseStore() {
-		datastorePrefix = "/mql"
-	}
-	url := fmt.Sprintf("http://localhost:8080%s/projects/%d/v1/channels/query", datastorePrefix, project_id)
-	rb := U.NewRequestBuilder(http.MethodPost, url).
+	url := fmt.Sprintf("/projects/%d/v1/channels/query", project_id)
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, url).
 		WithPostParams(channelQueryJSON).WithCookie(&http.Cookie{
 		Name:   C.GetFactorsCookieName(),
 		Value:  cookieData,
@@ -405,7 +401,7 @@ func TestChannelQueryHandlerForAdwords(t *testing.T) {
 	}
 
 	if C.UseMemSQLDatabaseStore() {
-		successChannelResponse[3] = []byte(`{"result":{"result_group":[{"headers":["clicks","impressions","spend"],"rows":[[204,2004,0]]}]}}`)
+		// On memsql, seems to be coming last in the order as compared to postgres where null comes first.
 		successChannelResponse[15] = []byte(`{"result":{"result_group":[{"headers":["ad_group_name","search_click_share"],"rows":[["agtest1",0.1],["agtest2",0],["agtest3",0]]}]}}`)
 	}
 
