@@ -590,12 +590,30 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 		})
 	assert.Equal(t, http.StatusOK, w.Code)
 
+	rEventName = "event3"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	rEventName = "event2"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
 	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
 	getEventNames2, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
 	assert.Equal(t, nil, err)
 	assert.Len(t, getEventNames2[U.MostRecent], 2)
-	assert.Equal(t, "$session", getEventNames2[U.MostRecent][0])
-	assert.Equal(t, "event2", getEventNames2[U.MostRecent][1])
+	assert.Equal(t, "event2", getEventNames2[U.MostRecent][0])
+	assert.Equal(t, "event3", getEventNames2[U.MostRecent][1])
 }
 
 func sendCreateSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent, enPayload *map[string]interface{}) *httptest.ResponseRecorder {
