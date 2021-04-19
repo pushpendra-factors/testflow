@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-
+	"strings"
 	C "factors/config"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +26,11 @@ var FORCED_EVENT_NAMES = map[uint64][]string{
 		// Project ExpertRec.
 		"cse.expertrec.com/payments/success",
 	},
+}
+
+var BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES = map[string]string {
+	"$hubspot_" : "$hubspot_",
+	"$sf_" : "$salesforce_",
 }
 
 // GetEventNamesHandler godoc
@@ -124,7 +129,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		return
 	}
 
-	var properties map[string][]string
+	properties := make(map[string][]string)
 	var decENameInBytes []byte
 	decENameInBytes, err = base64.StdEncoding.DecodeString(encodedEName)
 	if err != nil {
@@ -137,8 +142,31 @@ func GetEventPropertiesHandler(c *gin.Context) {
 	logCtx.WithField("decodedEventName", eventName).Debug("Decoded event name on properties request.")
 
 	if isExplain != "true" {
-		properties, err = store.GetStore().GetPropertiesByEvent(projectId, eventName, 2500,
+		propertiesFromCache, err := store.GetStore().GetPropertiesByEvent(projectId, eventName, 2500,
 			C.GetLookbackWindowForEventUserCache())
+		toBeFiltered := false
+		propertyPrefixToRemove := ""
+		for eventPrefix, propertyPrefix := range BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES {
+			if(strings.HasPrefix(eventName, eventPrefix)){
+				propertyPrefixToRemove = propertyPrefix
+				toBeFiltered = true
+				break
+			}
+		}
+		if(toBeFiltered == true){
+			for category, props := range propertiesFromCache {
+				if(properties[category] == nil){
+					properties[category] = make([]string, 0)
+				}
+				for _, property := range props {
+					if(!strings.HasPrefix(property, propertyPrefixToRemove)){
+						properties[category] = append(properties[category], property)
+					}
+				}
+			}
+		} else {
+			properties = propertiesFromCache
+		}
 		if err != nil {
 			logCtx.WithError(err).Error("get properties by event")
 			c.AbortWithStatus(http.StatusInternalServerError)

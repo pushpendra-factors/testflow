@@ -1964,7 +1964,7 @@ func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 			log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
 			continue
 		} else {
-			if cNode == nil {
+			if cNode == nil || cNode.Fcp == cNode.Fpp{
 				continue
 			}
 			filteredPatternsCount++
