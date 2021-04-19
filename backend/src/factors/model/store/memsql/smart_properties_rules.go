@@ -126,14 +126,14 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 
 	errMsg, isValidRule := validateSmartPropertyRules(projectID, smartPropertyRulesDoc)
 	if !isValidRule {
-		logCtx.Error(errMsg)
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn(errMsg)
 		return &model.SmartPropertyRules{}, errMsg, http.StatusBadRequest
 	}
 
 	logCtx = logCtx.WithField("type_alias", smartPropertyRulesDoc.TypeAlias)
 	objectType, typeExists := smartPropertyRulesTypeAliasToType[smartPropertyRulesDoc.TypeAlias]
 	if !typeExists {
-		logCtx.Error("Invalid type alias.")
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn("Invalid type alias.")
 		return &model.SmartPropertyRules{}, "Invalid type alias.", http.StatusBadRequest
 	}
 
@@ -164,7 +164,7 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 	}
 	objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
 	if !typeAliasExists {
-		logCtx.Error("Invalid type alias.")
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn("Invalid type")
 		return &model.SmartPropertyRules{}, "Invalid type return from db.", http.StatusBadRequest
 	}
 	smartPropertyRule.TypeAlias = objectTypeAlias
@@ -175,14 +175,14 @@ func (store *MemSQL) UpdateSmartPropertyRules(projectID uint64, ruleID string, s
 
 	errMsg, isValidRule := validateSmartPropertyRules(projectID, &smartPropertyRulesDoc)
 	if !isValidRule {
-		logCtx.Error(errMsg)
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn(errMsg)
 		return model.SmartPropertyRules{}, errMsg, http.StatusBadRequest
 	}
 
 	logCtx = logCtx.WithField("type_alias", smartPropertyRulesDoc.TypeAlias)
 	objectType, typeExists := smartPropertyRulesTypeAliasToType[smartPropertyRulesDoc.TypeAlias]
 	if !typeExists {
-		logCtx.Error("Invalid type alias.")
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn("Invalid type alias.")
 		return model.SmartPropertyRules{}, "Invalid type alias.", http.StatusBadRequest
 	}
 	errCode := store.checkIfRuleNameAlreadyPresentWhileUpdate(projectID, smartPropertyRulesDoc.Name, ruleID, objectType)
@@ -259,7 +259,7 @@ func (store *MemSQL) GetSmartPropertyRules(projectID uint64) ([]model.SmartPrope
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND is_deleted != ?", projectID, true).Find(&smartPropertyRules).Error
 	if err != nil {
-		log.WithField("project_id", projectID).Error(err)
+		log.WithField("project_id", projectID).Warn(err)
 		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
 	}
 	for index, smartPropertyRule := range smartPropertyRules {
@@ -277,7 +277,7 @@ func (store *MemSQL) GetAllChangedSmartPropertyRulesForProject(projectID uint64)
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND evaluation_status != ?", projectID, model.EvaluationStatusMap["picked"]).Find(&smartPropertyRules).Error
 	if err != nil {
-		log.Error(err)
+		log.WithField("project_id", projectID).Warn(err)
 		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
 	}
 	return smartPropertyRules, http.StatusFound
@@ -296,7 +296,7 @@ func (store *MemSQL) GetSmartPropertyRule(projectID uint64, ruleID string) (mode
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND is_deleted != ? AND id = ?", projectID, true, ruleID).Find(&smartPropertyRule).Error
 	if err != nil {
-		log.WithField("project_id", projectID).Error(err)
+		log.WithField("project_id", projectID).Warn(err)
 		return model.SmartPropertyRules{}, http.StatusNotFound
 	}
 	objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
