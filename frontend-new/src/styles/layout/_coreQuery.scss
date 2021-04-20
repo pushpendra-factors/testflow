@@ -283,6 +283,7 @@ $cq-card-transition: transform .2s ease-in-out;
     .ant-input-affix-wrapper {
         border: none;
         margin: 0;
+        overflow: scroll;
     }
 
     .ant-input-affix-wrapper-focused {

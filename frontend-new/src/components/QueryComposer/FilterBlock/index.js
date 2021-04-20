@@ -136,7 +136,7 @@ export default function FilterBlock({
     }
     setSearchTerm(userInput.currentTarget.value);
 
-    if((newFilterState.operator === 'contains' || newFilterState.operator === 'does not contains') && filterTypeState === 'values') {
+    if((newFilterState.operator === 'contains' || newFilterState.operator === 'does not contain') && filterTypeState === 'values') {
       const newFilter = Object.assign({}, newFilterState);
       newFilter[filterTypeState][0] ? newFilter[filterTypeState][0] =  newFilter[filterTypeState][0] + userInput.currentTarget.value : newFilter[filterTypeState][0] =  userInput.currentTarget.value;
       setNewFilterState(newFilter);
@@ -326,14 +326,21 @@ export default function FilterBlock({
       case 'values':
         if(newFilterState.props[1] === 'categorical') {
           
-          if(!searchTerm.length)
-          renderOptions.push(<span className={styles.filter_block__filter_select__option}
-            onClick={() => optionClick('$none')} >
-            {'$none'}
-          </span>
-          );
+          if(!searchTerm.length) {
+            renderOptions.push(<span className={styles.filter_block__filter_select__option}
+              onClick={() => optionClick('$none')} >
+              {'$none'}
+            </span>
+          ) 
+        } else {
+            renderOptions.push(<span className={styles.filter_block__filter_select__option}
+              onClick={() => optionClick(searchTerm)} >
+              {searchTerm}
+            </span>
+          ) 
+        };
 
-          if (options[newFilterState.props[0]] && options[newFilterState.props[0]].length) {
+          if ((newFilterState.operator !== 'contains' && newFilterState.operator !== 'does not contain') && options[newFilterState.props[0]] && options[newFilterState.props[0]].length) {
             options[newFilterState.props[0]].forEach(opt => {
               if (opt?.toLowerCase()?.includes(searchTerm.toLowerCase())) {
                 renderOptions.push(<span className={styles.filter_block__filter_select__option}
