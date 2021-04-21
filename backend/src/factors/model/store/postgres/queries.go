@@ -46,9 +46,7 @@ func (pg *Postgres) GetALLQueriesWithProjectId(projectID uint64) ([]model.Querie
 		return queries, http.StatusInternalServerError
 	}
 	if len(queries) == 0 {
-		log.WithField("project_id", projectID).Error("No Saved model.Queries found")
 		return queries, http.StatusFound
-
 	}
 	q, errCode := pg.addCreatedByNameInQueries(queries, projectID)
 	if errCode != http.StatusFound {

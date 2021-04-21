@@ -97,6 +97,8 @@ const (
 
 	SortASC  = "ASC"
 	SortDESC = "DESC"
+
+	AttributionErrorIntegrationNotFound = "no ad-words customer account id found for attribution query"
 )
 
 type UserSessionTimestamp struct {
@@ -199,6 +201,10 @@ func GetGCLIDAttributionValue(gclIDBasedCampaign map[string]CampaignInfo, gclID 
 		}
 	}
 	return PropertyValueNone
+}
+
+func IsIntegrationNotFoundError(err error) bool {
+	return err.Error() == AttributionErrorIntegrationNotFound
 }
 
 // GetQuerySessionProperty Maps the {attribution key} to the session properties field

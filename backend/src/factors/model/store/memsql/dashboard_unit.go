@@ -539,7 +539,7 @@ func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.Dashboard
 	} else if baseQuery.GetClass() == model.QueryClassAttribution {
 		attributionQuery := baseQuery.(*model.AttributionQueryUnit)
 		result, err = store.ExecuteAttributionQuery(projectID, attributionQuery.Query)
-		if err != nil {
+		if err != nil && !model.IsIntegrationNotFoundError(err) {
 			errCode = http.StatusInternalServerError
 		} else {
 			errCode = http.StatusOK

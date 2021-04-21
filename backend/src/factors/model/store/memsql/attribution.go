@@ -34,7 +34,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		return nil, errors.New("failed to get project Settings")
 	}
 	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
-		return nil, errors.New("execute attribution query failed as no ad-words customer account id found")
+		return &model.QueryResult{}, errors.New(model.AttributionErrorIntegrationNotFound)
 	}
 	sessionEventNameID, eventNameToIDList, err := store.getEventInformation(projectID, query)
 	if err != nil {
