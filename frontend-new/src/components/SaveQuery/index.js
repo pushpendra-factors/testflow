@@ -20,9 +20,10 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
-  EACH_USER_TYPE,
-  constantObj,
+  apiChartAnnotations,
+  CHART_TYPE_TABLE,
 } from "../../utils/constants";
+import { getSaveChartOptions } from "../../Views/CoreQuery/utils";
 
 function SaveQuery({
   requestQuery,
@@ -34,7 +35,7 @@ function SaveQuery({
   const [title, setTitle] = useState("");
   const [addToDashboard, setAddToDashboard] = useState(false);
   const [selectedDashboards, setSelectedDashboards] = useState([]);
-  const [dashboardPresentation, setDashboardPresentation] = useState("pt");
+  const [dashboardPresentation, setDashboardPresentation] = useState(apiChartAnnotations[CHART_TYPE_TABLE]);
   const [apisCalled, setApisCalled] = useState(false);
   const { active_project } = useSelector((state) => state.global);
   const { dashboards } = useSelector((state) => state.dashboard);
@@ -48,7 +49,7 @@ function SaveQuery({
     setTitle("");
     setSelectedDashboards([]);
     setAddToDashboard(false);
-    setDashboardPresentation("pb");
+    setDashboardPresentation(apiChartAnnotations[CHART_TYPE_TABLE]);
     setVisible(false);
   }, [setVisible]);
 
@@ -200,48 +201,6 @@ function SaveQuery({
   if (addToDashboard) {
     dashboardHelpText = "This widget will appear on the following dashboards:";
 
-    let firstOption = (
-      <Radio value="pb">
-        {queryType === QUERY_TYPE_FUNNEL
-          ? "Display Funnel Chart"
-          : "Display Bar Chart"}
-      </Radio>
-    );
-    let secondOption = null;
-
-    if (queryType === QUERY_TYPE_EVENT) {
-      if (requestQuery[0].ec === constantObj[EACH_USER_TYPE]) {
-        secondOption = (
-          <>
-            <Radio value="pl">Display Line Chart</Radio>
-            <Radio value="pa">Display Stacked Area Chart</Radio>
-          </>
-        );
-        if (!requestQuery[0].gbp.length) {
-          firstOption = <Radio value="pc">Display Spark Line Chart</Radio>;
-        }
-      } else {
-        secondOption = null;
-        if (!requestQuery[0].gbp.length) {
-          firstOption = <Radio value="pc">Display Count</Radio>;
-        } else {
-          firstOption = <Radio value="pb">Display Bar Chart</Radio>;
-        }
-      }
-    }
-
-    if (queryType === QUERY_TYPE_CAMPAIGN) {
-      secondOption = (
-        <>
-          <Radio value="pl">Display Line Chart</Radio>
-          <Radio value="pa">Display Stacked Area Chart</Radio>
-        </>
-      );
-      if (!requestQuery.query_group[0].group_by.length) {
-        firstOption = <Radio value="pc">Display Spark Line Chart</Radio>;
-      }
-    }
-
     dashboardOptions = (
       <>
         <div className="mt-5">
@@ -262,14 +221,13 @@ function SaveQuery({
             })}
           </Select>
         </div>
-        <div className="mt-6">
+        <div className="mt-2">
           <Radio.Group
             value={dashboardPresentation}
             onChange={handlePresentationChange}
+            className={styles.radioGroup}
           >
-            {firstOption}
-            {secondOption}
-            <Radio value="pt">Display Table</Radio>
+            {getSaveChartOptions(queryType, requestQuery)}
           </Radio.Group>
         </div>
       </>

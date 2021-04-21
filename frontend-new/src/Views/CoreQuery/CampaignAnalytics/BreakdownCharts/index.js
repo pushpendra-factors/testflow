@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { formatData, formatDataInLineChartFormat } from "./utils";
-import { CHART_TYPE_BARCHART, CHART_TYPE_LINECHART, DASHBOARD_MODAL } from "../../../../utils/constants";
+import { formatData, formatDataInLineChartFormat, formatDataInHighChartsFormat } from "./utils";
+import { CHART_TYPE_BARCHART, CHART_TYPE_LINECHART, DASHBOARD_MODAL, CHART_TYPE_STACKED_AREA, CHART_TYPE_STACKED_BAR } from "../../../../utils/constants";
 import BarChart from "../../../../components/BarChart";
 import BreakdownTable from "./BreakdownTable";
 import LineChart from "../../../../components/LineChart";
 import { generateColors } from "../../../../utils/dataFormatter";
 import NoDataChart from 'Components/NoDataChart';
+import StackedAreaChart from "../../../../components/StackedAreaChart";
+import StackedBarChart from "../../../../components/StackedBarChart";
 
 function BreakdownCharts({
   arrayMapper,
@@ -60,6 +62,38 @@ function BreakdownCharts({
 
   if (chartType === CHART_TYPE_BARCHART) {
     chart = <BarChart section={section} title={title} chartData={visibleProperties} />;
+  } else if(chartType === CHART_TYPE_STACKED_AREA) {
+    const { categories, highchartsData } = formatDataInHighChartsFormat(
+      data.result_group[0],
+      arrayMapper,
+      currentEventIndex,
+      visibleProperties
+    );
+    chart = (
+      <div className="w-full">
+        <StackedAreaChart
+          frequency="date"
+          categories={categories}
+          data={highchartsData}
+        />
+      </div>
+    ); 
+  } else if(chartType === CHART_TYPE_STACKED_BAR) {
+    const { categories, highchartsData } = formatDataInHighChartsFormat(
+      data.result_group[0],
+      arrayMapper,
+      currentEventIndex,
+      visibleProperties
+    );
+    chart = (
+      <div className="w-full">
+        <StackedBarChart
+          frequency="date"
+          categories={categories}
+          data={highchartsData}
+        />
+      </div>
+    ); 
   } else if(chartType === CHART_TYPE_LINECHART) {
     const mapper = visibleProperties.map((v, index) => {
       return {

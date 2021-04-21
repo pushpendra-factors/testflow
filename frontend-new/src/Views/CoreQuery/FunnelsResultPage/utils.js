@@ -47,7 +47,6 @@ export const generateGroupedChartsData = (
       });
     }
   });
-  console.log(result);
   return result;
 };
 

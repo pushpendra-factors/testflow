@@ -1,4 +1,5 @@
-import moment from "moment";
+import React from 'react';
+import moment from 'moment';
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
@@ -20,22 +21,15 @@ import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
-} from "../../utils/constants";
+  apiChartAnnotations,
+} from '../../utils/constants';
+import { Radio } from 'antd';
 
 export const labelsObj = {
-  [TOTAL_EVENTS_CRITERIA]: "Event Count",
-  [TOTAL_USERS_CRITERIA]: "User Count",
-  [ACTIVE_USERS_CRITERIA]: "User Count",
-  [FREQUENCY_CRITERIA]: "Count",
-};
-
-export const presentationObj = {
-  pb: CHART_TYPE_BARCHART,
-  pl: CHART_TYPE_LINECHART,
-  pt: CHART_TYPE_TABLE,
-  pc: CHART_TYPE_SPARKLINES,
-  pa: CHART_TYPE_STACKED_AREA,
-  ps: CHART_TYPE_STACKED_BAR,
+  [TOTAL_EVENTS_CRITERIA]: 'Event Count',
+  [TOTAL_USERS_CRITERIA]: 'User Count',
+  [ACTIVE_USERS_CRITERIA]: 'User Count',
+  [FREQUENCY_CRITERIA]: 'Count',
 };
 
 export const initialState = { loading: false, error: false, data: null };
@@ -45,25 +39,25 @@ export const initialResultState = [1, 2, 3, 4].map(() => {
 });
 
 const operatorMap = {
-  "=": "equals",
-  "!=": "notEqual",
-  contains: "contains",
-  "does not contain": "notContains",
-  "<": "lesserThan",
-  "<=": "lesserThanOrEqual",
-  ">": "greaterThan",
-  ">=": "greaterThanOrEqual",
+  '=': 'equals',
+  '!=': 'notEqual',
+  contains: 'contains',
+  'does not contain': 'notContains',
+  '<': 'lesserThan',
+  '<=': 'lesserThanOrEqual',
+  '>': 'greaterThan',
+  '>=': 'greaterThanOrEqual',
 };
 
 const reverseOperatorMap = {
-  equals: "=",
-  notEqual: "!=",
-  contains: "contains",
-  notContains: "not contains",
-  lesserThan: "<",
-  lesserThanOrEqual: "<=",
-  greaterThan: ">",
-  greaterThanOrEqual: ">=",
+  equals: '=',
+  notEqual: '!=',
+  contains: 'contains',
+  notContains: 'not contains',
+  lesserThan: '<',
+  lesserThanOrEqual: '<=',
+  greaterThan: '>',
+  greaterThanOrEqual: '>=',
 };
 
 const getEventsWithProperties = (queries) => {
@@ -75,7 +69,7 @@ const getEventsWithProperties = (queries) => {
         fil.values.forEach((val, index) => {
           filterProps.push({
             en: fil.props[2],
-            lop: !index ? "AND" : "OR",
+            lop: !index ? 'AND' : 'OR',
             op: operatorMap[fil.operator],
             pr: fil.props[0],
             ty: fil.props[1],
@@ -85,7 +79,7 @@ const getEventsWithProperties = (queries) => {
       } else {
         filterProps.push({
           en: fil.props[2],
-          lop: "AND",
+          lop: 'AND',
           op: operatorMap[fil.operator],
           pr: fil.props[0],
           ty: fil.props[1],
@@ -108,13 +102,13 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
 
   const period = {};
   if (dateRange.from && dateRange.to) {
-    period.from = moment(dateRange.from).startOf("day").utc().unix();
-    period.to = moment(dateRange.to).endOf("day").utc().unix();
+    period.from = moment(dateRange.from).startOf('day').utc().unix();
+    period.to = moment(dateRange.to).endOf('day').utc().unix();
   } else {
-    period.from = moment().startOf("week").utc().unix();
+    period.from = moment().startOf('week').utc().unix();
     period.to =
-      moment().format("dddd") !== "Sunday"
-        ? moment().subtract(1, "day").endOf("day").utc().unix()
+      moment().format('dddd') !== 'Sunday'
+        ? moment().subtract(1, 'day').endOf('day').utc().unix()
         : moment().utc().unix();
   }
 
@@ -122,7 +116,7 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
-  query.gbt = "";
+  query.gbt = '';
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
   query.gbp = appliedGroupBy.map((opt) => {
@@ -143,16 +137,16 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
         ena: opt.eventName,
       };
     }
-    if (opt.prop_type === "datetime") {
-      opt.grn ? (appGbp["grn"] = opt.grn) : (appGbp["grn"] = "day");
+    if (opt.prop_type === 'datetime') {
+      opt.grn ? (appGbp['grn'] = opt.grn) : (appGbp['grn'] = 'day');
     }
-    if (opt.prop_type === "numerical") {
-      opt.gbty ? (appGbp["gbty"] = opt.gbty) : (appGbp["gbty"] = "");
+    if (opt.prop_type === 'numerical') {
+      opt.gbty ? (appGbp['gbty'] = opt.gbty) : (appGbp['gbty'] = '');
     }
     return appGbp;
   });
-  query.ec = "any_given_event";
-  query.tz = "Asia/Kolkata";
+  query.ec = 'any_given_event';
+  query.tz = 'Asia/Kolkata';
   return query;
 };
 
@@ -173,13 +167,13 @@ export const getQuery = (
 
   const period = {};
   if (dateRange.from && dateRange.to) {
-    period.from = moment(dateRange.from).startOf("day").utc().unix();
-    period.to = moment(dateRange.to).endOf("day").utc().unix();
+    period.from = moment(dateRange.from).startOf('day').utc().unix();
+    period.to = moment(dateRange.to).endOf('day').utc().unix();
   } else {
-    period.from = moment().startOf("week").utc().unix();
+    period.from = moment().startOf('week').utc().unix();
     period.to =
-      moment().format("dddd") !== "Sunday"
-        ? moment().subtract(1, "day").endOf("day").utc().unix()
+      moment().format('dddd') !== 'Sunday'
+        ? moment().subtract(1, 'day').endOf('day').utc().unix()
         : moment().utc().unix();
   }
 
@@ -187,7 +181,7 @@ export const getQuery = (
   query.to = period.to;
 
   query.ewp = getEventsWithProperties(queries);
-  query.gbt = user_type === EACH_USER_TYPE ? dateRange.frequency : "";
+  query.gbt = user_type === EACH_USER_TYPE ? dateRange.frequency : '';
 
   const appliedGroupBy = [...groupBy.event, ...groupBy.global];
 
@@ -209,16 +203,16 @@ export const getQuery = (
         ena: opt.eventName,
       };
     }
-    if (opt.prop_type === "datetime") {
-      opt.grn ? (gbpReq["grn"] = opt.grn) : (gbpReq["grn"] = "day");
+    if (opt.prop_type === 'datetime') {
+      opt.grn ? (gbpReq['grn'] = opt.grn) : (gbpReq['grn'] = 'day');
     }
-    if (opt.prop_type === "numerical") {
-      opt.gbty ? (gbpReq["gbty"] = opt.gbty) : (gbpReq["gbty"] = "");
+    if (opt.prop_type === 'numerical') {
+      opt.gbty ? (gbpReq['gbty'] = opt.gbty) : (gbpReq['gbty'] = '');
     }
     return gbpReq;
   });
   query.ec = constantObj[user_type];
-  query.tz = "Asia/Kolkata";
+  query.tz = 'Asia/Kolkata';
   const sessionsQuery = {
     cl: QUERY_TYPE_EVENT,
     ty: TYPE_UNIQUE_USERS,
@@ -226,28 +220,28 @@ export const getQuery = (
     to: period.to,
     ewp: [
       {
-        na: "$session",
+        na: '$session',
         pr: [],
       },
     ],
-    gbt: "",
+    gbt: '',
     ec: constantObj.each,
-    tz: "Asia/Kolkata",
+    tz: 'Asia/Kolkata',
   };
   if (result_criteria === ACTIVE_USERS_CRITERIA) {
-    return [query, { ...query, gbt: "" }, sessionsQuery];
+    return [query, { ...query, gbt: '' }, sessionsQuery];
   } else if (result_criteria === FREQUENCY_CRITERIA) {
     return [
       query,
-      { ...query, gbt: "" },
+      { ...query, gbt: '' },
       { ...query, ty: TYPE_UNIQUE_USERS },
-      { ...query, ty: TYPE_UNIQUE_USERS, gbt: "" },
+      { ...query, ty: TYPE_UNIQUE_USERS, gbt: '' },
     ];
   }
   if (user_type === ANY_USER_TYPE || user_type === ALL_USER_TYPE) {
     return [query];
   }
-  return [query, { ...query, gbt: "" }];
+  return [query, { ...query, gbt: '' }];
 };
 
 export const calculateFrequencyData = (
@@ -289,9 +283,9 @@ export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
 };
 
 const getEventIdx = (eventData, userObj) => {
-  const str = userObj.slice(0, userObj.length - 1).join(",");
+  const str = userObj.slice(0, userObj.length - 1).join(',');
   const eventIdx = eventData.findIndex(
-    (elem) => elem.slice(0, elem.length - 1).join(",") === str
+    (elem) => elem.slice(0, elem.length - 1).join(',') === str
   );
   return eventIdx;
 };
@@ -422,7 +416,7 @@ export const hasApiFailed = (res) => {
     res.data.result_group &&
     res.data.result_group[0] &&
     res.data.result_group[0].headers &&
-    res.data.result_group[0].headers.indexOf("error") > -1
+    res.data.result_group[0].headers.indexOf('error') > -1
   ) {
     return true;
   }
@@ -430,11 +424,11 @@ export const hasApiFailed = (res) => {
 };
 
 export const numberWithCommas = (x) => {
-  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
 
 export const formatApiData = (data, metrics) => {
-  if (data.headers[0] !== "event_index") {
+  if (data.headers[0] !== 'event_index') {
     const order = data.meta.metrics[0].rows.map((elem) => elem[1]);
     const rowData = data.rows;
     for (let i = 0; i < rowData.length; i++) {
@@ -454,7 +448,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   const events = requestQuery.ewp.map((e) => {
     const filters = [];
     e.pr.forEach((pr) => {
-      if (pr.lop === "AND") {
+      if (pr.lop === 'AND') {
         filters.push({
           operator: reverseOperatorMap[pr.op],
           props: [pr.pr, pr.ty, pr.en],
@@ -494,23 +488,23 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
 
 export const DefaultDateRangeFormat = {
   from:
-    moment().format("dddd") === "Sunday" || moment().format("dddd") === "Monday"
-      ? moment().subtract(3, "days").startOf("week")
-      : moment().startOf("week"),
+    moment().format('dddd') === 'Sunday' || moment().format('dddd') === 'Monday'
+      ? moment().subtract(3, 'days').startOf('week')
+      : moment().startOf('week'),
   to:
-    moment().format("dddd") === "Sunday" || moment().format("dddd") === "Monday"
-      ? moment().subtract(3, "days").endOf("week")
-      : moment().subtract(1, "day"),
-  frequency: "date",
+    moment().format('dddd') === 'Sunday' || moment().format('dddd') === 'Monday'
+      ? moment().subtract(3, 'days').endOf('week')
+      : moment().subtract(1, 'day'),
+  frequency: 'date',
 };
 
 const getFilters = (filters) => {
   const result = [];
   filters.forEach((filter) => {
-    if (filter.props[1] !== "categorical") {
+    if (filter.props[1] !== 'categorical') {
       result.push({
         en: filter.props[2],
-        lop: "AND",
+        lop: 'AND',
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
@@ -518,11 +512,11 @@ const getFilters = (filters) => {
       });
     }
 
-    if (filter.props[1] === "categorical") {
+    if (filter.props[1] === 'categorical') {
       filter.values.forEach((value, index) => {
         result.push({
           en: filter.props[2],
-          lop: !index ? "AND" : "OR",
+          lop: !index ? 'AND' : 'OR',
           op: operatorMap[filter.operator],
           pr: filter.props[0],
           ty: filter.props[1],
@@ -537,10 +531,10 @@ const getFilters = (filters) => {
 const getFiltersTouchpoints = (filters, touchpoint) => {
   const result = [];
   filters.forEach((filter) => {
-    if (filter.props[1] !== "categorical") {
+    if (filter.props[1] !== 'categorical') {
       result.push({
         attribution_key: touchpoint,
-        lop: "AND",
+        lop: 'AND',
         op: operatorMap[filter.operator],
         pr: filter.props[0],
         ty: filter.props[1],
@@ -548,11 +542,11 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
       });
     }
 
-    if (filter.props[1] === "categorical") {
+    if (filter.props[1] === 'categorical') {
       filter.values.forEach((value, index) => {
         result.push({
           attribution_key: touchpoint,
-          lop: !index ? "AND" : "OR",
+          lop: !index ? 'AND' : 'OR',
           op: operatorMap[filter.operator],
           pr: filter.props[0],
           ty: filter.props[1],
@@ -592,7 +586,7 @@ export const getAttributionQuery = (
       metrics_breakdown: true,
     },
     query: {
-      cm: ["Impressions", "Clicks", "Spend"],
+      cm: ['Impressions', 'Clicks', 'Spend'],
       ce: {
         na: eventGoal.label,
         pr: eventFilters,
@@ -605,13 +599,13 @@ export const getAttributionQuery = (
     },
   };
   if (dateRange.from && dateRange.to) {
-    query.query.from = moment(dateRange.from).startOf("day").utc().unix();
-    query.query.to = moment(dateRange.to).endOf("day").utc().unix();
+    query.query.from = moment(dateRange.from).startOf('day').utc().unix();
+    query.query.to = moment(dateRange.to).endOf('day').utc().unix();
   } else {
-    query.query.from = moment().startOf("week").utc().unix();
+    query.query.from = moment().startOf('week').utc().unix();
     query.query.to =
-      moment().format("dddd") !== "Sunday"
-        ? moment().subtract(1, "day").endOf("day").utc().unix()
+      moment().format('dddd') !== 'Sunday'
+        ? moment().subtract(1, 'day').endOf('day').utc().unix()
         : moment().utc().unix();
   }
   if (models[1]) {
@@ -632,8 +626,8 @@ export const getAttributionQuery = (
 export const getAttributionStateFromRequestQuery = (requestQuery) => {
   const filters = [];
   requestQuery.ce.pr.forEach((pr) => {
-    if (pr.lop === "AND") {
-      let val = pr.ty === "categorical" ? [pr.va] : pr.va;
+    if (pr.lop === 'AND') {
+      let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       filters.push({
         operator: reverseOperatorMap[pr.op],
         props: [pr.pr, pr.ty, pr.en],
@@ -673,10 +667,10 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
   }
 
   if (requestQuery.lfe && requestQuery.lfe.length) {
-    result["linkedEvents"] = requestQuery.lfe.map((le) => {
+    result['linkedEvents'] = requestQuery.lfe.map((le) => {
       const linkedFilters = [];
       le.pr.forEach((pr) => {
-        if (pr.lop === "AND") {
+        if (pr.lop === 'AND') {
           linkedFilters.push({
             operator: reverseOperatorMap[pr.op],
             props: [pr.pr, pr.ty, pr.en],
@@ -692,7 +686,7 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
       };
     });
   } else {
-    result["linkedEvents"] = [];
+    result['linkedEvents'] = [];
   }
   return result;
 };
@@ -712,7 +706,7 @@ export const getCampaignsQuery = (
         name: filter.props[2],
         property: filter.props[0],
         condition: operatorMap[filter.operator],
-        logical_operator: !index ? "AND" : "OR",
+        logical_operator: !index ? 'AND' : 'OR',
         value,
       });
     });
@@ -728,20 +722,20 @@ export const getCampaignsQuery = (
       };
     }),
     filters: appliedFilters,
-    gbt: "date",
+    gbt: 'date',
   };
   if (dateRange.from && dateRange.to) {
-    query.fr = moment(dateRange.from).startOf("day").utc().unix();
-    query.to = moment(dateRange.to).endOf("day").utc().unix();
+    query.fr = moment(dateRange.from).startOf('day').utc().unix();
+    query.to = moment(dateRange.to).endOf('day').utc().unix();
   } else {
-    query.fr = moment().startOf("week").utc().unix();
+    query.fr = moment().startOf('week').utc().unix();
     query.to =
-      moment().format("dddd") !== "Sunday"
-        ? moment().subtract(1, "day").endOf("day").utc().unix()
+      moment().format('dddd') !== 'Sunday'
+        ? moment().subtract(1, 'day').endOf('day').utc().unix()
         : moment().utc().unix();
   }
   return {
-    query_group: [query, { ...query, gbt: "" }],
+    query_group: [query, { ...query, gbt: '' }],
     cl: QUERY_TYPE_CAMPAIGN,
   };
 };
@@ -749,10 +743,10 @@ export const getCampaignsQuery = (
 export const getCampaignStateFromRequestQuery = (requestQuery) => {
   const camp_filters = [];
   requestQuery.filters.forEach((filter) => {
-    if (filter.logical_operator === "AND") {
+    if (filter.logical_operator === 'AND') {
       camp_filters.push({
         operator: reverseOperatorMap[filter.condition],
-        props: [filter.property, "", filter.name],
+        props: [filter.property, '', filter.name],
         values: [filter.value],
       });
     } else {
@@ -773,4 +767,131 @@ export const getCampaignStateFromRequestQuery = (requestQuery) => {
   };
 
   return result;
+};
+
+export const getSaveChartOptions = (queryType, requestQuery) => {
+  if (queryType === QUERY_TYPE_FUNNEL) {
+    return (
+      <>
+        <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+          Display Funnel Chart
+        </Radio>
+        <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+          Display Table
+        </Radio>
+      </>
+    );
+  }
+  if (queryType === QUERY_TYPE_ATTRIBUTION) {
+    return (
+      <>
+        <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+          Display Bar Chart
+        </Radio>
+        <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+          Display Table
+        </Radio>
+      </>
+    );
+  }
+  if (queryType === QUERY_TYPE_CAMPAIGN) {
+    const commons = (
+      <>
+        <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
+          Display Line Chart
+        </Radio>
+        <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+          Display Table
+        </Radio>
+      </>
+    );
+    if (!requestQuery.query_group[0].group_by.length) {
+      return (
+        <>
+          <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
+            Display Spark Line Chart
+          </Radio>
+          {commons}
+        </>
+      );
+    } else {
+      return (
+        <>
+          <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+            Display Bar Chart
+          </Radio>
+          <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
+            Display Stacked Area Chart
+          </Radio>
+          <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
+            Display Stacked Bar Chart
+          </Radio>
+          {commons}
+        </>
+      );
+    }
+  }
+
+  if (queryType === QUERY_TYPE_EVENT) {
+    if (requestQuery[0].ec === constantObj[EACH_USER_TYPE]) {
+      const commons = (
+        <>
+          <Radio value={apiChartAnnotations[CHART_TYPE_LINECHART]}>
+            Display Line Chart
+          </Radio>
+          <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+            Display Table
+          </Radio>
+        </>
+      );
+      if (!requestQuery[0].gbp.length) {
+        return (
+          <>
+            <Radio value={apiChartAnnotations[CHART_TYPE_SPARKLINES]}>
+              Display Spark Line Chart
+            </Radio>
+            {commons}
+          </>
+        );
+      } else {
+        return (
+          <>
+            <Radio value={apiChartAnnotations[CHART_TYPE_BARCHART]}>
+              Display Bar Chart
+            </Radio>
+            <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_AREA]}>
+              Display Stacked Area Chart
+            </Radio>
+            <Radio value={apiChartAnnotations[CHART_TYPE_STACKED_BAR]}>
+              Display Stacked Bar Chart
+            </Radio>
+            {commons}
+          </>
+        );
+      }
+    } else {
+      const commons = (
+        <>
+          <Radio value={apiChartAnnotations[CHART_TYPE_TABLE]}>
+            Display Table
+          </Radio>
+        </>
+      );
+      if (!requestQuery[0].gbp.length) {
+        return (
+          <>
+            <Radio value='pc'>Display Count</Radio>
+            {commons}
+          </>
+        );
+      } else {
+        return (
+          <>
+            <Radio value='pb'>Display Bar Chart</Radio>
+            {commons}
+          </>
+        );
+      }
+    }
+  }
 };

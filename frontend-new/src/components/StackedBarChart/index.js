@@ -10,7 +10,7 @@ import LegendsCircle from '../../styles/components/LegendsCircle';
 import { formatCount } from '../../utils/dataFormatter';
 import TopLegends from '../GroupedBarChart/TopLegends';
 
-function StackedAreaChart({
+function StackedBarChart({
   categories,
   data,
   frequency,
@@ -22,7 +22,7 @@ function StackedAreaChart({
   const getChartOptions = useCallback(() => {
     return {
       chart: {
-        type: 'area',
+        type: 'column',
         height,
         spacing: cardSize !== 1 ? high_charts_default_spacing : spacing,
         style: {
@@ -34,6 +34,9 @@ function StackedAreaChart({
       },
       title: {
         text: undefined,
+      },
+      credits: {
+        enabled: false,
       },
       xAxis: {
         categories,
@@ -49,12 +52,20 @@ function StackedAreaChart({
         },
       },
       yAxis: {
+        min: 0,
         title: {
           enabled: false,
         },
-      },
-      credits: {
-        enabled: false,
+        stackLabels: {
+          enabled: true,
+          formatter: function () {
+            return cardSize !== 2
+              ? ReactDOMServer.renderToString(
+                  <NumFormat shortHand={true} number={this.total} />
+                )
+              : null;
+          },
+        },
       },
       tooltip: {
         backgroundColor: 'white',
@@ -103,12 +114,8 @@ function StackedAreaChart({
         },
       },
       plotOptions: {
-        area: {
+        column: {
           stacking: 'normal',
-          lineWidth: 2,
-          marker: {
-            symbol: 'circle',
-          },
         },
       },
       series: data,
@@ -130,7 +137,7 @@ function StackedAreaChart({
           colors={data.map((d) => d.color)}
         />
       ) : null}
-      <div className={styles.areaChart}>
+      <div className={styles.columnChart}>
         <HighchartsReact highcharts={Highcharts} options={options} />
       </div>
       {legendsPosition === 'bottom' ? (
@@ -144,4 +151,4 @@ function StackedAreaChart({
   );
 }
 
-export default StackedAreaChart;
+export default StackedBarChart;

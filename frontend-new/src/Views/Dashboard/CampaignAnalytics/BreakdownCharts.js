@@ -1,20 +1,26 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   formatData,
   formatDataInLineChartFormat,
-} from "../../CoreQuery/CampaignAnalytics/BreakdownCharts/utils";
-import BarChart from "../../../components/BarChart";
-import BreakdownTable from "../../CoreQuery/CampaignAnalytics/BreakdownCharts/BreakdownTable";
-import LineChart from "../../../components/LineChart";
-import { generateColors } from "../../../utils/dataFormatter";
+  formatDataInHighChartsFormat,
+} from '../../CoreQuery/CampaignAnalytics/BreakdownCharts/utils';
+import BarChart from '../../../components/BarChart';
+import BreakdownTable from '../../CoreQuery/CampaignAnalytics/BreakdownCharts/BreakdownTable';
+import LineChart from '../../../components/LineChart';
+import { generateColors } from '../../../utils/dataFormatter';
 import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_LINECHART,
   CHART_TYPE_TABLE,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
   DASHBOARD_WIDGET_LINE_CHART_HEIGHT,
-} from "../../../utils/constants";
+  CHART_TYPE_STACKED_AREA,
+  CHART_TYPE_STACKED_BAR,
+  DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
+} from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
+import StackedAreaChart from '../../../components/StackedAreaChart';
+import StackedBarChart from '../../../components/StackedBarChart';
 
 function BreakdownCharts({
   arrayMapper,
@@ -40,11 +46,17 @@ function BreakdownCharts({
     );
     setVisibleProperties(formattedData.slice(0, maxAllowedVisibleProperties));
     setChartsData(formattedData);
-  }, [data, arrayMapper, currentEventIndex, breakdown, maxAllowedVisibleProperties]);
+  }, [
+    data,
+    arrayMapper,
+    currentEventIndex,
+    breakdown,
+    maxAllowedVisibleProperties,
+  ]);
 
   if (!chartsData.length) {
     return (
-      <div className="mt-4 flex justify-center items-center w-full h-64 ">
+      <div className='mt-4 flex justify-center items-center w-full h-64 '>
         <NoDataChart />
       </div>
     );
@@ -56,8 +68,8 @@ function BreakdownCharts({
     tableContent = (
       <div
         onClick={() => setwidgetModal({ unit, data })}
-        style={{ color: "#5949BC" }}
-        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+        style={{ color: '#5949BC' }}
+        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >
         Show More &rarr;
       </div>
@@ -73,6 +85,40 @@ function BreakdownCharts({
         height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
         title={unit.id}
         chartData={visibleProperties}
+        cardSize={unit.cardSize}
+      />
+    );
+  } else if (chartType === CHART_TYPE_STACKED_AREA) {
+    const { categories, highchartsData } = formatDataInHighChartsFormat(
+      data.result_group[0],
+      arrayMapper,
+      currentEventIndex,
+      visibleProperties
+    );
+    chartContent = (
+      <StackedAreaChart
+        frequency="date"
+        categories={categories}
+        data={highchartsData}
+        height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
+        legendsPosition='top'
+        cardSize={unit.cardSize}
+      />
+    );
+  } else if (chartType === CHART_TYPE_STACKED_BAR) {
+    const { categories, highchartsData } = formatDataInHighChartsFormat(
+      data.result_group[0],
+      arrayMapper,
+      currentEventIndex,
+      visibleProperties
+    );
+    chartContent = (
+      <StackedBarChart
+        frequency="date"
+        categories={categories}
+        data={highchartsData}
+        height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
+        legendsPosition='top'
         cardSize={unit.cardSize}
       />
     );
@@ -96,7 +142,7 @@ function BreakdownCharts({
     chartContent = (
       <>
         <LineChart
-          frequency="date"
+          frequency='date'
           chartData={lineChartData}
           hiddenEvents={[]}
           setHiddenEvents={() => {}}
