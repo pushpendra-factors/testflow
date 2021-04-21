@@ -15,16 +15,25 @@ import EventGroupBlock from '../EventGroupBlock';
 import { QUERY_TYPE_FUNNEL } from '../../../utils/constants';
 
 function QueryBlock({
-  index, event, eventChange, queries, queryType, eventOptions,
-  activeProject, groupBy, setGroupBy,
-  delGroupBy, userProperties, eventProperties
+  index,
+  event,
+  eventChange,
+  queries,
+  queryType,
+  eventOptions,
+  activeProject,
+  groupBy,
+  setGroupBy,
+  delGroupBy,
+  userProperties,
+  eventProperties,
 }) {
   const [isDDVisible, setDDVisible] = useState(false);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
   const [filterProps, setFilterProperties] = useState({
     user: [],
-    event: []
+    event: [],
   });
 
   const alphabetIndex = 'ABCDEF';
@@ -37,7 +46,9 @@ function QueryBlock({
   };
 
   useEffect(() => {
-    if (!event || event === undefined) { return undefined; }; // Akhil please check this line
+    if (!event || event === undefined) {
+      return undefined;
+    } // Akhil please check this line
     const assignFilterProps = Object.assign({}, filterProps);
 
     if (eventProperties[event.label]) {
@@ -59,18 +70,19 @@ function QueryBlock({
     // const selectDisplay = isDDVisible ? 'block' : 'none';
 
     return (
-            <div className={styles.query_block__event_selector}>
-                   {isDDVisible
-                     ? <div className={styles.query_block__event_selector__btn}><GroupSelect
-                    groupedProperties={eventOptions}
-                    placeholder="Select Event"
-                    optionClick={(group, val) => onChange(val[0])}
-                    onClickOutside={() => setDDVisible(false)}
-                    allowEmpty={true}
-                  ></GroupSelect></div>
-
-                     : null }
-                </div>
+      <div className={styles.query_block__event_selector}>
+        {isDDVisible ? (
+          <div className={styles.query_block__event_selector__btn}>
+            <GroupSelect
+              groupedProperties={eventOptions}
+              placeholder='Select Event'
+              optionClick={(group, val) => onChange(val[0])}
+              onClickOutside={() => setDDVisible(false)}
+              allowEmpty={true}
+            ></GroupSelect>
+          </div>
+        ) : null}
+      </div>
     );
   };
 
@@ -84,7 +96,9 @@ function QueryBlock({
 
   const insertFilters = (filter) => {
     const newEvent = Object.assign({}, event);
-    const filt = newEvent.filters.filter(fil => JSON.stringify(fil) === JSON.stringify(filter));
+    const filt = newEvent.filters.filter(
+      (fil) => JSON.stringify(fil) === JSON.stringify(filter)
+    );
     if (filt && filt.length) return;
     newEvent.filters.push(filter);
     eventChange(newEvent, index - 1);
@@ -95,20 +109,20 @@ function QueryBlock({
     if (newEvent.filters[i]) {
       newEvent.filters.splice(i, 1);
     }
-    eventChange(newEvent, index-1);
+    eventChange(newEvent, index - 1);
   };
 
   const selectEventFilter = () => {
     if (isFilterDDVisible) {
-      return <FilterBlock
-      filterProps={filterProps}
-      activeProject={activeProject}
-      event={event}
-      insertFilter={insertFilters}
-      closeFilter={() => setFilterDDVisible(false)}
-      >
-
-      </FilterBlock>;
+      return (
+        <FilterBlock
+          filterProps={filterProps}
+          activeProject={activeProject}
+          event={event}
+          insertFilter={insertFilters}
+          closeFilter={() => setFilterDDVisible(false)}
+        ></FilterBlock>
+      );
     }
   };
 
@@ -118,28 +132,42 @@ function QueryBlock({
 
   const pushGroupBy = (groupState, index) => {
     let ind;
-    index >= 0 ? ind = index : ind = groupBy.length;
+    index >= 0 ? (ind = index) : (ind = groupBy.length);
     setGroupBy('event', groupState, ind);
   };
 
   const selectGroupByEvent = () => {
     if (isGroupByDDVisible) {
-      return <EventGroupBlock
-        eventIndex={index}
-        event={event}
-        setGroupState={pushGroupBy}
-        closeDropDown={() => setGroupByDDVisible(false)}
-      ></EventGroupBlock>;
+      return (
+        <EventGroupBlock
+          eventIndex={index}
+          event={event}
+          setGroupState={pushGroupBy}
+          closeDropDown={() => setGroupByDDVisible(false)}
+        ></EventGroupBlock>
+      );
     }
   };
 
   const additionalActions = () => {
     return (
-            <div className={'fa--query_block--actions'}>
-              <Button type="text" onClick={addGroupBy} icon={<SVG size={16} name="groupby" color={'grey'} />} />
-               <Button type="text" onClick={addFilter} icon={<SVG size={16} name="filter" color={'grey'} />} />
-               <Button type="text" onClick={deleteItem} icon={<SVG size={16} name="trash" color={'grey'} />} />
-            </div>
+      <div className={'fa--query_block--actions'}>
+        <Button
+          type='text'
+          onClick={addGroupBy}
+          icon={<SVG size={16} name='groupby' color={'grey'} />}
+        />
+        <Button
+          type='text'
+          onClick={addFilter}
+          icon={<SVG size={16} name='filter' color={'grey'} />}
+        />
+        <Button
+          type='text'
+          onClick={deleteItem}
+          icon={<SVG size={16} name='trash' color={'grey'} />}
+        />
+      </div>
     );
   };
 
@@ -148,17 +176,25 @@ function QueryBlock({
     if (event && event.filters.length) {
       event.filters.forEach((filter, index) => {
         filters.push(
-                    <div key={index} className={'fa--query_block--filters'}>
-                        <FilterBlock index={index} filter={filter} deleteFilter={removeFilters} insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>
-                    </div>
+          <div key={index} className={'fa--query_block--filters'}>
+            <FilterBlock
+              index={index}
+              filter={filter}
+              deleteFilter={removeFilters}
+              insertFilter={insertFilters}
+              closeFilter={() => setFilterDDVisible(false)}
+            ></FilterBlock>
+          </div>
         );
       });
     }
 
     if (isFilterDDVisible) {
-      filters.push(<div key={'init'} className={'fa--query_block--filters'}>
-            {selectEventFilter()}
-        </div>);
+      filters.push(
+        <div key={'init'} className={'fa--query_block--filters'}>
+          {selectEventFilter()}
+        </div>
+      );
     }
 
     return filters;
@@ -167,18 +203,29 @@ function QueryBlock({
   const groupByItems = () => {
     const groupByEvents = [];
     if (groupBy && groupBy.length && groupBy[0] && groupBy[0].property) {
-      groupBy.filter(gbp => gbp.eventName === event.label && gbp.eventIndex === index).forEach((gbp, gbpIndex) => {
-        groupByEvents.push(<div key={gbpIndex} className={'fa--query_block--filters'}>
-          <EventGroupBlock
-            index={gbpIndex}
-            eventIndex={index}
-            groupByEvent={gbp} event={event}
-            delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
-            setGroupState={pushGroupBy}
-            closeDropDown={() => setGroupByDDVisible(false)}
-            ></EventGroupBlock>
-        </div>);
-      });
+      groupBy
+        .map((gbp, index) => {
+          return { ...gbp, groupByIndex: index };
+        })
+        .filter((gbp) => {
+          return gbp.eventName === event.label && gbp.eventIndex === index;
+        })
+        .forEach((gbp, gbpIndex) => {
+          const { groupByIndex, ...orgGbp } = gbp;
+          groupByEvents.push(
+            <div key={gbpIndex} className={'fa--query_block--filters'}>
+              <EventGroupBlock
+                index={gbp.groupByIndex}
+                eventIndex={index}
+                groupByEvent={orgGbp}
+                event={event}
+                delGroupState={(ev) => deleteGroupBy(ev, gbpIndex)}
+                setGroupState={pushGroupBy}
+                closeDropDown={() => setGroupByDDVisible(false)}
+              ></EventGroupBlock>
+            </div>
+          );
+        });
     }
 
     if (isGroupByDDVisible) {
@@ -195,26 +242,68 @@ function QueryBlock({
   const ifQueries = queries.length > 0;
   if (!event) {
     return (
-            <div className={`${styles.query_block} fa--query_block mt-6 ${ifQueries ? 'borderless no-padding' : 'borderless no-padding'}`}>
-                <div className={`${styles.query_block__event} flex justify-start items-center`}> 
-                        {!isDDVisible && <Button  type="text" onClick={triggerDropDown} icon={<SVG name={'plus'} color={'grey'} />}>{ifQueries ? 'Add another event' : 'Add First Event'}</Button> }
-                    {selectEvents()}
-                </div>
-            </div>
+      <div
+        className={`${styles.query_block} fa--query_block mt-6 ${
+          ifQueries ? 'borderless no-padding' : 'borderless no-padding'
+        }`}
+      >
+        <div
+          className={`${styles.query_block__event} flex justify-start items-center`}
+        >
+          {!isDDVisible && (
+            <Button
+              type='text'
+              onClick={triggerDropDown}
+              icon={<SVG name={'plus'} color={'grey'} />}
+            >
+              {ifQueries ? 'Add another event' : 'Add First Event'}
+            </Button>
+          )}
+          {selectEvents()}
+        </div>
+      </div>
     );
   }
 
   return (
-        <div className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}>
-            <div className={`${styles.query_block__event} block_section flex justify-start items-center`}>
-                <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{queryType === QUERY_TYPE_FUNNEL ? index : alphabetIndex[index - 1]}</Text> </div>
-                {!isDDVisible && <Button  icon={<SVG name="mouseevent" size={16} color={'purple'} />} className={`fa-button--truncate`} type="link" onClick={triggerDropDown}> {event.label} </Button> }
-                {additionalActions()}
-                {selectEvents()}
-            </div>
-            {eventFilters()}
-            {groupByItems()}
+    <div
+      className={`${styles.query_block} fa--query_block_section borderless no-padding mt-2`}
+    >
+      <div
+        className={`${styles.query_block__event} block_section flex justify-start items-center`}
+      >
+        <div
+          className={
+            'fa--query_block--add-event active flex justify-center items-center mr-2'
+          }
+        >
+          <Text
+            type={'title'}
+            level={7}
+            weight={'bold'}
+            color={'white'}
+            extraClass={'m-0'}
+          >
+            {queryType === QUERY_TYPE_FUNNEL ? index : alphabetIndex[index - 1]}
+          </Text>{' '}
         </div>
+        {!isDDVisible && (
+          <Button
+            icon={<SVG name='mouseevent' size={16} color={'purple'} />}
+            className={`fa-button--truncate`}
+            type='link'
+            onClick={triggerDropDown}
+          >
+            {' '}
+            {event.label}{' '}
+          </Button>
+        )}
+        {additionalActions()}
+        {selectEvents()}
+      </div>
+      {eventFilters()}
+      {groupByItems()}
+    </div>
   );
 }
 
@@ -223,12 +312,16 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   userProperties: state.coreQuery.userProperties,
   eventProperties: state.coreQuery.eventProperties,
-  groupBy: state.coreQuery.groupBy.event
+  groupBy: state.coreQuery.groupBy.event,
 });
 
-const mapDispatchToProps = dispatch => bindActionCreators({
-  setGroupBy,
-  delGroupBy
-}, dispatch);
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      setGroupBy,
+      delGroupBy,
+    },
+    dispatch
+  );
 
 export default connect(mapStateToProps, mapDispatchToProps)(QueryBlock);
