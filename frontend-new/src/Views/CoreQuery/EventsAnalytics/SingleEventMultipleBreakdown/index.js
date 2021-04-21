@@ -14,8 +14,10 @@ import {
   DASHBOARD_MODAL,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_BARCHART,
+  CHART_TYPE_STACKED_BAR,
 } from '../../../../utils/constants';
 import StackedAreaChart from '../../../../components/StackedAreaChart';
+import StackedBarChart from '../../../../components/StackedBarChart';
 
 function SingleEventMultipleBreakdown({
   queries,
@@ -103,6 +105,21 @@ function SingleEventMultipleBreakdown({
     chart = (
       <div className='w-full'>
         <StackedAreaChart
+          frequency={durationObj.frequency}
+          categories={categories}
+          data={data}
+        />
+      </div>
+    );
+  } else if (chartType === CHART_TYPE_STACKED_BAR) {
+    const { categories, data } = formatDataInStackedAreaFormat(
+      resultState.data,
+      visibleLabels,
+      arrayMapper
+    );
+    chart = (
+      <div className='w-full'>
+        <StackedBarChart
           frequency={durationObj.frequency}
           categories={categories}
           data={data}

@@ -540,7 +540,7 @@ func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardU
 	} else if baseQuery.GetClass() == model.QueryClassAttribution {
 		attributionQuery := baseQuery.(*model.AttributionQueryUnit)
 		result, err = pg.ExecuteAttributionQuery(projectID, attributionQuery.Query)
-		if err != nil {
+		if err != nil && !model.IsIntegrationNotFoundError(err) {
 			errCode = http.StatusInternalServerError
 		} else {
 			errCode = http.StatusOK

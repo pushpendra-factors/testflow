@@ -18,8 +18,10 @@ import {
   DASHBOARD_WIDGET_MULTICOLORED_BAR_CHART_HEIGHT,
   CHART_TYPE_STACKED_AREA,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
+  CHART_TYPE_STACKED_BAR,
 } from "../../../utils/constants";
 import StackedAreaChart from "../../../components/StackedAreaChart";
+import StackedBarChart from "../../../components/StackedBarChart";
 // import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
@@ -110,6 +112,22 @@ function MultipleEventsWithBreakdown({
     );
     chartContent = (
       <StackedAreaChart
+        frequency={durationObj.frequency}
+        categories={categories}
+        data={data}
+        height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
+        legendsPosition="top"
+        cardSize={unit.cardSize}
+      />
+    );
+  } else if (chartType === CHART_TYPE_STACKED_BAR) {
+    const { categories, data } = formatDataInStackedAreaFormat(
+      resultState.data,
+      visibleLabels,
+      arrayMapper
+    );
+    chartContent = (
+      <StackedBarChart
         frequency={durationObj.frequency}
         categories={categories}
         data={data}

@@ -18,6 +18,12 @@
   color: #3e516c;
 }
 
+.radioGroup {
+  :global(.ant-radio-wrapper) {
+    margin-top: 0.75rem !important;
+  }
+}
+
 .multiSelectStyles,
 .singleSelectStyles {
   cursor: pointer;

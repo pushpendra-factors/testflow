@@ -33,6 +33,7 @@ func (store *MemSQL) CreateQuery(projectId uint64, query *model.Queries) (*model
 	return query, http.StatusCreated, ""
 }
 
+// GetALLQueriesWithProjectId Get all queries for Saved Reports.
 func (store *MemSQL) GetALLQueriesWithProjectId(projectID uint64) ([]model.Queries, int) {
 	db := C.GetServices().Db
 
@@ -45,9 +46,7 @@ func (store *MemSQL) GetALLQueriesWithProjectId(projectID uint64) ([]model.Queri
 		return queries, http.StatusInternalServerError
 	}
 	if len(queries) == 0 {
-		log.WithField("project_id", projectID).Error("No Saved model.Queries found")
 		return queries, http.StatusFound
-
 	}
 	q, errCode := store.addCreatedByNameInQueries(queries, projectID)
 	if errCode != http.StatusFound {

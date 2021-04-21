@@ -2,7 +2,6 @@ import React from "react";
 import { Spin } from "antd";
 import {
   getStateQueryFromRequestQuery,
-  presentationObj,
   getAttributionStateFromRequestQuery,
   getCampaignStateFromRequestQuery,
 } from "../CoreQuery/utils";
@@ -15,6 +14,7 @@ import {
   QUERY_TYPE_CAMPAIGN,
   DASHBOARD_WIDGET_SECTION,
   reverse_user_types,
+  presentationObj
 } from "../../utils/constants";
 import Attributions from "./Attributions";
 import CampaignAnalytics from "./CampaignAnalytics";

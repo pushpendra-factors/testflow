@@ -37,7 +37,6 @@ function StackedAreaChart({
       },
       xAxis: {
         categories,
-        tickmarkPlacement: 'on',
         title: {
           enabled: false,
         },

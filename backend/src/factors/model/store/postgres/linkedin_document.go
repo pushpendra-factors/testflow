@@ -368,15 +368,13 @@ func (pg *Postgres) buildObjectAndPropertiesForLinkedin(projectID uint64, object
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
 	for _, currentObject := range objects {
 		var currentProperties []model.ChannelProperty
+		var currentPropertiesSmart []model.ChannelProperty
+		currentProperties = buildProperties(allChannelsPropertyToRelated)
 		if C.IsShowSmartPropertiesAllowed(projectID) {
 			smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "linkedin")
-			if smartProperty != nil {
-				for key, value := range smartProperty {
-					allChannelsPropertyToRelated[key] = value
-				}
-			}
+			currentPropertiesSmart = buildProperties(smartProperty)
+			currentProperties = append(currentProperties, currentPropertiesSmart...)
 		}
-		currentProperties = buildProperties(allChannelsPropertyToRelated)
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
 	}
 	return objectsAndProperties

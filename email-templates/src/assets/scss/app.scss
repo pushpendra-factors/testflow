@@ -1,0 +1,40 @@
+@import 'settings';
+@import 'foundation-emails';
+
+@import 'template/template';
+
+
+
+body{
+    list-style: $global-line-height;
+    font-family: $body-font-family;
+}
+.brand-logo
+{
+    max-width: 175px;
+}
+
+.text-center{
+    text-align: center;
+}
+
+.primary-btn{
+    background-color: #5949BC; 
+    min-width: 150px; 
+    border-radius: 4px;
+    padding: 12px 20px;
+    text-align: center;
+    color: #fff !important;
+
+}
+
+.h7{
+    font-size: $small-font-size;
+    font-size: 400;
+}
+.medium-grey{
+    color: $medium-gray;
+}
+.light-grey{
+    color: $light-gray;
+}

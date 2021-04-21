@@ -74,7 +74,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
               <Menu.Item key={MenuTabs.Users}>{MenuTabs.Users}</Menu.Item>
               <Menu.Item key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item>
               <Menu.Item key={MenuTabs.Events}>{MenuTabs.Events}</Menu.Item>
-              {activeProject.id === 446 ? <Menu.Item key={MenuTabs.Properties}>{MenuTabs.Properties}</Menu.Item> : null}
+              <Menu.Item key={MenuTabs.Properties}>{MenuTabs.Properties}</Menu.Item>
             </Menu>
 
           </Col>
@@ -84,7 +84,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents }) {
             {selectedMenu === MenuTabs.Users && <UserSettings /> }
             {selectedMenu === MenuTabs.Integrations && <IntegrationSettings /> }
             {selectedMenu === MenuTabs.Events && <Events /> }
-            {(selectedMenu === MenuTabs.Properties && activeProject.id === 446) && <Properties />}
+            {(selectedMenu === MenuTabs.Properties) && <Properties />}
           </Col>
         </Row>
       </div>

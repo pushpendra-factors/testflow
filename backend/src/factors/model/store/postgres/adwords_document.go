@@ -660,26 +660,21 @@ func (pg *Postgres) buildObjectAndPropertiesForAdwords(projectID uint64, objects
 		// to do: check if normal properties present then only smart properties will be there
 		propertiesAndRelated, isPresent := mapOfObjectsToPropertiesAndRelated[currentObject]
 		var currentProperties []model.ChannelProperty
+		var currentPropertiesSmart []model.ChannelProperty
 		if isPresent {
-			if C.IsShowSmartPropertiesAllowed(projectID) {
-				smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "adwords")
-				if smartProperty != nil {
-					for key, value := range smartProperty {
-						propertiesAndRelated[key] = value
-					}
-				}
-			}
 			currentProperties = buildProperties(propertiesAndRelated)
-		} else {
 			if C.IsShowSmartPropertiesAllowed(projectID) {
 				smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "adwords")
-				if smartProperty != nil {
-					for key, value := range smartProperty {
-						allChannelsPropertyToRelated[key] = value
-					}
-				}
+				currentPropertiesSmart = buildProperties(smartProperty)
+				currentProperties = append(currentProperties, currentPropertiesSmart...)
 			}
+		} else {
 			currentProperties = buildProperties(allChannelsPropertyToRelated)
+			if C.IsShowSmartPropertiesAllowed(projectID) {
+				smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "adwords")
+				currentPropertiesSmart = buildProperties(smartProperty)
+				currentProperties = append(currentProperties, currentPropertiesSmart...)
+			}
 		}
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
 	}

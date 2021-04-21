@@ -1,8 +1,11 @@
 package model
 
 import (
+	"errors"
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
+	"fmt"
+	"strings"
 )
 
 type AttributionQuery struct {
@@ -94,6 +97,8 @@ const (
 
 	SortASC  = "ASC"
 	SortDESC = "DESC"
+
+	AttributionErrorIntegrationNotFound = "no ad-words customer account id found for attribution query"
 )
 
 type UserSessionTimestamp struct {
@@ -196,4 +201,128 @@ func GetGCLIDAttributionValue(gclIDBasedCampaign map[string]CampaignInfo, gclID 
 		}
 	}
 	return PropertyValueNone
+}
+
+func IsIntegrationNotFoundError(err error) bool {
+	return err.Error() == AttributionErrorIntegrationNotFound
+}
+
+// GetQuerySessionProperty Maps the {attribution key} to the session properties field
+func GetQuerySessionProperty(attributionKey string) (string, error) {
+	if attributionKey == AttributionKeyCampaign {
+		return U.EP_CAMPAIGN, nil
+	} else if attributionKey == AttributionKeySource {
+		return U.EP_SOURCE, nil
+	} else if attributionKey == AttributionKeyAdgroup {
+		return U.EP_ADGROUP, nil
+	} else if attributionKey == AttributionKeyKeyword {
+		return U.EP_KEYWORD, nil
+	}
+	return "", errors.New("invalid query properties")
+}
+
+// AddHeadersByAttributionKey Adds common column names and linked events as header to the result rows.
+func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
+	attributionKey := query.AttributionKey
+	result.Headers = append(append(result.Headers, attributionKey), AttributionFixedHeaders...)
+	conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
+	costPerConversion := fmt.Sprintf("Cost Per Conversion")
+	conversionEventCompareUsers := fmt.Sprintf("Compare - Users")
+	compareCostPerConversion := fmt.Sprintf("Compare Cost Per Conversion")
+	result.Headers = append(result.Headers, conversionEventUsers, costPerConversion,
+		conversionEventCompareUsers, compareCostPerConversion)
+	if len(query.LinkedEvents) > 0 {
+		for _, event := range query.LinkedEvents {
+			result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
+			result.Headers = append(result.Headers, fmt.Sprintf("%s - CPC", event.Name))
+		}
+	}
+}
+
+func IsValidAttributionKeyValueAND(attributionKeyType string, keyValue string,
+	filters []AttributionKeyFilter) bool {
+
+	for _, filter := range filters {
+		// supports AND and treats blank operator as AND
+		if filter.LogicalOp == "OR" {
+			continue
+		}
+		filterResult := applyOperator(attributionKeyType, keyValue, filter)
+		// AND is false for any false.
+		if !filterResult {
+			return false
+		}
+	}
+	return true
+}
+
+func IsValidAttributionKeyValueOR(attributionKeyType string, keyValue string,
+	filters []AttributionKeyFilter) bool {
+
+	for _, filter := range filters {
+		if filter.LogicalOp != "OR" {
+			continue
+		}
+		filterResult := applyOperator(attributionKeyType, keyValue, filter)
+		// OR is true for any true
+		if filterResult {
+			return true
+		}
+	}
+	return false
+}
+
+func applyOperator(attributionKeyType string, keyValue string,
+	filter AttributionKeyFilter) bool {
+
+	filterResult := true
+	// Currently only supporting matching key filters
+	if filter.AttributionKey == attributionKeyType {
+		switch filter.Operator {
+		case EqualsOpStr:
+			if keyValue != filter.Value {
+				filterResult = false
+			}
+		case NotEqualOpStr:
+			if keyValue == filter.Value {
+				filterResult = false
+			}
+		case ContainsOpStr:
+			if !strings.Contains(keyValue, filter.Value) {
+				filterResult = false
+			}
+		case NotContainsOpStr:
+			if strings.Contains(keyValue, filter.Value) {
+				filterResult = false
+			}
+		default:
+			filterResult = false
+		}
+	}
+	return filterResult
+}
+
+func DoesAdwordsReportExist(attributionKey string) bool {
+	// only campaign, adgroup, keyword reports available
+	if attributionKey == AttributionKeyCampaign || attributionKey == AttributionKeyAdgroup ||
+		attributionKey == AttributionKeyKeyword {
+		return true
+	}
+	return false
+}
+
+func DoesFBReportExist(attributionKey string) bool {
+	// only campaign, adgroup reports available
+	if attributionKey == AttributionKeyCampaign || attributionKey == AttributionKeyAdgroup {
+		return true
+	}
+	return false
+}
+
+func DoesLinkedinReportExist(attributionKey string) bool {
+	// only campaign, adgroup reports available
+	if attributionKey == AttributionKeyCampaign || attributionKey == AttributionKeyAdgroup {
+		return true
+	}
+	return false
 }

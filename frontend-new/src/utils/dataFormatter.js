@@ -169,7 +169,7 @@ export const formatCount = (count, precision) => {
 
 export const getChartTypeMenuItems = (queryType, hasBreakdown) => {
   let menuItems = [];
-  if (queryType === QUERY_TYPE_EVENT) {
+  if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_CAMPAIGN) {
     if (hasBreakdown) {
       menuItems = [
         {
@@ -184,34 +184,9 @@ export const getChartTypeMenuItems = (queryType, hasBreakdown) => {
           key: 'stackedareachart',
           name: 'Stacked Area Chart',
         },
-      ];
-    } else {
-      menuItems = [
         {
-          key: 'sparklines',
-          name: 'Sparkline',
-        },
-        {
-          key: 'linechart',
-          name: 'Line Chart',
-        },
-      ];
-    }
-  }
-  if (queryType === QUERY_TYPE_CAMPAIGN) {
-    if (hasBreakdown) {
-      menuItems = [
-        {
-          key: 'barchart',
-          name: 'Barchart',
-        },
-        {
-          key: 'linechart',
-          name: 'Line Chart',
-        },
-        {
-          key: "stackedareachart",
-          name: "Stacked Area Chart",
+          key: 'stackedbarchart',
+          name: 'Stacked Bar Chart',
         },
       ];
     } else {

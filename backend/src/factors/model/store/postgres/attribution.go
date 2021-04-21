@@ -14,102 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Maps the {attribution key} to the session properties field
-func getQuerySessionProperty(attributionKey string) (string, error) {
-	if attributionKey == model.AttributionKeyCampaign {
-		return U.EP_CAMPAIGN, nil
-	} else if attributionKey == model.AttributionKeySource {
-		return U.EP_SOURCE, nil
-	} else if attributionKey == model.AttributionKeyAdgroup {
-		return U.EP_ADGROUP, nil
-	} else if attributionKey == model.AttributionKeyKeyword {
-		return U.EP_KEYWORD, nil
-	}
-	return "", errors.New("invalid query properties")
-}
-
-// Adds common column names and linked events as header to the result rows.
-func addHeadersByAttributionKey(result *model.QueryResult, query *model.AttributionQuery) {
-	attributionKey := query.AttributionKey
-	result.Headers = append(append(result.Headers, attributionKey), model.AttributionFixedHeaders...)
-	conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
-	costPerConversion := fmt.Sprintf("Cost Per Conversion")
-	conversionEventCompareUsers := fmt.Sprintf("Compare - Users")
-	compareCostPerConversion := fmt.Sprintf("Compare Cost Per Conversion")
-	result.Headers = append(result.Headers, conversionEventUsers, costPerConversion,
-		conversionEventCompareUsers, compareCostPerConversion)
-	if len(query.LinkedEvents) > 0 {
-		for _, event := range query.LinkedEvents {
-			result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
-			result.Headers = append(result.Headers, fmt.Sprintf("%s - CPC", event.Name))
-		}
-	}
-}
-
-func isValidAttributionKeyValueAND(attributionKeyType string, keyValue string,
-	filters []model.AttributionKeyFilter) bool {
-
-	for _, filter := range filters {
-		// supports AND and treats blank operator as AND
-		if filter.LogicalOp == "OR" {
-			continue
-		}
-		filterResult := applyOperator(attributionKeyType, keyValue, filter)
-		// AND is false for any false.
-		if !filterResult {
-			return false
-		}
-	}
-	return true
-}
-
-func isValidAttributionKeyValueOR(attributionKeyType string, keyValue string,
-	filters []model.AttributionKeyFilter) bool {
-
-	for _, filter := range filters {
-		if filter.LogicalOp != "OR" {
-			continue
-		}
-		filterResult := applyOperator(attributionKeyType, keyValue, filter)
-		// OR is true for any true
-		if filterResult {
-			return true
-		}
-	}
-	return false
-}
-
-func applyOperator(attributionKeyType string, keyValue string,
-	filter model.AttributionKeyFilter) bool {
-
-	filterResult := true
-	// Currently only supporting matching key filters
-	if filter.AttributionKey == attributionKeyType {
-		switch filter.Operator {
-		case model.EqualsOpStr:
-			if keyValue != filter.Value {
-				filterResult = false
-			}
-		case model.NotEqualOpStr:
-			if keyValue == filter.Value {
-				filterResult = false
-			}
-		case model.ContainsOpStr:
-			if !strings.Contains(keyValue, filter.Value) {
-				filterResult = false
-			}
-		case model.NotContainsOpStr:
-			if strings.Contains(keyValue, filter.Value) {
-				filterResult = false
-			}
-		default:
-			log.Error("invalid filter operation found: " + filter.Operator)
-			filterResult = false
-		}
-	}
-	return filterResult
-}
-
 // ExecuteAttributionQuery Executes the Attribution using following steps:
 //	1. Get all the sessions data (userId, attributionId, timestamp) for given period by attribution key
 // 	2. Add the website visitor info using session data from step 1
@@ -130,7 +34,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, errors.New("failed to get project Settings")
 	}
 	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
-		return nil, errors.New("execute attribution query failed as no ad-words customer account id found")
+		return &model.QueryResult{}, errors.New(model.AttributionErrorIntegrationNotFound)
 	}
 	sessionEventNameID, eventNameToIDList, err := pg.getEventInformation(projectID, query)
 	if err != nil {
@@ -211,13 +115,16 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	addWebsiteVisitorsInfo(attributionData, sessions, len(query.LinkedEvents))
 
 	// 5. Add the performance information
-	currency, err := pg.AddAdwordsPerformanceReportInfo(projectID, attributionData, query.From, query.To,
-		*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey, query.Timezone)
-	if err != nil {
-		return nil, err
+	currency := ""
+	if model.DoesAdwordsReportExist(query.AttributionKey) {
+		currency, err = pg.AddAdwordsPerformanceReportInfo(projectID, attributionData, query.From, query.To,
+			*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey, query.Timezone)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	if projectSetting.IntFacebookAdAccount != "" {
+	if projectSetting.IntFacebookAdAccount != "" && model.DoesFBReportExist(query.AttributionKey) {
 		err := pg.AddFacebookPerformanceReportInfo(projectID, attributionData, query.From, query.To,
 			projectSetting.IntFacebookAdAccount, query.AttributionKey, query.Timezone)
 		if err != nil {
@@ -225,7 +132,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		}
 	}
 
-	if projectSetting.IntLinkedinAdAccount != "" {
+	if projectSetting.IntLinkedinAdAccount != "" && model.DoesLinkedinReportExist(query.AttributionKey) {
 		err := pg.AddLinkedinPerformanceReportInfo(projectID, attributionData, query.From, query.To,
 			projectSetting.IntLinkedinAdAccount, query.AttributionKey, query.Timezone)
 		if err != nil {
@@ -244,7 +151,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	})
 
 	result := &model.QueryResult{}
-	addHeadersByAttributionKey(result, query)
+	model.AddHeadersByAttributionKey(result, query)
 	result.Rows = mergedDataRows
 	result.Meta.Currency = currency
 	return result, nil
@@ -541,7 +448,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 		return nil, nil, err
 	}
 
-	attributionEventKey, err := getQuerySessionProperty(query.AttributionKey)
+	attributionEventKey, err := model.GetQuerySessionProperty(query.AttributionKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -576,8 +483,8 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 			continue
 		}
 		// apply filter at extracting session level itself
-		if !isValidAttributionKeyValueAND(query.AttributionKey,
-			attributionId, query.AttributionKeyFilter) && !isValidAttributionKeyValueOR(query.AttributionKey,
+		if !model.IsValidAttributionKeyValueAND(query.AttributionKey,
+			attributionId, query.AttributionKeyFilter) && !model.IsValidAttributionKeyValueOR(query.AttributionKey,
 			attributionId, query.AttributionKeyFilter) {
 			continue
 		}
@@ -1200,10 +1107,9 @@ func getKey(id1 string, id2 string) string {
 // group by value->>'campaign_id', campaign_name LIMIT 5;
 func (pg *Postgres) AddAdwordsPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
 	from, to int64, customerAccountID string, attributionKey string, timeZone string) (string, error) {
+
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
-
 	customerAccountIDs := strings.Split(customerAccountID, ",")
-
 	reportType := model.AdwordsDocumentTypeAlias[model.CampaignPerformanceReport] // 5
 	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
 		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
@@ -1339,10 +1245,9 @@ func (pg *Postgres) GetAdwordsCurrency(projectID uint64, customerAccountID strin
 // AND '20210303' group by value->>'campaign_id', campaign_name LIMIT 5;
 func (pg *Postgres) AddFacebookPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
 	from, to int64, customerAccountID string, attributionKey string, timeZone string) error {
+
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
-
 	customerAccountIDs := strings.Split(customerAccountID, ",")
-
 	reportType := facebookDocumentTypeAlias["campaign_insights"] // 5
 	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
 		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
@@ -1437,10 +1342,9 @@ func (pg *Postgres) AddFacebookPerformanceReportInfo(projectID uint64, attributi
 // timestamp between '20210220' AND '20210303' group by value->>'campaign_group_id', campaign_group_name LIMIT 5;
 func (pg *Postgres) AddLinkedinPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
 	from, to int64, customerAccountID string, attributionKey string, timeZone string) error {
+
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
-
 	customerAccountIDs := strings.Split(customerAccountID, ",")
-
 	reportType := linkedinDocumentTypeAlias["campaign_group_insights"] // 5
 	performanceQuery := "SELECT value->>'campaign_group_id' AS campaign_group_id,  value->>'campaign_group_name' AS campaign_group_name, " +
 		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +

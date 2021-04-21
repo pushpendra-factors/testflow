@@ -1,15 +1,15 @@
-import React from "react";
-import moment from "moment";
+import React from 'react';
+import moment from 'moment';
 import {
   generateColors,
   SortData,
   getTitleWithSorter,
-} from "../../../../utils/dataFormatter";
-import { Number as NumFormat } from "../../../../components/factorsComponents";
+} from '../../../../utils/dataFormatter';
+import { Number as NumFormat } from '../../../../components/factorsComponents';
 
 export const getBreakdownIndices = (data, breakdown) => {
   const result = breakdown.map((elem) => {
-    const str = elem.name + "_" + elem.property;
+    const str = elem.name + '_' + elem.property;
     return data.result_group[1].headers.findIndex((elem) => elem === str);
   });
   return result;
@@ -17,7 +17,7 @@ export const getBreakdownIndices = (data, breakdown) => {
 
 export const getDateBreakdownIndices = (data, breakdown) => {
   const result = breakdown.map((elem) => {
-    const str = elem.name + "_" + elem.property;
+    const str = elem.name + '_' + elem.property;
     return data.result_group[0].headers.findIndex((elem) => elem === str);
   });
   return result;
@@ -46,41 +46,13 @@ export const formatData = (data, arrayMapper, breakdown, currentEventIndex) => {
         });
         result.push({
           index,
-          label: label.join(", "),
+          label: label.join(', '),
           value: elem[currDataIndex],
           color: colors[currentEventIndex],
         });
-        // if (elem[currDataIndex]) {
-        //   const dateLabel = [];
-        //   const dataOverTime = [];
-        //   // dateRows.forEach((row) => {
-        //   //   if (!row.is_done) {
-        //   //     dateBreakdownIndices.forEach((b) => {
-        //   //       if (b > -1) {
-        //   //         dateLabel.push(row[b]);
-        //   //       }
-        //   //     });
-        //   //     if (label.join(", ") === dateLabel.join(", ")) {
-        //   //       dataOverTime.push(row);
-        //   //       row.is_done = true;
-        //   //     }
-        //   //   }
-        //   // });
-        //   console.log(elem[currDataIndex])
-        //   console.log(dataOverTime)
-
-        // } else {
-        //   result.push({
-        //     index,
-        //     label: label.join(", "),
-        //     value: elem[currDataIndex],
-        //     color: colors[currentEventIndex],
-        //     dataOverTime: [],
-        //   });
-        // }
       });
     }
-    return SortData(result, "value", "descend");
+    return SortData(result, 'value', 'descend');
   } catch (err) {
     console.log(err);
     return [];
@@ -99,8 +71,8 @@ export const getTableColumns = (
     return {
       title: data.result_group[1].headers[b],
       dataIndex: data.result_group[1].headers[b],
-      fixed: index < 2 ? "left" : "",
-      width: 150
+      fixed: index < 2 ? 'left' : '',
+      width: 150,
     };
   });
   const eventCols = arrayMapper.map((elem) => {
@@ -133,7 +105,7 @@ export const getTableData = (
   const currEventName = arrayMapper.find(
     (elem) => elem.index === currentEventIndex
   ).eventName;
-  const filteredRows = data.result_group[1].rows.filter((row) => 
+  const filteredRows = data.result_group[1].rows.filter((row) =>
     row[0].toString().toLowerCase().includes(searchText.toLowerCase())
   );
   const result = filteredRows.map((d, index) => {
@@ -156,7 +128,7 @@ export const getTableData = (
     };
   });
   if (!currentSorter.key) {
-    return SortData(result, currEventName, "descend");
+    return SortData(result, currEventName, 'descend');
   }
   return SortData(result, currentSorter.key, currentSorter.order);
 };
@@ -175,14 +147,14 @@ export const formatDataInLineChartFormat = (
   const currDataIndex = data.result_group[0].headers.findIndex(
     (elem) => elem === currEventName
   );
-  const format = "YYYY-MM-DD HH-mm";
+  const format = 'YYYY-MM-DD HH-mm';
   let dates = new Set();
-  const dateTimeIndex = data.result_group[0].headers.indexOf("datetime");
+  const dateTimeIndex = data.result_group[0].headers.indexOf('datetime');
   data.result_group[0].rows.forEach((row) => {
     dates.add(moment(row[dateTimeIndex]).format(format));
   });
   dates = Array.from(dates);
-  const xDates = ["x", ...dates];
+  const xDates = ['x', ...dates];
   const result = visibleProperties.map((v) => {
     const dateBreakdownIndices = getDateBreakdownIndices(data, breakdown);
     const breakdownRows = data.result_group[0].rows.filter((row) => {
@@ -192,7 +164,7 @@ export const formatDataInLineChartFormat = (
           dateLabel.push(row[b]);
         }
       });
-      return dateLabel.join(", ") === v.label;
+      return dateLabel.join(', ') === v.label;
     });
     const breakdownLabel = breakdownMapper.find(
       (elem) => elem.eventName === v.label
@@ -211,4 +183,58 @@ export const formatDataInLineChartFormat = (
     return values;
   });
   return [xDates, ...result];
+};
+
+export const formatDataInHighChartsFormat = (
+  data,
+  arrayMapper,
+  currentEventIndex,
+  visibleProperties
+) => {
+  if (
+    !data.headers ||
+    !data.headers.length ||
+    !data.rows ||
+    !data.rows.length
+  ) {
+    return {
+      categories: [],
+      highchartsData: [],
+    };
+  }
+  const colors = generateColors(visibleProperties.length);
+  const event = arrayMapper.find((elem) => elem.index === currentEventIndex)
+    .eventName;
+  const eventIndex = data.headers.findIndex((h) => h === event);
+  const dateIndex = data.headers.findIndex((h) => h === 'datetime');
+  let differentDates = new Set();
+  data.rows.forEach((row) => {
+    differentDates.add(row[dateIndex]);
+  });
+  differentDates = Array.from(differentDates);
+  const resultantData = visibleProperties.map((property, index) => {
+    const initialData = differentDates.map(() => {
+      return 0;
+    });
+    return {
+      name: property.label,
+      data: initialData,
+      color: colors[index],
+      marker: {
+        enabled: false,
+      },
+    };
+  });
+  data.rows.forEach((row) => {
+    const breakdownJoin = row.slice(0, dateIndex).join(', ');
+    const bIdx = resultantData.findIndex((d) => d.name === breakdownJoin);
+    if (bIdx > -1) {
+      const idx = differentDates.indexOf(row[dateIndex]);
+      resultantData[bIdx].data[idx] = row[eventIndex];
+    }
+  });
+  return {
+    categories: differentDates,
+    highchartsData: resultantData,
+  };
 };
