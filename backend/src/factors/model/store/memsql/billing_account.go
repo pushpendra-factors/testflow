@@ -3,6 +3,7 @@ package memsql
 import (
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 
 	"github.com/jinzhu/gorm"
@@ -21,6 +22,7 @@ func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*m
 	}
 
 	bA := &model.BillingAccount{
+		ID:        U.GetUUID(),
 		PlanID:    plan.ID,
 		AgentUUID: AgentUUID,
 	}
@@ -74,8 +76,8 @@ func (store *MemSQL) GetBillingAccountByAgentUUID(AgentUUID string) (*model.Bill
 	return &bA, http.StatusFound
 }
 
-func (store *MemSQL) UpdateBillingAccount(id, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int {
-	if id == 0 || planId == 0 {
+func (store *MemSQL) UpdateBillingAccount(id string, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int {
+	if id == "" || planId == 0 {
 		log.WithFields(log.Fields{
 			"id":      id,
 			"plan_id": planId,
@@ -117,7 +119,7 @@ func (store *MemSQL) UpdateBillingAccount(id, planId uint64, orgName, billingAdd
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) GetProjectsUnderBillingAccountID(ID uint64) ([]model.Project, int) {
+func (store *MemSQL) GetProjectsUnderBillingAccountID(ID string) ([]model.Project, int) {
 	db := C.GetServices().Db
 	projects := make([]model.Project, 0, 0)
 
@@ -139,7 +141,7 @@ func (store *MemSQL) GetAgentsByProjectIDs(projectIDs []uint64) ([]*model.Agent,
 	return agents, http.StatusFound
 }
 
-func (store *MemSQL) GetAgentsUnderBillingAccountID(ID uint64) ([]*model.Agent, int) {
+func (store *MemSQL) GetAgentsUnderBillingAccountID(ID string) ([]*model.Agent, int) {
 	db := C.GetServices().Db
 	agents := make([]*model.Agent, 0, 0)
 

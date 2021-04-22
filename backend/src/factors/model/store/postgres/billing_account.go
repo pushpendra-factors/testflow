@@ -74,8 +74,8 @@ func (pg *Postgres) GetBillingAccountByAgentUUID(AgentUUID string) (*model.Billi
 	return &bA, http.StatusFound
 }
 
-func (pg *Postgres) UpdateBillingAccount(id, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int {
-	if id == 0 || planId == 0 {
+func (pg *Postgres) UpdateBillingAccount(id string, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int {
+	if id == "" || planId == 0 {
 		log.WithFields(log.Fields{
 			"id":      id,
 			"plan_id": planId,
@@ -117,7 +117,7 @@ func (pg *Postgres) UpdateBillingAccount(id, planId uint64, orgName, billingAddr
 	return http.StatusAccepted
 }
 
-func (pg *Postgres) GetProjectsUnderBillingAccountID(ID uint64) ([]model.Project, int) {
+func (pg *Postgres) GetProjectsUnderBillingAccountID(ID string) ([]model.Project, int) {
 	db := C.GetServices().Db
 	projects := make([]model.Project, 0, 0)
 
@@ -139,7 +139,7 @@ func (pg *Postgres) GetAgentsByProjectIDs(projectIDs []uint64) ([]*model.Agent, 
 	return agents, http.StatusFound
 }
 
-func (pg *Postgres) GetAgentsUnderBillingAccountID(ID uint64) ([]*model.Agent, int) {
+func (pg *Postgres) GetAgentsUnderBillingAccountID(ID string) ([]*model.Agent, int) {
 	db := C.GetServices().Db
 	agents := make([]*model.Agent, 0, 0)
 

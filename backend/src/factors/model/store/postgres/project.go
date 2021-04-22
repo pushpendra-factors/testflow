@@ -165,7 +165,7 @@ func (pg *Postgres) createProjectDependencies(projectID uint64, agentUUID string
 
 // CreateProjectWithDependencies separate create method with dependencies to avoid breaking tests.
 func (pg *Postgres) CreateProjectWithDependencies(project *model.Project, agentUUID string,
-	agentRole uint64, billingAccountID uint64) (*model.Project, int) {
+	agentRole uint64, billingAccountID string) (*model.Project, int) {
 
 	cProject, errCode := createProject(project)
 	if errCode != http.StatusCreated {

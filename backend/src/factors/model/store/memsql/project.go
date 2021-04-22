@@ -171,7 +171,7 @@ func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID strin
 
 // CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
 func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agentUUID string,
-	agentRole uint64, billingAccountID uint64) (*model.Project, int) {
+	agentRole uint64, billingAccountID string) (*model.Project, int) {
 
 	cProject, errCode := createProject(project)
 	if errCode != http.StatusCreated {
