@@ -493,7 +493,9 @@ CREATE TABLE IF NOT EXISTS property_details(
     event_name_id bigint null,
     `key` text  NOT NULL,
     `type` text  NOT NULL,
-    entity integer  NOT NULL
+    entity integer  NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS smart_property_rules (

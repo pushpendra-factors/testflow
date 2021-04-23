@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	U "factors/util"
 
@@ -15,11 +16,13 @@ import (
 // PropertyDetail implements property_details table
 type PropertyDetail struct {
 	// Composite primary key with project_id, event_name_id,key .
-	ProjectID   uint64  `gorm:"unique_index:configured_properties_project_id_event_name_id_key_unique_idx" json:"project_id"`
-	EventNameID *uint64 `gorm:"unique_index:configured_properties_project_id_event_name_id_key_unique_idx" json:"event_name_id"`
-	Key         string  `gorm:"unique_index:configured_properties_project_id_event_name_id_key_unique_idx" json:"key"`
-	Type        string  `gorm:"not null" json:"type"`
-	Entity      int     `gorm:"not null" json:"entity"`
+	ProjectID   uint64    `gorm:"unique_index:configured_properties_project_id_event_name_id_key_unique_idx" json:"project_id"`
+	EventNameID *uint64   `gorm:"unique_index:configured_properties_project_id_event_name_id_key_unique_idx" json:"event_name_id"`
+	Key         string    `gorm:"unique_index:configured_properties_project_id_event_name_id_key_unique_idx" json:"key"`
+	Type        string    `gorm:"not null" json:"type"`
+	Entity      int       `gorm:"not null" json:"entity"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // cache properties type
