@@ -1,17 +1,17 @@
-import React, { useRef, useEffect, useCallback } from "react";
-import * as d3 from "d3";
-import ReactDOMServer from "react-dom/server";
-import styles from "./styles.module.scss";
+import React, { useRef, useEffect, useCallback } from 'react';
+import * as d3 from 'd3';
+import ReactDOMServer from 'react-dom/server';
+import styles from './styles.module.scss';
 import {
   REPORT_SECTION,
   DASHBOARD_WIDGET_SECTION,
   BAR_CHART_XAXIS_TICK_LENGTH,
   DASHBOARD_MODAL,
   FUNNELS_COUNT,
-} from "../../utils/constants";
-import TopLegends from "./TopLegends";
-import { getBarChartLeftMargin, getMaxYpoint } from "../BarChart/utils";
-import { Text, Number as NumFormat } from "../factorsComponents";
+} from '../../utils/constants';
+import TopLegends from './TopLegends';
+import { getBarChartLeftMargin, getMaxYpoint } from '../BarChart/utils';
+import { Text, Number as NumFormat } from '../factorsComponents';
 
 function GroupedBarChart({
   chartData,
@@ -22,11 +22,11 @@ function GroupedBarChart({
   method2,
   height: widgetHeight,
   section,
-  title = "chart",
+  title = 'chart',
   cardSize = 1,
   allValues,
   legends,
-  tooltipTitle
+  tooltipTitle,
 }) {
   const renderedData = chartData.slice(0, FUNNELS_COUNT[cardSize]);
   const keys = Object.keys(renderedData[0]).slice(1);
@@ -42,142 +42,142 @@ function GroupedBarChart({
     const tooltip = d3.select(tooltipRef.current);
 
     const showTooltip = (data) => {
-      const impressionsIdx = responseHeaders.indexOf("Impressions");
-      const clicksIdx = responseHeaders.indexOf("Clicks");
-      const spendIdx = responseHeaders.indexOf("Spend");
-      const visitorsIdx = responseHeaders.indexOf("Website Visitors");
+      const impressionsIdx = responseHeaders.indexOf('Impressions');
+      const clicksIdx = responseHeaders.indexOf('Clicks');
+      const spendIdx = responseHeaders.indexOf('Spend');
+      const visitorsIdx = responseHeaders.indexOf('Website Visitors');
       const row = responseRows.find((elem) => elem[0] === data.group);
       let padY = 300;
       let padX = 10;
 
       if (section === DASHBOARD_MODAL) {
         padY += 25;
-        padX = -10
+        padX = -10;
       }
       tooltip
-        .style("left", d3.event.pageX + padX + "px")
-        .style("top", d3.event.pageY - padY + "px")
-        .style("display", "inline-block")
+        .style('left', d3.event.pageX + padX + 'px')
+        .style('top', d3.event.pageY - padY + 'px')
+        .style('display', 'inline-block')
         .html(
           ReactDOMServer.renderToString(
             <>
-              <div className="pb-3 groupInfo">
+              <div className='pb-3 groupInfo'>
                 <Text
-                  type="title"
-                  weight="bold"
-                  color="grey-8"
-                  extraClass="mb-0"
+                  type='title'
+                  weight='bold'
+                  color='grey-8'
+                  extraClass='mb-0'
                 >
                   {data.group}
                 </Text>
               </div>
-              <div className="py-3 horizontal-border">
+              <div className='py-3 horizontal-border'>
                 <Text
-                  type="title"
-                  weight="bold"
-                  color="grey"
+                  type='title'
+                  weight='bold'
+                  color='grey'
                   level={8}
-                  extraClass="uppercase leading-4 mb-0"
+                  extraClass='uppercase leading-4 mb-0'
                 >
                   {tooltipTitle}
                 </Text>
-                <div className="flex justify-between mt-2">
+                <div className='flex justify-between mt-2'>
                   <Text
                     style={{ color: colors[0] }}
-                    type="title"
-                    extraClass="mb-0 leading-4"
-                    weight="bold"
+                    type='title'
+                    extraClass='mb-0 leading-4'
+                    weight='bold'
                     level={8}
                   >
                     {method1}
                   </Text>
-                  <Text color="grey2" type="title" extraClass="mb-0">
+                  <Text color='grey2' type='title' extraClass='mb-0'>
                     <NumFormat number={data[method1]} />
                   </Text>
                 </div>
-                <div className="flex justify-between mt-2">
+                <div className='flex justify-between mt-2'>
                   <Text
                     style={{ color: colors[1] }}
-                    type="title"
-                    extraClass="mb-0 leading-4"
-                    weight="bold"
+                    type='title'
+                    extraClass='mb-0 leading-4'
+                    weight='bold'
                     level={8}
                   >
                     {method2}
                   </Text>
-                  <Text color="grey2" type="title" extraClass="mb-0">
+                  <Text color='grey2' type='title' extraClass='mb-0'>
                     <NumFormat number={data[method2]} />
                   </Text>
                 </div>
               </div>
-              <div className="pt-3">
-                <div className="flex justify-between">
+              <div className='pt-3'>
+                <div className='flex justify-between'>
                   <Text
-                    color="grey2"
-                    type="title"
-                    extraClass="mb-0 leading-4"
+                    color='grey2'
+                    type='title'
+                    extraClass='mb-0 leading-4'
                     level={8}
                   >
                     Impressions
                   </Text>
                   <Text
-                    color="grey2"
-                    type="title"
-                    extraClass="mb-0 leading-4"
+                    color='grey2'
+                    type='title'
+                    extraClass='mb-0 leading-4'
                     level={8}
                   >
                     <NumFormat number={row[impressionsIdx]} />
                   </Text>
                 </div>
-                <div className="flex justify-between mt-2">
+                <div className='flex justify-between mt-2'>
                   <Text
-                    color="grey2"
-                    type="title"
-                    extraClass="mb-0 leading-4"
+                    color='grey2'
+                    type='title'
+                    extraClass='mb-0 leading-4'
                     level={8}
                   >
                     Clicks
                   </Text>
                   <Text
-                    color="grey2"
-                    type="title"
-                    extraClass="mb-0 leading-4"
+                    color='grey2'
+                    type='title'
+                    extraClass='mb-0 leading-4'
                     level={8}
                   >
                     <NumFormat number={row[clicksIdx]} />
                   </Text>
                 </div>
-                <div className="flex justify-between mt-2">
+                <div className='flex justify-between mt-2'>
                   <Text
-                    color="grey2"
-                    type="title"
-                    extraClass="mb-0 leading-4"
+                    color='grey2'
+                    type='title'
+                    extraClass='mb-0 leading-4'
                     level={8}
                   >
                     Spend
                   </Text>
                   <Text
-                    color="grey2"
-                    type="title"
-                    extraClass="mb-0 leading-4"
+                    color='grey2'
+                    type='title'
+                    extraClass='mb-0 leading-4'
                     level={8}
                   >
                     <NumFormat number={row[spendIdx]} />
                   </Text>
                 </div>
-                <div className="flex justify-between mt-2">
+                <div className='flex justify-between mt-2'>
                   <Text
-                    color="grey2"
-                    type="title"
-                    extraClass="mb-0 leading-4"
+                    color='grey2'
+                    type='title'
+                    extraClass='mb-0 leading-4'
                     level={8}
                   >
                     Visitors
                   </Text>
                   <Text
-                    color="grey2"
-                    type="title"
-                    extraClass="mb-0 leading-4"
+                    color='grey2'
+                    type='title'
+                    extraClass='mb-0 leading-4'
                     level={8}
                   >
                     <NumFormat number={row[visitorsIdx]} />
@@ -190,15 +190,15 @@ function GroupedBarChart({
     };
 
     const hideTooltip = (d) => {
-      tooltip.style("display", "none");
+      tooltip.style('display', 'none');
     };
 
     d3.select(chartRef.current)
-      .html("")
-      .append("svg")
-      .attr("width", availableWidth)
-      .attr("height", widgetHeight || 420)
-      .attr("id", `funnel-grouped-svg-${title}`);
+      .html('')
+      .append('svg')
+      .attr('width', availableWidth)
+      .attr('height', widgetHeight || 420)
+      .attr('id', `funnel-grouped-svg-${title}`);
     const svg = d3.select(`#funnel-grouped-svg-${title}`),
       margin = {
         top: 10,
@@ -206,11 +206,11 @@ function GroupedBarChart({
         bottom: 30,
         left: getBarChartLeftMargin(max),
       },
-      width = +svg.attr("width") - margin.left - margin.right,
-      height = +svg.attr("height") - margin.top - margin.bottom,
+      width = +svg.attr('width') - margin.left - margin.right,
+      height = +svg.attr('height') - margin.top - margin.bottom,
       g = svg
-        .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        .append('g')
+        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
     const x0 = d3.scaleBand().rangeRound([0, width]).padding(0.25);
     const x1 = d3.scaleBand().paddingInner(0.05);
@@ -225,25 +225,25 @@ function GroupedBarChart({
     x1.domain(keys).rangeRound([0, x0.bandwidth()]);
     y.domain([0, max]).nice();
 
-    const yAxisGrid = d3.axisLeft(y).tickSize(-width).tickFormat("").ticks(5);
+    const yAxisGrid = d3.axisLeft(y).tickSize(-width).tickFormat('').ticks(5);
 
-    g.append("g")
-      .attr("class", "y-axis-grid")
+    g.append('g')
+      .attr('class', 'y-axis-grid')
       .call(yAxisGrid)
-      .selectAll("line")
-      .attr("stroke", "#E7E9ED");
+      .selectAll('line')
+      .attr('stroke', '#E7E9ED');
 
     const base = g
-      .append("g")
-      .selectAll("g")
+      .append('g')
+      .selectAll('g')
       .data(renderedData)
       .enter()
-      .append("g")
-      .attr("transform", function (d) {
-        return "translate(" + x0(d.name) + ",0)";
+      .append('g')
+      .attr('transform', function (d) {
+        return 'translate(' + x0(d.name) + ',0)';
       });
     base
-      .selectAll("rect")
+      .selectAll('rect')
       .data(function (d) {
         return keys.map(function (key) {
           return {
@@ -256,48 +256,48 @@ function GroupedBarChart({
         });
       })
       .enter()
-      .append("rect")
-      .attr("x", function (d) {
+      .append('rect')
+      .attr('x', function (d) {
         return x1(d.key);
       })
-      .attr("y", function (d) {
+      .attr('y', function (d) {
         return y(d.value);
       })
-      .attr("width", x1.bandwidth())
-      .attr("height", function (d) {
+      .attr('width', x1.bandwidth())
+      .attr('height', function (d) {
         return height - y(d.value);
       })
-      .attr("fill", function (d) {
+      .attr('fill', function (d) {
         return z(d.key);
       })
-      .on("mousemove", (d) => {
+      .on('mousemove', (d) => {
         showTooltip(d);
       })
-      .on("mouseout", () => {
+      .on('mouseout', () => {
         hideTooltip();
       });
-    g.append("g")
-      .attr("class", "x-axis")
-      .attr("transform", "translate(0," + height + ")")
+    g.append('g')
+      .attr('class', 'x-axis')
+      .attr('transform', 'translate(0,' + height + ')')
       .call(
         d3.axisBottom(x0).tickFormat((d) => {
           let label;
-          if (d.includes("$no_group")) {
-            label = "Overall";
+          if (d.includes('$no_group')) {
+            label = 'Overall';
           } else {
             label = d;
           }
           if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
             return (
-              label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + "..."
+              label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + '...'
             );
           }
           return label;
         })
       );
 
-    g.append("g")
-      .attr("class", "y-axis")
+    g.append('g')
+      .attr('class', 'y-axis')
       .call(
         d3
           .axisLeft(y)
@@ -328,13 +328,23 @@ function GroupedBarChart({
   }, [drawChart, cardSize]);
 
   return (
-    <div className="w-full">
+    <div className='w-full'>
       {section === DASHBOARD_WIDGET_SECTION ? (
-        <TopLegends legends={legends} cardSize={cardSize} colors={colors} />
+        <TopLegends
+          showFullLegends={false}
+          legends={legends}
+          cardSize={cardSize}
+          colors={colors}
+        />
       ) : null}
       <div ref={chartRef} className={styles.groupedChart}></div>
       {section === REPORT_SECTION || section === DASHBOARD_MODAL ? (
-        <TopLegends legends={legends} cardSize={cardSize} colors={colors} />
+        <TopLegends
+          showFullLegends={true}
+          legends={legends}
+          cardSize={cardSize}
+          colors={colors}
+        />
       ) : null}
       <div ref={tooltipRef} className={styles.groupedChartTooltip}></div>
     </div>

@@ -105,10 +105,8 @@ export const getTableData = (
   const currEventName = arrayMapper.find(
     (elem) => elem.index === currentEventIndex
   ).eventName;
-  const filteredRows = data.result_group[1].rows.filter((row) =>
-    row[0].toString().toLowerCase().includes(searchText.toLowerCase())
-  );
-  const result = filteredRows.map((d, index) => {
+
+  const result = data.result_group[1].rows.map((d, index) => {
     const breakdownVals = {};
     breakdownIndices.forEach((b) => {
       const dataIndex = data.result_group[1].headers[b];
@@ -127,10 +125,25 @@ export const getTableData = (
       ...eventVals,
     };
   });
+
+  const filteredResult = result.filter((r) => {
+    for (let key in r) {
+      try {
+        return r[key]
+          .toString()
+          .toLowerCase()
+          .includes(searchText.toLowerCase());
+      } catch (err) {
+        console.log(err);
+        return false;
+      }
+    }
+  });
+
   if (!currentSorter.key) {
-    return SortData(result, currEventName, 'descend');
+    return SortData(filteredResult, currEventName, 'descend');
   }
-  return SortData(result, currentSorter.key, currentSorter.order);
+  return SortData(filteredResult, currentSorter.key, currentSorter.order);
 };
 
 export const formatDataInLineChartFormat = (

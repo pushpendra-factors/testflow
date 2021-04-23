@@ -9,7 +9,8 @@ export const cardClassNames = {
 export const getRearrangedData = (units, dashboard) => {
   let result;
   if (!dashboard.units_position || !dashboard.units_position.position) {
-    result = units.map((u, index) => {
+    const clonedUnits = [...units];
+    result = clonedUnits.reverse().map((u, index) => {
       return {
         ...u,
         position: index,
