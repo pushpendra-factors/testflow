@@ -17,8 +17,8 @@ type DisplayName struct {
 	EventName   string `gorm:"unique_index:display_names_project_id_event_name_property_name_tag_unique_idx" json:"event_name"`
 	PropertyName   string `gorm:"unique_index:display_names_project_id_event_name_property_name_tag_unique_idx" json:"property_name"`
 	Tag   string `gorm:"unique_index:display_names_project_id_event_name_property_name_tag_unique_idx" json:"tag"`
-	Entity      int     `gorm:"not null" json:"entity"`
-	Group        string  `gorm:"not null" json:"group"`
+	EntityType      int     `gorm:"not null" json:"entity_type"`
+	GroupName        string  `gorm:"not null" json:"group_name"`
 	GroupObjectName        string  `gorm:"not null" json:"group_object_name"`
 	DisplayName        string  `gorm:"not null" json:"display_name"`
 	CreatedAt   time.Time `json:"created_at"`
