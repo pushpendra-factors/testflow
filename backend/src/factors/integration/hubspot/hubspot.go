@@ -511,9 +511,25 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, apiKey string) (bool, 
 				continue
 			}
 
+			label := U.GetPropertyValueAsString(propertiesMeta[i].Label)
+			if label == "" {
+				logCtx.Error("Failed to get property label")
+			} else {
+				err := store.GetStore().CreateOrUpdateDisplayNameByObjectType(projectID, model.GetCRMEnrichPropertyKeyByType(
+					model.SmartCRMEventSourceHubspot,
+					docType,
+					fieldName,
+				), docType, label , model.SmartCRMEventSourceHubspot)
+				if(err != http.StatusCreated){
+					logCtx.Error("Failed to create or update display name")
+				}
+			}
+
 			if failure := syncHubspotPropertyByType(projectID, docType, fieldName, fieldType); failure != nil {
 				docTypeFailure = true
 			}
+
+			
 		}
 
 		if docTypeFailure {

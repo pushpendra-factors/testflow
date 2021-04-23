@@ -40,6 +40,7 @@ func GetEventNamesHandler(c *gin.Context) {
 		"projectId": projectId,
 	})
 
+	isDisplayNameEnabled := c.Query("is_display_name_enabled")
 	// RedisGet is the only call. In case of Cache crash, job will be manually triggered to repopulate cache
 	// No fallback for now.
 	eventNames, err := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, C.GetLookbackWindowForEventUserCache())
@@ -58,8 +59,35 @@ func GetEventNamesHandler(c *gin.Context) {
 	if fNames, pExists := FORCED_EVENT_NAMES[projectId]; pExists {
 		eventNames[U.FrequentlySeen] = append(eventNames[U.FrequentlySeen], fNames...)
 	}
+	if(isDisplayNameEnabled == "true"){
+		eventsWithGroups := make(map[string][]string)
+		standardGroups := U.STANDARD_EVENTS_GROUP_NAMES
+		for groupName, events := range eventNames {
+			for _, event := range events {
+				group := groupName
+				if(standardGroups[event] != ""){
+					group = standardGroups[event]
+				}
+				if(eventsWithGroups[group] == nil){
+					eventsWithGroups[group] = make([]string, 0)
+				}
+				eventsWithGroups[group] = append(eventsWithGroups[group], event)
+			}
+		}
 
-	// TODO: Janani Removing the IsExact property from output since its anyway backward compat with UI
-	// Will remove exact/approx logic in UI as well
-	c.JSON(http.StatusOK, gin.H{"event_names": eventNames})
+		_, displayNames :=  store.GetStore().GetDisplayNamesForAllEvents(projectId)
+		displayNameEvents := make(map[string]string)
+		standardEvents := U.STANDARD_EVENTS_DISPLAY_NAMES
+		for event, displayName := range standardEvents {
+			displayNameEvents[event] = displayName
+		}
+		for event, displayName := range displayNames {
+			displayNameEvents[event] = displayName
+		}
+		// TODO: Janani Removing the IsExact property from output since its anyway backward compat with UI
+		// Will remove exact/approx logic in UI as well
+		c.JSON(http.StatusOK, gin.H{"event_names": eventsWithGroups, "display_names": displayNameEvents})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"event_names": eventNames})
+	}
 }

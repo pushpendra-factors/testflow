@@ -128,6 +128,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	})
 
 	isExplain := c.Query("is_explain")
+	isDisplayNameEnabled := c.Query("is_display_name_enabled")
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
 	if modelIdParam != "" {
@@ -164,7 +165,25 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	properties = U.ClassifyDateTimePropertyKeys(&properties)
 	U.FillMandatoryDefaultUserProperties(&properties)
 	U.FilterDisabledCoreUserProperties(&properties)
+	
+	if(isDisplayNameEnabled == "true"){
+		_, displayNames :=  store.GetStore().GetDisplayNamesForAllUserProperties(projectId)
+		standardProperties := U.STANDARD_USER_PROPERTIES_DISPLAY_NAMES
+		displayNamesOp := make(map[string]string)
+		for property, displayName := range standardProperties {
+			displayNamesOp[property] = displayName
+		}
+		for property, displayName := range displayNames {
+			displayNamesOp[property] = displayName
+		}
 
+		_, displayNames =  store.GetStore().GetDisplayNamesForObjectEntities(projectId)
+		for property, displayName := range displayNames {
+			displayNamesOp[property] = displayName
+		}
+		c.JSON(http.StatusOK, gin.H{"properties": properties, "display_names": displayNamesOp})
+		return
+	}
 	c.JSON(http.StatusOK, properties)
 }
 

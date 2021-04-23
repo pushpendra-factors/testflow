@@ -1,77 +1,76 @@
-$textColor: #3E516C;
+$textColor: #3e516c;
 
 .ungroupedChart {
+  width: 100%;
 
-    width: 100%;
-    
-    :global(.area) {
-        fill: #E7E9ED;
-    }
+  :global(.area) {
+    fill: #e7e9ed;
+  }
 
-    :global(.axis.axis--y path) {
-        display: none;
-    }
+  :global(.axis.axis--y path) {
+    display: none;
+  }
 
-    :global(.axis.axis--y g.tick line) {
-        display: none;
-    }
+  :global(.axis.axis--y g.tick line) {
+    display: none;
+  }
 
-    :global(.axis.axis--x g.tick line) {
-        display: none;
-    }
+  :global(.axis.axis--x g.tick line) {
+    display: none;
+  }
 
-    :global(.axis.axis--x path) {
-        stroke: #E7E9ED;
-    }
+  :global(.axis.axis--x path) {
+    stroke: #e7e9ed;
+  }
 
-    :global(.y.axis-grid path) {
-        display: none;
-    }
+  :global(.y.axis-grid path) {
+    display: none;
+  }
 
-    :global(.opaque) {
-        opacity: 0.3;
-    }
+  :global(.opaque) {
+    opacity: 0.3;
+  }
 
-    :global(.tick text) {
-        font-size: 12px;
-        line-height: 1rem;
-        fill: $textColor;
-        font-weight: 400;
-        font-style: normal;
-    }
+  :global(.tick text) {
+    font-size: 12px;
+    line-height: 1rem;
+    fill: $textColor;
+    font-weight: 400;
+    font-style: normal;
+  }
 
-    :global(div.toolTip) {
-        position: absolute;
-        width: 200px;
-        padding: 12px 16px 12px 16px;
-        background: #FFFFFF;
-        border: 1px solid #E7E9ED;
-        border-radius: 12px;
-        font-family: 'Work Sans', sans-serif;
-        font-weight: 400;
-        word-wrap: break-word;
-        box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
-        font-size: 12px;
-        line-height: 18px;
-        color: $textColor;
-        z-index: 30;
-    }
+  :global(div.toolTip) {
+    position: absolute;
+    width: 200px;
+    padding: 12px 16px 12px 16px;
+    background: #ffffff;
+    border: 1px solid #e7e9ed;
+    border-radius: 12px;
+    font-family: 'Work Sans', sans-serif;
+    font-weight: 400;
+    word-wrap: break-word;
+    box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
+    font-size: 12px;
+    line-height: 18px;
+    color: $textColor;
+    z-index: 50;
+  }
 }
 
 .changePercents,
 .valueText {
-    font-weight: 600;
-    font-size: 14px;
-    font-family: 'Work Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: 'Work Sans', sans-serif;
 }
 
 .overAllConversionLine {
-    border-left-color: #B7BEC8;
+  border-left-color: #b7bec8;
 }
 
 .conversionText {
-    color: $textColor;
-    font-style: normal;
-    line-height: 24px;
-    font-size: 20px;
+  color: $textColor;
+  font-style: normal;
+  line-height: 24px;
+  font-size: 20px;
 }

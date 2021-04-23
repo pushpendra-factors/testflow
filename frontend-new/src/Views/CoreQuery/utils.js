@@ -53,7 +53,7 @@ const reverseOperatorMap = {
   equals: '=',
   notEqual: '!=',
   contains: 'contains',
-  notContains: 'not contains',
+  notContains: 'does not contain',
   lesserThan: '<',
   lesserThanOrEqual: '<=',
   greaterThan: '>',

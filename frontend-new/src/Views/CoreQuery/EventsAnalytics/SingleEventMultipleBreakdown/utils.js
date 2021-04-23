@@ -150,7 +150,8 @@ export const getDateBasedColumns = (
       return {
         title: elem.property,
         dataIndex,
-        fixed: !bIndex ? 'left' : '', //fixed to left if this is the first column
+        fixed: dataIndices.length === 1 ? "left" : '',
+        width: 150,
       };
     });
   const userBreakdowns = breakdown
@@ -165,8 +166,8 @@ export const getDateBasedColumns = (
       return {
         title: elem.property,
         dataIndex,
-        width: 150,
-        fixed: !eventBreakdowns.length && !bIndex ? 'left' : '', //fixed to left if this is the first column
+        fixed: dataIndices.length === 1 ? "left" : '',
+        width: 150
       };
     });
   let format = 'MMM D';
