@@ -421,7 +421,16 @@ type Model interface {
 	// project_analytics
 	GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error)
 
+	// Property details
 	CreatePropertyDetails(projectID uint64, eventName, propertyKey, propertyType string, isUserProperty bool, allowOverWrite bool) int
 	CreateOrDeletePropertyDetails(projectID uint64, eventName, enKey, pType string, isUserProperty, allowOverWrite bool) error
 	GetAllPropertyDetailsByProjectID(projectID uint64, eventName string, isUserProperty bool) (int, *map[string]string)
+
+	// display names
+	CreateOrUpdateDisplayNameByObjectType(projectID uint64, propertyName, objectType, displayName, group string) int
+	GetDisplayNamesForAllEvents(projectID uint64) (int, map[string]string)
+	GetDisplayNamesForAllEventProperties(projectID uint64, eventName string) (int, map[string]string)
+	GetDisplayNamesForAllUserProperties(projectID uint64) (int, map[string]string)
+	GetDisplayNamesForObjectEntities(projectID uint64) (int, map[string]string)
+	CreateOrUpdateDisplayName(projectID uint64, eventName, propertyName, displayName, tag string) int
 }

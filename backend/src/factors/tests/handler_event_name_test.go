@@ -19,6 +19,8 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	V1 "factors/handler/v1"
+	b64 "encoding/base64"
 )
 
 func sendGetEventNamesApproxRequest(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
@@ -50,6 +52,20 @@ func sendGetEventNamesExactRequest(projectId uint64, agent *model.Agent, r *gin.
 	return w
 }
 
+func sendGetEventNamesExactRequestWithDisplayNames(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	req, err := buildEventNameRequestWithDisplayNames(projectId, "true", cookieData)
+	if err != nil {
+		log.WithError(err).Error("Error getting event names.")
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func buildEventNameRequest(projectId uint64, requestType, cookieData string) (*http.Request, error) {
 	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/event_names?type=%s", projectId, requestType)).
 		WithCookie(&http.Cookie{
@@ -62,6 +78,101 @@ func buildEventNameRequest(projectId uint64, requestType, cookieData string) (*h
 		return nil, err
 	}
 	return req, nil
+}
+
+func sendGetEventProperties(projectId uint64, event string, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	req, err := buildEventPropertiesRequest(projectId, event, "true", cookieData)
+	if err != nil {
+		log.WithError(err).Error("Error getting event properties.")
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func buildEventPropertiesRequest(projectId uint64, event string, requestType, cookieData string) (*http.Request, error) {
+	eventEncoded := b64.StdEncoding.EncodeToString([]byte(event))
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/event_names/%s/properties?is_display_name_enabled=true", projectId, eventEncoded)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func sendGetUserProperties(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	req, err := buildUserPropertiesRequest(projectId, cookieData)
+	if err != nil {
+		log.WithError(err).Error("Error getting event properties.")
+	}
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func buildUserPropertiesRequest(projectId uint64, cookieData string) (*http.Request, error) {
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/user_properties?is_display_name_enabled=true", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func buildEventNameRequestWithDisplayNames(projectId uint64, displayNamesEnabled, cookieData string) (*http.Request, error) {
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/event_names?is_display_name_enabled=%s", projectId, displayNamesEnabled)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func sendCreateDisplayNameRequest(r *gin.Engine, request V1.CreateDisplayNamesParams, agent *model.Agent, projectID uint64) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/events/displayname", projectID)).
+		WithPostParams(request).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating display name")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
 }
 
 func createEventWithTimestampByName(t *testing.T, project *model.Project, user *model.User, name string, timestamp int64) (*model.EventName, *model.Event) {
@@ -127,6 +238,16 @@ func TestGetEventNamesHandler(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
+	rEventName = "$hubspot_contact_created"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
 	_, err = TaskSession.AddSession([]uint64{project.ID}, 0, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
 
@@ -138,5 +259,66 @@ func TestGetEventNamesHandler(t *testing.T) {
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &eventNames)
 	// should contain all event names along with $session.
-	assert.Len(t, eventNames.EventNames, 3)
+	assert.Len(t, eventNames.EventNames, 4)
+
+	var eventNamesWithDisplayNames = struct {
+		EventNames map[string][]string `json:"event_names"`
+		DisplayNames  map[string]string     `json:"display_names"`
+	}{}
+	w = sendGetEventNamesExactRequestWithDisplayNames(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &eventNamesWithDisplayNames)
+	// should contain all event names along with $session.
+	assert.Len(t, eventNamesWithDisplayNames.EventNames["MOST RECENT"], 3)
+	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 13)
+	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Website Session")
+
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"$session", DisplayName: "Test1"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"$hubspot_contact_created", DisplayName: "Test2", PropertyName: ""}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"", DisplayName: "Test3", PropertyName: "$joinTime"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"$session", DisplayName: "Test4", PropertyName: "$is_page_view"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"$session", DisplayName: "Test5", PropertyName: "Dummy"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"", DisplayName: "Test6", PropertyName: "Dummy"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"", DisplayName: "Test6-1", PropertyName: "Dummy"}, agent, project.ID)
+
+	status := store.GetStore().CreateOrUpdateDisplayNameByObjectType( project.ID, "$hubspot_contact_createdddate", "Contact", "Created Date", "Hubspot")
+	assert.Equal(t, status, 201)
+	status = store.GetStore().CreateOrUpdateDisplayNameByObjectType( project.ID, "$hubspot_contact_createdddate1", "Contact", "Created Date", "Hubspot")
+	assert.Equal(t, status, 409)
+	status = store.GetStore().CreateOrUpdateDisplayNameByObjectType( project.ID, "$hubspot_contact_createdddate", "Contact", "Created Date1", "Hubspot")
+	assert.Equal(t, status, 201)
+	status = store.GetStore().CreateOrUpdateDisplayNameByObjectType( project.ID, "$hubspot_opportunity_createdddate", "Opportunity", "Created Date1", "Hubspot")
+	assert.Equal(t, status, 201)
+
+	w = sendGetEventNamesExactRequestWithDisplayNames(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &eventNamesWithDisplayNames)
+	// should contain all event names along with $session.
+	assert.Len(t, eventNamesWithDisplayNames.EventNames["MOST RECENT"], 3)
+	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 13)
+	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Test1")
+	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$hubspot_contact_created"], "Test2")
+
+	var properties = struct {
+		Proprties map[string][]string `json:"properties"`
+		DisplayNames  map[string]string     `json:"display_names"`
+	}{}
+	w = sendGetEventProperties(project.ID, "$session", agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &properties)
+	assert.Equal(t, properties.DisplayNames["$is_page_view"], "Test4")
+	assert.Equal(t, properties.DisplayNames["Dummy"], "Test5")
+
+	w = sendGetUserProperties(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &properties)
+	assert.Equal(t, properties.DisplayNames["$joinTime"], "Test3")
+	assert.Equal(t, properties.DisplayNames["Dummy"], "Test6-1")
+	assert.Equal(t, properties.DisplayNames["$hubspot_contact_createdddate"], "Hubspot Contact Created Date1")
 }
