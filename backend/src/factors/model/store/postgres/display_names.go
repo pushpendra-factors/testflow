@@ -39,7 +39,7 @@ func (pg *Postgres) CreateOrUpdateDisplayName(projectID uint64, eventName, prope
 		EventName: eventName,
 		PropertyName: propertyName,
 		Tag: tag,
-		Entity: entityType,
+		EntityType: entityType,
 		DisplayName: displayName,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -49,7 +49,7 @@ func (pg *Postgres) CreateOrUpdateDisplayName(projectID uint64, eventName, prope
 			updateFields := map[string]interface{}{
 				"display_name": displayName,
 			}
-			query := db.Model(&model.DisplayName{}).Where("project_id = ? AND event_name = ? AND property_name = ? AND  tag = ? AND entity = ?",
+			query := db.Model(&model.DisplayName{}).Where("project_id = ? AND event_name = ? AND property_name = ? AND  tag = ? AND entity_type = ?",
 			projectID, eventName, propertyName, tag, entityType).Updates(updateFields)
 			if err := query.Error; err != nil {
 				logCtx.WithError(err).Error("Failed updating property details.")
@@ -83,8 +83,8 @@ func (pg *Postgres) CreateOrUpdateDisplayNameByObjectType(projectID uint64, prop
 		PropertyName: propertyName,
 		GroupObjectName: objectType,
 		Tag: "Source",
-		Group: group,
-		Entity: model.DisplayNameObjectEntityType,
+		GroupName: group,
+		EntityType: model.DisplayNameObjectEntityType,
 		DisplayName: displayName,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -94,7 +94,7 @@ func (pg *Postgres) CreateOrUpdateDisplayNameByObjectType(projectID uint64, prop
 			updateFields := map[string]interface{}{
 				"display_name": displayName,
 			}
-			query := db.Model(&model.DisplayName{}).Where("project_id = ? AND property_name = ? AND group_object_name = ? AND \"group\" = ? AND tag = ? AND entity = ?",
+			query := db.Model(&model.DisplayName{}).Where("project_id = ? AND property_name = ? AND group_object_name = ? AND group_name = ? AND tag = ? AND entity_type = ?",
 			projectID, propertyName, objectType, group, "Source", model.DisplayNameObjectEntityType).Updates(updateFields)
 			if err := query.Error; err != nil {
 				logCtx.WithError(err).Error("Failed updating property details.")
@@ -122,7 +122,7 @@ func (pg *Postgres)  GetDisplayNamesForAllEvents(projectID uint64) (int, map[str
 
 	displayNameFilter := &model.DisplayName{
 		ProjectID: projectID,
-		Entity:    entityType,
+		EntityType:    entityType,
 	}
 
 	db := C.GetServices().Db
@@ -154,7 +154,7 @@ func (pg *Postgres)  GetDisplayNamesForAllEventProperties(projectID uint64, even
 
 	displayNameFilter := &model.DisplayName{
 		ProjectID: projectID,
-		Entity:    entityType,
+		EntityType:    entityType,
 		EventName: eventName,
 	}
 
@@ -187,7 +187,7 @@ func (pg *Postgres)  GetDisplayNamesForAllUserProperties(projectID uint64) (int,
 
 	displayNameFilter := &model.DisplayName{
 		ProjectID: projectID,
-		Entity:    entityType,
+		EntityType:    entityType,
 	}
 
 	db := C.GetServices().Db
@@ -219,7 +219,7 @@ func (pg *Postgres)  GetDisplayNamesForObjectEntities(projectID uint64) (int, ma
 
 	displayNameFilter := &model.DisplayName{
 		ProjectID: projectID,
-		Entity:    entityType,
+		EntityType:    entityType,
 	}
 
 	db := C.GetServices().Db
@@ -236,8 +236,8 @@ func (pg *Postgres)  GetDisplayNamesForObjectEntities(projectID uint64) (int, ma
 
 	displayNamesMap := make(map[string]string)
 	for _, displayName := range displayNames {
-		if(displayName.Group != ""){
-			displayNamesMap[displayName.PropertyName] = fmt.Sprintf("%s ", displayName.Group)
+		if(displayName.GroupName!= ""){
+			displayNamesMap[displayName.PropertyName] = fmt.Sprintf("%s ", displayName.GroupName)
 		}
 		if(displayName.GroupObjectName != ""){
 			displayNamesMap[displayName.PropertyName] = fmt.Sprintf("%s%s ", displayNamesMap[displayName.PropertyName], displayName.GroupObjectName)
