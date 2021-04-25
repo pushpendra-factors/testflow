@@ -6,7 +6,7 @@ from scripts.adwords import CAMPAIGNS, ADS, AD_GROUPS, CUSTOMER_ACCOUNT_PROPERTI
 
 
 class SyncUtil:
-    MAX_LOOK_BACK_DAYS = 81
+    MAX_LOOK_BACK_DAYS = 30
 
     # generates next sync info with all missing timestamps for each document type.
     @staticmethod
