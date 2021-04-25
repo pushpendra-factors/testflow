@@ -54,6 +54,10 @@ const (
 	tableSalesforceDocuments           = "salesforce_documents"
 	tableQueries                       = "queries"
 	tableScheduledTasks                = "scheduled_tasks"
+	tableLinkedInDocuments             = "linkedin_documents"
+	tablePropertyDetails               = "property_details"
+	tableSmartProperties               = "smart_properties"
+	tableSmartPropertyRules            = "smart_property_rules"
 )
 
 type TableRecord struct {
@@ -487,6 +491,18 @@ func runCreateEventAndDependenciesOnMemSQL(eventsList [][]model.Event) {
 	}
 }
 
+func getIDColumnNameForTable(tableName string) string {
+	idColName := "id"
+	if tableName == tableAgents {
+		idColName = "uuid"
+	} else if tableName == tableSmartProperties || tableName == tablePropertyDetails {
+		idColName = "project_id"
+	} else if isProjectAssociatedTable(tableName) {
+		idColName = "project_id"
+	}
+	return idColName
+}
+
 func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interface{}, userID string) (*TableRecord, int) {
 	logCtx := log.WithField("project_id", projectID).WithField("id", id).
 		WithField("table", tableName)
@@ -500,14 +516,7 @@ func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interfa
 	}
 
 	var record TableRecord
-
-	idColName := "id"
-	if tableName == tableAgents {
-		idColName = "uuid"
-	}
-	if isProjectAssociatedTable(tableName) {
-		idColName = "project_id"
-	}
+	idColName := getIDColumnNameForTable(tableName)
 
 	db := memSQLDB.Table(tableName).Limit(1).Where(fmt.Sprintf("%s = ?", idColName), id)
 	if !isTableWithoutProjectID(tableName) {
@@ -544,13 +553,7 @@ func deleteByIDOnMemSQL(projectID uint64, tableName string, id interface{}, user
 		return http.StatusBadRequest
 	}
 
-	idColName := "id"
-	if tableName == tableAgents {
-		idColName = "uuid"
-	}
-	if isProjectAssociatedTable(tableName) {
-		idColName = "project_id"
-	}
+	idColName := getIDColumnNameForTable(tableName)
 
 	query := fmt.Sprintf("DELETE FROM %s WHERE %s = ?", tableName, idColName)
 	if !isTableWithoutProjectID(tableName) {
@@ -793,6 +796,14 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.ScheduledTask{}
 	case tableQueries:
 		record = &model.Queries{}
+	case tableLinkedInDocuments:
+		record = &model.LinkedinDocument{}
+	case tablePropertyDetails:
+		record = &model.PropertyDetail{}
+	case tableSmartProperties:
+		record = &model.SmartProperties{}
+	case tableSmartPropertyRules:
+		record = &model.SmartPropertyRules{}
 
 	// Tables related to analytics.
 	case tableEvents:
@@ -993,7 +1004,6 @@ func createOrUpdateOnMemSQLInParallel(tableName string, records []interface{}, w
 
 func migrateAllTables(projectIDs []uint64) {
 	tables := []string{
-		tableUserProperties,
 		tableUsers,
 		tableEventNames,
 		tableEvents,
@@ -1015,6 +1025,10 @@ func migrateAllTables(projectIDs []uint64) {
 		tableSalesforceDocuments,
 		tableQueries,
 		tableScheduledTasks,
+		tableLinkedInDocuments,
+		tablePropertyDetails,
+		tableSmartProperties,
+		tableSmartPropertyRules,
 	}
 
 	// Runs replication continiously for each table

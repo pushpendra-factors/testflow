@@ -51,13 +51,13 @@ var smartPropertySources = []string{"all", "facebook", "adwords", "linkedin"}
 
 func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int) {
 	var result model.SmartPropertyRulesConfig
-	sources := make([]model.Source, 0, 0)
+	sources := make([]model.Source, 0)
 	objectAndProperty, isExists := mapOfObjectAndProperty[objectType]
 	if !isExists {
 		return result, http.StatusBadRequest
 	}
 	for _, sourceName := range smartPropertySources {
-		objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
+		objectsAndProperties := make([]model.ChannelObjectAndProperties, 0)
 		for objectName, property := range objectAndProperty {
 			currentProperties := buildProperties(property)
 			objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{objectName})...)
@@ -73,7 +73,7 @@ func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType st
 }
 func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, name string, objectType int) int {
 	db := C.GetServices().Db
-	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
+	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	err := db.Model(&model.SmartPropertyRules{}).
 		Where("project_id = ? AND is_deleted != ? AND name = ? AND type = ?", projectID, true, name, objectType).
 		Find(&smartPropertyRules).Error
@@ -84,7 +84,7 @@ func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, 
 }
 func (store *MemSQL) checkIfRuleNameAlreadyPresentWhileUpdate(projectID uint64, name string, ruleID string, objectType int) int {
 	db := C.GetServices().Db
-	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
+	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	err := db.Model(&model.SmartPropertyRules{}).
 		Where("project_id = ? AND is_deleted != ? AND name = ? AND id != ? AND type = ?", projectID, true, name, ruleID, objectType).
 		Find(&smartPropertyRules).Error
@@ -181,7 +181,7 @@ func (store *MemSQL) UpdateSmartPropertyRules(projectID uint64, ruleID string, s
 		return model.SmartPropertyRules{}, "Invalid type alias.", http.StatusBadRequest
 	}
 	errCode := store.checkIfRuleNameAlreadyPresentWhileUpdate(projectID, smartPropertyRulesDoc.Name, ruleID, objectType)
-	if errCode == http.StatusFound {
+	if errCode == http.StatusFound && !smartPropertyRulesDoc.IsDeleted {
 		return model.SmartPropertyRules{}, "Name already present.", http.StatusBadRequest
 	}
 	updatedFields := map[string]interface{}{
@@ -246,16 +246,16 @@ func validationRules(rulesJsonb *postgres.Jsonb) bool {
 }
 
 func (store *MemSQL) GetSmartPropertyRules(projectID uint64) ([]model.SmartPropertyRules, int) {
-	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
+	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
-		return make([]model.SmartPropertyRules, 0, 0), http.StatusBadRequest
+		return make([]model.SmartPropertyRules, 0), http.StatusBadRequest
 	}
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND is_deleted != ?", projectID, true).Find(&smartPropertyRules).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Warn(err)
-		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
+		return make([]model.SmartPropertyRules, 0), http.StatusNotFound
 	}
 	for index, smartPropertyRule := range smartPropertyRules {
 		objectTypeAlias, typeAliasExists := smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
@@ -268,12 +268,12 @@ func (store *MemSQL) GetSmartPropertyRules(projectID uint64) ([]model.SmartPrope
 }
 
 func (store *MemSQL) GetAllChangedSmartPropertyRulesForProject(projectID uint64) ([]model.SmartPropertyRules, int) {
-	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
+	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	db := C.GetServices().Db
-	err := db.Table("smart_property_rules").Where("project_id = ? AND evaluation_status != ?", projectID, model.EvaluationStatusMap["picked"]).Find(&smartPropertyRules).Error
+	err := db.Table("smart_property_rules").Where("project_id = ? AND evaluation_status != ?", projectID, model.EvaluationStatusMap["picked"]).Order("updated_at asc").Find(&smartPropertyRules).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Warn(err)
-		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
+		return make([]model.SmartPropertyRules, 0), http.StatusNotFound
 	}
 	return smartPropertyRules, http.StatusFound
 }
@@ -326,13 +326,13 @@ func (store *MemSQL) GetProjectIDsHavingSmartPropertyRules() ([]uint64, int) {
 	var projectIDs []uint64
 	rows, err := db.Table("smart_property_rules").Select("DISTINCT(project_id)").Rows()
 	if err != nil {
-		return make([]uint64, 0, 0), http.StatusInternalServerError
+		return make([]uint64, 0), http.StatusInternalServerError
 	}
 	for rows.Next() {
 		var projectID uint64
 		err = rows.Scan(&projectID)
 		if err != nil {
-			return make([]uint64, 0, 0), http.StatusInternalServerError
+			return make([]uint64, 0), http.StatusInternalServerError
 		}
 		projectIDs = append(projectIDs, projectID)
 	}

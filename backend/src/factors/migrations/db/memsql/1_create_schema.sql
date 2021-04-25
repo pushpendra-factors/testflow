@@ -164,7 +164,7 @@ CREATE TABLE IF NOT EXISTS bigquery_settings (
 );
 
 CREATE TABLE IF NOT EXISTS billing_accounts (
-    id bigint AUTO_INCREMENT,
+    id text,
     plan_id bigint,
     agent_uuid text,
     organization_name text,
@@ -173,9 +173,7 @@ CREATE TABLE IF NOT EXISTS billing_accounts (
     phone_no text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
-    SHARD KEY (agent_uuid),
-    PRIMARY KEY (agent_uuid, id),
-    UNIQUE KEY (agent_uuid)
+    PRIMARY KEY (agent_uuid, id)
 
     -- Required constraints.
     -- Ref (agent_uuid) -> agents(id)
@@ -345,7 +343,7 @@ CREATE TABLE IF NOT EXISTS project_agent_mappings (
 
 CREATE TABLE IF NOT EXISTS project_billing_account_mappings (
     project_id bigint,
-    billing_account_id bigint,
+    billing_account_id text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
@@ -495,7 +493,9 @@ CREATE TABLE IF NOT EXISTS property_details(
     event_name_id bigint null,
     `key` text  NOT NULL,
     `type` text  NOT NULL,
-    entity integer  NOT NULL
+    entity integer  NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS smart_property_rules (

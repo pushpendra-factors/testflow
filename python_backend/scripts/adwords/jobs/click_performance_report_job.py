@@ -14,3 +14,12 @@ class ClickPerformanceReportsJob(ReportsFetch):
 
     def __init__(self, next_info):
         super().__init__(next_info)
+
+    # using transform to dedup.
+    def transform_entities(self, rows):
+        already_present = {}
+        for row in rows:
+            if row["gcl_id"] in already_present:
+                continue
+            already_present[row["gcl_id"]] = row
+        return list(already_present.values())

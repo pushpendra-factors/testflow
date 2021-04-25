@@ -79,10 +79,10 @@ type Model interface {
 	// billing_account
 	GetBillingAccountByProjectID(projectID uint64) (*model.BillingAccount, int)
 	GetBillingAccountByAgentUUID(AgentUUID string) (*model.BillingAccount, int)
-	UpdateBillingAccount(id, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int
-	GetProjectsUnderBillingAccountID(ID uint64) ([]model.Project, int)
+	UpdateBillingAccount(id string, planId uint64, orgName, billingAddr, pinCode, phoneNo string) int
+	GetProjectsUnderBillingAccountID(ID string) ([]model.Project, int)
 	GetAgentsByProjectIDs(projectIDs []uint64) ([]*model.Agent, int)
-	GetAgentsUnderBillingAccountID(ID uint64) ([]*model.Agent, int)
+	GetAgentsUnderBillingAccountID(ID string) ([]*model.Agent, int)
 	IsNewProjectAgentMappingCreationAllowed(projectID uint64, emailOfAgentToAdd string) (bool, int)
 
 	// channel_analytics
@@ -245,7 +245,7 @@ type Model interface {
 	EditProjectAgentMapping(projectID uint64, agentUUIDToEdit string, role int64) int
 
 	// project_billing_account
-	GetProjectBillingAccountMappings(billingAccountID uint64) ([]model.ProjectBillingAccountMapping, int)
+	GetProjectBillingAccountMappings(billingAccountID string) ([]model.ProjectBillingAccountMapping, int)
 	GetProjectBillingAccountMapping(projectID uint64) (*model.ProjectBillingAccountMapping, int)
 
 	// project_setting
@@ -269,7 +269,7 @@ type Model interface {
 
 	// project
 	UpdateProject(projectID uint64, project *model.Project) int
-	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID uint64) (*model.Project, int)
+	CreateProjectWithDependencies(project *model.Project, agentUUID string, agentRole uint64, billingAccountID string) (*model.Project, int)
 	CreateDefaultProjectForAgent(agentUUID string) (*model.Project, int)
 	GetProject(id uint64) (*model.Project, int)
 	GetProjectByToken(token string) (*model.Project, int)
@@ -421,7 +421,16 @@ type Model interface {
 	// project_analytics
 	GetEventUserCountsOfAllProjects(lastNDays int) (map[string][]*model.ProjectAnalytics, error)
 
+	// Property details
 	CreatePropertyDetails(projectID uint64, eventName, propertyKey, propertyType string, isUserProperty bool, allowOverWrite bool) int
 	CreateOrDeletePropertyDetails(projectID uint64, eventName, enKey, pType string, isUserProperty, allowOverWrite bool) error
 	GetAllPropertyDetailsByProjectID(projectID uint64, eventName string, isUserProperty bool) (int, *map[string]string)
+
+	// display names
+	CreateOrUpdateDisplayNameByObjectType(projectID uint64, propertyName, objectType, displayName, group string) int
+	GetDisplayNamesForAllEvents(projectID uint64) (int, map[string]string)
+	GetDisplayNamesForAllEventProperties(projectID uint64, eventName string) (int, map[string]string)
+	GetDisplayNamesForAllUserProperties(projectID uint64) (int, map[string]string)
+	GetDisplayNamesForObjectEntities(projectID uint64) (int, map[string]string)
+	CreateOrUpdateDisplayName(projectID uint64, eventName, propertyName, displayName, tag string) int
 }

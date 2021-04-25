@@ -57,13 +57,11 @@ function StackedBarChart({
           enabled: false,
         },
         stackLabels: {
-          enabled: true,
+          enabled: cardSize !== 2,
           formatter: function () {
-            return cardSize !== 2
-              ? ReactDOMServer.renderToString(
-                  <NumFormat shortHand={true} number={this.total} />
-                )
-              : null;
+            return ReactDOMServer.renderToString(
+              <NumFormat shortHand={true} number={this.total} />
+            );
           },
         },
       },
@@ -135,6 +133,7 @@ function StackedBarChart({
           cardSize={cardSize}
           legends={data.map((d) => d.name)}
           colors={data.map((d) => d.color)}
+          showFullLegends={false}
         />
       ) : null}
       <div className={styles.columnChart}>
@@ -145,6 +144,7 @@ function StackedBarChart({
           cardSize={cardSize}
           legends={data.map((d) => d.name)}
           colors={data.map((d) => d.color)}
+          showFullLegends={true}
         />
       ) : null}
     </>

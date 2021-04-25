@@ -432,6 +432,20 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, accessToken, instanceU
 				docTypeFailure = true
 			}
 
+			label, exist := describe.Fields[i]["label"]
+			if !exist {
+				logCtx.Error("Failed to get property label.")
+			} else {
+				logCtx.Info("Inserting display names")
+				err := store.GetStore().CreateOrUpdateDisplayNameByObjectType(projectID, model.GetCRMEnrichPropertyKeyByType(
+					model.SmartCRMEventSourceSalesforce,
+					typAlias,
+					U.GetPropertyValueAsString(fieldName),
+				), typAlias, U.GetPropertyValueAsString(label), model.SmartCRMEventSourceSalesforce)
+				if(err != http.StatusCreated){
+					logCtx.Error("Failed to create or update display name")
+				}
+			}
 		}
 
 		if docTypeFailure {

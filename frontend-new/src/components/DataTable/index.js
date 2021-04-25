@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Table } from "antd";
-import SearchBar from "./SearchBar";
-import styles from "./index.module.scss";
-import { useHistory } from "react-router-dom";
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Table } from 'antd';
+import SearchBar from './SearchBar';
+import styles from './index.module.scss';
+import { useHistory } from 'react-router-dom';
 
 function DataTable({
   tableData,
@@ -25,7 +25,7 @@ function DataTable({
 
   let isDashboardWidget = !isWidgetModal;
 
-  if (history.location.pathname === "/analyse") {
+  if (history.location.pathname === '/analyse') {
     isDashboardWidget = false;
   }
 
@@ -40,10 +40,14 @@ function DataTable({
     (e) => {
       if (componentRef && !componentRef.current.contains(e.target)) {
         showSearchBar(false);
-        handleSearchTextChange("");
+        handleSearchTextChange('');
       } else {
-        if(!searchBar && downloadBtnRef && downloadBtnRef.current.contains(e.target)) {
-          document.getElementById("csvLink").click();
+        if (
+          !searchBar &&
+          downloadBtnRef &&
+          downloadBtnRef.current.contains(e.target)
+        ) {
+          document.getElementById('csvLink').click();
         }
         showSearchBar(true);
       }
@@ -52,9 +56,9 @@ function DataTable({
   );
 
   useEffect(() => {
-    document.addEventListener("mousedown", handleDocumentClick);
+    document.addEventListener('mousedown', handleDocumentClick);
     return () => {
-      document.removeEventListener("mousedown", handleDocumentClick);
+      document.removeEventListener('mousedown', handleDocumentClick);
     };
   }, [handleDocumentClick]);
 
@@ -63,7 +67,7 @@ function DataTable({
   };
 
   return (
-    <div ref={componentRef} className="data-table">
+    <div ref={componentRef} className='data-table'>
       {!isDashboardWidget ? (
         <SearchBar
           searchText={searchText}
@@ -76,11 +80,15 @@ function DataTable({
       <Table
         pagination={
           !isDashboardWidget
-            ? { pageSize, onShowSizeChange: handlePageSizeChange }
+            ? {
+                pageSize,
+                onShowSizeChange: handlePageSizeChange,
+                showSizeChanger: tableData.length > 10,
+              }
             : false
         }
         bordered={true}
-        rowKey="index"
+        rowKey='index'
         rowSelection={!isDashboardWidget ? rowSelection : null}
         columns={columns}
         dataSource={isDashboardWidget ? tableData.slice(0, 3) : tableData}
