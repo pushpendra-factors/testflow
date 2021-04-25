@@ -88,7 +88,6 @@ func TestAttributionModel(t *testing.T) {
 
 	// Should return error for non adwords customer account id
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.Nil(t, result)
 	assert.NotNil(t, err)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
@@ -234,7 +233,6 @@ func TestAttributionEngagementModel(t *testing.T) {
 
 	// Should return error for non adwords customer account id
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, &model.AttributionQuery{})
-	assert.Nil(t, result)
 	assert.NotNil(t, err)
 
 	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
