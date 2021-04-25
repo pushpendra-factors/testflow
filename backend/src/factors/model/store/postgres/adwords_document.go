@@ -663,18 +663,14 @@ func (pg *Postgres) buildObjectAndPropertiesForAdwords(projectID uint64, objects
 		var currentPropertiesSmart []model.ChannelProperty
 		if isPresent {
 			currentProperties = buildProperties(propertiesAndRelated)
-			if C.IsShowSmartPropertiesAllowed(projectID) {
-				smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "adwords")
-				currentPropertiesSmart = buildProperties(smartProperty)
-				currentProperties = append(currentProperties, currentPropertiesSmart...)
-			}
+			smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "adwords")
+			currentPropertiesSmart = buildProperties(smartProperty)
+			currentProperties = append(currentProperties, currentPropertiesSmart...)
 		} else {
 			currentProperties = buildProperties(allChannelsPropertyToRelated)
-			if C.IsShowSmartPropertiesAllowed(projectID) {
-				smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "adwords")
-				currentPropertiesSmart = buildProperties(smartProperty)
-				currentProperties = append(currentProperties, currentPropertiesSmart...)
-			}
+			smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "adwords")
+			currentPropertiesSmart = buildProperties(smartProperty)
+			currentProperties = append(currentProperties, currentPropertiesSmart...)
 		}
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
 	}
@@ -869,7 +865,7 @@ func (pg *Postgres) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64, 
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
-	if C.IsShowSmartPropertiesAllowed(projectID) && isSmartPropertyPresent {
+	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}

@@ -364,11 +364,9 @@ func (store *MemSQL) buildObjectAndPropertiesForLinkedin(projectID uint64, objec
 		var currentProperties []model.ChannelProperty
 		var currentPropertiesSmart []model.ChannelProperty
 		currentProperties = buildProperties(allChannelsPropertyToRelated)
-		if C.IsShowSmartPropertiesAllowed(projectID) {
-			smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "linkedin")
-			currentPropertiesSmart = buildProperties(smartProperty)
-			currentProperties = append(currentProperties, currentPropertiesSmart...)
-		}
+		smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "linkedin")
+		currentPropertiesSmart = buildProperties(smartProperty)
+		currentProperties = append(currentProperties, currentPropertiesSmart...)
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
 	}
 	return objectsAndProperties
@@ -487,7 +485,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForLinkedinQueryV1(projectID uint64
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
-	if C.IsShowSmartPropertiesAllowed(projectID) && isSmartPropertyPresent {
+	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics, err = buildLinkedinQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError
