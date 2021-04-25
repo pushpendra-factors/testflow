@@ -57,13 +57,13 @@ func isDuplicateSmartPropertyRulesError(err error) bool {
 
 func (pg *Postgres) GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int) {
 	var result model.SmartPropertyRulesConfig
-	sources := make([]model.Source, 0, 0)
+	sources := make([]model.Source, 0)
 	objectAndProperty, isExists := mapOfObjectAndProperty[objectType]
 	if !isExists {
 		return result, http.StatusBadRequest
 	}
 	for _, sourceName := range smartPropertySources {
-		objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
+		objectsAndProperties := make([]model.ChannelObjectAndProperties, 0)
 		for objectName, property := range objectAndProperty {
 			currentProperties := buildProperties(property)
 			objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{objectName})...)
@@ -79,7 +79,7 @@ func (pg *Postgres) GetSmartPropertyRulesConfig(projectID uint64, objectType str
 }
 func (pg *Postgres) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, name string, objectType int) int {
 	db := C.GetServices().Db
-	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
+	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	err := db.Model(&model.SmartPropertyRules{}).
 		Where("project_id = ? AND is_deleted != ? AND name = ? AND type = ?", projectID, true, name, objectType).
 		Find(&smartPropertyRules).Error
@@ -90,7 +90,7 @@ func (pg *Postgres) checkIfRuleNameAlreadyPresentWhileCreate(projectID uint64, n
 }
 func (pg *Postgres) checkIfRuleNameAlreadyPresentWhileUpdate(projectID uint64, name string, ruleID string, objectType int) int {
 	db := C.GetServices().Db
-	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
+	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	err := db.Model(&model.SmartPropertyRules{}).
 		Where("project_id = ? AND is_deleted != ? AND name = ? AND id != ? AND type = ?", projectID, true, name, ruleID, objectType).
 		Find(&smartPropertyRules).Error
@@ -133,7 +133,7 @@ func (pg *Postgres) CreateSmartPropertyRules(projectID uint64, smartPropertyRule
 	logCtx = logCtx.WithField("type_alias", smartPropertyRulesDoc.TypeAlias)
 	objectType, typeExists := smartPropertyRulesTypeAliasToType[smartPropertyRulesDoc.TypeAlias]
 	if !typeExists {
-		logCtx.WithField("rule", smartPropertyRulesDoc).Error("Invalid type alias.")
+		logCtx.WithField("rule", smartPropertyRulesDoc).Warn("Invalid type alias.")
 		return &model.SmartPropertyRules{}, "Invalid type alias.", http.StatusBadRequest
 	}
 
@@ -272,12 +272,12 @@ func (pg *Postgres) GetSmartPropertyRules(projectID uint64) ([]model.SmartProper
 }
 
 func (pg *Postgres) GetAllChangedSmartPropertyRulesForProject(projectID uint64) ([]model.SmartPropertyRules, int) {
-	smartPropertyRules := make([]model.SmartPropertyRules, 0, 0)
+	smartPropertyRules := make([]model.SmartPropertyRules, 0)
 	db := C.GetServices().Db
 	err := db.Table("smart_property_rules").Where("project_id = ? AND evaluation_status != ?", projectID, model.EvaluationStatusMap["picked"]).Order("updated_at asc").Find(&smartPropertyRules).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Warn(err)
-		return make([]model.SmartPropertyRules, 0, 0), http.StatusNotFound
+		return make([]model.SmartPropertyRules, 0), http.StatusNotFound
 	}
 	return smartPropertyRules, http.StatusFound
 }

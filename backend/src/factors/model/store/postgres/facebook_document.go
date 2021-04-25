@@ -180,11 +180,9 @@ func (pg *Postgres) buildObjectAndPropertiesForFacebook(projectID uint64, object
 		var currentProperties []model.ChannelProperty
 		var currentPropertiesSmart []model.ChannelProperty
 		currentProperties = buildProperties(allChannelsPropertyToRelated)
-		if C.IsShowSmartPropertiesAllowed(projectID) {
-			smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
-			currentPropertiesSmart = buildProperties(smartProperty)
-			currentProperties = append(currentProperties, currentPropertiesSmart...)
-		}
+		smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
+		currentPropertiesSmart = buildProperties(smartProperty)
+		currentProperties = append(currentProperties, currentPropertiesSmart...)
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
 	}
 	return objectsAndProperties
@@ -323,7 +321,7 @@ func (pg *Postgres) GetSQLQueryAndParametersForFacebookQueryV1(projectID uint64,
 		return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusBadRequest
 	}
 	isSmartPropertyPresent := checkSmartProperty(query.Filters, query.GroupBy)
-	if C.IsShowSmartPropertiesAllowed(projectID) && isSmartPropertyPresent {
+	if isSmartPropertyPresent {
 		sql, params, selectKeys, selectMetrics, err = buildFacebookQueryWithSmartPropertyV1(transformedQuery, projectID, customerAccountID, fetchSource)
 		if err != nil {
 			return "", make([]interface{}, 0, 0), make([]string, 0, 0), make([]string, 0, 0), http.StatusInternalServerError

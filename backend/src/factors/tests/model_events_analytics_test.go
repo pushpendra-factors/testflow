@@ -223,14 +223,14 @@ func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
 			EventsCondition: model.EventCondAllGivenEvent,
 		}
 
-		//unique user count should return 2 for s0 to s1 with fliter property1
+		//unique user count should return 2 for s0 to s1 with filter property1
 		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.NotNil(t, result)
 		assert.Equal(t, "count", result.Headers[0])
 		assert.Equal(t, float64(2), result.Rows[0][0])
 
-		//unique user count should return 2 for s0 to s1 with fliter property2
+		//unique user count should return 2 for s0 to s1 with filter property2
 		query.EventsWithProperties[0].Properties[0].Value = "B"
 		result, errCode, _ = store.GetStore().ExecuteEventsQuery(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
@@ -891,7 +891,7 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 		}
 	})
 
-	t.Run("AnalyticsEachEventsQueryEventOccurrenceBreakdownByDate", func(t *testing.T) {
+	t.Run("AnalyticsEachEventsQueryEventOccurrenceBreakdownByDateEvents", func(t *testing.T) {
 		query := model.Query{
 			From: startTimestamp,
 			To:   startTimestamp + 40,
@@ -929,5 +929,997 @@ func TestEventAnalyticsEachEventQueryWithFilterAndBreakdown(t *testing.T) {
 			assert.Equal(t, float64(3), result.Rows[0][1])
 			assert.Equal(t, float64(2), result.Rows[0][2])
 		}
+	})
+}
+
+func TestCoalUniqueUsersEachEventQuery(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	customerIDUser1 := "customerIDUser1"
+	customerIDUser2 := "customerIDUser2"
+	customerIDUser3 := "customerIDUser3"
+
+	// here user1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
+	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user1.ID)
+	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user2.ID)
+	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user3.ID)
+	user4_1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user4_1.ID)
+	user5_2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user5_2.ID)
+	user6_3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user6_3.ID)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	/*
+		user1 -> event s0 with property1 -> s0 with property2 -> s1 with propterty2
+		user2 -> event s0 with property1 -> s1 with property1
+		user3 -> event s0 with property2 -> s1 with property2
+	*/
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user1.ID, stepTimestamp, "A", 1234)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user1.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user1.ID, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user2.ID, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user2.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user3.ID, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user3.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user4_1.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user4_1.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user5_2.ID, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user5_2.ID, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user6_3.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user6_3.ID, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	t.Run("TestCoalUniqueUsersEachEventQueryUser", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		if result.Rows[0][1] == "s1" {
+			assert.Equal(t, float64(3), result.Rows[0][2])
+		} else {
+			assert.Equal(t, float64(3), result.Rows[0][2])
+		}
+		if result.Rows[1][1] == "s0" {
+			assert.Equal(t, float64(3), result.Rows[1][2])
+		} else {
+			assert.Equal(t, float64(3), result.Rows[1][2])
+		}
+	})
+
+	t.Run("TestCoalUniqueUsersEachEventQueryEvents", func(t *testing.T) {
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			Class:            model.QueryClassEvents,
+			GroupByTimestamp: "date",
+			Type:             model.QueryTypeEventsOccurrence,
+			EventsCondition:  model.EventCondEachGivenEvent,
+		}
+
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "datetime", result.Headers[0])
+		if result.Headers[1] == "s0" {
+			assert.Equal(t, float64(7), result.Rows[0][1])
+			assert.Equal(t, float64(6), result.Rows[0][2])
+		} else {
+			assert.Equal(t, float64(6), result.Rows[0][1])
+			assert.Equal(t, float64(7), result.Rows[0][2])
+		}
+	})
+}
+
+func TestCoalUniqueUsersEachEventQuerySingleUser(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	customerIDUser1 := "customerIDUser1"
+
+	// here user1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
+	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user1.ID)
+	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user2.ID)
+	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user3.ID)
+	user4_1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user4_1.ID)
+	user5_2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user5_2.ID)
+	user6_3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user6_3.ID)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user1.ID, stepTimestamp, "A", 1234)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user1.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user1.ID, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user2.ID, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user2.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user3.ID, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user3.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user4_1.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user4_1.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user5_2.ID, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user5_2.ID, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user6_3.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user6_3.ID, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	t.Run("TestCoalUniqueUsersEachEventQuerySingleUserUser", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		if result.Rows[0][1] == "s1" {
+			assert.Equal(t, float64(1), result.Rows[0][2])
+		} else {
+			assert.Equal(t, float64(1), result.Rows[0][2])
+		}
+		if result.Rows[1][1] == "s0" {
+			assert.Equal(t, float64(1), result.Rows[1][2])
+		} else {
+			assert.Equal(t, float64(1), result.Rows[1][2])
+		}
+	})
+
+	t.Run("TestCoalUniqueUsersEachEventQuerySingleUserEvents", func(t *testing.T) {
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []model.QueryProperty{
+						model.QueryProperty{
+							Entity:    model.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			Class:            model.QueryClassEvents,
+			GroupByTimestamp: "date",
+			Type:             model.QueryTypeEventsOccurrence,
+			EventsCondition:  model.EventCondEachGivenEvent,
+		}
+
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "datetime", result.Headers[0])
+		if result.Headers[1] == "s0" {
+			assert.Equal(t, float64(7), result.Rows[0][1])
+			assert.Equal(t, float64(6), result.Rows[0][2])
+		} else {
+			assert.Equal(t, float64(6), result.Rows[0][1])
+			assert.Equal(t, float64(7), result.Rows[0][2])
+		}
+	})
+}
+
+func TestCoalUniqueUsersEachEventQuerySingleUserMultiEvents(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	customerIDUser1 := "customerIDUser1"
+
+	// here user1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
+	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user1.ID)
+	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user2.ID)
+	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user3.ID)
+	user4_1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user4_1.ID)
+	user5_2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user5_2.ID)
+	user6_3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user6_3.ID)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user1.ID, stepTimestamp, "A", 1234)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user1.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", user1.ID, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s3", user2.ID, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", user2.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user3.ID, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", user3.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s3", user4_1.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", user4_1.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s5", user5_2.ID, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s6", user5_2.ID, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s7", user6_3.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s8", user6_3.ID, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	t.Run("TestCoalUniqueUsersEachEventQuerySingleUserMultiEventsUserEach", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+				model.QueryEventWithProperties{
+					Name: "s5",
+				},
+				model.QueryEventWithProperties{
+					Name: "s6",
+				},
+				model.QueryEventWithProperties{
+					Name: "s7",
+				},
+				model.QueryEventWithProperties{
+					Name: "s8",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		for key := range result.Rows {
+			assert.Equal(t, float64(1), result.Rows[key][2])
+		}
+	})
+
+	t.Run("TestCoalUniqueUsersEachEventQuerySingleUserMultiEventsUserAny", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+				model.QueryEventWithProperties{
+					Name: "s5",
+				},
+				model.QueryEventWithProperties{
+					Name: "s6",
+				},
+				model.QueryEventWithProperties{
+					Name: "s7",
+				},
+				model.QueryEventWithProperties{
+					Name: "s8",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAnyGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, float64(1), result.Rows[0][0])
+	})
+
+	t.Run("TestCoalUniqueUsersEachEventQuerySingleUserMultiEventsUserAll", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+				model.QueryEventWithProperties{
+					Name: "s5",
+				},
+				model.QueryEventWithProperties{
+					Name: "s6",
+				},
+				model.QueryEventWithProperties{
+					Name: "s7",
+				},
+				model.QueryEventWithProperties{
+					Name: "s8",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, float64(1), result.Rows[0][0])
+	})
+}
+
+func TestCoalUniqueUsersEachEventQueryMultiUserMultiEvents(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	customerIDUser1 := "customerIDUser1"
+	customerIDUser2 := "customerIDUser2"
+	customerIDUser3 := "customerIDUser3"
+
+	// here user1, user4_1 have same customerID, same for 2, 5_2 and 3, 6_3
+	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user1.ID)
+	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user2.ID)
+	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user3.ID)
+	user4_1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser2})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user4_1.ID)
+	user5_2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser1})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user5_2.ID)
+	user6_3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: customerIDUser3})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user6_3.ID)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s0", user1.ID, stepTimestamp, "A", 1234)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user1.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", user1.ID, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user2.ID, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", user2.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s3", user3.ID, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s1", user3.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s2", user4_1.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s3", user4_1.ID, stepTimestamp+10, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d,
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", user5_2.ID, stepTimestamp+20, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", user5_2.ID, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", user6_3.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, 
+	"user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`,
+		"s4", user6_3.ID, stepTimestamp, "A", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	t.Run("TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsUserEach", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondEachGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "event_index", result.Headers[0])
+		for key := range result.Rows {
+			if result.Rows[key][0] == "s0" {
+				assert.Equal(t, float64(1), result.Rows[key][2])
+			} else if result.Rows[key][0] == "s1" {
+				assert.Equal(t, float64(3), result.Rows[key][2])
+			} else if result.Rows[key][0] == "s2" {
+				assert.Equal(t, float64(2), result.Rows[key][2])
+			} else if result.Rows[key][0] == "s3" {
+				assert.Equal(t, float64(2), result.Rows[key][2])
+			}
+		}
+	})
+	t.Run("TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsUserAny", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAnyGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, float64(3), result.Rows[0][0])
+	})
+	t.Run("TestCoalUniqueUsersEachEventQueryMultiUserMultiEventsUserAll", func(t *testing.T) {
+
+		query := model.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 200,
+			EventsWithProperties: []model.QueryEventWithProperties{
+				model.QueryEventWithProperties{
+					Name: "s0",
+				},
+				model.QueryEventWithProperties{
+					Name: "s1",
+				},
+				model.QueryEventWithProperties{
+					Name: "s2",
+				},
+				model.QueryEventWithProperties{
+					Name: "s3",
+				},
+				model.QueryEventWithProperties{
+					Name: "s4",
+				},
+			},
+			Class:           model.QueryClassEvents,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: model.EventCondAllGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with filter property1
+		result, errCode, _ := store.GetStore().ExecuteEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, float64(0), result.Rows[0][0])
 	})
 }

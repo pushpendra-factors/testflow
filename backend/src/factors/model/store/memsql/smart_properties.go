@@ -23,17 +23,19 @@ func (store *MemSQL) CreateSmartProperty(smartPropertyDoc *model.SmartProperties
 		return http.StatusBadRequest
 	}
 
-	db := C.GetServices().Db
-	err := db.Create(&smartPropertyDoc).Error
-	if err != nil {
-		if IsDuplicateRecordError(err) {
+	if !C.IsDryRunSmartProperties() {
+		db := C.GetServices().Db
+		err := db.Create(&smartPropertyDoc).Error
+		if err != nil {
+			if IsDuplicateRecordError(err) {
+				logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
+					"Failed to create smart properties. Duplicate.")
+				return http.StatusConflict
+			}
 			logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
-				"Failed to create smart properties. Duplicate.")
-			return http.StatusConflict
+				"Failed to create smart properties.")
+			return http.StatusInternalServerError
 		}
-		logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
-			"Failed to create smart properties.")
-		return http.StatusInternalServerError
 	}
 	return http.StatusCreated
 }
@@ -45,17 +47,19 @@ func (store *MemSQL) UpdateSmartProperty(smartPropertyDoc *model.SmartProperties
 		return http.StatusBadRequest
 	}
 
-	db := C.GetServices().Db
-	err := db.Save(&smartPropertyDoc).Error
-	if err != nil {
-		if IsDuplicateRecordError(err) {
+	if !C.IsDryRunSmartProperties() {
+		db := C.GetServices().Db
+		err := db.Save(&smartPropertyDoc).Error
+		if err != nil {
+			if IsDuplicateRecordError(err) {
+				logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
+					"Failed to update smart properties. Duplicate.")
+				return http.StatusConflict
+			}
 			logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
-				"Failed to update smart properties. Duplicate.")
-			return http.StatusConflict
+				"Failed to update smart properties.")
+			return http.StatusInternalServerError
 		}
-		logCtx.WithError(err).WithField("project_id", smartPropertyDoc.ProjectID).Error(
-			"Failed to update smart properties.")
-		return http.StatusInternalServerError
 	}
 	return http.StatusAccepted
 }
@@ -72,10 +76,12 @@ func (store *MemSQL) GetSmartPropertyByProjectIDAndSourceAndObjectType(projectID
 	}
 }
 func (store *MemSQL) DeleteSmartPropertyByProjectIDAndSourceAndObjectID(projectID uint64, source string, objectID string) int {
-	db := C.GetServices().Db
-	err := db.Table("smart_properties").Where("project_id = ? AND source = ? AND object_id = ?", projectID, source, objectID).Delete(&model.SmartProperties{}).Error
-	if err != nil {
-		return http.StatusInternalServerError
+	if !C.IsDryRunSmartProperties() {
+		db := C.GetServices().Db
+		err := db.Table("smart_properties").Where("project_id = ? AND source = ? AND object_id = ?", projectID, source, objectID).Delete(&model.SmartProperties{}).Error
+		if err != nil {
+			return http.StatusInternalServerError
+		}
 	}
 	return http.StatusAccepted
 }
@@ -239,9 +245,11 @@ func (store *MemSQL) DeleteSmartPropertyByRuleID(projectID uint64, ruleID string
 			newProperties[key] = value
 		}
 		if reflect.DeepEqual(newProperties, make(map[string]interface{})) {
-			err := db.Delete(&smartProperty).Error
-			if err != nil {
-				return recordsUpdated, recordsEvaluated, http.StatusInternalServerError
+			if !C.IsDryRunSmartProperties() {
+				err := db.Delete(&smartProperty).Error
+				if err != nil {
+					return recordsUpdated, recordsEvaluated, http.StatusInternalServerError
+				}
 			}
 		} else {
 			propertiesJson, err := json.Marshal(&newProperties)
@@ -257,9 +265,11 @@ func (store *MemSQL) DeleteSmartPropertyByRuleID(projectID uint64, ruleID string
 			rulesRefJsonb := &postgres.Jsonb{rulesRefJson}
 			smartProperty.Properties = propertiesJsonb
 			smartProperty.RulesRef = rulesRefJsonb
-			err = db.Save(smartProperty).Error
-			if err != nil {
-				return recordsUpdated, recordsEvaluated, http.StatusInternalServerError
+			if !C.IsDryRunSmartProperties() {
+				err = db.Save(smartProperty).Error
+				if err != nil {
+					return recordsUpdated, recordsEvaluated, http.StatusInternalServerError
+				}
 			}
 		}
 		recordsUpdated += 1

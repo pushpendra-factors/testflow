@@ -86,7 +86,6 @@ func (pg *Postgres) RunInsightsQuery(projectId uint64, query model.Query) (*mode
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
-
 	result, err := pg.ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
@@ -185,8 +184,8 @@ func updateEventNameInHeaderAndAddMeta(result *model.QueryResult) {
 			}
 		}
 	}
-	metaMetricsEventMeta := model.HeaderRows{MetaEventInfo,
-		[]string{"HeaderIndex", "EventIndex", "EventName"}, rows}
+	metaMetricsEventMeta := model.HeaderRows{Title: MetaEventInfo,
+		Headers: []string{"HeaderIndex", "EventIndex", "EventName"}, Rows: rows}
 	result.Meta.MetaMetrics = append(result.Meta.MetaMetrics, metaMetricsEventMeta)
 }
 
@@ -483,7 +482,7 @@ func limitMultiGroupByPropertiesResult(result *model.QueryResult, groupByTimesta
 	return nil
 }
 
-// Converts DB results into plottable query results.
+// SanitizeQueryResult Converts DB results into plottable query results.
 func SanitizeQueryResult(result *model.QueryResult, query *model.Query) error {
 	if query.GetGroupByTimestamp() != "" {
 		if err := sanitizeGroupByTimestampResult(result, query); err != nil {
@@ -826,8 +825,12 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	termSelect = appendSelectTimestampColIfRequired(termSelect, isGroupByTimestamp)
-
-	termStmnt := fmt.Sprintf("SELECT %s.event_user_id, ", refStep) + termSelect + " FROM " + refStep
+	termStmnt := ""
+	if termSelect != "" {
+		termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.coal_user_id, ", refStep, refStep) + termSelect + " FROM " + refStep
+	} else {
+		termStmnt = fmt.Sprintf("SELECT %s.event_user_id, %s.coal_user_id ", refStep, refStep) + termSelect + " FROM " + refStep
+	}
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
@@ -846,7 +849,7 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 			eventName = model.AliasEventName
 		}
 		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
-			&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id")
+			&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id, coal_user_id")
 		aggregateFromStepName = bucketedStepName
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
@@ -876,7 +879,7 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 		aggregateSelect = aggregateSelect + model.AliasEventName + ", "
 		aggregateGroupBys = joinWithComma(model.AliasEventName, aggregateGroupBys)
 	}
-	aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(DISTINCT(event_user_id)) AS %s FROM %s",
+	aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(DISTINCT(coal_user_id)) AS %s FROM %s",
 		model.AliasAggr, aggregateFromStepName)
 
 	aggregateSelect = appendGroupBy(aggregateSelect, aggregateGroupBys)
@@ -1036,7 +1039,7 @@ event_user_id, datetime ,  ''  as _group_key_0,  ''  as  _group_key_1, _group_ke
 as coal_user_id, step_2.event_user_id as event_user_id, datetime ,  ''  as _group_key_0,  ''
 as  _group_key_1,  ''  as _group_key_2, _group_key_3 as _group_key_3 FROM step_2) ,
 
-each_users_union AS (SELECT each_events_union.event_user_id,  each_events_union.event_name,
+each_users_union AS (SELECT each_events_union.event_user_id, each_events_union.coal_user_id, each_events_union.event_name,
 CASE WHEN user_properties.properties->>'$country' IS NULL THEN '$none' WHEN
 user_properties.properties->>'$country' = '' THEN '$none' ELSE user_properties.properties->>'$country'
 END AS _group_key_4, _group_key_0, _group_key_1, _group_key_2, _group_key_3, datetime FROM each_events_union
@@ -1044,7 +1047,7 @@ LEFT JOIN users ON each_events_union.event_user_id=users.id LEFT JOIN user_prope
 users.id=user_properties.user_id AND user_properties.id=users.properties_id)
 
 SELECT datetime, event_name, _group_key_0, _group_key_1, _group_key_2, _group_key_3, _group_key_4,
-COUNT(DISTINCT(event_user_id)) AS count FROM each_users_union GROUP BY event_name, _group_key_0,
+COUNT(DISTINCT(coal_user_id)) AS count FROM each_users_union GROUP BY event_name, _group_key_0,
 _group_key_1, _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
 */
 func buildUniqueUsersWithEachGivenEventsQuery(projectID uint64, query model.Query) (string, []interface{}, error) {
@@ -1158,10 +1161,10 @@ events.user_properties_id=user_properties.id WHERE events.project_id='3' AND tim
 AND events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='3' AND name='Fund Project')
 ORDER BY coal_user_id, _group_key_1, _group_key_2, events.timestamp ASC),
 
-events_intersect AS (SELECT step_0.event_user_id as event_user_id, step_1._group_key_1, step_1._group_key_2,
+events_intersect AS (SELECT step_0.event_user_id as event_user_id, step_0.coal_user_id as coal_user_id, step_1._group_key_1, step_1._group_key_2,
 step_0._group_key_3 FROM step_0  JOIN step_1 ON step_1.coal_user_id = step_0.coal_user_id) ,
 
-all_users_intersect AS (SELECT events_intersect.event_user_id, CASE WHEN user_properties.properties->>'' IS NULL THEN
+all_users_intersect AS (SELECT events_intersect.event_user_id, events_intersect.coal_user_id, CASE WHEN user_properties.properties->>'' IS NULL THEN
 '$none' WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_0,
 _group_key_1, _group_key_2, _group_key_3 FROM events_intersect LEFT JOIN users ON events_intersect.event_user_id=users.id
 LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
@@ -1181,7 +1184,7 @@ AS _group_key_1_bucket, _group_key_2, _group_key_3, event_user_id FROM all_users
 
 SELECT COALESCE(NULLIF(concat(round(min(_group_key_0::numeric), 1), ' - ', round(max(_group_key_0::numeric), 1)), 'NaN-NaN'), '$none') AS _group_key_0,
 COALESCE(NULLIF(concat(round(min(_group_key_1::numeric), 1), ' - ', round(max(_group_key_1::numeric), 1)), 'NaN-NaN'), '$none') AS _group_key_1,
-_group_key_2, _group_key_3,  COUNT(DISTINCT(event_user_id)) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1_bucket,
+_group_key_2, _group_key_3,  COUNT(DISTINCT(coal_user_id)) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1_bucket,
 _group_key_2, _group_key_3 ORDER BY _group_key_0_bucket, _group_key_1_bucket LIMIT 100000
 
 Example: Query with date
@@ -1225,7 +1228,7 @@ func buildUniqueUsersWithAllGivenEventsQuery(projectID uint64,
 	steps, _ := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 
 	// users intersection
-	intersectSelect := fmt.Sprintf("%s.event_user_id as event_user_id", steps[0])
+	intersectSelect := fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", steps[0], steps[0])
 	if query.GetGroupByTimestamp() != "" {
 		intersectSelect = joinWithComma(intersectSelect,
 			fmt.Sprintf("%s.%s as %s", steps[0], model.AliasDateTime, model.AliasDateTime))
@@ -1363,7 +1366,7 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64,
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	var unionStmnt string
 	for i, step := range steps {
-		selectStr := fmt.Sprintf("%s.event_user_id as event_user_id", step)
+		selectStr := fmt.Sprintf("%s.event_user_id as event_user_id, %s.coal_user_id as coal_user_id", step, step)
 		selectStr = appendSelectTimestampColIfRequired(selectStr, isGroupByTimestamp)
 		selectStr = joinWithComma(selectStr, egKeys)
 
@@ -1703,7 +1706,6 @@ func buildEventCountForEachGivenEventsQueryNEW(projectID uint64,
 	if err != nil {
 		return qStmnt, qParams, err
 	}
-
 	totalGroupKeys := 0
 	for _, val := range stepsToKeysMap {
 		totalGroupKeys = totalGroupKeys + len(val)
