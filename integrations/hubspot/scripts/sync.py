@@ -22,7 +22,7 @@ HEALTHCHECK_PING_ID = "87137001-b18b-474c-8bc5-63324baff2a8"
 API_RATE_LIMIT_TEN_SECONDLY_ROLLING = "TEN_SECONDLY_ROLLING"
 API_RATE_LIMIT_DAILY = "DAILY"
 API_ERROR_RATE_LIMIT = "RATE_LIMIT"
-RETRY_LIMIT = 10
+RETRY_LIMIT = 15
 
 # Todo: Boilerplate, move this to a reusable module.
 def notify(env, source, message):
@@ -121,24 +121,31 @@ def get_with_fallback_retry(project_id, get_url):
             try:
                 r = requests.get(url=get_url, headers = {})
                 if r.status_code != 429:
+                    if not r.ok:
+                        if retries < RETRY_LIMIT:
+                            log.error("Failed to get data from hubspot %d.Retries %d. Retrying in 2 seconds",r.status_code,retries)
+                            time.sleep(2)
+                            retries += 1
+                            continue
+                        log.error("Retry exhausted. Failed to get data after %d retries",retries)
                     return r
                 res_json = r.json()
                 if res_json["errorType"] == API_ERROR_RATE_LIMIT:
                     if res_json["policyName"] == API_RATE_LIMIT_TEN_SECONDLY_ROLLING:
                         if retries > RETRY_LIMIT:
                             log.error("Retry exhausted on %s for project_id %d.",API_RATE_LIMIT_TEN_SECONDLY_ROLLING,project_id)
-                            raise Exception("Retry exhausted with "+str(retries)+" retries "+res_json)
+                            raise Exception("Retry exhausted with "+str(retries)+" retries "+str(res_json))
 
                         log.warning("Hubspot API limit exceeed %s retry %d, retrying in 2 seconds",API_RATE_LIMIT_TEN_SECONDLY_ROLLING, retries)
                         retries += 1
                         time.sleep(2)
                         continue
                     elif res_json["policyName"] == API_RATE_LIMIT_DAILY:
-                        raise Exception("Hubspot API daily rate limit exceeded " + res_json)
+                        raise Exception("Hubspot API daily rate limit exceeded " + str(res_json))
                     else:
-                        raise Exception("Unknown error occured on errorType RATE_LIMIT " + res_json)
+                        raise Exception("Unknown error occured on errorType RATE_LIMIT " + str(res_json))
                 else:
-                    raise Exception("Unknown error occured "+res_json)
+                    raise Exception("Unknown error occured "+str(res_json))
             except requests.exceptions.RequestException as e:
                 if retries > RETRY_LIMIT:
                     raise Exception("Retry exhausted on connection error "+str(e)+ " , retries "+ str(retries))
@@ -147,7 +154,7 @@ def get_with_fallback_retry(project_id, get_url):
                 time.sleep(2)
     finally:
         end_time = time.time()
-        log.warning("Request took %d ms", end_time - start_time )
+        log.warning("Request took %d sec", end_time - start_time )
 
 def sync_contacts(project_id, api_key, sync_all=False):    
     if sync_all:
