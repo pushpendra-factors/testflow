@@ -3,8 +3,8 @@ kind: Deployment
 metadata:
   labels:
     layer: memsql-replicator
-    env: production
-    project: factors-production
+    env: staging
+    project: factors-staging
   name: memsql-replicator
   namespace: default
 spec:
@@ -25,10 +25,10 @@ spec:
         layer: memsql-replicator
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: memsql-migration
+        cloud.google.com/gke-nodepool: default-persistent-pool
       containers:
       - name: memsql-replicator
-        image: us.gcr.io/factors-production/memsql-replicator:v0.01-xxx
+        image: us.gcr.io/factors-staging/memsql-replicator:v0.01-xxx
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors/config
