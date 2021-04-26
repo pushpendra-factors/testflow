@@ -25,6 +25,7 @@ const EventPropertyCampaign = "$campaign"
 
 var clientUserIdToUserIdMap_staging = make(map[string]string)
 var clientUserIdToUserIdMap_prod = make(map[string]string)
+var clientUserIdToUserIdMap_prod2 = make(map[string]string)
 var campaignCounterPROD = make(map[string]int)
 var campaignCounterSTAGE = make(map[string]int)
 
@@ -96,6 +97,9 @@ func getUserId(clientUserId string, eventTimestamp int64, endpoint *string, auth
 	if env == "prod" {
 		userId, found = clientUserIdToUserIdMap_prod[clientUserId]
 	}
+	if env == "prod2" {
+		userId, found = clientUserIdToUserIdMap_prod2[clientUserId]
+	}
 	if !found {
 		// Create a user.
 		userRequestMap := make(map[string]interface{})
@@ -132,6 +136,9 @@ func getUserId(clientUserId string, eventTimestamp int64, endpoint *string, auth
 		if env == "prod" {
 			clientUserIdToUserIdMap_prod[clientUserId] = userId
 		}
+		if env == "prod2" {
+			clientUserIdToUserIdMap_prod2[clientUserId] = userId
+		}
 	}
 	return userId, nil
 }
@@ -142,6 +149,7 @@ func main() {
 	seedDate := flag.String("seed_date", "", "")
 	endpoint_prod := flag.String("endpoint_prod", "http://factors-dev.com:8085", "")
 	authToken_prod := flag.String("projectkey_prod", "", "")
+	authToken_prod_2 := flag.String("projectkey_prod_2", "", "")
 	project_id_prod := flag.Int("project_id_prod", 0, "Prod project Id")
 	adwords_customer_id_prod := flag.String("adwords_customer_id_prod", "", "")
 
@@ -198,9 +206,10 @@ func main() {
 
 	var events_staging []operations.EventOutput
 	var events_prod []operations.EventOutput
+	var events_prod_2 []operations.EventOutput
 
 	// processing events data
-	ProcessEventsFiles(env, dataConfig, endpoint_staging, authToken_staging, events_staging, endpoint_prod, authToken_prod, events_prod)
+	ProcessEventsFiles(env, dataConfig, endpoint_staging, authToken_staging, events_staging, endpoint_prod, authToken_prod, authToken_prod_2, events_prod, events_prod_2, executionDate)
 
 	// processing adwords data
 	ProcessAdwordsDataFromEventsFiles(executionDate, env, dataConfig, endpoint_staging, authToken_staging, events_staging, endpoint_prod, authToken_prod, events_prod)
@@ -208,7 +217,7 @@ func main() {
 
 func ProcessEventsFiles(env *string, dataConfig *string, endpoint_staging *string,
 	authToken_staging *string, events_staging []operations.EventOutput, endpoint_prod *string,
-	authToken_prod *string, events_prod []operations.EventOutput) {
+	authToken_prod *string, authToken_prod_2 *string, events_prod []operations.EventOutput, events_prod_2 []operations.EventOutput, date time.Time) {
 
 	maxBatchSize := 1000
 	counter := 0
@@ -273,6 +282,8 @@ func ProcessEventsFiles(env *string, dataConfig *string, endpoint_staging *strin
 				events_staging = append(events_staging, op)
 				op.UserId, _ = getUserId(op.UserId, (int64)(op.Timestamp), endpoint_prod, authToken_prod, "prod")
 				events_prod = append(events_prod, op)
+				op.UserId, _ = getUserId(op.UserId, (int64)(op.Timestamp), endpoint_prod, authToken_prod_2, "prod2")
+				events_prod_2 = append(events_prod_2, op)
 			}
 			counter++
 
@@ -285,6 +296,12 @@ func ProcessEventsFiles(env *string, dataConfig *string, endpoint_staging *strin
 				IngestData(events_prod, endpoint_prod, authToken_prod)
 				counter = 0
 				events_prod = nil
+				if(date.Day()%5 == 0 && date.Hour() == 0){
+					Log.Debug.Printf("Processing %v records", len(events_prod_2))
+					IngestData(events_prod_2, endpoint_prod, authToken_prod_2)
+					counter = 0
+					events_prod_2 = nil
+				}
 			}
 		}
 		if counter != 0 {
@@ -296,6 +313,12 @@ func ProcessEventsFiles(env *string, dataConfig *string, endpoint_staging *strin
 			IngestData(events_prod, endpoint_prod, authToken_prod)
 			counter = 0
 			events_prod = nil
+			if(date.Day()%5 == 0 && date.Hour() == 0){
+				Log.Debug.Printf("Processing %v records", len(events_prod_2))
+				IngestData(events_prod_2, endpoint_prod, authToken_prod_2)
+				counter = 0
+				events_prod_2 = nil
+			}
 		}
 		Log.Debug.Printf("Done !!! Processing contents of File: %s", element)
 		if *env != "development" {
