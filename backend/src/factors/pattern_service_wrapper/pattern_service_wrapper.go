@@ -1115,7 +1115,7 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0Go
 			if parent.FactorsInsightsType == "" || isValidInsightTransition(parent.FactorsInsightsType, child.FactorsInsightsType) {
 				subInsights := parent.FactorsSubInsights
 				subInsights = append(subInsights, trimChildNode(parent.FactorsInsightsType, child.FactorsInsightsType, parent, child))
-				parent.FactorsSubInsights = subInsights
+				parent.FactorsSubInsights = rearrangeSubinsights(subInsights)
 				indexLevelInsightsMap[insight.parentIndex] = parent
 			}
 		}
@@ -1123,6 +1123,25 @@ func buildFactorResultsFromPatternsV1(reqId string, nodes []*ItreeNode, Level0Go
 	return indexLevelInsightsMap[0].FactorsSubInsights
 }
 
+func rearrangeSubinsights(subInsights []*FactorsInsights) []*FactorsInsights {
+	numerical := make([]*FactorsInsights, 0)
+	withMultiplier1 := make([]*FactorsInsights, 0)
+	others := make([]*FactorsInsights, 0)
+	for _, insight := range subInsights {
+		if insight.FactorsInsightsMultiplier == 1 {
+			withMultiplier1 = append(withMultiplier1, insight)
+		} else if insight.FactorsInsightsType == ATTRIBUTETYPE && insight.FactorsInsightsAttribute[0].FactorsAttributeValue == "" {
+			numerical = append(numerical, insight)
+		} else {
+			others = append(others, insight)
+		}
+	}
+	final := make([]*FactorsInsights, 0)
+	final = append(final, others...)
+	final = append(final, withMultiplier1...)
+	final = append(final, numerical...)
+	return final
+}
 func isValidInsightTransition(parentType string, childType string) bool {
 	if parentType == JOURNEYTYPE {
 		return true

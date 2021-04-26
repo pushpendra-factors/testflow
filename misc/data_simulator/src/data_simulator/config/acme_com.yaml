@@ -10,7 +10,7 @@ custom_event_attribute_probablity: 0
 bring_existing_user: 0.5
 user_segments: 
   segment1:
-    number_of_users: 1000
+    number_of_users: 100
     activity_ticker_in_seconds: 30
     activity_probablity_map:
       DoSomething: 0.5
@@ -228,20 +228,20 @@ user_segments:
             Pricing Plan - Pro: 0.006
             Pricing Plan - Enterprise: 0.002
             Subscribe to Newsletter Form: 0.047
-            Whitepaper Download: 0.09
+            Whitepaper Download - AI & ML in Marketing Analytics 2021: 0.09
             Webinar Signed Up: 0.12
-            Webinar Attended: 0.09
+            Webinar Attended - Optimizing Marketing ROAS for B2B SaaS: 0.09
             Junk Leads: 0.04
             MQL Email Sequence - Email -1 Recieved: 0.41
             Logout: 0.022
           Junk Leads:
             Logout: 1.0
-          MQL Email Sequence - Email -5.1 Recieved:
-            Deal Created: 0.56
-            Logout: 0.44
-          MQL Email Sequence - Email -5.2 Recieved:
-            Deal Created: 0.69
-            Logout: 0.31
+          MQL Email Sequence 5 - "DIY Integration Steps & Guide" Received:
+            Deal Won: 0.28
+            Logout: 0.72
+          MQL Email Sequence 5 - "Call With Your Customer Sucess Team for Integrations" Received:
+            Deal Won: 0.76
+            Logout: 0.24
           MQL Email Sequence - Email -1 Recieved:
             MQL Email Sequence - Email -2 Recieved: 0.41
             Logout: 0.59
@@ -252,18 +252,18 @@ user_segments:
             MQL Email Sequence - Email -4 Recieved: 0.73
             Logout: 0.27
           MQL Email Sequence - Email -4 Recieved: 
-            MQL Email Sequence - Email -5.1 Recieved: 0.35
-            MQL Email Sequence - Email -5.2 Recieved: 0.36
+            MQL Email Sequence 5 - "DIY Integration Steps & Guide" Received: 0.35
+            MQL Email Sequence 5 - "Call With Your Customer Sucess Team for Integrations" Received: 0.36
             Logout: 0.29
-          Whitepaper Download:
-            Schedule A Demo Form: 0.2
-            Logout: 0.8
+          Whitepaper Download - AI & ML in Marketing Analytics 2021:
+            Deal Won: 0.8
+            Logout: 0.2
           Webinar Signed Up:
             Schedule A Demo Form: 0.18
             Logout: 0.82
-          Webinar Attended:
-            Schedule A Demo Form: 0.26
-            Logout: 0.74
+          Webinar Attended - Optimizing Marketing ROAS for B2B SaaS:
+            Deal Won: 0.74
+            Logout: 0.26
           Pricing Plan - Basic:
             Discovery Call Booked: 0.2
             Logout: 0.8
@@ -295,9 +295,24 @@ user_segments:
             Opportunity Created: 0.5804
             Logout: 0.4196
           Opportunity Created:
-            Deal Created: 0.3
+            Whitepaper Download - AI & ML in Marketing Analytics 2021: 0.1
+            Webinar Attended - Optimizing Marketing ROAS for B2B SaaS: 0.1
+            MQL Email Sequence 5 - "DIY Integration Steps & Guide" Received: 0.1
+            MQL Email Sequence 5 - "Call With Your Customer Sucess Team for Integrations" Received: 0.07
+            Signed up for The Marketing Analytics Academy: 0.08
+            eBook Downloaded - The Ultimate Guide to SaaS Marketing Analytics 2021: 0.07
+            Webinar Attended - Making The Most of Your CRM Data: 0.08
+            Deal Created: 0.2
             Deal Won: RULE15
-            Logout: 0.4005
+          Signed up for The Marketing Analytics Academy:
+            Deal Won: 0.64
+            Logout: 0.36
+          eBook Downloaded - The Ultimate Guide to SaaS Marketing Analytics 2021:
+            Deal Won: 0.84
+            Logout: 0.16
+          Webinar Attended - Making The Most of Your CRM Data:
+            Deal Won: 0.51
+            Logout: 0.49
           Deal Created:
             Deal Won: RULE3
             Deal Lost: 0.7505
@@ -533,7 +548,7 @@ user_segments:
           Seasonal_push: 0.25
           Brand_launch: 0.02
           Product_launch: 0.03
-          Contest_marketing: 0.15
+          Context_marketing: 0.15
           Brand_awareness: 0.10
           Email_marketing: 0.10
           Rebranding_campaign: 0.05
@@ -543,7 +558,7 @@ user_segments:
           Seasonal_push: 0.10
           Brand_launch: 0.02
           Product_launch: 0.03
-          Contest_marketing: 0.35
+          Context_marketing: 0.35
           Brand_awareness: 0.10
           Email_marketing: 0.25
           Rebranding_campaign: 0.05
@@ -553,7 +568,7 @@ user_segments:
           Seasonal_push: 0.25
           Brand_launch: 0.02
           Product_launch: 0.03
-          Contest_marketing: 0.15
+          Context_marketing: 0.15
           Brand_awareness: 0.35
           Email_marketing: 0.10
           Rebranding_campaign: 0.05
@@ -563,7 +578,7 @@ user_segments:
           Seasonal_push: 0.10
           Brand_launch: 0.02
           Product_launch: 0.25
-          Contest_marketing: 0.35
+          Context_marketing: 0.35
           Brand_awareness: 0.03
           Email_marketing: 0.10
           Rebranding_campaign: 0.05
@@ -573,7 +588,7 @@ user_segments:
           Seasonal_push: 0.10
           Brand_launch: 0.02
           Product_launch: 0.25
-          Contest_marketing: 0.35
+          Context_marketing: 0.35
           Brand_awareness: 0.03
           Email_marketing: 0.10
           Rebranding_campaign: 0.05
@@ -602,19 +617,10 @@ user_segments:
           Active: 0.24
           Active Lost: 0.25
           Working Lost: 0.1
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
@@ -631,19 +637,10 @@ user_segments:
           Active: 0.24
           Active Lost: 0.25
           Working Lost: 0.1
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
@@ -660,19 +657,10 @@ user_segments:
           Active: 0.24
           Active Lost: 0.25
           Working Lost: 0.1
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
@@ -689,199 +677,162 @@ user_segments:
           Active: 0.24
           Active Lost: 0.25
           Working Lost: 0.1 
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
           Marketo: 0.35
       Opportunity Created:
-        Opp Stage:
-          POC: 0.2
-          Pricing Negotiation: 0.3
-          Legal Evaluation: 0.5
+        Seniority:
+          Individual Contributor: 0.2
+          Manager: 0.24
+          Director: 0.15
+          VP: 0.18
+          Associate: 0.23
+        Number of decision makers:
+          1 to 2 : 0.37
+          3 to 5 : 0.29
+          6 to 8 : 0.23
+          Over 8 : 0.11
         Competitor Evaluating:
           Thoughspot: 0.2
           Bizible: 0.45
           Mixpanel: 0.35
+        Company Size:
+          SMB : 0.33
+          Mid Market: 0.46
+          Enterprise: 0.21
       Deal Created:
-        Opp Stage:
-          POC: 0.2
-          Pricing Negotiation: 0.3
-          Legal Evaluation: 0.5
+        Seniority:
+          Individual Contributor: 0.2
+          Manager: 0.24
+          Director: 0.15
+          VP: 0.18
+          Associate: 0.23
+        Number of decision makers:
+          1 to 2 : 0.37
+          3 to 5 : 0.29
+          6 to 8 : 0.23
+          Over 8 : 0.11
         Competitor Evaluating:
           Thoughspot: 0.2
           Bizible: 0.45
           Mixpanel: 0.35
+        Company Size:
+          SMB : 0.33
+          Mid Market: 0.46
+          Enterprise: 0.21
       Deal Won:
-        Opp Stage:
-          POC: 0.2
-          Pricing Negotiation: 0.3
-          Legal Evaluation: 0.5
+        Seniority:
+          Individual Contributor: 0.2
+          Manager: 0.24
+          Director: 0.15
+          VP: 0.18
+          Associate: 0.23
+        Number of decision makers:
+          1 to 2 : 0.37
+          3 to 5 : 0.29
+          6 to 8 : 0.23
+          Over 8 : 0.11
         Competitor Evaluating:
           Thoughspot: 0.2
           Bizible: 0.45
           Mixpanel: 0.35
+        Company Size:
+          SMB : 0.33
+          Mid Market: 0.46
+          Enterprise: 0.21
       Deal Lost:
-        Opp Stage:
-          POC: 0.2
-          Pricing Negotiation: 0.3
-          Legal Evaluation: 0.5
+        Seniority:
+          Individual Contributor: 0.2
+          Manager: 0.24
+          Director: 0.15
+          VP: 0.18
+          Associate: 0.23
+        Number of decision makers:
+          1 to 2 : 0.37
+          3 to 5 : 0.29
+          6 to 8 : 0.23
+          Over 8 : 0.11
         Competitor Evaluating:
           Thoughspot: 0.2
           Bizible: 0.45
           Mixpanel: 0.35
+        Company Size:
+          SMB : 0.33
+          Mid Market: 0.46
+          Enterprise: 0.21
       Pre-Sales Call Done:
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
           Marketo: 0.35
       Junk Leads:
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
           Marketo: 0.35
       MQL Email Sequence - Email -2 Received:
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
           Marketo: 0.35
       MQL Email Sequence - Email -3 Received:
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
           Marketo: 0.35
       MQL Email Sequence - Email -4 Received:
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
           Marketo: 0.35
-      MQL Email Sequence - Email -5.1 Received:
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
+      MQL Email Sequence 5 - "DIY Integration Steps & Guide" Received:
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
           Marketo: 0.35
-      MQL Email Sequence - Email -5.2 Received:
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
+      MQL Email Sequence 5 - "Call With Your Customer Sucess Team for Integrations" Received:
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
           Marketo: 0.35
       Discovery Call Booked:
-        Lead to Opp Velocity:
-          0-10 days: 0.1
-          10-25 days: 0.4
-          25-36 days: 0.3
-          Over 36 days: 0.2
         Product Plan:
           Enterprise: 0.2
           Startup: 0.45
           Growth: 0.35
-        Total Call Duration:
-          0-3 hours: 0.35
-          3-7 hours: 0.45
-          over 7 hours: 0.2
         Tech Stack:
           Hubspot, Drift: 0.2
           Google Analytics: 0.45
@@ -1155,44 +1106,32 @@ user_segments:
                   16-30
       RULE15:
         real_time_wait:
-        overall_probablity: 0.2995
+        overall_probablity: 0.2
         attribute_weights:
           -
-            probablity: 0.2
+            probablity: 0.5
             attributes: 
               Product Plan: 
                 -
                   Enterprise
           -
-            probablity: 0.5
-            attributes: 
-              Total Call Duration: 
-                -
-                  over 7 hours
-          -
-            probablity: 0.5
+            probablity: 0.88
             attributes: 
               Tech Stack: 
                 -
                   Hubspot, Drift
           -
-            probablity: 0.25
+            probablity: 0.03
             attributes: 
               Tech Stack: 
                 -
                   Marketo
           -
-            probablity: 0.1
+            probablity: 0.05
             attributes: 
               Competitor Evaluating: 
                 -
                   Bizible
-          -
-            probablity: 0.15
-            attributes: 
-              Lead to Opp Velocity: 
-                -
-                  Over 36 days
           -
             probablity: 0.55
             attributes: 
@@ -1200,25 +1139,25 @@ user_segments:
                 -
                   Pricing Negotiation
           -
-            probablity: 0.35
+            probablity: 0.66
             attributes: 
               Latest_Campaign: 
                 -
                   LI_Remarketing_Branding
           -
-            probablity: 0.6
+            probablity: 0.77
             attributes: 
               Latest_Campaign: 
                 -
                   FB_Remareketing_eBook
           -
-            probablity: 0.55
+            probablity: 0.99
             attributes: 
               page_url: 
                 -
                   /blog/all-about-marketing-analytics-for-saas/
           -
-            probablity: 0.4
+            probablity: 0.99
             attributes: 
               page_url: 
                 -
