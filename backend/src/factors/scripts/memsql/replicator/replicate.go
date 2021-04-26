@@ -95,6 +95,7 @@ func main() {
 			*memSQLUser, *memSQLPass, *memSQLHost, *memSQLPort, *memSQLName),
 		"",
 	)
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	projectIDStringList := flag.String("project_ids", "", "")
 	pageSize := flag.Int("page_size", 0, "No.of records per page.")
@@ -109,14 +110,13 @@ func main() {
 	eventsNumRouties := flag.Int("events_num_routines", 1, "")
 	flag.Parse()
 
-	if *env != "development" &&
-		*env != "staging" &&
-		*env != "production" {
+	if *env != C.DEVELOPMENT &&
+		*env != C.STAGING &&
+		*env != C.PRODUCTION {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
 	}
 
-	log.SetFormatter(&log.JSONFormatter{})
 	if *projectIDStringList == "" {
 		log.Fatal("Invalid project_id.")
 	}
@@ -129,7 +129,8 @@ func main() {
 	dedupeByQuery = *dedupeByQueryForNonUniqueTables
 
 	config := &C.Configuration{
-		Env: *env,
+		AppName: "memsql_replicator",
+		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -137,8 +138,10 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		SentryDSN: *sentryDSN,
 	}
 	C.InitConf(config)
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
 	err := C.InitDB(*config)
 	if err != nil {
