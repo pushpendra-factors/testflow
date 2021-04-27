@@ -424,7 +424,7 @@ type Model interface {
 	// Property details
 	CreatePropertyDetails(projectID uint64, eventName, propertyKey, propertyType string, isUserProperty bool, allowOverWrite bool) int
 	CreateOrDeletePropertyDetails(projectID uint64, eventName, enKey, pType string, isUserProperty, allowOverWrite bool) error
-	GetAllPropertyDetailsByProjectID(projectID uint64, eventName string, isUserProperty bool) (int, *map[string]string)
+	GetAllPropertyDetailsByProjectID(projectID uint64, eventName string, isUserProperty bool) (*map[string]string, int)
 
 	// display names
 	CreateOrUpdateDisplayNameByObjectType(projectID uint64, propertyName, objectType, displayName, group string) int

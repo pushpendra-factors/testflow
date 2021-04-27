@@ -1080,7 +1080,7 @@ func (pg *Postgres) GetUserPropertiesByProject(projectID uint64, limit int, last
 		}
 	}
 
-	propertyDetailsStatus, propertyDetails := pg.GetAllPropertyDetailsByProjectID(projectID, "", true)
+	propertyDetails, propertyDetailsStatus := pg.GetAllPropertyDetailsByProjectID(projectID, "", true)
 
 	for _, v := range userPropertiesSorted {
 		category := v.Category

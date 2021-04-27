@@ -4,6 +4,7 @@ import (
 	"errors"
 	C "factors/config"
 	"factors/model/model"
+	"factors/util"
 	U "factors/util"
 	"net/http"
 
@@ -302,14 +303,87 @@ func (store *MemSQL) updatePropertyDetails(projectID uint64, eventNameID uint64,
 	return http.StatusAccepted
 }
 
+func (store *MemSQL) getPropertyDetailsForSmartEventName(projectID uint64, eventNameDetails *model.EventName) (*map[string]string, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name_id": eventNameDetails.ID})
+	if !model.IsEventNameTypeSmartEvent(eventNameDetails.Type) {
+		logCtx.Error("Invalid smart event type.")
+		return nil, http.StatusBadRequest
+	}
+
+	smartEventFilter, err := model.GetDecodedSmartEventFilterExp(eventNameDetails.FilterExpr)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get decoded smart event filter.")
+		return nil, http.StatusInternalServerError
+	}
+
+	eventName := ""
+	if smartEventFilter != nil {
+		if smartEventFilter.Source == model.SmartCRMEventSourceSalesforce {
+			eventName = model.GetSalesforceEventNameByAction(smartEventFilter.ObjectType, model.SalesforceDocumentCreated)
+		}
+
+		if smartEventFilter.Source == model.SmartCRMEventSourceHubspot {
+			if smartEventFilter.ObjectType == model.HubspotDocumentTypeNameContact {
+				eventName = util.EVENT_NAME_HUBSPOT_CONTACT_CREATED
+			}
+
+			if smartEventFilter.ObjectType == model.HubspotDocumentTypeNameDeal {
+				eventName = util.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED
+			}
+		}
+	}
+
+	if eventName == "" {
+		logCtx.Error("Empty event name.")
+		return nil, http.StatusInternalServerError
+	}
+
+	eventNameDetails, status := store.GetEventName(eventName, projectID)
+	if status != http.StatusFound {
+		if status == http.StatusNotFound {
+			return nil, status
+		}
+
+		logCtx.Error("Failed to get event name on smart event property details.")
+		return nil, http.StatusInternalServerError
+	}
+
+	db := C.GetServices().Db
+
+	var propertyDetails []model.PropertyDetail
+	if err := db.Where("project_id = ? AND entity = ? AND event_name_id = ?", projectID, model.EntityEvent, eventNameDetails.ID).
+		Find(&propertyDetails).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error(
+			"Failed to getPropertyDetailsForSmartEventName.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(propertyDetails) < 1 {
+		return nil, http.StatusNotFound
+	}
+
+	propertyDetailsMap := make(map[string]string)
+	for i := range propertyDetails {
+		propertyDetailsMap[propertyDetails[i].Key] = propertyDetails[i].Type
+	}
+
+	return &propertyDetailsMap, http.StatusFound
+}
+
 // GetAllPropertyDetailsByProjectID returns all property details by event_name or user_property
-func (store *MemSQL) GetAllPropertyDetailsByProjectID(projectID uint64, eventName string, isUserProperty bool) (int, *map[string]string) {
+func (store *MemSQL) GetAllPropertyDetailsByProjectID(projectID uint64, eventName string, isUserProperty bool) (*map[string]string, int) {
 	if projectID == 0 {
-		return http.StatusBadRequest, nil
+		return nil, http.StatusBadRequest
 	}
 
 	if !isUserProperty && eventName == "" {
-		return http.StatusBadRequest, nil
+		return nil, http.StatusBadRequest
 	}
 
 	entity := model.GetEntity(isUserProperty)
@@ -323,11 +397,15 @@ func (store *MemSQL) GetAllPropertyDetailsByProjectID(projectID uint64, eventNam
 
 		if status != http.StatusFound {
 			if status == http.StatusNotFound {
-				return status, nil
+				return nil, status
 			}
 
 			logCtx.Error("Failed to get event name on property details")
-			return http.StatusInternalServerError, nil
+			return nil, http.StatusInternalServerError
+		}
+
+		if model.IsEventNameTypeSmartEvent(eventNameDetails.Type) {
+			return store.getPropertyDetailsForSmartEventName(projectID, eventNameDetails)
 		}
 
 		whereStmnt = whereStmnt + " AND " + " event_name_id = ? "
@@ -340,16 +418,16 @@ func (store *MemSQL) GetAllPropertyDetailsByProjectID(projectID uint64, eventNam
 	if err := db.Where(whereStmnt, whereParams...).Find(&propertyDetails).Error; err != nil {
 
 		if gorm.IsRecordNotFoundError(err) {
-			return http.StatusNotFound, nil
+			return nil, http.StatusNotFound
 		}
 
 		logCtx.WithError(err).Error(
 			"Failed to GetPropertyTypeFromDB.")
-		return http.StatusInternalServerError, nil
+		return nil, http.StatusInternalServerError
 	}
 
 	if len(propertyDetails) < 1 {
-		return http.StatusNotFound, nil
+		return nil, http.StatusNotFound
 	}
 
 	propertyDetailsMap := make(map[string]string)
@@ -357,5 +435,5 @@ func (store *MemSQL) GetAllPropertyDetailsByProjectID(projectID uint64, eventNam
 		propertyDetailsMap[propertyDetails[i].Key] = propertyDetails[i].Type
 	}
 
-	return http.StatusFound, &propertyDetailsMap
+	return &propertyDetailsMap, http.StatusFound
 }

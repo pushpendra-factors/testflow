@@ -1398,3 +1398,178 @@ func TestSalesforceIndentification(t *testing.T) {
 	assert.Equal(t, emailAccount, EventUserIDMap[U.EVENT_NAME_SALESFORCE_ACCOUNT_CREATED])
 	assert.Equal(t, emailLead, EventUserIDMap[U.EVENT_NAME_SALESFORCE_LEAD_CREATED])
 }
+
+func TestSmartEventPropertyDetails(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	filter := model.SmartCRMEventFilter{
+		Source:               model.SmartCRMEventSourceSalesforce,
+		ObjectType:           "contact",
+		Description:          "salesforce user created",
+		FilterEvaluationType: model.FilterEvaluationTypeSpecific,
+		Filters: []model.PropertyFilter{
+			{
+				Name: "day",
+				Rules: []model.CRMFilterRule{
+					{
+						PropertyState: model.CurrentState,
+						Value:         U.PROPERTY_VALUE_ANY,
+						Operator:      model.COMPARE_EQUAL,
+					},
+					{
+						PropertyState: model.PreviousState,
+						Value:         U.PROPERTY_VALUE_ANY,
+						Operator:      model.COMPARE_NOT_EQUAL,
+					},
+				},
+				LogicalOp: model.LOGICAL_OP_AND,
+			},
+		},
+		LogicalOp:               model.LOGICAL_OP_AND,
+		TimestampReferenceField: model.TimestampReferenceTypeDocument,
+	}
+
+	smartEventName := "Event 1"
+	requestPayload := make(map[string]interface{})
+	requestPayload["name"] = smartEventName
+	requestPayload["expr"] = filter
+
+	w := sendCreateSmartEventFilterReq(r, project.ID, agent, &requestPayload)
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	documentID := U.RandomLowerAphaNumString(4)
+	emailLead := getRandomEmail()
+	createdDate := time.Now()
+
+	jsonDataContact := fmt.Sprintf(`{"Id":"%s","Email":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailLead, createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument := &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonDataContact))},
+	}
+
+	status := store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	jsonDataContact = fmt.Sprintf(`{"Id":"%s","Email":"%s","day":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, documentID, emailLead, createdDate.Add(2*time.Second).UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.UTC().Format(model.SalesforceDocumentDateTimeLayout), createdDate.Add(10*time.Minute).UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	salesforceDocument = &model.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: model.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonDataContact))},
+	}
+
+	status = store.GetStore().CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	dtEnKey1 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameContact,
+		"day",
+	)
+
+	dtEnKey2 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameContact,
+		"CreatedDate",
+	)
+
+	dtEnKey3 := model.GetCRMEnrichPropertyKeyByType(
+		model.SmartCRMEventSourceSalesforce,
+		model.SalesforceDocumentTypeNameContact,
+		"LastModifiedDate",
+	)
+
+	_, status = store.GetStore().CreateOrGetEventName(&model.EventName{ProjectId: project.ID, Name: U.EVENT_NAME_SALESFORCE_CONTACT_CREATED, Type: model.TYPE_USER_CREATED_EVENT_NAME})
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().CreateOrGetEventName(&model.EventName{ProjectId: project.ID, Name: U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED, Type: model.TYPE_USER_CREATED_EVENT_NAME})
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, U.EVENT_NAME_SALESFORCE_CONTACT_CREATED, dtEnKey1, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED, dtEnKey1, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, U.EVENT_NAME_SALESFORCE_CONTACT_CREATED, dtEnKey2, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED, dtEnKey2, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, U.EVENT_NAME_SALESFORCE_CONTACT_CREATED, dtEnKey3, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED, dtEnKey3, U.PropertyTypeDateTime, false, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey1, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey2, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+	status = store.GetStore().CreatePropertyDetails(project.ID, "", dtEnKey3, U.PropertyTypeDateTime, true, false)
+	assert.Equal(t, http.StatusCreated, status)
+
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
+	assert.Equal(t, "success", enrichStatus[2].Status)
+
+	rollBackWindow := 1
+	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
+
+	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED, 2500, 1)
+	assert.Nil(t, err)
+	assert.Contains(t, properties[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2, dtEnKey3)
+	properties, err = store.GetStore().GetUserPropertiesByProject(project.ID, 100, 10)
+	assert.Nil(t, err)
+	assert.Contains(t, properties[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2, dtEnKey3)
+
+	properties, err = store.GetStore().GetPropertiesByEvent(project.ID, smartEventName, 2500, 1)
+	assert.Nil(t, err)
+	assert.Contains(t, properties[U.PropertyTypeDateTime], "$curr_salesforce_contact_day")
+
+	query := model.Query{
+		From: createdDate.Unix() - 500,
+		To:   createdDate.Unix() + 5000,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: U.EVENT_NAME_SALESFORCE_CONTACT_CREATED,
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: "$salesforce_contact_lastmodifieddate",
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+
+	result, _, _ := store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, fmt.Sprintf("%d", createdDate.Unix()), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+
+	query = model.Query{
+		From: createdDate.Unix() - 500,
+		To:   createdDate.Unix() + 5000,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name: smartEventName,
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityEvent,
+				Property: "$curr_salesforce_contact_day",
+			},
+		},
+		Class:           model.QueryClassEvents,
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+	}
+
+	result, _, _ = store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, fmt.Sprintf("%d", createdDate.Add(2*time.Second).Unix()), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+}
