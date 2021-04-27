@@ -107,7 +107,7 @@ function isPartOfForm(e) {
 }
 
 function bindAllNonFormButtonOnClick(appInstance, processCallback) {
-    var buttons = document.querySelectorAll('button,input[type="button"]');
+    var buttons = document.querySelectorAll('button,input[type="button"],input[type="submit"]');
     for (var i=0; i<buttons.length; i++) {
         // do not bind button part of a form.
         if (isPartOfForm(buttons[i])) continue;

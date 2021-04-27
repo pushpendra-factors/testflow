@@ -65,8 +65,32 @@ type TableRecord struct {
 	ID        interface{} `json:"id"`      // Using interface, as type of ID can be uint64 or uuid.
 	UUID      interface{} `json:"uuid"`    // Agents table is using uuid instead of id.
 	UserID    string      `json:"user_id"` // For analytics tables.
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+
+	// Additional Primary Key Fields per table.
+	// hubspot_documents, salesforce_documents
+	// adwords_documents, facebook_documents, linkedin_documents
+	Type      string `json:"type"`
+	Timestamp uint64 `json:"timestamp"`
+	// adwords_documents
+	CustomerAccountID string `json:"customer_account_id"`
+	// linkedin_documents
+	CustomerAdAccountID string `json:"customer_ad_account_id"`
+	// facebook_documents
+	Platform string `json:"platform"`
+	// hubspot_documents
+	Action uint64 `json:"action"`
+	// project_agent_mappings
+	AgentUUID string `json:"agent_uuid"`
+	// property_details
+	EventNameID uint64 `json:"event_name_id"`
+	Key         string `json:"key"`
+	// smart_properties
+	ObjectID   string `json:"object_id"`
+	ObjectType uint64 `json:"object_type"`
+	Source     string `json:"source"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 var (
@@ -95,6 +119,7 @@ func main() {
 			*memSQLUser, *memSQLPass, *memSQLHost, *memSQLPort, *memSQLName),
 		"",
 	)
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	projectIDStringList := flag.String("project_ids", "", "")
 	pageSize := flag.Int("page_size", 0, "No.of records per page.")
@@ -109,14 +134,13 @@ func main() {
 	eventsNumRouties := flag.Int("events_num_routines", 1, "")
 	flag.Parse()
 
-	if *env != "development" &&
-		*env != "staging" &&
-		*env != "production" {
+	if *env != C.DEVELOPMENT &&
+		*env != C.STAGING &&
+		*env != C.PRODUCTION {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
 	}
 
-	log.SetFormatter(&log.JSONFormatter{})
 	if *projectIDStringList == "" {
 		log.Fatal("Invalid project_id.")
 	}
@@ -129,7 +153,8 @@ func main() {
 	dedupeByQuery = *dedupeByQueryForNonUniqueTables
 
 	config := &C.Configuration{
-		Env: *env,
+		AppName: "memsql_replicator",
+		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -137,8 +162,10 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		SentryDSN: *sentryDSN,
 	}
 	C.InitConf(config)
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
 	err := C.InitDB(*config)
 	if err != nil {
@@ -491,7 +518,62 @@ func runCreateEventAndDependenciesOnMemSQL(eventsList [][]model.Event) {
 	}
 }
 
-func getIDColumnNameForTable(tableName string) string {
+func getAdditionalPrimaryKeyConditionsByTableName(tableName string, sourceTableRecord *TableRecord) (string, []interface{}) {
+	var conditions []string
+	params := make([]interface{}, 0, 0)
+
+	switch tableName {
+	case tableAdwordsDocuments:
+		conditions = []string{"customer_account_id", "type", "timestamp"}
+		params = append(params, sourceTableRecord.CustomerAccountID, sourceTableRecord.Type, sourceTableRecord.Timestamp)
+
+	case tableFacebookDocuments:
+		conditions = []string{"customer_ad_account_id", "platform", "type", "timestamp"}
+		params = append(params, sourceTableRecord.CustomerAdAccountID, sourceTableRecord.Platform,
+			sourceTableRecord.Type, sourceTableRecord.Timestamp)
+
+	case tableLinkedInDocuments:
+		conditions = []string{"customer_ad_account_id", "type", "timestamp"}
+		params = append(params, sourceTableRecord.CustomerAdAccountID, sourceTableRecord.Type, sourceTableRecord.Timestamp)
+
+	case tableHubspotDocuments:
+		conditions = []string{"type", "action", "timestamp"}
+		params = append(params, sourceTableRecord.Type, sourceTableRecord.Action, sourceTableRecord.Timestamp)
+
+	case tableSalesforceDocuments:
+		conditions = []string{"type", "timestamp"}
+		params = append(params, sourceTableRecord.Type, sourceTableRecord.Timestamp)
+
+	case tableProjectAgentMappings:
+		conditions = []string{"agent_uuid"}
+		params = append(params, sourceTableRecord.AgentUUID)
+
+	case tableQueries:
+		conditions = []string{"type"}
+		params = append(params, sourceTableRecord.Type)
+
+	case tablePropertyDetails:
+		conditions = []string{"event_name_id", "key"}
+		params = append(params, sourceTableRecord.EventNameID, sourceTableRecord.Key)
+
+	case tableSmartProperties:
+		conditions = []string{"object_id", "object_type", "source"}
+		params = append(params, sourceTableRecord.ObjectID, sourceTableRecord.ObjectType, sourceTableRecord.Source)
+
+	}
+
+	var condition string
+	for i, c := range conditions {
+		if i > 0 {
+			condition = condition + " AND "
+		}
+		condition = condition + fmt.Sprintf("%s = ?", c)
+	}
+
+	return condition, params
+}
+
+func getPrimaryKeyConditionByTableName(tableName string, sourceTableRecord *TableRecord) (string, []interface{}) {
 	idColName := "id"
 	if tableName == tableAgents {
 		idColName = "uuid"
@@ -500,10 +582,24 @@ func getIDColumnNameForTable(tableName string) string {
 	} else if isProjectAssociatedTable(tableName) {
 		idColName = "project_id"
 	}
-	return idColName
+
+	params := make([]interface{}, 0, 0)
+
+	condition := fmt.Sprintf("%s = ?", idColName)
+	params = append(params, sourceTableRecord.ID)
+
+	addCondition, addParams := getAdditionalPrimaryKeyConditionsByTableName(tableName, sourceTableRecord)
+	if addCondition != "" {
+		condition = fmt.Sprintf("%s AND %s", condition, addCondition)
+		params = append(params, addParams...)
+	}
+
+	return condition, params
 }
 
-func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interface{}, userID string) (*TableRecord, int) {
+func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interface{},
+	sourceTableRecord *TableRecord) (*TableRecord, int) {
+
 	logCtx := log.WithField("project_id", projectID).WithField("id", id).
 		WithField("table", tableName)
 
@@ -516,19 +612,18 @@ func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interfa
 	}
 
 	var record TableRecord
-	idColName := getIDColumnNameForTable(tableName)
-
-	db := memSQLDB.Table(tableName).Limit(1).Where(fmt.Sprintf("%s = ?", idColName), id)
+	condition, params := getPrimaryKeyConditionByTableName(tableName, sourceTableRecord)
+	db := memSQLDB.Table(tableName).Limit(1).Where(condition, params)
 	if !isTableWithoutProjectID(tableName) {
 		db = db.Where("project_id = ?", projectID)
 	}
 
 	// Add user_id also part of the filter to speed up the query.
 	if tableName == tableEvents || tableName == tableUserProperties {
-		if userID == "" {
+		if sourceTableRecord.UserID == "" {
 			logCtx.Error("user_id not provided on getTableRecordByIDFromMemSQL")
 		} else {
-			db = db.Where("user_id = ?", userID)
+			db = db.Where("user_id = ?", sourceTableRecord.UserID)
 		}
 	}
 
@@ -545,31 +640,30 @@ func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interfa
 	return &record, http.StatusFound
 }
 
-func deleteByIDOnMemSQL(projectID uint64, tableName string, id interface{}, userID string) int {
+func deleteByIDOnMemSQL(projectID uint64, tableName string, id interface{}, sourceTableRecord *TableRecord) int {
 	logCtx := log.WithField("project_id", projectID).WithField("table_name", tableName).
-		WithField("id", id).WithField("user_id", userID)
+		WithField("id", id).WithField("user_id", sourceTableRecord.UserID)
 
 	if (!isTableWithoutProjectID(tableName) && projectID == 0) || tableName == "" || id == nil {
 		return http.StatusBadRequest
 	}
 
-	idColName := getIDColumnNameForTable(tableName)
-
-	query := fmt.Sprintf("DELETE FROM %s WHERE %s = ?", tableName, idColName)
+	condition, params := getPrimaryKeyConditionByTableName(tableName, sourceTableRecord)
+	query := fmt.Sprintf("DELETE FROM %s WHERE %s", tableName, condition)
 	if !isTableWithoutProjectID(tableName) {
 		query = fmt.Sprintf("%s AND project_id = %d", query, projectID)
 	}
 
 	// Add user_id also part of the filter to speed up the query.
 	if tableName == tableEvents || tableName == tableUserProperties {
-		if userID == "" {
+		if sourceTableRecord.UserID == "" {
 			logCtx.Error("user_id not provided on deleteByIDOnMemSQL")
 		} else {
-			query = fmt.Sprintf("%s AND user_id = '%s'", query, userID)
+			query = fmt.Sprintf("%s AND user_id = '%s'", query, sourceTableRecord.UserID)
 		}
 	}
 
-	rows, err := memSQLDB.Raw(query, id).Rows()
+	rows, err := memSQLDB.Raw(query, params).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed deleting record in memsql.")
 		return http.StatusInternalServerError
@@ -668,7 +762,7 @@ func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interfac
 
 	var status int
 	if memsqlTableRecord == nil {
-		memsqlTableRecord, status = getTableRecordByIDFromMemSQL(projectID, tableName, pgTableRecord.ID, pgTableRecord.UserID)
+		memsqlTableRecord, status = getTableRecordByIDFromMemSQL(projectID, tableName, pgTableRecord.ID, pgTableRecord)
 		if status == http.StatusInternalServerError || status == http.StatusBadRequest {
 			logCtx.WithField("status", status).Error("Failed to get the existing record from memsql.")
 			return http.StatusInternalServerError
@@ -685,7 +779,7 @@ func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interfac
 	}
 
 	if pgTableRecord.UpdatedAt.After(memsqlTableRecord.UpdatedAt) {
-		status := deleteByIDOnMemSQL(projectID, tableName, pgTableRecord.ID, pgTableRecord.UserID)
+		status := deleteByIDOnMemSQL(projectID, tableName, pgTableRecord.ID, pgTableRecord)
 		if status != http.StatusOK {
 			return http.StatusInternalServerError
 		}
@@ -714,7 +808,7 @@ func createIfNotExistOrUpdateIfChangedOnMemSQL(tableName string, pgRecord interf
 	if isTableWithoutUniquePrimaryKey(tableName) && dedupeByQuery {
 		// TODO: Try to add a procedure/trigger to do the existence check before create on memsql itself for long term.
 		// Now doing it on the script itself, as it is sequential.
-		currentMemsqlRecord, status := getTableRecordByIDFromMemSQL(pgTableRecord.ProjectID, tableName, pgTableRecord.ID, pgTableRecord.UserID)
+		currentMemsqlRecord, status := getTableRecordByIDFromMemSQL(pgTableRecord.ProjectID, tableName, pgTableRecord.ID, pgTableRecord)
 		if status == http.StatusInternalServerError || status == http.StatusBadRequest {
 			logCtx.WithField("status", status).Error("Failed to get the existing record from memsql.")
 			return nil, http.StatusInternalServerError

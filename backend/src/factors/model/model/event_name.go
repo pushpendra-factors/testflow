@@ -118,6 +118,16 @@ type EventNameWithAggregation struct {
 const (
 	SmartCRMEventSourceSalesforce = "salesforce"
 	SmartCRMEventSourceHubspot    = "hubspot"
+
+	// smart event property prefix
+	SmartCRMEventPreviousPropertyPrefix = U.NAME_PREFIX + "prev_"
+	SmartCRMEventCurrentPropertyPrefix  = U.NAME_PREFIX + "curr_"
+
+	SmartCRMEventSalesforcePrevPropertyPrefix = SmartCRMEventPreviousPropertyPrefix + SmartCRMEventSourceSalesforce + "_"
+	SmartCRMEventHubspotPrevPropertyPrefix    = SmartCRMEventPreviousPropertyPrefix + SmartCRMEventSourceHubspot + "_"
+
+	SmartCRMEventSalesforceCurrPropertyPrefix = SmartCRMEventCurrentPropertyPrefix + SmartCRMEventSourceSalesforce + "_"
+	SmartCRMEventHubspotCurrPropertyPrefix    = SmartCRMEventCurrentPropertyPrefix + SmartCRMEventSourceHubspot + "_"
 )
 
 // GetDecodedSmartEventFilterExp unmarhsal encoded CRM smart event filter exp to SmartCRMEventFilter struct
@@ -136,17 +146,33 @@ func GetDecodedSmartEventFilterExp(enFilterExp string) (*SmartCRMEventFilter, er
 }
 
 func getPrevPropertyName(pName, source, objectType string) string {
-	if pName == "" {
+	if pName == "" || source == "" || objectType == "" {
 		return ""
 	}
-	return fmt.Sprintf("%sprev_%s", U.NAME_PREFIX, getCRMPropertyKeyByType(source, objectType, pName))
+
+	return SmartCRMEventPreviousPropertyPrefix + getCRMPropertyKeyByType(source, objectType, pName)
 }
 
 func getCurrPropertyName(pName, source, objectType string) string {
-	if pName == "" {
+	if pName == "" || source == "" || objectType == "" {
 		return ""
 	}
-	return fmt.Sprintf("%scurr_%s", U.NAME_PREFIX, getCRMPropertyKeyByType(source, objectType, pName))
+	return SmartCRMEventCurrentPropertyPrefix + getCRMPropertyKeyByType(source, objectType, pName)
+}
+
+// GetPropertyNameByTrimmedSmartEventPropertyPrefix removes smart event property property prefix
+func GetPropertyNameByTrimmedSmartEventPropertyPrefix(pName string) string {
+	if strings.HasPrefix(pName, SmartCRMEventSalesforcePrevPropertyPrefix) ||
+		strings.HasPrefix(pName, SmartCRMEventHubspotPrevPropertyPrefix) {
+		return U.NAME_PREFIX + strings.TrimPrefix(pName, SmartCRMEventPreviousPropertyPrefix)
+	}
+
+	if strings.HasPrefix(pName, SmartCRMEventSalesforceCurrPropertyPrefix) ||
+		strings.HasPrefix(pName, SmartCRMEventHubspotCurrPropertyPrefix) {
+		return U.NAME_PREFIX + strings.TrimPrefix(pName, SmartCRMEventCurrentPropertyPrefix)
+	}
+
+	return pName
 }
 
 // FillSmartEventCRMProperties fills all properties from CRM smart filter to new properties
@@ -201,6 +227,11 @@ func isSameSourceAndObjectType(existingFilter *SmartCRMEventFilter, incomingFilt
 	}
 
 	return false
+}
+
+// IsEventNameTypeSmartEvent validates event name is of type smart event
+func IsEventNameTypeSmartEvent(eventType string) bool {
+	return eventType == TYPE_CRM_HUBSPOT || eventType == TYPE_CRM_SALESFORCE
 }
 
 func checkDuplicatePropertyFilters(existingFilter, incomingFilter []PropertyFilter) bool {
@@ -704,15 +735,15 @@ func GetValuesByEventPropertyCountCacheKey(projectId uint64, dateKey string) (*c
 // Analytics Cache keys
 func UniqueEventNamesAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
 	prefix := "SS:A:EN"
-	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s",prefix, dateKey))
+	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s", prefix, dateKey))
 }
 func UserCountAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
 	prefix := "SS:A:UC"
-	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s",prefix, dateKey))
+	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s", prefix, dateKey))
 }
 func EventsCountAnalyticsCacheKey(dateKey string) (*cacheRedis.Key, error) {
 	prefix := "SS:A:EC"
-	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s",prefix, dateKey))
+	return cacheRedis.NewKeyWithOnlyPrefix(fmt.Sprintf("%s:%s", prefix, dateKey))
 }
 
 // FillEventPropertiesByFilterExpr - Parses and fills event properties

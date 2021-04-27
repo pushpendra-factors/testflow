@@ -3,16 +3,17 @@
 package pattern_service_wrapper
 
 import (
+	"factors/model/store"
 	P "factors/pattern"
 	U "factors/util"
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
-	"factors/model/store"
+
 	log "github.com/sirupsen/logrus"
-	"reflect"
 )
 
 type ItreeNode struct {
@@ -108,15 +109,16 @@ const NONE_PROPERTY_VALUES_LABEL = "None"
 var log2Value float64 = math.Log(2)
 
 var BLACKLISTED_JOURNEYS = map[string][]string{
-	"$hubspot_contact_created" : []string{"$hubspot_contact_updated", "ANY_CRM"},
-	"$sf_opportunity_created" : []string{"$sf_opportunity_updated", "ANY_CRM"},
-	"$sf_lead_created" : []string{"$sf_lead_updated", "ANY_CRM"},
+	"$hubspot_contact_created": []string{"$hubspot_contact_updated", "ANY_CRM"},
+	"$sf_opportunity_created":  []string{"$sf_opportunity_updated", "ANY_CRM"},
+	"$sf_lead_created":         []string{"$sf_lead_updated", "ANY_CRM"},
+	"Deal Won":                 []string{"Deal Created"},
 }
 
-var BLACKLISTED_PROPERTIES = map[string][]string {
-	"$hubspot_contact_created" : []string{"$hubspot_"},
-	"$sf_opportunity_created" : []string{"$salesforce_"},
-	"$sf_lead_created" : []string{"$salesforce_"},
+var BLACKLISTED_PROPERTIES = map[string][]string{
+	"$hubspot_contact_created": []string{"$hubspot_"},
+	"$sf_opportunity_created":  []string{"$salesforce_"},
+	"$sf_lead_created":         []string{"$salesforce_"},
 }
 
 func log2(x float64) float64 {
@@ -581,7 +583,6 @@ func (it *Itree) addNode(node *ItreeNode) int {
 	return node.Index
 }
 
-
 func isChildSequenceBlacklisted(crmEvents map[string]bool, ToBeAdded string, preSequence []string, goalEvent string) bool {
 	// If goalEvent has restrictions
 	// check what all events are in blacklisting and then check the ToBeadded event and then decide
@@ -594,15 +595,15 @@ func isChildSequenceBlacklisted(crmEvents map[string]bool, ToBeAdded string, pre
 	}
 
 	for _, blacklisted := range BLACKLISTED_JOURNEYS[goalEvent] {
-		if(ToBeAdded == blacklisted){
+		if ToBeAdded == blacklisted {
 			return true
 		}
-		if(blacklisted == "ANY_CRM" && crmEvents[ToBeAdded] == true){
+		if blacklisted == "ANY_CRM" && crmEvents[ToBeAdded] == true {
 			return true
 		}
 	}
 	for _, blacklisted := range BLACKLISTED_JOURNEYS[ToBeAdded] {
-		if(preSequenceMap[blacklisted] == true){
+		if preSequenceMap[blacklisted] == true {
 			return true
 		}
 	}
@@ -638,10 +639,10 @@ func isChildSequence(parent []string, child []string, crmEvents map[string]bool)
 		return false
 	}
 	preSeq := make([]string, 0)
-	if(pLen > 1){
-		preSeq = parent[0:pLen-1]
+	if pLen > 1 {
+		preSeq = parent[0 : pLen-1]
 	}
-	if(isChildSequenceBlacklisted(crmEvents, child[cLen-2], preSeq, parent[pLen-1])){
+	if isChildSequenceBlacklisted(crmEvents, child[cLen-2], preSeq, parent[pLen-1]) {
 		return false
 	}
 	return true
@@ -1167,7 +1168,7 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 	return addedChildNodes, nil
 }
 
-func BuildNewItree(reqId, 
+func BuildNewItree(reqId,
 	startEvent string, startEventConstraints *P.EventConstraints,
 	endEvent string, endEventConstraints *P.EventConstraints,
 	patternWrapper PatternServiceWrapperInterface, countType string, projectId uint64) (*Itree, error) {
@@ -1270,7 +1271,7 @@ func BuildNewItreeV1(reqId string,
 
 	events, _ := store.GetStore().GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, 8)
 	crmEvents := make(map[string]bool)
-	for _, event := range events[U.SmartEvent]{
+	for _, event := range events[U.SmartEvent] {
 		crmEvents[event] = true
 	}
 	var rootNodePattern *P.Pattern = nil
@@ -1352,7 +1353,7 @@ func BuildNewItreeV1(reqId string,
 
 			startDateTime := time.Now()
 			if attributeChildNodes, err, debugInfo := itree.buildAndAddPropertyChildNodesV1(reqId,
-				parentNode.node, allActiveUsersPattern, patternWrapper, countType, parentNode.level, debugKey, debugParams["PropertyName"], debugParams["PropertyValue"],startEventConstraints, endEventConstraints); err != nil {
+				parentNode.node, allActiveUsersPattern, patternWrapper, countType, parentNode.level, debugKey, debugParams["PropertyName"], debugParams["PropertyValue"], startEventConstraints, endEventConstraints); err != nil {
 				log.Errorf(fmt.Sprintf("%s", err))
 				return nil, err, nil
 			} else {
@@ -1684,7 +1685,7 @@ func (it *Itree) buildAndAddPropertyChildNodesV1(reqId string,
 
 func isPropertyGoalEventBlacklisted(goalEvent string, propertyName string) bool {
 	for _, propertyPrefix := range BLACKLISTED_PROPERTIES[goalEvent] {
-		if(strings.HasPrefix(propertyName, propertyPrefix)){
+		if strings.HasPrefix(propertyName, propertyPrefix) {
 			return true
 		}
 	}
@@ -1700,7 +1701,7 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 	numP := 0
 	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
 	for _, propertyName := range categoricalPropertyKeys {
-		if(isPropertyGoalEventBlacklisted(parentNode.Pattern.EventNames[len(parentNode.Pattern.EventNames)-1], propertyName)){
+		if isPropertyGoalEventBlacklisted(parentNode.Pattern.EventNames[len(parentNode.Pattern.EventNames)-1], propertyName) {
 			continue
 		}
 		if numP > maxNumProperties {
@@ -1824,7 +1825,7 @@ func (it *Itree) buildCategoricalPropertyChildNodesV1(reqId string,
 func (it *Itree) buildAndAddSequenceChildNodesV1(reqId string,
 	parentNode *ItreeNode, candidatePattens []*P.Pattern,
 	patternWrapper PatternServiceWrapperInterface,
-	allActiveUsersPattern *P.Pattern, countType string,startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints, crmEvents map[string]bool) ([]*ItreeNode, error) {
+	allActiveUsersPattern *P.Pattern, countType string, startEventConstraints *P.EventConstraints, endEventConstraints *P.EventConstraints, crmEvents map[string]bool) ([]*ItreeNode, error) {
 
 	parentPattern := parentNode.Pattern
 	peLen := len(parentPattern.EventNames)
@@ -1964,7 +1965,7 @@ func (it *Itree) buildAndAddCampaignChildNodesV1(reqId string,
 			log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
 			continue
 		} else {
-			if cNode == nil || cNode.Fcp == cNode.Fpp{
+			if cNode == nil || cNode.Fcp == cNode.Fpp {
 				continue
 			}
 			filteredPatternsCount++
@@ -2144,59 +2145,59 @@ func (it *Itree) buildChildNodeV1(reqId string,
 					UPNumericConstraints:     []P.NumericConstraint{},
 					UPCategoricalConstraints: []P.CategoricalConstraint{},
 				}
-				for _, constraint := range parentConstraints[0].EPCategoricalConstraints{
+				for _, constraint := range parentConstraints[0].EPCategoricalConstraints {
 					toBeAdded := true
-					for _, endConstraint := range endEventConstraints.EPCategoricalConstraints{
-						if(reflect.DeepEqual(constraint, endConstraint)){
+					for _, endConstraint := range endEventConstraints.EPCategoricalConstraints {
+						if reflect.DeepEqual(constraint, endConstraint) {
 							toBeAdded = false
-							break;	
-						} 
+							break
+						}
 					}
-					if( toBeAdded == true ){
-						nonEndConstraints.EPCategoricalConstraints = append(nonEndConstraints.EPCategoricalConstraints, constraint)	
-					}				
+					if toBeAdded == true {
+						nonEndConstraints.EPCategoricalConstraints = append(nonEndConstraints.EPCategoricalConstraints, constraint)
+					}
 				}
-				for _, constraint := range parentConstraints[0].EPNumericConstraints{
+				for _, constraint := range parentConstraints[0].EPNumericConstraints {
 					toBeAdded := true
-					for _, endConstraint := range endEventConstraints.EPNumericConstraints{
-						if(reflect.DeepEqual(constraint, endConstraint)){
+					for _, endConstraint := range endEventConstraints.EPNumericConstraints {
+						if reflect.DeepEqual(constraint, endConstraint) {
 							toBeAdded = false
-							break;	
-						} 
+							break
+						}
 					}
-					if( toBeAdded == true ){
-						nonEndConstraints.EPNumericConstraints = append(nonEndConstraints.EPNumericConstraints, constraint)	
-					}				
+					if toBeAdded == true {
+						nonEndConstraints.EPNumericConstraints = append(nonEndConstraints.EPNumericConstraints, constraint)
+					}
 				}
-				for _, constraint := range parentConstraints[0].UPCategoricalConstraints{
+				for _, constraint := range parentConstraints[0].UPCategoricalConstraints {
 					toBeAdded := true
-					for _, endConstraint := range endEventConstraints.UPCategoricalConstraints{
-						if(reflect.DeepEqual(constraint, endConstraint)){
+					for _, endConstraint := range endEventConstraints.UPCategoricalConstraints {
+						if reflect.DeepEqual(constraint, endConstraint) {
 							toBeAdded = false
-							break;	
-						} 
+							break
+						}
 					}
-					if( toBeAdded == true ){
-						nonEndConstraints.UPCategoricalConstraints = append(nonEndConstraints.UPCategoricalConstraints, constraint)	
-					}				
+					if toBeAdded == true {
+						nonEndConstraints.UPCategoricalConstraints = append(nonEndConstraints.UPCategoricalConstraints, constraint)
+					}
 				}
-				for _, constraint := range parentConstraints[0].UPNumericConstraints{
+				for _, constraint := range parentConstraints[0].UPNumericConstraints {
 					toBeAdded := true
-					for _, endConstraint := range endEventConstraints.UPNumericConstraints{
-						if(reflect.DeepEqual(constraint, endConstraint)){
+					for _, endConstraint := range endEventConstraints.UPNumericConstraints {
+						if reflect.DeepEqual(constraint, endConstraint) {
 							toBeAdded = false
-							break;	
-						} 
+							break
+						}
 					}
-					if( toBeAdded == true ){
-						nonEndConstraints.UPNumericConstraints = append(nonEndConstraints.UPNumericConstraints, constraint)	
-					}				
+					if toBeAdded == true {
+						nonEndConstraints.UPNumericConstraints = append(nonEndConstraints.UPNumericConstraints, constraint)
+					}
 				}
-				// For patternLength = 1 we dont need to consider endevent constraints for fcp calculation we just need startEvent constraints 
+				// For patternLength = 1 we dont need to consider endevent constraints for fcp calculation we just need startEvent constraints
 				if len(startEventConstraints.EPCategoricalConstraints) > 0 ||
-				len(startEventConstraints.EPNumericConstraints) > 0 ||
-				len(startEventConstraints.UPCategoricalConstraints) > 0 ||
-				len(startEventConstraints.UPNumericConstraints) > 0 {
+					len(startEventConstraints.EPNumericConstraints) > 0 ||
+					len(startEventConstraints.UPCategoricalConstraints) > 0 ||
+					len(startEventConstraints.UPNumericConstraints) > 0 {
 					allUConstraints[0].EPCategoricalConstraints = append(allUConstraints[0].EPCategoricalConstraints, startEventConstraints.EPCategoricalConstraints...)
 					allUConstraints[0].EPNumericConstraints = append(allUConstraints[0].EPNumericConstraints, startEventConstraints.EPNumericConstraints...)
 					allUConstraints[0].UPCategoricalConstraints = append(allUConstraints[0].UPCategoricalConstraints, startEventConstraints.UPCategoricalConstraints...)
@@ -2204,13 +2205,13 @@ func (it *Itree) buildChildNodeV1(reqId string,
 				}
 
 				if len(nonEndConstraints.EPCategoricalConstraints) > 0 ||
-				len(nonEndConstraints.EPNumericConstraints) > 0 ||
-				len(nonEndConstraints.UPCategoricalConstraints) > 0 ||
-				len(nonEndConstraints.UPNumericConstraints) > 0 {
-				allUConstraints[0].EPCategoricalConstraints = append(allUConstraints[0].EPCategoricalConstraints, nonEndConstraints.EPCategoricalConstraints...)
-				allUConstraints[0].EPNumericConstraints = append(allUConstraints[0].EPNumericConstraints, nonEndConstraints.EPNumericConstraints...)
-				allUConstraints[0].UPCategoricalConstraints = append(allUConstraints[0].UPCategoricalConstraints, nonEndConstraints.UPCategoricalConstraints...)
-				allUConstraints[0].UPNumericConstraints = append(allUConstraints[0].UPNumericConstraints, nonEndConstraints.UPNumericConstraints...)
+					len(nonEndConstraints.EPNumericConstraints) > 0 ||
+					len(nonEndConstraints.UPCategoricalConstraints) > 0 ||
+					len(nonEndConstraints.UPNumericConstraints) > 0 {
+					allUConstraints[0].EPCategoricalConstraints = append(allUConstraints[0].EPCategoricalConstraints, nonEndConstraints.EPCategoricalConstraints...)
+					allUConstraints[0].EPNumericConstraints = append(allUConstraints[0].EPNumericConstraints, nonEndConstraints.EPNumericConstraints...)
+					allUConstraints[0].UPCategoricalConstraints = append(allUConstraints[0].UPCategoricalConstraints, nonEndConstraints.UPCategoricalConstraints...)
+					allUConstraints[0].UPNumericConstraints = append(allUConstraints[0].UPNumericConstraints, nonEndConstraints.UPNumericConstraints...)
 				}
 				// Take all the event constraints which are part of start and not part of end and remove those from calculating fcp
 			} else {

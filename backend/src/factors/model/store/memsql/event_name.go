@@ -457,11 +457,20 @@ func (store *MemSQL) GetPropertiesByEvent(projectID uint64, eventName string, li
 		}
 	}
 
+	propertyDetails, propertyDetailsStatus := store.GetAllPropertyDetailsByProjectID(projectID, eventName, false)
 	for _, v := range eventPropertiesSorted {
-		if properties[v.Category] == nil {
-			properties[v.Category] = make([]string, 0)
+		category := v.Category
+		if propertyDetailsStatus == http.StatusFound {
+			pName := model.GetPropertyNameByTrimmedSmartEventPropertyPrefix(v.Name)
+			if pType, exist := (*propertyDetails)[pName]; exist {
+				category = pType
+			}
 		}
-		properties[v.Category] = append(properties[v.Category], v.Name)
+
+		if properties[category] == nil {
+			properties[category] = make([]string, 0)
+		}
+		properties[category] = append(properties[category], v.Name)
 	}
 
 	return properties, nil
@@ -684,11 +693,6 @@ func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID, id uint64, isDe
 	return &eventName, http.StatusFound
 }
 
-// IsEventNameTypeSmartEvent validates event name type
-func IsEventNameTypeSmartEvent(eventType string) bool {
-	return eventType == model.TYPE_CRM_HUBSPOT || eventType == model.TYPE_CRM_SALESFORCE
-}
-
 // returns list of EventNames objects for given names
 func (store *MemSQL) GetEventNamesByNames(projectId uint64, names []string) ([]model.EventName, int) {
 	var eventNames []model.EventName
@@ -784,7 +788,7 @@ func (store *MemSQL) updateCRMSmartEventFilter(projectID uint64, id uint64, name
 	}
 
 	// update not allowed for non CRM based smart event.
-	if !IsEventNameTypeSmartEvent(nameType) {
+	if !model.IsEventNameTypeSmartEvent(nameType) {
 		return nil, http.StatusBadRequest
 	}
 

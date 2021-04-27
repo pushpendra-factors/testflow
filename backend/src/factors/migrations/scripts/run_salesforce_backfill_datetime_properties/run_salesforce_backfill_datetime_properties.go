@@ -160,7 +160,7 @@ func beginBackFillDateTimePropertiesByEventNameID(projectID uint64, eventNameIDs
 			return nil, 0, 0, 0, errors.New("failed to get event name")
 		}
 
-		status, propertyDetails := store.GetStore().GetAllPropertyDetailsByProjectID(projectID, eventName.Name, false)
+		propertyDetails, status := store.GetStore().GetAllPropertyDetailsByProjectID(projectID, eventName.Name, false)
 		if status != http.StatusFound {
 			logCtx.Error("Failed to get property details.")
 			return nil, 0, 0, 0, errors.New("failed to get property details")

@@ -107,7 +107,7 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 
 	var eventNamesKeySortedSet *cacheRedis.Key
-	if IsEventNameTypeSmartEvent(eventNameDetails.Type) {
+	if model.IsEventNameTypeSmartEvent(eventNameDetails.Type) {
 		eventNamesKeySortedSet, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 			currentTimeDatePart)
 	} else {

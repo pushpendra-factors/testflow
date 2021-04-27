@@ -761,11 +761,21 @@ func (store *MemSQL) GetUserPropertiesByProject(projectID uint64, limit int, las
 		}
 	}
 
+	propertyDetails, propertyDetailsStatus := store.GetAllPropertyDetailsByProjectID(projectID, "", true)
+
 	for _, v := range userPropertiesSorted {
-		if properties[v.Category] == nil {
-			properties[v.Category] = make([]string, 0)
+		category := v.Category
+
+		if propertyDetailsStatus == http.StatusFound {
+			if pType, exist := (*propertyDetails)[v.Name]; exist {
+				category = pType
+			}
 		}
-		properties[v.Category] = append(properties[v.Category], v.Name)
+
+		if properties[category] == nil {
+			properties[category] = make([]string, 0)
+		}
+		properties[category] = append(properties[category], v.Name)
 	}
 
 	return properties, nil
