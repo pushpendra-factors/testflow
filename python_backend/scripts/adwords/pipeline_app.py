@@ -71,7 +71,12 @@ if __name__ == "__main__":
         if next_sync_infos is None:
             continue
         for next_sync in next_sync_infos:
-            JobScheduler(next_sync, skip_today).sync(env, is_dry)
+            if JobScheduler.validate(next_sync, skip_today):
+                JobScheduler(next_sync, skip_today).sync(env, is_dry)
+            else:
+                log.warning("Skipping job scheduler for following project with following properties: "+ str(next_sync))
+                continue
+            
 
     metrics_controller.publish()
     log.warning("Successfully synced. End of adwords sync job.")

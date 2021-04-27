@@ -223,7 +223,20 @@ func GormCleanupCallback(scope *gorm.Scope) {
 			fieldValue.RawMessage = []byte(sanitizeStringValue(jsonAsString))
 			err := field.Set(fieldValue)
 			if err != nil {
-				log.WithError(err).Error("Failed to cleanup postgres jsonb field value.")
+				log.WithError(err).Error("Failed to cleanup postgres.Jsonb field value.")
+				return
+			}
+		case "*postgres.Jsonb":
+			fieldValue := field.Field.Interface().(*postgres.Jsonb)
+			if fieldValue == nil {
+				return
+			}
+
+			jsonAsString := string(fieldValue.RawMessage)
+			fieldValue.RawMessage = []byte(sanitizeStringValue(jsonAsString))
+			err := field.Set(fieldValue)
+			if err != nil {
+				log.WithError(err).Error("Failed to cleanup *postgres.Jsonb field value.")
 				return
 			}
 		}
