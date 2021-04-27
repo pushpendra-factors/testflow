@@ -459,11 +459,12 @@ func (pg *Postgres) GetPropertiesByEvent(projectID uint64, eventName string, lim
 		}
 	}
 
-	propertyDetailsStatus, propertyDetails := pg.GetAllPropertyDetailsByProjectID(projectID, eventName, false)
+	propertyDetails, propertyDetailsStatus := pg.GetAllPropertyDetailsByProjectID(projectID, eventName, false)
 	for _, v := range eventPropertiesSorted {
 		category := v.Category
 		if propertyDetailsStatus == http.StatusFound {
-			if pType, exist := (*propertyDetails)[v.Name]; exist {
+			pName := model.GetPropertyNameByTrimmedSmartEventPropertyPrefix(v.Name)
+			if pType, exist := (*propertyDetails)[pName]; exist {
 				category = pType
 			}
 		}
@@ -676,11 +677,6 @@ func (pg *Postgres) GetSmartEventFilterEventNameByID(projectID, id uint64, isDel
 	return &eventName, http.StatusFound
 }
 
-// IsEventNameTypeSmartEvent validates event name type
-func IsEventNameTypeSmartEvent(eventType string) bool {
-	return eventType == model.TYPE_CRM_HUBSPOT || eventType == model.TYPE_CRM_SALESFORCE
-}
-
 // returns list of EventNames objects for given names
 func (pg *Postgres) GetEventNamesByNames(projectId uint64, names []string) ([]model.EventName, int) {
 	var eventNames []model.EventName
@@ -772,7 +768,7 @@ func (pg *Postgres) updateCRMSmartEventFilter(projectID uint64, id uint64, nameT
 	}
 
 	// update not allowed for non CRM based smart event.
-	if !IsEventNameTypeSmartEvent(nameType) {
+	if !model.IsEventNameTypeSmartEvent(nameType) {
 		return nil, http.StatusBadRequest
 	}
 
