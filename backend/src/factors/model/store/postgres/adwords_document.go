@@ -587,7 +587,7 @@ func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, ad
 	return selectedLastSyncInfos, http.StatusOK
 }
 
-// GetGCLIDBasedCampaignInfo - It returns GCLID based campaign info ( Adgroup, Campaign, AdId and KeywordId) for given time range and adwords account
+// GetGCLIDBasedCampaignInfo - It returns GCLID based campaign info for given time range and adwords account
 func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string) (map[string]model.CampaignInfo, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectID": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
@@ -603,15 +603,18 @@ func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, 
 		" WHEN value->>'creative_id' = '' THEN ? ELSE value->>'creative_id' END AS creative_id"
 	keywordIDCase := "CASE WHEN value->>'criteria_id' IS NULL THEN ? " +
 		" WHEN value->>'criteria_id' = '' THEN ? ELSE value->>'criteria_id' END AS criteria_id"
+	slotCase := "CASE WHEN value->>'slot' IS NULL THEN ? " +
+		" WHEN value->>'slot' = '' THEN ? ELSE value->>'slot' END AS slot"
 
 	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + adGroupIDCase + ", " + campaignNameCase + ", " +
-		campaignIDCase + ", " + adIDCase + ", " + keywordIDCase +
+		campaignIDCase + ", " + adIDCase + ", " + keywordIDCase + ", " + slotCase +
 		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
 	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
-		model.PropertyValueNone, model.PropertyValueNone, projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateOnlyFromTimestamp(from),
+		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
+		projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -627,7 +630,8 @@ func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, 
 		var campaignID string
 		var adID string
 		var keywordID string
-		if err = rows.Scan(&gclID, &adgroupName, &adgroupID, &campaignName, &campaignID, &adID, &keywordID); err != nil {
+		var slot string
+		if err = rows.Scan(&gclID, &adgroupName, &adgroupID, &campaignName, &campaignID, &adID, &keywordID, &slot); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed")
 			continue
 		}
@@ -638,6 +642,7 @@ func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, 
 			CampaignID:   campaignID,
 			AdID:         adID,
 			KeywordID:    keywordID,
+			Slot:         slot,
 		}
 	}
 	return gclIDBasedCampaign, nil

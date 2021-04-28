@@ -29,6 +29,7 @@ type CampaignInfo struct {
 	CampaignID   string
 	AdID         string
 	KeywordID    string
+	Slot         string
 }
 
 type AdwordsLastSyncInfo struct {
