@@ -138,3 +138,8 @@ export const apiChartAnnotations = {
   [CHART_TYPE_STACKED_AREA]: 'pa',
   [CHART_TYPE_STACKED_BAR]: 'ps',
 };
+
+export const DASHBOARD_TYPES = {
+  WEB: 'web',
+  USER_CREATED: 'user_created',
+};

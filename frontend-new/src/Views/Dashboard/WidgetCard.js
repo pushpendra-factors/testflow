@@ -1,25 +1,25 @@
-import React, { useRef, useEffect, useCallback, useState } from "react";
-import { Button, Dropdown, Menu } from "antd";
-import { Text, SVG } from "../../components/factorsComponents";
-import { RightOutlined, LeftOutlined } from "@ant-design/icons";
-import CardContent from "./CardContent";
-import { useSelector } from "react-redux";
+import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { Button, Dropdown, Menu, Tooltip } from 'antd';
+import { Text, SVG } from '../../components/factorsComponents';
+import { RightOutlined, LeftOutlined } from '@ant-design/icons';
+import CardContent from './CardContent';
+import { useSelector } from 'react-redux';
 import {
   initialState,
   formatApiData,
   calculateActiveUsersData,
   calculateFrequencyData,
   getStateQueryFromRequestQuery,
-} from "../CoreQuery/utils";
-import { cardClassNames } from "../../reducers/dashboard/utils";
-import { getDataFromServer } from "./utils";
+} from '../CoreQuery/utils';
+import { cardClassNames } from '../../reducers/dashboard/utils';
+import { getDataFromServer } from './utils';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_WEB,
-} from "../../utils/constants";
+} from '../../utils/constants';
 
 function WidgetCard({
   unit,
@@ -53,7 +53,7 @@ function WidgetCard({
           } else {
             queryType = QUERY_TYPE_EVENT;
           }
-          if (durationObj.frequency === "hour") {
+          if (durationObj.frequency === 'hour') {
             refresh = true;
           }
         } else if (
@@ -181,8 +181,8 @@ function WidgetCard({
   const getMenu = () => {
     return (
       <Menu>
-        <Menu.Item key="0">
-          <a onClick={handleDelete} href="#!">
+        <Menu.Item key='0'>
+          <a onClick={handleDelete} href='#!'>
             Delete Widget
           </a>
         </Menu.Item>
@@ -214,40 +214,46 @@ function WidgetCard({
 
   return (
     <div
-      className={`${unit.title.split(" ").join("-")} ${unit.className} py-3 flex widget-card-top-div`}
+      className={`${unit.title.split(' ').join('-')} ${
+        unit.className
+      } py-3 flex widget-card-top-div`}
     >
       <div
         id={`card-${unit.id}`}
         ref={cardRef}
-        className={"fa-dashboard--widget-card h-full w-full flex"}
+        className={'fa-dashboard--widget-card h-full w-full flex'}
       >
-        <div className={"py-5 flex justify-between items-start w-full"}>
-          <div className={"w-full flex flex-1 flex-col h-full"}>
+        <div className={'py-5 flex justify-between items-start w-full'}>
+          <div className={'w-full flex flex-1 flex-col h-full'}>
             <div
               style={{
-                borderBottom: "1px solid rgb(231, 233, 237)",
+                borderBottom: '1px solid rgb(231, 233, 237)',
               }}
-              className="flex items-center justify-between px-6 pb-4"
+              className='flex items-center justify-between px-6 pb-4'
             >
-              <div className="flex flex-col">
-                <div
-                  className="flex cursor-pointer items-center"
-                  onClick={() =>
-                    setwidgetModal({ unit, data: resultState.data })
-                  }
-                >
-                  <Text
-                    ellipsis
-                    type={"title"}
-                    level={6}
-                    weight={"bold"}
-                    extraClass={"m-0 mr-1"}
+              <Tooltip
+                title={unit.title}
+                mouseEnterDelay={0.2}
+              >
+                <div className='flex flex-col truncate'>
+                  <div
+                    className='flex cursor-pointer items-center'
+                    onClick={() =>
+                      setwidgetModal({ unit, data: resultState.data })
+                    }
                   >
-                    {unit.title}
-                  </Text>
-                  <SVG size={16} name="expand" />
-                </div>
-                {/* <div className="description">
+                    <Text
+                      ellipsis
+                      type={'title'}
+                      level={6}
+                      weight={'bold'}
+                      extraClass={'m-0 mr-1'}
+                    >
+                      {unit.title}
+                    </Text>
+                    <SVG size={16} name='expand' />
+                  </div>
+                  {/* <div className="description">
                   <Text
                     ellipsis
                     type={"paragraph"}
@@ -258,12 +264,13 @@ function WidgetCard({
                     {unit.description}
                   </Text>
                 </div> */}
-              </div>
+                </div>
+              </Tooltip>
               <div>
-                <Dropdown overlay={getMenu()} trigger={["hover"]}>
+                <Dropdown overlay={getMenu()} trigger={['hover']}>
                   <Button
-                    type="text"
-                    icon={<SVG size={20} name={"threedot"} color="#8692A3" />}
+                    type='text'
+                    icon={<SVG size={20} name={'threedot'} color='#8692A3' />}
                   />
                 </Dropdown>
               </div>
@@ -279,26 +286,26 @@ function WidgetCard({
       </div>
       <div
         id={`resize-${unit.id}`}
-        className={"fa-widget-card--resize-container"}
+        className={'fa-widget-card--resize-container'}
       >
-        <span className={"fa-widget-card--resize-contents"}>
+        <span className={'fa-widget-card--resize-contents'}>
           {unit.cardSize === 0 ? (
             <>
-              <a href="#!" onClick={changeCardSize.bind(this, 1)}>
+              <a href='#!' onClick={changeCardSize.bind(this, 1)}>
                 <RightOutlined />
               </a>
-              <a href="#!" onClick={changeCardSize.bind(this, 2)}>
+              <a href='#!' onClick={changeCardSize.bind(this, 2)}>
                 <LeftOutlined />
               </a>
             </>
           ) : null}
           {unit.cardSize === 1 ? (
-            <a href="#!" onClick={changeCardSize.bind(this, 0)}>
+            <a href='#!' onClick={changeCardSize.bind(this, 0)}>
               <LeftOutlined />
             </a>
           ) : null}
           {unit.cardSize === 2 ? (
-            <a href="#!" onClick={changeCardSize.bind(this, 0)}>
+            <a href='#!' onClick={changeCardSize.bind(this, 0)}>
               <RightOutlined />
             </a>
           ) : null}

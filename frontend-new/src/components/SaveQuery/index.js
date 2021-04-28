@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from "react";
-import moment from "moment";
+import React, { useState, useCallback } from 'react';
+import moment from 'moment';
 import {
   Button,
   Modal,
@@ -8,13 +8,13 @@ import {
   Select,
   Radio,
   notification,
-} from "antd";
-import { SVG, Text } from "../factorsComponents";
-import styles from "./index.module.scss";
-import { saveQuery } from "../../reducers/coreQuery/services";
-import { useSelector, useDispatch } from "react-redux";
-import { QUERY_CREATED } from "../../reducers/types";
-import { saveQueryToDashboard } from "../../reducers/dashboard/services";
+} from 'antd';
+import { SVG, Text } from '../factorsComponents';
+import styles from './index.module.scss';
+import { saveQuery } from '../../reducers/coreQuery/services';
+import { useSelector, useDispatch } from 'react-redux';
+import { QUERY_CREATED } from '../../reducers/types';
+import { saveQueryToDashboard } from '../../reducers/dashboard/services';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
@@ -22,8 +22,9 @@ import {
   QUERY_TYPE_CAMPAIGN,
   apiChartAnnotations,
   CHART_TYPE_TABLE,
-} from "../../utils/constants";
-import { getSaveChartOptions } from "../../Views/CoreQuery/utils";
+  DASHBOARD_TYPES,
+} from '../../utils/constants';
+import { getSaveChartOptions } from '../../Views/CoreQuery/utils';
 
 function SaveQuery({
   requestQuery,
@@ -32,10 +33,12 @@ function SaveQuery({
   queryType,
   setQuerySaved,
 }) {
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState('');
   const [addToDashboard, setAddToDashboard] = useState(false);
   const [selectedDashboards, setSelectedDashboards] = useState([]);
-  const [dashboardPresentation, setDashboardPresentation] = useState(apiChartAnnotations[CHART_TYPE_TABLE]);
+  const [dashboardPresentation, setDashboardPresentation] = useState(
+    apiChartAnnotations[CHART_TYPE_TABLE]
+  );
   const [apisCalled, setApisCalled] = useState(false);
   const { active_project } = useSelector((state) => state.global);
   const { dashboards } = useSelector((state) => state.dashboard);
@@ -46,7 +49,7 @@ function SaveQuery({
   }, []);
 
   const resetModalState = useCallback(() => {
-    setTitle("");
+    setTitle('');
     setSelectedDashboards([]);
     setAddToDashboard(false);
     setDashboardPresentation(apiChartAnnotations[CHART_TYPE_TABLE]);
@@ -89,16 +92,16 @@ function SaveQuery({
   const handleSave = useCallback(async () => {
     if (!title.trim().length) {
       notification.error({
-        message: "Incorrect Input!",
-        description: "Please Enter query title",
+        message: 'Incorrect Input!',
+        description: 'Please Enter query title',
         duration: 5,
       });
       return false;
     }
     if (addToDashboard && !selectedDashboards.length) {
       notification.error({
-        message: "Incorrect Input!",
-        description: "Please select atleast one dashboard",
+        message: 'Incorrect Input!',
+        description: 'Please select atleast one dashboard',
         duration: 5,
       });
       return false;
@@ -110,7 +113,7 @@ function SaveQuery({
       if (queryType === QUERY_TYPE_FUNNEL) {
         query = {
           ...requestQuery,
-          fr: moment().startOf("week").utc().unix(),
+          fr: moment().startOf('week').utc().unix(),
           to: moment().utc().unix(),
         };
       } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
@@ -118,7 +121,7 @@ function SaveQuery({
           ...requestQuery,
           query: {
             ...requestQuery.query,
-            from: moment().startOf("week").utc().unix(),
+            from: moment().startOf('week').utc().unix(),
             to: moment().utc().unix(),
           },
         };
@@ -127,9 +130,9 @@ function SaveQuery({
           query_group: requestQuery.map((q) => {
             return {
               ...q,
-              fr: moment().startOf("week").utc().unix(),
+              fr: moment().startOf('week').utc().unix(),
               to: moment().utc().unix(),
-              gbt: q.gbt ? "date" : "",
+              gbt: q.gbt ? 'date' : '',
             };
           }),
         };
@@ -139,9 +142,9 @@ function SaveQuery({
           query_group: requestQuery.query_group.map((q) => {
             return {
               ...q,
-              fr: moment().startOf("week").utc().unix(),
+              fr: moment().startOf('week').utc().unix(),
               to: moment().utc().unix(),
-              gbt: q.gbt ? "date" : "",
+              gbt: q.gbt ? 'date' : '',
             };
           }),
         };
@@ -154,18 +157,18 @@ function SaveQuery({
         };
         const reqBody = {
           settings,
-          description: "",
+          description: '',
           title,
           query_id: res.data.id,
         };
         await saveQueryToDashboard(
           active_project.id,
-          selectedDashboards.join(","),
+          selectedDashboards.join(','),
           reqBody
         );
       }
       notification.success({
-        message: "Report Saved Successfully",
+        message: 'Report Saved Successfully',
         duration: 5,
       });
       dispatch({ type: QUERY_CREATED, payload: res.data });
@@ -177,8 +180,8 @@ function SaveQuery({
       console.log(err);
       console.log(err.response);
       notification.error({
-        message: "Error!",
-        description: "Something went wrong.",
+        message: 'Error!',
+        description: 'Something went wrong.',
         duration: 5,
       });
     }
@@ -195,33 +198,35 @@ function SaveQuery({
     setQuerySaved,
   ]);
 
-  let dashboardHelpText = "Create a dashboard widget for regular monitoring";
+  let dashboardHelpText = 'Create a dashboard widget for regular monitoring';
   let dashboardOptions = null;
 
   if (addToDashboard) {
-    dashboardHelpText = "This widget will appear on the following dashboards:";
+    dashboardHelpText = 'This widget will appear on the following dashboards:';
 
     dashboardOptions = (
       <>
-        <div className="mt-5">
+        <div className='mt-5'>
           <Select
-            mode="multiple"
-            style={{ width: "100%" }}
-            placeholder={"Please Select"}
+            mode='multiple'
+            style={{ width: '100%' }}
+            placeholder={'Please Select'}
             onChange={handleSelectChange}
             className={styles.multiSelectStyles}
             value={getSelectedDashboards()}
           >
-            {dashboards.data.map((d) => {
-              return (
-                <Select.Option value={d.name} key={d.id}>
-                  {d.name}
-                </Select.Option>
-              );
-            })}
+            {dashboards.data
+              .filter((d) => d.class === DASHBOARD_TYPES.USER_CREATED)
+              .map((d) => {
+                return (
+                  <Select.Option value={d.name} key={d.id}>
+                    {d.name}
+                  </Select.Option>
+                );
+              })}
           </Select>
         </div>
-        <div className="mt-2">
+        <div className='mt-2'>
           <Radio.Group
             value={dashboardPresentation}
             onChange={handlePresentationChange}
@@ -238,9 +243,9 @@ function SaveQuery({
     <>
       <Button
         onClick={setVisible.bind(this, true)}
-        type="primary"
-        size={"large"}
-        icon={<SVG name={"save"} size={20} color={"white"} />}
+        type='primary'
+        size={'large'}
+        icon={<SVG name={'save'} size={20} color={'white'} />}
       >
         Save
       </Button>
@@ -252,20 +257,20 @@ function SaveQuery({
         title={null}
         onOk={handleSave}
         onCancel={handleSaveCancel}
-        className={"fa-modal--regular p-4 fa-modal--slideInDown"}
-        okText={"Save"}
+        className={'fa-modal--regular p-4 fa-modal--slideInDown'}
+        okText={'Save'}
         closable={false}
         confirmLoading={apisCalled}
-        transitionName=""
-        maskTransitionName=""
+        transitionName=''
+        maskTransitionName=''
       >
-        <div className="p-4">
-          <Text extraClass="m-0" type={"title"} level={3} weight={"bold"}>
+        <div className='p-4'>
+          <Text extraClass='m-0' type={'title'} level={3} weight={'bold'}>
             Create New Report
           </Text>
-          <div className="pt-6">
+          <div className='pt-6'>
             <Text
-              type={"title"}
+              type={'title'}
               level={7}
               extraClass={`m-0 ${styles.inputLabel}`}
             >
@@ -274,24 +279,24 @@ function SaveQuery({
             <Input
               onChange={handleTitleChange}
               value={title}
-              className={"fa-input"}
-              size={"large"}
+              className={'fa-input'}
+              size={'large'}
             />
           </div>
           {/* <div className={`pt-2 ${styles.linkText}`}>Help others to find this query easily?</div> */}
-          <div className={"pt-6 flex items-center"}>
+          <div className={'pt-6 flex items-center'}>
             <Switch
               onChange={toggleAddToDashboard}
               checked={addToDashboard}
               className={styles.switchBtn}
-              checkedChildren="On"
-              unCheckedChildren="Off"
+              checkedChildren='On'
+              unCheckedChildren='Off'
             />
-            <Text extraClass="m-0" type="title" level={6} weight="bold">
+            <Text extraClass='m-0' type='title' level={6} weight='bold'>
               Add to Dashboard
             </Text>
           </div>
-          <Text extraClass={`pt-1 ${styles.noteText}`} mini type={"paragraph"}>
+          <Text extraClass={`pt-1 ${styles.noteText}`} mini type={'paragraph'}>
             {dashboardHelpText}
           </Text>
           {dashboardOptions}
