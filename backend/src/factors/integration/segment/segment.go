@@ -91,18 +91,18 @@ type Campaign struct {
 
 type Context struct {
 	Campaign  interface{} `json:"campaign"`
-	IP        string   `json:"ip"`
-	Location  Location `json:"location"`
-	Page      Page     `json:"page"`
-	UserAgent string   `json:"userAgent"`
-	OS        OS       `json:"os"`
-	Screen    Screen   `json:"screen"`
-	Locale    string   `json:"locale"`
-	Device    Device   `json:"device"`
-	Network   Network  `json:"network"`
-	App       App      `json:"app"`
-	Library   Library  `json:"library"`
-	Timezone  string   `json:"timezone"`
+	IP        string      `json:"ip"`
+	Location  Location    `json:"location"`
+	Page      Page        `json:"page"`
+	UserAgent string      `json:"userAgent"`
+	OS        OS          `json:"os"`
+	Screen    Screen      `json:"screen"`
+	Locale    string      `json:"locale"`
+	Device    Device      `json:"device"`
+	Network   Network     `json:"network"`
+	App       App         `json:"app"`
+	Library   Library     `json:"library"`
+	Timezone  string      `json:"timezone"`
 }
 
 type Event struct {
@@ -284,9 +284,9 @@ func fillWebEventProperties(properties *U.PropertiesMap, event *Event) {
 	}
 
 	campaign := make(map[string]interface{})
-	if(event.Context.Campaign != nil){
+	if event.Context.Campaign != nil {
 		campaignType := fmt.Sprintf("%T", event.Context.Campaign)
-		if(campaignType == "map[string]interface {}"){
+		if campaignType == "map[string]interface {}" {
 			campaign = event.Context.Campaign.(map[string]interface{})
 			value, ok := campaign["name"]
 			valueType := fmt.Sprintf("%T", value)
@@ -314,7 +314,7 @@ func fillWebEventProperties(properties *U.PropertiesMap, event *Event) {
 				(*properties)[U.EP_CONTENT] = value.(string)
 			}
 		}
-	}	
+	}
 }
 
 func fillWebUserProperties(properties *U.PropertiesMap, event *Event) {}
@@ -589,7 +589,7 @@ func ProcessQueueEvent(token, eventJson string) (float64, string, error) {
 
 	status, response := ReceiveEvent(token, &event)
 	responseJsonBytes, _ := json.Marshal(response)
-	logCtx = log.WithField("status", status).WithField("response", string(responseJsonBytes))
+	logCtx = logCtx.WithField("status", status).WithField("response", string(responseJsonBytes))
 
 	metrics.Increment(metrics.IncrIntegrationRequestQueueProcessed)
 
