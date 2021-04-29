@@ -36,10 +36,13 @@ func main() {
 	redisPort := flag.Int("redis_port", 6379, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
 	flag.Parse()
 
-	appName := "data_server"
+	defaultAppName := "data_server"
+	appName := C.GetAppName(defaultAppName, *overrideAppName)
+
 	config := &C.Configuration{
 		AppName:            appName,
 		GCPProjectID:       *gcpProjectID,

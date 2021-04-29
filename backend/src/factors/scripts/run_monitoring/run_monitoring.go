@@ -51,13 +51,19 @@ func main() {
 
 	killSlowQueries := flag.Bool("kill_slow_queries", false, "Kill slow queries. TO BE USED WITH CAUTION")
 
+	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+
 	flag.Parse()
-	taskID := "monitoring_job"
-	healthcheckPingID := C.HealthcheckMonitoringJobPingID
-	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
+	defaultAppName := "monitoring_job"
+	defaultHealthcheckPingID := C.HealthcheckMonitoringJobPingID
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
+	appName := C.GetAppName(defaultAppName, *overrideAppName)
+
+	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
 
 	config := &C.Configuration{
-		AppName:            taskID,
+		AppName:            appName,
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -67,7 +73,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
-			AppName:  taskID,
+			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
 			Host:     *memSQLHost,
@@ -75,7 +81,7 @@ func main() {
 			User:     *memSQLUser,
 			Name:     *memSQLName,
 			Password: *memSQLPass,
-			AppName:  taskID,
+			AppName:  appName,
 		},
 		PrimaryDatastore: *primaryDatastore,
 		QueueRedisHost:   *queueRedisHost,
@@ -111,7 +117,7 @@ func main() {
 		if err != nil {
 			log.WithError(err).Panic("Failed to kill slow queries")
 		}
-		util.NotifyThroughSNS(taskID, *env, fmt.Sprintf("Killed %d slow queries. %v", len(factorsSlowQueries), factorsSlowQueries))
+		util.NotifyThroughSNS(appName, *env, fmt.Sprintf("Killed %d slow queries. %v", len(factorsSlowQueries), factorsSlowQueries))
 		return
 	}
 

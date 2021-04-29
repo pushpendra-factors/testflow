@@ -79,19 +79,25 @@ func main() {
 
 	numProjectRoutines := flag.Int("num_project_routines", 1, "Number of project level go routines to run in parallel.")
 
+	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+
 	flag.Parse()
 
 	if *env != "development" && *env != "staging" && *env != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
 	}
 
-	taskID := "hubspot_enrich_job"
-	healthcheckPingID := C.HealthcheckHubspotEnrichPingID
-	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
+	defaultAppName := "hubspot_enrich_job"
+	defaultHealthcheckPingID := C.HealthcheckHubspotEnrichPingID
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
+	appName := C.GetAppName(defaultAppName, *overrideAppName)
+
+	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
 
 	// init DB, etcd
 	config := &C.Configuration{
-		AppName:            taskID,
+		AppName:            appName,
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -101,7 +107,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
-			AppName:  taskID,
+			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
 			Host:     *memSQLHost,
@@ -109,7 +115,7 @@ func main() {
 			User:     *memSQLUser,
 			Name:     *memSQLName,
 			Password: *memSQLPass,
-			AppName:  taskID,
+			AppName:  appName,
 		},
 		PrimaryDatastore:    *primaryDatastore,
 		RedisHost:           *redisHost,

@@ -16,8 +16,6 @@ import (
 	swaggerDocs "factors/docs"
 )
 
-var appName = "app_server"
-
 // ./app --env=development --api_domain=localhost:8080 --app_domain=localhost:3000  --api_http_port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb --aws_region=us-east-1 --aws_key=dummy --aws_secret=dummy --email_sender=support@factors.ai --error_reporting_interval=300
 // @title Factors Backend Api
 // @version 1.0
@@ -104,11 +102,12 @@ func main() {
 	showSmartPropertiesAllowedProjectIDs := flag.String("show_smart_properties_allowed_projects",
 		"", "List of projects to show smart properties in channel configs.")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
+	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
 	flag.Parse()
-	if *primaryDatastore == C.DatastoreTypeMemSQL {
-		appName = appName + "_memsql"
-	}
+
+	defaultAppName := "app_server"
+	appName := C.GetAppName(defaultAppName, *overrideAppName)
 
 	config := &C.Configuration{
 		GCPProjectID:       *gcpProjectID,

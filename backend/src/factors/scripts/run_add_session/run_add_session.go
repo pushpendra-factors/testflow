@@ -62,6 +62,9 @@ func main() {
 	deprecateUserPropertiesTableReadProjectIDs := flag.String("deprecate_user_properties_table_read_projects",
 		"", "List of projects for which user_properties table read to be deprecated.")
 
+	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+
 	flag.Parse()
 
 	if *env != "development" &&
@@ -71,12 +74,15 @@ func main() {
 		panic(err)
 	}
 
-	taskID := "add_session"
-	healthcheckPingID := C.HealthcheckAddSessionPingID
-	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
+	defaultAppName := "add_session"
+	defaultHealthcheckPingID := C.HealthcheckAddSessionPingID
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
+	appName := C.GetAppName(defaultAppName, *overrideAppName)
+
+	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
 
 	config := &C.Configuration{
-		AppName:            taskID,
+		AppName:            appName,
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -86,7 +92,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
-			AppName:  taskID,
+			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
 			Host:     *memSQLHost,
@@ -94,7 +100,7 @@ func main() {
 			User:     *memSQLUser,
 			Name:     *memSQLName,
 			Password: *memSQLPass,
-			AppName:  taskID,
+			AppName:  appName,
 		},
 		PrimaryDatastore:    *primaryDatastore,
 		RedisHost:           *redisHost,
