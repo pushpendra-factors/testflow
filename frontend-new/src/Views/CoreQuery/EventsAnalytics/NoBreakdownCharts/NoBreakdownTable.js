@@ -1,13 +1,13 @@
-import React, { useState, useCallback } from "react";
-import moment from "moment";
-import DataTable from "../../../../components/DataTable";
+import React, { useState, useCallback } from 'react';
+import moment from 'moment';
+import DataTable from '../../../../components/DataTable';
 import {
   getNoGroupingTableData,
   getColumns,
   getDateBasedColumns,
   getNoGroupingTablularDatesBasedData,
-} from "./utils";
-import { CHART_TYPE_SPARKLINES } from "../../../../utils/constants";
+} from './utils';
+import { CHART_TYPE_SPARKLINES } from '../../../../utils/constants';
 
 function NoBreakdownTable({
   data,
@@ -18,10 +18,10 @@ function NoBreakdownTable({
   isWidgetModal,
   durationObj,
   arrayMapper,
-  reportTitle = "Events Analytics",
+  reportTitle = 'Events Analytics',
 }) {
   const [sorter, setSorter] = useState({});
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
@@ -86,13 +86,20 @@ function NoBreakdownTable({
       fileName: `${reportTitle}.csv`,
       data: tableData.map(({ index, date, ...rest }) => {
         if (chartType === CHART_TYPE_SPARKLINES) {
-          let format = "MMM D, YYYY";
-          if (durationObj.frequency === "hour") {
-            format = "h A, MMM D";
+          let format = 'MMM D, YYYY';
+          if (durationObj.frequency === 'hour') {
+            format = 'h A, MMM D';
+          }
+          const eventsData = {};
+          for (let key in rest) {
+            const mapper = arrayMapper.find((elem) => elem.mapper === key);
+            if (mapper) {
+              eventsData[`${mapper.eventName}-${mapper.index}`] = rest[key];
+            }
           }
           return {
             date: moment(date).format(format),
-            ...rest,
+            ...eventsData,
           };
         }
         return rest;

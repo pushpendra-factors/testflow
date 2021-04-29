@@ -600,15 +600,18 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 		" WHEN JSON_EXTRACT_STRING(value, 'creative_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'creative_id') END AS creative_id"
 	keywordIDCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'criteria_id') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'criteria_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'criteria_id') END AS criteria_id"
+	slotCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'slot') IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(value, 'slot') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'slot') END AS slot"
 
 	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + adGroupIDCase + ", " + campaignNameCase + ", " +
-		campaignIDCase + ", " + adIDCase + ", " + keywordIDCase +
+		campaignIDCase + ", " + adIDCase + ", " + keywordIDCase + ", " + slotCase +
 		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
 	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
-		model.PropertyValueNone, model.PropertyValueNone, projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateOnlyFromTimestamp(from),
+		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
+		projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -624,7 +627,8 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 		var campaignID string
 		var adID string
 		var keywordID string
-		if err = rows.Scan(&gclID, &adgroupName, &adgroupID, &campaignName, &campaignID, &adID, &keywordID); err != nil {
+		var slot string
+		if err = rows.Scan(&gclID, &adgroupName, &adgroupID, &campaignName, &campaignID, &adID, &keywordID, &slot); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed")
 			continue
 		}
@@ -635,6 +639,7 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 			CampaignID:   campaignID,
 			AdID:         adID,
 			KeywordID:    keywordID,
+			Slot:         slot,
 		}
 	}
 	return gclIDBasedCampaign, nil

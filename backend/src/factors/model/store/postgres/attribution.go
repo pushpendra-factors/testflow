@@ -494,7 +494,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 		}
 
 		// Override GCLID based campaign info if presents
-		if gclID != model.PropertyValueNone {
+		if gclID != model.PropertyValueNone && !(query.AttributionKey == model.AttributionKeyKeyword && !model.IsASearchSlotKeyword(gclIDBasedCampaign, gclID)) {
 			attributionIdBasedOnGclID := model.GetGCLIDAttributionValue(gclIDBasedCampaign, gclID, attributionEventKey)
 			// In cases where GCLID is present in events, but not in adwords report (as users tend to bookmark expired URLs),
 			// fallback is attributionId

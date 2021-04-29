@@ -60,6 +60,9 @@ var (
 
 	deprecateUserPropertiesTableReadProjectIDs = flag.String("deprecate_user_properties_table_read_projects",
 		"", "List of projects for which user_properties table read to be deprecated.")
+
+	overrideHealthcheckPingID = flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	overrideAppName           = flag.String("app_name", "", "Override default app_name.")
 )
 
 func registerStructs() {
@@ -202,10 +205,14 @@ func (f *reportJobSummaryCombineFn) ExtractOutput(a jobStatsAccumulator) {
 
 // TODO(prateek): Check a way to add handling for panic and worker errors.
 func main() {
-	appName := "beam_dashboard_caching"
-
 	flag.Parse()
-	defer C.PingHealthcheckForPanic(appName, *env, C.HealthcheckBeamDashboardCachingPingID)
+
+	defaultAppName := "beam_dashboard_caching"
+	defaultHealthcheckPingID := C.HealthcheckBeamDashboardCachingPingID
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
+	appName := C.GetAppName(defaultAppName, *overrideAppName)
+
+	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
 	registerStructs()
 	beam.Init()
 
@@ -241,7 +248,7 @@ func main() {
 		SentryDSN:                                *sentryDSN,
 		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 	}
-	beam.PipelineOptions.Set("HealthchecksPingID", C.HealthcheckBeamDashboardCachingPingID)
+	beam.PipelineOptions.Set("HealthchecksPingID", healthcheckPingID)
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))
 
 	// Create initial PCollection for the projectIDs string passed to be processed.

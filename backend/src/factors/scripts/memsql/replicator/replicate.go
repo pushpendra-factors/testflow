@@ -12,11 +12,9 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	emoji "github.com/tmdvs/Go-Emoji-Utils"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-	"github.com/jinzhu/gorm/dialects/postgres"
 
 	C "factors/config"
 	U "factors/util"
@@ -69,8 +67,8 @@ type TableRecord struct {
 	// Additional Primary Key Fields per table.
 	// hubspot_documents, salesforce_documents
 	// adwords_documents, facebook_documents, linkedin_documents
-	Type      string `json:"type"`
-	Timestamp uint64 `json:"timestamp"`
+	Type      interface{} `json:"type"`
+	Timestamp uint64      `json:"timestamp"`
 	// adwords_documents
 	CustomerAccountID string `json:"customer_account_id"`
 	// linkedin_documents
@@ -214,7 +212,7 @@ func initMemSQLDB(env, dsn string, maxOpenConns int) {
 	// Removes unneccesary select after insert triggered by gorm.
 	memSQLDB.Callback().Create().Remove("gorm:force_reload_after_create")
 	// Removes emoji and cleans up string and postgres.Jsonb columns.
-	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", gormCleanupCallback)
+	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
 
 	if C.IsDevelopment() {
 		memSQLDB.LogMode(true)
@@ -222,34 +220,6 @@ func initMemSQLDB(env, dsn string, maxOpenConns int) {
 		memSQLDB.LogMode(false)
 		memSQLDB.DB().SetMaxOpenConns(maxOpenConns)
 		memSQLDB.DB().SetMaxIdleConns(100)
-	}
-}
-
-func sanitizeStringValue(s string) string {
-	return emoji.RemoveAll(s)
-}
-
-// Custom GORM Plugin for cleaning up field values.
-func gormCleanupCallback(scope *gorm.Scope) {
-	for _, field := range scope.Fields() {
-		switch field.Field.Type().String() {
-		case "string":
-			fieldValue := field.Field.Interface().(string)
-			err := field.Set(sanitizeStringValue(fieldValue))
-			if err != nil {
-				log.WithError(err).Error("Failed to cleanup string field value.")
-				return
-			}
-		case "postgres.Jsonb":
-			fieldValue := field.Field.Interface().(postgres.Jsonb)
-			jsonAsString := string(fieldValue.RawMessage)
-			fieldValue.RawMessage = []byte(sanitizeStringValue(jsonAsString))
-			err := field.Set(fieldValue)
-			if err != nil {
-				log.WithError(err).Error("Failed to cleanup postgres jsonb field value.")
-				return
-			}
-		}
 	}
 }
 
@@ -613,7 +583,7 @@ func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interfa
 
 	var record TableRecord
 	condition, params := getPrimaryKeyConditionByTableName(tableName, sourceTableRecord)
-	db := memSQLDB.Table(tableName).Limit(1).Where(condition, params)
+	db := memSQLDB.Table(tableName).Limit(1).Where(condition, params...)
 	if !isTableWithoutProjectID(tableName) {
 		db = db.Where("project_id = ?", projectID)
 	}

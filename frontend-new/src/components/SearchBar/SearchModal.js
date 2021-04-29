@@ -64,7 +64,7 @@ function SearchModal({ visible, handleClose, handleQueryClick }) {
 
                 {data.length ? (
                     <div className="search-list pb-4 fa-global-search--contents">
-                        <div className={`p-4 ${styles.searchHeadings}`}>Saved Queries</div>
+                        <div className={`p-4 ${styles.searchHeadings}`}>Saved Reports</div>
                         <div className="fa-global-search--contents">
                             {data.map(d => {
                               let svgName = 'funnels_cq';

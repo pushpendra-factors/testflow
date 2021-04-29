@@ -182,6 +182,7 @@ type Services struct {
 }
 
 // Healthchecks.io ping IDs for monitoring. Can be used anywhere in code to report error on job.
+// Use flag --healthcheck_ping_id to override default ping_id for duplicate/special jobs.
 const (
 	// Cron ping IDs.
 	HealthcheckAddSessionPingID              = "8da15fff-15f0-4410-9efc-524f624fd388"
@@ -1394,4 +1395,24 @@ func IsLoggedInUserWhitelistedForProjectAnalytics(loggedInUUID string) bool {
 
 func EnableMQLAPI() bool {
 	return configuration.EnableMQLAPI
+}
+
+// GetHealthcheckPingID - Choose between default and override ping_id
+// based on availability.
+func GetHealthcheckPingID(defaultPingID, overridePingID string) string {
+	if overridePingID != "" {
+		return overridePingID
+	}
+
+	return defaultPingID
+}
+
+// GetAppName - Choose between default and override app_name
+// based on availability.
+func GetAppName(defaultAppName, overrideAppName string) string {
+	if overrideAppName != "" {
+		return overrideAppName
+	}
+
+	return defaultAppName
 }

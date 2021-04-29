@@ -33,6 +33,9 @@ func main() {
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
+	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+
 	flag.Parse()
 	if *env != "development" &&
 		*env != "staging" &&
@@ -41,12 +44,15 @@ func main() {
 		panic(err)
 	}
 
-	taskID := "cleanup_sortedset_cache"
-	healthcheckPingID := C.HealthcheckCleanupEventUserCachePingID
-	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
+	defaultAppName := "cleanup_sortedset_cache"
+	defaultHealthcheckPingID := C.HealthcheckCleanupEventUserCachePingID
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
+	appName := C.GetAppName(defaultAppName, *overrideAppName)
+
+	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
 
 	config := &C.Configuration{
-		AppName:            taskID,
+		AppName:            appName,
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -56,7 +62,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
-			AppName:  taskID,
+			AppName:  appName,
 		},
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *RedisPortPersistent,

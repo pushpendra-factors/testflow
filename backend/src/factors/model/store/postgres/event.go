@@ -765,7 +765,6 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 	sessionEndIndex := 0
 
 	isMatchingMktPropsOn := false
-	hasMismatchInBetween := false
 	noOfSessionsCreated := 0
 	sessionContinuedFlag := false
 	isLastEventToBeProcessed := false
@@ -779,7 +778,14 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 	// Use 2 moving cursor current, next. if diff(current, previous) > in-activity
 	// period or has marketing property, use current_event - 1 as session end
 	// and update. Update current_event as session start and do the same till the end.
+	var currentSessionCandidateEvent model.Event
+	isFirstEvent := true
 	for i := 0; i < len(events); {
+
+		if isFirstEvent {
+			currentSessionCandidateEvent = *events[i]
+			isFirstEvent = false
+		}
 		hasMarketingProperty, err := doesEventIsPageViewAndHasMarketingProperty(events[i])
 		if err != nil {
 			logCtx.WithError(err).
@@ -811,7 +817,6 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 				isMatchingMktPropsOn = true
 				backMatch = true
 			} else {
-				hasMismatchInBetween = true
 				backMatch = false
 			}
 			// Default case for first element
@@ -819,7 +824,7 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 				backMatch = true
 			}
 			// Forward properties matching case
-			if i+1 < len(events) && model.AreMarketingPropertiesMatching(*events[i], *events[i+1]) {
+			if i+1 < len(events) && (model.AreMarketingPropertiesMatching(currentSessionCandidateEvent, *events[i+1])) {
 				// continue with the next event in case next one has the same matching properties
 				forwardMatch = true
 				i++
@@ -828,8 +833,8 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 				forwardMatch = false
 			}
 		}
-
 		if (hasMarketingProperty || isNewSessionRequired || isLastSetOfEvents || (backMatch && !forwardMatch)) && !(!backMatch && forwardMatch && i < len(events)-1) {
+			isFirstEvent = true
 			var sessionEvent *model.Event
 			var isSessionContinued bool
 
@@ -849,7 +854,7 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 			}
 
 			// End condition for same marketing prop events.
-			if i == len(events)-1 && isMatchingMktPropsOn && !hasMismatchInBetween {
+			if i == len(events)-1 && isMatchingMktPropsOn {
 				sessionEndIndex = i
 				isLastEventToBeProcessed = false
 			}
@@ -975,7 +980,6 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 						0, isLastEventToBeProcessed, errCode
 				}
 				isMatchingMktPropsOn = false
-				hasMismatchInBetween = false
 				sessionEvent = newSessionEvent
 				noOfSessionsCreated++
 			}
@@ -1297,7 +1301,7 @@ func getPropertiesByNameAndMaxOccurrence(
 	propertiesWithCount := make(map[string]model.EventPropertiesWithCount, 0)
 	for name, propertiesByAuthor := range *propertiesByNameAndOccurence {
 		for _, pwc := range propertiesByAuthor {
-			// Select the poroeprties with max occurrence count.
+			// Select the properties with max occurrence count.
 			if (*pwc).Count > propertiesWithCount[name].Count &&
 				// Consider only max no.of properties available.
 				len((*pwc).Properties) >= len(propertiesWithCount[name].Properties) {
@@ -1317,7 +1321,7 @@ func getPropertiesByNameAndMaxOccurrence(
 	return &propertiesByName
 }
 
-// GetEventsWithoutPropertiesAndWithPropertiesByName - Use for getting properties with and without values
+// GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory - Use for getting properties with and without values
 // and use it for updating the events which doesn't have the values. User for fixing data for YourStory.
 func (pg *Postgres) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from,
 	to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int) {

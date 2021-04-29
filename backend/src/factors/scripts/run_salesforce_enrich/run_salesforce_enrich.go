@@ -68,10 +68,17 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	syncOnly := flag.Bool("sync_only", false, "Run only sync.")
 
+	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+
 	flag.Parse()
-	taskID := "salesforce_enrich"
-	healthcheckPingID := C.HealthcheckSalesforceEnrichPingID
-	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
+
+	defaultAppName := "salesforce_enrich"
+	defaultHealthcheckPingID := C.HealthcheckSalesforceEnrichPingID
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
+	appName := C.GetAppName(defaultAppName, *overrideAppName)
+
+	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
 
 	if *env != "development" && *env != "staging" && *env != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
@@ -82,7 +89,7 @@ func main() {
 	}
 
 	config := &C.Configuration{
-		AppName:            taskID,
+		AppName:            appName,
 		Env:                *env,
 		GCPProjectID:       *gcpProjectID,
 		GCPProjectLocation: *gcpProjectLocation,
@@ -92,7 +99,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
-			AppName:  taskID,
+			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
 			Host:     *memSQLHost,
@@ -100,7 +107,7 @@ func main() {
 			User:     *memSQLUser,
 			Name:     *memSQLName,
 			Password: *memSQLPass,
-			AppName:  taskID,
+			AppName:  appName,
 		},
 		PrimaryDatastore:    *primaryDatastore,
 		APIDomain:           *apiDomain,

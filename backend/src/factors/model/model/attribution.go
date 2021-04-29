@@ -203,6 +203,16 @@ func GetGCLIDAttributionValue(gclIDBasedCampaign map[string]CampaignInfo, gclID 
 	return PropertyValueNone
 }
 
+// IsASearchSlotKeyword Returns true if it is not a search click using slot's value
+func IsASearchSlotKeyword(gclIDBasedCampaign map[string]CampaignInfo, gclID string) bool {
+	if value, ok := gclIDBasedCampaign[gclID]; ok {
+		if strings.Contains(strings.ToLower(value.Slot), "search") {
+			return true
+		}
+	}
+	return false
+}
+
 func IsIntegrationNotFoundError(err error) bool {
 	return err.Error() == AttributionErrorIntegrationNotFound
 }

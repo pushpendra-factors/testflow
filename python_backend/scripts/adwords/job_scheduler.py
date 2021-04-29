@@ -20,7 +20,8 @@ from .jobs.ads_job import GetAdsJob
 
 class JobScheduler:
 
-    def _validate(self, next_info, skip_today):
+    @staticmethod
+    def validate(next_info, skip_today):
         project_id = next_info.get("project_id")
         customer_acc_id = next_info.get("customer_acc_id")
         doc_type = next_info.get("doc_type_alias")
@@ -36,7 +37,7 @@ class JobScheduler:
 
 
         elif refresh_token is None or refresh_token == "":
-            log.error("Invalid refresh token for project_id %s", refresh_token)
+            log.error("Invalid refresh token for project_id %s", str(project_id))
             message = "Invalid refresh token."
         if message != "":
             metrics_controller.update_job_stats(project_id, customer_acc_id, doc_type, STATUS_FAILED, message)
@@ -48,9 +49,6 @@ class JobScheduler:
 
     def __init__(self, next_info, skip_today):
         self.permission_error_cache = {}
-        validation_status = self._validate(next_info, skip_today)
-        if not validation_status:
-            return
 
         self.next_info = next_info
         self.doc_type = next_info.get("doc_type_alias")

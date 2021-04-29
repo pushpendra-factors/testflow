@@ -8,12 +8,11 @@ function CardUnit({ cardUnits, data }) {
   const { columns, tableData } = getCardsDataInTableFormat(cardUnits, data);
 
   return (
-    <div className={`py-4 px-2 flex widget-card-top-div`}>
+    <div style={{ height: "225px" }} className={`py-4 px-2 flex widget-card-top-div`}>
       <div
-        style={{ height: "200px" }}
         className={"fa-dashboard--widget-card w-full flex"}
       >
-        <div className={"px-8 py-4 flex justify-between items-start w-full"}>
+        <div className={"px-8 py-4 flex justify-between items-center w-full"}>
           <div className={"w-full"}>
             <div className="flex items-center justify-between">
               <div className="flex flex-col">

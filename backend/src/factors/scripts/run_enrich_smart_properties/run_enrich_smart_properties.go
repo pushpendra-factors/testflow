@@ -23,6 +23,9 @@ func main() {
 	dryRunSmartProperties := flag.Bool("dry_run_smart_properties", false, "Dry run mode for smart properties job")
 	projectIDs := flag.String("project_ids", "", "Projects for which the smart properties are to be populated")
 
+	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
+	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+
 	flag.Parse()
 	if *env != "development" &&
 		*env != "staging" &&
@@ -30,9 +33,13 @@ func main() {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
 	}
-	taskID := "enrich_smart_properties_job"
-	healthcheckPingID := C.HealthCheckSmartPropertiesPingID
-	defer C.PingHealthcheckForPanic(taskID, *env, healthcheckPingID)
+
+	defaultAppName := "enrich_smart_properties_job"
+	defaultHealthcheckPingID := C.HealthCheckSmartPropertiesPingID
+	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
+	appName := C.GetAppName(defaultAppName, *overrideAppName)
+
+	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
 
 	config := &C.Configuration{
 		AppName: "enrich_smart_properties_job",
