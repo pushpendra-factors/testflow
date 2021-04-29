@@ -834,7 +834,6 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 	sessionEndIndex := 0
 
 	isMatchingMktPropsOn := false
-	hasMismatchInBetween := false
 	noOfSessionsCreated := 0
 	sessionContinuedFlag := false
 	isLastEventToBeProcessed := false
@@ -848,7 +847,14 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 	// Use 2 moving cursor current, next. if diff(current, previous) > in-activity
 	// period or has marketing property, use current_event - 1 as session end
 	// and update. Update current_event as session start and do the same till the end.
+	var currentSessionCandidateEvent model.Event
+	isFirstEvent := true
 	for i := 0; i < len(events); {
+
+		if isFirstEvent {
+			currentSessionCandidateEvent = *events[i]
+			isFirstEvent = false
+		}
 		hasMarketingProperty, err := doesEventIsPageViewAndHasMarketingProperty(events[i])
 		if err != nil {
 			logCtx.WithError(err).
@@ -880,7 +886,6 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 				isMatchingMktPropsOn = true
 				backMatch = true
 			} else {
-				hasMismatchInBetween = true
 				backMatch = false
 			}
 			// Default case for first element
@@ -888,7 +893,7 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 				backMatch = true
 			}
 			// Forward properties matching case
-			if i+1 < len(events) && model.AreMarketingPropertiesMatching(*events[i], *events[i+1]) {
+			if i+1 < len(events) && model.AreMarketingPropertiesMatching(currentSessionCandidateEvent, *events[i+1]) {
 				// continue with the next event in case next one has the same matching properties
 				forwardMatch = true
 				i++
@@ -897,8 +902,8 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 				forwardMatch = false
 			}
 		}
-
 		if (hasMarketingProperty || isNewSessionRequired || isLastSetOfEvents || (backMatch && !forwardMatch)) && !(!backMatch && forwardMatch && i < len(events)-1) {
+			isFirstEvent = true
 			var sessionEvent *model.Event
 			var isSessionContinued bool
 
@@ -918,7 +923,7 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 			}
 
 			// End condition for same marketing prop events.
-			if i == len(events)-1 && isMatchingMktPropsOn && !hasMismatchInBetween {
+			if i == len(events)-1 && isMatchingMktPropsOn {
 				sessionEndIndex = i
 				isLastEventToBeProcessed = false
 			}
@@ -1044,7 +1049,6 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 						0, isLastEventToBeProcessed, errCode
 				}
 				isMatchingMktPropsOn = false
-				hasMismatchInBetween = false
 				sessionEvent = newSessionEvent
 				noOfSessionsCreated++
 			}
