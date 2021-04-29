@@ -9,6 +9,7 @@ import { bindActionCreators } from 'redux';
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 
 import FilterBlock from '../FilterBlock';
+import EventFilterWrapper from '../EventFilterWrapper';
 
 import GroupSelect from '../GroupSelect';
 import EventGroupBlock from '../EventGroupBlock';
@@ -39,7 +40,7 @@ function QueryBlock({
   const alphabetIndex = 'ABCDEF';
 
   const onChange = (value) => {
-    const newEvent = event || { label: '', filters: [] };
+    const newEvent = { label: '', filters: [] };
     newEvent.label = value;
     setDDVisible(false);
     eventChange(newEvent, index - 1);
@@ -94,13 +95,19 @@ function QueryBlock({
     setFilterDDVisible(true);
   };
 
-  const insertFilters = (filter) => {
+  const insertFilters = (filter, filterIndex) => {
     const newEvent = Object.assign({}, event);
-    const filt = newEvent.filters.filter(
-      (fil) => JSON.stringify(fil) === JSON.stringify(filter)
-    );
-    if (filt && filt.length) return;
-    newEvent.filters.push(filter);
+    if(filterIndex >= 0) {
+      newEvent.filters = newEvent.filters.map((filt, i) => {
+        if(i === filterIndex) {
+          return filter;
+        } 
+        return filt;
+      })
+    } else {
+      newEvent.filters.push(filter);
+    }
+    
     eventChange(newEvent, index - 1);
   };
 
@@ -113,17 +120,15 @@ function QueryBlock({
   };
 
   const selectEventFilter = () => {
-    if (isFilterDDVisible) {
       return (
-        <FilterBlock
+        <EventFilterWrapper
           filterProps={filterProps}
           activeProject={activeProject}
           event={event}
           insertFilter={insertFilters}
           closeFilter={() => setFilterDDVisible(false)}
-        ></FilterBlock>
+        ></EventFilterWrapper>
       );
-    }
   };
 
   const deleteGroupBy = (groupState, id, type = 'event') => {
@@ -177,13 +182,15 @@ function QueryBlock({
       event.filters.forEach((filter, index) => {
         filters.push(
           <div key={index} className={'fa--query_block--filters'}>
-            <FilterBlock
+            <EventFilterWrapper
               index={index}
               filter={filter}
+              filterProps={filterProps}
+              activeProject={activeProject}
               deleteFilter={removeFilters}
               insertFilter={insertFilters}
               closeFilter={() => setFilterDDVisible(false)}
-            ></FilterBlock>
+            ></EventFilterWrapper>
           </div>
         );
       });

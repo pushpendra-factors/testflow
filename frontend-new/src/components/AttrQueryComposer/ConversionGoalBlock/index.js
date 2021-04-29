@@ -145,7 +145,7 @@ const ConversionGoalBlock = ({
                     type="link" 
                     onClick={toggleEventSelect}
                     icon={<SVG name="mouseevent" />}
-                    className={'fa-button--truncate fa-button--truncate-sm'}
+                    className={'fa-button--truncate fa-button--truncate-xs'}
                     >
                          {eventGoal && eventGoal.label} 
                 </Button> }

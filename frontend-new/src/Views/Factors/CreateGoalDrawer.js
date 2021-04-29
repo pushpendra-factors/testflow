@@ -461,7 +461,7 @@ const renderFilterBlock = () => {
                             </>
                             }
 
-                            {event2 && !showDropDown2  && <Button type={'link'} size={'large'} className={'ml-2 fa-button--truncate fa-button--truncate-sm'} ellipsis onClick={()=>{
+                            {event2 && !showDropDown2  && <Button type={'link'} size={'large'} className={'ml-2 fa-button--truncate fa-button--truncate-xs'} ellipsis onClick={()=>{
                               setShowDropDown2(true); 
                               }} >{event2}</Button> 
                             }

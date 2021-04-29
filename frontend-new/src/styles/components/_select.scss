@@ -103,3 +103,9 @@
         } 
     }
 }
+
+.fa-select--group-select-sm {
+    @extend .fa-select--group-select;
+    width: 300px;
+}
+

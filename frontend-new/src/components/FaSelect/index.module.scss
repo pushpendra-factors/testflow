@@ -1,10 +1,12 @@
 .dropdown {
     &__select {
         position: absolute; 
-        top: 0;
 
         display: flex;
         flex-direction: column;
+
+        top: 36px;
+        left: 0;
 
         &__content {
             display: flex;
@@ -12,6 +14,12 @@
             max-height: 200px;
             overflow: scroll;
         }
+    }
+
+    &__select_rt {
+        @extend .dropdown__select;
+        right: 0;
+        left: unset;
     }
 
     &__hd_overlay {
@@ -28,8 +36,31 @@
     &__del_opt {
         border-top: 1px solid #F0F0F0;
     }
+
+    &__apply_opt {
+        position: sticky;
+        bottom: 0;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        background: white;
+    }
+
+    &__empty_opt {
+        height: 54px;
+    }
+}
+
+.fa_selected {
+    background: #F8F8FC;
+    cursor: auto;
+
+}
+
+.selectInput {
 }
 
 .optText {
     text-transform: capitalize;
+    width: 90%;
 }
