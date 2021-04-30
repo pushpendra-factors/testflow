@@ -125,6 +125,7 @@ function QueryBlock({
           filterProps={filterProps}
           activeProject={activeProject}
           event={event}
+          deleteFilter={() => setFilterDDVisible(false)}
           insertFilter={insertFilters}
           closeFilter={() => setFilterDDVisible(false)}
         ></EventFilterWrapper>
@@ -185,6 +186,7 @@ function QueryBlock({
             <EventFilterWrapper
               index={index}
               filter={filter}
+              event={event}
               filterProps={filterProps}
               activeProject={activeProject}
               deleteFilter={removeFilters}

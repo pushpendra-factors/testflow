@@ -95,7 +95,7 @@ export default function EventFilterWrapper({
       const filterDD = Object.assign({}, filterDropDownOptions);
       const propState = [];
       Object.keys(filterProps).forEach((k, i) => {
-        propState.push({label: k, icon: k, values: filterProps[k]});
+        propState.push({label: k, icon: k === 'event'? 'mouseclick' : k, values: filterProps[k]});
       })
       filterDD.props = propState;
       setFiltDD(filterDD);
@@ -492,15 +492,16 @@ export default function EventFilterWrapper({
           });
         }
       }
-    } else if(props[2] === 'event') {
-      if(!dropDownValues[props[0]]) {
-        fetchEventPropertyValues(activeProject.id, event.label, props[0]).then(res => {
-          const ddValues = Object.assign({}, dropDownValues);
-          ddValues[props[0]] = res.data;
-          setDropDownValues(ddValues);
-        });
+      else if(props[2] === 'event') {
+        if(!dropDownValues[props[0]]) {
+          fetchEventPropertyValues(activeProject.id, event.label, props[0]).then(res => {
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[props[0]] = res.data;
+            setDropDownValues(ddValues);
+          });
+        }
       }
-    }
+    } 
   }
 
   const filterSelComp = () => {
@@ -525,7 +526,7 @@ export default function EventFilterWrapper({
   return (
     <div className={`flex items-center relative w-full`}>
       {
-        filter && 
+        delFilter && 
           <Button 
           type="text" 
           onClick={delFilter}
