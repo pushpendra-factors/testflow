@@ -56,6 +56,7 @@ const (
 	tablePropertyDetails               = "property_details"
 	tableSmartProperties               = "smart_properties"
 	tableSmartPropertyRules            = "smart_property_rules"
+	tableDisplayNames                  = "display_names"
 )
 
 type TableRecord struct {
@@ -547,7 +548,7 @@ func getPrimaryKeyConditionByTableName(tableName string, sourceTableRecord *Tabl
 	idColName := "id"
 	if tableName == tableAgents {
 		idColName = "uuid"
-	} else if tableName == tableSmartProperties || tableName == tablePropertyDetails {
+	} else if tableName == tableSmartProperties || tableName == tablePropertyDetails || tableName == tableDisplayNames {
 		idColName = "project_id"
 	} else if isProjectAssociatedTable(tableName) {
 		idColName = "project_id"
@@ -868,6 +869,8 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.SmartProperties{}
 	case tableSmartPropertyRules:
 		record = &model.SmartPropertyRules{}
+	case tableDisplayNames:
+		record = &model.DisplayName{}
 
 	// Tables related to analytics.
 	case tableEvents:
@@ -1093,6 +1096,7 @@ func migrateAllTables(projectIDs []uint64) {
 		tablePropertyDetails,
 		tableSmartProperties,
 		tableSmartPropertyRules,
+		tableDisplayNames,
 	}
 
 	// Runs replication continiously for each table
