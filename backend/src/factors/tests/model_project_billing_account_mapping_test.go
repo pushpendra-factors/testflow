@@ -63,3 +63,24 @@ func TestCreateMultipleProjectsUnderSameBillingAccount(t *testing.T) {
 
 	assert.Equal(t, expProjectIDs, resultProjectIDs)
 }
+
+func TestPBAMConstraints(t *testing.T) {
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+91234567890")
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, agent)
+
+	agentBillingAccount, errCode := store.GetStore().GetBillingAccountByAgentUUID(agent.UUID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotEmpty(t, agentBillingAccount)
+
+	// Creating with a valid billing account id works.
+	_, errCode = store.GetStore().CreateProjectWithDependencies(
+		&model.Project{Name: U.RandomString(5)}, agent.UUID, model.ADMIN, agentBillingAccount.ID)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Creating new project with random billingAccountID should fail.
+	billingAccountID := U.GetUUID()
+	_, errCode = store.GetStore().CreateProjectWithDependencies(
+		&model.Project{Name: U.RandomString(5)}, agent.UUID, model.ADMIN, billingAccountID)
+	assert.Equal(t, http.StatusInternalServerError, errCode)
+}

@@ -24,10 +24,7 @@ const ROUTE_SDK_ADWORDS_ROOT = "/adwords_sdk_service"
 const ROUTE_VERSION_V1 = "/v1"
 
 func InitAppRoutes(r *gin.Engine) {
-	routePrefix := ""
-	if C.UseMemSQLDatabaseStore() || C.EnableMQLAPI() {
-		routePrefix = "/mql"
-	}
+	routePrefix := C.GetRoutesURLPrefix()
 
 	r.GET(routePrefix+"/status", func(c *gin.Context) {
 		resp := map[string]string{

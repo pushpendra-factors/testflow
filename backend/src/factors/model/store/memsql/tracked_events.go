@@ -14,6 +14,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesTrackedEventForeignConstraints(trackedEvent model.FactorsTrackedEvent) int {
+	_, projectErrCode := store.GetProject(trackedEvent.ProjectID)
+	if projectErrCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+
+	if trackedEvent.CreatedBy != nil && *trackedEvent.CreatedBy != "" {
+		_, agentErrCode := store.GetAgentByUUID(*trackedEvent.CreatedBy)
+		if agentErrCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+	return http.StatusOK
+}
+
 //CreateTrackedEvent - Inserts the tracked event to db
 func (store *MemSQL) CreateFactorsTrackedEvent(ProjectID uint64, EventName string, agentUUID string) (int64, int) {
 	if store.isActiveFactorsTrackedEventsLimitExceeded(ProjectID) {
@@ -68,6 +83,10 @@ func (store *MemSQL) CreateFactorsTrackedEvent(ProjectID uint64, EventName strin
 				CreatedAt:     &transTime,
 				UpdatedAt:     &transTime,
 			}
+		}
+
+		if errCode := store.satisfiesTrackedEventForeignConstraints(trackedEvent); errCode != http.StatusOK {
+			return 0, http.StatusInternalServerError
 		}
 		if err := db.Create(&trackedEvent).Error; err != nil {
 			logCtx.WithError(dbErr).Error("Insert into tracked_events table failed")

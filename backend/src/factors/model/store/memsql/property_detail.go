@@ -7,10 +7,19 @@ import (
 	"factors/util"
 	U "factors/util"
 	"net/http"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
+
+func (store *MemSQL) satisfiesPropertyDetailForeignConstraints(propertyDetail model.PropertyDetail) int {
+	_, errCode := store.GetProject(propertyDetail.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
 
 // GetPropertyTypeFromDB returns property type by key
 func (store *MemSQL) GetPropertyTypeFromDB(projectID uint64, eventName, propertyKey string, isUserProperty bool) (int, *model.PropertyDetail) {
@@ -111,6 +120,10 @@ func (store *MemSQL) CreatePropertyDetails(projectID uint64, eventName, property
 
 	configuredProperties.Entity = model.GetEntity(isUserProperty)
 
+	if errCode := store.satisfiesPropertyDetailForeignConstraints(*configuredProperties); errCode != http.StatusOK {
+		return http.StatusInternalServerError
+	}
+
 	if err := db.Create(configuredProperties).Error; err != nil {
 
 		if U.IsPostgresUniqueIndexViolationError("configured_properties_pkey", err) {
@@ -191,9 +204,14 @@ func (store *MemSQL) GetPropertyTypeByKeyValue(projectID uint64, eventName strin
 
 			if pType == U.PropertyTypeNumerical {
 				if _, err := U.GetPropertyValueAsFloat64(propertyValue); err != nil {
-					log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "property_value": propertyValue, "is_user_property": isUserProperty}).
-						WithError(err).Error("Failed to convert numerical property value.")
-					return U.PropertyTypeUnknown
+					// try removing comma separated number
+					cleanedValue := strings.ReplaceAll(U.GetPropertyValueAsString(propertyValue), ",", "")
+					if _, err := U.GetPropertyValueAsFloat64(cleanedValue); err != nil {
+						log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "property_value": propertyValue, "is_user_property": isUserProperty}).
+							WithError(err).Error("Failed to convert numerical property value.")
+						return U.PropertyTypeUnknown
+					}
+
 				}
 
 				return pType

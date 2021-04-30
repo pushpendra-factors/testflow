@@ -1367,7 +1367,7 @@ func (store *MemSQL) GetWebAnalyticsCachePayloadsForProject(projectID uint64) ([
 	}
 
 	var cachePayloads []model.WebAnalyticsCachePayload
-	for _, rangeFunction := range U.WebAnalyticsQueryDateRangePresets {
+	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to := rangeFunction()
 
 		cachePayloads = append(cachePayloads, model.WebAnalyticsCachePayload{

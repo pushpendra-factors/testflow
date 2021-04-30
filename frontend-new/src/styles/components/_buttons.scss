@@ -30,7 +30,10 @@
             display: inline;
         }
         &.fa-button--truncate-sm{
-            max-width: 275px; 
+            max-width: 250px; 
+        }
+        &.fa-button--truncate-xs{
+            max-width: 200px;
         }
     }
     &.ant-btn-icon-only{

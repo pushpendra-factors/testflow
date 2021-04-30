@@ -1,6 +1,7 @@
 package tests
 
 import (
+	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -185,4 +186,35 @@ func TestDeleteProjectAgentMapping(t *testing.T) {
 		assert.Equal(t, http.StatusAccepted, errCode)
 	})
 
+}
+
+func TestPAMConstraints(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotEmpty(t, project)
+	assert.NotEmpty(t, agent)
+
+	// Another entry with same project and agent should fail.
+	pam, errCode := store.GetStore().CreateProjectAgentMappingWithDependencies(
+		&model.ProjectAgentMapping{AgentUUID: agent.UUID, ProjectID: project.ID})
+	assert.Nil(t, pam)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	// Should fail for entry with non existing agent_uuid.
+	pam, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(
+		&model.ProjectAgentMapping{AgentUUID: U.GetUUID(), ProjectID: project.ID})
+	assert.Nil(t, pam)
+	assert.Equal(t, http.StatusInternalServerError, errCode)
+
+	// Should fail for non existing invited_by.
+	badInvitedBy := U.GetUUID()
+	pam, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(
+		&model.ProjectAgentMapping{AgentUUID: agent.UUID, ProjectID: project.ID, InvitedBy: &badInvitedBy})
+	assert.Nil(t, pam)
+	if C.UseMemSQLDatabaseStore() {
+		assert.Equal(t, http.StatusInternalServerError, errCode)
+	} else {
+		// In Postgres, primary constrain get's checked first and returns found for existing project, agent.
+		assert.Equal(t, http.StatusFound, errCode)
+	}
 }

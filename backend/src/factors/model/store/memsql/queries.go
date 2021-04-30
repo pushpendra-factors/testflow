@@ -9,6 +9,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesQueriesForeignConstraints(query model.Queries) int {
+	_, errCode := store.GetProject(query.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+
+	if query.CreatedBy != "" {
+		_, agentErrCode := store.GetAgentByUUID(query.CreatedBy)
+		if agentErrCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+	return http.StatusOK
+}
+
 func (store *MemSQL) CreateQuery(projectId uint64, query *model.Queries) (*model.Queries, int, string) {
 	db := C.GetServices().Db
 
@@ -23,6 +38,10 @@ func (store *MemSQL) CreateQuery(projectId uint64, query *model.Queries) (*model
 	}
 
 	query.ProjectID = projectId
+	if errCode := store.satisfiesQueriesForeignConstraints(*query); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError, "Foreign constraints violation"
+	}
+
 	if err := db.Create(&query).Error; err != nil {
 		errMsg := "Failed to insert query."
 		log.WithFields(log.Fields{"Query": query,
@@ -113,14 +132,14 @@ func (store *MemSQL) GetSavedQueryWithQueryId(projectID uint64, queryID uint64) 
 
 // GetQueryWithQueryId Get query by query id of any type.
 func (store *MemSQL) GetQueryWithQueryId(projectID uint64, queryID uint64) (*model.Queries, int) {
-	return store.getQueryWithQueryID(projectID, queryID, 0)
+	return store.getQueryWithQueryID(projectID, queryID, model.QueryTypeAllQueries)
 }
 
 func (store *MemSQL) getQueryWithQueryID(projectID uint64, queryID uint64, queryType int) (*model.Queries, int) {
 	db := C.GetServices().Db
 	var query model.Queries
 	var err error
-	if queryType == 0 {
+	if queryType == model.QueryTypeAllQueries {
 		err = db.Table("queries").Where("project_id = ? AND id=? AND is_deleted = ?",
 			projectID, queryID, "false").Find(&query).Error
 	} else {

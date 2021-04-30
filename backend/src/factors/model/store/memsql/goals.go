@@ -16,6 +16,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesGoalForeignConstraints(goal model.FactorsGoal) int {
+	_, projectErrCode := store.GetProject(goal.ProjectID)
+	if projectErrCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+
+	if goal.CreatedBy != nil && *goal.CreatedBy != "" {
+		_, agentErrCode := store.GetAgentByUUID(*goal.CreatedBy)
+		if agentErrCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+	return http.StatusOK
+}
+
 // GetAllFactorsGoals - get all the goals for a project
 func (store *MemSQL) GetAllFactorsGoals(ProjectID uint64) ([]model.FactorsGoal, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
@@ -93,6 +108,10 @@ func (store *MemSQL) CreateFactorsGoal(ProjectID uint64, Name string, Rule model
 			UpdatedAt:     &transTime,
 		}
 	}
+
+	if errCode := store.satisfiesGoalForeignConstraints(goal); errCode != http.StatusOK {
+		return 0, http.StatusInternalServerError, "Failed foreign key constraints"
+	}
 	if err := db.Create(&goal).Error; err != nil {
 		if IsDuplicateRecordError(err) {
 			logCtx.WithError(err).Error("Duplicate name")
@@ -124,7 +143,7 @@ func isDulplicateFactorsGoalRule(ProjectID uint64, Rule model.FactorsGoalRule) b
 			logCtx.WithError(err).Error("Failed to decode goal rule")
 			continue
 		}
-		if U.AreEqualStructs(resGoal, Rule) {
+		if reflect.DeepEqual(resGoal, Rule) {
 			return true
 		}
 	}

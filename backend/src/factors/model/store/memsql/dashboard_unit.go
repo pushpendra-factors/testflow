@@ -14,6 +14,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesDashboardUnitForeignConstraints(dashboardUnit model.DashboardUnit) int {
+	_, errCode := store.GetProject(dashboardUnit.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	} else {
+		if exists := store.existsDashboardByID(dashboardUnit.ProjectID, dashboardUnit.DashboardId); !exists {
+			return http.StatusBadRequest
+		}
+		if _, errCode := store.getQueryWithQueryID(
+			dashboardUnit.ProjectID, dashboardUnit.QueryId, model.QueryTypeAllQueries); errCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+	return http.StatusOK
+}
+
 // CreateDashboardUnitForMultipleDashboards creates multiple dashboard units each for given
 // list of dashboards
 func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64,
@@ -317,11 +333,6 @@ func (store *MemSQL) DeleteMultipleDashboardUnits(projectID uint64, agentUUID st
 
 func (store *MemSQL) deleteDashboardUnit(projectID uint64, dashboardID uint64, ID uint64) int {
 	db := C.GetServices().Db
-	// Required for getting query_id.
-	dashboardUnit, errCode := store.GetDashboardUnitByUnitID(projectID, ID)
-	if errCode != http.StatusFound {
-		return http.StatusInternalServerError
-	}
 
 	err := db.Model(&model.DashboardUnit{}).Where("id = ? AND project_id = ? AND dashboard_id = ?",
 		ID, projectID, dashboardID).Update(map[string]interface{}{"is_deleted": true}).Error
@@ -329,14 +340,6 @@ func (store *MemSQL) deleteDashboardUnit(projectID uint64, dashboardID uint64, I
 		log.WithFields(log.Fields{"project_id": projectID, "dashboard_id": dashboardID,
 			"unit_id": ID}).WithError(err).Error("Failed to delete dashboard unit.")
 		return http.StatusInternalServerError
-	}
-
-	// Removing dashboard saved query.
-	errCode, errMsg := store.DeleteDashboardQuery(projectID, dashboardUnit.QueryId)
-	if errCode != http.StatusAccepted {
-		log.WithFields(log.Fields{"project_id": projectID, "unitId": ID}).Error(errMsg)
-		// log error and continue to delete dashboard unit.
-		// To avoid improper experience.
 	}
 	return http.StatusAccepted
 }

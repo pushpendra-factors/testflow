@@ -18,6 +18,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesSalesforceDocumentForeignConstraints(document model.SalesforceDocument) int {
+	// TODO: Add for project_id, user_id.
+	_, errCode := store.GetProject(document.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 // GetSalesforceSyncInfo returns list of projects and their corresponding sync status
 func (store *MemSQL) GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int) {
 	var lastSyncInfo []model.SalesforceLastSyncInfo
@@ -223,6 +232,10 @@ func (store *MemSQL) CreateSalesforceDocumentByAction(projectID uint64, document
 		return http.StatusBadRequest
 	}
 	document.Timestamp = timestamp
+
+	if errCode := store.satisfiesSalesforceDocumentForeignConstraints(*document); errCode != http.StatusOK {
+		return http.StatusInternalServerError
+	}
 
 	db := C.GetServices().Db
 	err = db.Create(document).Error

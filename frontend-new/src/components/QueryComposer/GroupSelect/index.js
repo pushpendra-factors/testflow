@@ -109,7 +109,7 @@ function GroupSelect({
 
   return (
     <>
-        <div className={`${styles.dropdown__filter_select} ml-4 fa-select fa-select--group-select ${extraClass}`}>
+        <div className={`${styles.dropdown__filter_select} fa-select fa-select--group-select ${extraClass}`}>
           <Input
             className={styles.dropdown__filter_select__input}
             placeholder={placeholder}

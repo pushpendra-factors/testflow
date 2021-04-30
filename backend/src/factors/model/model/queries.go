@@ -23,6 +23,7 @@ type Queries struct {
 }
 
 const (
+	QueryTypeAllQueries     = 0
 	QueryTypeDashboardQuery = 1
 	QueryTypeSavedQuery     = 2
 )

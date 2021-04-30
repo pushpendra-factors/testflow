@@ -74,6 +74,14 @@ const staticWhereStatementForFacebookWithSmartProperty = "WHERE facebook_documen
 
 var objectsForFacebook = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
 
+func (store *MemSQL) satisfiesFacebookForeignConstraints(facebookDocument model.FacebookDocument) int {
+	_, errCode := store.GetProject(facebookDocument.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 // CreateFacebookDocument ...
 func (store *MemSQL) CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int {
 	logCtx := log.WithField("customer_acc_id", document.CustomerAdAccountID).WithField(
@@ -104,6 +112,9 @@ func (store *MemSQL) CreateFacebookDocument(projectID uint64, document *model.Fa
 	document.CampaignID = campaignIDValue
 	document.AdSetID = adSetID
 	document.AdID = adID
+	if errCode := store.satisfiesFacebookForeignConstraints(*document); errCode != http.StatusOK {
+		return http.StatusInternalServerError
+	}
 
 	db := C.GetServices().Db
 	err := db.Create(&document).Error
@@ -986,6 +997,7 @@ func (store *MemSQL) GetLatestMetaForFacebook(projectID uint64, objectType int) 
 	return channelDocuments
 }
 
+// Since we dont have a way to store raw format, we are going with the approach of joins on query.
 func (store *MemSQL) GetLatestMetaForFacebookAdGroup(projectID uint64, docType int, timestamp int64) []model.ChannelDocumentsWithFields {
 	channelDocuments := make([]model.ChannelDocumentsWithFields, 0, 0)
 	db := C.GetServices().Db

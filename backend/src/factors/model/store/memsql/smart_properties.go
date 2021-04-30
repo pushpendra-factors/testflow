@@ -15,6 +15,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesSmartPropertyForeignConstraints(properties model.SmartProperties) int {
+	_, errCode := store.GetProject(properties.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 func (store *MemSQL) CreateSmartProperty(smartPropertyDoc *model.SmartProperties) int {
 	logCtx := log.WithField("project_id", smartPropertyDoc.ProjectID)
 
@@ -24,6 +32,9 @@ func (store *MemSQL) CreateSmartProperty(smartPropertyDoc *model.SmartProperties
 	}
 
 	if !C.IsDryRunSmartProperties() {
+		if errCode := store.satisfiesSmartPropertyForeignConstraints(*smartPropertyDoc); errCode != http.StatusOK {
+			return http.StatusInternalServerError
+		}
 		db := C.GetServices().Db
 		err := db.Create(&smartPropertyDoc).Error
 		if err != nil {

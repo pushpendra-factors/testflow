@@ -15,6 +15,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesScheduledTaskForeignConstraints(task model.ScheduledTask) int {
+	// TODO: Add for project_id, user_id.
+	_, errCode := store.GetProject(task.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 // CreateScheduledTask Creates a new task entry in scheduled_tasks table.
 func (store *MemSQL) CreateScheduledTask(task *model.ScheduledTask) int {
 	logCtx := log.WithFields(log.Fields{
@@ -32,6 +41,10 @@ func (store *MemSQL) CreateScheduledTask(task *model.ScheduledTask) int {
 
 	if task.ID == "" {
 		task.ID = U.GetUUID()
+	}
+
+	if errCode := store.satisfiesScheduledTaskForeignConstraints(*task); errCode != http.StatusOK {
+		return http.StatusInternalServerError
 	}
 
 	db := C.GetServices().Db

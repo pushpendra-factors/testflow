@@ -621,7 +621,7 @@ func TestDeleteDashboardUnitWithQuery(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Empty(t, errMsg)
 
-	// Deleting dashboard unit should delete the query of type QueryTypeDashboardQuery.
+	// Deleting dashboard unit should not delete the query of type QueryTypeDashboardQuery.
 	unitID := dashboardUnit.ID
 	errCode = store.GetStore().DeleteDashboardUnit(project.ID, agent.UUID, dashboard.ID, dashboardUnit.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
@@ -629,8 +629,8 @@ func TestDeleteDashboardUnitWithQuery(t *testing.T) {
 	assert.Empty(t, dashboardUnit)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	query, errCode := store.GetStore().GetQueryWithQueryId(project.ID, dashboardQuery.ID)
-	assert.Empty(t, query)
-	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.NotEmpty(t, query)
+	assert.Equal(t, http.StatusFound, errCode)
 
 	// Dashboard unit with QueryTypeSavedQuery.
 	dashboardUnit, errCode, errMsg = store.GetStore().CreateDashboardUnit(project.ID, agent.UUID,

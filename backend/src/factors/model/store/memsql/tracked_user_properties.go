@@ -13,6 +13,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesTrackedUserPropertiesForeignConstraints(trackedUserProperty model.FactorsTrackedUserProperty) int {
+	_, projectErrCode := store.GetProject(trackedUserProperty.ProjectID)
+	if projectErrCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+
+	if trackedUserProperty.CreatedBy != nil && *trackedUserProperty.CreatedBy != "" {
+		_, agentErrCode := store.GetAgentByUUID(*trackedUserProperty.CreatedBy)
+		if agentErrCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+	return http.StatusOK
+}
+
 //CreateFactorsTrackedUserProperty - Inserts the tracked event to db
 func (store *MemSQL) CreateFactorsTrackedUserProperty(ProjectID uint64, UserPropertyName string, agentUUID string) (int64, int) {
 	if store.isActiveFactorsTrackedUserPropertiesLimitExceeded(ProjectID) {
@@ -63,6 +78,10 @@ func (store *MemSQL) CreateFactorsTrackedUserProperty(ProjectID uint64, UserProp
 				CreatedAt:        &transTime,
 				UpdatedAt:        &transTime,
 			}
+		}
+
+		if errCode := store.satisfiesTrackedUserPropertiesForeignConstraints(trackedUserProperty); errCode != http.StatusOK {
+			return 0, http.StatusInternalServerError
 		}
 		if err := db.Create(&trackedUserProperty).Error; err != nil {
 			logCtx.WithError(dbErr).Error("Insert into tracked_user_property table failed")

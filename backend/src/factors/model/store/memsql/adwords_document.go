@@ -221,6 +221,14 @@ type fields struct {
 	values            []string
 }
 
+func (store *MemSQL) satisfiesAdwordsForeignConstraints(adwordsDocument model.AdwordsDocument) int {
+	_, errCode := store.GetProject(adwordsDocument.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 func getAdwordsIDFieldNameByType(docType int) string {
 	switch docType {
 	case 4: // click_performance_report
@@ -312,6 +320,8 @@ func (store *MemSQL) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) in
 	status = addColumnInformationForAdwordsDocument(adwordsDoc)
 	if status != http.StatusOK {
 		return status
+	} else if errCode := store.satisfiesAdwordsForeignConstraints(*adwordsDoc); errCode != http.StatusOK {
+		return http.StatusInternalServerError
 	}
 
 	db := C.GetServices().Db

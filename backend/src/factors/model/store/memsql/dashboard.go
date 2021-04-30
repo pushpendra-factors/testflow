@@ -14,6 +14,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesDashboardForeignConstraints(dashboard model.Dashboard) int {
+	_, projectErrCode := store.GetProject(dashboard.ProjectId)
+	_, agentErrCode := store.GetAgentByUUID(dashboard.AgentUUID)
+	if projectErrCode != http.StatusFound || agentErrCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 func isValidDashboard(dashboard *model.Dashboard) bool {
 	if dashboard.Name == "" {
 		return false
@@ -47,6 +56,9 @@ func (store *MemSQL) CreateDashboard(projectId uint64, agentUUID string, dashboa
 
 	dashboard.ProjectId = projectId
 	dashboard.AgentUUID = agentUUID
+	if errCode := store.satisfiesDashboardForeignConstraints(*dashboard); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
+	}
 
 	if err := db.Create(dashboard).Error; err != nil {
 		log.WithFields(log.Fields{"dashboard": dashboard,
@@ -63,6 +75,23 @@ func (store *MemSQL) CreateAgentPersonalDashboardForProject(projectId uint64, ag
 			Description: model.AgentProjectPersonalDashboardDescription,
 			Type:        model.DashboardTypePrivate,
 		})
+}
+
+func (store *MemSQL) existsDashboardByID(projectID, dashboardID uint64) bool {
+	db := C.GetServices().Db
+
+	var dashboard model.Dashboard
+	err := db.Limit(1).Where("project_id = ? AND id = ?", projectID, dashboardID).Select("id").Find(&dashboard).Error
+	if err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			log.WithField("project_id", projectID).WithField("id", dashboardID).Error("Failed to check dashboard by id")
+		}
+		return false
+	}
+	if dashboard.ID != 0 {
+		return true
+	}
+	return false
 }
 
 func (store *MemSQL) GetDashboards(projectId uint64, agentUUID string) ([]model.Dashboard, int) {

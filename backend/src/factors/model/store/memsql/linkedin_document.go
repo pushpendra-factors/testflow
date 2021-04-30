@@ -76,6 +76,14 @@ const staticWhereStatementForLinkedinWithSmartProperty = "WHERE linkedin_documen
 
 var objectsForLinkedin = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
 
+func (store *MemSQL) satisfiesLinkedinForeignConstraints(linkedinDocument model.LinkedinDocument) int {
+	_, errCode := store.GetProject(linkedinDocument.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 func getLinkedinDocumentTypeAliasByType() map[int]string {
 	documentTypeMap := make(map[int]string, 0)
 	for alias, typ := range linkedinDocumentTypeAlias {
@@ -156,6 +164,9 @@ func (store *MemSQL) CreateLinkedinDocument(projectID uint64, document *model.Li
 	document.CampaignGroupID = campaignGroupID
 	document.CampaignID = campaignID
 	document.CreativeID = creativeID
+	if errCode := store.satisfiesLinkedinForeignConstraints(*document); errCode != http.StatusOK {
+		return http.StatusInternalServerError
+	}
 
 	db := C.GetServices().Db
 	err := db.Create(&document).Error
@@ -868,6 +879,7 @@ func getLowestHierarchyLevelForLinkedin(query *model.ChannelQueryV1) string {
 	return model.LinkedinCampaignGroup
 }
 
+// Since we dont have a way to store raw format, we are going with the approach of joins on query.
 func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	db := C.GetServices().Db
 

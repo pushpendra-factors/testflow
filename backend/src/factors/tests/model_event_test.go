@@ -93,8 +93,6 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 
 	t.Run("DuplicateCustomerEventId", func(t *testing.T) {
 		custEventId := U.RandomString(8)
-		//projectId, userId, eventNameId, err := SetupProjectUserEventName()
-		assert.Nil(t, err)
 
 		event, errCode = store.GetStore().CreateEvent(&model.Event{EventNameId: eventNameId, ProjectId: projectId,
 			UserId: userId, CustomerEventId: &custEventId, Timestamp: time.Now().Unix()})

@@ -11,6 +11,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesBigquerySettingsForeignConstraints(setting model.BigquerySetting) int {
+	_, errCode := store.GetProject(setting.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 // CreateBigquerySetting Validates and creates a new bigquery entry for the given setting.
 func (store *MemSQL) CreateBigquerySetting(setting *model.BigquerySetting) (*model.BigquerySetting, int) {
 	logCtx := log.WithFields(log.Fields{
@@ -31,6 +39,8 @@ func (store *MemSQL) CreateBigquerySetting(setting *model.BigquerySetting) (*mod
 		setting.BigqueryCredentialsJSON == "" {
 		logCtx.Error("Invalid Biquery credentials.")
 		return nil, http.StatusBadRequest
+	} else if errCode := store.satisfiesBigquerySettingsForeignConstraints(*setting); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
 	}
 
 	db := C.GetServices().Db

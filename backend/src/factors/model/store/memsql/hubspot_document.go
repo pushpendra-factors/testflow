@@ -16,6 +16,15 @@ import (
 	U "factors/util"
 )
 
+func (store *MemSQL) satisfiesHubspotDocumentForeignConstraints(document model.HubspotDocument) int {
+	// TODO: Add for project_id, user_id.
+	_, errCode := store.GetProject(document.ProjectId)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 	if document.Type == 0 {
 		return "", model.ErrorHubspotInvalidHubspotDocumentType
@@ -210,6 +219,9 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 	}
 	document.Timestamp = timestamp
 
+	if errCode := store.satisfiesHubspotDocumentForeignConstraints(*document); errCode != http.StatusOK {
+		return http.StatusInternalServerError
+	}
 	db := C.GetServices().Db
 	err = db.Create(document).Error
 	if err != nil {

@@ -10,6 +10,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesPAMForeignConstraints(pam model.ProjectAgentMapping) int {
+	_, agentErrCode := store.GetAgentByUUID(pam.AgentUUID)
+	_, projectErrCode := store.GetProject(pam.ProjectID)
+	if agentErrCode != http.StatusFound || projectErrCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+
+	if pam.InvitedBy != nil && *pam.InvitedBy != "" {
+		_, invitedByErrCode := store.GetAgentByUUID(*pam.InvitedBy)
+		if invitedByErrCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+	return http.StatusOK
+}
+
 // Add Check
 // Project should not have more than 100 Agents
 func createProjectAgentMapping(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int) {
@@ -35,6 +51,10 @@ func createProjectAgentMapping(pam *model.ProjectAgentMapping) (*model.ProjectAg
 }
 
 func (store *MemSQL) CreateProjectAgentMappingWithDependencies(pam *model.ProjectAgentMapping) (*model.ProjectAgentMapping, int) {
+	if errCode := store.satisfiesPAMForeignConstraints(*pam); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
+	}
+
 	cPam, errCode := createProjectAgentMapping(pam)
 	if errCode != http.StatusCreated {
 		return cPam, errCode

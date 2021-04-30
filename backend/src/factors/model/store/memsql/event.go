@@ -34,11 +34,15 @@ func satisfiesEventConstraints(event model.Event) int {
 
 	// Unique (project_id, customer_event_id)
 	if event.CustomerEventId != nil && *event.CustomerEventId != "" {
-		_, errCode := getEventsByCustomerEventID(event.ProjectId, *event.CustomerEventId)
-		if errCode == http.StatusFound {
+		if exists := existsEventByCustomerEventID(event.ProjectId, *event.CustomerEventId); exists {
 			logCtx.WithField("customer_event_id", event.CustomerEventId).Warn("Event exists with customer event id")
 			return http.StatusNotAcceptable
 		}
+	}
+
+	if existsIDForProject(event.ProjectId, event.UserId, event.ID) {
+		logCtx.Warn("Event exists with user_id and project_id")
+		return http.StatusNotAcceptable
 	}
 
 	if !U.IsValidUUID(event.ID) {
@@ -47,6 +51,25 @@ func satisfiesEventConstraints(event model.Event) int {
 		return http.StatusInternalServerError
 	}
 	return http.StatusOK
+}
+
+func existsIDForProject(projectID uint64, userID, eventID string) bool {
+	db := C.GetServices().Db
+
+	var event model.Event
+	err := db.Limit(1).Where("project_id = ? AND user_id = ? AND id = ?", projectID, userID, eventID).Select("id").Find(&event).Error
+	if err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			log.WithFields(log.Fields{
+				"project_id": projectID, "event_id": eventID, "user_id": userID}).Error("Failed to check event exists")
+		}
+		return false
+	}
+
+	if event.ID != "" {
+		return true
+	}
+	return false
 }
 
 func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId string, eventNameId uint64) (uint64, int) {
@@ -321,24 +344,24 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	return event, http.StatusCreated
 }
 
-// getEventsByCustomerEventID Get events by projectID and customerEventID.
-func getEventsByCustomerEventID(projectID uint64, customerEventID string) ([]model.Event, int) {
+// existsEventByCustomerEventID Get events by projectID and customerEventID.
+func existsEventByCustomerEventID(projectID uint64, customerEventID string) bool {
 	db := C.GetServices().Db
 
-	var events []model.Event
-	if err := db.Where("project_id = ?", projectID).Where("customer_event_id = ?", customerEventID).Find(&events).Error; err != nil {
+	var event model.Event
+	if err := db.Limit(1).Where("project_id = ?", projectID).
+		Where("customer_event_id = ?", customerEventID).Select("id").Find(&event).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
+			log.WithFields(log.Fields{"projectId": projectID}).WithError(err).Error(
+				"Getttng event failed on existsEventByCustomerEventID")
 		}
-		log.WithFields(log.Fields{"projectId": projectID}).WithError(err).Error(
-			"Getttng event failed on GetEventByCustomerEventID")
-		return nil, http.StatusInternalServerError
+		return false
 	}
 
-	if len(events) == 0 {
-		return nil, http.StatusNotFound
+	if event.ID != "" {
+		return true
 	}
-	return events, http.StatusFound
+	return false
 }
 
 func (store *MemSQL) GetEvent(projectId uint64, userId string, id string) (*model.Event, int) {
@@ -534,11 +557,6 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id string,
 	updatedFields := map[string]interface{}{
 		"properties":                   updatedPostgresJsonb,
 		"properties_updated_timestamp": propertiesLastUpdatedAt,
-	}
-
-	errCode = satisfiesEventConstraints(*event)
-	if errCode != http.StatusOK {
-		return errCode
 	}
 
 	err = db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id).Update(updatedFields).Error
