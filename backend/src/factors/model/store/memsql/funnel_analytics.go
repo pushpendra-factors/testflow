@@ -575,7 +575,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 		stepXToYName := fmt.Sprintf("%s_%s_users", stepName, prevStepName)
 
 		stepXToYSelect := fmt.Sprintf("%s.coal_user_id, FIRST(%s.user_id, FROM_UNIXTIME(%s.timestamp)) as user_id, FIRST(%s.timestamp, FROM_UNIXTIME(%s.timestamp)) as timestamp, %s", stepName, stepName, stepName, stepName, stepName, stepName)
-		if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent) && i < int(q.SessionEndEvent) {
+		if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent)-1 && i < int(q.SessionEndEvent) {
 			stepXToYSelect = fmt.Sprintf("%s.coal_user_id, FIRST(%s.user_id, FROM_UNIXTIME(%s.timestamp)) as user_id, FIRST(%s.timestamp, FROM_UNIXTIME(%s.timestamp)) as timestamp,"+
 				" FIRST(%s.session_id, FROM_UNIXTIME(%s.timestamp)) as session_id, FIRST(%s, FROM_UNIXTIME(%s.timestamp)) as %s",
 				stepName, stepName, stepName, stepName, stepName, stepName, stepName, stepName, stepName, stepName)

@@ -1579,6 +1579,35 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	result9, errCode, _ := store.GetStore().Analyze(project.ID, query9)
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, result9)
+
+	query10 := model.Query{
+		From: startTimestamp - 1, // session created before timestamp of first event.
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "$session",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "s2",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:             model.QueryClassFunnel,
+		Type:              model.QueryTypeUniqueUsers,
+		EventsCondition:   model.EventCondAllGivenEvent,
+		SessionStartEvent: 2,
+		SessionEndEvent:   3,
+	}
+
+	result10, errCode, _ := store.GetStore().Analyze(project.ID, query10)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(10), result10.Rows[0][0])
+	assert.Equal(t, float64(5), result10.Rows[0][1])
 }
 
 func TestAnalyticsInsightsQuery(t *testing.T) {
