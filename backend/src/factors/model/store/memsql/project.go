@@ -151,7 +151,7 @@ func (store *MemSQL) createProjectDependencies(projectID uint64, agentUUID strin
 	defaultAutoTrackState := true
 	defaultExcludebotState := true
 	defaultDriftIntegrationState := false
-	_, errCode := createProjectSetting(&model.ProjectSetting{ProjectId: projectID,
+	_, errCode := store.createProjectSetting(&model.ProjectSetting{ProjectId: projectID,
 		AutoTrack: &defaultAutoTrackState, ExcludeBot: &defaultExcludebotState, IntDrift: &defaultDriftIntegrationState})
 	if errCode != http.StatusCreated {
 		logCtx.Error("Create project settings failed on create project dependencies.")
@@ -192,7 +192,7 @@ func (store *MemSQL) CreateProjectWithDependencies(project *model.Project, agent
 		return nil, errCode
 	}
 
-	_, errCode = createProjectBillingAccountMapping(project.ID, billingAccountID)
+	_, errCode = store.createProjectBillingAccountMapping(project.ID, billingAccountID)
 	return cProject, errCode
 }
 

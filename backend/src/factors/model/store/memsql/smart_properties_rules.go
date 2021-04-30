@@ -49,6 +49,15 @@ var mapOfObjectAndProperty = map[string]map[string]map[string]PropertiesAndRelat
 var smartPropertyObjects = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
 var smartPropertySources = []string{"all", "facebook", "adwords", "linkedin"}
 
+func (store *MemSQL) satisfiesSmartPropertyRulesForeignConstraints(rule model.SmartPropertyRules) int {
+	// TODO: Add for project_id, user_id.
+	_, errCode := store.GetProject(rule.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 func (store *MemSQL) GetSmartPropertyRulesConfig(projectID uint64, objectType string) (model.SmartPropertyRulesConfig, int) {
 	var result model.SmartPropertyRulesConfig
 	sources := make([]model.Source, 0)
@@ -145,6 +154,11 @@ func (store *MemSQL) CreateSmartPropertyRules(projectID uint64, smartPropertyRul
 		CreatedAt:   time.Now().UTC(),
 		UpdatedAt:   time.Now().UTC(),
 	}
+
+	if errCode := store.satisfiesSmartPropertyRulesForeignConstraints(smartPropertyRule); errCode != http.StatusOK {
+		return &model.SmartPropertyRules{}, "Foreign constraints violated", http.StatusInternalServerError
+	}
+
 	db := C.GetServices().Db
 	err := db.Create(&smartPropertyRule).Error
 	if err != nil {

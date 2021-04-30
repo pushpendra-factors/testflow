@@ -9,7 +9,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func createProjectBillingAccountMapping(projectID uint64, billingAccID string) (*model.ProjectBillingAccountMapping, int) {
+func (store *MemSQL) satisfiesPBAMForeignConstraints(pbam model.ProjectBillingAccountMapping) int {
+	_, projectErrCode := store.GetProject(pbam.ProjectID)
+	baExists := store.existsBillingAccountByID(pbam.BillingAccountID)
+	if projectErrCode != http.StatusFound || !baExists {
+		return http.StatusBadRequest
+	}
+
+	return http.StatusOK
+}
+
+func (store *MemSQL) createProjectBillingAccountMapping(projectID uint64, billingAccID string) (*model.ProjectBillingAccountMapping, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "billing_account_id": billingAccID})
 
 	if projectID == 0 || billingAccID == "" {
@@ -18,6 +28,9 @@ func createProjectBillingAccountMapping(projectID uint64, billingAccID string) (
 	db := C.GetServices().Db
 
 	pBAM := &model.ProjectBillingAccountMapping{ProjectID: projectID, BillingAccountID: billingAccID}
+	if errCode := store.satisfiesPBAMForeignConstraints(*pBAM); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
+	}
 	if err := db.Create(&pBAM).Error; err != nil {
 		logCtx.WithError(err).Error("Creating model.ProjectBillingAccountMapping failed")
 		return nil, http.StatusInternalServerError

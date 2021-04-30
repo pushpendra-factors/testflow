@@ -568,7 +568,7 @@ func GetPrimaryDatastore() string {
 
 // GetRoutesURLPrefix Prefix for urls supported on memsql. Returns /mql if memsql is enabled.
 func GetRoutesURLPrefix() string {
-	if UseMemSQLDatabaseStore() {
+	if UseMemSQLDatabaseStore() || EnableMQLAPI() {
 		return "/mql"
 	}
 	return ""
@@ -791,7 +791,8 @@ func InitSentryLogging(sentryDSN, appName string) {
 		sentryHook.StacktraceConfiguration.IncludeErrorBreadcrumb = true
 
 		sentryHook.SetTagsContext(map[string]string{
-			"AppName": appName,
+			"AppName":   appName,
+			"Datastore": GetPrimaryDatastore(),
 		})
 
 		services.SentryHook = sentryHook

@@ -10,6 +10,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesBillingAccountForeignConstraints(ba model.BillingAccount) int {
+	if _, errCode := store.GetAgentByUUID(ba.AgentUUID); errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*model.BillingAccount, int) {
 
 	if planCode == "" || AgentUUID == "" {
@@ -26,8 +33,12 @@ func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*m
 		PlanID:    plan.ID,
 		AgentUUID: AgentUUID,
 	}
-	db := C.GetServices().Db
 
+	if errCode := store.satisfiesBillingAccountForeignConstraints(*bA); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
+	}
+
+	db := C.GetServices().Db
 	if bA.PlanID == 0 {
 		log.Errorf("Error Creating Billing Account for agent: %s, missing planID", AgentUUID)
 		return nil, http.StatusBadRequest
@@ -39,6 +50,24 @@ func (store *MemSQL) createBillingAccount(planCode string, AgentUUID string) (*m
 	}
 
 	return bA, http.StatusCreated
+}
+
+func (store *MemSQL) existsBillingAccountByID(billingAccountID string) bool {
+	db := C.GetServices().Db
+
+	var billingAccount model.BillingAccount
+	err := db.Limit(1).Where("id = ?", billingAccountID).Select("id").Find(&billingAccount).Error
+	if err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			log.WithField("ba_id", billingAccountID).Error("Failed to check if billing account exists")
+		}
+		return false
+	}
+
+	if billingAccount.ID != "" {
+		return true
+	}
+	return false
 }
 
 func (store *MemSQL) GetBillingAccountByProjectID(projectID uint64) (*model.BillingAccount, int) {

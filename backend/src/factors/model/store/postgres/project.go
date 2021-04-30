@@ -16,11 +16,15 @@ const TOKEN_GEN_RETRY_LIMIT = 5
 const ENABLE_DEFAULT_WEB_ANALYTICS = false
 
 // Checks for the existence of token already.
-func isTokenExist(token string) (exists int, err error) {
+func isTokenExist(token string, private bool) (exists int, err error) {
 	db := C.GetServices().Db
 
+	whereCondition := "token = ?"
+	if private {
+		whereCondition = "private_token = ?"
+	}
 	var count uint64
-	if err := db.Model(&model.Project{}).Where("token = ?", token).Count(&count).Error; err != nil {
+	if err := db.Model(&model.Project{}).Where(whereCondition, token).Count(&count).Error; err != nil {
 		return -1, err
 	}
 
@@ -31,10 +35,10 @@ func isTokenExist(token string) (exists int, err error) {
 	return 0, nil
 }
 
-func generateUniqueToken() (token string, err error) {
+func generateUniqueToken(private bool) (token string, err error) {
 	for tryCount := 0; tryCount < TOKEN_GEN_RETRY_LIMIT; tryCount++ {
 		token = U.RandomLowerAphaNumString(32)
-		tokenExists, err := isTokenExist(token)
+		tokenExists, err := isTokenExist(token, private)
 		if err != nil {
 			return "", err
 		}
@@ -80,7 +84,7 @@ func createProject(project *model.Project) (*model.Project, int) {
 	}
 
 	// Add project token before create.
-	token, err := generateUniqueToken()
+	token, err := generateUniqueToken(false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to generate unique token for project token.")
 		return nil, http.StatusInternalServerError
@@ -88,7 +92,7 @@ func createProject(project *model.Project) (*model.Project, int) {
 	project.Token = token
 
 	// Add project private token before create.
-	privateToken, err := generateUniqueToken()
+	privateToken, err := generateUniqueToken(true)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to generate unique token for private token.")
 		return nil, http.StatusInternalServerError

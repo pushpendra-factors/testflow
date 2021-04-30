@@ -113,7 +113,7 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	memSQLDSN := flag.String(
 		"memsql_dsn",
-		fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local&timeout=30s",
 			*memSQLUser, *memSQLPass, *memSQLHost, *memSQLPort, *memSQLName),
 		"",
 	)

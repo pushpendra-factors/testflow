@@ -24,6 +24,14 @@ func satisfiesEventNameConstraints(eventName model.EventName) int {
 	return http.StatusOK
 }
 
+func (store *MemSQL) satisfiesEventNameForeignConstraints(eventName model.EventName) int {
+	_, errCode := store.GetProject(eventName.ProjectId)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+	return http.StatusOK
+}
+
 func (store *MemSQL) CreateOrGetEventName(eventName *model.EventName) (*model.EventName, int) {
 	logCtx := log.WithFields(log.Fields{"event_name": &eventName})
 
@@ -47,6 +55,8 @@ func (store *MemSQL) CreateOrGetEventName(eventName *model.EventName) (*model.Ev
 		return eventName, http.StatusConflict
 	} else if errCode := satisfiesEventNameConstraints(*eventName); errCode != http.StatusOK {
 		return nil, errCode
+	} else if errCode := store.satisfiesEventNameForeignConstraints(*eventName); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
 	} else if err := db.Create(eventName).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to create event_name.")
 		return nil, http.StatusInternalServerError
@@ -753,10 +763,6 @@ func (store *MemSQL) UpdateEventName(projectId uint64, id uint64,
 	updateFields := map[string]interface{}{}
 	updateFields["name"] = eventName.Name
 
-	if errCode := satisfiesEventNameConstraints(*eventName); errCode != http.StatusOK {
-		return nil, errCode
-	}
-
 	query := db.Model(&updatedEventName).Where(
 		"project_id = ? AND id = ? AND type = ?",
 		projectId, id, nameType).Updates(updateFields)
@@ -838,10 +844,6 @@ func (store *MemSQL) updateCRMSmartEventFilter(projectID uint64, id uint64, name
 			updateFields["filter_expr"] = enFilterExp
 		}
 
-	}
-
-	if errCode := satisfiesEventNameConstraints(*eventName); errCode != http.StatusOK {
-		return nil, errCode
 	}
 
 	var updatedEventName model.EventName

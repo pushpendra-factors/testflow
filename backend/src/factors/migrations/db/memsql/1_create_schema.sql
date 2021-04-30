@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS events (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (project_id, event_name_id, timestamp) USING CLUSTERED COLUMNSTORE,
+    KEY (customer_event_id) USING HASH,
     SHARD KEY (user_id)
 
     -- Required constraints.
@@ -47,6 +48,9 @@ CREATE TABLE IF NOT EXISTS users (
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
     KEY (project_id, customer_user_id) USING CLUSTERED COLUMNSTORE,
+    KEY (customer_user_id) USING HASH,
+    KEY (segment_anonymous_id) USING HASH,
+    KEY (amp_user_id) USING HASH,
     SHARD KEY (id),
     UNIQUE KEY unique_id_idx (id) USING HASH
 

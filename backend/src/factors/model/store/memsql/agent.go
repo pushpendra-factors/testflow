@@ -13,6 +13,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesAgentForeignConstraints(agent model.Agent) int {
+	if agent.InvitedBy != nil && *agent.InvitedBy != "" {
+		_, errCode := store.GetAgentByUUID(*agent.InvitedBy)
+		if errCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+	return http.StatusOK
+}
+
 func (store *MemSQL) createAgent(agent *model.Agent) (*model.Agent, int) {
 	if agent.Email == "" {
 		log.Error("CreateAgent Failed. Email not provided.")
@@ -32,6 +42,10 @@ func (store *MemSQL) createAgent(agent *model.Agent) (*model.Agent, int) {
 
 	if agent.UUID == "" {
 		agent.UUID = U.GetUUID()
+	}
+
+	if errCode := store.satisfiesAgentForeignConstraints(*agent); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
 	}
 
 	db := C.GetServices().Db

@@ -14,6 +14,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func (store *MemSQL) satisfiesDashboardUnitForeignConstraints(dashboardUnit model.DashboardUnit) int {
+	_, errCode := store.GetProject(dashboardUnit.ProjectID)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	} else {
+		if exists := store.existsDashboardByID(dashboardUnit.ProjectID, dashboardUnit.DashboardId); !exists {
+			return http.StatusBadRequest
+		}
+		if _, errCode := store.getQueryWithQueryID(
+			dashboardUnit.ProjectID, dashboardUnit.QueryId, model.QueryTypeAllQueries); errCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+	return http.StatusOK
+}
+
 // CreateDashboardUnitForMultipleDashboards creates multiple dashboard units each for given
 // list of dashboards
 func (store *MemSQL) CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64,

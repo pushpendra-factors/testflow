@@ -867,23 +867,6 @@ func (store *MemSQL) GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID 
 	return "", nil, http.StatusBadRequest
 }
 
-func (store *MemSQL) GetUserPropertyRecordsByUserId(projectId uint64, userId string) ([]model.UserProperties, int) {
-	db := C.GetServices().Db
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
-
-	var userProperties []model.UserProperties
-	if err := db.Where("project_id = ? AND user_id = ?", projectId, userId).Find(&userProperties).Error; err != nil {
-		logCtx.WithError(err).Error("Getting user property records by user_id failed")
-		return nil, http.StatusInternalServerError
-	}
-
-	if len(userProperties) == 0 {
-		return nil, http.StatusNotFound
-	}
-
-	return userProperties, http.StatusFound
-}
-
 func (store *MemSQL) OverwriteUserProperties(projectId uint64, userId string,
 	id string, propertiesJsonb *postgres.Jsonb) int {
 

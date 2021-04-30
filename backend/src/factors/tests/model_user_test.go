@@ -914,3 +914,25 @@ func TestGetUserByPropertyKey(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, user.ID, leadUser.ID)
 }
+
+func TestUsersUniquenessConstraints(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	segAid := "seg_anon_id_1"
+	ampUserID := "amp_user_id_1"
+	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, SegmentAnonymousId: segAid, AMPUserId: ampUserID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, user)
+	assert.Equal(t, segAid, user.SegmentAnonymousId)
+
+	// Creating again with same project_id, seg_anon_id should fail.
+	user, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, SegmentAnonymousId: segAid})
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Nil(t, user)
+
+	// Creating again with same project_id, amp_user_id should fail.
+	user, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, AMPUserId: ampUserID})
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Nil(t, user)
+}

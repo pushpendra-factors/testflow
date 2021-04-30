@@ -24,16 +24,22 @@ import (
 
 const usersLimitForProperties = 50000
 
+const constraintViolationError = "constraint violation"
+
+func isConstraintViolationError(err error) bool {
+	return err.Error() == constraintViolationError
+}
+
 func satisfiesUserConstraints(user model.User) int {
-	// Unique (project_id, segment_anonymous_id) constraint.
 	logCtx := log.WithFields(log.Fields{
 		"method":     "satisfiesUserConstraints",
 		"project_id": user.ProjectId,
 		"id":         user.ID,
 	})
+
+	// Unique (project_id, segment_anonymous_id) constraint.
 	if user.SegmentAnonymousId != "" {
-		_, errCode := getUserBySegmentAnonymousId(user.ProjectId, user.SegmentAnonymousId)
-		if errCode == http.StatusFound {
+		if exists := existsUserWithSegmentAnonymousID(user.ProjectId, user.SegmentAnonymousId); exists {
 			logCtx.WithField("seg_anon_id", user.SegmentAnonymousId).Error("segment anonymous id constraint violation")
 			return http.StatusBadRequest
 		}
@@ -41,8 +47,7 @@ func satisfiesUserConstraints(user model.User) int {
 
 	// Unique (project_id, amp_user_id) constraint.
 	if user.AMPUserId != "" {
-		_, errCode := getUserByAMPUserId(user.ProjectId, user.AMPUserId)
-		if errCode == http.StatusFound {
+		if exists := existsUserWithAMPUserID(user.ProjectId, user.AMPUserId); exists {
 			logCtx.WithField("amp_user_id", user.AMPUserId).Error("amp user id constraint violation")
 			return http.StatusBadRequest
 		}
@@ -64,6 +69,10 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 	// Add id with our uuid generator, if not given.
 	if user.ID == "" {
 		user.ID = U.GetUUID()
+	}
+
+	if errCode := satisfiesUserConstraints(*user); errCode != http.StatusOK {
+		return user, errors.New("constraint violation")
 	}
 
 	// Add join timestamp before creation.
@@ -133,7 +142,7 @@ func (store *MemSQL) CreateUser(user *model.User) (*model.User, int) {
 		return newUser, http.StatusCreated
 	}
 
-	if U.IsPostgresIntegrityViolationError(err) || IsDuplicateRecordError(err) {
+	if IsDuplicateRecordError(err) || isConstraintViolationError(err) {
 		if user.ID != "" {
 			// Multiple requests trying to create user at the
 			// same time should not lead failure permanently,
@@ -180,11 +189,9 @@ func (store *MemSQL) UpdateUser(projectId uint64, id string,
 	// Discourage direct properties update.
 	// Update always through UpdateUserProperties method.
 	userProperties := user.Properties
+	// Properties column will not be added as part update
+	// when set with empty postgres jsonb as value. Tested.
 	user.Properties = postgres.Jsonb{}
-
-	if errCode := satisfiesUserConstraints(*user); errCode != http.StatusOK {
-		return nil, errCode
-	}
 
 	var updatedUser model.User
 	db := C.GetServices().Db
@@ -392,11 +399,26 @@ func (store *MemSQL) GetExistingCustomerUserID(projectId uint64, arrayCustomerUs
 	return customerUserIDMap, http.StatusFound
 }
 
-func (store *MemSQL) GetUserBySegmentAnonymousId(projectID uint64, segAnonID string) (*model.User, int) {
-	return getUserBySegmentAnonymousId(projectID, segAnonID)
+func existsUserWithSegmentAnonymousID(projectID uint64, segAnonID string) bool {
+	db := C.GetServices().Db
+
+	var user model.User
+	if err := db.Limit(1).Where("project_id = ?", projectID).Where(
+		"segment_anonymous_id = ?", segAnonID).Select("id").Find(&user).Error; err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			log.WithField("project_id", projectID).WithField("segment_anonymous_id", segAnonID).
+				Error("Failed to get count of users by segment_anonymous_id.")
+		}
+		return false
+	}
+
+	if user.ID != "" {
+		return true
+	}
+	return false
 }
 
-func getUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*model.User, int) {
+func (store *MemSQL) GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*model.User, int) {
 	db := C.GetServices().Db
 
 	var users []model.User
@@ -549,6 +571,25 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 
 	// provided and fetched c_uid are same.
 	return user, http.StatusOK
+}
+
+func existsUserWithAMPUserID(projectId uint64, ampUserId string) bool {
+	db := C.GetServices().Db
+
+	var user model.User
+	if err := db.Limit(1).Where("project_id = ? AND amp_user_id = ?",
+		projectId, ampUserId).Select("id").Find(&user).Error; err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			log.WithField("project_id", projectId).WithField("amp_user_id", ampUserId).
+				Error("Failed to get count of users by amp_user_id")
+		}
+		return false
+	}
+
+	if user.ID != "" {
+		return true
+	}
+	return false
 }
 
 func getUserByAMPUserId(projectId uint64, ampUserId string) (*model.User, int) {

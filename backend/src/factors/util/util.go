@@ -895,15 +895,6 @@ func DeepCopy(a, b interface{}) {
 	json.Unmarshal(byt, b)
 }
 
-// AreEqualStructs To compare if two struct are equal by marshalling.
-func AreEqualStructs(a, b interface{}) bool {
-	bytesA, _ := json.Marshal(a)
-	bytesB, _ := json.Marshal(b)
-	fmt.Println(string(bytesA))
-	fmt.Println(string(bytesB))
-	return string(bytesA) == string(bytesB)
-}
-
 type Pair struct {
 	Key   string
 	Value int

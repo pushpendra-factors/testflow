@@ -17,6 +17,42 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+func (store *MemSQL) satisfiesProjectSettingForeignConstraints(setting model.ProjectSetting) int {
+	_, errCode := store.GetProject(setting.ProjectId)
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest
+	}
+
+	if setting.IntAdwordsEnabledAgentUUID != nil && *setting.IntAdwordsEnabledAgentUUID != "" {
+		_, agentErrCode := store.GetAgentByUUID(*setting.IntAdwordsEnabledAgentUUID)
+		if agentErrCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+
+	if setting.IntFacebookAgentUUID != nil && *setting.IntFacebookAgentUUID != "" {
+		_, agentErrCode := store.GetAgentByUUID(*setting.IntFacebookAgentUUID)
+		if agentErrCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+
+	if setting.IntLinkedinAgentUUID != nil && *setting.IntLinkedinAgentUUID != "" {
+		_, agentErrCode := store.GetAgentByUUID(*setting.IntLinkedinAgentUUID)
+		if agentErrCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+
+	if setting.IntSalesforceEnabledAgentUUID != nil && *setting.IntSalesforceEnabledAgentUUID != "" {
+		_, agentErrCode := store.GetAgentByUUID(*setting.IntSalesforceEnabledAgentUUID)
+		if agentErrCode != http.StatusFound {
+			return http.StatusBadRequest
+		}
+	}
+	return http.StatusOK
+}
+
 func (store *MemSQL) GetProjectSetting(projectId uint64) (*model.ProjectSetting, int) {
 	db := C.GetServices().Db
 	logCtx := log.WithField("project_id", projectId)
@@ -257,11 +293,15 @@ func (store *MemSQL) GetProjectSettingByPrivateTokenWithCacheAndDefault(
 		model.ProjectSettingKeyPrivateToken, privateToken)
 }
 
-func createProjectSetting(ps *model.ProjectSetting) (*model.ProjectSetting, int) {
+func (store *MemSQL) createProjectSetting(ps *model.ProjectSetting) (*model.ProjectSetting, int) {
 	db := C.GetServices().Db
 
 	if valid := isValidProjectScope(ps.ProjectId); !valid {
 		return nil, http.StatusBadRequest
+	}
+
+	if errCode := store.satisfiesProjectSettingForeignConstraints(*ps); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
 	}
 
 	if err := db.Create(ps).Error; err != nil {
@@ -291,6 +331,7 @@ func (store *MemSQL) UpdateProjectSettings(projectId uint64, settings *model.Pro
 	if projectId == 0 || settings == nil {
 		return nil, http.StatusBadRequest
 	}
+	settings.ProjectId = projectId
 
 	if settings.IntAdwordsCustomerAccountId != nil {
 		var cleanAdwordsAccountIds []string
@@ -302,6 +343,10 @@ func (store *MemSQL) UpdateProjectSettings(projectId uint64, settings *model.Pro
 			cleanAdwordsAccountIds = append(cleanAdwordsAccountIds, adwordsCustomerAccountId)
 		}
 		*settings.IntAdwordsCustomerAccountId = strings.Join(cleanAdwordsAccountIds, ",")
+	}
+
+	if errCode := store.satisfiesProjectSettingForeignConstraints(*settings); errCode != http.StatusOK {
+		return nil, http.StatusInternalServerError
 	}
 
 	var updatedProjectSetting model.ProjectSetting
