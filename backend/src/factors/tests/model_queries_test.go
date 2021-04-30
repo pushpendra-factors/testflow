@@ -205,10 +205,10 @@ func TestDeleteQueryWithDashboardUnit(t *testing.T) {
 	query, errCode = store.GetStore().GetQueryWithQueryId(project.ID, dashboardQuery.ID)
 	assert.NotEmpty(t, query)
 
-	// On deleting the other unit, it should now delete the undelying query.
+	// On deleting the other unit, it should not delete the undelying query.
 	errCode = store.GetStore().DeleteDashboardUnit(project.ID, agent.UUID, dashboard.ID, dashboardUnit2.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
 	query, errCode = store.GetStore().GetQueryWithQueryId(project.ID, dashboardQuery.ID)
-	assert.Empty(t, query)
-	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.NotEmpty(t, query)
+	assert.Equal(t, http.StatusFound, errCode)
 }
