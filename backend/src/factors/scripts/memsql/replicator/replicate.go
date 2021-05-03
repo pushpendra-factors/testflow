@@ -71,7 +71,7 @@ type TableRecord struct {
 	Type      interface{} `json:"type"`
 	Timestamp uint64      `json:"timestamp"`
 	// adwords_documents
-	CustomerAccountID string `json:"customer_account_id"`
+	CustomerAccountID string `json:"customer_acc_id"`
 	// linkedin_documents
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 	// facebook_documents
@@ -634,7 +634,7 @@ func deleteByIDOnMemSQL(projectID uint64, tableName string, id interface{}, sour
 		}
 	}
 
-	rows, err := memSQLDB.Raw(query, params).Rows()
+	rows, err := memSQLDB.Raw(query, params...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed deleting record in memsql.")
 		return http.StatusInternalServerError

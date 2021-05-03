@@ -10,7 +10,7 @@ type AdwordsDocument struct {
 	ProjectID         uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	CustomerAccountID string          `gorm:"primary_key:true;auto_increment:false" json:"customer_acc_id"`
 	TypeAlias         string          `gorm:"-" json:"type_alias"`
-	Type              int             `gorm:"primary_key:true;auto_increment:false" json:"-"`
+	Type              int             `gorm:"primary_key:true;auto_increment:false" json:"type"`
 	Timestamp         int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
 	ID                string          `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	CampaignID        int64           `json:"-"`
