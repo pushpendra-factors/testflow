@@ -50,6 +50,7 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  "enrich_smart_properties_job",
 		},
 		DryRunSmartProperties: *dryRunSmartProperties,
 	}

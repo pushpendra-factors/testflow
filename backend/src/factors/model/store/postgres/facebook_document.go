@@ -73,6 +73,21 @@ const fromFacebookDocuments = " FROM facebook_documents "
 const staticWhereStatementForFacebook = "WHERE project_id = ? AND customer_ad_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 const staticWhereStatementForFacebookWithSmartProperty = "WHERE facebook_documents.project_id = ? AND facebook_documents.customer_ad_account_id IN ( ? ) AND facebook_documents.type = ? AND facebook_documents.timestamp between ? AND ? "
 
+const facebookAdGroupMetadataFetchQueryStr = "WITH ad_group AS (select ad_set_id as ad_group_id, value->>'name' as ad_group_name, campaign_id " +
+	"from facebook_documents where type = ? AND project_id = ? AND timestamp BETWEEN ? AND ? AND customer_ad_account_id IN (?) " +
+	"AND (ad_set_id, timestamp) in (select ad_set_id, max(timestamp) from facebook_documents " +
+	"where type = ? AND project_id = ? AND timestamp between ? and ? AND customer_ad_account_id IN (?) group by ad_set_id))" +
+	", campaign as (select campaign_id, value->>'name' as campaign_name from facebook_documents where type = ? AND " +
+	"project_id = ? AND timestamp BETWEEN ? AND ? AND customer_ad_account_id IN (?) and (campaign_id, timestamp) in " +
+	"(select campaign_id, max(timestamp) from facebook_documents where type = ? and project_id = ? and timestamp " +
+	"BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_id)) select ad_group_id, ad_group_name, " +
+	"ad_group.campaign_id, campaign_name from ad_group join campaign on ad_group.campaign_id = campaign.campaign_id"
+
+const facebookCampaignMetadataFetchQueryStr = "select campaign_id, value->>'name' as campaign_name from facebook_documents where type = ? AND " +
+	"project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) and (campaign_id, timestamp) " +
+	"in (select campaign_id, max(timestamp) from facebook_documents where type = ? " +
+	"and project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_id)"
+
 var objectsForFacebook = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
 
 func isDuplicateFacebookDocumentError(err error) bool {
@@ -966,63 +981,22 @@ func (pg *Postgres) GetFacebookChannelResult(projectID uint64, customerAccountID
 	return queryResult, nil
 }
 
-func (pg *Postgres) GetLatestMetaForFacebook(projectID uint64, objectType int) []model.ChannelDocumentsWithFields {
-	channelDocuments := make([]model.ChannelDocumentsWithFields, 0, 0)
-	var docType int
-	if objectType == 1 {
-		docType = 1
-	}
-	if objectType == 2 {
-		docType = 3
-	}
-	db := C.GetServices().Db
-	var latestTimestamp LatestTimestamp
-	err := db.Table("facebook_documents").Select("MAX(timestamp) AS timestamp").Where("project_id = ? AND type = ?", projectID, docType).Find(&latestTimestamp).Error
-	if err != nil {
-		log.Error("Failed to get latest timestamp for meta fetch for facebook from db")
-		return channelDocuments
-	}
-	if objectType == 1 {
-		channelDocuments = pg.GetLatestMetaForFacebookCampaign(projectID, docType, latestTimestamp.Timestamp)
-	}
-	if objectType == 2 {
-		channelDocuments = pg.GetLatestMetaForFacebookAdGroup(projectID, docType, latestTimestamp.Timestamp)
-	}
-	return channelDocuments
-}
-
-// Since we dont have a way to store raw format, we are going with the approach of joins on query.
-func (pg *Postgres) GetLatestMetaForFacebookAdGroup(projectID uint64, docType int, timestamp int64) []model.ChannelDocumentsWithFields {
-	channelDocuments := make([]model.ChannelDocumentsWithFields, 0, 0)
-	db := C.GetServices().Db
-
-	queryStr := "WITH ad_group_meta AS (SELECT value->>'name' as ad_group_name, ad_set_id as ad_group_id, campaign_id from facebook_documents where project_id= ? and type = 3 and timestamp= ?)," +
-		" campaign_meta AS (SELECT value->>'name' as campaign_name, campaign_id from facebook_documents where project_id= ?  and type = 1 and timestamp= ?) " +
-		"select ad_group_name, campaign_name, ad_group_id, ad_group_meta.campaign_id from ad_group_meta left join campaign_meta on ad_group_meta.campaign_id = campaign_meta.campaign_id"
-	err := db.Raw(queryStr, projectID, timestamp, projectID, timestamp).Find(&channelDocuments).Error
-	if err != nil {
-		log.Error("Failed to get latest meta for facebook from db")
-		return make([]model.ChannelDocumentsWithFields, 0, 0)
-	}
-	return channelDocuments
-}
-func (pg *Postgres) GetLatestMetaForFacebookCampaign(projectID uint64, docType int, timestamp int64) []model.ChannelDocumentsWithFields {
-	channelDocuments := make([]model.ChannelDocumentsWithFields, 0, 0)
-	db := C.GetServices().Db
-
-	err := db.Table("facebook_documents").Select("campaign_id, value->>'name' as campaign_name").Where("project_id = ? AND type = ? AND timestamp = ?", projectID, docType, timestamp).Find(&channelDocuments).Error
-	if err != nil {
-		log.Error("Failed to get latest meta for facebook from db")
-		return make([]model.ChannelDocumentsWithFields, 0, 0)
-	}
-	return channelDocuments
-}
-
 func (pg *Postgres) GetLatestMetaForFacebookForGivenDays(projectID uint64, days int) ([]model.ChannelDocumentsWithFields, []model.ChannelDocumentsWithFields) {
 	db := C.GetServices().Db
 
-	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0, 0)
-	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0, 0)
+	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0)
+	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0)
+
+	projectSetting, errCode := pg.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		log.Error("Failed to get project settings")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	if projectSetting.IntFacebookAdAccount == "" {
+		log.Error("Failed to get custtomer account ids")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	customerAccountIDs := strings.Split(projectSetting.IntFacebookAdAccount, ",")
 
 	to, err := strconv.ParseUint(time.Now().Format("20060102"), 10, 64)
 	if err != nil {
@@ -1036,30 +1010,26 @@ func (pg *Postgres) GetLatestMetaForFacebookForGivenDays(projectID uint64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	adGroupQueryStr := "WITH ad_group AS (select ad_set_id as ad_group_id, value->>'name' as ad_group_name, campaign_id " +
-		"from facebook_documents where type = 3 AND project_id = ? AND (ad_set_id, timestamp) in (select ad_set_id, max(timestamp) " +
-		"from facebook_documents where type = 3 AND project_id = ? AND timestamp between ? and ? group by ad_set_id))" +
-		", campaign as (select campaign_id, value->>'name' as campaign_name from facebook_documents where type = 1 AND project_id = ? " +
-		"and (campaign_id, timestamp) in (select campaign_id, max(timestamp) from facebook_documents where type = 1 and project_id = ? " +
-		"and timestamp BETWEEN ? and ? group by campaign_id)) select ad_group_id, ad_group_name, ad_group.campaign_id, " +
-		"campaign_name from ad_group join campaign on ad_group.campaign_id = campaign.campaign_id"
-
-	campaignGroupQueryStr := "select campaign_id, value->>'name' as campaign_name from facebook_documents where type = 1 AND " +
-		"project_id = ? and (campaign_id, timestamp) in (select campaign_id, max(timestamp) from facebook_documents where type = 1 " +
-		"and project_id = ? and timestamp BETWEEN ? and ? group by campaign_id)"
-
-	err = db.Raw(adGroupQueryStr, projectID, projectID, from, to, projectID, projectID, from, to).Find(&channelDocumentsAdGroup).Error
+	err = db.Raw(facebookAdGroupMetadataFetchQueryStr, facebookDocumentTypeAlias[facebookAdSet], projectID, from, to,
+		customerAccountIDs, facebookDocumentTypeAlias[facebookAdSet], projectID, from, to, customerAccountIDs,
+		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs,
+		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
 	if err != nil {
+		log.Fatal()
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
 		log.Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(campaignGroupQueryStr, projectID, projectID, from, to).Find(&channelDocumentsCampaign).Error
+	err = db.Raw(facebookCampaignMetadataFetchQueryStr, facebookDocumentTypeAlias[facebookCampaign], projectID, from, to,
+		customerAccountIDs, facebookDocumentTypeAlias[facebookCampaign], projectID, from, to,
+		customerAccountIDs).Find(&channelDocumentsCampaign).Error
 	if err != nil {
+		log.Fatal()
 		errString := fmt.Sprintf("failed to get last %d campaign meta for facebook", days)
 		log.Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
+	log.Fatal()
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
