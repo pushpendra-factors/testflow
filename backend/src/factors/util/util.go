@@ -1001,3 +1001,15 @@ func GetAggrAsFloat64(aggr interface{}) (float64, error) {
 		return float64(0), errors.New("invalid aggregate value type")
 	}
 }
+
+// CleanSplitByDelimiter Splits a string by delimiter and removes any spaces.
+// Ex: "a, b, c" and "a,b,c" will return same ["a", "b", "c"].
+func CleanSplitByDelimiter(str string, del string) []string {
+	split := strings.Split(str, del)
+
+	cleanSplit := make([]string, 0, 0)
+	for _, s := range split {
+		cleanSplit = append(cleanSplit, strings.TrimSpace(s))
+	}
+	return cleanSplit
+}

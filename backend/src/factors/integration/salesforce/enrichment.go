@@ -27,9 +27,9 @@ type Status struct {
 
 var salesforceSyncOrderByType = [...]int{
 	model.SalesforceDocumentTypeContact,
-	model.SalesforceDocumentTypeAccount,
 	model.SalesforceDocumentTypeLead,
 	model.SalesforceDocumentTypeOpportunity,
+	model.SalesforceDocumentTypeAccount,
 }
 
 func getUserIDFromLastestProperties(properties []model.UserProperties) string {

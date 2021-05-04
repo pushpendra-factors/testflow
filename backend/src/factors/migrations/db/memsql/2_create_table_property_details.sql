@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS property_details (
     `key` text NOT NULL,
     `type` text NOT NULL,
     entity integer NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
     UNIQUE KEY property_details_project_id_event_name_id_key_unique_idx(project_id, event_name_id,`key`)
 

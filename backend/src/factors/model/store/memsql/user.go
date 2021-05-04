@@ -37,6 +37,10 @@ func satisfiesUserConstraints(user model.User) int {
 		"id":         user.ID,
 	})
 
+	if exists := existsUserForProject(user.ProjectId, user.ID); exists {
+		logCtx.Error("duplicate user id being inserted for proejct")
+	}
+
 	// Unique (project_id, segment_anonymous_id) constraint.
 	if user.SegmentAnonymousId != "" {
 		if exists := existsUserWithSegmentAnonymousID(user.ProjectId, user.SegmentAnonymousId); exists {
@@ -293,6 +297,24 @@ func getUserPropertiesId(projectId uint64, id string) (string, int) {
 	}
 
 	return user.PropertiesId, http.StatusFound
+}
+
+func existsUserForProject(projectID uint64, id string) bool {
+	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": id})
+
+	var user model.User
+	if err := db.Limit(1).Where("project_id = ? AND id = ?", projectID, id).Select("id").Find(&user).Error; err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			logCtx.WithError(err).Error("Failed to check user using user_id")
+		}
+		return false
+	}
+
+	if user.ID != "" {
+		return true
+	}
+	return false
 }
 
 func (store *MemSQL) GetUser(projectId uint64, id string) (*model.User, int) {

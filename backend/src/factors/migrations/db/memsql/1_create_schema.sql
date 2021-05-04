@@ -51,8 +51,7 @@ CREATE TABLE IF NOT EXISTS users (
     KEY (customer_user_id) USING HASH,
     KEY (segment_anonymous_id) USING HASH,
     KEY (amp_user_id) USING HASH,
-    SHARD KEY (id),
-    UNIQUE KEY unique_id_idx (id) USING HASH
+    SHARD KEY (id)
 
     -- Required constraints.
     -- Unique (project_id, segment_anonymous_id)
@@ -488,16 +487,6 @@ CREATE TABLE IF NOT EXISTS linkedin_documents (
     creative_id text,
     campaign_group_id text,
     campaign_id text,
-    created_at timestamp(6) NOT NULL,
-    updated_at timestamp(6) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS property_details(
-    project_id bigint NOT NULL,
-    event_name_id bigint null,
-    `key` text  NOT NULL,
-    `type` text  NOT NULL,
-    entity integer  NOT NULL,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL
 );
