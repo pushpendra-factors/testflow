@@ -10,6 +10,7 @@ CREATE INDEX linkedin_documents_updated_at ON linkedin_documents(updated_at ASC)
 CREATE INDEX property_details_updated_at ON property_details(updated_at ASC);
 CREATE INDEX smart_properties_updated_at ON smart_properties(updated_at ASC);
 CREATE INDEX smart_property_rules_updated_at ON smart_property_rules(updated_at ASC);
+CREATE INDEX display_names_updated_at ON display_names(updated_at ASC);
 
 
 -- DOWN
@@ -21,3 +22,4 @@ DROP INDEX linkedin_documents_updated_at;
 DROP INDEX property_details_updated_at;
 DROP INDEX smart_properties_updated_at;
 DROP INDEX smart_property_rules_updated_at;
+DROP INDEX display_names_updated_at;

@@ -56,6 +56,7 @@ const (
 	tablePropertyDetails               = "property_details"
 	tableSmartProperties               = "smart_properties"
 	tableSmartPropertyRules            = "smart_property_rules"
+	tableDisplayNames                  = "display_names"
 )
 
 type TableRecord struct {
@@ -70,7 +71,7 @@ type TableRecord struct {
 	Type      interface{} `json:"type"`
 	Timestamp uint64      `json:"timestamp"`
 	// adwords_documents
-	CustomerAccountID string `json:"customer_account_id"`
+	CustomerAccountID string `json:"customer_acc_id"`
 	// linkedin_documents
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 	// facebook_documents
@@ -547,7 +548,7 @@ func getPrimaryKeyConditionByTableName(tableName string, sourceTableRecord *Tabl
 	idColName := "id"
 	if tableName == tableAgents {
 		idColName = "uuid"
-	} else if tableName == tableSmartProperties || tableName == tablePropertyDetails {
+	} else if tableName == tableSmartProperties || tableName == tablePropertyDetails || tableName == tableDisplayNames {
 		idColName = "project_id"
 	} else if isProjectAssociatedTable(tableName) {
 		idColName = "project_id"
@@ -633,7 +634,7 @@ func deleteByIDOnMemSQL(projectID uint64, tableName string, id interface{}, sour
 		}
 	}
 
-	rows, err := memSQLDB.Raw(query, params).Rows()
+	rows, err := memSQLDB.Raw(query, params...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed deleting record in memsql.")
 		return http.StatusInternalServerError
@@ -868,6 +869,8 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.SmartProperties{}
 	case tableSmartPropertyRules:
 		record = &model.SmartPropertyRules{}
+	case tableDisplayNames:
+		record = &model.DisplayName{}
 
 	// Tables related to analytics.
 	case tableEvents:
@@ -1093,6 +1096,7 @@ func migrateAllTables(projectIDs []uint64) {
 		tablePropertyDetails,
 		tableSmartProperties,
 		tableSmartPropertyRules,
+		tableDisplayNames,
 	}
 
 	// Runs replication continiously for each table

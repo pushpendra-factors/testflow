@@ -36,8 +36,18 @@ const (
 	staticWhereStatementForAdwords = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument            = " FROM adwords_documents "
 
-	shareHigherOrderExpression = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
-	sumOfFloatExp              = "sum((JSON_EXTRACT_STRING(value, '%s')))"
+	shareHigherOrderExpression          = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
+	sumOfFloatExp                       = "sum((JSON_EXTRACT_STRING(value, '%s')))"
+	adwordsAdGroupMetadataFetchQueryStr = "select ad_group_id, campaign_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, " +
+		"JSON_EXTRACT_STRING(value, 'campaign_name') as campaign_name from adwords_documents where type = ? AND project_id = ? " +
+		"AND timestamp BETWEEN ? AND ? AND customer_account_id in (?) " +
+		"AND (ad_group_id, timestamp) in (select ad_group_id, max(timestamp) from adwords_documents where type = ?" +
+		" AND project_id = ? AND timestamp between ? AND ? AND customer_account_id in (?) group by ad_group_id)"
+
+	adwordsCampaignMetadataFetchQueryStr = "select campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from adwords_documents where type = ? AND " +
+		"project_id = ? AND timestamp BETWEEN ? AND ? AND customer_account_id in (?) " +
+		"AND (campaign_id, timestamp) in (select campaign_id, max(timestamp) from adwords_documents where type = ? " +
+		"AND project_id = ? AND timestamp BETWEEN ? AND ? AND customer_account_id in (?) group by campaign_id)"
 )
 
 var selectableMetricsForAdwords = []string{
@@ -1815,6 +1825,17 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0, 0)
 	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0, 0)
 
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		log.Error("Failed to get project settings")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	if projectSetting.IntAdwordsCustomerAccountId == nil || *(projectSetting.IntAdwordsCustomerAccountId) == "" {
+		log.Error("Failed to get custtomer account ids")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	customerAccountIDs := strings.Split(*(projectSetting.IntAdwordsCustomerAccountId), ",")
+
 	to, err := strconv.ParseUint(time.Now().Format("20060102"), 10, 64)
 	if err != nil {
 		log.Error("Failed to parse to timestamp")
@@ -1827,28 +1848,20 @@ func (store *MemSQL) GetLatestMetaForAdwordsForGivenDays(projectID uint64, days 
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	// to do : select keys, revisit
-	adGroupQueryStr := "select ad_group_id, campaign_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, " +
-		"JSON_EXTRACT_STRING(value, 'campaign_name') as campaign_name from adwords_documents where type = 3 AND project_id = ? " +
-		"and (ad_group_id, timestamp) in (select ad_group_id, max(timestamp) from adwords_documents where type = 3" +
-		" AND project_id = ? AND timestamp between ? and ? group by ad_group_id)"
-
-	campaignGroupQueryStr := "select campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from adwords_documents where type = 1 AND " +
-		"project_id = ? and (campaign_id, timestamp) in (select campaign_id, max(timestamp) from adwords_documents where type = 1 " +
-		"and project_id = ? and timestamp BETWEEN ? and ? group by campaign_id)"
-
-	err = db.Raw(adGroupQueryStr, projectID, projectID, from, to).Find(&channelDocumentsAdGroup).Error
+	err = db.Raw(adwordsAdGroupMetadataFetchQueryStr, model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs,
+		model.AdwordsDocumentTypeAlias["ad_groups"], projectID, from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for adwords", days)
 		log.Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(campaignGroupQueryStr, projectID, projectID, from, to).Find(&channelDocumentsCampaign).Error
+	err = db.Raw(adwordsCampaignMetadataFetchQueryStr, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs, model.AdwordsDocumentTypeAlias["campaigns"], projectID, from, to, customerAccountIDs).Find(&channelDocumentsCampaign).Error
 	if err != nil {
 		errString := fmt.Sprintf("failed to get last %d campaign meta for adwords", days)
 		log.Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
+
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }

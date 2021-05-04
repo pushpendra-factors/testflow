@@ -74,6 +74,21 @@ const fromLinkedinDocuments = " FROM linkedin_documents "
 const staticWhereStatementForLinkedin = "WHERE project_id = ? AND customer_ad_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 const staticWhereStatementForLinkedinWithSmartProperty = "WHERE linkedin_documents.project_id = ? AND linkedin_documents.customer_ad_account_id IN ( ? ) AND linkedin_documents.type = ? AND linkedin_documents.timestamp between ? AND ? "
 
+const linkedinAdGroupMetadataFetchQueryStr = "WITH ad_group as (select campaign_id as ad_group_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, campaign_group_id " +
+	"from linkedin_documents where type = ? AND project_id = ? AND timestamp BETWEEN ? AND ? AND customer_ad_account_id IN (?) " +
+	"AND (campaign_id, timestamp) in (select campaign_id, max(timestamp) from linkedin_documents where type = ? AND " +
+	"project_id = ? AND timestamp between ? and ? AND customer_ad_account_id IN (?) group by campaign_id)), campaign as " +
+	"(select campaign_group_id as campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from linkedin_documents where type = ? AND " +
+	"project_id = ?  AND timestamp BETWEEN ? AND ? AND customer_ad_account_id IN (?) and (campaign_group_id, timestamp) in " +
+	"(select campaign_group_id, max(timestamp) from linkedin_documents where type = ? and project_id = ? and timestamp " +
+	"BETWEEN ? and ?  AND customer_ad_account_id IN (?) group by campaign_group_id)) select ad_group_id, ad_group_name, " +
+	"campaign.campaign_id, campaign_name from ad_group join campaign on ad_group.campaign_group_id = campaign.campaign_id"
+
+const linkedinCampaignMetadataFetchQueryStr = "select campaign_group_id as campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from linkedin_documents where " +
+	"type = ? AND project_id = ? AND timestamp BETWEEN ? AND ? AND customer_ad_account_id IN (?) and " +
+	"(campaign_group_id, timestamp) in (select campaign_group_id, max(timestamp) from linkedin_documents where type = ? " +
+	"and project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_group_id)"
+
 var objectsForLinkedin = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
 
 func (store *MemSQL) satisfiesLinkedinForeignConstraints(linkedinDocument model.LinkedinDocument) int {
@@ -886,6 +901,17 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 	channelDocumentsCampaign := make([]model.ChannelDocumentsWithFields, 0, 0)
 	channelDocumentsAdGroup := make([]model.ChannelDocumentsWithFields, 0, 0)
 
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		log.Error("Failed to get project settings")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	if projectSetting.IntLinkedinAdAccount == "" {
+		log.Error("Failed to get custtomer account ids")
+		return channelDocumentsCampaign, channelDocumentsAdGroup
+	}
+	customerAccountIDs := strings.Split(projectSetting.IntLinkedinAdAccount, ",")
+
 	to, err := strconv.ParseUint(time.Now().Format("20060102"), 10, 64)
 	if err != nil {
 		log.Error("Failed to parse to timestamp")
@@ -898,30 +924,24 @@ func (store *MemSQL) GetLatestMetaForLinkedinForGivenDays(projectID uint64, days
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	adGroupQueryStr := "WITH ad_group as (select campaign_id as ad_group_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, campaign_group_id " +
-		"from linkedin_documents where type = 3 AND project_id = ? AND (campaign_id, timestamp) in (select campaign_id, max(timestamp) " +
-		"from linkedin_documents where type = 3 AND project_id = ? AND timestamp between ? and ? group by campaign_id)), campaign as " +
-		"(select campaign_group_id as campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from linkedin_documents where type = 2 AND " +
-		"project_id = ? and (campaign_group_id, timestamp) in (select campaign_group_id, max(timestamp) from linkedin_documents where " +
-		"type = 2 and project_id = ? and timestamp BETWEEN ? and ? group by campaign_group_id)) select ad_group_id, ad_group_name, " +
-		"campaign.campaign_id, campaign_name from ad_group join campaign on ad_group.campaign_group_id = campaign.campaign_id"
-
-	campaignGroupQueryStr := "select campaign_group_id as campaign_id, JSON_EXTRACT_STRING(value, 'name') as campaign_name from linkedin_documents where type = 2 AND " +
-		"project_id = ? and (campaign_group_id, timestamp) in (select campaign_group_id, max(timestamp) from linkedin_documents" +
-		" where type = 2 and project_id = ? and timestamp BETWEEN ? and ? group by campaign_group_id)"
-
-	err = db.Raw(adGroupQueryStr, projectID, projectID, from, to, projectID, projectID, from, to).Find(&channelDocumentsAdGroup).Error
+	err = db.Raw(linkedinAdGroupMetadataFetchQueryStr, linkedinDocumentTypeAlias["campaign"], projectID, from, to, customerAccountIDs,
+		linkedinDocumentTypeAlias["campaign"], projectID, from, to, customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"],
+		projectID, from, to, customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID,
+		from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
 	if err != nil {
-		errString := fmt.Sprintf("failed to get last %d ad_group meta for linkedin", days)
+		errString := fmt.Sprintf("failed to get last %d ad_group meta for Linkedin", days)
 		log.Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
 
-	err = db.Raw(campaignGroupQueryStr, projectID, projectID, from, to).Find(&channelDocumentsCampaign).Error
+	err = db.Raw(linkedinCampaignMetadataFetchQueryStr, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+		customerAccountIDs, linkedinDocumentTypeAlias["campaign_group"], projectID, from, to,
+		customerAccountIDs).Find(&channelDocumentsCampaign).Error
 	if err != nil {
-		errString := fmt.Sprintf("failed to get last %d campaign meta for linkedin", days)
+		errString := fmt.Sprintf("failed to get last %d campaign meta for Linkedin", days)
 		log.Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
+
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
