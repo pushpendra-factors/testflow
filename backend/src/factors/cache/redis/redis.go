@@ -391,9 +391,10 @@ func incrBatch(persistent bool, keys []*Key) ([]int64, error) {
 }
 
 type SortedSetKeyValueTuple struct {
-	Key *Key
+	Key   *Key
 	Value string
 }
+
 func ZincrBatch(OnlyPrefixKey bool, keys ...SortedSetKeyValueTuple) ([]int64, error) {
 	return zincrBatch(false, keys, OnlyPrefixKey)
 }
@@ -401,7 +402,7 @@ func ZincrPersistentBatch(OnlyPrefixKey bool, keys ...SortedSetKeyValueTuple) ([
 	return zincrBatch(true, keys, OnlyPrefixKey)
 }
 
-func zincrBatch(persistent bool, keys []SortedSetKeyValueTuple,  OnlyPrefixKey bool) ([]int64, error) {
+func zincrBatch(persistent bool, keys []SortedSetKeyValueTuple, OnlyPrefixKey bool) ([]int64, error) {
 	if len(keys) == 0 {
 		return nil, ErrorInvalidValues
 	}
@@ -421,7 +422,7 @@ func zincrBatch(persistent bool, keys []SortedSetKeyValueTuple,  OnlyPrefixKey b
 	for _, key := range keys {
 		var err error
 		var cKey string
-		if(OnlyPrefixKey == true){
+		if OnlyPrefixKey == true {
 			cKey, err = key.Key.KeyWithOnlyPrefix()
 		} else {
 			cKey, err = key.Key.Key()
@@ -429,7 +430,7 @@ func zincrBatch(persistent bool, keys []SortedSetKeyValueTuple,  OnlyPrefixKey b
 		if err != nil {
 			return nil, err
 		}
-		err = redisConn.Send("ZINCRBY", cKey , 1, key.Value)
+		err = redisConn.Send("ZINCRBY", cKey, 1, key.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -746,19 +747,19 @@ func zcard(key *Key, persistent bool) (int64, error) {
 	return redis.Int64(redisConn.Do("ZCARD", cKey))
 }
 
-func ZrangeWithScores(OnlyPrefixKey bool,key *Key) (map[string]string, error){
+func ZrangeWithScores(OnlyPrefixKey bool, key *Key) (map[string]string, error) {
 	return zrangeWithScores(OnlyPrefixKey, key, false)
 }
-func ZrangeWithScoresPersistent(OnlyPrefixKey bool,key *Key) (map[string]string, error){
+func ZrangeWithScoresPersistent(OnlyPrefixKey bool, key *Key) (map[string]string, error) {
 	return zrangeWithScores(OnlyPrefixKey, key, true)
 }
-func zrangeWithScores(OnlyPrefixKey bool,key *Key, persistent bool)(map[string]string, error){
+func zrangeWithScores(OnlyPrefixKey bool, key *Key, persistent bool) (map[string]string, error) {
 	if key == nil {
 		return nil, ErrorInvalidKey
 	}
 	var err error
 	var cKey string
-	if(OnlyPrefixKey == true){
+	if OnlyPrefixKey == true {
 		cKey, err = key.KeyWithOnlyPrefix()
 	} else {
 		cKey, err = key.Key()
@@ -783,9 +784,9 @@ func zrangeWithScores(OnlyPrefixKey bool,key *Key, persistent bool)(map[string]s
 	_ = redis.ScanSlice(values, &sortedSetValues)
 
 	sortedSetMap := make(map[string]string)
-	for i := 0; i < len(sortedSetValues) ;  {
+	for i := 0; i < len(sortedSetValues); {
 		sortedSetMap[sortedSetValues[i]] = sortedSetValues[i+1]
-		i = i+2;
+		i = i + 2
 	}
 	return sortedSetMap, nil
 }

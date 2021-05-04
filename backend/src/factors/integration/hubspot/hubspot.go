@@ -519,8 +519,8 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, apiKey string) (bool, 
 					model.SmartCRMEventSourceHubspot,
 					docType,
 					fieldName,
-				), docType, label , model.SmartCRMEventSourceHubspot)
-				if(err != http.StatusCreated){
+				), docType, label, model.SmartCRMEventSourceHubspot)
+				if err != http.StatusCreated {
 					logCtx.Error("Failed to create or update display name")
 				}
 			}
@@ -529,7 +529,6 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, apiKey string) (bool, 
 				docTypeFailure = true
 			}
 
-			
 		}
 
 		if docTypeFailure {

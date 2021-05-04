@@ -1,17 +1,17 @@
 package event_user_cache
 
-import(
+import (
+	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	"factors/model/model"
-	log "github.com/sirupsen/logrus"
 	U "factors/util"
+	log "github.com/sirupsen/logrus"
 	"strconv"
-	"time"
-	"encoding/json"
 	"strings"
+	"time"
 )
 
-func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
+func DoRollUpSortedSet(rollupLookback *int) map[string]interface{} {
 	// Get all projects sorted set
 	// Zrange for all the keys
 	// Rollup data
@@ -45,7 +45,7 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 				return nil
 			}
 			eventNamesKeySortedSet, err := model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
-					currentTimeDatePart)
+				currentTimeDatePart)
 			if err != nil {
 				log.WithError(err).Error("Failed to get cache key - smart events")
 				return nil
@@ -71,23 +71,23 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 				log.WithError(err).Error("Failed to get cache key - values")
 				return nil
 			}
-			smartEvents, err  := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesSmartKeySortedSet)
+			smartEvents, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesSmartKeySortedSet)
 			log.WithField("Count", len(smartEvents)).Info("SmartEventCount")
-			events, err  := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesKeySortedSet)
+			events, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesKeySortedSet)
 			log.WithField("Count", len(events)).Info("EventsCount")
-			properties, err  := cacheRedis.ZrangeWithScoresPersistent(false, propertyCategoryKeySortedSet)
+			properties, err := cacheRedis.ZrangeWithScoresPersistent(false, propertyCategoryKeySortedSet)
 			log.WithField("Count", len(properties)).Info("PropertiesCount")
-			values, err  := cacheRedis.ZrangeWithScoresPersistent(false, valueKeySortedSet)
+			values, err := cacheRedis.ZrangeWithScoresPersistent(false, valueKeySortedSet)
 			log.WithField("Count", len(values)).Info("ValuesCount")
 			userProperties, err := cacheRedis.ZrangeWithScoresPersistent(false, userPropertyCategoryKeySortedSet)
 			log.WithField("Count", len(userProperties)).Info("UserPropertiesCount")
 			userValues, err := cacheRedis.ZrangeWithScoresPersistent(false, userValueKeySortedSet)
 			log.WithField("Count", len(userValues)).Info("UserValuesCount")
 
-			if(len(events) > 0){
+			if len(events) > 0 {
 				// Events
 				// 1. Create cache object
-				// 2. Get the cache key 
+				// 2. Get the cache key
 				// 3. set cache
 				eventNamesRollupObj := GetCacheEventObject(events, smartEvents, currentTimeDatePart)
 				eventNamesKey, err := model.GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(projectID, currentTimeDatePart)
@@ -107,14 +107,14 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 					split1 := strings.Split(property, ":SS-EN-PC:")
 					eventName := split1[0]
 					property := split1[1]
-					if(propertiesMap[eventName] == nil){
+					if propertiesMap[eventName] == nil {
 						propertiesMap[eventName] = make(map[string]string)
 					}
 					propertiesMap[eventName][property] = count
 				}
 				eventPropertiesToCache := make(map[*cacheRedis.Key]string)
 				for eventName, properties := range propertiesMap {
-					if(len(properties) > 0) {
+					if len(properties) > 0 {
 						eventPropertiesKey, _ := model.GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventName, currentTimeDatePart)
 						cacheEventPropertyObject := GetCachePropertyObject(properties, currentTimeDatePart)
 						enEventPropertiesCache, err := json.Marshal(cacheEventPropertyObject)
@@ -125,15 +125,15 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 						eventPropertiesToCache[eventPropertiesKey] = string(enEventPropertiesCache)
 					}
 				}
-				if(len(eventPropertiesToCache) > 0){
+				if len(eventPropertiesToCache) > 0 {
 					err = cacheRedis.SetPersistentBatch(eventPropertiesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 					if err != nil {
 						log.WithError(err).Error("Failed to set cache")
 					}
 				}
 
-				// user properties 
-				if(len(properties) > 0) {
+				// user properties
+				if len(properties) > 0 {
 					userPropertiesRollupObj := GetCachePropertyObject(userProperties, currentTimeDatePart)
 					userPropertiesKey, err := model.GetUserPropertiesCategoryByProjectRollUpCacheKey(projectID, currentTimeDatePart)
 					usPropertyCache, err := json.Marshal(userPropertiesRollupObj)
@@ -155,10 +155,10 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 					split2 := strings.Split(split1[1], ":SS-EN-PV:")
 					property := split2[0]
 					value := split2[1]
-					if(propertyValues[eventName] == nil){
+					if propertyValues[eventName] == nil {
 						propertyValues[eventName] = make(map[string]map[string]string)
 					}
-					if(propertyValues[eventName][property] == nil){
+					if propertyValues[eventName][property] == nil {
 						propertyValues[eventName][property] = make(map[string]string)
 					}
 					propertyValues[eventName][property][value] = count
@@ -166,7 +166,7 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 				eventPropertyValuesToCache := make(map[*cacheRedis.Key]string)
 				for eventName, propertyValue := range propertyValues {
 					for property, values := range propertyValue {
-						if(len(values) > 0) {
+						if len(values) > 0 {
 							eventPropertyValuesKey, _ := model.GetValuesByEventPropertyRollUpCacheKey(projectID, eventName, property, currentTimeDatePart)
 							cacheEventPropertyValueObject := GetCachePropertyValueObject(values, currentTimeDatePart)
 							enEventPropertyValuesCache, err := json.Marshal(cacheEventPropertyValueObject)
@@ -178,7 +178,7 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 						}
 					}
 				}
-				if(len(eventPropertyValuesToCache) > 0){
+				if len(eventPropertyValuesToCache) > 0 {
 					err = cacheRedis.SetPersistentBatch(eventPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 					if err != nil {
 						log.WithError(err).Error("Failed to set cache")
@@ -191,15 +191,15 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 					split1 := strings.Split(valueKey, ":SS-US-PV:")
 					property := split1[0]
 					value := split1[1]
-					if(userPropertyValues[property] == nil){
+					if userPropertyValues[property] == nil {
 						userPropertyValues[property] = make(map[string]string)
 					}
 					userPropertyValues[property][value] = count
-					
+
 				}
 				userPropertyValuesToCache := make(map[*cacheRedis.Key]string)
 				for property, values := range userPropertyValues {
-					if(len(values) > 0){
+					if len(values) > 0 {
 						userPropertyValuesKey, _ := model.GetValuesByUserPropertyRollUpCacheKey(projectID, property, currentTimeDatePart)
 						cacheUserPropertyValueObject := GetCachePropertyValueObject(values, currentTimeDatePart)
 						usEventPropertyValuesCache, err := json.Marshal(cacheUserPropertyValueObject)
@@ -210,18 +210,18 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 						userPropertyValuesToCache[userPropertyValuesKey] = string(usEventPropertyValuesCache)
 					}
 				}
-				if(len(userPropertyValuesToCache) > 0){
+				if len(userPropertyValuesToCache) > 0 {
 					err = cacheRedis.SetPersistentBatch(userPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 					if err != nil {
 						log.WithError(err).Error("Failed to set cache")
 					}
 				}
-				if(isCurrentDay == false){
-					err = cacheRedis.DelPersistent(eventNamesSmartKeySortedSet, 
-						eventNamesKeySortedSet, 
-						propertyCategoryKeySortedSet, 
+				if isCurrentDay == false {
+					err = cacheRedis.DelPersistent(eventNamesSmartKeySortedSet,
+						eventNamesKeySortedSet,
+						propertyCategoryKeySortedSet,
 						valueKeySortedSet,
-						userPropertyCategoryKeySortedSet, 
+						userPropertyCategoryKeySortedSet,
 						userValueKeySortedSet)
 					if err != nil {
 						log.WithError(err).Error("Failed to del cache keys")
@@ -233,7 +233,6 @@ func DoRollUpSortedSet(rollupLookback *int)map[string]interface{}{
 	}
 	return nil
 }
-	
 
 func GetCacheEventObject(events map[string]string, smartEvents map[string]string, date string) model.CacheEventNamesWithTimestamp {
 	eventNames := make(map[string]U.CountTimestampTuple)
@@ -253,7 +252,7 @@ func GetCacheEventObject(events map[string]string, smartEvents map[string]string
 		eventNameCacheObj := U.CountTimestampTuple{
 			LastSeenTimestamp: keyDate.Unix(),
 			Count:             int64(eventCount),
-			Type: model.EVENT_NAME_TYPE_SMART_EVENT,
+			Type:              model.EVENT_NAME_TYPE_SMART_EVENT,
 		}
 		eventNames[eventName] = eventNameCacheObj
 	}
@@ -278,7 +277,7 @@ func GetCachePropertyValueObject(values map[string]string, date string) U.CacheP
 	return cachePropertyValues
 }
 
-func extractCategoryProperty(propertyCategory string) (string, string){
+func extractCategoryProperty(propertyCategory string) (string, string) {
 	splits := strings.Split(propertyCategory, ":")
 	category := splits[0]
 	property := splits[1]

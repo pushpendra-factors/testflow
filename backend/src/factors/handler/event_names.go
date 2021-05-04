@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/base64"
+	C "factors/config"
 	mid "factors/middleware"
 	"factors/model/store"
 	PW "factors/pattern_service_wrapper"
@@ -10,7 +11,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	C "factors/config"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -28,9 +28,9 @@ var FORCED_EVENT_NAMES = map[uint64][]string{
 	},
 }
 
-var BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES = map[string]string {
-	"$hubspot_" : "$hubspot_",
-	"$sf_" : "$salesforce_",
+var BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES = map[string]string{
+	"$hubspot_": "$hubspot_",
+	"$sf_":      "$salesforce_",
 }
 
 // GetEventNamesHandler godoc
@@ -148,19 +148,19 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		toBeFiltered := false
 		propertyPrefixToRemove := ""
 		for eventPrefix, propertyPrefix := range BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES {
-			if(strings.HasPrefix(eventName, eventPrefix)){
+			if strings.HasPrefix(eventName, eventPrefix) {
 				propertyPrefixToRemove = propertyPrefix
 				toBeFiltered = true
 				break
 			}
 		}
-		if(toBeFiltered == true){
+		if toBeFiltered == true {
 			for category, props := range propertiesFromCache {
-				if(properties[category] == nil){
+				if properties[category] == nil {
 					properties[category] = make([]string, 0)
 				}
 				for _, property := range props {
-					if(!strings.HasPrefix(property, propertyPrefixToRemove)){
+					if !strings.HasPrefix(property, propertyPrefixToRemove) {
 						properties[category] = append(properties[category], property)
 					}
 				}

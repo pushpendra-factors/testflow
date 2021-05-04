@@ -4,17 +4,17 @@ import (
 	"factors/model/store"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
+	C "factors/config"
 	mid "factors/middleware"
 	U "factors/util"
-	C "factors/config"
+	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 )
 
 func GetFactorsAnalyticsHandler(c *gin.Context) {
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	if(!C.IsLoggedInUserWhitelistedForProjectAnalytics(agentUUID)){
+	if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentUUID) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}

@@ -296,7 +296,7 @@ func ProcessEventsFiles(env *string, dataConfig *string, endpoint_staging *strin
 				IngestData(events_prod, endpoint_prod, authToken_prod)
 				counter = 0
 				events_prod = nil
-				if(date.Day()%5 == 0 && date.Hour() == 0){
+				if date.Day()%5 == 0 && date.Hour() == 0 {
 					Log.Debug.Printf("Processing %v records", len(events_prod_2))
 					IngestData(events_prod_2, endpoint_prod, authToken_prod_2)
 					counter = 0
@@ -313,7 +313,7 @@ func ProcessEventsFiles(env *string, dataConfig *string, endpoint_staging *strin
 			IngestData(events_prod, endpoint_prod, authToken_prod)
 			counter = 0
 			events_prod = nil
-			if(date.Day()%5 == 0 && date.Hour() == 0){
+			if date.Day()%5 == 0 && date.Hour() == 0 {
 				Log.Debug.Printf("Processing %v records", len(events_prod_2))
 				IngestData(events_prod_2, endpoint_prod, authToken_prod_2)
 				counter = 0

@@ -336,7 +336,7 @@ func CustomCors() gin.HandlerFunc {
 					"https://tufte-prod.factors.ai",
 					"https://app-old.factors.ai",
 					"http://localhost:3000",
-					"http://factors-dev.com:3000", 
+					"http://factors-dev.com:3000",
 				}
 			}
 

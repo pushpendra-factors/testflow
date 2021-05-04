@@ -2,6 +2,7 @@ package session
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -21,6 +22,7 @@ type NextSessionInfo struct {
 const (
 	StatusNotModified = "not_modified"
 	StatusFailed      = "failed"
+	StatusSuccess     = "success"
 )
 
 type Status struct {
@@ -72,45 +74,13 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 
 	logCtx.Info("Adding session for project.")
 
-	sessionEventName, errCode := store.GetStore().CreateOrGetSessionEventName(projectId)
-	if errCode != http.StatusCreated && errCode != http.StatusConflict {
-		logCtx.Error("Failed to create session event name.")
-		return status, http.StatusInternalServerError
-	}
+	shouldReturn, sessionEventName, errCode, userEventsMap,
+		noOfEventsDownloaded, _ := GetNextSessionAndPullEvent(projectId, maxLookbackTimestamp, startTimestamp,
+		endTimestamp, bufferTimeBeforeSessionCreateInSecs, logCtx)
 
-	var eventsDownloadStartTimestamp, eventsDownloadEndTimestamp int64
-
-	if startTimestamp > 0 && endTimestamp > 0 {
-		// Use the specific window, if given.
-		eventsDownloadStartTimestamp = startTimestamp
-		eventsDownloadEndTimestamp = endTimestamp
-	} else {
-		eventsDownloadStartTimestamp, errCode = store.GetStore().GetNextSessionStartTimestampForProject(projectId)
-		if errCode != http.StatusFound {
-			logCtx.Error("Failed to get last min session timestamp of user for project.")
-			return status, http.StatusInternalServerError
-		}
-
-		// Log and limit the startTimestamp to maxLookbackTimestamp configured.
-		// Case: When one single user has an event which is very old, could cause
-		// scanning and downloading of all events from that timestamp on next run.
-		if maxLookbackTimestamp > 0 && eventsDownloadStartTimestamp < maxLookbackTimestamp {
-			logCtx.Warn("Events download start timestamp is greater than maxLookbackTimestamp.")
-			eventsDownloadStartTimestamp = maxLookbackTimestamp
-		}
-
-		logCtx = logCtx.WithField("start_timestamp", eventsDownloadStartTimestamp)
-		eventsDownloadEndTimestamp = U.TimeNowUnix() - bufferTimeBeforeSessionCreateInSecs
-	}
-
-	userEventsMap, noOfEventsDownloaded, errCode := store.GetStore().GetAllEventsForSessionCreationAsUserEventsMap(projectId,
-		sessionEventName.ID, eventsDownloadStartTimestamp, eventsDownloadEndTimestamp)
-	if errCode == http.StatusInternalServerError {
-		logCtx.Error("Failed to get user events map on add session for project.")
-		return status, http.StatusInternalServerError
-	}
-	if errCode == http.StatusNotFound {
-		return status, http.StatusNotModified
+	// return if getNextSessionAndPullEvent failed or NOT_MODIFIED
+	if shouldReturn {
+		return status, errCode
 	}
 
 	status.NoOfEvents = noOfEventsDownloaded
@@ -170,6 +140,56 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp, startTimestam
 	}
 
 	return status, http.StatusOK
+}
+
+func GetNextSessionAndPullEvent(projectId uint64, maxLookbackTimestamp int64, startTimestamp int64,
+	endTimestamp int64, bufferTimeBeforeSessionCreateInSecs int64, logCtx *log.Entry) (bool, *model.EventName, int, *map[string][]model.Event, int, string) {
+	sessionEventName, errCode := store.GetStore().CreateOrGetSessionEventName(projectId)
+
+	if errCode != http.StatusCreated && errCode != http.StatusConflict {
+		msg := fmt.Sprintf("failed to create session event name, errCode: %v", errCode)
+		logCtx.Error(msg)
+		return true, nil, http.StatusInternalServerError, nil, 0, msg
+	}
+
+	var eventsDownloadStartTimestamp, eventsDownloadEndTimestamp int64
+
+	if startTimestamp > 0 && endTimestamp > 0 {
+		// Use the specific window, if given.
+		eventsDownloadStartTimestamp = startTimestamp
+		eventsDownloadEndTimestamp = endTimestamp
+	} else {
+		eventsDownloadStartTimestamp, errCode = store.GetStore().GetNextSessionStartTimestampForProject(projectId)
+		if errCode != http.StatusFound {
+			msg := fmt.Sprintf("failed to get last min session timestamp of user for project, errCode: %v", errCode)
+			logCtx.Error(msg)
+			return true, nil, http.StatusInternalServerError, nil, 0, msg
+		}
+
+		// Log and limit the startTimestamp to maxLookbackTimestamp configured.
+		// Case: When one single user has an event which is very old, could cause
+		// scanning and downloading of all events from that timestamp on next run.
+		if maxLookbackTimestamp > 0 && eventsDownloadStartTimestamp < maxLookbackTimestamp {
+			logCtx.Warn("Events download start timestamp is greater than maxLookbackTimestamp.")
+			eventsDownloadStartTimestamp = maxLookbackTimestamp
+		}
+
+		logCtx = logCtx.WithField("start_timestamp", eventsDownloadStartTimestamp)
+		eventsDownloadEndTimestamp = U.TimeNowUnix() - bufferTimeBeforeSessionCreateInSecs
+	}
+	log.Info(fmt.Sprintf("pulling events for projectID %v for "+
+		"eventsDownloadStartTimestamp %v to eventsDownloadEndTimestamp %v", projectId, eventsDownloadStartTimestamp, eventsDownloadEndTimestamp))
+	userEventsMap, noOfEventsDownloaded, errCode := store.GetStore().GetAllEventsForSessionCreationAsUserEventsMap(projectId,
+		sessionEventName.ID, eventsDownloadStartTimestamp, eventsDownloadEndTimestamp)
+	if errCode == http.StatusInternalServerError {
+		msg := fmt.Sprintf("failed to get user events map on add session for project, errCode: %v", errCode)
+		logCtx.Error(msg)
+		return true, nil, http.StatusInternalServerError, nil, 0, msg
+	}
+	if errCode == http.StatusNotFound {
+		return true, nil, http.StatusNotModified, nil, 0, "Status Not Modified"
+	}
+	return false, sessionEventName, errCode, userEventsMap, noOfEventsDownloaded, ""
 }
 
 func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList string) ([]uint64, int) {
@@ -249,7 +269,7 @@ func addSessionProjectWorker(projectId uint64, maxLookbackTimestamp, startTimest
 
 	logCtx.Info("Added session for project.")
 
-	status.Status = "success"
+	status.Status = StatusSuccess
 	setProjectStatus(projectId, statusMap, status, hasFailures, false, statusLock)
 }
 

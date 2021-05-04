@@ -1,12 +1,13 @@
 package main
 
-import(
+import (
 	C "factors/config"
 	"flag"
 	"github.com/gomodule/redigo/redis"
 	log "github.com/sirupsen/logrus"
 )
-func main(){
+
+func main() {
 	// Get persistent connection
 	// Scan set by set (EN:pid:*) (EN:PC:pid:*) (EN:PV:pid:*) (US:PC:pid:*) (US:PV:pid:*)
 	// del set by set
@@ -18,8 +19,8 @@ func main(){
 	flag.Parse()
 	taskID := "cleanup_offline"
 	config := &C.Configuration{
-		AppName:            taskID,
-		Env:                *env,
+		AppName:             taskID,
+		Env:                 *env,
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *RedisPortPersistent,
 	}
@@ -35,15 +36,15 @@ func main(){
 	pattern := "EN:pid:*"
 	for {
 		res, err := redis.Values(redisConn.Do("SCAN", cursor, "MATCH", pattern, "COUNT", 1000))
-		if(err != nil){
+		if err != nil {
 			log.WithError(err).Error("scan failed")
 		}
 		cacheKeyStrings := make([]interface{}, 0)
 		redis.Scan(res, &cursor, &cacheKeyStrings)
-		if(len(cacheKeyStrings) > 0){
+		if len(cacheKeyStrings) > 0 {
 			log.WithField("del", len(cacheKeyStrings)).Info("Del EN:")
 			_, err = redisConn.Do("DEL", cacheKeyStrings...)
-			if(err != nil){
+			if err != nil {
 				log.WithError(err).Error("del failed")
 			}
 		}
@@ -56,15 +57,15 @@ func main(){
 	pattern = "EN:SE:pid:*"
 	for {
 		res, err := redis.Values(redisConn.Do("SCAN", cursor, "MATCH", pattern, "COUNT", 1000))
-		if(err != nil){
+		if err != nil {
 			log.WithError(err).Error("scan failed")
 		}
 		cacheKeyStrings := make([]interface{}, 0)
 		redis.Scan(res, &cursor, &cacheKeyStrings)
-		if(len(cacheKeyStrings) > 0){
+		if len(cacheKeyStrings) > 0 {
 			log.WithField("del", len(cacheKeyStrings)).Info("Del EN:")
 			_, err = redisConn.Do("DEL", cacheKeyStrings...)
-			if(err != nil){
+			if err != nil {
 				log.WithError(err).Error("del failed")
 			}
 		}
@@ -77,15 +78,15 @@ func main(){
 	pattern = "EN:PC:*:pid:*"
 	for {
 		res, err := redis.Values(redisConn.Do("SCAN", cursor, "MATCH", pattern, "COUNT", 1000))
-		if(err != nil){
+		if err != nil {
 			log.WithError(err).Error("scan failed")
 		}
 		cacheKeyStrings := make([]interface{}, 0)
 		redis.Scan(res, &cursor, &cacheKeyStrings)
-		if(len(cacheKeyStrings) > 0){
+		if len(cacheKeyStrings) > 0 {
 			log.WithField("del", len(cacheKeyStrings)).Info("Del EN:")
 			_, err = redisConn.Do("DEL", cacheKeyStrings...)
-			if(err != nil){
+			if err != nil {
 				log.WithError(err).Error("del failed")
 			}
 		}
@@ -98,15 +99,15 @@ func main(){
 	pattern = "EN:PV:*:pid:*"
 	for {
 		res, err := redis.Values(redisConn.Do("SCAN", cursor, "MATCH", pattern, "COUNT", 1000))
-		if(err != nil){
+		if err != nil {
 			log.WithError(err).Error("scan failed")
 		}
 		cacheKeyStrings := make([]interface{}, 0)
 		redis.Scan(res, &cursor, &cacheKeyStrings)
-		if(len(cacheKeyStrings) > 0){
+		if len(cacheKeyStrings) > 0 {
 			log.WithField("del", len(cacheKeyStrings)).Info("Del EN:")
 			_, err = redisConn.Do("DEL", cacheKeyStrings...)
-			if(err != nil){
+			if err != nil {
 				log.WithError(err).Error("del failed")
 			}
 		}
@@ -119,15 +120,15 @@ func main(){
 	pattern = "US:PC:pid:*"
 	for {
 		res, err := redis.Values(redisConn.Do("SCAN", cursor, "MATCH", pattern, "COUNT", 1000))
-		if(err != nil){
+		if err != nil {
 			log.WithError(err).Error("scan failed")
 		}
 		cacheKeyStrings := make([]interface{}, 0)
 		redis.Scan(res, &cursor, &cacheKeyStrings)
-		if(len(cacheKeyStrings) > 0){
+		if len(cacheKeyStrings) > 0 {
 			log.WithField("del", len(cacheKeyStrings)).Info("Del EN:")
 			_, err = redisConn.Do("DEL", cacheKeyStrings...)
-			if(err != nil){
+			if err != nil {
 				log.WithError(err).Error("del failed")
 			}
 		}
@@ -140,15 +141,15 @@ func main(){
 	pattern = "US:PV:*:pid:*"
 	for {
 		res, err := redis.Values(redisConn.Do("SCAN", cursor, "MATCH", pattern, "COUNT", 1000))
-		if(err != nil){
+		if err != nil {
 			log.WithError(err).Error("scan failed")
 		}
 		cacheKeyStrings := make([]interface{}, 0)
 		redis.Scan(res, &cursor, &cacheKeyStrings)
-		if(len(cacheKeyStrings) > 0){
+		if len(cacheKeyStrings) > 0 {
 			log.WithField("del", len(cacheKeyStrings)).Info("Del EN:")
 			_, err = redisConn.Do("DEL", cacheKeyStrings...)
-			if(err != nil){
+			if err != nil {
 				log.WithError(err).Error("del failed")
 			}
 		}
