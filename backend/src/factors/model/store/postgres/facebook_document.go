@@ -1015,7 +1015,6 @@ func (pg *Postgres) GetLatestMetaForFacebookForGivenDays(projectID uint64, days 
 		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs,
 		facebookDocumentTypeAlias[facebookCampaign], projectID, from, to, customerAccountIDs).Find(&channelDocumentsAdGroup).Error
 	if err != nil {
-		log.Fatal()
 		errString := fmt.Sprintf("failed to get last %d ad_group meta for facebook", days)
 		log.Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
@@ -1025,11 +1024,9 @@ func (pg *Postgres) GetLatestMetaForFacebookForGivenDays(projectID uint64, days 
 		customerAccountIDs, facebookDocumentTypeAlias[facebookCampaign], projectID, from, to,
 		customerAccountIDs).Find(&channelDocumentsCampaign).Error
 	if err != nil {
-		log.Fatal()
 		errString := fmt.Sprintf("failed to get last %d campaign meta for facebook", days)
 		log.Error(errString)
 		return channelDocumentsCampaign, channelDocumentsAdGroup
 	}
-	log.Fatal()
 	return channelDocumentsCampaign, channelDocumentsAdGroup
 }
