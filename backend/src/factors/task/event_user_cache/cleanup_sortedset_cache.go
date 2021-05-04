@@ -1,10 +1,10 @@
 package event_user_cache
 
-import(
+import (
 	cacheRedis "factors/cache/redis"
 	"factors/model/model"
-	log "github.com/sirupsen/logrus"
 	U "factors/util"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 )
 
@@ -12,7 +12,7 @@ func DoCleanUpSortedSet(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 	// Get all projects sorted set
 	// zcard for all the keys
 	// zremrange for [0 - (count - limit)]
-	
+
 	currentTimeDatePart := U.TimeNow().Format(U.DATETIME_FORMAT_YYYYMMDD)
 	uniqueUsersCountKey, err := model.UserCountAnalyticsCacheKey(
 		currentTimeDatePart)
@@ -33,7 +33,7 @@ func DoCleanUpSortedSet(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 			return nil
 		}
 		eventNamesKeySortedSet, err := model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
-				currentTimeDatePart)
+			currentTimeDatePart)
 		if err != nil {
 			log.WithError(err).Error("Failed to get cache key - smart events")
 			return nil
@@ -71,9 +71,9 @@ func DoCleanUpSortedSet(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 			return nil
 		}
 		smartEventsCount := int(count)
-		if(eventCount + smartEventsCount > *eventsLimit && eventCount > (*eventsLimit - eventCount + smartEventsCount -1)){
-			log.WithField("ProjectId", projectID).WithField("Count", eventCount + smartEventsCount -1 - *eventsLimit ).Info("Deleting events")
-			_, err := cacheRedis.ZRemRangePersistent(eventNamesKeySortedSet, 0, (eventCount + smartEventsCount -1 - *eventsLimit ))
+		if eventCount+smartEventsCount > *eventsLimit && eventCount > (*eventsLimit-eventCount+smartEventsCount-1) {
+			log.WithField("ProjectId", projectID).WithField("Count", eventCount+smartEventsCount-1-*eventsLimit).Info("Deleting events")
+			_, err := cacheRedis.ZRemRangePersistent(eventNamesKeySortedSet, 0, (eventCount + smartEventsCount - 1 - *eventsLimit))
 			if err != nil {
 				log.WithError(err).Error("Failed to delete - events")
 				return nil
@@ -85,9 +85,9 @@ func DoCleanUpSortedSet(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 			return nil
 		}
 		propCount := int(count)
-		if(propCount > *propertiesLimit){
-			log.WithField("ProjectId", projectID).WithField("Count", propCount -1 - *propertiesLimit  ).Info("Deleting event properties")
-			_, err := cacheRedis.ZRemRangePersistent(propertyCategoryKeySortedSet, 0, (propCount -1 - *propertiesLimit ))
+		if propCount > *propertiesLimit {
+			log.WithField("ProjectId", projectID).WithField("Count", propCount-1-*propertiesLimit).Info("Deleting event properties")
+			_, err := cacheRedis.ZRemRangePersistent(propertyCategoryKeySortedSet, 0, (propCount - 1 - *propertiesLimit))
 			if err != nil {
 				log.WithError(err).Error("Failed to delete - properties")
 				return nil
@@ -99,9 +99,9 @@ func DoCleanUpSortedSet(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 			return nil
 		}
 		valueCount := int(count)
-		if(valueCount > *valuesLimit){
-			log.WithField("ProjectId", projectID).WithField("Count", valueCount -1 - *valuesLimit  ).Info("Deleting event properties values")
-			_, err := cacheRedis.ZRemRangePersistent(valueKeySortedSet, 0, (valueCount -1 - *valuesLimit))
+		if valueCount > *valuesLimit {
+			log.WithField("ProjectId", projectID).WithField("Count", valueCount-1-*valuesLimit).Info("Deleting event properties values")
+			_, err := cacheRedis.ZRemRangePersistent(valueKeySortedSet, 0, (valueCount - 1 - *valuesLimit))
 			if err != nil {
 				log.WithError(err).Error("Failed to delete - values")
 				return nil
@@ -113,9 +113,9 @@ func DoCleanUpSortedSet(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 			return nil
 		}
 		userPropCount := int(count)
-		if(userPropCount > *propertiesLimit){
-			log.WithField("ProjectId", projectID).WithField("Count", userPropCount -1 - *propertiesLimit  ).Info("Deleting user properties")
-			_, err := cacheRedis.ZRemRangePersistent(userPropertyCategoryKeySortedSet, 0, (userPropCount -1 - *propertiesLimit ))
+		if userPropCount > *propertiesLimit {
+			log.WithField("ProjectId", projectID).WithField("Count", userPropCount-1-*propertiesLimit).Info("Deleting user properties")
+			_, err := cacheRedis.ZRemRangePersistent(userPropertyCategoryKeySortedSet, 0, (userPropCount - 1 - *propertiesLimit))
 			if err != nil {
 				log.WithError(err).Error("Failed to delete - user property")
 				return nil
@@ -127,9 +127,9 @@ func DoCleanUpSortedSet(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 			return nil
 		}
 		userValueCount := int(count)
-		if(userValueCount > *valuesLimit){
-			log.WithField("ProjectId", projectID).WithField("Count", userValueCount -1 - *valuesLimit).Info("Deleting user properties values")
-			_, err := cacheRedis.ZRemRangePersistent(userValueKeySortedSet, 0, (userValueCount -1 - *valuesLimit ))
+		if userValueCount > *valuesLimit {
+			log.WithField("ProjectId", projectID).WithField("Count", userValueCount-1-*valuesLimit).Info("Deleting user properties values")
+			_, err := cacheRedis.ZRemRangePersistent(userValueKeySortedSet, 0, (userValueCount - 1 - *valuesLimit))
 			if err != nil {
 				log.WithError(err).Error("Failed to delete - user property value")
 				return nil

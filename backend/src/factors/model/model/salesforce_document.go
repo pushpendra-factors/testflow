@@ -237,12 +237,12 @@ func GetSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 
 	t, err := time.Parse(SalesforceDocumentDateTimeLayout, timestampStr)
 	if err != nil {
-		loc,err := time.LoadLocation(string(util.TimeZoneStringIST))
-		if err!=nil{
+		loc, err := time.LoadLocation(string(util.TimeZoneStringIST))
+		if err != nil {
 			return 0, err
 		}
 
-		t, err := time.ParseInLocation(SalesforceDocumentDateLayout, timestampStr,loc)
+		t, err := time.ParseInLocation(SalesforceDocumentDateLayout, timestampStr, loc)
 		if err != nil {
 			return 0, err
 		}

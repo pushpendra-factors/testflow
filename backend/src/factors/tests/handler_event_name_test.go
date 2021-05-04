@@ -252,7 +252,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Test events ingested via sdk/track call
-	rollBackWindow :=  1
+	rollBackWindow := 1
 	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
 	w = sendGetEventNamesExactRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
