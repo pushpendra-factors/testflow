@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -28,6 +29,10 @@ var migrateAllProjects bool
 var migrationPageSize int
 var migrationRoutines int
 var dedupeByQuery bool
+
+var migrageAllTables bool
+var includeTablesMap map[string]bool
+var excludeTablesMap map[string]bool
 
 const (
 	tableUserProperties                = "user_properties"
@@ -131,6 +136,9 @@ func main() {
 	eventsStartTimestamp := flag.Int64("events_start_timestamp", 0, "")
 	eventsEndTimestamp := flag.Int64("events_end_timestamp", 0, "")
 	eventsNumRouties := flag.Int("events_num_routines", 1, "")
+
+	includeTables := flag.String("include_tables", "*", "Comma separated tables to run or *")
+	excludeTables := flag.String("exclude_tables", "", "Comma separated tables to exclude from the run")
 	flag.Parse()
 
 	if *env != C.DEVELOPMENT &&
@@ -150,6 +158,20 @@ func main() {
 	migrationPageSize = *pageSize
 	migrationRoutines = *routines
 	dedupeByQuery = *dedupeByQueryForNonUniqueTables
+
+	includeTablesMap = make(map[string]bool)
+	excludeTablesMap = make(map[string]bool)
+	if *includeTables == "*" {
+		migrageAllTables = true
+	} else {
+		for _, tableName := range U.CleanSplitByDelimiter(*includeTables, ",") {
+			includeTablesMap[tableName] = true
+		}
+	}
+
+	for _, tableName := range U.CleanSplitByDelimiter(*excludeTables, ",") {
+		excludeTablesMap[tableName] = true
+	}
 
 	config := &C.Configuration{
 		AppName: "memsql_replicator",
@@ -930,7 +952,6 @@ func getRecordsAsChunks(list []interface{}, batchSize int) [][]interface{} {
 }
 
 func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt *time.Time) (*time.Time, int, int) {
-
 	logCtx := log.WithField("table_name", tableName).
 		WithField("project_id", projectIDs)
 
@@ -946,7 +967,7 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 
 	anyProjectsCondition := fmt.Sprintf("ANY(ARRAY[%s])", buildStringList(projectIDs))
 
-	query := fmt.Sprintf("SELECT * FROM %s", tableName)
+	query := fmt.Sprintf("SELECT %%s FROM %s", tableName)
 
 	var where bool
 	if !migrateAllProjects {
@@ -973,6 +994,7 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 		query = query + " " + whereProjectCondition
 	}
 
+	var timestampSubQuery string
 	if lastPageUpdatedAt != nil {
 		if where {
 			query = query + " " + "AND"
@@ -980,13 +1002,49 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 			query = query + " " + "WHERE"
 		}
 
-		query = fmt.Sprintf("%s updated_at > '%+v'", query, lastPageUpdatedAt.Format(time.RFC3339Nano))
+		timestampSubQuery = fmt.Sprintf("%s updated_at > '%+v'", query, lastPageUpdatedAt.Format(time.RFC3339Nano))
+	} else {
+		timestampSubQuery = query
+		if migrateAllProjects {
+			query = query + " " + "WHERE"
+		}
 	}
+	timestampSubQuery = fmt.Sprintf(timestampSubQuery, "updated_at")
 
-	query = query + " " + fmt.Sprintf("ORDER BY updated_at ASC LIMIT %d", migrationPageSize)
-
+	timestampSubQuery = timestampSubQuery + " " + fmt.Sprintf("ORDER BY updated_at ASC LIMIT %d", migrationPageSize)
+	timestampQuery := fmt.Sprintf("SELECT MIN(updated_at), MAX(updated_at) FROM (%s) subq", timestampSubQuery)
 	db := C.GetServices().Db
-	rows, err := db.Raw(query).Rows()
+
+	rows, err := db.Raw(timestampQuery).Rows()
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			logCtx.Info("No new records found")
+			return nil, 0, http.StatusOK
+		}
+		logCtx.WithError(err).Error("Error fetching last updated_at range")
+		return nil, 0, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	var minTimestamp, maxTimestamp sql.NullTime
+	for rows.Next() {
+		if err := rows.Scan(&minTimestamp, &maxTimestamp); err != nil {
+			logCtx.WithError(err).Error("Failed to scan min and max timestmap")
+			return nil, 0, http.StatusInternalServerError
+		}
+		if !minTimestamp.Valid || !maxTimestamp.Valid {
+			logCtx.Info("Invalid values for min: %v, max: %v timestamp", minTimestamp, maxTimestamp)
+			return nil, 0, http.StatusOK
+		}
+	}
+	logCtx.Info("Fetching for range %v - %v", minTimestamp, maxTimestamp)
+
+	if lastPageUpdatedAt == nil && !migrateAllProjects {
+		query = query + " AND"
+	}
+	query = fmt.Sprintf(query, "*") + fmt.Sprintf(" updated_at BETWEEN '%+v' AND '%+v'",
+		minTimestamp.Time.Format(time.RFC3339Nano), maxTimestamp.Time.Format(time.RFC3339Nano))
+	rows, err = db.Raw(query).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get records on migrate_table_by_name.")
 		return nil, 0, http.StatusInternalServerError
@@ -1102,6 +1160,11 @@ func migrateAllTables(projectIDs []uint64) {
 	// Runs replication continiously for each table
 	// on a separate go routine.
 	for i := range tables {
+		_, includeFound := includeTablesMap[tables[i]]
+		_, excludeFound := excludeTablesMap[tables[i]]
+		if (!migrageAllTables && !includeFound) || excludeFound {
+			continue
+		}
 		go migrateTableContiniously(tables[i], projectIDs)
 	}
 
