@@ -1,0 +1,42 @@
+.areaChart {
+  .infoText {
+    font-size: 14px;
+    line-height: 20px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: break-spaces;
+  }
+
+  :global(.highcharts-legend-item text) {
+    font-size: 14px !important;
+    line-height: 20px !important;
+    font-weight: 400 !important;
+    color: #3e516c !important;
+  }
+
+  :global(.highcharts-axis-labels text) {
+    font-size: 12px !important;
+    line-height: 18px !important;
+    font-weight: 400 !important;
+    color: #3e516c !important;
+  }
+
+  :global(.highcharts-tooltip) {
+    span {
+      &:first-child {
+        width: 175px;
+        padding-left: 8px;
+      }
+    }
+    span {
+      &.number {
+        padding-left: 0px !important;
+        width: unset;
+      }
+      span {
+        padding-left: 0px !important;
+        width: unset;
+      }
+    }
+  }
+}

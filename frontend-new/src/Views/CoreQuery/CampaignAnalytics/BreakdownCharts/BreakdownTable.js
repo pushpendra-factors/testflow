@@ -1,7 +1,6 @@
-import React, { useState, useCallback } from "react";
-import { CHART_TYPE_BARCHART } from "../../../../utils/constants";
-import { getTableColumns, getTableData } from "./utils";
-import DataTable from "../../../../components/DataTable";
+import React, { useState, useCallback } from 'react';
+import { getTableColumns, getTableData } from './utils';
+import DataTable from '../../../../components/DataTable';
 
 function BreakdownTable({
   chartsData,
@@ -15,11 +14,11 @@ function BreakdownTable({
   visibleProperties,
   maxAllowedVisibleProperties,
   setVisibleProperties,
-  reportTitle = "CampaignAnalytics",
+  reportTitle = 'CampaignAnalytics',
 }) {
   let columns, data;
   const [sorter, setSorter] = useState({});
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);

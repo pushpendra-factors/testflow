@@ -46,8 +46,6 @@ function DashboardSubMenu({
     setShowRefreshBtn(isRefresh);
   }, [durationObj, dashboard, activeDashboard]);
 
-  console.log(dashboard);
-
   return (
     <div className={'flex justify-between items-center px-0 mb-5'}>
       <div className={'flex justify-between items-center'}>

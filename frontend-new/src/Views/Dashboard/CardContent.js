@@ -1,12 +1,12 @@
-import React from "react";
-import { Spin } from "antd";
+import React from 'react';
+import { Spin } from 'antd';
 import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
   getCampaignStateFromRequestQuery,
-} from "../CoreQuery/utils";
-import EventsAnalytics from "./EventsAnalytics";
-import Funnels from "./Funnels";
+} from '../CoreQuery/utils';
+import EventsAnalytics from './EventsAnalytics';
+import Funnels from './Funnels';
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
@@ -14,10 +14,10 @@ import {
   QUERY_TYPE_CAMPAIGN,
   DASHBOARD_WIDGET_SECTION,
   reverse_user_types,
-  presentationObj
-} from "../../utils/constants";
-import Attributions from "./Attributions";
-import CampaignAnalytics from "./CampaignAnalytics";
+  presentationObj,
+} from '../../utils/constants';
+import Attributions from './Attributions';
+import CampaignAnalytics from './CampaignAnalytics';
 import NoDataChart from '../../components/NoDataChart';
 
 function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
@@ -25,15 +25,15 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
 
   if (resultState.loading) {
     content = (
-      <div className="flex justify-center items-center w-full h-64">
-        <Spin size="small" />
+      <div className='flex justify-center items-center w-full h-64'>
+        <Spin size='small' />
       </div>
     );
   }
 
   if (resultState.error) {
     content = (
-      <div className="flex justify-center items-center w-full h-64">
+      <div className='flex justify-center items-center w-full h-64'>
         <NoDataChart />
       </div>
     );
@@ -66,8 +66,6 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
 
     let breakdown,
       events,
-      eventsMapper = {},
-      reverseEventsMapper = {},
       arrayMapper = [],
       attributionsState,
       campaignState,
@@ -81,8 +79,6 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       ];
       events = [...equivalentQuery.events];
       events.forEach((q, index) => {
-        eventsMapper[`${q.label}`] = `event${index + 1}`;
-        reverseEventsMapper[`event${index + 1}`] = q.label;
         arrayMapper.push({
           eventName: q.label,
           index,
@@ -91,8 +87,8 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       });
     }
 
-    if(queryType === QUERY_TYPE_EVENT) {
-      breakdownType = reverse_user_types[unit.query.query.query_group[0].ec]
+    if (queryType === QUERY_TYPE_EVENT) {
+      breakdownType = reverse_user_types[unit.query.query.query_group[0].ec];
     }
 
     if (queryType === QUERY_TYPE_ATTRIBUTION) {
@@ -120,7 +116,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
       });
     }
 
-    let dashboardPresentation = "pl";
+    let dashboardPresentation = 'pl';
 
     try {
       dashboardPresentation = unit.settings.chart;

@@ -1,18 +1,23 @@
-import React, { useState, useCallback, useEffect } from "react";
-import moment from "moment";
-import { bindActionCreators } from "redux";
-import { connect, useSelector, useDispatch } from "react-redux";
-import QueryComposer from "../../components/QueryComposer";
-import AttrQueryComposer from "../../components/AttrQueryComposer";
-import CampQueryComposer from "../../components/CampQueryComposer";
-import CoreQueryHome from "../CoreQueryHome";
-import { Drawer, Button } from "antd"; 
-import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
-import {ErrorBoundary} from 'react-error-boundary';
+import React, { useState, useCallback, useEffect } from 'react';
+import moment from 'moment';
+import { bindActionCreators } from 'redux';
+import { connect, useSelector, useDispatch } from 'react-redux';
+import QueryComposer from '../../components/QueryComposer';
+import AttrQueryComposer from '../../components/AttrQueryComposer';
+import CampQueryComposer from '../../components/CampQueryComposer';
+import CoreQueryHome from '../CoreQueryHome';
+import { Drawer, Button } from 'antd';
+import {
+  Text,
+  SVG,
+  FaErrorComp,
+  FaErrorLog,
+} from '../../components/factorsComponents';
+import { ErrorBoundary } from 'react-error-boundary';
 import {
   deleteGroupByForEvent,
   getCampaignConfigData,
-} from "../../reducers/coreQuery/middleware";
+} from '../../reducers/coreQuery/middleware';
 import {
   calculateFrequencyData,
   calculateActiveUsersData,
@@ -23,13 +28,13 @@ import {
   DefaultDateRangeFormat,
   getAttributionQuery,
   getCampaignsQuery,
-} from "./utils";
+} from './utils';
 import {
   getEventsData,
   getFunnelData,
   getAttributionsData,
   getCampaignsData,
-} from "../../reducers/coreQuery/services";
+} from '../../reducers/coreQuery/services';
 import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_EVENT,
@@ -41,13 +46,13 @@ import {
   FREQUENCY_CRITERIA,
   EACH_USER_TYPE,
   REPORT_SECTION,
-} from "../../utils/constants";
-import { SHOW_ANALYTICS_RESULT } from "../../reducers/types";
-import AnalysisResultsPage from "./AnalysisResultsPage";
+} from '../../utils/constants';
+import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
+import AnalysisResultsPage from './AnalysisResultsPage';
 import {
   SET_CAMP_DATE_RANGE,
   SET_ATTR_DATE_RANGE,
-} from "../../reducers/coreQuery/actions";
+} from '../../reducers/coreQuery/actions';
 
 function CoreQuery({
   activeProject,
@@ -57,7 +62,7 @@ function CoreQuery({
 }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
-  const [activeKey, setActiveKey] = useState("0");
+  const [activeKey, setActiveKey] = useState('0');
   const [showResult, setShowResult] = useState(false);
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
@@ -71,15 +76,15 @@ function CoreQuery({
   const [queryOptions, setQueryOptions] = useState({
     groupBy: [
       {
-        prop_category: "", // user / event
-        property: "", // user/eventproperty
-        prop_type: "", // categorical  /numberical
-        eventValue: "", // event name (funnel only)
-        eventName: "", // eventName $present for global user breakdown
+        prop_category: '', // user / event
+        property: '', // user/eventproperty
+        prop_type: '', // categorical  /numberical
+        eventValue: '', // event name (funnel only)
+        eventName: '', // eventName $present for global user breakdown
         eventIndex: 0,
       },
     ],
-    event_analysis_seq: "",
+    event_analysis_seq: '',
     session_analytics_seq: {
       start: 0,
       end: 0,
@@ -88,7 +93,7 @@ function CoreQuery({
   });
   const [attributionsState, setAttributionsState] = useState({
     eventGoal: {},
-    touchpoint: "",
+    touchpoint: '',
     models: [],
     linkedEvents: [],
     date_range: {},
@@ -97,7 +102,7 @@ function CoreQuery({
   const [cmprAttrDurationObj, setcmprAttrDurationObj] = useState({});
 
   const [campaignState, setCampaignState] = useState({
-    channel: "",
+    channel: '',
     select_metrics: [],
     filters: [],
     group_by: [],
@@ -131,7 +136,7 @@ function CoreQuery({
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
-      getCampaignConfigData(activeProject.id, "all_ads");
+      getCampaignConfigData(activeProject.id, 'all_ads');
     }
   }, [activeProject, getCampaignConfigData]);
 
@@ -273,11 +278,10 @@ function CoreQuery({
   );
 
   const runAttrCmprQuery = (cmprDuration) => {
-    if(!cmprDuration) 
-    {
-        setCmprResultState({
-        ...initialState
-      })
+    if (!cmprDuration) {
+      setCmprResultState({
+        ...initialState,
+      });
     }
 
     setcmprAttrDurationObj(cmprDuration);
@@ -292,29 +296,29 @@ function CoreQuery({
       cmprDuration
     );
 
-
     setCmprResultState({
       ...initialState,
       loading: true,
       data: null,
-  })
-    
+    });
 
-    getAttributionsData(activeProject.id, query).then((res) => {
-      setCmprResultState({
+    getAttributionsData(activeProject.id, query).then(
+      (res) => {
+        setCmprResultState({
           ...initialState,
           data: res.data,
-      })
-     }, (err) => {
-      setCmprResultState({
-        ...initialState,
-        loading: false,
-        error: true,
-        data: null,
-    })
-
-     });
-  }
+        });
+      },
+      (err) => {
+        setCmprResultState({
+          ...initialState,
+          loading: false,
+          error: true,
+          data: null,
+        });
+      }
+    );
+  };
 
   const runAttributionQuery = useCallback(
     async (isQuerySaved, durationObj) => {
@@ -434,7 +438,7 @@ function CoreQuery({
     (dates) => {
       let from,
         to,
-        frequency = "date";
+        frequency = 'date';
       if (Array.isArray(dates.startDate)) {
         from = dates.startDate[0];
         to = dates.startDate[1];
@@ -442,8 +446,8 @@ function CoreQuery({
         from = dates.startDate;
         to = dates.endDate;
       }
-      if (moment(to).diff(from, "hours") < 24) {
-        frequency = "hour";
+      if (moment(to).diff(from, 'hours') < 24) {
+        frequency = 'hour';
       }
       setQueryOptions((currState) => {
         return {
@@ -472,9 +476,9 @@ function CoreQuery({
 
       if (queryType === QUERY_TYPE_CAMPAIGN) {
         const payload = {
-          from: moment(from).startOf("day"),
-          to: moment(to).endOf("day"),
-          frequency: "date",
+          from: moment(from).startOf('day'),
+          to: moment(to).endOf('day'),
+          frequency: 'date',
         };
         dispatch({ type: SET_CAMP_DATE_RANGE, payload });
         runCampaignsQuery(querySaved, payload);
@@ -482,9 +486,9 @@ function CoreQuery({
 
       if (queryType === QUERY_TYPE_ATTRIBUTION) {
         const payload = {
-          from: moment(from).startOf("day"),
-          to: moment(to).endOf("day"),
-          frequency: "date",
+          from: moment(from).startOf('day'),
+          to: moment(to).endOf('day'),
+          frequency: 'date',
         };
         dispatch({ type: SET_ATTR_DATE_RANGE, payload });
         runAttributionQuery(querySaved, payload);
@@ -529,10 +533,10 @@ function CoreQuery({
     };
   }, [dispatch]);
 
-  const queryChange = (newEvent, index, changeType = "add") => {
+  const queryChange = (newEvent, index, changeType = 'add') => {
     const queryupdated = [...queries];
     if (queryupdated[index]) {
-      if (changeType === "add") {
+      if (changeType === 'add') {
         if (JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)) {
           deleteGroupByForEvent(newEvent, index);
         }
@@ -559,28 +563,28 @@ function CoreQuery({
     switch (queryType) {
       case QUERY_TYPE_EVENT:
         return {
-          text: "Analyse Events",
-          icon: "funnels_cq",
+          text: 'Analyse Events',
+          icon: 'funnels_cq',
         };
       case QUERY_TYPE_FUNNEL:
         return {
-          text: "Find event funnel for",
-          icon: "events_dashboard_cq",
+          text: 'Find event funnel for',
+          icon: 'events_dashboard_cq',
         };
       case QUERY_TYPE_CAMPAIGN:
         return {
-          text: "Campaign Analytics",
-          icon: "funnels_cq",
+          text: 'Campaign Analytics',
+          icon: 'funnels_cq',
         };
       case QUERY_TYPE_ATTRIBUTION:
         return {
-          text: "Attributions",
-          icon: "funnels_cq",
+          text: 'Attributions',
+          icon: 'funnels_cq',
         };
       default:
         return {
-          text: "Templates",
-          icon: "funnels_cq",
+          text: 'Templates',
+          icon: 'funnels_cq',
         };
     }
   };
@@ -588,24 +592,24 @@ function CoreQuery({
   const title = () => {
     const IconAndText = IconAndTextSwitchQueryType(queryType);
     return (
-      <div className={"flex justify-between items-center"}>
-        <div className={"flex items-center"}>
-          <SVG name={IconAndText.icon} size="24px"></SVG>
+      <div className={'flex justify-between items-center'}>
+        <div className={'flex items-center'}>
+          <SVG name={IconAndText.icon} size='24px'></SVG>
           <Text
-            type={"title"}
+            type={'title'}
             level={4}
-            weight={"bold"}
-            extraClass={"ml-2 m-0"}
+            weight={'bold'}
+            extraClass={'ml-2 m-0'}
           >
             {IconAndText.text}
           </Text>
         </div>
-        <div className={"flex justify-end items-center"}>
+        <div className={'flex justify-end items-center'}>
           {/* <Button size={"large"} type="text">
             <SVG name="play"></SVG>Help
           </Button> */}
-          <Button size={"large"} type="text" onClick={() => closeDrawer()}>
-            <SVG name="times"></SVG>
+          <Button size={'large'} type='text' onClick={() => closeDrawer()}>
+            <SVG name='times'></SVG>
           </Button>
         </div>
       </div>
@@ -654,63 +658,77 @@ function CoreQuery({
       );
     }
   };
-  
+
   return (
     <>
-    <ErrorBoundary fallback={<FaErrorComp size={'medium'} title={'Analyse Error'} subtitle={'We are facing trouble loading Analyse. Drop us a message on the in-app chat.'} />} onError={FaErrorLog}>
-      
-      <Drawer
-        title={title()}
-        placement="left"
-        closable={false}
-        visible={drawerVisible}
-        onClose={closeDrawer}
-        getContainer={false}
-        width={"600px"}
-        className={"fa-drawer"}
+      <ErrorBoundary
+        fallback={
+          <FaErrorComp
+            size={'medium'}
+            title={'Analyse Error'}
+            subtitle={
+              'We are facing trouble loading Analyse. Drop us a message on the in-app chat.'
+            }
+          />
+        }
+        onError={FaErrorLog}
       >
-        <ErrorBoundary fallback={<FaErrorComp subtitle={'Facing issues with Query Builder'} />} onError={FaErrorLog}> 
-        {renderQueryComposer()}
-        </ErrorBoundary>
-      </Drawer>
+        <Drawer
+          title={title()}
+          placement='left'
+          closable={false}
+          visible={drawerVisible}
+          onClose={closeDrawer}
+          getContainer={false}
+          width={'600px'}
+          className={'fa-drawer'}
+        >
+          <ErrorBoundary
+            fallback={
+              <FaErrorComp subtitle={'Facing issues with Query Builder'} />
+            }
+            onError={FaErrorLog}
+          >
+            {renderQueryComposer()}
+          </ErrorBoundary>
+        </Drawer>
 
-      
-      {showResult ? (
-        <AnalysisResultsPage
-          queryType={queryType}
-          resultState={resultState}
-          setDrawerVisible={setDrawerVisible}
-          requestQuery={requestQuery}
-          queries={appliedQueries}
-          breakdown={appliedBreakdown}
-          setShowResult={setShowResult}
-          querySaved={querySaved}
-          setQuerySaved={setQuerySaved}
-          durationObj={queryOptions.date_range}
-          cmprDuration={cmprAttrDurationObj}
-          handleDurationChange={handleDurationChange}
-          arrayMapper={arrayMapper}
-          queryOptions={queryOptions}
-          attributionsState={attributionsState}
-          breakdownType={breakdownType}
-          campaignState={campaignState}
-          eventPage={result_criteria}
-          section={REPORT_SECTION}
-          runAttrCmprQuery={runAttrCmprQuery}
-          cmprResultState={cmprResultState}
-        />
-      ) : (
-        <CoreQueryHome
-          setQueryType={setQueryType}
-          setDrawerVisible={setDrawerVisible}
-          setQueries={setQueries}
-          setQueryOptions={setExtraOptions}
-          setRowClicked={setRowClicked}
-          location={location}
-          setActiveKey={setActiveKey}
-          setBreakdownType={setBreakdownType}
-        />
-      )}
+        {showResult ? (
+          <AnalysisResultsPage
+            queryType={queryType}
+            resultState={resultState}
+            setDrawerVisible={setDrawerVisible}
+            requestQuery={requestQuery}
+            queries={appliedQueries}
+            breakdown={appliedBreakdown}
+            setShowResult={setShowResult}
+            querySaved={querySaved}
+            setQuerySaved={setQuerySaved}
+            durationObj={queryOptions.date_range}
+            cmprDuration={cmprAttrDurationObj}
+            handleDurationChange={handleDurationChange}
+            arrayMapper={arrayMapper}
+            queryOptions={queryOptions}
+            attributionsState={attributionsState}
+            breakdownType={breakdownType}
+            campaignState={campaignState}
+            eventPage={result_criteria}
+            section={REPORT_SECTION}
+            runAttrCmprQuery={runAttrCmprQuery}
+            cmprResultState={cmprResultState}
+          />
+        ) : (
+          <CoreQueryHome
+            setQueryType={setQueryType}
+            setDrawerVisible={setDrawerVisible}
+            setQueries={setQueries}
+            setQueryOptions={setExtraOptions}
+            setRowClicked={setRowClicked}
+            location={location}
+            setActiveKey={setActiveKey}
+            setBreakdownType={setBreakdownType}
+          />
+        )}
       </ErrorBoundary>
     </>
   );

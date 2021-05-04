@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from 'react';
+import { formatData, getDataInLineChartFormat } from './utils';
+import NoBreakdownTable from './NoBreakdownTable';
+import SparkLineChart from '../../../../components/SparkLineChart';
+import LineChart from '../../../../components/HCLineChart';
+import { generateColors } from '../../../../utils/dataFormatter';
 import {
-  formatSingleEventAnalyticsData,
-  formatMultiEventsAnalyticsData,
-  getDataInLineChartFormat,
-} from "./utils";
-import NoBreakdownTable from "./NoBreakdownTable";
-import SparkLineChart from "../../../../components/SparkLineChart";
-import LineChart from "../../../../components/LineChart";
-import { generateColors } from "../../../../utils/dataFormatter";
-import { ACTIVE_USERS_CRITERIA, FREQUENCY_CRITERIA, DASHBOARD_MODAL, CHART_TYPE_SPARKLINES, CHART_TYPE_LINECHART } from "../../../../utils/constants";
+  DASHBOARD_MODAL,
+  CHART_TYPE_SPARKLINES,
+  CHART_TYPE_LINECHART,
+} from '../../../../utils/constants';
 
 function NoBreakdownCharts({
   queries,
@@ -17,17 +17,32 @@ function NoBreakdownCharts({
   chartType,
   durationObj,
   arrayMapper,
-  section
+  section,
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
-  const appliedColors = generateColors(queries.length);
+  const appliedColors = useMemo(() => {
+    return generateColors(queries.length);
+  }, [queries]);
 
-  let chartsData = [];
-  if (queries.length === 1) {
-    chartsData = formatSingleEventAnalyticsData(resultState.data, arrayMapper);
-  } else {
-    chartsData = formatMultiEventsAnalyticsData(resultState.data, arrayMapper);
-  }
+  const chartsData = useMemo(() => {
+    return formatData(resultState.data, arrayMapper, queries.length);
+  }, [resultState.data, arrayMapper, queries.length]);
+
+  const { categories, data } = useMemo(() => {
+    return getDataInLineChartFormat(resultState.data, arrayMapper);
+  }, [resultState.data, arrayMapper]);
+
+  const visibleSeriesData = useMemo(() => {
+    return data
+      .filter((elem) => hiddenEvents.findIndex((he) => he === elem.name) === -1)
+      .map((elem, index) => {
+        const color = appliedColors[index];
+        return {
+          ...elem,
+          color,
+        };
+      });
+  }, [data, hiddenEvents, appliedColors]);
 
   if (!chartsData.length) {
     return null;
@@ -35,15 +50,8 @@ function NoBreakdownCharts({
 
   let chart = null;
 
-  const lineChartData = getDataInLineChartFormat(
-    chartsData,
-    queries,
-    hiddenEvents,
-    arrayMapper
-  );
-
   const table = (
-    <div className="mt-12 w-full">
+    <div className='mt-12 w-full'>
       <NoBreakdownTable
         isWidgetModal={section === DASHBOARD_MODAL}
         data={chartsData}
@@ -72,22 +80,18 @@ function NoBreakdownCharts({
     );
   } else if (chartType === CHART_TYPE_LINECHART) {
     chart = (
-      <LineChart
-        frequency={durationObj.frequency}
-        chartData={lineChartData}
-        appliedColors={appliedColors}
-        queries={queries}
-        setHiddenEvents={setHiddenEvents}
-        hiddenEvents={hiddenEvents}
-        arrayMapper={arrayMapper}
-        isDecimalAllowed={page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA}
-        section={section}
-      />
+      <div className='w-full'>
+        <LineChart
+          frequency={durationObj.frequency}
+          categories={categories}
+          data={visibleSeriesData}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       {chart}
       {table}
     </div>

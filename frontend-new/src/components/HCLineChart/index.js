@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, memo } from 'react';
 import { Text, Number as NumFormat } from '../factorsComponents';
 import styles from './styles.module.scss';
 import ReactDOMServer from 'react-dom/server';
@@ -6,10 +6,9 @@ import moment from 'moment';
 import Highcharts from 'highcharts';
 import { high_charts_default_spacing } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
-import { formatCount } from '../../utils/dataFormatter';
 import TopLegends from '../GroupedBarChart/TopLegends';
 
-function StackedBarChart({
+function LineChart({
   categories,
   data,
   frequency,
@@ -17,12 +16,11 @@ function StackedBarChart({
   legendsPosition = 'bottom',
   cardSize = 1,
   spacing = high_charts_default_spacing,
-  chartId = 'barChartContainer',
+  chartId = 'lineChartContainer',
 }) {
   const drawChart = useCallback(() => {
     Highcharts.chart(chartId, {
       chart: {
-        type: 'column',
         height,
         spacing: cardSize !== 1 ? high_charts_default_spacing : spacing,
         style: {
@@ -34,9 +32,6 @@ function StackedBarChart({
       },
       title: {
         text: undefined,
-      },
-      credits: {
-        enabled: false,
       },
       xAxis: {
         categories,
@@ -56,14 +51,9 @@ function StackedBarChart({
         title: {
           enabled: false,
         },
-        stackLabels: {
-          enabled: cardSize !== 2,
-          formatter: function () {
-            return ReactDOMServer.renderToString(
-              <NumFormat shortHand={true} number={this.total} />
-            );
-          },
-        },
+      },
+      credits: {
+        enabled: false,
       },
       tooltip: {
         backgroundColor: 'white',
@@ -100,25 +90,20 @@ function StackedBarChart({
                   <NumFormat className='number' number={this.point.y} />
                 </Text>
               </span>
-              <Text
-                type='title'
-                color='grey-2'
-                extraClass={`mt-1 ${styles.infoText} mb-0`}
-              >{`${formatCount(this.point.percentage, 1)}% (${
-                this.point.y
-              } of ${this.point.stackTotal})`}</Text>
             </>
           );
         },
       },
       plotOptions: {
-        column: {
-          stacking: 'normal',
+        line: {
+          marker: {
+            symbol: 'circle',
+          },
         },
       },
       series: data,
     });
-  }, [cardSize, categories, chartId, data, frequency, height, spacing]);
+  }, [cardSize, categories, data, frequency, height, spacing, chartId]);
 
   useEffect(() => {
     drawChart();
@@ -134,7 +119,7 @@ function StackedBarChart({
           showFullLegends={false}
         />
       ) : null}
-      <div id={chartId} className={styles.columnChart}></div>
+      <div className={styles.areaChart} id={chartId}></div>
       {legendsPosition === 'bottom' ? (
         <TopLegends
           cardSize={cardSize}
@@ -147,4 +132,4 @@ function StackedBarChart({
   );
 }
 
-export default StackedBarChart;
+export default memo(LineChart);

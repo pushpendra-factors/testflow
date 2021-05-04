@@ -1,7 +1,7 @@
-import React from "react";
-import moment from "moment";
-import { SortData, getTitleWithSorter } from "../../../../utils/dataFormatter";
-import { Number as NumFormat } from "../../../../components/factorsComponents";
+import React from 'react';
+import moment from 'moment';
+import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
+import { Number as NumFormat } from '../../../../components/factorsComponents';
 
 export const getNoGroupingTableData = (data, arrayMapper, currentSorter) => {
   const clonedData = data.map((elem) => {
@@ -34,19 +34,19 @@ export const getColumns = (
   currentSorter,
   handleSorting
 ) => {
-  let format = "MMM D, YYYY";
-  if (frequency === "hour") {
-    format = "h A, MMM D";
+  let format = 'MMM D, YYYY';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D';
   }
   const result = [
     {
-      title: "",
-      dataIndex: "",
+      title: '',
+      dataIndex: '',
       width: 37,
     },
     {
-      title: getTitleWithSorter("Date", "date", currentSorter, handleSorting),
-      dataIndex: "date",
+      title: getTitleWithSorter('Date', 'date', currentSorter, handleSorting),
+      dataIndex: 'date',
       render: (d) => {
         return moment(d).format(format);
       },
@@ -65,12 +65,30 @@ export const getColumns = (
   return [...result, ...eventColumns];
 };
 
+export const formatData = (response, arrayMapper, noOfQueries) => {
+  if (noOfQueries > 1) {
+    return formatMultiEventsAnalyticsData(response, arrayMapper);
+  } else {
+    return formatSingleEventAnalyticsData(response, arrayMapper);
+  }
+};
+
 export const formatSingleEventAnalyticsData = (response, arrayMapper) => {
+  if (
+    !response.headers ||
+    !response.headers.length ||
+    !response.rows ||
+    !response.rows.length
+  ) {
+    return [];
+  }
+  const { headers } = response;
+  const dateIndex = headers.findIndex((h) => h === 'datetime');
   const result = response.rows.map((row) => {
     const key = arrayMapper[0].mapper;
     return {
-      date: new Date(row[0]),
-      [key]: row[1],
+      date: new Date(row[dateIndex]),
+      [key]: row[dateIndex + 1],
     };
   });
   return result;
@@ -92,33 +110,53 @@ export const formatMultiEventsAnalyticsData = (response, arrayMapper) => {
   return result;
 };
 
-export const getDataInLineChartFormat = (
-  data,
-  queries,
-  hiddenEvents = [],
-  arrayMapper
-) => {
-  data.sort((a, b) => {
-    return moment(a.date).utc().unix() > moment(b.date).utc().unix() ? 1 : -1;
-  });
-  const result = [];
-  const hashedData = {};
-  const format = "YYYY-MM-DD HH-mm";
-  hashedData.x = data.map((elem) => {
-    return moment(elem.date).format(format);
-  });
-  queries.forEach((q, index) => {
-    if (hiddenEvents.indexOf(q) === -1) {
-      const key = arrayMapper.find((m) => m.index === index).mapper;
-      hashedData[key] = data.map((elem) => {
-        return elem[key];
-      });
-    }
-  });
-  for (const obj in hashedData) {
-    result.push([obj, ...hashedData[obj]]);
+export const getDataInLineChartFormat = (data, arrayMapper) => {
+  if (
+    !data.headers ||
+    !data.headers.length ||
+    !data.rows ||
+    !data.rows.length
+  ) {
+    return {
+      categories: [],
+      data: [],
+    };
   }
-  return result;
+  const { headers } = data;
+  const dateIndex = headers.findIndex((h) => h === 'datetime');
+  let differentDates = new Set();
+  data.rows.forEach((row) => {
+    differentDates.add(row[dateIndex]);
+  });
+  differentDates = Array.from(differentDates);
+  const initializedDatesData = differentDates.map(() => {
+    return 0;
+  });
+  const eventIndices = [];
+  const resultantData = arrayMapper.map((m) => {
+    eventIndices.push(headers.findIndex((header) => m.eventName === header));
+    return {
+      name: m.eventName,
+      data: [...initializedDatesData],
+      index: m.index,
+      marker: {
+        enabled: false,
+      },
+    };
+  });
+
+  data.rows.forEach((row) => {
+    const idx = differentDates.indexOf(row[dateIndex]);
+    eventIndices.forEach((valIndex, index) => {
+      if (valIndex > -1) {
+        resultantData[index].data[idx] = row[valIndex];
+      }
+    });
+  });
+  return {
+    categories: differentDates,
+    data: resultantData,
+  };
 };
 
 export const getDateBasedColumns = (
@@ -129,15 +167,15 @@ export const getDateBasedColumns = (
 ) => {
   const result = [
     {
-      title: "Events",
-      dataIndex: "event",
-      fixed: "left",
+      title: 'Events',
+      dataIndex: 'event',
+      fixed: 'left',
       width: 200,
     },
   ];
-  let format = "MMM D";
-  if (frequency === "hour") {
-    format = "h A, MMM D";
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D';
   }
 
   const dateColumns = data.map((elem) => {
@@ -170,9 +208,9 @@ export const getNoGroupingTablularDatesBasedData = (
       elem.eventName.toLowerCase().includes(searchText.toLowerCase())
     )
     .map((elem) => elem.mapper);
-  let format = "MMM D";
-  if (frequency === "hour") {
-    format = "h A, MMM D";
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D';
   }
   const dates = data.map((elem) => moment(elem.date).format(format));
   const result = filteredEvents.map((elem, index) => {

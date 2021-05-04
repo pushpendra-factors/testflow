@@ -1,24 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   formatData,
   formatVisibleProperties,
-  formatDataInLineChartFormat,
   formatDataInStackedAreaFormat,
-} from "./utils";
-import BarChart from "../../../../components/BarChart";
-import MultipleEventsWithBreakdownTable from "./MultipleEventsWithBreakdownTable";
-import LineChart from "../../../../components/LineChart";
-import { generateColors } from "../../../../utils/dataFormatter";
+} from './utils';
+import BarChart from '../../../../components/BarChart';
+import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable';
+import LineChart from '../../../../components/HCLineChart';
+import { generateColors } from '../../../../utils/dataFormatter';
 import {
-  ACTIVE_USERS_CRITERIA,
-  FREQUENCY_CRITERIA,
   DASHBOARD_MODAL,
   CHART_TYPE_BARCHART,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
-} from "../../../../utils/constants";
-import StackedAreaChart from "../../../../components/StackedAreaChart";
-import StackedBarChart from "../../../../components/StackedBarChart";
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+} from '../../../../utils/constants';
+import StackedAreaChart from '../../../../components/StackedAreaChart';
+import StackedBarChart from '../../../../components/StackedBarChart';
 
 function MultipleEventsWithBreakdown({
   queries,
@@ -30,69 +28,64 @@ function MultipleEventsWithBreakdown({
   title,
   section,
 }) {
-  const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [hiddenProperties, setHiddenProperties] = useState([]);
 
-  const maxAllowedVisibleProperties = 5;
+  const aggregateData = useMemo(() => {
+    const appliedColors = generateColors(queries.length);
+    return formatData(resultState.data, queries, appliedColors);
+  }, [resultState.data, queries]);
+  
+  const { categories, data } = useMemo(() => {
+    return formatDataInStackedAreaFormat(resultState.data, aggregateData);
+  }, [resultState.data, aggregateData]);
+
+  const visibleSeriesData = useMemo(() => {
+    const colors = generateColors(visibleProperties.length);
+    return data
+      .filter(
+        (elem) =>
+          visibleProperties.findIndex((vp) => vp.index === elem.index) > -1
+      )
+      .map((elem, index) => {
+        const color = colors[index];
+        return {
+          ...elem,
+          color,
+        };
+      });
+  }, [data, visibleProperties]);
 
   useEffect(() => {
-    const appliedColors = generateColors(queries.length);
-    const formattedData = formatData(resultState.data, queries, appliedColors);
-    setChartsData(formattedData);
     setVisibleProperties([
-      ...formattedData.slice(0, maxAllowedVisibleProperties),
+      ...aggregateData.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
     ]);
-  }, [resultState.data, queries]);
+  }, [aggregateData]);
 
-  if (!chartsData.length) {
+  if (!visibleProperties.length) {
     return null;
   }
 
-  const mapper = {};
-  const reverseMapper = {};
-  const arrayMapper = [];
-
-  const visibleLabels = visibleProperties.map((v) => `${v.event},${v.label}`);
-
-  visibleLabels.forEach((q, index) => {
-    mapper[`${q}`] = `event${index + 1}`;
-    reverseMapper[`event${index + 1}`] = q;
-    arrayMapper.push({
-      eventName: q,
-      index,
-      mapper: `event${index + 1}`,
-    });
-  });
-
-  const lineChartData = formatDataInLineChartFormat(
-    visibleProperties,
-    arrayMapper,
-    hiddenProperties
-  );
-
   let chart = null;
+
   const table = (
-    <div className="mt-12 w-full">
+    <div className='mt-12 w-full'>
       <MultipleEventsWithBreakdownTable
         isWidgetModal={section === DASHBOARD_MODAL}
-        data={chartsData}
-        lineChartData={lineChartData}
+        data={aggregateData}
+        seriesData={data}
         queries={queries}
         breakdown={breakdown}
         events={queries}
         chartType={chartType}
         setVisibleProperties={setVisibleProperties}
         visibleProperties={visibleProperties}
-        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-        originalData={resultState.data}
         page={page}
         durationObj={durationObj}
+        categories={categories}
       />
     </div>
   );
 
-  const appliedColors = generateColors(visibleProperties.length);
   if (chartType === CHART_TYPE_BARCHART) {
     chart = (
       <BarChart
@@ -103,57 +96,39 @@ function MultipleEventsWithBreakdown({
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_AREA) {
-    const { categories, data } = formatDataInStackedAreaFormat(
-      resultState.data,
-      visibleLabels,
-      arrayMapper
-    );
     chart = (
-      <div className="w-full">
+      <div className='w-full'>
         <StackedAreaChart
           frequency={durationObj.frequency}
           categories={categories}
-          data={data}
+          data={visibleSeriesData}
         />
       </div>
     );
   } else if (chartType === CHART_TYPE_STACKED_BAR) {
-    const { categories, data } = formatDataInStackedAreaFormat(
-      resultState.data,
-      visibleLabels,
-      arrayMapper
-    );
     chart = (
-      <div className="w-full">
+      <div className='w-full'>
         <StackedBarChart
           frequency={durationObj.frequency}
           categories={categories}
-          data={data}
+          data={visibleSeriesData}
         />
       </div>
     );
   } else {
     chart = (
-      <LineChart
-        frequency={durationObj.frequency}
-        chartData={lineChartData}
-        appliedColors={appliedColors}
-        queries={visibleLabels}
-        reverseEventsMapper={reverseMapper}
-        eventsMapper={mapper}
-        setHiddenEvents={setHiddenProperties}
-        hiddenEvents={hiddenProperties}
-        isDecimalAllowed={
-          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
-        }
-        arrayMapper={arrayMapper}
-        section={section}
-      />
+      <div className='w-full'>
+        <LineChart
+          frequency={durationObj.frequency}
+          categories={categories}
+          data={visibleSeriesData}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       {chart}
       {table}
     </div>

@@ -1,19 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from 'react';
 import {
   formatSingleEventAnalyticsData,
   formatMultiEventsAnalyticsData,
   getDataInLineChartFormat,
-} from "../../CoreQuery/EventsAnalytics/NoBreakdownCharts/utils";
-import NoBreakdownTable from "../../CoreQuery/EventsAnalytics/NoBreakdownCharts/NoBreakdownTable";
-import SparkLineChart from "../../../components/SparkLineChart";
-import LineChart from "../../../components/LineChart";
-import { generateColors } from "../../../utils/dataFormatter";
+} from '../../CoreQuery/EventsAnalytics/NoBreakdownCharts/utils';
+import NoBreakdownTable from '../../CoreQuery/EventsAnalytics/NoBreakdownCharts/NoBreakdownTable';
+import SparkLineChart from '../../../components/SparkLineChart';
+import LineChart from '../../../components/HCLineChart';
+import { generateColors } from '../../../utils/dataFormatter';
 import {
-  ACTIVE_USERS_CRITERIA,
-  FREQUENCY_CRITERIA,
   CHART_TYPE_TABLE,
   CHART_TYPE_SPARKLINES,
-} from "../../../utils/constants";
+  DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
+  CHART_TYPE_LINECHART,
+} from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
 
 function NoBreakdownCharts({
@@ -31,6 +31,7 @@ function NoBreakdownCharts({
   const appliedColors = generateColors(queries.length);
 
   let chartsData = [];
+
   if (resultState.data && !resultState.data.metrics.rows.length) {
     chartsData = [];
   } else {
@@ -47,9 +48,29 @@ function NoBreakdownCharts({
     }
   }
 
+  const { categories, data } = useMemo(() => {
+    if (chartType === CHART_TYPE_LINECHART) {
+      return getDataInLineChartFormat(resultState.data, arrayMapper);
+    }
+    return {
+      categories: [],
+      data: [],
+    };
+  }, [resultState.data, arrayMapper, chartType]);
+
+  const visibleSeriesData = useMemo(() => {
+    return data.map((elem, index) => {
+      const color = appliedColors[index];
+      return {
+        ...elem,
+        color,
+      };
+    });
+  }, [data, appliedColors]);
+
   if (!chartsData.length) {
     return (
-      <div className="mt-4 flex justify-center items-center w-full h-64 ">
+      <div className='mt-4 flex justify-center items-center w-full h-64 '>
         <NoDataChart />
       </div>
     );
@@ -63,8 +84,8 @@ function NoBreakdownCharts({
     tableContent = (
       <div
         onClick={() => setwidgetModal({ unit, data: resultState.data })}
-        style={{ color: "#5949BC" }}
-        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+        style={{ color: '#5949BC' }}
+        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >
         Show More &rarr;
       </div>
@@ -101,27 +122,15 @@ function NoBreakdownCharts({
       />
     );
   } else {
-    const lineChartData = getDataInLineChartFormat(
-      chartsData,
-      queries,
-      hiddenEvents,
-      arrayMapper
-    );
     chartContent = (
       <LineChart
         frequency={durationObj.frequency}
-        chartData={lineChartData}
-        appliedColors={appliedColors}
-        queries={queries}
-        setHiddenEvents={setHiddenEvents}
-        hiddenEvents={hiddenEvents}
-        isDecimalAllowed={
-          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
-        }
-        arrayMapper={arrayMapper}
+        categories={categories}
+        data={visibleSeriesData}
+        height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
+        legendsPosition='top'
         cardSize={unit.cardSize}
-        height={225}
-        section={section}
+        chartId={`line-${unit.id}`}
       />
     );
   }

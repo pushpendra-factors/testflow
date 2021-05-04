@@ -1,10 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Text, Number as NumFormat } from '../factorsComponents';
 import styles from './styles.module.scss';
 import ReactDOMServer from 'react-dom/server';
 import moment from 'moment';
 import Highcharts from 'highcharts';
-import HighchartsReact from 'highcharts-react-official';
 import { high_charts_default_spacing } from '../../utils/constants';
 import LegendsCircle from '../../styles/components/LegendsCircle';
 import { formatCount } from '../../utils/dataFormatter';
@@ -18,9 +17,10 @@ function StackedAreaChart({
   legendsPosition = 'bottom',
   cardSize = 1,
   spacing = high_charts_default_spacing,
+  chartId = 'areaChartContainer',
 }) {
-  const getChartOptions = useCallback(() => {
-    return {
+  const drawChart = useCallback(() => {
+    Highcharts.chart(chartId, {
       chart: {
         type: 'area',
         height,
@@ -112,14 +112,12 @@ function StackedAreaChart({
         },
       },
       series: data,
-    };
-  }, [categories, data, frequency, height, spacing, cardSize]);
-
-  const [options, setOptions] = useState(getChartOptions());
+    });
+  }, [cardSize, categories, chartId, data, frequency, height, spacing]);
 
   useEffect(() => {
-    setOptions(getChartOptions());
-  }, [cardSize, getChartOptions]);
+    drawChart();
+  }, [cardSize, drawChart]);
 
   return (
     <>
@@ -131,9 +129,7 @@ function StackedAreaChart({
           showFullLegends={false}
         />
       ) : null}
-      <div className={styles.areaChart}>
-        <HighchartsReact highcharts={Highcharts} options={options} />
-      </div>
+      <div id={chartId} className={styles.areaChart}></div>
       {legendsPosition === 'bottom' ? (
         <TopLegends
           cardSize={cardSize}

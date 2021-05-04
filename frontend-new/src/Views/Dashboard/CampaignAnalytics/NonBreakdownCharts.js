@@ -1,21 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from 'react';
 import {
   formatData,
-  formatDataInLineChartFormat,
-} from "../../CoreQuery/CampaignAnalytics/NoBreakdownCharts/utils";
-import ChartHeader from "../../../components/SparkLineChart/ChartHeader";
-import SparkChart from "../../../components/SparkLineChart/Chart";
-import { generateColors } from "../../../utils/dataFormatter";
-import LineChart from "../../../components/LineChart";
-import NoBreakdownTable from "../../CoreQuery/CampaignAnalytics/NoBreakdownCharts/NoBreakdownTable";
+  formatDataInHighChartsSeriesFormat,
+} from '../../CoreQuery/CampaignAnalytics/NoBreakdownCharts/utils';
+import ChartHeader from '../../../components/SparkLineChart/ChartHeader';
+import SparkChart from '../../../components/SparkLineChart/Chart';
+import { generateColors } from '../../../utils/dataFormatter';
+import LineChart from '../../../components/HCLineChart';
+import NoBreakdownTable from '../../CoreQuery/CampaignAnalytics/NoBreakdownCharts/NoBreakdownTable';
 import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_LINECHART,
   CHART_TYPE_TABLE,
-} from "../../../utils/constants";
-import NoDataChart from "../../../components/NoDataChart";
-import DashboardWidgetLegends from "../../../components/DashboardWidgetLegends";
-import { Text, Number as NumFormat } from "../../../components/factorsComponents";
+  DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
+} from '../../../utils/constants';
+import NoDataChart from '../../../components/NoDataChart';
+import DashboardWidgetLegends from '../../../components/DashboardWidgetLegends';
+import {
+  Text,
+  Number as NumFormat,
+} from '../../../components/factorsComponents';
 
 function NoBreakdownCharts({
   chartType,
@@ -23,19 +27,25 @@ function NoBreakdownCharts({
   arrayMapper,
   isWidgetModal,
   unit,
-  section,
   setwidgetModal,
 }) {
-  const [chartsData, setChartsData] = useState([]);
-
-  useEffect(() => {
-    const formattedData = formatData(data, arrayMapper);
-    setChartsData(formattedData);
+  const chartsData = useMemo(() => {
+    return formatData(data, arrayMapper);
   }, [data, arrayMapper]);
+
+  const { categories, seriesData } = useMemo(() => {
+    if (chartType === CHART_TYPE_LINECHART) {
+      return formatDataInHighChartsSeriesFormat(data, arrayMapper);
+    }
+    return {
+      categories: [],
+      seriesData: [],
+    };
+  }, [data, arrayMapper, chartType]);
 
   if (!chartsData.length) {
     return (
-      <div className="mt-4 flex justify-center items-center w-full h-64 ">
+      <div className='mt-4 flex justify-center items-center w-full h-64 '>
         <NoDataChart />
       </div>
     );
@@ -47,8 +57,8 @@ function NoBreakdownCharts({
     tableContent = (
       <div
         onClick={() => setwidgetModal({ unit, data })}
-        style={{ color: "#5949BC" }}
-        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+        style={{ color: '#5949BC' }}
+        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >
         Show More &rarr;
       </div>
@@ -62,23 +72,23 @@ function NoBreakdownCharts({
       chartContent = (
         <div
           className={`flex items-center flex-wrap justify-center ${
-            unit.cardSize !== 1 ? "flex-col" : ""
+            unit.cardSize !== 1 ? 'flex-col' : ''
           }`}
         >
-          <div className={unit.cardSize === 1 ? "w-1/4" : "w-full"}>
+          <div className={unit.cardSize === 1 ? 'w-1/4' : 'w-full'}>
             <ChartHeader
-              bgColor="#4D7DB4"
+              bgColor='#4D7DB4'
               query={chartsData[0].name}
               total={chartsData[0].total}
             />
           </div>
-          <div className={unit.cardSize === 1 ? "w-3/4" : "w-full"}>
+          <div className={unit.cardSize === 1 ? 'w-3/4' : 'w-full'}>
             <SparkChart
-              frequency="date"
-              page="campaigns"
+              frequency='date'
+              page='campaigns'
               event={chartsData[0].mapper}
               chartData={chartsData[0].dataOverTime}
-              chartColor="#4D7DB4"
+              chartColor='#4D7DB4'
               height={unit.cardSize === 1 ? 180 : 100}
               title={unit.id}
             />
@@ -96,7 +106,7 @@ function NoBreakdownCharts({
       chartContent = (
         <div
           className={`flex items-center flex-wrap justify-center ${
-            !unit.cardSize ? "flex-col" : ""
+            !unit.cardSize ? 'flex-col' : ''
           }`}
         >
           {!unit.cardSize ? (
@@ -110,19 +120,19 @@ function NoBreakdownCharts({
           {chartsData.slice(0, 3).map((chartData, index) => {
             if (unit.cardSize === 0) {
               return (
-                <div className="flex items-center w-full justify-center">
+                <div className='flex items-center w-full justify-center'>
                   <Text
-                    extraClass="flex items-center w-1/4 justify-center"
-                    type={"title"}
+                    extraClass='flex items-center w-1/4 justify-center'
+                    type={'title'}
                     level={3}
-                    weight={"bold"}
+                    weight={'bold'}
                   >
                     <NumFormat shortHand={true} number={chartData.total} />
                   </Text>
-                  <div className="w-2/3">
+                  <div className='w-2/3'>
                     <SparkChart
-                      frequency="date"
-                      page="campaigns"
+                      frequency='date'
+                      page='campaigns'
                       event={chartData.mapper}
                       chartData={chartData.dataOverTime}
                       chartColor={appliedColors[index]}
@@ -135,20 +145,20 @@ function NoBreakdownCharts({
             } else if (unit.cardSize === 1) {
               return (
                 <div
-                  style={{ minWidth: "300px" }}
+                  style={{ minWidth: '300px' }}
                   key={chartData.index}
-                  className="w-1/3 mt-4 px-1"
+                  className='w-1/3 mt-4 px-1'
                 >
-                  <div className="flex flex-col">
+                  <div className='flex flex-col'>
                     <ChartHeader
                       total={chartData.total}
                       query={chartData.name}
                       bgColor={appliedColors[index]}
                     />
-                    <div className="mt-4">
+                    <div className='mt-4'>
                       <SparkChart
-                        frequency="date"
-                        page="campaigns"
+                        frequency='date'
+                        page='campaigns'
                         event={chartData.mapper}
                         chartData={chartData.dataOverTime}
                         chartColor={appliedColors[index]}
@@ -162,11 +172,11 @@ function NoBreakdownCharts({
             } else {
               return (
                 <div
-                  style={{ minWidth: "300px" }}
+                  style={{ minWidth: '300px' }}
                   key={chartData.index}
-                  className="w-1/3 mt-6 px-1"
+                  className='w-1/3 mt-6 px-1'
                 >
-                  <div className="flex flex-col">
+                  <div className='flex flex-col'>
                     <ChartHeader
                       total={chartData.total}
                       query={chartData.name}
@@ -182,23 +192,15 @@ function NoBreakdownCharts({
       );
     }
   } else if (chartType === CHART_TYPE_LINECHART) {
-    const lineChartData = formatDataInLineChartFormat(chartsData);
-    const appliedColors = generateColors(chartsData.length);
     chartContent = (
       <LineChart
-        frequency="date"
-        chartData={lineChartData}
-        hiddenEvents={[]}
-        setHiddenEvents={() => {}}
-        appliedColors={appliedColors}
-        queries={chartsData.map((elem) => elem.name)}
-        arrayMapper={arrayMapper.filter(
-          (elem) => chartsData.findIndex((d) => d.index === elem.index) > -1
-        )}
-        isDecimalAllowed={false}
-        section={section}
-        height={225}
+        frequency='date'
+        categories={categories}
+        data={seriesData}
+        height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
+        legendsPosition='top'
         cardSize={unit.cardSize}
+        chartId={`line-${unit.id}`}
       />
     );
   } else {

@@ -1,26 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   formatData,
-  formatDataInLineChartFormat,
-  formatDataInStackedAreaFormat
-} from "../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/utils";
-import BarChart from "../../../components/BarChart";
-import LineChart from "../../../components/LineChart";
-import SingleEventMultipleBreakdownTable from "../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/SingleEventMultipleBreakdownTable";
-import { generateColors } from "../../../utils/dataFormatter";
+  formatDataInStackedAreaFormat,
+} from '../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/utils';
+import BarChart from '../../../components/BarChart';
+import LineChart from '../../../components/HCLineChart';
+import SingleEventMultipleBreakdownTable from '../../CoreQuery/EventsAnalytics/SingleEventMultipleBreakdown/SingleEventMultipleBreakdownTable';
+import { generateColors } from '../../../utils/dataFormatter';
 import {
-  ACTIVE_USERS_CRITERIA,
-  FREQUENCY_CRITERIA,
   CHART_TYPE_TABLE,
   CHART_TYPE_BARCHART,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
-  DASHBOARD_WIDGET_LINE_CHART_HEIGHT,
   CHART_TYPE_STACKED_AREA,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
   CHART_TYPE_STACKED_BAR,
-} from "../../../utils/constants";
-import StackedAreaChart from "../../../components/StackedAreaChart";
-import StackedBarChart from "../../../components/StackedBarChart";
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+} from '../../../utils/constants';
+import StackedAreaChart from '../../../components/StackedAreaChart';
+import StackedBarChart from '../../../components/StackedBarChart';
 
 function SingleEventMultipleBreakdown({
   resultState,
@@ -33,48 +30,47 @@ function SingleEventMultipleBreakdown({
   section,
   setwidgetModal,
 }) {
-  const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [hiddenProperties, setHiddenProperties] = useState([]);
 
-  const maxAllowedVisibleProperties = 5;
+  const aggregateData = useMemo(() => {
+    return formatData(resultState.data);
+  }, [resultState.data]);
+
+  const { categories, data } = useMemo(() => {
+    if (chartType === CHART_TYPE_BARCHART) {
+      return {
+        categories: [],
+        data: [],
+      };
+    }
+    return formatDataInStackedAreaFormat(resultState.data, aggregateData);
+  }, [resultState.data, aggregateData, chartType]);
+
+  const visibleSeriesData = useMemo(() => {
+    const colors = generateColors(visibleProperties.length);
+    return data
+      .filter(
+        (elem) =>
+          visibleProperties.findIndex((vp) => vp.index === elem.index) > -1
+      )
+      .map((elem, index) => {
+        const color = colors[index];
+        return {
+          ...elem,
+          color,
+        };
+      });
+  }, [data, visibleProperties]);
 
   useEffect(() => {
-    const formattedData = formatData(resultState.data);
-    setChartsData(formattedData);
     setVisibleProperties([
-      ...formattedData.slice(0, maxAllowedVisibleProperties),
+      ...aggregateData.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
     ]);
-  }, [resultState.data, maxAllowedVisibleProperties]);
+  }, [aggregateData]);
 
-  if (!chartsData.length) {
+  if (!visibleProperties.length) {
     return null;
   }
-
-  const mapper = {};
-  const reverseMapper = {};
-  const arrayMapper = [];
-
-  const visibleLabels = visibleProperties.map((v) => v.label);
-
-  visibleLabels.forEach((q, index) => {
-    mapper[`${q}`] = `event${index + 1}`;
-    reverseMapper[`event${index + 1}`] = q;
-    arrayMapper.push({
-      eventName: q,
-      index,
-      mapper: `event${index + 1}`,
-    });
-  });
-
-  const lineChartData = formatDataInLineChartFormat(
-    resultState.data,
-    visibleProperties,
-    mapper,
-    hiddenProperties
-  );
-
-  const appliedColors = generateColors(visibleProperties.length);
 
   let chartContent = null;
 
@@ -84,8 +80,8 @@ function SingleEventMultipleBreakdown({
     tableContent = (
       <div
         onClick={() => setwidgetModal({ unit, data: resultState.data })}
-        style={{ color: "#5949BC" }}
-        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+        style={{ color: '#5949BC' }}
+        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >
         Show More &rarr;
       </div>
@@ -94,7 +90,7 @@ function SingleEventMultipleBreakdown({
 
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
-      <div className="flex mt-4">
+      <div className='flex mt-4'>
         <BarChart
           chartData={visibleProperties}
           height={DASHBOARD_WIDGET_BAR_CHART_HEIGHT}
@@ -108,69 +104,52 @@ function SingleEventMultipleBreakdown({
   } else if (chartType === CHART_TYPE_TABLE) {
     chartContent = (
       <SingleEventMultipleBreakdownTable
-        data={chartsData}
-        lineChartData={lineChartData}
+        data={aggregateData}
+        seriesData={data}
         breakdown={breakdown}
         events={queries}
         chartType={chartType}
         setVisibleProperties={setVisibleProperties}
         visibleProperties={visibleProperties}
-        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-        originalData={resultState.data}
         page={page}
         durationObj={durationObj}
+        categories={categories}
       />
     );
-  } else if(chartType === CHART_TYPE_STACKED_AREA) {
-    const { categories, data } = formatDataInStackedAreaFormat(
-      resultState.data,
-      visibleLabels,
-      arrayMapper
-    );
+  } else if (chartType === CHART_TYPE_STACKED_AREA) {
     chartContent = (
       <StackedAreaChart
         frequency={durationObj.frequency}
         categories={categories}
-        data={data}
+        data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
+        chartId={`area-${unit.id}`}
       />
-    )
-  } else if(chartType === CHART_TYPE_STACKED_BAR) {
-    const { categories, data } = formatDataInStackedAreaFormat(
-      resultState.data,
-      visibleLabels,
-      arrayMapper
     );
+  } else if (chartType === CHART_TYPE_STACKED_BAR) {
     chartContent = (
       <StackedBarChart
         frequency={durationObj.frequency}
         categories={categories}
-        data={data}
+        data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
-        legendsPosition="top"
+        legendsPosition='top'
         cardSize={unit.cardSize}
+        chartId={`bar-${unit.id}`}
       />
-    )
+    );
   } else {
     chartContent = (
       <LineChart
-        arrayMapper={arrayMapper}
         frequency={durationObj.frequency}
-        chartData={lineChartData}
-        appliedColors={appliedColors}
-        queries={visibleLabels}
-        reverseEventsMapper={reverseMapper}
-        eventsMapper={mapper}
-        setHiddenEvents={setHiddenProperties}
-        hiddenEvents={hiddenProperties}
-        isDecimalAllowed={
-          page === ACTIVE_USERS_CRITERIA || page === FREQUENCY_CRITERIA
-        }
+        categories={categories}
+        data={visibleSeriesData}
+        height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
+        legendsPosition='top'
         cardSize={unit.cardSize}
-        section={section}
-        height={DASHBOARD_WIDGET_LINE_CHART_HEIGHT}
+        chartId={`line-${unit.id}`}
       />
     );
   }
