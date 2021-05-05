@@ -160,6 +160,10 @@ type Configuration struct {
 	PrimaryDatastore                         string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
+	// Flags to disable DB and Redis writes when primary datastore is memSQL.
+	// Added as pointer to prevent accidental writes from other services while testing.
+	DisableMemSQLDBWrites    *bool
+	DisableMemSQLRedisWrites *bool
 }
 
 type Services struct {
@@ -572,6 +576,30 @@ func GetRoutesURLPrefix() string {
 		return "/mql"
 	}
 	return ""
+}
+
+// DisableMemSQLDBWrites If DB writes are disabled on MemSQL. Defaults to true unless specified explicitly.
+func DisableMemSQLDBWrites() bool {
+	if !UseMemSQLDatabaseStore() {
+		return false
+	}
+
+	if GetConfig().DisableMemSQLDBWrites != nil {
+		return *GetConfig().DisableMemSQLDBWrites
+	}
+	return true
+}
+
+// DisableMemSQLRedisWrites If redis writes are disabled on MemSQL. Defaults to true unless specified explicitly.
+func DisableMemSQLRedisWrites() bool {
+	if !UseMemSQLDatabaseStore() {
+		return false
+	}
+
+	if GetConfig().DisableMemSQLRedisWrites != nil {
+		return *GetConfig().DisableMemSQLRedisWrites
+	}
+	return true
 }
 
 func NewRequestBuilderWithPrefix(methodType, URL string) *U.RequestBuilder {

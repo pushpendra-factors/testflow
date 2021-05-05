@@ -44,6 +44,8 @@ func main() {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	disableMemSQLDBWrites := flag.Bool("disable_mql_db_writes", true, "To disable DB writes when using MemSQL")
+	disableMemSQLRedisWrites := flag.Bool("disable_mql_redis_writes", true, "To disable redis writes when using MemSQL")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -173,6 +175,8 @@ func main() {
 		ShowSmartPropertiesAllowedProjectIDs:     *showSmartPropertiesAllowedProjectIDs,
 		ProjectAnalyticsWhitelistedUUIds:         C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
 		EnableMQLAPI:                             *enableMQLAPI,
+		DisableMemSQLDBWrites:                    disableMemSQLDBWrites,
+		DisableMemSQLRedisWrites:                 disableMemSQLRedisWrites,
 	}
 
 	// Initialize configs and connections.
