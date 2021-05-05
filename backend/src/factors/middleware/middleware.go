@@ -328,6 +328,7 @@ func CustomCors() gin.HandlerFunc {
 					"https://staging-app.factors.ai",
 					"https://tufte-staging.factors.ai",
 					"https://staging-app-old.factors.ai",
+					"https://flash-staging.factors.ai",
 				}
 			} else {
 				corsConfig.AllowOrigins = []string{
@@ -337,6 +338,7 @@ func CustomCors() gin.HandlerFunc {
 					"https://app-old.factors.ai",
 					"http://localhost:3000",
 					"http://factors-dev.com:3000",
+					"https://flash.factors.ai",
 				}
 			}
 

@@ -10,7 +10,7 @@ build-prod:
 
 
 deploy-staging: build-staging
-	firebase use factors-staging; firebase deploy --only hosting:staging
+	firebase use factors-staging; firebase deploy --only hosting:staging; firebase deploy --only hosting:flash-staging
 
 deploy-prod: build-prod
 	firebase use factors-production; firebase deploy --only hosting:production
