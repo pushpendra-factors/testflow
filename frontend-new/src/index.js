@@ -8,7 +8,6 @@ import reducers from './reducers';
 import './assets/tailwind.output.css';
 import './assets/index.scss';
 import './styles/factors-ai.main.scss';
-import 'c3/c3.css';
 import App from './App';
 import { persistStore, persistReducer } from 'redux-persist';
 import storage from 'redux-persist/lib/storage'; // defaults to localStorage for web

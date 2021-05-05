@@ -1,12 +1,26 @@
-import React from "react";
-import moment from "moment";
-import { getTitleWithSorter, SortData } from "../../../../utils/dataFormatter";
-import { Number as NumFormat } from "../../../../components/factorsComponents";
+import React from 'react';
+import moment from 'moment';
+import {
+  getTitleWithSorter,
+  SortData,
+  generateColors,
+} from '../../../../utils/dataFormatter';
+import { Number as NumFormat } from '../../../../components/factorsComponents';
 
 export const formatData = (data, arrayMapper) => {
+  if (
+    !data.result_group ||
+    !data.result_group.length ||
+    !data.result_group[0].headers ||
+    !data.result_group[0].headers.length ||
+    !data.result_group[0].rows ||
+    !data.result_group[0].rows.length
+  ) {
+    return [];
+  }
   const result = [];
   arrayMapper.forEach((elem) => {
-    const dateTimeIndex = data.result_group[0].headers.indexOf("datetime");
+    const dateTimeIndex = data.result_group[0].headers.indexOf('datetime');
     const dateTimeEventIndex = data.result_group[0].headers.indexOf(
       elem.eventName
     );
@@ -34,23 +48,15 @@ export const formatData = (data, arrayMapper) => {
   return result;
 };
 
-export const formatDataInLineChartFormat = (chartsData) => {
-  const result = [];
-  const format = "YYYY-MM-DD HH-mm";
-  const dates = chartsData[0].dataOverTime.map((d) =>
-    moment(d.date).format(format)
-  );
-  result.push(["x", ...dates]);
-  chartsData.forEach((d) => {
-    result.push([d.mapper, ...d.dataOverTime.map((elem) => elem[d.mapper])]);
-  });
-  return result;
-};
-
-export const getTableColumns = (chartsData, frequency, currentSorter, handleSorting) => {
-  let format = "MMM D, YYYY";
-  if (frequency === "hour") {
-    format = "h A, MMM D";
+export const getTableColumns = (
+  chartsData,
+  frequency,
+  currentSorter,
+  handleSorting
+) => {
+  let format = 'MMM D, YYYY';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D';
   }
   const result = chartsData.map((elem) => {
     return {
@@ -68,10 +74,10 @@ export const getTableColumns = (chartsData, frequency, currentSorter, handleSort
   });
   return [
     {
-      title: getTitleWithSorter("Date", "date", currentSorter, handleSorting),
-      dataIndex: "date",
+      title: getTitleWithSorter('Date', 'date', currentSorter, handleSorting),
+      dataIndex: 'date',
       render: (d) => {
-        return moment(d).format(format)
+        return moment(d).format(format);
       },
     },
     ...result,
@@ -102,9 +108,9 @@ export const getDateBaseTableColumns = (
   currentSorter,
   handleSorting
 ) => {
-  let format = "MMM D";
-  if (frequency === "hour") {
-    format = "h A, MMM D";
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D';
   }
   const dates = chartsData[0].dataOverTime.map((d) => d.date);
   const dateColumns = dates.map((date) => {
@@ -124,9 +130,9 @@ export const getDateBaseTableColumns = (
   });
   return [
     {
-      title: "Measures",
-      dataIndex: "measures",
-      fixed: "left",
+      title: 'Measures',
+      dataIndex: 'measures',
+      fixed: 'left',
       width: 150,
     },
     ...dateColumns,
@@ -134,9 +140,9 @@ export const getDateBaseTableColumns = (
 };
 
 export const getDateBasedTableData = (chartsData, frequency, currentSorter) => {
-  let format = "MMM D";
-  if (frequency === "hour") {
-    format = "h A, MMM D";
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D';
   }
   const result = chartsData.map((elem) => {
     const dateVals = {};
@@ -150,4 +156,57 @@ export const getDateBasedTableData = (chartsData, frequency, currentSorter) => {
     };
   });
   return SortData(result, currentSorter.key, currentSorter.order);
+};
+
+export const formatDataInHighChartsSeriesFormat = (data, arrayMapper) => {
+  if (
+    !data.result_group ||
+    !data.result_group.length ||
+    !data.result_group[0].headers ||
+    !data.result_group[0].headers.length ||
+    !data.result_group[0].rows ||
+    !data.result_group[0].rows.length
+  ) {
+    return {
+      categories: [],
+      seriesData: [],
+    };
+  }
+  const { headers, rows } = data.result_group[0];
+  const dateIndex = headers.findIndex((h) => h === 'datetime');
+  let differentDates = new Set();
+  rows.forEach((row) => {
+    differentDates.add(row[dateIndex]);
+  });
+  differentDates = Array.from(differentDates);
+  const initializedDatesData = differentDates.map(() => {
+    return 0;
+  });
+  const appliedColors = generateColors(arrayMapper.length);
+  const eventIndices = [];
+  const resultantData = arrayMapper.map((m, index) => {
+    eventIndices.push(headers.findIndex((header) => m.eventName === header));
+    return {
+      name: m.eventName,
+      data: [...initializedDatesData],
+      index: m.index,
+      color: appliedColors[index],
+      marker: {
+        enabled: false,
+      },
+    };
+  });
+
+  rows.forEach((row) => {
+    const idx = differentDates.indexOf(row[dateIndex]);
+    eventIndices.forEach((valIndex, index) => {
+      if (valIndex > -1) {
+        resultantData[index].data[idx] = row[valIndex];
+      }
+    });
+  });
+  return {
+    categories: differentDates,
+    seriesData: resultantData,
+  };
 };

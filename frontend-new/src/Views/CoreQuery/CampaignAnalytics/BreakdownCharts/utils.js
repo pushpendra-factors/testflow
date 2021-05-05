@@ -1,5 +1,4 @@
 import React from 'react';
-import moment from 'moment';
 import {
   generateColors,
   SortData,
@@ -144,58 +143,6 @@ export const getTableData = (
     return SortData(filteredResult, currEventName, 'descend');
   }
   return SortData(filteredResult, currentSorter.key, currentSorter.order);
-};
-
-export const formatDataInLineChartFormat = (
-  visibleProperties,
-  data,
-  breakdown,
-  currentEventIndex,
-  arrayMapper,
-  breakdownMapper
-) => {
-  const currEventName = arrayMapper.find(
-    (elem) => elem.index === currentEventIndex
-  ).eventName;
-  const currDataIndex = data.result_group[0].headers.findIndex(
-    (elem) => elem === currEventName
-  );
-  const format = 'YYYY-MM-DD HH-mm';
-  let dates = new Set();
-  const dateTimeIndex = data.result_group[0].headers.indexOf('datetime');
-  data.result_group[0].rows.forEach((row) => {
-    dates.add(moment(row[dateTimeIndex]).format(format));
-  });
-  dates = Array.from(dates);
-  const xDates = ['x', ...dates];
-  const result = visibleProperties.map((v) => {
-    const dateBreakdownIndices = getDateBreakdownIndices(data, breakdown);
-    const breakdownRows = data.result_group[0].rows.filter((row) => {
-      const dateLabel = [];
-      dateBreakdownIndices.forEach((b) => {
-        if (b > -1) {
-          dateLabel.push(row[b]);
-        }
-      });
-      return dateLabel.join(', ') === v.label;
-    });
-    const breakdownLabel = breakdownMapper.find(
-      (elem) => elem.eventName === v.label
-    ).mapper;
-    const values = [breakdownLabel];
-    dates.forEach((d) => {
-      const idx = breakdownRows.findIndex(
-        (bRow) => moment(bRow[dateTimeIndex]).format(format) === d
-      );
-      if (idx > -1) {
-        values.push(breakdownRows[idx][currDataIndex]);
-      } else {
-        values.push(0);
-      }
-    });
-    return values;
-  });
-  return [xDates, ...result];
 };
 
 export const formatDataInHighChartsFormat = (

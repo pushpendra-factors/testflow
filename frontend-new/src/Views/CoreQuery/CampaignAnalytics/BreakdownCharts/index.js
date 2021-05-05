@@ -1,22 +1,27 @@
-import React, { useState, useEffect } from "react";
-import { formatData, formatDataInLineChartFormat, formatDataInHighChartsFormat } from "./utils";
-import { CHART_TYPE_BARCHART, CHART_TYPE_LINECHART, DASHBOARD_MODAL, CHART_TYPE_STACKED_AREA, CHART_TYPE_STACKED_BAR } from "../../../../utils/constants";
-import BarChart from "../../../../components/BarChart";
-import BreakdownTable from "./BreakdownTable";
-import LineChart from "../../../../components/LineChart";
-import { generateColors } from "../../../../utils/dataFormatter";
-import NoDataChart from 'Components/NoDataChart';
-import StackedAreaChart from "../../../../components/StackedAreaChart";
-import StackedBarChart from "../../../../components/StackedBarChart";
+import React, { useState, useEffect, useMemo } from 'react';
+import { formatData, formatDataInHighChartsFormat } from './utils';
+import {
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_LINECHART,
+  DASHBOARD_MODAL,
+  CHART_TYPE_STACKED_AREA,
+  CHART_TYPE_STACKED_BAR,
+} from '../../../../utils/constants';
+import LineChart from '../../../../components/HCLineChart';
+import BarChart from '../../../../components/BarChart';
+import BreakdownTable from './BreakdownTable';
+import NoDataChart from '../../../../components/NoDataChart';
+import StackedAreaChart from '../../../../components/StackedAreaChart';
+import StackedBarChart from '../../../../components/StackedBarChart';
 
 function BreakdownCharts({
   arrayMapper,
   chartType,
   breakdown,
   data,
-  title = "chart",
+  title = 'chart',
   currentEventIndex,
-  section
+  section,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -33,16 +38,25 @@ function BreakdownCharts({
     setChartsData(formattedData);
   }, [data, arrayMapper, currentEventIndex, breakdown]);
 
+  const { categories, highchartsData } = useMemo(() => {
+    return formatDataInHighChartsFormat(
+      data.result_group[0],
+      arrayMapper,
+      currentEventIndex,
+      visibleProperties
+    );
+  }, [data.result_group, arrayMapper, currentEventIndex, visibleProperties]);
+
   if (!chartsData.length) {
     return (
-      <div className="mt-4 flex justify-center items-center w-full h-64 ">
+      <div className='mt-4 flex justify-center items-center w-full h-64 '>
         <NoDataChart />
       </div>
     );
   }
 
   const table = (
-    <div className="mt-12 w-full">
+    <div className='mt-12 w-full'>
       <BreakdownTable
         currentEventIndex={currentEventIndex}
         chartType={chartType}
@@ -61,73 +75,43 @@ function BreakdownCharts({
   let chart = null;
 
   if (chartType === CHART_TYPE_BARCHART) {
-    chart = <BarChart section={section} title={title} chartData={visibleProperties} />;
-  } else if(chartType === CHART_TYPE_STACKED_AREA) {
-    const { categories, highchartsData } = formatDataInHighChartsFormat(
-      data.result_group[0],
-      arrayMapper,
-      currentEventIndex,
-      visibleProperties
-    );
     chart = (
-      <div className="w-full">
+      <BarChart section={section} title={title} chartData={visibleProperties} />
+    );
+  } else if (chartType === CHART_TYPE_STACKED_AREA) {
+    chart = (
+      <div className='w-full'>
         <StackedAreaChart
-          frequency="date"
+          frequency='date'
           categories={categories}
           data={highchartsData}
         />
       </div>
-    ); 
-  } else if(chartType === CHART_TYPE_STACKED_BAR) {
-    const { categories, highchartsData } = formatDataInHighChartsFormat(
-      data.result_group[0],
-      arrayMapper,
-      currentEventIndex,
-      visibleProperties
     );
+  } else if (chartType === CHART_TYPE_STACKED_BAR) {
     chart = (
-      <div className="w-full">
+      <div className='w-full'>
         <StackedBarChart
-          frequency="date"
+          frequency='date'
           categories={categories}
           data={highchartsData}
         />
       </div>
-    ); 
-  } else if(chartType === CHART_TYPE_LINECHART) {
-    const mapper = visibleProperties.map((v, index) => {
-      return {
-        index: index,
-        mapper: `event${index + 1}`,
-        eventName: v.label,
-      };
-    });
-    const lineChartData = formatDataInLineChartFormat(
-      visibleProperties,
-      data,
-      breakdown,
-      currentEventIndex,
-      arrayMapper,
-      mapper
     );
-    const appliedColors = generateColors(visibleProperties.length);
+  } else if (chartType === CHART_TYPE_LINECHART) {
     chart = (
-      <LineChart
-        frequency="date"
-        chartData={lineChartData}
-        hiddenEvents={[]}
-        setHiddenEvents={() => {}}
-        appliedColors={appliedColors}
-        queries={visibleProperties.map((v) => v.label)}
-        arrayMapper={mapper}
-        isDecimalAllowed={false}
-        section={section}
-      />
+      <div className='w-full'>
+        <LineChart
+          frequency='date'
+          categories={categories}
+          data={highchartsData}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       {chart}
       {table}
     </div>

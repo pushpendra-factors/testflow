@@ -139,6 +139,8 @@ export const apiChartAnnotations = {
   [CHART_TYPE_STACKED_BAR]: 'ps',
 };
 
+export const MAX_ALLOWED_VISIBLE_PROPERTIES = 5;
+
 export const DASHBOARD_TYPES = {
   WEB: 'web',
   USER_CREATED: 'user_created',

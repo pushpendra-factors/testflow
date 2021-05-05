@@ -22,33 +22,6 @@ code {
     display: none;
 }
 
-.c3 svg {
-    font-family: 'Work Sans', sans-serif !important;
-}
-
-.c3-bar._expanded_ {
-    fill-opacity: 1 !important;
-}
-
-.c3-line {
-    stroke-width: 2px !important;
-}
-
-.c3-shape.c3-circle {
-    display: none;
-}
-
-.c3-focused {
-    .c3-shape.c3-circle {
-        display: unset;
-    }
-}
-
-.c3-circle._expanded_ {
-    stroke-width: 2px !important;
-    fill: white;
-}
-
 .app-font-family {
     font-family: 'Work Sans', sans-serif !important;
 }

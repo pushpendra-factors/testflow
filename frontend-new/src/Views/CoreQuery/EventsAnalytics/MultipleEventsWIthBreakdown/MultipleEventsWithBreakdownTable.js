@@ -1,75 +1,102 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   getTableColumns,
   getTableData,
   getDateBasedColumns,
   getDateBasedTableData,
-} from "./utils";
-import DataTable from "../../../../components/DataTable";
-import { CHART_TYPE_LINECHART, CHART_TYPE_STACKED_AREA } from "../../../../utils/constants";
+} from './utils';
+import DataTable from '../../../../components/DataTable';
+import {
+  CHART_TYPE_BARCHART,
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
+} from '../../../../utils/constants';
 
 function MultipleEventsWithBreakdownTable({
   chartType,
   breakdown,
   data,
+  seriesData,
+  categories,
   visibleProperties,
   setVisibleProperties,
-  maxAllowedVisibleProperties,
   page,
-  lineChartData,
   isWidgetModal,
   durationObj,
-  reportTitle = "Events Analytics",
+  reportTitle = 'Events Analytics',
 }) {
   const [sorter, setSorter] = useState({});
-  const [searchText, setSearchText] = useState("");
-
-  useEffect(() => {
-    // reset sorter on change of chart type
-    setSorter({});
-  }, [chartType]);
+  const [dateSorter, setDateSorter] = useState({});
+  const [searchText, setSearchText] = useState('');
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
   }, []);
 
-  let columns, tableData;
+  const handleDateSorting = useCallback((sorter) => {
+    setDateSorter(sorter);
+  }, []);
 
-  const getCSVData = () => {
-    return {
-      fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, eventIndex, dateWise, color, label, value, ...rest }) => {
-        const result = {};
-        for (let obj in rest) {
-          result[obj.split(";")[0]] = rest[obj];
-        }
-        return result;
-      }),
-    };
-  };
+  const columns = useMemo(() => {
+    return getTableColumns(breakdown, sorter, handleSorting, page);
+  }, [breakdown, sorter, handleSorting, page]);
 
-  if (chartType === CHART_TYPE_LINECHART || chartType === CHART_TYPE_STACKED_AREA) {
-    columns = getDateBasedColumns(
-      lineChartData,
+  const tableData = useMemo(() => {
+    return getTableData(data, breakdown, searchText, sorter);
+  }, [data, breakdown, searchText, sorter]);
+
+  const dateBasedColumns = useMemo(() => {
+    return getDateBasedColumns(
+      categories,
       breakdown,
-      sorter,
-      handleSorting,
+      dateSorter,
+      handleDateSorting,
       durationObj.frequency
     );
-    tableData = getDateBasedTableData(
-      data,
+  }, [
+    categories,
+    breakdown,
+    dateSorter,
+    handleDateSorting,
+    durationObj.frequency,
+  ]);
+
+  const dateBasedTableData = useMemo(() => {
+    return getDateBasedTableData(
+      seriesData,
+      categories,
       breakdown,
-      sorter,
+      dateSorter,
       searchText,
       durationObj.frequency
     );
-  } else {
-    tableData = getTableData(data, breakdown, searchText, sorter);
-    columns = getTableColumns(breakdown, sorter, handleSorting, page);
-  }
+  }, [
+    breakdown,
+    categories,
+    dateSorter,
+    durationObj.frequency,
+    searchText,
+    seriesData,
+  ]);
+
+  const getCSVData = () => {
+    const activeTableData =
+      chartType === CHART_TYPE_BARCHART ? tableData : dateBasedTableData;
+    return {
+      fileName: `${reportTitle}.csv`,
+      data: activeTableData.map(
+        ({ index, eventIndex, dateWise, color, label, value, ...rest }) => {
+          const result = {};
+          for (let obj in rest) {
+            result[obj.split(';')[0]] = rest[obj];
+          }
+          return result;
+        }
+      ),
+    };
+  };
 
   const onSelectionChange = (selectedIncices) => {
-    if (selectedIncices.length > maxAllowedVisibleProperties) {
+    if (selectedIncices.length > MAX_ALLOWED_VISIBLE_PROPERTIES) {
       return false;
     }
     if (!selectedIncices.length) {
@@ -81,7 +108,9 @@ function MultipleEventsWithBreakdownTable({
     setVisibleProperties(newSelectedRows);
   };
 
-  const selectedRowKeys = visibleProperties.map((elem) => elem.index);
+  const selectedRowKeys = useMemo(() => {
+    return visibleProperties.map((vp) => vp.index);
+  }, [visibleProperties]);
 
   const rowSelection = {
     selectedRowKeys,
@@ -91,10 +120,12 @@ function MultipleEventsWithBreakdownTable({
   return (
     <DataTable
       isWidgetModal={isWidgetModal}
-      tableData={tableData}
+      tableData={
+        chartType === CHART_TYPE_BARCHART ? tableData : dateBasedTableData
+      }
       searchText={searchText}
       setSearchText={setSearchText}
-      columns={columns}
+      columns={chartType === CHART_TYPE_BARCHART ? columns : dateBasedColumns}
       rowSelection={rowSelection}
       scroll={{ x: 250 }}
       getCSVData={getCSVData}

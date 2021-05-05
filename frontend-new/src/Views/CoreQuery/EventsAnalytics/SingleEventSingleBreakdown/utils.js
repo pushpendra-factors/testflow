@@ -1,12 +1,8 @@
-import React from "react";
-import moment from "moment";
-import { labelsObj } from "../../utils";
-import {
-  SortData,
-  getTitleWithSorter,
-  generateColors,
-} from "../../../../utils/dataFormatter";
-import { Number as NumFormat } from "../../../../components/factorsComponents";
+import React from 'react';
+import moment from 'moment';
+import { labelsObj } from '../../utils';
+import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
+import { Number as NumFormat } from '../../../../components/factorsComponents';
 
 export const getTableColumns = (
   events,
@@ -22,21 +18,21 @@ export const getTableColumns = (
     };
   });
 
-  const eventColumns = events.map((e) => {
-    return {
-      title: getTitleWithSorter(
-        `${e}: ${labelsObj[page]}`,
-        e,
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: e,
-      render: (d) => {
-        return <NumFormat number={d} />;
-      },
-    };
-  });
-  return [...breakdownColumns, ...eventColumns];
+  const e = events[0];
+
+  const countColumn = {
+    title: getTitleWithSorter(
+      `${e}: ${labelsObj[page]}`,
+      e,
+      currentSorter,
+      handleSorting
+    ),
+    dataIndex: e,
+    render: (d) => {
+      return <NumFormat number={d} />;
+    },
+  };
+  return [...breakdownColumns, countColumn];
 };
 
 export const getDataInTableFormat = (
@@ -52,7 +48,7 @@ export const getDataInTableFormat = (
     );
     const result = filteredData.map((d, index) => {
       return {
-        index,
+        index: d.index,
         [breakdown[0]]: d.label,
         [events[0]]: d.value,
       };
@@ -63,55 +59,26 @@ export const getDataInTableFormat = (
 };
 
 export const formatData = (data) => {
-  const result = data.metrics.rows.map((elem) => {
+  if (
+    !data ||
+    !data.metrics ||
+    !data.metrics.rows ||
+    !data.metrics.rows.length
+  ) {
+    return [];
+  }
+  const result = data.metrics.rows.map((elem, index) => {
     return {
       label: elem[2],
       value: elem[3],
+      index,
     };
   });
-  return SortData(result, "value", "descend");
-};
-
-export const formatDataInLineChartFormat = (
-  data,
-  visibleProperties,
-  mapper,
-  hiddenProperties
-) => {
-  const visibleLabels = visibleProperties
-    .map((v) => v.label)
-    .filter((l) => hiddenProperties.indexOf(l) === -1);
-  const resultInObjFormat = {};
-  const result = [];
-  data.rows.forEach((elem) => {
-    if (visibleLabels.indexOf(elem[3]) > -1) {
-      if (resultInObjFormat[elem[1]]) {
-        resultInObjFormat[elem[1]][elem[3]] = elem[4];
-      } else {
-        resultInObjFormat[elem[1]] = {
-          [elem[3]]: elem[4],
-        };
-      }
-    }
-  });
-  result.push(["x"]);
-  const keysMapper = {};
-  visibleLabels.forEach((v) => {
-    result.push([mapper[v]]);
-    keysMapper[v] = result.length - 1;
-  });
-  const format = "YYYY-MM-DD HH-mm";
-  for (const key in resultInObjFormat) {
-    result[0].push(moment(key).format(format));
-    for (const b in resultInObjFormat[key]) {
-      result[keysMapper[b]].push(resultInObjFormat[key][b]);
-    }
-  }
-  return result;
+  return SortData(result, 'value', 'descend');
 };
 
 export const getDateBasedColumns = (
-  data,
+  categories,
   breakdown,
   currentSorter,
   handleSorting,
@@ -121,26 +88,26 @@ export const getDateBasedColumns = (
     {
       title: breakdown[0],
       dataIndex: breakdown[0],
-      fixed: "left",
+      fixed: 'left',
       width: 200,
     },
   ];
 
-  let format = "MMM D";
-  if (frequency === "hour") {
-    format = "h A, MMM D";
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D';
   }
 
-  const dateColumns = data[0].slice(1).map((elem) => {
+  const dateColumns = categories.map((cat) => {
     return {
       title: getTitleWithSorter(
-        moment(elem).utc().format(format),
-        moment(elem).utc().format(format),
+        moment(cat).format(format),
+        moment(cat).format(format),
         currentSorter,
         handleSorting
       ),
       width: 100,
-      dataIndex: moment(elem).utc().format(format),
+      dataIndex: moment(cat).format(format),
       render: (d) => {
         return <NumFormat number={d} />;
       },
@@ -150,68 +117,65 @@ export const getDateBasedColumns = (
 };
 
 export const getDateBasedTableData = (
-  labels,
-  data,
+  seriesData,
+  categories,
   breakdown,
   searchText,
   currentSorter,
   frequency
 ) => {
-  const filteredLabels = labels.filter(
-    (d) => d.toLowerCase().indexOf(searchText.toLowerCase()) > -1
-  );
-  let format = "MMM D";
-  if (frequency === "hour") {
-    format = "h A, MMM D";
+  let format = 'MMM D';
+  if (frequency === 'hour') {
+    format = 'h A, MMM D';
   }
-  const result = filteredLabels.map((elem, index) => {
-    const entries = data.rows.filter((d) => d[3] === elem);
-    const obj = {
-      index,
-      [breakdown[0]]: elem,
-    };
-    entries.forEach((entry) => {
-      obj[moment(entry[1]).format(format)] = entry[4];
+  const result = seriesData
+    .filter((sd) => sd.name.toLowerCase().includes(searchText.toLowerCase()))
+    .map((sd) => {
+      const dateWiseData = {};
+      categories.forEach((cat, index) => {
+        dateWiseData[moment(cat).format(format)] = sd.data[index];
+      });
+      return {
+        index: sd.index,
+        [breakdown[0]]: sd.name,
+        ...dateWiseData,
+      };
     });
-    return obj;
-  });
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
-export const formatDataInStackedAreaFormat = (
-  data,
-  visibleLabels,
-  arrayMapper
-) => {
+export const formatDataInStackedAreaFormat = (data, aggregateData) => {
   if (
     !data.headers ||
     !data.headers.length ||
     !data.rows ||
-    !data.rows.length
+    !data.rows.length ||
+    !aggregateData.length
   ) {
     return {
       categories: [],
       data: [],
     };
   }
-  const colors = generateColors(visibleLabels.length);
-  const dateIndex = data.headers.findIndex((h) => h === "datetime");
-  const countIndex = data.headers.findIndex((h) => h === "count");
-  const eventIndex = data.headers.findIndex((h) => h === "event_name");
+  const dateIndex = data.headers.findIndex((h) => h === 'datetime');
+  const countIndex = data.headers.findIndex((h) => h === 'count');
+  const eventIndex = data.headers.findIndex((h) => h === 'event_name');
   const breakdownIndex = eventIndex + 1;
   let differentDates = new Set();
   data.rows.forEach((row) => {
     differentDates.add(row[dateIndex]);
   });
   differentDates = Array.from(differentDates);
-  const resultantData = visibleLabels.map((name, index) => {
-    const data = differentDates.map(() => {
-      return 0;
-    });
+  const initializedDatesData = differentDates.map(() => {
+    return 0;
+  });
+  const labelsMapper = {};
+  const resultantData = aggregateData.map((d, index) => {
+    labelsMapper[d.label] = index;
     return {
-      name,
-      data,
-      color: colors[index],
+      name: d.label,
+      data: [...initializedDatesData],
+      index: d.index,
       marker: {
         enabled: false,
       },
@@ -219,10 +183,10 @@ export const formatDataInStackedAreaFormat = (
   });
 
   data.rows.forEach((row) => {
-    const breakdownJoin = row.slice(breakdownIndex, countIndex).join(",");
-    const bIdx = visibleLabels.indexOf(breakdownJoin);
-    if (bIdx > -1) {
-      const idx = differentDates.indexOf(row[dateIndex]);
+    const breakdownJoin = row.slice(breakdownIndex, countIndex).join(',');
+    const bIdx = labelsMapper[breakdownJoin];
+    const idx = differentDates.indexOf(row[dateIndex]);
+    if (resultantData[bIdx]) {
       resultantData[bIdx].data[idx] = row[countIndex];
     }
   });

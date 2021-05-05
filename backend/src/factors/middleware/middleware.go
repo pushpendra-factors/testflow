@@ -425,7 +425,6 @@ func isAdminTokenLogin(token string) bool {
 func SetLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var loginAgent *model.Agent
-
 		loginAuthToken := c.Request.Header.Get("Authorization")
 		loginAuthToken = strings.TrimSpace(loginAuthToken)
 		if loginAuthToken != "" {
@@ -494,7 +493,6 @@ func SetLoggedInAgent() gin.HandlerFunc {
 
 func SetAuthorizedProjectsByLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		loggedInAgentUUID := U.GetScopeByKeyAsString(c, SCOPE_LOGGEDIN_AGENT_UUID)
 
 		loginAdminToken := c.Request.Header.Get("Authorization")
@@ -649,5 +647,17 @@ func Logger() gin.HandlerFunc {
 
 		msg := fmt.Sprintf("%s - %s [%s] \"%s %s\" %d %d \"%s\" \"%s\" (%dms)", clientIP, hostname, time.Now().UTC(), c.Request.Method, path, statusCode, dataLength, referer, clientUserAgent, latency)
 		entry.Info(msg)
+	}
+}
+
+func SkipMemSQLAPIWritesIfDisabled() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if C.DisableMemSQLDBWrites() {
+			if c.Request.Method == http.MethodPost || c.Request.Method == http.MethodDelete || c.Request.Method == http.MethodPut {
+				c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Writes are disabled for MQL"})
+				return
+			}
+		}
+		c.Next()
 	}
 }

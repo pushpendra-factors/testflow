@@ -1,37 +1,39 @@
-import React, { useState, useEffect } from "react";
-import { formatData, formatDataInLineChartFormat } from "./utils";
-import ChartHeader from "../../../../components/SparkLineChart/ChartHeader";
-import SparkChart from "../../../../components/SparkLineChart/Chart";
+import React, { useMemo } from 'react';
 import {
-  generateColors,
-} from "../../../../utils/dataFormatter";
-import LineChart from "../../../../components/LineChart";
-import NoBreakdownTable from "./NoBreakdownTable";
+  formatData,
+  formatDataInHighChartsSeriesFormat,
+} from './utils';
+import ChartHeader from '../../../../components/SparkLineChart/ChartHeader';
+import SparkChart from '../../../../components/SparkLineChart/Chart';
+import { generateColors } from '../../../../utils/dataFormatter';
+import LineChart from '../../../../components/HCLineChart';
+import NoBreakdownTable from './NoBreakdownTable';
 import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_LINECHART,
   DASHBOARD_MODAL,
-} from "../../../../utils/constants";
+} from '../../../../utils/constants';
 import NoDataChart from '../../../../components/NoDataChart';
 
 function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
-  const [chartsData, setChartsData] = useState([]);
+  const chartsData = useMemo(() => {
+    return formatData(data, arrayMapper);
+  }, [data, arrayMapper]);
 
-  useEffect(() => {
-    const formattedData = formatData(data, arrayMapper);
-    setChartsData(formattedData);
+  const { categories, seriesData } = useMemo(() => {
+    return formatDataInHighChartsSeriesFormat(data, arrayMapper);
   }, [data, arrayMapper]);
 
   if (!chartsData.length) {
     return (
-      <div className="mt-4 flex justify-center items-center w-full h-64 ">
+      <div className='mt-4 flex justify-center items-center w-full h-64 '>
         <NoDataChart />
       </div>
     );
   }
 
   const table = (
-    <div className="mt-12 w-full">
+    <div className='mt-12 w-full'>
       <NoBreakdownTable
         chartType={chartType}
         chartsData={chartsData}
@@ -45,21 +47,21 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
   if (chartType === CHART_TYPE_SPARKLINES) {
     if (chartsData.length === 1) {
       chart = (
-        <div className="flex items-center justify-center w-full">
-          <div className="w-1/4">
+        <div className='flex items-center justify-center w-full'>
+          <div className='w-1/4'>
             <ChartHeader
-              bgColor="#4D7DB4"
+              bgColor='#4D7DB4'
               query={chartsData[0].name}
               total={chartsData[0].total}
             />
           </div>
-          <div className="w-3/4">
+          <div className='w-3/4'>
             <SparkChart
-              frequency="date"
-              page="campaigns"
+              frequency='date'
+              page='campaigns'
               event={chartsData[0].mapper}
               chartData={chartsData[0].dataOverTime}
-              chartColor="#4D7DB4"
+              chartColor='#4D7DB4'
             />
           </div>
         </div>
@@ -69,24 +71,24 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
     if (chartsData.length > 1) {
       const appliedColors = generateColors(chartsData.length);
       chart = (
-        <div className="flex items-center flex-wrap justify-center w-full">
+        <div className='flex items-center flex-wrap justify-center w-full'>
           {chartsData.map((chartData, index) => {
             return (
               <div
-                style={{ minWidth: "300px" }}
+                style={{ minWidth: '300px' }}
                 key={chartData.index}
-                className="w-1/3 mt-4 px-4"
+                className='w-1/3 mt-4 px-4'
               >
-                <div className="flex flex-col">
+                <div className='flex flex-col'>
                   <ChartHeader
                     total={chartData.total}
                     query={chartData.name}
                     bgColor={appliedColors[index]}
                   />
-                  <div className="mt-8">
+                  <div className='mt-8'>
                     <SparkChart
-                      frequency="date"
-                      page="campaigns"
+                      frequency='date'
+                      page='campaigns'
                       event={chartData.mapper}
                       chartData={chartData.dataOverTime}
                       chartColor={appliedColors[index]}
@@ -100,27 +102,19 @@ function NoBreakdownCharts({ chartType, data, arrayMapper, section }) {
       );
     }
   } else if (chartType === CHART_TYPE_LINECHART) {
-    const lineChartData = formatDataInLineChartFormat(chartsData);
-    const appliedColors = generateColors(chartsData.length);
     chart = (
-      <LineChart
-        frequency="date"
-        chartData={lineChartData}
-        hiddenEvents={[]}
-        setHiddenEvents={() => {}}
-        appliedColors={appliedColors}
-        queries={chartsData.map((elem) => elem.name)}
-        arrayMapper={arrayMapper.filter(
-          (elem) => chartsData.findIndex((d) => d.index === elem.index) > -1
-        )}
-        isDecimalAllowed={false}
-        section={section}
-      />
+      <div className='w-full'>
+        <LineChart
+          frequency="date"
+          categories={categories}
+          data={seriesData}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       {chart}
       {table}
     </div>

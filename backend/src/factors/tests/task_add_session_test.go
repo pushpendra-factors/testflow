@@ -3138,3 +3138,148 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSession(t *testing
 	assert.Nil(t, err)
 	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
 }
+
+func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProperty(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+
+	// Test: New user with one event and one skip_session event.
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+	// Updating project timestamp to before events start timestamp.
+	errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName := RandomURL()
+
+	// Test: event with marketing property.
+	timestamp = timestamp + 2
+	trackPayload := SDK.TrackPayload{
+		Auto:      true,
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
+			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
+		},
+	}
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	eventId1 := response.EventId
+	userId := response.UserId
+
+	// Test:  event with same marketing property.
+	timestamp = timestamp + 3
+	trackPayload = SDK.TrackPayload{
+		Auto:      true,
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
+			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "",
+		},
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	eventId2 := response.EventId
+
+	// Test:  event with same marketing property.
+	timestamp = timestamp + 4
+	trackPayload = SDK.TrackPayload{
+		Auto:      true,
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "",
+			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
+		},
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	eventId3 := response.EventId
+
+	timestamp = timestamp + 5
+	trackPayload = SDK.TrackPayload{
+		Auto:      true,
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "keyword": "",
+		},
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	eventId4 := response.EventId
+
+	timestamp = timestamp + 6
+	trackPayload = SDK.TrackPayload{
+		Auto:      true,
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
+			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
+			U.QUERY_PARAM_UTM_PREFIX + "keyword":  "",
+		},
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	eventId5 := response.EventId
+
+	timestamp = timestamp + 6
+	trackPayload = SDK.TrackPayload{
+		Auto:      true,
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "campaign_same_winter_sale",
+			U.QUERY_PARAM_UTM_PREFIX + "adgroup":  "adgroup_same_winter_sale",
+		},
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	eventId6 := response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotEmpty(t, event1.SessionId)
+
+	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotEmpty(t, event2.SessionId)
+	assert.Equal(t, *event2.SessionId, *event1.SessionId)
+
+	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotEmpty(t, event3.SessionId)
+	assert.Equal(t, *event3.SessionId, *event1.SessionId)
+
+	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotEmpty(t, event4.SessionId)
+	assert.Equal(t, *event4.SessionId, *event1.SessionId)
+
+	//
+	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotEmpty(t, event5.SessionId)
+	assert.Equal(t, *event5.SessionId, *event1.SessionId)
+
+	// since user id different, should create a new session for this
+	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotEmpty(t, event6.SessionId)
+	assert.NotEqual(t, *event6.SessionId, *event5.SessionId)
+
+	// Test: Project with no events and all events with session already.
+	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+	assert.Equal(t, "not_modified", statusMap[project.ID].Status)
+}

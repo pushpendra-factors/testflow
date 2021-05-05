@@ -822,5 +822,5 @@ func preventWriteOperations() bool {
 	if C.GetConfig().Env == C.TEST || C.GetConfig().Env == C.DEVELOPMENT {
 		return false
 	}
-	return C.UseMemSQLDatabaseStore()
+	return C.DisableMemSQLRedisWrites()
 }

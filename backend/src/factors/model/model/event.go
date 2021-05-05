@@ -140,11 +140,18 @@ func AreMarketingPropertiesMatching(event1 Event, event2 Event) bool {
 	for _, marketingProperty := range U.DEFINED_MARKETING_PROPERTIES {
 		val1, exists1 := (*eventProp)[marketingProperty]
 		val2, exists2 := (*lastSessionProp)[marketingProperty]
-		// 2nd event has additional property
+		// Treat empty value as absence of property.
+		if val1 == "" {
+			exists1 = false
+		}
+		if val2 == "" {
+			exists2 = false
+		}
+		// 2nd event has additional property.
 		if exists2 && !exists1 {
 			return false
 		}
-		// Exists but a different property
+		// Exists but a different property.
 		if exists1 && exists2 && val1 != val2 {
 			return false
 		}

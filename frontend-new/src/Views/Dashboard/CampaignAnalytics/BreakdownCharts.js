@@ -1,19 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   formatData,
-  formatDataInLineChartFormat,
   formatDataInHighChartsFormat,
 } from '../../CoreQuery/CampaignAnalytics/BreakdownCharts/utils';
 import BarChart from '../../../components/BarChart';
 import BreakdownTable from '../../CoreQuery/CampaignAnalytics/BreakdownCharts/BreakdownTable';
-import LineChart from '../../../components/LineChart';
-import { generateColors } from '../../../utils/dataFormatter';
+import LineChart from '../../../components/HCLineChart';
 import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_LINECHART,
   CHART_TYPE_TABLE,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
-  DASHBOARD_WIDGET_LINE_CHART_HEIGHT,
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
@@ -33,7 +30,7 @@ function BreakdownCharts({
   section,
 }) {
   const [chartsData, setChartsData] = useState([]);
-  const [currentEventIndex, setCurrentEventIndex] = useState(0);
+  const currentEventIndex = 0;
   const [visibleProperties, setVisibleProperties] = useState([]);
   const maxAllowedVisibleProperties = 5;
 
@@ -52,6 +49,27 @@ function BreakdownCharts({
     currentEventIndex,
     breakdown,
     maxAllowedVisibleProperties,
+  ]);
+
+  const { categories, highchartsData } = useMemo(() => {
+    if (chartType === CHART_TYPE_BARCHART || chartType === CHART_TYPE_TABLE) {
+      return {
+        categories: [],
+        highchartsData: [],
+      };
+    }
+    return formatDataInHighChartsFormat(
+      data.result_group[0],
+      arrayMapper,
+      currentEventIndex,
+      visibleProperties
+    );
+  }, [
+    data.result_group,
+    arrayMapper,
+    currentEventIndex,
+    visibleProperties,
+    chartType,
   ]);
 
   if (!chartsData.length) {
@@ -89,72 +107,40 @@ function BreakdownCharts({
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_AREA) {
-    const { categories, highchartsData } = formatDataInHighChartsFormat(
-      data.result_group[0],
-      arrayMapper,
-      currentEventIndex,
-      visibleProperties
-    );
     chartContent = (
       <StackedAreaChart
-        frequency="date"
+        frequency='date'
         categories={categories}
         data={highchartsData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
+        chartId={`area-${unit.id}`}
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_BAR) {
-    const { categories, highchartsData } = formatDataInHighChartsFormat(
-      data.result_group[0],
-      arrayMapper,
-      currentEventIndex,
-      visibleProperties
-    );
     chartContent = (
       <StackedBarChart
-        frequency="date"
+        frequency='date'
         categories={categories}
         data={highchartsData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
+        chartId={`bar-${unit.id}`}
       />
     );
   } else if (chartType === CHART_TYPE_LINECHART) {
-    const mapper = visibleProperties.map((v, index) => {
-      return {
-        index: index,
-        mapper: `event${index + 1}`,
-        eventName: v.label,
-      };
-    });
-    const lineChartData = formatDataInLineChartFormat(
-      visibleProperties,
-      data,
-      breakdown,
-      currentEventIndex,
-      arrayMapper,
-      mapper
-    );
-    const appliedColors = generateColors(visibleProperties.length);
     chartContent = (
-      <>
-        <LineChart
-          frequency='date'
-          chartData={lineChartData}
-          hiddenEvents={[]}
-          setHiddenEvents={() => {}}
-          appliedColors={appliedColors}
-          queries={visibleProperties.map((v) => v.label)}
-          arrayMapper={mapper}
-          isDecimalAllowed={false}
-          cardSize={unit.cardSize}
-          section={section}
-          height={DASHBOARD_WIDGET_LINE_CHART_HEIGHT}
-        />
-      </>
+      <LineChart
+        frequency='date'
+        categories={categories}
+        data={highchartsData}
+        height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
+        legendsPosition='top'
+        cardSize={unit.cardSize}
+        chartId={`line-${unit.id}`}
+      />
     );
   } else {
     chartContent = (
