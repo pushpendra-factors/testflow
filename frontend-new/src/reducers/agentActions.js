@@ -1,8 +1,8 @@
 /* eslint-disable */
 import _ from 'lodash';
-import { getHostURL } from '../../../frontend/src/util';
-import { get, post, put } from '../utils/request';
-var host = getHostURL();
+import { get, post, put, getHostUrl } from '../utils/request';
+
+var host = getHostUrl();
 host = (host[host.length - 1] === '/') ? host : host + '/';
 
 export default function reducer(state = {
