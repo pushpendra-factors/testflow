@@ -145,3 +145,11 @@ export const DASHBOARD_TYPES = {
   WEB: 'web',
   USER_CREATED: 'user_created',
 };
+
+export const MARKETING_TOUCHPOINTS = {
+  CAMPAIGN: 'Campaign',
+  ADGROUP: 'AdGroup',
+  SOURCE: 'Source',
+  KEYWORD: 'Keyword',
+  MATCHTYPE: 'MatchType'
+};
