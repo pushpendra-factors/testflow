@@ -117,12 +117,7 @@ func main() {
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
-	memSQLDSN := flag.String(
-		"memsql_dsn",
-		fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local&timeout=30s",
-			*memSQLUser, *memSQLPass, *memSQLHost, *memSQLPort, *memSQLName),
-		"",
-	)
+	memSQLCertificate := flag.String("memsql_cert", "", "")
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	projectIDStringList := flag.String("project_ids", "", "")
@@ -194,7 +189,15 @@ func main() {
 	}
 
 	maxOpenConns := (30 * migrationRoutines) + 10
-	initMemSQLDB(*env, *memSQLDSN, maxOpenConns)
+	memSQLDBConf := C.DBConf{
+		Host:        *memSQLHost,
+		Port:        *memSQLPort,
+		User:        *memSQLUser,
+		Name:        *memSQLName,
+		Password:    *memSQLPass,
+		Certiifcate: *memSQLCertificate,
+	}
+	initMemSQLDB(*env, &memSQLDBConf, maxOpenConns)
 
 	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIDStringList, "")
 	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
@@ -223,10 +226,11 @@ func main() {
 	migrateAllTables(projectIDs)
 }
 
-func initMemSQLDB(env, dsn string, maxOpenConns int) {
+func initMemSQLDB(env string, dbConf *C.DBConf, maxOpenConns int) {
+	dbConf.UseSSL = C.IsStaging() || C.IsProduction()
+
 	var err error
-	// dsn sample admin:LpAHQyAMyI@tcp(svc-2b9e36ee-d5d0-4082-9779-2027e39fcbab-ddl.gcp-virginia-1.db.memsql.com:3306)/factors?charset=utf8mb4&parseTime=True&loc=Local
-	memSQLDB, err = gorm.Open("mysql", dsn)
+	memSQLDB, err = gorm.Open("mysql", C.GetMemSQLDSNString(dbConf))
 	if err != nil {
 		log.WithError(err).Fatal("Failed connecting to memsql.")
 	}
@@ -1012,7 +1016,7 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 	timestampSubQuery = fmt.Sprintf(timestampSubQuery, "updated_at")
 
 	timestampSubQuery = timestampSubQuery + " " + fmt.Sprintf("ORDER BY updated_at ASC LIMIT %d", migrationPageSize)
-	timestampQuery := fmt.Sprintf("SELECT MIN(updated_at), MAX(updated_at) FROM (%s) subq", timestampSubQuery)
+	timestampQuery := fmt.Sprintf("SELECT COUNT(*), MIN(updated_at), MAX(updated_at) FROM (%s) subq", timestampSubQuery)
 	db := C.GetServices().Db
 
 	rows, err := db.Raw(timestampQuery).Rows()
@@ -1027,10 +1031,15 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 	defer rows.Close()
 
 	var minTimestamp, maxTimestamp sql.NullTime
+	var rowCount int64
 	for rows.Next() {
-		if err := rows.Scan(&minTimestamp, &maxTimestamp); err != nil {
+		if err := rows.Scan(&rowCount, &minTimestamp, &maxTimestamp); err != nil {
 			logCtx.WithError(err).Error("Failed to scan min and max timestmap")
 			return nil, 0, http.StatusInternalServerError
+		}
+		if rowCount == 0 {
+			logCtx.Info("No new records found")
+			return nil, 0, http.StatusOK
 		}
 		if !minTimestamp.Valid || !maxTimestamp.Valid {
 			logCtx.Info("Invalid values for min: %v, max: %v timestamp", minTimestamp, maxTimestamp)

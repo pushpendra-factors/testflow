@@ -3,6 +3,8 @@ package config
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -15,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
 
 	"github.com/coreos/etcd/mvcc/mvccpb"
@@ -81,12 +84,14 @@ var PostgresDefaultDBParams = DBConf{
 }
 
 type DBConf struct {
-	Host     string
-	Port     int
-	User     string
-	Name     string
-	Password string
-	AppName  string
+	Host        string
+	Port        int
+	User        string
+	Name        string
+	Password    string
+	AppName     string
+	UseSSL      bool
+	Certiifcate string
 }
 
 type Configuration struct {
@@ -521,15 +526,57 @@ func InitPostgresDBWithMaxIdleAndMaxOpenConn(dbConf DBConf,
 	return nil
 }
 
+func GetMemSQLDSNString(dbConf *DBConf) string {
+	if dbConf.User == "" || dbConf.Password == "" ||
+		dbConf.Name == "" || dbConf.Host == "" ||
+		dbConf.Port == 0 {
+
+		log.WithField("db_config", dbConf).Fatal("Invalid memsql db config.")
+	}
+
+	memsqlDBConfig := mysql.Config{
+		User:                 dbConf.User,
+		Passwd:               dbConf.Password,
+		Addr:                 fmt.Sprintf("%s:%d", dbConf.Host, dbConf.Port),
+		Net:                  "tcp",
+		DBName:               dbConf.Name,
+		Loc:                  time.Local, // Todo: Use UTC timezone.
+		AllowNativePasswords: true,
+		ParseTime:            true,
+		Params:               map[string]string{"charset": "utf8mb4"},
+	}
+
+	if dbConf.UseSSL {
+		if dbConf.Certiifcate == "" {
+			log.Fatal("Enable use_ssl but certificate not given.")
+		}
+
+		const tlsConfigname = "custom"
+
+		// Register certificate.
+		rootCertPool := x509.NewCertPool()
+		if ok := rootCertPool.AppendCertsFromPEM([]byte(dbConf.Certiifcate)); !ok {
+			log.Fatal("Failed to add certificate for memsql connection.")
+		}
+		mysql.RegisterTLSConfig(tlsConfigname, &tls.Config{RootCAs: rootCertPool})
+
+		// use the registered certificate.
+		memsqlDBConfig.TLSConfig = tlsConfigname
+
+		log.Info("Using SSL for MemSQL connections.")
+	}
+
+	return memsqlDBConfig.FormatDSN()
+}
+
 func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleConns int) error {
 	if services == nil {
 		services = &Services{}
 	}
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		dbConf.User, dbConf.Password, dbConf.Host, dbConf.Port, dbConf.Name)
-
-	memSQLDB, err := gorm.Open("mysql", dsn)
+	// Todo: Enable SSL mandatory environments after adding support for all workloads.
+	// dbConf.UseSSL = IsDevelopment() || IsProduction()
+	memSQLDB, err := gorm.Open("mysql", GetMemSQLDSNString(&dbConf))
 	if err != nil {
 		log.WithError(err).Fatal("Failed connecting to memsql.")
 	}

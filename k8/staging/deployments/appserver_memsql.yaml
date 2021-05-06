@@ -78,6 +78,8 @@ spec:
           - $(MEMSQL_USER)
           - --db_pass
           - $(MEMSQL_PASSWORD)
+          - --memsql_cert
+          - $(MEMSQL_CERTIFICATE)
           - --redis_host
           - $(REDIS_HOST)
           - --redis_port

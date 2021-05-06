@@ -7,7 +7,7 @@ export function isRequestSuccess(status) {
 export const getHostUrl = () => {
     let host = BUILD_CONFIG.backend_host;
     host = (host[host.length - 1] === '/') ? host : host + '/';
-    let isFlashApp = window.location && window.location.host && window.location.host.indexOf("flash-") == 0;
+    let isFlashApp = window.location && window.location.host && window.location.host.indexOf("flash") == 0;
     var useMemSQL = localStorage.getItem("use-memsql-datastore");
     if (isFlashApp || (useMemSQL && useMemSQL == "true")) {
         host = host + "mql/"
