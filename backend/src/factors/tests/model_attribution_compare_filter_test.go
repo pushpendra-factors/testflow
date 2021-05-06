@@ -70,7 +70,7 @@ func TestAttributionModelCompare(t *testing.T) {
 
 	// Events with +1 Days
 	errCode = createEventWithSession(project.ID, "event1", user1.ID,
-		timestamp+1*U.SECONDS_IN_A_DAY, user1.PropertiesId, "111111")
+		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
@@ -90,9 +90,9 @@ func TestAttributionModelCompare(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	t.Run("AttributionQueryCompareOutOfTimestampRangeNoLookBack", func(t *testing.T) {
@@ -111,18 +111,18 @@ func TestAttributionModelCompare(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
-		user2.ID, timestamp+5*U.SECONDS_IN_A_DAY, user2.PropertiesId, "222222")
+		user2.ID, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user3.ID, timestamp+5*U.SECONDS_IN_A_DAY, user3.PropertiesId, "333333")
+		user3.ID, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
@@ -142,17 +142,17 @@ func TestAttributionModelCompare(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "222222"))
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "333333"))
-		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "222222"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "333333"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "333333"))
+		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// linked event for user1
-	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*U.SECONDS_IN_A_DAY, user1.PropertiesId, "1234567")
+	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
@@ -172,16 +172,16 @@ func TestAttributionModelCompare(t *testing.T) {
 		//Should only have user2 with no 0 linked event count
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(1), getConversionUserCount(result, "222222"))
-		assert.Equal(t, float64(1), getConversionUserCount(result, "333333"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "333333"))
 		// compare conversion should be same as conversion count
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "222222"))
-		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "333333"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
 		// no hit for campaigns 1234567 or none
-		assert.Equal(t, float64(0), getConversionUserCount(result, "1234567"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 }
 
@@ -210,7 +210,7 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user1)
 
-	_, errCode = createSession(project.ID, user1.ID, timestamp+4*U.SECONDS_IN_A_DAY, "")
+	_, errCode = createSession(project.ID, user1.ID, timestamp+4*U.SECONDS_IN_A_DAY, "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	userEventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "event1"})
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -242,15 +242,15 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 		UserId: user1.ID, Timestamp: timestamp + 5*U.SECONDS_IN_A_DAY})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	_, errCode = createSession(project.ID, user1.ID, timestamp+8*U.SECONDS_IN_A_DAY, "campaign1")
+	_, errCode = createSession(project.ID, user1.ID, timestamp+8*U.SECONDS_IN_A_DAY, "campaign1", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	query.From = timestamp + 5*U.SECONDS_IN_A_DAY
 
 	//event beyond look back window
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
-	assert.Equal(t, float64(0), getConversionUserCount(result, "campaign1"))
-	assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "campaign1"))
+	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 
 }
 
@@ -310,7 +310,7 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 	// Events with +1 Days
 	errCode = createEventWithSession(project.ID, "event1", user1.ID,
-		timestamp+1*U.SECONDS_IN_A_DAY, user1.PropertiesId, "111111")
+		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
@@ -333,9 +333,9 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
@@ -358,9 +358,9 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
@@ -382,9 +382,9 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
@@ -406,18 +406,18 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
-		user2.ID, timestamp+5*U.SECONDS_IN_A_DAY, user2.PropertiesId, "222222")
+		user2.ID, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user3.ID, timestamp+5*U.SECONDS_IN_A_DAY, user3.PropertiesId, "333333")
+		user3.ID, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
@@ -440,13 +440,13 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "222222"))
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "333333"))
-		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "222222"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "333333"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "333333"))
+		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
@@ -469,17 +469,17 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "222222"))
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "333333"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "222222"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "333333"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "333333"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// linked event for user1
-	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*U.SECONDS_IN_A_DAY, user1.PropertiesId, "1234567")
+	errCode = createEventWithSession(project.ID, "event2", user1.ID, timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
@@ -520,16 +520,16 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		//Should only have user2 with no 0 linked event count
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(1), getConversionUserCount(result, "222222"))
-		assert.Equal(t, float64(1), getConversionUserCount(result, "333333"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "333333"))
 		// compare conversion should be same as conversion count
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "222222"))
-		assert.Equal(t, float64(1), getCompareConversionUserCount(result, "333333"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
 		// no hit for campaigns 1234567 or none
-		assert.Equal(t, float64(0), getConversionUserCount(result, "1234567"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
@@ -570,15 +570,15 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		//Should only have user2 with no 0 linked event count
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "222222"))
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "333333"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "333333"))
 		// compare conversion should be same as conversion count
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "111111"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "222222"))
-		assert.Equal(t, int64(-1), getCompareConversionUserCount(result, "333333"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "222222"))
+		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
 		// no hit for campaigns 1234567 or none
-		assert.Equal(t, int64(-1), getConversionUserCount(result, "1234567"))
-		assert.Equal(t, float64(0), getConversionUserCount(result, "none"))
+		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "1234567"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 }

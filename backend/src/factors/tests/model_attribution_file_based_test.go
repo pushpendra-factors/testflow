@@ -83,8 +83,7 @@ func TestAttributionModelFile(t *testing.T) {
 	for _, sessionEvent := range events {
 		errCode = createEventWithSession(project.ID, sessionEvent.EventName,
 			customerUserIdToUser[sessionEvent.CustomerUserID].ID, sessionEvent.Timestamp,
-			customerUserIdToUser[sessionEvent.CustomerUserID].PropertiesId,
-			sessionEvent.UTMCampaign)
+			sessionEvent.UTMCampaign, "", "", "", "")
 		assert.Equal(t, http.StatusCreated, errCode)
 	}
 
@@ -104,7 +103,7 @@ func TestAttributionModelFile(t *testing.T) {
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, &query)
 		assert.Nil(t, err)
 		for _, row := range resultRows {
-			assert.Equal(t, row.Conversion, getConversionUserCount(result, row.AttributionKey))
+			assert.Equal(t, row.Conversion, getConversionUserCount(query.AttributionKey, result, row.AttributionKey))
 		}
 	})
 }

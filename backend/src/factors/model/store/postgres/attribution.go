@@ -1,7 +1,6 @@
 package postgres
 
 import (
-	"database/sql"
 	"errors"
 	C "factors/config"
 	"factors/model/model"
@@ -36,6 +35,12 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
 		return &model.QueryResult{}, errors.New(model.AttributionErrorIntegrationNotFound)
 	}
+
+	marketingData, err := pg.FetchMarketingReports(projectID, *query, *projectSetting)
+	if err != nil {
+		return nil, err
+	}
+
 	sessionEventNameID, eventNameToIDList, err := pg.getEventInformation(projectID, query)
 	if err != nil {
 		return nil, err
@@ -43,7 +48,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	// 1. Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
 	_sessions, sessionUsers, err := pg.getAllTheSessions(projectID, sessionEventNameID, query,
-		*projectSetting.IntAdwordsCustomerAccountId)
+		&(*marketingData).AdwordsGCLIDData)
 	if err != nil {
 		return nil, err
 	}
@@ -114,52 +119,34 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 
 	addWebsiteVisitorsInfo(attributionData, sessions, len(query.LinkedEvents))
 
-	// 5. Add the performance information
-	currency := ""
-	if model.DoesAdwordsReportExist(query.AttributionKey) {
-		currency, err = pg.AddAdwordsPerformanceReportInfo(projectID, attributionData, query.From, query.To,
-			*projectSetting.IntAdwordsCustomerAccountId, query.AttributionKey, query.Timezone)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if projectSetting.IntFacebookAdAccount != "" && model.DoesFBReportExist(query.AttributionKey) {
-		err := pg.AddFacebookPerformanceReportInfo(projectID, attributionData, query.From, query.To,
-			projectSetting.IntFacebookAdAccount, query.AttributionKey, query.Timezone)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if projectSetting.IntLinkedinAdAccount != "" && model.DoesLinkedinReportExist(query.AttributionKey) {
-		err := pg.AddLinkedinPerformanceReportInfo(projectID, attributionData, query.From, query.To,
-			projectSetting.IntLinkedinAdAccount, query.AttributionKey, query.Timezone)
-		if err != nil {
-			return nil, err
-		}
-	}
+	// Add the performance information
+	model.AddPerformanceData(attributionData, query.AttributionKey, marketingData)
 
 	// Merging same name key's into single row
-	dataRows := getRowsByMaps(attributionData, query.LinkedEvents, isCompare)
-	mergedDataRows := model.MergeDataRowsHavingSameKey(dataRows)
+	dataRows := model.GetRowsByMaps(query.AttributionKey, attributionData, query.LinkedEvents, isCompare)
+	mergedDataRows := model.MergeDataRowsHavingSameKey(dataRows, model.GetKeyIndexOrAddedKeySize(query.AttributionKey))
+
+	result := &model.QueryResult{}
+	model.AddHeadersByAttributionKey(result, query)
 
 	// sort the rows by conversionEvent
-	conversionIndex := 5
+	conversionIndex := model.GetConversionIndex(result.Headers)
 	sort.Slice(mergedDataRows, func(i, j int) bool {
 		return mergedDataRows[i][conversionIndex].(float64) > mergedDataRows[j][conversionIndex].(float64)
 	})
 
-	result := &model.QueryResult{}
-	model.AddHeadersByAttributionKey(result, query)
 	result.Rows = mergedDataRows
+	currency, err := pg.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
+	if err != nil {
+		return result, err
+	}
 	result.Meta.Currency = currency
 	return result, nil
 }
 
 func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 	conversionFrom, conversionTo int64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionTimestamp) (map[string]*model.AttributionData, error) {
+	sessions map[string]map[string]model.UserSessionData) (map[string]*model.AttributionData, error) {
 
 	// Empty linkedEvents as they are not analyzed in compare events.
 	var linkedEvents []model.QueryEventWithProperties
@@ -212,7 +199,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 		return nil, err
 	}
 
-	attributionData := addUpConversionEventCount(userConversionHit)
+	attributionData := model.AddUpConversionEventCount(userConversionHit)
 
 	// Attribution based on given attributionMethodologyCompare methodology.
 	userConversionCompareHit, _, err := model.ApplyAttribution(query.QueryType, query.AttributionMethodologyCompare,
@@ -221,7 +208,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 	if err != nil {
 		return nil, err
 	}
-	attributionDataCompare := addUpConversionEventCount(userConversionCompareHit)
+	attributionDataCompare := model.AddUpConversionEventCount(userConversionCompareHit)
 
 	// Merge compare data into attributionData.
 	for key := range attributionData {
@@ -244,7 +231,7 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 func (pg *Postgres) runAttribution(projectID uint64,
 	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionTimestamp) (map[string]*model.AttributionData, error) {
+	sessions map[string]map[string]model.UserSessionData) (map[string]*model.AttributionData, error) {
 
 	goalEventName := goalEvent.Name
 	goalEventProperties := goalEvent.Properties
@@ -295,107 +282,9 @@ func (pg *Postgres) runAttribution(projectID uint64,
 	}
 
 	attributionData := make(map[string]*model.AttributionData)
-	attributionData = addUpConversionEventCount(userConversionHit)
-	addUpLinkedFunnelEventCount(query.LinkedEvents, attributionData, userLinkedFEHit)
+	attributionData = model.AddUpConversionEventCount(userConversionHit)
+	model.AddUpLinkedFunnelEventCount(query.LinkedEvents, attributionData, userLinkedFEHit)
 	return attributionData, nil
-}
-
-// getLinkedEventColumnAsInterfaceList return interface list having linked event count and CPC
-func getLinkedEventColumnAsInterfaceList(spend float64, data []float64) []interface{} {
-	var list []interface{}
-	for _, val := range data {
-		cpc := 0.0
-		if val != 0.0 {
-			cpc, _ = U.FloatRoundOffWithPrecision(spend/val, U.DefaultPrecision)
-		}
-		list = append(list, val, cpc)
-	}
-	return list
-}
-
-// Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
-func getRowsByMaps(attributionData map[string]*model.AttributionData,
-	linkedEvents []model.QueryEventWithProperties, isCompare bool) [][]interface{} {
-
-	rows := make([][]interface{}, 0)
-	nonMatchingRow := []interface{}{"none", int64(0), int64(0), float64(0), int64(0), float64(0), float64(0),
-		float64(0), float64(0)}
-	for i := 0; i < len(linkedEvents); i++ {
-		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0))
-	}
-	for key, data := range attributionData {
-		attributionIdName := data.Name
-		if attributionIdName == "" {
-			attributionIdName = key
-		}
-		if attributionIdName != "" {
-			var row []interface{}
-			cpc := 0.0
-			if data.ConversionEventCount != 0.0 {
-				cpc, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCount, U.DefaultPrecision)
-			}
-			if isCompare {
-				cpcCompare := 0.0
-				if data.ConversionEventCompareCount != 0.0 {
-					cpcCompare, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCompareCount, U.DefaultPrecision)
-				}
-				row = append(row, attributionIdName, data.Impressions, data.Clicks, data.Spend,
-					data.WebsiteVisitors, data.ConversionEventCount, cpc,
-					data.ConversionEventCompareCount, cpcCompare)
-			} else {
-				row = append(row, attributionIdName, data.Impressions, data.Clicks, data.Spend,
-					data.WebsiteVisitors, data.ConversionEventCount, cpc, float64(0), float64(0))
-			}
-			row = append(row, getLinkedEventColumnAsInterfaceList(row[3].(float64), data.LinkedEventsCount)...)
-			rows = append(rows, row)
-		}
-	}
-	rows = append(rows, nonMatchingRow)
-	return rows
-}
-
-// Groups all unique users by attributionId and adds it to attributionData
-func addUpConversionEventCount(usersIdAttributionIdMap map[string][]string) map[string]*model.AttributionData {
-	attributionData := make(map[string]*model.AttributionData)
-	for _, attributionKeys := range usersIdAttributionIdMap {
-		weight := 1 / float64(len(attributionKeys))
-		for _, key := range attributionKeys {
-			if _, exists := attributionData[key]; !exists {
-				attributionData[key] = &model.AttributionData{}
-			}
-			attributionData[key].ConversionEventCount += weight
-		}
-	}
-	return attributionData
-}
-
-// Attribute each user to the conversion event and linked event by attribution Id.
-func addUpLinkedFunnelEventCount(linkedEvents []model.QueryEventWithProperties,
-	attributionData map[string]*model.AttributionData, linkedUserAttributionData map[string]map[string][]string) {
-
-	linkedEventToPositionMap := make(map[string]int)
-	for position, linkedEvent := range linkedEvents {
-		linkedEventToPositionMap[linkedEvent.Name] = position
-	}
-	// fill up all the linked events count with 0 value
-	for _, attributionRow := range attributionData {
-		if attributionRow != nil {
-			for len(attributionRow.LinkedEventsCount) < len(linkedEvents) {
-				attributionRow.LinkedEventsCount = append(attributionRow.LinkedEventsCount, 0.0)
-			}
-		}
-	}
-	// Update linked up events with event hit count.
-	for linkedEventName, userIdAttributionIdMap := range linkedUserAttributionData {
-		for _, attributionKeys := range userIdAttributionIdMap {
-			weight := 1 / float64(len(attributionKeys))
-			for _, key := range attributionKeys {
-				if attributionData[key] != nil {
-					attributionData[key].LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += weight
-				}
-			}
-		}
-	}
 }
 
 // GetCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
@@ -432,8 +321,7 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 
 // getAllTheSessions Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
-func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint64,
-	query *model.AttributionQuery, adwordsAccountId string) (map[string]map[string]model.UserSessionTimestamp, []string, error) {
+func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint64, query *model.AttributionQuery, gclIDBasedCampaign *map[string]model.CampaignInfo) (map[string]map[string]model.UserSessionData, []string, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	effectiveFrom := lookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -443,30 +331,37 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 		effectiveFrom = lookbackAdjustedFrom(query.From, query.LookbackDays)
 		effectiveTo = lookbackAdjustedTo(query.To, query.LookbackDays)
 	}
-	gclIDBasedCampaign, err := pg.GetGCLIDBasedCampaignInfo(projectId, effectiveFrom, effectiveTo, adwordsAccountId)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	attributionEventKey, err := model.GetQuerySessionProperty(query.AttributionKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	attributedSessionsByUserId := make(map[string]map[string]model.UserSessionTimestamp)
+	attributedSessionsByUserId := make(map[string]map[string]model.UserSessionData)
 	userIdMap := make(map[string]bool)
 	var userIdsWithSession []string
 
 	caseSelectStmt := "CASE WHEN sessions.properties->>? IS NULL THEN ? " +
 		" WHEN sessions.properties->>? = '' THEN ? ELSE sessions.properties->>? END"
 
-	queryUserSessionTimeRange := "SELECT sessions.user_id, " + caseSelectStmt + " AS attribution_id, " + caseSelectStmt + " AS gcl_id, " +
+	queryUserSessionTimeRange := "SELECT sessions.user_id, " +
+		caseSelectStmt + " AS campaignName, " +
+		caseSelectStmt + " AS adgroupName, " +
+		caseSelectStmt + " AS keywordName, " +
+		caseSelectStmt + " AS source, " +
+		caseSelectStmt + " AS attribution_id, " +
+		caseSelectStmt + " AS gcl_id, " +
 		" sessions.timestamp FROM events AS sessions " +
 		" WHERE sessions.project_id=? AND sessions.event_name_id=? AND sessions.timestamp BETWEEN ? AND ?"
 	var qParams []interface{}
-	qParams = append(qParams, attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone,
-		attributionEventKey, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, projectId,
-		sessionEventNameId, effectiveFrom, effectiveTo)
+	qParams = append(qParams,
+		U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
+		U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP,
+		U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD,
+		U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE,
+		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
+		U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
+		projectId, sessionEventNameId, effectiveFrom, effectiveTo)
 	rows, err := pg.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -475,10 +370,14 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 	defer rows.Close()
 	for rows.Next() {
 		var userID string
+		var campaignName string
+		var adgroupName string
+		var keywordName string
+		var sourceName string
 		var attributionId string
 		var gclID string
 		var timestamp int64
-		if err = rows.Scan(&userID, &attributionId, &gclID, &timestamp); err != nil {
+		if err = rows.Scan(&userID, &campaignName, &adgroupName, &keywordName, &sourceName, &attributionId, &gclID, &timestamp); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
@@ -492,13 +391,14 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 			userIdsWithSession = append(userIdsWithSession, userID)
 			userIdMap[userID] = true
 		}
-
+		marketingValues := model.AttributionKeyValue{CampaignName: campaignName, AdgroupName: adgroupName, Keyword: keywordName, Source: sourceName}
+		var attributionIdBasedOnGclID string
 		// Override GCLID based campaign info if presents
 		if gclID != model.PropertyValueNone && !(query.AttributionKey == model.AttributionKeyKeyword && !model.IsASearchSlotKeyword(gclIDBasedCampaign, gclID)) {
-			attributionIdBasedOnGclID := model.GetGCLIDAttributionValue(gclIDBasedCampaign, gclID, attributionEventKey)
+			attributionIdBasedOnGclID, marketingValues = model.GetGCLIDAttributionValue(gclIDBasedCampaign, gclID, attributionEventKey, marketingValues)
 			// In cases where GCLID is present in events, but not in adwords report (as users tend to bookmark expired URLs),
 			// fallback is attributionId
-			if attributionIdBasedOnGclID != model.PropertyValueNone {
+			if attributionIdBasedOnGclID != model.PropertyValueNone && attributionIdBasedOnGclID != "" {
 				attributionId = attributionIdBasedOnGclID
 			}
 		}
@@ -506,24 +406,24 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint6
 		// add session info uniquely for user-attributionId pair
 		if _, ok := attributedSessionsByUserId[userID]; ok {
 
-			if timeRange, ok := attributedSessionsByUserId[userID][attributionId]; ok {
-				timeRange.MinTimestamp = U.Min(timeRange.MinTimestamp, timestamp)
-				timeRange.MaxTimestamp = U.Max(timeRange.MaxTimestamp, timestamp)
-				timeRange.TimeStamps = append(timeRange.TimeStamps, timestamp)
-				timeRange.WithinQueryPeriod = timeRange.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
-				attributedSessionsByUserId[userID][attributionId] = timeRange
+			if userSessionData, ok := attributedSessionsByUserId[userID][attributionId]; ok {
+				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
+				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
+				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
+				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
+				attributedSessionsByUserId[userID][attributionId] = userSessionData
 			} else {
-				sessionRange := model.UserSessionTimestamp{MinTimestamp: timestamp,
+				userSessionDataNew := model.UserSessionData{MinTimestamp: timestamp,
 					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To}
-				attributedSessionsByUserId[userID][attributionId] = sessionRange
+					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, KeyValues: marketingValues}
+				attributedSessionsByUserId[userID][attributionId] = userSessionDataNew
 			}
 		} else {
-			attributedSessionsByUserId[userID] = make(map[string]model.UserSessionTimestamp)
-			sessionRange := model.UserSessionTimestamp{MinTimestamp: timestamp,
+			attributedSessionsByUserId[userID] = make(map[string]model.UserSessionData)
+			userSessionDataNew := model.UserSessionData{MinTimestamp: timestamp,
 				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To}
-			attributedSessionsByUserId[userID][attributionId] = sessionRange
+				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, KeyValues: marketingValues}
+			attributedSessionsByUserId[userID][attributionId] = userSessionDataNew
 		}
 	}
 	return attributedSessionsByUserId, userIdsWithSession, nil
@@ -1021,10 +921,10 @@ func lookbackAdjustedTo(to int64, lookbackDays int) int64 {
 }
 
 // updateSessionsMapWithCoalesceID Clones a new map replacing userId by coalUserId.
-func updateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[string]model.UserSessionTimestamp,
-	usersInfo map[string]model.UserInfo) map[string]map[string]model.UserSessionTimestamp {
+func updateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[string]model.UserSessionData,
+	usersInfo map[string]model.UserInfo) map[string]map[string]model.UserSessionData {
 
-	newSessionsMap := make(map[string]map[string]model.UserSessionTimestamp)
+	newSessionsMap := make(map[string]map[string]model.UserSessionData)
 	for userID, attributionIdMap := range attributedSessionsByUserID {
 		userInfo := usersInfo[userID]
 		for attributionID, newUserSession := range attributionIdMap {
@@ -1042,7 +942,7 @@ func updateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[s
 				newSessionsMap[userInfo.CoalUserID][attributionID] = newUserSession
 				continue
 			}
-			newSessionsMap[userInfo.CoalUserID] = make(map[string]model.UserSessionTimestamp)
+			newSessionsMap[userInfo.CoalUserID] = make(map[string]model.UserSessionData)
 			newSessionsMap[userInfo.CoalUserID][attributionID] = newUserSession
 		}
 	}
@@ -1051,7 +951,7 @@ func updateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[s
 
 // addWebsiteVisitorsInfo Maps the count distinct users session to campaign id and adds it to attributionData
 func addWebsiteVisitorsInfo(attributionData map[string]*model.AttributionData,
-	attributedSessionsByUserID map[string]map[string]model.UserSessionTimestamp, linkedEventsCount int) {
+	attributedSessionsByUserID map[string]map[string]model.UserSessionData, linkedEventsCount int) {
 	// Creating an empty linked events row.
 	emptyLinkedEventRow := make([]float64, 0)
 	for i := 0; i < linkedEventsCount; i++ {
@@ -1088,117 +988,6 @@ func getKey(id1 string, id2 string) string {
 	return id1 + "|_|" + id2
 }
 
-// AddAdwordsPerformanceReportInfo Adds channel data to attributionData based on attribution id.
-// Key id with no matching channel
-// data is left with empty name parameter
-//
-// # ADGroup
-// SELECT value->>'ad_group_id' AS ad_group_id,  value->>'ad_group_name' AS ad_group_name,
-// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
-// SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents where project_id = '399'
-// AND customer_account_id IN ('1475899910') AND type = '10' AND timestamp between '20210220' AND '20210303'
-// group by value->>'ad_group_id', ad_group_name LIMIT 5;
-//
-// # Campaign
-// SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name,
-// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
-// SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents where project_id = '399'
-// AND customer_account_id IN ('1475899910') AND type = '5' AND timestamp between '20210220' AND '20210303'
-// group by value->>'campaign_id', campaign_name LIMIT 5;
-func (pg *Postgres) AddAdwordsPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
-	from, to int64, customerAccountID string, attributionKey string, timeZone string) (string, error) {
-
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
-	customerAccountIDs := strings.Split(customerAccountID, ",")
-	reportType := model.AdwordsDocumentTypeAlias[model.CampaignPerformanceReport] // 5
-	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
-		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-		"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents " +
-		"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by value->>'campaign_id', campaign_name"
-
-	// AdGroup report for AttributionKey as AdGroup
-	if attributionKey == model.AttributionKeyAdgroup {
-		reportType = model.AdwordsDocumentTypeAlias[model.AdGroupPerformanceReport] // 10
-		performanceQuery = "SELECT value->>'ad_group_id' AS ad_group_id,  value->>'ad_group_name' AS ad_group_name, " +
-			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-			"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents " +
-			"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-			"group by value->>'ad_group_id', ad_group_name"
-	}
-
-	// Keyword report for AttributionKey as keyword
-	if attributionKey == model.AttributionKeyKeyword {
-		reportType = model.AdwordsDocumentTypeAlias[model.KeywordPerformanceReport] // 8
-		performanceQuery = "SELECT value->>'id' AS id,  value->>'criteria' AS criteria, " +
-			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-			"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents " +
-			"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-			"group by value->>'id', criteria"
-	}
-
-	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
-		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
-	if err != nil {
-		logCtx.WithError(err).Error("SQL Query failed")
-		return "", err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var keyNameNull sql.NullString
-		var keyIDNull sql.NullString
-		var impressionsNull sql.NullFloat64
-		var clicksNull sql.NullFloat64
-		var spendNull sql.NullFloat64
-		if err = rows.Scan(&keyIDNull, &keyNameNull, &impressionsNull, &clicksNull, &spendNull); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
-			continue
-		}
-		if !keyNameNull.Valid || !keyIDNull.Valid {
-			continue
-		}
-		var keyName string
-		var keyID string
-		var impressions float64
-		var clicks float64
-		var spend float64
-		impressions = 0
-		clicks = 0
-		spend = 0
-		keyName = keyNameNull.String
-		keyID = keyIDNull.String
-		if impressionsNull.Valid {
-			impressions = impressionsNull.Float64
-		}
-		if clicksNull.Valid {
-			clicks = clicksNull.Float64
-		}
-		if spendNull.Valid {
-			spend = spendNull.Float64
-		}
-
-		matchingID := ""
-		if _, keyIDFound := attributionData[keyID]; keyIDFound {
-			matchingID = keyID
-		} else if _, keyNameFound := attributionData[keyName]; keyNameFound {
-			matchingID = keyName
-		}
-		if matchingID != "" {
-			attributionData[matchingID].Name = keyName
-			attributionData[matchingID].Impressions += int64(impressions)
-			attributionData[matchingID].Clicks += int64(clicks)
-			attributionData[matchingID].Spend += spend
-		}
-	}
-
-	currency, err := pg.GetAdwordsCurrency(projectID, customerAccountID, from, to)
-	if err != nil {
-		return "", err
-	}
-	return currency, nil
-}
-
 // GetAdwordsCurrency Returns currency used for adwords customer_account_id
 func (pg *Postgres) GetAdwordsCurrency(projectID uint64, customerAccountID string, from, to int64) (string, error) {
 
@@ -1226,196 +1015,4 @@ func (pg *Postgres) GetAdwordsCurrency(projectID uint64, customerAccountID strin
 		}
 	}
 	return currency, nil
-}
-
-// AddFacebookPerformanceReportInfo Adds Facebook channel data to attributionData based on attribution id.
-// Key id with no matching channel
-// data is left with empty name parameter
-// # ADGroup
-// SELECT value->>'adset_id' AS adset_id,  value->>'adset_name' AS adset_name, SUM((value->>'impressions')::float)
-// AS impressions, SUM((value->>'clicks')::float) AS clicks, SUM((value->>'spend')::float)/1000000 AS total_spend
-// FROM facebook_documents where project_id = '399' AND customer_ad_account_id IN ('act_367960820625667')
-// AND type = '6' AND timestamp between '20210220' AND '20210303' group by value->>'adset_id', adset_name LIMIT 5;
-//
-// # Campaign
-// SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name,
-// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
-// SUM((value->>'spend')::float)/1000000 AS total_spend FROM facebook_documents where project_id = '399'
-// AND customer_ad_account_id IN ('act_367960820625667') AND type = '5' AND timestamp between '20210220'
-// AND '20210303' group by value->>'campaign_id', campaign_name LIMIT 5;
-func (pg *Postgres) AddFacebookPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
-	from, to int64, customerAccountID string, attributionKey string, timeZone string) error {
-
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
-	customerAccountIDs := strings.Split(customerAccountID, ",")
-	reportType := facebookDocumentTypeAlias["campaign_insights"] // 5
-	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
-		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-		"SUM((value->>'spend')::float) AS total_spend FROM facebook_documents " +
-		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by value->>'campaign_id', campaign_name"
-
-	// AdGroup report for AttributionKey as AdGroup
-	if attributionKey == model.AttributionKeyAdgroup {
-		reportType = facebookDocumentTypeAlias["ad_set_insights"] // 5
-		performanceQuery = "SELECT value->>'adset_id' AS adset_id,  value->>'adset_name' AS adset_name, " +
-			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-			"SUM((value->>'spend')::float) AS total_spend FROM facebook_documents " +
-			"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-			"group by value->>'adset_id', adset_name"
-	}
-
-	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
-		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
-	if err != nil {
-		logCtx.WithError(err).Error("SQL Query failed")
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var keyNameNull sql.NullString
-		var keyIDNull sql.NullString
-		var impressionsNull sql.NullFloat64
-		var clicksNull sql.NullFloat64
-		var spendNull sql.NullFloat64
-		if err = rows.Scan(&keyIDNull, &keyNameNull, &impressionsNull, &clicksNull, &spendNull); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
-			continue
-		}
-		if !keyNameNull.Valid || !keyIDNull.Valid {
-			continue
-		}
-		var keyName string
-		var keyID string
-		var impressions float64
-		var clicks float64
-		var spend float64
-		impressions = 0
-		clicks = 0
-		spend = 0
-		keyName = keyNameNull.String
-		keyID = keyIDNull.String
-		if impressionsNull.Valid {
-			impressions = impressionsNull.Float64
-		}
-		if clicksNull.Valid {
-			clicks = clicksNull.Float64
-		}
-		if spendNull.Valid {
-			spend = spendNull.Float64
-		}
-
-		matchingID := ""
-		if _, keyIdFound := attributionData[keyID]; keyIdFound {
-			matchingID = keyID
-		} else if _, keyNameFound := attributionData[keyName]; keyNameFound {
-			matchingID = keyName
-		}
-		if matchingID != "" {
-			// TODO (Anil) How do we resolve the conflict in same name ads across G/FB/Linkedin
-			attributionData[matchingID].Name = keyName
-			attributionData[matchingID].Impressions += int64(impressions)
-			attributionData[matchingID].Clicks += int64(clicks)
-			// TODO (Anil) Add currency or use conversion factor to set in default currency for G/FB/Linkedin
-			attributionData[matchingID].Spend += spend
-		}
-	}
-	return nil
-}
-
-// AddLinkedinPerformanceReportInfo Adds Linkedin channel data to attributionData based on attribution id.
-// Key id with no matching channel
-// data is left with empty name parameter
-// # ADGroup
-// SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name,
-// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
-// SUM((value->>'costInLocalCurrency')::float)/1000000 AS total_spend FROM linkedin_documents where
-// project_id = '399' AND customer_ad_account_id IN ('506157045') AND type = '6' AND timestamp
-// between '20210220' AND '20210303' group by value->>'campaign_id', campaign_name LIMIT 5;
-//
-// # Campaign
-// SELECT value->>'campaign_group_id' AS campaign_group_id,  value->>'campaign_group_name' AS campaign_group_name,
-// SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks,
-// SUM((value->>'costInLocalCurrency')::float)/1000000 AS total_spend FROM linkedin_documents
-// where project_id = '399' AND customer_ad_account_id IN ('506157045') AND type = '5' AND
-// timestamp between '20210220' AND '20210303' group by value->>'campaign_group_id', campaign_group_name LIMIT 5;
-func (pg *Postgres) AddLinkedinPerformanceReportInfo(projectID uint64, attributionData map[string]*model.AttributionData,
-	from, to int64, customerAccountID string, attributionKey string, timeZone string) error {
-
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
-	customerAccountIDs := strings.Split(customerAccountID, ",")
-	reportType := linkedinDocumentTypeAlias["campaign_group_insights"] // 5
-	performanceQuery := "SELECT value->>'campaign_group_id' AS campaign_group_id,  value->>'campaign_group_name' AS campaign_group_name, " +
-		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-		"SUM((value->>'costInLocalCurrency')::float) AS total_spend FROM linkedin_documents " +
-		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-		"group by value->>'campaign_group_id', campaign_group_name"
-
-	// AdGroup report for AttributionKey as AdGroup
-	if attributionKey == model.AttributionKeyAdgroup {
-		reportType = linkedinDocumentTypeAlias["campaign_insights"] // 6
-		performanceQuery = "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
-			"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
-			"SUM((value->>'costInLocalCurrency')::float) AS total_spend FROM linkedin_documents " +
-			"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
-			"group by value->>'campaign_id', campaign_name"
-	}
-
-	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
-		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
-	if err != nil {
-		logCtx.WithError(err).Error("SQL Query failed")
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var keyNameNull sql.NullString
-		var keyIDNull sql.NullString
-		var impressionsNull sql.NullFloat64
-		var clicksNull sql.NullFloat64
-		var spendNull sql.NullFloat64
-		if err = rows.Scan(&keyIDNull, &keyNameNull, &impressionsNull, &clicksNull, &spendNull); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
-			continue
-		}
-		if !keyNameNull.Valid || !keyIDNull.Valid {
-			continue
-		}
-		var keyName string
-		var keyID string
-		var impressions float64
-		var clicks float64
-		var spend float64
-		impressions = 0
-		clicks = 0
-		spend = 0
-		keyName = keyNameNull.String
-		keyID = keyIDNull.String
-		if impressionsNull.Valid {
-			impressions = impressionsNull.Float64
-		}
-		if clicksNull.Valid {
-			clicks = clicksNull.Float64
-		}
-		if spendNull.Valid {
-			spend = spendNull.Float64
-		}
-
-		matchingID := ""
-		if _, keyIdFound := attributionData[keyID]; keyIdFound {
-			matchingID = keyID
-		} else if _, keyNameFound := attributionData[keyName]; keyNameFound {
-			matchingID = keyName
-		}
-		if matchingID != "" {
-			attributionData[matchingID].Name = keyName
-			attributionData[matchingID].Impressions += int64(impressions)
-			attributionData[matchingID].Clicks += int64(clicks)
-			// TODO (Anil) Add currency or use conversion factor to set in default currency for G/FB/Linkedin
-			attributionData[matchingID].Spend += spend
-		}
-	}
-	return nil
 }

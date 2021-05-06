@@ -11,7 +11,7 @@ type pair struct {
 
 // ApplyAttribution This method maps the user to the attribution key based on given attribution methodology.
 func ApplyAttribution(attributionType string, method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
-	userInitialSession map[string]map[string]UserSessionTimestamp,
+	userInitialSession map[string]map[string]UserSessionData,
 	coalUserIdConversionTimestamp map[string]int64,
 	lookbackDays int, campaignFrom, campaignTo int64) (map[string][]string, map[string]map[string][]string, error) {
 
@@ -73,7 +73,7 @@ type Interaction struct {
 	InteractionTime int64
 }
 
-func getMergedInteractions(attributionTimerange map[string]UserSessionTimestamp) []Interaction {
+func getMergedInteractions(attributionTimerange map[string]UserSessionData) []Interaction {
 
 	var interactions []Interaction
 	for key, value := range attributionTimerange {
@@ -100,7 +100,7 @@ func sortInteractionTime(interactions []Interaction, sortingType string) []Inter
 }
 
 // returns list of attribution keys from given attributionKeyTime map
-func getLinearTouch(attributionType string, attributionTimerange map[string]UserSessionTimestamp, conversionTime, lookbackPeriod, from, to int64) []string {
+func getLinearTouch(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
 
 	var keys []string
 	interactions := getMergedInteractions(attributionTimerange)
@@ -125,7 +125,7 @@ func getLinearTouch(attributionType string, attributionTimerange map[string]User
 }
 
 // returns the first attributionId
-func getFirstTouchId(attributionType string, attributionTimerange map[string]UserSessionTimestamp, conversionTime, lookbackPeriod, from, to int64) []string {
+func getFirstTouchId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = sortInteractionTime(interactions, SortASC)
@@ -153,7 +153,7 @@ func getFirstTouchId(attributionType string, attributionTimerange map[string]Use
 }
 
 // returns the last attributionId
-func getLastTouchId(attributionType string, attributionTimerange map[string]UserSessionTimestamp, conversionTime, lookbackPeriod, from, to int64) []string {
+func getLastTouchId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = sortInteractionTime(interactions, SortDESC)
@@ -182,7 +182,7 @@ func getLastTouchId(attributionType string, attributionTimerange map[string]User
 }
 
 // returns the first non $none attributionId
-func getFirstTouchNDId(attributionType string, attributionTimerange map[string]UserSessionTimestamp, conversionTime, lookbackPeriod, from, to int64) []string {
+func getFirstTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = sortInteractionTime(interactions, SortASC)
@@ -211,7 +211,7 @@ func getFirstTouchNDId(attributionType string, attributionTimerange map[string]U
 }
 
 // returns the last non $none attributionId
-func getLastTouchNDId(attributionType string, attributionTimerange map[string]UserSessionTimestamp, conversionTime, lookbackPeriod, from, to int64) []string {
+func getLastTouchNDId(attributionType string, attributionTimerange map[string]UserSessionData, conversionTime, lookbackPeriod, from, to int64) []string {
 
 	interactions := getMergedInteractions(attributionTimerange)
 	interactions = sortInteractionTime(interactions, SortDESC)
