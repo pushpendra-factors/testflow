@@ -655,7 +655,11 @@ func Logger() gin.HandlerFunc {
 func SkipMemSQLAPIWritesIfDisabled() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if C.DisableMemSQLDBWrites() {
-			if c.Request.Method == http.MethodPost || c.Request.Method == http.MethodDelete || c.Request.Method == http.MethodPut {
+			isAllowedPath := strings.HasSuffix(c.Request.URL.Path, "/query") ||
+				strings.HasSuffix(c.Request.URL.Path, "/query/web_analytics") ||
+				strings.HasPrefix(c.Request.URL.Path, "/agents/signin")
+			if (c.Request.Method == http.MethodPost && !isAllowedPath) ||
+				c.Request.Method == http.MethodDelete || c.Request.Method == http.MethodPut {
 				c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Writes are disabled for MQL"})
 				return
 			}
