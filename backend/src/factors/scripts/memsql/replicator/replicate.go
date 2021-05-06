@@ -1012,7 +1012,7 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 	timestampSubQuery = fmt.Sprintf(timestampSubQuery, "updated_at")
 
 	timestampSubQuery = timestampSubQuery + " " + fmt.Sprintf("ORDER BY updated_at ASC LIMIT %d", migrationPageSize)
-	timestampQuery := fmt.Sprintf("SELECT MIN(updated_at), MAX(updated_at) FROM (%s) subq", timestampSubQuery)
+	timestampQuery := fmt.Sprintf("SELECT COUNT(*), MIN(updated_at), MAX(updated_at) FROM (%s) subq", timestampSubQuery)
 	db := C.GetServices().Db
 
 	rows, err := db.Raw(timestampQuery).Rows()
@@ -1027,10 +1027,15 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 	defer rows.Close()
 
 	var minTimestamp, maxTimestamp sql.NullTime
+	var rowCount int64
 	for rows.Next() {
-		if err := rows.Scan(&minTimestamp, &maxTimestamp); err != nil {
+		if err := rows.Scan(&rowCount, &minTimestamp, &maxTimestamp); err != nil {
 			logCtx.WithError(err).Error("Failed to scan min and max timestmap")
 			return nil, 0, http.StatusInternalServerError
+		}
+		if rowCount == 0 {
+			logCtx.Info("No new records found")
+			return nil, 0, http.StatusOK
 		}
 		if !minTimestamp.Valid || !maxTimestamp.Valid {
 			logCtx.Info("Invalid values for min: %v, max: %v timestamp", minTimestamp, maxTimestamp)
