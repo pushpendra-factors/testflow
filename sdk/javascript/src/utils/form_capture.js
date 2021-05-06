@@ -42,11 +42,37 @@ function isFieldByMatch(elem, typeStr1, typeStr2) {
     return false;
 }
 
+function getFormsFromIframes() {
+    logger.debug("Scanning for iframe forms.", false);
+    var frames = document.querySelectorAll('iframe');
+    var formsFromFrames = [];
+    for(var fri=0; fri<frames.length; fri++) {
+        // This only takes care of certain scenarios. Will have to check all iframe scenarios.
+        var frms = [];
+
+        if(frames[fri].contentDocument && frames[fri].contentDocument.querySelectorAll) {
+            frms = frames[fri].contentDocument.querySelectorAll('form');
+        }
+
+        for(var formI=0; formI<frms.length; formI++) {
+            formsFromFrames.push(frms[formI])
+        }
+    }
+    return formsFromFrames;
+}
+
 function bindAllFormsOnSubmit(appInstance, processCallback) {
     logger.debug("Scanning for unbind forms.", false);
 
+    var iframeForms = getFormsFromIframes();
+
     // bind processForm to onSubmit event for all forms.
     var forms = document.querySelectorAll('form');
+
+    for (var ind=0; ind<iframeForms.length; ind++) {
+        forms.push(iframeForms[ind]);
+    }
+    
     for (var i=0; i<forms.length; i++) {
         var maxCallCount = 0; // Max callback calls expected.
         var callCount = 0; // Current callback calls.
