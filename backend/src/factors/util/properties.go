@@ -42,6 +42,8 @@ const EVENT_NAME_SALESFORCE_ACCOUNT_CREATED = "$sf_account_created"
 const EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED = "$sf_account_updated"
 const EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED = "$sf_opportunity_created"
 const EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$sf_opportunity_updated"
+const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED = "$sf_campaign_member_created"
+const EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED = "$sf_campaign_member_updated"
 
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
@@ -73,6 +75,8 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
 	EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
 	EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
+	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+	EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_UPDATED,
 }
 
 // Factors API constants
@@ -1000,6 +1004,8 @@ var STANDARD_EVENTS_DISPLAY_NAMES = map[string]string{
 	"$sf_account_updated":"Account Updated",
 	"$sf_opportunity_created":"Opportunity Created",
 	"$sf_opportunity_updated":"Opportunity Updated",
+	"$sf_campaign_member_created":"Campaign Member Created",
+	"$sf_campaign_member_updated":"Campaign Member Updated",
 	"$session":"Website Session",
 	"$form_submitted":"Form Submit",
 }
@@ -1016,6 +1022,8 @@ var STANDARD_EVENTS_GROUP_NAMES = map[string]string{
 	"$sf_account_updated":"Salesforce",
 	"$sf_opportunity_created":"Salesforce",
 	"$sf_opportunity_updated":"Salesforce",
+	"$sf_campaign_member_created":"Salesforce",
+	"$sf_campaign_member_updated":"Salesforce",
 }
 
 var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string {

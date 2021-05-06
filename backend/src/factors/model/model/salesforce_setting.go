@@ -1,5 +1,7 @@
 package model
 
+import C "factors/config"
+
 // Salesforce required fields per project
 var (
 	designcafeLeadsAllowedFields = map[string]bool{
@@ -256,10 +258,15 @@ func GetSalesforceAllowedObjects(projectID uint64) []int {
 			docType := GetSalesforceDocTypeByAlias(name)
 			docTypes = append(docTypes, docType)
 		}
+
 		return docTypes
-	} else {
-		docTypes = SalesforceStandardDocumentType
 	}
+
+	docTypes = SalesforceStandardDocumentType
+	if C.IsAllowedCampaignEnrichementByProjectID(projectID) {
+		docTypes = append(docTypes, SalesforceCampaignDocuments...)
+	}
+
 	return docTypes
 }
 

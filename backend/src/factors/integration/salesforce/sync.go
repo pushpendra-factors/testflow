@@ -12,6 +12,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 	U "factors/util"
 
 	"github.com/jinzhu/now"
@@ -83,14 +84,12 @@ func GETRequest(url, accessToken string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return resp, nil
 }
 
 // DataServiceError impelements error interface for salesforce data api error
-type DataServiceError struct {
-	Message   string `json:"message"`
-	ErrorCode string `json:"errorCode"`
-}
+type DataServiceError interface{}
 
 func getSalesforceObjectDescription(objectName, accessToken, instanceURL string) (*Describe, error) {
 	if objectName == "" || accessToken == "" || instanceURL == "" {
@@ -160,9 +159,11 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 
 	if resp.StatusCode != http.StatusOK {
 		var errBody []DataServiceError
-		json.NewDecoder(resp.Body).Decode(&errBody)
+		if err := json.NewDecoder(resp.Body).Decode(&errBody); err != nil {
+			return nil, err
+		}
 
-		return nil, fmt.Errorf("error while query data %+v", errBody)
+		return nil, fmt.Errorf("error while query data %+v %d", errBody, resp.StatusCode)
 	}
 
 	var jsonResponse QueryResponse
@@ -173,89 +174,412 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 	return &jsonResponse, nil
 }
 
-func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName, dateTime string) (ObjectStatus, error) {
+// DataClient salesforce data client handles data query from salesforce
+type DataClient struct {
+	accessToken    string
+	instanceURL    string
+	isFirstRun     bool
+	nextBatchRoute string
+	queryURL       string
+}
+
+// NewSalesforceDataClient create new instance of DataClient for fetching data from salesforce
+func NewSalesforceDataClient(accessToken string, instanceURL string) (*DataClient, error) {
+	if accessToken == "" || instanceURL == "" {
+		return nil, errors.New("missing requied field")
+	}
+
+	dataClient := &DataClient{
+		accessToken: accessToken,
+		instanceURL: instanceURL,
+		isFirstRun:  true,
+	}
+
+	return dataClient, nil
+}
+
+func getSalesforceObjectFieldlList(objectName, accessToken, instanceURL string) ([]string, error) {
+	if objectName == "" || accessToken == "" || instanceURL == "" {
+		return nil, errors.New("missing required field")
+	}
+
+	description, err := getSalesforceObjectDescription(objectName, accessToken, instanceURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to getSalesforceObjectDescription %s", err)
+	}
+
+	fields, err := getFieldsListFromDescription(description)
+	if err != nil || len(fields) < 1 {
+		return nil, fmt.Errorf("failed to getFieldsListFromDescription %s", err)
+	}
+
+	return fields, nil
+}
+
+func (s *DataClient) getRecordByObjectNameANDStartTimestamp(objectName string, lookbackTimestamp int64) (*DataClient, error) {
+	fields, err := getSalesforceObjectFieldlList(objectName, s.accessToken, s.instanceURL)
+	if err != nil {
+		return nil, err
+	}
+
+	fieldList := strings.Join(fields, ",")
+	// append all campaign memebers to campaign object
+	if objectName == model.SalesforceDocumentTypeNameCampaign {
+		fieldList = fieldList + ",(+SELECT+id+from+campaignmembers+)"
+	}
+
+	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s", fieldList, objectName)
+	queryURL := s.instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/query?q=" + queryStmnt
+
+	if lookbackTimestamp > 0 {
+		t := time.Unix(lookbackTimestamp, 0)
+		sfFormatedTime := t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
+		queryURL = queryURL + "+" + "WHERE" + "+" + "LastModifiedDate" + url.QueryEscape(">"+sfFormatedTime)
+	}
+
+	dataClient := &DataClient{
+		accessToken:    s.accessToken,
+		instanceURL:    s.instanceURL,
+		queryURL:       queryURL,
+		isFirstRun:     true,
+		nextBatchRoute: "",
+	}
+
+	return dataClient, nil
+}
+
+func (s *DataClient) getNextBatch() ([]model.SalesforceRecord, bool, error) {
+	if s.accessToken == "" || s.instanceURL == "" {
+		return nil, true, errors.New("missing url parameters")
+	}
+
+	if !s.isFirstRun && s.nextBatchRoute == "" {
+		return nil, true, nil
+	}
+
+	queryURL := ""
+	if s.isFirstRun {
+		if s.nextBatchRoute != "" {
+			return nil, true, errors.New("invalid nextBatchRoute on first run for salesforce data client")
+		}
+
+		queryURL = s.queryURL
+	} else {
+		if s.nextBatchRoute == "" {
+			return nil, true, errors.New("invalid nextBatchRoute in salesforce data client")
+		}
+
+		queryURL = s.instanceURL + s.nextBatchRoute
+	}
+
+	res, err := s.getRequest(queryURL)
+	if err != nil {
+		log.WithFields(log.Fields{"url": queryURL}).WithError(err).Warn("Failed to get salesforce data.")
+		return nil, true, err
+	}
+
+	s.nextBatchRoute = res.NextRecordsURL
+	s.isFirstRun = false
+
+	return res.Records, res.Done, nil
+}
+
+func (s *DataClient) getRequest(queryURL string) (*QueryResponse, error) {
+	resp, err := GETRequest(queryURL, s.accessToken)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		var errBody []DataServiceError
+		if err := json.NewDecoder(resp.Body).Decode(&errBody); err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("error while query data %+v %d", errBody, resp.StatusCode)
+	}
+
+	var jsonResponse QueryResponse
+	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
+	if err != nil {
+		return nil, errors.New("failed to decode response")
+	}
+
+	return &jsonResponse, nil
+}
+
+// GetObjectRecordsByIDs get list of records by Id and object type
+func (s *DataClient) GetObjectRecordsByIDs(objectName string, IDs []string) (*DataClient, error) {
+	if objectName == "" {
+		return nil, errors.New("missing required fields")
+	}
+
+	fields, err := getSalesforceObjectFieldlList(objectName, s.accessToken, s.instanceURL)
+	if err != nil {
+		return nil, err
+	}
+
+	fieldList := strings.Join(fields, ",")
+	idList := "'" + strings.Join(IDs, "','") + "'"
+
+	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s+WHERE+Id+IN+(%s)", fieldList, objectName, idList)
+	queryURL := s.instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/query?q=" + queryStmnt
+
+	dataClient := &DataClient{
+		accessToken:    s.accessToken,
+		instanceURL:    s.instanceURL,
+		isFirstRun:     true,
+		queryURL:       queryURL,
+		nextBatchRoute: "",
+	}
+
+	return dataClient, nil
+}
+
+func getCampaingMemberIDsFromCampaign(properties *model.SalesforceRecord) ([]string, error) {
+	memberIDs := make([]string, 0)
+	if campaignMembersInt, exist := (*properties)[model.SalesforceChildRelationshipNameCampaignMembers]; exist && campaignMembersInt != nil {
+		campaignMembers, ok := campaignMembersInt.(map[string]interface{})
+		if !ok {
+			return nil, errors.New("failed to typecast campaignmemebers to map")
+		}
+
+		recordsInt, ok := campaignMembers["records"].([]interface{})
+		if !ok {
+			return nil, errors.New("failed to typecast campaignmemeber records to array of interface")
+		}
+
+		for i := range recordsInt {
+			record, ok := recordsInt[i].(map[string]interface{})
+			if !ok {
+				return nil, errors.New("failed to typecast campaignmemeber record to map")
+			}
+
+			if record["Id"] != "" {
+				memberIDs = append(memberIDs, U.GetPropertyValueAsString(record["Id"]))
+			}
+		}
+	}
+
+	return memberIDs, nil
+
+}
+
+func getSalesforceContactIDANDLeadIDFromCampaignMember(properties *model.SalesforceRecord) (string, string) {
+	var contactID, leadID string
+
+	if (*properties)["LeadId"] != "" {
+		leadID = U.GetPropertyValueAsString((*properties)["LeadId"])
+	}
+
+	if (*properties)["ContactId"] != "" {
+		contactID = U.GetPropertyValueAsString((*properties)["ContactId"])
+	}
+	return contactID, leadID
+}
+
+func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberIDs []string, accessToken, instanceURL string) ([]model.SalesforceRecord, []string, error) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforce data client to getAllCampaignMemberContactAndLeadRecords.")
+		return nil, nil, err
+	}
+
+	campaignMemberLeadIDs := make([]string, 0)
+	campaignMemberContactIDs := make([]string, 0)
+
+	if len(campaignMemberIDs) > 0 {
+
+		batchedCampaignMemberIDs := U.GetStringListAsBatch(campaignMemberIDs, 50)
+		for i := range batchedCampaignMemberIDs {
+			paginatedCampaignMembersByID, err := salesforceDataClient.GetObjectRecordsByIDs(model.SalesforceDocumentTypeNameCampaignMember, batchedCampaignMemberIDs[i])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to initialize salesforce data client to getAllCampaignMemberContactAndLeadRecords.")
+				return nil, nil, err
+			}
+
+			done := false
+			for !done {
+				var campaignMembers []model.SalesforceRecord
+				campaignMembers, done, err = paginatedCampaignMembersByID.getNextBatch()
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to get next batch to getAllCampaignMemberContactAndLeadRecords.")
+					break // break and sync successfully pulled records
+				}
+
+				for i := range campaignMembers {
+					contactID, leadID := getSalesforceContactIDANDLeadIDFromCampaignMember(&campaignMembers[i])
+					if contactID != "" {
+						campaignMemberContactIDs = append(campaignMemberContactIDs, contactID)
+					}
+					if leadID != "" {
+						campaignMemberLeadIDs = append(campaignMemberLeadIDs, leadID)
+					}
+				}
+			}
+		}
+	}
+
+	// sync all campaign member if not existed since the first date of data pull
+	var memberRecords []model.SalesforceRecord
+	var memberRecordsObjectType []string
+	for campaignMemberObject, campaignMemberObjectIDs := range map[string][]string{model.SalesforceDocumentTypeNameLead: campaignMemberLeadIDs, model.SalesforceDocumentTypeNameContact: campaignMemberContactIDs} {
+		batchedCampaignMemberObjectIDs := U.GetStringListAsBatch(campaignMemberObjectIDs, 50)
+		for i := range batchedCampaignMemberObjectIDs {
+			paginatedObjectsByID, err := salesforceDataClient.GetObjectRecordsByIDs(campaignMemberObject, batchedCampaignMemberObjectIDs[i])
+			if err != nil {
+				logCtx.WithFields(log.Fields{"object_name": campaignMemberObject}).WithError(err).Error("Failed to re-initialze salesforce data cleint for lead and contact ids.")
+				return nil, nil, err
+			}
+
+			done := false
+			var records []model.SalesforceRecord
+			for !done {
+				records, done, err = paginatedObjectsByID.getNextBatch()
+				if err != nil {
+					logCtx.WithFields(log.Fields{"object_name": campaignMemberObject}).WithError(err).Error("Failed to get next batch for lead and contact ids.")
+					return nil, nil, err
+				}
+
+				for i := range records {
+					memberRecords = append(memberRecords, records[i])
+					memberRecordsObjectType = append(memberRecordsObjectType, campaignMemberObject)
+				}
+
+			}
+		}
+
+	}
+
+	return memberRecords, memberRecordsObjectType, nil
+}
+
+func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName string, timestamp int64) (ObjectStatus, error) {
 	var salesforceObjectStatus ObjectStatus
 	salesforceObjectStatus.ProjetID = ps.ProjectID
 	salesforceObjectStatus.DocType = objectName
 
 	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName})
 
-	description, err := getSalesforceObjectDescription(objectName, accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to getSalesforceObjectDescription.")
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient.")
 		return salesforceObjectStatus, err
 	}
 
-	fields, err := getFieldsListFromDescription(description)
+	allCampaignMemberIDs := make([]string, 0)
+	allCampaignIDs := make(map[string]bool)
+
+	paginatedObjectsByStartTimestamp, err := salesforceDataClient.getRecordByObjectNameANDStartTimestamp(objectName, timestamp)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to getFieldsListFromDescription.")
+		logCtx.WithError(err).Error("Failed to initialize salesforce data client.")
 		return salesforceObjectStatus, err
 	}
 
-	selectStmnt := strings.Join(fields, ",")
-	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s", selectStmnt, objectName)
-	queryResponse, err := getSalesforceDataByQuery(queryStmnt, accessToken, ps.InstanceURL, dateTime)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to getSalesforceDataByQuery.")
-		return salesforceObjectStatus, err
-	}
-	salesforceObjectStatus.TotalRecords = queryResponse.TotalSize
-	records := queryResponse.Records
-
-	hasMore := true
-	nextBatchRoute := ""
-	for hasMore {
-		if nextBatchRoute != "" {
-			queryResponse, err = getSalesforceNextBatch(nextBatchRoute, ps.InstanceURL, accessToken)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to getSalesforceNextBatch.")
-				return salesforceObjectStatus, err
-			}
-			records = queryResponse.Records
+	done := false
+	var objectRecords []model.SalesforceRecord
+	for !done {
+		objectRecords, done, err = paginatedObjectsByStartTimestamp.getNextBatch()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to getNextBatch.")
+			return salesforceObjectStatus, err
 		}
 
 		var failures []string
-		for i := range records {
-			err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, objectName, records[i])
+		for i := range objectRecords {
+			// get campaing memeber ids from the campaign to sync missing leads,contacts and campaign members associated with the campaign
+			if objectName == model.SalesforceDocumentTypeNameCampaign {
+				campaignMemberIDs, err := getCampaingMemberIDsFromCampaign(&objectRecords[i])
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to get campaign member ids from campaign.")
+				} else {
+					allCampaignMemberIDs = append(allCampaignMemberIDs, campaignMemberIDs...)
+				}
+
+			}
+
+			if objectName == model.SalesforceDocumentTypeNameCampaignMember {
+				campaignID := util.GetPropertyValueAsString(objectRecords[i]["CampaignId"])
+
+				if campaignID != "" {
+					allCampaignIDs[campaignID] = true
+				} else {
+					logCtx.WithError(err).Error("Missing campaign Id from campaign member record.")
+				}
+				campaignMemberIDs := util.GetPropertyValueAsString(objectRecords[i]["Id"])
+				if campaignMemberIDs != "" {
+					allCampaignMemberIDs = append(allCampaignMemberIDs, campaignMemberIDs)
+				} else {
+					logCtx.WithError(err).Error("Missing campaign member Id from campaign member record.")
+				}
+			}
+
+			err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, objectName, objectRecords[i])
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument.")
 				failures = append(failures, err.Error())
 			}
 		}
-
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
-		hasMore = !queryResponse.Done
-		nextBatchRoute = queryResponse.NextRecordsURL
-		records = make([]model.SalesforceRecord, 0)
+	}
+
+	// sync missing lead or contact id if not available from first date of data pull
+	if objectName == model.SalesforceDocumentTypeNameCampaign || objectName == model.SalesforceDocumentTypeNameCampaignMember {
+
+		campaignMemberRecords, recordObjectType, err := getAllCampaignMemberContactAndLeadRecords(ps.ProjectID, allCampaignMemberIDs, accessToken, ps.InstanceURL)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to getAllCampaignMemberContactAndLeadRecords")
+			return salesforceObjectStatus, err
+		}
+
+		var failures []string
+		for i := range campaignMemberRecords {
+			err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, recordObjectType[i], campaignMemberRecords[i])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to insert campaign members on BuildAndUpsertDocument.")
+				failures = append(failures, err.Error())
+			}
+		}
+	}
+
+	// sync missing campaign if not available from first date of data pull
+	if objectName == model.SalesforceDocumentTypeNameCampaignMember {
+		campaignIDs := make([]string, 0)
+		for campaignID := range allCampaignIDs {
+			campaignIDs = append(campaignIDs, campaignID)
+		}
+
+		batchedcampaignIDs := U.GetStringListAsBatch(campaignIDs, 50)
+		for i := range batchedcampaignIDs {
+			paginatedObjectByID, err := salesforceDataClient.GetObjectRecordsByIDs(model.SalesforceDocumentTypeNameCampaign, batchedcampaignIDs[i])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to re-initialize salesforce data client.")
+				return salesforceObjectStatus, err
+			}
+
+			var campaignRecords []model.SalesforceRecord
+			done = false
+			for !done {
+				campaignRecords, done, err = paginatedObjectByID.getNextBatch()
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to getNextBatch.")
+					return salesforceObjectStatus, err
+				}
+
+				for i := range campaignRecords {
+					err = store.GetStore().BuildAndUpsertDocument(ps.ProjectID, model.SalesforceDocumentTypeNameCampaign, campaignRecords[i])
+					if err != nil {
+						logCtx.WithError(err).Error("Failed to insert campaign for campaign members on BuildAndUpsertDocument.")
+					}
+				}
+			}
+		}
 	}
 
 	return salesforceObjectStatus, nil
-}
-
-func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken string) (*QueryResponse, error) {
-	if nextBatchRoute == "" || InstanceURL == "" || accessToken == "" {
-		return nil, errors.New("missing required fields")
-	}
-	url := InstanceURL + nextBatchRoute
-	resp, err := GETRequest(url, accessToken)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		var errBody []DataServiceError
-		json.NewDecoder(resp.Body).Decode(&errBody)
-		return nil, fmt.Errorf("error while query next batch %+v ", errBody)
-	}
-
-	var jsonRespone QueryResponse
-	err = json.NewDecoder(resp.Body).Decode(&jsonRespone)
-	if err != nil {
-		return nil, errors.New("failed to decode response")
-	}
-
-	return &jsonRespone, nil
 }
 
 // TokenError implements error interface for token api error
@@ -442,7 +766,7 @@ func SyncDatetimeAndNumericalProperties(projectID uint64, accessToken, instanceU
 					typAlias,
 					U.GetPropertyValueAsString(fieldName),
 				), typAlias, U.GetPropertyValueAsString(label), model.SmartCRMEventSourceSalesforce)
-				if(err != http.StatusCreated){
+				if err != http.StatusCreated {
 					logCtx.Error("Failed to create or update display name")
 				}
 			}
@@ -466,7 +790,6 @@ func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]
 	var allObjectStatus []ObjectStatus
 
 	for docType, timestamp := range lastSyncInfo {
-		var sfFormatedTime string
 		var syncAll bool
 		if timestamp == 0 {
 			currentTime := time.Now().AddDate(0, 0, -30).UTC()
@@ -474,10 +797,7 @@ func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]
 			syncAll = true
 		}
 
-		t := time.Unix(timestamp, 0)
-		sfFormatedTime = t.UTC().Format(model.SalesforceDocumentDateTimeLayout)
-
-		objectStatus, err := syncByType(ps, accessToken, docType, sfFormatedTime)
+		objectStatus, err := syncByType(ps, accessToken, docType, timestamp)
 		if err != nil || len(objectStatus.Failures) != 0 {
 			log.WithFields(log.Fields{
 				"project_id": ps.ProjectID,

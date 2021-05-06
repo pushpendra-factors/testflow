@@ -541,3 +541,42 @@ func (store *MemSQL) GetSalesforceDocumentsByTypeForSync(projectID uint64, typ i
 
 	return documents, http.StatusFound
 }
+
+//GetLatestSalesforceDocumentByID return latest synced or unsynced document
+func (store *MemSQL) GetLatestSalesforceDocumentByID(projectID uint64, documentIDs []string, docType int) ([]model.SalesforceDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "ids": documentIDs, "type": docType})
+
+	if projectID == 0 || len(documentIDs) < 1 || docType == 0 {
+		logCtx.Error("Failed to get salesforce document by id and type.")
+		return nil, http.StatusBadRequest
+	}
+
+	selectStmnt := "WITH latest_timestamp as (SELECT id,max(timestamp) as timestamp FROM salesforce_documents " +
+		"WHERE project_id = ? AND type=? AND id IN(?) GROUP BY id ) " +
+		"SELECT * FROM salesforce_documents left join latest_timestamp ON salesforce_documents.id=latest_timestamp.id " +
+		"WHERE salesforce_documents.project_id = ? AND salesforce_documents.type=? AND salesforce_documents.id IN(?) AND " +
+		"salesforce_documents.timestamp = latest_timestamp.timestamp"
+	db := C.GetServices().Db
+	rows, err := db.Raw(selectStmnt, projectID, docType, documentIDs, projectID, docType, documentIDs).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to execute query on GetLatestSalesforceDocumentByID.")
+		return nil, http.StatusInternalServerError
+	}
+
+	var documents []model.SalesforceDocument
+	for rows.Next() {
+		var document model.SalesforceDocument
+		if err := db.ScanRows(rows, &document); err != nil {
+			logCtx.WithError(err).Error("Failed scanning rows on GetLatestSalesforceDocumentByID.")
+			return nil, http.StatusInternalServerError
+		}
+		documents = append(documents, document)
+	}
+
+	if len(documents) < 1 {
+		return nil, http.StatusNotFound
+	}
+
+	return documents, http.StatusFound
+}

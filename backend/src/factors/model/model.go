@@ -299,6 +299,7 @@ type Model interface {
 	GetSyncedSalesforceDocumentByType(projectID uint64, ids []string, docType int) ([]model.SalesforceDocument, int)
 	GetSalesforceObjectValuesByPropertyName(ProjectID uint64, objectType string, propertyName string) []interface{}
 	GetSalesforceDocumentsByTypeForSync(projectID uint64, typ int) ([]model.SalesforceDocument, int)
+	GetLatestSalesforceDocumentByID(projectID uint64, documentIDs []string, docType int) ([]model.SalesforceDocument, int)
 
 	// scheduled_task
 	CreateScheduledTask(task *model.ScheduledTask) int

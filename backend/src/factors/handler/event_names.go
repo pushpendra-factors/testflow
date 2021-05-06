@@ -29,8 +29,11 @@ var FORCED_EVENT_NAMES = map[uint64][]string{
 }
 
 var BLACKLISTED_EVENTS_FOR_EVENT_PROPERTIES = map[string]string{
-	"$hubspot_": "$hubspot_",
-	"$sf_":      "$salesforce_",
+	"$hubspot_":        "$hubspot_",
+	"$sf_contact_":     "$salesforce_",
+	"$sf_lead_":        "$salesforce_",
+	"$sf_account_":     "$salesforce_",
+	"$sf_opportunity_": "$salesforce_",
 }
 
 // GetEventNamesHandler godoc
@@ -190,14 +193,14 @@ func GetEventPropertiesHandler(c *gin.Context) {
 	}
 	U.FilterDisabledCoreEventProperties(&properties)
 
-	if(isDisplayNameEnabled == "true"){
-		_, displayNames :=  store.GetStore().GetDisplayNamesForAllEventProperties(projectId, eventName)
+	if isDisplayNameEnabled == "true" {
+		_, displayNames := store.GetStore().GetDisplayNamesForAllEventProperties(projectId, eventName)
 		standardPropertiesAllEvent := U.STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES
 		displayNamesOp := make(map[string]string)
 		for property, displayName := range standardPropertiesAllEvent {
 			displayNamesOp[property] = displayName
 		}
-		if(eventName == "$session"){
+		if eventName == "$session" {
 			standardPropertiesSession := U.STANDARD_SESSION_PROPERTIES_DISPLAY_NAMES
 			for property, displayName := range standardPropertiesSession {
 				displayNamesOp[property] = displayName

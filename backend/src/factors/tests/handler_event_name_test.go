@@ -16,11 +16,12 @@ import (
 	"testing"
 	"time"
 
+	b64 "encoding/base64"
+	V1 "factors/handler/v1"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	V1 "factors/handler/v1"
-	b64 "encoding/base64"
 )
 
 func sendGetEventNamesApproxRequest(projectId uint64, agent *model.Agent, r *gin.Engine) *httptest.ResponseRecorder {
@@ -262,8 +263,8 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Len(t, eventNames.EventNames, 4)
 
 	var eventNamesWithDisplayNames = struct {
-		EventNames map[string][]string `json:"event_names"`
-		DisplayNames  map[string]string     `json:"display_names"`
+		EventNames   map[string][]string `json:"event_names"`
+		DisplayNames map[string]string   `json:"display_names"`
 	}{}
 	w = sendGetEventNamesExactRequestWithDisplayNames(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -272,24 +273,24 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names along with $session.
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["MOST RECENT"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 13)
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 15)
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Website Session")
 
-	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"$session", DisplayName: "Test1"}, agent, project.ID)
-	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"$hubspot_contact_created", DisplayName: "Test2", PropertyName: ""}, agent, project.ID)
-	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"", DisplayName: "Test3", PropertyName: "$joinTime"}, agent, project.ID)
-	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"$session", DisplayName: "Test4", PropertyName: "$is_page_view"}, agent, project.ID)
-	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"$session", DisplayName: "Test5", PropertyName: "Dummy"}, agent, project.ID)
-	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"", DisplayName: "Test6", PropertyName: "Dummy"}, agent, project.ID)
-	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName :"", DisplayName: "Test6-1", PropertyName: "Dummy"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "$session", DisplayName: "Test1"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "$hubspot_contact_created", DisplayName: "Test2", PropertyName: ""}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "", DisplayName: "Test3", PropertyName: "$joinTime"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "$session", DisplayName: "Test4", PropertyName: "$is_page_view"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "$session", DisplayName: "Test5", PropertyName: "Dummy"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "", DisplayName: "Test6", PropertyName: "Dummy"}, agent, project.ID)
+	sendCreateDisplayNameRequest(r, V1.CreateDisplayNamesParams{EventName: "", DisplayName: "Test6-1", PropertyName: "Dummy"}, agent, project.ID)
 
-	status := store.GetStore().CreateOrUpdateDisplayNameByObjectType( project.ID, "$hubspot_contact_createdddate", "Contact", "Created Date", "Hubspot")
+	status := store.GetStore().CreateOrUpdateDisplayNameByObjectType(project.ID, "$hubspot_contact_createdddate", "Contact", "Created Date", "Hubspot")
 	assert.Equal(t, status, 201)
-	status = store.GetStore().CreateOrUpdateDisplayNameByObjectType( project.ID, "$hubspot_contact_createdddate1", "Contact", "Created Date", "Hubspot")
+	status = store.GetStore().CreateOrUpdateDisplayNameByObjectType(project.ID, "$hubspot_contact_createdddate1", "Contact", "Created Date", "Hubspot")
 	assert.Equal(t, status, 409)
-	status = store.GetStore().CreateOrUpdateDisplayNameByObjectType( project.ID, "$hubspot_contact_createdddate", "Contact", "Created Date1", "Hubspot")
+	status = store.GetStore().CreateOrUpdateDisplayNameByObjectType(project.ID, "$hubspot_contact_createdddate", "Contact", "Created Date1", "Hubspot")
 	assert.Equal(t, status, 201)
-	status = store.GetStore().CreateOrUpdateDisplayNameByObjectType( project.ID, "$hubspot_opportunity_createdddate", "Opportunity", "Created Date1", "Hubspot")
+	status = store.GetStore().CreateOrUpdateDisplayNameByObjectType(project.ID, "$hubspot_opportunity_createdddate", "Opportunity", "Created Date1", "Hubspot")
 	assert.Equal(t, status, 201)
 
 	w = sendGetEventNamesExactRequestWithDisplayNames(project.ID, agent, r)
@@ -299,13 +300,13 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// should contain all event names along with $session.
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["MOST RECENT"], 3)
 	assert.Len(t, eventNamesWithDisplayNames.EventNames["Hubspot"], 1)
-	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 13)
+	assert.Len(t, eventNamesWithDisplayNames.DisplayNames, 15)
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$session"], "Test1")
 	assert.Equal(t, eventNamesWithDisplayNames.DisplayNames["$hubspot_contact_created"], "Test2")
 
 	var properties = struct {
-		Proprties map[string][]string `json:"properties"`
-		DisplayNames  map[string]string     `json:"display_names"`
+		Proprties    map[string][]string `json:"properties"`
+		DisplayNames map[string]string   `json:"display_names"`
 	}{}
 	w = sendGetEventProperties(project.ID, "$session", agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)

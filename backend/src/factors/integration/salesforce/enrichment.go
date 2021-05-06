@@ -29,8 +29,32 @@ var salesforceSyncOrderByType = [...]int{
 	model.SalesforceDocumentTypeContact,
 	model.SalesforceDocumentTypeLead,
 	model.SalesforceDocumentTypeOpportunity,
+	model.SalesforceDocumentTypeCampaign,
+	model.SalesforceDocumentTypeCampaignMember,
 	model.SalesforceDocumentTypeAccount,
 }
+
+// CampaignChildRelationship campaign parent to child relationship
+type CampaignChildRelationship struct {
+	CampaignMembers RelationshipCampaignMember `json:"CampaignMembers"`
+}
+
+// RelationshipCampaignMemberRecord  child campaignmember required field
+type RelationshipCampaignMemberRecord struct {
+	ID        string `json:"Id"`
+	IsDeleted bool   `json:"IsDeleted"`
+	LeadID    string `json:"LeadId"`
+	ContactID string `json:"ContactId"`
+}
+
+// RelationshipCampaignMember campaign members of a campaign
+type RelationshipCampaignMember struct {
+	TotalSize int                                `json:"totalSize"`
+	Done      bool                               `json:"done"`
+	Records   []RelationshipCampaignMemberRecord `json:"records"`
+}
+
+var allowedCampaignFields = map[string]bool{}
 
 func getUserIDFromLastestProperties(properties []model.UserProperties) string {
 	latestIndex := len(properties) - 1
@@ -122,7 +146,8 @@ func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]in
 			}
 		}
 	}
-	delete(*properties, "attributes") // delte nested meta object
+	delete(*properties, "attributes")                                         // delte nested meta object
+	delete(*properties, model.SalesforceChildRelationshipNameCampaignMembers) // delete child relationship data
 }
 
 func getSalesforceAccountID(document *model.SalesforceDocument) (string, error) {
@@ -680,6 +705,245 @@ func enrichLeads(projectID uint64, document *model.SalesforceDocument, salesforc
 	return http.StatusOK
 }
 
+func getCampaignMemberIDsFromCampaign(document *model.SalesforceDocument) ([]string, error) {
+
+	var campaignChildRelationship CampaignChildRelationship
+	err := json.Unmarshal(document.Value.RawMessage, &campaignChildRelationship)
+	if err != nil {
+		return nil, err
+	}
+
+	records := campaignChildRelationship.CampaignMembers.Records
+	campaignMemberIDs := make([]string, len(records))
+	for i := range records {
+		campaignMemberIDs[i] = records[i].ID
+	}
+
+	return campaignMemberIDs, nil
+}
+
+func enrichCampaignToAllCampaignMembers(projectID uint64, document *model.SalesforceDocument) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID})
+	if document.Type != model.SalesforceDocumentTypeCampaign {
+		return http.StatusBadRequest
+	}
+
+	enProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get properties for campaign.")
+		return http.StatusInternalServerError
+	}
+
+	campaignMemberIDs, err := getCampaignMemberIDsFromCampaign(document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get campaign members ids.")
+		return http.StatusInternalServerError
+	}
+
+	if len(campaignMemberIDs) < 1 {
+		status := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, "", "")
+		if status != http.StatusAccepted {
+			logCtx.Error("Failed to mark campaign as synced.")
+			return http.StatusInternalServerError
+		}
+
+		return http.StatusOK
+	}
+
+	memberDocuments, status := store.GetStore().GetLatestSalesforceDocumentByID(projectID, campaignMemberIDs, model.SalesforceDocumentTypeCampaignMember)
+	if status != http.StatusFound {
+		logCtx.WithError(err).Error("Failed to get campaign members.")
+		return http.StatusInternalServerError
+	}
+
+	for i := range memberDocuments {
+		enMemberProperties, _, err := GetSalesforceDocumentProperties(projectID, &memberDocuments[i])
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get campaign member properties.")
+			return http.StatusInternalServerError
+		}
+
+		for pName := range *enProperties {
+			(*enMemberProperties)[pName] = (*enProperties)[pName]
+		}
+
+		referenceDocument := memberDocuments[i]
+		existingUserID := ""
+		if referenceDocument.Action == model.SalesforceDocumentCreated && memberDocuments[i].Synced == false {
+			existingUserID = getExistingCampaignMemberUserIDFromProperties(projectID, enMemberProperties)
+			if existingUserID == "" {
+				logCtx.WithField("member_id", referenceDocument.ID).Error("Missing lead or contact record for a campaign.")
+			}
+		} else {
+			referenceDocument.Action = model.SalesforceDocumentUpdated
+		}
+
+		// use latest timestamp
+		if referenceDocument.Timestamp < document.Timestamp {
+			referenceDocument.Value = document.Value
+			referenceDocument.Timestamp = document.Timestamp
+		}
+
+		trackPayload := &SDK.TrackPayload{
+			ProjectId:       projectID,
+			EventProperties: *enMemberProperties, // no user properties for campaign members
+			UserId:          existingUserID,
+		}
+
+		eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, &referenceDocument, "")
+		if err != nil {
+			logCtx.WithField("member_id", referenceDocument.ID).WithError(err).Error(
+				"Failed to track salesforce campaign member update on campaign update.")
+			return http.StatusInternalServerError
+		}
+
+		if memberDocuments[i].Synced == false {
+			status = store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, &memberDocuments[i], eventID, userID)
+			if status != http.StatusAccepted {
+				logCtx.WithField("member_id", referenceDocument.ID).Error("Failed to mark campaign member as synced.")
+				return http.StatusInternalServerError
+			}
+		}
+	}
+
+	status = store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, "", "")
+	if status != http.StatusAccepted {
+		logCtx.Error("Failed to mark campaign as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
+// Get existing lead or contact user ID from campaign members data
+func getExistingCampaignMemberUserIDFromProperties(projectID uint64, properties *map[string]interface{}) string {
+	existingUserID := ""
+	existingContactMemberID := (*properties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "ContactId")]
+	existingLeadMemberID := (*properties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "LeadId")]
+
+	// use contact Id associated user id. Once user converts from lead to contact, salesforce prioritize contact based identification
+	if existingContactMemberID != "" {
+		existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingContactMemberID)}, model.SalesforceDocumentTypeContact)
+		if status == http.StatusFound {
+			if existingMember[0].UserID != "" {
+				existingUserID = existingMember[0].UserID
+			}
+		}
+	}
+
+	if existingUserID == "" { // use lead Id if available
+		existingMember, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(existingLeadMemberID)}, model.SalesforceDocumentTypeLead)
+		if status == http.StatusFound {
+			if existingMember[0].UserID != "" {
+				existingUserID = existingMember[0].UserID
+			}
+		}
+	}
+
+	return existingUserID
+}
+
+func enrichCampaignMember(projectID uint64, document *model.SalesforceDocument) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID})
+	if document.Type != model.SalesforceDocumentTypeCampaignMember {
+		return http.StatusBadRequest
+	}
+
+	enCampaingMemberProperties, _, err := GetSalesforceDocumentProperties(projectID, document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get properties for campaign member.")
+		return http.StatusInternalServerError
+	}
+
+	campaignID, exist := (*enCampaingMemberProperties)[model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce, model.SalesforceDocumentTypeNameCampaignMember, "CampaignId")]
+	if !exist {
+		logCtx.Error("Missing campaign_id in campaign member")
+		return http.StatusInternalServerError
+	}
+
+	campaignDocuments, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{util.GetPropertyValueAsString(campaignID)}, model.SalesforceDocumentTypeCampaign)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get campaign document for campaign member.")
+		return http.StatusInternalServerError
+	}
+
+	enCampaignProperties, _, err := GetSalesforceDocumentProperties(projectID, &campaignDocuments[len(campaignDocuments)-1])
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get properties for campaign member.")
+		return http.StatusInternalServerError
+	}
+
+	for pName := range *enCampaignProperties {
+		(*enCampaingMemberProperties)[pName] = (*enCampaignProperties)[pName]
+	}
+
+	existingUserID := ""
+	// use user_id from lead or contact id
+	if document.Action == model.SalesforceDocumentCreated {
+		existingUserID = getExistingCampaignMemberUserIDFromProperties(projectID, enCampaingMemberProperties)
+	}
+
+	trackPayload := &SDK.TrackPayload{
+		ProjectId:       projectID,
+		EventProperties: *enCampaingMemberProperties,
+		UserId:          existingUserID,
+	}
+
+	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to track salesforce lead event.")
+		return http.StatusInternalServerError
+	}
+
+	errCode := store.GetStore().UpdateSalesforceDocumentAsSynced(projectID, document, eventID, userID)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update salesforce lead document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+
+}
+
+/*
+	Campaign{
+		ID:
+		Name:
+		CampaignMembers:{
+			Records:[{
+				ID:
+			},
+			{
+				ID:
+			}
+			]
+		}
+	}
+
+	CampaignMember{
+		ID:
+		CampaignID:
+		LeadID:
+		ContactID:
+	}
+*/
+func enrichCampaign(projectID uint64, document *model.SalesforceDocument) int {
+	if projectID == 0 || document == nil {
+		return http.StatusBadRequest
+	}
+
+	if document.Type == model.SalesforceDocumentTypeCampaign {
+		return enrichCampaignToAllCampaignMembers(projectID, document)
+	}
+
+	if document.Type == model.SalesforceDocumentTypeCampaignMember {
+		return enrichCampaignMember(projectID, document)
+	}
+
+	return http.StatusBadRequest
+}
+
 func enrichAll(projectID uint64, documents []model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 {
 		return http.StatusBadRequest
@@ -700,6 +964,8 @@ func enrichAll(projectID uint64, documents []model.SalesforceDocument, salesforc
 			errCode = enrichLeads(projectID, &documents[i], salesforceSmartEventNames)
 		case model.SalesforceDocumentTypeOpportunity:
 			errCode = enrichOpportunities(projectID, &documents[i], salesforceSmartEventNames)
+		case model.SalesforceDocumentTypeCampaign, model.SalesforceDocumentTypeCampaignMember:
+			errCode = enrichCampaign(projectID, &documents[i])
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
 			continue
