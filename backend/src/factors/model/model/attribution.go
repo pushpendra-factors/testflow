@@ -224,6 +224,9 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 
 	rowKeyMap := make(map[string][]interface{})
 	for _, row := range rows {
+		if len(row) == 0 {
+			continue
+		}
 		key := row[keyIndex].(string)
 		if _, exists := rowKeyMap[key]; exists {
 			seenRow := rowKeyMap[key]
