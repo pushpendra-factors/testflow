@@ -87,15 +87,19 @@ func getCRMPropertyKeyByType(source, objectType, key string) string {
  Salesforce supported document types and their alias
 */
 const (
-	SalesforceDocumentTypeContact     = 1
-	SalesforceDocumentTypeLead        = 2
-	SalesforceDocumentTypeAccount     = 3
-	SalesforceDocumentTypeOpportunity = 4
+	SalesforceDocumentTypeContact        = 1
+	SalesforceDocumentTypeLead           = 2
+	SalesforceDocumentTypeAccount        = 3
+	SalesforceDocumentTypeOpportunity    = 4
+	SalesforceDocumentTypeCampaign       = 5
+	SalesforceDocumentTypeCampaignMember = 6
 
-	SalesforceDocumentTypeNameContact     = "contact"
-	SalesforceDocumentTypeNameLead        = "lead"
-	SalesforceDocumentTypeNameAccount     = "account"
-	SalesforceDocumentTypeNameOpportunity = "opportunity"
+	SalesforceDocumentTypeNameContact        = "contact"
+	SalesforceDocumentTypeNameLead           = "lead"
+	SalesforceDocumentTypeNameAccount        = "account"
+	SalesforceDocumentTypeNameOpportunity    = "opportunity"
+	SalesforceDocumentTypeNameCampaign       = "campaign"
+	SalesforceDocumentTypeNameCampaignMember = "campaignmember"
 
 	SalesforceDocumentCreated SalesforceAction = 1
 	SalesforceDocumentUpdated SalesforceAction = 2
@@ -105,12 +109,19 @@ const (
 	SalesforceDocumentDateLayout     = "2006-01-02"
 )
 
+// Parent to child relationship for query related data, use plural form of names
+const (
+	SalesforceChildRelationshipNameCampaignMembers = "CampaignMembers"
+)
+
 // SalesforceDocumentTypeAlias maps document type to alias
 var SalesforceDocumentTypeAlias = map[string]int{
-	SalesforceDocumentTypeNameContact:     SalesforceDocumentTypeContact,
-	SalesforceDocumentTypeNameLead:        SalesforceDocumentTypeLead,
-	SalesforceDocumentTypeNameAccount:     SalesforceDocumentTypeAccount,
-	SalesforceDocumentTypeNameOpportunity: SalesforceDocumentTypeOpportunity,
+	SalesforceDocumentTypeNameContact:        SalesforceDocumentTypeContact,
+	SalesforceDocumentTypeNameLead:           SalesforceDocumentTypeLead,
+	SalesforceDocumentTypeNameAccount:        SalesforceDocumentTypeAccount,
+	SalesforceDocumentTypeNameOpportunity:    SalesforceDocumentTypeOpportunity,
+	SalesforceDocumentTypeNameCampaign:       SalesforceDocumentTypeCampaign,
+	SalesforceDocumentTypeNameCampaignMember: SalesforceDocumentTypeCampaignMember,
 }
 
 // SalesforceStandardDocumentType will be pulled if no custom list is provided
@@ -119,6 +130,12 @@ var SalesforceStandardDocumentType = []int{
 	SalesforceDocumentTypeContact,
 	SalesforceDocumentTypeLead,
 	SalesforceDocumentTypeOpportunity,
+}
+
+// SalesforceCampaignDocuments campaign related documents
+var SalesforceCampaignDocuments = []int{
+	SalesforceDocumentTypeCampaign,
+	SalesforceDocumentTypeCampaignMember,
 }
 
 var errorDuplicateRecord = errors.New("duplicate record")
@@ -154,6 +171,7 @@ func GetSalesforceDocumentTypeAlias(projectID uint64) map[string]int {
 	for _, doctype := range GetSalesforceAllowedObjects(projectID) {
 		docTypes[GetSalesforceAliasByDocType(doctype)] = doctype
 	}
+
 	return docTypes
 }
 
@@ -167,6 +185,10 @@ func GetSalesforceEventNameByDocumentAndAction(doc *SalesforceDocument, action S
 func GetSalesforceEventNameByAction(typAlias string, action SalesforceAction) string {
 	if typAlias == "" || action == 0 {
 		return ""
+	}
+
+	if typAlias == SalesforceDocumentTypeNameCampaignMember || typAlias == SalesforceDocumentTypeNameCampaign {
+		typAlias = "campaign_member"
 	}
 
 	if action == SalesforceDocumentCreated {

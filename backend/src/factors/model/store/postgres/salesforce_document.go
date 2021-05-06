@@ -95,7 +95,7 @@ func getSalesforceDocumentID(document *model.SalesforceDocument) (string, error)
 	return idAsString, nil
 }
 
-// GetSyncedSalesforceDocumentByType return salesforce_documents by doc type which are synced
+// GetSyncedSalesforceDocumentByType return salesforce_documents by doc type which are synced on chronological order
 func (pg *Postgres) GetSyncedSalesforceDocumentByType(projectID uint64, ids []string,
 	docType int) ([]model.SalesforceDocument, int) {
 
@@ -118,6 +118,35 @@ func (pg *Postgres) GetSyncedSalesforceDocumentByType(projectID uint64, ids []st
 	}
 
 	if len(documents) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return documents, http.StatusFound
+}
+
+//GetLatestSalesforceDocumentByID return latest synced or unsynced document
+func (pg *Postgres) GetLatestSalesforceDocumentByID(projectID uint64, documentIDs []string, docType int) ([]model.SalesforceDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "id": documentIDs, "type": docType})
+
+	if projectID == 0 || len(documentIDs) < 1 || docType == 0 {
+		logCtx.Error("Failed to get salesforce document by id and type.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	var documents []model.SalesforceDocument
+	err := db.Select("DISTINCT ON(id) salesforce_documents.*").Where("project_id = ? AND id IN (?) AND type = ?", projectID, documentIDs,
+		docType).Order("id,timestamp desc").Find(&documents).Error
+	if err != nil {
+		if !gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get latest salesforce document by id and type.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) < 1 {
 		return nil, http.StatusNotFound
 	}
 

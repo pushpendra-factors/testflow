@@ -2447,7 +2447,7 @@ func TestQueryCaching(t *testing.T) {
 		go sendAnalyticsQueryFromRoutine(r, queryClass, project.ID, agent, dashboardID, unitID, baseQuery, false, false, 1, &waitGroup)
 
 		// Another immediate query. Should return from cache after polling.
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboardID, unitID, baseQuery, false, false)
 		assert.NotEmpty(t, w)
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -2485,7 +2485,7 @@ func TestQueryCachingFailedCondition(t *testing.T) {
 		go sendAnalyticsQueryFromRoutine(r, queryClass, project.ID, agent, 0, 0, baseQuery, false, false, 1, &waitGroup)
 
 		// First query should will fail because of wrong query class. This query should return error after polling.
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 		w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, 0, 0, baseQuery, false, false)
 		assert.NotEmpty(t, w)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)

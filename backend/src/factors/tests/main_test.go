@@ -29,6 +29,7 @@ func TestMain(m *testing.M) {
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	allowedCampaignEnrichmentByProjectID := flag.String("allowed_campaign_enrichment_by_project_id", "*", "Campaign enrichment by project_id.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -83,6 +84,7 @@ func TestMain(m *testing.M) {
 		DeprecateUserPropertiesTableReadProjects: "*",
 		// List of projects to stop writing to user_properties table.
 		DeprecateUserPropertiesTableWriteProjects: "*",
+		AllowedCampaignEnrichmentByProjectID:      *allowedCampaignEnrichmentByProjectID,
 	}
 
 	// Setup.

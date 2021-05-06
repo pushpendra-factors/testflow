@@ -167,8 +167,9 @@ type Configuration struct {
 	EnableMQLAPI bool
 	// Flags to disable DB and Redis writes when primary datastore is memSQL.
 	// Added as pointer to prevent accidental writes from other services while testing.
-	DisableMemSQLDBWrites    *bool
-	DisableMemSQLRedisWrites *bool
+	DisableMemSQLDBWrites                *bool
+	DisableMemSQLRedisWrites             *bool
+	AllowedCampaignEnrichmentByProjectID string
 }
 
 type Services struct {
@@ -282,6 +283,27 @@ func InitPropertiesTypeCache(enablePropertyTypeFromDB bool, propertiesTypeCacheS
 
 	propertiesTypeCache.LastResetDate = U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
 	log.Info("Properties_type cache initialized.")
+}
+
+func IsAllowedCampaignEnrichementByProjectID(projectID uint64) bool {
+	if configuration.AllowedCampaignEnrichmentByProjectID == "" {
+		return false
+	}
+
+	if configuration.AllowedCampaignEnrichmentByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.AllowedCampaignEnrichmentByProjectID, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
+
 }
 
 // GetPropertiesTypeCache returns PropertiesTypeCache instance
@@ -627,7 +649,7 @@ func GetRoutesURLPrefix() string {
 
 // DisableMemSQLDBWrites If DB writes are disabled on MemSQL. Defaults to true unless specified explicitly.
 func DisableMemSQLDBWrites() bool {
-	if !UseMemSQLDatabaseStore() {
+	if !UseMemSQLDatabaseStore() || GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
 		return false
 	}
 
@@ -639,7 +661,7 @@ func DisableMemSQLDBWrites() bool {
 
 // DisableMemSQLRedisWrites If redis writes are disabled on MemSQL. Defaults to true unless specified explicitly.
 func DisableMemSQLRedisWrites() bool {
-	if !UseMemSQLDatabaseStore() {
+	if !UseMemSQLDatabaseStore() || GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
 		return false
 	}
 

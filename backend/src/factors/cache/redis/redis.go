@@ -145,7 +145,7 @@ func Set(key *Key, value string, expiryInSecs float64) error {
 
 func set(key *Key, value string, expiryInSecs float64, persistent bool) error {
 	// TODO(prateek): To be removed.
-	if preventWriteOperations() {
+	if C.DisableMemSQLRedisWrites() {
 		return nil
 	}
 	if key == nil {
@@ -276,7 +276,7 @@ func Del(keys ...*Key) error {
 
 func del(persistent bool, keys ...*Key) error {
 	// TODO(prateek): To be removed.
-	if preventWriteOperations() {
+	if C.DisableMemSQLRedisWrites() {
 		return nil
 	}
 	var cKeys []interface{}
@@ -349,7 +349,7 @@ func IncrPersistentBatch(keys ...*Key) ([]int64, error) {
 }
 func incrBatch(persistent bool, keys []*Key) ([]int64, error) {
 	// TODO(prateek): To be removed.
-	if preventWriteOperations() {
+	if C.DisableMemSQLRedisWrites() {
 		return []int64{}, nil
 	}
 	if len(keys) == 0 {
@@ -457,7 +457,7 @@ func SetPersistentBatch(values map[*Key]string, expiryInSecs float64) error {
 
 func setBatch(values map[*Key]string, expiryInSecs float64, persistent bool) error {
 	// TODO(prateek): To be removed.
-	if preventWriteOperations() {
+	if C.DisableMemSQLRedisWrites() {
 		return nil
 	}
 	if len(values) == 0 {
@@ -545,7 +545,7 @@ func PFAdd(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
 
 func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool) (bool, error) {
 	// TODO(prateek): To be removed.
-	if preventWriteOperations() {
+	if C.DisableMemSQLRedisWrites() {
 		return false, nil
 	}
 	if cacheKey == nil {
@@ -634,7 +634,7 @@ func IncrByBatchPersistent(keys []KeyCountTuple) ([]int64, error) {
 
 func incrByBatch(keys []KeyCountTuple, persistent bool) ([]int64, error) {
 	// TODO(prateek): To be removed.
-	if preventWriteOperations() {
+	if C.DisableMemSQLRedisWrites() {
 		return []int64{}, nil
 	}
 	if len(keys) == 0 {
@@ -684,7 +684,7 @@ func DecrByBatchPersistent(keys map[*Key]int64) error {
 
 func decrByBatch(keys map[*Key]int64, persistent bool) error {
 	// TODO(prateek): To be removed.
-	if preventWriteOperations() {
+	if C.DisableMemSQLRedisWrites() {
 		return nil
 	}
 	if len(keys) == 0 {
@@ -816,11 +816,4 @@ func zRemRange(key *Key, startIndex int, endIndex int, persistent bool) (int64, 
 	defer redisConn.Close()
 
 	return redis.Int64(redisConn.Do("ZREMRANGEBYRANK", cKey, startIndex, endIndex))
-}
-func preventWriteOperations() bool {
-	// Allow write operations for test / development environment.
-	if C.GetConfig().Env == C.TEST || C.GetConfig().Env == C.DEVELOPMENT {
-		return false
-	}
-	return C.DisableMemSQLRedisWrites()
 }

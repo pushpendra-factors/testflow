@@ -67,6 +67,7 @@ func main() {
 	blacklistEnrichmentByProjectID := flag.String("blacklist_enrichment_by_project_id", "", "Blacklist enrichment by project_id.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	syncOnly := flag.Bool("sync_only", false, "Run only sync.")
+	allowedCampaignEnrichmentByProjectID := flag.String("allowed_campaign_enrichment_by_project_id", "", "Campaign enrichment by project_id.")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -126,6 +127,7 @@ func main() {
 		// List of projects to use on-table user_properties for read.
 		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 		CacheSortedSet:                           *cacheSortedSet,
+		AllowedCampaignEnrichmentByProjectID:     *allowedCampaignEnrichmentByProjectID,
 	}
 
 	C.InitConf(config)
