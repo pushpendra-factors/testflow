@@ -177,7 +177,7 @@ func (store *MemSQL) PullLinkedinMarketingData(projectID uint64, from, to int64,
 	customerAccountIDs := strings.Split(customerAccountID, ",")
 	performanceQuery := "SELECT campaign_group_id as campaignID, campaign_id as adgroupID, '$none' as keywordID, creative_id as adID, " +
 		"JSON_EXTRACT_STRING(value, ?) AS key_id, JSON_EXTRACT_STRING(value, ?) AS key_name, JSON_EXTRACT_STRING(value, ?) AS extra_value1, " +
-		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM((JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
+		"SUM(JSON_EXTRACT_STRING(value, 'impressions')) AS impressions, SUM(JSON_EXTRACT_STRING(value, 'clicks')) AS clicks, " +
 		"SUM(JSON_EXTRACT_STRING(value, 'costInLocalCurrency')) AS total_spend FROM linkedin_documents " +
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"

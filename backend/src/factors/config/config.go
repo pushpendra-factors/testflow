@@ -627,7 +627,7 @@ func GetRoutesURLPrefix() string {
 
 // DisableMemSQLDBWrites If DB writes are disabled on MemSQL. Defaults to true unless specified explicitly.
 func DisableMemSQLDBWrites() bool {
-	if !UseMemSQLDatabaseStore() {
+	if !UseMemSQLDatabaseStore() || GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
 		return false
 	}
 
@@ -639,7 +639,7 @@ func DisableMemSQLDBWrites() bool {
 
 // DisableMemSQLRedisWrites If redis writes are disabled on MemSQL. Defaults to true unless specified explicitly.
 func DisableMemSQLRedisWrites() bool {
-	if !UseMemSQLDatabaseStore() {
+	if !UseMemSQLDatabaseStore() || GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
 		return false
 	}
 

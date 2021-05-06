@@ -996,17 +996,17 @@ func sanitizeNumericalBucketRanges(result *model.QueryResult, query *model.Query
 func (pg *Postgres) ExecQueryWithContext(stmnt string, params []interface{}) (*sql.Rows, error) {
 	db := C.GetServices().Db
 
-	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST {
-		log.WithField("Query", U.DBDebugPreparedStatement(stmnt, params)).Info("Exec query with context")
-	}
-
 	// For query: ...where id in ($1) where $1 is passed as a slice, convert to pq.Array()
 	stmnt, params = model.ExpandArrayWithIndividualValues(stmnt, params)
 
 	// Change ? in the query to to $1, $2 format.
 	stmnt = model.TransformQueryPlaceholdersForContext(stmnt)
 
-	return db.DB().QueryContext(*C.GetServices().DBContext, stmnt, params...)
+	rows, err := db.DB().QueryContext(*C.GetServices().DBContext, stmnt, params...)
+	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST || err != nil {
+		log.WithField("Query", U.DBDebugPreparedStatement(stmnt, params)).Info("Exec query with context")
+	}
+	return rows, err
 }
 
 func (pg *Postgres) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {

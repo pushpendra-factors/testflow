@@ -1003,11 +1003,13 @@ func (store *MemSQL) ExecQueryWithContext(stmnt string, params []interface{}) (*
 
 	// For query: ...where id in ($1) where $1 is passed as a slice, convert to pq.Array()
 	stmnt, params = model.ExpandArrayWithIndividualValues(stmnt, params)
-	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST {
+
+	rows, err := db.DB().QueryContext(*C.GetServices().DBContext, stmnt, params...)
+	if C.GetConfig().Env == C.DEVELOPMENT || C.GetConfig().Env == C.TEST || err != nil {
 		log.WithFields(log.Fields{"Query": U.DBDebugPreparedStatement(stmnt, params)}).Info("Exec query with context")
 	}
 
-	return db.DB().QueryContext(*C.GetServices().DBContext, stmnt, params...)
+	return rows, err
 }
 
 func (store *MemSQL) ExecQuery(stmnt string, params []interface{}) (*model.QueryResult, error) {
