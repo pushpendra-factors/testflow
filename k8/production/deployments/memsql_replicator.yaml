@@ -51,8 +51,18 @@ spec:
           - $(POSTGRES_PASSWORD)
           - --sentry_dsn
           - $(SENTRY_DSN)
-          - --memsql_dsn
-          - "<USER>:<PASSWORD>@tcp(<HOST>:3306)/factors?charset=utf8mb4&parseTime=True&loc=Local"
+          - --memsql_host
+          - $(MEMSQL_HOST)
+          - --memsql_port
+          - $(MEMSQL_PORT)
+          - --memsql_name
+          - $(MEMSQL_DB)
+          - --memsql_user
+          - $(MEMSQL_USER)
+          - --memsql_pass
+          - $(MEMSQL_PASSWORD)
+          - --memsql_cert
+          - $(MEMSQL_CERTIFICATE)
           - --project_ids
           - "*"
           - --page_size
@@ -62,10 +72,14 @@ spec:
             name: config-env
         - configMapRef:
             name: config-postgres
+        - configMapRef:
+            name: config-memsql
         - secretRef:
             name: secret-postgres
         - secretRef:
             name: secret-sentry
+        - secretRef:
+            name: secret-memsql
       volumes:
       - name: workdir
         emptyDir: {}
