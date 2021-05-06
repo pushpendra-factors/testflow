@@ -7,6 +7,9 @@
       "hosting": {
         "staging": [
           "factors-staging"
+        ],
+        "flash-staging": [
+          "flash-staging-1"
         ]
       }
     },

@@ -328,6 +328,7 @@ func CustomCors() gin.HandlerFunc {
 					"https://staging-app.factors.ai",
 					"https://tufte-staging.factors.ai",
 					"https://staging-app-old.factors.ai",
+					"https://flash-staging.factors.ai",
 				}
 			} else {
 				corsConfig.AllowOrigins = []string{
@@ -337,6 +338,7 @@ func CustomCors() gin.HandlerFunc {
 					"https://app-old.factors.ai",
 					"http://localhost:3000",
 					"http://factors-dev.com:3000",
+					"https://flash.factors.ai",
 				}
 			}
 
@@ -653,7 +655,11 @@ func Logger() gin.HandlerFunc {
 func SkipMemSQLAPIWritesIfDisabled() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if C.DisableMemSQLDBWrites() {
-			if c.Request.Method == http.MethodPost || c.Request.Method == http.MethodDelete || c.Request.Method == http.MethodPut {
+			isAllowedPath := strings.HasSuffix(c.Request.URL.Path, "/query") ||
+				strings.HasSuffix(c.Request.URL.Path, "/query/web_analytics") ||
+				strings.HasPrefix(c.Request.URL.Path, "/agents/signin")
+			if (c.Request.Method == http.MethodPost && !isAllowedPath) ||
+				c.Request.Method == http.MethodDelete || c.Request.Method == http.MethodPut {
 				c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Writes are disabled for MQL"})
 				return
 			}

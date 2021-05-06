@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"database/sql"
 	"errors"
 	C "factors/config"
 	Const "factors/constants"
@@ -640,6 +641,21 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 	defer rows.Close()
 	gclIDBasedCampaign := make(map[string]model.CampaignInfo)
 	for rows.Next() {
+		var gclIDTmp sql.NullString
+		var adgroupNameTmp sql.NullString
+		var adgroupIDTmp sql.NullString
+		var campaignNameTmp sql.NullString
+		var campaignIDTmp sql.NullString
+		var adIDTmp sql.NullString
+		var keywordIDTmp sql.NullString
+		var slotTmp sql.NullString
+		if err = rows.Scan(&gclIDTmp, &adgroupNameTmp, &adgroupIDTmp, &campaignNameTmp, &campaignIDTmp, &adIDTmp, &keywordIDTmp, &slotTmp); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+		if !gclIDTmp.Valid {
+			continue
+		}
 		var gclID string
 		var adgroupName string
 		var adgroupID string
@@ -648,10 +664,14 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 		var adID string
 		var keywordID string
 		var slot string
-		if err = rows.Scan(&gclID, &adgroupName, &adgroupID, &campaignName, &campaignID, &adID, &keywordID, &slot); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed")
-			continue
-		}
+		gclID = gclIDTmp.String
+		adgroupName = U.IfThenElse(adgroupNameTmp.Valid == true, adgroupNameTmp.String, "").(string)
+		adgroupID = U.IfThenElse(adgroupIDTmp.Valid == true, adgroupIDTmp.String, "").(string)
+		campaignName = U.IfThenElse(campaignNameTmp.Valid == true, campaignNameTmp.String, "").(string)
+		campaignID = U.IfThenElse(campaignIDTmp.Valid == true, campaignIDTmp.String, "").(string)
+		adID = U.IfThenElse(adIDTmp.Valid == true, adIDTmp.String, "").(string)
+		keywordID = U.IfThenElse(keywordIDTmp.Valid == true, keywordIDTmp.String, "").(string)
+		slot = U.IfThenElse(slotTmp.Valid == true, slotTmp.String, "").(string)
 		gclIDBasedCampaign[gclID] = model.CampaignInfo{
 			AdgroupName:  adgroupName,
 			AdgroupID:    adgroupID,
@@ -891,6 +911,7 @@ func (store *MemSQL) GetSQLQueryAndParametersForAdwordsQueryV1(projectID uint64,
 		sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryWithSmartPropertyV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
 		return sql, params, selectKeys, selectMetrics, http.StatusOK
 	}
+
 	sql, params, selectKeys, selectMetrics = buildAdwordsSimpleQueryV2(transformedQuery, projectID, *customerAccountID, reqID, fetchSource)
 	return sql, params, selectKeys, selectMetrics, http.StatusOK
 }

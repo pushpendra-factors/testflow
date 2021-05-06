@@ -299,6 +299,14 @@ func StringSliceDiff(sliceA, sliceB []string) []string {
 	return diffSlice
 }
 
+// IfThenElse Is a hack to get ternary one liners
+func IfThenElse(condition bool, a interface{}, b interface{}) interface{} {
+	if condition {
+		return a
+	}
+	return b
+}
+
 // StringValueIn Returns true if `value` is in `list` else false.
 func StringValueIn(value string, list []string) bool {
 	for _, val := range list {
@@ -596,6 +604,13 @@ func MinInt(a int, b int) int {
 }
 
 func MaxInt(a int, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func MaxFloat64(a float64, b float64) float64 {
 	if a > b {
 		return a
 	}

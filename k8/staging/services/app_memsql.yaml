@@ -9,7 +9,7 @@ metadata:
   namespace: default
 spec:    
   ports:
-  - nodePort: 31074
+  - nodePort: 31076
     port: 80
     protocol: TCP
     targetPort: 8080
