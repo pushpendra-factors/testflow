@@ -1,9 +1,20 @@
 import tornado.web
 # from raven.contrib.tornado import SentryMixin
+from lib.adwords.cors import Cors
 
 
 class BaseHandler(tornado.web.RequestHandler):
-    pass
+
+    def set_default_headers(self):
+        request_headers = self.request.headers
+        origin = request_headers.get('Origin')
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with, Origin, Content-Type")
+        self.set_header("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
+        self.set_header("Access-Control-Allow-Credentials", "true")
+        allowed_origin = Cors.get_cors_allowed_origin(origin)
+        if allowed_origin != None:
+            self.set_header("Access-Control-Allow-Origin", allowed_origin)
+
 # def write_error(self, status_code, **kwargs):
 #     if status_code == 500:
 #         exception = kwargs["exc_info"][1]
