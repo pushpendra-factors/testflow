@@ -16,6 +16,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	C "factors/config"
 	U "factors/util"
@@ -29,6 +30,7 @@ var migrateAllProjects bool
 var migrationPageSize int
 var migrationRoutines int
 var dedupeByQuery bool
+var disableSyncColumns bool
 
 var migrageAllTables bool
 var includeTablesMap map[string]bool
@@ -95,6 +97,13 @@ type TableRecord struct {
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+
+	// Columns to exclude.
+	// Projects table.
+	JobsMetadata *postgres.Jsonb `json:"jobs_metadata"`
+	// Hubspot and salesforce documents. UserID is already added above.
+	Synced bool   `json:"synced"`
+	SyncId string `json:"sync_id"`
 }
 
 var (
@@ -134,6 +143,7 @@ func main() {
 
 	includeTables := flag.String("include_tables", "*", "Comma separated tables to run or *")
 	excludeTables := flag.String("exclude_tables", "", "Comma separated tables to exclude from the run")
+	disableSyncColumnsFlag := flag.Bool("disable_sync_column", false, "To disable sync columns like jobs_metadata, synced etc")
 	flag.Parse()
 
 	if *env != C.DEVELOPMENT &&
@@ -167,6 +177,7 @@ func main() {
 	for _, tableName := range U.CleanSplitByDelimiter(*excludeTables, ",") {
 		excludeTablesMap[tableName] = true
 	}
+	disableSyncColumns = *disableSyncColumnsFlag
 
 	config := &C.Configuration{
 		AppName: "memsql_replicator",
@@ -781,6 +792,9 @@ func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interfac
 			return http.StatusInternalServerError
 		}
 
+		// Copy old memsql record values for selected sync columns.
+		pgRecord = disallowUpdateOnSyncColumns(tableName, memsqlTableRecord, pgRecord)
+
 		status = createOnMemSQL(projectID, tableName, pgRecord, pgTableRecord.ID, false)
 		if status != http.StatusCreated && status != http.StatusConflict {
 			return http.StatusInternalServerError
@@ -788,6 +802,31 @@ func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interfac
 	}
 
 	return http.StatusOK
+}
+
+func disallowUpdateOnSyncColumns(tableName string, memsqlTableRecord *TableRecord, pgRecord interface{}) interface{} {
+	if !disableSyncColumns || (tableName != tableProjects && tableName != tableHubspotDocuments && tableName != tableSalesforceDocuments) {
+		return pgRecord
+	}
+
+	if tableName == tableProjects {
+		project := pgRecord.(*model.Project)
+		project.JobsMetadata = memsqlTableRecord.JobsMetadata
+		return project
+	} else if tableName == tableHubspotDocuments {
+		hubspotDocument := pgRecord.(*model.HubspotDocument)
+		hubspotDocument.SyncId = memsqlTableRecord.SyncId
+		hubspotDocument.Synced = memsqlTableRecord.Synced
+		hubspotDocument.UserId = memsqlTableRecord.UserID
+		return hubspotDocument
+	} else if tableName == tableSalesforceDocuments {
+		salesforceDocument := pgRecord.(*model.SalesforceDocument)
+		salesforceDocument.SyncID = memsqlTableRecord.SyncId
+		salesforceDocument.Synced = memsqlTableRecord.Synced
+		salesforceDocument.UserID = memsqlTableRecord.UserID
+		return salesforceDocument
+	}
+	return pgRecord
 }
 
 func createIfNotExistOrUpdateIfChangedOnMemSQL(tableName string, pgRecord interface{}) (*TableRecord, int) {

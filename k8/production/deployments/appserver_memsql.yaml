@@ -94,6 +94,8 @@ spec:
           - $(API_DOMAIN)
           - --app_domain
           - $(APP_DOMAIN)
+          - --app_old_domain
+          - $(APP_OLD_HOST_URL)
           - --aws_region
           - $(AWS_REGION)
           - --aws_key
@@ -114,6 +116,10 @@ spec:
           - $(FACEBOOK_APP_SECRET)
           - --salesforce_app_id
           - $(SALESFORCE_APP_ID)
+          - --linkedin_client_id
+          - $(LINKEDIN_CLIENT_ID)
+          - --linkedin_client_secret
+          - $(LINKEDIN_CLIENT_SECRET)
           - --salesforce_app_secret
           - $(SALESFORCE_APP_SECRET)
           - --device_detector_path
@@ -155,6 +161,8 @@ spec:
             name: secret-login-token
         - secretRef:
             name: secret-facebook
+        - secretRef:
+            name: secret-linkedin
         - secretRef:
             name: secret-salesforce
         - secretRef:

@@ -41,7 +41,7 @@ class AppConfig(Config):
 
     @classmethod
     def get_factors_admin_adwords_redirect_url(cls, status=None):
-        url = cls.app_host_url + "/#/settings/adwords"
+        url = cls.app_host_url + "/settings/#integrations"
         if status is not None:
             url = url + "?status=" + status
         return url

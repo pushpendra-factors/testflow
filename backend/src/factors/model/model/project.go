@@ -21,7 +21,7 @@ type Project struct {
 	DateFormat          string          `json:"date_format"`
 	TimeZone            string          `json:"time_zone"`
 	InteractionSettings postgres.Jsonb  `json:"interaction_settings"`
-	JobsMetadata        *postgres.Jsonb `json:"-"`
+	JobsMetadata        *postgres.Jsonb `json:"jobs_metadata"`
 }
 
 const (
