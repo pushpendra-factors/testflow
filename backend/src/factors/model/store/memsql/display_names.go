@@ -3,6 +3,7 @@ package memsql
 import (
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 
 	"fmt"
@@ -44,6 +45,7 @@ func (store *MemSQL) CreateOrUpdateDisplayName(projectID uint64, eventName, prop
 	}
 
 	displayNameObj := model.DisplayName{
+		ID:           U.GetUUID(),
 		ProjectID:    projectID,
 		EventName:    eventName,
 		PropertyName: propertyName,
@@ -93,6 +95,7 @@ func (store *MemSQL) CreateOrUpdateDisplayNameByObjectType(projectID uint64, pro
 	db := C.GetServices().Db
 
 	displayNameObj := model.DisplayName{
+		ID:              U.GetUUID(),
 		ProjectID:       projectID,
 		PropertyName:    propertyName,
 		GroupObjectName: objectType,
