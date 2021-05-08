@@ -39,7 +39,7 @@ export const getTableColumns = (
   const breakdownColumns = breakdown.map((e, index) => {
     return {
       title: e.property,
-      dataIndex: e.property,
+      dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
       width: 200,
     };
@@ -76,7 +76,7 @@ export const getDataInTableFormat = (
     const splittedLabel = d.label.split(',');
     const breakdownData = {};
     breakdown.forEach((b, index) => {
-      breakdownData[b.property] = splittedLabel[index];
+      breakdownData[`${b.property} - ${index}`] = splittedLabel[index];
     });
     return {
       index: d.index,

@@ -368,7 +368,7 @@ export function enableAdwordsIntegration(projectId) {
 export function fetchAdwordsCustomerAccounts(payload) {
   return function(dispatch){
     return new Promise((resolve, reject) => {
-      post(dispatch, host +"adwords/get_customer_accounts", payload)
+      post(dispatch, host +"adwords/v1/get_customer_accounts", payload)
         .then((r) => {
           if (r.ok) {
             dispatch({ type: "FETCH_ADWORDS_CUSTOMER_ACCOUNTS_FULFILLED", payload: r.data })

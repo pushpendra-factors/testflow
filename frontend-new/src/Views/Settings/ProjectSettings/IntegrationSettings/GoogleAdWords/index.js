@@ -3,7 +3,8 @@ import { connect } from 'react-redux';
 import {
     Button, message, Select, Modal, Row, Col, Input, Checkbox, Skeleton
 } from 'antd';
-const ADWORDS_REDIRECT_URI = "/adwords/v1/auth/redirect"; 
+// const ADWORDS_REDIRECT_URI = "/adwords/auth/redirect"; 
+const ADWORDS_REDIRECT_URI_NEW = "/adwords/v1/auth/redirect"; 
 import { enableAdwordsIntegration, fetchAdwordsCustomerAccounts, udpateProjectSettings, fetchProjectSettings } from 'Reducers/global';
 const isDevelopment = () => {
     return ENV === "development"
@@ -43,34 +44,35 @@ const GoogleIntegration = ({
     }
 
     const getRedirectURL = () => {
+        let params = {
+            method: "GET",
+            credentials: "include"
+          }
         let host = getAdwordsHostURL();
-        let url =  host + ADWORDS_REDIRECT_URI + "?pid=" + activeProject?.id + "&aid=" + agent_details?.uuid;
-        fetch(url).then(response => response.json()).then((response)=>{
-            console.log('getRedirectURL success', response);
-            return response.url
-        }).catch((err)=>{
-            console.log('getRedirectURL for googleAds failed', err);
+        let url =  host + ADWORDS_REDIRECT_URI_NEW + "?pid=" + activeProject?.id + "&aid=" + agent_details?.uuid; 
+        fetch(url, params).then(response => response.json()).then((response)=>{ 
+            if(response?.url){ 
+                window.location = response.url; 
+            } 
+        }).catch((err)=>{ 
             return false
         })
     }
     useEffect(() => {
         if (isIntAdwordsEnabled()) {
             setIsActive(true);
-        }
+        } 
     }, [activeProject, agent_details]);
 
     const enableAdwords = () => {
         setLoading(true);
         enableAdwordsIntegration(activeProject.id).then((r) => {
-            setLoading(false);
-            console.log("rrrrr", r)
+            setLoading(false); 
             if (r.status == 304) {
-                window.location = getRedirectURL();
-                return
+                getRedirectURL(); 
             }
             if (r.status == 200) {
-                renderSettingInfo();
-                message.success('Google Ads integration enabled!');
+                renderSettingInfo(); 
                 fetchProjectSettings(activeProject.id).then(() => {
                     if (currentProjectSettings?.int_facebook_ad_account) {
                         setIsActive(true);
@@ -85,7 +87,7 @@ const GoogleIntegration = ({
             setIsActive(true);
         }).catch((err) => {
             setLoading(false);
-            console.log('change password failed-->', err);
+            console.log('Google Ads error-->', err);
             setIsActive(false);
         });
     };
@@ -200,6 +202,8 @@ const GoogleIntegration = ({
                 setCustomerAccountsLoaded(true);
                 setCustomerAccounts(data?.customer_accounts);
                 // setLoadingData(false);
+            }).catch((error)=>{
+                message.error("Error while fetch Customer Accounts.")
             });
         }
  

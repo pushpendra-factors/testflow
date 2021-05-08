@@ -318,7 +318,8 @@ upload-rollup-sortedset-cache: notify-deployment
 pack-memsql-replicator:
 	docker build -t us.gcr.io/factors-$(ENV)/memsql-replicator:$(TAG) -f Dockerfile.memsql_replicator .
 
-upload-memsql-replicator:
+upload-memsql-replicator: export IMAGE_NAME=memsql-replicator
+upload-memsql-replicator: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/memsql-replicator:$(TAG)
 
 pack-memsql-bulk-download:

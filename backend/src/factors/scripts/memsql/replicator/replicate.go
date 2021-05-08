@@ -28,7 +28,8 @@ import (
 var memSQLDB *gorm.DB
 var migrateAllProjects bool
 var migrationPageSize int
-var migrationRoutines int
+var migrationRoutinesHeavy int
+var migrationRoutinesOther int
 var dedupeByQuery bool
 var disableSyncColumns bool
 
@@ -65,6 +66,8 @@ const (
 	tableSmartPropertyRules            = "smart_property_rules"
 	tableDisplayNames                  = "display_names"
 )
+
+var heavyTables = []string{tableEvents, tableUsers, tableAdwordsDocuments, tableHubspotDocuments}
 
 type TableRecord struct {
 	ProjectID uint64      `json:"project_id"`
@@ -131,7 +134,8 @@ func main() {
 
 	projectIDStringList := flag.String("project_ids", "", "")
 	pageSize := flag.Int("page_size", 0, "No.of records per page.")
-	routines := flag.Int("routines", 10, "No.of parallel routines to use for each page.")
+	routinesHeavy := flag.Int("routines_heavy", 10, "No.of parallel routines to use for events, users, adwords_documents and hubspot_documents.")
+	routinesOther := flag.Int("routines_other", 5, "No.of parallel routines to use for all other tables.")
 	dedupeByQueryForNonUniqueTables := flag.Bool("dedupe_by_query", false,
 		"Dedupe's by firing a get query everytime for events and user_properties table.")
 
@@ -161,7 +165,8 @@ func main() {
 		log.Fatal("Migration page size cannot be zero.")
 	}
 	migrationPageSize = *pageSize
-	migrationRoutines = *routines
+	migrationRoutinesHeavy = *routinesHeavy
+	migrationRoutinesOther = *routinesOther
 	dedupeByQuery = *dedupeByQueryForNonUniqueTables
 
 	includeTablesMap = make(map[string]bool)
@@ -199,7 +204,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize db in add session.")
 	}
 
-	maxOpenConns := (30 * migrationRoutines) + 10
+	maxOpenConns := (24 * migrationRoutinesOther) + (4 * migrationRoutinesHeavy) + 10
 	memSQLDBConf := C.DBConf{
 		Host:        *memSQLHost,
 		Port:        *memSQLPort,
@@ -257,7 +262,7 @@ func initMemSQLDB(env string, dbConf *C.DBConf, maxOpenConns int) {
 	} else {
 		memSQLDB.LogMode(false)
 		memSQLDB.DB().SetMaxOpenConns(maxOpenConns)
-		memSQLDB.DB().SetMaxIdleConns(100)
+		memSQLDB.DB().SetMaxIdleConns(maxOpenConns)
 	}
 }
 
@@ -585,7 +590,7 @@ func getPrimaryKeyConditionByTableName(tableName string, sourceTableRecord *Tabl
 	idColName := "id"
 	if tableName == tableAgents {
 		idColName = "uuid"
-	} else if tableName == tableSmartProperties || tableName == tablePropertyDetails || tableName == tableDisplayNames {
+	} else if tableName == tableSmartProperties || tableName == tablePropertyDetails {
 		idColName = "project_id"
 	} else if isProjectAssociatedTable(tableName) {
 		idColName = "project_id"
@@ -1120,7 +1125,12 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 
 	var wg sync.WaitGroup
 	var states MStates
-	recordChunks := getRecordsAsChunks(recordIntfs, migrationRoutines)
+	var recordChunks [][]interface{}
+	if U.StringValueIn(tableName, heavyTables) {
+		recordChunks = getRecordsAsChunks(recordIntfs, migrationRoutinesHeavy)
+	} else {
+		recordChunks = getRecordsAsChunks(recordIntfs, migrationRoutinesOther)
+	}
 	for i := range recordChunks {
 		wg.Add(1)
 		go createOrUpdateOnMemSQLInParallel(tableName, recordChunks[i], &wg, &states)
