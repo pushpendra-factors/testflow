@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	emoji "github.com/tmdvs/Go-Emoji-Utils"
 )
 
 // DBReadRows Creates [][]interface{} from sql result rows.
@@ -212,7 +212,7 @@ func GormCleanupCallback(scope *gorm.Scope) {
 		switch field.Field.Type().String() {
 		case "string":
 			fieldValue := field.Field.Interface().(string)
-			err := field.Set(sanitizeStringValue(fieldValue))
+			err := field.Set(SanitizeStringValueForUnicode(fieldValue))
 			if err != nil {
 				log.WithError(err).Error("Failed to cleanup string field value.")
 				return
@@ -220,7 +220,7 @@ func GormCleanupCallback(scope *gorm.Scope) {
 		case "postgres.Jsonb":
 			fieldValue := field.Field.Interface().(postgres.Jsonb)
 			jsonAsString := string(fieldValue.RawMessage)
-			fieldValue.RawMessage = []byte(sanitizeStringValue(jsonAsString))
+			fieldValue.RawMessage = []byte(SanitizeStringValueForUnicode(jsonAsString))
 			err := field.Set(fieldValue)
 			if err != nil {
 				log.WithError(err).Error("Failed to cleanup postgres.Jsonb field value.")
@@ -233,7 +233,7 @@ func GormCleanupCallback(scope *gorm.Scope) {
 			}
 
 			jsonAsString := string(fieldValue.RawMessage)
-			fieldValue.RawMessage = []byte(sanitizeStringValue(jsonAsString))
+			fieldValue.RawMessage = []byte(SanitizeStringValueForUnicode(jsonAsString))
 			err := field.Set(fieldValue)
 			if err != nil {
 				log.WithError(err).Error("Failed to cleanup *postgres.Jsonb field value.")
@@ -243,6 +243,21 @@ func GormCleanupCallback(scope *gorm.Scope) {
 	}
 }
 
-func sanitizeStringValue(s string) string {
-	return emoji.RemoveAll(s)
+// https://stackoverflow.com/a/34863211/2341189
+// https://docs.singlestore.com/v7.3/guides/use-memsql/physical-schema-design/using-json/using-json/#unicode-support
+func SanitizeStringValueForUnicode(s string) string {
+	runes := make([]rune, 0, 0)
+	for _, r := range s {
+		if !utf8.ValidRune(r) {
+			continue
+		}
+		if r > 65536 {
+			// Memsql supports only till 65536. Convert to unicode point text.
+			escaped := []rune(strings.Replace(fmt.Sprintf("%U", r), "U+", "\\u", 1))
+			runes = append(runes, escaped...)
+		} else {
+			runes = append(runes, r)
+		}
+	}
+	return string(runes)
 }
