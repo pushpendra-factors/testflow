@@ -123,50 +123,62 @@ const (
 
 	LinkedinAdgroupID   = "campaign_id"
 	LinkedinAdgroupName = "campaign_name"
+
+	KeyDelimiter = ":-:"
 )
 
 type MarketingReports struct {
-	AdwordsGCLIDData        map[string]CampaignInfo
-	AdwordsCampaignIDData   map[string]MarketingData
-	AdwordsCampaignNameData map[string]MarketingData
+	AdwordsGCLIDData      map[string]MarketingData
+	AdwordsCampaignIDData map[string]MarketingData
+	//AdwordsCampaignNameData map[string]MarketingData
+	AdwordsCampaignKeyData map[string]MarketingData
 
-	AdwordsAdgroupIDData   map[string]MarketingData
-	AdwordsAdgroupNameData map[string]MarketingData
+	AdwordsAdgroupIDData map[string]MarketingData
+	//AdwordsAdgroupNameData map[string]MarketingData
+	AdwordsAdgroupKeyData map[string]MarketingData
 
-	AdwordsKeywordIDData   map[string]MarketingData
-	AdwordsKeywordNameData map[string]MarketingData
+	AdwordsKeywordIDData map[string]MarketingData
+	//AdwordsKeywordNameData map[string]MarketingData
+	AdwordsKeywordKeyData map[string]MarketingData
 
-	FacebookCampaignIDData   map[string]MarketingData
-	FacebookCampaignNameData map[string]MarketingData
+	FacebookCampaignIDData map[string]MarketingData
+	//FacebookCampaignNameData map[string]MarketingData
+	FacebookCampaignKeyData map[string]MarketingData
 
-	FacebookAdgroupIDData   map[string]MarketingData
-	FacebookAdgroupNameData map[string]MarketingData
+	FacebookAdgroupIDData map[string]MarketingData
+	//FacebookAdgroupNameData map[string]MarketingData
+	FacebookAdgroupKeyData map[string]MarketingData
 
-	LinkedinCampaignIDData   map[string]MarketingData
-	LinkedinCampaignNameData map[string]MarketingData
+	LinkedinCampaignIDData map[string]MarketingData
+	//LinkedinCampaignNameData map[string]MarketingData
+	LinkedinCampaignKeyData map[string]MarketingData
 
-	LinkedinAdgroupIDData   map[string]MarketingData
-	LinkedinAdgroupNameData map[string]MarketingData
+	LinkedinAdgroupIDData map[string]MarketingData
+	//LinkedinAdgroupNameData map[string]MarketingData
+	LinkedinAdgroupKeyData map[string]MarketingData
 }
 type MarketingData struct {
-	KeyID   string
-	KeyName string
-	// For Adword's Keyword Perf report, it is keyword_match_type
-	ExtraValue1 string
-	CampaignID  string
-	AdgroupID   string
-	KeywordID   string
-	AdID        string
-	Impressions int64
-	Clicks      int64
-	Spend       float64
-}
-
-type AttributionKeyValue struct {
-	CampaignName string
-	AdgroupName  string
-	Keyword      string
-	Source       string
+	// Key is CampaignName + AdgroupName + KeywordName + MatchType (i.e. ExtraValue)
+	Key string
+	// CampaignID, AdgroupID etc
+	ID string
+	// CampaignName, AdgroupName etc
+	Name string
+	// For Adwords Keyword Perf report, it is keyword_match_type, for others it is $none
+	CampaignID       string
+	CampaignName     string
+	AdgroupID        string
+	AdgroupName      string
+	KeywordMatchType string
+	KeywordID        string
+	KeywordName      string
+	AdID             string
+	AdName           string
+	Slot             string
+	Source           string
+	Impressions      int64
+	Clicks           int64
+	Spend            float64
 }
 
 type UserSessionData struct {
@@ -174,7 +186,7 @@ type UserSessionData struct {
 	MaxTimestamp      int64
 	TimeStamps        []int64
 	WithinQueryPeriod bool
-	KeyValues         AttributionKeyValue
+	MarketingInfo     MarketingData
 }
 
 var AddedKeysForAdgroup = []string{"Campaign"}
@@ -193,6 +205,7 @@ type AttributionData struct {
 	ConversionEventCount        float64
 	LinkedEventsCount           []float64
 	ConversionEventCompareCount float64
+	MarketingInfo               MarketingData
 }
 
 type UserInfo struct {
@@ -227,7 +240,11 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 		if len(row) == 0 {
 			continue
 		}
-		key := row[keyIndex].(string)
+		// creating a key for using added keys and index
+		key := ""
+		for j := 0; j <= keyIndex; j++ {
+			key = key + row[j].(string)
+		}
 		if _, exists := rowKeyMap[key]; exists {
 			seenRow := rowKeyMap[key]
 			// Don't sum up Impressions, Clicks, Spend.
@@ -256,56 +273,76 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 }
 
 // GetGCLIDAttributionValue Returns the matching value for GCLID, if not found returns $none
-func GetGCLIDAttributionValue(gclIDBasedCampaign *map[string]CampaignInfo, gclID string,
-	attributionKey string, originalMarketingValues AttributionKeyValue) (string, AttributionKeyValue) {
+func GetGCLIDAttributionValue(gclIDBasedCampaign *map[string]MarketingData, gclID string,
+	attributionKey string, sessionUTMMarketingValue MarketingData) (string, MarketingData) {
 
 	if v, ok := (*gclIDBasedCampaign)[gclID]; ok {
 
-		// Put the best v in marketingValues
-		if v.CampaignID != PropertyValueNone && v.CampaignID != "" {
-			// adding campaignID to CampaignName for better mapping later.
-			originalMarketingValues.CampaignName = v.CampaignID
-		}
-		// Prioritizing v.CampaignName
-		if v.CampaignName != PropertyValueNone && v.CampaignName != "" {
-			originalMarketingValues.CampaignName = v.CampaignName
-		}
-		if v.AdgroupID != PropertyValueNone && v.AdgroupID != "" {
-			// adding AdgroupID to AdgroupName for better mapping later.
-			originalMarketingValues.AdgroupName = v.AdgroupID
-		}
-		// Prioritizing v.AdgroupName
-		if v.AdgroupName != PropertyValueNone && v.AdgroupName != "" {
-			originalMarketingValues.AdgroupName = v.AdgroupName
-		}
-		if v.KeywordID != PropertyValueNone && v.KeywordID != "" {
-			originalMarketingValues.Keyword = v.KeywordID
-		}
+		enrichMarketData(&v, &sessionUTMMarketingValue)
 
-		// Select the best v for attributionKey
+		// Select the best value for attributionKey
 		switch attributionKey {
-		case U.EP_ADGROUP:
-			if v.AdgroupName != PropertyValueNone && v.AdgroupName != "" {
-				return v.AdgroupName, originalMarketingValues
+		case AttributionKeyCampaign:
+			if U.IsNonEmptyKey(v.CampaignName) {
+				return v.CampaignName, sessionUTMMarketingValue
 			}
-			return v.AdgroupID, originalMarketingValues
-		case U.EP_CAMPAIGN:
-			if v.CampaignName != PropertyValueNone && v.CampaignName != "" {
-				return v.CampaignName, originalMarketingValues
+			return v.CampaignID, sessionUTMMarketingValue
+		case AttributionKeyAdgroup:
+			if U.IsNonEmptyKey(v.AdgroupName) {
+				return v.AdgroupName, sessionUTMMarketingValue
 			}
-			return v.CampaignID, originalMarketingValues
-		case U.EP_KEYWORD:
-			return v.KeywordID, originalMarketingValues
+			return v.AdgroupID, sessionUTMMarketingValue
+		case AttributionKeyKeyword:
+			if U.IsNonEmptyKey(v.KeywordName) {
+				return v.KeywordName, sessionUTMMarketingValue
+			}
+			return v.KeywordID, sessionUTMMarketingValue
 		default:
 			// No enrichment for Source via GCLID
-			return PropertyValueNone, originalMarketingValues
+			return PropertyValueNone, sessionUTMMarketingValue
 		}
 	}
-	return PropertyValueNone, originalMarketingValues
+	return PropertyValueNone, sessionUTMMarketingValue
+}
+
+func enrichMarketData(v *MarketingData, sessionUTMMarketingValue *MarketingData) {
+	if U.IsNonEmptyKey(v.CampaignID) {
+		sessionUTMMarketingValue.CampaignID = v.CampaignID
+	}
+	if U.IsNonEmptyKey(v.CampaignName) {
+		sessionUTMMarketingValue.CampaignName = v.CampaignName
+	}
+	if U.IsNonEmptyKey(v.AdgroupID) {
+		sessionUTMMarketingValue.AdgroupID = v.AdgroupID
+	}
+	if U.IsNonEmptyKey(v.AdgroupName) {
+		sessionUTMMarketingValue.AdgroupName = v.AdgroupName
+	}
+	if U.IsNonEmptyKey(v.KeywordMatchType) {
+		sessionUTMMarketingValue.KeywordMatchType = v.KeywordMatchType
+	}
+	if U.IsNonEmptyKey(v.KeywordID) {
+		sessionUTMMarketingValue.KeywordID = v.KeywordID
+	}
+	if U.IsNonEmptyKey(v.KeywordName) {
+		sessionUTMMarketingValue.KeywordName = v.KeywordName
+	}
+	if U.IsNonEmptyKey(v.AdID) {
+		sessionUTMMarketingValue.AdID = v.AdID
+	}
+	if U.IsNonEmptyKey(v.AdName) {
+		sessionUTMMarketingValue.AdName = v.AdName
+	}
+	if U.IsNonEmptyKey(v.Slot) {
+		sessionUTMMarketingValue.Slot = v.Slot
+	}
+	if U.IsNonEmptyKey(v.Source) {
+		sessionUTMMarketingValue.Source = v.Source
+	}
 }
 
 // IsASearchSlotKeyword Returns true if it is not a search click using slot's v
-func IsASearchSlotKeyword(gclIDBasedCampaign *map[string]CampaignInfo, gclID string) bool {
+func IsASearchSlotKeyword(gclIDBasedCampaign *map[string]MarketingData, gclID string) bool {
 	if value, ok := (*gclIDBasedCampaign)[gclID]; ok {
 		if strings.Contains(strings.ToLower(value.Slot), "search") {
 			return true
@@ -434,10 +471,21 @@ func GetRowsByMaps(attributionKey string, attributionData map[string]*Attributio
 		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0))
 	}
 	rows := make([][]interface{}, 0)
-	for key, data := range attributionData {
-		attributionIdName := data.Name
+	for _, data := range attributionData {
+		attributionIdName := ""
+		switch attributionKey {
+		case AttributionKeyCampaign:
+			attributionIdName = data.MarketingInfo.CampaignName
+		case AttributionKeyAdgroup:
+			attributionIdName = data.MarketingInfo.AdgroupName
+		case AttributionKeyKeyword:
+			attributionIdName = data.MarketingInfo.KeywordName
+		case AttributionKeySource:
+			attributionIdName = data.MarketingInfo.Source
+		default:
+		}
 		if attributionIdName == "" {
-			attributionIdName = key
+			attributionIdName = PropertyValueNone
 		}
 		if attributionIdName != "" {
 			var row []interface{}
@@ -604,6 +652,30 @@ func DoesLinkedinReportExist(attributionKey string) bool {
 	return false
 }
 
+func AddTheAddedKeys(attributionData map[string]*AttributionData, attributionKey string, sessionKeyMap map[string]MarketingData) {
+
+	for key, _ := range attributionData {
+		if _, exists := sessionKeyMap[key]; exists {
+			// Add the marketing info
+			attributionData[key].MarketingInfo = sessionKeyMap[key]
+			switch attributionKey {
+			case AttributionKeyCampaign:
+				attributionData[key].Name = sessionKeyMap[key].CampaignName
+			case AttributionKeyAdgroup:
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].CampaignName)
+				attributionData[key].Name = sessionKeyMap[key].AdgroupID
+			case AttributionKeyKeyword:
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].CampaignName)
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].AdgroupName)
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].KeywordMatchType)
+				attributionData[key].Name = sessionKeyMap[key].KeywordName
+			case AttributionKeySource:
+				attributionData[key].Name = sessionKeyMap[key].Source
+			}
+		}
+	}
+}
+
 func AddPerformanceData(attributionData map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
 
 	AddAdwordsPerformanceReportInfo(attributionData, attributionKey, marketingData)
@@ -615,11 +687,11 @@ func AddAdwordsPerformanceReportInfo(attributionData map[string]*AttributionData
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.AdwordsCampaignIDData, nil, nil, nil)
+		addMetricsFromReport(attributionData, marketingData.AdwordsCampaignKeyData)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.AdwordsAdgroupIDData, marketingData.AdwordsCampaignIDData, nil, nil)
+		addMetricsFromReport(attributionData, marketingData.AdwordsAdgroupKeyData)
 	case AttributionKeyKeyword:
-		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordIDData, marketingData.AdwordsCampaignIDData, marketingData.AdwordsAdgroupIDData, marketingData.AdwordsKeywordIDData)
+		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordKeyData)
 	default:
 		// no enrichment for any other type
 		return
@@ -630,9 +702,9 @@ func AddFacebookPerformanceReportInfo(attributionData map[string]*AttributionDat
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.FacebookCampaignIDData, nil, nil, nil)
+		addMetricsFromReport(attributionData, marketingData.FacebookCampaignKeyData)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.FacebookAdgroupIDData, marketingData.FacebookCampaignIDData, nil, nil)
+		addMetricsFromReport(attributionData, marketingData.FacebookAdgroupKeyData)
 	case AttributionKeyKeyword:
 		// No keyword report for fb.
 		return
@@ -646,9 +718,9 @@ func AddLinkedinPerformanceReportInfo(attributionData map[string]*AttributionDat
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.LinkedinCampaignIDData, nil, nil, nil)
+		addMetricsFromReport(attributionData, marketingData.LinkedinCampaignKeyData)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.LinkedinAdgroupIDData, marketingData.LinkedinCampaignIDData, nil, nil)
+		addMetricsFromReport(attributionData, marketingData.LinkedinAdgroupKeyData)
 	case AttributionKeyKeyword:
 		// No keyword report for Linkedin.
 		return
@@ -658,68 +730,70 @@ func AddLinkedinPerformanceReportInfo(attributionData map[string]*AttributionDat
 	}
 }
 
-func addMetricsFromReport(attributionData map[string]*AttributionData, reportDataID map[string]MarketingData,
-	campaignIDData map[string]MarketingData, adgroupIDData map[string]MarketingData, keywordIDData map[string]MarketingData) {
+func addMetricsFromReport(attributionData map[string]*AttributionData, reportKeyData map[string]MarketingData) {
 
-	for keyID, value := range reportDataID {
-		matchingID := ""
-		keyName := value.KeyName
-		// nameNameName := ""
-		if _, keyIdFound := attributionData[keyID]; keyIdFound {
-			matchingID = keyID
-			// nameNameName = value.KeyName
-			enrichAttributionRow(attributionData, reportDataID, campaignIDData, adgroupIDData, keywordIDData, matchingID, keyName, value, keyID)
-		}
-
-		if _, keyNameFound := attributionData[keyName]; keyNameFound {
-			matchingID = keyName
-			enrichAttributionRow(attributionData, reportDataID, campaignIDData, adgroupIDData, keywordIDData, matchingID, keyName, value, keyID)
+	// If key is not found, no performance report enrichment will happen
+	for key, value := range reportKeyData {
+		if _, found := attributionData[key]; found {
+			enrichAttributionRow(attributionData, key, value)
 		}
 	}
 }
 
-func enrichAttributionRow(attributionData map[string]*AttributionData, reportDataID map[string]MarketingData, campaignIDData map[string]MarketingData, adgroupIDData map[string]MarketingData, keywordIDData map[string]MarketingData, matchingID string, keyName string, value MarketingData, keyID string) {
-	if matchingID != "" {
-		attributionData[matchingID].Name = keyName
-		attributionData[matchingID].Impressions = value.Impressions
-		attributionData[matchingID].Clicks = value.Clicks
-		attributionData[matchingID].Spend = value.Spend
+func getKeyFromAttributionData(data AttributionData) string {
 
-		// Appending campaign.
-		if campaignIDData != nil {
-			cmpID := reportDataID[keyID].CampaignID
-			cmpNm := ""
-			if cmpID != "" && cmpID != PropertyValueNone {
-				cmpNm = campaignIDData[cmpID].KeyName
-			}
-			attributionData[matchingID].AddedKeys = append(attributionData[matchingID].AddedKeys, cmpNm)
-		}
-		// Appending adgroup.
-		if adgroupIDData != nil {
-			adgID := reportDataID[keyID].AdgroupID
-			adgNm := ""
-			if adgID != "" && adgID != PropertyValueNone {
-				adgNm = adgroupIDData[adgID].KeyName
-			}
-			attributionData[matchingID].AddedKeys = append(attributionData[matchingID].AddedKeys, adgNm)
-		}
-		// Appending match_type
-		if keywordIDData != nil {
-			keywordID := reportDataID[keyID].KeywordID
-			matchType := ""
-			if keywordID != "" && keywordID != PropertyValueNone {
-				// ExtraValue is keyword_match_type
-				matchType = keywordIDData[keywordID].ExtraValue1
-			}
-			attributionData[matchingID].AddedKeys = append(attributionData[matchingID].AddedKeys, matchType)
-		}
+	key := ""
+	for i := 0; i < len(data.AddedKeys); i++ {
+		key = key + data.AddedKeys[i] + KeyDelimiter
 	}
+	key = key + data.Name
+	return key
 }
 
-func ProcessRow(rows *sql.Rows, err error, logCtx *log.Entry) (map[string]MarketingData, map[string]MarketingData) {
+func GetMarketingDataKey(attributionKey string, data MarketingData) string {
 
-	marketingDataKeyIdMap := make(map[string]MarketingData)
-	marketingDataKeyNameMap := make(map[string]MarketingData)
+	key := ""
+	switch attributionKey {
+	case AttributionKeyCampaign:
+		// we know we get campaignIDReport here
+		key = key + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.CampaignName).(string)
+	case AttributionKeyAdgroup:
+		key = key + data.CampaignName + KeyDelimiter + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.AdgroupName).(string)
+	case AttributionKeyKeyword:
+		// we know we get keywordIDReport here
+		key = key + data.CampaignName + KeyDelimiter + data.AdgroupName + KeyDelimiter + data.KeywordMatchType + KeyDelimiter + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.KeywordName).(string)
+	case AttributionKeySource:
+		key = key + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.Source).(string)
+	default:
+		key = key + data.Name
+	}
+	return key
+}
+
+func GetKeyMapToData(attributionKey string, dataIDMap map[string]MarketingData) map[string]MarketingData {
+
+	keyToData := make(map[string]MarketingData)
+	for _, v := range dataIDMap {
+		key := GetMarketingDataKey(attributionKey, v)
+		val := MarketingData{}
+		U.DeepCopy(&v, &val)
+		val.Key = key
+		keyToData[key] = val
+	}
+	return keyToData
+}
+
+func enrichAttributionRow(attributionData map[string]*AttributionData, key string, value MarketingData) {
+
+	attributionData[key].Impressions = value.Impressions
+	attributionData[key].Clicks = value.Clicks
+	attributionData[key].Spend = value.Spend
+}
+
+func ProcessRow(rows *sql.Rows, err error, logCtx *log.Entry) map[string]MarketingData {
+
+	// ID is CampaignID, AdgroupID, KeywordID etc
+	marketingDataIDMap := make(map[string]MarketingData)
 
 	for rows.Next() {
 		var campaignIDNull sql.NullString
@@ -740,17 +814,16 @@ func ProcessRow(rows *sql.Rows, err error, logCtx *log.Entry) (map[string]Market
 		if !keyNameNull.Valid || !keyIDNull.Valid {
 			continue
 		}
-		name, ID, data := GetMarketingDataFromValues(campaignIDNull, adgroupIDNull, keywordIDNull, adIDNull,
+		ID, data := getMarketingDataFromValues(campaignIDNull, adgroupIDNull, keywordIDNull, adIDNull,
 			keyIDNull, keyNameNull, extraValue1Null, impressionsNull, clicksNull, spendNull)
-		marketingDataKeyIdMap[ID] = data
-		marketingDataKeyNameMap[name] = data
+		marketingDataIDMap[ID] = data
 	}
-	return marketingDataKeyIdMap, marketingDataKeyNameMap
+	return marketingDataIDMap
 }
 
-func GetMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql.NullString, keywordIDNull sql.NullString,
-	adIDNull sql.NullString, keyIDNull sql.NullString, keyNameNull sql.NullString, extraValue1Null sql.NullString, impressionsNull sql.NullFloat64,
-	clicksNull sql.NullFloat64, spendNull sql.NullFloat64) (string, string, MarketingData) {
+func getMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql.NullString, keywordIDNull sql.NullString,
+	adIDNull sql.NullString, IDNull sql.NullString, nameNull sql.NullString, extraValue1Null sql.NullString, impressionsNull sql.NullFloat64,
+	clicksNull sql.NullFloat64, spendNull sql.NullFloat64) (string, MarketingData) {
 
 	campaignID := PropertyValueNone
 	adgroupID := PropertyValueNone
@@ -760,14 +833,11 @@ func GetMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql
 	var impressions float64
 	var clicks float64
 	var spend float64
-	keyName := keyNameNull.String
-	keyID := keyIDNull.String
+	name := nameNull.String
+	ID := IDNull.String
 	impressions = 0
 	clicks = 0
 	spend = 0
-	if extraValue1Null.Valid {
-		extraValue1 = extraValue1Null.String
-	}
 	if impressionsNull.Valid {
 		impressions = impressionsNull.Float64
 	}
@@ -777,19 +847,39 @@ func GetMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql
 	if spendNull.Valid {
 		spend = spendNull.Float64
 	}
+	if extraValue1Null.Valid {
+		extraValue1 = U.IfThenElse(extraValue1Null.String != "", extraValue1Null.String, PropertyValueNone).(string)
+	}
 	if campaignIDNull.Valid {
-		campaignID = campaignIDNull.String
+		campaignID = U.IfThenElse(campaignIDNull.String != "", campaignIDNull.String, PropertyValueNone).(string)
 	}
 	if adgroupIDNull.Valid {
-		adgroupID = adgroupIDNull.String
+		adgroupID = U.IfThenElse(adgroupIDNull.String != "", adgroupIDNull.String, PropertyValueNone).(string)
 	}
 	if keywordIDNull.Valid {
-		keywordID = keywordIDNull.String
+		keywordID = U.IfThenElse(keywordIDNull.String != "", keywordIDNull.String, PropertyValueNone).(string)
 	}
 	if adIDNull.Valid {
-		adID = adIDNull.String
+		adID = U.IfThenElse(adIDNull.String != "", adIDNull.String, PropertyValueNone).(string)
 	}
-	data := MarketingData{KeyID: keyID, KeyName: keyName, ExtraValue1: extraValue1, CampaignID: campaignID, AdgroupID: adgroupID,
-		KeywordID: keywordID, AdID: adID, Impressions: int64(impressions), Clicks: int64(clicks), Spend: spend}
-	return keyName, keyID, data
+
+	// Only fill IDs. Key and Names would be set separately.
+	data := MarketingData{
+		Key:              "",
+		ID:               ID,
+		Name:             name,
+		CampaignID:       campaignID,
+		CampaignName:     PropertyValueNone,
+		AdgroupID:        adgroupID,
+		AdgroupName:      PropertyValueNone,
+		KeywordMatchType: extraValue1,
+		KeywordName:      PropertyValueNone,
+		KeywordID:        keywordID,
+		AdName:           PropertyValueNone,
+		AdID:             adID,
+		Slot:             PropertyValueNone,
+		Impressions:      int64(impressions),
+		Clicks:           int64(clicks),
+		Spend:            spend}
+	return ID, data
 }

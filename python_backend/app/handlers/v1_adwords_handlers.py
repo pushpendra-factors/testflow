@@ -1,6 +1,7 @@
 import json
 import urllib.parse
 from base64 import b64decode
+import traceback
 
 from tornado import gen
 from tornado.log import logging as log
@@ -49,6 +50,7 @@ class OAuthRedirectV1Handler(BaseHandler):
 
 
 class OAuthCallbackV1Handler(BaseHandler):
+
     @gen.coroutine
     def get(self):
         # Input params validation.
@@ -56,44 +58,32 @@ class OAuthCallbackV1Handler(BaseHandler):
             authorisation_code = self.get_argument("code")
         except Exception as e:
             log.error(MISSING_ARGUMENT_ERROR.format(argment="code", exception=e))
-            self.finish(json.dumps({'error': {'code': 400, 'message': "authorisation_code is not provided in params."}}))
+            self.redirect(app.CONFIG.ADWORDS_APP.get_factors_admin_adwords_redirect_url(STATUS_FAILURE), True)
             return
 
         try:
             state = self.get_argument("state")
         except Exception as e:
             log.error(MISSING_ARGUMENT_ERROR.format(argument="state", exception=e))
-            self.finish(json.dumps({'error': {'code': 400, 'message': "state is not provided in params."}}))
+            self.redirect(app.CONFIG.ADWORDS_APP.get_factors_admin_adwords_redirect_url(STATUS_FAILURE), True)
             return
 
         state_payload = json.loads(b64decode(state).decode())
         try:
             AdwordsOauthService().check_and_add_refresh_token(authorisation_code, state_payload)
         except OauthCallbackMissingParameter as e:
-            self.finish(json.dumps({'error': {'code': 400, 'message': "Invalid state is provided."}}))
+            self.redirect(app.CONFIG.ADWORDS_APP.get_factors_admin_adwords_redirect_url(STATUS_FAILURE), True)
             return
 
         except OauthCallbackMissingRefreshToken as e:
-            self.finish(json.dumps({'error': {'code': 400, 'message': "Refresh token fetch failed."}}))
+            self.redirect(app.CONFIG.ADWORDS_APP.get_factors_admin_adwords_redirect_url(REFRESH_TOKEN_FAILURE), True)
             return
 
-        self.set_status(200)
-        self.finish()
+        self.redirect(app.CONFIG.ADWORDS_APP.get_factors_admin_adwords_redirect_url(), True)
         return
 
 
 class GetCustomerAccountsV1Handler(BaseHandler):
-    # Not considering # for origin.
-    def set_default_headers(self):
-        request_headers = self.request.headers
-        origin = request_headers.get('Origin')
-        cors = app.CONFIG.ADWORDS_APP.cors
-        self.set_header("Access-Control-Allow-Headers", "x-requested-with, Origin, Content-Type")
-        self.set_header("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS")
-        self.set_header("Access-Control-Allow-Credentials", "true")
-        allowed_origin = Cors.get_cors_allowed_origin(origin)
-        if allowed_origin != None:
-            self.set_header("Access-Control-Allow-Origin", allowed_origin)
 
     @gen.coroutine
     def options(self):
@@ -107,7 +97,7 @@ class GetCustomerAccountsV1Handler(BaseHandler):
             project_id = params["project_id"]
         except Exception as e:
             self.set_status(400)
-            self.finish(MISSING_ARGUMENT_ERROR.format(argument="project_id", exception=e))
+            self.finish({"message": MISSING_ARGUMENT_ERROR.format(argument="project_id", exception=e)})
             return
 
         session_cookie_key = app.CONFIG.ADWORDS_APP.get_session_cookie_key()
@@ -137,9 +127,15 @@ class GetCustomerAccountsV1Handler(BaseHandler):
             return
 
         # Get customer accounts.
-        customer_service = FetchService(app.CONFIG.ADWORDS_OAUTH).get_customer_accounts(refresh_token)
-        response = []
-        customer_accounts = customer_service.getCustomers()
+        try:
+            customer_service = FetchService(app.CONFIG.ADWORDS_OAUTH).get_customer_accounts(refresh_token)
+            response = []
+            customer_accounts = customer_service.getCustomers()
+        except Exception as e:
+            self.set_status(400)
+            traceback.print_tb(e.__traceback__)
+            log.warning("Errored during customer fetch from adwords" + str(e))
+            self.finish({"message":"Error happened during fetch of customers from adwords."})
 
         if len(customer_accounts) == 0:
             self.set_status(404)

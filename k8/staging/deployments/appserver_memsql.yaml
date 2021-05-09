@@ -49,14 +49,14 @@ spec:
         securityContext: {}
         readinessProbe:
           httpGet:
-            path: /status?s=k8_rp
+            path: /mql/status?s=k8_rp
             scheme: HTTP
             port: 8080
           initialDelaySeconds: 10
           periodSeconds: 10
         livenessProbe:
           httpGet:
-            path: /status?s=k8_lp
+            path: /mql/status?s=k8_lp
             scheme: HTTP
             port: 8080
           initialDelaySeconds: 10
@@ -94,6 +94,8 @@ spec:
           - $(API_DOMAIN)
           - --app_domain
           - $(APP_DOMAIN)
+          - --app_old_domain
+          - $(APP_OLD_HOST_URL)
           - --aws_region
           - $(AWS_REGION)
           - --aws_key
@@ -112,6 +114,10 @@ spec:
           - $(FACEBOOK_APP_ID)
           - --facebook_app_secret
           - $(FACEBOOK_APP_SECRET)
+          - --linkedin_client_id
+          - $(LINKEDIN_CLIENT_ID)
+          - --linkedin_client_secret
+          - $(LINKEDIN_CLIENT_SECRET)
           - --salesforce_app_secret
           - $(SALESFORCE_APP_SECRET)
           - --salesforce_app_id
@@ -155,6 +161,8 @@ spec:
             name: secret-login-token
         - secretRef:
             name: secret-facebook
+        - secretRef:
+            name: secret-linkedin
         - secretRef:
             name: secret-sentry
         - secretRef:

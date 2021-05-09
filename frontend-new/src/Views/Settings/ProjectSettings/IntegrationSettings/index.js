@@ -67,7 +67,7 @@ const IntegrationCard = ({ item, index }) => {
       case 'Drift': return <DriftIntegration setIsActive={setIsActive} />;
       case 'Facebook': return <FacebookIntegration setIsActive={setIsActive} />;
       case 'Salesforce': return <SalesForceIntegration setIsActive={setIsActive} />;
-      // case 'Google': return <GoogleAdWords setIsActive={setIsActive} />;
+      case 'Google': return <GoogleAdWords setIsActive={setIsActive} />;
       case 'LinkedIn': return <LinkedInIntegration setIsActive={setIsActive} />;
       default: return <><Tag color="orange" style={{ marginTop: '8px' }}>Enable from <a href="https://app-old.factors.ai/" target="_blank">here</a></Tag> </>
     }

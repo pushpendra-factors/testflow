@@ -6,28 +6,29 @@ import (
 	U "factors/util"
 	"net/http"
 
+	"fmt"
+	"time"
+
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
-	"fmt"	
-	"time"
 )
 
-func (pg *Postgres) CreateOrUpdateDisplayName(projectID uint64, eventName, propertyName, displayName, tag string) int{
+func (pg *Postgres) CreateOrUpdateDisplayName(projectID uint64, eventName, propertyName, displayName, tag string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_name": propertyName, "event_name": eventName, "display_name": displayName, "tag": tag})
 
-	if (displayName == "" || projectID == 0) {
+	if displayName == "" || projectID == 0 {
 		logCtx.Error("Missing required field.")
 		return http.StatusBadRequest
 	}
-	
+
 	db := C.GetServices().Db
 
 	var entityType int
-	if(eventName != "" && propertyName != ""){
+	if eventName != "" && propertyName != "" {
 		entityType = model.DisplayNameEventPropertyEntityType
-	} else if(eventName != "") {
+	} else if eventName != "" {
 		entityType = model.DisplayNameEventEntityType
-	} else if(propertyName != ""){
+	} else if propertyName != "" {
 		entityType = model.DisplayNameUserPropertyEntityType
 	} else {
 		logCtx.Error("Missing required field.")
@@ -35,22 +36,22 @@ func (pg *Postgres) CreateOrUpdateDisplayName(projectID uint64, eventName, prope
 	}
 
 	displayNameObj := model.DisplayName{
-		ProjectID: projectID,
-		EventName: eventName,
+		ProjectID:    projectID,
+		EventName:    eventName,
 		PropertyName: propertyName,
-		Tag: tag,
-		EntityType: entityType,
-		DisplayName: displayName,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		Tag:          tag,
+		EntityType:   entityType,
+		DisplayName:  displayName,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
-	if err := db.Create(displayNameObj).Error; err != nil {
+	if err := db.Create(&displayNameObj).Error; err != nil {
 		if U.IsPostgresUniqueIndexViolationError("display_names_project_id_event_name_property_name_tag_unique_id", err) {
 			updateFields := map[string]interface{}{
 				"display_name": displayName,
 			}
 			query := db.Model(&model.DisplayName{}).Where("project_id = ? AND event_name = ? AND property_name = ? AND  tag = ? AND entity_type = ?",
-			projectID, eventName, propertyName, tag, entityType).Updates(updateFields)
+				projectID, eventName, propertyName, tag, entityType).Updates(updateFields)
 			if err := query.Error; err != nil {
 				logCtx.WithError(err).Error("Failed updating property details.")
 				return http.StatusInternalServerError
@@ -68,34 +69,34 @@ func (pg *Postgres) CreateOrUpdateDisplayName(projectID uint64, eventName, prope
 	return http.StatusCreated
 }
 
-func (pg *Postgres) CreateOrUpdateDisplayNameByObjectType(projectID uint64, propertyName, objectType, displayName, group string) int{
+func (pg *Postgres) CreateOrUpdateDisplayNameByObjectType(projectID uint64, propertyName, objectType, displayName, group string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_name": propertyName, "object_type": objectType})
 
-	if (objectType == "" || propertyName == "" || displayName == "" || group == "" || projectID == 0) {
+	if objectType == "" || propertyName == "" || displayName == "" || group == "" || projectID == 0 {
 		logCtx.Error("Missing required field.")
 		return http.StatusBadRequest
 	}
-	
+
 	db := C.GetServices().Db
 
 	displayNameObj := model.DisplayName{
-		ProjectID: projectID,
-		PropertyName: propertyName,
+		ProjectID:       projectID,
+		PropertyName:    propertyName,
 		GroupObjectName: objectType,
-		Tag: "Source",
-		GroupName: group,
-		EntityType: model.DisplayNameObjectEntityType,
-		DisplayName: displayName,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		Tag:             "Source",
+		GroupName:       group,
+		EntityType:      model.DisplayNameObjectEntityType,
+		DisplayName:     displayName,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
-	if err := db.Create(displayNameObj).Error; err != nil {
+	if err := db.Create(&displayNameObj).Error; err != nil {
 		if U.IsPostgresUniqueIndexViolationError("display_names_project_id_event_name_property_name_tag_unique_id", err) {
 			updateFields := map[string]interface{}{
 				"display_name": displayName,
 			}
 			query := db.Model(&model.DisplayName{}).Where("project_id = ? AND property_name = ? AND group_object_name = ? AND group_name = ? AND tag = ? AND entity_type = ?",
-			projectID, propertyName, objectType, group, "Source", model.DisplayNameObjectEntityType).Updates(updateFields)
+				projectID, propertyName, objectType, group, "Source", model.DisplayNameObjectEntityType).Updates(updateFields)
 			if err := query.Error; err != nil {
 				logCtx.WithError(err).Error("Failed updating property details.")
 				return http.StatusInternalServerError
@@ -112,8 +113,8 @@ func (pg *Postgres) CreateOrUpdateDisplayNameByObjectType(projectID uint64, prop
 	}
 	return http.StatusCreated
 }
-	
-func (pg *Postgres)  GetDisplayNamesForAllEvents(projectID uint64) (int, map[string]string) {
+
+func (pg *Postgres) GetDisplayNamesForAllEvents(projectID uint64) (int, map[string]string) {
 	if projectID == 0 {
 		return http.StatusBadRequest, nil
 	}
@@ -121,8 +122,8 @@ func (pg *Postgres)  GetDisplayNamesForAllEvents(projectID uint64) (int, map[str
 	entityType := model.DisplayNameEventEntityType
 
 	displayNameFilter := &model.DisplayName{
-		ProjectID: projectID,
-		EntityType:    entityType,
+		ProjectID:  projectID,
+		EntityType: entityType,
 	}
 
 	db := C.GetServices().Db
@@ -145,7 +146,7 @@ func (pg *Postgres)  GetDisplayNamesForAllEvents(projectID uint64) (int, map[str
 	return http.StatusFound, displayNamesMap
 }
 
-func (pg *Postgres)  GetDisplayNamesForAllEventProperties(projectID uint64, eventName string)  (int, map[string]string) {
+func (pg *Postgres) GetDisplayNamesForAllEventProperties(projectID uint64, eventName string) (int, map[string]string) {
 	if projectID == 0 {
 		return http.StatusBadRequest, nil
 	}
@@ -153,9 +154,9 @@ func (pg *Postgres)  GetDisplayNamesForAllEventProperties(projectID uint64, even
 	entityType := model.DisplayNameEventPropertyEntityType
 
 	displayNameFilter := &model.DisplayName{
-		ProjectID: projectID,
-		EntityType:    entityType,
-		EventName: eventName,
+		ProjectID:  projectID,
+		EntityType: entityType,
+		EventName:  eventName,
 	}
 
 	db := C.GetServices().Db
@@ -178,7 +179,7 @@ func (pg *Postgres)  GetDisplayNamesForAllEventProperties(projectID uint64, even
 	return http.StatusFound, displayNamesMap
 }
 
-func (pg *Postgres)  GetDisplayNamesForAllUserProperties(projectID uint64) (int, map[string]string) {
+func (pg *Postgres) GetDisplayNamesForAllUserProperties(projectID uint64) (int, map[string]string) {
 	if projectID == 0 {
 		return http.StatusBadRequest, nil
 	}
@@ -186,8 +187,8 @@ func (pg *Postgres)  GetDisplayNamesForAllUserProperties(projectID uint64) (int,
 	entityType := model.DisplayNameUserPropertyEntityType
 
 	displayNameFilter := &model.DisplayName{
-		ProjectID: projectID,
-		EntityType:    entityType,
+		ProjectID:  projectID,
+		EntityType: entityType,
 	}
 
 	db := C.GetServices().Db
@@ -210,7 +211,7 @@ func (pg *Postgres)  GetDisplayNamesForAllUserProperties(projectID uint64) (int,
 	return http.StatusFound, displayNamesMap
 }
 
-func (pg *Postgres)  GetDisplayNamesForObjectEntities(projectID uint64) (int, map[string]string) {
+func (pg *Postgres) GetDisplayNamesForObjectEntities(projectID uint64) (int, map[string]string) {
 	if projectID == 0 {
 		return http.StatusBadRequest, nil
 	}
@@ -218,8 +219,8 @@ func (pg *Postgres)  GetDisplayNamesForObjectEntities(projectID uint64) (int, ma
 	entityType := model.DisplayNameObjectEntityType
 
 	displayNameFilter := &model.DisplayName{
-		ProjectID: projectID,
-		EntityType:    entityType,
+		ProjectID:  projectID,
+		EntityType: entityType,
 	}
 
 	db := C.GetServices().Db
@@ -236,10 +237,10 @@ func (pg *Postgres)  GetDisplayNamesForObjectEntities(projectID uint64) (int, ma
 
 	displayNamesMap := make(map[string]string)
 	for _, displayName := range displayNames {
-		if(displayName.GroupName!= ""){
+		if displayName.GroupName != "" {
 			displayNamesMap[displayName.PropertyName] = fmt.Sprintf("%s ", displayName.GroupName)
 		}
-		if(displayName.GroupObjectName != ""){
+		if displayName.GroupObjectName != "" {
 			displayNamesMap[displayName.PropertyName] = fmt.Sprintf("%s%s ", displayNamesMap[displayName.PropertyName], displayName.GroupObjectName)
 		}
 		displayNamesMap[displayName.PropertyName] = fmt.Sprintf("%s%s", displayNamesMap[displayName.PropertyName], displayName.DisplayName)

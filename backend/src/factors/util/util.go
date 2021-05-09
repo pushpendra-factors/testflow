@@ -299,6 +299,15 @@ func StringSliceDiff(sliceA, sliceB []string) []string {
 	return diffSlice
 }
 
+// IsNonEmptyKey returns true if key is anything but not empty ("") or '$none'
+func IsNonEmptyKey(key string) bool {
+
+	if key != "" && key != "$none" {
+		return true
+	}
+	return false
+}
+
 // IfThenElse Is a hack to get ternary one liners
 func IfThenElse(condition bool, a interface{}, b interface{}) interface{} {
 	if condition {

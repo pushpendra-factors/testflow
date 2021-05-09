@@ -16,6 +16,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	C "factors/config"
 	U "factors/util"
@@ -27,8 +28,10 @@ import (
 var memSQLDB *gorm.DB
 var migrateAllProjects bool
 var migrationPageSize int
-var migrationRoutines int
+var migrationRoutinesHeavy int
+var migrationRoutinesOther int
 var dedupeByQuery bool
+var disableSyncColumns bool
 
 var migrageAllTables bool
 var includeTablesMap map[string]bool
@@ -64,6 +67,8 @@ const (
 	tableDisplayNames                  = "display_names"
 )
 
+var heavyTables = []string{tableEvents, tableUsers, tableAdwordsDocuments, tableHubspotDocuments}
+
 type TableRecord struct {
 	ProjectID uint64      `json:"project_id"`
 	ID        interface{} `json:"id"`      // Using interface, as type of ID can be uint64 or uuid.
@@ -95,6 +100,13 @@ type TableRecord struct {
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+
+	// Columns to exclude.
+	// Projects table.
+	JobsMetadata *postgres.Jsonb `json:"jobs_metadata"`
+	// Hubspot and salesforce documents. UserID is already added above.
+	Synced bool   `json:"synced"`
+	SyncId string `json:"sync_id"`
 }
 
 var (
@@ -122,7 +134,8 @@ func main() {
 
 	projectIDStringList := flag.String("project_ids", "", "")
 	pageSize := flag.Int("page_size", 0, "No.of records per page.")
-	routines := flag.Int("routines", 10, "No.of parallel routines to use for each page.")
+	routinesHeavy := flag.Int("routines_heavy", 10, "No.of parallel routines to use for events, users, adwords_documents and hubspot_documents.")
+	routinesOther := flag.Int("routines_other", 5, "No.of parallel routines to use for all other tables.")
 	dedupeByQueryForNonUniqueTables := flag.Bool("dedupe_by_query", false,
 		"Dedupe's by firing a get query everytime for events and user_properties table.")
 
@@ -134,6 +147,7 @@ func main() {
 
 	includeTables := flag.String("include_tables", "*", "Comma separated tables to run or *")
 	excludeTables := flag.String("exclude_tables", "", "Comma separated tables to exclude from the run")
+	disableSyncColumnsFlag := flag.Bool("disable_sync_column", false, "To disable sync columns like jobs_metadata, synced etc")
 	flag.Parse()
 
 	if *env != C.DEVELOPMENT &&
@@ -151,7 +165,8 @@ func main() {
 		log.Fatal("Migration page size cannot be zero.")
 	}
 	migrationPageSize = *pageSize
-	migrationRoutines = *routines
+	migrationRoutinesHeavy = *routinesHeavy
+	migrationRoutinesOther = *routinesOther
 	dedupeByQuery = *dedupeByQueryForNonUniqueTables
 
 	includeTablesMap = make(map[string]bool)
@@ -167,6 +182,7 @@ func main() {
 	for _, tableName := range U.CleanSplitByDelimiter(*excludeTables, ",") {
 		excludeTablesMap[tableName] = true
 	}
+	disableSyncColumns = *disableSyncColumnsFlag
 
 	config := &C.Configuration{
 		AppName: "memsql_replicator",
@@ -188,7 +204,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize db in add session.")
 	}
 
-	maxOpenConns := (30 * migrationRoutines) + 10
+	maxOpenConns := (24 * migrationRoutinesOther) + (4 * migrationRoutinesHeavy) + 10
 	memSQLDBConf := C.DBConf{
 		Host:        *memSQLHost,
 		Port:        *memSQLPort,
@@ -246,7 +262,7 @@ func initMemSQLDB(env string, dbConf *C.DBConf, maxOpenConns int) {
 	} else {
 		memSQLDB.LogMode(false)
 		memSQLDB.DB().SetMaxOpenConns(maxOpenConns)
-		memSQLDB.DB().SetMaxIdleConns(100)
+		memSQLDB.DB().SetMaxIdleConns(maxOpenConns)
 	}
 }
 
@@ -574,7 +590,7 @@ func getPrimaryKeyConditionByTableName(tableName string, sourceTableRecord *Tabl
 	idColName := "id"
 	if tableName == tableAgents {
 		idColName = "uuid"
-	} else if tableName == tableSmartProperties || tableName == tablePropertyDetails || tableName == tableDisplayNames {
+	} else if tableName == tableSmartProperties || tableName == tablePropertyDetails {
 		idColName = "project_id"
 	} else if isProjectAssociatedTable(tableName) {
 		idColName = "project_id"
@@ -781,6 +797,9 @@ func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interfac
 			return http.StatusInternalServerError
 		}
 
+		// Copy old memsql record values for selected sync columns.
+		pgRecord = disallowUpdateOnSyncColumns(tableName, memsqlTableRecord, pgRecord)
+
 		status = createOnMemSQL(projectID, tableName, pgRecord, pgTableRecord.ID, false)
 		if status != http.StatusCreated && status != http.StatusConflict {
 			return http.StatusInternalServerError
@@ -788,6 +807,31 @@ func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interfac
 	}
 
 	return http.StatusOK
+}
+
+func disallowUpdateOnSyncColumns(tableName string, memsqlTableRecord *TableRecord, pgRecord interface{}) interface{} {
+	if !disableSyncColumns || (tableName != tableProjects && tableName != tableHubspotDocuments && tableName != tableSalesforceDocuments) {
+		return pgRecord
+	}
+
+	if tableName == tableProjects {
+		project := pgRecord.(*model.Project)
+		project.JobsMetadata = memsqlTableRecord.JobsMetadata
+		return project
+	} else if tableName == tableHubspotDocuments {
+		hubspotDocument := pgRecord.(*model.HubspotDocument)
+		hubspotDocument.SyncId = memsqlTableRecord.SyncId
+		hubspotDocument.Synced = memsqlTableRecord.Synced
+		hubspotDocument.UserId = memsqlTableRecord.UserID
+		return hubspotDocument
+	} else if tableName == tableSalesforceDocuments {
+		salesforceDocument := pgRecord.(*model.SalesforceDocument)
+		salesforceDocument.SyncID = memsqlTableRecord.SyncId
+		salesforceDocument.Synced = memsqlTableRecord.Synced
+		salesforceDocument.UserID = memsqlTableRecord.UserID
+		return salesforceDocument
+	}
+	return pgRecord
 }
 
 func createIfNotExistOrUpdateIfChangedOnMemSQL(tableName string, pgRecord interface{}) (*TableRecord, int) {
@@ -1081,7 +1125,12 @@ func migrateTableByName(projectIDs []uint64, tableName string, lastPageUpdatedAt
 
 	var wg sync.WaitGroup
 	var states MStates
-	recordChunks := getRecordsAsChunks(recordIntfs, migrationRoutines)
+	var recordChunks [][]interface{}
+	if U.StringValueIn(tableName, heavyTables) {
+		recordChunks = getRecordsAsChunks(recordIntfs, migrationRoutinesHeavy)
+	} else {
+		recordChunks = getRecordsAsChunks(recordIntfs, migrationRoutinesOther)
+	}
 	for i := range recordChunks {
 		wg.Add(1)
 		go createOrUpdateOnMemSQLInParallel(tableName, recordChunks[i], &wg, &states)

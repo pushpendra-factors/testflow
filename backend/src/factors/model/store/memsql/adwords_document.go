@@ -479,7 +479,7 @@ func (store *MemSQL) GetAdwordsLastSyncInfoForProject(projectID uint64) ([]model
 	return sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
 }
 
-// GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType - @TODO Kark v1
+// GetAllAdwordsLastSyncInfoForAllProjects - @TODO Kark v1
 func (store *MemSQL) GetAllAdwordsLastSyncInfoForAllProjects() ([]model.AdwordsLastSyncInfo, int) {
 	params := make([]interface{}, 0, 0)
 	adwordsLastSyncInfos, status := getAdwordsLastSyncInfo(lastSyncInfoQueryForAllProjects, params)
@@ -606,7 +606,8 @@ func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, ad
 }
 
 // GetGCLIDBasedCampaignInfo - It returns GCLID based campaign info ( Adgroup, Campaign and Ad) for given time range and adwords account
-func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string) (map[string]model.CampaignInfo, error) {
+func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string,
+	campaignIDReport, adgroupIDReport, keywordIDReport map[string]model.MarketingData) (map[string]model.MarketingData, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectID": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	adGroupNameCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'ad_group_name') IS NULL THEN ? " +
@@ -619,19 +620,22 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 		" WHEN JSON_EXTRACT_STRING(value, 'campaign_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'campaign_id') END AS campaign_id"
 	adIDCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'creative_id') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'creative_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'creative_id') END AS creative_id"
+	keywordNameCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'criteria_name') IS NULL THEN ? " +
+		" WHEN JSON_EXTRACT_STRING(value, 'criteria_name') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'criteria_name') END AS criteria_name"
 	keywordIDCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'criteria_id') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'criteria_id') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'criteria_id') END AS criteria_id"
 	slotCase := "CASE WHEN JSON_EXTRACT_STRING(value, 'slot') IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(value, 'slot') = '' THEN ? ELSE JSON_EXTRACT_STRING(value, 'slot') END AS slot"
 
 	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + adGroupIDCase + ", " + campaignNameCase + ", " +
-		campaignIDCase + ", " + adIDCase + ", " + keywordIDCase + ", " + slotCase +
+		campaignIDCase + ", " + adIDCase + ", " + keywordNameCase + ", " + keywordIDCase + ", " + slotCase +
 		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
 	customerAccountIDs := strings.Split(adwordsAccountIDs, ",")
 	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
+		model.PropertyValueNone, model.PropertyValueNone,
 		projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)})
 	if err != nil {
@@ -639,7 +643,7 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 		return nil, err
 	}
 	defer rows.Close()
-	gclIDBasedCampaign := make(map[string]model.CampaignInfo)
+	gclidBasedMarketData := make(map[string]model.MarketingData)
 	for rows.Next() {
 		var gclIDTmp sql.NullString
 		var adgroupNameTmp sql.NullString
@@ -647,9 +651,10 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 		var campaignNameTmp sql.NullString
 		var campaignIDTmp sql.NullString
 		var adIDTmp sql.NullString
+		var keywordNameTmp sql.NullString
 		var keywordIDTmp sql.NullString
 		var slotTmp sql.NullString
-		if err = rows.Scan(&gclIDTmp, &adgroupNameTmp, &adgroupIDTmp, &campaignNameTmp, &campaignIDTmp, &adIDTmp, &keywordIDTmp, &slotTmp); err != nil {
+		if err = rows.Scan(&gclIDTmp, &adgroupNameTmp, &adgroupIDTmp, &campaignNameTmp, &campaignIDTmp, &adIDTmp, &keywordNameTmp, &keywordIDTmp, &slotTmp); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
@@ -662,27 +667,52 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 		var campaignName string
 		var campaignID string
 		var adID string
+		var keywordName string
 		var keywordID string
 		var slot string
 		gclID = gclIDTmp.String
-		adgroupName = U.IfThenElse(adgroupNameTmp.Valid == true, adgroupNameTmp.String, "").(string)
-		adgroupID = U.IfThenElse(adgroupIDTmp.Valid == true, adgroupIDTmp.String, "").(string)
-		campaignName = U.IfThenElse(campaignNameTmp.Valid == true, campaignNameTmp.String, "").(string)
-		campaignID = U.IfThenElse(campaignIDTmp.Valid == true, campaignIDTmp.String, "").(string)
-		adID = U.IfThenElse(adIDTmp.Valid == true, adIDTmp.String, "").(string)
-		keywordID = U.IfThenElse(keywordIDTmp.Valid == true, keywordIDTmp.String, "").(string)
-		slot = U.IfThenElse(slotTmp.Valid == true, slotTmp.String, "").(string)
-		gclIDBasedCampaign[gclID] = model.CampaignInfo{
-			AdgroupName:  adgroupName,
-			AdgroupID:    adgroupID,
-			CampaignName: campaignName,
-			CampaignID:   campaignID,
-			AdID:         adID,
-			KeywordID:    keywordID,
-			Slot:         slot,
+		adgroupName = U.IfThenElse(adgroupNameTmp.Valid == true, adgroupNameTmp.String, model.PropertyValueNone).(string)
+		adgroupID = U.IfThenElse(adgroupIDTmp.Valid == true, adgroupIDTmp.String, model.PropertyValueNone).(string)
+		campaignName = U.IfThenElse(campaignNameTmp.Valid == true, campaignNameTmp.String, model.PropertyValueNone).(string)
+		campaignID = U.IfThenElse(campaignIDTmp.Valid == true, campaignIDTmp.String, model.PropertyValueNone).(string)
+		adID = U.IfThenElse(adIDTmp.Valid == true, adIDTmp.String, model.PropertyValueNone).(string)
+		keywordName = U.IfThenElse(keywordNameTmp.Valid == true, keywordNameTmp.String, model.PropertyValueNone).(string)
+		keywordID = U.IfThenElse(keywordIDTmp.Valid == true, keywordIDTmp.String, model.PropertyValueNone).(string)
+		slot = U.IfThenElse(slotTmp.Valid == true, slotTmp.String, model.PropertyValueNone).(string)
+
+		// Enriching GCLID report using other reports
+		if U.IsNonEmptyKey(campaignID) {
+			if val, exists := campaignIDReport[campaignID]; exists {
+				campaignName = val.Name
+			}
+		}
+		if U.IsNonEmptyKey(adgroupID) {
+			if val, exists := adgroupIDReport[adgroupID]; exists {
+				adgroupName = val.Name
+			}
+		}
+		keywordMatchType := ""
+		if U.IsNonEmptyKey(keywordID) {
+			if val, exists := keywordIDReport[keywordID]; exists {
+				keywordName = val.Name
+				keywordMatchType = val.KeywordMatchType
+			}
+		}
+
+		gclidBasedMarketData[gclID] = model.MarketingData{
+			ID:               gclID,
+			AdgroupName:      adgroupName,
+			AdgroupID:        adgroupID,
+			CampaignName:     campaignName,
+			CampaignID:       campaignID,
+			AdID:             adID,
+			KeywordID:        keywordID,
+			KeywordName:      keywordName,
+			KeywordMatchType: keywordMatchType,
+			Slot:             slot,
 		}
 	}
-	return gclIDBasedCampaign, nil
+	return gclidBasedMarketData, nil
 }
 
 // @TODO Kark v1

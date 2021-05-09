@@ -35,7 +35,7 @@ class AuthorisationFlow(BaseOauthService):
             include_granted_scopes="true",
             state=state)
 
-        log.info("Generated authorization URL: %s", authorization_url)
+        log.warning("Generated authorization URL: %s", authorization_url)
         return authorization_url
 
     def check_and_add_refresh_token(self, authorisation_code, state_payload):

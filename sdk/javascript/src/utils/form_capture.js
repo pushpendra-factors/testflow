@@ -67,8 +67,11 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
     var iframeForms = getFormsFromIframes();
 
     // bind processForm to onSubmit event for all forms.
-    var forms = document.querySelectorAll('form');
+    var formsList = document.querySelectorAll('form');
 
+    // converts to array. Will be empty array if any of the items are empty
+    var forms = [].slice.call(formsList);
+    
     for (var ind=0; ind<iframeForms.length; ind++) {
         forms.push(iframeForms[ind]);
     }

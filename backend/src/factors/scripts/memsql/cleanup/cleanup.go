@@ -11,35 +11,9 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	emoji "github.com/tmdvs/Go-Emoji-Utils"
 )
 
 var memSQLDB *gorm.DB
-
-func sanitizeStringValue(s string) string {
-	return emoji.RemoveAll(s)
-}
-
-func gormCallbackCleanup(scope *gorm.Scope) {
-	for _, field := range scope.Fields() {
-		switch field.Field.Type().String() {
-		case "string":
-			fieldValue := field.Field.Interface().(string)
-			err := field.Set(sanitizeStringValue(fieldValue))
-			if err != nil {
-				log.WithError(err).Error("Failed to cleanup string field value.")
-			}
-		case "postgres.Jsonb":
-			fieldValue := field.Field.Interface().(postgres.Jsonb)
-			jsonAsString := string(fieldValue.RawMessage)
-			fieldValue.RawMessage = []byte(sanitizeStringValue(jsonAsString))
-			err := field.Set(fieldValue)
-			if err != nil {
-				log.WithError(err).Error("Failed to cleanup postgres jsonb field value.")
-			}
-		}
-	}
-}
 
 func initMemSQLDB(env, dsn string) {
 	var err error
@@ -49,7 +23,7 @@ func initMemSQLDB(env, dsn string) {
 		log.WithError(err).Fatal("Failed connecting to memsql.")
 	}
 
-	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", gormCallbackCleanup)
+	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
 
 	if env == "development" {
 		memSQLDB.LogMode(true)
@@ -67,14 +41,14 @@ type TestCleanup struct {
 func main() {
 	memSQLDSN := flag.String(
 		"memsql_dsn",
-		"admin:LIuvIgQDHU@tcp(svc-89fe9813-850d-49e1-864b-aa1a8c600f3c-ddl.gcp-mumbai-1.db.memsql.com:3306)/factors?charset=utf8mb4&parseTime=True&loc=Local",
+		"root:dbfactors123@tcp(localhost:3306)/factors?charset=utf8mb4&parseTime=True&loc=Local",
 		"",
 	)
 	flag.Parse()
 	initMemSQLDB("development", *memSQLDSN)
 
 	input := "This is a string 😄 🐷 with some 👍🏻 🙈 emoji! 🐷 🏃🏿‍♂️"
-	output := emoji.RemoveAll(input)
+	output := U.SanitizeStringValueForUnicode(input)
 	fmt.Println(output)
 
 	if err := memSQLDB.CreateTable(&TestCleanup{}).Error; err != nil {
