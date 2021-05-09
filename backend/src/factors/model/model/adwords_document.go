@@ -22,16 +22,6 @@ type AdwordsDocument struct {
 	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
-type CampaignInfo struct {
-	AdgroupName  string
-	AdgroupID    string
-	CampaignName string
-	CampaignID   string
-	AdID         string
-	KeywordID    string
-	Slot         string
-}
-
 type AdwordsLastSyncInfo struct {
 	ProjectId         uint64 `json:"project_id"`
 	CustomerAccountId string `json:"customer_acc_id"`

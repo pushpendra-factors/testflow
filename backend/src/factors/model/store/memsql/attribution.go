@@ -36,7 +36,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		return &model.QueryResult{}, errors.New(model.AttributionErrorIntegrationNotFound)
 	}
 
-	marketingData, err := store.FetchMarketingReports(projectID, *query, *projectSetting)
+	marketingReports, err := store.FetchMarketingReports(projectID, *query, *projectSetting)
 	if err != nil {
 		return nil, err
 	}
@@ -47,8 +47,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	}
 
 	// 1. Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
-	_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query,
-		&(*marketingData).AdwordsGCLIDData)
+	_sessions, sessionUsers, err := store.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
 	if err != nil {
 		return nil, err
 	}
@@ -57,6 +56,13 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		return nil, err
 	}
 	sessions := updateSessionsMapWithCoalesceID(_sessions, usersInfo)
+
+	sessionKeyMap := make(map[string]model.MarketingData)
+	for _, value := range _sessions {
+		for k, v := range value {
+			sessionKeyMap[k] = v.MarketingInfo
+		}
+	}
 
 	isCompare := false
 	// Default conversion for AttributionQueryTypeConversionBased.
@@ -119,8 +125,11 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 
 	addWebsiteVisitorsInfo(attributionData, sessions, len(query.LinkedEvents))
 
+	// Add the Added keys
+	model.AddTheAddedKeys(attributionData, query.AttributionKey, sessionKeyMap)
+
 	// Add the performance information
-	model.AddPerformanceData(attributionData, query.AttributionKey, marketingData)
+	model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports)
 
 	// Merging same name key's into single row
 	dataRows := model.GetRowsByMaps(query.AttributionKey, attributionData, query.LinkedEvents, isCompare)
@@ -321,7 +330,7 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
-func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId uint64, query *model.AttributionQuery, gclIDBasedCampaign *map[string]model.CampaignInfo) (map[string]map[string]model.UserSessionData, []string, error) {
+func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId uint64, query *model.AttributionQuery, reports *model.MarketingReports) (map[string]map[string]model.UserSessionData, []string, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	effectiveFrom := lookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -348,16 +357,19 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId uint
 		caseSelectStmt + " AS campaignName, " +
 		caseSelectStmt + " AS adgroupName, " +
 		caseSelectStmt + " AS keywordName, " +
+		caseSelectStmt + " AS keywordMatchType, " +
 		caseSelectStmt + " AS source, " +
 		caseSelectStmt + " AS attribution_id, " +
 		caseSelectStmt + " AS gcl_id, " +
 		" sessions.timestamp FROM events AS sessions " +
 		" WHERE sessions.project_id=? AND sessions.event_name_id=? AND sessions.timestamp BETWEEN ? AND ?"
 	var qParams []interface{}
+
 	qParams = append(qParams,
 		U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
 		U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP,
 		U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD,
+		U.EP_KEYWORD_MATCH_TYPE, model.PropertyValueNone, U.EP_KEYWORD_MATCH_TYPE, model.PropertyValueNone, U.EP_KEYWORD_MATCH_TYPE,
 		U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE, model.PropertyValueNone, U.EP_SOURCE,
 		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 		U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
@@ -373,11 +385,12 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId uint
 		var campaignName string
 		var adgroupName string
 		var keywordName string
+		var keywordMatchType string
 		var sourceName string
 		var attributionId string
 		var gclID string
 		var timestamp int64
-		if err = rows.Scan(&userID, &campaignName, &adgroupName, &keywordName, &sourceName, &attributionId, &gclID, &timestamp); err != nil {
+		if err = rows.Scan(&userID, &campaignName, &adgroupName, &keywordName, &keywordMatchType, &sourceName, &attributionId, &gclID, &timestamp); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
@@ -391,39 +404,46 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId uint
 			userIdsWithSession = append(userIdsWithSession, userID)
 			userIdMap[userID] = true
 		}
-		marketingValues := model.AttributionKeyValue{CampaignName: campaignName, AdgroupName: adgroupName, Keyword: keywordName, Source: sourceName}
+		marketingValues := model.MarketingData{CampaignName: campaignName, AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName}
 		var attributionIdBasedOnGclID string
 		// Override GCLID based campaign info if presents
-		if gclID != model.PropertyValueNone && !(query.AttributionKey == model.AttributionKeyKeyword && !model.IsASearchSlotKeyword(gclIDBasedCampaign, gclID)) {
-			attributionIdBasedOnGclID, marketingValues = model.GetGCLIDAttributionValue(gclIDBasedCampaign, gclID, attributionEventKey, marketingValues)
+		if gclID != model.PropertyValueNone && !(query.AttributionKey == model.AttributionKeyKeyword && !model.IsASearchSlotKeyword(&(*reports).AdwordsGCLIDData, gclID)) {
+			attributionIdBasedOnGclID, marketingValues = model.GetGCLIDAttributionValue(&(*reports).AdwordsGCLIDData, gclID, attributionEventKey, marketingValues)
 			// In cases where GCLID is present in events, but not in adwords report (as users tend to bookmark expired URLs),
 			// fallback is attributionId
 			if attributionIdBasedOnGclID != model.PropertyValueNone && attributionIdBasedOnGclID != "" {
 				attributionId = attributionIdBasedOnGclID
 			}
+		} else {
+			// we can't enrich the values in any other way, why?
+			// Because, an adgroup can belong to multiple campaign, keyword also has match type, adgroup, campaign as keys
 		}
-
+		// Name
+		marketingValues.Name = attributionId
+		// Add the unique attributionKey key
+		marketingValues.Key = model.GetMarketingDataKey(query.AttributionKey, marketingValues)
+		uniqueAttributionKey := marketingValues.Key
 		// add session info uniquely for user-attributionId pair
 		if _, ok := attributedSessionsByUserId[userID]; ok {
 
-			if userSessionData, ok := attributedSessionsByUserId[userID][attributionId]; ok {
+			if userSessionData, ok := attributedSessionsByUserId[userID][uniqueAttributionKey]; ok {
 				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
 				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
 				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
 				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
-				attributedSessionsByUserId[userID][attributionId] = userSessionData
+				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
 			} else {
 				userSessionDataNew := model.UserSessionData{MinTimestamp: timestamp,
 					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, KeyValues: marketingValues}
-				attributedSessionsByUserId[userID][attributionId] = userSessionDataNew
+					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 			}
 		} else {
 			attributedSessionsByUserId[userID] = make(map[string]model.UserSessionData)
 			userSessionDataNew := model.UserSessionData{MinTimestamp: timestamp,
 				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
-				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, KeyValues: marketingValues}
-			attributedSessionsByUserId[userID][attributionId] = userSessionDataNew
+				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 	}
 	return attributedSessionsByUserId, userIdsWithSession, nil
