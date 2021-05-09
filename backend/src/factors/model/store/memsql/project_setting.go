@@ -548,6 +548,18 @@ func (store *MemSQL) GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjec
 	}
 	return linkedinProjectSettings, http.StatusOK
 }
+func (store *MemSQL) GetLinkedinEnabledProjectSettingsForProjects(projectIDs []string) ([]model.LinkedinProjectSettings, int) {
+	db := C.GetServices().Db
+
+	linkedinProjectSettings := make([]model.LinkedinProjectSettings, 0, 0)
+
+	err := db.Table("project_settings").Where("int_linkedin_refresh_token IS NOT NULL AND int_linkedin_refresh_token != '' AND project_id IN (?)", projectIDs).Find(&linkedinProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get linkedin enabled project settings for sync info.")
+		return linkedinProjectSettings, http.StatusInternalServerError
+	}
+	return linkedinProjectSettings, http.StatusOK
+}
 
 // GetArchiveEnabledProjectIDs Returns list of project ids which have archive enabled.
 func (store *MemSQL) GetArchiveEnabledProjectIDs() ([]uint64, int) {

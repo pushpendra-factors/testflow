@@ -15,6 +15,27 @@ func DataServiceLinkedinGetProjectSettings(c *gin.Context) {
 	linkedinProjectSettings, status := store.GetStore().GetLinkedinEnabledProjectSettings()
 	c.JSON(status, linkedinProjectSettings)
 }
+
+type LinkedInProjectIDs struct {
+	ProjectIDs []string `json:"project_ids"`
+}
+
+func DataServiceLinkedinGetProjectSettingsForProjects(c *gin.Context) {
+	r := c.Request
+
+	var linkedinProjectIDs LinkedInProjectIDs
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&linkedinProjectIDs); err != nil {
+		log.WithError(err).Error("Failed to decode Json request on linkedin get project settings handler.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Invalid request json."})
+		return
+	}
+	linkedinProjectSettings, status := store.GetStore().GetLinkedinEnabledProjectSettingsForProjects(linkedinProjectIDs.ProjectIDs)
+	c.JSON(status, linkedinProjectSettings)
+}
+
 func DataServiceLinkedinAddDocumentHandler(c *gin.Context) {
 	r := c.Request
 
