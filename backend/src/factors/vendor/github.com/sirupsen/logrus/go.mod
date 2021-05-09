@@ -1,6 +1,5 @@
 module github.com/sirupsen/logrus
 
-
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1
