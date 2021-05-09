@@ -3,7 +3,7 @@ import sys
 
 import scripts
 from lib.data_services.factors_data_service import FactorsDataService
-from lib.utils.sync_util import SyncUtil
+from lib.utils.adwords.sync_util import AdwordsSyncUtil
 from scripts.adwords.etl_config import EtlConfig
 from scripts.adwords.etl_parser import EtlParser
 from scripts.adwords.job_scheduler import JobScheduler
@@ -13,7 +13,7 @@ def setup(argv):
     input_args, rem = EtlParser(argv[1::]).parse()
     EtlConfig.build(input_args)
     scripts.adwords.CONFIG = EtlConfig
-    FactorsDataService.init(config=scripts.adwords.CONFIG)
+    FactorsDataService.init(scripts.adwords.CONFIG.ADWORDS_APP.get_data_service_path())
     return
 
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     final_last_sync_infos = get_last_sync_infos(input_project_ids, input_exclude_project_ids, input_document_type)
 
     for last_sync in final_last_sync_infos:
-        next_sync_infos = SyncUtil.get_next_sync_infos(last_sync, input_last_timestamp, input_to_timestamp)
+        next_sync_infos = AdwordsSyncUtil.get_next_sync_infos(last_sync, input_last_timestamp, input_to_timestamp)
         if next_sync_infos is None:
             continue
         for next_sync in next_sync_infos:

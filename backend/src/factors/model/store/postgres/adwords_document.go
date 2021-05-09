@@ -72,7 +72,7 @@ var errorEmptyAdwordsDocument = errors.New("empty adwords document")
 
 var objectsForAdwords = []string{model.AdwordsCampaign, model.AdwordsAdGroup, model.AdwordsKeyword}
 
-var mapOfObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
+var mapOfAdwordsObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
 	model.AdwordsCampaign: {
 		"id":                         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 		"name":                       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
@@ -118,6 +118,7 @@ var nonHigherOrderMetrics = map[string]struct{}{
 	"conversions":     {},
 }
 
+// Later Handle divide by zero separately.
 // Same structure is being used for internal operations and external.
 var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 	model.Impressions: {
@@ -141,25 +142,25 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalOperation:        "sum",
 	},
 	model.ClickThroughRate: {
-		higherOrderExpression:    "sum((value->>'clicks')::float)*100/NULLIF(sum((value->>'impressions')::float), 0)",
+		higherOrderExpression:    "sum((value->>'clicks')::float)*100/NULLIF(sum((value->>'impressions')::float), 100000)",
 		nonHigherOrderExpression: "sum((value->>'clicks')::float)*100",
 		externalValue:            model.ClickThroughRate,
 		externalOperation:        "sum",
 	},
 	model.ConversionRate: {
-		higherOrderExpression:    "sum((value->>'conversions')::float)*100/NULLIF(sum((value->>'clicks')::float), 0)",
+		higherOrderExpression:    "sum((value->>'conversions')::float)*100/NULLIF(sum((value->>'clicks')::float), 100000)",
 		nonHigherOrderExpression: "sum((value->>'conversions')::float)*100",
 		externalValue:            model.ConversionRate,
 		externalOperation:        "sum",
 	},
 	model.CostPerClick: {
-		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'clicks')::float), 0)",
+		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'clicks')::float), 100000)",
 		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
 		externalValue:            model.CostPerClick,
 		externalOperation:        "sum",
 	},
 	model.CostPerConversion: {
-		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'conversions')::float), 0)",
+		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'conversions')::float), 100000)",
 		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
 		externalValue:            model.CostPerConversion,
 		externalOperation:        "sum",
@@ -712,7 +713,7 @@ func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, 
 func (pg *Postgres) buildAdwordsChannelConfig(projectID uint64) *model.ChannelConfigResult {
 	adwordsObjectsAndProperties := pg.buildObjectAndPropertiesForAdwords(projectID, objectsForAdwords)
 	selectMetrics := append(selectableMetricsForAllChannels, selectableMetricsForAdwords...)
-	objectsAndProperties := append(adwordsObjectsAndProperties)
+	objectsAndProperties := adwordsObjectsAndProperties
 	return &model.ChannelConfigResult{
 		SelectMetrics:        selectMetrics,
 		ObjectsAndProperties: objectsAndProperties,
@@ -723,7 +724,7 @@ func (pg *Postgres) buildObjectAndPropertiesForAdwords(projectID uint64, objects
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
 	for _, currentObject := range objects {
 		// to do: check if normal properties present then only smart properties will be there
-		propertiesAndRelated, isPresent := mapOfObjectsToPropertiesAndRelated[currentObject]
+		propertiesAndRelated, isPresent := mapOfAdwordsObjectsToPropertiesAndRelated[currentObject]
 		var currentProperties []model.ChannelProperty
 		var currentPropertiesSmart []model.ChannelProperty
 		if isPresent {

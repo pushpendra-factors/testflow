@@ -66,12 +66,13 @@ type HubspotProjectSettings struct {
 }
 
 type FacebookProjectSettings struct {
-	ProjectId              string `json:"project_id"`
+	ProjectId              uint64 `json:"project_id"`
 	IntFacebookUserId      string `json:"int_facebook_user_id"`
 	IntFacebookAccessToken string `json:"int_facebook_access_token"`
 	IntFacebookAdAccount   string `json:"int_facebook_ad_account"`
 	IntFacebookEmail       string `json:"int_facebook_email"`
 }
+
 type LinkedinProjectSettings struct {
 	ProjectId                     string `json:"project_id"`
 	IntLinkedinAdAccount          string `json:"int_linkedin_ad_account"`

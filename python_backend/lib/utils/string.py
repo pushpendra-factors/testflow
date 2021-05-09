@@ -31,3 +31,7 @@ class StringUtil:
     def camel_case_to_snake_case(s):
         s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", s)
         return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+    @staticmethod
+    def get_set_from_string_split_by_comma(s):
+        return set([int(x) for x in s.split(",")])

@@ -1,7 +1,6 @@
-from lib.utils.google_storage_file import GoogleStorageFile
-from lib.utils.local_storage import LocalStorage
+from lib.utils.adwords.google_storage_file import GoogleStorageFile
+from lib.utils.adwords.local_storage import LocalStorage
 from scripts.adwords import DEVELOPMENT, TEST, STAGING
-
 
 class JobStorage:
     storage_file = None
@@ -9,13 +8,13 @@ class JobStorage:
     env = None
 
     @classmethod
-    def init(cls, env, dry, project_name):
+    def init(cls, env, dry):
         cls.env = env
         if env in [DEVELOPMENT, TEST]:
             cls.storage_file = LocalStorage()
         else:
             bucket_name = cls.get_bucket_name(dry)
-            cls.storage_file = GoogleStorageFile(project_name, bucket_name)
+            cls.storage_file = GoogleStorageFile(bucket_name)
 
     @classmethod
     def get_bucket_name(cls, dry):

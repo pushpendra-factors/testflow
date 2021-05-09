@@ -2,29 +2,33 @@ import copy
 import json
 import logging as log
 
-from lib.sns_notifier import SnsNotifier
-from lib.utils.json import JsonUtil
-from scripts.adwords import REQUEST_COUNT, RECORDS_COUNT, LATENCY_COUNT, TO_IN_MEMORY, \
-    TO_FILE
 
+class TaskStats:
+    # metrics constants
+    REQUEST_COUNT = "request_count"
+    RECORDS_COUNT = "request_count"
+    LATENCY_COUNT = "latency_count"
+    TO_IN_MEMORY = "to_in_memory"
+    TO_FILE = "to_file"
 
-class JobTaskStats:
     PROJECT_KEY = "projects"
     TOTAL_KEY = "total_by_key"
     STATS = {
-            REQUEST_COUNT: {PROJECT_KEY: {}, TOTAL_KEY: {}},
-            RECORDS_COUNT: {PROJECT_KEY: {}, TOTAL_KEY: {}},
-            LATENCY_COUNT: {PROJECT_KEY: {}, TOTAL_KEY: {}},
+        REQUEST_COUNT: {PROJECT_KEY: {}, TOTAL_KEY: {}},
+        RECORDS_COUNT: {PROJECT_KEY: {}, TOTAL_KEY: {}},
+        LATENCY_COUNT: {PROJECT_KEY: {}, TOTAL_KEY: {}},
     }
     task_stats = None
+    sns_notifier = None
 
-    def __init__(self):
+    def __init__(self, sns_notifier):
+        self.sns_notifier = sns_notifier
         self.task_stats = {
-            TO_IN_MEMORY: copy.deepcopy(self.STATS),
-            TO_FILE: copy.deepcopy(self.STATS)
+            self.TO_IN_MEMORY: copy.deepcopy(self.STATS),
+            self.TO_FILE: copy.deepcopy(self.STATS)
         }
 
-    # Each type of run has reading from source and pushing to destination. Phase represents this.
+    # Each type of run has reading from system and pushing to destination. Phase represents this.
     def update_record_stats(self, phase, metric_type, project_id, doc_type, value):
         count_map = self.task_stats[phase][metric_type]
         project_count_map = count_map[self.PROJECT_KEY]
@@ -39,12 +43,12 @@ class JobTaskStats:
         total_key_map[doc_type] += value
 
     def processed_equal_records(self, that):
-        if isinstance(that, JobTaskStats):
-            return json.dumps(self.STATS[RECORDS_COUNT]) == \
-                   json.dumps(that.STATS[RECORDS_COUNT])
+        if isinstance(that, TaskStats):
+            return json.dumps(self.STATS[self.RECORDS_COUNT]) == \
+                   json.dumps(that.STATS[self.RECORDS_COUNT])
         return False
 
     def publish(self):
-        SnsNotifier.notify(self.task_stats)
+        self.sns_notifier.notify(self.task_stats)
         task_stats = json.dumps(self.task_stats)
         log.warning("Metrics for the job Tasks: %s", task_stats)

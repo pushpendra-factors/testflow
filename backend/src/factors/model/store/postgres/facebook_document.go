@@ -18,11 +18,60 @@ import (
 )
 
 const (
-	facebookCampaign     = "campaign"
-	facebookAdSet        = "ad_set"
-	facebookAd           = "ad"
-	facebookStringColumn = "facebook"
+	facebookCampaign                                = "campaign"
+	facebookAdSet                                   = "ad_set"
+	facebookAd                                      = "ad"
+	facebookStringColumn                            = "facebook"
+	metricsExpressionOfDivisionWithHandleOf0AndNull = "SUM((value->>'%s')::float)*%s/(case when sum((value->>'%s')::float) = 0 then 100000 else NULLIF(sum((value->>'%s')::float), 100000) end)"
 )
+
+var selectableMetricsForFacebook = []string{
+	"conversion",
+	"video_p50_watched_actions",
+	"video_p25_watched_actions",
+	"video_30_sec_watched_actions",
+	"video_p100_watched_actions",
+	"video_p75_watched_actions",
+	"cost_per_click",
+	"cost_per_link_click",
+	"cost_per_thousand_impressions",
+	"click_through_rate",
+	"link_click_through_rate",
+	"link_clicks",
+	"frequency",
+	"leads",
+	"reach",
+}
+
+var mapOfFacebookObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
+	CAFilterCampaign: {
+		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"daily_budget":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"lifetime_budget":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"objective":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"bid_strategy":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"buying_type":       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	},
+	CAFilterAdGroup: {
+		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"daily_budget":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"lifetime_budget":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"objective":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"bid_strategy":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	},
+	CAFilterAd: {
+		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	},
+}
 
 var facebookDocumentTypeAlias = map[string]int{
 	"ad_account":        7,
@@ -34,29 +83,74 @@ var facebookDocumentTypeAlias = map[string]int{
 	"ad_set_insights":   6,
 }
 
+// Note: To change ObjectToValueInFacebookJobsMapping and other constants when we change any of below.
 var objectAndPropertyToValueInFacebookReportsMapping = map[string]string{
-	"campaign:name": "value->>'campaign_name'",
-	"ad_set:name":   "value->>'adset_name'",
-	"campaign:id":   "campaign_id::bigint",
-	"ad_set:id":     "ad_set_id::bigint",
-	"ad:id":         "id",
-}
-var objectToValueInFacebookFiltersMapping = map[string]string{
-	"campaign:name": "value->>'campaign_name'",
-	"ad_set:name":   "value->>'adset_name'",
-	"campaign:id":   "campaign_id",
-	"ad_set:id":     "ad_set_id",
-	"ad:id":         "ad_id",
+	"campaign:daily_budget":      "value->>'campaign_daily_budget'",
+	"campaign:lifetime_budget":   "value->>'campaign_lifetime_budget'",
+	"campaign:configured_status": "value->>'campaign_configured_status'",
+	"campaign:effective_status":  "value->>'campaign_effective_status'",
+	"campaign:objective":         "value->>'campaign_objective'",
+	"campaign:buying_type":       "value->>'campaign_buying_type'",
+	"campaign:bid_strategy":      "value->>'campaign_bid_strategy'",
+	"campaign:name":              "value->>'campaign_name'",
+	"campaign:id":                "campaign_id::bigint",
+	"ad_set:daily_budget":        "value->>'ad_set_daily_budget'",
+	"ad_set:lifetime_budget":     "value->>'ad_set_lifetime_budget'",
+	"ad_set:configured_status":   "value->>'ad_set_configured_status'",
+	"ad_set:effective_status":    "value->>'ad_set_effective_status'",
+	"ad_set:objective":           "value->>'ad_set_objective'",
+	"ad_set:bid_strategy":        "value->>'ad_set_bid_strategy'",
+	"ad_set:name":                "value->>'adset_name'",
+	"ad_set:id":                  "ad_set_id::bigint",
+	"ad:id":                      "ad_id::bigint",
+	"ad:name":                    "value->>'ad_name'",
+	"ad:configured_status":       "value->>'ad_configured_status'",
+	"ad:effective_status":        "value->>'ad_effective_status'",
 }
 
-// TODO check
+var objectToValueInFacebookFiltersMapping = map[string]string{
+	"campaign:daily_budget":      "value->>'campaign_daily_budget'",
+	"campaign:lifetime_budget":   "value->>'campaign_lifetime_budget'",
+	"campaign:configured_status": "value->>'campaign_configured_status'",
+	"campaign:effective_status":  "value->>'campaign_effective_status'",
+	"campaign:objective":         "value->>'campaign_objective'",
+	"campaign:buying_type":       "value->>'campaign_buying_type'",
+	"campaign:bid_strategy":      "value->>'campaign_bid_strategy'",
+	"campaign:name":              "value->>'campaign_name'",
+	"campaign:id":                "campaign_id",
+	"ad_set:daily_budget":        "value->>'ad_set_daily_budget'",
+	"ad_set:lifetime_budget":     "value->>'ad_set_lifetime_budget'",
+	"ad_set:configured_status":   "value->>'ad_set_configured_status'",
+	"ad_set:effective_status":    "value->>'ad_set_effective_status'",
+	"ad_set:objective":           "value->>'ad_set_objective'",
+	"ad_set:bid_strategy":        "value->>'ad_set_bid_strategy'",
+	"ad_set:name":                "value->>'adset_name'",
+	"ad_set:id":                  "ad_set_id",
+	"ad:id":                      "ad_id::bigint",
+	"ad:name":                    "value->>'adset_name'",
+	"ad:configured_status":       "value->>'ad_configured_status'",
+	"ad:effective_status":        "value->>'ad_effective_status'",
+}
+
 var facebookMetricsToAggregatesInReportsMapping = map[string]string{
-	"impressions": "SUM((value->>'impressions')::float)",
-	"clicks":      "SUM((value->>'clicks')::float)",
-	"spend":       "SUM((value->>'spend')::float)",
-	"conversions": "SUM((value->>'conversions')::float)",
-	// "cost_per_click": "average_cost",
-	// "conversion_rate": "conversion_rate"
+	"impressions":                   "SUM((value->>'impressions')::float)",
+	"clicks":                        "SUM((value->>'clicks')::float)",
+	"link_clicks":                   "SUM((value->>'inline_link_clicks')::float)",
+	"spend":                         "SUM((value->>'spend')::float)",
+	"conversions":                   "SUM((value->>'conversions')::float)",
+	"video_p50_watched_actions":     "SUM((value->>'video_p50_watched_actions')::float)",
+	"video_p25_watched_actions":     "SUM((value->>'video_p25_watched_actions')::float)",
+	"video_30_sec_watched_actions":  "SUM((value->>'video_30_sec_watched_actions')::float)",
+	"video_p100_watched_actions":    "SUM((value->>'video_p100_watched_actions')::float)",
+	"video_p75_watched_actions":     "SUM((value->>'video_p75_watched_actions')::float)",
+	"cost_per_click":                fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "clicks", "clicks"),
+	"cost_per_link_click":           fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "inline_link_clicks", "inline_link_clicks"),
+	"cost_per_thousand_impressions": fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1000", "impressions", "impressions"),
+	"click_through_rate":            fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "clicks", "100", "impressions", "impressions"),
+	"link_click_through_rate":       fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "inline_link_clicks", "100", "impressions", "impressions"),
+	"frequency":                     fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "impressions", "1", "reach", "reach"),
+	"leads":                         "SUM((value->>'action_lead')::float)",
+	"reach":                         "SUM((value->>'reach')::float)",
 }
 
 const platform = "platform"
@@ -88,7 +182,7 @@ const facebookCampaignMetadataFetchQueryStr = "select campaign_id, value->>'name
 	"in (select campaign_id, max(timestamp) from facebook_documents where type = ? " +
 	"and project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_id)"
 
-var objectsForFacebook = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
+var objectsForFacebook = []string{CAFilterCampaign, CAFilterAdGroup, CAFilterAd}
 
 func isDuplicateFacebookDocumentError(err error) bool {
 	return err.Error() == errorDuplicateFacebookDocument
@@ -181,23 +275,43 @@ func getFacebookDocumentTypeAliasByType() map[int]string {
 // @TODO Kark v1
 func (pg *Postgres) buildFbChannelConfig(projectID uint64) *model.ChannelConfigResult {
 	facebookObjectsAndProperties := pg.buildObjectAndPropertiesForFacebook(projectID, objectsForFacebook)
-	objectsAndProperties := append(facebookObjectsAndProperties)
+	selectMetrics := append(selectableMetricsForAllChannels, selectableMetricsForFacebook...)
+	objectsAndProperties := facebookObjectsAndProperties
 
 	return &model.ChannelConfigResult{
-		SelectMetrics:        selectableMetricsForAllChannels,
+		SelectMetrics:        selectMetrics,
 		ObjectsAndProperties: objectsAndProperties,
 	}
 }
 
+// current
 func (pg *Postgres) buildObjectAndPropertiesForFacebook(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0)
 	for _, currentObject := range objects {
+		// to do: check if normal properties present then only smart properties will be there
+		propertiesAndRelated, isPresent := mapOfFacebookObjectsToPropertiesAndRelated[currentObject]
 		var currentProperties []model.ChannelProperty
-		var currentPropertiesSmart []model.ChannelProperty
-		currentProperties = buildProperties(allChannelsPropertyToRelated)
-		smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
-		currentPropertiesSmart = buildProperties(smartProperty)
-		currentProperties = append(currentProperties, currentPropertiesSmart...)
+		if isPresent {
+			if C.IsShowSmartPropertiesAllowed(projectID) {
+				smartProperties := pg.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
+				if smartProperties != nil {
+					for key, value := range smartProperties {
+						propertiesAndRelated[key] = value
+					}
+				}
+			}
+			currentProperties = buildProperties(propertiesAndRelated)
+		} else {
+			if C.IsShowSmartPropertiesAllowed(projectID) {
+				smartProperties := pg.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
+				if smartProperties != nil {
+					for key, value := range smartProperties {
+						allChannelsPropertyToRelated[key] = value
+					}
+				}
+			}
+			currentProperties = buildProperties(allChannelsPropertyToRelated)
+		}
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
 	}
 	return objectsAndProperties
@@ -763,9 +877,9 @@ func (pg *Postgres) GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccountI
 
 	facebookLastSyncInfos := make([]model.FacebookLastSyncInfo, 0, 0)
 
-	queryStr := "SELECT project_id, customer_ad_account_id, platform, type as document_type, max(timestamp) as last_timestamp" +
+	queryStr := "SELECT project_id, customer_ad_account_id, type as document_type, max(timestamp) as last_timestamp" +
 		" FROM facebook_documents WHERE project_id = ? AND customer_ad_account_id = ?" +
-		" GROUP BY project_id, customer_ad_account_id, platform, type "
+		" GROUP BY project_id, customer_ad_account_id, type "
 
 	rows, err := db.Raw(queryStr, projectID, CustomerAdAccountID).Rows()
 	if err != nil {

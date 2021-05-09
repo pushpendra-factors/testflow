@@ -5,7 +5,6 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -51,7 +50,6 @@ func DataServiceFacebookGetLastSyncInfoHandler(c *gin.Context) {
 			gin.H{"error": "Invalid request json."})
 		return
 	}
-	projectID, _ := strconv.ParseUint(payload.ProjectId, 10, 64)
-	lastSyncInfo, status := store.GetStore().GetFacebookLastSyncInfo(projectID, payload.CustomerAdAccountId)
+	lastSyncInfo, status := store.GetStore().GetFacebookLastSyncInfo(payload.ProjectId, payload.CustomerAdAccountId)
 	c.JSON(status, lastSyncInfo)
 }

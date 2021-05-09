@@ -18,11 +18,60 @@ import (
 )
 
 const (
-	facebookCampaign     = "campaign"
-	facebookAdSet        = "ad_set"
-	facebookAd           = "ad"
-	facebookStringColumn = "facebook"
+	facebookCampaign                                = "campaign"
+	facebookAdSet                                   = "ad_set"
+	facebookAd                                      = "ad"
+	facebookStringColumn                            = "facebook"
+	metricsExpressionOfDivisionWithHandleOf0AndNull = "SUM(JSON_EXTRACT_STRING(value,'%s'))*%s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
 )
+
+var selectableMetricsForFacebook = []string{
+	"conversion",
+	"video_p50_watched_actions",
+	"video_p25_watched_actions",
+	"video_30_sec_watched_actions",
+	"video_p100_watched_actions",
+	"video_p75_watched_actions",
+	"cost_per_click",
+	"cost_per_link_click",
+	"cost_per_thousand_impressions",
+	"click_through_rate",
+	"link_click_through_rate",
+	"link_clicks",
+	"frequency",
+	"leads",
+	"reach",
+}
+
+var mapOfFacebookObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
+	CAFilterCampaign: {
+		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"daily_budget":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"lifetime_budget":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"objective":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"bid_strategy":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"buying_type":       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	},
+	CAFilterAdGroup: {
+		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"daily_budget":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"lifetime_budget":   PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"objective":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"bid_strategy":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	},
+	CAFilterAd: {
+		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	},
+}
 
 var facebookDocumentTypeAlias = map[string]int{
 	"ad_account":        7,
@@ -35,29 +84,71 @@ var facebookDocumentTypeAlias = map[string]int{
 }
 
 var objectAndPropertyToValueInFacebookReportsMapping = map[string]string{
-	"campaign:name": "JSON_EXTRACT_STRING(value, 'campaign_name')",
-	"ad_set:name":   "JSON_EXTRACT_STRING(value, 'adset_name')",
-	"campaign:id":   "campaign_id",
-	"ad_set:id":     "ad_set_id",
-	"ad:id":         "id",
+	"campaign:daily_budget":      "JSON_EXTRACT_STRING(value, 'campaign_daily_budget')",
+	"campaign:lifetime_budget":   "JSON_EXTRACT_STRING(value, 'campaign_lifetime_budget')",
+	"campaign:configured_status": "JSON_EXTRACT_STRING(value, 'campaign_configured_status')",
+	"campaign:effective_status":  "JSON_EXTRACT_STRING(value, 'campaign_effective_status')",
+	"campaign:objective":         "JSON_EXTRACT_STRING(value, 'campaign_objective')",
+	"campaign:buying_type":       "JSON_EXTRACT_STRING(value, 'campaign_buying_type')",
+	"campaign:bid_strategy":      "JSON_EXTRACT_STRING(value, 'campaign_bid_strategy')",
+	"campaign:name":              "JSON_EXTRACT_STRING(value, 'campaign_name')",
+	"campaign:id":                "campaign_id::bigint",
+	"ad_set:daily_budget":        "JSON_EXTRACT_STRING(value, 'ad_set_daily_budget')",
+	"ad_set:lifetime_budget":     "JSON_EXTRACT_STRING(value, 'ad_set_lifetime_budget')",
+	"ad_set:configured_status":   "JSON_EXTRACT_STRING(value, 'ad_set_configured_status')",
+	"ad_set:effective_status":    "JSON_EXTRACT_STRING(value, 'ad_set_effective_status')",
+	"ad_set:objective":           "JSON_EXTRACT_STRING(value, 'ad_set_objective')",
+	"ad_set:bid_strategy":        "JSON_EXTRACT_STRING(value, 'ad_set_bid_strategy')",
+	"ad_set:name":                "JSON_EXTRACT_STRING(value, 'adset_name')",
+	"ad_set:id":                  "ad_set_id::bigint",
+	"ad:id":                      "ad_id::bigint",
+	"ad:name":                    "JSON_EXTRACT_STRING(value, 'ad_name')",
+	"ad:configured_status":       "JSON_EXTRACT_STRING(value, 'ad_configured_status')",
+	"ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
 }
 
 var objectToValueInFacebookFiltersMapping = map[string]string{
-	"campaign:name": "JSON_EXTRACT_STRING(value, 'campaign_name')",
-	"ad_set:name":   "JSON_EXTRACT_STRING(value, 'adset_name')",
-	"campaign:id":   "campaign_id",
-	"ad_set:id":     "ad_set_id",
-	"ad:id":         "ad_id",
+	"campaign:daily_budget":      "JSON_EXTRACT_STRING(value,'campaign_daily_budget')",
+	"campaign:lifetime_budget":   "JSON_EXTRACT_STRING(value,'campaign_lifetime_budget')",
+	"campaign:configured_status": "JSON_EXTRACT_STRING(value,'campaign_configured_status')",
+	"campaign:effective_status":  "JSON_EXTRACT_STRING(value,'campaign_effective_status')",
+	"campaign:objective":         "JSON_EXTRACT_STRING(value,'campaign_objective')",
+	"campaign:buying_type":       "JSON_EXTRACT_STRING(value,'campaign_buying_type')",
+	"campaign:bid_strategy":      "JSON_EXTRACT_STRING(value,'campaign_bid_strategy')",
+	"campaign:name":              "JSON_EXTRACT_STRING(value,'campaign_name')",
+	"campaign:id":                "campaign_id",
+	"ad_set:daily_budget":        "JSON_EXTRACT_STRING(value,'ad_set_daily_budget')",
+	"ad_set:lifetime_budget":     "JSON_EXTRACT_STRING(value,'ad_set_lifetime_budget')",
+	"ad_set:configured_status":   "JSON_EXTRACT_STRING(value,'ad_set_configured_status')",
+	"ad_set:effective_status":    "JSON_EXTRACT_STRING(value,'ad_set_effective_status')",
+	"ad_set:objective":           "JSON_EXTRACT_STRING(value,'ad_set_objective')",
+	"ad_set:bid_strategy":        "JSON_EXTRACT_STRING(value,'ad_set_bid_strategy')",
+	"ad_set:name":                "JSON_EXTRACT_STRING(value,'adset_name')",
+	"ad_set:id":                  "ad_set_id",
+	"ad:id":                      "ad_id",
+	"ad:name":                    "JSON_EXTRACT_STRING(value, 'ad_name')",
+	"ad:configured_status":       "JSON_EXTRACT_STRING(value, 'ad_configured_status')",
+	"ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
 }
 
-// TODO check
 var facebookMetricsToAggregatesInReportsMapping = map[string]string{
-	"impressions": "SUM(JSON_EXTRACT_STRING(value, 'impressions'))",
-	"clicks":      "SUM(JSON_EXTRACT_STRING(value, 'clicks'))",
-	"spend":       "SUM(JSON_EXTRACT_STRING(value, 'spend'))",
-	"conversions": "SUM(JSON_EXTRACT_STRING(value, 'conversions'))",
-	// "cost_per_click": "average_cost",
-	// "conversion_rate": "conversion_rate"
+	"impressions":                   "SUM(JSON_EXTRACT_STRING(value,'impressions'))",
+	"clicks":                        "SUM(JSON_EXTRACT_STRING(value,'clicks'))",
+	"spend":                         "SUM(JSON_EXTRACT_STRING(value,'spend'))",
+	"conversions":                   "SUM(JSON_EXTRACT_STRING(value,'conversions'))",
+	"video_p50_watched_actions":     "SUM(JSON_EXTRACT_STRING(value,'video_p50_watched_actions'))",
+	"video_p25_watched_actions":     "SUM(JSON_EXTRACT_STRING(value,'video_p25_watched_actions'))",
+	"video_30_sec_watched_actions":  "SUM(JSON_EXTRACT_STRING(value,'video_30_sec_watched_actions'))",
+	"video_p100_watched_actions":    "SUM(JSON_EXTRACT_STRING(value,'video_p100_watched_actions'))",
+	"video_p75_watched_actions":     "SUM(JSON_EXTRACT_STRING(value,'video_p75_watched_actions'))",
+	"cost_per_click":                fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "clicks", "clicks"),
+	"cost_per_link_click":           fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1", "inline_link_clicks", "inline_link_clicks"),
+	"cost_per_thousand_impressions": fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "spend", "1000", "impressions", "impressions"),
+	"click_through_rate":            fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "clicks", "100", "impressions", "impressions"),
+	"link_click_through_rate":       fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "inline_link_clicks", "100", "impressions", "impressions"),
+	"frequency":                     fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "impressions", "1", "reach", "reach"),
+	"leads":                         "SUM(JSON_EXTRACT_STRING(value,'action_lead'))",
+	"reach":                         "SUM(JSON_EXTRACT_STRING(value,'reach'))",
 }
 
 const platform = "platform"
@@ -87,7 +178,7 @@ const facebookCampaignMetadataFetchQueryStr = "select campaign_id, JSON_EXTRACT_
 	"in (select campaign_id, max(timestamp) from facebook_documents where type = ? " +
 	"and project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_id)"
 
-var objectsForFacebook = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
+var objectsForFacebook = []string{CAFilterCampaign, CAFilterAdGroup, CAFilterAd}
 
 func (store *MemSQL) satisfiesFacebookForeignConstraints(facebookDocument model.FacebookDocument) int {
 	_, errCode := store.GetProject(facebookDocument.ProjectID)
@@ -187,10 +278,11 @@ func getFacebookDocumentTypeAliasByType() map[int]string {
 // @TODO Kark v1
 func (store *MemSQL) buildFbChannelConfig(projectID uint64) *model.ChannelConfigResult {
 	facebookObjectsAndProperties := store.buildObjectAndPropertiesForFacebook(projectID, objectsForFacebook)
-	objectsAndProperties := append(facebookObjectsAndProperties)
+	selectMetrics := append(selectableMetricsForAllChannels, selectableMetricsForFacebook...)
+	objectsAndProperties := facebookObjectsAndProperties
 
 	return &model.ChannelConfigResult{
-		SelectMetrics:        selectableMetricsForAllChannels,
+		SelectMetrics:        selectMetrics,
 		ObjectsAndProperties: objectsAndProperties,
 	}
 }
@@ -198,12 +290,30 @@ func (store *MemSQL) buildFbChannelConfig(projectID uint64) *model.ChannelConfig
 func (store *MemSQL) buildObjectAndPropertiesForFacebook(projectID uint64, objects []string) []model.ChannelObjectAndProperties {
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
 	for _, currentObject := range objects {
+		// to do: check if normal properties present then only smart properties will be there
+		propertiesAndRelated, isPresent := mapOfFacebookObjectsToPropertiesAndRelated[currentObject]
 		var currentProperties []model.ChannelProperty
-		var currentPropertiesSmart []model.ChannelProperty
-		currentProperties = buildProperties(allChannelsPropertyToRelated)
-		smartProperty := store.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
-		currentPropertiesSmart = buildProperties(smartProperty)
-		currentProperties = append(currentProperties, currentPropertiesSmart...)
+		if isPresent {
+			if C.IsShowSmartPropertiesAllowed(projectID) {
+				smartProperties := store.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
+				if smartProperties != nil {
+					for key, value := range smartProperties {
+						propertiesAndRelated[key] = value
+					}
+				}
+			}
+			currentProperties = buildProperties(propertiesAndRelated)
+		} else {
+			if C.IsShowSmartPropertiesAllowed(projectID) {
+				smartProperties := store.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
+				if smartProperties != nil {
+					for key, value := range smartProperties {
+						allChannelsPropertyToRelated[key] = value
+					}
+				}
+			}
+			currentProperties = buildProperties(allChannelsPropertyToRelated)
+		}
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
 	}
 	return objectsAndProperties
@@ -769,9 +879,9 @@ func (store *MemSQL) GetFacebookLastSyncInfo(projectID uint64, CustomerAdAccount
 
 	facebookLastSyncInfos := make([]model.FacebookLastSyncInfo, 0, 0)
 
-	queryStr := "SELECT project_id, customer_ad_account_id, platform, type as document_type, max(timestamp) as last_timestamp" +
+	queryStr := "SELECT project_id, customer_ad_account_id, type as document_type, max(timestamp) as last_timestamp" +
 		" FROM facebook_documents WHERE project_id = ? AND customer_ad_account_id = ?" +
-		" GROUP BY project_id, customer_ad_account_id, platform, type "
+		" GROUP BY project_id, customer_ad_account_id, type "
 
 	rows, err := db.Raw(queryStr, projectID, CustomerAdAccountID).Rows()
 	if err != nil {

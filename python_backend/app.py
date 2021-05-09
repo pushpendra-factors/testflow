@@ -15,7 +15,7 @@ if __name__ == "__main__":
     input_args, rem = AppParser(sys.argv[1::]).parse()
     AppConfig.build(input_args)
     app.CONFIG = AppConfig
-    FactorsDataService.init(app.CONFIG)
+    FactorsDataService.init(app.CONFIG.ADWORDS_APP.get_data_service_path())
     SentryDataService.init(app.CONFIG.SENTRY)
 
     application = tornado.web.Application(ROUTES)

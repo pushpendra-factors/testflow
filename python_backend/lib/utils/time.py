@@ -17,6 +17,13 @@ class TimeUtil:
         return int(dt.strftime('%Y%m%d'))
 
     @staticmethod
+    def get_string_of_specific_format_from_timestamp(timestamp, fmt):
+        if timestamp is None:
+            return
+        curr_date = datetime.strptime(str(timestamp), "%Y%m%d")
+        return curr_date.strftime(fmt)
+
+    @staticmethod
     def get_datetime_from_timestamp(timestamp):
         if timestamp is None:
             return

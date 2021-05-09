@@ -73,7 +73,7 @@ var errorEmptyAdwordsDocument = errors.New("empty adwords document")
 
 var objectsForAdwords = []string{model.AdwordsCampaign, model.AdwordsAdGroup, model.AdwordsKeyword}
 
-var mapOfObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
+var mapOfAdwordsObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
 	model.AdwordsCampaign: {
 		"id":                         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 		"name":                       PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
@@ -142,25 +142,25 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalOperation:        "sum",
 	},
 	model.ClickThroughRate: {
-		higherOrderExpression:    "sum(JSON_EXTRACT_STRING(value, 'clicks'))*100/NULLIF(sum(JSON_EXTRACT_STRING(value, 'impressions')), 0)",
+		higherOrderExpression:    "sum(JSON_EXTRACT_STRING(value, 'clicks'))*100/NULLIF(sum(JSON_EXTRACT_STRING(value, 'impressions')), 100000)",
 		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'clicks'))*100",
 		externalValue:            model.ClickThroughRate,
 		externalOperation:        "sum",
 	},
 	model.ConversionRate: {
-		higherOrderExpression:    "sum(JSON_EXTRACT_STRING(value, 'conversions'))*100/NULLIF(sum(JSON_EXTRACT_STRING(value, 'clicks')), 0)",
+		higherOrderExpression:    "sum(JSON_EXTRACT_STRING(value, 'conversions'))*100/NULLIF(sum(JSON_EXTRACT_STRING(value, 'clicks')), 100000)",
 		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'conversions'))*100",
 		externalValue:            model.ConversionRate,
 		externalOperation:        "sum",
 	},
 	model.CostPerClick: {
-		higherOrderExpression:    "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)/NULLIF(sum(JSON_EXTRACT_STRING(value, 'clicks')), 0)",
+		higherOrderExpression:    "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)/NULLIF(sum(JSON_EXTRACT_STRING(value, 'clicks')), 100000)",
 		nonHigherOrderExpression: "(sum((value, 'cost'))/1000000)",
 		externalValue:            model.CostPerClick,
 		externalOperation:        "sum",
 	},
 	model.CostPerConversion: {
-		higherOrderExpression:    "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)/NULLIF(sum(JSON_EXTRACT_STRING(value, 'conversions')), 0)",
+		higherOrderExpression:    "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)/NULLIF(sum(JSON_EXTRACT_STRING(value, 'conversions')), 100000)",
 		nonHigherOrderExpression: "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)",
 		externalValue:            model.CostPerConversion,
 		externalOperation:        "sum",
@@ -719,7 +719,7 @@ func (store *MemSQL) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64,
 func (store *MemSQL) buildAdwordsChannelConfig(projectID uint64) *model.ChannelConfigResult {
 	adwordsObjectsAndProperties := store.buildObjectAndPropertiesForAdwords(projectID, objectsForAdwords)
 	selectMetrics := append(selectableMetricsForAllChannels, selectableMetricsForAdwords...)
-	objectsAndProperties := append(adwordsObjectsAndProperties)
+	objectsAndProperties := adwordsObjectsAndProperties
 	return &model.ChannelConfigResult{
 		SelectMetrics:        selectMetrics,
 		ObjectsAndProperties: objectsAndProperties,
@@ -730,7 +730,7 @@ func (store *MemSQL) buildObjectAndPropertiesForAdwords(projectID uint64, object
 	objectsAndProperties := make([]model.ChannelObjectAndProperties, 0, 0)
 	for _, currentObject := range objects {
 		// to do: check if normal properties present then only smart properties will be there
-		propertiesAndRelated, isPresent := mapOfObjectsToPropertiesAndRelated[currentObject]
+		propertiesAndRelated, isPresent := mapOfAdwordsObjectsToPropertiesAndRelated[currentObject]
 		var currentProperties []model.ChannelProperty
 		var currentPropertiesSmart []model.ChannelProperty
 		if isPresent {

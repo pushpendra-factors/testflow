@@ -1,0 +1,69 @@
+import logging as log
+import uuid
+from datetime import datetime
+
+import requests
+
+from .base import BaseSystem
+from ...utils.json import JsonUtil
+
+
+# paginated strategy with support for systems with http and url only.
+# May be a separate class requirement is required so that client and system implementation are decoupled.
+# This is specific implementation for facebook.
+class ExternalSystem(BaseSystem):
+
+    def read(self):
+        result_records = []
+        records, next_page_metadata, result_response = self.get_paginated_from_source(self.system_attributes["url"])
+        if not result_response.ok:
+            return "", result_response
+        result_records.extend(records)
+
+        while next_page_metadata["exists"]:
+            next_page_link = next_page_metadata["link"]
+            records, next_page_metadata, result_response = self.get_paginated_from_source(next_page_link)
+            result_records.extend(records)
+        return JsonUtil.create(records), result_response
+
+    def write(self, input_string):
+        input_records = JsonUtil.read(input_string)
+        if len(input_records) == 0:
+            curr_payload = self.get_payload_for_facebook_data_service({"id": str(uuid.uuid4()), "publisher_platform": "facebook"})
+            curr_response = requests.post(self.system_attributes["url"], json=curr_payload)
+            if not curr_response.ok:
+                return
+                # log.error('Failed to add response %s to facebook data service for project %s. StatusCode:  %d, %s',
+                #           self.system_attributes["type_alias"], self.system_attributes["project_id"],
+                #           curr_response.status_code, curr_response.json())
+        for input_record in input_records:
+            curr_payload = self.get_payload_for_facebook_data_service(input_record)
+            curr_response = requests.post(self.system_attributes["url"], json=curr_payload)
+            if not curr_response.ok:
+                return
+                # log.error('Failed to add response %s to facebook data service for project %s. StatusCode:  %d, %s',
+                #           self.system_attributes["type_alias"], self.system_attributes["project_id"],
+                #           curr_response.status_code, curr_response.json())
+        return
+
+    def get_paginated_from_source(self, url):
+        result_response = requests.get(url)
+        if not result_response.ok:
+            return [], {"exists": False, "link": ""}, result_response
+        if "paging" in result_response.json() and "next" in result_response.json()["paging"]:
+            next_page_metadata = {"exists": True, "link": result_response.json()["paging"]["next"]}
+        else:
+            next_page_metadata = {"exists": False, "link": ""}
+        return result_response.json()['data'], next_page_metadata, result_response
+
+    def get_payload_for_facebook_data_service(self, value):
+        payload = {
+            'project_id': int(self.system_attributes["project_id"]),
+            'customer_ad_account_id': self.system_attributes["customer_account_id"],
+            'type_alias': self.system_attributes["type_alias"],
+            'id': value["id"],
+            'value': value,
+            'timestamp': self.system_attributes["timestamp"],
+            'platform': value['publisher_platform']
+        }
+        return payload
