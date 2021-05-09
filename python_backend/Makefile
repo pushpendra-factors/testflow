@@ -1,4 +1,4 @@
-.PHONY: pack-python-server upload-python-server pack-adwords-etl upload-adwords-etl pack-adwords-etl-debug upload-adwords-etl-debug
+.PHONY: pack-python-server upload-python-server pack-adwords-etl upload-adwords-etl pack-adwords-etl-debug upload-adwords-etl-debug pack-facebook-etl upload-facebook-etl
 
 TAG?=
 export TAG
@@ -32,3 +32,9 @@ pack-adwords-etl-debug:
 upload-adwords-etl-debug: export IMAGE_NAME=adwords-etl-debug
 upload-adwords-etl-debug: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/adwords-etl-debug:$(TAG)
+
+pack-facebook-etl:
+	docker build -t us.gcr.io/factors-$(ENV)/facebook-etl:$(TAG) -f Dockerfile.facebook_job .
+upload-facebook-etl: export IMAGE_NAME=facebook-etl
+upload-facebook-etl: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/facebook-etl:$(TAG)

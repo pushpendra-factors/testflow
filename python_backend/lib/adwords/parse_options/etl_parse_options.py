@@ -2,7 +2,7 @@ from lib.parse_options import ParseOptions
 
 
 # Check if this should be at WebServer/Application Level
-class EtlParserOptions(ParseOptions):
+class AdwordsEtlParserOptions(ParseOptions):
 
     @classmethod
     def add_options_to_parser(cls, parser):
@@ -10,7 +10,6 @@ class EtlParserOptions(ParseOptions):
         parser.add_option("--developer_token", dest="developer_token", help="", default="")
         parser.add_option("--oauth_secret", dest="oauth_secret", help="", default="")
         parser.add_option("--skip_today", dest="skip_today", help="", default="False")
-        parser.add_option("--google_project_name", dest="google_project_name", help="", default="")
         parser.add_option("--data_service_host", dest="data_service_host",
                           help="Data service host", default="http://localhost:8089")
 

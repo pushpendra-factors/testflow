@@ -1,6 +1,7 @@
 from lib.config import Config
-from lib.metrics_controller import MetricsController
-from lib.utils.job_storage import JobStorage
+from lib.utils.adwords.metrics_controller import MetricsController
+from lib.utils.adwords.job_storage import JobStorage
+from lib.utils.string import StringUtil
 
 SESSION_COOKIE_NAME = "factors-sid"
 
@@ -24,14 +25,12 @@ class AppConfig(Config):
     @classmethod
     def _init(cls, env, skip_today, 
               project_ids, exclude_project_ids, document_type, data_service_host,
-              google_project_name,
               type_of_run, dry, last_timestamp, to_timestamp):
         cls.env = env
         cls.skip_today = (skip_today == "True")
         cls.project_ids = project_ids
         cls.exclude_project_ids = exclude_project_ids
         cls.document_type = document_type
-        cls.google_project_name = google_project_name
         cls.data_service_host = data_service_host
 
         cls.type_of_run = type_of_run
@@ -40,7 +39,7 @@ class AppConfig(Config):
         cls.to_timestamp = to_timestamp
         MetricsController.init(type_of_run)
         cls.metrics_controller = MetricsController
-        JobStorage.init(cls.env, cls.dry, cls.google_project_name)
+        JobStorage.init(cls.env, cls.dry)
         cls.job_storage = JobStorage
 
     @classmethod
@@ -48,13 +47,12 @@ class AppConfig(Config):
         project_ids = set()
         exclude_project_ids = set()
         if argv.project_id is not None:
-            project_ids = set([int(x) for x in argv.project_id.split(",")])
+            project_ids = StringUtil.get_set_from_string_split_by_comma(argv.project_id)
         if argv.exclude_project_id is not None:
-            exclude_project_ids = set([int(x) for x in argv.exclude_project_id.split(",")])
+            exclude_project_ids = StringUtil.get_set_from_string_split_by_comma(argv.exclude_project_id)
 
         cls._init(argv.env, argv.skip_today,
                   project_ids, exclude_project_ids, argv.document_type, argv.data_service_host,
-                  argv.google_project_name,
                   argv.type_of_run, argv.dry, argv.last_timestamp, argv.to_timestamp)
 
     @classmethod

@@ -2,7 +2,7 @@
 import errno
 import os
 
-
+# Though this is not in used in google context, this is used only for google.
 class LocalStorage:
     BASE_FOLDER = "/usr/local/var/factors/cloud_storage"
 

@@ -5,8 +5,7 @@ class GoogleStorageFile:
     client = None
     bucket = None
 
-    def __init__(self, project_name, bucket_name):
-        # self.client = storage.Client(project_name)
+    def __init__(self, bucket_name):
         self.client = storage.Client()
         self.bucket = self.client.get_bucket(bucket_name)
 

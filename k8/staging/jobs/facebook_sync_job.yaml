@@ -21,7 +21,7 @@ spec:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: facebook-sync
-            image: us.gcr.io/factors-staging/facebook-sync-job:v0.01-ea6b22e
+            image: us.gcr.io/factors-staging/facebook-etl:v0.01-ea6b22e
             imagePullPolicy: IfNotPresent
             args:
             - --env

@@ -1,5 +1,3 @@
-import io
-import logging as log
 import operator
 from datetime import datetime
 
@@ -8,7 +6,7 @@ from googleads import adwords
 import scripts
 from lib.adwords.oauth_service.fetch_service import FetchService
 from lib.utils.csv import CsvUtil
-from lib.utils.format import FormatUtil
+from lib.utils.adwords.format import FormatUtil
 from lib.utils.string import StringUtil
 from .base_job import BaseJob
 from .. import EXTRACT, REQUEST_COUNT, LATENCY_COUNT, LOAD, RECORDS_COUNT
@@ -77,7 +75,7 @@ class ReportsFetch(BaseJob):
     def __init__(self, next_info):
         next_info["extract_load_timestamps"] = [next_info.get("next_timestamp")]
         super().__init__(next_info)
-        # Usage - 1.Extract from source into in memory. 2. Message passing for extract-load task.
+        # Usage - 1.Extract from system into in memory. 2. Message passing for extract-load task.
         self._rows = None
 
     def extract_task(self):

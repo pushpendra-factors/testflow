@@ -4,7 +4,7 @@ from datetime import datetime
 import scripts
 from lib.adwords.oauth_service.fetch_service import FetchService
 from lib.utils.json import JsonUtil
-from lib.utils.sync_util import SyncUtil
+from lib.utils.adwords.sync_util import AdwordsSyncUtil
 from .base_job import BaseJob
 from .. import EXTRACT, LATENCY_COUNT, REQUEST_COUNT, LOAD, RECORDS_COUNT
 # TODO: Exception getting caught at job scheduler will lose the stats at JobLevel.
@@ -22,16 +22,16 @@ class MultipleRequestsFetchJob(BaseJob):
     def __init__(self, next_info):
         next_info["extract_load_timestamps"] = self.get_extract_load_timestamps(next_info)
         super().__init__(next_info)
-        # Usage - 1.Extract from source into in memory. 2. Message passing for extract-load task.
+        # Usage - 1.Extract from system into in memory. 2. Message passing for extract-load task.
         # self._report_string in reports_fetch_job is equal to self._rows in multiple_request_job.
         self._rows = None
 
     @staticmethod
     def get_extract_load_timestamps(next_info):
         if next_info.get("first_run"):
-            return SyncUtil.get_next_timestamps_for_run(next_info.get("first_run"), None, None,
-                                                        next_info.get("last_timestamp"), next_info.get("doc_type_alias")
-                                                        )
+            return AdwordsSyncUtil.get_next_timestamps_for_run(next_info.get("first_run"), None, None,
+                                                               next_info.get("last_timestamp"), next_info.get("doc_type_alias")
+                                                               )
         else:
             return [next_info.get("next_timestamp")]
 

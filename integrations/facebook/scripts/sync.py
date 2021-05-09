@@ -48,7 +48,6 @@ doc_type_map = {
     CAMPAIGN: 'campaign'
 }
 
-
 parser = OptionParser()
 parser.add_option('--env', dest='env', default='development')
 parser.add_option('--dry', dest='dry', help='', default='False')
@@ -112,7 +111,6 @@ def get_time_ranges_list(date_start: str) -> List[Dict[str, str]]:
         time_ranges.append(time_range)
     return time_ranges
 
-
 def get_facebook_int_settings() -> json:
     uri: str = '/data_service/facebook/project/settings'
     url: str = options.data_service_host + uri
@@ -134,7 +132,6 @@ def sync_for_project_and_customer_account(facebook_int_setting: dict, customer_a
     response[PROJECT_ID] = project_id
     response['ad_account'] = facebook_int_setting_dup[FACEBOOK_AD_ACCOUNT]
     return response
-
 
 def get_last_sync_info(project_id: str, account_id: str) -> dict:
     uri: str = '/data_service/facebook/documents/last_sync_info'

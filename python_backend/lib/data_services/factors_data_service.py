@@ -1,15 +1,21 @@
 # TODO: Check the error handling.
+from datetime import datetime, timedelta
+from typing import Dict, List
+
 import requests
 import logging as log
 
+from requests import Response
 
+# Note: This class currently holds 2 functionalities - 1. Fetching data 2. Provide data with proper transformation(sometimes).
+# TODO Add Ability to test.
 class FactorsDataService:
     data_service_path = None
     BATCH_SIZE = 1000
 
     @classmethod
-    def init(cls, config):
-        cls.data_service_path = config.ADWORDS_APP.get_data_service_path()
+    def init(cls, data_service_path):
+        cls.data_service_path = data_service_path
 
     @classmethod
     def add_refresh_token(cls, session, payload):
@@ -106,3 +112,30 @@ class FactorsDataService:
             "value": doc,
             "timestamp": timestamp,
         }
+
+    # facebook related processing.
+    @classmethod
+    def get_facebook_settings(cls):
+        url: str = cls.data_service_path + "/facebook/project/settings"
+
+        response: Response = requests.get(url)
+        if not response.ok:
+            log.error('Failed to get facebook integration settings from data services with error: %s', response.text)
+            return
+        return response.json()
+
+    # Add sample response
+    # Add failure handling.
+    @classmethod
+    def get_facebook_last_sync_info(cls, project_id, customer_account_id) -> dict:
+        url: str = cls.data_service_path + "/facebook/documents/last_sync_info"
+        payload: Dict[str, str] = {
+            "project_id": project_id,
+            "account_id": customer_account_id
+        }
+        resp: requests.Response = requests.get(url, json=payload)
+        all_info: List = resp.json()
+        sync_info_with_type: dict = {}
+        for info in all_info:
+            sync_info_with_type[info['type_alias']] = info
+        return sync_info_with_type

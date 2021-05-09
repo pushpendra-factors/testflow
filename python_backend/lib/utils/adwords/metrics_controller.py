@@ -4,8 +4,7 @@ import scripts
 from lib.utils.healthchecks import HealthChecksUtil
 from lib.utils.json import JsonUtil
 from scripts.adwords import STATUS_SKIPPED, STATUS_FAILED, FAILURE_MESSAGE, SUCCESS_MESSAGE
-from lib.job_task_stats import JobTaskStats
-
+from lib.utils.adwords.job_task_stats import JobTaskStats
 
 # NOTE: SIGKILL cant capture this.
 # TODO: Give summary separately. Comparing extract and load.
@@ -20,6 +19,7 @@ class MetricsController:
         "failures": {},
         "success": {}
     }
+    ADWORDS_SYNC_PING_ID = "188cbf7c-0ea1-414b-bf5c-eee47c12a0c8"
 
     @classmethod
     def init(cls, type_of_run):
@@ -68,7 +68,10 @@ class MetricsController:
             cls.etl_stats["status"] = FAILURE_MESSAGE
 
         if status is None:
-            cls.etl_stats["failures"].append("Sync status is missing on response")
+            message = "Sync status is missing on response"
+            cls.etl_stats["failures"].setdefault(message, {})
+            cls.etl_stats["failures"][message].setdefault(doc_type, set())
+            cls.etl_stats["failures"][message][doc_type].add(project_id)
         elif status == STATUS_FAILED:
             cls.etl_stats["failures"].setdefault(message, {})
             cls.etl_stats["failures"][message].setdefault(doc_type, set())
@@ -98,9 +101,9 @@ class MetricsController:
             cls.etl_stats["task_stats"] = cls.compare_load_and_extract()
 
         if cls.etl_stats["status"] == SUCCESS_MESSAGE:
-            HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["success"])
+            HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["success"], cls.ADWORDS_SYNC_PING_ID)
         else:
-            HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["failures"], endpoint="/fail")
+            HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["failures"], cls.ADWORDS_SYNC_PING_ID, endpoint="/fail")
             log.warning("Job has errors. Successfully synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
 
     @classmethod

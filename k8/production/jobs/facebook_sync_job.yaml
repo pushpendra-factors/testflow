@@ -21,7 +21,7 @@ spec:
             cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: facebook-sync
-            image: us.gcr.io/factors-production/facebook-sync-job:v0.01-eaf59a3
+            image: us.gcr.io/factors-production/facebook-etl:v0.01-eaf59a3
             imagePullPolicy: IfNotPresent
             args:
             - --env

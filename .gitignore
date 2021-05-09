@@ -30,6 +30,7 @@ misc/ingest_events/src/github.com/**
 integrations/adwords/**/.swp
 **/__pycache__
 *.pyc
+.venv/
 
 */.DS_Store
 **/.DS_Store
