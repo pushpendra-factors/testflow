@@ -254,6 +254,7 @@ type Model interface {
 	GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int)
 	GetFacebookEnabledProjectSettings() ([]model.FacebookProjectSettings, int)
 	GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int)
+	GetLinkedinEnabledProjectSettingsForProjects(projectIDs []string) ([]model.LinkedinProjectSettings, int)
 	GetArchiveEnabledProjectIDs() ([]uint64, int)
 	GetBigqueryEnabledProjectIDs() ([]uint64, int)
 	GetAllSalesforceProjectSettings() ([]model.SalesforceProjectSettings, int)

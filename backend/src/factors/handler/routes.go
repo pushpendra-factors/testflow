@@ -294,6 +294,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.GET("/linkedin/project/settings",
 		IH.DataServiceLinkedinGetProjectSettings)
 
+	dataServiceRouteGroup.GET("/linkedin/project/settings/projects",
+		IH.DataServiceLinkedinGetProjectSettingsForProjects)
+
 }
 
 type Error struct {

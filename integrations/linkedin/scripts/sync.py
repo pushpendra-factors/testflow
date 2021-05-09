@@ -16,6 +16,11 @@ parser.add_option('--env', dest='env', default='development')
 parser.add_option('--dry', dest='dry', help='', default='False')
 parser.add_option('--skip_today', dest='skip_today', help='', default='False') 
 parser.add_option('--project_id', dest='project_id', help='', default=None, type=int)
+parser.add_option('--project_ids', dest='project_ids', help='', default=None, type=str)
+parser.add_option('--start_timestamp', dest='start_timestamp', help='', default=None, type=int)
+parser.add_option('--end_timestamp', dest='end_timestamp', help='', default=None, type=int)
+parser.add_option('--insert_metadata', dest='insert_metadata', help='', default='True')
+parser.add_option('--insert_report', dest='insert_report', help='', default='True')
 parser.add_option('--data_service_host', dest='data_service_host',
     help='Data service host', default='http://localhost:8089')
 
@@ -44,6 +49,8 @@ INSIGHTS_COUNT = 10000
 
 METRIC_TYPE_INCR = 'incr'
 HEALTHCHECK_PING_ID = '837dce09-92ec-4930-80b3-831b295d1a34'
+start_timestamp = None
+end_timestamp = None
 
 def ping_healthcheck(env, healthcheck_id, message, endpoint=''):
     message = json.dumps(message, indent=1)
@@ -65,6 +72,20 @@ def get_linkedin_int_settings():
     response = requests.get(url)
     if not response.ok:
         log.error('Failed to get linkedin integration settings from data services')
+        return 
+    return response.json()
+
+def get_linkedin_int_settings_for_projects(project_ids):
+    uri = '/data_service/linkedin/project/settings/projects'
+    url = options.data_service_host + uri
+    project_ids_arr = project_ids.split(',')
+    payload = {
+        'project_ids': project_ids_arr
+    }
+
+    response = requests.get(url, json=payload)
+    if not response.ok:
+        log.error('Failed to get linkedin integration settings for projects from data services')
         return 
     return response.json()
 
@@ -114,20 +135,37 @@ def add_linkedin_documents(project_id, ad_account_id, doc_type, obj_id, value, t
 def get_timestamp(date):
     return int(datetime(date['year'],date['month'],date['day']).strftime('%Y%m%d'))
 
+# can't keep very long range, we might hit rate limit
 def get_insights_and_insert(linkedin_int_setting, sync_info_with_type, doc_type, pivot, campaign_group_meta, campaign_meta, creative_meta, meta_request_count):
     log.warning("Fetching insights for %s started for project %s", doc_type, linkedin_int_setting[PROJECT_ID])
     date_start = ''
-    if doc_type not in sync_info_with_type:
-        date_start = (datetime.now() - timedelta(days=MAX_LOOKBACK)).strftime('%Y-%m-%d')
+    date_end = ''
+    if start_timestamp != None:
+        date_start = str(datetime.strptime(str(start_timestamp), '%Y%m%d').date())
+        if end_timestamp != None:
+            date_end = str(datetime.strptime(str(end_timestamp), '%Y%m%d').date())
+        else:
+            date_end = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     else:
-        date_start = sync_info_with_type[doc_type]
+        if doc_type not in sync_info_with_type:
+            date_start = (datetime.now() - timedelta(days=MAX_LOOKBACK)).strftime('%Y-%m-%d')
+        else:
+            date_start = sync_info_with_type[doc_type]
+        date_end = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    
     start_year, start_month, start_day = get_separated_date(date_start)
+    end_year, end_month, end_day = get_separated_date(date_end)
 
     request_counter = meta_request_count
     records = 0
+
+    if date_start > date_end:
+        errString = 'Skipped getting {} insights from linkedin. Already synced. Project_id: {}. Date start: {}, Date end: {}'.format(pivot, linkedin_int_setting[PROJECT_ID], date_start, date_end)
+        return {'status': 'skipped', 'errMsg': errString, API_REQUESTS: request_counter}
+
     fields='totalEngagements,impressions,clicks,dateRange,landingPageClicks,costInUsd,leadGenerationMailContactInfoShares,leadGenerationMailInterestedClicks,opens,videoCompletions,videoFirstQuartileCompletions,videoMidpointCompletions,videoThirdQuartileCompletions,videoViews,externalWebsiteConversions,externalWebsitePostClickConversions,externalWebsitePostViewConversions,costInLocalCurrency,conversionValueInLocalCurrency,pivotValue'
-    url = 'https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&pivot={}&dateRange.start.day={}&dateRange.start.month={}&dateRange.start.year={}&timeGranularity=DAILY&fields={}&accounts[0]=urn:li:sponsoredAccount:{}&start=0&count={}'.format(
-        pivot, start_day, start_month, start_year, fields, linkedin_int_setting[LINKEDIN_AD_ACCOUNT], INSIGHTS_COUNT)
+    url = 'https://api.linkedin.com/v2/adAnalyticsV2?q=analytics&pivot={}&dateRange.start.day={}&dateRange.start.month={}&dateRange.start.year={}&dateRange.end.day={}&dateRange.end.month={}&dateRange.end.year={}&timeGranularity=DAILY&fields={}&accounts[0]=urn:li:sponsoredAccount:{}&start=0&count={}'.format(
+        pivot, start_day, start_month, start_year, end_day, end_month, end_year, fields, linkedin_int_setting[LINKEDIN_AD_ACCOUNT], INSIGHTS_COUNT)
     headers = {'Authorization': 'Bearer ' + linkedin_int_setting[ACCESS_TOKEN]}
     response = requests.get(url, headers=headers)
     request_counter += 1
@@ -216,11 +254,21 @@ def insert_metadata(doc_type, project_id, ad_account, response, timestamp, extra
         if not add_documents_response.ok:
             return
 
-def enrich_metadata_first_run_previous_dates(doc_type, project_id, ad_account, metadata, meta):
+def enrich_metadata_previous_dates(doc_type, project_id, ad_account, metadata, meta):
     days = MAX_LOOKBACK
-    log.warning("No of metadata records to be backfilled for %s for project %s : %d", doc_type, project_id, len(metadata)*(days-1))
-    for i in range (1, days):
-        timestamp = int((datetime.now()-timedelta(days=i)).strftime('%Y%m%d'))
+    end_date = datetime.now()
+    if start_timestamp != None:
+        if end_timestamp != None:
+            days = end_timestamp - start_timestamp
+            end_date = datetime.strptime(str(end_timestamp), '%Y%m%d')
+        else:
+            days = int((datetime.now()).strftime('%Y%m%d')) - start_timestamp
+    if days == 0:
+        log.warning("No of metadata records to be backfilled for %s for project %s : %d", doc_type, project_id, 0)
+        return
+    log.warning("No of metadata records to be backfilled for %s for project %s : %d", doc_type, project_id, len(metadata)*(days))
+    for i in range (1, days+1):
+        timestamp = int((end_date-timedelta(days=i)).strftime('%Y%m%d'))
         insert_metadata(doc_type, project_id, ad_account, metadata, timestamp, meta)
 
 def get_campaign_group_data(linkedin_int_setting, sync_info_with_type, meta):
@@ -231,17 +279,19 @@ def get_campaign_group_data(linkedin_int_setting, sync_info_with_type, meta):
     for data in metadata:
         meta[str(data['id'])] = {CAMPAIGN_GROUP_ID: str(data['id']), 'campaign_group_name': data['name'], 'campaign_group_status': data['status']}
     timestamp = int(datetime.now().strftime('%Y%m%d'))
+    if end_timestamp != None:
+        timestamp = end_timestamp
     
-    log.warning("No of metadata records for campaign group to be inserted for project %s : %d", linkedin_int_setting[PROJECT_ID], len(metadata))
-    
-    insert_metadata(CAMPAIGN_GROUPS, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, timestamp, meta)
-    
-    log.warning("Insertion metadata for campaign group ended for project %s", linkedin_int_setting[PROJECT_ID])
+    if options.insert_metadata != 'False':
+        log.warning("No of metadata records for campaign group to be inserted for project %s : %d", linkedin_int_setting[PROJECT_ID], len(metadata))
+        insert_metadata(CAMPAIGN_GROUPS, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, timestamp, meta)
+        
+        log.warning("Insertion metadata for campaign group ended for project %s", linkedin_int_setting[PROJECT_ID])
 
-    if CAMPAIGN_GROUPS not in sync_info_with_type:
-        log.warning("Backfilling campaign group metadata started for project %s", linkedin_int_setting[PROJECT_ID])
-        enrich_metadata_first_run_previous_dates(CAMPAIGN_GROUPS, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, meta)
-        log.warning("Backfilling campaign group metadata ended for project %s", linkedin_int_setting[PROJECT_ID])
+        if CAMPAIGN_GROUPS not in sync_info_with_type:
+            log.warning("Backfilling campaign group metadata started for project %s", linkedin_int_setting[PROJECT_ID])
+            enrich_metadata_previous_dates(CAMPAIGN_GROUPS, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, meta)
+            log.warning("Backfilling campaign group metadata ended for project %s", linkedin_int_setting[PROJECT_ID])
     
     return get_insights_and_insert(linkedin_int_setting, sync_info_with_type, CAMPAIGN_GROUP_INSIGHTS, 'CAMPAIGN_GROUP', meta, {}, {}, request_counter)
 
@@ -254,17 +304,20 @@ def get_campaign_data(linkedin_int_setting, sync_info_with_type , campaign_group
         campaign_group_id = str(data['campaignGroup'].split(':')[3])
         meta[str(data['id'])] = {'campaign_group_id': campaign_group_id,'campaign_id': str(data['id']), 'campaign_name': data['name'], 'campaign_status': data['status'], 'campaign_type': data['type']}
     timestamp = int(datetime.now().strftime('%Y%m%d'))
+    if end_timestamp != None:
+        timestamp = end_timestamp
     
-    log.warning("No of metadata records for campaign to be inserted for project %s : %d", linkedin_int_setting[PROJECT_ID], len(metadata))
-    
-    insert_metadata(CAMPAIGNS, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, timestamp, meta)
-    
-    log.warning("Insertion metadata for campaign ended for project %s", linkedin_int_setting[PROJECT_ID])
+    if options.insert_metadata != 'False':
+        log.warning("No of metadata records for campaign to be inserted for project %s : %d", linkedin_int_setting[PROJECT_ID], len(metadata))
+        
+        insert_metadata(CAMPAIGNS, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, timestamp, meta)
+        
+        log.warning("Insertion metadata for campaign ended for project %s", linkedin_int_setting[PROJECT_ID])
 
-    if CAMPAIGNS not in sync_info_with_type:
-        log.warning("Backfilling campaign metadata started for project %s", linkedin_int_setting[PROJECT_ID])
-        enrich_metadata_first_run_previous_dates(CAMPAIGNS, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, meta)
-        log.warning("Backfilling campaign metadata ended for project %s", linkedin_int_setting[PROJECT_ID])
+        if CAMPAIGNS not in sync_info_with_type:
+            log.warning("Backfilling campaign metadata started for project %s", linkedin_int_setting[PROJECT_ID])
+            enrich_metadata_previous_dates(CAMPAIGNS, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, meta)
+            log.warning("Backfilling campaign metadata ended for project %s", linkedin_int_setting[PROJECT_ID])
 
     return get_insights_and_insert(linkedin_int_setting, sync_info_with_type, CAMPAIGN_INSIGHTS, 'CAMPAIGN', campaign_group_meta, meta, {}, request_counter)
 
@@ -278,16 +331,19 @@ def get_creative_data(linkedin_int_setting, sync_info_with_type, campaign_group_
         campaign_group_id = campaign_meta[campaign_id][CAMPAIGN_GROUP_ID]
         meta[str(data['id'])] = {'campaign_group_id': campaign_group_id, 'campaign_id': campaign_id ,'creative_id': str(data['id']), 'creative_status': data['status'], 'creative_type': data['type']}
     timestamp = int(datetime.now().strftime('%Y%m%d'))
+    if end_timestamp != None:
+        timestamp = end_timestamp
     
-    log.warning("No of metadata records for creative to be inserted for project %s : %d", linkedin_int_setting[PROJECT_ID], len(metadata))
-    
-    insert_metadata(CREATIVES, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, timestamp, meta)
-    log.warning("Insertion metadata for creative ended for project %s", linkedin_int_setting[PROJECT_ID])
+    if options.insert_metadata != 'False':
+        log.warning("No of metadata records for creative to be inserted for project %s : %d", linkedin_int_setting[PROJECT_ID], len(metadata))
+        
+        insert_metadata(CREATIVES, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, timestamp, meta)
+        log.warning("Insertion metadata for creative ended for project %s", linkedin_int_setting[PROJECT_ID])
 
-    if CREATIVES not in sync_info_with_type:
-        log.warning("Backfilling creative metadata started for project %s", linkedin_int_setting[PROJECT_ID])
-        enrich_metadata_first_run_previous_dates(CREATIVES, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, meta)
-        log.warning("Backfilling creative metadata ended for project %s", linkedin_int_setting[PROJECT_ID])
+        if CREATIVES not in sync_info_with_type:
+            log.warning("Backfilling creative metadata started for project %s", linkedin_int_setting[PROJECT_ID])
+            enrich_metadata_previous_dates(CREATIVES, linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], metadata, meta)
+            log.warning("Backfilling creative metadata ended for project %s", linkedin_int_setting[PROJECT_ID])
     
     return get_insights_and_insert(linkedin_int_setting, sync_info_with_type, CREATIVE_INSIGHTS, 'CREATIVE', campaign_group_meta, campaign_meta, meta, request_counter)
 
@@ -300,6 +356,8 @@ def get_ad_account_data(linkedin_int_setting):
         return {'status': 'failed', 'errMsg': errString, API_REQUESTS: 0}
     metadata = response.json()
     timestamp = int(datetime.now().strftime('%Y%m%d'))
+    if end_timestamp != None:
+        timestamp = end_timestamp
     add_linkedin_documents(linkedin_int_setting[PROJECT_ID], linkedin_int_setting[LINKEDIN_AD_ACCOUNT], AD_ACCOUNT, str(metadata['id']),metadata, timestamp)
     return {'status': 'success', 'errMsg': '', API_REQUESTS: 1}
 
@@ -307,32 +365,42 @@ def get_collections(linkedin_int_setting, sync_info_with_type):
     response = {'status': 'success'}
     status = ''
     errMsgs = []
+    skipMsgs = []
     campaign_group_meta = {}
     campaign_meta = {}
     creative_meta = {}
     requests_counter = 0
     try:
-        res = get_ad_account_data(linkedin_int_setting)
-        requests_counter += res[API_REQUESTS]
-        if res['status'] == 'failed':
-            status = 'failed'
-            errMsgs.append(res['errMsg'])
+        if options.insert_metadata != 'False':
+            res = get_ad_account_data(linkedin_int_setting)
+            requests_counter += res[API_REQUESTS]
+            if res['status'] == 'failed':
+                status = 'failed'
+                errMsgs.append(res['errMsg'])
         # don't mutate meta object, return it as a new object from get_campaign_group_function
         res = get_campaign_group_data(linkedin_int_setting, sync_info_with_type, campaign_group_meta)
         requests_counter += res[API_REQUESTS]
         if res['status'] == 'failed':
             status = 'failed'
             errMsgs.append(res['errMsg'])
+        if res['status'] == 'skipped':
+            skipMsgs.append(res['errMsg'])
+        
         res = get_campaign_data(linkedin_int_setting, sync_info_with_type, campaign_group_meta, campaign_meta)
         requests_counter += res[API_REQUESTS]
         if res['status'] == 'failed':
             status = 'failed'
             errMsgs.append(res['errMsg'])
+        if res['status'] == 'skipped':
+            skipMsgs.append(res['errMsg'])
+        
         res = get_creative_data(linkedin_int_setting, sync_info_with_type, campaign_group_meta, campaign_meta, creative_meta)
         requests_counter += res[API_REQUESTS]
         if res['status'] == 'failed':
             status = 'failed'
             errMsgs.append(res['errMsg'])
+        if res['status'] == 'skipped':
+            skipMsgs.append(res['errMsg'])
     except Exception as e:
         traceback.print_tb(e.__traceback__)
         response['status'] = 'failed'
@@ -346,21 +414,34 @@ def get_collections(linkedin_int_setting, sync_info_with_type):
         return response
     response['status']= 'success'
     response[API_REQUESTS] = requests_counter
+    response['msg'] = skipMsgs
     return response
 
 if __name__ == '__main__':
-    linkedin_int_settings= get_linkedin_int_settings()
+    (options, args) = parser.parse_args()
+    
+    linkedin_int_settings =[]
+    if options.project_ids != None and options.project_ids != '':
+        linkedin_int_settings = get_linkedin_int_settings_for_projects(options.project_ids)
+    else:
+        linkedin_int_settings= get_linkedin_int_settings()
+    start_timestamp = options.start_timestamp
+    end_timestamp = options.end_timestamp
 
     if(linkedin_int_settings is not None):
         failures = []
         successes = []
         for linkedin_int_setting in linkedin_int_settings:
-            sync_info_with_type, err = get_last_sync_info(linkedin_int_setting)
-            if err != '':
-                response['status'] = 'failed'
-                response['msg'] = 'Failed to get last sync info'
+            response = {}
+            if start_timestamp == None:
+                sync_info_with_type, err = get_last_sync_info(linkedin_int_setting)
+                if err != '':
+                    response['status'] = 'failed'
+                    response['msg'] = 'Failed to get last sync info'
+                else:
+                    response = get_collections(linkedin_int_setting, sync_info_with_type)
             else:
-                response = get_collections(linkedin_int_setting, sync_info_with_type)
+                response = get_collections(linkedin_int_setting, {})
             response[PROJECT_ID] = linkedin_int_setting[PROJECT_ID]
             response[AD_ACCOUNT] = linkedin_int_setting[LINKEDIN_AD_ACCOUNT]
             if(response['status']=='failed'):
