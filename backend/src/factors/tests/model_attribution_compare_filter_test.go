@@ -250,8 +250,8 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "campaign1"))
+	assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "$none"))
 	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
-
 }
 
 func TestAttributionModelCompareFilter(t *testing.T) {

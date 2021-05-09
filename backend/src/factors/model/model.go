@@ -20,7 +20,7 @@ type Model interface {
 	CreateMultipleAdwordsDocument(adwordsDoc []model.AdwordsDocument) int
 	GetAdwordsLastSyncInfoForProject(projectID uint64) ([]model.AdwordsLastSyncInfo, int)
 	GetAllAdwordsLastSyncInfoForAllProjects() ([]model.AdwordsLastSyncInfo, int)
-	GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string) (map[string]model.CampaignInfo, error)
+	GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string, campaignIDReport, adgroupIDReport, keywordIDReport map[string]model.MarketingData) (map[string]model.MarketingData, error)
 	GetAdwordsFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) ([]interface{}, int)
 	GetAdwordsSQLQueryAndParametersForFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, reqID string) (string, []interface{}, int)
 	ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.ChannelQueryV1, reqID string) ([]string, [][]interface{}, int)

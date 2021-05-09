@@ -25,103 +25,141 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 
 	adwordsCustomerID := *projectSetting.IntAdwordsCustomerAccountId
 
-	var adwordsGCLIDData map[string]model.CampaignInfo
+	var adwordsGCLIDData map[string]model.MarketingData
 	var reportType int
-	var adwordsCampaignIDData, adwordsCampaignNameData, adwordsAdgroupIDData, adwordsAdgroupNameData, adwordsKeywordIDData, adwordsKeywordNameData map[string]model.MarketingData
+	var adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData map[string]model.MarketingData
 	// Adwords.
 	if adwordsCustomerID != "" && model.DoesAdwordsReportExist(q.AttributionKey) {
 
-		adwordsGCLIDData, err = pg.GetGCLIDBasedCampaignInfo(projectID, effectiveFrom, effectiveTo, adwordsCustomerID)
-		if err != nil {
-			return data, err
-		}
-
 		reportType = model.AdwordsDocumentTypeAlias[model.CampaignPerformanceReport] // 5
-		adwordsCampaignIDData, adwordsCampaignNameData, err = pg.PullAdwordsMarketingData(projectID, effectiveFrom,
+		adwordsCampaignIDData, err = pg.PullAdwordsMarketingData(projectID, effectiveFrom,
 			effectiveTo, adwordsCustomerID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.PropertyValueNone, reportType, q.Timezone)
 		if err != nil {
 			return data, err
 		}
+
 		reportType = model.AdwordsDocumentTypeAlias[model.AdGroupPerformanceReport] // 10
-		adwordsAdgroupIDData, adwordsAdgroupNameData, err = pg.PullAdwordsMarketingData(projectID, effectiveFrom,
+		adwordsAdgroupIDData, err = pg.PullAdwordsMarketingData(projectID, effectiveFrom,
 			effectiveTo, adwordsCustomerID, model.AdwordsAdgroupID, model.AdwordsAdgroupName, model.PropertyValueNone, reportType, q.Timezone)
 		if err != nil {
 			return data, err
 		}
+		for id, value := range adwordsAdgroupIDData {
+			campID := adwordsAdgroupIDData[id].CampaignID
+			if U.IsNonEmptyKey(campID) {
+				value.CampaignName = adwordsCampaignIDData[campID].Name
+				adwordsAdgroupIDData[id] = value
+			}
+		}
+
 		reportType = model.AdwordsDocumentTypeAlias[model.KeywordPerformanceReport] // 8
-		adwordsKeywordIDData, adwordsKeywordNameData, err = pg.PullAdwordsMarketingData(projectID, effectiveFrom,
+		adwordsKeywordIDData, err = pg.PullAdwordsMarketingData(projectID, effectiveFrom,
 			effectiveTo, adwordsCustomerID, model.AdwordsKeywordID, model.AdwordsKeywordName, model.AdwordsKeywordMatchType, reportType, q.Timezone)
+		if err != nil {
+			return data, err
+		}
+		for id, value := range adwordsKeywordIDData {
+			campID := adwordsKeywordIDData[id].CampaignID
+			if U.IsNonEmptyKey(campID) {
+				value.CampaignName = adwordsCampaignIDData[campID].Name
+				adwordsKeywordIDData[id] = value
+			}
+		}
+		for id, value := range adwordsKeywordIDData {
+			adgroupID := adwordsKeywordIDData[id].AdgroupID
+			if U.IsNonEmptyKey(adgroupID) {
+				value.AdgroupName = adwordsAdgroupIDData[adgroupID].Name
+				adwordsKeywordIDData[id] = value
+			}
+		}
+
+		adwordsGCLIDData, err = pg.GetGCLIDBasedCampaignInfo(projectID, effectiveFrom, effectiveTo, adwordsCustomerID,
+			adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData)
 		if err != nil {
 			return data, err
 		}
 	}
 
 	// Facebook.
-	var facebookCampaignIDData, facebookCampaignNameData, facebookAdgroupIDData, facebookAdgroupNameData map[string]model.MarketingData
+	var facebookCampaignIDData, facebookAdgroupIDData map[string]model.MarketingData
 	if projectSetting.IntFacebookAdAccount != "" && model.DoesFBReportExist(q.AttributionKey) {
 		facebookCustomerID := projectSetting.IntFacebookAdAccount
 
 		reportType = facebookDocumentTypeAlias["campaign_insights"] // 5
-		facebookCampaignIDData, facebookCampaignNameData, err = pg.PullFacebookMarketingData(projectID, effectiveFrom,
+		facebookCampaignIDData, err = pg.PullFacebookMarketingData(projectID, effectiveFrom,
 			effectiveTo, facebookCustomerID, model.FacebookCampaignID, model.FacebookCampaignName, model.PropertyValueNone, reportType, q.Timezone)
 		if err != nil {
 			return data, err
 		}
 		reportType = facebookDocumentTypeAlias["ad_set_insights"] // 5
-		facebookAdgroupIDData, facebookAdgroupNameData, err = pg.PullFacebookMarketingData(projectID, effectiveFrom,
+		facebookAdgroupIDData, err = pg.PullFacebookMarketingData(projectID, effectiveFrom,
 			effectiveTo, facebookCustomerID, model.FacebookAdgroupID, model.FacebookAdgroupName, model.PropertyValueNone, reportType, q.Timezone)
 		if err != nil {
 			return data, err
 		}
+		for id, value := range facebookAdgroupIDData {
+			campID := facebookAdgroupIDData[id].CampaignID
+			if U.IsNonEmptyKey(campID) {
+				value.CampaignName = facebookCampaignIDData[campID].Name
+				facebookAdgroupIDData[id] = value
+			}
+		}
 	}
 
 	// Linkedin.
-	var linkedinCampaignIDData, linkedinCampaignNameData, linkedinAdgroupIDData, linkedinAdgroupNameData map[string]model.MarketingData
+	var linkedinCampaignIDData, linkedinAdgroupIDData map[string]model.MarketingData
 	if projectSetting.IntLinkedinAdAccount != "" && model.DoesLinkedinReportExist(q.AttributionKey) {
 		linkedinCustomerID := projectSetting.IntLinkedinAdAccount
 
 		reportType = linkedinDocumentTypeAlias["campaign_group_insights"] // 5
-		linkedinCampaignIDData, linkedinCampaignNameData, err = pg.PullLinkedinMarketingData(projectID, effectiveFrom,
+		linkedinCampaignIDData, err = pg.PullLinkedinMarketingData(projectID, effectiveFrom,
 			effectiveTo, linkedinCustomerID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.PropertyValueNone, reportType, q.Timezone)
 		if err != nil {
 			return data, err
 		}
 		reportType = linkedinDocumentTypeAlias["campaign_insights"] // 6
-		linkedinAdgroupIDData, linkedinAdgroupNameData, err = pg.PullLinkedinMarketingData(projectID, effectiveFrom,
+		linkedinAdgroupIDData, err = pg.PullLinkedinMarketingData(projectID, effectiveFrom,
 			effectiveTo, linkedinCustomerID, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.PropertyValueNone, reportType, q.Timezone)
 		if err != nil {
 			return data, err
+		}
+		for id, value := range linkedinAdgroupIDData {
+			campID := linkedinAdgroupIDData[id].CampaignID
+			if U.IsNonEmptyKey(campID) {
+				value.CampaignName = linkedinCampaignIDData[campID].Name
+				linkedinAdgroupIDData[id] = value
+			}
 		}
 	}
 
 	data.AdwordsGCLIDData = adwordsGCLIDData
 	data.AdwordsCampaignIDData = adwordsCampaignIDData
-	data.AdwordsCampaignNameData = adwordsCampaignNameData
+	data.AdwordsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, adwordsCampaignIDData)
 
 	data.AdwordsAdgroupIDData = adwordsAdgroupIDData
-	data.AdwordsAdgroupNameData = adwordsAdgroupNameData
+	data.AdwordsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, adwordsAdgroupIDData)
 
 	data.AdwordsKeywordIDData = adwordsKeywordIDData
-	data.AdwordsKeywordNameData = adwordsKeywordNameData
+	data.AdwordsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, adwordsKeywordIDData)
 
 	data.FacebookCampaignIDData = facebookCampaignIDData
-	data.FacebookCampaignNameData = facebookCampaignNameData
+	data.FacebookCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, facebookCampaignIDData)
 
 	data.FacebookAdgroupIDData = facebookAdgroupIDData
-	data.FacebookAdgroupNameData = facebookAdgroupNameData
+	data.FacebookAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, facebookAdgroupIDData)
 
 	data.LinkedinCampaignIDData = linkedinCampaignIDData
-	data.LinkedinCampaignNameData = linkedinCampaignNameData
+	data.LinkedinCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, linkedinCampaignIDData)
 
 	data.LinkedinAdgroupIDData = linkedinAdgroupIDData
-	data.LinkedinAdgroupNameData = linkedinAdgroupNameData
+	data.LinkedinAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, linkedinAdgroupIDData)
 
 	return data, err
 }
 
 // PullAdwordsMarketingData Pulls Adds channel data for Adwords.
 func (pg *Postgres) PullAdwordsMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
-	keyName string, extraValue1 string, reportType int, timeZone string) (map[string]model.MarketingData, map[string]model.MarketingData, error) {
+	keyName string, extraValue1 string, reportType int, timeZone string) (map[string]model.MarketingData, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	customerAccountIDs := strings.Split(customerAccountID, ",")
@@ -136,17 +174,17 @@ func (pg *Postgres) PullAdwordsMarketingData(projectID uint64, from, to int64, c
 		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 
-	marketingDataKeyIdMap, marketingDataKeyNameMap := model.ProcessRow(rows, err, logCtx)
-	return marketingDataKeyIdMap, marketingDataKeyNameMap, nil
+	marketingDataIDMap := model.ProcessRow(rows, err, logCtx)
+	return marketingDataIDMap, nil
 }
 
 // PullFacebookMarketingData Pulls Adds channel data for Facebook.
 func (pg *Postgres) PullFacebookMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
-	keyName string, extraValue1 string, reportType int, timeZone string) (map[string]model.MarketingData, map[string]model.MarketingData, error) {
+	keyName string, extraValue1 string, reportType int, timeZone string) (map[string]model.MarketingData, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	customerAccountIDs := strings.Split(customerAccountID, ",")
@@ -161,17 +199,17 @@ func (pg *Postgres) PullFacebookMarketingData(projectID uint64, from, to int64, 
 		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 
-	marketingDataKeyIdMap, marketingDataKeyNameMap := model.ProcessRow(rows, err, logCtx)
-	return marketingDataKeyIdMap, marketingDataKeyNameMap, nil
+	marketingDataIDMap := model.ProcessRow(rows, err, logCtx)
+	return marketingDataIDMap, nil
 }
 
 // PullLinkedinMarketingData Pulls Adds channel data for Linkedin.
 func (pg *Postgres) PullLinkedinMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
-	keyName string, extraValue1 string, reportType int, timeZone string) (map[string]model.MarketingData, map[string]model.MarketingData, error) {
+	keyName string, extraValue1 string, reportType int, timeZone string) (map[string]model.MarketingData, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	customerAccountIDs := strings.Split(customerAccountID, ",")
@@ -186,10 +224,10 @@ func (pg *Postgres) PullLinkedinMarketingData(projectID uint64, from, to int64, 
 		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 
-	marketingDataKeyIdMap, marketingDataKeyNameMap := model.ProcessRow(rows, err, logCtx)
-	return marketingDataKeyIdMap, marketingDataKeyNameMap, nil
+	marketingDataIDMap := model.ProcessRow(rows, err, logCtx)
+	return marketingDataIDMap, nil
 }

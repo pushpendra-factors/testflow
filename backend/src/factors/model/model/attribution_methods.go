@@ -11,7 +11,7 @@ type pair struct {
 
 // ApplyAttribution This method maps the user to the attribution key based on given attribution methodology.
 func ApplyAttribution(attributionType string, method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
-	userInitialSession map[string]map[string]UserSessionData,
+	sessions map[string]map[string]UserSessionData,
 	coalUserIdConversionTimestamp map[string]int64,
 	lookbackDays int, campaignFrom, campaignTo int64) (map[string][]string, map[string]map[string][]string, error) {
 
@@ -25,27 +25,27 @@ func ApplyAttribution(attributionType string, method string, conversionEvent str
 		attributionKeys := []string{PropertyValueNone}
 		switch method {
 		case AttributionMethodFirstTouch:
-			attributionKeys = getFirstTouchId(attributionType, userInitialSession[userId], conversionTime,
+			attributionKeys = getFirstTouchId(attributionType, sessions[userId], conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLastTouch:
-			attributionKeys = getLastTouchId(attributionType, userInitialSession[userId], conversionTime,
+			attributionKeys = getLastTouchId(attributionType, sessions[userId], conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodFirstTouchNonDirect:
-			attributionKeys = getFirstTouchNDId(attributionType, userInitialSession[userId], conversionTime,
+			attributionKeys = getFirstTouchNDId(attributionType, sessions[userId], conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLastTouchNonDirect:
-			attributionKeys = getLastTouchNDId(attributionType, userInitialSession[userId], conversionTime,
+			attributionKeys = getLastTouchNDId(attributionType, sessions[userId], conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
 		case AttributionMethodLinear:
-			attributionKeys = getLinearTouch(attributionType, userInitialSession[userId], conversionTime,
+			attributionKeys = getLinearTouch(attributionType, sessions[userId], conversionTime,
 				lookbackPeriod, campaignFrom, campaignTo)
 			break
 
