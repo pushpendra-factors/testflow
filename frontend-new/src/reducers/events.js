@@ -81,6 +81,20 @@ export function fetchSmartEvents(projectID) {
           });
         }
 } 
+export function removeSmartEvents(projectID,filterID) {
+        return function(dispatch) {
+          return new Promise((resolve,reject) => {
+            del(dispatch, host + "projects/"+projectID+'/v1/smart_event?filter_id='+filterID+'&type=crm')
+              .then((response)=>{        
+                dispatch({type:"FETCH_SMART_EVENTS_REMOVE_FULFILLED", payload: response.data});
+                resolve(response)
+              }).catch((err)=>{        
+                dispatch({type:"FETCH_SMART_EVENTS_REMOVE_REJECTED", payload: err});
+                reject(err);
+              });
+          });
+        }
+} 
 
 export function saveSmartEvents(projectID,data) {
   return function(dispatch) {

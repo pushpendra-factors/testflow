@@ -1,20 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Switch, Avatar, Button, Tabs, Table, Tag, Space
+  Row, Col, Switch, Menu, Dropdown, Button, Tabs, Table, Tag, Space, message
 } from 'antd';
 import { Text, SVG } from 'factorsComponents'; 
 import { connect } from 'react-redux';
 import SmartEventsForm from './SmartEvents/SmartEventsForm';
 import { fetchEventNames, getUserProperties } from 'Reducers/coreQuery/middleware';
+import { MoreOutlined } from '@ant-design/icons';
+import {removeSmartEvents, fetchSmartEvents} from 'Reducers/events';
 
 const { TabPane } = Tabs;
 
 
 
-function Events({smart_events, fetchEventNames, activeProject}) { 
+function Events({smart_events, fetchEventNames, activeProject, removeSmartEvents, fetchSmartEvents}) { 
 
     const [smartEvents, setsmartEvents] = useState(null); 
     const [showSmartEventForm, setShowSmartEventForm] = useState(false); 
+    const [seletedEvent, setSeletedEvent] = useState(null); 
+
+
+    const menu = (values) => {
+      return (
+      <Menu> 
+        <Menu.Item key="0" onClick={() => confirmRemove(values)}>
+          <a>Remove Event</a> 
+        </Menu.Item> 
+      </Menu>
+      );
+    };
 
 const columns = [
 
@@ -29,9 +43,34 @@ const columns = [
       dataIndex: 'source',
       key: 'source', 
       render: (text) => <span className={'capitalize'}>{text}</span>
+    },
+    {
+      title: '',
+      dataIndex: 'actions',
+      key: 'actions',
+      render: (values) => (
+        <Dropdown overlay={() => menu(values)} trigger={['hover']}>
+          <Button type="text" icon={<MoreOutlined />} />
+        </Dropdown>
+      )
     }
   ];
-   
+
+  const editEvent = (values) =>{
+    setSeletedEvent(values); 
+    setShowSmartEventForm(true);
+  }
+
+  const confirmRemove = (values) =>{ 
+    removeSmartEvents(values?.project_id, values?.id).then(()=>{
+      message.success("Smart Event removed!")
+      fetchSmartEvents(values?.project_id);
+    }).catch((err)=>{
+      message.error(err?.data?.error);
+      console.log('error in removing Smartevent:', err)
+    });
+    return false
+  }
 
   useEffect(()=>{
     fetchEventNames(activeProject.id);
@@ -42,6 +81,7 @@ const columns = [
                 key: index,
                 name: item.name, 
                 source: item?.expr?.source, 
+                actions: item, 
               });
         });
         setsmartEvents(smartEventsArray);
@@ -60,7 +100,7 @@ const columns = [
           </Col>
           <Col span={12}>
             <div className={'flex justify-end'}>
-              <Button size={'large'} onClick={() => setShowSmartEventForm(true)}><SVG name={'plus'} extraClass={'mr-2'} size={16} />New Event</Button>
+              <Button size={'large'} onClick={() =>   {setSeletedEvent(null);setShowSmartEventForm(true)}}><SVG name={'plus'} extraClass={'mr-2'} size={16} />New Event</Button>
             </div>
           </Col>
         </Row>
@@ -78,11 +118,11 @@ const columns = [
                 </Tabs> 
             </div>  
         </Col> 
-        </Row>
+        </Row> 
         </>
         }
         {showSmartEventForm && <>  
-                <SmartEventsForm setShowSmartEventForm={setShowSmartEventForm} /> 
+                <SmartEventsForm seletedEvent={seletedEvent} setShowSmartEventForm={setShowSmartEventForm} /> 
         </>
         }
       </div>
@@ -96,4 +136,4 @@ const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
   });
 
-  export default connect(mapStateToProps, {fetchEventNames})(Events); 
+  export default connect(mapStateToProps, {fetchEventNames, removeSmartEvents, fetchSmartEvents})(Events); 
