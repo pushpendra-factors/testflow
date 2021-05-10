@@ -663,7 +663,7 @@ func AddTheAddedKeys(attributionData map[string]*AttributionData, attributionKey
 				attributionData[key].Name = sessionKeyMap[key].CampaignName
 			case AttributionKeyAdgroup:
 				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].CampaignName)
-				attributionData[key].Name = sessionKeyMap[key].AdgroupID
+				attributionData[key].Name = sessionKeyMap[key].AdgroupName
 			case AttributionKeyKeyword:
 				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].CampaignName)
 				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].AdgroupName)
@@ -744,7 +744,7 @@ func addMetricsFromReport(attributionData map[string]*AttributionData, reportKey
 				attributionData[key].Name = reportKeyData[key].CampaignName
 			case AttributionKeyAdgroup:
 				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].CampaignName)
-				attributionData[key].Name = reportKeyData[key].AdgroupID
+				attributionData[key].Name = reportKeyData[key].AdgroupName
 			case AttributionKeyKeyword:
 				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].CampaignName)
 				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].AdgroupName)
