@@ -601,7 +601,7 @@ func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, ad
 
 // GetGCLIDBasedCampaignInfo - It returns GCLID based campaign info for given time range and adwords account
 func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string,
-	campaignIDReport, adgroupIDReport, keywordIDReport map[string]model.MarketingData) (map[string]model.MarketingData, error) {
+	campaignIDReport, adgroupIDReport, keywordIDReport map[string]model.MarketingData, timeZone string) (map[string]model.MarketingData, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectID": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	adGroupNameCase := "CASE WHEN value->>'ad_group_name' IS NULL THEN ? " +
@@ -630,8 +630,8 @@ func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, 
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone, model.PropertyValueNone,
 		model.PropertyValueNone, model.PropertyValueNone,
-		projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateOnlyFromTimestamp(from),
-		U.GetDateOnlyFromTimestamp(to)})
+		projectID, customerAccountIDs, model.AdwordsClickReportType, U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)),
+		U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, err

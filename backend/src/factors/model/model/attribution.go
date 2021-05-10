@@ -471,11 +471,11 @@ func GetRowsByMaps(attributionKey string, attributionData map[string]*Attributio
 		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0))
 	}
 	rows := make([][]interface{}, 0)
-	for _, data := range attributionData {
+	for key, data := range attributionData {
 		attributionIdName := ""
 		switch attributionKey {
 		case AttributionKeyCampaign:
-			attributionIdName = data.MarketingInfo.CampaignName
+			attributionIdName = key
 		case AttributionKeyAdgroup:
 			attributionIdName = data.MarketingInfo.AdgroupName
 		case AttributionKeyKeyword:
@@ -687,11 +687,11 @@ func AddAdwordsPerformanceReportInfo(attributionData map[string]*AttributionData
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.AdwordsCampaignKeyData)
+		addMetricsFromReport(attributionData, marketingData.AdwordsCampaignKeyData, attributionKey)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.AdwordsAdgroupKeyData)
+		addMetricsFromReport(attributionData, marketingData.AdwordsAdgroupKeyData, attributionKey)
 	case AttributionKeyKeyword:
-		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordKeyData)
+		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordKeyData, attributionKey)
 	default:
 		// no enrichment for any other type
 		return
@@ -702,9 +702,9 @@ func AddFacebookPerformanceReportInfo(attributionData map[string]*AttributionDat
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.FacebookCampaignKeyData)
+		addMetricsFromReport(attributionData, marketingData.FacebookCampaignKeyData, attributionKey)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.FacebookAdgroupKeyData)
+		addMetricsFromReport(attributionData, marketingData.FacebookAdgroupKeyData, attributionKey)
 	case AttributionKeyKeyword:
 		// No keyword report for fb.
 		return
@@ -718,9 +718,9 @@ func AddLinkedinPerformanceReportInfo(attributionData map[string]*AttributionDat
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.LinkedinCampaignKeyData)
+		addMetricsFromReport(attributionData, marketingData.LinkedinCampaignKeyData, attributionKey)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.LinkedinAdgroupKeyData)
+		addMetricsFromReport(attributionData, marketingData.LinkedinAdgroupKeyData, attributionKey)
 	case AttributionKeyKeyword:
 		// No keyword report for Linkedin.
 		return
@@ -730,12 +730,34 @@ func AddLinkedinPerformanceReportInfo(attributionData map[string]*AttributionDat
 	}
 }
 
-func addMetricsFromReport(attributionData map[string]*AttributionData, reportKeyData map[string]MarketingData) {
+func addMetricsFromReport(attributionData map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string) {
 
 	// If key is not found, no performance report enrichment will happen
 	for key, value := range reportKeyData {
 		if _, found := attributionData[key]; found {
 			enrichAttributionRow(attributionData, key, value)
+		} else {
+			attributionData[key] = &AttributionData{}
+			attributionData[key].MarketingInfo = reportKeyData[key]
+			switch attributionKey {
+			case AttributionKeyCampaign:
+				attributionData[key].Name = reportKeyData[key].CampaignName
+			case AttributionKeyAdgroup:
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].CampaignName)
+				attributionData[key].Name = reportKeyData[key].AdgroupID
+			case AttributionKeyKeyword:
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].CampaignName)
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].AdgroupName)
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].KeywordMatchType)
+				attributionData[key].Name = reportKeyData[key].KeywordName
+			case AttributionKeySource:
+				attributionData[key].Name = reportKeyData[key].Source
+			}
+			attributionData[key].ConversionEventCount = 0
+			attributionData[key].ConversionEventCompareCount = 0
+			attributionData[key].Impressions = value.Impressions
+			attributionData[key].Clicks = value.Clicks
+			attributionData[key].Spend = value.Spend
 		}
 	}
 }

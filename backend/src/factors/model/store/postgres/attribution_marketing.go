@@ -15,16 +15,10 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 	var err error
 
 	// Get adwords, facebook, linkedin reports.
-	effectiveFrom := lookbackAdjustedFrom(q.From, q.LookbackDays)
+	effectiveFrom := q.From
 	effectiveTo := q.To
-	// Extend the campaign window for engagement based attribution.
-	if q.QueryType == model.AttributionQueryTypeEngagementBased {
-		effectiveFrom = lookbackAdjustedFrom(q.From, q.LookbackDays)
-		effectiveTo = lookbackAdjustedTo(q.To, q.LookbackDays)
-	}
 
 	adwordsCustomerID := *projectSetting.IntAdwordsCustomerAccountId
-
 	var adwordsGCLIDData map[string]model.MarketingData
 	var reportType int
 	var adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData map[string]model.MarketingData
@@ -74,7 +68,7 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 		}
 
 		adwordsGCLIDData, err = pg.GetGCLIDBasedCampaignInfo(projectID, effectiveFrom, effectiveTo, adwordsCustomerID,
-			adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData)
+			adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData, q.Timezone)
 		if err != nil {
 			return data, err
 		}
