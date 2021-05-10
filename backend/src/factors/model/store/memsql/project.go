@@ -102,11 +102,27 @@ func createProject(project *model.Project) (*model.Project, int) {
 	project.PrivateToken = privateToken
 
 	db := C.GetServices().Db
-	if err := db.Create(project).Error; err != nil {
-		logCtx.WithError(err).Error("Create project failed.")
-		return nil, http.StatusInternalServerError
-	}
+	var errCount int64
+	maxRetries := 700
+	for i := 0; i < maxRetries; i++ {
+		if err := db.Create(project).Error; err != nil {
+			if IsDuplicateRecordError(err) {
+				logCtx.WithError(err).Error("Duplicate primary key error for memsql projects")
 
+				errCount++
+				if errCount >= int64(maxRetries) {
+					logCtx.WithError(err).Error(fmt.Sprintf("Failed to create project after '%d' retries", maxRetries))
+					return nil, http.StatusInternalServerError
+				} else {
+					continue
+				}
+			}
+			logCtx.WithError(err).Error("Create project failed.")
+			return nil, http.StatusInternalServerError
+		} else {
+			break
+		}
+	}
 	return project, http.StatusCreated
 }
 
