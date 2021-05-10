@@ -5,13 +5,21 @@ import { connect } from "react-redux";
 import { fetchProjectSettings } from "Reducers/global";
 import retryDynamicImport from 'Utils/dynamicImport';
 
-const HubspotIntegration = lazy(()=>retryDynamicImport(() => import("./Hubspot")));
-const SegmentIntegration = lazy(()=>retryDynamicImport(() => import("./Segment")));
-const DriftIntegration = lazy(()=>retryDynamicImport(() => import("./Drift")));
-const GoogleAdWords = lazy(()=>retryDynamicImport(() => import("./GoogleAdWords")));
-const FacebookIntegration = lazy(()=>retryDynamicImport(() => import("./Facebook")));
-const SalesForceIntegration = lazy(()=>retryDynamicImport(() => import("./Salesforce")));
-const LinkedInIntegration = lazy(()=>retryDynamicImport(() => import("./LinkedIn")));
+// const HubspotIntegration = lazy(()=>retryDynamicImport(() => import("./Hubspot")));
+// const SegmentIntegration = lazy(()=>retryDynamicImport(() => import("./Segment")));
+// const DriftIntegration = lazy(()=>retryDynamicImport(() => import("./Drift")));
+// const GoogleAdWords = lazy(()=>retryDynamicImport(() => import("./GoogleAdWords")));
+// const FacebookIntegration = lazy(()=>retryDynamicImport(() => import("./Facebook")));
+// const SalesForceIntegration = lazy(()=>retryDynamicImport(() => import("./Salesforce")));
+// const LinkedInIntegration = lazy(()=>retryDynamicImport(() => import("./LinkedIn")));
+
+import HubspotIntegration from "./Hubspot";
+import SegmentIntegration from "./Segment";
+import DriftIntegration from "./Drift";
+import GoogleAdWords from "./GoogleAdWords";
+import FacebookIntegration from "./Facebook";
+import SalesForceIntegration from "./Salesforce";
+import LinkedInIntegration from "./LinkedIn";
 
 import { ErrorBoundary } from "react-error-boundary";
 
