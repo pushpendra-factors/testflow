@@ -718,6 +718,7 @@ func createOnMemSQL(projectID uint64, tableName string, record interface{}, id i
 		dedupeMap.Store(id, true)
 	}
 
+	record = disallowCreateWithSyncColumns(tableName, record)
 	if err := memSQLDB.Create(record).Error; err != nil {
 		if isDuplicateError(err) {
 			return http.StatusConflict
@@ -829,6 +830,39 @@ func disallowUpdateOnSyncColumns(tableName string, memsqlTableRecord *TableRecor
 		salesforceDocument.SyncID = memsqlTableRecord.SyncId
 		salesforceDocument.Synced = memsqlTableRecord.Synced
 		salesforceDocument.UserID = memsqlTableRecord.UserID
+		return salesforceDocument
+	}
+	return pgRecord
+}
+
+func disallowCreateWithSyncColumns(tableName string, pgRecord interface{}) interface{} {
+	if !disableSyncColumns || (tableName != tableProjects && tableName != tableHubspotDocuments && tableName != tableSalesforceDocuments) {
+		return pgRecord
+	}
+
+	if tableName == tableProjects {
+		project := pgRecord.(*model.Project)
+		jobsMetadata := &map[string]interface{}{
+			// Set it to 1 hour before created_at to be safe.
+			model.JobsMetadataKeyNextSessionStartTimestamp: project.CreatedAt.Unix() - 3600,
+		}
+		jobsMetadataJsonb, err := U.EncodeToPostgresJsonb(jobsMetadata)
+		if err != nil {
+			return pgRecord
+		}
+		project.JobsMetadata = jobsMetadataJsonb
+		return project
+	} else if tableName == tableHubspotDocuments {
+		hubspotDocument := pgRecord.(*model.HubspotDocument)
+		hubspotDocument.SyncId = ""
+		hubspotDocument.Synced = false
+		hubspotDocument.UserId = ""
+		return hubspotDocument
+	} else if tableName == tableSalesforceDocuments {
+		salesforceDocument := pgRecord.(*model.SalesforceDocument)
+		salesforceDocument.SyncID = ""
+		salesforceDocument.Synced = false
+		salesforceDocument.UserID = ""
 		return salesforceDocument
 	}
 	return pgRecord

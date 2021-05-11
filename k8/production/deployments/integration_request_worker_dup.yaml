@@ -44,16 +44,18 @@ spec:
         args:
           - --env
           - $(ENV)
-          - --db_host
-          - $(DB_HOST_CLONE)
-          - --db_port
-          - $(DB_PORT)
-          - --db_name
-          - $(POSTGRES_DB)
-          - --db_user
-          - $(POSTGRES_USER)
-          - --db_pass
-          - $(POSTGRES_PASSWORD)
+          - --memsql_host
+          - $(MEMSQL_HOST)
+          - --memsql_port
+          - $(MEMSQL_PORT)
+          - --memsql_name
+          - $(MEMSQL_DB)
+          - --memsql_user
+          - $(MEMSQL_USER)
+          - --memsql_pass
+          - $(MEMSQL_PASSWORD)
+          - --memsql_cert
+          - $(MEMSQL_CERTIFICATE)
           - --redis_host
           - $(REDIS_HOST_2)
           - --redis_port
@@ -82,6 +84,8 @@ spec:
           - $(GCP_PROJECT_ID)
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
+          - --primary_datastore
+          - "memsql"
           - --ontable_user_properties_allowed_projects
           - "*"
           - --deprecate_user_properties_table_read_projects
@@ -94,7 +98,7 @@ spec:
         - configMapRef:
             name: config-env
         - configMapRef:
-            name: config-postgres
+            name: config-memsql
         - configMapRef:
             name: config-redis
         - configMapRef:
@@ -102,7 +106,7 @@ spec:
         - configMapRef:
             name: config-add-session-job
         - secretRef:
-            name: secret-postgres
+            name: secret-memsql
         - secretRef:
             name: secret-sentry
         - configMapRef:
