@@ -656,7 +656,7 @@ func getOpportunityLinkedLeadOrContactDocument(projectID uint64, document *model
 		if opportunityMappingOrder[i] == model.SalesforceChildRelationshipNameOpportunityContactRoles && oppContactID != "" {
 			linkedObject, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppContactID}, model.SalesforceDocumentTypeContact)
 			if status == http.StatusFound {
-				return &linkedObject[0], nil
+				return &linkedObject[len(linkedObject)-1], nil
 			}
 
 		}
@@ -664,7 +664,7 @@ func getOpportunityLinkedLeadOrContactDocument(projectID uint64, document *model
 		if opportunityMappingOrder[i] == model.SalesforceDocumentTypeNameLead && oppLeadID != "" {
 			linkedObject, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppLeadID}, model.SalesforceDocumentTypeLead)
 			if status == http.StatusFound {
-				return &linkedObject[0], nil
+				return &linkedObject[len(linkedObject)-1], nil
 			}
 
 		}
@@ -704,16 +704,18 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 			if err != errMissingOpportunityLeadAndContact {
 				logCtx.WithError(err).Error("Failed to get linked document for opportunity.")
 			}
-
 		} else {
 			linkedDocEnProperties, _, err := GetSalesforceDocumentProperties(projectID, linkedDocument)
 			if err == nil {
 				customerUserID, userID = getCustomerUserIDFromProperties(projectID, *linkedDocEnProperties, model.GetSalesforceAliasByDocType(linkedDocument.Type), &model.SalesforceProjectIdentificationFieldStore)
-				if customerUserID == "" && userID == "" {
-					if linkedDocument.UserID != "" {
-						userID = linkedDocument.UserID
-					}
+				if document.Action == model.SalesforceDocumentUpdated && customerUserID != "" { // set user_id = null to allow indentification without user_id change
+					userID = ""
 				}
+
+				if document.Action == model.SalesforceDocumentCreated && customerUserID == "" && userID == "" && linkedDocument.UserID != "" {
+					userID = linkedDocument.UserID
+				}
+
 			} else {
 				logCtx.WithError(err).Error("Failed to get properties on opportunities associations")
 			}
@@ -721,7 +723,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 		}
 	}
 
-	if userID == "" {
+	if userID == "" && customerUserID == "" {
 		customerUserID, userID = getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	}
 
