@@ -89,7 +89,7 @@ branch_name=`git branch --show-current`
 # TODO(prateek): Make alert more rich in terms of tagging and blocks.
 echo "Sending alert on slack"
 payload="-------------------------------------------------------------
-*Deployment initiated for ${IMAGE_NAME}. By ${deployer_email} from branch '${branch_name}'*."
+*Deployment initiated for '${IMAGE_NAME}'. By ${deployer_email} from branch '${branch_name}'*."
 
 # If production, add commit hightlights for the deployment.
 if [[ "${ENV}" == "production" ]]; then

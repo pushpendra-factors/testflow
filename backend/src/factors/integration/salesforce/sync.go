@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"factors/config"
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
@@ -60,6 +61,9 @@ type JobStatus struct {
 	Success  []ObjectStatus `json:"success"`
 	Failures []ObjectStatus `json:"failures"`
 }
+
+// OpportunityLeadID lead id in opportunity
+const OpportunityLeadID = "opportunity_to_lead"
 
 func buildSalesforceGETRequest(url, accessToken string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", url, nil)
@@ -216,6 +220,26 @@ func getSalesforceObjectFieldlList(objectName, accessToken, instanceURL string) 
 	return fields, nil
 }
 
+func (s *DataClient) getRecordByObjectNameANDFilter(objectName, filterSmnt string) (*DataClient, error) {
+	fields, err := getSalesforceObjectFieldlList(objectName, s.accessToken, s.instanceURL)
+	if err != nil {
+		return nil, err
+	}
+
+	fieldList := strings.Join(fields, ",")
+	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s+WHERE+%s", fieldList, objectName, url.QueryEscape(filterSmnt))
+	queryURL := s.instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/query?q=" + queryStmnt
+	dataClient := &DataClient{
+		accessToken:    s.accessToken,
+		instanceURL:    s.instanceURL,
+		queryURL:       queryURL,
+		isFirstRun:     true,
+		nextBatchRoute: "",
+	}
+
+	return dataClient, nil
+}
+
 func (s *DataClient) getRecordByObjectNameANDStartTimestamp(objectName string, lookbackTimestamp int64) (*DataClient, error) {
 	fields, err := getSalesforceObjectFieldlList(objectName, s.accessToken, s.instanceURL)
 	if err != nil {
@@ -226,6 +250,11 @@ func (s *DataClient) getRecordByObjectNameANDStartTimestamp(objectName string, l
 	// append all campaign memebers to campaign object
 	if objectName == model.SalesforceDocumentTypeNameCampaign {
 		fieldList = fieldList + ",(+SELECT+id+from+campaignmembers+)"
+	}
+
+	// append all opportunity contact roles to opportunity object
+	if objectName == model.SalesforceDocumentTypeNameOpportunity {
+		fieldList = fieldList + ",(+SELECT+id,isPrimary,ContactId,OpportunityId,Role+from+" + model.SalesforceChildRelationshipNameOpportunityContactRoles + "+)"
 	}
 
 	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s", fieldList, objectName)
@@ -457,12 +486,231 @@ func getAllCampaignMemberContactAndLeadRecords(projectID uint64, campaignMemberI
 	return memberRecords, memberRecordsObjectType, nil
 }
 
+func syncOpportunityPrimaryContact(projectID uint64, primaryContactIDs []string, accessToken, instanceURL string) ([]string, bool) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build new salesforce data client fron primary contact sync")
+		return nil, true
+	}
+
+	paginatedContacts, err := salesforceDataClient.GetObjectRecordsByIDs(model.SalesforceDocumentTypeNameContact, primaryContactIDs)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to initialize salesforce data client for sync oppportunities contact.")
+		return nil, true
+	}
+
+	var failures []string
+	done := false
+	var contactRecords []model.SalesforceRecord
+	for !done {
+		contactRecords, done, err = paginatedContacts.getNextBatch()
+		if err != nil {
+			return nil, true
+		}
+
+		for i := range contactRecords {
+			err = store.GetStore().BuildAndUpsertDocument(projectID, model.SalesforceDocumentTypeNameContact, contactRecords[i])
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to BuildAndUpsertDocument opportunity contact sync.")
+				failures = append(failures, err.Error())
+			}
+		}
+	}
+
+	return failures, len(failures) > 0
+}
+
+// getLeadIDForOpportunityRecords sync associated leads if missing and return all lead ids
+func getLeadIDForOpportunityRecords(projectID uint64, records []model.SalesforceRecord, accessToken, instanceURL string) (map[string]string, error) {
+	if len(records) < 1 {
+		return nil, nil
+	}
+
+	oppToLeadID := make(map[string]string, 0)
+	oppIDs := make([]string, 0)
+	for i := range records {
+		oppID := util.GetPropertyValueAsString(records[i]["Id"])
+		if oppID != "" {
+			oppIDs = append(oppIDs, oppID)
+			oppToLeadID[oppID] = ""
+		}
+	}
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	if err != nil {
+		return nil, err
+	}
+
+	filterStmnt := "ConvertedOpportunityId IN (" + "'" + strings.Join(oppIDs, "','") + "')"
+	paginatedLeads, err := salesforceDataClient.getRecordByObjectNameANDFilter(model.SalesforceDocumentTypeNameLead, filterStmnt)
+	if err != nil {
+		return nil, err
+	}
+
+	var objectRecords []model.SalesforceRecord
+	done := false
+	for !done {
+		objectRecords, done, err = paginatedLeads.getNextBatch()
+		if err != nil {
+			return nil, err
+		}
+
+		for i := range objectRecords {
+			leadID := util.GetPropertyValueAsString(objectRecords[i]["Id"])
+			if leadID != "" {
+				convertOppID := util.GetPropertyValueAsString(objectRecords[i]["ConvertedOpportunityId"])
+				if convertOppID != "" {
+					if _, exist := oppToLeadID[convertOppID]; exist {
+						log.WithFields(log.Fields{"lead_id": leadID}).Error("Duplicate opportunity id on multiple leads")
+					}
+
+					oppToLeadID[convertOppID] = leadID
+				} else {
+					log.WithFields(log.Fields{"project_id": projectID}).Warn("Missing ConvertedOpportunityId on lead document")
+				}
+
+			} else {
+				log.WithFields(log.Fields{"project_id": projectID}).Error("Missing lead id on lead document")
+			}
+
+			err = store.GetStore().BuildAndUpsertDocument(projectID, model.SalesforceDocumentTypeNameLead, objectRecords[i])
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectID}).Error("Failed to BuildAndUpsertDocument opportunity lead sync .")
+			}
+		}
+	}
+
+	return oppToLeadID, nil
+
+}
+
+func getOpportunityPrimaryContactIDs(projectID uint64, oppRecords []model.SalesforceRecord) []string {
+	primaryContacts := make([]string, 0)
+	for i := range oppRecords {
+		opportunityContactRolesInt := oppRecords[i][model.SalesforceChildRelationshipNameOpportunityContactRoles]
+		if opportunityContactRolesInt == nil {
+			log.WithFields(log.Fields{"project_id": projectID, "doc_id": oppRecords[i]["Id"]}).Warn("Missing opportunity contact roles")
+			continue
+		}
+
+		opportunityContactRolesMap := opportunityContactRolesInt.(map[string]interface{})
+		opportunityContactRoleRecords, ok := opportunityContactRolesMap["records"].([]interface{})
+		if !ok {
+			log.WithFields(log.Fields{"project_id": projectID, "doc_id": oppRecords[i]["Id"]}).Warn("Failed to typecast opportunity contact role records")
+			continue
+		}
+
+		primaryContact := false
+		for i := range opportunityContactRoleRecords {
+			contactRole := opportunityContactRoleRecords[i].(map[string]interface{})
+			if contactRole["IsPrimary"] == true {
+				contactID := util.GetPropertyValueAsString(contactRole["ContactId"])
+				if contactID != "" {
+					primaryContacts = append(primaryContacts, contactID)
+					primaryContact = true
+					break
+				} else {
+					log.WithFields(log.Fields{"project_id": projectID, "doc_id": oppRecords[i]["Id"]}).Error("Missing primary contact id on opportunity contact roles.")
+				}
+			}
+		}
+
+		if len(opportunityContactRoleRecords) > 0 && !primaryContact {
+			log.WithFields(log.Fields{"project_id": projectID, "doc_id": oppRecords[i]}).Error("Missing primary contact. Skipping contact association.")
+		}
+	}
+
+	return primaryContacts
+
+}
+
+func syncOpporunitiesUsingAssociations(projectID uint64, accessToken, instanceURL string, timestamp int64) ([]string, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	allowedObject := model.GetSalesforceDocumentTypeAlias(projectID)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient for opportunity sync.")
+		return nil, err
+	}
+
+	paginatedOpportunitiesByStartTimestamp, err := salesforceDataClient.getRecordByObjectNameANDStartTimestamp(model.SalesforceDocumentTypeNameOpportunity, timestamp)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to initialize salesforce data client for opportunity sync.")
+		return nil, err
+	}
+
+	done := false
+	var objectRecords []model.SalesforceRecord
+	var failures []string
+
+	for !done {
+		objectRecords, done, err = paginatedOpportunitiesByStartTimestamp.getNextBatch()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to getNextBatch on opportunity sync.")
+			return failures, err
+		}
+
+		var oppToLeadIDs map[string]string
+		if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
+			oppToLeadIDs, err = getLeadIDForOpportunityRecords(projectID, objectRecords, accessToken, instanceURL)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to get lead converted opportunity id for opportunity sync.")
+			}
+		}
+
+		for i := range objectRecords {
+			if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
+				oppID := util.GetPropertyValueAsString(objectRecords[i]["Id"])
+				leadID := (oppToLeadIDs)[oppID]
+				if leadID == "" {
+					logCtx.WithFields(log.Fields{"opportunity_id": oppID}).Error("Missing lead id for opportunity. Skipping adding lead id to opportunity.")
+				} else {
+					objectRecords[i][OpportunityLeadID] = leadID
+				}
+			}
+
+			err = store.GetStore().BuildAndUpsertDocument(projectID, model.SalesforceDocumentTypeNameOpportunity, objectRecords[i])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument for opportunity sync .")
+				failures = append(failures, err.Error())
+			}
+		}
+
+		// only sync object if allowed by the project, will fallback to leads if not allowed
+		if _, exist := allowedObject[model.SalesforceDocumentTypeNameContact]; exist {
+			primaryContactIDs := getOpportunityPrimaryContactIDs(projectID, objectRecords)
+			if len(primaryContactIDs) < 1 {
+				continue
+			}
+
+			allFailures, failure := syncOpportunityPrimaryContact(projectID, primaryContactIDs, accessToken, instanceURL)
+			if failure {
+				failures = append(failures, allFailures...)
+			}
+		}
+
+	}
+
+	return failures, nil
+}
+
 func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName string, timestamp int64) (ObjectStatus, error) {
 	var salesforceObjectStatus ObjectStatus
 	salesforceObjectStatus.ProjetID = ps.ProjectID
 	salesforceObjectStatus.DocType = objectName
 
 	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName})
+
+	if objectName == model.SalesforceDocumentTypeNameOpportunity && config.UseOpportunityAssociationByProjectID(ps.ProjectID) {
+		failures, err := syncOpporunitiesUsingAssociations(ps.ProjectID, accessToken, ps.InstanceURL, timestamp)
+		if err != nil {
+			logCtx.WithError(err).Error("Failure on sync opportunities.")
+			salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
+			return salesforceObjectStatus, err
+		}
+		return salesforceObjectStatus, nil
+	}
 
 	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
 	if err != nil {

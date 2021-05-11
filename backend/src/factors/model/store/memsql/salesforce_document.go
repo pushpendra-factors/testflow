@@ -243,6 +243,7 @@ func (store *MemSQL) CreateSalesforceDocumentByAction(projectID uint64, document
 		if IsDuplicateRecordError(err) {
 			return http.StatusConflict
 		}
+		log.WithError(err).Error("Failed to create salesforce document.")
 
 		return http.StatusInternalServerError
 	}

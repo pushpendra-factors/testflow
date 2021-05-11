@@ -85,6 +85,7 @@ func TestMain(m *testing.M) {
 		// List of projects to stop writing to user_properties table.
 		DeprecateUserPropertiesTableWriteProjects: "*",
 		AllowedCampaignEnrichmentByProjectID:      *allowedCampaignEnrichmentByProjectID,
+		UseOpportunityAssociationByProjectID:      "*",
 	}
 
 	// Setup.

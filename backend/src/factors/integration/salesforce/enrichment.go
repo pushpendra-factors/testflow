@@ -54,6 +54,11 @@ type RelationshipCampaignMember struct {
 	Records   []RelationshipCampaignMemberRecord `json:"records"`
 }
 
+var opportunityMappingOrder = []string{
+	model.SalesforceChildRelationshipNameOpportunityContactRoles,
+	model.SalesforceDocumentTypeNameLead,
+}
+
 var allowedCampaignFields = map[string]bool{}
 
 func getUserIDFromLastestProperties(properties []model.UserProperties) string {
@@ -148,6 +153,8 @@ func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]in
 	}
 	delete(*properties, "attributes")                                         // delte nested meta object
 	delete(*properties, model.SalesforceChildRelationshipNameCampaignMembers) // delete child relationship data
+	delete(*properties, model.SalesforceChildRelationshipNameOpportunityContactRoles)
+	delete(*properties, OpportunityLeadID)
 }
 
 func getSalesforceAccountID(document *model.SalesforceDocument) (string, error) {
@@ -583,6 +590,89 @@ func TrackSalesforceSmartEvent(projectID uint64, salesforceSmartEventName *Sales
 	return prevProperties
 }
 
+type OpportunityContactRoleRecord struct {
+	ID            string `json:"Id"` // only required field
+	IsPrimary     bool   `json:"IsPrimary"`
+	ContactID     string `json:"ContactId"`
+	Role          string `json:"Role"`
+	OpportunityID string `json:"OpportunityId"`
+}
+
+type RelationshipOpportunityContactRole struct {
+	Records []OpportunityContactRoleRecord `json:"records"`
+}
+
+type OpportunityChildRelationship struct {
+	OpportunityContactRole RelationshipOpportunityContactRole `json:"OpportunityContactRoles"`
+	OppLeadID              string                             `json:"opportunity_to_lead"`
+}
+
+var errMissingOpportunityLeadAndContact = errors.New("missing lead and contact id")
+
+func getOpportuntityLeadAndContactID(document *model.SalesforceDocument) (string, string, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": document.ProjectID, "doc_id": document.ID, "doc_type": document.Type})
+	var opportunityChildRelationship OpportunityChildRelationship
+	err := json.Unmarshal(document.Value.RawMessage, &opportunityChildRelationship)
+	if err != nil {
+		return "", "", err
+	}
+
+	allowedObjects := model.GetSalesforceDocumentTypeAlias(document.ProjectID)
+	oppLeadID := ""
+	oppContactID := ""
+
+	if _, exist := allowedObjects[model.SalesforceDocumentTypeNameContact]; exist {
+		records := opportunityChildRelationship.OpportunityContactRole.Records
+
+		for i := range records {
+			if records[i].IsPrimary {
+				if records[i].ContactID == "" {
+					logCtx.Error("Missing primary contact id.")
+					break
+				}
+
+				oppContactID = records[i].ContactID
+			}
+		}
+	}
+
+	if _, exist := allowedObjects[model.SalesforceDocumentTypeNameLead]; exist {
+		if opportunityChildRelationship.OppLeadID != "" {
+			oppLeadID = opportunityChildRelationship.OppLeadID
+		}
+	}
+
+	return oppLeadID, oppContactID, nil
+}
+
+func getOpportunityLinkedLeadOrContactDocument(projectID uint64, document *model.SalesforceDocument) (*model.SalesforceDocument, error) {
+
+	oppLeadID, oppContactID, err := getOpportuntityLeadAndContactID(document)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range opportunityMappingOrder {
+		if opportunityMappingOrder[i] == model.SalesforceChildRelationshipNameOpportunityContactRoles && oppContactID != "" {
+			linkedObject, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppContactID}, model.SalesforceDocumentTypeContact)
+			if status == http.StatusFound {
+				return &linkedObject[len(linkedObject)-1], nil
+			}
+
+		}
+
+		if opportunityMappingOrder[i] == model.SalesforceDocumentTypeNameLead && oppLeadID != "" {
+			linkedObject, status := store.GetStore().GetSyncedSalesforceDocumentByType(projectID, []string{oppLeadID}, model.SalesforceDocumentTypeLead)
+			if status == http.StatusFound {
+				return &linkedObject[len(linkedObject)-1], nil
+			}
+
+		}
+	}
+
+	return nil, errors.New("missing lead and contact record for opportunity link")
+}
+
 func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
 	if projectID == 0 || document == nil {
 		return http.StatusBadRequest
@@ -607,10 +697,39 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 
 	var eventID string
 	var eventUserID string
-	customerUserID, userID := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
+	var customerUserID, userID string
+	if C.UseOpportunityAssociationByProjectID(projectID) {
+		linkedDocument, err := getOpportunityLinkedLeadOrContactDocument(projectID, document)
+		if err != nil {
+			if err != errMissingOpportunityLeadAndContact {
+				logCtx.WithError(err).Error("Failed to get linked document for opportunity.")
+			}
+		} else {
+			linkedDocEnProperties, _, err := GetSalesforceDocumentProperties(projectID, linkedDocument)
+			if err == nil {
+				customerUserID, userID = getCustomerUserIDFromProperties(projectID, *linkedDocEnProperties, model.GetSalesforceAliasByDocType(linkedDocument.Type), &model.SalesforceProjectIdentificationFieldStore)
+				if document.Action == model.SalesforceDocumentUpdated && customerUserID != "" { // set user_id = null to allow indentification without user_id change
+					userID = ""
+				}
+
+				if document.Action == model.SalesforceDocumentCreated && customerUserID == "" && userID == "" && linkedDocument.UserID != "" {
+					userID = linkedDocument.UserID
+				}
+
+			} else {
+				logCtx.WithError(err).Error("Failed to get properties on opportunities associations")
+			}
+
+		}
+	}
+
+	if userID == "" && customerUserID == "" {
+		customerUserID, userID = getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
+	}
+
 	if customerUserID != "" {
 		if userID != "" {
-			trackPayload.UserId = userID
+			trackPayload.UserId = userID // will also handle opportunity updated event which is not stiched with other object
 			eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
 		} else {
 			eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
@@ -622,6 +741,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 			return http.StatusInternalServerError
 		}
 	} else {
+		trackPayload.UserId = userID
 		eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
 		if err != nil {
 			logCtx.WithError(err).Error(
