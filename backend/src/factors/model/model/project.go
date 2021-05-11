@@ -59,3 +59,16 @@ func DefaultMarketingPropertiesMap() InteractionSettings {
 
 	return interactionSettings
 }
+
+// DefaultURLPropertiesToMarketingPropertiesMap returns default query params map reverse of DefaultMarketingPropertiesMap
+func DefaultURLPropertiesToMarketingPropertiesMap() map[string]string {
+
+	urlToEventPropMap := make(map[string]string)
+	interactionSettings := DefaultMarketingPropertiesMap()
+	for key, value := range interactionSettings.UTMMappings {
+		for _, v := range value {
+			urlToEventPropMap[v] = key
+		}
+	}
+	return urlToEventPropMap
+}
