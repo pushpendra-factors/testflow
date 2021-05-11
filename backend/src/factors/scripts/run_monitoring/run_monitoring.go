@@ -8,6 +8,8 @@ import (
 	"factors/util"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -154,9 +156,22 @@ func main() {
 			fmt.Sprintf("Integration queue length %d exceeds threshold of %d", integrationQueueLength, *integrationQueueThreshold))
 	}
 
+	res, err := http.Get(C.SDKAssetsURL)
+	if err != nil || res.StatusCode != http.StatusOK {
+		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
+			fmt.Sprintf("Error '%s', Code '%d' on getting SDK from %s", err.Error(), res.StatusCode, C.SDKAssetsURL))
+	}
+
+	sdkBody, err := ioutil.ReadAll(res.Body)
+	if err != nil || len(sdkBody) < 20000 || string(sdkBody[0:12]) != "var factors=" {
+		// Approx file size of 20k. Error out if less than that.
+		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
+			fmt.Sprintf("Size '%d' of SDK file lesser than expected 20k chars. Content: '%s'", len(sdkBody), string(sdkBody)))
+	}
+
 	tableSizes := postgres.GetStore().CollectTableSizes()
 
-	slowQueriesStatus := map[string]interface{}{
+	monitoringPayload := map[string]interface{}{
 		"factorsSlowQueries":       factorsSlowQueries[:util.MinInt(5, len(factorsSlowQueries))],
 		"sqlAdminSlowQueries":      sqlAdminSlowQueries[:util.MinInt(5, len(sqlAdminSlowQueries))],
 		"factorsSlowQueriesCount":  len(factorsSlowQueries),
@@ -166,5 +181,5 @@ func main() {
 		"integrationQueueLength":   integrationQueueLength,
 		"tableSizes":               tableSizes,
 	}
-	C.PingHealthcheckForSuccess(healthcheckPingID, slowQueriesStatus)
+	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
 }

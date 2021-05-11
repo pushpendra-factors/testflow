@@ -4,7 +4,7 @@ deployer_email=`gcloud config list account --format "value(core.account)" 2> /de
 
 echo "Sending alert on slack.."
 payload="-------------------------------------------------------------
-*Deployment initiated for production 'frontend' from branch '${branch_name}'. By ${deployer_email}*.
+*Deployment initiated for production 'frontend-new' from branch '${branch_name}'. By ${deployer_email}*.
 "
 
 # Escape double quotes from payload.

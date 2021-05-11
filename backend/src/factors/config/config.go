@@ -59,6 +59,9 @@ const PRODUCTION = "production"
 // in sync with other services which uses the cookie.
 const FactorsSessionCookieName = "factors-sid"
 
+// URL for loading SDK on client side.
+const SDKAssetsURL = "https://app.factors.ai/assets/factors.js"
+
 // Datastore specific constants.
 const (
 	DatastoreTypePostgres = "postgres"

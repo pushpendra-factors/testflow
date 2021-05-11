@@ -1,8 +1,12 @@
 package config
 
 import (
+	"io/ioutil"
+	"net/http"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetProjectsFromListWithAllProjectSupport(t *testing.T) {
@@ -45,4 +49,24 @@ func TestGetProjectsFromListWithAllProjectSupport(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestJSSDKSize(t *testing.T) {
+	res, err := http.Get(SDKAssetsURL)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	sdkBody, err := ioutil.ReadAll(res.Body)
+	assert.Nil(t, err)
+	assert.True(t, len(sdkBody) > 20000)
+	assert.Equal(t, string(sdkBody[0:12]), "var factors=")
+
+	// Non existent URL. StatusCode is still 200 as it returns empty page.
+	res, err = http.Get("https://app.factors.ai/assets/non_existent.js")
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	sdkBody, err = ioutil.ReadAll(res.Body)
+	assert.Nil(t, err)
+	assert.True(t, len(sdkBody) < 20000)
 }
