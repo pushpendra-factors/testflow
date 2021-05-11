@@ -2,8 +2,10 @@ package segment
 
 import (
 	"encoding/json"
+	"factors/model/model"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -419,6 +421,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 
 	switch event.Type {
 	case "track":
+
 		userProperties := U.PropertiesMap{}
 		fillGenericUserProperties(&userProperties, event)
 		fillWebUserProperties(&userProperties, event)
@@ -433,6 +436,16 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		}
 		fillGenericEventProperties(&eventProperties, event)
 		fillWebEventProperties(&eventProperties, event)
+
+		pageURL := GetURLFromPageEvent(event)
+		parsedPageURL, err := U.ParseURLStable(pageURL)
+		if err != nil {
+			// logging URL parse error but continuing for track requests
+			logCtx.WithFields(log.Fields{log.ErrorKey: err, "page_url": pageURL}).Error(
+				"Failed parsing URL from segment.")
+		} else {
+			enrichEventPropertyUsingURL(parsedPageURL, &eventProperties)
+		}
 
 		request := &SDK.TrackPayload{
 			Name:            event.TrackName,
@@ -461,24 +474,24 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		response.EventId = trackResponse.EventId
 
 	case "page":
-		pageURL := GetURLFromPageEvent(event)
-		parsedPageURL, err := U.ParseURLStable(pageURL)
-		if err != nil {
-			logCtx.WithFields(log.Fields{log.ErrorKey: err, "page_url": pageURL}).Error(
-				"Failed parsing URL from segment.")
-
-			response.Error = "Invalid page url"
-			return http.StatusBadRequest, response
-		}
 
 		userProperties := U.PropertiesMap{}
 		fillGenericUserProperties(&userProperties, event)
 		fillWebUserProperties(&userProperties, event)
 
 		eventProperties := U.PropertiesMap{}
-		U.FillPropertiesFromURL(&eventProperties, parsedPageURL)
 		fillGenericEventProperties(&eventProperties, event)
 		fillWebEventProperties(&eventProperties, event)
+
+		pageURL := GetURLFromPageEvent(event)
+		parsedPageURL, err := U.ParseURLStable(pageURL)
+		if err != nil {
+			// logging URL parse error but continuing for page requests
+			logCtx.WithFields(log.Fields{log.ErrorKey: err, "page_url": pageURL}).Error(
+				"Failed parsing URL from segment.")
+		} else {
+			enrichEventPropertyUsingURL(parsedPageURL, &eventProperties)
+		}
 
 		name := U.GetURLHostAndPath(parsedPageURL)
 		request := &SDK.TrackPayload{
@@ -569,6 +582,29 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 
 	response.Message = "Successfully received event"
 	return http.StatusOK, response
+}
+
+func enrichEventPropertyUsingURL(parsedPageURL *url.URL, eventProperties *U.PropertiesMap) {
+
+	var eventPropertiesURL U.PropertiesMap
+	eventPropertiesURL = make(U.PropertiesMap, 0)
+	U.FillPropertiesFromURL(&eventPropertiesURL, parsedPageURL)
+	if eventPropertiesURL != nil {
+		urlToEventPropMap := model.DefaultURLPropertiesToMarketingPropertiesMap()
+		// Initialized with already existing event props.
+		for urlProp, value := range eventPropertiesURL {
+			if eventProp, exists := urlToEventPropMap[urlProp]; exists {
+				if _, ok := (*eventProperties)[eventProp]; ok {
+					// property seen already
+					continue
+				} else {
+					(*eventProperties)[urlProp] = value
+				}
+			} else {
+				(*eventProperties)[urlProp] = value
+			}
+		}
+	}
 }
 
 func ProcessQueueEvent(token, eventJson string) (float64, string, error) {

@@ -1249,7 +1249,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 			  "referrer": "https://google.com",
 			  "search": "",
 			  "title": "Analytics Academy",
-			  "url": "https://segment.com/academy/"
+			  "url": "https://segment.com/academy/?utm_url_param=101ABC&utm_campaign=CAMPAIGN-001&gclid=GCLID-001&utm_adgroup=ADGROUP-001&utm_medium=MEDIUM-001&utm_source=SOURCE-001"
 			},
 			"referrer": {
 			  "id": "ABCD582CDEFFFF01919",
@@ -1299,6 +1299,14 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	eventPropertiesBytes, err := retEvent.Properties.Value()
 	var eventPropertiesMap map[string]interface{}
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+	assert.Equal(t, "101ABC", eventPropertiesMap["$qp_utm_url_param"])
+	assert.Equal(t, "GCLID-001", eventPropertiesMap["$gclid"])
+	assert.Equal(t, "ADGROUP-001", eventPropertiesMap["$adgroup"])
+	// Merging URL props with precedence to attribute's value
+	assert.Equal(t, "TPS Innovation Newsletter", eventPropertiesMap["$campaign"])
+	assert.Equal(t, "email", eventPropertiesMap["$medium"])
+	assert.Equal(t, "Newsletter", eventPropertiesMap["$source"])
+	assertKeysExistAndNotEmpty(t, eventPropertiesMap, genericEventProps)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, genericEventProps)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, webEventProps)
 	// Check event properties added.
