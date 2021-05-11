@@ -68,6 +68,7 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	syncOnly := flag.Bool("sync_only", false, "Run only sync.")
 	allowedCampaignEnrichmentByProjectID := flag.String("allowed_campaign_enrichment_by_project_id", "", "Campaign enrichment by project_id.")
+	useOpportunityAssociationByProjectID := flag.String("use_opportunity_association_by_project_id", "", "Use salesforce associations for opportunity stitching")
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
@@ -128,6 +129,7 @@ func main() {
 		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 		CacheSortedSet:                           *cacheSortedSet,
 		AllowedCampaignEnrichmentByProjectID:     *allowedCampaignEnrichmentByProjectID,
+		UseOpportunityAssociationByProjectID:     *useOpportunityAssociationByProjectID,
 	}
 
 	C.InitConf(config)

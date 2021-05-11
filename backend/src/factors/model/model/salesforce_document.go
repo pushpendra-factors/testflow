@@ -111,7 +111,8 @@ const (
 
 // Parent to child relationship for query related data, use plural form of names
 const (
-	SalesforceChildRelationshipNameCampaignMembers = "CampaignMembers"
+	SalesforceChildRelationshipNameCampaignMembers         = "CampaignMembers"
+	SalesforceChildRelationshipNameOpportunityContactRoles = "OpportunityContactRoles"
 )
 
 // SalesforceDocumentTypeAlias maps document type to alias

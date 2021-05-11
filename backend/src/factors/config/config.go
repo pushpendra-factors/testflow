@@ -170,6 +170,7 @@ type Configuration struct {
 	DisableMemSQLDBWrites                *bool
 	DisableMemSQLRedisWrites             *bool
 	AllowedCampaignEnrichmentByProjectID string
+	UseOpportunityAssociationByProjectID string
 }
 
 type Services struct {
@@ -980,6 +981,27 @@ func Init(config *Configuration) error {
 
 	initiated = true
 	return nil
+}
+
+// UseOpportunityAssociationByProjectID should use salesforce association for opportunity stitching
+func UseOpportunityAssociationByProjectID(projectID uint64) bool {
+	if configuration.UseOpportunityAssociationByProjectID == "" {
+		return false
+	}
+
+	if configuration.UseOpportunityAssociationByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectID)
+	projectIDs := strings.Split(configuration.UseOpportunityAssociationByProjectID, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
 }
 
 func InitDataService(config *Configuration) error {

@@ -2056,5 +2056,212 @@ func TestGetLatestSalesforeDocument(t *testing.T) {
 	err = json.Unmarshal(document[0].Value.RawMessage, &contactMap)
 	assert.Nil(t, err)
 	assert.Equal(t, leadUpdated, contactMap)
+}
 
+func TestSalesforceOpportunityAssociations(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	/*
+		Use opportunity contact roles for stitch
+	*/
+	contactID1 := U.RandomString(5)
+	contactID2 := U.RandomString(5)
+	contactID3 := U.RandomString(5)
+	contact1CreatedDate := time.Now()
+	contact1LastModifiedDate := contact1CreatedDate.Add(10 * time.Second)
+	contact1Created := map[string]interface{}{
+		"Id":               contactID1,
+		"Name":             "contact1",
+		"City":             "City1",
+		"CreatedDate":      contact1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": contact1LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, contact1Created, model.SalesforceDocumentTypeNameContact)
+	assert.Nil(t, err)
+
+	contact2CreatedDate := time.Now()
+	contact2LastModifiedDate := contact2CreatedDate.Add(10 * time.Second)
+	contact2Created := map[string]interface{}{
+		"Id":               contactID2,
+		"Name":             "contact2",
+		"City":             "City2",
+		"CreatedDate":      contact2CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": contact2LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, contact2Created, model.SalesforceDocumentTypeNameContact)
+	assert.Nil(t, err)
+
+	contact3CreatedDate := time.Now()
+	contact3LastModifiedDate := contact3CreatedDate.Add(10 * time.Second)
+	contact3Created := map[string]interface{}{
+		"Id":               contactID3,
+		"Name":             "contact3",
+		"City":             "City3",
+		"CreatedDate":      contact3CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": contact3LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, contact3Created, model.SalesforceDocumentTypeNameContact)
+	assert.Nil(t, err)
+
+	oppID1 := U.RandomString(5)
+	opp1CreatedDate := time.Now()
+	opp1LastModifiedDate := opp1CreatedDate.Add(10 * time.Second)
+	oppContactRoleID1 := U.RandomString(5)
+	oppContactRoleID2 := U.RandomString(5)
+	oppContactRoleID3 := U.RandomString(5)
+
+	oppCreated := map[string]interface{}{
+		"Id":               oppID1,
+		"Name":             "opp1",
+		"City":             "City1",
+		"CreatedDate":      opp1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": opp1LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		model.SalesforceChildRelationshipNameOpportunityContactRoles: IntSalesforce.RelationshipOpportunityContactRole{
+			Records: []IntSalesforce.OpportunityContactRoleRecord{
+				{
+					ID:        oppContactRoleID1,
+					IsPrimary: false,
+					ContactID: contactID1,
+				},
+				{
+					ID:        oppContactRoleID2,
+					IsPrimary: true,
+					ContactID: contactID2,
+				},
+				{
+					ID:        oppContactRoleID3,
+					IsPrimary: false,
+					ContactID: contactID3,
+				},
+			},
+		},
+	}
+	err = createDummySalesforceDocument(project.ID, oppCreated, model.SalesforceDocumentTypeNameOpportunity)
+	assert.Nil(t, err)
+
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
+	assert.Equal(t, "success", enrichStatus[2].Status)
+
+	query := model.Query{
+		From: contact1CreatedDate.Unix() - 500,
+		To:   opp1LastModifiedDate.Unix() + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       util.EVENT_NAME_SALESFORCE_CONTACT_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       util.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class: model.QueryClassFunnel,
+
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(3), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+
+	query.GroupByProperties = []model.QueryGroupByProperty{
+		{
+			Entity:    model.PropertyEntityUser,
+			Property:  "$salesforce_contact_id",
+			EventName: model.UserPropertyGroupByPresent,
+		},
+		{
+			Entity:    model.PropertyEntityUser,
+			Property:  "$salesforce_contact_city",
+			EventName: model.UserPropertyGroupByPresent,
+		},
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	success := false
+	for i := range result.Rows {
+		if result.Rows[i][0] == contactID2 {
+			assert.Equal(t, "City2", result.Rows[i][1])
+			assert.Equal(t, float64(1), result.Rows[i][2])
+			assert.Equal(t, float64(1), result.Rows[i][3])
+			success = true
+		}
+	}
+	assert.Equal(t, true, success)
+
+	/*
+		Use lead for opportunity stitching, opportunity contact roles will be skipped if record not available
+	*/
+	oppID2 := U.RandomString(5)
+	leadID1 := U.RandomString(5)
+	opp2CreatedDate := time.Now()
+	opp2LastModifiedDate := opp2CreatedDate.Add(10 * time.Second)
+	opp2Created := map[string]interface{}{
+		"Id":                            oppID2,
+		"Name":                          "opp2",
+		"City":                          "City4",
+		"CreatedDate":                   opp2CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate":              opp2LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		IntSalesforce.OpportunityLeadID: leadID1,
+		model.SalesforceChildRelationshipNameOpportunityContactRoles: IntSalesforce.RelationshipOpportunityContactRole{
+			Records: []IntSalesforce.OpportunityContactRoleRecord{
+				{
+					ID:        "123456",
+					IsPrimary: true,
+					ContactID: "123445",
+				},
+			},
+		},
+	}
+
+	err = createDummySalesforceDocument(project.ID, opp2Created, model.SalesforceDocumentTypeNameOpportunity)
+	assert.Nil(t, err)
+
+	lead1CreatedDate := time.Now()
+	lead1LastModifiedDate := lead1CreatedDate.Add(10 * time.Second)
+	lead1Created := map[string]interface{}{
+		"Id":               leadID1,
+		"Name":             "lead1",
+		"City":             "City5",
+		"CreatedDate":      lead1CreatedDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": lead1LastModifiedDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+	err = createDummySalesforceDocument(project.ID, lead1Created, model.SalesforceDocumentTypeNameLead)
+	assert.Nil(t, err)
+
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
+	assert.Equal(t, "success", enrichStatus[2].Status)
+
+	query = model.Query{
+		From: contact1CreatedDate.Unix() - 500,
+		To:   lead1LastModifiedDate.Unix() + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       util.EVENT_NAME_SALESFORCE_LEAD_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       util.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class: model.QueryClassFunnel,
+
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(1), result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
 }

@@ -149,7 +149,6 @@ func (pg *Postgres) GetLatestSalesforceDocumentByID(projectID uint64, documentID
 	if len(documents) < 1 {
 		return nil, http.StatusNotFound
 	}
-
 	return documents, http.StatusFound
 }
 
@@ -260,6 +259,7 @@ func (pg *Postgres) CreateSalesforceDocumentByAction(projectID uint64, document 
 			return http.StatusConflict
 		}
 
+		log.WithError(err).Error("Failed to create salesforce document")
 		return http.StatusInternalServerError
 	}
 
