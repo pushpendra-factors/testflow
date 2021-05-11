@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -30,12 +31,13 @@ var migrateAllProjects bool
 var migrationPageSize int
 var migrationRoutinesHeavy int
 var migrationRoutinesOther int
-var dedupeByQuery bool
 var disableSyncColumns bool
 
 var migrageAllTables bool
 var includeTablesMap map[string]bool
 var excludeTablesMap map[string]bool
+
+var modeMigrate bool
 
 const (
 	tableUserProperties                = "user_properties"
@@ -86,8 +88,8 @@ type TableRecord struct {
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 	// facebook_documents
 	Platform string `json:"platform"`
-	// hubspot_documents
-	Action uint64 `json:"action"`
+	// hubspot_documents, salesforce_documents
+	Action interface{} `json:"action"`
 	// project_agent_mappings
 	AgentUUID string `json:"agent_uuid"`
 	// property_details
@@ -107,6 +109,50 @@ type TableRecord struct {
 	// Hubspot and salesforce documents. UserID is already added above.
 	Synced bool   `json:"synced"`
 	SyncId string `json:"sync_id"`
+}
+
+type memsql_EventName struct {
+	// Composite primary key with projectId.
+	ID   string `gorm:"primary_key:true;" json:"-"` // DISABLED json tag for overriding on programatically.
+	Name string `json:"name"`
+	Type string `gorm:"not null;type:varchar(2)" json:"type"`
+	// Below are the foreign key constraints added in creation script.
+	// project_id -> projects(id)
+	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	// if default is not set as NULL empty string will be installed.
+	FilterExpr string    `gorm:"type:varchar(500);default:null" json:"filter_expr"`
+	Deleted    bool      `gorm:"not null;default:false" json:"deleted"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type memsql_Event struct {
+	// Composite primary key with project_id and uuid.
+	ID              string  `gorm:"primary_key:true;type:uuid" json:"id"`
+	CustomerEventId *string `json:"customer_event_id"`
+
+	// Below are the foreign key constraints added in creation script.
+	// project_id -> projects(id)
+	// (project_id, user_id) -> users(project_id, id)
+	// (project_id, event_name_id) -> event_names(project_id, id)
+	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	UserId    string `json:"user_id"`
+
+	// TODO(Dinesh): Remove user_properties_id column and field after
+	// user_properties table is permanantly deprecated.
+	UserPropertiesId string `json:"user_properties_id"`
+
+	UserProperties *postgres.Jsonb `json:"user_properties"`
+	SessionId      *string         `json:session_id`
+	EventNameId    string          `json:"-"` // DISABLED json tag for overriding on programatically.
+	Count          uint64          `json:"count"`
+	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
+	Properties                 postgres.Jsonb `json:"properties,omitempty"`
+	PropertiesUpdatedTimestamp int64          `gorm:"not null;default:0" json:"properties_updated_timestamp,omitempty"`
+	// unix epoch timestamp in seconds.
+	Timestamp int64     `json:"timestamp"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 var (
@@ -136,14 +182,7 @@ func main() {
 	pageSize := flag.Int("page_size", 0, "No.of records per page.")
 	routinesHeavy := flag.Int("routines_heavy", 10, "No.of parallel routines to use for events, users, adwords_documents and hubspot_documents.")
 	routinesOther := flag.Int("routines_other", 5, "No.of parallel routines to use for all other tables.")
-	dedupeByQueryForNonUniqueTables := flag.Bool("dedupe_by_query", false,
-		"Dedupe's by firing a get query everytime for events and user_properties table.")
-
-	// Migrates events table with dependencies for a timerange of events.
-	migrateEventsWithDependencies := flag.Bool("events_with_dep", false, "")
-	eventsStartTimestamp := flag.Int64("events_start_timestamp", 0, "")
-	eventsEndTimestamp := flag.Int64("events_end_timestamp", 0, "")
-	eventsNumRouties := flag.Int("events_num_routines", 1, "")
+	migrate := flag.Bool("migrate", false, "Disable's additional queries like dedupe query for migration.")
 
 	includeTables := flag.String("include_tables", "*", "Comma separated tables to run or *")
 	excludeTables := flag.String("exclude_tables", "", "Comma separated tables to exclude from the run")
@@ -167,7 +206,7 @@ func main() {
 	migrationPageSize = *pageSize
 	migrationRoutinesHeavy = *routinesHeavy
 	migrationRoutinesOther = *routinesOther
-	dedupeByQuery = *dedupeByQueryForNonUniqueTables
+	modeMigrate = *migrate
 
 	includeTablesMap = make(map[string]bool)
 	excludeTablesMap = make(map[string]bool)
@@ -226,18 +265,6 @@ func main() {
 		log.Fatal("Invalid value on project_ids flag. Should be list of project_ids or *.")
 	}
 
-	if *migrateEventsWithDependencies {
-		if len(projectIDs) == 0 {
-			log.Fatal("No projects given for migrating events table with dependencies.")
-		}
-
-		for i := range projectIDs {
-			log.Infof("Running in migrate events with dependencies mode for project %d.", projectIDs[i])
-			migrateEventsTableAndDepedencies(projectIDs[i], *eventsStartTimestamp, *eventsEndTimestamp, *eventsNumRouties)
-		}
-		return
-	}
-
 	log.WithField("project_ids", projectIDs).Info("Running in replication mode.")
 	migrateAllTables(projectIDs)
 }
@@ -282,40 +309,6 @@ func getDedupeMap(tableName string) *sync.Map {
 	}
 }
 
-// Move this method to model, only if it is being used on production.
-func getEventNameByID(projectId uint64, id uint64) (*model.EventName, int) {
-	db := C.GetServices().Db
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "event_name_id": id})
-
-	var eventName model.EventName
-	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&eventName).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
-		}
-		logCtx.WithError(err).Error("Failed to get event_name by id.")
-		return nil, http.StatusInternalServerError
-	}
-
-	return &eventName, http.StatusFound
-}
-
-// Move this method to model, only if it is being used on production.
-func getUserByID(projectId uint64, id string) (*model.User, int) {
-	db := C.GetServices().Db
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": id})
-
-	var user model.User
-	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&user).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
-		}
-		logCtx.WithError(err).Error("Failed to get user by id.")
-		return nil, http.StatusInternalServerError
-	}
-
-	return &user, http.StatusFound
-}
-
 func doesExistByUserAndIDOnMemSQLDB(tableName string, projectID uint64,
 	userID string, id interface{}) (bool, *TableRecord, error) {
 
@@ -340,167 +333,6 @@ func doesExistByUserAndIDOnMemSQLDB(tableName string, projectID uint64,
 	return true, &record, nil
 }
 
-func createOnMemSQLWithInMemoryDedupe(projectID uint64, tableName string, record interface{}) int {
-	logCtx := log.WithField("project_id", projectID).WithField("table_name", tableName)
-
-	pgTableRecord, err := convertToTableRecord(tableName, record)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to convert pg record to table record.")
-		return http.StatusInternalServerError
-	}
-
-	return createOnMemSQL(projectID, tableName, record, pgTableRecord.ID, true)
-}
-
-// createEventAndDependenciesOnMemSQL - creates event with all associated dependencies.
-func createEventAndDependenciesOnMemSQL(event *model.Event, inMemoryDedupe bool, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	logCtx := log.WithField("event", event)
-
-	// Skip existence check using db for inmemory dedupe.
-	if !inMemoryDedupe {
-		// Return, if event already exists.
-		exists, tableRecord, err := doesExistByUserAndIDOnMemSQLDB(tableEvents, event.ProjectId, event.UserId, event.ID)
-		if err != nil {
-			return
-		}
-		if exists {
-			if isUpdated := event.UpdatedAt.After(tableRecord.UpdatedAt); !isUpdated {
-				return
-			}
-		}
-	}
-
-	if event.EventNameId != 0 {
-		eventName, errCode := getEventNameByID(event.ProjectId, event.EventNameId)
-		if errCode != http.StatusFound {
-			logCtx.WithField("err_code", errCode).Error("Failed to get user associated to event.")
-			return
-		}
-
-		if inMemoryDedupe {
-			errCode = createOnMemSQLWithInMemoryDedupe(event.ProjectId, tableEventNames, eventName)
-		} else {
-			_, errCode = createIfNotExistOrUpdateIfChangedOnMemSQL(tableEventNames, eventName)
-		}
-		if errCode != http.StatusCreated {
-			return
-		}
-	}
-
-	var latestUserPropertiesID string
-	if event.UserId != "" {
-		logCtx = logCtx.WithField("user_id", event.UserId)
-
-		user, errCode := getUserByID(event.ProjectId, event.UserId)
-		if errCode != http.StatusFound {
-			logCtx.WithField("err_code", errCode).Error("Failed to get user associated to event.")
-			return
-		}
-		latestUserPropertiesID = user.PropertiesId
-
-		if inMemoryDedupe {
-			errCode = createOnMemSQLWithInMemoryDedupe(event.ProjectId, tableUsers, user)
-		} else {
-			_, errCode = createIfNotExistOrUpdateIfChangedOnMemSQL(tableUsers, user)
-		}
-		if errCode != http.StatusCreated {
-			return
-		}
-	}
-
-	// Create latest user_properties of user.
-	if latestUserPropertiesID != "" {
-		errCode := createUserPropertiesOnMemSQLDB(event.ProjectId, event.UserId, latestUserPropertiesID, inMemoryDedupe)
-		if errCode != http.StatusCreated {
-			logCtx.WithField("err_code", errCode).Error("Failed to create latest user_properties of user.")
-			return
-		}
-	}
-
-	if event.UserPropertiesId != "" {
-		errCode := createUserPropertiesOnMemSQLDB(event.ProjectId, event.UserId, event.UserPropertiesId, inMemoryDedupe)
-		if errCode != http.StatusCreated {
-			logCtx.WithField("err_code", errCode).Error("Failed to create user_properties from event.")
-			return
-		}
-	}
-
-	if inMemoryDedupe {
-		createOnMemSQLWithInMemoryDedupe(event.ProjectId, tableEvents, event)
-		return
-	}
-
-	createIfNotExistOrUpdateIfChangedOnMemSQL(tableEvents, event)
-}
-
-func createUserPropertiesOnMemSQLDB(projectID uint64, userID, userPropertiesID string, inMemoryDedupe bool) int {
-	logCtx := log.WithField("project_id", projectID).
-		WithField("user_id", userID).
-		WithField("user_properties_id", userPropertiesID)
-
-	userProperties, errCode := store.GetStore().GetUserPropertiesRecord(projectID, userID, userPropertiesID)
-	if errCode != http.StatusFound {
-		logCtx.WithField("err_code", errCode).Error("Failed to get user_properties associated to event.")
-		return http.StatusInternalServerError
-	}
-
-	if inMemoryDedupe {
-		return createOnMemSQLWithInMemoryDedupe(projectID, tableUserProperties, userProperties)
-	}
-
-	_, status := createIfNotExistOrUpdateIfChangedOnMemSQL(tableUserProperties, userProperties)
-	return status
-}
-
-// Copies records from events table and dependencies user by user_id,
-// user_properties by user_properties_id, event_names by event_names_id.
-// Also copies the user_properties by properties_id while copying users from events table.
-func migrateEventsTableAndDepedencies(projectID uint64, startTimestamp, endTimestamp int64, numRoutines int) {
-	logCtx := log.WithField("project_id", projectID).
-		WithField("start_timestamp", startTimestamp).
-		WithField("end_timestamp", endTimestamp).
-		WithField("num_routines", numRoutines)
-
-	if startTimestamp == 0 || endTimestamp == 0 {
-		log.Fatal("For start_timestamp and end_timestamp cannot be zero.")
-	}
-
-	logCtx.Info("Migrating with events with dependencies.")
-
-	db := C.GetServices().Db
-	rows, err := db.Raw("SELECT * FROM events WHERE project_id = ? AND timestamp BETWEEN ? AND ?",
-		projectID, startTimestamp, endTimestamp).Rows()
-	if err != nil {
-		log.WithError(err).Error("Failed to pull events.")
-		return
-	}
-	defer rows.Close()
-
-	events := make([]model.Event, 0, 0)
-	for rows.Next() {
-		var event model.Event
-		if err := db.ScanRows(rows, &event); err != nil {
-			log.WithError(err).Error("Failed to scan event.")
-			continue
-		}
-
-		events = append(events, event)
-	}
-
-	if err := rows.Err(); err != nil {
-		log.WithError(err).Fatal("Failure on rows scanner.")
-	}
-
-	logCtx.WithField("rows", len(events))
-	logCtx.Info("Fetched events. Pushing to memsql.")
-
-	runCreateEventAndDependenciesOnMemSQL(getEventsListAsBatch(events, numRoutines))
-
-	logCtx.Info("Successfully pushed from postgres to memsql.")
-}
-
 func getEventsListAsBatch(list []model.Event, batchSize int) [][]model.Event {
 	batchList := make([][]model.Event, 0, 0)
 	listLen := len(list)
@@ -515,20 +347,6 @@ func getEventsListAsBatch(list []model.Event, batchSize int) [][]model.Event {
 	}
 
 	return batchList
-}
-
-func runCreateEventAndDependenciesOnMemSQL(eventsList [][]model.Event) {
-	for eli := range eventsList {
-		var wg sync.WaitGroup
-		wg.Add(len(eventsList[eli]))
-
-		for ei := range eventsList[eli] {
-			// using inmemory dedupe.
-			go createEventAndDependenciesOnMemSQL(&eventsList[eli][ei], true, &wg)
-		}
-
-		wg.Wait()
-	}
 }
 
 func getAdditionalPrimaryKeyConditionsByTableName(tableName string, sourceTableRecord *TableRecord) (string, []interface{}) {
@@ -703,30 +521,14 @@ func isDefaultValue(x interface{}) bool {
 	return x == nil || reflect.DeepEqual(x, reflect.Zero(reflect.TypeOf(x)).Interface())
 }
 
-func createOnMemSQL(projectID uint64, tableName string, record interface{}, id interface{}, inMemoryDedupe bool) int {
+func createOnMemSQL(projectID uint64, tableName string, record interface{}, id interface{}) int {
 	logCtx := log.WithField("project_id", projectID).WithField("table_name", tableName).
 		WithField("record", record)
 
-	if inMemoryDedupe {
-		dedupeMap := getDedupeMap(tableName)
-		if _, exists := dedupeMap.Load(id); exists {
-			return http.StatusCreated
-		}
-
-		// Mark it as inserted quickly to avoid duplicate
-		// insertion on another go routine.
-		dedupeMap.Store(id, true)
-	}
-
 	record = disallowCreateWithSyncColumns(tableName, record)
-	if err := memSQLDB.Create(record).Error; err != nil {
+	if err := memSQLDB.Table(tableName).Create(record).Error; err != nil {
 		if isDuplicateError(err) {
 			return http.StatusConflict
-		}
-
-		if inMemoryDedupe {
-			dedupeMap := getDedupeMap(tableName)
-			dedupeMap.Delete(id) // Delete, if create failed.
 		}
 
 		logCtx.WithError(err).Error("Failed to create record on memsql.")
@@ -763,7 +565,16 @@ func convertToTableRecord(tableName string, record interface{}) (*TableRecord, e
 }
 
 func isTableWithoutUniquePrimaryKey(tableName string) bool {
-	return U.StringValueIn(tableName, []string{tableEvents, tableUserProperties})
+	return U.StringValueIn(tableName, []string{
+		tableEvents,
+		tableUserProperties,
+		tableEventNames,
+		tableAdwordsDocuments,
+		tableFacebookDocuments,
+		tableLinkedInDocuments,
+		tableHubspotDocuments,
+		tableSalesforceDocuments,
+	})
 }
 
 func isProjectAssociatedTable(tableName string) bool {
@@ -801,7 +612,7 @@ func updateIfExistOnMemSQL(projectID uint64, tableName string, pgRecord interfac
 		// Copy old memsql record values for selected sync columns.
 		pgRecord = disallowUpdateOnSyncColumns(tableName, memsqlTableRecord, pgRecord)
 
-		status = createOnMemSQL(projectID, tableName, pgRecord, pgTableRecord.ID, false)
+		status = createOnMemSQL(projectID, tableName, pgRecord, pgTableRecord.ID)
 		if status != http.StatusCreated && status != http.StatusConflict {
 			return http.StatusInternalServerError
 		}
@@ -880,7 +691,7 @@ func createIfNotExistOrUpdateIfChangedOnMemSQL(tableName string, pgRecord interf
 		WithField("table_name", tableName).
 		WithField("pg_record_id", pgTableRecord.ID)
 
-	if isTableWithoutUniquePrimaryKey(tableName) && dedupeByQuery {
+	if isTableWithoutUniquePrimaryKey(tableName) && !modeMigrate {
 		// TODO: Try to add a procedure/trigger to do the existence check before create on memsql itself for long term.
 		// Now doing it on the script itself, as it is sequential.
 		currentMemsqlRecord, status := getTableRecordByIDFromMemSQL(pgTableRecord.ProjectID, tableName, pgTableRecord.ID, pgTableRecord)
@@ -908,7 +719,7 @@ func createIfNotExistOrUpdateIfChangedOnMemSQL(tableName string, pgRecord interf
 
 	// If the table has unique primary key. Do not do getOnMemSQL in the beginning.
 	// Only do it, when there is a conflict for checking the updatedAt.
-	status := createOnMemSQL(pgTableRecord.ProjectID, tableName, pgRecord, pgTableRecord.ID, false)
+	status := createOnMemSQL(pgTableRecord.ProjectID, tableName, pgRecord, pgTableRecord.ID)
 	if status == http.StatusConflict {
 		if status := updateIfExistOnMemSQL(pgTableRecord.ProjectID,
 			tableName, pgRecord, pgTableRecord, nil); status != http.StatusOK {
@@ -1202,12 +1013,85 @@ func (s *MStates) AddToState(mstate MState) {
 	s.mstates = append(s.mstates, mstate)
 }
 
+func convertIDToUUIDFromInterface(id interface{}) (string, error) {
+	idUint64, ok := id.(uint64)
+	if !ok {
+		return "", errors.New("failed to assert to uint64.")
+	}
+	uuid, err := U.ConvertIntToUUID(idUint64)
+	if err != nil {
+		return "", err
+	}
+
+	return uuid, nil
+}
+
+func convertStruct(sourceRecord, destRecord interface{}) error {
+	recordJSON, err := json.Marshal(sourceRecord)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal([]byte(recordJSON), destRecord)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func convertColumnTypeByTable(tableName string, record interface{}) (interface{}, error) {
+	switch tableName {
+	case tableEventNames:
+		eventName := record.(*model.EventName)
+		var memsqlEventName memsql_EventName
+		err := convertStruct(eventName, &memsqlEventName)
+		if err != nil {
+			return record, err
+		}
+
+		uuid, err := convertIDToUUIDFromInterface(eventName.ID)
+		if err != nil {
+			log.WithError(err).Error("Failed to convert event to memsql event_name.")
+			return record, err
+		}
+		memsqlEventName.ID = uuid
+		return &memsqlEventName, nil
+
+	case tableEvents:
+		event := record.(*model.Event)
+		var memsqlEvent memsql_Event
+		err := convertStruct(event, &memsqlEvent)
+		if err != nil {
+			log.WithError(err).Error("Failed to convert event to memsql event.")
+			return record, err
+		}
+
+		uuid, err := convertIDToUUIDFromInterface(event.EventNameId)
+		if err != nil {
+			return record, err
+		}
+		memsqlEvent.EventNameId = uuid
+		return &memsqlEvent, nil
+	}
+
+	return record, nil
+}
+
 func createOrUpdateOnMemSQLInParallel(tableName string, records []interface{}, wg *sync.WaitGroup, states *MStates) {
 	defer wg.Done()
 
 	logCtx := log.WithField("table_name", tableName)
 	for i := range records {
-		sourceTableRecord, errCode := createIfNotExistOrUpdateIfChangedOnMemSQL(tableName, records[i])
+		record, err := convertColumnTypeByTable(tableName, records[i])
+		if err != nil {
+			// Do not proceed on failure. This stops the routine of the table.
+			logCtx.WithError(err).WithField("record", records[i]).Error("Failed to convert column type")
+			states.AddToState(MState{Status: http.StatusInternalServerError})
+			return
+		}
+
+		sourceTableRecord, errCode := createIfNotExistOrUpdateIfChangedOnMemSQL(tableName, record)
 		if errCode != http.StatusCreated {
 			// Do not proceed on failure. This stops the routine of the table.
 			logCtx.WithField("record", records[i]).Error("Failed to create or update record.")

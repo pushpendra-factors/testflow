@@ -11,7 +11,7 @@ type FacebookDocument struct {
 	CustomerAdAccountID string          `gorm:"primary_key:true;auto_increment:false" json:"customer_ad_account_id"`
 	Platform            string          `gorm:"primary_key:true;auto_increment:false" json:"platform"`
 	TypeAlias           string          `gorm:"-" json:"type_alias"`
-	Type                int             `gorm:"primary_key:true;auto_increment:false" json:"-"`
+	Type                int             `gorm:"primary_key:true;auto_increment:false" json:"type"`
 	Timestamp           int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
 	ID                  string          `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	CampaignID          string          `json:"-"`

@@ -15,7 +15,7 @@ import (
 type HubspotDocument struct {
 	ProjectId uint64 `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ID        string `gorm:"primary_key:true;auto_increment:false" json:"id"`
-	Type      int    `gorm:"primary_key:true;auto_increment:false" json:"-"`
+	Type      int    `gorm:"primary_key:true;auto_increment:false" json:"type"`
 	Action    int    `gorm:"primary_key:true;auto_increment:false" json:"action"`
 	// created or updated timestamp from hubspot.
 	Timestamp int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
