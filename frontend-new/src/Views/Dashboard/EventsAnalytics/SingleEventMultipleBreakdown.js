@@ -114,6 +114,7 @@ function SingleEventMultipleBreakdown({
         page={page}
         durationObj={durationObj}
         categories={categories}
+        section={section}
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_AREA) {

@@ -72,14 +72,25 @@ def create_document(project_id, doc_type, doc):
     }
 
     start_time = time.time()
-    response = requests.post(url, json=payload)
-    if not response.ok:
-        log.error("Failed to add response %s to hubspot warehouse with uri %s: %d.", 
-            doc_type, uri, response.status_code)
-    end_time = time.time()
-    log.warning("Create_document took %d ms", end_time-start_time )
-    
-    return response
+    retries = 0
+    while True:
+        try:
+            response = requests.post(url, json=payload)
+            if response.ok or response.status_code == requests.codes['conflict']:
+                log.warning("Successfully inserted %s.",doc_type)
+            else:
+                log.error("Failed to add response %s to hubspot warehouse with uri %s: %d.", 
+                    doc_type, uri, response.status_code)
+            return response
+        except requests.exceptions.RequestException as e:
+            if retries > RETRY_LIMIT:
+                raise Exception("Retry exhausted on connection error on inserting document "+str(e)+ " , retries "+ str(retries))
+            log.warning("Connection error occured on insert document %s retry %d, retrying in %d seconds", str(e),retries, 2)
+            retries += 1
+            time.sleep(2)
+        finally:
+            end_time = time.time()
+            log.warning("Create_document took %ds", end_time-start_time )
 
 def create_all_documents(project_id, doc_type, docs):
     if options.dry == "True":

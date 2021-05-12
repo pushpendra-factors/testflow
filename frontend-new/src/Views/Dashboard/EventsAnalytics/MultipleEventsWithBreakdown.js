@@ -148,6 +148,7 @@ function MultipleEventsWithBreakdown({
         page={page}
         durationObj={durationObj}
         categories={categories}
+        section={section}
       />
     );
   } else {

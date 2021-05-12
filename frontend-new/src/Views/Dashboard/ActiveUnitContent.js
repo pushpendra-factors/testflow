@@ -143,6 +143,7 @@ function ActiveUnitContent({
           section={DASHBOARD_MODAL}
           queryTitle={unit.title}
           onReportClose={setwidgetModal}
+          campaignsArrayMapper={arrayMapper}
         />
     </div>
   );

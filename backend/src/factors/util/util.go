@@ -278,6 +278,23 @@ func IsValidUUID(id string) bool {
 	return err == nil
 }
 
+func ConvertIntToUUID(value uint64) (string, error) {
+	if value == 0 {
+		return "", errors.New("invalid integer for conversion")
+	}
+
+	valueAsString := fmt.Sprintf("%v", value)
+	valueLen := len(valueAsString)
+	if valueLen > 12 {
+		return "", errors.New("unsupported integer of 12 digit")
+	}
+
+	lastOctet := "000000000000"
+	lastOctet = lastOctet[:len(lastOctet)-valueLen] + valueAsString
+
+	return fmt.Sprintf("00000000-0000-0000-0000-%s", lastOctet), nil
+}
+
 // StringSliceDiff Returns sliceA - sliceB set of elements.
 func StringSliceDiff(sliceA, sliceB []string) []string {
 	if len(sliceA) == 0 || len(sliceB) == 0 {

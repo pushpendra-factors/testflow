@@ -202,6 +202,15 @@ func (pg *Postgres) CreateSalesforceDocument(projectID uint64, document *model.S
 
 	logCtx = logCtx.WithField("type", document.Type).WithField("value", document.Value)
 
+	newBytes := U.RemoveNullCharacterBytes(document.Value.RawMessage)
+
+	if len(newBytes) != len(document.Value.RawMessage) {
+		log.WithFields(log.Fields{"document_id": document.ID, "project_id": document.ProjectID,
+			"raw_message":    string(document.Value.RawMessage),
+			"sliced_message": string(newBytes)}).Warn("Using new sliced bytes for null character.")
+		document.Value.RawMessage = newBytes
+	}
+
 	_, errCode := getSalesforceDocumentByIDAndType(document.ProjectID,
 		document.ID, document.Type)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {

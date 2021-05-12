@@ -9,6 +9,7 @@ import {
 import {
   CHART_TYPE_BARCHART,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
+  DASHBOARD_WIDGET_SECTION,
 } from '../../../../utils/constants';
 
 function SingleEventSingleBreakdownTable({
@@ -24,6 +25,7 @@ function SingleEventSingleBreakdownTable({
   durationObj,
   categories,
   reportTitle = 'Events Analytics',
+  section,
 }) {
   const appliedBreakdown = useMemo(() => {
     return [breakdown[0].property];
@@ -136,11 +138,19 @@ function SingleEventSingleBreakdownTable({
     <DataTable
       isWidgetModal={isWidgetModal}
       tableData={
-        chartType === CHART_TYPE_BARCHART ? tableData : dateBasedTableData
+        chartType === CHART_TYPE_BARCHART ||
+        section === DASHBOARD_WIDGET_SECTION
+          ? tableData
+          : dateBasedTableData
       }
       searchText={searchText}
       setSearchText={setSearchText}
-      columns={chartType === CHART_TYPE_BARCHART ? columns : dateBasedColumns}
+      columns={
+        chartType === CHART_TYPE_BARCHART ||
+        section === DASHBOARD_WIDGET_SECTION
+          ? columns
+          : dateBasedColumns
+      }
       rowSelection={rowSelection}
       scroll={{ x: 250 }}
       getCSVData={getCSVData}

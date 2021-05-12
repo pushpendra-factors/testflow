@@ -1,9 +1,6 @@
 import React from 'react';
-import {
-  generateColors,
-  SortData,
-  getTitleWithSorter,
-} from '../../../../utils/dataFormatter';
+import moment from 'moment';
+import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 
 export const getBreakdownIndices = (data, breakdown) => {
@@ -22,36 +19,43 @@ export const getDateBreakdownIndices = (data, breakdown) => {
   return result;
 };
 
-export const formatData = (data, arrayMapper, breakdown, currentEventIndex) => {
+export const formatData = (data, arrayMapper, breakdown) => {
+  if (
+    !data ||
+    !Array.isArray(data.result_group) ||
+    data.result_group.length < 2 ||
+    !Array.isArray(data.result_group[1].headers) ||
+    !data.result_group[1].headers.length ||
+    !Array.isArray(data.result_group[1].rows) ||
+    !data.result_group[1].rows.length
+  ) {
+    return [];
+  }
   try {
+    const { headers, rows } = data.result_group[1];
     const breakdownIndices = getBreakdownIndices(data, breakdown);
-    // const dateBreakdownIndices = getDateBreakdownIndices(data, breakdown);
-    const colors = generateColors(arrayMapper.length);
-    const currEventName = arrayMapper.find(
-      (elem) => elem.index === currentEventIndex
-    ).eventName;
-    const currDataIndex = data.result_group[1].headers.findIndex(
-      (elem) => elem === currEventName
-    );
     let result = [];
-    // const dateRows = [...data.result_group[0].rows];
-    if (currDataIndex > -1) {
-      data.result_group[1].rows.forEach((elem, index) => {
-        const label = [];
-        breakdownIndices.forEach((b) => {
-          if (b > -1) {
-            label.push(elem[b]);
-          }
-        });
-        result.push({
-          index,
-          label: label.join(', '),
-          value: elem[currDataIndex],
-          color: colors[currentEventIndex],
-        });
+    rows.forEach((elem, index) => {
+      const label = [];
+      breakdownIndices.forEach((b) => {
+        if (b > -1) {
+          label.push(elem[b]);
+        }
       });
-    }
-    return SortData(result, 'value', 'descend');
+      const measures = {};
+      arrayMapper.forEach((mapper) => {
+        const currDataIndex = headers.findIndex(
+          (elem) => elem === mapper.eventName
+        );
+        measures[mapper.eventName] = elem[currDataIndex];
+      });
+      result.push({
+        index,
+        label: label.join(', '),
+        ...measures,
+      });
+    });
+    return result;
   } catch (err) {
     console.log(err);
     return [];
@@ -59,21 +63,20 @@ export const formatData = (data, arrayMapper, breakdown, currentEventIndex) => {
 };
 
 export const getTableColumns = (
-  data,
-  breakdown,
   arrayMapper,
+  breakdown,
   currentSorter,
   handleSorting
 ) => {
-  const breakdownIndices = getBreakdownIndices(data, breakdown);
-  const breakdownCols = breakdownIndices.map((b, index) => {
+  const breakdownCols = breakdown.map((b, index) => {
     return {
-      title: data.result_group[1].headers[b],
-      dataIndex: data.result_group[1].headers[b],
-      fixed: index < 2 ? 'left' : '',
+      title: `${b.name}_${b.property}`,
+      dataIndex: `${b.name}_${b.property}-${index}`,
+      fixed: !index ? 'left' : '',
       width: 150,
     };
   });
+
   const eventCols = arrayMapper.map((elem) => {
     return {
       title: getTitleWithSorter(
@@ -89,72 +92,48 @@ export const getTableColumns = (
       },
     };
   });
+
   return [...breakdownCols, ...eventCols];
 };
 
 export const getTableData = (
   data,
   breakdown,
-  currentEventIndex,
   arrayMapper,
-  currentSorter,
-  searchText
+  currentEventIndex,
+  searchText,
+  currentSorter
 ) => {
-  const breakdownIndices = getBreakdownIndices(data, breakdown);
-  const currEventName = arrayMapper.find(
-    (elem) => elem.index === currentEventIndex
-  ).eventName;
-
-  const result = data.result_group[1].rows.map((d, index) => {
+  const filteredData = data.filter(
+    (d) => d.label.toLowerCase().indexOf(searchText.toLowerCase()) > -1
+  );
+  const result = filteredData.map(({ label, ...rest }) => {
     const breakdownVals = {};
-    breakdownIndices.forEach((b) => {
-      const dataIndex = data.result_group[1].headers[b];
-      breakdownVals[dataIndex] = d[b];
-    });
-    const eventVals = {};
-    arrayMapper.forEach((elem) => {
-      const currDataIndex = data.result_group[1].headers.findIndex(
-        (header) => header === elem.eventName
-      );
-      eventVals[elem.eventName] = d[currDataIndex];
+    const splittedLabel = label.split(', ');
+    breakdown.forEach((b, index) => {
+      breakdownVals[`${b.name}_${b.property}-${index}`] = splittedLabel[index];
     });
     return {
+      ...rest,
       ...breakdownVals,
-      index,
-      ...eventVals,
     };
   });
-
-  const filteredResult = result.filter((r) => {
-    for (let key in r) {
-      try {
-        return r[key]
-          .toString()
-          .toLowerCase()
-          .includes(searchText.toLowerCase());
-      } catch (err) {
-        console.log(err);
-        return false;
-      }
-    }
-  });
-
-  if (!currentSorter.key) {
-    return SortData(filteredResult, currEventName, 'descend');
+  if (currentSorter.key) {
+    return SortData(result, currentSorter.key, currentSorter.order);
   }
-  return SortData(filteredResult, currentSorter.key, currentSorter.order);
+  return SortData(result, arrayMapper[currentEventIndex].eventName, 'descend');
 };
 
 export const formatDataInHighChartsFormat = (
   data,
   arrayMapper,
-  currentEventIndex,
-  visibleProperties
+  aggregateData
 ) => {
   if (
-    !data.headers ||
+    !data ||
+    !Array.isArray(data.headers) ||
     !data.headers.length ||
-    !data.rows ||
+    !Array.isArray(data.rows) ||
     !data.rows.length
   ) {
     return {
@@ -162,24 +141,24 @@ export const formatDataInHighChartsFormat = (
       highchartsData: [],
     };
   }
-  const colors = generateColors(visibleProperties.length);
-  const event = arrayMapper.find((elem) => elem.index === currentEventIndex)
-    .eventName;
-  const eventIndex = data.headers.findIndex((h) => h === event);
   const dateIndex = data.headers.findIndex((h) => h === 'datetime');
   let differentDates = new Set();
   data.rows.forEach((row) => {
     differentDates.add(row[dateIndex]);
   });
   differentDates = Array.from(differentDates);
-  const resultantData = visibleProperties.map((property, index) => {
-    const initialData = differentDates.map(() => {
-      return 0;
+  const initialData = differentDates.map(() => {
+    return 0;
+  });
+  const resultantData = aggregateData.map((property, index) => {
+    const measures = {};
+    arrayMapper.forEach((mapper) => {
+      measures[mapper.eventName] = [...initialData];
     });
     return {
+      index: property.index,
       name: property.label,
-      data: initialData,
-      color: colors[index],
+      ...measures,
       marker: {
         enabled: false,
       },
@@ -188,13 +167,87 @@ export const formatDataInHighChartsFormat = (
   data.rows.forEach((row) => {
     const breakdownJoin = row.slice(0, dateIndex).join(', ');
     const bIdx = resultantData.findIndex((d) => d.name === breakdownJoin);
-    if (bIdx > -1) {
-      const idx = differentDates.indexOf(row[dateIndex]);
-      resultantData[bIdx].data[idx] = row[eventIndex];
+    const idx = differentDates.indexOf(row[dateIndex]);
+    if (resultantData[bIdx]) {
+      arrayMapper.forEach((mapper) => {
+        const currDataIndex = data.headers.findIndex(
+          (elem) => elem === mapper.eventName
+        );
+        resultantData[bIdx][mapper.eventName][idx] = row[currDataIndex];
+      });
     }
   });
   return {
     categories: differentDates,
     highchartsData: resultantData,
   };
+};
+
+export const getDateBasedColumns = (
+  categories,
+  breakdown,
+  currentSorter,
+  handleSorting
+) => {
+  const breakdownCols = breakdown.map((b, index) => {
+    return {
+      title: `${b.name}_${b.property}`,
+      dataIndex: `${b.name}_${b.property}-${index}`,
+      fixed: !index ? 'left' : '',
+      width: 150,
+    };
+  });
+  const format = 'MMM D';
+  const dateColumns = categories.map((cat) => {
+    return {
+      title: getTitleWithSorter(
+        moment(cat).format(format),
+        moment(cat).format(format),
+        currentSorter,
+        handleSorting
+      ),
+      width: 100,
+      dataIndex: moment(cat).format(format),
+      render: (d) => {
+        return <NumFormat number={d} />;
+      },
+    };
+  });
+  return [...breakdownCols, ...dateColumns];
+};
+
+export const getDateBasedTableData = (
+  seriesData,
+  categories,
+  breakdown,
+  searchText,
+  currentSorter,
+  arrayMapper,
+  currentEventIndex
+) => {
+  const format = 'MMM D';
+  const currentEventName = arrayMapper[currentEventIndex].eventName;
+  const result = seriesData
+    .filter((sd) => sd.name.toLowerCase().includes(searchText.toLowerCase()))
+    .map((sd) => {
+      const dateWiseData = {};
+      categories.forEach((cat, index) => {
+        dateWiseData[moment(cat).format(format)] = sd[currentEventName][index];
+      });
+      const splittedLabel = sd.name.split(',');
+      const breakdownData = {};
+      breakdown.forEach((b, index) => {
+        breakdownData[`${b.name}_${b.property}-${index}`] =
+          splittedLabel[index];
+      });
+      return {
+        index: sd.index,
+        ...breakdownData,
+        ...dateWiseData,
+      };
+    });
+  if (currentSorter.key) {
+    return SortData(result, currentSorter.key, currentSorter.order);
+  }
+  return result;
 };

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS events (
     customer_event_id text, 
     user_id text,
     user_properties_id text, 
-    event_name_id int, 
+    event_name_id text, 
     count bigint,
     properties json,
     user_properties json,
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS user_properties (
 );
 
 CREATE TABLE IF NOT EXISTS event_names (
-    id bigint AUTO_INCREMENT,
+    id text, -- UUID
     project_id bigint,
     name text,
     type varchar(2),
@@ -89,11 +89,11 @@ CREATE TABLE IF NOT EXISTS event_names (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
-    PRIMARY KEY (project_id, id),
-    UNIQUE KEY project_id_type_filter_expr_idx(project_id, type, filter_expr)
+    KEY (project_id, name) USING CLUSTERED COLUMNSTORE
 
     -- Required constraints.
     -- Unique (project_id, name, type) WHERE type != 'FE'
+    -- Unique (project_id, id)
     -- Ref (project_id) -> projects(id)
 );
 
@@ -112,9 +112,10 @@ CREATE TABLE IF NOT EXISTS adwords_documents (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
-    PRIMARY KEY (project_id, customer_account_id, type, timestamp, id)
+    KEY (project_id, customer_account_id, timestamp) USING CLUSTERED COLUMNSTORE
     
     -- Required constraints.
+    -- Unique (project_id, customer_account_id, timestamp, id)
     -- Ref (project_id) -> projects(id)
     -- Ref (project_id, customer_account_id) -> project_settings(project_id, int_adwords_customer_account_id)
 );
@@ -240,9 +241,10 @@ CREATE TABLE IF NOT EXISTS facebook_documents (
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
-    PRIMARY KEY (project_id, customer_ad_account_id, platform, type, timestamp, id)
+    KEY (project_id, customer_ad_account_id, platform, timestamp) USING CLUSTERED COLUMNSTORE
 
     -- Required constraints.
+    -- Unique (project_id, customer_ad_account_id, platform, type, timestamp, id)
     -- Ref (project_id) -> projects(id)
     -- Ref (project_id, customer_ad_account_id) -> project_settings(project_id, int_facebook_ad_account)
 );
@@ -318,13 +320,13 @@ CREATE TABLE IF NOT EXISTS hubspot_documents (
     user_id text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
-    SHARD KEY (project_id),
-    PRIMARY KEY (project_id, id, type, action, timestamp),
-    KEY project_id_type_timestamp_user_id_idx(project_id, type, timestamp DESC, user_id),
-    KEY project_id_type_user_id_timestamp_idx(project_id, type, user_id, timestamp DESC)
+    SHARD KEY (project_id, type, action),
+    KEY (project_id, type, timestamp) USING CLUSTERED COLUMNSTORE,
+    KEY (user_id) USING HASH
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
+    -- Unique (project_id, id, type, action, timestamp)
     -- Ref (project_id, user_id) -> users(project_id, id)
 );
 
@@ -449,13 +451,13 @@ CREATE TABLE IF NOT EXISTS salesforce_documents (
     user_id text,
     created_at timestamp(6) NOT NULL, 
     updated_at timestamp(6) NOT NULL,
-    SHARD KEY (project_id),
-    PRIMARY KEY (project_id, id, type, timestamp),
-    KEY project_id_type_timestamp_user_id_idx(project_id, type, timestamp DESC, user_id),
-    KEY project_id_type_user_id_timestamp_idx(project_id, type, user_id, timestamp DESC)
+    SHARD KEY (project_id, type, action),
+    KEY (project_id, type, timestamp) USING CLUSTERED COLUMNSTORE,
+    KEY (user_id) USING HASH
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
+    -- Unique (project_id, id, type, action, timestamp)
     -- Ref (project_id, user_id) -> users(project_id, id)
 );
 
@@ -490,7 +492,12 @@ CREATE TABLE IF NOT EXISTS linkedin_documents (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
-    PRIMARY KEY (project_id, customer_ad_account_id, type, timestamp, id)
+    KEY (project_id, customer_ad_account_id, timestamp) USING CLUSTERED COLUMNSTORE
+
+    -- Required constraints.
+    -- Unique (project_id, customer_ad_account_id, type, timestamp, id)
+    -- Ref (project_id) -> projects(id)
+    -- Ref (project_id, customer_ad_account_id) -> project_settings(project_id, int_facebook_ad_account)
 );
 
 CREATE TABLE IF NOT EXISTS smart_property_rules (

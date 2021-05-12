@@ -111,6 +111,7 @@ function SingleEventSingleBreakdown({
         visibleProperties={visibleProperties}
         durationObj={durationObj}
         categories={categories}
+        section={section}
       />
     );
   } else if (chartType === CHART_TYPE_STACKED_AREA) {

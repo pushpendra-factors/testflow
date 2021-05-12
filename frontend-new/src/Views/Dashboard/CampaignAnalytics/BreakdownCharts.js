@@ -14,10 +14,12 @@ import {
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
   DASHBOARD_WIDGET_AREA_CHART_HEIGHT,
+  MAX_ALLOWED_VISIBLE_PROPERTIES,
 } from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
+import { generateColors, SortData } from '../../../utils/dataFormatter';
 
 function BreakdownCharts({
   arrayMapper,
@@ -29,50 +31,63 @@ function BreakdownCharts({
   unit,
   section,
 }) {
-  const [chartsData, setChartsData] = useState([]);
-  const currentEventIndex = 0;
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const maxAllowedVisibleProperties = 5;
+  const currentEventIndex = 0;
 
-  useEffect(() => {
-    const formattedData = formatData(
-      data,
-      arrayMapper,
-      breakdown,
-      currentEventIndex
-    );
-    setVisibleProperties(formattedData.slice(0, maxAllowedVisibleProperties));
-    setChartsData(formattedData);
-  }, [
-    data,
-    arrayMapper,
-    currentEventIndex,
-    breakdown,
-    maxAllowedVisibleProperties,
-  ]);
+  const aggregateData = useMemo(() => {
+    return formatData(data, arrayMapper, breakdown);
+  }, [data, breakdown, arrayMapper]);
+
+  const chartData = useMemo(() => {
+    const colors = generateColors(1);
+    const currEventName = arrayMapper.find(
+      (elem) => elem.index === currentEventIndex
+    ).eventName;
+    const result = aggregateData.map((d) => {
+      return {
+        ...d,
+        color: colors[0],
+        value: d[currEventName],
+      };
+    });
+    return SortData(result, currEventName, 'descend');
+  }, [currentEventIndex, arrayMapper, aggregateData]);
 
   const { categories, highchartsData } = useMemo(() => {
-    if (chartType === CHART_TYPE_BARCHART || chartType === CHART_TYPE_TABLE) {
-      return {
-        categories: [],
-        highchartsData: [],
-      };
-    }
     return formatDataInHighChartsFormat(
       data.result_group[0],
       arrayMapper,
-      currentEventIndex,
-      visibleProperties
+      aggregateData
     );
-  }, [
-    data.result_group,
-    arrayMapper,
-    currentEventIndex,
-    visibleProperties,
-    chartType,
-  ]);
+  }, [data.result_group, arrayMapper, aggregateData]);
 
-  if (!chartsData.length) {
+  const visibleSeriesData = useMemo(() => {
+    const colors = generateColors(visibleProperties.length);
+    const currEventName = arrayMapper.find(
+      (elem) => elem.index === currentEventIndex
+    ).eventName;
+    return highchartsData
+      .filter(
+        (elem) =>
+          visibleProperties.findIndex((vp) => vp.index === elem.index) > -1
+      )
+      .map((elem, index) => {
+        const color = colors[index];
+        return {
+          ...elem,
+          data: elem[currEventName],
+          color,
+        };
+      });
+  }, [highchartsData, visibleProperties, arrayMapper, currentEventIndex]);
+
+  useEffect(() => {
+    setVisibleProperties([
+      ...chartData.slice(0, MAX_ALLOWED_VISIBLE_PROPERTIES),
+    ]);
+  }, [chartData]);
+
+  if (!chartData.length) {
     return (
       <div className='mt-4 flex justify-center items-center w-full h-64 '>
         <NoDataChart />
@@ -111,7 +126,7 @@ function BreakdownCharts({
       <StackedAreaChart
         frequency='date'
         categories={categories}
-        data={highchartsData}
+        data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
@@ -123,7 +138,7 @@ function BreakdownCharts({
       <StackedBarChart
         frequency='date'
         categories={categories}
-        data={highchartsData}
+        data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
@@ -135,7 +150,7 @@ function BreakdownCharts({
       <LineChart
         frequency='date'
         categories={categories}
-        data={highchartsData}
+        data={visibleSeriesData}
         height={DASHBOARD_WIDGET_AREA_CHART_HEIGHT}
         legendsPosition='top'
         cardSize={unit.cardSize}
@@ -145,16 +160,17 @@ function BreakdownCharts({
   } else {
     chartContent = (
       <BreakdownTable
+        chartsData={chartData}
+        seriesData={highchartsData}
+        categories={categories}
+        breakdown={breakdown}
         currentEventIndex={currentEventIndex}
         chartType={chartType}
-        chartsData={chartsData}
-        breakdown={breakdown}
         arrayMapper={arrayMapper}
         isWidgetModal={isWidgetModal}
-        responseData={data}
         visibleProperties={visibleProperties}
-        maxAllowedVisibleProperties={maxAllowedVisibleProperties}
         setVisibleProperties={setVisibleProperties}
+        section={section}
       />
     );
   }
