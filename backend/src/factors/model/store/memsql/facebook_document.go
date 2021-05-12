@@ -25,24 +25,6 @@ const (
 	metricsExpressionOfDivisionWithHandleOf0AndNull = "SUM(JSON_EXTRACT_STRING(value,'%s'))*%s/(case when sum(JSON_EXTRACT_STRING(value,'%s')) = 0 then 100000 else NULLIF(sum(JSON_EXTRACT_STRING(value,'%s')), 100000) end)"
 )
 
-var selectableMetricsForFacebook = []string{
-	"conversion",
-	"video_p50_watched_actions",
-	"video_p25_watched_actions",
-	"video_30_sec_watched_actions",
-	"video_p100_watched_actions",
-	"video_p75_watched_actions",
-	"cost_per_click",
-	"cost_per_link_click",
-	"cost_per_thousand_impressions",
-	"click_through_rate",
-	"link_click_through_rate",
-	"link_clicks",
-	"frequency",
-	"leads",
-	"reach",
-}
-
 var mapOfFacebookObjectsToPropertiesAndRelated = map[string]map[string]PropertiesAndRelated{
 	CAFilterCampaign: {
 		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
@@ -65,12 +47,12 @@ var mapOfFacebookObjectsToPropertiesAndRelated = map[string]map[string]Propertie
 		"objective":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 		"bid_strategy":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 	},
-	CAFilterAd: {
-		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	},
+	// CAFilterAd: {
+	// 	"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	// 	"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	// 	"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	// 	"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	// },
 }
 
 var facebookDocumentTypeAlias = map[string]int{
@@ -101,10 +83,10 @@ var objectAndPropertyToValueInFacebookReportsMapping = map[string]string{
 	"ad_set:bid_strategy":        "JSON_EXTRACT_STRING(value, 'ad_set_bid_strategy')",
 	"ad_set:name":                "JSON_EXTRACT_STRING(value, 'adset_name')",
 	"ad_set:id":                  "ad_set_id::bigint",
-	"ad:id":                      "ad_id::bigint",
-	"ad:name":                    "JSON_EXTRACT_STRING(value, 'ad_name')",
-	"ad:configured_status":       "JSON_EXTRACT_STRING(value, 'ad_configured_status')",
-	"ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
+	// "ad:id":                      "ad_id::bigint",
+	// "ad:name":                    "JSON_EXTRACT_STRING(value, 'ad_name')",
+	// "ad:configured_status":       "JSON_EXTRACT_STRING(value, 'ad_configured_status')",
+	// "ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
 }
 
 var objectToValueInFacebookFiltersMapping = map[string]string{
@@ -125,17 +107,16 @@ var objectToValueInFacebookFiltersMapping = map[string]string{
 	"ad_set:bid_strategy":        "JSON_EXTRACT_STRING(value,'ad_set_bid_strategy')",
 	"ad_set:name":                "JSON_EXTRACT_STRING(value,'adset_name')",
 	"ad_set:id":                  "ad_set_id",
-	"ad:id":                      "ad_id",
-	"ad:name":                    "JSON_EXTRACT_STRING(value, 'ad_name')",
-	"ad:configured_status":       "JSON_EXTRACT_STRING(value, 'ad_configured_status')",
-	"ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
+	// "ad:id":                      "ad_id",
+	// "ad:name":                    "JSON_EXTRACT_STRING(value, 'ad_name')",
+	// "ad:configured_status":       "JSON_EXTRACT_STRING(value, 'ad_configured_status')",
+	// "ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
 }
 
 var facebookMetricsToAggregatesInReportsMapping = map[string]string{
 	"impressions":                   "SUM(JSON_EXTRACT_STRING(value,'impressions'))",
 	"clicks":                        "SUM(JSON_EXTRACT_STRING(value,'clicks'))",
 	"spend":                         "SUM(JSON_EXTRACT_STRING(value,'spend'))",
-	"conversions":                   "SUM(JSON_EXTRACT_STRING(value,'conversions'))",
 	"video_p50_watched_actions":     "SUM(JSON_EXTRACT_STRING(value,'video_p50_watched_actions'))",
 	"video_p25_watched_actions":     "SUM(JSON_EXTRACT_STRING(value,'video_p25_watched_actions'))",
 	"video_30_sec_watched_actions":  "SUM(JSON_EXTRACT_STRING(value,'video_30_sec_watched_actions'))",
@@ -177,8 +158,6 @@ const facebookCampaignMetadataFetchQueryStr = "select campaign_id, JSON_EXTRACT_
 	"project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) and (campaign_id, timestamp) " +
 	"in (select campaign_id, max(timestamp) from facebook_documents where type = ? " +
 	"and project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_id)"
-
-var objectsForFacebook = []string{CAFilterCampaign, CAFilterAdGroup, CAFilterAd}
 
 func (store *MemSQL) satisfiesFacebookForeignConstraints(facebookDocument model.FacebookDocument) int {
 	_, errCode := store.GetProject(facebookDocument.ProjectID)
@@ -277,8 +256,8 @@ func getFacebookDocumentTypeAliasByType() map[int]string {
 
 // @TODO Kark v1
 func (store *MemSQL) buildFbChannelConfig(projectID uint64) *model.ChannelConfigResult {
-	facebookObjectsAndProperties := store.buildObjectAndPropertiesForFacebook(projectID, objectsForFacebook)
-	selectMetrics := append(selectableMetricsForAllChannels, selectableMetricsForFacebook...)
+	facebookObjectsAndProperties := store.buildObjectAndPropertiesForFacebook(projectID, model.ObjectsForFacebook)
+	selectMetrics := append(selectableMetricsForAllChannels, model.SelectableMetricsForFacebook...)
 	objectsAndProperties := facebookObjectsAndProperties
 
 	return &model.ChannelConfigResult{

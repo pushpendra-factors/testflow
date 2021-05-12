@@ -53,7 +53,8 @@ class BaseInfoExtract(BaseExtract):
         elif self.is_eligible_for_backfill():
             return SyncUtil.get_next_timestamps(0, int(datetime.utcnow().strftime('%Y%m%d')))
         else:
-            return SyncUtil.get_next_timestamps(self.last_timestamp, int(datetime.utcnow().strftime('%Y%m%d')))
+            min_timestamp_to_fill = min(self.project_min_timestamp, self.last_timestamp)
+            return SyncUtil.get_next_timestamps(min_timestamp_to_fill, int(datetime.utcnow().strftime('%Y%m%d')))
 
     def is_first_run(self):
         return self.last_timestamp == 0 or self.last_timestamp < self.get_max_look_back_timestamp()
@@ -77,12 +78,12 @@ class BaseInfoExtract(BaseExtract):
                 bucket_name = FacebookStorageDecider.get_bucket_name(self.env, self.dry)
                 file_path = FacebookStorageDecider.get_file_path(self.curr_timestamp, self.project_id,
                                                                  self.customer_account_id, self.type_alias)
-                destination.set_attributes({"bucket_name": bucket_name, "file_path": file_path})
+                destination.set_attributes({"bucket_name": bucket_name, "file_path": file_path, "file_override": False})
             else:
                 file_path = FacebookStorageDecider.get_file_path(self.curr_timestamp, self.project_id,
                                                                  self.customer_account_id, self.type_alias)
                 destination.set_attributes(
-                    {"base_path": "/usr/local/var/factors/cloud_storage/", "file_path": file_path})
+                    {"base_path": "/usr/local/var/factors/cloud_storage/", "file_path": file_path, "file_override": False})
         return
 
     def read_records(self):
@@ -91,8 +92,8 @@ class BaseInfoExtract(BaseExtract):
             log.warning(ERROR_MESSAGE.format(self.get_name(), result_response.status_code, result_response.text,
                                  self.project_id))
             MetricsAggregator.update_job_stats(self.project_id, self.customer_account_id,
-                                               self.type_alias, "failure", result_response.text)
-            return "failure"
+                                               self.type_alias, "failed", result_response.text)
+            return "failed"
         else:
             MetricsAggregator.update_job_stats(self.project_id, self.customer_account_id,
                                                self.type_alias, "success", "")

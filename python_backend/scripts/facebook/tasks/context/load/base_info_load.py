@@ -76,6 +76,8 @@ class BaseInfoLoad(BaseLoad):
         return
 
     def write_records(self):
+        if self.dry:
+            return        
         records_string = JsonUtil.create(self.records)
         for destination in self.get_destinations():
             destination.write(records_string)

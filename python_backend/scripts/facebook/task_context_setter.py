@@ -26,7 +26,7 @@ from scripts.facebook.tasks.load.base_report_load import BaseReportLoad
 class TaskContextSetter:
 
     def __init__(self, last_sync_info, facebook_int_setting, env, dry, workflow_type, task_type,
-                 facebook_data_service_path, input_from_timestamp, input_to_timestamp):
+                 facebook_data_service_path, input_from_timestamp, input_to_timestamp, project_min_timestamp):
         self.last_sync_info = last_sync_info
         self.facebook_int_setting = facebook_int_setting
         self.env = env
@@ -36,6 +36,7 @@ class TaskContextSetter:
         self.facebook_data_service_path = facebook_data_service_path
         self.input_from_timestamp = input_from_timestamp
         self.input_to_timestamp = input_to_timestamp
+        self.project_min_timestamp = project_min_timestamp
 
     def get_task(self):
         if self.task_type == EXTRACT:
@@ -64,6 +65,7 @@ class TaskContextSetter:
         task_context.add_input_from_timestamp(self.input_from_timestamp)
         task_context.add_input_to_timestamp(self.input_to_timestamp)
         task_context.add_facebook_data_service_path(self.facebook_data_service_path)
+        task_context.add_project_min_timestamp(self.project_min_timestamp)
         return task_context
 
     def get_extract_task_context(self):

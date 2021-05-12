@@ -26,7 +26,8 @@ class BaseReportExtract(BaseExtract):
     TASK_TYPE = EXTRACT
     UNFORMATTED_URL = 'https://graph.facebook.com/v9.0/{}/insights?breakdowns={' \
                       '}&&action_breakdowns=action_type&&time_range={}&&fields={}&&access_token={}&&level={' \
-                      '}&&limit=1000 '
+                      '}&&filtering=[{{\'field\':\'impressions\',\'operator\':\'GREATER_THAN_OR_EQUAL\',\'value\':0}}]&&limit=1000'
+
 
     def add_job_running_context(self):
         pass
@@ -52,9 +53,8 @@ class BaseReportExtract(BaseExtract):
         curr_timestamp_in_string = TimeUtil.get_string_of_specific_format_from_timestamp(self.curr_timestamp,
                                                                                          '%Y-%m-%d')
         time_range = {'since': curr_timestamp_in_string, 'until': curr_timestamp_in_string}
-        return self.UNFORMATTED_URL.format(self.customer_account_id, self.get_segments(), time_range, self.get_fields(),
-                                           self.int_facebook_access_token, self.LEVEL_BREAKDOWN
-                                           )
+        url_ = self.UNFORMATTED_URL.format(self.customer_account_id, self.get_segments(), time_range, self.get_fields(),self.int_facebook_access_token, self.LEVEL_BREAKDOWN)
+        return url_
 
     def get_next_timestamps(self):
         if self.input_from_timestamp is not None and self.input_to_timestamp is not None:
@@ -77,12 +77,12 @@ class BaseReportExtract(BaseExtract):
                 bucket_name = FacebookStorageDecider.get_bucket_name(self.env, self.dry)
                 file_path = FacebookStorageDecider.get_file_path(self.curr_timestamp, self.project_id,
                                                                  self.customer_account_id, self.type_alias)
-                destination.set_attributes({"bucket_name": bucket_name, "file_path": file_path})
+                destination.set_attributes({"bucket_name": bucket_name, "file_path": file_path, "file_override": True})
             else:
                 file_path = FacebookStorageDecider.get_file_path(self.curr_timestamp, self.project_id,
                                                                  self.customer_account_id, self.type_alias)
                 destination.set_attributes(
-                    {"base_path": "/usr/local/var/factors/cloud_storage/", "file_path": file_path})
+                    {"base_path": "/usr/local/var/factors/cloud_storage/", "file_path": file_path, "file_override": True})
         return
 
     # Read records gives response of status of message
@@ -92,8 +92,8 @@ class BaseReportExtract(BaseExtract):
             log.warning(ERROR_MESSAGE.format(self.get_name(), result_response.status_code, result_response.text,
                                  self.project_id))
             MetricsAggregator.update_job_stats(self.project_id, self.customer_account_id,
-                                               self.type_alias, "failure", result_response.text)
-            return "failure"
+                                               self.type_alias, "failed", result_response.text)
+            return "failed"
         else:
             MetricsAggregator.update_job_stats(self.project_id, self.customer_account_id,
                                                self.type_alias, "success", "")

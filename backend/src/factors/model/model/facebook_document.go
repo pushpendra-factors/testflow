@@ -37,6 +37,23 @@ type FacebookLastSyncInfoPayload struct {
 	CustomerAdAccountId string `json:"account_id"`
 }
 
+var SelectableMetricsForFacebook = []string{
+	"video_p50_watched_actions",
+	"video_p25_watched_actions",
+	"video_30_sec_watched_actions",
+	"video_p100_watched_actions",
+	"video_p75_watched_actions",
+	"cost_per_click",
+	"cost_per_link_click",
+	"cost_per_thousand_impressions",
+	"click_through_rate",
+	"link_click_through_rate",
+	"link_clicks",
+	"frequency",
+	"leads",
+	"reach",
+}
+
 // To change the below when facebook objectAndPropertyToValueInFacebookReportsMapping or any other changes.
 var ObjectToValueInFacebookJobsMapping = map[string]string{
 	"campaign:daily_budget":      "campaign_daily_budget",
@@ -80,7 +97,6 @@ var FacebookExternalRepresentationToInternalRepresentation = map[string]string{
 	"clicks":                        "clicks",
 	"link_clicks":                   "link_clicks",
 	"spend":                         "spend",
-	"conversion":                    "conversions",
 	"video_p50_watched_actions":     "video_p50_watched_actions",
 	"video_p25_watched_actions":     "video_p25_watched_actions",
 	"video_30_sec_watched_actions":  "video_30_sec_watched_actions",
@@ -104,7 +120,6 @@ var FacebookInternalRepresentationToExternalRepresentation = map[string]string{
 	"clicks":                        "clicks",
 	"link_clicks":                   "link_clicks",
 	"spend":                         "spend",
-	"conversions":                   "conversion",
 	"video_p50_watched_actions":     "video_p50_watched_actions",
 	"video_p25_watched_actions":     "video_p25_watched_actions",
 	"video_30_sec_watched_actions":  "video_30_sec_watched_actions",
@@ -145,6 +160,11 @@ var FacebookObjectMapForSmartProperty = map[string]string{
 	"ad_set":   "ad_group",
 }
 
+var ObjectsForFacebook = []string{CAFilterCampaign, CAFilterAdGroup}
+
 const (
 	FacebookSpecificError = "Failed in facebook with the following error."
+	CAFilterCampaign      = "campaign"
+	CAFilterAdGroup       = "ad_group"
+	CAFilterAd            = "ad"
 )

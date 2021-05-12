@@ -73,3 +73,7 @@ class BaseLoad:
     def add_log(self, running_status):
         log.warning("%s load of job for Project Id: %s, Timestamp: %d, Doc Type: %s", running_status,
                     self.project_id, self.curr_timestamp, self.type_alias)
+
+    # This is used only in extract
+    def add_project_min_timestamp(self, project_min_timestamp):
+        pass
