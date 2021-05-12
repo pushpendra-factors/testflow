@@ -21,6 +21,7 @@ class BaseExtract:
     input_to_timestamp = None
     curr_timestamp = None
     facebook_data_service_path = None
+    project_min_timestamp = None
 
     source = None
     destination = None
@@ -62,6 +63,10 @@ class BaseExtract:
 
     def add_facebook_data_service_path(self, facebook_data_service_path):
         self.facebook_data_service_path = facebook_data_service_path
+
+    # Used in info task. Min of (info, project_reports) is used.
+    def add_project_min_timestamp(self, project_min_timestamp):
+        self.project_min_timestamp = project_min_timestamp
 
     def add_log(self, running_status):
         log.warning("%s extract of job for Project Id: %s, Timestamp: %d, Doc Type: %s", running_status,

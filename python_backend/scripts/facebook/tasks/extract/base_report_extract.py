@@ -63,7 +63,7 @@ class BaseReportExtract(BaseExtract):
                 log.warning("Failed with exception: %d %s %s", task_context.project_id,
                             task_context.customer_account_id, message)
                 MetricsAggregator.update_job_stats(task_context.project_id, task_context.customer_account_id,
-                                                   task_context.type_alias, "failure", message)
+                                                   task_context.type_alias, "failed", message)
         return
 
     # Later can add decorators for tracking.

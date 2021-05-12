@@ -11,8 +11,11 @@ from scripts.facebook.task_context_setter import TaskContextSetter
 # Later - precise system requirements and task phases of workflow. Eg - extract just to s3 Raw, transform
 # and then multiple stage merges or transformation and loads.
 # Later check how to handle permission denied.
+# Imp migration - Following has to be handled properly if only few of the records/reports are to be handled.
+# TODO IMP - Handle migrations properly.
+# This might fail if metadata job itself is not run using run_job.
 class JobSchedulerAndRunner:
-    TASKS_WITH_INC_EXECUTION_ORDER = [AD, AD_SET, CAMPAIGN, CAMPAIGN_INSIGHTS, AD_SET_INSIGHTS, AD_INSIGHTS]
+    TASKS_WITH_INC_EXECUTION_ORDER = [AD, AD_SET, CAMPAIGN, CAMPAIGN_INSIGHTS, AD_SET_INSIGHTS]
 
     @classmethod
     def sync(cls, facebook_int_setting: dict, sync_info_with_type: dict):
@@ -21,6 +24,7 @@ class JobSchedulerAndRunner:
             facebook_int_setting.get(PROJECT_ID),
             facebook_int_setting.get(FACEBOOK_AD_ACCOUNT),
             sync_info_with_type)
+        project_min_timestamp = JobSchedulerAndRunner.get_project_min_timestamp(ordered_last_sync_infos)
         for task_name in WORKFLOW_TO_TASKS[facebook_config.type_of_run]:
             for last_sync_info in ordered_last_sync_infos:
                 try:
@@ -29,7 +33,8 @@ class JobSchedulerAndRunner:
                                                             facebook_config.type_of_run, task_name,
                                                             facebook_config.get_data_service_path(),
                                                             facebook_config.last_timestamp,
-                                                            facebook_config.to_timestamp)
+                                                            facebook_config.to_timestamp,
+                                                            project_min_timestamp)
                     task_context = task_context_setter.get_task_context()
                     task = task_context_setter.get_task()
                     task.execute(task_context)
@@ -41,7 +46,16 @@ class JobSchedulerAndRunner:
                                 facebook_int_setting["int_facebook_ad_account"], message)
                     MetricsAggregator.update_job_stats(facebook_int_setting["project_id"],
                                                        facebook_int_setting["int_facebook_ad_account"],
-                                                       last_sync_info.get("type_alias"), "failure", message)
+                                                       last_sync_info.get("type_alias"), "failed", message)
+
+
+    @staticmethod
+    def get_project_min_timestamp(sync_infos):
+        min_timestamp = 80001229
+        for sync_info in sync_infos:
+            if "insights" in sync_info[TYPE_ALIAS]:
+                min_timestamp = min(sync_info[LAST_TIMESTAMP], min_timestamp)
+        return min_timestamp
 
     # Manually defining order of tasks.
     @staticmethod
