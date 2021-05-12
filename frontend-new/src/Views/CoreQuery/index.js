@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import moment from 'moment';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector, useDispatch } from 'react-redux';
@@ -620,6 +620,16 @@ function CoreQuery({
   let reverseEventsMapper = {};
   let arrayMapper = [];
 
+  const campaignsArrayMapper = useMemo(() => {
+    return campaignState.select_metrics.map((metric, index) => {
+      return {
+        eventName: metric,
+        index,
+        mapper: `event${index + 1}`,
+      };
+    });
+  }, [campaignState.select_metrics]);
+
   appliedQueries.forEach((q, index) => {
     eventsMapper[`${q}`] = `event${index + 1}`;
     reverseEventsMapper[`event${index + 1}`] = q;
@@ -716,6 +726,7 @@ function CoreQuery({
             section={REPORT_SECTION}
             runAttrCmprQuery={runAttrCmprQuery}
             cmprResultState={cmprResultState}
+            campaignsArrayMapper={campaignsArrayMapper}
           />
         ) : (
           <CoreQueryHome

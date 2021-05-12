@@ -41,6 +41,7 @@ function ReportContent({
   cmprDuration,
   runAttrCmprQuery,
   cmprResultState,
+  campaignsArrayMapper
 }) {
   let content = null,
     queryDetail = null,
@@ -189,15 +190,6 @@ function ReportContent({
     }
 
     if (queryType === QUERY_TYPE_CAMPAIGN) {
-      const campaignsArrayMapper = campaignState.select_metrics.map(
-        (metric, index) => {
-          return {
-            eventName: metric,
-            index,
-            mapper: `event${index + 1}`,
-          };
-        }
-      );
       content = (
         <CampaignAnalytics
           resultState={resultState}
