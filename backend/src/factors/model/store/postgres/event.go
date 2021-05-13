@@ -1469,17 +1469,21 @@ func (pg *Postgres) OverwriteEventUserPropertiesByID(projectID uint64,
 func (pg *Postgres) PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
 	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
 		" events.properties, users.join_timestamp, events.user_properties FROM events "+
-		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
+		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
+		"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
 		"WHERE events.project_id = %d AND events.timestamp BETWEEN  %d AND %d "+
-		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d", projectID, startTime, endTime, model.EventsPullLimit+1)
+		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d",
+		projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
 
 	if config.ShouldUseUserPropertiesTableForRead(projectID) {
 		rawQuery = fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
 			" events.properties, users.join_timestamp, user_properties.properties FROM events "+
-			"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
+			"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
+			"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
 			"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
 			"WHERE events.project_id = %d AND events.timestamp BETWEEN  %d AND %d "+
-			"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d", projectID, startTime, endTime, model.EventsPullLimit+1)
+			"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d",
+			projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
 	}
 
 	db := C.GetServices().Db
@@ -1491,15 +1495,17 @@ func (pg *Postgres) PullEventRowsForArchivalJob(projectID uint64, startTime, end
 
 	rawQuery := fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
 		"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, events.user_properties FROM events "+
-		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
-		"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, startTime, endTime)
+		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
+		"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
+		"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, projectID, startTime, endTime)
 
 	if config.ShouldUseUserPropertiesTableForRead(projectID) {
 		rawQuery = fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
 			"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, user_properties.properties FROM events "+
-			"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
+			"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
+			"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
 			"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
-			"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, startTime, endTime)
+			"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, projectID, startTime, endTime)
 	}
 
 	db := C.GetServices().Db

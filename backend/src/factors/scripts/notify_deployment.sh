@@ -83,13 +83,16 @@ if [[ "${lines_to_delete}" != "" ]]; then
     highlights=`echo "${highlights}" | sed "${lines_to_delete}d"`
 fi
 
-deployer_email=`gcloud config list account --format "value(core.account)" 2> /dev/null`
+deployer_email=`git config --list | grep user.email | cut -d'=' -f2`
+if [ -z "${deployer_email}" ]; then
+    deployer_email=`gcloud config list account --format "value(core.account)" 2> /dev/null`
+fi
 branch_name=`git branch --show-current`
 
 # TODO(prateek): Make alert more rich in terms of tagging and blocks.
 echo "Sending alert on slack"
 payload="-------------------------------------------------------------
-*Deployment initiated for '${IMAGE_NAME}'. By ${deployer_email} from branch '${branch_name}'*."
+*Deployment initiated for '${IMAGE_NAME}' with tag '${TAG}'. By ${deployer_email} from branch '${branch_name}'*."
 
 # If production, add commit hightlights for the deployment.
 if [[ "${ENV}" == "production" ]]; then

@@ -341,7 +341,7 @@ upload-copy-user-properties-migration:
 	docker push us.gcr.io/factors-$(ENV)/copy-user-properties-migration:$(TAG)
 
 notify-deployment:
-	$(GOPATH)/src/factors/scripts/notify_deployment.sh
+	TAG=$(TAG) $(GOPATH)/src/factors/scripts/notify_deployment.sh
 
 build-api-doc:
 	cd $(GOPATH)/src/factors;../../bin/swag init -g app/app.go

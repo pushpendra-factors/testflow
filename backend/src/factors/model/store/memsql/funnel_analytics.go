@@ -542,7 +542,8 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 			addSelect = joinWithComma(addSelect, egSelect)
 		}
 		addParams = egParams
-		addJoinStatement := "JOIN users ON events.user_id=users.id"
+		addJoinStatement := "JOIN users ON events.user_id=users.id AND users.project_id = ? "
+		addParams = append(addParams, projectId)
 		if C.ShouldUseUserPropertiesTableForRead(projectId) {
 			if groupByUserProperties && !hasWhereEntity(q.EventsWithProperties[i], model.PropertyEntityUser) {
 				// If event has filter on user property, JOIN on user_properties is added in next step.

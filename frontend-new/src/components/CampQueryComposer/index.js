@@ -3,7 +3,7 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import styles from './index.module.scss';
 import { SVG, Text } from '../../components/factorsComponents';
-import { Button, Popover } from 'antd';
+import { Button, Popover, Radio } from 'antd';
 
 import ChannelBlock from './ChannelBlock';
 
@@ -67,10 +67,31 @@ const CampQueryComposer = ({ activeProject, channel,
         setCampFilters([]);
     }
 
-    const renderChannelBlock = () => {
-        if (channel) {
-            return <ChannelBlock channel={channel} onChannelSelect={setChannel}></ChannelBlock>
+    const changeSource = (val) => {
+        if(val.target.value === 'search_console') {
+            setChannel('search_console');
         } else {
+            setChannel('');
+        }
+    }
+
+    const renderChannelSource = () => {
+        const val = channel === 'search_console' ? 'search_console' : 'channels';
+        return (<div>
+            <Radio.Group onChange={changeSource} value={val}>
+                                    <Radio value={`channels`}>Ad Channels</Radio>
+                                    <Radio value={`search_console`}>Search Console</Radio>
+            </Radio.Group>
+
+        </div>);
+    }
+
+    const renderChannelBlock = () => {
+        if (channel && channel !== 'search_console') {
+            return <ChannelBlock channel={channel} onChannelSelect={setChannel}></ChannelBlock>
+        } 
+
+        if(!channel) {
             return <ChannelBlock onChannelSelect={setChannel}></ChannelBlock>
         }
 
@@ -291,9 +312,18 @@ const CampQueryComposer = ({ activeProject, channel,
                         <Text type={'title'} level={7} weight={'bold'}>Select Channel</Text>
                     </div>
                     <div className={styles.composer__section__content}>
-                        {renderChannelBlock()}
+                        {renderChannelSource()}
                     </div>
                 </div>
+
+                {channel !== 'search_console' ? <div className={`${styles.composer__section} fa--query_block`}>
+                    <div className={styles.composer__section__title}>
+                        <Text type={'title'} level={7} weight={'bold'}>Select Channel</Text>
+                    </div>
+                    <div className={styles.composer__section__content}>
+                        {renderChannelBlock()}
+                    </div>
+                </div> : null}
 
                 <div className={`${styles.composer__section} fa--query_block`}>
                     <div className={styles.composer__section__title}>
