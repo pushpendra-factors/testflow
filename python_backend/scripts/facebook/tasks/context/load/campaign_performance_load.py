@@ -24,6 +24,8 @@ class CampaignPerformanceLoad(BaseReportLoad):
     def merge_dependencies_and_current_task_records(self):
         records = self.records
         for record in records:
+            if record["campaign_id"] not in self.campaigns:
+                continue
             required_campaign = self.campaigns[record["campaign_id"]]
             for field in self.FIELDS_TO_BE_ADDED:
                 record["campaign_" + field] = required_campaign.get(field)

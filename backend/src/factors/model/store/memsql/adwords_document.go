@@ -37,7 +37,10 @@ const (
 	staticWhereStatementForAdwords = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument            = " FROM adwords_documents "
 
-	shareHigherOrderExpression          = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
+	shareHigherOrderExpression         = "sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END)/NULLIF(sum(case when JSON_EXTRACT_STRING(value, '%s') IS NOT NULL THEN (JSON_EXTRACT_STRING(value, '%s')) else 0 END), 0)"
+	higherOrderExpressionsWithMultiply = "SUM(JSON_EXTRACT_STRING(value, '%s'))*%s/(COALESCE( NULLIF(sum(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
+	higherOrderExpressionsWithDiv      = "(SUM(JSON_EXTRACT_STRING(value, '%s'))/1000000)/(COALESCE( NULLIF(JSON_EXTRACT_STRING(value, '%s')), 0), 100000))"
+
 	sumOfFloatExp                       = "sum((JSON_EXTRACT_STRING(value, '%s')))"
 	adwordsAdGroupMetadataFetchQueryStr = "select ad_group_id, campaign_id, JSON_EXTRACT_STRING(value, 'name') as ad_group_name, " +
 		"JSON_EXTRACT_STRING(value, 'campaign_name') as campaign_name from adwords_documents where type = ? AND project_id = ? " +
@@ -142,25 +145,25 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalOperation:        "sum",
 	},
 	model.ClickThroughRate: {
-		higherOrderExpression:    "sum(JSON_EXTRACT_STRING(value, 'clicks'))*100/NULLIF(sum(JSON_EXTRACT_STRING(value, 'impressions')), 100000)",
+		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithMultiply, "clicks", "100", "impressions"),
 		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'clicks'))*100",
 		externalValue:            model.ClickThroughRate,
 		externalOperation:        "sum",
 	},
 	model.ConversionRate: {
-		higherOrderExpression:    "sum(JSON_EXTRACT_STRING(value, 'conversions'))*100/NULLIF(sum(JSON_EXTRACT_STRING(value, 'clicks')), 100000)",
+		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithMultiply, "conversions", "100", "clicks"),
 		nonHigherOrderExpression: "sum(JSON_EXTRACT_STRING(value, 'conversions'))*100",
 		externalValue:            model.ConversionRate,
 		externalOperation:        "sum",
 	},
 	model.CostPerClick: {
-		higherOrderExpression:    "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)/NULLIF(sum(JSON_EXTRACT_STRING(value, 'clicks')), 100000)",
+		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "clicks"),
 		nonHigherOrderExpression: "(sum((value, 'cost'))/1000000)",
 		externalValue:            model.CostPerClick,
 		externalOperation:        "sum",
 	},
 	model.CostPerConversion: {
-		higherOrderExpression:    "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)/NULLIF(sum(JSON_EXTRACT_STRING(value, 'conversions')), 100000)",
+		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions"),
 		nonHigherOrderExpression: "(sum(JSON_EXTRACT_STRING(value, 'cost'))/1000000)",
 		externalValue:            model.CostPerConversion,
 		externalOperation:        "sum",
