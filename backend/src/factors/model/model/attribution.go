@@ -94,6 +94,10 @@ const (
 	AttributionKeyAdgroup                = "AdGroup"
 	AttributionKeyKeyword                = "Keyword"
 
+	ReportCampaign = "Campaign"
+	ReportAdGroup  = "AdGroup"
+	ReportKeyword  = "Keyword"
+
 	AttributionQueryTypeConversionBased = "ConversionBased"
 	AttributionQueryTypeEngagementBased = "EngagementBased"
 
@@ -732,11 +736,35 @@ func AddLinkedinPerformanceReportInfo(attributionData map[string]*AttributionDat
 
 func addMetricsFromReport(attributionData map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string) {
 
+	logCtx := log.WithFields(log.Fields{"DEBUG-attributionKey": attributionKey})
+
 	// If key is not found, no performance report enrichment will happen
 	for key, value := range reportKeyData {
+		// TODO (Anil) remove this debug log
+		if strings.Contains(key, PropertyValueNone) || !U.IsNonEmptyKey(attributionData[key].Name) {
+			logCtx.WithFields(log.Fields{
+				"Key":              value.Key,
+				"ID":               value.ID,
+				"Name":             value.Name,
+				"CampaignID":       value.CampaignID,
+				"CampaignName":     value.CampaignName,
+				"AdgroupID":        value.AdgroupID,
+				"AdgroupName":      value.AdgroupName,
+				"KeywordMatchType": value.KeywordMatchType,
+				"KeywordID":        value.KeywordID,
+				"KeywordName":      value.KeywordName,
+				"AdName":           value.AdName,
+				"Impressions":      value.Impressions,
+				"Clicks":           value.Clicks,
+				"Spend":            value.Spend,
+			}).Info("Campaign Data with none values")
+		}
+
 		if _, found := attributionData[key]; found {
 			enrichAttributionRow(attributionData, key, value)
+
 		} else {
+
 			attributionData[key] = &AttributionData{}
 			attributionData[key].MarketingInfo = reportKeyData[key]
 			switch attributionKey {
@@ -760,6 +788,13 @@ func addMetricsFromReport(attributionData map[string]*AttributionData, reportKey
 			attributionData[key].Spend = value.Spend
 		}
 	}
+}
+
+func enrichAttributionRow(attributionData map[string]*AttributionData, key string, value MarketingData) {
+
+	attributionData[key].Impressions = value.Impressions
+	attributionData[key].Clicks = value.Clicks
+	attributionData[key].Spend = value.Spend
 }
 
 func getKeyFromAttributionData(data AttributionData) string {
@@ -805,14 +840,7 @@ func GetKeyMapToData(attributionKey string, dataIDMap map[string]MarketingData) 
 	return keyToData
 }
 
-func enrichAttributionRow(attributionData map[string]*AttributionData, key string, value MarketingData) {
-
-	attributionData[key].Impressions = value.Impressions
-	attributionData[key].Clicks = value.Clicks
-	attributionData[key].Spend = value.Spend
-}
-
-func ProcessRow(rows *sql.Rows, err error, logCtx *log.Entry) map[string]MarketingData {
+func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry) map[string]MarketingData {
 
 	// ID is CampaignID, AdgroupID, KeywordID etc
 	marketingDataIDMap := make(map[string]MarketingData)
@@ -828,7 +856,7 @@ func ProcessRow(rows *sql.Rows, err error, logCtx *log.Entry) map[string]Marketi
 		var impressionsNull sql.NullFloat64
 		var clicksNull sql.NullFloat64
 		var spendNull sql.NullFloat64
-		if err = rows.Scan(&campaignIDNull, &adgroupIDNull, &keywordIDNull, &adIDNull, &keyIDNull, &keyNameNull, &extraValue1Null,
+		if err := rows.Scan(&campaignIDNull, &adgroupIDNull, &keywordIDNull, &adIDNull, &keyIDNull, &keyNameNull, &extraValue1Null,
 			&impressionsNull, &clicksNull, &spendNull); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
@@ -837,7 +865,7 @@ func ProcessRow(rows *sql.Rows, err error, logCtx *log.Entry) map[string]Marketi
 			continue
 		}
 		ID, data := getMarketingDataFromValues(campaignIDNull, adgroupIDNull, keywordIDNull, adIDNull,
-			keyIDNull, keyNameNull, extraValue1Null, impressionsNull, clicksNull, spendNull)
+			keyIDNull, keyNameNull, extraValue1Null, impressionsNull, clicksNull, spendNull, reportName)
 		marketingDataIDMap[ID] = data
 	}
 	return marketingDataIDMap
@@ -845,7 +873,7 @@ func ProcessRow(rows *sql.Rows, err error, logCtx *log.Entry) map[string]Marketi
 
 func getMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql.NullString, keywordIDNull sql.NullString,
 	adIDNull sql.NullString, IDNull sql.NullString, nameNull sql.NullString, extraValue1Null sql.NullString, impressionsNull sql.NullFloat64,
-	clicksNull sql.NullFloat64, spendNull sql.NullFloat64) (string, MarketingData) {
+	clicksNull sql.NullFloat64, spendNull sql.NullFloat64, reportName string) (string, MarketingData) {
 
 	campaignID := PropertyValueNone
 	adgroupID := PropertyValueNone
@@ -903,5 +931,14 @@ func getMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql
 		Impressions:      int64(impressions),
 		Clicks:           int64(clicks),
 		Spend:            spend}
+
+	switch reportName {
+	case ReportCampaign:
+		data.CampaignName = name
+	case ReportAdGroup:
+		data.AdgroupName = name
+	case ReportKeyword:
+		data.KeywordName = name
+	}
 	return ID, data
 }
