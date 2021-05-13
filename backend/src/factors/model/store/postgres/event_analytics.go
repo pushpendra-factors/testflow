@@ -760,7 +760,8 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 			}
 		}
 
-		addJoinStmnt := "JOIN users ON events.user_id=users.id"
+		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
+		stepParams = append(stepParams, projectID)
 		if C.ShouldUseUserPropertiesTableForRead(projectID) {
 			if groupByUserProperties && !hasWhereEntity(ewp, model.PropertyEntityUser) {
 				// If event has filter on user property, JOIN on user_properties is added in next step.
@@ -1825,7 +1826,8 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 			}
 		}
 
-		addJoinStmnt := "JOIN users ON events.user_id=users.id"
+		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
+		stepParams = append(stepParams, projectID)
 		if C.ShouldUseUserPropertiesTableForRead(projectID) {
 			if groupByUserProperties && !hasWhereEntity(ewp, model.PropertyEntityUser) {
 				// If event has filter on user property, JOIN on user_properties is added in next step.

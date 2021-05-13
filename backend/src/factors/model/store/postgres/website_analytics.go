@@ -1212,11 +1212,11 @@ func (pg *Postgres) ExecuteWebAnalyticsQueries(projectId uint64, queries *model.
 	}
 
 	queryStmnt := "SELECT" + " " + selectStmnt + " " + "FROM events" + " " +
-		"LEFT JOIN users ON events.user_id=users.id" + " " +
+		"LEFT JOIN users ON events.user_id=users.id AND users.project_id = ?" + " " +
 		"WHERE events.project_id = ? AND events.timestamp BETWEEN ? AND ?" + " " +
 		// Filter session and page view event.
 		"AND (events.properties->>?=? OR events.event_name_id = ?)"
-	queryParams = append(queryParams, projectId, queries.From, queries.To,
+	queryParams = append(queryParams, projectId, projectId, queries.From, queries.To,
 		U.EP_IS_PAGE_VIEW, true, sessionEventName.ID)
 
 	queryStartTimestamp := U.TimeNowUnix()
