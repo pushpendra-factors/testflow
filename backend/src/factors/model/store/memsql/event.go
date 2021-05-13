@@ -72,7 +72,7 @@ func existsIDForProject(projectID uint64, userID, eventID string) bool {
 	return false
 }
 
-func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId string, eventNameId uint64) (uint64, int) {
+func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId string, eventNameId string) (uint64, int) {
 	var count uint64
 
 	db := C.GetServices().Db
@@ -87,7 +87,7 @@ func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId str
 }
 
 // GetEventCountOfUsersByEventName Get count of events for event_name_id for multiple users.
-func (store *MemSQL) GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID uint64) (uint64, int) {
+func (store *MemSQL) GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID string) (uint64, int) {
 	var count uint64
 
 	db := C.GetServices().Db
@@ -245,7 +245,7 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	logCtx := log.WithField("project_id", event.ProjectId)
 
-	if event.ProjectId == 0 || event.UserId == "" || event.EventNameId == 0 {
+	if event.ProjectId == 0 || event.UserId == "" || event.EventNameId == "" {
 		logCtx.Error("CreateEvent Failed. Invalid projectId or userId or eventNameId.")
 		return nil, http.StatusBadRequest
 	}
@@ -399,7 +399,7 @@ func (store *MemSQL) GetEventById(projectId uint64, id string) (*model.Event, in
 	return &event, http.StatusFound
 }
 
-func (store *MemSQL) GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId uint64,
+func (store *MemSQL) GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId string,
 	startTimestamp int64, endTimestamp int64) (*model.Event, int) {
 
 	db := C.GetServices().Db
@@ -574,7 +574,7 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id string,
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uint64) ([]model.Event, int) {
+func (store *MemSQL) GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId string) ([]model.Event, int) {
 	if projectId == 0 {
 		return nil, http.StatusBadRequest
 	}
@@ -779,7 +779,7 @@ func associateSessionToEventsInBatch(projectId uint64, events []*model.Event,
 // new session for last event when new session conditions met.
 func (store *MemSQL) AddSessionForUser(projectId uint64, userId string, userEvents []model.Event,
 	bufferTimeBeforeSessionCreateInSecs int64,
-	sessionEventNameId uint64) (int, int, bool, int, int) {
+	sessionEventNameId string) (int, int, bool, int, int) {
 
 	noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 		noOfUserPropertiesUpdated, isLastEventToBeProcessed,
@@ -822,7 +822,7 @@ e3 - t3
 */
 func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents []model.Event,
 	bufferTimeBeforeSessionCreateInSecs int64,
-	sessionEventNameId uint64) (int, int, bool, int, bool, int) {
+	sessionEventNameId string) (int, int, bool, int, bool, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
 
@@ -1294,7 +1294,7 @@ func (store *MemSQL) GetLastSessionEventTimestamp(projectID uint64, sessionEvent
 
 // GetAllEventsForSessionCreationAsUserEventsMap - Returns a map of user:[events...] withing given period,
 // excluding session event and event with session_id.
-func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId, sessionEventNameId uint64,
+func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId uint64, sessionEventNameId string,
 	startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
@@ -1592,7 +1592,7 @@ func (store *MemSQL) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp,
 	return unusedSessions, http.StatusFound
 }
 
-func (store *MemSQL) DeleteEventsByIDsInBatchForJob(projectID, eventNameID uint64, ids []string, batchSize int) int {
+func (store *MemSQL) DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int {
 	logCtx := log.WithField("project_id", projectID).WithField("batch_size", batchSize)
 	if projectID == 0 || batchSize == 0 {
 		logCtx.Error("Invalid params.")
@@ -1613,7 +1613,7 @@ func (store *MemSQL) DeleteEventsByIDsInBatchForJob(projectID, eventNameID uint6
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) DeleteEventByIDs(projectID, eventNameID uint64, ids []string) int {
+func (store *MemSQL) DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int {
 	logCtx := log.WithField("project_id", projectID)
 
 	db := C.GetServices().Db

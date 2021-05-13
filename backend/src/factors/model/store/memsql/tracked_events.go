@@ -193,7 +193,7 @@ func (store *MemSQL) GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64)
 }
 
 // GetFactorsTrackedEvent - Get details of tracked event
-func (store *MemSQL) GetFactorsTrackedEvent(EventNameID uint64, ProjectID uint64) (*model.FactorsTrackedEvent, error) {
+func (store *MemSQL) GetFactorsTrackedEvent(EventNameID string, ProjectID uint64) (*model.FactorsTrackedEvent, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 

@@ -16,7 +16,7 @@ import (
 
 type EventName struct {
 	// Composite primary key with projectId.
-	ID   uint64 `gorm:"primary_key:true;" json:"id"`
+	ID   string `gorm:"primary_key:true;" json:"id"`
 	Name string `json:"name"`
 	Type string `gorm:"not null;type:varchar(2)" json:"type"`
 	// Below are the foreign key constraints added in creation script.
@@ -99,7 +99,7 @@ const (
 
 type EventNameWithAggregation struct {
 	// Composite primary key with projectId.
-	ID   uint64 `gorm:"primary_key:true;" json:"id"`
+	ID   string `gorm:"primary_key:true;" json:"id"`
 	Name string `json:"name"`
 	Type string `gorm:"not null;type:varchar(2)" json:"type"`
 	// Below are the foreign key constraints added in creation script.

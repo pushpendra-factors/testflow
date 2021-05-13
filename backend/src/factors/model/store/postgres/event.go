@@ -30,7 +30,7 @@ func isDuplicateCustomerEventIdError(err error) bool {
 	return err.Error() == error_Duplicate_event_customerEventID
 }
 
-func (pg *Postgres) GetEventCountOfUserByEventName(projectId uint64, userId string, eventNameId uint64) (uint64, int) {
+func (pg *Postgres) GetEventCountOfUserByEventName(projectId uint64, userId, eventNameId string) (uint64, int) {
 	var count uint64
 
 	db := C.GetServices().Db
@@ -45,7 +45,7 @@ func (pg *Postgres) GetEventCountOfUserByEventName(projectId uint64, userId stri
 }
 
 // GetEventCountOfUsersByEventName Get count of events for event_name_id for multiple users.
-func (pg *Postgres) GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID uint64) (uint64, int) {
+func (pg *Postgres) GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID string) (uint64, int) {
 	var count uint64
 
 	db := C.GetServices().Db
@@ -202,7 +202,7 @@ func (pg *Postgres) addEventDetailsToCache(projectID uint64, event *model.Event,
 func (pg *Postgres) CreateEvent(event *model.Event) (*model.Event, int) {
 	logCtx := log.WithField("project_id", event.ProjectId)
 
-	if event.ProjectId == 0 || event.UserId == "" || event.EventNameId == 0 {
+	if event.ProjectId == 0 || event.UserId == "" || event.EventNameId == "" {
 		logCtx.Error("CreateEvent Failed. Invalid projectId or userId or eventNameId.")
 		return nil, http.StatusBadRequest
 	}
@@ -340,7 +340,7 @@ func (pg *Postgres) GetEventById(projectId uint64, id string) (*model.Event, int
 	return &event, http.StatusFound
 }
 
-func (pg *Postgres) GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId uint64,
+func (pg *Postgres) GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId string,
 	startTimestamp int64, endTimestamp int64) (*model.Event, int) {
 
 	db := C.GetServices().Db
@@ -487,7 +487,7 @@ func (pg *Postgres) UpdateEventProperties(projectId uint64, id string,
 	return http.StatusAccepted
 }
 
-func (pg *Postgres) GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uint64) ([]model.Event, int) {
+func (pg *Postgres) GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId string) ([]model.Event, int) {
 	if projectId == 0 {
 		return nil, http.StatusBadRequest
 	}
@@ -692,7 +692,7 @@ func associateSessionToEventsInBatch(projectId uint64, events []*model.Event,
 // new session for last event when new session conditions met.
 func (pg *Postgres) AddSessionForUser(projectId uint64, userId string, userEvents []model.Event,
 	bufferTimeBeforeSessionCreateInSecs int64,
-	sessionEventNameId uint64) (int, int, bool, int, int) {
+	sessionEventNameId string) (int, int, bool, int, int) {
 
 	noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 		noOfUserPropertiesUpdated, isLastEventToBeProcessed,
@@ -735,7 +735,7 @@ e3 - t3
 */
 func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvents []model.Event,
 	bufferTimeBeforeSessionCreateInSecs int64,
-	sessionEventNameId uint64) (int, int, bool, int, bool, int) {
+	sessionEventNameId string) (int, int, bool, int, bool, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
 
@@ -1207,7 +1207,7 @@ func (pg *Postgres) GetLastSessionEventTimestamp(projectID uint64, sessionEventN
 
 // GetAllEventsForSessionCreationAsUserEventsMap - Returns a map of user:[events...] withing given period,
 // excluding session event and event with session_id.
-func (pg *Postgres) GetAllEventsForSessionCreationAsUserEventsMap(projectId, sessionEventNameId uint64,
+func (pg *Postgres) GetAllEventsForSessionCreationAsUserEventsMap(projectId uint64, sessionEventNameId string,
 	startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
@@ -1573,7 +1573,7 @@ func (pg *Postgres) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, 
 	return unusedSessions, http.StatusFound
 }
 
-func (pg *Postgres) DeleteEventsByIDsInBatchForJob(projectID, eventNameID uint64, ids []string, batchSize int) int {
+func (pg *Postgres) DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int {
 	logCtx := log.WithField("project_id", projectID).WithField("batch_size", batchSize)
 	if projectID == 0 || batchSize == 0 {
 		logCtx.Error("Invalid params.")
@@ -1594,7 +1594,7 @@ func (pg *Postgres) DeleteEventsByIDsInBatchForJob(projectID, eventNameID uint64
 	return http.StatusAccepted
 }
 
-func (pg *Postgres) DeleteEventByIDs(projectID, eventNameID uint64, ids []string) int {
+func (pg *Postgres) DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int {
 	logCtx := log.WithField("project_id", projectID)
 
 	db := C.GetServices().Db

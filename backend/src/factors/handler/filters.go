@@ -9,7 +9,7 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -21,7 +21,7 @@ type API_FilterRequestPayload struct {
 }
 
 type API_FilterResponePayload struct {
-	EventNameID uint64 `json:"id,omitempty"`
+	EventNameID string `json:"id,omitempty"`
 	ProjectID   uint64 `json:"project_id,omitempty"`
 	EventName   string `json:"name,omitempty"`
 	Deleted     bool   `json:"deleted,omitempty"`
@@ -30,7 +30,7 @@ type API_FilterResponePayload struct {
 
 // APISmartEventFilterResponePayload implements the response payload for smart event filter
 type APISmartEventFilterResponePayload struct {
-	EventNameID uint64                    `json:"id,omitempty"`
+	EventNameID string                    `json:"id,omitempty"`
 	ProjectID   uint64                    `json:"project_id,omitempty"`
 	EventName   string                    `json:"name,omitempty"`
 	Deleted     bool                      `json:"deleted,omitempty" swaggerignore:"true"`
@@ -269,9 +269,9 @@ func UpdateSmartEventFilterHandler(c *gin.Context) {
 		"reqId":      U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	filterID, err := strconv.ParseUint(c.Query("filter_id"), 10, 64)
-	if err != nil || filterID == 0 {
-		logCtx.WithFields(log.Fields{log.ErrorKey: err}).Error("Updating smart event filter failed. filter_id parse failed.")
+	filterID := strings.TrimSpace(c.Query("filter_id"))
+	if filterID == "" {
+		logCtx.Error("Updating smart event filter failed. filter_id parse failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid filter id."})
 		return
 	}
@@ -337,9 +337,9 @@ func DeleteSmartEventFilterHandler(c *gin.Context) (interface{}, int, string, st
 		"reqId":      U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	filterID, err := strconv.ParseUint(c.Query("filter_id"), 10, 64)
-	if err != nil || filterID == 0 {
-		logCtx.WithFields(log.Fields{log.ErrorKey: err}).Error("Deleting smart event_name filter failed. filter_id parse failed.")
+	filterID := strings.TrimSpace(c.Query("filter_id"))
+	if filterID == "" {
+		logCtx.Error("Deleting smart event_name filter failed. filter_id parse failed.")
 		return nil, http.StatusBadRequest, V1.INVALID_INPUT, "Delete smart event_name filter failed. Invalid rule id", true
 	}
 
@@ -383,9 +383,9 @@ func UpdateFilterHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	filterId, err := strconv.ParseUint(c.Params.ByName("filter_id"), 10, 64)
-	if err != nil || filterId == 0 {
-		logCtx.WithFields(log.Fields{log.ErrorKey: err}).Error("Updating filter failed. filter_id parse failed.")
+	filterId := strings.TrimSpace(c.Params.ByName("filter_id"))
+	if filterId == "" {
+		logCtx.Error("Updating filter failed. filter_id parse failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid filter id."})
 		return
 	}
@@ -439,9 +439,9 @@ func DeleteFilterHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	filterId, err := strconv.ParseUint(c.Params.ByName("filter_id"), 10, 64)
-	if err != nil || filterId == 0 {
-		logCtx.WithError(err).Error("Updating filter failed. filter_id parse failed.")
+	filterId := strings.TrimSpace(c.Params.ByName("filter_id"))
+	if filterId == "" {
+		logCtx.Error("Updating filter failed. filter_id parse failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid filter id."})
 		return
 	}

@@ -15,6 +15,7 @@ export const getTableColumns = (
     return {
       title: e,
       dataIndex: e,
+      width: "50%",
     };
   });
 

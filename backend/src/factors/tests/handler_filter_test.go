@@ -210,7 +210,7 @@ func TestAPIGetFiltersHandler(t *testing.T) {
 
 }
 
-func sendUpdateFilterReq(r *gin.Engine, projectId, filterId uint64, agent *model.Agent, name, expr *string) *httptest.ResponseRecorder {
+func sendUpdateFilterReq(r *gin.Engine, projectId uint64, filterId string, agent *model.Agent, name, expr *string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
@@ -224,7 +224,7 @@ func sendUpdateFilterReq(r *gin.Engine, projectId, filterId uint64, agent *model
 		params["expr"] = *expr
 	}
 
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/filters/%d", projectId, filterId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/filters/%s", projectId, filterId)).
 		WithPostParams(params).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -291,13 +291,13 @@ func TestAPIUpdateFilterHandler(t *testing.T) {
 	})
 }
 
-func sendDeleteFilterReq(r *gin.Engine, projectId, fileterId uint64, agent *model.Agent) *httptest.ResponseRecorder {
+func sendDeleteFilterReq(r *gin.Engine, projectId uint64, fileterId string, agent *model.Agent) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
 
-	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/filters/%d", projectId, fileterId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/filters/%s", projectId, fileterId)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -322,7 +322,7 @@ func TestAPIDeleteFilterHandler(t *testing.T) {
 	assert.NotNil(t, project)
 
 	t.Run("InvalidFilter", func(t *testing.T) {
-		invalidFilterId := uint64(99999)
+		invalidFilterId := "99999"
 		w := sendDeleteFilterReq(r, project.ID, invalidFilterId, agent)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)

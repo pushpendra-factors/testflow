@@ -153,7 +153,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Nil(t, event)
 
 	// Test Create Event without eventNameId.
-	event, errCode = store.GetStore().CreateEvent(&model.Event{EventNameId: 0, ProjectId: projectId, UserId: userId,
+	event, errCode = store.GetStore().CreateEvent(&model.Event{EventNameId: "", ProjectId: projectId, UserId: userId,
 		Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)

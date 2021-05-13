@@ -274,7 +274,7 @@ func addSessionProjectWorker(projectId uint64, maxLookbackTimestamp, startTimest
 }
 
 func addSessionUserEventsWorker(projectID uint64, userID string, events []model.Event,
-	sessionEventNameID uint64, bufferTimeBeforeSessionCreateInSecs int64,
+	sessionEventNameID string, bufferTimeBeforeSessionCreateInSecs int64,
 	wg *sync.WaitGroup, status *Status) {
 	logCtx := log.WithField("project_id", projectID).WithField("user_id", userID)
 

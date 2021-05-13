@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -42,6 +43,14 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, projectId, eventName.ProjectId)
 	assert.True(t, eventName.CreatedAt.After(start))
+	assert.NotEmpty(t, eventName.ID)
+	if C.GetPrimaryDatastore() == C.DatastoreTypeMemSQL {
+		assert.True(t, U.IsValidUUID(eventName.ID))
+	} else {
+		eventNameIDInt, err := strconv.ParseUint(eventName.ID, 0, 64)
+		assert.Nil(t, err)
+		assert.NotZero(t, eventNameIDInt)
+	}
 	// Trying to create again should return the old one.
 	expectedEventName := &model.EventName{}
 	copier.Copy(expectedEventName, eventName)
@@ -458,7 +467,7 @@ func TestDBUpdateFilterEventName(t *testing.T) {
 	assert.NotNil(t, project)
 
 	// Invalid event_name id.
-	eventName, errCode := store.GetStore().UpdateFilterEventName(project.ID, 9999, &model.EventName{Name: U.RandomLowerAphaNumString(5)})
+	eventName, errCode := store.GetStore().UpdateFilterEventName(project.ID, "9999", &model.EventName{Name: U.RandomLowerAphaNumString(5)})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, eventName)
 
@@ -498,7 +507,7 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 	assert.NotNil(t, project)
 
 	// Invalid event_name id.
-	errCode := store.GetStore().DeleteFilterEventName(project.ID, 9999)
+	errCode := store.GetStore().DeleteFilterEventName(project.ID, "9999")
 	assert.Equal(t, http.StatusBadRequest, errCode)
 
 	expr := "a.com/u1/u2/u3"
@@ -526,6 +535,21 @@ func TestNonFilterEventUniquenessConstraint(t *testing.T) {
 
 	// Creating another event with same name should fail.
 	eventName2, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{Name: "test_event", ProjectId: project.ID})
+	assert.Equal(t, http.StatusConflict, errCode)
+	assert.NotEmpty(t, eventName2)
+}
+
+func TestEventNameUniquenessByTypeAndFilterExpr(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// Test successful create eventName.
+	eventName1, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{Name: "test_event", FilterExpr: "a.com/a", ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, eventName1)
+
+	// Creating another event with same type and fitler_expr should fail.
+	eventName2, errCode := store.GetStore().CreateOrGetFilterEventName(&model.EventName{Name: "test_event", FilterExpr: "a.com/a", ProjectId: project.ID})
 	assert.Equal(t, http.StatusConflict, errCode)
 	assert.NotEmpty(t, eventName2)
 }
@@ -642,7 +666,7 @@ func sendCreateSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model
 	return w
 }
 
-func sendDeleteSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent, eventNameID uint64) *httptest.ResponseRecorder {
+func sendDeleteSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Agent, eventNameID string) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -650,7 +674,8 @@ func sendDeleteSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model
 		return nil
 	}
 
-	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s&filter_id=%d", projectId, "crm", eventNameID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodDelete,
+		fmt.Sprintf("/projects/%d/v1/smart_event?type=%s&filter_id=%s", projectId, "crm", eventNameID)).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
@@ -692,14 +717,17 @@ func sendGetSmartEventFilterReq(r *gin.Engine, projectId uint64, agent *model.Ag
 	return w
 }
 
-func sendUpdateSmartEventFilterReq(r *gin.Engine, projectID uint64, agent *model.Agent, enPayload *map[string]interface{}, filterID uint64) *httptest.ResponseRecorder {
+func sendUpdateSmartEventFilterReq(r *gin.Engine, projectID uint64, agent *model.Agent,
+	enPayload *map[string]interface{}, filterID string) *httptest.ResponseRecorder {
+
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
 		return nil
 	}
 
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/v1/smart_event?type=%s&filter_id=%d", projectID, "crm", filterID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut,
+		fmt.Sprintf("/projects/%d/v1/smart_event?type=%s&filter_id=%s", projectID, "crm", filterID)).
 		WithPostParams(enPayload).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
