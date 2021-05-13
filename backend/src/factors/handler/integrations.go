@@ -121,8 +121,18 @@ type AdwordsAddRefreshTokenPayload struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+type GoogleOrganicAddRefreshTokenPayload struct {
+	// project_id conv from string to uint64 explicitly.
+	ProjectId    string `json:"project_id"`
+	AgentUUID    string `json:"agent_uuid"`
+	RefreshToken string `json:"refresh_token"`
+}
 type AdwordsRequestPayload struct {
 	ProjectId string `json:"project_id"`
+}
+
+type GoogleOrganicRequestPayload struct {
+	ProjectID string `json:"project_id"`
 }
 
 // Updates projects settings required for Adwords.
@@ -214,6 +224,94 @@ func IntAdwordsGetRefreshTokenHandler(c *gin.Context) {
 	c.JSON(http.StatusFound, gin.H{"refresh_token": refreshToken})
 }
 
+// Updates projects settings required for Google search console.
+// Uses session cookie for auth on middleware.
+func IntGoogleOrganicAddRefreshTokenHandler(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload GoogleOrganicAddRefreshTokenPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("GoogleOrganic update payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. update failed."})
+		return
+	}
+
+	if requestPayload.ProjectId == "" ||
+		requestPayload.AgentUUID == "" ||
+		requestPayload.RefreshToken == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "invalid json payload. empty mandatory fields."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as uint64.")
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "invalid json payload. empty mandatory fields."})
+		return
+	}
+
+	// Todo: Check agent has access to project or not, before adding refresh token?
+
+	errCode := store.GetStore().UpdateAgentIntGoogleOrganicRefreshToken(requestPayload.AgentUUID, requestPayload.RefreshToken)
+	if errCode != http.StatusAccepted {
+		log.WithField("agent_uuid", requestPayload.AgentUUID).
+			Error("Failed to update gsc refresh token for agent.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed updating gsc refresh token for agent"})
+		return
+	}
+
+	_, errCode = store.GetStore().UpdateProjectSettings(projectId,
+		&model.ProjectSetting{IntGoogleOrganicEnabledAgentUUID: &requestPayload.AgentUUID})
+	if errCode != http.StatusAccepted {
+		log.WithField("project_id", projectId).
+			Error("Failed to update project settings GoogleOrganic enable agent uuid.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed updating GoogleOrganic enabled agent uuid project settings"})
+		return
+	}
+
+	c.JSON(errCode, gin.H{})
+}
+func IntGoogleOrganicGetRefreshTokenHandler(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload GoogleOrganicRequestPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("GoogleOrganic get refresh token payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. fetch failed."})
+		return
+	}
+
+	if requestPayload.ProjectID == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectID, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as uint64.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	refreshToken, errCode := store.GetStore().GetIntGoogleOrganicRefreshTokenForProject(projectId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "failed to get gsc refresh token for project."})
+		return
+	}
+
+	c.JSON(http.StatusFound, gin.H{"refresh_token": refreshToken})
+}
+
 // IntEnableAdwordsHandler - Checks for refresh_token for the
 // agent if exists: then add the agent_uuid as adwords_enabled_agent_uuid
 // on project settings. if not exists: return 304.
@@ -266,6 +364,51 @@ func IntEnableAdwordsHandler(c *gin.Context) {
 	_, errCode = store.GetStore().UpdateProjectSettings(projectId, &addEnableAgentUUIDSetting)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to enable adwords"})
+		return
+	}
+
+	c.JSON(http.StatusOK, addEnableAgentUUIDSetting)
+}
+func IntEnableGoogleOrganicHandler(c *gin.Context) {
+	r := c.Request
+	var requestPayload AdwordsRequestPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("GoogleOrganic get refresh token payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. enable failed."})
+		return
+	}
+
+	if requestPayload.ProjectId == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as uint64.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	agent, errCode := store.GetStore().GetAgentByUUID(currentAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid agent."})
+		return
+	}
+
+	if agent.IntGoogleOrganicRefreshToken == "" {
+		c.JSON(http.StatusNotModified, gin.H{})
+		return
+	}
+
+	addEnableAgentUUIDSetting := model.ProjectSetting{IntGoogleOrganicEnabledAgentUUID: &currentAgentUUID}
+	_, errCode = store.GetStore().UpdateProjectSettings(projectId, &addEnableAgentUUIDSetting)
+	if errCode != http.StatusAccepted {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to enable google search console"})
 		return
 	}
 

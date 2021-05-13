@@ -1,5 +1,5 @@
 import {get, post, del, put} from "./request.js";
-import { getHostURL, getAdwordsHostURL } from "../util";
+import { getHostURL, getAdwordsHostURL, getGSCHostURL } from "../util";
 
 var host = getHostURL();
 
@@ -481,6 +481,27 @@ export function fetchAdwordsCustomerAccounts(payload) {
   }
 }
 
+export function fetchGSCURLs(payload) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      post(dispatch, getGSCHostURL()+"/google_organic/get_google_organic_urls", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "FETCH_GSC_CUSTOMER_ACCOUNTS_FULFILLED", payload: r.data })
+            resolve(r.data);
+          } else {
+            dispatch({ type:"FETCH_GSC_CUSTOMER_ACCOUNTS_REJECTED" });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"FETCH_GSC_CUSTOMER_ACCOUNTS_REJECTED", payload: err });
+          reject(err);
+        })
+    })
+  }
+}
+
 export function enableAdwordsIntegration(projectId) {
   return function(dispatch){
     return new Promise((resolve, reject) => {
@@ -498,6 +519,30 @@ export function enableAdwordsIntegration(projectId) {
         })
         .catch((err) => {
           dispatch({ type:"ENABLE_ADWORDS_REJECTED", payload: err });
+          reject(err);
+        })
+    })
+  }
+}
+
+
+export function enableGSCIntegration(projectId) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      let payload = { project_id: projectId.toString() }
+
+      post(dispatch, getHostURL()+"integrations/google_organic/enable", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "ENABLE_GSC_FULFILLED", payload: r.data })
+            resolve(r);
+          } else {
+            dispatch({ type:"ENABLE_GSC_REJECTED" });
+            reject(r); 
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"ENABLE_GSC_REJECTED", payload: err });
           reject(err);
         })
     })

@@ -353,6 +353,33 @@ func (pg *Postgres) GetIntAdwordsRefreshTokenForProject(projectId uint64) (strin
 
 	return refreshToken, http.StatusFound
 }
+func (pg *Postgres) GetIntGoogleOrganicRefreshTokenForProject(projectId uint64) (string, int) {
+	settings, errCode := pg.GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		return "", errCode
+	}
+
+	if settings.IntGoogleOrganicEnabledAgentUUID == nil || *settings.IntGoogleOrganicEnabledAgentUUID == "" {
+		return "", http.StatusNotFound
+	}
+
+	logCtx := log.WithField("agent_uuid",
+		*settings.IntGoogleOrganicEnabledAgentUUID).WithField("project_id", projectId)
+
+	agent, errCode := pg.GetAgentByUUID(*settings.IntGoogleOrganicEnabledAgentUUID)
+	if errCode != http.StatusFound {
+		logCtx.Error("GoogleOrganic enabled agent not found on agents table.")
+		return "", errCode
+	}
+
+	refreshToken := agent.IntGoogleOrganicRefreshToken
+	if refreshToken == "" {
+		logCtx.Error("GoogleOrganic enabled agent refresh token is empty.")
+		return "", http.StatusInternalServerError
+	}
+
+	return refreshToken, http.StatusFound
+}
 
 func (pg *Postgres) GetIntAdwordsProjectSettingsForProjectID(projectID uint64) ([]model.AdwordsProjectSettings, int) {
 
@@ -366,7 +393,6 @@ func (pg *Postgres) GetIntAdwordsProjectSettingsForProjectID(projectID uint64) (
 
 	return pg.getIntAdwordsProjectSettings(queryStr, params)
 }
-
 func (pg *Postgres) GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int) {
 
 	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
@@ -400,6 +426,53 @@ func (pg *Postgres) getIntAdwordsProjectSettings(query string, params []interfac
 	}
 
 	return adwordsProjectSettings, http.StatusOK
+}
+
+func (pg *Postgres) GetIntGoogleOrganicProjectSettingsForProjectID(projectID uint64) ([]model.GoogleOrganicProjectSettings, int) {
+
+	queryStr := "SELECT project_settings.project_id, project_settings.int_google_organic_url_prefixes as url_prefix," +
+		" " + "agents.int_google_organic_refresh_token as refresh_token, project_settings.int_google_organic_enabled_agent_uuid as agent_uuid" +
+		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_google_organic_enabled_agent_uuid = agents.uuid" +
+		" " + "WHERE project_settings.project_id = ?" +
+		" " + "AND project_settings.int_google_organic_url_prefixes IS NOT NULL" +
+		" " + "AND project_settings.int_google_organic_enabled_agent_uuid IS NOT NULL "
+	params := []interface{}{projectID}
+
+	return pg.getIntGoogleOrganicProjectSettings(queryStr, params)
+}
+
+func (pg *Postgres) GetAllIntGoogleOrganicProjectSettings() ([]model.GoogleOrganicProjectSettings, int) {
+
+	queryStr := "SELECT project_settings.project_id, project_settings.int_google_organic_url_prefixes as url_prefix," +
+		" " + "agents.int_google_organic_refresh_token as refresh_token, project_settings.int_google_organic_enabled_agent_uuid as agent_uuid" +
+		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_google_organic_enabled_agent_uuid = agents.uuid" +
+		" " + "WHERE project_settings.int_google_organic_url_prefixes IS NOT NULL" +
+		" " + "AND project_settings.int_google_organic_enabled_agent_uuid IS NOT NULL "
+	params := make([]interface{}, 0, 0)
+
+	return pg.getIntGoogleOrganicProjectSettings(queryStr, params)
+}
+func (pg *Postgres) getIntGoogleOrganicProjectSettings(query string, params []interface{}) ([]model.GoogleOrganicProjectSettings, int) {
+	db := C.GetServices().Db
+	gscProjectSettings := make([]model.GoogleOrganicProjectSettings, 0, 0)
+	rows, err := db.Raw(query, params).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get all gsc project settings.")
+		return gscProjectSettings, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var gscSettings model.GoogleOrganicProjectSettings
+		if err := db.ScanRows(rows, &gscSettings); err != nil {
+			log.WithError(err).Error("Failed to scan get all gsc project settings.")
+			return gscProjectSettings, http.StatusInternalServerError
+		}
+
+		gscProjectSettings = append(gscProjectSettings, gscSettings)
+	}
+
+	return gscProjectSettings, http.StatusOK
 }
 
 func (pg *Postgres) GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int) {

@@ -32,10 +32,10 @@ class AuthorisationFlow(BaseOauthService):
 
         authorization_url, state = self.flow.authorization_url(
             access_type="offline",
-            include_granted_scopes="true",
+            scopes=[oauth2.GetAPIScope("adwords")],
             state=state)
 
-        log.warning("Generated authorization URL: %s", authorization_url)
+        log.info("Generated authorization URL: %s", authorization_url)
         return authorization_url
 
     def check_and_add_refresh_token(self, authorisation_code, state_payload):

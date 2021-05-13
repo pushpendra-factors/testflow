@@ -36,6 +36,7 @@ type Model interface {
 	GetAgentsByUUIDs(uuids []string) ([]*model.Agent, int)
 	GetAgentInfo(uuid string) (*model.AgentInfo, int)
 	UpdateAgentIntAdwordsRefreshToken(uuid, refreshToken string) int
+	UpdateAgentIntGoogleOrganicRefreshToken(uuid, refreshToken string) int
 	UpdateAgentIntSalesforce(uuid, refreshToken string, instanceURL string) int
 	UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int
 	UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int
@@ -249,6 +250,7 @@ type Model interface {
 	GetProjectSettingByPrivateTokenWithCacheAndDefault(privateToken string) (*model.ProjectSetting, int)
 	UpdateProjectSettings(projectID uint64, settings *model.ProjectSetting) (*model.ProjectSetting, int)
 	GetIntAdwordsRefreshTokenForProject(projectID uint64) (string, int)
+	GetIntGoogleOrganicRefreshTokenForProject(projectID uint64) (string, int)
 	GetIntAdwordsProjectSettingsForProjectID(projectID uint64) ([]model.AdwordsProjectSettings, int)
 	GetAllIntAdwordsProjectSettings() ([]model.AdwordsProjectSettings, int)
 	GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int)
@@ -429,4 +431,10 @@ type Model interface {
 	GetDisplayNamesForAllUserProperties(projectID uint64) (int, map[string]string)
 	GetDisplayNamesForObjectEntities(projectID uint64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID uint64, eventName, propertyName, displayName, tag string) int
+
+	// search console
+	GetGoogleOrganicLastSyncInfoForProject(projectID uint64) ([]model.GoogleOrganicLastSyncInfo, int)
+	GetAllGoogleOrganicLastSyncInfoForAllProjects() ([]model.GoogleOrganicLastSyncInfo, int)
+	CreateGoogleOrganicDocument(gscDoc *model.GoogleOrganicDocument) int
+	CreateMultipleGoogleOrganicDocument(gscDocuments []model.GoogleOrganicDocument) int
 }

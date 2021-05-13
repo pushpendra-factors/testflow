@@ -45,6 +45,9 @@ export function getHostURL() {
 export function getAdwordsHostURL() {
     return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
 }
+export function getGSCHostURL() {
+    return isDevelopment() ? BUILD_CONFIG.gsc_service_host : BUILD_CONFIG.backend_host;
+}
 
 export function deepEqual(x, y) {
     return JSON.stringify(x) === JSON.stringify(y);

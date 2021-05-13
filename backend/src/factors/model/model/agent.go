@@ -30,11 +30,12 @@ type Agent struct {
 	LastLoggedInAt *time.Time `json:"last_logged_in_at"`
 	LoginCount     uint64     `json:"login_count"`
 
-	IntAdwordsRefreshToken    string `json:"-"`
-	IntSalesforceInstanceURL  string `json:"int_salesforce_instance_url"`
-	IntSalesforceRefreshToken string `json:"int_salesforce_refresh_token"`
-	CompanyURL                string `json:"company_url"`
-	SubscribeNewsletter       bool   `json:"subscribe_newsletter"`
+	IntAdwordsRefreshToken       string `json:"-"`
+	IntSalesforceInstanceURL     string `json:"int_salesforce_instance_url"`
+	IntSalesforceRefreshToken    string `json:"int_salesforce_refresh_token"`
+	CompanyURL                   string `json:"company_url"`
+	SubscribeNewsletter          bool   `json:"subscribe_newsletter"`
+	IntGoogleOrganicRefreshToken string `json:"int_google_organic_refresh_token"`
 }
 
 type CreateAgentParams struct {
@@ -129,6 +130,11 @@ func LastLoggedInAtAndIncrLoginCount(time time.Time) Option {
 func IntAdwordsRefreshToken(refreshToken string) Option {
 	return func(fields FieldsToUpdate) {
 		fields["int_adwords_refresh_token"] = refreshToken
+	}
+}
+func IntGSCRefreshToken(refreshToken string) Option {
+	return func(fields FieldsToUpdate) {
+		fields["int_google_organic_refresh_token"] = refreshToken
 	}
 }
 

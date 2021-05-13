@@ -38,3 +38,10 @@ pack-facebook-etl:
 upload-facebook-etl: export IMAGE_NAME=facebook-etl
 upload-facebook-etl: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/facebook-etl:$(TAG)
+
+pack-google-search-console-etl:
+	docker build -t us.gcr.io/factors-$(ENV)/google-search-console-etl:$(TAG) -f Dockerfile.google_search_console_job .
+upload-google-search-console-etl: export IMAGE_NAME=google-search-console-etl
+upload-google-search-console-etl: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/google-search-console-etl:$(TAG)
+

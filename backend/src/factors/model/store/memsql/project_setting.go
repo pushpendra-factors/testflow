@@ -399,6 +399,34 @@ func (store *MemSQL) GetIntAdwordsRefreshTokenForProject(projectId uint64) (stri
 	return refreshToken, http.StatusFound
 }
 
+func (store *MemSQL) GetIntGoogleOrganicRefreshTokenForProject(projectId uint64) (string, int) {
+	settings, errCode := store.GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		return "", errCode
+	}
+
+	if settings.IntGoogleOrganicEnabledAgentUUID == nil || *settings.IntGoogleOrganicEnabledAgentUUID == "" {
+		return "", http.StatusNotFound
+	}
+
+	logCtx := log.WithField("agent_uuid",
+		*settings.IntGoogleOrganicEnabledAgentUUID).WithField("project_id", projectId)
+
+	agent, errCode := store.GetAgentByUUID(*settings.IntGoogleOrganicEnabledAgentUUID)
+	if errCode != http.StatusFound {
+		logCtx.Error("GoogleOrganic enabled agent not found on agents table.")
+		return "", errCode
+	}
+
+	refreshToken := agent.IntGoogleOrganicRefreshToken
+	if refreshToken == "" {
+		logCtx.Error("GoogleOrganic enabled agent refresh token is empty.")
+		return "", http.StatusInternalServerError
+	}
+
+	return refreshToken, http.StatusFound
+}
+
 func (store *MemSQL) GetIntAdwordsProjectSettingsForProjectID(projectID uint64) ([]model.AdwordsProjectSettings, int) {
 
 	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
@@ -445,6 +473,54 @@ func (store *MemSQL) getIntAdwordsProjectSettings(query string, params []interfa
 	}
 
 	return adwordsProjectSettings, http.StatusOK
+}
+
+func (store *MemSQL) GetIntGoogleOrganicProjectSettingsForProjectID(projectID uint64) ([]model.GoogleOrganicProjectSettings, int) {
+
+	queryStr := "SELECT project_settings.project_id, project_settings.int_google_organic_url_prefixes as url," +
+		" " + "agents.int_google_organic_refresh_token as refresh_token, project_settings.int_google_organic_enabled_agent_uuid as agent_uuid" +
+		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_google_organic_enabled_agent_uuid = agents.uuid" +
+		" " + "WHERE project_settings.project_id = ?" +
+		" " + "AND project_settings.int_google_organic_url_prefixes IS NOT NULL" +
+		" " + "AND project_settings.int_google_organic_enabled_agent_uuid IS NOT NULL "
+	params := []interface{}{projectID}
+
+	return store.getIntGoogleOrganicProjectSettings(queryStr, params)
+}
+
+func (store *MemSQL) GetAllIntGoogleOrganicProjectSettings() ([]model.GoogleOrganicProjectSettings, int) {
+
+	queryStr := "SELECT project_settings.project_id, project_settings.int_google_organic_url_prefixes as url," +
+		" " + "agents.int_google_organic_refresh_token as refresh_token, project_settings.int_google_organic_enabled_agent_uuid as agent_uuid" +
+		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_google_organic_enabled_agent_uuid = agents.uuid" +
+		" " + "WHERE project_settings.project_id = ?" +
+		" " + "AND project_settings.int_google_organic_url_prefixes IS NOT NULL" +
+		" " + "AND project_settings.int_google_organic_enabled_agent_uuid IS NOT NULL "
+	params := make([]interface{}, 0, 0)
+
+	return store.getIntGoogleOrganicProjectSettings(queryStr, params)
+}
+func (store *MemSQL) getIntGoogleOrganicProjectSettings(query string, params []interface{}) ([]model.GoogleOrganicProjectSettings, int) {
+	db := C.GetServices().Db
+	gscProjectSettings := make([]model.GoogleOrganicProjectSettings, 0, 0)
+	rows, err := db.Raw(query, params).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get all gsc project settings.")
+		return gscProjectSettings, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var gscSettings model.GoogleOrganicProjectSettings
+		if err := db.ScanRows(rows, &gscSettings); err != nil {
+			log.WithError(err).Error("Failed to scan get all gsc project settings.")
+			return gscProjectSettings, http.StatusInternalServerError
+		}
+
+		gscProjectSettings = append(gscProjectSettings, gscSettings)
+	}
+
+	return gscProjectSettings, http.StatusOK
 }
 
 func (store *MemSQL) GetAllHubspotProjectSettings() ([]model.HubspotProjectSettings, int) {

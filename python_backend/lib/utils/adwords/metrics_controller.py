@@ -40,18 +40,20 @@ class MetricsController:
     def init_load(cls):
         cls.load_stats = JobTaskStats()
 
+    # key_string takes in customer_account_id or url_prefix
     @classmethod
-    def is_permission_denied_previously(cls, project_id, customer_acc_id, refresh_token):
-        key = "{0}:{1}".format(customer_acc_id, refresh_token)
+    def is_permission_denied_previously(cls, project_id, key_string, refresh_token):
+        key = "{0}:{1}".format(key_string, refresh_token)
         if key in cls.permission_error_cache:
-            log.error("Skipping sync user permission denied already for project %s, 'customer_acc_id:refresh_token' : %s", 
+            log.error("Skipping sync user permission denied already for project %s, 'key_string:refresh_token' : %s", 
                 str(project_id), key)
             return True
         return False
 
-    def update_permission_cache(cls, customer_acc_id, refresh_token, message):
-        key = "{0}:{1}".format(customer_acc_id, refresh_token)
+    def update_permission_cache(cls, key_string, refresh_token, message):
+        key = "{0}:{1}".format(key_string, refresh_token)
         cls.permission_error_cache[key] = message
+
 
     # Phase - In memory or file.
     @classmethod
@@ -79,6 +81,18 @@ class MetricsController:
         else:
             cls.etl_stats["success"].setdefault(project_id, set())
             cls.etl_stats["success"][project_id].add(customer_acc_id)
+    @classmethod
+    def update_gsc_job_stats(cls, project_id, url, status, message=""):
+        if status == STATUS_FAILED:
+            cls.etl_stats["status"] = FAILURE_MESSAGE
+
+        if status is None:
+            cls.etl_stats["failures"].append("Sync status is missing on response")
+        elif status == STATUS_FAILED:
+            cls.etl_stats["failures"].setdefault(message, {})
+        else:
+            cls.etl_stats["success"].setdefault(project_id, set())
+            cls.etl_stats["success"][project_id].add(url)
 
     @classmethod
     def publish(cls):

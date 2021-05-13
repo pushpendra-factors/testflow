@@ -55,3 +55,25 @@ class TimeUtil:
             start_timestamp = TimeUtil.get_next_day_timestamp(start_timestamp)
         
         return date_range
+
+    @staticmethod
+    def get_gsc_timestamp_range(from_timestamp, to_timestamp=None):
+        date_range = []
+        if from_timestamp is None:
+            return date_range
+        
+        # if to_timestamp not given: range 3 days before. 
+        if to_timestamp is None:
+            to_timestamp = TimeUtil.get_timestamp_before_days(3)
+
+        start_timestamp = from_timestamp
+        while start_timestamp <= to_timestamp:
+            date_range.append(start_timestamp)
+            start_timestamp = TimeUtil.get_next_day_timestamp(start_timestamp)
+        
+        return date_range
+
+    @staticmethod
+    def convert_timestamp_to_gsc_date_parameter(dt):
+        return datetime.strftime(datetime.strptime(str(dt), "%Y%m%d"), "%Y-%m-%d")
+

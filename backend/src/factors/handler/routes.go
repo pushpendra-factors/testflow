@@ -218,6 +218,11 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntEnableAdwordsHandler)
 
+	intRouteGroup.POST("/google_organic/enable",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		IntEnableGoogleOrganicHandler)
+
 	intRouteGroup.POST("/facebook/add_access_token",
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
@@ -247,6 +252,7 @@ func InitIntRoutes(r *gin.Engine) {
 func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup := r.Group(ROUTE_DATA_SERVICE_ROOT)
 
+	//todo @ashhar: merge adwords and google_organic whereever possible
 	dataServiceRouteGroup.POST("/adwords/documents/add",
 		IH.DataServiceAdwordsAddDocumentHandler)
 	dataServiceRouteGroup.POST("/adwords/documents/add_multiple",
@@ -263,6 +269,24 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.GET("/adwords/documents/last_sync_info",
 		IH.DataServiceAdwordsGetLastSyncInfoHandler)
+
+	dataServiceRouteGroup.POST("/google_organic/documents/add",
+		IH.DataServiceGoogleOrganicAddDocumentHandler)
+
+	dataServiceRouteGroup.POST("/google_organic/documents/add_multiple",
+		IH.DataServiceGoogleOrganicAddMultipleDocumentsHandler)
+
+	dataServiceRouteGroup.POST("/google_organic/add_refresh_token",
+		IntGoogleOrganicAddRefreshTokenHandler)
+
+	dataServiceRouteGroup.POST("/google_organic/get_refresh_token",
+		IntGoogleOrganicGetRefreshTokenHandler)
+
+	dataServiceRouteGroup.GET("/google_organic/documents/project_last_sync_info",
+		IH.DataServiceGoogleOrganicGetLastSyncForProjectInfoHandler)
+
+	dataServiceRouteGroup.GET("/google_organic/documents/last_sync_info",
+		IH.DataServiceGoogleOrganicGetLastSyncInfoHandler)
 
 	dataServiceRouteGroup.POST("/hubspot/documents/add",
 		IH.DataServiceHubspotAddDocumentHandler)
