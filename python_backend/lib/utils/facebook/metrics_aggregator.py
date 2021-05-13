@@ -49,7 +49,7 @@ class MetricsAggregator:
     def update_task_stats(cls, task, phase, metric_type, project_id, doc_type, value):
         if task == "extract":
             cls.extract_stats.update_record_stats(phase, metric_type, project_id, doc_type, value)
-        elif task == "extract":
+        elif task == "load":
             cls.load_stats.update_record_stats(phase, metric_type, project_id, doc_type, value)
 
     # Format of failure status: { message : { doc_type : Set() } }
@@ -102,7 +102,7 @@ class MetricsAggregator:
                         json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
 
     @classmethod
-    def publish_to_healthcheck_failure():
+    def publish_to_healthcheck_failure(cls):
         HealthChecksUtil.ping(cls.env, cls.etl_stats["failures"], cls.HEALTHCHECK_PING_ID, endpoint="/fail")
 
     @classmethod

@@ -37,6 +37,8 @@ const (
 	staticWhereStatementForAdwords     = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument                = " FROM adwords_documents "
 	shareHigherOrderExpression         = "sum(case when value->>'%s' IS NOT NULL THEN (value->>'%s')::float else 0 END)/NULLIF(sum(case when value->>'%s' IS NOT NULL THEN (value->>'%s')::float else 0 END), 0)"
+	higherOrderExpressionsWithMultiply = "SUM(COALESCE((value->>'%s')::float, 0))*%s/(COALESCE( NULLIF(sum(COALESCE((value->>'%s')::float, 0)), 0), 100000))"
+	higherOrderExpressionsWithDiv      = "(SUM(COALESCE((value->>'%s')::float, 0))/1000000)/(COALESCE( NULLIF(sum(COALESCE((value->>'%s')::float, 0)), 0), 100000))"
 	sumOfFloatExp                      = "sum((value->>'%s')::float)"
 	adwordsAdGroupMetdataFetchQueryStr = "select ad_group_id::text, campaign_id::text, value->>'name' as ad_group_name, " +
 		"value->>'campaign_name' as campaign_name from adwords_documents where type = ? AND project_id = ? AND " +
@@ -142,25 +144,25 @@ var adwordsInternalMetricsToAllRep = map[string]metricsAndRelated{
 		externalOperation:        "sum",
 	},
 	model.ClickThroughRate: {
-		higherOrderExpression:    "sum((value->>'clicks')::float)*100/NULLIF(sum((value->>'impressions')::float), 100000)",
+		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithMultiply, "clicks", "100", "impressions"),
 		nonHigherOrderExpression: "sum((value->>'clicks')::float)*100",
 		externalValue:            model.ClickThroughRate,
 		externalOperation:        "sum",
 	},
 	model.ConversionRate: {
-		higherOrderExpression:    "sum((value->>'conversions')::float)*100/NULLIF(sum((value->>'clicks')::float), 100000)",
+		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithMultiply, "conversions", "100", "clicks"),
 		nonHigherOrderExpression: "sum((value->>'conversions')::float)*100",
 		externalValue:            model.ConversionRate,
 		externalOperation:        "sum",
 	},
 	model.CostPerClick: {
-		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'clicks')::float), 100000)",
+		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "clicks"),
 		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
 		externalValue:            model.CostPerClick,
 		externalOperation:        "sum",
 	},
 	model.CostPerConversion: {
-		higherOrderExpression:    "(sum((value->>'cost')::float)/1000000)/NULLIF(sum((value->>'conversions')::float), 100000)",
+		higherOrderExpression:    fmt.Sprintf(higherOrderExpressionsWithDiv, "cost", "conversions"),
 		nonHigherOrderExpression: "(sum((value->>'cost')::float)/1000000)",
 		externalValue:            model.CostPerConversion,
 		externalOperation:        "sum",
