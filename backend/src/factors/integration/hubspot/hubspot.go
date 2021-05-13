@@ -620,28 +620,38 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 			user, errCode := store.GetStore().GetUserByPropertyKey(
 				projectID, model.UserPropertyHubspotContactLeadGUID, leadGUID)
 			if errCode != http.StatusFound {
-				if errCode == http.StatusNotFound {
-					// Added below fallback for getting user_id by contact create synced for same document.
-					// This is not the ideal scenario. Ideally the user_id should be availble one-one on users table.
-					lastSyncedDocument, errCode := store.GetStore().GetSyncedHubspotDocumentWithUserIDByFilter(projectID,
-						document.ID, model.HubspotDocumentTypeContact, model.HubspotDocumentActionCreated)
-					if errCode == http.StatusFound && lastSyncedDocument.UserId != "" {
-						logCtx.Info("Failed to get user with given lead_guid on contact updated event. Using user_id on contact created document.")
-						userID = lastSyncedDocument.UserId
-					} else {
-						logCtx.Info("Failed to get user with given lead_guid on contact updated event. Not able to get user by last contact create document. Trying user by customer_user_id")
-						userByCustomerUserID, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectID, customerUserID)
-						if errCode == http.StatusFound && userByCustomerUserID != nil {
-							userID = userByCustomerUserID.ID
-						} else {
-							logCtx.WithField("customer_user_id", customerUserID).Error("Failed to get user_id on all fallbacks.")
-							return http.StatusInternalServerError
-						}
-					}
-				} else {
+				if errCode != http.StatusNotFound {
 					logCtx.WithField("err_code", errCode).Error("Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
 					return http.StatusInternalServerError
 				}
+
+				// Added below fallback for getting user_id by contact create synced for same document.
+				// This is not the ideal scenario. Ideally the user_id should be availble one-one on users table.
+				lastSyncedDocument, errCode := store.GetStore().GetSyncedHubspotDocumentWithUserIDByFilter(projectID,
+					document.ID, model.HubspotDocumentTypeContact, model.HubspotDocumentActionCreated)
+				if errCode == http.StatusFound && lastSyncedDocument.UserId != "" {
+					logCtx.Info("Failed to get user with given lead_guid on contact updated event. Using user_id on contact created document.")
+					userID = lastSyncedDocument.UserId
+				} else {
+					logCtx.Info("Failed to get user with given lead_guid on contact updated event. Not able to get user by last contact create document. Trying user by customer_user_id")
+					userByCustomerUserID, errCode := store.GetStore().GetUserLatestByCustomerUserId(projectID, customerUserID)
+					if errCode == http.StatusFound && userByCustomerUserID != nil {
+						userID = userByCustomerUserID.ID
+					} else if lastSyncedDocument != nil && lastSyncedDocument.SyncId != "" {
+						event, status := store.GetStore().GetEventById(projectID, lastSyncedDocument.SyncId)
+						if status == http.StatusFound {
+							logCtx.Info("Failed to get user with given lead_guid on contact updated event. Not able to get user by customer user id. Using contact create event user id.")
+							userID = event.UserId
+						}
+					}
+
+					if userID == "" {
+						logCtx.WithField("customer_user_id", customerUserID).Error("Failed to get user_id on all fallbacks.")
+						return http.StatusInternalServerError
+					}
+
+				}
+
 			} else {
 				userID = user.ID
 			}
