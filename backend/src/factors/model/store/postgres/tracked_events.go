@@ -173,7 +173,7 @@ func (pg *Postgres) GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64) 
 }
 
 // GetFactorsTrackedEvent - Get details of tracked event
-func (pg *Postgres) GetFactorsTrackedEvent(EventNameID uint64, ProjectID uint64) (*model.FactorsTrackedEvent, error) {
+func (pg *Postgres) GetFactorsTrackedEvent(EventNameID string, ProjectID uint64) (*model.FactorsTrackedEvent, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": ProjectID})
 	db := C.GetServices().Db
 

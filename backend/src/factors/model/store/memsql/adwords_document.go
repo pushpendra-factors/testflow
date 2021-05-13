@@ -235,12 +235,59 @@ type fields struct {
 	values            []string
 }
 
-func (store *MemSQL) satisfiesAdwordsForeignConstraints(adwordsDocument model.AdwordsDocument) int {
+func (store *MemSQL) satisfiesAdwordsDocumentForeignConstraints(adwordsDocument model.AdwordsDocument) int {
 	_, errCode := store.GetProject(adwordsDocument.ProjectID)
 	if errCode != http.StatusFound {
 		return http.StatusBadRequest
 	}
+
 	return http.StatusOK
+}
+
+func (store *MemSQL) satisfiesAdwordsDocumentUniquenessConstraints(adwordsDocument *model.AdwordsDocument) int {
+	errCode := store.isAdwordsDocumentExistByPrimaryKey(adwordsDocument)
+	if errCode == http.StatusFound {
+		return http.StatusConflict
+	}
+	if errCode == http.StatusNotFound {
+		return http.StatusOK
+	}
+	return errCode
+}
+
+// Checks PRIMARY KEY constraint (project_id, customer_account_id, type, timestamp, id)
+func (store *MemSQL) isAdwordsDocumentExistByPrimaryKey(document *model.AdwordsDocument) int {
+	logCtx := log.WithField("document", document)
+
+	if document.ProjectID == 0 || document.CustomerAccountID == "" || document.Type == 0 ||
+		document.Timestamp == 0 || document.ID == "" {
+
+		log.Error("Invalid document on primary constraint check.")
+		return http.StatusBadRequest
+	}
+
+	var adwordsDocument model.AdwordsDocument
+
+	db := C.GetServices().Db
+	if err := db.Limit(1).Where("project_id = ? AND customer_account_id = ? AND type = ? AND timestamp = ? AND id = ?",
+		document.ProjectID, document.CustomerAccountID, document.Type, document.Timestamp, document.ID,
+	).Select("id").Find(&adwordsDocument).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+
+		logCtx.WithError(err).
+			Error("Failed getting to check existence adwords document by primary keys.")
+		return http.StatusInternalServerError
+	}
+
+	if adwordsDocument.ID == "" {
+		logCtx.Error("Invalid id value returned on adwords document primary key check.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusFound
 }
 
 func getAdwordsIDFieldNameByType(docType int) string {
@@ -334,13 +381,17 @@ func (store *MemSQL) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) in
 	status = addColumnInformationForAdwordsDocument(adwordsDoc)
 	if status != http.StatusOK {
 		return status
-	} else if errCode := store.satisfiesAdwordsForeignConstraints(*adwordsDoc); errCode != http.StatusOK {
+	} else if errCode := store.satisfiesAdwordsDocumentForeignConstraints(*adwordsDoc); errCode != http.StatusOK {
 		return http.StatusInternalServerError
+	}
+
+	errCode := store.satisfiesAdwordsDocumentUniquenessConstraints(adwordsDoc)
+	if errCode != http.StatusOK {
+		return errCode
 	}
 
 	db := C.GetServices().Db
 	dbc := db.Create(adwordsDoc)
-
 	if dbc.Error != nil {
 		if IsDuplicateRecordError(dbc.Error) {
 			log.WithError(dbc.Error).Error("Failed to create an adwords doc. Duplicate.")

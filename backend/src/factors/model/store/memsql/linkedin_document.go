@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -91,12 +92,58 @@ const linkedinCampaignMetadataFetchQueryStr = "select campaign_group_id as campa
 
 var objectsForLinkedin = []string{model.AdwordsCampaign, model.AdwordsAdGroup}
 
-func (store *MemSQL) satisfiesLinkedinForeignConstraints(linkedinDocument model.LinkedinDocument) int {
+func (store *MemSQL) satisfiesLinkedinDocumentForeignConstraints(linkedinDocument model.LinkedinDocument) int {
 	_, errCode := store.GetProject(linkedinDocument.ProjectID)
 	if errCode != http.StatusFound {
 		return http.StatusBadRequest
 	}
 	return http.StatusOK
+}
+
+func (store *MemSQL) satisfiesLinkedinDocumentUniquenessConstraints(linkedinDocument *model.LinkedinDocument) int {
+	errCode := store.isLinkedinDocumentExistByPrimaryKey(linkedinDocument)
+	if errCode == http.StatusFound {
+		return http.StatusConflict
+	}
+	if errCode == http.StatusNotFound {
+		return http.StatusOK
+	}
+	return errCode
+}
+
+// Checks PRIMARY KEY (project_id, customer_ad_account_id, type, timestamp, id)
+func (store *MemSQL) isLinkedinDocumentExistByPrimaryKey(document *model.LinkedinDocument) int {
+	logCtx := log.WithField("document", document)
+
+	if document.ProjectID == 0 || document.CustomerAdAccountID == "" || document.Type == 0 ||
+		document.Timestamp == 0 || document.ID == "" {
+
+		log.Error("Invalid linkedin document on primary constraint check.")
+		return http.StatusBadRequest
+	}
+
+	var linkedinDocument model.LinkedinDocument
+
+	db := C.GetServices().Db
+	if err := db.Limit(1).Where("project_id = ? AND customer_ad_account_id = ? AND type = ? AND timestamp = ? AND id = ?",
+		document.ProjectID, document.CustomerAdAccountID, document.Type, document.Timestamp, document.ID,
+	).Select("id").Find(&linkedinDocument).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+
+		logCtx.WithError(err).
+			Error("Failed getting to check existence linkedin document by primary keys.")
+		return http.StatusInternalServerError
+	}
+
+	if linkedinDocument.ID == "" {
+		logCtx.Error("Invalid id value returned on linkedin document primary key check.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusFound
 }
 
 func getLinkedinDocumentTypeAliasByType() map[int]string {
@@ -179,8 +226,13 @@ func (store *MemSQL) CreateLinkedinDocument(projectID uint64, document *model.Li
 	document.CampaignGroupID = campaignGroupID
 	document.CampaignID = campaignID
 	document.CreativeID = creativeID
-	if errCode := store.satisfiesLinkedinForeignConstraints(*document); errCode != http.StatusOK {
+	if errCode := store.satisfiesLinkedinDocumentForeignConstraints(*document); errCode != http.StatusOK {
 		return http.StatusInternalServerError
+	}
+
+	errCode := store.satisfiesLinkedinDocumentUniquenessConstraints(document)
+	if errCode != http.StatusOK {
+		return errCode
 	}
 
 	db := C.GetServices().Db

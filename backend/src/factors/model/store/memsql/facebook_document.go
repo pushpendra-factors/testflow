@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -159,12 +160,61 @@ const facebookCampaignMetadataFetchQueryStr = "select campaign_id, JSON_EXTRACT_
 	"in (select campaign_id, max(timestamp) from facebook_documents where type = ? " +
 	"and project_id = ? and timestamp BETWEEN ? and ? AND customer_ad_account_id IN (?) group by campaign_id)"
 
-func (store *MemSQL) satisfiesFacebookForeignConstraints(facebookDocument model.FacebookDocument) int {
+var objectsForFacebook = []string{CAFilterCampaign, CAFilterAdGroup, CAFilterAd}
+
+func (store *MemSQL) satisfiesFacebookDocumentForeignConstraints(facebookDocument model.FacebookDocument) int {
 	_, errCode := store.GetProject(facebookDocument.ProjectID)
 	if errCode != http.StatusFound {
 		return http.StatusBadRequest
 	}
 	return http.StatusOK
+}
+
+func (store *MemSQL) satisfiesFacebookDocumentUniquenessConstraints(facebookDocument *model.FacebookDocument) int {
+	errCode := store.isFacebookDocumentExistByPrimaryKey(facebookDocument)
+	if errCode == http.StatusFound {
+		return http.StatusConflict
+	}
+	if errCode == http.StatusNotFound {
+		return http.StatusOK
+	}
+	return errCode
+}
+
+// Checks PRIMARY KEY (project_id, customer_ad_account_id, platform, type, timestamp, id)
+func (store *MemSQL) isFacebookDocumentExistByPrimaryKey(document *model.FacebookDocument) int {
+	logCtx := log.WithField("document", document)
+
+	if document.ProjectID == 0 || document.CustomerAdAccountID == "" || document.Platform == "" ||
+		document.Type == 0 || document.Timestamp == 0 || document.ID == "" {
+
+		log.Error("Invalid facebook document on primary constraint check.")
+		return http.StatusBadRequest
+	}
+
+	var facebookDocument model.FacebookDocument
+
+	db := C.GetServices().Db
+	if err := db.Limit(1).Where(
+		"project_id = ? AND customer_ad_account_id = ? AND platform = ? AND type = ? AND timestamp = ? AND id = ?",
+		document.ProjectID, document.CustomerAdAccountID, document.Platform, document.Type, document.Timestamp, document.ID,
+	).Select("id").Find(&facebookDocument).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+
+		logCtx.WithError(err).
+			Error("Failed getting to check existence facebook document by primary keys.")
+		return http.StatusInternalServerError
+	}
+
+	if facebookDocument.ID == "" {
+		logCtx.Error("Invalid id value returned on facebook document primary key check.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusFound
 }
 
 // CreateFacebookDocument ...
@@ -197,8 +247,13 @@ func (store *MemSQL) CreateFacebookDocument(projectID uint64, document *model.Fa
 	document.CampaignID = campaignIDValue
 	document.AdSetID = adSetID
 	document.AdID = adID
-	if errCode := store.satisfiesFacebookForeignConstraints(*document); errCode != http.StatusOK {
+	if errCode := store.satisfiesFacebookDocumentForeignConstraints(*document); errCode != http.StatusOK {
 		return http.StatusInternalServerError
+	}
+
+	errCode := store.satisfiesFacebookDocumentUniquenessConstraints(document)
+	if errCode != http.StatusOK {
+		return errCode
 	}
 
 	db := C.GetServices().Db

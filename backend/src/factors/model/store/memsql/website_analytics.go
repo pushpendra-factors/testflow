@@ -1234,7 +1234,7 @@ func (store *MemSQL) ExecuteWebAnalyticsQueries(projectId uint64, queries *model
 		var timestamp int64
 		var userID string
 		var sessionID sql.NullString
-		var eventNameID uint64
+		var eventNameID string
 		// properties
 		var eventPropertyIsPageView sql.NullBool
 		var eventPropertyPageURL sql.NullString

@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS event_names (
 
     -- Required constraints.
     -- Unique (project_id, name, type) WHERE type != 'FE'
+    -- Unique (project_id, type, filter_expr)
     -- Unique (project_id, id)
     -- Ref (project_id) -> projects(id)
 );
@@ -457,7 +458,7 @@ CREATE TABLE IF NOT EXISTS salesforce_documents (
 
     -- Required constraints.
     -- Ref (project_id) -> projects(id)
-    -- Unique (project_id, id, type, action, timestamp)
+    -- Unique (project_id, id, type, timestamp)
     -- Ref (project_id, user_id) -> users(project_id, id)
 );
 

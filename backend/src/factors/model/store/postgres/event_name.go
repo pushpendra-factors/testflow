@@ -654,8 +654,8 @@ func (pg *Postgres) GetSmartEventFilterEventNames(projectID uint64, includeDelet
 }
 
 // GetSmartEventFilterEventNameByID returns the smart event by event_name id
-func (pg *Postgres) GetSmartEventFilterEventNameByID(projectID, id uint64, isDeleted bool) (*model.EventName, int) {
-	if id == 0 || projectID == 0 {
+func (pg *Postgres) GetSmartEventFilterEventNameByID(projectID uint64, id string, isDeleted bool) (*model.EventName, int) {
+	if id == "" || projectID == 0 {
 		return nil, http.StatusBadRequest
 	}
 
@@ -717,7 +717,7 @@ func (pg *Postgres) GetFilterEventNamesByExprPrefix(projectId uint64, prefix str
 	return eventNames, http.StatusFound
 }
 
-func (pg *Postgres) UpdateEventName(projectId uint64, id uint64,
+func (pg *Postgres) UpdateEventName(projectId uint64, id string,
 	nameType string, eventName *model.EventName) (*model.EventName, int) {
 	db := C.GetServices().Db
 
@@ -756,12 +756,12 @@ func (pg *Postgres) UpdateEventName(projectId uint64, id uint64,
 	return &updatedEventName, http.StatusAccepted
 }
 
-func (pg *Postgres) updateCRMSmartEventFilter(projectID uint64, id uint64, nameType string,
+func (pg *Postgres) updateCRMSmartEventFilter(projectID uint64, id string, nameType string,
 	eventName *model.EventName, filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name_id": id, "event_name_type": nameType})
 	// Validation
-	if id == 0 || projectID == 0 || eventName.ProjectId != 0 ||
+	if id == "" || projectID == 0 || eventName.ProjectId != 0 ||
 		!isValidName(eventName.Name, eventName.Type) {
 		logCtx.Error("Missing required Fields")
 		return nil, http.StatusBadRequest
@@ -851,7 +851,7 @@ func getCRMSmartEventNameType(source string) string {
 	return ""
 }
 
-func (pg *Postgres) UpdateCRMSmartEventFilter(projectID uint64, id uint64, eventName *model.EventName,
+func (pg *Postgres) UpdateCRMSmartEventFilter(projectID uint64, id string, eventName *model.EventName,
 	filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
 
 	_, duplicate := pg.checkDuplicateSmartEventFilter(projectID, filterExpr)
@@ -865,7 +865,7 @@ func (pg *Postgres) UpdateCRMSmartEventFilter(projectID uint64, id uint64, event
 }
 
 // DeleteSmartEventFilter soft delete smart event name with filter expression
-func (pg *Postgres) DeleteSmartEventFilter(projectID uint64, id uint64) (*model.EventName, int) {
+func (pg *Postgres) DeleteSmartEventFilter(projectID uint64, id string) (*model.EventName, int) {
 	eventName, status := pg.GetSmartEventFilterEventNameByID(projectID, id, false)
 	if status != http.StatusFound {
 		return nil, http.StatusBadRequest
@@ -879,12 +879,11 @@ func (pg *Postgres) DeleteSmartEventFilter(projectID uint64, id uint64) (*model.
 	return eventName, status
 }
 
-func (pg *Postgres) UpdateFilterEventName(projectId uint64, id uint64, eventName *model.EventName) (*model.EventName, int) {
+func (pg *Postgres) UpdateFilterEventName(projectId uint64, id string, eventName *model.EventName) (*model.EventName, int) {
 	return pg.UpdateEventName(projectId, id, model.TYPE_FILTER_EVENT_NAME, eventName)
 }
 
-func DeleteEventName(projectId uint64, id uint64,
-	nameType string) int {
+func DeleteEventName(projectId uint64, id string, nameType string) int {
 	db := C.GetServices().Db
 
 	// Validation
@@ -911,7 +910,7 @@ func DeleteEventName(projectId uint64, id uint64,
 	return http.StatusAccepted
 }
 
-func (pg *Postgres) DeleteFilterEventName(projectId uint64, id uint64) int {
+func (pg *Postgres) DeleteFilterEventName(projectId uint64, id string) int {
 	return DeleteEventName(projectId, id, model.TYPE_FILTER_EVENT_NAME)
 }
 
@@ -1098,7 +1097,7 @@ func (pg *Postgres) FilterEventNameByEventURL(projectId uint64, eventURL string)
 	return filterInfo.eventName, http.StatusFound
 }
 
-func (pg *Postgres) GetEventNameFromEventNameId(eventNameId uint64, projectId uint64) (*model.EventName, error) {
+func (pg *Postgres) GetEventNameFromEventNameId(eventNameId string, projectId uint64) (*model.EventName, error) {
 	db := C.GetServices().Db
 	var eventName model.EventName
 	queryStr := "SELECT * FROM event_names WHERE id = ? AND project_id = ?"

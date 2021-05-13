@@ -25,6 +25,52 @@ func (store *MemSQL) satisfiesHubspotDocumentForeignConstraints(document model.H
 	return http.StatusOK
 }
 
+func (store *MemSQL) satisfiesHubspotDocumentUniquenessConstraints(document *model.HubspotDocument) int {
+	errCode := store.isHubspotDocumentExistByPrimaryKey(document)
+	if errCode == http.StatusFound {
+		return http.StatusConflict
+	}
+	if errCode == http.StatusNotFound {
+		return http.StatusOK
+	}
+	return errCode
+}
+
+// Checks PRIMARY KEY constraint (project_id, id, type, action, timestamp)
+func (store *MemSQL) isHubspotDocumentExistByPrimaryKey(document *model.HubspotDocument) int {
+	logCtx := log.WithField("document", document)
+
+	if document.ProjectId == 0 || document.ID == "" || document.Type == 0 ||
+		document.Action == 0 || document.Timestamp == 0 {
+
+		log.Error("Invalid hubspot document on primary constraint check.")
+		return http.StatusBadRequest
+	}
+
+	var hubspotDocument model.HubspotDocument
+
+	db := C.GetServices().Db
+	if err := db.Limit(1).Where("project_id = ? AND id = ? AND type = ? AND action = ? AND timestamp = ?",
+		document.ProjectId, document.ID, document.Type, document.Action, document.Timestamp,
+	).Select("id").Find(&hubspotDocument).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+
+		logCtx.WithError(err).
+			Error("Failed getting to check existence hubspot document by primary keys.")
+		return http.StatusInternalServerError
+	}
+
+	if hubspotDocument.ID == "" {
+		logCtx.Error("Invalid id value returned on hubspot document primary key check.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusFound
+}
+
 func getHubspotDocumentId(document *model.HubspotDocument) (string, error) {
 	if document.Type == 0 {
 		return "", model.ErrorHubspotInvalidHubspotDocumentType
@@ -219,9 +265,16 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 	}
 	document.Timestamp = timestamp
 
-	if errCode := store.satisfiesHubspotDocumentForeignConstraints(*document); errCode != http.StatusOK {
+	errCode = store.satisfiesHubspotDocumentForeignConstraints(*document)
+	if errCode != http.StatusOK {
 		return http.StatusInternalServerError
 	}
+
+	errCode = store.satisfiesHubspotDocumentUniquenessConstraints(document)
+	if errCode != http.StatusOK {
+		return errCode
+	}
+
 	db := C.GetServices().Db
 	err = db.Create(document).Error
 	if err != nil {

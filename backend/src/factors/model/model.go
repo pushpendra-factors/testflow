@@ -138,44 +138,44 @@ type Model interface {
 	GetOrderedEventNamesFromDb(projectID uint64, startTimestamp int64, endTimestamp int64, limit int) ([]model.EventNameWithAggregation, error)
 	GetFilterEventNames(projectID uint64) ([]model.EventName, int)
 	GetSmartEventFilterEventNames(projectID uint64, includeDeleted bool) ([]model.EventName, int)
-	GetSmartEventFilterEventNameByID(projectID, id uint64, isDeleted bool) (*model.EventName, int)
+	GetSmartEventFilterEventNameByID(projectID uint64, id string, isDeleted bool) (*model.EventName, int)
 	GetEventNamesByNames(projectID uint64, names []string) ([]model.EventName, int)
-	DeleteSmartEventFilter(projectID uint64, id uint64) (*model.EventName, int)
+	DeleteSmartEventFilter(projectID uint64, id string) (*model.EventName, int)
 	GetFilterEventNamesByExprPrefix(projectID uint64, prefix string) ([]model.EventName, int)
-	UpdateEventName(projectId uint64, id uint64, nameType string, eventName *model.EventName) (*model.EventName, int)
-	UpdateCRMSmartEventFilter(projectID uint64, id uint64, eventName *model.EventName, filterExpr *model.SmartCRMEventFilter) (*model.EventName, int)
-	UpdateFilterEventName(projectID uint64, id uint64, eventName *model.EventName) (*model.EventName, int)
-	DeleteFilterEventName(projectID uint64, id uint64) int
+	UpdateEventName(projectId uint64, id string, nameType string, eventName *model.EventName) (*model.EventName, int)
+	UpdateCRMSmartEventFilter(projectID uint64, id string, eventName *model.EventName, filterExpr *model.SmartCRMEventFilter) (*model.EventName, int)
+	UpdateFilterEventName(projectID uint64, id string, eventName *model.EventName) (*model.EventName, int)
+	DeleteFilterEventName(projectID uint64, id string) int
 	FilterEventNameByEventURL(projectID uint64, eventURL string) (*model.EventName, int)
-	GetEventNameFromEventNameId(eventNameId uint64, projectID uint64) (*model.EventName, error)
+	GetEventNameFromEventNameId(eventNameId string, projectID uint64) (*model.EventName, error)
 	GetEventTypeFromDb(projectID uint64, eventNames []string, limit int64) (map[string]string, error)
 	GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDays int) (map[string][]string, error)
 	GetPropertyValuesByEventProperty(projectID uint64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error)
 
 	// events
-	GetEventCountOfUserByEventName(projectID uint64, userId string, eventNameId uint64) (uint64, int)
-	GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID uint64) (uint64, int)
+	GetEventCountOfUserByEventName(projectID uint64, userId string, eventNameId string) (uint64, int)
+	GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID string) (uint64, int)
 	CreateEvent(event *model.Event) (*model.Event, int)
 	GetEvent(projectID uint64, userId string, id string) (*model.Event, int)
 	GetEventById(projectID uint64, id string) (*model.Event, int)
-	GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId uint64, startTimestamp int64, endTimestamp int64) (*model.Event, int)
+	GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId string, startTimestamp int64, endTimestamp int64) (*model.Event, int)
 	GetRecentEventPropertyKeysWithLimits(projectID uint64, eventName string, starttime int64, endtime int64, eventsLimit int) ([]U.Property, error)
 	GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string, property string, valuesLimit int, rowsLimit int, starttime int64, endtime int64) ([]U.PropertyValue, string, error)
 	UpdateEventProperties(projectId uint64, id string, properties *U.PropertiesMap, updateTimestamp int64) int
-	GetUserEventsByEventNameId(projectID uint64, userId string, eventNameId uint64) ([]model.Event, int)
+	GetUserEventsByEventNameId(projectID uint64, userId string, eventNameId string) ([]model.Event, int)
 	OverwriteEventProperties(projectId uint64, userId string, eventId string, newEventProperties *postgres.Jsonb) int
 	OverwriteEventPropertiesByID(projectId uint64, id string, newEventProperties *postgres.Jsonb) int
-	AddSessionForUser(projectId uint64, userId string, userEvents []model.Event, bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId uint64) (int, int, bool, int, int)
+	AddSessionForUser(projectId uint64, userId string, userEvents []model.Event, bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId string) (int, int, bool, int, int)
 	GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int)
-	GetAllEventsForSessionCreationAsUserEventsMap(projectId, sessionEventNameId uint64, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
+	GetAllEventsForSessionCreationAsUserEventsMap(projectId uint64, sessionEventNameId string, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from, to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int)
 	OverwriteEventUserPropertiesByID(projectID uint64, id string, properties *postgres.Jsonb) int
 	PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error)
 	PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error)
 	GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int)
-	DeleteEventsByIDsInBatchForJob(projectID, eventNameID uint64, ids []string, batchSize int) int
-	DeleteEventByIDs(projectID, eventNameID uint64, ids []string) int
+	DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int
+	DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int
@@ -319,7 +319,7 @@ type Model interface {
 	DeactivateFactorsTrackedEvent(ID int64, ProjectID uint64) (int64, int)
 	GetAllFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int)
 	GetAllActiveFactorsTrackedEventsByProject(ProjectID uint64) ([]model.FactorsTrackedEventInfo, int)
-	GetFactorsTrackedEvent(EventNameID uint64, ProjectID uint64) (*model.FactorsTrackedEvent, error)
+	GetFactorsTrackedEvent(EventNameID string, ProjectID uint64) (*model.FactorsTrackedEvent, error)
 	GetFactorsTrackedEventByID(ID int64, ProjectID uint64) (*model.FactorsTrackedEvent, error)
 
 	// tracked_user_properties

@@ -30,7 +30,7 @@ type Event struct {
 
 	UserProperties *postgres.Jsonb `json:"user_properties"`
 	SessionId      *string         `json:session_id`
-	EventNameId    uint64          `json:"event_name_id"`
+	EventNameId    string          `json:"event_name_id"`
 	Count          uint64          `json:"count"`
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties                 postgres.Jsonb `json:"properties,omitempty"`

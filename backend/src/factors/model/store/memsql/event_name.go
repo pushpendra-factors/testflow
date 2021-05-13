@@ -21,6 +21,16 @@ func satisfiesEventNameConstraints(eventName model.EventName) int {
 	if errCode == http.StatusFound {
 		return http.StatusConflict
 	}
+
+	// Unique (project_id, type, filter_expr)
+	if eventName.FilterExpr != "" {
+		errCode := isEventNameExistByTypeAndFitlerExpr(eventName.ProjectId,
+			eventName.Type, eventName.FilterExpr)
+		if errCode == http.StatusFound {
+			return http.StatusConflict
+		}
+	}
+
 	return http.StatusOK
 }
 
@@ -57,7 +67,12 @@ func (store *MemSQL) CreateOrGetEventName(eventName *model.EventName) (*model.Ev
 		return nil, errCode
 	} else if errCode := store.satisfiesEventNameForeignConstraints(*eventName); errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError
-	} else if err := db.Create(eventName).Error; err != nil {
+	}
+
+	if eventName.ID == "" {
+		eventName.ID = U.GetUUID()
+	}
+	if err := db.Create(eventName).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to create event_name.")
 		return nil, http.StatusInternalServerError
 	}
@@ -637,6 +652,26 @@ func getNonFilterEventsByName(projectID uint64, eventName string) ([]model.Event
 	return eventNames, http.StatusFound
 }
 
+func isEventNameExistByTypeAndFitlerExpr(projectID uint64, typ string, filterExpr string) int {
+	db := C.GetServices().Db
+
+	var eventNames model.EventName
+	if err := db.Limit(1).Where("project_id = ? AND type = ? AND filter_expr = ? AND deleted = 'false'",
+		projectID, typ, filterExpr).Select("id").Find(&eventNames).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+
+		log.WithFields(log.Fields{"project_id": projectID}).WithError(err).
+			Error("Failed getting to check existence of event_name by type and filter_expr")
+
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusFound
+}
+
 func (store *MemSQL) GetFilterEventNames(projectId uint64) ([]model.EventName, int) {
 	db := C.GetServices().Db
 
@@ -680,8 +715,8 @@ func (store *MemSQL) GetSmartEventFilterEventNames(projectID uint64, includeDele
 }
 
 // GetSmartEventFilterEventNameByID returns the smart event by event_name id
-func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID, id uint64, isDeleted bool) (*model.EventName, int) {
-	if id == 0 || projectID == 0 {
+func (store *MemSQL) GetSmartEventFilterEventNameByID(projectID uint64, id string, isDeleted bool) (*model.EventName, int) {
+	if id == "" || projectID == 0 {
 		return nil, http.StatusBadRequest
 	}
 
@@ -743,7 +778,7 @@ func (store *MemSQL) GetFilterEventNamesByExprPrefix(projectId uint64, prefix st
 	return eventNames, http.StatusFound
 }
 
-func (store *MemSQL) UpdateEventName(projectId uint64, id uint64,
+func (store *MemSQL) UpdateEventName(projectId uint64, id string,
 	nameType string, eventName *model.EventName) (*model.EventName, int) {
 	db := C.GetServices().Db
 
@@ -782,12 +817,12 @@ func (store *MemSQL) UpdateEventName(projectId uint64, id uint64,
 	return &updatedEventName, http.StatusAccepted
 }
 
-func (store *MemSQL) updateCRMSmartEventFilter(projectID uint64, id uint64, nameType string,
+func (store *MemSQL) updateCRMSmartEventFilter(projectID uint64, id string, nameType string,
 	eventName *model.EventName, filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "event_name_id": id, "event_name_type": nameType})
 	// Validation
-	if id == 0 || projectID == 0 || eventName.ProjectId != 0 ||
+	if id == "" || projectID == 0 || eventName.ProjectId != 0 ||
 		!isValidName(eventName.Name, eventName.Type) {
 		logCtx.Error("Missing required Fields")
 		return nil, http.StatusBadRequest
@@ -877,7 +912,7 @@ func getCRMSmartEventNameType(source string) string {
 	return ""
 }
 
-func (store *MemSQL) UpdateCRMSmartEventFilter(projectID uint64, id uint64, eventName *model.EventName,
+func (store *MemSQL) UpdateCRMSmartEventFilter(projectID uint64, id string, eventName *model.EventName,
 	filterExpr *model.SmartCRMEventFilter) (*model.EventName, int) {
 
 	_, duplicate := store.checkDuplicateSmartEventFilter(projectID, filterExpr)
@@ -891,7 +926,7 @@ func (store *MemSQL) UpdateCRMSmartEventFilter(projectID uint64, id uint64, even
 }
 
 // DeleteSmartEventFilter soft delete smart event name with filter expression
-func (store *MemSQL) DeleteSmartEventFilter(projectID uint64, id uint64) (*model.EventName, int) {
+func (store *MemSQL) DeleteSmartEventFilter(projectID uint64, id string) (*model.EventName, int) {
 	eventName, status := store.GetSmartEventFilterEventNameByID(projectID, id, false)
 	if status != http.StatusFound {
 		return nil, http.StatusBadRequest
@@ -905,11 +940,11 @@ func (store *MemSQL) DeleteSmartEventFilter(projectID uint64, id uint64) (*model
 	return eventName, status
 }
 
-func (store *MemSQL) UpdateFilterEventName(projectId uint64, id uint64, eventName *model.EventName) (*model.EventName, int) {
+func (store *MemSQL) UpdateFilterEventName(projectId uint64, id string, eventName *model.EventName) (*model.EventName, int) {
 	return store.UpdateEventName(projectId, id, model.TYPE_FILTER_EVENT_NAME, eventName)
 }
 
-func DeleteEventName(projectId uint64, id uint64,
+func DeleteEventName(projectId uint64, id string,
 	nameType string) int {
 	db := C.GetServices().Db
 
@@ -937,7 +972,7 @@ func DeleteEventName(projectId uint64, id uint64,
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) DeleteFilterEventName(projectId uint64, id uint64) int {
+func (store *MemSQL) DeleteFilterEventName(projectId uint64, id string) int {
 	return DeleteEventName(projectId, id, model.TYPE_FILTER_EVENT_NAME)
 }
 
@@ -1124,7 +1159,7 @@ func (store *MemSQL) FilterEventNameByEventURL(projectId uint64, eventURL string
 	return filterInfo.eventName, http.StatusFound
 }
 
-func (store *MemSQL) GetEventNameFromEventNameId(eventNameId uint64, projectId uint64) (*model.EventName, error) {
+func (store *MemSQL) GetEventNameFromEventNameId(eventNameId string, projectId uint64) (*model.EventName, error) {
 	db := C.GetServices().Db
 	var eventName model.EventName
 	queryStr := "SELECT * FROM event_names WHERE id = ? AND project_id = ?"

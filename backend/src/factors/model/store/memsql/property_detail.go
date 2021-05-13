@@ -289,7 +289,7 @@ func (store *MemSQL) deletePropertyDetailsIfExist(projectID uint64, eventName, k
 }
 
 // updatePropertyDetails updates property details by event_name_id or user_property
-func (store *MemSQL) updatePropertyDetails(projectID uint64, eventNameID uint64, key, propertyType string, entity int, newPropertyType string) int {
+func (store *MemSQL) updatePropertyDetails(projectID uint64, eventNameID string, key, propertyType string, entity int, newPropertyType string) int {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_key": key, "property_type": propertyType, "event_name_id": eventNameID})
 
@@ -297,7 +297,7 @@ func (store *MemSQL) updatePropertyDetails(projectID uint64, eventNameID uint64,
 		return http.StatusBadRequest
 	}
 
-	if entity != model.EntityUser && eventNameID == 0 {
+	if entity != model.EntityUser && eventNameID == "" {
 		return http.StatusBadRequest
 	}
 

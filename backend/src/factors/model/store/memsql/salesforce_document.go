@@ -27,6 +27,50 @@ func (store *MemSQL) satisfiesSalesforceDocumentForeignConstraints(document mode
 	return http.StatusOK
 }
 
+func (store *MemSQL) satisfiesSalesforceDocumentUniquenessConstraints(document *model.SalesforceDocument) int {
+	errCode := store.isSalesforceDocumentExistByPrimaryKey(document)
+	if errCode == http.StatusFound {
+		return http.StatusConflict
+	}
+	if errCode == http.StatusNotFound {
+		return http.StatusOK
+	}
+	return errCode
+}
+
+// Checks PRIMARY KEY constraint (project_id, id, type, timestamp)
+func (store *MemSQL) isSalesforceDocumentExistByPrimaryKey(document *model.SalesforceDocument) int {
+	logCtx := log.WithField("document", document)
+
+	if document.ProjectID == 0 || document.ID == "" || document.Type == 0 || document.Timestamp == 0 {
+		log.Error("Invalid salesforce document on primary constraint check.")
+		return http.StatusBadRequest
+	}
+
+	var salesforceDocument model.SalesforceDocument
+
+	db := C.GetServices().Db
+	if err := db.Limit(1).Where("project_id = ? AND id = ? AND type = ? AND timestamp = ?",
+		document.ProjectID, document.ID, document.Type, document.Timestamp,
+	).Select("id").Find(&salesforceDocument).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+
+		logCtx.WithError(err).
+			Error("Failed getting to check existence salesforce document by primary keys.")
+		return http.StatusInternalServerError
+	}
+
+	if salesforceDocument.ID == "" {
+		logCtx.Error("Invalid id value returned on salesforce document primary key check.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusFound
+}
+
 // GetSalesforceSyncInfo returns list of projects and their corresponding sync status
 func (store *MemSQL) GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int) {
 	var lastSyncInfo []model.SalesforceLastSyncInfo
@@ -233,8 +277,14 @@ func (store *MemSQL) CreateSalesforceDocumentByAction(projectID uint64, document
 	}
 	document.Timestamp = timestamp
 
-	if errCode := store.satisfiesSalesforceDocumentForeignConstraints(*document); errCode != http.StatusOK {
+	errCode := store.satisfiesSalesforceDocumentForeignConstraints(*document)
+	if errCode != http.StatusOK {
 		return http.StatusInternalServerError
+	}
+
+	errCode = store.satisfiesSalesforceDocumentUniquenessConstraints(document)
+	if errCode != http.StatusOK {
+		return errCode
 	}
 
 	db := C.GetServices().Db

@@ -59,10 +59,10 @@ func SetupProjectUserReturnDAO() (*model.Project, *model.User, error) {
 }
 
 // Todo(Dinesh): To be replaced with SetupProjectUserEventNameReturnDAO.
-func SetupProjectUserEventName() (uint64, string, uint64, error) {
+func SetupProjectUserEventName() (uint64, string, string, error) {
 	var projectId uint64
 	var userId string
-	var eventNameId uint64
+	var eventNameId string
 
 	// Create random project and a corresponding eventName and user.
 

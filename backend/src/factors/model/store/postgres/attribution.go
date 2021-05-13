@@ -330,7 +330,8 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 
 // getAllTheSessions Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
-func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId uint64, query *model.AttributionQuery, reports *model.MarketingReports) (map[string]map[string]model.UserSessionData, []string, error) {
+func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId string, query *model.AttributionQuery,
+	reports *model.MarketingReports) (map[string]map[string]model.UserSessionData, []string, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	effectiveFrom := lookbackAdjustedFrom(query.From, query.LookbackDays)
@@ -465,7 +466,7 @@ func buildEventNamesPlaceholder(query *model.AttributionQuery) []string {
 
 // Return conversion event Id, list of all event_ids(Conversion and funnel events) and a Id to name mapping
 func (pg *Postgres) getEventInformation(projectId uint64,
-	query *model.AttributionQuery) (uint64, map[string][]interface{}, error) {
+	query *model.AttributionQuery) (string, map[string][]interface{}, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
 	names := buildEventNamesPlaceholder(query)
@@ -479,12 +480,12 @@ func (pg *Postgres) getEventInformation(projectId uint64,
 	eventNames, errCode := pg.GetEventNamesByNames(projectId, names)
 	if errCode != http.StatusFound {
 		logCtx.Error("failed to find event names")
-		return 0, nil, errors.New("failed to find event names")
+		return "", nil, errors.New("failed to find event names")
 	}
 	// this is one to many mapping
 	eventNameToId := make(map[string][]interface{})
 	// this is one to one mapping
-	eventNameIdToName := make(map[uint64]string)
+	eventNameIdToName := make(map[string]string)
 	for _, event := range eventNames {
 		eventNameId := event.ID
 		eventName := event.Name
@@ -494,19 +495,19 @@ func (pg *Postgres) getEventInformation(projectId uint64,
 	// there exists only one session event name per project
 	if len(eventNameToId[U.EVENT_NAME_SESSION]) == 0 {
 		logCtx.Error("$Session Name Id not found")
-		return 0, nil, errors.New("$Session Name Id not found")
+		return "", nil, errors.New("$Session Name Id not found")
 	}
 	if len(eventNameToId[query.ConversionEvent.Name]) == 0 {
 		logCtx.Error("conversion event name : " + query.ConversionEvent.Name + " not found")
-		return 0, nil, errors.New("conversion event name : " + query.ConversionEvent.Name + " not found")
+		return "", nil, errors.New("conversion event name : " + query.ConversionEvent.Name + " not found")
 	}
 	for _, linkedEvent := range query.LinkedEvents {
 		if len(eventNameToId[linkedEvent.Name]) == 0 {
 			logCtx.Error("linked event name : " + linkedEvent.Name + " not found")
-			return 0, nil, errors.New("linked event name : " + linkedEvent.Name + " not found")
+			return "", nil, errors.New("linked event name : " + linkedEvent.Name + " not found")
 		}
 	}
-	sessionEventNameId := eventNameToId[U.EVENT_NAME_SESSION][0].(uint64)
+	sessionEventNameId := eventNameToId[U.EVENT_NAME_SESSION][0].(string)
 	return sessionEventNameId, eventNameToId, nil
 }
 

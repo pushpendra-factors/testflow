@@ -6,7 +6,7 @@ import "time"
 type FactorsTrackedEvent struct {
 	ID            uint64     `gorm:"primary_key:true;" json:"id"`
 	ProjectID     uint64     `json:"project_id"`
-	EventNameID   uint64     `json:"event_name_id"`
+	EventNameID   string     `json:"event_name_id"`
 	Type          string     `gorm:"not null;type:varchar(2)" json:"type"`
 	CreatedBy     *string    `json:"created_by"`
 	LastTrackedAt *time.Time `json:"last_tracked_at"`
@@ -18,7 +18,7 @@ type FactorsTrackedEvent struct {
 type FactorsTrackedEventInfo struct {
 	ID            uint64     `gorm:"primary_key:true;" json:"id"`
 	ProjectID     uint64     `json:"project_id"`
-	EventNameID   uint64     `json:"event_name_id"`
+	EventNameID   string     `json:"event_name_id"`
 	Type          string     `gorm:"not null;type:varchar(2)" json:"type"`
 	CreatedBy     *string    `json:"created_by"`
 	LastTrackedAt *time.Time `json:"last_tracked_at"`
