@@ -741,7 +741,11 @@ func addMetricsFromReport(attributionData map[string]*AttributionData, reportKey
 	// If key is not found, no performance report enrichment will happen
 	for key, value := range reportKeyData {
 		// TODO (Anil) remove this debug log
-		if strings.Contains(key, PropertyValueNone) || !U.IsNonEmptyKey(attributionData[key].Name) {
+		exists := false
+		if _, found := attributionData[key]; found {
+			exists = true
+		}
+		if strings.Contains(key, PropertyValueNone) || (exists && !U.IsNonEmptyKey(attributionData[key].Name)) {
 			logCtx.WithFields(log.Fields{
 				"Key":              value.Key,
 				"ID":               value.ID,
