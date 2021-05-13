@@ -32,6 +32,8 @@ class AdPerformanceLoad(BaseReportLoad):
     def merge_dependencies_and_current_task_records(self):
         records = self.records
         for record in records:
+            if (record["campaign_id"] not in self.campaigns) or (record["adset_id"] not in self.ad_set) or (record["ad_id"] not in self.ads):
+                continue
             required_campaign = self.campaigns[record["campaign_id"]]
             required_ad_set = self.ad_set[record["adset_id"]]
             required_ad = self.ads[record["ad_id"]]
