@@ -148,6 +148,15 @@ func (pg *Postgres) UpdateAgentIntAdwordsRefreshToken(uuid, refreshToken string)
 
 	return updateAgent(uuid, model.IntAdwordsRefreshToken(refreshToken))
 }
+func (pg *Postgres) UpdateAgentIntGoogleOrganicRefreshToken(uuid, refreshToken string) int {
+	if uuid == "" || refreshToken == "" {
+		log.WithField("agent_uuid", uuid).Error(
+			"UpdateAgentGSCRefreshToken failed. Invalid params.")
+		return http.StatusBadRequest
+	}
+
+	return updateAgent(uuid, model.IntGSCRefreshToken(refreshToken))
+}
 
 func (pg *Postgres) UpdateAgentIntSalesforce(uuid, refreshToken string, instanceUrl string) int {
 	if uuid == "" || refreshToken == "" || instanceUrl == "" {

@@ -35,7 +35,7 @@ spec:
             - $(DATA_SERVICE_HOST_URL)
             envFrom:
             - configMapRef:
-                name: config-adwordsserver
+                name: config-pythonappserver
             - configMapRef:
                 name: config-env
             - secretRef:

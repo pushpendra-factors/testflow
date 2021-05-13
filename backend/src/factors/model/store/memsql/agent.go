@@ -163,6 +163,15 @@ func (store *MemSQL) UpdateAgentIntAdwordsRefreshToken(uuid, refreshToken string
 
 	return updateAgent(uuid, model.IntAdwordsRefreshToken(refreshToken))
 }
+func (store *MemSQL) UpdateAgentIntGoogleOrganicRefreshToken(uuid, refreshToken string) int {
+	if uuid == "" || refreshToken == "" {
+		log.WithField("agent_uuid", uuid).Error(
+			"UpdateAgentGSCRefreshToken failed. Invalid params.")
+		return http.StatusBadRequest
+	}
+
+	return updateAgent(uuid, model.IntGSCRefreshToken(refreshToken))
+}
 
 func (store *MemSQL) UpdateAgentIntSalesforce(uuid, refreshToken string, instanceUrl string) int {
 	if uuid == "" || refreshToken == "" || instanceUrl == "" {

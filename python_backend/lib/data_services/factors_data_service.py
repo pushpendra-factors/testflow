@@ -32,6 +32,22 @@ class FactorsDataService:
             return
 
         return response
+    
+    @classmethod
+    def add_gsc_refresh_token(cls, session, payload):
+        if session is None or session == "":
+            log.error("Invalid session cookie on add_refresh_token request.")
+            return
+
+        url = cls.data_service_path + "/google_organic/add_refresh_token"
+
+        response = requests.post(url, json=payload)
+        if not response.ok:
+            log.error("Failed updating adwords integration with response : %d, %s",
+                      response.status_code, response.text)
+            return
+
+        return response
 
     @classmethod
     def get_adwords_refresh_token(cls, project_id):
@@ -41,6 +57,18 @@ class FactorsDataService:
         response = requests.post(url, json=payload)
         if not response.ok:
             log.error("Failed getting adwords integration with response : %d, %s",
+                      response.status_code, response.text)
+            return
+        return response
+
+    @classmethod
+    def get_gsc_refresh_token(cls, project_id):
+        url = cls.data_service_path + "/google_organic/get_refresh_token"
+        # project_id as str for consistency on json.
+        payload = {"project_id": str(project_id)}
+        response = requests.post(url, json=payload)
+        if not response.ok:
+            log.error("Failed getting gsc integration with response : %d, %s",
                       response.status_code, response.text)
             return
         return response
@@ -113,6 +141,73 @@ class FactorsDataService:
             "timestamp": timestamp,
         }
 
+    @classmethod
+    def get_gsc_last_sync_infos_for_all_projects(cls):
+        url = cls.data_service_path + "/google_organic/documents/last_sync_info"
+
+        response = requests.get(url)
+        if not response.ok:
+            log.error("Failed to get sync data: %d, %s",
+                      response.status_code, response.text)
+
+        log.warning("Got gsc last sync info.")
+        return response.json()
+
+    @classmethod
+    def get_gsc_last_sync_infos_for_project(cls, project_id):
+        url = cls.data_service_path + "/google_organic/documents/project_last_sync_info"
+        payload = {
+            "project_id": project_id
+        }
+        response = requests.get(url, json=payload)
+        return response.json()
+
+    @classmethod
+    def add_all_gsc_documents(cls, project_id, url, docs, timestamp):
+
+        for i in range(0, len(docs), cls.BATCH_SIZE):
+            batch = docs[i:i+cls.BATCH_SIZE]
+            response = cls.add_multiple_gsc_document(project_id, url,
+                                     batch, timestamp)
+            if not response.ok:
+                return response
+
+        return response
+
+    @classmethod
+    def add_gsc_document(cls, project_id, url_prefix, doc, timestamp):
+        url = cls.data_service_path + "/google_organic/documents/add"
+
+        payload = cls.get_payload_for_gsc(project_id, url_prefix, doc, timestamp)
+
+        response = requests.post(url, json=payload)
+        if not response.ok:
+            log.error("Failed to add response %s to gsc warehouse: %d, %s",
+                    url, response.status_code, response.text)
+
+        return response
+
+    @classmethod
+    def add_multiple_gsc_document(cls, project_id, url_prefix, docs, timestamp):
+        url = cls.data_service_path + "/google_organic/documents/add_multiple"
+        batch_of_payloads = [cls.get_payload_for_gsc(project_id, url_prefix,
+                                    doc, timestamp) for doc in docs]
+
+        response = requests.post(url, json=batch_of_payloads)
+        if not response.ok:
+            log.error("Failed to add response %s to gsc warehouse: %d, %s",
+                    url, response.status_code, response.text)
+        return response
+
+    @staticmethod
+    def get_payload_for_gsc(project_id, url, doc, timestamp):
+        return {
+            "project_id": project_id,
+            "url_prefix": url,
+            "value": doc,
+            "timestamp": timestamp,
+            "id": doc["id"]
+        }
     # facebook related processing.
     @classmethod
     def get_facebook_settings(cls):

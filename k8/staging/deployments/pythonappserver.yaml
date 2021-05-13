@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    layer: adwordsserver
-    env: production
-    project: factors-production
-    nodePool: default-pool
-  name: adwordsserver
+    layer: pythonappserver
+    env: staging
+    project: factors-staging
+    nodePool: factors-staging-node-pool
+  name: pythonappserver
   namespace: default
 spec:
   progressDeadlineSeconds: 600
@@ -14,7 +14,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      layer: adwordsserver
+      layer: pythonappserver
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -23,13 +23,13 @@ spec:
   template:
     metadata:      
       labels:
-        layer: adwordsserver
-        nodePool: default-pool
+        layer: pythonappserver
+        nodePool: factors-staging-node-pool
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-pool
+        cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
-      - name: adwordsserver
+      - name: pythonappserver
         image: us.gcr.io/factors-staging/python-server:v0.13-4bcdb5e2
         imagePullPolicy: IfNotPresent
         ports:
@@ -63,7 +63,7 @@ spec:
           - --api_host_url
           - $(DATA_SERVICE_HOST_URL)
           - --app_host_url
-          - $(APP_OLD_HOST_URL)
+          - $(APP_HOST_URL)
           - --oauth_secret
           - $(GOOGLE_OAUTH_SECRET)
           - --developer_token
@@ -71,10 +71,10 @@ spec:
           - --sentry_dsn
           - $(SENTRY_DSN)
           - --server_name
-          - "adwordsserver"          
+          - "pythonappserver"
         envFrom:
         - configMapRef:
-            name: config-adwordsserver
+            name: config-pythonappserver
         - configMapRef:
             name: config-env
         - secretRef:

@@ -39,6 +39,7 @@ const (
 	CAChannelGoogleAds                     = "google_ads"
 	CAChannelFacebookAds                   = "facebook_ads"
 	CAChannelLinkedinAds                   = "linkedin_ads"
+	CAChannelSearchConsole                 = "search_console"
 	CAAllChannelAds                        = "all_ads"
 	CAColumnValueAll                       = "all"
 	CAChannelGroupKey                      = "group_key"
@@ -50,7 +51,8 @@ const (
 	CAColumnConversionValueInLocalCurrency = "conversion_value_in_local_currency"
 	CAColumnTotalEngagement                = "total_engagements"
 	CAFilterCampaignGroup                  = "campaign_group"
-	CAFilterCreactive                      = "creative"
+	CAFilterCreative                       = "creative"
+	CAFilterOrganicProperty                = "organic_property"
 	dateTruncateString                     = "date_trunc('%s', make_timestamptz(SUBSTRING (%s::text, 1, 4)::INTEGER, SUBSTRING (%s::text, 5, 2)::INTEGER, SUBSTRING (%s::text, 7, 2)::INTEGER, 0, 0, 0, '%s') AT TIME ZONE '%s')"
 	CAUnionFilterQuery                     = "SELECT filter_value from ( %s ) all_ads LIMIT 2500"
 	CAUnionQuery1                          = "SELECT %s FROM ( %s ) all_ads ORDER BY %s %s"
@@ -83,7 +85,8 @@ var CAFilters = []string{
 	CAFilterQuery,
 	CAFilterAdset,
 	CAFilterCampaignGroup,
-	CAFilterCreactive,
+	CAFilterCreative,
+	CAFilterOrganicProperty,
 }
 
 // TODO: Move and fetch it from respective channels - allChannels, adwords etc.. because this is error prone.
@@ -120,6 +123,8 @@ func (pg *Postgres) GetChannelConfig(projectID uint64, channel string, reqID str
 		result = pg.buildAdwordsChannelConfig(projectID)
 	case CAChannelLinkedinAds:
 		result = pg.buildLinkedinChannelConfig(projectID)
+	case CAChannelSearchConsole:
+		result = pg.buildGoogleOrganicChannelConfig()
 	}
 	return result, http.StatusOK
 }
@@ -142,8 +147,7 @@ func isValidChannel(channel string) bool {
 			return true
 		}
 	}
-
-	return false
+	return channel == CAChannelSearchConsole
 }
 
 // @TODO Kark v1
@@ -206,6 +210,8 @@ func (pg *Postgres) GetChannelFilterValuesV1(projectID uint64, channel, filterOb
 		filterValues, errCode = pg.GetAdwordsFilterValues(projectID, filterObject, filterProperty, reqID)
 	case CAChannelLinkedinAds:
 		filterValues, errCode = pg.GetLinkedinFilterValues(projectID, filterObject, filterProperty, reqID)
+	case CAChannelSearchConsole:
+		filterValues, errCode = pg.GetGoogleOrganicFilterValues(projectID, filterObject, filterProperty, reqID)
 	}
 
 	if errCode != http.StatusFound {
@@ -300,6 +306,8 @@ func (pg *Postgres) ExecuteChannelQueryV1(projectID uint64, query *model.Channel
 		columns, resultMetrics, err = pg.ExecuteAdwordsChannelQueryV1(projectID, query, reqID)
 	case CAChannelLinkedinAds:
 		columns, resultMetrics, err = pg.ExecuteLinkedinChannelQueryV1(projectID, query, reqID)
+	case CAChannelSearchConsole:
+		columns, resultMetrics, err = pg.ExecuteGoogleOrganicChannelQueryV1(projectID, query, reqID)
 	}
 	if err != http.StatusOK {
 		logCtx.Warn(query)

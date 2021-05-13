@@ -43,3 +43,17 @@ class JobStorage:
     @staticmethod
     def get_file_path(timestamp, project_id, customer_acc_id, doc_type):
         return "adwords_extract/{0}/{1}/{2}/{3}.csv".format(timestamp, project_id, customer_acc_id, doc_type)
+    
+    @classmethod
+    def write_gsc(cls, input_string, timestamp, project_id, url):
+        file_path = JobStorage.get_gsc_file_path(timestamp, project_id, url)
+        cls.storage_file.write(input_string, file_path)
+
+    @classmethod
+    def read_gsc(cls, timestamp, project_id, url):
+        file_path = JobStorage.get_gsc_file_path(timestamp, project_id, url)
+        return cls.storage_file.read(file_path)
+
+    @staticmethod
+    def get_gsc_file_path(timestamp, project_id, url):
+        return "gsc_extract/{0}/{1}/{2}.csv".format(timestamp, project_id, url)

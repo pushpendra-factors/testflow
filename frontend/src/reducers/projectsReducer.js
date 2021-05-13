@@ -290,6 +290,11 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
         }
         return _state;
       }
+      case "FETCH_GSC_CUSTOMER_ACCOUNTS_FULFILLED": {
+        let _state = { ...state }
+        _state.gscURLs = [...action.payload.urls];
+        return _state;
+      }
       case "ENABLE_SALESFORCE_FULFILLED": {
         let enabledAgentUUID = action.payload.int_salesforce_enabled_agent_uuid;
         if (!enabledAgentUUID || enabledAgentUUID == "")

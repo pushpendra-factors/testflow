@@ -19,6 +19,9 @@ type ProjectSetting struct {
 	// for disabling adwords integration for the project.
 	IntAdwordsEnabledAgentUUID  *string `json:"int_adwords_enabled_agent_uuid,omitempty"`
 	IntAdwordsCustomerAccountId *string `json:"int_adwords_customer_account_id,omitempty"`
+	// for disabling google search console integration for the project.
+	IntGoogleOrganicEnabledAgentUUID *string `json:"int_google_organic_enabled_agent_uuid,omitempty"`
+	IntGoogleOrganicURLPrefixes      *string `json:"int_google_organic_url_prefixes,omitempty"`
 	// Hubspot integration settings.
 	IntHubspot       *bool     `gorm:"not null;default:false" json:"int_hubspot,omitempty"`
 	IntHubspotApiKey string    `json:"int_hubspot_api_key,omitempty"`
@@ -60,6 +63,12 @@ type AdwordsProjectSettings struct {
 	RefreshToken      string
 }
 
+type GoogleOrganicProjectSettings struct {
+	ProjectID    uint64
+	URLPrefix    string
+	AgentUUID    string
+	RefreshToken string
+}
 type HubspotProjectSettings struct {
 	ProjectId uint64 `json:"-"`
 	APIKey    string `json:"api_key"`
