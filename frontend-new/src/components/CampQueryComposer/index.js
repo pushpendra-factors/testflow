@@ -309,7 +309,7 @@ const CampQueryComposer = ({ activeProject, channel,
             <div className={styles.composer}>
                 <div className={`${styles.composer__section} fa--query_block`}>
                     <div className={styles.composer__section__title}>
-                        <Text type={'title'} level={7} weight={'bold'}>Select Channel</Text>
+                        <Text type={'title'} level={7} weight={'bold'}>Select Source</Text>
                     </div>
                     <div className={styles.composer__section__content}>
                         {renderChannelSource()}
