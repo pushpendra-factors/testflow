@@ -1016,11 +1016,16 @@ func (s *MStates) AddToState(mstate MState) {
 }
 
 func convertIDToUUIDFromInterface(id interface{}) (string, error) {
-	idUint64, ok := id.(uint64)
-	if !ok {
-		return "", errors.New("failed to assert to uint64.")
+	var uuid string
+	var err error
+	switch id.(type) {
+	case uint64:
+		uuid, err = U.ConvertIntToUUID(id.(uint64))
+	case string:
+		uuid, err = U.ConvertIntStringToUUID(id.(string))
+	default:
+		return "", errors.New(fmt.Sprintf("Invalid type %T with value %v", id, id))
 	}
-	uuid, err := U.ConvertIntToUUID(idUint64)
 	if err != nil {
 		return "", err
 	}
