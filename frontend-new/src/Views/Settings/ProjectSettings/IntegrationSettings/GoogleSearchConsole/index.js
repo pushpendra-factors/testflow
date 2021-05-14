@@ -3,27 +3,27 @@ import { connect } from 'react-redux';
 import {
     Button, message, Select, Modal, Row, Col, Input, Checkbox, Skeleton
 } from 'antd';
-// const ADWORDS_REDIRECT_URI = "/adwords/auth/redirect"; 
-const ADWORDS_REDIRECT_URI_NEW = "/adwords/v1/auth/redirect"; 
-import { enableAdwordsIntegration, fetchAdwordsCustomerAccounts, udpateProjectSettings, fetchProjectSettings } from 'Reducers/global';
+// const GSC_REDIRECT_URI = "/adwords/auth/redirect"; 
+const GSC_REDIRECT_URI_NEW = "/google_organic/v1/auth/redirect"; 
+import { enableSearchConsoleIntegration, fetchSearchConsoleCustomerAccounts, udpateProjectSettings, fetchProjectSettings } from 'Reducers/global';
 const isDevelopment = () => {
     return ENV === "development"
 }
 import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary'
-const getAdwordsHostURL = () => {
+const getGSCHostURL = () => {
     // return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
     return BUILD_CONFIG.backend_host;
 }
 
 
-const GoogleIntegration = ({
+const GoogleSearchConsole = ({
     activeProject,
     agent_details,
     currentProjectSettings,
-    enableAdwordsIntegration,
+    enableSearchConsoleIntegration,
     setIsActive,
-    fetchAdwordsCustomerAccounts,
+    fetchSearchConsoleCustomerAccounts,
     udpateProjectSettings,
     fetchProjectSettings
 }) => {
@@ -34,22 +34,24 @@ const GoogleIntegration = ({
     const [addNewAccount, setAddNewAccount] = useState(false);
     const [customerAccountsLoaded, setCustomerAccountsLoaded] = useState(false);
     const [customerAccounts, setCustomerAccounts] = useState(false);
-    const [selectedAdwordsAccounts, setSelectedAdwordsAccounts] = useState([]);
+    const [selectedGSCAccounts, setSelectedGSCAccounts] = useState([]);
     const [manualAccounts, setManualAccounts] = useState([]);
     const [accountId, setAccountId] = useState(null);
     const [showManageBtn, setShowManageBtn] = useState(true);
-
-    const isIntAdwordsEnabled = () => {
-        return currentProjectSettings && currentProjectSettings.int_adwords_enabled_agent_uuid && currentProjectSettings.int_adwords_enabled_agent_uuid != "";
-    }
+ 
+    const isGSCEnabled = () =>  {
+        return currentProjectSettings && 
+          currentProjectSettings.int_google_organic_enabled_agent_uuid && 
+          currentProjectSettings.int_google_organic_enabled_agent_uuid != ""
+      }
 
     const getRedirectURL = () => {
         let params = {
             method: "GET",
             credentials: "include"
           }
-        let host = getAdwordsHostURL();
-        let url =  host + ADWORDS_REDIRECT_URI_NEW + "?pid=" + activeProject?.id + "&aid=" + agent_details?.uuid; 
+        let host = getGSCHostURL();
+        let url =  host + GSC_REDIRECT_URI_NEW + "?pid=" + activeProject?.id + "&aid=" + agent_details?.uuid; 
         fetch(url, params).then(response => response.json()).then((response)=>{ 
             if(response?.url){ 
                 window.location = response.url; 
@@ -59,14 +61,14 @@ const GoogleIntegration = ({
         })
     }
     useEffect(() => {
-        if (isIntAdwordsEnabled()) {
+        if (isGSCEnabled()) {
             setIsActive(true);
         } 
     }, [activeProject, agent_details]);
 
-    const enableAdwords = () => {
+    const enableGSC = () => {
         setLoading(true);
-        enableAdwordsIntegration(activeProject.id).then((r) => {
+        enableSearchConsoleIntegration(activeProject.id).then((r) => {
             setLoading(false); 
             if (r.status == 304) {
                 getRedirectURL(); 
@@ -74,7 +76,7 @@ const GoogleIntegration = ({
             if (r.status == 200) {
                 renderSettingInfo(); 
                 fetchProjectSettings(activeProject.id).then(() => {
-                    if (currentProjectSettings?.int_adwords_enabled_agent_uuid) {
+                    if (currentProjectSettings?.int_google_organic_enabled_agent_uuid) {
                         setIsActive(true);
                     }
                 });
@@ -93,14 +95,14 @@ const GoogleIntegration = ({
     };
 
     const onAccountSelect = (e) => {
-        let selectedAdwordsAcc = [...selectedAdwordsAccounts]
+        let selectedGSCAcc = [...selectedGSCAccounts]
         if (e.target.checked) {
-            selectedAdwordsAcc.push(e.target.value)
+            selectedGSCAcc.push(e.target.value)
         } else {
-            let index = selectedAdwordsAcc.indexOf(e.target.value)
-            if (index > -1) selectedAdwordsAcc.splice(index, 1)
+            let index = selectedGSCAcc.indexOf(e.target.value)
+            if (index > -1) selectedGSCAcc.splice(index, 1)
         }
-        setSelectedAdwordsAccounts(selectedAdwordsAcc);
+        setSelectedGSCAccounts(selectedGSCAcc);
     }
 
     const addManualAccount = () => {
@@ -117,12 +119,12 @@ const GoogleIntegration = ({
     }
 
     const onClickFinishSetup = () => {
-        let selectedAdwordsAcc = selectedAdwordsAccounts.join(",")
+        let selectedGSCAcc = selectedGSCAccounts.join(",")
         udpateProjectSettings(activeProject.id,
-            { 'int_adwords_customer_account_id': selectedAdwordsAcc }).then(() => {
+            { 'int_google_organic_url_prefixes': selectedGSCAcc }).then(() => {
                 setAddNewAccount(false);
-                setSelectedAdwordsAccounts([]);
-                message.success('Adwords Accounts updated!');
+                setSelectedGSCAccounts([]);
+                message.success('Search Console Accounts updated!');
                 setShowManageBtn(true);
                 setCustomerAccountsLoaded(false);
             });
@@ -140,10 +142,9 @@ const GoogleIntegration = ({
             accountRows.push(
                 <tr>
                     <td style={{ border: 'none', padding: '5px' }}>
-                        <Checkbox value={account.customer_id} onChange={onAccountSelect} />
+                        <Checkbox value={account} onChange={onAccountSelect} />
                     </td>
-                    <td style={{ border: 'none', padding: '5px' }}>{account.customer_id}</td>
-                    <td style={{ border: 'none', padding: '5px' }}>{account.name}</td>
+                    <td style={{ border: 'none', padding: '5px' }}>{account}</td> 
                 </tr>
             )
         }
@@ -153,10 +154,9 @@ const GoogleIntegration = ({
             accountRows.push(
                 <tr>
                     <td style={{ border: 'none', padding: '5px' }}>
-                        <Checkbox value={account.customer_id} onChange={onAccountSelect} />
+                        <Checkbox value={account} onChange={onAccountSelect} />
                     </td>
-                    <td style={{ border: 'none', padding: '5px' }}>{account.customer_id}</td>
-                    <td style={{ border: 'none', padding: '5px' }}>{account.name}</td>
+                    <td style={{ border: 'none', padding: '5px' }}>{account}</td> 
                 </tr>
             )
         }
@@ -164,13 +164,12 @@ const GoogleIntegration = ({
 
         return (
             <div className={'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'}>
-                <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Add/Remove Accounts</Text>
+                <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Add/Remove URL(s)</Text>
                 <table>
                     <thead>
                         <tr>
                             <td style={{ border: 'none', padding: '5px' }}></td>
-                            <td style={{ border: 'none', padding: '5px' }}><Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Customer Id</Text></td>
-                            <td style={{ border: 'none', padding: '5px' }}><Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Customer Name</Text></td>
+                            <td style={{ border: 'none', padding: '5px' }}><Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>URL(S)</Text></td> 
                         </tr>
                     </thead>
                     <tbody>{accountRows}</tbody>
@@ -186,47 +185,51 @@ const GoogleIntegration = ({
 
 
     // const isCustomerAccountSelected = () => {
-    //     return currentProjectSettings && currentProjectSettings.int_adwords_customer_account_id && !addNewAccount;
+    //     return currentProjectSettings && currentProjectSettings.int_google_organic_url_prefixes && !addNewAccount;
     // };
 
     const renderSettingInfo = () => {
  
-        let isCustomerAccountChosen = currentProjectSettings.int_adwords_customer_account_id &&
-        currentProjectSettings.int_adwords_customer_account_id != "" && !addNewAccount;
+        let isCustomerAccountChosen = currentProjectSettings.int_google_organic_url_prefixes &&
+        currentProjectSettings.int_google_organic_url_prefixes != "" && !addNewAccount;
         
-        // get all adwords account when no account is chosen and not account list not loaded. 
-        // if (isIntAdwordsEnabled() && !isCustomerAccountChosen && !customerAccountsLoaded) {
-        if (isIntAdwordsEnabled() && !customerAccountsLoaded) {
+        // get all GSC account when no account is chosen and not account list not loaded. 
+        // if (isGSCEnabled() && !isCustomerAccountChosen && !customerAccountsLoaded) {
+        if (isGSCEnabled() && !customerAccountsLoaded) {
             // setLoadingData(true); 
-            fetchAdwordsCustomerAccounts({ "project_id": activeProject.id }).then((data) => {
+            fetchSearchConsoleCustomerAccounts({ "project_id": activeProject.id }).then((data) => {
+                // console.log('fetchSearchConsoleCustomerAccounts', data);
                 setCustomerAccountsLoaded(true);
-                setCustomerAccounts(data?.customer_accounts);
+                setCustomerAccounts(data?.urls);
                 // setLoadingData(false);
             }).catch((error)=>{
-                message.error("Error while fetch Customer Accounts.")
+                console.log('fetchSearchConsoleCustomerAccounts error-->', error);
+                message.error("Error while fetching URLs.")
             });
         }
  
     } 
     return (
         <>
-                <ErrorBoundary fallback={<FaErrorComp subtitle={'Facing issues with GoogleAdWords integrations'} />} onError={FaErrorLog}>
+                <ErrorBoundary fallback={<FaErrorComp subtitle={'Facing issues with Google Search Console integrations'} />} onError={FaErrorLog}>
 
                 
 
             <div className={'mt-4 flex w-full'}>
-                {currentProjectSettings?.int_adwords_customer_account_id && <>
+                {(currentProjectSettings?.int_google_organic_url_prefixes &&
+        currentProjectSettings?.int_google_organic_url_prefixes != "") && <>
                     <div className={'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'}>
-                        <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Connected Accounts</Text>
-                        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Adwords sync account details</Text>
-                        <Input size="large" disabled={true} value={currentProjectSettings?.int_adwords_customer_account_id} style={{ width: '400px' }} />
+                        <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Connected URL(s)</Text>
+                        {/* <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>URL(s)</Text> */}
+                        <Input size="large" disabled={true} value={currentProjectSettings?.int_google_organic_url_prefixes} style={{ width: '400px' }} />
                     </div>
                 </>}
             </div>
+
             <div className={'w-full'}>
                 {
-                    isIntAdwordsEnabled() && showManageBtn && <div className={'mt-4'}>
-                        <Button onClick={() => { renderSettingInfo(); setShowManageBtn(false); }}>Manage Accounts</Button>
+                    isGSCEnabled() && showManageBtn && <div className={'mt-4'}>
+                        <Button onClick={() => { renderSettingInfo(); setShowManageBtn(false); }}>Manage URL(s)</Button>
                     </div>
                 }
             </div>
@@ -243,8 +246,8 @@ const GoogleIntegration = ({
 
             <div className={'mt-4 flex'}>
                 {
-                    !currentProjectSettings?.int_adwords_enabled_agent_uuid && <>
-                        <Button type={'primary'} loading={loading} onClick={enableAdwords}>Enable using Google</Button>
+                    !currentProjectSettings?.int_google_organic_enabled_agent_uuid && <>
+                        <Button type={'primary'} loading={loading} onClick={enableGSC}>Enable using Google</Button>
                         <Button className={'ml-2 '}>View documentation</Button>
                     </>
                 }
@@ -263,12 +266,12 @@ const GoogleIntegration = ({
             >
                 <Row>
                     <Col span={24}>
-                        <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Manually add Google Adwords account</Text>
+                        <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Manually add Google Search Console account</Text>
                     </Col>
                 </Row>
                 <Row className={'mt-4'}>
                     <Col span={24}>
-                        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Enter adwords account ID:</Text>
+                        <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Enter Search Console account ID:</Text>
                         <Input type="text" className={'mt-2'} onChange={(e) => setAccountId(e.target.value)} />
                     </Col>
                 </Row>
@@ -296,4 +299,4 @@ const mapStateToProps = (state) => ({
     currentProjectSettings: state.global.currentProjectSettings
 });
 
-export default connect(mapStateToProps, { fetchProjectSettings, enableAdwordsIntegration, fetchAdwordsCustomerAccounts, udpateProjectSettings })(GoogleIntegration);
+export default connect(mapStateToProps, { fetchProjectSettings, enableSearchConsoleIntegration, fetchSearchConsoleCustomerAccounts, udpateProjectSettings })(GoogleSearchConsole);

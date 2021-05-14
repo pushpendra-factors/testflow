@@ -364,6 +364,27 @@ export function enableAdwordsIntegration(projectId) {
     })
   }
 }
+export function enableSearchConsoleIntegration(projectId) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      let payload = { project_id: projectId.toString() }
+      post(dispatch, host + "integrations/google_organic/enable", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "ENABLE_ADWORDS_FULFILLED", payload: r.data })
+            resolve(r);
+          } else {
+            dispatch({ type:"ENABLE_ADWORDS_REJECTED" });
+            reject(r); 
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"ENABLE_ADWORDS_REJECTED", payload: err });
+          reject(err);
+        })
+    })
+  }
+}
 
 export function fetchAdwordsCustomerAccounts(payload) {
   return function(dispatch){
@@ -380,6 +401,23 @@ export function fetchAdwordsCustomerAccounts(payload) {
         })
         .catch((err) => {
           dispatch({ type:"FETCH_ADWORDS_CUSTOMER_ACCOUNTS_REJECTED", payload: err });
+          reject(err);
+        })
+    })
+  }
+}
+export function fetchSearchConsoleCustomerAccounts(payload) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      post(dispatch, host +"google_organic/v1/get_google_organic_urls", payload)
+        .then((r) => {
+          if (r.ok) { 
+            resolve(r.data);
+          } else { 
+            reject(r);
+          }
+        })
+        .catch((err) => { 
           reject(err);
         })
     })

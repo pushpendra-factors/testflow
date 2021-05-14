@@ -20,6 +20,7 @@ import GoogleAdWords from "./GoogleAdWords";
 import FacebookIntegration from "./Facebook";
 import SalesForceIntegration from "./Salesforce";
 import LinkedInIntegration from "./LinkedIn";
+import GoogleSearchConsole from "./GoogleSearchConsole";
 
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -40,7 +41,7 @@ const IntegrationProviderData = [
     icon: 'Salesforce_ads'
   },
   {
-    name: 'Google',
+    name: 'Google Ads',
     desc: 'Integrate reporting from Google Search, Youtube and Display Network',
     icon: 'Google_ads'
   },
@@ -59,6 +60,11 @@ const IntegrationProviderData = [
     desc: 'Track events and conversions from Drift’s chat solution on the website',
     icon: 'DriftLogo'
   },
+  {
+    name: 'Google Search Console',
+    desc: 'Track organic search impressions, clicks and position from Google Search',
+    icon: 'Google'
+  },
 ];
 
 
@@ -75,8 +81,9 @@ const IntegrationCard = ({ item, index }) => {
       case 'Drift': return <DriftIntegration setIsActive={setIsActive} />;
       case 'Facebook': return <FacebookIntegration setIsActive={setIsActive} />;
       case 'Salesforce': return <SalesForceIntegration setIsActive={setIsActive} />;
-      case 'Google': return <GoogleAdWords setIsActive={setIsActive} />;
+      case 'Google Ads': return <GoogleAdWords setIsActive={setIsActive} />;
       case 'LinkedIn': return <LinkedInIntegration setIsActive={setIsActive} />;
+      case 'Google Search Console': return <GoogleSearchConsole setIsActive={setIsActive} />;
       default: return <><Tag color="orange" style={{ marginTop: '8px' }}>Enable from <a href="https://app-old.factors.ai/" target="_blank">here</a></Tag> </>
     }
   }
