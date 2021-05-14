@@ -1,9 +1,9 @@
-import React, { useCallback } from "react";
+import React, { useCallback } from 'react';
 import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
-} from "../CoreQuery/utils";
-import { useHistory } from "react-router-dom";
+} from '../CoreQuery/utils';
+import { useHistory } from 'react-router-dom';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
@@ -14,8 +14,9 @@ import {
   TOTAL_EVENTS_CRITERIA,
   DASHBOARD_MODAL,
   reverse_user_types,
-} from "../../utils/constants";
-import ReportContent from "../CoreQuery/AnalysisResultsPage/ReportContent";
+} from '../../utils/constants';
+import ReportContent from '../CoreQuery/AnalysisResultsPage/ReportContent';
+import { useSelector } from 'react-redux';
 
 function ActiveUnitContent({
   unit,
@@ -25,6 +26,7 @@ function ActiveUnitContent({
   setwidgetModal,
 }) {
   const history = useHistory();
+  const { eventNames } = useSelector((state) => state.coreQuery);
 
   let equivalentQuery;
   if (unit.query.query) {
@@ -79,15 +81,16 @@ function ActiveUnitContent({
         eventName: q.label,
         index,
         mapper: `event${index + 1}`,
+        displayName: eventNames[q.label] || q.label,
       });
     });
   }
 
-  if(queryType === QUERY_TYPE_EVENT) {
-    if(unit.query.query.query_group.length > 1) {
-      breakdownType = EACH_USER_TYPE
+  if (queryType === QUERY_TYPE_EVENT) {
+    if (unit.query.query.query_group.length > 1) {
+      breakdownType = EACH_USER_TYPE;
     } else {
-      breakdownType = reverse_user_types[unit.query.query.query_group[0].ec]
+      breakdownType = reverse_user_types[unit.query.query.query_group[0].ec];
     }
   }
 
@@ -113,7 +116,7 @@ function ActiveUnitContent({
 
   const handleEditQuery = useCallback(() => {
     history.push({
-      pathname: "/analyse",
+      pathname: '/analyse',
       state: {
         query: { ...unit.query, settings: unit.settings },
         global_search: true,
@@ -122,29 +125,32 @@ function ActiveUnitContent({
   }, [history, unit]);
 
   return (
-    <div className="p-4">
+    <div className='p-4'>
       <ReportContent
-          queryType={queryType}
-          resultState={
-            queryType === QUERY_TYPE_WEB
-              ? { ...resultState, data: resultState.data ? resultState.data[unit.id] : null }
-              : resultState
-          }
-          setDrawerVisible={handleEditQuery}
-          queries={events.map((q) => q.label)}
-          breakdown={breakdown}
-          handleDurationChange={handleDurationChange}
-          arrayMapper={arrayMapper}
-          queryOptions={{ date_range: durationObj }}
-          attributionsState={attributionsState}
-          breakdownType={breakdownType}
-          campaignState={{ ...equivalentQuery, date_range: durationObj }}
-          eventPage={TOTAL_EVENTS_CRITERIA}
-          section={DASHBOARD_MODAL}
-          queryTitle={unit.title}
-          onReportClose={setwidgetModal}
-          campaignsArrayMapper={arrayMapper}
-        />
+        queryType={queryType}
+        resultState={
+          queryType === QUERY_TYPE_WEB
+            ? {
+                ...resultState,
+                data: resultState.data ? resultState.data[unit.id] : null,
+              }
+            : resultState
+        }
+        setDrawerVisible={handleEditQuery}
+        queries={events.map((q) => q.label)}
+        breakdown={breakdown}
+        handleDurationChange={handleDurationChange}
+        arrayMapper={arrayMapper}
+        queryOptions={{ date_range: durationObj }}
+        attributionsState={attributionsState}
+        breakdownType={breakdownType}
+        campaignState={{ ...equivalentQuery, date_range: durationObj }}
+        eventPage={TOTAL_EVENTS_CRITERIA}
+        section={DASHBOARD_MODAL}
+        queryTitle={unit.title}
+        onReportClose={setwidgetModal}
+        campaignsArrayMapper={arrayMapper}
+      />
     </div>
   );
 }
