@@ -2,11 +2,10 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: factors-staging-node-pool
-  name: add-session-job-dup
+    nodePool: persistent-pool-highmem-16
+  name: hubspot-enrich-job-dup
 spec:
-  schedule: "*/30 * * * *" # every 30 minutes
-  concurrencyPolicy: Forbid
+  schedule: "0 21 * * *" # In UTC
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
   jobTemplate:
@@ -15,13 +14,13 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: factors-staging-node-pool
+            nodePool: persistent-pool-highmem-16
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: factors-staging-node-pool
+            cloud.google.com/gke-nodepool: persistent-pool-highmem-16
           containers:
-          - name: add-session-job-dup
-            image: us.gcr.io/factors-staging/add-session-job:859291fb0-1542
+          - name: hubspot-enrich-job-dup
+            image: us.gcr.io/factors-production/hubspot-enrich-job:v0.82-2375b12d-1167
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -42,22 +41,6 @@ spec:
             - $(REDIS_HOST_2)
             - --redis_port
             - $(REDIS_PORT_2)
-            - --project_ids
-            - "*"
-            - --num_project_routines
-            - $(ADD_SESSION_PROJECT_ROUTINES)
-            - --num_user_routines
-            - $(ADD_SESSION_USER_ROUTINES)
-            - --num_project_routines
-            - $(ADD_SESSION_PROJECT_ROUTINES)
-            - --num_user_routines
-            - $(ADD_SESSION_USER_ROUTINES)
-            - --max_lookback_hours
-            - "48"
-            - --start_timestamp
-            - "0"
-            - --end_timestamp
-            - "0"
             - --redis_host_ps
             - $(REDIS_HOST_2)
             - --redis_port_ps
@@ -70,21 +53,15 @@ spec:
             - $(GCP_PROJECT_LOCATION)
             - --primary_datastore
             - "memsql"
-            - --ontable_user_properties_allowed_projects
-            - "*"
-            - --deprecate_user_properties_table_read_projects
-            - "*"
             envFrom:
             - configMapRef:
                 name: config-env
             - configMapRef:
                 name: config-memsql
-            - configMapRef:
-                name: config-redis
-            - configMapRef:
-                name: config-add-session-job
             - secretRef:
                 name: secret-memsql
+            - configMapRef:
+                name: config-redis
             - secretRef:
                 name: secret-sentry
             - configMapRef:

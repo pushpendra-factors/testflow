@@ -81,13 +81,13 @@ spec:
           - --memsql_cert
           - $(MEMSQL_CERTIFICATE)
           - --redis_host
-          - $(REDIS_HOST)
+          - $(REDIS_HOST_2)
           - --redis_port
-          - $(REDIS_PORT)
+          - $(REDIS_PORT_2)
           - --redis_host_ps
-          - $(PERSISTENT_REDIS_HOST)
+          - $(REDIS_HOST_2)
           - --redis_port_ps
-          - $(PERSISTENT_REDIS_PORT)
+          - $(REDIS_PORT_2)
           - --geo_loc_path
           - $(GEO_LOC_FILE_PATH)
           - --api_domain
@@ -132,6 +132,8 @@ spec:
           - $(GCP_PROJECT_LOCATION)
           - --blocked_sdk_request_project_tokens
           - "5w62sncn48ohs9nl9fymkad3ewcked23"
+          - --primary_datastore
+          - "memsql"
         env:
           - name: MY_POD_IP
             valueFrom:
