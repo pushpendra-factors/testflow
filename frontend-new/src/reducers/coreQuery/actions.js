@@ -22,10 +22,15 @@ export const SET_CAMP_FILTERS = 'SET_CAMP_FILTERS';
 export const SET_CAMP_GROUBY = 'SET_CAMP_GROUBY';
 export const SET_CAMP_DATE_RANGE = 'SET_CAMP_DATE_RANGE';
 export const SET_DEFAULT_STATE = 'SET_DEFAULT_STATE';
+export const SET_EVENT_NAMES = 'SET_EVENT_NAMES';
 
 // Action creators
 export const fetchEventsAction = (events, status = 'started') => {
   return { type: FETCH_EVENTS, payload: events };
+};
+
+export const setEventsDisplayAction = (displayNames, status = 'started') => {
+  return { type: SET_EVENT_NAMES, payload: displayNames };
 };
 
 export const fetchUserPropertiesAction = (userProps) => {

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import {
   getTableColumns,
   getDataInTableFormat,
@@ -30,6 +31,7 @@ function SingleEventMultipleBreakdownTable({
   const [sorter, setSorter] = useState({});
   const [dateSorter, setDateSorter] = useState({});
   const [searchText, setSearchText] = useState('');
+  const { eventNames } = useSelector((state) => state.coreQuery);
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
@@ -40,8 +42,8 @@ function SingleEventMultipleBreakdownTable({
   }, []);
 
   const columns = useMemo(() => {
-    return getTableColumns(events, breakdown, sorter, handleSorting, page);
-  }, [events, breakdown, sorter, page, handleSorting]);
+    return getTableColumns(events, breakdown, sorter, handleSorting, page, eventNames);
+  }, [events, breakdown, sorter, page, handleSorting, eventNames]);
 
   const tableData = useMemo(() => {
     return getDataInTableFormat(data, events, breakdown, searchText, sorter);

@@ -22,7 +22,8 @@ import {
   FETCH_CAMP_CONFIG,
   SET_CAMP_GROUBY,
   SET_CAMP_DATE_RANGE,
-  SET_DEFAULT_STATE
+  SET_DEFAULT_STATE,
+  SET_EVENT_NAMES
 } from "./actions";
 import {
   SHOW_ANALYTICS_RESULT,
@@ -72,12 +73,15 @@ const defaultState = {
     ...DefaultDateRangeFormat,
     dateStr: "",
   },
+  eventNames: []
 };
 
 export default function (state = defaultState, action) {
   switch (action.type) {
     case FETCH_EVENTS:
       return { ...state, eventOptions: action.payload };
+    case SET_EVENT_NAMES:
+      return { ...state, eventNames: action.payload}
     case FETCH_USER_PROPERTIES:
       return { ...state, userProperties: action.payload };
     case FETCH_EVENT_PROPERTIES:

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import DataTable from '../../../../components/DataTable';
 import {
   getTableColumns,
@@ -27,6 +28,8 @@ function SingleEventSingleBreakdownTable({
   reportTitle = 'Events Analytics',
   section,
 }) {
+  const { eventNames } = useSelector((state) => state.coreQuery);
+  
   const appliedBreakdown = useMemo(() => {
     return [breakdown[0].property];
   }, [breakdown]);
@@ -60,9 +63,10 @@ function SingleEventSingleBreakdownTable({
       appliedBreakdown,
       sorter,
       handleSorting,
-      page
+      page,
+      eventNames
     );
-  }, [events, appliedBreakdown, sorter, page, handleSorting]);
+  }, [events, appliedBreakdown, sorter, page, handleSorting, eventNames]);
 
   const tableData = useMemo(() => {
     return getDataInTableFormat(

@@ -11,7 +11,7 @@ import { getErrorMessage } from "../../utils/dataFormatter";
 const host = getHostUrl();
 
 export const getEventNames = (dispatch, projectId) => {
-  return get(dispatch, host + "projects/" + projectId + "/v1/event_names", {});
+  return get(dispatch, host + "projects/" + projectId + "/v1/event_names?is_display_name_enabled=true", {});
 };
 
 export const getEventsData = (

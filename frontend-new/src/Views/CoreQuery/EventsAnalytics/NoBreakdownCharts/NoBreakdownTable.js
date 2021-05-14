@@ -8,6 +8,7 @@ import {
   getNoGroupingTablularDatesBasedData,
 } from './utils';
 import { CHART_TYPE_SPARKLINES } from '../../../../utils/constants';
+import { useSelector } from 'react-redux';
 
 function NoBreakdownTable({
   data,
@@ -22,6 +23,7 @@ function NoBreakdownTable({
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
+  const { eventNames } = useSelector((state) => state.coreQuery);
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
@@ -39,7 +41,8 @@ function NoBreakdownTable({
       arrayMapper,
       durationObj.frequency,
       sorter,
-      handleSorting
+      handleSorting,
+      eventNames
     );
     tableData = getNoGroupingTableData(data, arrayMapper, sorter);
   } else {
@@ -47,7 +50,8 @@ function NoBreakdownTable({
       data,
       sorter,
       handleSorting,
-      durationObj.frequency
+      durationObj.frequency,
+      eventNames
     );
     tableData = getNoGroupingTablularDatesBasedData(
       data,
@@ -84,7 +88,7 @@ function NoBreakdownTable({
   const getCSVData = () => {
     return {
       fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, date, ...rest }) => {
+      data: tableData.map(({ index, date, event, ...rest }) => {
         if (chartType === CHART_TYPE_SPARKLINES) {
           let format = 'MMM D, YYYY';
           if (durationObj.frequency === 'hour') {
@@ -94,15 +98,23 @@ function NoBreakdownTable({
           for (let key in rest) {
             const mapper = arrayMapper.find((elem) => elem.mapper === key);
             if (mapper) {
-              eventsData[`${mapper.eventName}-${mapper.index}`] = rest[key];
+              eventsData[
+                `${eventNames[mapper.eventName] || mapper.eventName}-${
+                  mapper.index
+                }`
+              ] = rest[key];
             }
           }
           return {
             date: moment(date).format(format),
             ...eventsData,
           };
+        } else {
+          return {
+            Event: eventNames[event] || event,
+            ...rest,
+          };
         }
-        return rest;
       }),
     };
   };

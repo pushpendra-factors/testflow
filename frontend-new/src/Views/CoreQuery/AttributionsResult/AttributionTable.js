@@ -8,6 +8,7 @@ import {
   calcChangePerc,
 } from './utils';
 import DataTable from '../../../components/DataTable';
+import { useSelector } from 'react-redux';
 
 function AttributionTable({
   data,
@@ -27,9 +28,11 @@ function AttributionTable({
 }) {
   const [searchText, setSearchText] = useState('');
   const [sorter, setSorter] = useState({});
+  const { eventNames } = useSelector((state) => state.coreQuery);
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
   }, []);
+  
   const columns = getTableColumns(
     sorter,
     handleSorting,
@@ -37,7 +40,8 @@ function AttributionTable({
     attribution_method_compare,
     touchpoint,
     linkedEvents,
-    event
+    event,
+    eventNames
   );
 
   const cmprColums = data2
@@ -48,7 +52,8 @@ function AttributionTable({
         attribution_method_compare,
         touchpoint,
         linkedEvents,
-        event
+        event,
+        eventNames
       )
     : null;
 

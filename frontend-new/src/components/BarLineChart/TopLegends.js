@@ -1,12 +1,30 @@
 import React from "react";
 import { Text } from "../factorsComponents";
 import { charts_legend_length } from "../../utils/constants";
+import { useSelector } from 'react-redux';
 
 function TopLegends({
   parentClassName = "flex justify-center py-3",
   cardSize,
   legends
 }) {
+
+
+  const {
+    eventNames,
+  } = useSelector((state) => state.coreQuery);
+
+  const displayLegend = (legend) => {
+    const sanitisedLegend = eventNames[legend] ? eventNames[legend] : legend;
+    return (
+      <Text mini type='paragraph'>
+        {sanitisedLegend.length > legend_length[cardSize] && !showFullLegends
+          ? sanitisedLegend.substr(0, legend_length[cardSize]) + '...'
+          : sanitisedLegend}
+      </Text>
+    )
+  }
+
   return (
     <div className={parentClassName}>
       <div className="flex items-center">

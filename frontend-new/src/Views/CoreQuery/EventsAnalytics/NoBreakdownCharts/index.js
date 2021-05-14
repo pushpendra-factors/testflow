@@ -9,6 +9,7 @@ import {
   CHART_TYPE_SPARKLINES,
   CHART_TYPE_LINECHART,
 } from '../../../../utils/constants';
+import { useSelector } from 'react-redux';
 
 function NoBreakdownCharts({
   queries,
@@ -20,6 +21,7 @@ function NoBreakdownCharts({
   section,
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
+  const { eventNames } = useSelector((state) => state.coreQuery);
   const appliedColors = useMemo(() => {
     return generateColors(queries.length);
   }, [queries]);
@@ -29,8 +31,8 @@ function NoBreakdownCharts({
   }, [resultState.data, arrayMapper, queries.length]);
 
   const { categories, data } = useMemo(() => {
-    return getDataInLineChartFormat(resultState.data, arrayMapper);
-  }, [resultState.data, arrayMapper]);
+    return getDataInLineChartFormat(resultState.data, arrayMapper, eventNames);
+  }, [resultState.data, arrayMapper, eventNames]);
 
   const visibleSeriesData = useMemo(() => {
     return data

@@ -22,6 +22,7 @@ function QueryBlock({
   queries,
   queryType,
   eventOptions,
+  eventNames,
   activeProject,
   groupBy,
   setGroupBy,
@@ -77,7 +78,7 @@ function QueryBlock({
             <GroupSelect
               groupedProperties={eventOptions}
               placeholder='Select Event'
-              optionClick={(group, val) => onChange(val[0])}
+              optionClick={(group, val) => onChange(val[1]? val[1]: val[0])}
               onClickOutside={() => setDDVisible(false)}
               allowEmpty={true}
             ></GroupSelect>
@@ -304,7 +305,7 @@ function QueryBlock({
             onClick={triggerDropDown}
           >
             {' '}
-            {event.label}{' '}
+            {eventNames[event.label]? eventNames[event.label] : event.label}{' '}
           </Button>
         )}
         {additionalActions()}
@@ -322,6 +323,7 @@ const mapStateToProps = (state) => ({
   userProperties: state.coreQuery.userProperties,
   eventProperties: state.coreQuery.eventProperties,
   groupBy: state.coreQuery.groupBy.event,
+  eventNames: state.coreQuery.eventNames
 });
 
 const mapDispatchToProps = (dispatch) =>

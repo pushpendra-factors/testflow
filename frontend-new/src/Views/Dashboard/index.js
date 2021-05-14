@@ -9,13 +9,24 @@ import { DASHBOARD_UNMOUNTED } from "../../reducers/types";
 import { DefaultDateRangeFormat } from "../CoreQuery/utils";
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import {ErrorBoundary} from 'react-error-boundary';
+import { connect} from 'react-redux';
+import { bindActionCreators } from 'redux';
+import {
+  fetchEventNames
+} from "Reducers/coreQuery/middleware";
 
-function Dashboard() {
+function Dashboard({fetchEventNames, activeProject}) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState({ ...DefaultDateRangeFormat });
   const [refreshClicked, setRefreshClicked] = useState(false);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    if(activeProject && activeProject.id) {
+      fetchEventNames(activeProject.id)
+    }
+  }, [activeProject])
 
   const handleEditClick = useCallback((dashboard) => {
     setaddDashboardModal(true);
@@ -84,4 +95,12 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project
+});
+
+const mapDispatchToProps = dispatch => bindActionCreators({
+  fetchEventNames
+}, dispatch);
+
+export default connect(mapStateToProps, mapDispatchToProps)(Dashboard);

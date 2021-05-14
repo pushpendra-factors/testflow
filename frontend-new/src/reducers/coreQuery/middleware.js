@@ -10,7 +10,8 @@ import {
   setCampFiltersAction, setCampGroupByAction, 
   setAttrDateRangeAction, setCampDateRangeAction, 
   setDefaultStateAction, setTouchPointFiltersAction,
-  setAttributionQueryTypeAction
+  setAttributionQueryTypeAction,
+  setEventsDisplayAction
 } from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties, fetchCampaignConfig } from './services';
 import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
@@ -20,7 +21,8 @@ export const fetchEventNames = (projectId) => {
     return new Promise((resolve, reject) => {
       getEventNames(dispatch, projectId)
         .then((response) => {
-          const options = convertToEventOptions(response.data.event_names);
+          const options = convertToEventOptions(response.data.event_names, response.data.display_names);
+          dispatch(setEventsDisplayAction(response.data.display_names))
           resolve(dispatch(fetchEventsAction(options)));
         }).catch((err) => {
           resolve(dispatch(fetchEventsAction([])));

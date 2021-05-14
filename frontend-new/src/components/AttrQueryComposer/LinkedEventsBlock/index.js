@@ -16,6 +16,7 @@ const LinkedEventsBlock = ({
     eventNameOptions, 
     activeProject, 
     eventProperties,
+    eventNames,
     userProperties
 }) => {
 
@@ -127,7 +128,7 @@ const LinkedEventsBlock = ({
                      ? <GroupSelect
                             groupedProperties={eventNameOptions}
                             placeholder="Select Event"
-                            optionClick={(group, val) => onEventSelect(val[0])}
+                            optionClick={(group, val) => onEventSelect(val[1]? val[1]: val[0])}
                             onClickOutside={() => setSelectVisible(false)}
 
                         ></GroupSelect>
@@ -144,7 +145,7 @@ const LinkedEventsBlock = ({
                     type="link" 
                     onClick={toggleEventSelect}>
                         <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
-                         {linkEvent && linkEvent.label} 
+                        {eventNames[linkEvent?.label]? eventNames[linkEvent?.label] : linkEvent?.label}
                 </Button> }
 
                 {selectEvents()}
@@ -181,7 +182,8 @@ const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
     eventProperties: state.coreQuery.eventProperties,
     userProperties: state.coreQuery.userProperties,
-    eventNameOptions: state.coreQuery.eventOptions
+    eventNameOptions: state.coreQuery.eventOptions,
+    eventNames: state.coreQuery.eventNames
 });
   
 const mapDispatchToProps = dispatch => bindActionCreators({}, dispatch);

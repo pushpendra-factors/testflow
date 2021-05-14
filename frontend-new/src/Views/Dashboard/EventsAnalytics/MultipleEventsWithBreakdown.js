@@ -19,6 +19,7 @@ import {
 } from '../../../utils/constants';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
+import { useSelector } from 'react-redux';
 // import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
@@ -33,6 +34,7 @@ function MultipleEventsWithBreakdown({
   setwidgetModal,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const { eventNames } = useSelector((state) => state.coreQuery);
 
   const appliedQueries = useMemo(() => {
     return queries.join(';');
@@ -43,9 +45,10 @@ function MultipleEventsWithBreakdown({
     return formatData(
       resultState.data,
       appliedQueries.split(';'),
-      appliedColors
+      appliedColors,
+      eventNames
     );
-  }, [resultState.data, appliedQueries]);
+  }, [resultState.data, appliedQueries, eventNames]);
 
   const { categories, data } = useMemo(() => {
     if (chartType === CHART_TYPE_BARCHART) {
@@ -54,8 +57,8 @@ function MultipleEventsWithBreakdown({
         data: [],
       };
     }
-    return formatDataInStackedAreaFormat(resultState.data, aggregateData);
-  }, [resultState.data, aggregateData, chartType]);
+    return formatDataInStackedAreaFormat(resultState.data, aggregateData, eventNames);
+  }, [resultState.data, aggregateData, chartType, eventNames]);
 
   const visibleSeriesData = useMemo(() => {
     const colors = generateColors(visibleProperties.length);

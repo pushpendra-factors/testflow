@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import moment from "moment";
 import { Button } from "antd";
 import { SVG, Text } from "../../../components/factorsComponents";
+import {  useSelector } from 'react-redux';
 import {
   REPORT_SECTION,
   DASHBOARD_MODAL,
@@ -25,6 +26,18 @@ function ReportTitle({
     }
   }, [section, setDrawerVisible]);
 
+  const {
+    eventNames,
+  } = useSelector((state) => state.coreQuery);
+
+  const displayQueryName = (q) => {
+    const names = q.split(',');
+    const sanitisedNames = names.map((nam) => {
+      return eventNames[nam.trim()]? eventNames[nam.trim()] : nam;
+    })
+    return sanitisedNames.join(', ')
+  }
+
   return (
     <div className="pb-2 border-bottom--thin-2">
       <div className="flex justify-between items-center"> 
@@ -39,7 +52,7 @@ function ReportTitle({
       </div>
       <div className="flex items-center"> 
       <div className={'fa-title--editable flex items-center cursor-pointer '} onClick={queryType !== QUERY_TYPE_WEB ? handleClick : null}>
-        <Text type={"title"} level={6} color={'grey'} extraClass={'m-0 mr-2'}> {queryDetail} </Text>  
+        <Text type={"title"} level={6} color={'grey'} extraClass={'m-0 mr-2'}> {displayQueryName(queryDetail)} </Text>  
         <SVG 
                 name="edit" 
                 color={'grey'}

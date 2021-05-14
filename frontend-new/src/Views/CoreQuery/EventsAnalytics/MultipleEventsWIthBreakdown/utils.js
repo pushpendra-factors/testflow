@@ -22,7 +22,7 @@ export const getBreakdownTitle = (breakdown) => {
   );
 };
 
-export const formatData = (data, queries, colors) => {
+export const formatData = (data, queries, colors, eventNames) => {
   if (
     !data ||
     !data.metrics ||
@@ -39,7 +39,8 @@ export const formatData = (data, queries, colors) => {
   const eventIndex = headers.findIndex((elem) => elem === 'event_name');
 
   const result = rows.map((d, index) => {
-    const str = d.slice(eventIndex, countIndex).join(',');
+    const eventName = eventNames[d[eventIndex]] || d[eventIndex];
+    const str = eventName + ',' + d.slice(eventIndex + 1, countIndex).join(',');
     const queryIndex = queries.findIndex(
       (_, index) => index === d[event_indexIndex]
     );
@@ -91,12 +92,16 @@ export const getTableColumns = (
   breakdown,
   currentSorter,
   handleSorting,
-  page
+  page,
+  eventNames
 ) => {
   const result = [];
   result.push({
     title: 'Event',
     dataIndex: 'event',
+    render: (d) => {
+      return eventNames[d] || d;
+    },
   });
   breakdown.forEach((b, index) => {
     result.push({
@@ -216,7 +221,11 @@ export const getDateBasedTableData = (
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
-export const formatDataInStackedAreaFormat = (data, aggregateData) => {
+export const formatDataInStackedAreaFormat = (
+  data,
+  aggregateData,
+  eventNames
+) => {
   if (
     !data.headers ||
     !data.headers.length ||
@@ -253,7 +262,9 @@ export const formatDataInStackedAreaFormat = (data, aggregateData) => {
     };
   });
   data.rows.forEach((row) => {
-    const breakdownJoin = row.slice(eventIndex, countIndex).join(',');
+    const eventName = eventNames[row[eventIndex]] || row[eventIndex];
+    const breakdownJoin =
+      eventName + ',' + row.slice(eventIndex + 1, countIndex).join(',');
     const bIdx = labelsMapper[breakdownJoin];
     const idx = differentDates.indexOf(row[dateIndex]);
     if (resultantData[bIdx]) {

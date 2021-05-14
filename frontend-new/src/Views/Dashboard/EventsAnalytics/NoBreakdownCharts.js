@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useSelector } from 'react-redux';
 import {
   formatSingleEventAnalyticsData,
   formatMultiEventsAnalyticsData,
@@ -28,6 +29,7 @@ function NoBreakdownCharts({
   setwidgetModal,
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
+  const { eventNames } = useSelector((state) => state.coreQuery);
   const appliedColors = generateColors(queries.length);
 
   let chartsData = [];
@@ -50,13 +52,17 @@ function NoBreakdownCharts({
 
   const { categories, data } = useMemo(() => {
     if (chartType === CHART_TYPE_LINECHART) {
-      return getDataInLineChartFormat(resultState.data, arrayMapper);
+      return getDataInLineChartFormat(
+        resultState.data,
+        arrayMapper,
+        eventNames
+      );
     }
     return {
       categories: [],
       data: [],
     };
-  }, [resultState.data, arrayMapper, chartType]);
+  }, [resultState.data, arrayMapper, eventNames, chartType]);
 
   const visibleSeriesData = useMemo(() => {
     return data.map((elem, index) => {

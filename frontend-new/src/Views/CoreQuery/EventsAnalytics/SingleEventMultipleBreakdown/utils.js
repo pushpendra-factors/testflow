@@ -34,7 +34,8 @@ export const getTableColumns = (
   breakdown,
   currentSorter,
   handleSorting,
-  page
+  page,
+  eventNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
     return {
@@ -46,14 +47,16 @@ export const getTableColumns = (
   });
 
   const e = events[0];
+  const title = eventNames[e] || e;
+  
   const countColumn = {
     title: getTitleWithSorter(
-      `${e}: ${labelsObj[page]}`,
-      e,
+      `${title}: ${labelsObj[page]}`,
+      'Event Count',
       currentSorter,
       handleSorting
     ),
-    dataIndex: e,
+    dataIndex: 'Event Count',
     render: (d) => {
       return <NumFormat number={d} />;
     },
@@ -80,7 +83,7 @@ export const getDataInTableFormat = (
     });
     return {
       index: d.index,
-      [events[0]]: d.value,
+      'Event Count': d.value,
       ...breakdownData,
     };
   });
