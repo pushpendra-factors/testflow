@@ -67,6 +67,8 @@ const (
 	tableSmartProperties               = "smart_properties"
 	tableSmartPropertyRules            = "smart_property_rules"
 	tableDisplayNames                  = "display_names"
+
+	healthcheckPingID = "e6e3735b-82a3-4534-82be-b621470c4c69"
 )
 
 var heavyTables = []string{tableEvents, tableUsers, tableAdwordsDocuments, tableHubspotDocuments}
@@ -93,7 +95,7 @@ type TableRecord struct {
 	// project_agent_mappings
 	AgentUUID string `json:"agent_uuid"`
 	// property_details
-	EventNameID uint64 `json:"event_name_id"`
+	EventNameID string `json:"event_name_id"`
 	Key         string `json:"key"`
 	// smart_properties
 	ObjectID   string `json:"object_id"`
@@ -1155,6 +1157,7 @@ func migrateTableContiniously(table string, projectIDs []uint64) {
 		status := migrateTableByNameWithPagination(table, projectIDs)
 		if status == http.StatusInternalServerError {
 			logCtx.Error("Migration failure. Stopping the replication.")
+			C.PingHealthcheckForFailure(healthcheckPingID, fmt.Sprintf("Replication failed for table %s", table))
 			break
 		}
 
