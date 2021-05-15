@@ -33,7 +33,7 @@ export const fetchEventNames = (projectId) => {
   };
 };
  
-export const getUserProperties = (projectId, queryType) => {
+export const getUserProperties = (projectId, queryType = '') => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       fetchUserProperties(projectId, queryType).then((response) => {

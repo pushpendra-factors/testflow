@@ -55,7 +55,9 @@ function SingleEventMultipleBreakdownTable({
       breakdown,
       dateSorter,
       handleDateSorting,
-      durationObj.frequency
+      durationObj.frequency,
+      userPropNames, 
+      eventPropNames
     );
   }, [
     categories,

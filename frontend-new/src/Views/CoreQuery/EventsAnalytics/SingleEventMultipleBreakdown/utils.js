@@ -108,11 +108,23 @@ export const getDateBasedColumns = (
   breakdown,
   currentSorter,
   handleSorting,
-  frequency
+  frequency,
+  userPropNames, 
+    eventPropNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
+
+    let displayTitle = e.property;
+    if(e.prop_category === 'user') {
+      displayTitle = userPropNames[e.property]? userPropNames[e.property] : e.property;
+    }
+
+    if(e.prop_category === 'event') {
+      displayTitle = eventPropNames[e.property]? eventPropNames[e.property] : e.property;
+    }
+
     return {
-      title: e.property,
+      title: displayTitle,
       dataIndex: e.property,
       fixed: !index ? 'left' : '',
       width: 200,

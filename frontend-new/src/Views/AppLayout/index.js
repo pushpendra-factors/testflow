@@ -16,6 +16,7 @@ import {
 } from "react-router-dom";
 import { fetchProjects } from "../../reducers/agentActions";
 import { fetchQueries } from "../../reducers/coreQuery/services";
+import { getUserProperties, getEventProperties, fetchEventNames } from "../../reducers/coreQuery/middleware";
 import { fetchDashboards } from "../../reducers/dashboard/services";
 import PageSuspenseLoader from "../../components/SuspenseLoaders/PageSuspenseLoader";
 import retryDynamicImport from 'Utils/dynamicImport';
@@ -26,7 +27,11 @@ const CoreQuery = lazy(()=>retryDynamicImport(() => import("../CoreQuery")));
 const Dashboard = lazy(()=>retryDynamicImport(() => import("../Dashboard")));
 const Factors = lazy(()=>retryDynamicImport(() => import("../Factors")));
 
-function AppLayout({ fetchProjects }) {
+function AppLayout({ fetchProjects, 
+  fetchEventNames,
+  getEventProperties,
+  getUserProperties 
+}) {
   const [dataLoading, setDataLoading] = useState(true);
   const { Content } = Layout;
   const history = useHistory();
@@ -53,6 +58,9 @@ function AppLayout({ fetchProjects }) {
     if (active_project.id) {
       fetchDashboards(dispatch, active_project.id);
       fetchQueries(dispatch, active_project.id);
+      fetchEventNames(active_project.id);
+      getUserProperties(active_project.id);
+      getEventProperties(active_project.id);
     }
   }, [dispatch, active_project.id]);
 
@@ -108,6 +116,9 @@ const mapDispatchToProps = (dispatch) =>
     {
       fetchProjects,
       fetchDashboards,
+      fetchEventNames,
+      getEventProperties,
+      getUserProperties
     },
     dispatch
   );
