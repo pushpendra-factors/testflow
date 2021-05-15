@@ -5,7 +5,7 @@ from tornado.log import logging as log
 
 from lib.config import Config
 
-CALLBACK_PATH = "/google_organic/auth/callback"
+CALLBACK_PATH = "/google_organic/v1/auth/callback"
 
 
 class OauthConfig(Config):
