@@ -30,7 +30,7 @@ function MultipleEventsWithBreakdownTable({
   const [sorter, setSorter] = useState({});
   const [dateSorter, setDateSorter] = useState({});
   const [searchText, setSearchText] = useState('');
-  const { eventNames } = useSelector((state) => state.coreQuery);
+  const { eventNames, userPropNames, eventPropNames } = useSelector((state) => state.coreQuery);
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
@@ -41,7 +41,7 @@ function MultipleEventsWithBreakdownTable({
   }, []);
 
   const columns = useMemo(() => {
-    return getTableColumns(breakdown, sorter, handleSorting, page, eventNames);
+    return getTableColumns(breakdown, sorter, handleSorting, page, eventNames, userPropNames, eventPropNames);
   }, [breakdown, sorter, handleSorting, page, eventNames]);
 
   const tableData = useMemo(() => {
@@ -55,6 +55,8 @@ function MultipleEventsWithBreakdownTable({
       dateSorter,
       handleDateSorting,
       durationObj.frequency,
+      userPropNames, 
+      eventPropNames
     );
   }, [
     categories,

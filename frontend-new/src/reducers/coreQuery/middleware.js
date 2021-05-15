@@ -11,7 +11,9 @@ import {
   setAttrDateRangeAction, setCampDateRangeAction, 
   setDefaultStateAction, setTouchPointFiltersAction,
   setAttributionQueryTypeAction,
-  setEventsDisplayAction
+  setEventsDisplayAction,
+  setUserPropertiesNamesAction,
+  setEventPropertiesNamesAction
 } from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties, fetchCampaignConfig } from './services';
 import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
@@ -35,7 +37,8 @@ export const getUserProperties = (projectId, queryType) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       fetchUserProperties(projectId, queryType).then((response) => {
-        const options = convertPropsToOptions(response.data);
+        const options = convertPropsToOptions(response.data?.properties, response.data?.display_names);
+        resolve(dispatch(setUserPropertiesNamesAction(response.data?.display_names)));
         resolve(dispatch(fetchUserPropertiesAction(options)));
       }).catch((err) => {
         // resolve(dispatch(fetchEventPropertiesAction({})));
@@ -49,7 +52,8 @@ export const getEventProperties = (projectId, eventName) => {
     return new Promise((resolve, reject) => {
       fetchEventProperties(projectId, eventName)
         .then((response) => {
-          const options = convertPropsToOptions(response.data);
+          const options = convertPropsToOptions(response.data.properties);
+          resolve(dispatch(setEventPropertiesNamesAction(response.data?.display_names)));
           resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
         }).catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));

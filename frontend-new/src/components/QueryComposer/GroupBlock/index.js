@@ -14,7 +14,9 @@ function GroupBlock({
   groupByState,
   setGroupBy,
   delGroupBy,
-  userProperties
+  userProperties,
+  userPropNames,
+  eventPropNames
 }) {
   const [isDDVisible, setDDVisible] = useState([false]);
   const [isValueDDVisible, setValueDDVisible] = useState([false]);
@@ -55,8 +57,8 @@ function GroupBlock({
     const newGroupByState = Object.assign({}, groupByState.global[index]);
     newGroupByState.prop_category = 'user';
     newGroupByState.eventName = '$present';
-    newGroupByState.property = value[1][0];
-    newGroupByState.prop_type = value[1][1];
+    newGroupByState.property = value[1][1];
+    newGroupByState.prop_type = value[1][2];
     if(newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = 'raw_values';
     }
@@ -153,6 +155,22 @@ function GroupBlock({
     </div>);
   }
 
+  const renderGroupDisplayName = (opt, index) => {
+    let propertyName = '';
+    if(opt.property && opt.prop_category === 'user') {
+      propertyName = userPropNames[opt.property]?  userPropNames[opt.property] : opt.property;
+    }
+    if(opt.property && opt.prop_category === 'event') {
+      propertyName = eventPropNames[opt.property]?  eventPropNames[opt.property] : opt.property;
+    }
+    if(!opt.property) {
+      propertyName = 'Select user property';
+    }
+    return (
+      <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {propertyName}</Button>
+    )
+  }
+
   const renderExistingBreakdowns = () => {
     if (groupByState.global.length < 1) return;
     return (groupByState.global.map((opt, index) => (
@@ -164,7 +182,7 @@ function GroupBlock({
         className={`${styles.group_block__remove} mr-2`}
         icon={<SVG name="delete" />}
         /> 
-        <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {opt.property ? opt.property : 'Select user property'}</Button>
+        {renderGroupDisplayName(opt, index)}
         {renderGroupPropertyOptions(opt, index)}
         </>
         }
@@ -203,6 +221,8 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   userProperties: state.coreQuery.userProperties,
   eventProperties: state.coreQuery.eventProperties,
+  userPropNames: state.coreQuery.userPropNames,
+  eventPropNames: state.coreQuery.eventPropNames,
   groupByState: state.coreQuery.groupBy
 });
 

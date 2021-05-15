@@ -28,7 +28,7 @@ function SingleEventSingleBreakdownTable({
   reportTitle = 'Events Analytics',
   section,
 }) {
-  const { eventNames } = useSelector((state) => state.coreQuery);
+  const { eventNames, userPropNames, eventPropNames } = useSelector((state) => state.coreQuery);
   
   const appliedBreakdown = useMemo(() => {
     return [breakdown[0].property];
@@ -64,7 +64,9 @@ function SingleEventSingleBreakdownTable({
       sorter,
       handleSorting,
       page,
-      eventNames
+      eventNames,
+      userPropNames,
+      eventPropNames
     );
   }, [events, appliedBreakdown, sorter, page, handleSorting, eventNames]);
 

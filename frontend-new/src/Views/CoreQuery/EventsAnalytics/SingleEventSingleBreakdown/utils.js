@@ -10,11 +10,21 @@ export const getTableColumns = (
   currentSorter,
   handleSorting,
   page,
-  eventNames
+  eventNames,
+  userPropNames,
+  eventPropNames
 ) => {
   const breakdownColumns = breakdown.map((e) => {
+    let displayTitle = e;
+    if(userPropNames[e]) {
+      displayTitle = userPropNames[e]? userPropNames[e] : e;
+    }
+    if(eventPropNames[e]) {
+      displayTitle = eventPropNames[e]? eventPropNames[e] : e;;
+    }
+
     return {
-      title: e,
+      title: displayTitle,
       dataIndex: e,
       width: "50%",
     };

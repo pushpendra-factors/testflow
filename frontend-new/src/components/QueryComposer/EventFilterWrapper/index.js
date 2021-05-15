@@ -1,5 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { DateRangePicker } from 'react-date-range';
 import { Input, Button, Result } from 'antd';
@@ -84,6 +85,8 @@ export default function EventFilterWrapper({
       operator: operatorProps,
   });
 
+  const {userPropNames} = useSelector((state) => state.coreQuery)
+
   useEffect(() => {
     if(filter && filter.props[1] === 'categorical') {
       setValuesByProps(filter.props)
@@ -108,12 +111,6 @@ export default function EventFilterWrapper({
   }
 
   const renderFilterContent = () => {
-    
-    // return (
-    //   <Button type={'link'} className={'ml-2 fa-button--truncate'}>
-    //     {filter.props[0] + ' ' + filter.operator + ' ' + values} 
-    //   </Button> 
-    // );
     return (<FAFilterSelect 
       propOpts={filterDropDownOptions.props} 
       operatorOpts={filterDropDownOptions.operator}
@@ -482,21 +479,21 @@ export default function EventFilterWrapper({
   };
 
   const setValuesByProps = (props) => {
-    if(props[1] === 'categorical') {
-      if(props[2] === 'user') {
-        if(!dropDownValues[props[0]]) {
-          fetchUserPropertyValues(activeProject.id,props[0]).then(res => {
+    if(props[2] === 'categorical') {
+      if(props[3] === 'user') {
+        if(!dropDownValues[props[1]]) {
+          fetchUserPropertyValues(activeProject.id,props[1]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[props[0]] = res.data;
+            ddValues[props[1]] = res.data;
             setDropDownValues(ddValues);
           });
         }
       }
-      else if(props[2] === 'event') {
+      else if(props[3] === 'event') {
         if(!dropDownValues[props[0]]) {
-          fetchEventPropertyValues(activeProject.id, event.label, props[0]).then(res => {
+          fetchEventPropertyValues(activeProject.id, event.label, props[1]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[props[0]] = res.data;
+            ddValues[props[1]] = res.data;
             setDropDownValues(ddValues);
           });
         }

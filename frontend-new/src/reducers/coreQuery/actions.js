@@ -3,6 +3,8 @@
 export const FETCH_EVENTS = 'FETCH_EVENTS';
 export const FETCH_EVENT_PROPERTIES = 'FETCH_EVENT_PROPERTIES';
 export const FETCH_USER_PROPERTIES = 'FETCH_USER_PROPERTIES';
+export const SET_USER_PROP_NAME = 'SET_USER_PROP_NAME';
+export const SET_EVENT_PROP_NAME = 'SET_EVENT_PROP_NAME';
 export const INITIALIZE_GROUPBY = 'INITIALIZE_GROUPBY';
 export const SET_GROUPBY = 'SET_GROUPBY';
 export const DEL_GROUPBY = 'DEL_GROUPBY';
@@ -37,8 +39,16 @@ export const fetchUserPropertiesAction = (userProps) => {
   return { type: FETCH_USER_PROPERTIES, payload: userProps};
 }
 
+export const setUserPropertiesNamesAction = (userPropsDisplayNames) => {
+  return { type: SET_USER_PROP_NAME, payload: userPropsDisplayNames};
+}
+
 export const fetchEventPropertiesAction = (eventProps, name) => {
   return { type: FETCH_EVENT_PROPERTIES, payload: eventProps, eventName: name };
+}
+
+export const setEventPropertiesNamesAction = (eventPropDisplayNames) => {
+  return { type: SET_EVENT_PROP_NAME, payload: eventPropDisplayNames};
 }
 
 export const delGroupByAction = (type, payload, index) => {

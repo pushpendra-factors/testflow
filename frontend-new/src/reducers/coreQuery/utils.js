@@ -18,11 +18,11 @@ export const convertToEventOptions = (eventNames, display_names = []) => {
   return options
 };
 
-export const convertPropsToOptions = (props) => {
+export const convertPropsToOptions = (props, display_names = []) => {
   const options = [];
   Object.keys(props).forEach((type) => {
     props[type].forEach((val) => {
-      options.push([val, type]);
+      options.push([display_names[val]? display_names[val] : val, val, type]);
     })
   })
   return options;
