@@ -15,7 +15,9 @@ const EventGroupBlock = ({
   groupByEvent,
   event,
   userProperties,
+  userPropNames,
   eventProperties,
+  eventPropNames,
   setGroupState,
   delGroupState,
   closeDropDown,
@@ -56,8 +58,8 @@ const EventGroupBlock = ({
     }
 
     newGroupByState.eventName = event.label;
-    newGroupByState.property = val[0];
-    newGroupByState.prop_type = val[1];
+    newGroupByState.property = val[1];
+    newGroupByState.prop_type = val[2];
     newGroupByState.eventIndex = eventIndex;
 
     if (newGroupByState.prop_type === 'numerical') {
@@ -138,10 +140,19 @@ const EventGroupBlock = ({
   };
 
   const renderGroupContent = () => {
+    let propName = '';
+    if(groupByEvent.property && groupByEvent.prop_category === 'user') {
+      propName = userPropNames[groupByEvent.property]? userPropNames[groupByEvent.property] : groupByEvent.property;
+    }
+
+    if(groupByEvent.property && groupByEvent.prop_category === 'event') {
+      propName = eventPropNames[groupByEvent.property]? eventPropNames[groupByEvent.property] : groupByEvent.property;
+    }
+
     return (
       <>
         <Button type={'link'} className={'ml-2 fa-button--truncate'}>
-          {groupByEvent.property}
+          {propName}
         </Button>
         {renderGroupPropertyOptions(groupByEvent)}
       </>
@@ -183,6 +194,8 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   userProperties: state.coreQuery.userProperties,
   eventProperties: state.coreQuery.eventProperties,
+  userPropNames: state.coreQuery.userPropNames,
+  eventPropNames: state.coreQuery.eventPropNames,
 });
 
 export default connect(mapStateToProps)(EventGroupBlock);

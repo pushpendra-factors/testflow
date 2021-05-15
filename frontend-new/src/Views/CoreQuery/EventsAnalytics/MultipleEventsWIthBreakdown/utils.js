@@ -4,14 +4,23 @@ import { labelsObj } from '../../utils';
 import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 
-export const getBreakdownTitle = (breakdown) => {
+export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
   const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  let displayTitle = breakdown.property;
+  if(breakdown.prop_category === 'user') {
+    displayTitle = userPropNames[breakdown.property]? userPropNames[breakdown.property] : breakdown.property;
+  }
+
+  if(breakdown.prop_category === 'event') {
+    displayTitle = eventPropNames[breakdown.property]? eventPropNames[breakdown.property] : breakdown.property;
+  }
+  
   if (!breakdown.eventIndex) {
-    return breakdown.property;
+    return displayTitle;
   }
   return (
     <div className='flex items-center'>
-      <div className='mr-1'>{breakdown.property} of </div>
+      <div className='mr-1'>{displayTitle} of </div>
       <div
         style={{ backgroundColor: '#3E516C' }}
         className='text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs'
@@ -22,7 +31,7 @@ export const getBreakdownTitle = (breakdown) => {
   );
 };
 
-export const formatData = (data, queries, colors) => {
+export const formatData = (data, queries, colors, eventNames) => {
   if (
     !data ||
     !data.metrics ||
@@ -39,7 +48,8 @@ export const formatData = (data, queries, colors) => {
   const eventIndex = headers.findIndex((elem) => elem === 'event_name');
 
   const result = rows.map((d, index) => {
-    const str = d.slice(eventIndex, countIndex).join(',');
+    const eventName = eventNames[d[eventIndex]] || d[eventIndex];
+    const str = eventName + ',' + d.slice(eventIndex + 1, countIndex).join(',');
     const queryIndex = queries.findIndex(
       (_, index) => index === d[event_indexIndex]
     );
@@ -91,16 +101,22 @@ export const getTableColumns = (
   breakdown,
   currentSorter,
   handleSorting,
-  page
+  page,
+  eventNames,
+  userPropNames,
+  eventPropNames
 ) => {
   const result = [];
   result.push({
     title: 'Event',
     dataIndex: 'event',
+    render: (d) => {
+      return eventNames[d] || d;
+    },
   });
   breakdown.forEach((b, index) => {
     result.push({
-      title: getBreakdownTitle(b),
+      title: getBreakdownTitle(b, userPropNames, eventPropNames),
       dataIndex: b.property + ';' + index,
     });
   });
@@ -145,11 +161,12 @@ export const getDateBasedColumns = (
   breakdown,
   currentSorter,
   handleSorting,
-  frequency
+  frequency,
+  userPropNames, eventPropNames
 ) => {
   const breakdownColumns = breakdown.map((elem, index) => {
     return {
-      title: getBreakdownTitle(elem),
+      title: getBreakdownTitle(elem, userPropNames, eventPropNames),
       dataIndex: elem.property + ';' + index,
       width: 200,
     };
@@ -216,7 +233,11 @@ export const getDateBasedTableData = (
   return SortData(result, currentSorter.key, currentSorter.order);
 };
 
-export const formatDataInStackedAreaFormat = (data, aggregateData) => {
+export const formatDataInStackedAreaFormat = (
+  data,
+  aggregateData,
+  eventNames
+) => {
   if (
     !data.headers ||
     !data.headers.length ||
@@ -253,7 +274,9 @@ export const formatDataInStackedAreaFormat = (data, aggregateData) => {
     };
   });
   data.rows.forEach((row) => {
-    const breakdownJoin = row.slice(eventIndex, countIndex).join(',');
+    const eventName = eventNames[row[eventIndex]] || row[eventIndex];
+    const breakdownJoin =
+      eventName + ',' + row.slice(eventIndex + 1, countIndex).join(',');
     const bIdx = labelsMapper[breakdownJoin];
     const idx = differentDates.indexOf(row[dateIndex]);
     if (resultantData[bIdx]) {

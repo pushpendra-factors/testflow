@@ -78,7 +78,7 @@ export const generateTableColumns = (
   queries,
   currentSorter,
   handleSorting,
-  arrayMapper
+  arrayMapper,
 ) => {
   const result = [
     {
@@ -110,12 +110,12 @@ export const generateTableColumns = (
     eventColumns.push({
       title: breakdown.length
         ? getTitleWithSorter(
-            elem,
+            arrayMapper[index].displayName,
             arrayMapper[index].mapper,
             currentSorter,
             handleSorting
           )
-        : elem,
+        : arrayMapper[index].displayName,
       dataIndex: arrayMapper[index].mapper,
       width: 200,
       render: (d) => {

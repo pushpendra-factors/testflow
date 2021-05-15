@@ -1,6 +1,7 @@
-import React, { useCallback, useState } from "react";
-import { generateTableColumns, generateTableData } from "../utils";
-import DataTable from "../../../../components/DataTable";
+import React, { useCallback, useState } from 'react';
+import { generateTableColumns, generateTableData } from '../utils';
+import DataTable from '../../../../components/DataTable';
+import { useSelector } from 'react-redux';
 
 function FunnelsResultTable({
   chartData,
@@ -11,11 +12,11 @@ function FunnelsResultTable({
   maxAllowedVisibleProperties,
   isWidgetModal,
   arrayMapper,
-  reportTitle = "FunnelAnalysis",
+  reportTitle = 'FunnelAnalysis',
   durations,
 }) {
   const [sorter, setSorter] = useState({});
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
@@ -44,7 +45,7 @@ function FunnelsResultTable({
       fileName: `${reportTitle}.csv`,
       data: tableData.map(({ index, ...rest }) => {
         arrayMapper.forEach((elem, index) => {
-          rest[`${elem.eventName}-${index}`] = rest[`${elem.mapper}`].count;
+          rest[`${elem.displayName}-${index}`] = rest[`${elem.mapper}`].count;
           delete rest[`${elem.mapper}`];
         });
         return { ...rest };

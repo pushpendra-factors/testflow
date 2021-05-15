@@ -214,7 +214,7 @@ type Model interface {
 
 	// hubspot_document
 	GetHubspotDocumentByTypeAndActions(projectId uint64, ids []string, docType int, actions []int) ([]model.HubspotDocument, int)
-	GetSyncedHubspotDocumentWithUserIDByFilter(projectId uint64, id string, docType, action int) (*model.HubspotDocument, int)
+	GetSyncedHubspotDocumentByFilter(projectId uint64, id string, docType, action int) (*model.HubspotDocument, int)
 	CreateHubspotDocument(projectID uint64, document *model.HubspotDocument) int
 	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
 	GetHubspotFormDocuments(projectID uint64) ([]model.HubspotDocument, int)

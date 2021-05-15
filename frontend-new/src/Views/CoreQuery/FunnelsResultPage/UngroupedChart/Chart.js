@@ -70,7 +70,7 @@ function Chart({
 
     const showTooltip = (d, index) => {
       const label = arrayMapper.find((elem) => elem.mapper === d.event)
-        .eventName;
+        .displayName;
 
       let padY = index ? 200 : 100;
       let padX = 10;
@@ -233,7 +233,7 @@ function Chart({
       .attr("transform", "translate(0," + height + ")")
       .call(
         d3.axisBottom(x).tickFormat((d) => {
-          const label = arrayMapper.find((elem) => elem.mapper === d).eventName;
+          const label = arrayMapper.find((elem) => elem.mapper === d).displayName;
           if (label.length > BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) {
             return (
               label.substr(0, BAR_CHART_XAXIS_TICK_LENGTH[cardSize]) + "..."

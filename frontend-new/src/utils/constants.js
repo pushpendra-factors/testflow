@@ -151,5 +151,5 @@ export const MARKETING_TOUCHPOINTS = {
   ADGROUP: 'AdGroup',
   SOURCE: 'Source',
   KEYWORD: 'Keyword',
-  MATCHTYPE: 'MatchType'
+  MATCHTYPE: 'MatchType',
 };

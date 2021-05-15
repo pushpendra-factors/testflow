@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from '../factorsComponents';
 import { Button, InputNumber, Tooltip } from 'antd';
@@ -54,6 +55,8 @@ const FAFilterSelect = ({
 
     const [updateState, updateStateApply] = useState(false);
 
+    const {userPropNames, eventPropNames} = useSelector((state) => state.coreQuery)
+
     useEffect(() => {
         if (filter) {
             const prop = filter.props;
@@ -75,21 +78,6 @@ const FAFilterSelect = ({
             updateStateApply(false);
         }
     }, [updateState])
-
-    // useEffect(() => {
-    //     setPropState({ icon: prop[2], name: prop[0] });
-    //     setPropSelectOpen(false);
-    // }, [prop])
-
-    // useEffect(() => {
-    //     setOperSelectOpen(false);
-    // }, [operator])
-
-    // useEffect(() => {
-    //     if (values?.length) {
-    //         setValuesSelectionOpen(false);
-    //     }
-    // }, [values])
 
 
     const setValues = () => {
@@ -121,7 +109,7 @@ const FAFilterSelect = ({
     }
 
     const propSelect = (prop) => {
-        setPropState({ icon: prop[2], name: prop[0], type: prop[1] });
+        setPropState({ icon: prop[3], name: prop[1], type: prop[2] });
         setPropSelectOpen(false);
         setOperatorState("=");
         setValuesState(null);
@@ -181,6 +169,21 @@ const FAFilterSelect = ({
         //           moment(toVal).format('MMM DD, YYYY'));
     }
 
+    const renderGroupDisplayName = (propState) => {
+        // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
+        let propertyName = '';
+        if(propState.name && propState.icon === 'user') {
+          propertyName = userPropNames[propState.name]?  userPropNames[propState.name] : propState.name;
+        }
+        if(propState.name && propState.icon === 'event') {
+          propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
+        }
+        if(!propState.name) {
+          propertyName = 'Select Property';
+        }
+        return propertyName;
+      }
+
     const renderPropSelect = () => {
         return (<div className={styles.filter__propContainer}>
 
@@ -188,7 +191,7 @@ const FAFilterSelect = ({
                 icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
                 className={`fa-button--truncate fa-button--truncate-xs`}
                 type="link"
-                onClick={() => setPropSelectOpen(!propSelectOpen)}> {propState?.name ? propState?.name : 'Select Property'}
+                onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderGroupDisplayName(propState)}
             </Button>
 
             {propSelectOpen &&

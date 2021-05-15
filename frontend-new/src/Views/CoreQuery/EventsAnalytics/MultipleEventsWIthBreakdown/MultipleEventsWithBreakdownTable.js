@@ -11,6 +11,7 @@ import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DASHBOARD_WIDGET_SECTION,
 } from '../../../../utils/constants';
+import { useSelector } from 'react-redux';
 
 function MultipleEventsWithBreakdownTable({
   chartType,
@@ -29,6 +30,7 @@ function MultipleEventsWithBreakdownTable({
   const [sorter, setSorter] = useState({});
   const [dateSorter, setDateSorter] = useState({});
   const [searchText, setSearchText] = useState('');
+  const { eventNames, userPropNames, eventPropNames } = useSelector((state) => state.coreQuery);
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
@@ -39,8 +41,8 @@ function MultipleEventsWithBreakdownTable({
   }, []);
 
   const columns = useMemo(() => {
-    return getTableColumns(breakdown, sorter, handleSorting, page);
-  }, [breakdown, sorter, handleSorting, page]);
+    return getTableColumns(breakdown, sorter, handleSorting, page, eventNames, userPropNames, eventPropNames);
+  }, [breakdown, sorter, handleSorting, page, eventNames]);
 
   const tableData = useMemo(() => {
     return getTableData(data, breakdown, searchText, sorter);
@@ -52,7 +54,9 @@ function MultipleEventsWithBreakdownTable({
       breakdown,
       dateSorter,
       handleDateSorting,
-      durationObj.frequency
+      durationObj.frequency,
+      userPropNames, 
+      eventPropNames
     );
   }, [
     categories,
@@ -89,7 +93,11 @@ function MultipleEventsWithBreakdownTable({
         ({ index, eventIndex, dateWise, color, label, value, ...rest }) => {
           const result = {};
           for (let obj in rest) {
-            result[obj.split(';')[0]] = rest[obj];
+            if (obj.toLowerCase() === 'event') {
+              result['Event'] = eventNames[rest[obj]] || rest[obj];
+            } else {
+              result[obj.split(';')[0]] = rest[obj];
+            }
           }
           return result;
         }

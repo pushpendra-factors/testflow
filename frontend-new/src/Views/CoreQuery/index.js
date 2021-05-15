@@ -125,6 +125,7 @@ function CoreQuery({
     camp_groupBy,
     camp_dateRange,
     attr_dateRange,
+    eventNames,
   } = useSelector((state) => state.coreQuery);
 
   const {
@@ -564,27 +565,27 @@ function CoreQuery({
       case QUERY_TYPE_EVENT:
         return {
           text: 'Analyse Events',
-          icon: 'funnels_cq',
+          icon: 'events_cq',
         };
       case QUERY_TYPE_FUNNEL:
         return {
           text: 'Find event funnel for',
-          icon: 'events_dashboard_cq',
+          icon: 'funnels_cq',
         };
       case QUERY_TYPE_CAMPAIGN:
         return {
           text: 'Campaign Analytics',
-          icon: 'funnels_cq',
+          icon: 'campaigns_cq',
         };
       case QUERY_TYPE_ATTRIBUTION:
         return {
           text: 'Attributions',
-          icon: 'funnels_cq',
+          icon: 'attributions_cq',
         };
       default:
         return {
           text: 'Templates',
-          icon: 'funnels_cq',
+          icon: 'templates_cq',
         };
     }
   };
@@ -637,6 +638,7 @@ function CoreQuery({
       eventName: q,
       index,
       mapper: `event${index + 1}`,
+      displayName: eventNames[q] || q,
     });
   });
 

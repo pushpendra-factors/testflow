@@ -284,13 +284,17 @@ func ConvertIntToUUID(value uint64) (string, error) {
 	}
 
 	valueAsString := fmt.Sprintf("%v", value)
-	valueLen := len(valueAsString)
+	return ConvertIntStringToUUID(valueAsString)
+}
+
+func ConvertIntStringToUUID(intAsString string) (string, error) {
+	valueLen := len(intAsString)
 	if valueLen > 12 {
 		return "", errors.New("unsupported integer of 12 digit")
 	}
 
 	lastOctet := "000000000000"
-	lastOctet = lastOctet[:len(lastOctet)-valueLen] + valueAsString
+	lastOctet = lastOctet[:len(lastOctet)-valueLen] + intAsString
 
 	return fmt.Sprintf("00000000-0000-0000-0000-%s", lastOctet), nil
 }

@@ -105,7 +105,8 @@ export const getCompareTableColumns = (
   attribution_method_compare,
   touchpoint,
   linkedEvents,
-  event
+  event,
+  eventNames
 ) => {
   const result = [
     {
@@ -154,7 +155,7 @@ export const getCompareTableColumns = (
       render: renderComparCell,
     },
     {
-      title: event,
+      title: eventNames[event] || event,
       className: 'tableParentHeader',
       children: [
         {
@@ -245,7 +246,7 @@ export const getCompareTableColumns = (
   if (linkedEvents.length) {
     linkedEventsColumns = linkedEvents.map((le) => {
       return {
-        title: le.label,
+        title: eventNames[le.label] || le.label,
         className: 'tableParentHeader',
         children: [
           {
@@ -321,7 +322,8 @@ export const getTableColumns = (
   attribution_method_compare,
   touchpoint,
   linkedEvents,
-  event
+  event,
+  eventNames
 ) => {
   const result = [
     {
@@ -378,7 +380,7 @@ export const getTableColumns = (
       },
     },
     {
-      title: event,
+      title: eventNames[event] || event,
       className: 'tableParentHeader',
       children: [
         {
@@ -478,7 +480,7 @@ export const getTableColumns = (
   if (linkedEvents.length) {
     linkedEventsColumns = linkedEvents.map((le) => {
       return {
-        title: le.label,
+        title: eventNames[le.label] || le.label,
         className: 'tableParentHeader',
         children: [
           {

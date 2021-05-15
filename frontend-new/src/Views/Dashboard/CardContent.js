@@ -19,9 +19,11 @@ import {
 import Attributions from './Attributions';
 import CampaignAnalytics from './CampaignAnalytics';
 import NoDataChart from '../../components/NoDataChart';
+import { useSelector } from 'react-redux';
 
 function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
   let content = null;
+  const { eventNames } = useSelector((state) => state.coreQuery);
 
   if (resultState.loading) {
     content = (
@@ -83,6 +85,7 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           eventName: q.label,
           index,
           mapper: `event${index + 1}`,
+          displayName: eventNames[q.label] || q.label,
         });
       });
     }

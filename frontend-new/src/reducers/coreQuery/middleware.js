@@ -10,7 +10,10 @@ import {
   setCampFiltersAction, setCampGroupByAction, 
   setAttrDateRangeAction, setCampDateRangeAction, 
   setDefaultStateAction, setTouchPointFiltersAction,
-  setAttributionQueryTypeAction
+  setAttributionQueryTypeAction,
+  setEventsDisplayAction,
+  setUserPropertiesNamesAction,
+  setEventPropertiesNamesAction
 } from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties, fetchCampaignConfig } from './services';
 import { convertToEventOptions, convertPropsToOptions, convertCampaignConfig } from './utils';
@@ -20,7 +23,8 @@ export const fetchEventNames = (projectId) => {
     return new Promise((resolve, reject) => {
       getEventNames(dispatch, projectId)
         .then((response) => {
-          const options = convertToEventOptions(response.data.event_names);
+          const options = convertToEventOptions(response.data.event_names, response.data.display_names);
+          dispatch(setEventsDisplayAction(response.data.display_names))
           resolve(dispatch(fetchEventsAction(options)));
         }).catch((err) => {
           resolve(dispatch(fetchEventsAction([])));
@@ -29,11 +33,12 @@ export const fetchEventNames = (projectId) => {
   };
 };
  
-export const getUserProperties = (projectId, queryType) => {
+export const getUserProperties = (projectId, queryType = '') => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       fetchUserProperties(projectId, queryType).then((response) => {
-        const options = convertPropsToOptions(response.data);
+        const options = convertPropsToOptions(response.data?.properties, response.data?.display_names);
+        resolve(dispatch(setUserPropertiesNamesAction(response.data?.display_names)));
         resolve(dispatch(fetchUserPropertiesAction(options)));
       }).catch((err) => {
         // resolve(dispatch(fetchEventPropertiesAction({})));
@@ -47,7 +52,8 @@ export const getEventProperties = (projectId, eventName) => {
     return new Promise((resolve, reject) => {
       fetchEventProperties(projectId, eventName)
         .then((response) => {
-          const options = convertPropsToOptions(response.data);
+          const options = convertPropsToOptions(response.data.properties, response.data?.display_names);
+          resolve(dispatch(setEventPropertiesNamesAction(response.data?.display_names)));
           resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
         }).catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));

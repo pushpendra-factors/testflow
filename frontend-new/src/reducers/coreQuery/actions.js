@@ -3,6 +3,8 @@
 export const FETCH_EVENTS = 'FETCH_EVENTS';
 export const FETCH_EVENT_PROPERTIES = 'FETCH_EVENT_PROPERTIES';
 export const FETCH_USER_PROPERTIES = 'FETCH_USER_PROPERTIES';
+export const SET_USER_PROP_NAME = 'SET_USER_PROP_NAME';
+export const SET_EVENT_PROP_NAME = 'SET_EVENT_PROP_NAME';
 export const INITIALIZE_GROUPBY = 'INITIALIZE_GROUPBY';
 export const SET_GROUPBY = 'SET_GROUPBY';
 export const DEL_GROUPBY = 'DEL_GROUPBY';
@@ -22,18 +24,31 @@ export const SET_CAMP_FILTERS = 'SET_CAMP_FILTERS';
 export const SET_CAMP_GROUBY = 'SET_CAMP_GROUBY';
 export const SET_CAMP_DATE_RANGE = 'SET_CAMP_DATE_RANGE';
 export const SET_DEFAULT_STATE = 'SET_DEFAULT_STATE';
+export const SET_EVENT_NAMES = 'SET_EVENT_NAMES';
 
 // Action creators
 export const fetchEventsAction = (events, status = 'started') => {
   return { type: FETCH_EVENTS, payload: events };
 };
 
+export const setEventsDisplayAction = (displayNames, status = 'started') => {
+  return { type: SET_EVENT_NAMES, payload: displayNames };
+};
+
 export const fetchUserPropertiesAction = (userProps) => {
   return { type: FETCH_USER_PROPERTIES, payload: userProps};
 }
 
+export const setUserPropertiesNamesAction = (userPropsDisplayNames) => {
+  return { type: SET_USER_PROP_NAME, payload: userPropsDisplayNames};
+}
+
 export const fetchEventPropertiesAction = (eventProps, name) => {
   return { type: FETCH_EVENT_PROPERTIES, payload: eventProps, eventName: name };
+}
+
+export const setEventPropertiesNamesAction = (eventPropDisplayNames) => {
+  return { type: SET_EVENT_PROP_NAME, payload: eventPropDisplayNames};
 }
 
 export const delGroupByAction = (type, payload, index) => {

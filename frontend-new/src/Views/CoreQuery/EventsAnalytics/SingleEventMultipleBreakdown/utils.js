@@ -34,11 +34,25 @@ export const getTableColumns = (
   breakdown,
   currentSorter,
   handleSorting,
-  page
+  page,
+  eventNames,
+  userPropNames,
+  eventPropNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
+
+    let displayTitle = e.property;
+    if(e.prop_category === 'user') {
+      displayTitle = userPropNames[e.property]? userPropNames[e.property] : e.property;
+    }
+
+    if(e.prop_category === 'event') {
+      displayTitle = eventPropNames[e.property]? eventPropNames[e.property] : e.property;
+    }
+
+
     return {
-      title: e.property,
+      title: displayTitle,
       dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
       width: 200,
@@ -46,14 +60,16 @@ export const getTableColumns = (
   });
 
   const e = events[0];
+  const title = eventNames[e] || e;
+  
   const countColumn = {
     title: getTitleWithSorter(
-      `${e}: ${labelsObj[page]}`,
-      e,
+      `${title}: ${labelsObj[page]}`,
+      'Event Count',
       currentSorter,
       handleSorting
     ),
-    dataIndex: e,
+    dataIndex: 'Event Count',
     render: (d) => {
       return <NumFormat number={d} />;
     },
@@ -80,7 +96,7 @@ export const getDataInTableFormat = (
     });
     return {
       index: d.index,
-      [events[0]]: d.value,
+      'Event Count': d.value,
       ...breakdownData,
     };
   });
@@ -92,11 +108,23 @@ export const getDateBasedColumns = (
   breakdown,
   currentSorter,
   handleSorting,
-  frequency
+  frequency,
+  userPropNames, 
+    eventPropNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
+
+    let displayTitle = e.property;
+    if(e.prop_category === 'user') {
+      displayTitle = userPropNames[e.property]? userPropNames[e.property] : e.property;
+    }
+
+    if(e.prop_category === 'event') {
+      displayTitle = eventPropNames[e.property]? eventPropNames[e.property] : e.property;
+    }
+
     return {
-      title: e.property,
+      title: displayTitle,
       dataIndex: e.property,
       fixed: !index ? 'left' : '',
       width: 200,

@@ -28,6 +28,7 @@ func main() {
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -100,7 +101,10 @@ func main() {
 			User:     *memSQLUser,
 			Name:     *memSQLName,
 			Password: *memSQLPass,
-			AppName:  appName,
+			// Todo: Remove UseSSL after enabling it by environment on all workloads.
+			UseSSL:      *env == C.STAGING || *env == C.PRODUCTION,
+			Certiifcate: *memSQLCertificate,
+			AppName:     appName,
 		},
 		PrimaryDatastore:    *primaryDatastore,
 		RedisHost:           *redisHost,

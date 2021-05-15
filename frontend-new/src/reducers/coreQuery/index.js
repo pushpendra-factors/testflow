@@ -22,7 +22,10 @@ import {
   FETCH_CAMP_CONFIG,
   SET_CAMP_GROUBY,
   SET_CAMP_DATE_RANGE,
-  SET_DEFAULT_STATE
+  SET_DEFAULT_STATE,
+  SET_EVENT_NAMES,
+  SET_USER_PROP_NAME,
+  SET_EVENT_PROP_NAME
 } from "./actions";
 import {
   SHOW_ANALYTICS_RESULT,
@@ -72,18 +75,27 @@ const defaultState = {
     ...DefaultDateRangeFormat,
     dateStr: "",
   },
+  eventNames: [],
+  userPropNames: [],
+  eventPropNames: []
 };
 
 export default function (state = defaultState, action) {
   switch (action.type) {
     case FETCH_EVENTS:
       return { ...state, eventOptions: action.payload };
+    case SET_EVENT_NAMES:
+      return { ...state, eventNames: action.payload}
+    case SET_USER_PROP_NAME:
+      return {...state, userPropNames: action.payload}
     case FETCH_USER_PROPERTIES:
       return { ...state, userProperties: action.payload };
     case FETCH_EVENT_PROPERTIES:
       const eventPropState = Object.assign({}, state.eventProperties);
       eventPropState[action.eventName] = action.payload;
       return { ...state, eventProperties: eventPropState };
+    case SET_EVENT_PROP_NAME:
+      return {...state, eventPropNames: action.payload}
     case INITIALIZE_GROUPBY: {
       return {
         ...state,

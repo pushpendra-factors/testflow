@@ -14,6 +14,7 @@ const ConversionGoalBlock = ({
     eventGoalChange, 
     delEvent, 
     eventNameOptions, 
+    eventNames,
     activeProject, 
     eventProperties,
     userProperties
@@ -127,7 +128,7 @@ const ConversionGoalBlock = ({
                      ? <GroupSelect
                             groupedProperties={eventNameOptions}
                             placeholder="Select Event"
-                            optionClick={(group, val) => onEventSelect(val[0])}
+                            optionClick={(group, val) => onEventSelect(val[1]? val[1]: val[0])}
                             onClickOutside={() => setSelectVisible(false)}
 
                         ></GroupSelect>
@@ -147,7 +148,8 @@ const ConversionGoalBlock = ({
                     icon={<SVG name="mouseevent" />}
                     className={'fa-button--truncate fa-button--truncate-xs'}
                     >
-                         {eventGoal && eventGoal.label} 
+
+                        {eventNames[eventGoal?.label]? eventNames[eventGoal?.label] : eventGoal?.label}
                 </Button> }
 
                 {selectEvents()}
@@ -186,7 +188,8 @@ const mapStateToProps = (state) => ({
     activeProject: state.global.active_project,
     eventProperties: state.coreQuery.eventProperties,
     userProperties: state.coreQuery.userProperties,
-    eventNameOptions: state.coreQuery.eventOptions
+    eventNameOptions: state.coreQuery.eventOptions,
+    eventNames: state.coreQuery.eventNames
 });
   
 const mapDispatchToProps = dispatch => bindActionCreators({}, dispatch);

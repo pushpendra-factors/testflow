@@ -11,7 +11,7 @@ import { getErrorMessage } from "../../utils/dataFormatter";
 const host = getHostUrl();
 
 export const getEventNames = (dispatch, projectId) => {
-  return get(dispatch, host + "projects/" + projectId + "/v1/event_names", {});
+  return get(dispatch, host + "projects/" + projectId + "/v1/event_names?is_display_name_enabled=true", {});
 };
 
 export const getEventsData = (
@@ -42,7 +42,7 @@ export function fetchEventProperties(projectId, eventName) {
     projectId +
     "/event_names/" +
     btoa(eventName) +
-    "/properties";
+    "/properties?is_display_name_enabled=true";
   return get(null, url);
 }
 
@@ -95,7 +95,7 @@ export function fetchUserPropertyValues(projectId, propertyName) {
 
 export function fetchUserProperties(projectId, queryType) {
   const url =
-    host + "projects/" + projectId + "/user_properties?query_type=" + queryType;
+    host + "projects/" + projectId + "/user_properties?is_display_name_enabled=true";
   return get(null, url);
 }
 

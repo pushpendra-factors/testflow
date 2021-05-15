@@ -32,7 +32,8 @@ export const getColumns = (
   arrayMapper,
   frequency,
   currentSorter,
-  handleSorting
+  handleSorting,
+  eventNames
 ) => {
   let format = 'MMM D, YYYY';
   if (frequency === 'hour') {
@@ -55,7 +56,12 @@ export const getColumns = (
 
   const eventColumns = events.map((e, idx) => {
     return {
-      title: getTitleWithSorter(e, e, currentSorter, handleSorting),
+      title: getTitleWithSorter(
+        eventNames[e] || e,
+        e,
+        currentSorter,
+        handleSorting
+      ),
       dataIndex: arrayMapper.find((elem) => elem.index === idx).mapper,
       render: (d) => {
         return <NumFormat number={d} />;
@@ -110,7 +116,7 @@ export const formatMultiEventsAnalyticsData = (response, arrayMapper) => {
   return result;
 };
 
-export const getDataInLineChartFormat = (data, arrayMapper) => {
+export const getDataInLineChartFormat = (data, arrayMapper, eventNames) => {
   if (
     !data.headers ||
     !data.headers.length ||
@@ -136,7 +142,7 @@ export const getDataInLineChartFormat = (data, arrayMapper) => {
   const resultantData = arrayMapper.map((m) => {
     eventIndices.push(headers.findIndex((header) => m.eventName === header));
     return {
-      name: m.eventName,
+      name: eventNames[m.eventName] || m.eventName,
       data: [...initializedDatesData],
       index: m.index,
       marker: {
@@ -163,7 +169,8 @@ export const getDateBasedColumns = (
   data,
   currentSorter,
   handleSorting,
-  frequency
+  frequency,
+  eventNames
 ) => {
   const result = [
     {
@@ -171,6 +178,9 @@ export const getDateBasedColumns = (
       dataIndex: 'event',
       fixed: 'left',
       width: 200,
+      render: (d) => {
+        return eventNames[d] || d;
+      },
     },
   ];
   let format = 'MMM D';

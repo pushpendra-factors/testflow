@@ -140,6 +140,7 @@ CREATE TABLE IF NOT EXISTS agents (
     int_adwords_refresh_token text,
     int_salesforce_refresh_token text,
     int_salesforce_instance_url text,
+    int_google_organic_refresh_token text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (uuid),
@@ -385,6 +386,8 @@ CREATE TABLE IF NOT EXISTS project_settings (
     bigquery_enabled boolean NOT NULL DEFAULT FALSE,
     int_salesforce_enabled_agent_uuid text,
     int_drift boolean NOT NULL DEFAULT FALSE, 
+    int_google_organic_enabled_agent_uuid text,
+    int_google_organic_url_prefixes text,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
@@ -396,6 +399,7 @@ CREATE TABLE IF NOT EXISTS project_settings (
     -- Ref (int_facebook_agent_uuid) -> agents(uuid)
     -- Ref (int_linkedin_agent_uuid) -> agents(uuid)
     -- Ref (int_salesforce_enabled_agent_uuid) -> agents(uuid)
+    -- Ref (int_google_organic_enabled_agent_uuid) -> agents(uuid)
 );
 
 CREATE TABLE IF NOT EXISTS projects (
@@ -564,6 +568,22 @@ CREATE TABLE IF NOT EXISTS display_names (
     UNIQUE KEY  display_names_project_id_object_group_entity_tag_unique_idx(project_id, group_name, entity_type, group_object_name, display_name)
 
     -- Required constraints.
+    -- Ref (project_id) -> projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS google_organic_documents (
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    url_prefix text NOT NULL,
+    timestamp bigint NOT NULL,
+    value json,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (project_id),
+    KEY (project_id, url_prefix, timestamp) USING CLUSTERED COLUMNSTORE
+
+    -- Required constraints.
+    -- Unique (project_id, customer_ad_account_id, type, timestamp, id)
     -- Ref (project_id) -> projects(id)
 );
 -- DOWN
