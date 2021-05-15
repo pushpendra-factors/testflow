@@ -95,7 +95,8 @@ export default function (state = defaultState, action) {
       eventPropState[action.eventName] = action.payload;
       return { ...state, eventProperties: eventPropState };
     case SET_EVENT_PROP_NAME:
-      return {...state, eventPropNames: action.payload}
+      const evnPropNames = {...state.eventPropNames, ...action.payload};
+      return {...state, eventPropNames: evnPropNames}
     case INITIALIZE_GROUPBY: {
       return {
         ...state,
