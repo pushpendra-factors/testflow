@@ -627,7 +627,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 
 				// Added below fallback for getting user_id by contact create synced for same document.
 				// This is not the ideal scenario. Ideally the user_id should be availble one-one on users table.
-				lastSyncedDocument, errCode := store.GetStore().GetSyncedHubspotDocumentWithUserIDByFilter(projectID,
+				lastSyncedDocument, errCode := store.GetStore().GetSyncedHubspotDocumentByFilter(projectID,
 					document.ID, model.HubspotDocumentTypeContact, model.HubspotDocumentActionCreated)
 				if errCode == http.StatusFound && lastSyncedDocument.UserId != "" {
 					logCtx.Info("Failed to get user with given lead_guid on contact updated event. Using user_id on contact created document.")
