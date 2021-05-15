@@ -292,7 +292,7 @@ export default function FilterBlock({
                   if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                     valuesOptions.push(
                       <div title={val[0]} className={`fa-select-group-select--options`}
-                            onClick={() => optionClick([...val, propsConstants[grpIndex]])} >
+                            onClick={() => optionClick([val[1], val[2], propsConstants[grpIndex]])} >
                           {searchTerm.length > 0 &&
                            <div>
                             <SVG  color={'purple'} name={group.icon} extraClass={'self-center'}></SVG>

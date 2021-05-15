@@ -629,4 +629,11 @@ func main() {
 		log.Info("Created smart properties table.")
 	}
 
+	// Create google_organic_documents table
+	if err := db.CreateTable(&model.GoogleOrganicDocument{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("google_organic_documents table creation failed.")
+	} else {
+		log.Info("Created google_organic_documents table.")
+	}
+
 }
