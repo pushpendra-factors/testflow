@@ -52,7 +52,7 @@ export const getEventProperties = (projectId, eventName) => {
     return new Promise((resolve, reject) => {
       fetchEventProperties(projectId, eventName)
         .then((response) => {
-          const options = convertPropsToOptions(response.data.properties);
+          const options = convertPropsToOptions(response.data.properties, response.data?.display_names);
           resolve(dispatch(setEventPropertiesNamesAction(response.data?.display_names)));
           resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
         }).catch((err) => {
