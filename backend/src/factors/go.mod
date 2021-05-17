@@ -95,7 +95,7 @@ require (
 	github.com/swaggo/gin-swagger v1.3.0
 	github.com/swaggo/swag v1.6.7
 	github.com/thinkerou/favicon v0.1.0 // indirect
-	github.com/tmdvs/Go-Emoji-Utils v1.1.0 // indirect
+	github.com/tmdvs/Go-Emoji-Utils v1.1.0
 	github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2 // indirect
 	github.com/ttacon/libphonenumber v1.1.0
 	github.com/urfave/cli v1.22.5 // indirect
