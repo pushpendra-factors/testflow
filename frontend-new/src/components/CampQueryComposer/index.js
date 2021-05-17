@@ -15,7 +15,7 @@ import {
     setCampDateRange
 } from '../../reducers/coreQuery/middleware';
 import MeasuresBlock from './MeasuresBlock';
-import FilterBlock from '../QueryComposer/FilterBlock';
+import CampFilterBlock from './CampFilterBlock';
 
 import FaDatepicker from '../../components/FaDatepicker';
 
@@ -139,7 +139,7 @@ const CampQueryComposer = ({ activeProject, channel,
             filters.forEach((filt, id) => {
                 filtrs.push(
                     <div key={id} className={id !== 0 ? `mt-4` : null}>
-                        <FilterBlock activeProject={activeProject}
+                        <CampFilterBlock activeProject={activeProject}
                             index={id}
                             blockType={'global'} filterType={'channel'}
                             filter={filt}
@@ -149,7 +149,7 @@ const CampQueryComposer = ({ activeProject, channel,
                             deleteFilter={delFilter}
                             typeProps={{ channel: channel }} filterProps={filterProps}
                             propsConstants={Object.keys(filterProps)}
-                        ></FilterBlock>
+                        ></CampFilterBlock>
                     </div>
                 )
             })
@@ -157,7 +157,7 @@ const CampQueryComposer = ({ activeProject, channel,
             if (filterDD) {
                 filtrs.push(
                     <div key={filtrs.length} className={`mt-4`}>
-                        <FilterBlock activeProject={activeProject}
+                        <CampFilterBlock activeProject={activeProject}
                             blockType={'global'} filterType={'channel'}
                             extraClass={styles.filterSelect}
                             delBtnClass={styles.filterDelBtn}
@@ -165,7 +165,7 @@ const CampQueryComposer = ({ activeProject, channel,
                             propsConstants={Object.keys(filterProps)}
                             insertFilter={addFilter}
                             closeFilter={closeFilter}
-                        ></FilterBlock>
+                        ></CampFilterBlock>
                     </div>
                 )
             } else {
