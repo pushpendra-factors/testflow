@@ -250,11 +250,11 @@ func SanitizeStringValueForUnicode(s string) string {
 	for _, r := range s {
 		if !utf8.ValidRune(r) {
 			continue
-		}
-		if r > 65536 {
+		} else if r > 65536 {
 			// Memsql supports only till 65536. Convert to unicode point text.
-			escaped := []rune(strings.Replace(fmt.Sprintf("%U", r), "U+", "\\u", 1))
-			runes = append(runes, escaped...)
+			// escaped := []rune(strings.Replace(fmt.Sprintf("%U", r), "U+", "\\u", 1))
+			// runes = append(runes, escaped...)
+			continue
 		} else {
 			runes = append(runes, r)
 		}
