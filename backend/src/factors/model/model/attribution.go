@@ -829,6 +829,11 @@ func addMetricsFromReport(attributionData map[string]*AttributionData, reportKey
 
 	// If key is not found, no performance report enrichment will happen
 	for key, value := range reportKeyData {
+
+		if value.Impressions == 0 && value.Clicks == 0 && value.Spend == 0 {
+			// ignore ZERO valued keys
+			continue
+		}
 		if _, found := attributionData[key]; found {
 
 			// Todo (Anil) Debug stmts. Remove it
