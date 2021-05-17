@@ -51,18 +51,13 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	if err != nil {
 		return nil, err
 	}
+
 	usersInfo, err := store.GetCoalesceIDFromUserIDs(sessionUsers, projectID)
 	if err != nil {
 		return nil, err
 	}
+	// coalUserId[Key][UserSessionData]
 	sessions := updateSessionsMapWithCoalesceID(_sessions, usersInfo)
-
-	sessionKeyMap := make(map[string]model.MarketingData)
-	for _, value := range _sessions {
-		for k, v := range value {
-			sessionKeyMap[k] = v.MarketingInfo
-		}
-	}
 
 	isCompare := false
 	// Default conversion for AttributionQueryTypeConversionBased.
@@ -126,10 +121,13 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	addWebsiteVisitorsInfo(attributionData, sessions, len(query.LinkedEvents))
 
 	// Add the Added keys
-	model.AddTheAddedKeys(attributionData, query.AttributionKey, sessionKeyMap)
+	model.AddTheAddedKeysAndMetrics(attributionData, query.AttributionKey, sessions)
 
 	// Add the performance information
 	model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports)
+
+	// Add additional metrics values
+	model.ComputeAdditionalMetrics(attributionData)
 
 	// Merging same name key's into single row
 	dataRows := model.GetRowsByMaps(query.AttributionKey, attributionData, query.LinkedEvents, isCompare)
@@ -354,6 +352,8 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 		" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
 
 	queryUserSessionTimeRange := "SELECT sessions.user_id, " +
+		caseSelectStmt + " AS sessionTimeSpent, " +
+		caseSelectStmt + " AS pageCount, " +
 		caseSelectStmt + " AS campaignName, " +
 		caseSelectStmt + " AS adgroupName, " +
 		caseSelectStmt + " AS keywordName, " +
@@ -366,6 +366,8 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 	var qParams []interface{}
 
 	qParams = append(qParams,
+		U.SP_SPENT_TIME, 0, U.SP_SPENT_TIME, 0, U.SP_SPENT_TIME,
+		U.SP_PAGE_COUNT, 0, U.SP_PAGE_COUNT, 0, U.SP_PAGE_COUNT,
 		U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
 		U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP,
 		U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD,
@@ -382,6 +384,8 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 	defer rows.Close()
 	for rows.Next() {
 		var userID string
+		var sessionSpentTime float64
+		var pageCount int64
 		var campaignName string
 		var adgroupName string
 		var keywordName string
@@ -390,7 +394,7 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 		var attributionId string
 		var gclID string
 		var timestamp int64
-		if err = rows.Scan(&userID, &campaignName, &adgroupName, &keywordName, &keywordMatchType, &sourceName, &attributionId, &gclID, &timestamp); err != nil {
+		if err = rows.Scan(&userID, &sessionSpentTime, &pageCount, &campaignName, &adgroupName, &keywordName, &keywordMatchType, &sourceName, &attributionId, &gclID, &timestamp); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 			continue
 		}
@@ -429,19 +433,25 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 			if userSessionData, ok := attributedSessionsByUserId[userID][uniqueAttributionKey]; ok {
 				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
 				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
+				userSessionData.SessionSpentTimes = append(userSessionData.SessionSpentTimes, sessionSpentTime)
+				userSessionData.PageCounts = append(userSessionData.PageCounts, pageCount)
 				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
 				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
 			} else {
 				userSessionDataNew := model.UserSessionData{MinTimestamp: timestamp,
-					MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
+					SessionSpentTimes: []float64{sessionSpentTime},
+					PageCounts:        []int64{pageCount},
+					MaxTimestamp:      timestamp, TimeStamps: []int64{timestamp},
 					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
 				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 			}
 		} else {
 			attributedSessionsByUserId[userID] = make(map[string]model.UserSessionData)
 			userSessionDataNew := model.UserSessionData{MinTimestamp: timestamp,
-				MaxTimestamp: timestamp, TimeStamps: []int64{timestamp},
+				SessionSpentTimes: []float64{sessionSpentTime},
+				PageCounts:        []int64{pageCount},
+				MaxTimestamp:      timestamp, TimeStamps: []int64{timestamp},
 				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
@@ -996,7 +1006,7 @@ func addWebsiteVisitorsInfo(attributionData map[string]*model.AttributionData,
 				if _, ok := userIDAttributionIDVisit[getKey(userID, attributionID)]; ok {
 					continue
 				}
-				attributionData[attributionID].WebsiteVisitors += 1
+				attributionData[attributionID].Sessions += 1
 				userIDAttributionIDVisit[getKey(userID, attributionID)] = true
 			}
 		}

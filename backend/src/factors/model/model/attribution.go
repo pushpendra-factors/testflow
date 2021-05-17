@@ -189,27 +189,41 @@ type UserSessionData struct {
 	MinTimestamp      int64
 	MaxTimestamp      int64
 	TimeStamps        []int64
+	SessionSpentTimes []float64
+	PageCounts        []int64
 	WithinQueryPeriod bool
 	MarketingInfo     MarketingData
 }
 
 var AddedKeysForAdgroup = []string{"Campaign"}
 var AddedKeysForKeyword = []string{"Campaign", "AdGroup", "MatchType"}
-var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "Website Visitors"}
-var AttributionFixedMetrics = []string{"Cost Per Conversion", "Compare - Users", "Compare Cost Per Conversion"}
+
+// TODO (Anil) Update Website Visitors to Session back
+var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR", "Average CPC", "CPM", "ConversionRate", "Website Visitors", "Users", "Average Session Time", "PageViews"}
+
+// var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR", "Average CPC", "CPM", "ConversionRate", "Sessions", "Users", "Average Session Time", "PageViews"}
+var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "Compare - Users", "Compare Cost Per Conversion"}
 
 type AttributionData struct {
-	AddedKeys                   []string
-	Name                        string
-	Impressions                 int64
-	Clicks                      int64
-	Spend                       float64
-	WebsiteVisitors             int64
-	AddedMetrics                []float64
-	ConversionEventCount        float64
-	LinkedEventsCount           []float64
-	ConversionEventCompareCount float64
-	MarketingInfo               MarketingData
+	AddedKeys                     []string
+	Name                          string
+	Impressions                   int64
+	Clicks                        int64
+	Spend                         float64
+	CTR                           float64
+	AvgCPC                        float64
+	CPM                           float64
+	ConversionRate                float64
+	Sessions                      int64
+	Users                         int64
+	AvgSessionTime                float64
+	PageViews                     int64
+	ConversionEventCount          float64
+	CostPerConversion             float64
+	LinkedEventsCount             []float64
+	ConversionEventCompareCount   float64
+	CostPerConversionCompareCount float64
+	MarketingInfo                 MarketingData
 }
 
 type UserInfo struct {
@@ -249,19 +263,31 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 		for j := 0; j <= keyIndex; j++ {
 			key = key + row[j].(string)
 		}
+
 		if _, exists := rowKeyMap[key]; exists {
 			seenRow := rowKeyMap[key]
 			// Don't sum up Impressions, Clicks, Spend.
 			seenRow[keyIndex+1] = U.Max(seenRow[keyIndex+1].(int64), row[keyIndex+1].(int64))            // Impressions.
 			seenRow[keyIndex+2] = U.Max(seenRow[keyIndex+2].(int64), row[keyIndex+2].(int64))            // Clicks.
 			seenRow[keyIndex+3] = U.MaxFloat64(seenRow[keyIndex+3].(float64), row[keyIndex+3].(float64)) // Spend.
-			seenRow[keyIndex+4] = seenRow[keyIndex+4].(int64) + row[keyIndex+4].(int64)                  // Website Visitors.
-			seenRow[keyIndex+5] = seenRow[keyIndex+5].(float64) + row[keyIndex+5].(float64)              // Conversion.
-			seenRow[keyIndex+6] = seenRow[keyIndex+6].(float64) + row[keyIndex+6].(float64)              // Conversion - CPC.
-			seenRow[keyIndex+7] = seenRow[keyIndex+7].(float64) + row[keyIndex+7].(float64)              // Compare Conversion.
-			seenRow[keyIndex+8] = seenRow[keyIndex+8].(float64) + row[keyIndex+8].(float64)              // Compare Conversion - CPC.
+
+			seenRow[keyIndex+4] = U.MaxFloat64(seenRow[keyIndex+4].(float64), row[keyIndex+4].(float64)) // CTR.
+			seenRow[keyIndex+5] = U.MaxFloat64(seenRow[keyIndex+5].(float64), row[keyIndex+5].(float64)) // AvgCPC.
+			seenRow[keyIndex+6] = U.MaxFloat64(seenRow[keyIndex+6].(float64), row[keyIndex+6].(float64)) // CPM.
+			seenRow[keyIndex+7] = U.MaxFloat64(seenRow[keyIndex+7].(float64), row[keyIndex+7].(float64)) // ConversionRate.
+
+			seenRow[keyIndex+8] = seenRow[keyIndex+8].(int64) + row[keyIndex+8].(int64) // Sessions.
+			seenRow[keyIndex+9] = seenRow[keyIndex+9].(int64) + row[keyIndex+9].(int64) // Users.
+
+			seenRow[keyIndex+10] = U.MaxFloat64(seenRow[keyIndex+10].(float64), row[keyIndex+10].(float64)) // AvgSessionTime.
+			seenRow[keyIndex+11] = seenRow[keyIndex+11].(int64) + row[keyIndex+11].(int64)                  // PageViews.
+
+			seenRow[keyIndex+12] = seenRow[keyIndex+12].(float64) + row[keyIndex+12].(float64)              // Conversion.
+			seenRow[keyIndex+13] = U.MaxFloat64(seenRow[keyIndex+13].(float64), row[keyIndex+13].(float64)) // Conversion - CPC.
+			seenRow[keyIndex+14] = seenRow[keyIndex+14].(float64) + row[keyIndex+14].(float64)              // Compare Conversion.
+			seenRow[keyIndex+15] = U.MaxFloat64(seenRow[keyIndex+15].(float64), row[keyIndex+15].(float64)) // Compare Conversion - CPC.
 			// Remaining linked funnel events & CPCs
-			for i := keyIndex + 9; i < len(seenRow); i++ {
+			for i := keyIndex + 16; i < len(seenRow); i++ {
 				seenRow[i] = seenRow[i].(float64) + row[i].(float64)
 			}
 			rowKeyMap[key] = seenRow
@@ -392,7 +418,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 	result.Headers = append(append(result.Headers, attributionKey), AttributionFixedHeaders...)
 	conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
 	result.Headers = append(result.Headers, conversionEventUsers)
-	result.Headers = append(result.Headers, AttributionFixedMetrics...)
+	result.Headers = append(result.Headers, AttributionFixedHeadersPostPostConversion...)
 	if len(query.LinkedEvents) > 0 {
 		for _, event := range query.LinkedEvents {
 			result.Headers = append(result.Headers, fmt.Sprintf("%s - Users", event.Name))
@@ -432,7 +458,7 @@ func GetKeyIndexOrAddedKeySize(attributionKey string) int {
 
 func GetConversionIndex(headers []string) int {
 	for index, val := range headers {
-		if val == "Website Visitors" {
+		if val == "PageViews" {
 			return index + 1
 		}
 	}
@@ -451,9 +477,36 @@ func GetSpendIndex(headers []string) int {
 // GetRowsByMaps Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
 func GetRowsByMaps(attributionKey string, attributionData map[string]*AttributionData,
 	linkedEvents []QueryEventWithProperties, isCompare bool) [][]interface{} {
+	type AttributionData struct {
+		AddedKeys                     []string
+		Name                          string
+		Impressions                   int64
+		Clicks                        int64
+		Spend                         float64
+		CTR                           float64 // New TODO (Anil) remove these comments
+		AvgCPC                        float64 // New
+		CPM                           float64 // New
+		ConversionRate                float64 // New
+		Sessions                      int64
+		Users                         int64   // New
+		AvgSessionTime                float64 // New
+		PageViews                     int64   // New
+		ConversionEventCount          float64
+		CostPerConversion             float64 // New
+		LinkedEventsCount             []float64
+		ConversionEventCompareCount   float64
+		CostPerConversionCompareCount float64 // New
+		MarketingInfo                 MarketingData
+	}
 
-	defaultMatchingRow := []interface{}{"none", int64(0), int64(0), float64(0), int64(0), float64(0), float64(0),
-		float64(0), float64(0)}
+	// Name, impression, clicks, spend
+	defaultMatchingRow := []interface{}{"none", int64(0), int64(0), float64(0),
+		// (CTR, AvgCPC, CPM, ConversionRate)
+		float64(0), float64(0), float64(0), float64(0),
+		// Sessions, (users), (AvgSessionTime), (pageViews),
+		int64(0), int64(0), float64(0), int64(0),
+		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
+		float64(0), float64(0), float64(0), float64(0)}
 	var nonMatchingRow []interface{}
 
 	addedKeysSize := 0
@@ -500,6 +553,8 @@ func GetRowsByMaps(attributionKey string, attributionData map[string]*Attributio
 					row = append(row, PropertyValueNone)
 				}
 			}
+			row = append(row, attributionIdName, data.Impressions, data.Clicks, data.Spend,
+				data.CTR, data.AvgCPC, data.CPM, data.ConversionRate, data.Sessions, data.Users, data.AvgSessionTime, data.PageViews, data.ConversionEventCount)
 			cpc := 0.0
 			if data.ConversionEventCount != 0.0 {
 				cpc, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCount, U.DefaultPrecision)
@@ -509,12 +564,9 @@ func GetRowsByMaps(attributionKey string, attributionData map[string]*Attributio
 				if data.ConversionEventCompareCount != 0.0 {
 					cpcCompare, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCompareCount, U.DefaultPrecision)
 				}
-				row = append(row, attributionIdName, data.Impressions, data.Clicks, data.Spend,
-					data.WebsiteVisitors, data.ConversionEventCount, cpc,
-					data.ConversionEventCompareCount, cpcCompare)
+				row = append(row, cpc, data.ConversionEventCompareCount, cpcCompare)
 			} else {
-				row = append(row, attributionIdName, data.Impressions, data.Clicks, data.Spend,
-					data.WebsiteVisitors, data.ConversionEventCount, cpc, float64(0), float64(0))
+				row = append(row, cpc, float64(0), float64(0))
 			}
 			row = append(row, getLinkedEventColumnAsInterfaceList(row[addedKeysSize+3].(float64), data.LinkedEventsCount)...)
 			rows = append(rows, row)
@@ -656,27 +708,65 @@ func DoesLinkedinReportExist(attributionKey string) bool {
 	return false
 }
 
-func AddTheAddedKeys(attributionData map[string]*AttributionData, attributionKey string, sessionKeyMap map[string]MarketingData) {
+func AddTheAddedKeysAndMetrics(attributionData map[string]*AttributionData, attributionKey string, sessions map[string]map[string]UserSessionData) {
 
-	for key, _ := range attributionData {
-		if _, exists := sessionKeyMap[key]; exists {
-			// Add the marketing info
-			attributionData[key].MarketingInfo = sessionKeyMap[key]
-			switch attributionKey {
-			case AttributionKeyCampaign:
-				attributionData[key].Name = sessionKeyMap[key].CampaignName
-			case AttributionKeyAdgroup:
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].CampaignName)
-				attributionData[key].Name = sessionKeyMap[key].AdgroupName
-			case AttributionKeyKeyword:
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].CampaignName)
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].AdgroupName)
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMap[key].KeywordMatchType)
-				attributionData[key].Name = sessionKeyMap[key].KeywordName
-			case AttributionKeySource:
-				attributionData[key].Name = sessionKeyMap[key].Source
+	// Extract out key based info
+	sessionKeyMarketingInfo := make(map[string]MarketingData)
+	sessionKeySessionTimes := make(map[string][]float64)
+	sessionKeyPageCounts := make(map[string][]int64)
+	sessionKeyUserCount := make(map[string]int64)
+	for _, value := range sessions {
+		userKeyPairCounted := false
+		for k, v := range value {
+			sessionKeyMarketingInfo[k] = v.MarketingInfo
+			sessionKeySessionTimes[k] = append(sessionKeySessionTimes[k], v.SessionSpentTimes...)
+			sessionKeyPageCounts[k] = append(sessionKeyPageCounts[k], v.PageCounts...)
+			// Any one instance of this user
+			if !userKeyPairCounted {
+				sessionKeyUserCount[k] = sessionKeyUserCount[k] + 1
+				userKeyPairCounted = true
 			}
 		}
+	}
+
+	for key, _ := range attributionData {
+		if _, exists := sessionKeyMarketingInfo[key]; exists {
+			// Add the marketing info
+			attributionData[key].MarketingInfo = sessionKeyMarketingInfo[key]
+			switch attributionKey {
+			case AttributionKeyCampaign:
+				attributionData[key].Name = sessionKeyMarketingInfo[key].CampaignName
+			case AttributionKeyAdgroup:
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
+				attributionData[key].Name = sessionKeyMarketingInfo[key].AdgroupName
+			case AttributionKeyKeyword:
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMarketingInfo[key].AdgroupName)
+				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMarketingInfo[key].KeywordMatchType)
+				attributionData[key].Name = sessionKeyMarketingInfo[key].KeywordName
+			case AttributionKeySource:
+				attributionData[key].Name = sessionKeyMarketingInfo[key].Source
+			}
+			// Add AvgSessionTime
+			totalTime := 0.0
+			for _, v := range sessionKeySessionTimes[key] {
+				totalTime = totalTime + v
+			}
+			if totalTime != 0 && len(sessionKeySessionTimes[key]) != 0 {
+				attributionData[key].AvgSessionTime = totalTime / float64(len(sessionKeySessionTimes[key]))
+			}
+			// Add PageViews
+			totalPageCount := int64(0)
+			for _, v := range sessionKeyPageCounts[key] {
+				totalPageCount = totalPageCount + v
+			}
+			attributionData[key].PageViews = totalPageCount
+
+			// Add Unique user count
+			attributionData[key].Users = sessionKeyUserCount[key]
+
+		}
+
 	}
 }
 
@@ -735,40 +825,35 @@ func AddLinkedinPerformanceReportInfo(attributionData map[string]*AttributionDat
 }
 
 func addMetricsFromReport(attributionData map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string) {
-
-	logCtx := log.WithFields(log.Fields{"DEBUG-attributionKey": attributionKey})
+	logCtx := log.WithFields(log.Fields{"DEBUG-MISMATCH-KEY-AttributionKey": attributionKey})
 
 	// If key is not found, no performance report enrichment will happen
 	for key, value := range reportKeyData {
-		// TODO (Anil) remove this debug log
-		exists := false
 		if _, found := attributionData[key]; found {
-			exists = true
-		}
-		if strings.Contains(key, PropertyValueNone) || (exists && !U.IsNonEmptyKey(attributionData[key].Name)) {
-			logCtx.WithFields(log.Fields{
-				"Key":              value.Key,
-				"ID":               value.ID,
-				"Name":             value.Name,
-				"CampaignID":       value.CampaignID,
-				"CampaignName":     value.CampaignName,
-				"AdgroupID":        value.AdgroupID,
-				"AdgroupName":      value.AdgroupName,
-				"KeywordMatchType": value.KeywordMatchType,
-				"KeywordID":        value.KeywordID,
-				"KeywordName":      value.KeywordName,
-				"AdName":           value.AdName,
-				"Impressions":      value.Impressions,
-				"Clicks":           value.Clicks,
-				"Spend":            value.Spend,
-			}).Info("Campaign Data with none values")
-		}
 
-		if _, found := attributionData[key]; found {
+			// Todo (Anil) Debug stmts. Remove it
+			keyBuilder := GetKeyByAttributionData(attributionData[key])
+			if key != keyBuilder {
+				logCtx.WithFields(log.Fields{
+					"keyBuilder":       keyBuilder,
+					"Key":              value.Key,
+					"ID":               value.ID,
+					"Name":             value.Name,
+					"CampaignID":       value.CampaignID,
+					"CampaignName":     value.CampaignName,
+					"AdgroupID":        value.AdgroupID,
+					"AdgroupName":      value.AdgroupName,
+					"KeywordMatchType": value.KeywordMatchType,
+					"KeywordID":        value.KeywordID,
+					"KeywordName":      value.KeywordName,
+					"AdName":           value.AdName,
+					"Impressions":      value.Impressions,
+					"Clicks":           value.Clicks,
+					"Spend":            value.Spend,
+				}).Info("Campaign Data values")
+			}
 			enrichAttributionRow(attributionData, key, value)
-
 		} else {
-
 			attributionData[key] = &AttributionData{}
 			attributionData[key].MarketingInfo = reportKeyData[key]
 			switch attributionKey {
@@ -785,6 +870,28 @@ func addMetricsFromReport(attributionData map[string]*AttributionData, reportKey
 			case AttributionKeySource:
 				attributionData[key].Name = reportKeyData[key].Source
 			}
+
+			// Todo (Anil) Debug stmts. Remove it
+			keyBuilder := GetKeyByAttributionData(attributionData[key])
+			if key != keyBuilder {
+				logCtx.WithFields(log.Fields{
+					"keyBuilder":       keyBuilder,
+					"Key":              value.Key,
+					"ID":               value.ID,
+					"Name":             value.Name,
+					"CampaignID":       value.CampaignID,
+					"CampaignName":     value.CampaignName,
+					"AdgroupID":        value.AdgroupID,
+					"AdgroupName":      value.AdgroupName,
+					"KeywordMatchType": value.KeywordMatchType,
+					"KeywordID":        value.KeywordID,
+					"KeywordName":      value.KeywordName,
+					"AdName":           value.AdName,
+					"Impressions":      value.Impressions,
+					"Clicks":           value.Clicks,
+					"Spend":            value.Spend,
+				}).Info("Campaign Data values")
+			}
 			attributionData[key].ConversionEventCount = 0
 			attributionData[key].ConversionEventCompareCount = 0
 			attributionData[key].Impressions = value.Impressions
@@ -794,6 +901,16 @@ func addMetricsFromReport(attributionData map[string]*AttributionData, reportKey
 	}
 }
 
+func GetKeyByAttributionData(value *AttributionData) interface{} {
+
+	key := ""
+	for i := 0; i < len(value.AddedKeys); i++ {
+		key = key + value.AddedKeys[i] + KeyDelimiter
+	}
+	key = key + value.Name
+	return key
+}
+
 func enrichAttributionRow(attributionData map[string]*AttributionData, key string, value MarketingData) {
 
 	attributionData[key].Impressions = value.Impressions
@@ -801,14 +918,22 @@ func enrichAttributionRow(attributionData map[string]*AttributionData, key strin
 	attributionData[key].Spend = value.Spend
 }
 
-func getKeyFromAttributionData(data AttributionData) string {
+func ComputeAdditionalMetrics(attributionData map[string]*AttributionData) {
 
-	key := ""
-	for i := 0; i < len(data.AddedKeys); i++ {
-		key = key + data.AddedKeys[i] + KeyDelimiter
+	for k, v := range attributionData {
+		attributionData[k].CTR = 0
+		attributionData[k].CPM = 0
+		attributionData[k].AvgCPC = 0
+		attributionData[k].ConversionRate = 0
+		if v.Impressions > 0 {
+			attributionData[k].CTR = float64(v.Clicks) / float64(v.Impressions)
+			attributionData[k].CPM = 1000 * float64(v.Spend) / float64(v.Impressions)
+		}
+		if v.Clicks > 0 {
+			attributionData[k].AvgCPC = float64(v.Spend) / float64(v.Clicks)
+			attributionData[k].ConversionRate = float64(v.ConversionEventCount) / float64(v.Clicks)
+		}
 	}
-	key = key + data.Name
-	return key
 }
 
 func GetMarketingDataKey(attributionKey string, data MarketingData) string {
