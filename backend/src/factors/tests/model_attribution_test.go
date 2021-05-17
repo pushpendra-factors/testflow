@@ -712,7 +712,7 @@ func getConversionUserCount(attributionKey string, result *model.QueryResult, ke
 	for _, row := range result.Rows {
 		rowKey := getRowKey(addedKeysSize, row)
 		if rowKey == key {
-			return row[addedKeysSize+5]
+			return row[addedKeysSize+12]
 		}
 	}
 	return int64(-1)
@@ -770,7 +770,7 @@ func getCompareConversionUserCount(attributionKey string, result *model.QueryRes
 	addedKeysSize := model.GetKeyIndexOrAddedKeySize(attributionKey)
 	for _, row := range result.Rows {
 		if row[0] == key {
-			return row[addedKeysSize+7]
+			return row[addedKeysSize+14]
 		}
 	}
 	return int64(-1)
@@ -1386,15 +1386,30 @@ func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
 func TestMergeDataRowsHavingSameKey(t *testing.T) {
 
 	rows := make([][]interface{}, 0)
-	row1 := []interface{}{"Campaign1", int64(1), int64(1), float64(1), int64(1), float64(1), float64(1),
-		float64(1), float64(1), float64(1), float64(1), float64(1), float64(1)}
-	row2 := []interface{}{"Campaign1", int64(1), int64(1), float64(1), int64(1), float64(1), float64(1),
-		float64(1), float64(1), float64(1), float64(1), float64(1), float64(1)}
+	row1 := []interface{}{"Campaign1", int64(2), int64(2), float64(2),
+		// (CTR, AvgCPC, CPM, ConversionRate)
+		float64(2), float64(2), float64(2), float64(2),
+		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
+		int64(2), int64(2), float64(2), int64(2),
+		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
+		float64(2), float64(2), float64(2), float64(2)}
+	row2 := []interface{}{"Campaign1", int64(3), int64(3), float64(3),
+		// (CTR, AvgCPC, CPM, ConversionRate)
+		float64(3), float64(3), float64(3), float64(3),
+		// Sessions, (users), (AvgSessionTime), (pageViews),  ConversionEventCount,
+		int64(3), int64(3), float64(3), int64(3),
+		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
+		float64(3), float64(3), float64(3), float64(3)}
 	rows = append(rows, row1, row2)
 
 	mergedRows := make([][]interface{}, 0)
-	row3 := []interface{}{"Campaign1", int64(1), int64(1), float64(1), int64(2), float64(2), float64(2),
-		float64(2), float64(2), float64(2), float64(2), float64(2), float64(2)}
+	row3 := []interface{}{"Campaign1", int64(3), int64(3), float64(3),
+		// (CTR, AvgCPC, CPM, ConversionRate)
+		float64(3), float64(3), float64(3), float64(3),
+		// Sessions, (users), (AvgSessionTime), (pageViews),
+		int64(5), int64(5), float64(3), int64(5),
+		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
+		float64(5), float64(3), float64(5), float64(3)}
 
 	mergedRows = append(mergedRows, row3)
 	type args struct {
