@@ -35,6 +35,9 @@ class ReportsFetch(BaseJob):
         str_timestamp = TimeUtil.convert_timestamp_to_gsc_date_parameter(self._next_timestamp)
         during = str_timestamp + "," + str_timestamp
         downloader = FetchService(scripts.gsc.CONFIG.GSC_OAUTH).get_webmasters_service(self._refresh_token)
+        if downloader is None:
+            self.log_status_of_job("extract", "not completed")
+            return
         response_rows = []
         row_start = 0
         request = {
@@ -46,8 +49,6 @@ class ReportsFetch(BaseJob):
         }
         response = downloader.searchanalytics().query(
             siteUrl=self._url_prefix, body=request).execute()
-        print(response)
-        exit()
 
 
         # pagination 
@@ -83,7 +84,9 @@ class ReportsFetch(BaseJob):
             latency_metric = (end_time - start_time).total_seconds()
             self.update_to_in_memory_metrics(LOAD, REQUEST_COUNT, self._project_id, self._url_prefix, 1)
             self.update_to_in_memory_metrics(LOAD, LATENCY_COUNT, self._project_id, self._url_prefix, latency_metric)
-
+            if rows is None:
+                self.log_status_of_job("load", "not completed")
+                return
             # Load Phase
             start_time = datetime.now()
             
