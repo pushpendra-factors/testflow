@@ -626,3 +626,55 @@ func TestExecuteChannelQueryHandlerForLinkedin(t *testing.T) {
 
 	assert.Equal(t, result3, expectedResult)
 }
+
+func TestExecuteChannelQueryHandlerForSearchConsole(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	Const.SetSmartPropertiesReservedNames()
+
+	//inserting sample data in google_organic, also testing data service endpoint google_organic/documents/add
+	project, agent, _ := SetupProjectWithAgentDAO()
+	assert.NotNil(t, project)
+	urlPrefix := U.RandomNumericString(10)
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntGoogleOrganicURLPrefixes: &urlPrefix,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	id1 := U.RandomNumericString(8)
+	value1, _ := json.Marshal(map[string]interface{}{"query": "factors.ai", "clicks": "50", "id": id1, "impressions": "1000"})
+	id2 := U.RandomNumericString(8)
+	value2, _ := json.Marshal(map[string]interface{}{"query": "factors ai", "clicks": "100", "id": id2, "impressions": "2000"})
+
+	googleOrganicDocuments := []model.GoogleOrganicDocument{
+		{ID: id1, ProjectID: project.ID, URLPrefix: urlPrefix, Timestamp: 20210205,
+			Value: &postgres.Jsonb{value1}},
+
+		{ID: id2, ProjectID: project.ID, URLPrefix: urlPrefix, Timestamp: 20210206,
+			Value: &postgres.Jsonb{value2}},
+	}
+
+	for _, googleOrganicDocument := range googleOrganicDocuments {
+		log.Warn("tx", googleOrganicDocument)
+		status := store.GetStore().CreateGoogleOrganicDocument(&googleOrganicDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+	queries := []map[string]interface{}{
+		{"query_group": []map[string]interface{}{{"channel": "search_console", "select_metrics": []string{"clicks", "impressions", "click_through_rate"},
+			"group_by": []map[string]interface{}{},
+			"filters":  []map[string]interface{}{{"name": "organic_property", "property": "query", "condition": "equals", "logical_operator": "AND", "value": "factors.ai"}},
+			"gbt":      "", "fr": 1612314000, "to": 1612746000}}, "cl": "channel_v1"},
+		{"query_group": [1]map[string]interface{}{{"channel": "search_console", "select_metrics": [3]string{"clicks", "impressions", "click_through_rate"},
+			"group_by": [1]map[string]interface{}{{"name": "organic_property", "property": "query"}},
+			"gbt":      "", "fr": 1612314000, "to": 1612746000}}, "cl": "channel_v1"},
+	}
+	expectedResults := [][]byte{
+		[]byte(`{"result":{"result_group":[{"headers":["clicks","impressions","click_through_rate"],"rows":[[50,1000,5]]}]}}`),
+		[]byte(`{"result":{"result_group":[{"headers":["organic_property_query","clicks","impressions","click_through_rate"],"rows":[["factors ai", 100, 2000, 5], ["factors.ai", 50, 1000, 5]]}]}}`),
+	}
+	for index, channelQuery := range queries {
+		w := sendChannelAnalyticsQueryReq(r, project.ID, agent, channelQuery)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assertIfResponseIsEqualToExpected(t, w.Body, expectedResults[index], index)
+	}
+}

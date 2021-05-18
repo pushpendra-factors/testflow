@@ -21,15 +21,17 @@ const (
 	insertGoogleOrganicDocumentsStr = "INSERT INTO google_organic_documents (id,project_id,url_prefix,timestamp,value,created_at,updated_at) VALUES "
 	googleOrganicFilterQueryStr     = "SELECT DISTINCT(value->>?) as filter_value FROM google_organic_documents WHERE project_id = ? AND" +
 		" " + "value->>? IS NOT NULL LIMIT 5000"
-	fromGoogleOrganicDocuments           = " FROM google_organic_documents "
-	staticWhereStatementForGoogleOrganic = "WHERE project_id = ? AND url_prefix IN ( ? ) AND timestamp between ? AND ? "
+	fromGoogleOrganicDocuments                              = " FROM google_organic_documents "
+	staticWhereStatementForGoogleOrganic                    = "WHERE project_id = ? AND url_prefix IN ( ? ) AND timestamp between ? AND ? "
+	weightedMetricsExpressionOfDivisionWithHandleOf0AndNull = "SUM(((value->>'%s')::float)*((value->>'%s')::float))/(case when sum((value->>'%s')::float) = 0 then 100000 else NULLIF(sum((value->>'%s')::float), 100000) end)"
 )
 
 var googleOrganicMetricsToAggregatesInReportsMapping = map[string]string{
-	"impressions": "SUM((value->>'impressions')::float)",
-	"clicks":      "SUM((value->>'clicks')::float)",
-	"ctr":         fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "clicks", "1", "impressions", "impressions"),
-	"position":    "AVG((value->>'position')::float)",
+	"impressions":                      "SUM((value->>'impressions')::float)",
+	"clicks":                           "SUM((value->>'clicks')::float)",
+	model.ClickThroughRate:             fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "clicks", "100", "impressions", "impressions"),
+	"position_avg":                     "AVG((value->>'position')::float)",
+	"position_impression_weighted_avg": fmt.Sprintf(weightedMetricsExpressionOfDivisionWithHandleOf0AndNull, "position", "impressions", "impressions", "impressions"),
 }
 
 var mapOfObjectsToPropertiesAndRelatedGoogleOrganic = map[string]map[string]PropertiesAndRelated{
@@ -40,7 +42,7 @@ var mapOfObjectsToPropertiesAndRelatedGoogleOrganic = map[string]map[string]Prop
 		"device":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 	},
 }
-var selectableMetricsForGoogleOrganic = []string{"impressions", "clicks", "ctr", "position"}
+var selectableMetricsForGoogleOrganic = []string{"impressions", "clicks", model.ClickThroughRate, "position_avg", "position_impression_weighted_avg"}
 var objectsForGoogleOrganic = []string{"organic_property"}
 
 func (pg *Postgres) buildGoogleOrganicChannelConfig() *model.ChannelConfigResult {
