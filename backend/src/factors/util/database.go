@@ -11,7 +11,6 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
-	emoji "github.com/tmdvs/Go-Emoji-Utils"
 )
 
 // DBReadRows Creates [][]interface{} from sql result rows.
@@ -247,10 +246,9 @@ func GormCleanupCallback(scope *gorm.Scope) {
 // https://stackoverflow.com/a/34863211/2341189
 // https://docs.singlestore.com/v7.3/guides/use-memsql/physical-schema-design/using-json/using-json/#unicode-support
 func SanitizeStringValueForUnicode(s string) string {
-	s = emoji.RemoveAll(s)
 	runes := make([]rune, 0, 0)
 	for _, r := range s {
-		if !utf8.ValidRune(r) {
+		if len(string(r)) != utf8.RuneCountInString(string(r)) || !utf8.ValidRune(r) {
 			continue
 		} else if r > 65536 {
 			// Memsql supports only till 65536. Convert to unicode point text.
