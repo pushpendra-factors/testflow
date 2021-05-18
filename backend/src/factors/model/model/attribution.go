@@ -1000,6 +1000,9 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry) map[string
 		}
 		ID, data := getMarketingDataFromValues(campaignIDNull, adgroupIDNull, keywordIDNull, adIDNull,
 			keyIDNull, keyNameNull, extraValue1Null, impressionsNull, clicksNull, spendNull, reportName)
+		if ID == "" {
+			continue
+		}
 		marketingDataIDMap[ID] = data
 	}
 	return marketingDataIDMap
@@ -1030,6 +1033,9 @@ func getMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql
 	}
 	if spendNull.Valid {
 		spend = spendNull.Float64
+	}
+	if impressions == 0 && clicks == 0 && spend == 0 {
+		return "", MarketingData{}
 	}
 	if extraValue1Null.Valid {
 		extraValue1 = U.IfThenElse(extraValue1Null.String != "", extraValue1Null.String, PropertyValueNone).(string)
