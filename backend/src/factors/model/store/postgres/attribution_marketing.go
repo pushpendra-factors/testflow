@@ -143,71 +143,28 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 			}
 		}
 	}
-	logCtx := log.WithFields(log.Fields{"MISMATCH": "FetchMarketingReports"})
 
 	data.AdwordsGCLIDData = adwordsGCLIDData
 	data.AdwordsCampaignIDData = adwordsCampaignIDData
 	data.AdwordsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, adwordsCampaignIDData)
-	if len(data.AdwordsCampaignKeyData) != len(data.AdwordsCampaignIDData) {
-		logCtx.WithFields(log.Fields{
-			"AdwordsCampaignIDData Size":  len(data.AdwordsCampaignIDData),
-			"AdwordsCampaignKeyData Size": len(data.AdwordsCampaignKeyData),
-		}).Info("Un matching length")
-	}
 
 	data.AdwordsAdgroupIDData = adwordsAdgroupIDData
 	data.AdwordsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, adwordsAdgroupIDData)
-	if len(data.AdwordsAdgroupKeyData) != len(data.AdwordsAdgroupIDData) {
-		logCtx.WithFields(log.Fields{
-			"AdwordsAdgroupIDData Size":  len(data.AdwordsAdgroupIDData),
-			"AdwordsAdgroupKeyData Size": len(data.AdwordsAdgroupKeyData),
-		}).Info("Un matching length")
-	}
 
 	data.AdwordsKeywordIDData = adwordsKeywordIDData
 	data.AdwordsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, adwordsKeywordIDData)
-	if len(data.AdwordsKeywordKeyData) != len(data.AdwordsKeywordIDData) {
-		logCtx.WithFields(log.Fields{
-			"AdwordsKeywordIDData Size":  len(data.AdwordsKeywordIDData),
-			"AdwordsKeywordKeyData Size": len(data.AdwordsKeywordKeyData),
-		}).Info("Un matching length")
-	}
 
 	data.FacebookCampaignIDData = facebookCampaignIDData
 	data.FacebookCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, facebookCampaignIDData)
-	if len(data.FacebookCampaignKeyData) != len(data.FacebookCampaignIDData) {
-		logCtx.WithFields(log.Fields{
-			"FacebookCampaignIDData Size":  len(data.FacebookCampaignIDData),
-			"FacebookCampaignKeyData Size": len(data.FacebookCampaignKeyData),
-		}).Info("Un matching length")
-	}
 
 	data.FacebookAdgroupIDData = facebookAdgroupIDData
 	data.FacebookAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, facebookAdgroupIDData)
-	if len(data.FacebookAdgroupKeyData) != len(data.FacebookAdgroupIDData) {
-		logCtx.WithFields(log.Fields{
-			"FacebookAdgroupIDData Size":  len(data.FacebookAdgroupIDData),
-			"FacebookAdgroupKeyData Size": len(data.FacebookAdgroupKeyData),
-		}).Info("Un matching length")
-	}
 
 	data.LinkedinCampaignIDData = linkedinCampaignIDData
 	data.LinkedinCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, linkedinCampaignIDData)
-	if len(data.LinkedinCampaignKeyData) != len(data.LinkedinCampaignIDData) {
-		logCtx.WithFields(log.Fields{
-			"LinkedinCampaignIDData Size":  len(data.LinkedinCampaignIDData),
-			"LinkedinCampaignKeyData Size": len(data.LinkedinCampaignKeyData),
-		}).Info("Un matching length")
-	}
 
 	data.LinkedinAdgroupIDData = linkedinAdgroupIDData
 	data.LinkedinAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, linkedinAdgroupIDData)
-	if len(data.LinkedinAdgroupKeyData) != len(data.LinkedinAdgroupIDData) {
-		logCtx.WithFields(log.Fields{
-			"LinkedinAdgroupIDData Size":  len(data.LinkedinAdgroupIDData),
-			"LinkedinAdgroupKeyData Size": len(data.LinkedinAdgroupKeyData),
-		}).Info("Un matching length")
-	}
 
 	return data, err
 }

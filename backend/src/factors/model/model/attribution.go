@@ -977,41 +977,6 @@ func GetKeyMapToData(attributionKey string, dataIDMap map[string]MarketingData) 
 		val := MarketingData{}
 		U.DeepCopy(&v, &val)
 		val.Key = key
-		if _, exists := keyToData[key]; exists {
-			logCtx := log.WithFields(log.Fields{"MISMATCH": "GetKeyMapToData"})
-			logCtx.WithFields(log.Fields{
-				"Key":              key,
-				"ID":               val.ID,
-				"Name":             val.Name,
-				"CampaignID":       val.CampaignID,
-				"CampaignName":     val.CampaignName,
-				"AdgroupID":        val.AdgroupID,
-				"AdgroupName":      val.AdgroupName,
-				"KeywordMatchType": val.KeywordMatchType,
-				"KeywordID":        val.KeywordID,
-				"KeywordName":      val.KeywordName,
-				"AdName":           val.AdName,
-				"Impressions":      val.Impressions,
-				"Clicks":           val.Clicks,
-				"Spend":            val.Spend,
-			}).Info("xOriginal Value")
-			logCtx.WithFields(log.Fields{
-				"Key":              key,
-				"ID":               keyToData[key].ID,
-				"Name":             keyToData[key].Name,
-				"CampaignID":       keyToData[key].CampaignID,
-				"CampaignName":     keyToData[key].CampaignName,
-				"AdgroupID":        keyToData[key].AdgroupID,
-				"AdgroupName":      keyToData[key].AdgroupName,
-				"KeywordMatchType": keyToData[key].KeywordMatchType,
-				"KeywordID":        keyToData[key].KeywordID,
-				"KeywordName":      keyToData[key].KeywordName,
-				"AdName":           keyToData[key].AdName,
-				"Impressions":      keyToData[key].Impressions,
-				"Clicks":           keyToData[key].Clicks,
-				"Spend":            keyToData[key].Spend,
-			}).Info("xExisting Value")
-		}
 		keyToData[key] = val
 	}
 	return keyToData
