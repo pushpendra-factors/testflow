@@ -251,6 +251,8 @@ const (
 // MergeDataRowsHavingSameKey merges rows having same key by adding each column value
 func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interface{} {
 
+	logCtx := log.WithFields(log.Fields{"MISMATCH": "MergeDataRowsHavingSameKey"})
+
 	rowKeyMap := make(map[string][]interface{})
 	for _, row := range rows {
 		if len(row) == 0 {
@@ -292,6 +294,15 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 		} else {
 			rowKeyMap[key] = row
 		}
+
+		logCtx.WithFields(log.Fields{
+			"Key":         key,
+			"Name":        rowKeyMap[key][keyIndex],
+			"Impressions": rowKeyMap[key][keyIndex+1],
+			"Clicks":      rowKeyMap[key][keyIndex+2],
+			"Spend":       rowKeyMap[key][keyIndex+3],
+		}).Info("Original Value from ReportKeyData")
+
 	}
 	resultRows := make([][]interface{}, 0)
 	for _, mapRow := range rowKeyMap {
@@ -473,29 +484,8 @@ func GetSpendIndex(headers []string) int {
 }
 
 // GetRowsByMaps Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
-func GetRowsByMaps(attributionKey string, attributionData map[string]*AttributionData,
+func GetRowsByMaps(attributionKey string, attributionData *map[string]*AttributionData,
 	linkedEvents []QueryEventWithProperties, isCompare bool) [][]interface{} {
-	type AttributionData struct {
-		AddedKeys                     []string
-		Name                          string
-		Impressions                   int64
-		Clicks                        int64
-		Spend                         float64
-		CTR                           float64 // New TODO (Anil) remove these comments
-		AvgCPC                        float64 // New
-		CPM                           float64 // New
-		ConversionRate                float64 // New
-		Sessions                      int64
-		Users                         int64   // New
-		AvgSessionTime                float64 // New
-		PageViews                     int64   // New
-		ConversionEventCount          float64
-		CostPerConversion             float64 // New
-		LinkedEventsCount             []float64
-		ConversionEventCompareCount   float64
-		CostPerConversionCompareCount float64 // New
-		MarketingInfo                 MarketingData
-	}
 
 	// Name, impression, clicks, spend
 	defaultMatchingRow := []interface{}{"none", int64(0), int64(0), float64(0),
@@ -526,7 +516,7 @@ func GetRowsByMaps(attributionKey string, attributionData map[string]*Attributio
 		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0))
 	}
 	rows := make([][]interface{}, 0)
-	for key, data := range attributionData {
+	for key, data := range *attributionData {
 		attributionIdName := ""
 		switch attributionKey {
 		case AttributionKeyCampaign:
@@ -566,7 +556,7 @@ func GetRowsByMaps(attributionKey string, attributionData map[string]*Attributio
 			} else {
 				row = append(row, cpc, float64(0), float64(0))
 			}
-			row = append(row, getLinkedEventColumnAsInterfaceList(row[addedKeysSize+3].(float64), data.LinkedEventsCount)...)
+			row = append(row, getLinkedEventColumnAsInterfaceList(data.Spend, data.LinkedEventsCount)...)
 			rows = append(rows, row)
 		}
 	}
@@ -706,7 +696,7 @@ func DoesLinkedinReportExist(attributionKey string) bool {
 	return false
 }
 
-func AddTheAddedKeysAndMetrics(attributionData map[string]*AttributionData, attributionKey string, sessions map[string]map[string]UserSessionData) {
+func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, attributionKey string, sessions map[string]map[string]UserSessionData) {
 
 	// Extract out key based info
 	sessionKeyMarketingInfo := make(map[string]MarketingData)
@@ -727,23 +717,23 @@ func AddTheAddedKeysAndMetrics(attributionData map[string]*AttributionData, attr
 		}
 	}
 
-	for key, _ := range attributionData {
+	for key, _ := range *attributionData {
 		if _, exists := sessionKeyMarketingInfo[key]; exists {
 			// Add the marketing info
-			attributionData[key].MarketingInfo = sessionKeyMarketingInfo[key]
+			(*attributionData)[key].MarketingInfo = sessionKeyMarketingInfo[key]
 			switch attributionKey {
 			case AttributionKeyCampaign:
-				attributionData[key].Name = sessionKeyMarketingInfo[key].CampaignName
+				(*attributionData)[key].Name = sessionKeyMarketingInfo[key].CampaignName
 			case AttributionKeyAdgroup:
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
-				attributionData[key].Name = sessionKeyMarketingInfo[key].AdgroupName
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
+				(*attributionData)[key].Name = sessionKeyMarketingInfo[key].AdgroupName
 			case AttributionKeyKeyword:
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMarketingInfo[key].AdgroupName)
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, sessionKeyMarketingInfo[key].KeywordMatchType)
-				attributionData[key].Name = sessionKeyMarketingInfo[key].KeywordName
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].AdgroupName)
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].KeywordMatchType)
+				(*attributionData)[key].Name = sessionKeyMarketingInfo[key].KeywordName
 			case AttributionKeySource:
-				attributionData[key].Name = sessionKeyMarketingInfo[key].Source
+				(*attributionData)[key].Name = sessionKeyMarketingInfo[key].Source
 			}
 			// Add AvgSessionTime
 			totalTime := 0.0
@@ -751,31 +741,31 @@ func AddTheAddedKeysAndMetrics(attributionData map[string]*AttributionData, attr
 				totalTime = totalTime + v
 			}
 			if totalTime != 0 && len(sessionKeySessionTimes[key]) != 0 {
-				attributionData[key].AvgSessionTime = totalTime / float64(len(sessionKeySessionTimes[key]))
+				(*attributionData)[key].AvgSessionTime = totalTime / float64(len(sessionKeySessionTimes[key]))
 			}
 			// Add PageViews
 			totalPageCount := int64(0)
 			for _, v := range sessionKeyPageCounts[key] {
 				totalPageCount = totalPageCount + v
 			}
-			attributionData[key].PageViews = totalPageCount
+			(*attributionData)[key].PageViews = totalPageCount
 
 			// Add Unique user count
-			attributionData[key].Users = sessionKeyUserCount[key]
+			(*attributionData)[key].Users = sessionKeyUserCount[key]
 
 		}
 
 	}
 }
 
-func AddPerformanceData(attributionData map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddPerformanceData(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
 
 	AddAdwordsPerformanceReportInfo(attributionData, attributionKey, marketingData)
 	AddFacebookPerformanceReportInfo(attributionData, attributionKey, marketingData)
 	AddLinkedinPerformanceReportInfo(attributionData, attributionKey, marketingData)
 }
 
-func AddAdwordsPerformanceReportInfo(attributionData map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddAdwordsPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
@@ -790,7 +780,7 @@ func AddAdwordsPerformanceReportInfo(attributionData map[string]*AttributionData
 	}
 }
 
-func AddFacebookPerformanceReportInfo(attributionData map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddFacebookPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
@@ -806,7 +796,7 @@ func AddFacebookPerformanceReportInfo(attributionData map[string]*AttributionDat
 	}
 }
 
-func AddLinkedinPerformanceReportInfo(attributionData map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
+func AddLinkedinPerformanceReportInfo(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
@@ -822,20 +812,19 @@ func AddLinkedinPerformanceReportInfo(attributionData map[string]*AttributionDat
 	}
 }
 
-func addMetricsFromReport(attributionData map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string) {
-	logCtx := log.WithFields(log.Fields{"DEBUG-MISMATCH-KEY-AttributionKey": attributionKey})
+func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string) {
 
-	// If key is not found, no performance report enrichment will happen
+	logCtx := log.WithFields(log.Fields{"MISMATCH": "addMetricsFromReport"})
 	for key, value := range reportKeyData {
 
 		if value.Impressions == 0 && value.Clicks == 0 && value.Spend == 0 {
 			// ignore ZERO valued keys
 			continue
 		}
-		if _, found := attributionData[key]; found {
+		if _, found := (*attributionData)[key]; found {
 
 			// Todo (Anil) Debug stmts. Remove it
-			keyBuilder := GetKeyByAttributionData(attributionData[key])
+			keyBuilder := GetKeyByAttributionData((*attributionData)[key])
 			if key != keyBuilder {
 				logCtx.WithFields(log.Fields{
 					"keyBuilder":       keyBuilder,
@@ -855,27 +844,30 @@ func addMetricsFromReport(attributionData map[string]*AttributionData, reportKey
 					"Spend":            value.Spend,
 				}).Info("Campaign Data values")
 			}
-			enrichAttributionRow(attributionData, key, value)
+			(*attributionData)[key].Impressions = value.Impressions
+			(*attributionData)[key].Clicks = value.Clicks
+			(*attributionData)[key].Spend = value.Spend
+
 		} else {
-			attributionData[key] = &AttributionData{}
-			attributionData[key].MarketingInfo = reportKeyData[key]
+			(*attributionData)[key] = &AttributionData{}
+			(*attributionData)[key].MarketingInfo = reportKeyData[key]
 			switch attributionKey {
 			case AttributionKeyCampaign:
-				attributionData[key].Name = reportKeyData[key].CampaignName
+				(*attributionData)[key].Name = reportKeyData[key].CampaignName
 			case AttributionKeyAdgroup:
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].CampaignName)
-				attributionData[key].Name = reportKeyData[key].AdgroupName
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].CampaignName)
+				(*attributionData)[key].Name = reportKeyData[key].AdgroupName
 			case AttributionKeyKeyword:
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].CampaignName)
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].AdgroupName)
-				attributionData[key].AddedKeys = append(attributionData[key].AddedKeys, reportKeyData[key].KeywordMatchType)
-				attributionData[key].Name = reportKeyData[key].KeywordName
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].CampaignName)
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].AdgroupName)
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].KeywordMatchType)
+				(*attributionData)[key].Name = reportKeyData[key].KeywordName
 			case AttributionKeySource:
-				attributionData[key].Name = reportKeyData[key].Source
+				(*attributionData)[key].Name = reportKeyData[key].Source
 			}
 
 			// Todo (Anil) Debug stmts. Remove it
-			keyBuilder := GetKeyByAttributionData(attributionData[key])
+			keyBuilder := GetKeyByAttributionData((*attributionData)[key])
 			if key != keyBuilder {
 				logCtx.WithFields(log.Fields{
 					"keyBuilder":       keyBuilder,
@@ -895,12 +887,37 @@ func addMetricsFromReport(attributionData map[string]*AttributionData, reportKey
 					"Spend":            value.Spend,
 				}).Info("Campaign Data values")
 			}
-			attributionData[key].ConversionEventCount = 0
-			attributionData[key].ConversionEventCompareCount = 0
-			attributionData[key].Impressions = value.Impressions
-			attributionData[key].Clicks = value.Clicks
-			attributionData[key].Spend = value.Spend
+			(*attributionData)[key].ConversionEventCount = 0
+			(*attributionData)[key].ConversionEventCompareCount = 0
+			(*attributionData)[key].Impressions = value.Impressions
+			(*attributionData)[key].Clicks = value.Clicks
+			(*attributionData)[key].Spend = value.Spend
 		}
+
+		logCtx.WithFields(log.Fields{
+			"Key":              value.Key,
+			"ID":               value.ID,
+			"Name":             value.Name,
+			"CampaignID":       value.CampaignID,
+			"CampaignName":     value.CampaignName,
+			"AdgroupID":        value.AdgroupID,
+			"AdgroupName":      value.AdgroupName,
+			"KeywordMatchType": value.KeywordMatchType,
+			"KeywordID":        value.KeywordID,
+			"KeywordName":      value.KeywordName,
+			"AdName":           value.AdName,
+			"Impressions":      value.Impressions,
+			"Clicks":           value.Clicks,
+			"Spend":            value.Spend,
+		}).Info("Original Value from ReportKeyData")
+
+		logCtx.WithFields(log.Fields{
+			"AddedKeys":   (*attributionData)[key].AddedKeys,
+			"Name":        (*attributionData)[key].Name,
+			"Impressions": (*attributionData)[key].Impressions,
+			"Clicks":      (*attributionData)[key].Clicks,
+			"Spend":       (*attributionData)[key].Spend,
+		}).Info("AttributionData Value from AttributionData")
 	}
 }
 
@@ -914,27 +931,20 @@ func GetKeyByAttributionData(value *AttributionData) interface{} {
 	return key
 }
 
-func enrichAttributionRow(attributionData map[string]*AttributionData, key string, value MarketingData) {
+func ComputeAdditionalMetrics(attributionData *map[string]*AttributionData) {
 
-	attributionData[key].Impressions = value.Impressions
-	attributionData[key].Clicks = value.Clicks
-	attributionData[key].Spend = value.Spend
-}
-
-func ComputeAdditionalMetrics(attributionData map[string]*AttributionData) {
-
-	for k, v := range attributionData {
-		attributionData[k].CTR = 0
-		attributionData[k].CPM = 0
-		attributionData[k].AvgCPC = 0
-		attributionData[k].ConversionRate = 0
+	for k, v := range *attributionData {
+		(*attributionData)[k].CTR = 0
+		(*attributionData)[k].CPM = 0
+		(*attributionData)[k].AvgCPC = 0
+		(*attributionData)[k].ConversionRate = 0
 		if v.Impressions > 0 {
-			attributionData[k].CTR = float64(v.Clicks) / float64(v.Impressions)
-			attributionData[k].CPM = 1000 * float64(v.Spend) / float64(v.Impressions)
+			(*attributionData)[k].CTR = float64(v.Clicks) / float64(v.Impressions)
+			(*attributionData)[k].CPM = 1000 * float64(v.Spend) / float64(v.Impressions)
 		}
 		if v.Clicks > 0 {
-			attributionData[k].AvgCPC = float64(v.Spend) / float64(v.Clicks)
-			attributionData[k].ConversionRate = float64(v.ConversionEventCount) / float64(v.Clicks)
+			(*attributionData)[k].AvgCPC = float64(v.Spend) / float64(v.Clicks)
+			(*attributionData)[k].ConversionRate = float64(v.ConversionEventCount) / float64(v.Clicks)
 		}
 	}
 }

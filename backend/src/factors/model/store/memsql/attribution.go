@@ -67,7 +67,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		conversionFrom = query.From
 		conversionTo = lookbackAdjustedTo(query.To, query.LookbackDays)
 	}
-	var attributionData map[string]*model.AttributionData
+	var attributionData *map[string]*model.AttributionData
 	if query.AttributionMethodologyCompare != "" {
 		// Two AttributionMethodologies comparison
 		isCompare = true
@@ -92,18 +92,18 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 		}
 
 		// Merge compare data into attributionData.
-		for key := range attributionData {
-			if _, exists := attributionCompareData[key]; exists {
-				attributionData[key].ConversionEventCompareCount = attributionCompareData[key].ConversionEventCount
+		for key := range *attributionData {
+			if _, exists := (*attributionCompareData)[key]; exists {
+				(*attributionData)[key].ConversionEventCompareCount = (*attributionCompareData)[key].ConversionEventCount
 			} else {
-				attributionData[key].ConversionEventCompareCount = 0
+				(*attributionData)[key].ConversionEventCompareCount = 0
 			}
 		}
 		// Filling any non-matched touch points.
-		for missingKey := range attributionCompareData {
-			if _, exists := attributionData[missingKey]; !exists {
-				attributionData[missingKey] = &model.AttributionData{}
-				attributionData[missingKey].ConversionEventCompareCount = attributionCompareData[missingKey].ConversionEventCount
+		for missingKey := range *attributionCompareData {
+			if _, exists := (*attributionData)[missingKey]; !exists {
+				(*attributionData)[missingKey] = &model.AttributionData{}
+				(*attributionData)[missingKey].ConversionEventCompareCount = (*attributionCompareData)[missingKey].ConversionEventCount
 			}
 		}
 	} else {
@@ -152,7 +152,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 
 func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 	conversionFrom, conversionTo int64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionData) (map[string]*model.AttributionData, error) {
+	sessions map[string]map[string]model.UserSessionData) (*map[string]*model.AttributionData, error) {
 
 	// Empty linkedEvents as they are not analyzed in compare events.
 	var linkedEvents []model.QueryEventWithProperties
@@ -218,13 +218,13 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 			attributionData[missingKey].ConversionEventCompareCount = attributionDataCompare[missingKey].ConversionEventCount
 		}
 	}
-	return attributionData, nil
+	return &attributionData, nil
 }
 
 func (store *MemSQL) runAttribution(projectID uint64,
 	conversionFrom, conversionTo int64, goalEvent model.QueryEventWithProperties,
 	query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
-	sessions map[string]map[string]model.UserSessionData) (map[string]*model.AttributionData, error) {
+	sessions map[string]map[string]model.UserSessionData) (*map[string]*model.AttributionData, error) {
 
 	goalEventName := goalEvent.Name
 	goalEventProperties := goalEvent.Properties
@@ -267,7 +267,7 @@ func (store *MemSQL) runAttribution(projectID uint64,
 	attributionData := make(map[string]*model.AttributionData)
 	attributionData = model.AddUpConversionEventCount(userConversionHit)
 	model.AddUpLinkedFunnelEventCount(query.LinkedEvents, attributionData, userLinkedFEHit)
-	return attributionData, nil
+	return &attributionData, nil
 }
 
 // GetCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
@@ -726,7 +726,7 @@ func updateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[s
 }
 
 // addWebsiteVisitorsInfo Maps the count distinct users session to campaign id and adds it to attributionData
-func addWebsiteVisitorsInfo(attributionData map[string]*model.AttributionData,
+func addWebsiteVisitorsInfo(attributionData *map[string]*model.AttributionData,
 	attributedSessionsByUserID map[string]map[string]model.UserSessionData, linkedEventsCount int) {
 	// Creating an empty linked events row.
 	emptyLinkedEventRow := make([]float64, 0)
@@ -741,18 +741,18 @@ func addWebsiteVisitorsInfo(attributionData map[string]*model.AttributionData,
 			// Only count sessions that happened during attribution period.
 			if sessionTimestamp.WithinQueryPeriod {
 
-				if _, ok := attributionData[attributionID]; !ok {
-					attributionData[attributionID] = &model.AttributionData{}
+				if _, ok := (*attributionData)[attributionID]; !ok {
+					(*attributionData)[attributionID] = &model.AttributionData{}
 					if linkedEventsCount > 0 {
 						// Init the linked events with 0.0 value.
 						tempRow := emptyLinkedEventRow
-						attributionData[attributionID].LinkedEventsCount = tempRow
+						(*attributionData)[attributionID].LinkedEventsCount = tempRow
 					}
 				}
 				if _, ok := userIDAttributionIDVisit[getKey(userID, attributionID)]; ok {
 					continue
 				}
-				attributionData[attributionID].Sessions += 1
+				(*attributionData)[attributionID].Sessions += 1
 				userIDAttributionIDVisit[getKey(userID, attributionID)] = true
 			}
 		}
