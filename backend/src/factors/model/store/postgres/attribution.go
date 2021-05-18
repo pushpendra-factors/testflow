@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"errors"
-	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -163,16 +162,9 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 	var coalUserIdConversionTimestamp map[string]int64
 	var err error
 	// Fetch users who hit conversion event.
-	if C.ShouldUseUserPropertiesTableForRead(projectID) {
-		userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = pg.GetConvertedUsers(projectID,
-			query.ConversionEvent.Name, query.ConversionEvent.Properties, conversionFrom, conversionTo,
-			eventNameToIDList)
-
-	} else {
-		userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = pg.GetConvertedUsersWithFilter(projectID,
-			query.ConversionEvent.Name, query.ConversionEvent.Properties, conversionFrom, conversionTo,
-			eventNameToIDList)
-	}
+	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = pg.GetConvertedUsersWithFilter(projectID,
+		query.ConversionEvent.Name, query.ConversionEvent.Properties, conversionFrom, conversionTo,
+		eventNameToIDList)
 	if err != nil {
 		return nil, err
 	}
@@ -184,15 +176,9 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 			EventName: query.ConversionEvent.Name})
 	}
 
-	if C.ShouldUseUserPropertiesTableForRead(projectID) {
-		err = pg.GetLinkedFunnelEventUsers(projectID, conversionFrom, conversionTo,
-			linkedEvents, eventNameToIDList, userIDToInfoConverted,
-			&usersToBeAttributed)
-	} else {
-		err = pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo,
-			linkedEvents, eventNameToIDList, userIDToInfoConverted,
-			&usersToBeAttributed)
-	}
+	err = pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo,
+		linkedEvents, eventNameToIDList, userIDToInfoConverted,
+		&usersToBeAttributed)
 
 	if err != nil {
 		return nil, err
@@ -249,14 +235,8 @@ func (pg *Postgres) runAttribution(projectID uint64,
 	var coalUserIdConversionTimestamp map[string]int64
 	var err error
 	// Fetch users who hit conversion event.
-	if C.ShouldUseUserPropertiesTableForRead(projectID) {
-		userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = pg.GetConvertedUsers(projectID,
-			goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList)
-
-	} else {
-		userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = pg.GetConvertedUsersWithFilter(projectID,
-			goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList)
-	}
+	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = pg.GetConvertedUsersWithFilter(projectID,
+		goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList)
 	if err != nil {
 		return nil, err
 	}
@@ -268,13 +248,8 @@ func (pg *Postgres) runAttribution(projectID uint64,
 			EventName: goalEventName})
 	}
 
-	if C.ShouldUseUserPropertiesTableForRead(projectID) {
-		err = pg.GetLinkedFunnelEventUsers(projectID, conversionFrom, conversionTo, query.LinkedEvents,
-			eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
-	} else {
-		err = pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents,
-			eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
-	}
+	err = pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents,
+		eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
 
 	if err != nil {
 		return nil, err
@@ -320,7 +295,7 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 				continue
 			}
-			userIDToCoalUserIDMap[userID] = model.UserInfo{CoalUserID: coalesceID, PropertiesID: propertiesID}
+			userIDToCoalUserIDMap[userID] = model.UserInfo{CoalUserID: coalesceID}
 		}
 	}
 	return userIDToCoalUserIDMap, nil
@@ -604,144 +579,6 @@ func (pg *Postgres) GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom,
 	return nil
 }
 
-// GetLinkedFunnelEventUsers Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
-func (pg *Postgres) GetLinkedFunnelEventUsers(projectID uint64, queryFrom, queryTo int64,
-	linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
-	userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error {
-
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
-	var usersHitConversion []string
-	for key := range userIDInfo {
-		usersHitConversion = append(usersHitConversion, key)
-	}
-
-	for _, linkedEvent := range linkedEvents {
-		// Part I - Fetch Users base on Event Hit satisfying events.properties
-		linkedEventNameIDs := eventNameToId[linkedEvent.Name]
-		eventsPlaceHolder := "?"
-		for i := 0; i < len(linkedEventNameIDs)-1; i++ {
-			eventsPlaceHolder += ",?"
-		}
-		var userIDList []string
-		userIDHitGoalEventTimestamp := make(map[string]int64)
-		userPropertiesIdsInBatches := U.GetStringListAsBatch(usersHitConversion, model.UserBatchSize)
-		for _, users := range userPropertiesIdsInBatches {
-
-			// add user batching
-			usersPlaceHolder := U.GetValuePlaceHolder(len(users))
-			value := U.GetInterfaceList(users)
-			queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND " +
-				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
-				" AND user_id = ANY (VALUES " + usersPlaceHolder + " ) "
-			qParams := []interface{}{projectID, queryFrom, queryTo}
-			qParams = append(qParams, linkedEventNameIDs...)
-			qParams = append(qParams, value...)
-			// add event filter
-			wStmt, wParams, err := getFilterSQLStmtForEventProperties(projectID, linkedEvent.Properties)
-			if err != nil {
-				return err
-			}
-			if wStmt != "" {
-				queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmt)
-				qParams = append(qParams, wParams...)
-			}
-			// fetch query results
-			rows, err := pg.ExecQueryWithContext(queryEventHits, qParams)
-			if err != nil {
-				logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
-				return err
-			}
-			defer rows.Close()
-			for rows.Next() {
-				var userID string
-				var timestamp int64
-				if err = rows.Scan(&userID, &timestamp); err != nil {
-					logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
-					continue
-				}
-				if _, ok := userIDHitGoalEventTimestamp[userID]; !ok {
-					userIDList = append(userIDList, userID)
-					userIDHitGoalEventTimestamp[userID] = timestamp
-				}
-			}
-		}
-
-		// Part-II - Filter the fetched users from Part-I base on user_properties
-		filteredUserIdList, err := pg.ApplyUserPropertiesFilter(projectID, userIDList, userIDInfo, linkedEvent.Properties)
-		if err != nil {
-			logCtx.WithError(err).Error("error while applying user properties")
-			return err
-		}
-
-		// Part-III add the filtered users with eventId usersToBeAttributed
-		for _, userId := range filteredUserIdList {
-			*usersToBeAttributed = append(*usersToBeAttributed,
-				model.UserEventInfo{CoalUserID: userIDInfo[userId].CoalUserID, EventName: linkedEvent.Name})
-		}
-	}
-	return nil
-}
-
-// ApplyUserPropertiesFilter Applies user properties filter on given set of users and returns only the filters ones those match
-func (pg *Postgres) ApplyUserPropertiesFilter(projectID uint64, userIDList []string, userIDInfo map[string]model.UserInfo,
-	goalEventProperties []model.QueryProperty) ([]string, error) {
-
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
-
-	wStmt, wParams, err := getFilterSQLStmtForUserProperties(projectID, goalEventProperties)
-	if err != nil {
-		return nil, err
-	}
-	// return the same list if there's no user_properties filter
-	if wStmt == "" {
-		return userIDList, nil
-	}
-
-	var userPropertiesIds []string
-	// Use properties Ids to speed up the search from user_properties table
-	for _, userID := range userIDList {
-		userPropertiesIds = append(userPropertiesIds, userIDInfo[userID].PropertiesID)
-	}
-
-	var filteredUserIdList []string
-	userIdHitGoalEventTimestamp := make(map[string]bool)
-	userPropertiesIdsInBatches := U.GetStringListAsBatch(userPropertiesIds, model.UserBatchSize)
-	for _, users := range userPropertiesIdsInBatches {
-		placeHolder := U.GetValuePlaceHolder(len(users))
-		value := U.GetInterfaceList(users)
-
-		userPropertiesRefTable := "user_properties"
-		queryUserIdCoalID := fmt.Sprintf("SELECT user_id FROM %s", userPropertiesRefTable) + " " +
-			"WHERE id = ANY (VALUES " + placeHolder + " ) "
-
-		var qParams []interface{}
-		qParams = append(qParams, value...)
-		// add user_properties filter
-		if wStmt != "" {
-			queryUserIdCoalID = queryUserIdCoalID + " AND " + fmt.Sprintf("( %s )", wStmt)
-			qParams = append(qParams, wParams...)
-		}
-		rows, err := pg.ExecQueryWithContext(queryUserIdCoalID, qParams)
-		if err != nil {
-			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
-			return nil, err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var userID string
-			if err = rows.Scan(&userID); err != nil {
-				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
-				continue
-			}
-			if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
-				filteredUserIdList = append(filteredUserIdList, userID)
-				userIdHitGoalEventTimestamp[userID] = true
-			}
-		}
-	}
-	return filteredUserIdList, nil
-}
-
 // GetConvertedUsersWithFilter Returns the list of eligible users who hit conversion
 // event for userProperties from events table
 func (pg *Postgres) GetConvertedUsersWithFilter(projectID uint64, goalEventName string,
@@ -821,102 +658,10 @@ func (pg *Postgres) GetConvertedUsersWithFilter(projectID uint64, goalEventName 
 	for _, userID := range filteredUserIdList {
 		timestamp := userIdHitGoalEventTimestamp[userID]
 		coalUserID := userIDToCoalIDInfo[userID].CoalUserID
-		propertiesID := userIDToCoalIDInfo[userID].PropertiesID
 		filteredCoalIDToUserIDInfo[coalUserID] =
 			append(filteredCoalIDToUserIDInfo[coalUserID],
-				model.UserIDPropID{UserID: userID, PropertiesID: propertiesID, Timestamp: timestamp})
-		filteredUserIdToUserIDInfo[userID] = model.UserInfo{CoalUserID: coalUserID,
-			PropertiesID: propertiesID, Timestamp: timestamp}
-
-		if _, ok := coalUserIdConversionTimestamp[coalUserID]; ok {
-			if timestamp < coalUserIdConversionTimestamp[coalUserID] {
-				// Considering earliest conversion.
-				coalUserIdConversionTimestamp[coalUserID] = timestamp
-			}
-		} else {
-			coalUserIdConversionTimestamp[coalUserID] = timestamp
-		}
-	}
-
-	return filteredUserIdToUserIDInfo, filteredCoalIDToUserIDInfo, coalUserIdConversionTimestamp, nil
-}
-
-// GetConvertedUsers Returns the list of eligible users who hit conversion event
-func (pg *Postgres) GetConvertedUsers(projectID uint64, goalEventName string,
-	goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
-	eventNameToIdList map[string][]interface{}) (map[string]model.UserInfo,
-	map[string][]model.UserIDPropID, map[string]int64, error) {
-
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
-
-	conversionEventNameIDs := eventNameToIdList[goalEventName]
-	placeHolder := "?"
-	for i := 0; i < len(conversionEventNameIDs)-1; i++ {
-		placeHolder += ",?"
-	}
-	queryEventHits := "SELECT user_id, timestamp FROM events WHERE events.project_id=? AND timestamp >= ? AND " +
-		" timestamp <=? AND events.event_name_id IN (" + placeHolder + ") "
-	qParams := []interface{}{projectID, conversionFrom, conversionTo}
-	qParams = append(qParams, conversionEventNameIDs...)
-
-	// add event filter
-	wStmt, wParams, err := getFilterSQLStmtForEventProperties(projectID, goalEventProperties) // query.ConversionEvent.Properties)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if wStmt != "" {
-		queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmt)
-		qParams = append(qParams, wParams...)
-	}
-	// fetch query results
-	rows, err := pg.ExecQueryWithContext(queryEventHits, qParams)
-	if err != nil {
-		logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
-		return nil, nil, nil, err
-	}
-	defer rows.Close()
-	var userIDList []string
-	userIdHitGoalEventTimestamp := make(map[string]int64)
-	for rows.Next() {
-		var userID string
-		var timestamp int64
-		if err = rows.Scan(&userID, &timestamp); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
-			continue
-		}
-		if _, ok := userIdHitGoalEventTimestamp[userID]; !ok {
-			userIDList = append(userIDList, userID)
-			userIdHitGoalEventTimestamp[userID] = timestamp
-		}
-	}
-
-	// Get coalesced Id for converted user_ids (without filter)
-	userIDToCoalIDInfo, err := pg.GetCoalesceIDFromUserIDs(userIDList, projectID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Part-II - Filter the fetched users from Part-I base on user_properties
-	filteredUserIdList, err := pg.ApplyUserPropertiesFilter(projectID, userIDList, userIDToCoalIDInfo,
-		goalEventProperties)
-	if err != nil {
-		logCtx.WithError(err).Error("error while applying user properties")
-		return nil, nil, nil, err
-	}
-
-	filteredUserIdToUserIDInfo := make(map[string]model.UserInfo)
-	filteredCoalIDToUserIDInfo := make(map[string][]model.UserIDPropID)
-	coalUserIdConversionTimestamp := make(map[string]int64)
-
-	for _, userID := range filteredUserIdList {
-		timestamp := userIdHitGoalEventTimestamp[userID]
-		coalUserID := userIDToCoalIDInfo[userID].CoalUserID
-		propertiesID := userIDToCoalIDInfo[userID].PropertiesID
-		filteredCoalIDToUserIDInfo[coalUserID] =
-			append(filteredCoalIDToUserIDInfo[coalUserID],
-				model.UserIDPropID{UserID: userID, PropertiesID: propertiesID, Timestamp: timestamp})
-		filteredUserIdToUserIDInfo[userID] = model.UserInfo{CoalUserID: coalUserID,
-			PropertiesID: propertiesID, Timestamp: timestamp}
+				model.UserIDPropID{UserID: userID, Timestamp: timestamp})
+		filteredUserIdToUserIDInfo[userID] = model.UserInfo{CoalUserID: coalUserID, Timestamp: timestamp}
 
 		if _, ok := coalUserIdConversionTimestamp[coalUserID]; ok {
 			if timestamp < coalUserIdConversionTimestamp[coalUserID] {
