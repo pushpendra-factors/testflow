@@ -227,15 +227,13 @@ type AttributionData struct {
 }
 
 type UserInfo struct {
-	CoalUserID   string
-	PropertiesID string
-	Timestamp    int64
+	CoalUserID string
+	Timestamp  int64
 }
 
 type UserIDPropID struct {
-	UserID       string
-	PropertiesID string
-	Timestamp    int64
+	UserID    string
+	Timestamp int64
 }
 
 type UserEventInfo struct {

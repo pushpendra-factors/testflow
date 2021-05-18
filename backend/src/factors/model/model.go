@@ -55,16 +55,14 @@ type Model interface {
 	// attribution
 	ExecuteAttributionQuery(projectID uint64, query *model.AttributionQuery) (*model.QueryResult, error)
 	GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]model.UserInfo, error)
-	GetLinkedFunnelEventUsers(projectId uint64, from, to int64,
+	GetLinkedFunnelEventUsersFilter(projectID uint64, queryFrom, queryTo int64,
 		linkedEvents []model.QueryEventWithProperties, eventNameToId map[string][]interface{},
 		userIDInfo map[string]model.UserInfo, usersToBeAttributed *[]model.UserEventInfo) error
-	ApplyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo map[string]model.UserInfo,
-		goalEventProperties []model.QueryProperty) ([]string, error)
-	GetConvertedUsers(projectID uint64, goalEventName string,
-		goalEventProperties []model.QueryProperty, from, to int64,
+	GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error)
+	GetConvertedUsersWithFilter(projectID uint64, goalEventName string,
+		goalEventProperties []model.QueryProperty, conversionFrom, conversionTo int64,
 		eventNameToIdList map[string][]interface{}) (map[string]model.UserInfo,
 		map[string][]model.UserIDPropID, map[string]int64, error)
-	GetAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error)
 
 	// bigquery_setting
 	CreateBigquerySetting(setting *model.BigquerySetting) (*model.BigquerySetting, int)
