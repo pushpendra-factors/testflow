@@ -182,8 +182,10 @@ func (pg *Postgres) PullAdwordsMarketingData(projectID uint64, from, to int64, c
 		"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
-	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
+	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
+		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
+	fmt.Println("DEBUG QUERY ->>>>>>1>>>>>>>>>>>>>>>>>>\n" + U.DBDebugPreparedStatement(performanceQuery, params))
+	rows, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, err
@@ -207,8 +209,10 @@ func (pg *Postgres) PullFacebookMarketingData(projectID uint64, from, to int64, 
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
-	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
+	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
+		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
+	fmt.Println("DEBUG QUERY ->>>>>>1>>>>>>>>>>>>>>>>>>\n" + U.DBDebugPreparedStatement(performanceQuery, params))
+	rows, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, err
@@ -232,8 +236,10 @@ func (pg *Postgres) PullLinkedinMarketingData(projectID uint64, from, to int64, 
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
-	rows, err := pg.ExecQueryWithContext(performanceQuery, []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
+	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
+		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
+	fmt.Println("DEBUG QUERY ->>>>>>1>>>>>>>>>>>>>>>>>>\n" + U.DBDebugPreparedStatement(performanceQuery, params))
+	rows, err := pg.ExecQueryWithContext(performanceQuery, params)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return nil, err
