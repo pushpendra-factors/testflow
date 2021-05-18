@@ -53,9 +53,6 @@ function WidgetCard({
           } else {
             queryType = QUERY_TYPE_EVENT;
           }
-          if (durationObj.frequency === 'hour') {
-            refresh = true;
-          }
         } else if (
           unit.query.query.cl &&
           unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
@@ -94,12 +91,7 @@ function WidgetCard({
             data: res.data.result,
           });
         } else {
-          let result_group;
-          if (refresh) {
-            result_group = res.data.result_group;
-          } else {
-            result_group = res.data.result.result_group;
-          }
+          const result_group = res.data.result.result_group;
           const equivalentQuery = getStateQueryFromRequestQuery(
             unit.query.query.query_group[0]
           );
@@ -231,10 +223,7 @@ function WidgetCard({
               }}
               className='flex items-center justify-between px-6 pb-4'
             >
-              <Tooltip
-                title={unit.title}
-                mouseEnterDelay={0.2}
-              >
+              <Tooltip title={unit.title} mouseEnterDelay={0.2}>
                 <div className='flex flex-col truncate'>
                   <div
                     className='flex cursor-pointer items-center'

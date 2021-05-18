@@ -1,15 +1,15 @@
-import moment from "moment";
+import moment from 'moment';
 import {
   getEventsData,
   getFunnelData,
   getAttributionsData,
   getCampaignsData,
-} from "../../reducers/coreQuery/services";
+} from '../../reducers/coreQuery/services';
 import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
   NAMED_QUERY,
-} from "../../utils/constants";
+} from '../../utils/constants';
 
 export const getDataFromServer = (
   query,
@@ -27,59 +27,48 @@ export const getDataFromServer = (
       queryGroup = queryGroup.map((elem) => {
         return {
           ...elem,
-          fr: moment(durationObj.from).startOf("day").utc().unix(),
-          to: moment(durationObj.to).endOf("day").utc().unix(),
+          fr: moment(durationObj.from).startOf('day').utc().unix(),
+          to: moment(durationObj.to).endOf('day').utc().unix(),
           gbt: elem.gbt
             ? isCampaignQuery
-              ? "date"
+              ? 'date'
               : durationObj.frequency
-            : "",
+            : '',
         };
       });
     } else {
       queryGroup = queryGroup.map((elem) => {
         return {
           ...elem,
-          fr: moment().startOf("week").utc().unix(),
+          fr: moment().startOf('week').utc().unix(),
           to:
-            moment().format("dddd") !== "Sunday"
-              ? moment().subtract(1, "day").endOf("day").utc().unix()
+            moment().format('dddd') !== 'Sunday'
+              ? moment().subtract(1, 'day').endOf('day').utc().unix()
               : moment().utc().unix(),
           gbt: elem.gbt
             ? isCampaignQuery
-              ? "date"
+              ? 'date'
               : durationObj.frequency
-            : "",
+            : '',
         };
       });
     }
     if (isCampaignQuery) {
-      if (refresh) {
-        return getCampaignsData(activeProjectId, {
-          query_group: queryGroup,
-          cl: QUERY_TYPE_CAMPAIGN,
-        });
-      } else {
-        return getCampaignsData(
-          activeProjectId,
-          { query_group: queryGroup, cl: QUERY_TYPE_CAMPAIGN },
-          {
-            refresh,
-            unit_id: unitId,
-            id: dashboardId,
-          }
-        );
-      }
-    } else {
-      if (refresh) {
-        return getEventsData(activeProjectId, queryGroup);
-      } else {
-        return getEventsData(activeProjectId, queryGroup, {
+      return getCampaignsData(
+        activeProjectId,
+        { query_group: queryGroup, cl: QUERY_TYPE_CAMPAIGN },
+        {
           refresh,
           unit_id: unitId,
           id: dashboardId,
-        });
-      }
+        }
+      );
+    } else {
+      return getEventsData(activeProjectId, queryGroup, {
+        refresh,
+        unit_id: unitId,
+        id: dashboardId,
+      });
     }
   } else if (query.query.cl && query.query.cl === QUERY_TYPE_ATTRIBUTION) {
     let attributionQuery = query.query;
@@ -88,8 +77,8 @@ export const getDataFromServer = (
         ...attributionQuery,
         query: {
           ...attributionQuery.query,
-          from: moment(durationObj.from).startOf("day").utc().unix(),
-          to: moment(durationObj.to).endOf("day").utc().unix(),
+          from: moment(durationObj.from).startOf('day').utc().unix(),
+          to: moment(durationObj.to).endOf('day').utc().unix(),
         },
       };
     } else {
@@ -97,16 +86,16 @@ export const getDataFromServer = (
         ...attributionQuery,
         query: {
           ...attributionQuery.query,
-          from: moment().startOf("week").utc().unix(),
+          from: moment().startOf('week').utc().unix(),
           to:
-            moment().format("dddd") !== "Sunday"
-              ? moment().subtract(1, "day").endOf("day").utc().unix()
+            moment().format('dddd') !== 'Sunday'
+              ? moment().subtract(1, 'day').endOf('day').utc().unix()
               : moment().utc().unix(),
         },
       };
     }
     return getAttributionsData(activeProjectId, attributionQuery, {
-      refresh: false,
+      refresh,
       unit_id: unitId,
       id: dashboardId,
     });
@@ -115,21 +104,21 @@ export const getDataFromServer = (
     if (durationObj.from && durationObj.to) {
       funnelQuery = {
         ...funnelQuery,
-        fr: moment(durationObj.from).startOf("day").utc().unix(),
-        to: moment(durationObj.to).endOf("day").utc().unix(),
+        fr: moment(durationObj.from).startOf('day').utc().unix(),
+        to: moment(durationObj.to).endOf('day').utc().unix(),
       };
     } else {
       funnelQuery = {
         ...funnelQuery,
-        fr: moment().startOf("week").utc().unix(),
+        fr: moment().startOf('week').utc().unix(),
         to:
-          moment().format("dddd") !== "Sunday"
-            ? moment().subtract(1, "day").endOf("day").utc().unix()
+          moment().format('dddd') !== 'Sunday'
+            ? moment().subtract(1, 'day').endOf('day').utc().unix()
             : moment().utc().unix(),
       };
     }
     return getFunnelData(activeProjectId, funnelQuery, {
-      refresh: false,
+      refresh,
       unit_id: unitId,
       id: dashboardId,
     });
@@ -161,18 +150,18 @@ export const getWebAnalyticsRequestBody = (units, durationObj) => {
   });
 
   if (durationObj.from && durationObj.to) {
-    if (durationObj?.dateType === "now" || durationObj?.dateType === "today") {
+    if (durationObj?.dateType === 'now' || durationObj?.dateType === 'today') {
       query.from = moment(durationObj.from).utc().unix();
       query.to = moment(durationObj.to).utc().unix();
     } else {
-      query.from = moment(durationObj.from).startOf("day").utc().unix();
-      query.to = moment(durationObj.to).endOf("day").utc().unix();
+      query.from = moment(durationObj.from).startOf('day').utc().unix();
+      query.to = moment(durationObj.to).endOf('day').utc().unix();
     }
   } else {
-    query.from = moment().startOf("week").utc().unix();
+    query.from = moment().startOf('week').utc().unix();
     query.to =
-      moment().format("dddd") !== "Sunday"
-        ? moment().subtract(1, "day").endOf("day").utc().unix()
+      moment().format('dddd') !== 'Sunday'
+        ? moment().subtract(1, 'day').endOf('day').utc().unix()
         : moment().utc().unix();
   }
   // query.from = 1601490600;
