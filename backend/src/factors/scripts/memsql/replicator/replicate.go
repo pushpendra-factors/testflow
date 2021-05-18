@@ -533,6 +533,11 @@ func createOnMemSQL(projectID uint64, tableName string, record interface{}, id i
 			return http.StatusConflict
 		}
 
+		if strings.Contains(err.Error(), "Invalid JSON value for column") {
+			logCtx.WithError(err).Error("Skipping record with invalid json value")
+			return http.StatusCreated
+		}
+
 		logCtx.WithError(err).Error("Failed to create record on memsql.")
 		return http.StatusInternalServerError
 	}
