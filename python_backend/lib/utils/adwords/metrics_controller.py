@@ -20,6 +20,7 @@ class MetricsController:
         "success": {}
     }
     ADWORDS_SYNC_PING_ID = "188cbf7c-0ea1-414b-bf5c-eee47c12a0c8"
+    GSC_SYNC_PING_ID = "914866ad-dab5-4ec9-bad1-2b6ef6eab6f5"
 
     @classmethod
     def init(cls, type_of_run):
@@ -94,10 +95,16 @@ class MetricsController:
             cls.etl_stats["success"].setdefault(project_id, set())
             cls.etl_stats["success"][project_id].add(url)
 
+# todo @ashhar: merge gsc and adwords pubish functions
     @classmethod
     def publish(cls):
         cls.publish_task_stats()
         cls.publish_job_stats()
+    
+    @classmethod
+    def publish_gsc(cls):
+        cls.publish_gsc_task_stats()
+        cls.publish_gsc_job_stats()
 
     @classmethod
     def publish_task_stats(cls):
@@ -110,6 +117,16 @@ class MetricsController:
             cls.load_stats.publish()
 
     @classmethod
+    def publish_gsc_task_stats(cls):
+        if cls.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
+            cls.extract_stats.publish_gsc()
+            cls.load_stats.publish_gsc()
+        elif cls.type_of_run == scripts.adwords.EXTRACT:
+            cls.extract_stats.publish_gsc()
+        else:
+            cls.load_stats.publish_gsc()
+    
+    @classmethod
     def publish_job_stats(cls):
         if cls.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
             cls.etl_stats["task_stats"] = cls.compare_load_and_extract()
@@ -118,6 +135,17 @@ class MetricsController:
             HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["success"], cls.ADWORDS_SYNC_PING_ID)
         else:
             HealthChecksUtil.ping(scripts.adwords.CONFIG.ADWORDS_APP.env, cls.etl_stats["failures"], cls.ADWORDS_SYNC_PING_ID, endpoint="/fail")
+            log.warning("Job has errors. Successfully synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
+
+    @classmethod
+    def publish_gsc_job_stats(cls):
+        if cls.type_of_run == scripts.adwords.EXTRACT_AND_LOAD:
+            cls.etl_stats["task_stats"] = cls.compare_load_and_extract()
+
+        if cls.etl_stats["status"] == SUCCESS_MESSAGE:
+            HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, cls.etl_stats["success"], cls.GSC_SYNC_PING_ID)
+        else:
+            HealthChecksUtil.ping(scripts.gsc.CONFIG.GSC_APP.env, cls.etl_stats["failures"], cls.GSC_SYNC_PING_ID, endpoint="/fail")
             log.warning("Job has errors. Successfully synced Projects and customer accounts are: %s", json.dumps(cls.etl_stats["failures"], default=JsonUtil.serialize_sets))
 
     @classmethod
