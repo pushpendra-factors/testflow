@@ -14,6 +14,7 @@ import (
 )
 
 const (
+	errorDuplicateGoogleOrganicDocument          = "pq: duplicate key value violates unique constraint \"google_organic_documents_primary_key\""
 	lastSyncInfoQueryForAllProjectsGoogleOrganic = "SELECT project_id, url_prefix, max(timestamp) as last_timestamp" +
 		" " + "FROM google_organic_documents GROUP BY project_id, url_prefix"
 	lastSyncInfoForAProjectGoogleOrganic = "SELECT project_id, url_prefix, max(timestamp) as last_timestamp" +
@@ -44,6 +45,10 @@ var mapOfObjectsToPropertiesAndRelatedGoogleOrganic = map[string]map[string]Prop
 }
 var selectableMetricsForGoogleOrganic = []string{"impressions", "clicks", model.ClickThroughRate, "position_avg", "position_impression_weighted_avg"}
 var objectsForGoogleOrganic = []string{"organic_property"}
+
+func isDuplicateGoogleOrganicDocumentError(err error) bool {
+	return err.Error() == errorDuplicateGoogleOrganicDocument
+}
 
 func (pg *Postgres) buildGoogleOrganicChannelConfig() *model.ChannelConfigResult {
 	googleOrganicObjectsAndProperties := pg.buildObjectAndPropertiesForGoogleOrganic(objectsForGoogleOrganic)
@@ -234,7 +239,11 @@ func (pg *Postgres) CreateGoogleOrganicDocument(googleOrganicDoc *model.GoogleOr
 	dbc := db.Table("google_organic_documents").Create(googleOrganicDoc)
 
 	if dbc.Error != nil {
-		log.WithError(dbc.Error).Error("Failed to create an search console doc.")
+		if isDuplicateGoogleOrganicDocumentError(dbc.Error) {
+			log.WithError(dbc.Error).WithField("googleOrganicDocuments", googleOrganicDoc).Warn("Failed to create search console doc. Duplicate")
+			return http.StatusConflict
+		}
+		log.WithError(dbc.Error).WithField("googleOrganicDocuments", googleOrganicDoc).Error("Failed to create search console doc")
 		return http.StatusInternalServerError
 	}
 
@@ -266,6 +275,11 @@ func (pg *Postgres) CreateMultipleGoogleOrganicDocument(googleOrganicDocuments [
 	rows, err := db.Raw(insertStatement, insertValues...).Rows()
 
 	if err != nil {
+		if isDuplicateGoogleOrganicDocumentError(err) {
+			log.WithError(err).WithField("googleOrganicDocuments", googleOrganicDocuments).Warn(
+				"Failed to create an googleOrganic doc. Duplicate. Continued inserting other docs.")
+			return http.StatusConflict
+		}
 		log.WithError(err).WithField("googleOrganicDocuments", googleOrganicDocuments).Error(
 			"Failed to create an googleOrganic doc. Continued inserting other docs.")
 		return http.StatusInternalServerError

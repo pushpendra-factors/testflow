@@ -394,9 +394,12 @@ func (store *MemSQL) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) in
 	dbc := db.Create(adwordsDoc)
 	if dbc.Error != nil {
 		if IsDuplicateRecordError(dbc.Error) {
-			log.WithError(dbc.Error).Error("Failed to create an adwords doc. Duplicate.")
+			log.WithError(dbc.Error).WithField("adwordsDocuments", adwordsDoc).Error("Failed to create an adwords doc. Duplicate.")
 			return http.StatusConflict
 		}
+		log.WithError(dbc.Error).WithField("adwordsDocuments", adwordsDoc).Error(
+			"Failed to create an adwords doc.")
+		return http.StatusInternalServerError
 	}
 
 	return http.StatusCreated
