@@ -1,35 +1,38 @@
-import { get, getHostUrl, post, del } from "../../utils/request";
+import { get, getHostUrl, post, del } from '../../utils/request';
 import {
   QUERIES_LOADING,
   QUERIES_LOADED,
   QUERIES_LOADING_FAILED,
   QUERY_DELETED,
   QUERIES_LOADING_STOPPED,
-} from "../types";
-import { notification } from "antd";
-import { getErrorMessage } from "../../utils/dataFormatter";
+} from '../types';
+import { notification } from 'antd';
+import { getErrorMessage } from '../../utils/dataFormatter';
 const host = getHostUrl();
 
 export const getEventNames = (dispatch, projectId) => {
-  return get(dispatch, host + "projects/" + projectId + "/v1/event_names?is_display_name_enabled=true", {});
+  return get(
+    dispatch,
+    host +
+      'projects/' +
+      projectId +
+      '/v1/event_names?is_display_name_enabled=true',
+    {}
+  );
 };
 
-export const getEventsData = (
-  projectId,
-  query_group,
-  dashboard = { refresh: true }
-) => {
+export const getEventsData = (projectId, query_group, dashboard) => {
   let url;
-  if (dashboard.refresh) {
-    url = host + "projects/" + projectId + "/v1/query";
+  if (!dashboard) {
+    url = host + 'projects/' + projectId + '/v1/query';
   } else {
     url =
       host +
-      "projects/" +
+      'projects/' +
       projectId +
-      "/v1/query?refresh=false&dashboard_id=" +
+      `/v1/query?refresh=${dashboard.refresh}&dashboard_id=` +
       dashboard.id +
-      "&dashboard_unit_id=" +
+      '&dashboard_unit_id=' +
       dashboard.unit_id;
   }
   return post(null, url, { query_group });
@@ -38,42 +41,42 @@ export const getEventsData = (
 export function fetchEventProperties(projectId, eventName) {
   const url =
     host +
-    "projects/" +
+    'projects/' +
     projectId +
-    "/event_names/" +
+    '/event_names/' +
     btoa(eventName) +
-    "/properties?is_display_name_enabled=true";
+    '/properties?is_display_name_enabled=true';
   return get(null, url);
 }
 
 export function fetchEventPropertyValues(projectId, eventName, propertyName) {
   const url =
     host +
-    "projects/" +
+    'projects/' +
     projectId +
-    "/event_names/" +
+    '/event_names/' +
     btoa(eventName) +
-    "/properties/" +
+    '/properties/' +
     propertyName +
-    "/values";
+    '/values';
   return get(null, url);
 }
 
 export const fetchChannelObjPropertyValues = (
   projectId,
-  channel = "all_channels",
+  channel = 'all_channels',
   filterObj,
   property
 ) => {
   const url =
     host +
-    "projects/" +
+    'projects/' +
     projectId +
-    "/v1/channels/filter_values?channel=" +
+    '/v1/channels/filter_values?channel=' +
     channel +
-    "&filter_object=" +
+    '&filter_object=' +
     filterObj +
-    "&filter_property=" +
+    '&filter_property=' +
     property;
   // const url =
   //   filterObj === "campaign"
@@ -85,57 +88,56 @@ export const fetchChannelObjPropertyValues = (
 export function fetchUserPropertyValues(projectId, propertyName) {
   const url =
     host +
-    "projects/" +
+    'projects/' +
     projectId +
-    "/user_properties/" +
+    '/user_properties/' +
     propertyName +
-    "/values";
+    '/values';
   return get(null, url);
 }
 
 export function fetchUserProperties(projectId, queryType) {
   const url =
-    host + "projects/" + projectId + "/user_properties?is_display_name_enabled=true";
+    host +
+    'projects/' +
+    projectId +
+    '/user_properties?is_display_name_enabled=true';
   return get(null, url);
 }
 
-export const getFunnelData = (
-  projectId,
-  query,
-  dashboard = { refresh: true }
-) => {
+export const getFunnelData = (projectId, query, dashboard) => {
   let url;
-  if (dashboard.refresh) {
-    url = host + "projects/" + projectId + "/query";
+  if (!dashboard) {
+    url = host + 'projects/' + projectId + '/query';
   } else {
     url =
       host +
-      "projects/" +
+      'projects/' +
       projectId +
-      "/query?refresh=false&dashboard_id=" +
+      `/query?refresh=${dashboard.refresh}&dashboard_id=` +
       dashboard.id +
-      "&dashboard_unit_id=" +
+      '&dashboard_unit_id=' +
       dashboard.unit_id;
   }
   return post(null, url, { query });
 };
 
 export const saveQuery = (projectId, title, query, type) => {
-  const url = host + "projects/" + projectId + "/queries";
+  const url = host + 'projects/' + projectId + '/queries';
   return post(null, url, { query, title, type });
 };
 
 export const deleteQuery = async (dispatch, query) => {
   try {
     dispatch({ type: QUERIES_LOADING });
-    const url = host + "projects/" + query.project_id + "/queries/" + query.id;
+    const url = host + 'projects/' + query.project_id + '/queries/' + query.id;
     await del(null, url);
     dispatch({ type: QUERY_DELETED, payload: query.id });
   } catch (err) {
     console.log(err);
     dispatch({ type: QUERIES_LOADING_STOPPED });
     notification.error({
-      message: "Something went wrong!",
+      message: 'Something went wrong!',
       description: getErrorMessage(err),
       duration: 5,
     });
@@ -145,7 +147,7 @@ export const deleteQuery = async (dispatch, query) => {
 export const fetchQueries = async (dispatch, projectId) => {
   try {
     dispatch({ type: QUERIES_LOADING });
-    const url = host + "projects/" + projectId + "/queries";
+    const url = host + 'projects/' + projectId + '/queries';
     const res = await get(null, url);
     dispatch({ type: QUERIES_LOADED, payload: res.data });
   } catch (err) {
@@ -154,22 +156,18 @@ export const fetchQueries = async (dispatch, projectId) => {
   }
 };
 
-export const getAttributionsData = (
-  projectId,
-  reqBody,
-  dashboard = { refresh: true }
-) => {
+export const getAttributionsData = (projectId, reqBody, dashboard) => {
   let url;
-  if (dashboard.refresh) {
-    url = host + "projects/" + projectId + "/attribution/query";
+  if (!dashboard) {
+    url = host + 'projects/' + projectId + '/attribution/query';
   } else {
     url =
       host +
-      "projects/" +
+      'projects/' +
       projectId +
-      "/attribution/query?refresh=false&dashboard_id=" +
+      `/attribution/query?refresh=${dashboard.refresh}&dashboard_id=` +
       dashboard.id +
-      "&dashboard_unit_id=" +
+      '&dashboard_unit_id=' +
       dashboard.unit_id;
   }
   return post(null, url, reqBody);
@@ -177,26 +175,22 @@ export const getAttributionsData = (
 
 export const fetchCampaignConfig = (projectId, channel) => {
   const url =
-    host + "projects/" + projectId + "/v1/channels/config?channel=" + channel;
+    host + 'projects/' + projectId + '/v1/channels/config?channel=' + channel;
   return get(null, url);
 };
 
-export const getCampaignsData = (
-  projectId,
-  reqBody,
-  dashboard = { refresh: true }
-) => {
+export const getCampaignsData = (projectId, reqBody, dashboard) => {
   let url;
-  if (dashboard.refresh) {
-    url = host + "projects/" + projectId + "/v1/channels/query";
+  if (!dashboard) {
+    url = host + 'projects/' + projectId + '/v1/channels/query';
   } else {
     url =
       host +
-      "projects/" +
+      'projects/' +
       projectId +
-      "/v1/channels/query?refresh=false&dashboard_id=" +
+      `/v1/channels/query?refresh=${dashboard.refresh}&dashboard_id=` +
       dashboard.id +
-      "&dashboard_unit_id=" +
+      '&dashboard_unit_id=' +
       dashboard.unit_id;
   }
   return post(null, url, reqBody);

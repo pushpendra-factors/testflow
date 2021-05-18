@@ -234,10 +234,13 @@ func (store *MemSQL) CreateGoogleOrganicDocument(googleOrganicDoc *model.GoogleO
 	dbc := db.Table("google_organic_documents").Create(googleOrganicDoc)
 
 	if dbc.Error != nil {
-		log.WithError(dbc.Error).Error("Failed to create an search console doc.")
+		if IsDuplicateRecordError(dbc.Error) {
+			log.WithError(dbc.Error).WithField("googleOrganicDocuments", googleOrganicDoc).Warn("Failed to create an search console doc. Duplicate")
+			return http.StatusConflict
+		}
+		log.WithError(dbc.Error).WithField("googleOrganicDocuments", googleOrganicDoc).Error("Failed to create an search console doc.")
 		return http.StatusInternalServerError
 	}
-
 	return http.StatusCreated
 }
 
@@ -266,6 +269,11 @@ func (store *MemSQL) CreateMultipleGoogleOrganicDocument(googleOrganicDocuments 
 	rows, err := db.Raw(insertStatement, insertValues...).Rows()
 
 	if err != nil {
+		if IsDuplicateRecordError(err) {
+			log.WithError(err).WithField("googleOrganicDocuments", googleOrganicDocuments).Warn(
+				"Failed to create an googleOrganic doc. Duplicate. Continued inserting other docs.")
+			return http.StatusConflict
+		}
 		log.WithError(err).WithField("googleOrganicDocuments", googleOrganicDocuments).Error(
 			"Failed to create an googleOrganic doc. Continued inserting other docs.")
 		return http.StatusInternalServerError

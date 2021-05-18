@@ -65,6 +65,6 @@ if __name__ == "__main__":
         for next_sync in next_sync_infos:
             JobScheduler(next_sync, skip_today).sync(env, is_dry)
 
-    # metrics_controller.publish()
+    metrics_controller.publish_gsc()
     log.warning("Successfully synced. End of search console sync job.")
     sys.exit(0)

@@ -7,6 +7,7 @@ from scripts.adwords import REQUEST_COUNT, RECORDS_COUNT, LATENCY_COUNT, TO_IN_M
     TO_FILE
 
 
+# to do @ashhar: merge gsc and adwords functions
 class JobTaskStats:
     PROJECT_KEY = "projects"
     TOTAL_KEY = "total_by_key"
@@ -45,5 +46,10 @@ class JobTaskStats:
 
     def publish(self):
         SnsNotifier.notify(self.task_stats)
+        task_stats = json.dumps(self.task_stats)
+        log.warning("Metrics for the job Tasks: %s", task_stats)
+    
+    def publish_gsc(self):
+        SnsNotifier.notify_gsc(self.task_stats)
         task_stats = json.dumps(self.task_stats)
         log.warning("Metrics for the job Tasks: %s", task_stats)

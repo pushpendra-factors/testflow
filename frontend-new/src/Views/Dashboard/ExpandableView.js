@@ -1,19 +1,20 @@
-import React, { useEffect, useCallback, useState } from "react";
-import moment from "moment";
-import { Modal, Spin } from "antd";
-import ActiveUnitContent from "./ActiveUnitContent";
+import React, { useEffect, useCallback, useState } from 'react';
+import moment from 'moment';
+import { Modal, Spin } from 'antd';
+import ActiveUnitContent from './ActiveUnitContent';
 import {
   initialState,
   formatApiData,
   DefaultDateRangeFormat,
-} from "../CoreQuery/utils";
-import { useSelector } from "react-redux";
-import { getDataFromServer } from "./utils";
+} from '../CoreQuery/utils';
+import { useSelector } from 'react-redux';
+import { getDataFromServer } from './utils';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION,
-} from "../../utils/constants";
+  QUERY_TYPE_CAMPAIGN,
+} from '../../utils/constants';
 
 function ExpandableView({
   widgetModal,
@@ -40,8 +41,13 @@ function ExpandableView({
 
         if (unit.query.query.query_group) {
           queryType = QUERY_TYPE_EVENT;
-          if (newDurationObj.frequency === "hour") {
-            refresh = true;
+          if (
+            unit.query.query.cl &&
+            unit.query.query.cl === QUERY_TYPE_CAMPAIGN
+          ) {
+            queryType = QUERY_TYPE_CAMPAIGN;
+          } else {
+            queryType = QUERY_TYPE_EVENT;
           }
         } else if (
           unit.query.query.cl &&
@@ -69,26 +75,21 @@ function ExpandableView({
         } else if (queryType === QUERY_TYPE_ATTRIBUTION) {
           setResultState({
             ...initialState,
-            data: res.data,
+            data: res.data.result,
+          });
+        } else if (queryType === QUERY_TYPE_CAMPAIGN) {
+          setResultState({
+            ...initialState,
+            data: res.data.result,
           });
         } else {
-          if (refresh) {
-            setResultState({
-              ...initialState,
-              data: formatApiData(
-                res.data.result_group[0],
-                res.data.result_group[1]
-              ),
-            });
-          } else {
-            setResultState({
-              ...initialState,
-              data: formatApiData(
-                res.data.result.result_group[0],
-                res.data.result.result_group[1]
-              ),
-            });
-          }
+          setResultState({
+            ...initialState,
+            data: formatApiData(
+              res.data.result.result_group[0],
+              res.data.result.result_group[1]
+            ),
+          });
         }
       } catch (err) {
         console.log(err);
@@ -117,7 +118,7 @@ function ExpandableView({
     (dates) => {
       let from,
         to,
-        frequency = "date";
+        frequency = 'date';
       if (Array.isArray(dates.startDate)) {
         from = dates.startDate[0];
         to = dates.startDate[1];
@@ -125,8 +126,8 @@ function ExpandableView({
         from = dates.startDate;
         to = dates.endDate;
       }
-      if (moment(to).diff(from, "hours") < 24) {
-        frequency = "hour";
+      if (moment(to).diff(from, 'hours') < 24) {
+        frequency = 'hour';
       }
       const newDurationObj = {
         ...duration,
@@ -144,7 +145,7 @@ function ExpandableView({
 
   if (widgetModalLoading) {
     content = (
-      <div className="flex justify-center items-center w-full min-h-screen">
+      <div className='flex justify-center items-center w-full min-h-screen'>
         <Spin />
       </div>
     );
@@ -172,8 +173,8 @@ function ExpandableView({
       onCancel={() => setwidgetModal(false)}
       // className={`w-full inset-0 ${styles.fullModal}`}
       className={`fa-modal--regular fa-modal--quick-view fa-modal--slideInDown`}
-      transitionName=""
-      maskTransitionName=""
+      transitionName=''
+      maskTransitionName=''
     >
       {content}
     </Modal>

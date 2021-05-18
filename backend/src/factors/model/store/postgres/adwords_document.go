@@ -336,9 +336,12 @@ func (pg *Postgres) CreateAdwordsDocument(adwordsDoc *model.AdwordsDocument) int
 
 	if dbc.Error != nil {
 		if isDuplicateAdwordsDocumentError(dbc.Error) {
-			log.WithError(dbc.Error).Error("Failed to create an adwords doc. Duplicate.")
+			log.WithError(dbc.Error).WithField("adwordsDocuments", adwordsDoc).Error("Failed to create an adwords doc. Duplicate.")
 			return http.StatusConflict
 		}
+		log.WithError(dbc.Error).WithField("adwordsDocuments", adwordsDoc).Error(
+			"Failed to create an adwords doc.")
+		return http.StatusInternalServerError
 	}
 
 	return http.StatusCreated
