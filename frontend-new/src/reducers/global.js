@@ -6,9 +6,9 @@ import {
   CREATE_PROJECT_FULFILLED,
   FETCH_PROJECTS_REJECTED,
 } from "./types";
-import { get, post, put } from "../utils/request";
+import { get, getHostUrl, post, put } from "../utils/request";
 
-var host = BUILD_CONFIG.backend_host;
+var host = getHostUrl();
 host = host[host.length - 1] === "/" ? host : host + "/";
 
 const defaultState = {

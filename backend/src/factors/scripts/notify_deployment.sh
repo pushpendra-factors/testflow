@@ -63,8 +63,8 @@ fi
 recent_non_pr_commits=`echo "${commit_history}" | grep -m1 -B1000 -e "(#[0-9]\+)$" | sed '$d' | sed '$d' | sed '$d'`
 
 # Highlights captures only pull requests information instead of entire commit history.
-# With grep -m5, takes only recent 5 pull requests, otherwise for old image, it will be flooded with PRs.
-pr_highlights=`echo "${commit_history}" | grep -m5 -B2 -e "(#[0-9]\+)$"`
+# With grep -m3, takes only recent 5 pull requests, otherwise for old image, it will be flooded with PRs.
+pr_highlights=`echo "${commit_history}" | grep -m3 -B2 -e "(#[0-9]\+)$"`
 highlights="${recent_non_pr_commits}
 ${pr_highlights}"
 if [[ "${highlights}" == "" ]]; then
