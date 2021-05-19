@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -26,6 +27,8 @@ const eventsLimitForProperites = 50000
 const OneDayInSeconds int64 = 24 * 60 * 60
 
 func satisfiesEventConstraints(event model.Event) int {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{
 		"method":     "satisfiesEventsConstaints",
 		"project_id": event.ProjectId,
@@ -54,6 +57,8 @@ func satisfiesEventConstraints(event model.Event) int {
 }
 
 func existsIDForProject(projectID uint64, userID, eventID string) bool {
+	defer model.LogOnSlowExecution(time.Now())
+
 	db := C.GetServices().Db
 
 	var event model.Event
@@ -73,6 +78,8 @@ func existsIDForProject(projectID uint64, userID, eventID string) bool {
 }
 
 func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId string, eventNameId string) (uint64, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	var count uint64
 
 	db := C.GetServices().Db
@@ -88,6 +95,8 @@ func (store *MemSQL) GetEventCountOfUserByEventName(projectId uint64, userId str
 
 // GetEventCountOfUsersByEventName Get count of events for event_name_id for multiple users.
 func (store *MemSQL) GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID string) (uint64, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	var count uint64
 
 	db := C.GetServices().Db
@@ -102,6 +111,8 @@ func (store *MemSQL) GetEventCountOfUsersByEventName(projectID uint64, userIDs [
 }
 
 func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event, isUpdateEventProperty bool) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	// TODO: Remove this check after enabling caching realtime.
 	blackListedForUpdate := make(map[string]bool)
 	blackListedForUpdate[U.EP_PAGE_SPENT_TIME] = true
@@ -243,6 +254,7 @@ func (store *MemSQL) addEventDetailsToCache(projectID uint64, event *model.Event
 }
 
 func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
+	defer model.LogOnSlowExecution(time.Now())
 	logCtx := log.WithField("project_id", event.ProjectId)
 
 	if event.ProjectId == 0 || event.UserId == "" || event.EventNameId == "" {
@@ -346,9 +358,11 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 
 // existsEventByCustomerEventID Get events by projectID and customerEventID.
 func existsEventByCustomerEventID(projectID uint64, customerEventID string) bool {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	var event model.Event
+
+	db := C.GetServices().Db
 	if err := db.Limit(1).Where("project_id = ?", projectID).
 		Where("customer_event_id = ?", customerEventID).Select("id").Find(&event).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
@@ -365,12 +379,14 @@ func existsEventByCustomerEventID(projectID uint64, customerEventID string) bool
 }
 
 func (store *MemSQL) GetEvent(projectId uint64, userId string, id string) (*model.Event, int) {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	if !U.IsValidUUID(id) {
 		return nil, http.StatusInternalServerError
 	}
 	var event model.Event
+
+	db := C.GetServices().Db
 	if err := db.Where("id = ?", id).Where("project_id = ?", projectId).Where("user_id = ?", userId).First(&event).Error; err != nil {
 		log.WithFields(log.Fields{"projectId": projectId, "userId": userId}).WithError(err).Error(
 			"Getttng event failed on GetEvent")
@@ -383,9 +399,11 @@ func (store *MemSQL) GetEvent(projectId uint64, userId string, id string) (*mode
 }
 
 func (store *MemSQL) GetEventById(projectId uint64, id string) (*model.Event, int) {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	var event model.Event
+
+	db := C.GetServices().Db
 	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&event).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			// Do not log error. Log on caller, if needed.
@@ -401,14 +419,15 @@ func (store *MemSQL) GetEventById(projectId uint64, id string) (*model.Event, in
 
 func (store *MemSQL) GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId string,
 	startTimestamp int64, endTimestamp int64) (*model.Event, int) {
-
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	if startTimestamp == 0 || endTimestamp == 0 {
 		return nil, http.StatusBadRequest
 	}
 
 	var events []model.Event
+
+	db := C.GetServices().Db
 	if err := db.Limit(1).Order("timestamp desc").Where(
 		"project_id = ? AND event_name_id = ? AND user_id = ? AND timestamp > ? AND timestamp <= ?",
 		projectId, eventNameId, userId, startTimestamp, endTimestamp).Find(&events).Error; err != nil {
@@ -423,10 +442,14 @@ func (store *MemSQL) GetLatestEventOfUserByEventNameId(projectId uint64, userId 
 	return &events[0], http.StatusFound
 }
 
-// GetRecentEventPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project/event
-func (store *MemSQL) GetRecentEventPropertyKeysWithLimits(projectID uint64, eventName string, starttime int64, endtime int64, eventsLimit int) ([]U.Property, error) {
+// GetRecentEventPropertyKeysWithLimits This method gets all the recent 'limit' property keys
+// from DB for a given project/event
+func (store *MemSQL) GetRecentEventPropertyKeysWithLimits(projectID uint64, eventName string,
+	starttime int64, endtime int64, eventsLimit int) ([]U.Property, error) {
+	defer model.LogOnSlowExecution(time.Now())
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "eventName": eventName, "starttime": starttime, "endtime": endtime, "eventsLimit": eventsLimit})
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "eventName": eventName,
+		"starttime": starttime, "endtime": endtime, "eventsLimit": eventsLimit})
 	properties := make([]U.Property, 0)
 
 	queryStr := "SELECT properties, " +
@@ -487,7 +510,10 @@ func (store *MemSQL) GetRecentEventPropertyKeysWithLimits(projectID uint64, even
 
 // GetRecentEventPropertyValuesWithLimits This method gets all the recent 'limit' property values from DB for a given project/event/property
 func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string,
-	property string, valuesLimit int, rowsLimit int, starttime int64, endtime int64) ([]U.PropertyValue, string, error) {
+	property string, valuesLimit int, rowsLimit int, starttime int64,
+	endtime int64) ([]U.PropertyValue, string, error) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"projectId": projectID, "eventName": eventName, "property": property,
 		"valuesLimit": valuesLimit, "rowsLimit": rowsLimit, "starttime": starttime, "endtime": endtime})
@@ -526,6 +552,7 @@ func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID uint64, ev
 
 func (store *MemSQL) UpdateEventProperties(projectId uint64, id string,
 	properties *U.PropertiesMap, updateTimestamp int64) int {
+	defer model.LogOnSlowExecution(time.Now())
 
 	if projectId == 0 || id == "" {
 		return http.StatusBadRequest
@@ -575,13 +602,15 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id string,
 }
 
 func (store *MemSQL) GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId string) ([]model.Event, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	if projectId == 0 {
 		return nil, http.StatusBadRequest
 	}
 
-	db := C.GetServices().Db
-
 	var events []model.Event
+
+	db := C.GetServices().Db
 	if err := db.Order("timestamp DESC").Where("project_id = ? AND user_id = ? AND event_name_id = ?",
 		projectId, userId, eventNameId).Find(&events).Error; err != nil {
 
@@ -615,6 +644,7 @@ func getPageCountAndTimeSpentFromEventsList(events []*model.Event, sessionEvent 
 
 func getPageCountAndTimeSpentForContinuedSession(projectId uint64, userId string,
 	continuedSessionEvent *model.Event, events []*model.Event) (float64, float64, float64, float64, int) {
+	defer model.LogOnSlowExecution(time.Now())
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
 
@@ -669,6 +699,8 @@ func (store *MemSQL) OverwriteEventProperties(projectId uint64, userId string, e
 
 func (store *MemSQL) OverwriteEventPropertiesByID(projectId uint64, id string,
 	newEventProperties *postgres.Jsonb) int {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{"projectId": projectId, "id": id})
 
 	if newEventProperties == nil {
@@ -734,6 +766,8 @@ func filterEventsForSession(events []model.Event, endTimestamp int64) []*model.E
 }
 
 func associateSessionByEventIds(projectId uint64, eventIds []string, sessionId string) int {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"event_ids": eventIds, "session_id": sessionId})
 
@@ -778,8 +812,8 @@ func associateSessionToEventsInBatch(projectId uint64, events []*model.Event,
 // AddSessionForUser - Wrapper for addSessionForUser to handle creating
 // new session for last event when new session conditions met.
 func (store *MemSQL) AddSessionForUser(projectId uint64, userId string, userEvents []model.Event,
-	bufferTimeBeforeSessionCreateInSecs int64,
-	sessionEventNameId string) (int, int, bool, int, int) {
+	bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId string) (int, int, bool, int, int) {
+	defer model.LogOnSlowExecution(time.Now())
 
 	noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 		noOfUserPropertiesUpdated, isLastEventToBeProcessed,
@@ -821,8 +855,8 @@ e2 - t2
 e3 - t3
 */
 func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents []model.Event,
-	bufferTimeBeforeSessionCreateInSecs int64,
-	sessionEventNameId string) (int, int, bool, int, bool, int) {
+	bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId string) (int, int, bool, int, bool, int) {
+	defer model.LogOnSlowExecution(time.Now())
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
 
@@ -1177,9 +1211,11 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 
 // GetDatesForNextEventsArchivalBatch Get dates for events since startTime, excluding today's date.
 func (store *MemSQL) GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int) {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
+
 	countByDates := make(map[string]int64)
 
+	db := C.GetServices().Db
 	rows, err := db.Model(&model.Event{}).
 		Where("project_id = ? AND timestamp BETWEEN ? AND (UNIX_TIMESTAMP(CURRENT_DATE()) - 1)", projectID, startTime).
 		Group("date(FROM_UNIXTIME(timestamp))").
@@ -1207,6 +1243,7 @@ func (store *MemSQL) GetDatesForNextEventsArchivalBatch(projectID uint64, startT
 
 func (store *MemSQL) GetNextSessionEventInfoFromDB(projectID uint64, withSession bool,
 	sessionEventNameId uint64, maxLookbackTimestamp int64) (int64, int) {
+	defer model.LogOnSlowExecution(time.Now())
 
 	sessionExistStr := "NOT NULL"
 	startTimestampAggrFunc := "max"
@@ -1257,6 +1294,8 @@ func (store *MemSQL) GetNextSessionEventInfoFromDB(projectID uint64, withSession
 }
 
 func (store *MemSQL) GetLastSessionEventTimestamp(projectID uint64, sessionEventNameID uint64) (int64, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectID)
 
 	// This is a faster query.
@@ -1296,6 +1335,7 @@ func (store *MemSQL) GetLastSessionEventTimestamp(projectID uint64, sessionEvent
 // excluding session event and event with session_id.
 func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId uint64, sessionEventNameId string,
 	startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int) {
+	defer model.LogOnSlowExecution(time.Now())
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"start_timestamp": startTimestamp, "end_timestamp": endTimestamp})
@@ -1362,6 +1402,8 @@ func (store *MemSQL) GetAllEventsForSessionCreationAsUserEventsMap(projectId uin
 }
 
 func doesPropertiesMapHaveKeys(propertiesMap U.PropertiesMap, keys []string) (bool, bool, U.PropertiesMap) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	filteredPropertiesMap := U.PropertiesMap{}
 
 	if propertiesMap == nil {
@@ -1384,6 +1426,7 @@ func doesPropertiesMapHaveKeys(propertiesMap U.PropertiesMap, keys []string) (bo
 func getPropertiesByNameAndMaxOccurrence(
 	propertiesByNameAndOccurence *map[string]map[string]*model.EventPropertiesWithCount,
 ) *map[string]U.PropertiesMap {
+	defer model.LogOnSlowExecution(time.Now())
 
 	propertiesWithCount := make(map[string]model.EventPropertiesWithCount, 0)
 	for name, propertiesByAuthor := range *propertiesByNameAndOccurence {
@@ -1412,6 +1455,8 @@ func getPropertiesByNameAndMaxOccurrence(
 // and use it for updating the events which doesn't have the values. User for fixing data for YourStory.
 func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from,
 	to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectID).
 		WithField("from", from).
 		WithField("to", to)
@@ -1526,6 +1571,8 @@ func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourSto
 }
 
 func (store *MemSQL) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectID).
 		WithField("start_timestamp", startTimestamp).
 		WithField("end_timestamp", endTimestamp)
@@ -1593,6 +1640,8 @@ func (store *MemSQL) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp,
 }
 
 func (store *MemSQL) DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectID).WithField("batch_size", batchSize)
 	if projectID == 0 || batchSize == 0 {
 		logCtx.Error("Invalid params.")
@@ -1614,6 +1663,8 @@ func (store *MemSQL) DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameI
 }
 
 func (store *MemSQL) DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectID)
 
 	db := C.GetServices().Db
@@ -1633,6 +1684,7 @@ func (store *MemSQL) DeleteEventByIDs(projectID uint64, eventNameID string, ids 
 
 func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID uint64,
 	id string, userProperties *postgres.Jsonb) int {
+	defer model.LogOnSlowExecution(time.Now())
 
 	logCtx := log.WithField("project_id", projectID).WithField("id", id)
 
@@ -1660,6 +1712,8 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID uint64,
 
 // PullEventRowsForBuildSequenceJob - Function to pull events for factors model building sequentially.
 func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
 		" events.properties, users.join_timestamp, events.user_properties FROM events "+
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
@@ -1685,6 +1739,7 @@ func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTim
 
 // PullEventsForArchivalJob - Function to pull events for archival.
 func (store *MemSQL) PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error) {
+	defer model.LogOnSlowExecution(time.Now())
 
 	rawQuery := fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
 		"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, events.user_properties FROM events "+

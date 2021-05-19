@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -52,6 +53,8 @@ func generateUniqueToken(private bool) (token string, err error) {
 
 func createProject(project *model.Project) (*model.Project, int) {
 	logCtx := log.WithFields(log.Fields{"project": project})
+
+	defer model.LogOnSlowExecution(time.Now())
 
 	// Input Validation. (ID is to be auto generated)
 	if project.ID > 0 {
