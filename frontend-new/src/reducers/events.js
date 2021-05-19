@@ -1,5 +1,5 @@
-import { get, post, del } from '../utils/request';
-var host = BUILD_CONFIG.backend_host;
+import { get, post, del, getHostUrl } from '../utils/request';
+var host = getHostUrl();
     host = (host[host.length - 1] === '/') ? host : host + '/';
 
     const isDevelopment = () => {
