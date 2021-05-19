@@ -168,13 +168,18 @@ func GetProjectModelsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
-	modelIntervals, err := PC.GetProjectModelIntervals(reqId, projectId)
-	if err != nil {
-		logCtx.WithError(err).Error("falied to get projectModelIntervals")
+	modelIntervals := make([]PC.ModelInfo, 0)
+	modelMetadata, errCode, msg := store.GetStore().GetProjectModelMetadata(projectId)
+	if errCode != http.StatusFound {
+		logCtx.Error(msg)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-
+	for _, metadata := range modelMetadata {
+		modelIntervals = append(modelIntervals, PC.ModelInfo{ModelId: metadata.ModelId,
+			ModelType:      metadata.ModelType,
+			StartTimestamp: metadata.StartTime,
+			EndTimestamp:   metadata.EndTime})
+	}
 	c.JSON(http.StatusOK, modelIntervals)
 }

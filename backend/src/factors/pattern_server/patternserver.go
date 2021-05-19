@@ -1,7 +1,6 @@
 package patternserver
 
 import (
-	"errors"
 	"factors/filestore"
 	"factors/pattern"
 	client "factors/pattern_client"
@@ -10,8 +9,10 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/http"
-	"sort"
+	"strings"
 	"sync"
+
+	modelstore "factors/model/store"
 
 	"github.com/gin-gonic/gin"
 	E "github.com/pkg/errors"
@@ -222,68 +223,29 @@ func serveProjectModelChunk(projectId, modelId uint64, chunkId string, myNum, no
 	return hashN%noOfPatternServers == myNum%noOfPatternServers
 }
 
-func (ps *PatternServer) GetProjectModels(projectId uint64) (ModelChunkMapping, bool) {
-	projectModels := ps.GetState().getProjectModelChunkData()
-	projectData, exists := projectModels[projectId]
-	return projectData, exists
-}
-
-func (ps *PatternServer) GetProjectModel(projectId, modelId uint64) (ModelData, bool) {
-	projectModels, found := ps.GetProjectModels(projectId)
-	if !found {
-		return ModelData{}, found
-	}
-	modelData, found := projectModels[modelId]
-	return modelData, found
-}
-
 func (ps *PatternServer) GetProjectModelChunks(projectId, modelId uint64) ([]string, bool) {
-	modelData, found := ps.GetProjectModel(projectId, modelId)
-	if !found {
-		return []string{}, found
-	}
+	// call db to get this: janani
+	modelData, _, _ := modelstore.GetStore().GetProjectModelMetadata(projectId)
 	chunkIds := make([]string, 0, 0)
-	for _, cId := range modelData.Chunks {
-		chunkIds = append(chunkIds, cId)
+	for _, data := range modelData {
+		if data.ModelId == modelId {
+			chunkIds = strings.Split(data.Chunks, ",")
+		}
 	}
 	return chunkIds, true
 }
 
-func (ps *PatternServer) GetProjectModelIntervals(projectId uint64) ([]client.ModelInfo, error) {
-
-	modelInfos := make([]client.ModelInfo, 0, 0)
-
-	modelChunkData, exists := ps.GetProjectModels(projectId)
-	if !exists {
-		err := errors.New("MissingModelChunkData")
-		return modelInfos, E.Wrap(err, fmt.Sprintf("ProjectID %d, Missing ModelChunkData", projectId))
-	}
-
-	for mid, modelData := range modelChunkData {
-		mi := client.ModelInfo{
-			ModelId:        mid,
-			ModelType:      modelData.Type,
-			StartTimestamp: modelData.StartTimestamp,
-			EndTimestamp:   modelData.EndTimestamp,
-		}
-		modelInfos = append(modelInfos, mi)
-	}
-
-	// latest interval is first
-	sort.Slice(modelInfos, func(i, j int) bool {
-		return modelInfos[i].StartTimestamp > modelInfos[j].StartTimestamp
-	})
-
-	return modelInfos, nil
-}
-
 func (ps *PatternServer) GetProjectModelLatestInterval(projectId uint64) (client.ModelInfo, error) {
-	modelInfos, err := ps.GetProjectModelIntervals(projectId)
-	if err != nil {
-		return client.ModelInfo{}, E.Wrap(err, fmt.Sprintf("ProjectID %d, Missing ProjectModelIntervals", projectId))
+	// call db to get this: janani
+	modelMetadata, _, msg := modelstore.GetStore().GetProjectModelMetadata(projectId)
+	var err error
+	if msg != "" {
+		return client.ModelInfo{}, E.Wrap(err, fmt.Sprintf("ProjectID %d, Missing ProjectModelIntervals, %s", projectId, msg))
 	}
-
-	return modelInfos[0], nil
+	return client.ModelInfo{ModelId: modelMetadata[0].ModelId,
+		ModelType:      modelMetadata[0].ModelType,
+		StartTimestamp: modelMetadata[0].StartTime,
+		EndTimestamp:   modelMetadata[0].EndTime}, nil
 }
 
 func (ps *PatternServer) GetProjectDataVersion() string {

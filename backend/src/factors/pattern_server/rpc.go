@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	modelstore "factors/model/store"
+
 	E "github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -156,7 +158,7 @@ func (ps *PatternServer) GetAllPatterns(
 }
 
 func isModelWeekly(ps *PatternServer, modelId uint64, projectId uint64) bool {
-	modelInfos, _ := ps.GetProjectModelIntervals(projectId)
+	modelInfos, _, _ := modelstore.GetStore().GetProjectModelMetadata(projectId)
 	for _, model := range modelInfos {
 		if model.ModelId == modelId {
 			if model.ModelType == "w" {
@@ -373,31 +375,6 @@ func (ps *PatternServer) GetUserAndEventsInfo(
 	result.ProjectId = args.ProjectId
 	result.ModelId = modelId
 	result.UserAndEventsInfo = userAndEventsInfo
-	return nil
-}
-
-func (ps *PatternServer) GetProjectModelsIntervals(
-	r *http.Request, args *client.GetProjectModelIntervalsRequest,
-	result *client.GetProjectModelIntervalsResponse) error {
-	if args == nil || args.ProjectId == 0 {
-		err := E.Wrap(errors.New("MissingParams"), "GetProjectModelsIntervals Missing Param")
-		result.Error = err
-		return err
-	}
-
-	if !ps.IsProjectServable(args.ProjectId) {
-		result.Ignored = true
-		return nil
-	}
-
-	modelInfos, err := ps.GetProjectModelIntervals(args.ProjectId)
-	if err != nil {
-		result.Error = err
-		return err
-	}
-
-	result.ProjectId = args.ProjectId
-	result.ModelInfo = modelInfos
 	return nil
 }
 
