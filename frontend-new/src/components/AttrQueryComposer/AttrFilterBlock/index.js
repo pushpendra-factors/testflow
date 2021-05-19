@@ -1,6 +1,5 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import { DateRangePicker } from 'react-date-range';
 import { Input, Button, Result } from 'antd';
@@ -8,7 +7,7 @@ import moment from 'moment';
 import { SVG, Text } from 'factorsComponents';
 import {
   DEFAULT_DATE_RANGE,
-} from '../DateRangeSelector/utils';
+} from '../../QueryComposer/DateRangeSelector/utils';
 
 const defaultOpProps = {
   "categorical": [
@@ -31,10 +30,9 @@ const defaultOpProps = {
 };
 
 import { fetchEventPropertyValues, fetchUserPropertyValues, 
-  fetchChannelObjPropertyValues } from '../../../reducers/coreQuery/services';
-import FAFilterSelect from '../../FaFilterSelect';
+  fetchChannelObjPropertyValues } from 'Reducers/coreQuery/services';
 
-export default function EventFilterWrapper({ 
+export default function CampFilterBlock({ 
   index, 
   blockType = 'event', 
   filterType = 'analytics',
@@ -85,24 +83,16 @@ export default function EventFilterWrapper({
       operator: operatorProps,
   });
 
-  const {userPropNames} = useSelector((state) => state.coreQuery)
-
   useEffect(() => {
-    if(filter && filter.props[1] === 'categorical') {
-      setValuesByProps(filter.props)
-      setNewFilterState(filter);
-    }
-
-  }, [filter])
-
-  useEffect(() => {
+    if(filterType === 'channel') {
       const filterDD = Object.assign({}, filterDropDownOptions);
       const propState = [];
       Object.keys(filterProps).forEach((k, i) => {
-        propState.push({label: k, icon: k === 'event'? 'mouseclick' : k, values: filterProps[k]});
+        propState.push({label: k, icon: k.replace(' ', '_')});
       })
       filterDD.props = propState;
       setFiltDD(filterDD);
+    }
 
   }, [filterProps])
 
@@ -112,16 +102,20 @@ export default function EventFilterWrapper({
   }
 
   const renderFilterContent = () => {
-    return (<FAFilterSelect 
-      propOpts={filterDropDownOptions.props} 
-      operatorOpts={filterDropDownOptions.operator}
-      valueOpts={dropDownValues}
-      applyFilter={applyFilter}
-      setValuesByProps={setValuesByProps}
-      filter={filter}
-    >
-
-    </FAFilterSelect>)
+    let values;
+    if(filter.props[1] === 'categorical'){ 
+      values = filter.values.join(', ');
+    } else if (filter.props[1] === 'datetime') { 
+      const parsedValues = JSON.parse(filter.values);
+      values = parseDateRangeFilter(parsedValues.fr, parsedValues.to)
+    } else {
+      values = filter.values;
+    }
+    return (
+      <Button type={'link'} className={'ml-2 fa-button--truncate'}>
+        {filter.props[0] + ' ' + filter.operator + ' ' + values} 
+      </Button> 
+    );
   };
 
   const onSelectSearch = (userInput) => {
@@ -298,7 +292,7 @@ export default function EventFilterWrapper({
                   if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                     valuesOptions.push(
                       <div title={val[0]} className={`fa-select-group-select--options`}
-                            onClick={() => optionClick([...val, propsConstants[grpIndex]])} >
+                            onClick={() => optionClick([val[0], val[1], propsConstants[grpIndex]])} >
                           {searchTerm.length > 0 &&
                            <div>
                             <SVG  color={'purple'} name={group.icon} extraClass={'self-center'}></SVG>
@@ -468,9 +462,12 @@ export default function EventFilterWrapper({
     );
   };
 
-  const applyFilter = (filterState) => {
-    if(filterState) {
-      insertFilter(filterState, index);
+  const applyFilter = () => {
+    if (newFilterState.props.length &&
+      newFilterState.operator.length &&
+      newFilterState.values.length
+    ) {
+      insertFilter(newFilterState);
       closeFilter();
     }
   }
@@ -479,52 +476,17 @@ export default function EventFilterWrapper({
     closeFilter();
   };
 
-  const setValuesByProps = (props) => {
-    if(props[2] === 'categorical') {
-      if(props[3] === 'user') {
-        if(!dropDownValues[props[1]]) {
-          fetchUserPropertyValues(activeProject.id,props[1]).then(res => {
-            const ddValues = Object.assign({}, dropDownValues);
-            ddValues[props[1]] = res.data;
-            setDropDownValues(ddValues);
-          });
-        }
-      }
-      else if(props[3] === 'event') {
-        if(!dropDownValues[props[0]]) {
-          fetchEventPropertyValues(activeProject.id, event.label, props[1]).then(res => {
-            const ddValues = Object.assign({}, dropDownValues);
-            ddValues[props[1]] = res.data;
-            setDropDownValues(ddValues);
-          });
-        }
-      }
-    } 
-  }
-
   const filterSelComp = () => {
-    // return <>
-    //   {renderFilterSelect()}
-    //   <div className={styles.filter_block__hd_overlay} onClick={onClickOutside}></div>
-    // </>
-
     return <>
-      <FAFilterSelect 
-        propOpts={filterDropDownOptions.props} 
-        operatorOpts={filterDropDownOptions.operator}
-        valueOpts={dropDownValues}
-        applyFilter={applyFilter}
-        setValuesByProps={setValuesByProps}
-      >
-
-      </FAFilterSelect>
+      {renderFilterSelect()}
+      <div className={styles.filter_block__hd_overlay} onClick={onClickOutside}></div>
     </>
   }
 
   return (
     <div className={`flex items-center relative w-full`}>
       {
-        delFilter && 
+        filter && 
           <Button 
           type="text" 
           onClick={delFilter}
@@ -536,7 +498,7 @@ export default function EventFilterWrapper({
           filter && blockType === 'event' 
           && <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>{index >=1 ? 'and' : 'where'}</Text>
       }
-      <div className={`relative flex flex-grow ${filter ? 'ml-2': ''}`}>  
+      <div className={'relative flex flex-grow'}>  
         {filter
           ? renderFilterContent()
           : filterSelComp()

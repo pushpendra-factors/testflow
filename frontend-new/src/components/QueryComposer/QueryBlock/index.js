@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { SVG, Text } from '../../factorsComponents';
 import styles from './index.module.scss';
-import { Button } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
@@ -261,13 +261,15 @@ function QueryBlock({
           className={`${styles.query_block__event} flex justify-start items-center`}
         >
           {!isDDVisible && (
-            <Button
-              type='text'
-              onClick={triggerDropDown}
-              icon={<SVG name={'plus'} color={'grey'} />}
-            >
-              {ifQueries ? 'Add another event' : 'Add First Event'}
-            </Button>
+            
+              <Button
+                type='text'
+                onClick={triggerDropDown}
+                icon={<SVG name={'plus'} color={'grey'} />}
+              >
+                {ifQueries ? 'Add another event' : 'Add First Event'}
+              </Button>
+            
           )}
           {selectEvents()}
         </div>
@@ -298,15 +300,17 @@ function QueryBlock({
           </Text>{' '}
         </div>
         {!isDDVisible && (
-          <Button
-            icon={<SVG name='mouseevent' size={16} color={'purple'} />}
-            className={`fa-button--truncate`}
-            type='link'
-            onClick={triggerDropDown}
-          >
-            {' '}
-            {eventNames[event.label]? eventNames[event.label] : event.label}{' '}
-          </Button>
+          <Tooltip title={eventNames[event.label]? eventNames[event.label] : event.label}>
+            <Button
+              icon={<SVG name='mouseevent' size={16} color={'purple'} />}
+              className={`fa-button--truncate`}
+              type='link'
+              onClick={triggerDropDown}
+            >
+              {' '}
+              {eventNames[event.label]? eventNames[event.label] : event.label}{' '}
+            </Button>
+          </Tooltip>
         )}
         {additionalActions()}
         {selectEvents()}

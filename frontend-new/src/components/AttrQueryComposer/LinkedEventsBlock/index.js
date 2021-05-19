@@ -6,7 +6,7 @@ import { bindActionCreators } from 'redux';
 import GroupSelect from '../../QueryComposer/GroupSelect';
 import FilterBlock from '../../QueryComposer/FilterBlock';
 
-import { Button } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 
 const LinkedEventsBlock = ({
@@ -141,12 +141,13 @@ const LinkedEventsBlock = ({
     const renderLinkEventBlockContent = () => {
         return (
             <div className={`${styles.block__content} fa--query_block_section--basic mt-2`}>
-                {!selectVisible && <Button 
+                {!selectVisible && <Tooltip title={eventNames[linkEvent?.label]? eventNames[linkEvent?.label] : linkEvent?.label}> <Button 
                     type="link" 
+                    className={`fa-button--truncate`}
                     onClick={toggleEventSelect}>
                         <SVG name="mouseevent" extraClass={'mr-1'}></SVG>
                         {eventNames[linkEvent?.label]? eventNames[linkEvent?.label] : linkEvent?.label}
-                </Button> }
+                </Button> </Tooltip> }
 
                 {selectEvents()}
 

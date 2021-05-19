@@ -187,13 +187,14 @@ const FAFilterSelect = ({
     const renderPropSelect = () => {
         return (<div className={styles.filter__propContainer}>
 
-            <Button
-                icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
-                className={`fa-button--truncate fa-button--truncate-xs`}
-                type="link"
-                onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderGroupDisplayName(propState)}
-            </Button>
-
+            <Tooltip title={renderGroupDisplayName(propState)}>
+                <Button
+                    icon={propState && propState.icon ? <SVG name={propState.icon} size={16} color={'purple'} /> : null}
+                    className={`fa-button--truncate fa-button--truncate-xs`}
+                    type="link"
+                    onClick={() => setPropSelectOpen(!propSelectOpen)}> {renderGroupDisplayName(propState)}
+                </Button>
+            </Tooltip>
             {propSelectOpen &&
                 <GroupSelect
                     groupedProperties={propOpts}

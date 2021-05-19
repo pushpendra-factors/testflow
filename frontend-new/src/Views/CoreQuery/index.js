@@ -697,7 +697,7 @@ function CoreQuery({
           visible={drawerVisible}
           onClose={closeDrawer}
           getContainer={false}
-          width={'600px'}
+          width={'650px'}
           className={'fa-drawer'}
         >
           <ErrorBoundary
