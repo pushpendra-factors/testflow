@@ -352,6 +352,7 @@ func (pg *Postgres) getAllTheSessions(projectId uint64, sessionEventNameId strin
 		attributionEventKey, model.PropertyValueNone, attributionEventKey, model.PropertyValueNone, attributionEventKey,
 		U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID, model.PropertyValueNone, U.EP_GCLID,
 		projectId, sessionEventNameId, effectiveFrom, effectiveTo)
+	fmt.Println("DEBUG QUERY ->>>>>>1>>>>>>>>>>>>>>>>>>\n" + U.DBDebugPreparedStatement(queryUserSessionTimeRange, qParams))
 	rows, err := pg.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")

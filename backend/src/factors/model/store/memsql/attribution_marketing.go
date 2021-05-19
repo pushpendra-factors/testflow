@@ -22,12 +22,11 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 	var adwordsGCLIDData map[string]model.MarketingData
 	var reportType int
 	var adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData map[string]model.MarketingData
-	var adwordsCampaignAllRows, adwordsAdgroupAllRows, adwordsKeywordAllRows []model.MarketingData
 	// Adwords.
 	if adwordsCustomerID != "" && model.DoesAdwordsReportExist(q.AttributionKey) {
 
 		reportType = model.AdwordsDocumentTypeAlias[model.CampaignPerformanceReport] // 5
-		adwordsCampaignIDData, adwordsCampaignAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
+		adwordsCampaignIDData, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
 			effectiveTo, adwordsCustomerID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
 		if err != nil {
 			return data, err
@@ -37,12 +36,8 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 			adwordsCampaignIDData[id] = v
 		}
 
-		for i, _ := range adwordsCampaignAllRows {
-			adwordsCampaignAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(adwordsCampaignAllRows[i].CampaignName), adwordsCampaignAllRows[i].CampaignName, adwordsCampaignAllRows[i].Name).(string)
-		}
-
 		reportType = model.AdwordsDocumentTypeAlias[model.AdGroupPerformanceReport] // 10
-		adwordsAdgroupIDData, adwordsAdgroupAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
+		adwordsAdgroupIDData, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
 			effectiveTo, adwordsCustomerID, model.AdwordsAdgroupID, model.AdwordsAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
 		if err != nil {
 			return data, err
@@ -55,16 +50,9 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 				adwordsAdgroupIDData[id] = value
 			}
 		}
-		for i, _ := range adwordsAdgroupAllRows {
-			adwordsAdgroupAllRows[i].AdgroupName = U.IfThenElse(U.IsNonEmptyKey(adwordsAdgroupAllRows[i].AdgroupName), adwordsAdgroupAllRows[i].AdgroupName, adwordsAdgroupAllRows[i].Name).(string)
-			campID := adwordsAdgroupAllRows[i].CampaignID
-			if U.IsNonEmptyKey(campID) {
-				adwordsAdgroupAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(adwordsAdgroupAllRows[i].CampaignName), adwordsAdgroupAllRows[i].CampaignName, adwordsCampaignIDData[campID].Name).(string)
-			}
-		}
 
 		reportType = model.AdwordsDocumentTypeAlias[model.KeywordPerformanceReport] // 8
-		adwordsKeywordIDData, adwordsKeywordAllRows, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
+		adwordsKeywordIDData, err = store.PullAdwordsMarketingData(projectID, effectiveFrom,
 			effectiveTo, adwordsCustomerID, model.AdwordsKeywordID, model.AdwordsKeywordName, model.AdwordsKeywordMatchType, reportType, model.ReportKeyword, q.Timezone)
 		if err != nil {
 			return data, err
@@ -77,25 +65,11 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 				adwordsKeywordIDData[id] = value
 			}
 		}
-
-		for i, _ := range adwordsKeywordAllRows {
-			adwordsKeywordAllRows[i].KeywordName = U.IfThenElse(U.IsNonEmptyKey(adwordsKeywordAllRows[i].KeywordName), adwordsKeywordAllRows[i].KeywordName, adwordsKeywordAllRows[i].Name).(string)
-			campID := adwordsKeywordAllRows[i].CampaignID
-			if U.IsNonEmptyKey(campID) {
-				adwordsKeywordAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(adwordsKeywordAllRows[i].CampaignName), adwordsKeywordAllRows[i].CampaignName, adwordsCampaignIDData[campID].Name).(string)
-			}
-		}
 		for id, value := range adwordsKeywordIDData {
 			adgroupID := value.AdgroupID
 			if U.IsNonEmptyKey(adgroupID) {
 				value.AdgroupName = U.IfThenElse(U.IsNonEmptyKey(value.AdgroupName), value.AdgroupName, adwordsAdgroupIDData[adgroupID].Name).(string)
 				adwordsKeywordIDData[id] = value
-			}
-		}
-		for i, _ := range adwordsKeywordAllRows {
-			adgroupID := adwordsKeywordAllRows[i].AdgroupID
-			if U.IsNonEmptyKey(adgroupID) {
-				adwordsKeywordAllRows[i].AdgroupName = U.IfThenElse(U.IsNonEmptyKey(adwordsKeywordAllRows[i].AdgroupName), adwordsKeywordAllRows[i].AdgroupName, adwordsAdgroupIDData[adgroupID].Name).(string)
 			}
 		}
 
@@ -108,12 +82,11 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 
 	// Facebook.
 	var facebookCampaignIDData, facebookAdgroupIDData map[string]model.MarketingData
-	var facebookCampaignAllRows, facebookAdgroupAllRows []model.MarketingData
 	if projectSetting.IntFacebookAdAccount != "" && model.DoesFBReportExist(q.AttributionKey) {
 		facebookCustomerID := projectSetting.IntFacebookAdAccount
 
 		reportType = facebookDocumentTypeAlias["campaign_insights"] // 5
-		facebookCampaignIDData, facebookCampaignAllRows, err = store.PullFacebookMarketingData(projectID, effectiveFrom,
+		facebookCampaignIDData, err = store.PullFacebookMarketingData(projectID, effectiveFrom,
 			effectiveTo, facebookCustomerID, model.FacebookCampaignID, model.FacebookCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
 		if err != nil {
 			return data, err
@@ -122,12 +95,9 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 			v.CampaignName = U.IfThenElse(U.IsNonEmptyKey(v.CampaignName), v.CampaignName, v.Name).(string)
 			facebookCampaignIDData[id] = v
 		}
-		for i, _ := range facebookCampaignAllRows {
-			facebookCampaignAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(facebookCampaignAllRows[i].CampaignName), facebookCampaignAllRows[i].CampaignName, facebookCampaignAllRows[i].Name).(string)
-		}
 
 		reportType = facebookDocumentTypeAlias["ad_set_insights"] // 5
-		facebookAdgroupIDData, facebookAdgroupAllRows, err = store.PullFacebookMarketingData(projectID, effectiveFrom,
+		facebookAdgroupIDData, err = store.PullFacebookMarketingData(projectID, effectiveFrom,
 			effectiveTo, facebookCustomerID, model.FacebookAdgroupID, model.FacebookAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
 		if err != nil {
 			return data, err
@@ -140,23 +110,15 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 				facebookAdgroupIDData[id] = value
 			}
 		}
-		for i, _ := range facebookAdgroupAllRows {
-			facebookAdgroupAllRows[i].AdgroupName = U.IfThenElse(U.IsNonEmptyKey(facebookAdgroupAllRows[i].AdgroupName), facebookAdgroupAllRows[i].AdgroupName, facebookAdgroupAllRows[i].Name).(string)
-			campID := facebookAdgroupAllRows[i].CampaignID
-			if U.IsNonEmptyKey(campID) {
-				facebookAdgroupAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(facebookAdgroupAllRows[i].CampaignName), facebookAdgroupAllRows[i].CampaignName, adwordsCampaignIDData[campID].Name).(string)
-			}
-		}
 	}
 
 	// Linkedin.
 	var linkedinCampaignIDData, linkedinAdgroupIDData map[string]model.MarketingData
-	var linkedinCampaignAllRows, linkedinAdgroupAllRows []model.MarketingData
 	if projectSetting.IntLinkedinAdAccount != "" && model.DoesLinkedinReportExist(q.AttributionKey) {
 		linkedinCustomerID := projectSetting.IntLinkedinAdAccount
 
 		reportType = linkedinDocumentTypeAlias["campaign_group_insights"] // 5
-		linkedinCampaignIDData, linkedinCampaignAllRows, err = store.PullLinkedinMarketingData(projectID, effectiveFrom,
+		linkedinCampaignIDData, err = store.PullLinkedinMarketingData(projectID, effectiveFrom,
 			effectiveTo, linkedinCustomerID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.PropertyValueNone, reportType, model.ReportCampaign, q.Timezone)
 		if err != nil {
 			return data, err
@@ -165,12 +127,9 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 			v.CampaignName = U.IfThenElse(U.IsNonEmptyKey(v.CampaignName), v.CampaignName, v.Name).(string)
 			linkedinCampaignIDData[id] = v
 		}
-		for i, _ := range linkedinCampaignAllRows {
-			linkedinCampaignAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(linkedinCampaignAllRows[i].CampaignName), linkedinCampaignAllRows[i].CampaignName, linkedinCampaignAllRows[i].Name).(string)
-		}
 
 		reportType = linkedinDocumentTypeAlias["campaign_insights"] // 6
-		linkedinAdgroupIDData, linkedinAdgroupAllRows, err = store.PullLinkedinMarketingData(projectID, effectiveFrom,
+		linkedinAdgroupIDData, err = store.PullLinkedinMarketingData(projectID, effectiveFrom,
 			effectiveTo, linkedinCustomerID, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.PropertyValueNone, reportType, model.ReportAdGroup, q.Timezone)
 		if err != nil {
 			return data, err
@@ -183,43 +142,36 @@ func (store *MemSQL) FetchMarketingReports(projectID uint64, q model.Attribution
 				linkedinAdgroupIDData[id] = value
 			}
 		}
-		for i, _ := range linkedinAdgroupAllRows {
-			linkedinAdgroupAllRows[i].AdgroupName = U.IfThenElse(U.IsNonEmptyKey(linkedinAdgroupAllRows[i].AdgroupName), linkedinAdgroupAllRows[i].AdgroupName, linkedinAdgroupAllRows[i].Name).(string)
-			campID := linkedinAdgroupAllRows[i].CampaignID
-			if U.IsNonEmptyKey(campID) {
-				linkedinAdgroupAllRows[i].CampaignName = U.IfThenElse(U.IsNonEmptyKey(linkedinAdgroupAllRows[i].CampaignName), linkedinAdgroupAllRows[i].CampaignName, adwordsCampaignIDData[campID].Name).(string)
-			}
-		}
 	}
 
 	data.AdwordsGCLIDData = adwordsGCLIDData
 	data.AdwordsCampaignIDData = adwordsCampaignIDData
-	data.AdwordsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, adwordsCampaignAllRows)
+	data.AdwordsCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, adwordsCampaignIDData)
 
 	data.AdwordsAdgroupIDData = adwordsAdgroupIDData
-	data.AdwordsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, adwordsAdgroupAllRows)
+	data.AdwordsAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, adwordsAdgroupIDData)
 
 	data.AdwordsKeywordIDData = adwordsKeywordIDData
-	data.AdwordsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, adwordsKeywordAllRows)
+	data.AdwordsKeywordKeyData = model.GetKeyMapToData(model.AttributionKeyKeyword, adwordsKeywordIDData)
 
 	data.FacebookCampaignIDData = facebookCampaignIDData
-	data.FacebookCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, facebookCampaignAllRows)
+	data.FacebookCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, facebookCampaignIDData)
 
 	data.FacebookAdgroupIDData = facebookAdgroupIDData
-	data.FacebookAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, facebookAdgroupAllRows)
+	data.FacebookAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, facebookAdgroupIDData)
 
 	data.LinkedinCampaignIDData = linkedinCampaignIDData
-	data.LinkedinCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, linkedinCampaignAllRows)
+	data.LinkedinCampaignKeyData = model.GetKeyMapToData(model.AttributionKeyCampaign, linkedinCampaignIDData)
 
 	data.LinkedinAdgroupIDData = linkedinAdgroupIDData
-	data.LinkedinAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, linkedinAdgroupAllRows)
+	data.LinkedinAdgroupKeyData = model.GetKeyMapToData(model.AttributionKeyAdgroup, linkedinAdgroupIDData)
 
 	return data, err
 }
 
 // PullAdwordsMarketingData Pulls Adds channel data for Adwords.
 func (store *MemSQL) PullAdwordsMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
-	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	customerAccountIDs := strings.Split(customerAccountID, ",")
@@ -230,22 +182,21 @@ func (store *MemSQL) PullAdwordsMarketingData(projectID uint64, from, to int64, 
 		"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
-	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
-	rows, err := store.ExecQueryWithContext(performanceQuery, params)
+	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
+		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 
-	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx)
-	return marketingDataIDMap, allRows, nil
+	marketingDataIDMap := model.ProcessRow(rows, reportName, logCtx)
+	return marketingDataIDMap, nil
 }
 
 // PullFacebookMarketingData Pulls Adds channel data for Facebook.
 func (store *MemSQL) PullFacebookMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
-	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	customerAccountIDs := strings.Split(customerAccountID, ",")
@@ -256,22 +207,21 @@ func (store *MemSQL) PullFacebookMarketingData(projectID uint64, from, to int64,
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
-	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
-	rows, err := store.ExecQueryWithContext(performanceQuery, params)
+	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
+		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 
-	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx)
-	return marketingDataIDMap, allRows, nil
+	marketingDataIDMap := model.ProcessRow(rows, reportName, logCtx)
+	return marketingDataIDMap, nil
 }
 
 // PullLinkedinMarketingData Pulls Adds channel data for Linkedin.
 func (store *MemSQL) PullLinkedinMarketingData(projectID uint64, from, to int64, customerAccountID string, keyID string,
-	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, []model.MarketingData, error) {
+	keyName string, extraValue1 string, reportType int, reportName string, timeZone string) (map[string]model.MarketingData, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
 	customerAccountIDs := strings.Split(customerAccountID, ",")
@@ -282,15 +232,14 @@ func (store *MemSQL) PullLinkedinMarketingData(projectID uint64, from, to int64,
 		"where project_id = ? AND customer_ad_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by campaignID, adgroupID, keywordID, adID, key_id, key_name, extra_value1"
 
-	params := []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
-		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))}
-	rows, err := store.ExecQueryWithContext(performanceQuery, params)
+	rows, err := store.ExecQueryWithContext(performanceQuery, []interface{}{keyID, keyName, extraValue1, projectID, customerAccountIDs, reportType,
+		U.GetDateAsStringZ(from, U.TimeZoneString(timeZone)), U.GetDateAsStringZ(to, U.TimeZoneString(timeZone))})
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
-		return nil, nil, err
+		return nil, err
 	}
 	defer rows.Close()
 
-	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx)
-	return marketingDataIDMap, allRows, nil
+	marketingDataIDMap := model.ProcessRow(rows, reportName, logCtx)
+	return marketingDataIDMap, nil
 }

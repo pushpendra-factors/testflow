@@ -814,6 +814,7 @@ func AddLinkedinPerformanceReportInfo(attributionData *map[string]*AttributionDa
 
 func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string) {
 
+	logCtx := log.WithFields(log.Fields{"MISMATCH": "addMetricsFromReport"})
 	for key, value := range reportKeyData {
 
 		if value.Impressions == 0 && value.Clicks == 0 && value.Spend == 0 {
@@ -822,6 +823,27 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 		}
 		if _, found := (*attributionData)[key]; found {
 
+			// Todo (Anil) Debug stmts. Remove it
+			keyBuilder := GetKeyByAttributionData((*attributionData)[key])
+			if key != keyBuilder {
+				logCtx.WithFields(log.Fields{
+					"keyBuilder":       keyBuilder,
+					"Key":              value.Key,
+					"ID":               value.ID,
+					"Name":             value.Name,
+					"CampaignID":       value.CampaignID,
+					"CampaignName":     value.CampaignName,
+					"AdgroupID":        value.AdgroupID,
+					"AdgroupName":      value.AdgroupName,
+					"KeywordMatchType": value.KeywordMatchType,
+					"KeywordID":        value.KeywordID,
+					"KeywordName":      value.KeywordName,
+					"AdName":           value.AdName,
+					"Impressions":      value.Impressions,
+					"Clicks":           value.Clicks,
+					"Spend":            value.Spend,
+				}).Info("Campaign Data values")
+			}
 			(*attributionData)[key].Impressions = value.Impressions
 			(*attributionData)[key].Clicks = value.Clicks
 			(*attributionData)[key].Spend = value.Spend
@@ -843,7 +865,59 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 			case AttributionKeySource:
 				(*attributionData)[key].Name = reportKeyData[key].Source
 			}
+
+			// Todo (Anil) Debug stmts. Remove it
+			keyBuilder := GetKeyByAttributionData((*attributionData)[key])
+			if key != keyBuilder {
+				logCtx.WithFields(log.Fields{
+					"keyBuilder":       keyBuilder,
+					"Key":              value.Key,
+					"ID":               value.ID,
+					"Name":             value.Name,
+					"CampaignID":       value.CampaignID,
+					"CampaignName":     value.CampaignName,
+					"AdgroupID":        value.AdgroupID,
+					"AdgroupName":      value.AdgroupName,
+					"KeywordMatchType": value.KeywordMatchType,
+					"KeywordID":        value.KeywordID,
+					"KeywordName":      value.KeywordName,
+					"AdName":           value.AdName,
+					"Impressions":      value.Impressions,
+					"Clicks":           value.Clicks,
+					"Spend":            value.Spend,
+				}).Info("Campaign Data values")
+			}
+			(*attributionData)[key].ConversionEventCount = 0
+			(*attributionData)[key].ConversionEventCompareCount = 0
+			(*attributionData)[key].Impressions = value.Impressions
+			(*attributionData)[key].Clicks = value.Clicks
+			(*attributionData)[key].Spend = value.Spend
 		}
+
+		logCtx.WithFields(log.Fields{
+			"Key":              value.Key,
+			"ID":               value.ID,
+			"Name":             value.Name,
+			"CampaignID":       value.CampaignID,
+			"CampaignName":     value.CampaignName,
+			"AdgroupID":        value.AdgroupID,
+			"AdgroupName":      value.AdgroupName,
+			"KeywordMatchType": value.KeywordMatchType,
+			"KeywordID":        value.KeywordID,
+			"KeywordName":      value.KeywordName,
+			"AdName":           value.AdName,
+			"Impressions":      value.Impressions,
+			"Clicks":           value.Clicks,
+			"Spend":            value.Spend,
+		}).Info("Original Value from ReportKeyData")
+
+		logCtx.WithFields(log.Fields{
+			"AddedKeys":   (*attributionData)[key].AddedKeys,
+			"Name":        (*attributionData)[key].Name,
+			"Impressions": (*attributionData)[key].Impressions,
+			"Clicks":      (*attributionData)[key].Clicks,
+			"Spend":       (*attributionData)[key].Spend,
+		}).Info("AttributionData Value from AttributionData")
 	}
 }
 
@@ -895,24 +969,58 @@ func GetMarketingDataKey(attributionKey string, data MarketingData) string {
 	return key
 }
 
-func GetKeyMapToData(attributionKey string, allRows []MarketingData) map[string]MarketingData {
+func GetKeyMapToData(attributionKey string, dataIDMap map[string]MarketingData) map[string]MarketingData {
 
+	logCtx := log.WithFields(log.Fields{"MISMATCH": "GetKeyMapToData"})
 	keyToData := make(map[string]MarketingData)
-	for _, v := range allRows {
+	for _, v := range dataIDMap {
 		key := GetMarketingDataKey(attributionKey, v)
 		val := MarketingData{}
 		U.DeepCopy(&v, &val)
 		val.Key = key
+		if _, exists := keyToData[key]; exists {
+			logCtx.WithFields(log.Fields{
+				"Key":              key,
+				"ID":               val.ID,
+				"Name":             val.Name,
+				"CampaignID":       val.CampaignID,
+				"CampaignName":     val.CampaignName,
+				"AdgroupID":        val.AdgroupID,
+				"AdgroupName":      val.AdgroupName,
+				"KeywordMatchType": val.KeywordMatchType,
+				"KeywordID":        val.KeywordID,
+				"KeywordName":      val.KeywordName,
+				"AdName":           val.AdName,
+				"Impressions":      val.Impressions,
+				"Clicks":           val.Clicks,
+				"Spend":            val.Spend,
+			}).Info("xOriginal Value")
+			logCtx.WithFields(log.Fields{
+				"Key":              key,
+				"ID":               keyToData[key].ID,
+				"Name":             keyToData[key].Name,
+				"CampaignID":       keyToData[key].CampaignID,
+				"CampaignName":     keyToData[key].CampaignName,
+				"AdgroupID":        keyToData[key].AdgroupID,
+				"AdgroupName":      keyToData[key].AdgroupName,
+				"KeywordMatchType": keyToData[key].KeywordMatchType,
+				"KeywordID":        keyToData[key].KeywordID,
+				"KeywordName":      keyToData[key].KeywordName,
+				"AdName":           keyToData[key].AdName,
+				"Impressions":      keyToData[key].Impressions,
+				"Clicks":           keyToData[key].Clicks,
+				"Spend":            keyToData[key].Spend,
+			}).Info("xExisting Value")
+		}
 		keyToData[key] = val
 	}
 	return keyToData
 }
 
-func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry) (map[string]MarketingData, []MarketingData) {
+func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry) map[string]MarketingData {
 
 	// ID is CampaignID, AdgroupID, KeywordID etc
 	marketingDataIDMap := make(map[string]MarketingData)
-	var allRows []MarketingData
 
 	for rows.Next() {
 		var campaignIDNull sql.NullString
@@ -939,9 +1047,8 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry) (map[strin
 			continue
 		}
 		marketingDataIDMap[ID] = data
-		allRows = append(allRows, data)
 	}
-	return marketingDataIDMap, allRows
+	return marketingDataIDMap
 }
 
 func getMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql.NullString, keywordIDNull sql.NullString,
