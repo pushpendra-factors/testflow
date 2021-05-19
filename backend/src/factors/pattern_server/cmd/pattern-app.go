@@ -5,7 +5,6 @@ import (
 	C "factors/config"
 	"factors/filestore"
 	PC "factors/pattern_client"
-	PMM "factors/pattern_model_meta"
 	patternserver "factors/pattern_server"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
@@ -24,6 +23,9 @@ import (
 
 	rpcjson "github.com/gorilla/rpc/json"
 
+	"factors/model/model"
+	modelstore "factors/model/store"
+
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -36,16 +38,16 @@ const (
 )
 
 // Add Test
-func makeProjectModelChunkLookup(projectDatas []PMM.ProjectData) map[uint64]patternserver.ModelChunkMapping {
+func makeProjectModelChunkLookup(projectDatas []model.ProjectModelMetadata) map[uint64]patternserver.ModelChunkMapping {
 	pD := make(map[uint64]patternserver.ModelChunkMapping)
 	for _, p := range projectDatas {
-		mCM, exists := pD[p.ID]
+		mCM, exists := pD[p.ProjectId]
 		if !exists {
 			mCM = patternserver.ModelChunkMapping{}
 		}
-		mD := patternserver.ModelData{Type: p.ModelType, Chunks: p.Chunks, StartTimestamp: p.StartTimestamp, EndTimestamp: p.EndTimestamp}
-		mCM[p.ModelID] = mD
-		pD[p.ID] = mCM
+		mD := patternserver.ModelData{Type: p.ModelType, Chunks: strings.Split(p.Chunks, ","), StartTimestamp: p.StartTime, EndTimestamp: p.EndTime}
+		mCM[p.ModelId] = mD
+		pD[p.ProjectId] = mCM
 	}
 	return pD
 }
@@ -158,6 +160,19 @@ func main() {
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+
 	flag.Parse()
 
 	config, err := NewConfig(*env, *ip, *rpc_port, *http_port, *etcd, *diskBaseDir, *bucketName)
@@ -165,10 +180,33 @@ func main() {
 		panic(err)
 	}
 
+	dbConfig := &C.Configuration{
+		Env: *env,
+		DBInfo: C.DBConf{
+			Host:     *dbHost,
+			Port:     *dbPort,
+			User:     *dbUser,
+			Name:     *dbName,
+			Password: *dbPass,
+		},
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+		},
+		PrimaryDatastore: *primaryDatastore,
+	}
 	C.InitConf(&C.Configuration{Env: *env})
 	C.InitSentryLogging(*sentryDSN, "pattern_server")
 	defer C.SafeFlushAllCollectors()
-
+	err = C.InitDB(*dbConfig)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to initialize DB")
+	}
+	db := C.GetServices().Db
+	defer db.Close()
 	// TODO(Ankit):
 	// This needs to be handled with graceful shutdown
 	// defer ErrorCollector.Flush()
@@ -436,28 +474,14 @@ func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger files
 }
 
 func getProjectsDataFromVersion(version string, cloudManger filestore.FileManager) (map[uint64]patternserver.ModelChunkMapping, error) {
-	// always read from cloud
-	// do not copy on disk ?
-	projectDataFilePath, fName := cloudManger.GetProjectsDataFilePathAndName(version)
 
-	log.WithFields(log.Fields{
-		"Version": version,
-		"path":    projectDataFilePath,
-	}).Info("ProjectsDataFile")
+	modelMetadata, _, msg := modelstore.GetStore().GetAllProjectModelMetadata()
 
-	projectDataFile, err := cloudManger.Get(projectDataFilePath, fName)
-	if err != nil {
-		log.WithError(err).Errorln("Failed to open projects data file")
-		return nil, err
-	}
-	defer projectDataFile.Close()
-
-	projectMetadata, err := PMM.ParseProjectsDataFile(projectDataFile)
-	if err != nil {
-		return nil, err
+	if msg != "" {
+		return nil, errors.New(msg)
 	}
 
-	return makeProjectModelChunkLookup(projectMetadata), nil
+	return makeProjectModelChunkLookup(modelMetadata), nil
 }
 
 func keepEtcdLeaseAlive(ps *patternserver.PatternServer) {

@@ -22,6 +22,7 @@ import {
   CHART_TYPE_STACKED_AREA,
   CHART_TYPE_STACKED_BAR,
   apiChartAnnotations,
+  INITIAL_SESSION_ANALYTICS_SEQ,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 
@@ -95,7 +96,12 @@ const getEventsWithProperties = (queries) => {
   return ewps;
 };
 
-export const getFunnelQuery = (groupBy, queries, dateRange) => {
+export const getFunnelQuery = (
+  groupBy,
+  queries,
+  session_analytics_seq,
+  dateRange
+) => {
   const query = {};
   query.cl = QUERY_TYPE_FUNNEL;
   query.ty = TYPE_UNIQUE_USERS;
@@ -145,6 +151,10 @@ export const getFunnelQuery = (groupBy, queries, dateRange) => {
     }
     return appGbp;
   });
+  if (session_analytics_seq.start && session_analytics_seq.end) {
+    query.sse = session_analytics_seq.start;
+    query.see = session_analytics_seq.end;
+  }
   query.ec = 'any_given_event';
   query.tz = 'Asia/Kolkata';
   return query;
@@ -464,6 +474,13 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     };
   });
   const queryType = requestQuery.cl;
+  const session_analytics_seq = INITIAL_SESSION_ANALYTICS_SEQ;
+  if (requestQuery.cl && requestQuery.cl === QUERY_TYPE_FUNNEL) {
+    if (requestQuery.sse && requestQuery.see) {
+      session_analytics_seq.start = requestQuery.sse;
+      session_analytics_seq.end = requestQuery.see;
+    }
+  }
   const breakdown = requestQuery.gbp.map((opt) => {
     return {
       property: opt.pr,
@@ -478,6 +495,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
   const result = {
     events,
     queryType,
+    session_analytics_seq,
     breakdown: {
       event,
       global,

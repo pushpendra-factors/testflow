@@ -16,17 +16,18 @@ export const getTableColumns = (
 ) => {
   const breakdownColumns = breakdown.map((e) => {
     let displayTitle = e;
-    if(userPropNames[e]) {
-      displayTitle = userPropNames[e]? userPropNames[e] : e;
+    if (userPropNames[e]) {
+      displayTitle = userPropNames[e] ? userPropNames[e] : e;
     }
-    if(eventPropNames[e]) {
-      displayTitle = eventPropNames[e]? eventPropNames[e] : e;;
+    if (eventPropNames[e]) {
+      displayTitle = eventPropNames[e] ? eventPropNames[e] : e;
     }
 
     return {
       title: displayTitle,
       dataIndex: e,
-      width: "50%",
+      width: '50%',
+      fixed: 'left',
     };
   });
 
