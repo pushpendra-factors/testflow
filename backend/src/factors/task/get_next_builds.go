@@ -2,8 +2,10 @@ package task
 
 import (
 	"factors/filestore"
-	PMM "factors/pattern_model_meta"
+	"factors/model/model"
+	"factors/model/store"
 	serviceEtcd "factors/services/etcd"
+	"net/http"
 	"time"
 
 	"fmt"
@@ -38,23 +40,23 @@ type Build struct {
 var gnbLog = taskLog.WithField("prefix", "Task#GetNextBuilds")
 
 // Returns last build timestamp lookup map for each project by type.
-func makeLastBuildTimestampMap(projectData []PMM.ProjectData,
+func makeLastBuildTimestampMap(projectData []model.ProjectModelMetadata,
 	buildStartTimestamp int64) *map[uint64]map[string]int64 {
 
 	minEndTimestamp := buildStartTimestamp
 	projectLatestModel := make(map[uint64]map[string]int64, 0)
 
 	for _, p := range projectData {
-		if p.EndTimestamp > minEndTimestamp {
-			if _, exist := projectLatestModel[p.ID]; !exist {
-				projectLatestModel[p.ID] = make(map[string]int64, 0)
+		if p.EndTime > minEndTimestamp {
+			if _, exist := projectLatestModel[p.ProjectId]; !exist {
+				projectLatestModel[p.ProjectId] = make(map[string]int64, 0)
 			}
-			if _, exist := projectLatestModel[p.ID][p.ModelType]; !exist {
-				projectLatestModel[p.ID][p.ModelType] = 0
+			if _, exist := projectLatestModel[p.ProjectId][p.ModelType]; !exist {
+				projectLatestModel[p.ProjectId][p.ModelType] = 0
 			}
 
-			if p.EndTimestamp > projectLatestModel[p.ID][p.ModelType] {
-				projectLatestModel[p.ID][p.ModelType] = p.EndTimestamp
+			if p.EndTime > projectLatestModel[p.ProjectId][p.ModelType] {
+				projectLatestModel[p.ProjectId][p.ModelType] = p.EndTime
 			}
 		}
 	}
@@ -168,14 +170,18 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 	}
 
 	builds := make([]Build, 0, 0)
-	projectsMeta, err := PMM.GetProjectsMetadata(cloudManager, etcdClient)
-	if err != nil {
-		gnbLog.Error("Failed to get current project metadata")
-		return nil, existingBuilds, err
+	projectsMeta := make([]model.ProjectModelMetadata, 0)
+	for projId, _ := range projectIDs {
+		projMetadata, err, msg := store.GetStore().GetProjectModelMetadata(projId)
+		if err != http.StatusFound {
+			gnbLog.Error(msg)
+			return nil, existingBuilds, nil
+		}
+		projectsMeta = append(projectsMeta, projMetadata...)
 	}
 
 	for _, meta := range projectsMeta {
-		buildID := getUniqueModelBuildID(meta.ID, meta.ModelType, meta.StartTimestamp, meta.EndTimestamp)
+		buildID := getUniqueModelBuildID(meta.ProjectId, meta.ModelType, meta.StartTime, meta.EndTime)
 		existingBuilds[buildID] = true
 	}
 

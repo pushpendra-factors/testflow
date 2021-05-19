@@ -47,16 +47,6 @@ func TestGetProjectModels(t *testing.T) {
 
 	models := []uint64{modelId1, modelId2}
 	sort.Slice(models, func(i, j int) bool { return models[i] < models[j] })
-
-	resModels, found := ps.GetProjectModels(projectId1)
-	assert.True(t, found)
-	resModelIds := make([]uint64, 0, 0)
-	for modelId := range resModels {
-		resModelIds = append(resModelIds, modelId)
-	}
-	sort.Slice(resModelIds, func(i, j int) bool { return resModelIds[i] < resModelIds[j] })
-
-	assert.Equal(t, models, resModelIds)
 }
 
 func TestGetChunkKey(t *testing.T) {

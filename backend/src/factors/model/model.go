@@ -430,6 +430,11 @@ type Model interface {
 	GetDisplayNamesForObjectEntities(projectID uint64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID uint64, eventName, propertyName, displayName, tag string) int
 
+	// project model metadata
+	CreateProjectModelMetadata(pmm *model.ProjectModelMetadata) (int, string)
+	GetProjectModelMetadata(projectId uint64) ([]model.ProjectModelMetadata, int, string)
+	GetAllProjectModelMetadata() ([]model.ProjectModelMetadata, int, string)
+
 	// search console
 	GetGoogleOrganicLastSyncInfoForProject(projectID uint64) ([]model.GoogleOrganicLastSyncInfo, int)
 	GetAllGoogleOrganicLastSyncInfoForAllProjects() ([]model.GoogleOrganicLastSyncInfo, int)

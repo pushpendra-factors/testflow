@@ -287,6 +287,13 @@ upload-instantiate-event-user-cache: export IMAGE_NAME=instantiate-event-user-ca
 upload-instantiate-event-user-cache: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/instantiate-event-user-cache-job:$(TAG)
 
+pack-migrate-model-metadata: 
+	docker build -t us.gcr.io/factors-$(ENV)/migrate-model-metadata-todb-job:$(TAG) -f Dockerfile.migrate_model_metadata_job .
+
+upload-migrate-model-metadata: export IMAGE_NAME=migrate-model-metadata-todb-job
+upload-migrate-model-metadata: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/migrate-model-metadata-todb-job:$(TAG)
+
 pack-cleanup-eventuser-cache: 
 	docker build -t us.gcr.io/factors-$(ENV)/cleanup-eventuser-cache-job:$(TAG) -f Dockerfile.cleanup_eventuser_cache_job .
 

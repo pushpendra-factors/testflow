@@ -116,7 +116,7 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 
 		// Patten mine
 		startAt = time.Now().UnixNano()
-		newProjectMetaVersion, numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
+		numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
 			bucketName, noOfPatternWorkers, build.ProjectId, modelId, build.ModelType,
 			build.StartTimestamp, build.EndTimestamp, maxModelSize, countOccurence, numCampaignsLimit)
 		if err != nil {
@@ -124,7 +124,6 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 			failures = append(failures, BuildFailure{Build: build, Error: fmt.Sprintf("%s", err), Message: "Pattern mining failure"})
 			continue
 		}
-		logCtx = logCtx.WithFields(log.Fields{"NewProjectMetaVersion": newProjectMetaVersion})
 		timeTakenToMinePatterns := (time.Now().UnixNano() - startAt) / 1000000
 		logCtx = logCtx.WithField("TimeTakenToMinePatternsInMS", timeTakenToMinePatterns)
 		success = append(success, BuildSuccess{

@@ -1,4 +1,4 @@
--- Table: public.property_details
+-- Table: public.display_names
 
 CREATE TABLE public.display_names
 (

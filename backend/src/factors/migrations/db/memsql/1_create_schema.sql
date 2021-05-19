@@ -586,6 +586,26 @@ CREATE TABLE IF NOT EXISTS google_organic_documents (
     -- Unique (project_id, customer_ad_account_id, type, timestamp, id)
     -- Ref (project_id) -> projects(id)
 );
+
+CREATE TABLE IF NOT EXISTS project_model_metadata
+(
+    id text NOT NULL,
+    project_id bigint NOT NULL,
+    model_id bigint NOT NULL,
+    model_type text NOT NULL,
+    start_time  bigint NOT NULL, 
+    end_time bigint NOT NULL,
+    chunks text NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (project_id),
+    UNIQUE KEY  project_model_metadata_project_id_stdate_enddate_unique_idx(project_id, start_time, end_time),
+    KEY (project_id) USING HASH
+
+    -- Add Foreign Key for project_id
+);
+
+
 -- DOWN
 
 -- DROP DATABASE factors;

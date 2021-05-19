@@ -8,7 +8,6 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	P "factors/pattern"
-	PMM "factors/pattern_model_meta"
 	patternStore "factors/pattern_server/store"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
@@ -1406,7 +1405,7 @@ func buildEventsInfoForEncodedEvents(smartEvents CampaignEventLists, userAndEven
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
-	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64, countOccurence bool, campaignLimitCount int) (string, int, error) {
+	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64, countOccurence bool, campaignLimitCount int) (int, error) {
 
 	var err error
 
@@ -1419,7 +1418,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
 			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
-		return "", 0, err
+		return 0, err
 	}
 
 	tmpEventsFilepath := efTmpPath + efTmpName
@@ -1427,14 +1426,14 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	eventNames, eventNamesWithType, err := GetEventNamesAndType(tmpEventsFilepath, projectId)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get eventName and event type.")
-		return "", 0, err
+		return 0, err
 	}
 
 	userAndEventsInfo, allPropsMap, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
 
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
-		return "", 0, err
+		return 0, err
 	}
 	userPropList, eventPropList := buildWhiteListProperties(projectId, allPropsMap, topKProperties)
 	userAndEventsInfo = FilterEventsInfo(userAndEventsInfo, userPropList, eventPropList)
@@ -1442,7 +1441,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	userAndEventsInfoBytes, err := json.Marshal(userAndEventsInfo)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal events Info.")
-		return "", 0, err
+		return 0, err
 	}
 
 	if len(userAndEventsInfoBytes) > 249900000 {
@@ -1451,12 +1450,12 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 			"Too big properties info, modelId: %d, modelType: %s, projectId: %d, numBytes: %d",
 			modelId, modelType, projectId, len(userAndEventsInfoBytes))
 		mineLog.Error(errorString)
-		return "", 0, fmt.Errorf(errorString)
+		return 0, fmt.Errorf(errorString)
 	}
 	err = writeEventInfoFile(projectId, modelId, bytes.NewReader(userAndEventsInfoBytes), (*cloudManager))
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events Info.")
-		return "", 0, err
+		return 0, err
 	}
 
 	mineLog.Info("Number of EventNames: ", len(eventNames))
@@ -1466,7 +1465,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		modelId, eReader, userPropList, eventPropList, campaignLimitCount)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events data.")
-		return "", 0, err
+		return 0, err
 	}
 
 	userAndEventsInfo = buildEventsInfoForEncodedEvents(campaignAnalyticsSorted, userAndEventsInfo)
@@ -1486,20 +1485,20 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	allActiveUsersPattern, err := P.NewPattern([]string{U.SEN_ALL_ACTIVE_USERS}, userAndEventsInfo)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build pattern with histogram of all active user properties.")
-		return "", 0, err
+		return 0, err
 	}
 	if err := computeAllUserPropertiesHistogram(projectId, tmpEventsFilepath, allActiveUsersPattern); err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to compute user properties.")
-		return "", 0, err
+		return 0, err
 	}
 	tmpChunksDir := diskManager.GetPatternChunksDir(projectId, modelId)
 	if err := serviceDisk.MkdirAll(tmpChunksDir); err != nil {
 		mineLog.WithFields(log.Fields{"chunkDir": tmpChunksDir, "error": err}).Error("Unable to create chunks directory.")
-		return "", 0, err
+		return 0, err
 	}
 	if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir); err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
-		return "", 0, err
+		return 0, err
 	}
 	mineLog.Info("Successfully built all user properties histogram.")
 
@@ -1510,7 +1509,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize, countOccurence, eventNamesWithType, repeatedEvents, campaignAnalyticsSorted)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
-		return "", 0, err
+		return 0, err
 	}
 	mineLog.Info("Successfully mined patterns and written it as chunks.")
 
@@ -1534,33 +1533,33 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		"EndTimestamp":   endTime,
 		"Chunks":         chunkIds,
 	}).Info("Updating mined patterns info to new version of metadata.")
-	projectDatas, err := PMM.GetProjectsMetadata(cloudManager, etcdClient)
-	if err != nil {
-		// failures logged already.
-		return "", 0, err
+
+	chunkIdsString := ""
+	for _, chunkId := range chunkIds {
+		if chunkIdsString != "" {
+			chunkIdsString += ","
+		}
+		chunkIdsString += chunkId
 	}
-	projectDatas = append(projectDatas, PMM.ProjectData{
-		ID:             projectId,
-		ModelID:        modelId,
-		ModelType:      modelType,
-		StartTimestamp: startTime,
-		EndTimestamp:   endTime,
-		Chunks:         chunkIds,
+	errCode, message := store.GetStore().CreateProjectModelMetadata(&model.ProjectModelMetadata{
+		ProjectId: projectId,
+		ModelId:   modelId,
+		ModelType: modelType,
+		StartTime: startTime,
+		EndTime:   endTime,
+		// CONVERT THIS TO COMMA SEPERATED STRING
+		Chunks: chunkIdsString,
 	})
-	newVersionId := fmt.Sprintf("%v", time.Now().Unix())
-	err = PMM.WriteProjectDataFile(newVersionId, projectDatas, cloudManager)
-	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write new version file to cloud.")
-		return "", 0, err
+	if errCode != http.StatusCreated {
+		mineLog.Error(message)
 	}
+	newVersionId := fmt.Sprintf("%v", time.Now().Unix())
 	err = etcdClient.SetProjectVersion(newVersionId)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write new version id to etcd.")
-		return "", 0, err
+		return 0, err
 	}
-	mineLog.WithField("newVersionId", newVersionId).Info("Successfully mined patterns, updated metadata and notified new version id.")
-
-	return newVersionId, len(chunkIds), nil
+	return len(chunkIds), nil
 }
 
 func convert(eventNamesWithAggregation []model.EventNameWithAggregation) []model.EventName {

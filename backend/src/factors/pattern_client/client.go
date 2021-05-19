@@ -24,7 +24,6 @@ const (
 	OperationNameGetAllContainingPatterns  = "GetAllContainingPatterns"
 	OperationNameGetPatterns               = "GetPatterns"
 	OperationNameGetCountOfPattern         = "GetCountOfPattern"
-	OperationNameGetProjectModelsIntervals = "GetProjectModelsIntervals"
 	OperationNameGetTotalEventCount        = "GetTotalEventCount"
 	Separator                              = "."
 	OperationNameGetUserAndEventsInfo      = "GetUserAndEventsInfo"
@@ -69,15 +68,6 @@ type GetPatternsRequest struct {
 type GetPatternsResponse struct {
 	GenericRPCResp
 	Patterns []*json.RawMessage `json:"ps"`
-}
-
-type GetProjectModelIntervalsRequest struct {
-	ProjectId uint64 `json:"pid"`
-}
-
-type GetProjectModelIntervalsResponse struct {
-	GenericRPCResp
-	ModelInfo []ModelInfo `json:"intervals"`
 }
 
 type GetTotalEventCountRequest struct {
@@ -362,61 +352,6 @@ func GetUserAndEventsInfo(reqId string, projectId, modelId uint64) (*pattern.Use
 	}
 
 	return &respUserAndEventsInfo, respModelId, nil
-}
-
-func GetProjectModelIntervals(reqId string, projectId uint64) ([]ModelInfo, error) {
-	params := GetProjectModelIntervalsRequest{
-		ProjectId: projectId,
-	}
-	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetProjectModelsIntervals, params)
-	if err != nil {
-		return []ModelInfo{}, err
-	}
-
-	serverAddrs := C.GetServices().GetPatternServerAddresses()
-
-	gatherResp := make(chan httpResp, len(serverAddrs))
-	headers := map[string]string{
-		"content-type": "application/json",
-		"X-Req-Id":     reqId,
-	}
-
-	urls := make([]string, 0, 0)
-	for _, serverAddr := range serverAddrs {
-		url := fmt.Sprintf("http://%s%s", serverAddr, RPCEndpoint)
-		urls = append(urls, url)
-	}
-
-	httpDo(http.MethodPost, urls, paramBytes, headers, gatherResp)
-	modelInfo := make([]ModelInfo, 0, 0)
-
-	for r := range gatherResp {
-		if r.err != nil {
-			log.WithError(r.err).Error("Error Ignoring GetProjectModelIntervalsResponse")
-			continue
-		}
-
-		var result GetProjectModelIntervalsResponse
-		defer r.resp.Body.Close()
-		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
-		if err != nil {
-			log.WithError(err).Error("Error Ignoring GetProjectModelIntervalsResponse")
-			result.Error = err
-			continue
-		}
-		if result.Ignored {
-			log.Debugln("Ignoring GetProjectModelIntervalsResponse")
-			continue
-		}
-
-		if result.Error != nil {
-			log.WithError(result.Error).Error("Error GetProjectModelIntervalsResponse")
-			continue
-		}
-		modelInfo = append(modelInfo, result.ModelInfo...)
-	}
-
-	return modelInfo, nil
 }
 
 func GetTotalEventCount(reqId string, projectId, modelId uint64) (uint64, error) {
