@@ -26,12 +26,14 @@ function SingleEventMultipleBreakdownTable({
   durationObj,
   categories,
   reportTitle = 'Events Analytics',
-  section
+  section,
 }) {
   const [sorter, setSorter] = useState({});
   const [dateSorter, setDateSorter] = useState({});
   const [searchText, setSearchText] = useState('');
-  const { eventNames, userPropNames ,eventPropNames} = useSelector((state) => state.coreQuery);
+  const { eventNames, userPropNames, eventPropNames } = useSelector(
+    (state) => state.coreQuery
+  );
 
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
@@ -42,8 +44,26 @@ function SingleEventMultipleBreakdownTable({
   }, []);
 
   const columns = useMemo(() => {
-    return getTableColumns(events, breakdown, sorter, handleSorting, page, eventNames, userPropNames, eventPropNames);
-  }, [events, breakdown, sorter, page, handleSorting, eventNames]);
+    return getTableColumns(
+      events,
+      breakdown,
+      sorter,
+      handleSorting,
+      page,
+      eventNames,
+      userPropNames,
+      eventPropNames
+    );
+  }, [
+    events,
+    breakdown,
+    sorter,
+    page,
+    handleSorting,
+    eventNames,
+    userPropNames,
+    eventPropNames,
+  ]);
 
   const tableData = useMemo(() => {
     return getDataInTableFormat(data, events, breakdown, searchText, sorter);
@@ -56,7 +76,7 @@ function SingleEventMultipleBreakdownTable({
       dateSorter,
       handleDateSorting,
       durationObj.frequency,
-      userPropNames, 
+      userPropNames,
       eventPropNames
     );
   }, [
@@ -65,6 +85,8 @@ function SingleEventMultipleBreakdownTable({
     dateSorter,
     durationObj.frequency,
     handleDateSorting,
+    userPropNames,
+    eventPropNames,
   ]);
 
   const dateBasedTableData = useMemo(() => {

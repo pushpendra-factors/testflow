@@ -1,6 +1,11 @@
 /* eslint-disable */
 import React, { useCallback, useState, useEffect } from 'react';
-import { Text, SVG, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import {
+  Text,
+  SVG,
+  FaErrorComp,
+  FaErrorLog,
+} from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Row, Col, Table, Avatar, Button, Dropdown, Menu, Tag } from 'antd';
 import { MoreOutlined } from '@ant-design/icons';
@@ -175,6 +180,7 @@ function CoreQuery({
       setQueryOptions((currData) => {
         return {
           ...currData,
+          session_analytics_seq: equivalentQuery.session_analytics_seq,
           groupBy: [
             ...equivalentQuery.breakdown.global,
             ...equivalentQuery.breakdown.event,

@@ -116,7 +116,6 @@ function LineChart({
           cardSize={cardSize}
           legends={data.map((d) => d.name)}
           colors={data.map((d) => d.color)}
-          showFullLegends={false}
         />
       ) : null}
       <div className={styles.areaChart} id={chartId}></div>
@@ -125,7 +124,6 @@ function LineChart({
           cardSize={cardSize}
           legends={data.map((d) => d.name)}
           colors={data.map((d) => d.color)}
-          showFullLegends={true}
         />
       ) : null}
     </>

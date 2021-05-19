@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { generateTableColumns, generateTableData } from '../utils';
 import DataTable from '../../../../components/DataTable';
-import { useSelector } from 'react-redux';
 
 function FunnelsResultTable({
   chartData,

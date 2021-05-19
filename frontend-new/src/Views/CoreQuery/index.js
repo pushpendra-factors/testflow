@@ -46,6 +46,7 @@ import {
   FREQUENCY_CRITERIA,
   EACH_USER_TYPE,
   REPORT_SECTION,
+  INITIAL_SESSION_ANALYTICS_SEQ,
 } from '../../utils/constants';
 import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
@@ -85,10 +86,7 @@ function CoreQuery({
       },
     ],
     event_analysis_seq: '',
-    session_analytics_seq: {
-      start: 0,
-      end: 0,
-    },
+    session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
     date_range: { ...DefaultDateRangeFormat },
   });
   const [attributionsState, setAttributionsState] = useState({
@@ -134,6 +132,7 @@ function CoreQuery({
   } = useSelector((state) => state.analyticsQuery);
 
   const dateRange = queryOptions.date_range;
+  const { session_analytics_seq } = queryOptions;
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -254,7 +253,12 @@ function CoreQuery({
         setAppliedQueries(queries.map((elem) => elem.label));
         updateAppliedBreakdown();
         updateResultState({ ...initialState, loading: true });
-        const query = getFunnelQuery(groupBy, queries, durationObj);
+        const query = getFunnelQuery(
+          groupBy,
+          queries,
+          session_analytics_seq,
+          durationObj
+        );
         updateRequestQuery(query);
         const res = await getFunnelData(activeProject.id, query);
         if (res.status === 200) {
@@ -269,6 +273,7 @@ function CoreQuery({
     },
     [
       queries,
+      session_analytics_seq,
       updateAppliedBreakdown,
       activeProject.id,
       groupBy,

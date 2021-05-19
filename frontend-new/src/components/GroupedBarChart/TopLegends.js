@@ -14,24 +14,21 @@ function TopLegends({
   legends,
   parentClassName = 'flex flex-wrap justify-center py-3',
   cardSize,
-  showFullLegends,
 }) {
   let itemsCount = legend_counts[cardSize];
 
-  const {
-    eventNames,
-  } = useSelector((state) => state.coreQuery);
+  const { eventNames } = useSelector((state) => state.coreQuery);
 
   const displayLegend = (legend) => {
-    const sanitisedLegend = eventNames[legend] ? eventNames[legend] : legend;
+    const sanitisedLegend = eventNames[legend] || legend;
     return (
       <Text mini type='paragraph'>
-        {sanitisedLegend.length > legend_length[cardSize] && !showFullLegends
+        {sanitisedLegend.length > legend_length[cardSize]
           ? sanitisedLegend.substr(0, legend_length[cardSize]) + '...'
           : sanitisedLegend}
       </Text>
-    )
-  }
+    );
+  };
 
   return (
     <div className={parentClassName}>
@@ -46,9 +43,7 @@ function TopLegends({
                 borderRadius: '8px',
               }}
             ></div>
-            <div className='px-2'>
-              {displayLegend(legend)}
-            </div>
+            <div className='px-2'>{displayLegend(legend)}</div>
           </div>
         );
       })}
