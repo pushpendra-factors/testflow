@@ -63,6 +63,8 @@ func satisfiesUserConstraints(user model.User) int {
 // createUserWithError - Returns error during create to match
 // with constraint errors.
 func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", user.ProjectId)
 
 	if user.ProjectId == 0 {
@@ -138,6 +140,8 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 }
 
 func (store *MemSQL) CreateUser(user *model.User) (*model.User, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", user.ProjectId).
 		WithField("user_id", user.ID)
 
@@ -172,6 +176,7 @@ func (store *MemSQL) CreateUser(user *model.User) (*model.User, int) {
 // UpdateUser updates user fields by Id.
 func (store *MemSQL) UpdateUser(projectId uint64, id string,
 	user *model.User, updateTimestamp int64) (*model.User, int) {
+	defer model.LogOnSlowExecution(time.Now())
 
 	// Todo(Dinesh): Move to validations.
 	// Ref: https://github.com/qor/validations
@@ -217,6 +222,7 @@ func (store *MemSQL) UpdateUser(projectId uint64, id string,
 // UpdateUserProperties only if there is a change in properties values.
 func (store *MemSQL) UpdateUserProperties(projectId uint64, id string,
 	newProperties *postgres.Jsonb, updateTimestamp int64) (string, *postgres.Jsonb, int) {
+	defer model.LogOnSlowExecution(time.Now())
 
 	var userPropertiesID string
 	var userProperties *postgres.Jsonb
@@ -250,6 +256,7 @@ func (store *MemSQL) UpdateUserProperties(projectId uint64, id string,
 // UpdateUser
 func (store *MemSQL) UpdateUserPropertiesByCurrentProperties(projectId uint64, id string,
 	currentPropertiesId string, properties *postgres.Jsonb, updateTimestamp int64) (string, int) {
+	defer model.LogOnSlowExecution(time.Now())
 
 	if updateTimestamp == 0 {
 		return "", http.StatusBadRequest
@@ -286,9 +293,10 @@ func (store *MemSQL) UpdateUserPropertiesByCurrentProperties(projectId uint64, i
 }
 
 func getUserPropertiesId(projectId uint64, id string) (string, int) {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	var user model.User
+	db := C.GetServices().Db
 	if err := db.Select("properties_id").Where("project_id = ?", projectId).Where("id = ?", id).First(&user).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return "", http.StatusNotFound
@@ -300,10 +308,12 @@ func getUserPropertiesId(projectId uint64, id string) (string, int) {
 }
 
 func existsUserForProject(projectID uint64, id string) bool {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": id})
 
 	var user model.User
+	db := C.GetServices().Db
 	if err := db.Limit(1).Where("project_id = ? AND id = ?", projectID, id).Select("id").Find(&user).Error; err != nil {
 		if !gorm.IsRecordNotFoundError(err) {
 			logCtx.WithError(err).Error("Failed to check user using user_id")
@@ -318,10 +328,12 @@ func existsUserForProject(projectID uint64, id string) bool {
 }
 
 func (store *MemSQL) GetUser(projectId uint64, id string) (*model.User, int) {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": id})
 
 	var user model.User
+	db := C.GetServices().Db
 	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&user).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -344,10 +356,12 @@ func (store *MemSQL) GetUser(projectId uint64, id string) (*model.User, int) {
 }
 
 func (store *MemSQL) GetUsers(projectId uint64, offset uint64, limit uint64) ([]model.User, int) {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	var users []model.User
-	if err := db.Order("created_at").Offset(offset).Where("project_id = ?", projectId).Limit(limit).Find(&users).Error; err != nil {
+	db := C.GetServices().Db
+	if err := db.Order("created_at").Offset(offset).
+		Where("project_id = ?", projectId).Limit(limit).Find(&users).Error; err != nil {
 		return nil, http.StatusInternalServerError
 	}
 	if len(users) == 0 {
@@ -358,14 +372,19 @@ func (store *MemSQL) GetUsers(projectId uint64, offset uint64, limit uint64) ([]
 
 // GetUsersByCustomerUserID Gets all the users indentified by given customer_user_id in increasing order of updated_at.
 func (store *MemSQL) GetUsersByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int) {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{
 		"ProjectID":      projectID,
 		"CustomerUserID": customerUserID,
 	})
 
 	var users []model.User
-	if err := db.Order("created_at ASC").Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).Find(&users).Error; err != nil {
+	db := C.GetServices().Db
+	if err := db.Order("created_at ASC").
+		Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).
+		Find(&users).Error; err != nil {
+
 		logCtx.WithError(err).Error("Failed to get users for customer_user_id")
 		return nil, http.StatusInternalServerError
 	}
@@ -377,11 +396,14 @@ func (store *MemSQL) GetUsersByCustomerUserID(projectID uint64, customerUserID s
 }
 
 func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*model.User, int) {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	var user model.User
-	if err := db.Order("created_at DESC").Where("project_id = ?", projectId).Where(
-		"customer_user_id = ?", customerUserId).First(&user).Error; err != nil {
+	db := C.GetServices().Db
+	if err := db.Order("created_at DESC").Where("project_id = ?", projectId).
+		Where("customer_user_id = ?", customerUserId).
+		First(&user).Error; err != nil {
+
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -391,14 +413,14 @@ func (store *MemSQL) GetUserLatestByCustomerUserId(projectId uint64, customerUse
 }
 
 func (store *MemSQL) GetExistingCustomerUserID(projectId uint64, arrayCustomerUserID []string) (map[string]string, int) {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	customerUserIDMap := make(map[string]string)
-
 	if len(arrayCustomerUserID) == 0 {
 		return nil, http.StatusBadRequest
 	}
 
+	db := C.GetServices().Db
 	queryStmnt := "SELECT" + " " + "DISTINCT(customer_user_id), id" + " FROM " + "users" + " WHERE " + "project_id = ? AND customer_user_id IN ( ? )"
 	rows, err := db.Raw(queryStmnt, projectId, arrayCustomerUserID).Rows()
 	if err != nil {
@@ -422,9 +444,10 @@ func (store *MemSQL) GetExistingCustomerUserID(projectId uint64, arrayCustomerUs
 }
 
 func existsUserWithSegmentAnonymousID(projectID uint64, segAnonID string) bool {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	var user model.User
+	db := C.GetServices().Db
 	if err := db.Limit(1).Where("project_id = ?", projectID).Where(
 		"segment_anonymous_id = ?", segAnonID).Select("id").Find(&user).Error; err != nil {
 		if !gorm.IsRecordNotFoundError(err) {
@@ -441,9 +464,10 @@ func existsUserWithSegmentAnonymousID(projectID uint64, segAnonID string) bool {
 }
 
 func (store *MemSQL) GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*model.User, int) {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	var users []model.User
+	db := C.GetServices().Db
 	if err := db.Limit(1).Where("project_id = ?", projectId).Where(
 		"segment_anonymous_id = ?", segAnonId).Find(&users).Error; err != nil {
 		log.WithField("project_id", projectId).WithField(
@@ -461,6 +485,8 @@ func (store *MemSQL) GetUserBySegmentAnonymousId(projectId uint64, segAnonId str
 
 // CreateOrGetUser create or updates(c_uid) and returns user customer_user_id.
 func (store *MemSQL) CreateOrGetUser(projectId uint64, custUserId string) (*model.User, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"provided_c_uid": custUserId})
 	if custUserId == "" {
@@ -494,6 +520,8 @@ func (store *MemSQL) CreateOrGetUser(projectId uint64, custUserId string) (*mode
 
 // GetAllUserIDByCustomerUserID returns all users with same customer_user_id
 func (store *MemSQL) GetAllUserIDByCustomerUserID(projectID uint64, customerUserID string) ([]string, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	if projectID == 0 || customerUserID == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -501,7 +529,10 @@ func (store *MemSQL) GetAllUserIDByCustomerUserID(projectID uint64, customerUser
 	db := C.GetServices().Db
 
 	var users []model.User
-	if err := db.Table("users").Select("distinct(id)").Where("project_id = ? AND customer_user_id=?", projectID, customerUserID).Find(&users).Error; err != nil {
+	if err := db.Table("users").Select("distinct(id)").
+		Where("project_id = ? AND customer_user_id=?", projectID, customerUserID).
+		Find(&users).Error; err != nil {
+
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -522,7 +553,10 @@ func (store *MemSQL) GetAllUserIDByCustomerUserID(projectID uint64, customerUser
 
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
-func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int) {
+func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string,
+	requestTimestamp int64) (*model.User, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId,
 		"provided_c_uid": custUserId})
 
@@ -596,9 +630,11 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 }
 
 func existsUserWithAMPUserID(projectId uint64, ampUserId string) bool {
-	db := C.GetServices().Db
+	defer model.LogOnSlowExecution(time.Now())
 
 	var user model.User
+	db := C.GetServices().Db
+
 	if err := db.Limit(1).Where("project_id = ? AND amp_user_id = ?",
 		projectId, ampUserId).Select("id").Find(&user).Error; err != nil {
 		if !gorm.IsRecordNotFoundError(err) {
@@ -615,6 +651,8 @@ func existsUserWithAMPUserID(projectId uint64, ampUserId string) bool {
 }
 
 func getUserByAMPUserId(projectId uint64, ampUserId string) (*model.User, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectId).WithField(
 		"amp_user_id", ampUserId)
 
@@ -636,6 +674,8 @@ func getUserByAMPUserId(projectId uint64, ampUserId string) (*model.User, int) {
 }
 
 func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (*model.User, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	if projectId == 0 || ampUserId == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -666,6 +706,8 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 
 //GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
 func (store *MemSQL) GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, propertyLimit int, seedDate time.Time) ([]U.Property, error) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	properties := make([]U.Property, 0)
 	db := C.GetServices().Db
 	startTime := seedDate.AddDate(0, 0, -7).Unix()
@@ -739,8 +781,12 @@ func (store *MemSQL) GetRecentUserPropertyKeysWithLimits(projectID uint64, users
 	return properties[:U.MinInt(propertyLimit, len(properties))], nil
 }
 
-//GetRecentUserPropertyValuesWithLimits This method gets all the recent 'limit' property values from DB for a given project/property
-func (store *MemSQL) GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string, usersLimit, valuesLimit int, seedDate time.Time) ([]U.PropertyValue, string, error) {
+// GetRecentUserPropertyValuesWithLimits This method gets all the recent 'limit' property values
+// from DB for a given project/property
+func (store *MemSQL) GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
+	usersLimit, valuesLimit int, seedDate time.Time) ([]U.PropertyValue, string, error) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	// limit on values returned.
 	values := make([]U.PropertyValue, 0, 0)
 	startTime := seedDate.AddDate(0, 0, -7).Unix()
@@ -799,6 +845,8 @@ func (store *MemSQL) GetRecentUserPropertyValuesWithLimits(projectID uint64, pro
 //GetUserPropertiesByProject This method iterates over n days and gets user properties from cache for a given project
 // Picks all past 24 hrs seen properties and sorts the remaining by count and returns top 'limit'
 func (store *MemSQL) GetUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map[string][]string, error) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	properties := make(map[string][]string)
 	if projectID == 0 {
 		return properties, errors.New("invalid project on GetUserPropertiesByProject")
@@ -845,6 +893,8 @@ func (store *MemSQL) GetUserPropertiesByProject(projectID uint64, limit int, las
 }
 
 func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.CachePropertyWithTimestamp, error) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
@@ -872,9 +922,13 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 	return cacheValue, nil
 }
 
-//GetPropertyValuesByUserProperty This method iterates over n days and gets user property values from cache for a given project/property
-// Picks all past 24 hrs seen values and sorts the remaining by count and returns top 'limit'
-func (store *MemSQL) GetPropertyValuesByUserProperty(projectID uint64, propertyName string, limit int, lastNDays int) ([]string, error) {
+//GetPropertyValuesByUserProperty This method iterates over n days and gets user property values
+// from cache for a given project/property. Picks all past 24 hrs seen values and sorts the
+// remaining by count and returns top 'limit'
+func (store *MemSQL) GetPropertyValuesByUserProperty(projectID uint64,
+	propertyName string, limit int, lastNDays int) ([]string, error) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	if projectID == 0 {
 		return []string{}, errors.New("invalid project on GetPropertyValuesByUserProperty")
 	}
@@ -909,16 +963,21 @@ func (store *MemSQL) GetPropertyValuesByUserProperty(projectID uint64, propertyN
 	return valueStrings, nil
 }
 
-func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
+func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName string,
+	dateKey string) (U.CachePropertyValueWithTimestamp, error) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
 	if projectID == 0 {
-		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid project on GetPropertyValuesByUserPropertyFromCache")
+		return U.CachePropertyValueWithTimestamp{},
+			errors.New("invalid project on GetPropertyValuesByUserPropertyFromCache")
 	}
 
 	if propertyName == "" {
-		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid property_name on GetPropertyValuesByUserPropertyFromCache")
+		return U.CachePropertyValueWithTimestamp{},
+			errors.New("invalid property_name on GetPropertyValuesByUserPropertyFromCache")
 	}
 
 	eventPropertyValuesKey, err := model.GetValuesByUserPropertyRollUpCacheKey(projectID, propertyName, dateKey)
@@ -942,6 +1001,8 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 }
 
 func (store *MemSQL) GetLatestUserPropertiesOfUserAsMap(projectId uint64, id string) (*map[string]interface{}, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectId).WithField("id", id)
 
 	user, errCode := store.GetUser(projectId, id)
@@ -963,11 +1024,15 @@ func (store *MemSQL) GetLatestUserPropertiesOfUserAsMap(projectId uint64, id str
 
 // GetDistinctCustomerUserIDSForProject Returns all distinct customer_user_id for Project.
 func (store *MemSQL) GetDistinctCustomerUserIDSForProject(projectID uint64) ([]string, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithFields(log.Fields{"ProjectID": projectID})
-	db := C.GetServices().Db
 
 	var customerUserIDS []string
-	rows, err := db.Model(&model.User{}).Where("project_id = ? AND customer_user_id IS NOT NULL", projectID).Select("distinct customer_user_id").Rows()
+	db := C.GetServices().Db
+	rows, err := db.Model(&model.User{}).
+		Where("project_id = ? AND customer_user_id IS NOT NULL", projectID).
+		Select("distinct customer_user_id").Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get customer user ids")
 		return customerUserIDS, http.StatusInternalServerError
@@ -987,6 +1052,8 @@ func (store *MemSQL) GetDistinctCustomerUserIDSForProject(projectID uint64) ([]s
 
 // GetUserIdentificationPhoneNumber tries various patterns of phone number if exist in db and return the phone no based on priority
 func (store *MemSQL) GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	if len(phoneNo) < 5 {
 		return "", ""
 	}
@@ -1005,6 +1072,8 @@ func (store *MemSQL) GetUserIdentificationPhoneNumber(projectID uint64, phoneNo 
 }
 
 func (store *MemSQL) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId uint64, isDryRun bool) error {
+	defer model.LogOnSlowExecution(time.Now())
+
 	userRows, err := db.Raw("SELECT id, join_timestamp FROM users WHERE project_id = ?", projectId).Rows()
 	defer userRows.Close()
 	if err != nil {
@@ -1041,6 +1110,8 @@ func (store *MemSQL) FixAllUsersJoinTimestampForProject(db *gorm.DB, projectId u
 }
 
 func (store *MemSQL) GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectID).WithField("user_id", id)
 
 	if projectID == 0 || id == "" {
@@ -1048,8 +1119,8 @@ func (store *MemSQL) GetUserPropertiesByUserID(projectID uint64, id string) (*po
 		return nil, http.StatusBadRequest
 	}
 
-	db := C.GetServices().Db
 	var user model.User
+	db := C.GetServices().Db
 	if err := db.Model(&model.User{}).Where("project_id = ? AND id = ?", projectID, id).
 		Select("properties").Find(&user).Error; err != nil {
 
@@ -1069,13 +1140,14 @@ func (store *MemSQL) GetUserPropertiesByUserID(projectID uint64, id string) (*po
 // given property with value. No specific order.
 func (store *MemSQL) GetUserByPropertyKey(projectID uint64,
 	key string, value interface{}) (*model.User, int) {
+	defer model.LogOnSlowExecution(time.Now())
 
 	logCtx := log.WithField("project_id", projectID).WithField(
 		"key", key).WithField("value", value)
 
-	db := C.GetServices().Db
 	var user model.User
 	// $$$ is a gorm alias for ? jsonb operator.
+	db := C.GetServices().Db
 	err := db.Limit(1).Where("project_id=?", projectID).Where(
 		"JSON_EXTRACT_STRING(properties, ?) = ?", key, value).Find(&user).Error
 	if err != nil {
@@ -1161,8 +1233,12 @@ func mergeUserPropertiesByCustomerUserID(projectID uint64, users []model.User) (
 	return &mergedUserProperties, http.StatusOK
 }
 
-func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int) {
-	logCtx := log.WithField("project_id", projectID).WithField("customer_user_id", customerUserID)
+func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint64,
+	customerUserID string) ([]model.User, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
+	logCtx := log.WithField("project_id", projectID).
+		WithField("customer_user_id", customerUserID)
 
 	if projectID == 0 || customerUserID == "" {
 		logCtx.Error("Invalid values for arguments.")
@@ -1193,8 +1269,9 @@ func (store *MemSQL) getUsersForMergingPropertiesByCustomerUserID(projectID uint
 
 func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint64, userID string,
 	currentProperties *postgres.Jsonb, currentUpdateTimestamp int64,
-	newProperties *postgres.Jsonb, newUpdateTimestamp int64,
-) (*postgres.Jsonb, int) {
+	newProperties *postgres.Jsonb, newUpdateTimestamp int64) (*postgres.Jsonb, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectID)
 
 	var newPropertiesMap map[string]interface{}
@@ -1263,8 +1340,11 @@ func (store *MemSQL) mergeNewPropertiesWithCurrentUserProperties(projectID uint6
 // merge the properties of user with same customer_user_id, then updates properties on users table.
 func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 	newProperties *postgres.Jsonb, newUpdateTimestamp int64) (*postgres.Jsonb, int) {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectID).WithField("id", id).
-		WithField("new_properties", newProperties).WithField("new_update_timestamp", newUpdateTimestamp)
+		WithField("new_properties", newProperties).
+		WithField("new_update_timestamp", newUpdateTimestamp)
 
 	newProperties = U.SanitizePropertiesJsonb(newProperties)
 
@@ -1390,6 +1470,8 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID uint64, id string,
 // of all users which has the given customer_user_id, with given properties JSON.
 func (store *MemSQL) OverwriteUserPropertiesByCustomerUserID(projectID uint64,
 	customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int {
+	defer model.LogOnSlowExecution(time.Now())
+
 	logCtx := log.WithField("project_id", projectID).WithField("customer_user_id", customerUserID)
 
 	if properties == nil {
@@ -1414,6 +1496,7 @@ func (store *MemSQL) OverwriteUserPropertiesByCustomerUserID(projectID uint64,
 
 func (store *MemSQL) OverwriteUserPropertiesByID(projectID uint64, id string,
 	properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64) int {
+	defer model.LogOnSlowExecution(time.Now())
 
 	logCtx := log.WithField("project_id", projectID).WithField("id", id).
 		WithField("update_timestamp", updateTimestamp)
