@@ -88,3 +88,11 @@
         line-height: 1;
     }
 }
+
+
+
+.fa-tag--green{
+    color: $fa-color--mono-5 !important;
+    background: rgba($fa-color--green,0.1) !important;
+    border-color: $fa-color--green !important    ;
+}

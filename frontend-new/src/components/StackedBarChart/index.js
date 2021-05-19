@@ -131,7 +131,6 @@ function StackedBarChart({
           cardSize={cardSize}
           legends={data.map((d) => d.name)}
           colors={data.map((d) => d.color)}
-          showFullLegends={false}
         />
       ) : null}
       <div id={chartId} className={styles.columnChart}></div>
@@ -140,7 +139,6 @@ function StackedBarChart({
           cardSize={cardSize}
           legends={data.map((d) => d.name)}
           colors={data.map((d) => d.color)}
-          showFullLegends={true}
         />
       ) : null}
     </>

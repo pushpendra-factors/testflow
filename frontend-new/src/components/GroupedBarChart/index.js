@@ -331,7 +331,6 @@ function GroupedBarChart({
     <div className='w-full'>
       {section === DASHBOARD_WIDGET_SECTION ? (
         <TopLegends
-          showFullLegends={false}
           legends={legends}
           cardSize={cardSize}
           colors={colors}
@@ -340,7 +339,6 @@ function GroupedBarChart({
       <div ref={chartRef} className={styles.groupedChart}></div>
       {section === REPORT_SECTION || section === DASHBOARD_MODAL ? (
         <TopLegends
-          showFullLegends={true}
           legends={legends}
           cardSize={cardSize}
           colors={colors}

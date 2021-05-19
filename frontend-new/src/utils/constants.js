@@ -153,3 +153,8 @@ export const MARKETING_TOUCHPOINTS = {
   KEYWORD: 'Keyword',
   MATCHTYPE: 'MatchType',
 };
+
+export const INITIAL_SESSION_ANALYTICS_SEQ = {
+  start: 0,
+  end: 0,
+};
