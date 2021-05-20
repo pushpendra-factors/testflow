@@ -356,7 +356,7 @@ const renderFilterBlock = () => {
         visible={props.visible}
         onClose={props.onClose}
         getContainer={false}
-        width={'600px'}
+        width={'650px'}
         className={'fa-drawer'}
       >
 

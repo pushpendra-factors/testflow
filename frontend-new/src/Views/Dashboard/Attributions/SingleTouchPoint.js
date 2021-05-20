@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { formatData } from "../../CoreQuery/AttributionsResult/utils";
-import AttributionTable from "../../CoreQuery/AttributionsResult/AttributionTable";
-import BarLineChart from "../../../components/BarLineChart";
+import React, { useState, useEffect, useContext } from 'react';
+import { formatData } from '../../CoreQuery/AttributionsResult/utils';
+import AttributionTable from '../../CoreQuery/AttributionsResult/AttributionTable';
+import BarLineChart from '../../../components/BarLineChart';
 import {
   CHART_TYPE_BARCHART,
   CHART_TYPE_TABLE,
   DASHBOARD_WIDGET_BARLINE_CHART_HEIGHT,
-} from "../../../utils/constants";
+} from '../../../utils/constants';
+import { DashboardContext } from '../../../contexts/DashboardContext';
 
 function SingleTouchPoint({
   data,
@@ -26,6 +27,9 @@ function SingleTouchPoint({
   const [visibleIndices, setVisibleIndices] = useState(
     Array.from(Array(maxAllowedVisibleProperties).keys())
   );
+  const { attributionMetrics, setAttributionMetrics } = useContext(
+    DashboardContext
+  );
 
   useEffect(() => {
     const formattedData = formatData(data, event, visibleIndices, touchpoint);
@@ -40,9 +44,9 @@ function SingleTouchPoint({
 
   const legends = [
     `Conversions as Unique users (${attribution_method})`,
-    "Cost per conversion",
+    'Cost per conversion',
   ];
-  
+
   if (chartType === CHART_TYPE_BARCHART) {
     chartContent = (
       <BarLineChart
@@ -69,6 +73,9 @@ function SingleTouchPoint({
         setVisibleIndices={setVisibleIndices}
         maxAllowedVisibleProperties={maxAllowedVisibleProperties}
         attribution_method={attribution_method}
+        attributionMetrics={attributionMetrics}
+        setAttributionMetrics={setAttributionMetrics}
+        section={section}
       />
     );
   }
@@ -79,8 +86,8 @@ function SingleTouchPoint({
     tableContent = (
       <div
         onClick={() => setwidgetModal({ unit, data: resultState.data })}
-        style={{ color: "#5949BC" }}
-        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+        style={{ color: '#5949BC' }}
+        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >
         Show More &rarr;
       </div>
@@ -88,9 +95,7 @@ function SingleTouchPoint({
   }
 
   return (
-    <div
-      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
-    >
+    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
       {chartContent}
       {tableContent}
     </div>

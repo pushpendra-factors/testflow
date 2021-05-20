@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { formatData } from "./utils";
-import BarLineChart from "../../../components/BarLineChart";
-import AttributionTable from "./AttributionTable";
-import { DASHBOARD_MODAL } from "../../../utils/constants";
+import React, { useState, useEffect, useContext } from 'react';
+import { formatData } from './utils';
+import BarLineChart from '../../../components/BarLineChart';
+import AttributionTable from './AttributionTable';
+import { DASHBOARD_MODAL } from '../../../utils/constants';
+import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 
 function AttributionsChart({
   data,
@@ -20,6 +21,9 @@ function AttributionsChart({
   const [visibleIndices, setVisibleIndices] = useState(
     Array.from(Array(maxAllowedVisibleProperties).keys())
   );
+  const { attributionMetrics, setAttributionMetrics } = useContext(
+    CoreQueryContext
+  );
 
   useEffect(() => {
     const formattedData = formatData(data, event, visibleIndices, touchpoint);
@@ -32,11 +36,11 @@ function AttributionsChart({
 
   const legends = [
     `Conversions as Unique users (${attribution_method})`,
-    "Cost per conversion",
+    'Cost per conversion',
   ];
 
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       <BarLineChart
         responseRows={data.rows}
         responseHeaders={data.headers}
@@ -45,7 +49,7 @@ function AttributionsChart({
         section={section}
         legends={legends}
       />
-      <div className="mt-12 w-full">
+      <div className='mt-12 w-full'>
         <AttributionTable
           linkedEvents={linkedEvents}
           touchpoint={touchpoint}
@@ -59,6 +63,9 @@ function AttributionsChart({
           setVisibleIndices={setVisibleIndices}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
           attribution_method={attribution_method}
+          attributionMetrics={attributionMetrics}
+          setAttributionMetrics={setAttributionMetrics}
+          section={section}
         />
       </div>
     </div>

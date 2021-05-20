@@ -14,6 +14,7 @@ function DataTable({
   scroll,
   isWidgetModal,
   getCSVData,
+  ignoreDocumentClick,
 }) {
   const componentRef = useRef(null);
   const downloadBtnRef = useRef(null);
@@ -38,6 +39,9 @@ function DataTable({
 
   const handleDocumentClick = useCallback(
     (e) => {
+      if (ignoreDocumentClick) {
+        return false;
+      }
       if (componentRef && !componentRef.current.contains(e.target)) {
         showSearchBar(false);
         handleSearchTextChange('');

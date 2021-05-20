@@ -47,6 +47,7 @@ import {
   EACH_USER_TYPE,
   REPORT_SECTION,
   INITIAL_SESSION_ANALYTICS_SEQ,
+  ATTRIBUTION_METRICS,
 } from '../../utils/constants';
 import { SHOW_ANALYTICS_RESULT } from '../../reducers/types';
 import AnalysisResultsPage from './AnalysisResultsPage';
@@ -54,6 +55,7 @@ import {
   SET_CAMP_DATE_RANGE,
   SET_ATTR_DATE_RANGE,
 } from '../../reducers/coreQuery/actions';
+import { CoreQueryContext } from '../../contexts/CoreQueryContext';
 
 function CoreQuery({
   activeProject,
@@ -106,6 +108,10 @@ function CoreQuery({
     group_by: [],
     date_range: {},
   });
+
+  const [attributionMetrics, setAttributionMetrics] = useState([
+    ...ATTRIBUTION_METRICS,
+  ]);
 
   const dispatch = useDispatch();
   const {
@@ -697,7 +703,7 @@ function CoreQuery({
           visible={drawerVisible}
           onClose={closeDrawer}
           getContainer={false}
-          width={'600px'}
+          width={'650px'}
           className={'fa-drawer'}
         >
           <ErrorBoundary
@@ -711,30 +717,34 @@ function CoreQuery({
         </Drawer>
 
         {showResult ? (
-          <AnalysisResultsPage
-            queryType={queryType}
-            resultState={resultState}
-            setDrawerVisible={setDrawerVisible}
-            requestQuery={requestQuery}
-            queries={appliedQueries}
-            breakdown={appliedBreakdown}
-            setShowResult={setShowResult}
-            querySaved={querySaved}
-            setQuerySaved={setQuerySaved}
-            durationObj={queryOptions.date_range}
-            cmprDuration={cmprAttrDurationObj}
-            handleDurationChange={handleDurationChange}
-            arrayMapper={arrayMapper}
-            queryOptions={queryOptions}
-            attributionsState={attributionsState}
-            breakdownType={breakdownType}
-            campaignState={campaignState}
-            eventPage={result_criteria}
-            section={REPORT_SECTION}
-            runAttrCmprQuery={runAttrCmprQuery}
-            cmprResultState={cmprResultState}
-            campaignsArrayMapper={campaignsArrayMapper}
-          />
+          <CoreQueryContext.Provider
+            value={{ attributionMetrics, setAttributionMetrics }}
+          >
+            <AnalysisResultsPage
+              queryType={queryType}
+              resultState={resultState}
+              setDrawerVisible={setDrawerVisible}
+              requestQuery={requestQuery}
+              queries={appliedQueries}
+              breakdown={appliedBreakdown}
+              setShowResult={setShowResult}
+              querySaved={querySaved}
+              setQuerySaved={setQuerySaved}
+              durationObj={queryOptions.date_range}
+              cmprDuration={cmprAttrDurationObj}
+              handleDurationChange={handleDurationChange}
+              arrayMapper={arrayMapper}
+              queryOptions={queryOptions}
+              attributionsState={attributionsState}
+              breakdownType={breakdownType}
+              campaignState={campaignState}
+              eventPage={result_criteria}
+              section={REPORT_SECTION}
+              runAttrCmprQuery={runAttrCmprQuery}
+              cmprResultState={cmprResultState}
+              campaignsArrayMapper={campaignsArrayMapper}
+            />
+          </CoreQueryContext.Provider>
         ) : (
           <CoreQueryHome
             setQueryType={setQueryType}

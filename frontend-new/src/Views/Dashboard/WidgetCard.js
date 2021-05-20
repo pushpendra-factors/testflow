@@ -19,7 +19,9 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
   QUERY_TYPE_WEB,
+  ATTRIBUTION_METRICS,
 } from '../../utils/constants';
+import { DashboardContext } from '../../contexts/DashboardContext';
 
 function WidgetCard({
   unit,
@@ -33,6 +35,9 @@ function WidgetCard({
   const [resultState, setResultState] = useState(initialState);
   const { active_project } = useSelector((state) => state.global);
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
+  const [attributionMetrics, setAttributionMetrics] = useState([
+    ...ATTRIBUTION_METRICS,
+  ]);
 
   const getData = useCallback(
     async (refresh = false) => {
@@ -166,6 +171,12 @@ function WidgetCard({
     }
   }, [refreshClicked, getData]);
 
+  useEffect(() => {
+    if (unit.settings && unit.settings.attributionMetrics) {
+      setAttributionMetrics(JSON.parse(unit.settings.attributionMetrics));
+    }
+  }, [unit.settings]);
+
   const handleDelete = useCallback(() => {
     showDeleteWidgetModal(unit);
   }, [unit, showDeleteWidgetModal]);
@@ -264,12 +275,16 @@ function WidgetCard({
                 </Dropdown>
               </div>
             </div>
-            <CardContent
-              durationObj={durationObj}
-              unit={unit}
-              resultState={resultState}
-              setwidgetModal={setwidgetModal}
-            />
+            <DashboardContext.Provider
+              value={{ attributionMetrics, setAttributionMetrics }}
+            >
+              <CardContent
+                durationObj={durationObj}
+                unit={unit}
+                resultState={resultState}
+                setwidgetModal={setwidgetModal}
+              />
+            </DashboardContext.Provider>
           </div>
         </div>
       </div>

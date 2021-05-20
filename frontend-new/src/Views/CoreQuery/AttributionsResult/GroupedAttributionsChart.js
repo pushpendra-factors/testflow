@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
-import AttributionTable from "./AttributionTable";
-import { formatGroupedData } from "./utils";
-import GroupedBarChart from "../../../components/GroupedBarChart";
-import { DASHBOARD_MODAL } from "../../../utils/constants";
+import React, { useState, useEffect, useContext } from 'react';
+import AttributionTable from './AttributionTable';
+import { formatGroupedData } from './utils';
+import GroupedBarChart from '../../../components/GroupedBarChart';
+import { DASHBOARD_MODAL } from '../../../utils/constants';
+import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 
 function GroupedAttributionsChart({
   data,
@@ -16,12 +17,15 @@ function GroupedAttributionsChart({
   data2,
   currMetricsValue,
   durationObj,
-  cmprDuration
+  cmprDuration,
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
   const [visibleIndices, setVisibleIndices] = useState(
     Array.from(Array(maxAllowedVisibleProperties).keys())
+  );
+  const { attributionMetrics, setAttributionMetrics } = useContext(
+    CoreQueryContext
   );
 
   useEffect(() => {
@@ -55,7 +59,7 @@ function GroupedAttributionsChart({
   });
 
   const getColors = () => {
-    return ["#4D7DB4", "#4CBCBD"];
+    return ['#4D7DB4', '#4CBCBD'];
   };
 
   let legends, tooltipTitle;
@@ -64,17 +68,17 @@ function GroupedAttributionsChart({
       `Cost Per Conversion (${attribution_method})`,
       `Cost Per Conversion (${attribution_method_compare})`,
     ];
-    tooltipTitle = "Cost Per Conversion";
+    tooltipTitle = 'Cost Per Conversion';
   } else {
     legends = [
       `Conversions as Unique users (${attribution_method})`,
       `Conversions as Unique users (${attribution_method_compare})`,
     ];
-    tooltipTitle = "Conversions";
+    tooltipTitle = 'Conversions';
   }
 
   return (
-    <div className="flex items-center justify-center flex-col">
+    <div className='flex items-center justify-center flex-col'>
       <GroupedBarChart
         colors={getColors()}
         chartData={chartsData}
@@ -89,7 +93,7 @@ function GroupedAttributionsChart({
         legends={legends}
         tooltipTitle={tooltipTitle}
       />
-      <div className="mt-12 w-full">
+      <div className='mt-12 w-full'>
         <AttributionTable
           touchpoint={touchpoint}
           linkedEvents={linkedEvents}
@@ -104,6 +108,9 @@ function GroupedAttributionsChart({
           attribution_method_compare={attribution_method_compare}
           durationObj={durationObj}
           cmprDuration={cmprDuration}
+          attributionMetrics={attributionMetrics}
+          setAttributionMetrics={setAttributionMetrics}
+          section={section}
         />
       </div>
     </div>

@@ -4,7 +4,7 @@ import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
 import { bindActionCreators } from 'redux';
 
-import { Button } from 'antd';
+import { Button, Tooltip } from 'antd';
 import GroupSelect from '../GroupSelect';
 
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
@@ -84,7 +84,7 @@ function GroupBlock({
   const renderInitGroupSelect = (index) => {
     return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center mt-2`} >
       {!isDDVisible[index] &&
-        <Button type="text" onClick={() => triggerDropDown(index)} icon={<SVG name="plus" />}> Add new </Button> }
+        <Button className={`fa-button--truncate`} type="text" onClick={() => triggerDropDown(index)} icon={<SVG name="plus" />}> Add new </Button> }
       {isDDVisible[index]
         ? (<GroupSelect groupedProperties={filterOptions}
           placeholder="Select Property"
@@ -167,7 +167,9 @@ function GroupBlock({
       propertyName = 'Select user property';
     }
     return (
-      <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {propertyName}</Button>
+      <Tooltip title={propertyName}>
+        <Button className={`fa-button--truncate`} type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" extraClass={`mr-2`} />} {propertyName}</Button>
+      </Tooltip>
     )
   }
 
@@ -178,6 +180,7 @@ function GroupBlock({
         {!isDDVisible[index] && <>
         <Button
         type="text"
+        className={`fa-button--truncate`}
         onClick={() => delOption(index)}
         className={`${styles.group_block__remove} mr-2`}
         icon={<SVG name="delete" />}

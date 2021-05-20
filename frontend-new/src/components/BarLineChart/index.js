@@ -73,7 +73,7 @@ function BarLineChart({
       const impressionsIdx = responseHeaders.indexOf('Impressions');
       const clicksIdx = responseHeaders.indexOf('Clicks');
       const spendIdx = responseHeaders.indexOf('Spend');
-      const visitorsIdx = responseHeaders.indexOf('Website Visitors');
+      const sessionsIdx = responseHeaders.indexOf('Website Visitors');
       const rowIndex = visibleIndices[i];
 
       const toolTipHeight = d3.select(".toolTip").node()?.getBoundingClientRect()
@@ -120,9 +120,9 @@ function BarLineChart({
             )}</div>
           </div>
           <div class="flex justify-between pt-2">
-            <div>Visitors</div>
+            <div>Sessions</div>
             <div>${numberWithCommas(
-              formatCount(responseRows[rowIndex][visitorsIdx], 1)
+              formatCount(responseRows[rowIndex][sessionsIdx], 1)
             )}</div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   getStateQueryFromRequestQuery,
   getAttributionStateFromRequestQuery,
@@ -14,9 +14,11 @@ import {
   TOTAL_EVENTS_CRITERIA,
   DASHBOARD_MODAL,
   reverse_user_types,
+  ATTRIBUTION_METRICS,
 } from '../../utils/constants';
 import ReportContent from '../CoreQuery/AnalysisResultsPage/ReportContent';
 import { useSelector } from 'react-redux';
+import { CoreQueryContext } from '../../contexts/CoreQueryContext';
 
 function ActiveUnitContent({
   unit,
@@ -27,6 +29,9 @@ function ActiveUnitContent({
 }) {
   const history = useHistory();
   const { eventNames } = useSelector((state) => state.coreQuery);
+  const [attributionMetrics, setAttributionMetrics] = useState([
+    ...ATTRIBUTION_METRICS,
+  ]);
 
   let equivalentQuery;
   if (unit.query.query) {
@@ -126,31 +131,35 @@ function ActiveUnitContent({
 
   return (
     <div className='p-4'>
-      <ReportContent
-        queryType={queryType}
-        resultState={
-          queryType === QUERY_TYPE_WEB
-            ? {
-                ...resultState,
-                data: resultState.data ? resultState.data[unit.id] : null,
-              }
-            : resultState
-        }
-        setDrawerVisible={handleEditQuery}
-        queries={events.map((q) => q.label)}
-        breakdown={breakdown}
-        handleDurationChange={handleDurationChange}
-        arrayMapper={arrayMapper}
-        queryOptions={{ date_range: durationObj }}
-        attributionsState={attributionsState}
-        breakdownType={breakdownType}
-        campaignState={{ ...equivalentQuery, date_range: durationObj }}
-        eventPage={TOTAL_EVENTS_CRITERIA}
-        section={DASHBOARD_MODAL}
-        queryTitle={unit.title}
-        onReportClose={setwidgetModal}
-        campaignsArrayMapper={arrayMapper}
-      />
+      <CoreQueryContext.Provider
+        value={{ attributionMetrics, setAttributionMetrics }}
+      >
+        <ReportContent
+          queryType={queryType}
+          resultState={
+            queryType === QUERY_TYPE_WEB
+              ? {
+                  ...resultState,
+                  data: resultState.data ? resultState.data[unit.id] : null,
+                }
+              : resultState
+          }
+          setDrawerVisible={handleEditQuery}
+          queries={events.map((q) => q.label)}
+          breakdown={breakdown}
+          handleDurationChange={handleDurationChange}
+          arrayMapper={arrayMapper}
+          queryOptions={{ date_range: durationObj }}
+          attributionsState={attributionsState}
+          breakdownType={breakdownType}
+          campaignState={{ ...equivalentQuery, date_range: durationObj }}
+          eventPage={TOTAL_EVENTS_CRITERIA}
+          section={DASHBOARD_MODAL}
+          queryTitle={unit.title}
+          onReportClose={setwidgetModal}
+          campaignsArrayMapper={arrayMapper}
+        />
+      </CoreQueryContext.Provider>
     </div>
   );
 }
