@@ -31,6 +31,15 @@ const (
 	IncrSDKRequestTypeIdentifyUser             = "sdk_request_type_identify_user"
 	IncrSDKGetSettingsTimeout                  = "sdk_get_settings_timeout"
 
+	// Metrics to track latency of sdk requests.
+	LatencySDKRequestTypeTrack                    = "sdk_request_track_latency"
+	LatencySDKRequestTypeAMPTrack                 = "sdk_request_amp_track_latency"
+	LatencySDKRequestTypeUpdateEventProperties    = "sdk_request_update_event_properties_latency"
+	LatencySDKRequestTypeAMPUpdateEventProperties = "sdk_request_amp_update_event_properties_latency"
+	LatencySDKRequestTypeAddUserProperties        = "sdk_request_add_user_properties_latency"
+	LatencySDKRequestTypeIdentifyUser             = "sdk_request_identify_user_latency"
+	LatencySDKRequestTypeAMPIdentifyUser          = "sdk_request_identify_amp_user_latency"
+
 	// Metrics related to event user caching.
 	IncrEventCacheCounter          = "event_cache_incr"
 	IncrUserCacheCounter           = "user_cache_incr"

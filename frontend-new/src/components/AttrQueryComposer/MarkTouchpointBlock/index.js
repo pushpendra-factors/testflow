@@ -4,7 +4,7 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
 import GroupSelect from '../../QueryComposer/GroupSelect';
-import FilterBlock from '../../QueryComposer/FilterBlock';
+import AttrFilterBlock from '../AttrFilterBlock';
 
 import {setTouchPointFilters} from 'Reducers/coreQuery/middleware';
 
@@ -132,14 +132,14 @@ const MarkTouchpointBlock = ({touchPoint, touchPointOptions,
             filters.forEach((filt, id) => {
                 filtrs.push(
                     <div key={id} className={`mt-4`}>
-                        <FilterBlock activeProject={activeProject}
+                        <AttrFilterBlock activeProject={activeProject}
                             index={id}
                             blockType={'event'} filterType={'channel'}
                             filter={filt}
                             deleteFilter={delFilter}
                             typeProps={{ channel: "all_ads" }} filterProps={filterProps}
                             propsConstants={Object.keys(filterProps)}
-                        ></FilterBlock>
+                        ></AttrFilterBlock>
                     </div>
                 )
             })
@@ -147,7 +147,7 @@ const MarkTouchpointBlock = ({touchPoint, touchPointOptions,
             if (filterDD) {
                 filtrs.push(
                     <div key={filtrs.length} className={`mt-4`}>
-                        <FilterBlock activeProject={activeProject}
+                        <AttrFilterBlock activeProject={activeProject}
                             blockType={'event'} filterType={'channel'}
                             
                             delBtnClass={styles.filterDelBtn}
@@ -155,7 +155,7 @@ const MarkTouchpointBlock = ({touchPoint, touchPointOptions,
                             propsConstants={Object.keys(filterProps)}
                             insertFilter={insertFilter}
                             closeFilter={() => setFilterDD(false)}
-                        ></FilterBlock>
+                        ></AttrFilterBlock>
                     </div>
                 )
             }

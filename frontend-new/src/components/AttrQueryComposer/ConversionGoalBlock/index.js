@@ -6,7 +6,7 @@ import { bindActionCreators } from 'redux';
 import GroupSelect from '../../QueryComposer/GroupSelect';
 import FilterBlock from '../../QueryComposer/FilterBlock';
 
-import { Button } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 
 const ConversionGoalBlock = ({
@@ -141,7 +141,9 @@ const ConversionGoalBlock = ({
     const renderGoalBlockContent = () => {
         return (
             <div className={'flex items-center relative'}>
-                {!selectVisible && <Button 
+                {!selectVisible && 
+                <Tooltip title={eventNames[eventGoal?.label]? eventNames[eventGoal?.label] : eventGoal?.label}>
+                <Button 
                     size={'large'} 
                     type="link" 
                     onClick={toggleEventSelect}
@@ -150,7 +152,8 @@ const ConversionGoalBlock = ({
                     >
 
                         {eventNames[eventGoal?.label]? eventNames[eventGoal?.label] : eventGoal?.label}
-                </Button> }
+                </Button> 
+                </Tooltip> }
 
                 {selectEvents()}
 

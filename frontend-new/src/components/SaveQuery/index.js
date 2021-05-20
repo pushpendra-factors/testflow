@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import moment from 'moment';
 import {
   Button,
@@ -25,6 +25,7 @@ import {
   DASHBOARD_TYPES,
 } from '../../utils/constants';
 import { getSaveChartOptions } from '../../Views/CoreQuery/utils';
+import { CoreQueryContext } from '../../contexts/CoreQueryContext';
 
 function SaveQuery({
   requestQuery,
@@ -40,6 +41,7 @@ function SaveQuery({
     apiChartAnnotations[CHART_TYPE_TABLE]
   );
   const [apisCalled, setApisCalled] = useState(false);
+  const { attributionMetrics } = useContext(CoreQueryContext);
   const { active_project } = useSelector((state) => state.global);
   const { dashboards } = useSelector((state) => state.dashboard);
   const dispatch = useDispatch();
@@ -154,6 +156,7 @@ function SaveQuery({
       if (addToDashboard) {
         const settings = {
           chart: dashboardPresentation,
+          attributionMetrics: JSON.stringify(attributionMetrics),
         };
         const reqBody = {
           settings,
@@ -196,6 +199,7 @@ function SaveQuery({
     selectedDashboards,
     queryType,
     setQuerySaved,
+    attributionMetrics
   ]);
 
   let dashboardHelpText = 'Create a dashboard widget for regular monitoring';

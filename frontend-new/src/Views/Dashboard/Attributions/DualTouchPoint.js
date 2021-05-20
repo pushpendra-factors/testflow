@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from "react";
-import AttributionTable from "../../CoreQuery/AttributionsResult/AttributionTable";
-import GroupedBarChart from "../../../components/GroupedBarChart";
-import { formatGroupedData } from "../../CoreQuery/AttributionsResult/utils";
-import { CHART_TYPE_BARCHART, CHART_TYPE_TABLE } from "../../../utils/constants";
+import React, { useState, useEffect, useContext } from 'react';
+import AttributionTable from '../../CoreQuery/AttributionsResult/AttributionTable';
+import GroupedBarChart from '../../../components/GroupedBarChart';
+import { formatGroupedData } from '../../CoreQuery/AttributionsResult/utils';
+import {
+  CHART_TYPE_BARCHART,
+  CHART_TYPE_TABLE,
+} from '../../../utils/constants';
+import { DashboardContext } from '../../../contexts/DashboardContext';
 
 function DualTouchPoint({
   data,
@@ -23,7 +27,9 @@ function DualTouchPoint({
   const [visibleIndices, setVisibleIndices] = useState(
     Array.from(Array(maxAllowedVisibleProperties).keys())
   );
-
+  const { attributionMetrics, setAttributionMetrics } = useContext(
+    DashboardContext
+  );
   useEffect(() => {
     const formattedData = formatGroupedData(
       data,
@@ -49,20 +55,18 @@ function DualTouchPoint({
 
   chartsData.forEach((cd) => {
     allValues.push(cd[attribution_method]);
-    allValues.push(
-      allValues.push(cd[attribution_method_compare])
-    );
+    allValues.push(allValues.push(cd[attribution_method_compare]));
   });
 
   const getColors = () => {
-    return ["#4D7DB4", "#4CBCBD"];
+    return ['#4D7DB4', '#4CBCBD'];
   };
 
   const legends = [
     `Conversions as Unique users (${attribution_method})`,
     `Conversions as Unique users (${attribution_method_compare})`,
   ];
-  
+
   let chartContent = null;
 
   if (chartType === CHART_TYPE_BARCHART) {
@@ -82,7 +86,7 @@ function DualTouchPoint({
         cardSize={unit.cardSize}
         allValues={allValues}
         legends={legends}
-        tooltipTitle="Conversions"
+        tooltipTitle='Conversions'
       />
     );
   } else {
@@ -98,6 +102,9 @@ function DualTouchPoint({
         maxAllowedVisibleProperties={maxAllowedVisibleProperties}
         attribution_method={attribution_method}
         attribution_method_compare={attribution_method_compare}
+        attributionMetrics={attributionMetrics}
+        setAttributionMetrics={setAttributionMetrics}
+        section={section}
       />
     );
   }
@@ -108,8 +115,8 @@ function DualTouchPoint({
     tableContent = (
       <div
         onClick={() => setwidgetModal({ unit, data: resultState.data })}
-        style={{ color: "#5949BC" }}
-        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+        style={{ color: '#5949BC' }}
+        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >
         Show More &rarr;
       </div>
@@ -117,9 +124,7 @@ function DualTouchPoint({
   }
 
   return (
-    <div
-      className={`w-full px-6 flex flex-1 flex-col  justify-center`}
-    >
+    <div className={`w-full px-6 flex flex-1 flex-col  justify-center`}>
       {chartContent}
       {tableContent}
     </div>

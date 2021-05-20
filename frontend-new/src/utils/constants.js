@@ -158,3 +158,61 @@ export const INITIAL_SESSION_ANALYTICS_SEQ = {
   start: 0,
   end: 0,
 };
+
+export const ATTRIBUTION_METRICS = [
+  {
+    title: 'Impressions',
+    header: 'Impressions',
+    enabled: true,
+  },
+  {
+    title: 'Clicks',
+    header: 'Clicks',
+    enabled: true,
+  },
+  {
+    title: 'Spend',
+    header: 'Spend',
+    enabled: true,
+  },
+  {
+    title: 'Sessions',
+    header: 'Website Visitors',
+    enabled: true,
+  },
+  {
+    title: 'CTR',
+    header: 'CTR',
+    enabled: false,
+  },
+  {
+    title: 'Average CPC',
+    header: 'Average CPC',
+    enabled: false,
+  },
+  {
+    title: 'CPM',
+    header: 'CPM',
+    enabled: false,
+  },
+  {
+    title: 'Conversion Rate',
+    header: 'ConversionRate',
+    enabled: false,
+  },
+  {
+    title: 'Users',
+    header: 'Users',
+    enabled: false,
+  },
+  {
+    title: 'Average Session Time',
+    header: 'Average Session Time',
+    enabled: false,
+  },
+  {
+    title: 'Page Views',
+    header: 'PageViews',
+    enabled: false,
+  },
+];
