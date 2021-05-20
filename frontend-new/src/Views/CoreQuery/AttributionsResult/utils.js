@@ -14,6 +14,7 @@ import {
   SVG,
   Number as NumFormat,
 } from '../../../components/factorsComponents';
+import { Popover } from 'antd';
 
 export const getDifferentCampaingns = (data) => {
   const { headers } = data.result;
@@ -106,54 +107,60 @@ export const getCompareTableColumns = (
   touchpoint,
   linkedEvents,
   event,
-  eventNames
+  eventNames,
+  metrics,
+  OptionsPopover
 ) => {
+  const metricsColumns = metrics
+    .filter((metric) => metric.enabled)
+    .map((metric, index, arr) => {
+      return {
+        title:
+          index !== arr.length - 1 ? (
+            getTitleWithSorter(
+              metric.title,
+              metric.title,
+              currentSorter,
+              handleSorting
+            )
+          ) : (
+            <div className='flex flex-col'>
+              <div className='mb-6 flex justify-end '>
+                <Popover
+                  placement='bottomLeft'
+                  trigger='click'
+                  content={OptionsPopover}
+                >
+                  <span
+                    className={`text-2xl font-normal inline-flex items-center justify-center cursor-pointer absolute bg-white top-4 -right-4 z-10 shadow ${styles.metricOptionsToggler}`}
+                  >
+                    +
+                  </span>
+                </Popover>
+              </div>
+              {getTitleWithSorter(
+                metric.title,
+                metric.title,
+                currentSorter,
+                handleSorting
+              )}
+            </div>
+          ),
+        dataIndex: metric.title,
+        width: 150,
+        className: 'align-bottom',
+        render: renderComparCell,
+      };
+    });
   const result = [
     {
       title: touchpoint,
       dataIndex: touchpoint,
       fixed: 'left',
-      width: 100,
-    },
-    {
-      title: getTitleWithSorter(
-        'Impressions',
-        'impressions',
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'impressions',
       width: 150,
-      render: renderComparCell,
+      className: 'align-bottom',
     },
-    {
-      title: getTitleWithSorter(
-        'Clicks',
-        'clicks',
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'clicks',
-      width: 150,
-      render: renderComparCell,
-    },
-    {
-      title: getTitleWithSorter('Spend', 'spend', currentSorter, handleSorting),
-      dataIndex: 'spend',
-      width: 150,
-      render: renderComparCell,
-    },
-    {
-      title: getTitleWithSorter(
-        'Visitors',
-        'visitors',
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'visitors',
-      width: 150,
-      render: renderComparCell,
-    },
+    ...metricsColumns,
     {
       title: eventNames[event] || event,
       className: 'tableParentHeader',
@@ -286,7 +293,8 @@ export const getCompareTableColumns = (
         title: MARKETING_TOUCHPOINTS.CAMPAIGN,
         dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
         fixed: 'left',
-        width: 100,
+        width: 150,
+        className: 'align-bottom',
       },
     ];
   }
@@ -296,19 +304,22 @@ export const getCompareTableColumns = (
         title: MARKETING_TOUCHPOINTS.CAMPAIGN,
         dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
         fixed: 'left',
-        width: 100,
+        width: 150,
+        className: 'align-bottom',
       },
       {
         title: MARKETING_TOUCHPOINTS.ADGROUP,
         dataIndex: MARKETING_TOUCHPOINTS.ADGROUP,
         fixed: 'left',
-        width: 100,
+        width: 150,
+        className: 'align-bottom',
       },
       {
         title: MARKETING_TOUCHPOINTS.MATCHTYPE,
         dataIndex: MARKETING_TOUCHPOINTS.MATCHTYPE,
         fixed: 'left',
-        width: 100,
+        width: 150,
+        className: 'align-bottom',
       },
     ];
   }
@@ -323,62 +334,62 @@ export const getTableColumns = (
   touchpoint,
   linkedEvents,
   event,
-  eventNames
+  eventNames,
+  metrics,
+  OptionsPopover
 ) => {
+  const metricsColumns = metrics
+    .filter((metric) => metric.enabled)
+    .map((metric, index, arr) => {
+      return {
+        title:
+          index !== arr.length - 1 ? (
+            getTitleWithSorter(
+              metric.title,
+              metric.title,
+              currentSorter,
+              handleSorting
+            )
+          ) : (
+            <div className='flex flex-col'>
+              <div className='mb-6 flex justify-end '>
+                <Popover
+                  placement='bottomLeft'
+                  trigger='click'
+                  content={OptionsPopover}
+                >
+                  <span
+                    className={`text-2xl font-normal inline-flex items-center justify-center cursor-pointer absolute bg-white top-4 -right-4 z-10 shadow ${styles.metricOptionsToggler}`}
+                  >
+                    +
+                  </span>
+                </Popover>
+              </div>
+              {getTitleWithSorter(
+                metric.title,
+                metric.title,
+                currentSorter,
+                handleSorting
+              )}
+            </div>
+          ),
+        dataIndex: metric.title,
+        width: 150,
+        className: 'align-bottom',
+        render: (d) => {
+          return <NumFormat number={d} />;
+        },
+      };
+    });
   const result = [
     {
       title: touchpoint,
       dataIndex: touchpoint,
       fixed: 'left',
-      width: 100,
-    },
-    {
-      title: getTitleWithSorter(
-        'Impressions',
-        'impressions',
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'impressions',
       width: 150,
-      render: (d) => {
-        return <NumFormat number={d} />;
-      },
+      className: 'align-bottom',
     },
-    {
-      title: getTitleWithSorter(
-        'Clicks',
-        'clicks',
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'clicks',
-      width: 150,
-      render: (d) => {
-        return <NumFormat number={d} />;
-      },
-    },
-    {
-      title: getTitleWithSorter('Spend', 'spend', currentSorter, handleSorting),
-      dataIndex: 'spend',
-      width: 150,
-      render: (d) => {
-        return <NumFormat number={d} />;
-      },
-    },
-    {
-      title: getTitleWithSorter(
-        'Visitors',
-        'visitors',
-        currentSorter,
-        handleSorting
-      ),
-      dataIndex: 'visitors',
-      width: 150,
-      render: (d) => {
-        return <NumFormat number={d} />;
-      },
-    },
+    ...metricsColumns,
     {
       title: eventNames[event] || event,
       className: 'tableParentHeader',
@@ -524,7 +535,8 @@ export const getTableColumns = (
         title: MARKETING_TOUCHPOINTS.CAMPAIGN,
         dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
         fixed: 'left',
-        width: 100,
+        width: 150,
+        className: 'align-bottom',
       },
     ];
   }
@@ -534,19 +546,22 @@ export const getTableColumns = (
         title: MARKETING_TOUCHPOINTS.CAMPAIGN,
         dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
         fixed: 'left',
-        width: 100,
+        width: 150,
+        className: 'align-bottom',
       },
       {
         title: MARKETING_TOUCHPOINTS.ADGROUP,
         dataIndex: MARKETING_TOUCHPOINTS.ADGROUP,
         fixed: 'left',
-        width: 100,
+        width: 150,
+        className: 'align-bottom',
       },
       {
         title: MARKETING_TOUCHPOINTS.MATCHTYPE,
         dataIndex: MARKETING_TOUCHPOINTS.MATCHTYPE,
         fixed: 'left',
-        width: 100,
+        width: 150,
+        className: 'align-bottom',
       },
     ];
   }
@@ -569,14 +584,11 @@ export const getCompareTableData = (
   currentSorter,
   attribution_method_compare,
   touchpoint,
-  linkedEvents
+  linkedEvents,
+  metrics
 ) => {
   const { headers } = data;
   const touchpointIdx = headers.indexOf(touchpoint);
-  const impressionsIdx = headers.indexOf('Impressions');
-  const clicksIdx = headers.indexOf('Clicks');
-  const spendIdx = headers.indexOf('Spend');
-  const visitorsIdx = headers.indexOf('Website Visitors');
   const costIdx = headers.indexOf('Cost Per Conversion');
   const userIdx = headers.indexOf(`${event} - Users`);
   const compareUsersIdx = headers.indexOf(`Compare - Users`);
@@ -587,13 +599,16 @@ export const getCompareTableData = (
       const row2 = data2Rows.filter(
         (r) => r[touchpointIdx] === row[touchpointIdx]
       )[0];
+      const metricsData = {};
+      const enabledMetrics = metrics.filter((metric) => metric.enabled);
+      enabledMetrics.forEach((metric) => {
+        const index = headers.indexOf(metric.header);
+        metricsData[metric.title] = constrComparisionCellData(row, row2, index);
+      });
       let resultantRow = {
         index,
         [touchpoint]: row[touchpointIdx],
-        impressions: constrComparisionCellData(row, row2, impressionsIdx),
-        clicks: constrComparisionCellData(row, row2, clicksIdx),
-        spend: constrComparisionCellData(row, row2, spendIdx),
-        visitors: constrComparisionCellData(row, row2, visitorsIdx),
+        ...metricsData,
         conversion: constrComparisionCellData(row, row2, userIdx),
         cost: constrComparisionCellData(row, row2, costIdx),
       };
@@ -686,27 +701,27 @@ export const getTableData = (
   currentSorter,
   attribution_method_compare,
   touchpoint,
-  linkedEvents
+  linkedEvents,
+  metrics
 ) => {
   const { headers } = data;
   const touchpointIdx = headers.indexOf(touchpoint);
-  const impressionsIdx = headers.indexOf('Impressions');
-  const clicksIdx = headers.indexOf('Clicks');
-  const spendIdx = headers.indexOf('Spend');
-  const visitorsIdx = headers.indexOf('Website Visitors');
   const costIdx = headers.indexOf('Cost Per Conversion');
   const userIdx = headers.indexOf(`${event} - Users`);
   const compareUsersIdx = headers.indexOf(`Compare - Users`);
   const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
   const result = data.rows
     .map((row, index) => {
+      const metricsData = {};
+      const enabledMetrics = metrics.filter((metric) => metric.enabled);
+      enabledMetrics.forEach((metric) => {
+        const index = headers.indexOf(metric.header);
+        metricsData[metric.title] = row[index];
+      });
       let resultantRow = {
         index,
         [touchpoint]: row[touchpointIdx],
-        impressions: formatCount(row[impressionsIdx], 1),
-        clicks: formatCount(row[clicksIdx], 1),
-        spend: formatCount(row[spendIdx], 1),
-        visitors: formatCount(row[visitorsIdx], 1),
+        ...metricsData,
         conversion: formatCount(row[userIdx], 1),
         cost: formatCount(row[costIdx], 1),
       };

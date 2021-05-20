@@ -9,6 +9,8 @@ import {
 } from './utils';
 import DataTable from '../../../components/DataTable';
 import { useSelector } from 'react-redux';
+import OptionsPopover from './OptionsPopover';
+import { DASHBOARD_WIDGET_SECTION } from '../../../utils/constants';
 
 function AttributionTable({
   data,
@@ -25,6 +27,9 @@ function AttributionTable({
   reportTitle = 'Attributions',
   durationObj,
   cmprDuration,
+  attributionMetrics,
+  setAttributionMetrics,
+  section = null,
 }) {
   const [searchText, setSearchText] = useState('');
   const [sorter, setSorter] = useState({});
@@ -32,19 +37,38 @@ function AttributionTable({
   const handleSorting = useCallback((sorter) => {
     setSorter(sorter);
   }, []);
-  
-  const columns = getTableColumns(
-    sorter,
-    handleSorting,
-    attribution_method,
-    attribution_method_compare,
-    touchpoint,
-    linkedEvents,
-    event,
-    eventNames
+
+  const handleMetricsVisibilityChange = useCallback(
+    (option) => {
+      setAttributionMetrics((curMetrics) => {
+        const newState = curMetrics.map((metric) => {
+          if (metric.header === option.header) {
+            return {
+              ...metric,
+              enabled: !metric.enabled,
+            };
+          }
+          return metric;
+        });
+        const enabledOptions = newState.filter((metric) => metric.enabled);
+        if (!enabledOptions.length) {
+          return curMetrics;
+        } else {
+          return newState;
+        }
+      });
+    },
+    [setAttributionMetrics]
   );
 
-  const cmprColums = data2
+  const metricsOptionsPopover = (
+    <OptionsPopover
+      options={attributionMetrics}
+      onChange={handleMetricsVisibilityChange}
+    />
+  );
+
+  const columns = data2
     ? getCompareTableColumns(
         sorter,
         handleSorting,
@@ -53,21 +77,24 @@ function AttributionTable({
         touchpoint,
         linkedEvents,
         event,
-        eventNames
+        eventNames,
+        attributionMetrics,
+        metricsOptionsPopover
       )
-    : null;
+    : getTableColumns(
+        sorter,
+        handleSorting,
+        attribution_method,
+        attribution_method_compare,
+        touchpoint,
+        linkedEvents,
+        event,
+        eventNames,
+        attributionMetrics,
+        metricsOptionsPopover
+      );
 
-  const tableData = getTableData(
-    data,
-    event,
-    searchText,
-    sorter,
-    attribution_method_compare,
-    touchpoint,
-    linkedEvents
-  );
-
-  const cmrTableData = data2
+  const tableData = data2
     ? getCompareTableData(
         data,
         data2,
@@ -76,9 +103,19 @@ function AttributionTable({
         sorter,
         attribution_method_compare,
         touchpoint,
-        linkedEvents
+        linkedEvents,
+        attributionMetrics
       )
-    : null;
+    : getTableData(
+        data,
+        event,
+        searchText,
+        sorter,
+        attribution_method_compare,
+        touchpoint,
+        linkedEvents,
+        attributionMetrics
+      );
 
   const calcTotal = (rowTtl, tblItem) => {
     if (rowTtl && !isNaN(tblItem)) {
@@ -132,11 +169,11 @@ function AttributionTable({
   };
 
   const getCSVData = () => {
-    const dt = cmrTableData ? cmrTableData : tableData;
+    const dt = tableData;
     let dataTotal = {};
     const mappedData = dt.map(({ index, ...rest }) => {
       let results;
-      if (cmrTableData) {
+      if (data2) {
         [results, dataTotal] = constructCompareCSV(rest, dataTotal);
       } else {
         results = rest;
@@ -172,13 +209,14 @@ function AttributionTable({
   return (
     <DataTable
       isWidgetModal={isWidgetModal}
-      tableData={cmrTableData ? cmrTableData : tableData}
+      tableData={tableData}
       searchText={searchText}
       setSearchText={setSearchText}
-      columns={cmprColums ? cmprColums : columns}
+      columns={columns}
       rowSelection={rowSelection}
       scroll={{ x: 250 }}
       getCSVData={getCSVData}
+      ignoreDocumentClick={section === DASHBOARD_WIDGET_SECTION}
     />
   );
 }
