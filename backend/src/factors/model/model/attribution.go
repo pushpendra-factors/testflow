@@ -201,7 +201,7 @@ var AddedKeysForKeyword = []string{"Campaign", "AdGroup", "MatchType"}
 // TODO (Anil) Update Website Visitors to Session back
 var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR", "Average CPC", "CPM", "ConversionRate", "Website Visitors", "Users", "Average Session Time", "PageViews"}
 
-// var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR", "Average CPC", "CPM", "ConversionRate", "Sessions", "Users", "Average Session Time", "PageViews"}
+// var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR(%)", "Average CPC", "CPM", "ConversionRate(%)", "Sessions", "Users", "Average Session Time", "PageViews"}
 var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "Compare - Users", "Compare Cost Per Conversion"}
 
 type AttributionData struct {
@@ -696,65 +696,103 @@ func DoesLinkedinReportExist(attributionKey string) bool {
 	return false
 }
 
-func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, attributionKey string, sessions map[string]map[string]UserSessionData) {
+func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, query *AttributionQuery, sessions map[string]map[string]UserSessionData) {
 
 	// Extract out key based info
 	sessionKeyMarketingInfo := make(map[string]MarketingData)
 	sessionKeySessionTimes := make(map[string][]float64)
 	sessionKeyPageCounts := make(map[string][]int64)
 	sessionKeyUserCount := make(map[string]int64)
+	sessionKeyCount := make(map[string]int64)
 	for _, value := range sessions {
 		userKeyPairCounted := false
 		for k, v := range value {
 			sessionKeyMarketingInfo[k] = v.MarketingInfo
-			sessionKeySessionTimes[k] = append(sessionKeySessionTimes[k], v.SessionSpentTimes...)
-			sessionKeyPageCounts[k] = append(sessionKeyPageCounts[k], v.PageCounts...)
-			// Any one instance of this user
-			if !userKeyPairCounted {
+			for index, sv := range v.TimeStamps {
+				if sv >= query.From && sv <= query.To {
+
+					// SessionSpentTimes which are within query period
+					if len(v.SessionSpentTimes) > index {
+						sessionKeySessionTimes[k] = append(sessionKeySessionTimes[k], v.SessionSpentTimes[index])
+					}
+					// PageCounts which are within query period
+					if len(v.PageCounts) > index {
+						sessionKeyPageCounts[k] = append(sessionKeyPageCounts[k], v.PageCounts[index])
+					}
+					// Sessions which are within query period
+					sessionKeyCount[k] = sessionKeyCount[k] + 1
+				}
+			}
+
+			// Any one instance of this user if the session by them is WithinQueryPeriod
+			if !userKeyPairCounted && v.WithinQueryPeriod {
 				sessionKeyUserCount[k] = sessionKeyUserCount[k] + 1
 				userKeyPairCounted = true
 			}
 		}
 	}
 
-	for key, _ := range *attributionData {
-		if _, exists := sessionKeyMarketingInfo[key]; exists {
-			// Add the marketing info
-			(*attributionData)[key].MarketingInfo = sessionKeyMarketingInfo[key]
-			switch attributionKey {
-			case AttributionKeyCampaign:
-				(*attributionData)[key].Name = sessionKeyMarketingInfo[key].CampaignName
-			case AttributionKeyAdgroup:
-				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
-				(*attributionData)[key].Name = sessionKeyMarketingInfo[key].AdgroupName
-			case AttributionKeyKeyword:
-				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
-				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].AdgroupName)
-				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].KeywordMatchType)
-				(*attributionData)[key].Name = sessionKeyMarketingInfo[key].KeywordName
-			case AttributionKeySource:
-				(*attributionData)[key].Name = sessionKeyMarketingInfo[key].Source
-			}
-			// Add AvgSessionTime
-			totalTime := 0.0
-			for _, v := range sessionKeySessionTimes[key] {
-				totalTime = totalTime + v
-			}
-			if totalTime != 0 && len(sessionKeySessionTimes[key]) != 0 {
-				(*attributionData)[key].AvgSessionTime = totalTime / float64(len(sessionKeySessionTimes[key]))
-			}
-			// Add PageViews
-			totalPageCount := int64(0)
-			for _, v := range sessionKeyPageCounts[key] {
-				totalPageCount = totalPageCount + v
-			}
-			(*attributionData)[key].PageViews = totalPageCount
+	// Creating an empty linked events row.
+	emptyLinkedEventRow := make([]float64, 0)
+	for i := 0; i < len(query.LinkedEvents); i++ {
+		emptyLinkedEventRow = append(emptyLinkedEventRow, float64(0))
+	}
+	for _, attributionIDMap := range sessions {
+		for key, sessionTimestamp := range attributionIDMap {
+			// Only count sessions that happened during attribution period.
+			if sessionTimestamp.WithinQueryPeriod {
 
-			// Add Unique user count
-			(*attributionData)[key].Users = sessionKeyUserCount[key]
+				// Create a row in AttributionData if no key is present for this session
+				if _, ok := (*attributionData)[key]; !ok {
+					(*attributionData)[key] = &AttributionData{}
+					if len(query.LinkedEvents) > 0 {
+						// Init the linked events with 0.0 value.
+						tempRow := emptyLinkedEventRow
+						(*attributionData)[key].LinkedEventsCount = tempRow
+					}
+				}
 
+				if _, exists := sessionKeyMarketingInfo[key]; exists {
+					// Add the marketing info
+					(*attributionData)[key].MarketingInfo = sessionKeyMarketingInfo[key]
+					switch query.AttributionKey {
+					case AttributionKeyCampaign:
+						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].CampaignName
+					case AttributionKeyAdgroup:
+						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
+						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].AdgroupName
+					case AttributionKeyKeyword:
+						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
+						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].AdgroupName)
+						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].KeywordMatchType)
+						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].KeywordName
+					case AttributionKeySource:
+						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].Source
+					}
+					// Sessions
+					(*attributionData)[key].Sessions = sessionKeyCount[key]
+
+					// Add AvgSessionTime
+					totalTime := 0.0
+					for _, v := range sessionKeySessionTimes[key] {
+						totalTime = totalTime + v
+					}
+					if totalTime != 0 && len(sessionKeySessionTimes[key]) != 0 {
+						(*attributionData)[key].AvgSessionTime = totalTime / float64(len(sessionKeySessionTimes[key]))
+					}
+					// Add PageViews
+					totalPageCount := int64(0)
+					for _, v := range sessionKeyPageCounts[key] {
+						totalPageCount = totalPageCount + v
+					}
+					(*attributionData)[key].PageViews = totalPageCount
+
+					// Add Unique user count
+					(*attributionData)[key].Users = sessionKeyUserCount[key]
+
+				}
+			}
 		}
-
 	}
 }
 
@@ -865,12 +903,12 @@ func ComputeAdditionalMetrics(attributionData *map[string]*AttributionData) {
 		(*attributionData)[k].AvgCPC = 0
 		(*attributionData)[k].ConversionRate = 0
 		if v.Impressions > 0 {
-			(*attributionData)[k].CTR = float64(v.Clicks) / float64(v.Impressions)
+			(*attributionData)[k].CTR = 100 * float64(v.Clicks) / float64(v.Impressions)
 			(*attributionData)[k].CPM = 1000 * float64(v.Spend) / float64(v.Impressions)
 		}
 		if v.Clicks > 0 {
 			(*attributionData)[k].AvgCPC = float64(v.Spend) / float64(v.Clicks)
-			(*attributionData)[k].ConversionRate = float64(v.ConversionEventCount) / float64(v.Clicks)
+			(*attributionData)[k].ConversionRate = 100 * float64(v.ConversionEventCount) / float64(v.Clicks)
 		}
 	}
 }
