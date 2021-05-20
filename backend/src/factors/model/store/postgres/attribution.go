@@ -45,7 +45,7 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, err
 	}
 
-	// 1. Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
+	// Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
 	_sessions, sessionUsers, err := pg.getAllTheSessions(projectID, sessionEventNameID, query, marketingReports)
 	if err != nil {
 		return nil, err
@@ -117,10 +117,8 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 		return nil, err
 	}
 
-	addWebsiteVisitorsInfo(attributionData, sessions, len(query.LinkedEvents))
-
 	// Add the Added keys
-	model.AddTheAddedKeysAndMetrics(attributionData, query.AttributionKey, sessions)
+	model.AddTheAddedKeysAndMetrics(attributionData, query, sessions)
 
 	// Add the performance information
 	model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports)
@@ -723,45 +721,6 @@ func updateSessionsMapWithCoalesceID(attributedSessionsByUserID map[string]map[s
 		}
 	}
 	return newSessionsMap
-}
-
-// addWebsiteVisitorsInfo Maps the count distinct users session to campaign id and adds it to attributionData
-func addWebsiteVisitorsInfo(attributionData *map[string]*model.AttributionData,
-	attributedSessionsByUserID map[string]map[string]model.UserSessionData, linkedEventsCount int) {
-	// Creating an empty linked events row.
-	emptyLinkedEventRow := make([]float64, 0)
-	for i := 0; i < linkedEventsCount; i++ {
-		emptyLinkedEventRow = append(emptyLinkedEventRow, float64(0))
-	}
-
-	userIDAttributionIDVisit := make(map[string]bool)
-	for userID, attributionIDMap := range attributedSessionsByUserID {
-		for attributionID, sessionTimestamp := range attributionIDMap {
-
-			// Only count sessions that happened during attribution period.
-			if sessionTimestamp.WithinQueryPeriod {
-
-				if _, ok := (*attributionData)[attributionID]; !ok {
-					(*attributionData)[attributionID] = &model.AttributionData{}
-					if linkedEventsCount > 0 {
-						// Init the linked events with 0.0 value.
-						tempRow := emptyLinkedEventRow
-						(*attributionData)[attributionID].LinkedEventsCount = tempRow
-					}
-				}
-				if _, ok := userIDAttributionIDVisit[getKey(userID, attributionID)]; ok {
-					continue
-				}
-				(*attributionData)[attributionID].Sessions += 1
-				userIDAttributionIDVisit[getKey(userID, attributionID)] = true
-			}
-		}
-	}
-}
-
-// Merges 2 ids to create a string key
-func getKey(id1 string, id2 string) string {
-	return id1 + "|_|" + id2
 }
 
 // GetAdwordsCurrency Returns currency used for adwords customer_account_id

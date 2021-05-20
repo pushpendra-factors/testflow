@@ -4,11 +4,6 @@ import (
 	"sort"
 )
 
-type pair struct {
-	key   string
-	value int64
-}
-
 // ApplyAttribution This method maps the user to the attribution key based on given attribution methodology.
 func ApplyAttribution(attributionType string, method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
 	sessions map[string]map[string]UserSessionData,
