@@ -137,13 +137,13 @@ const RequestQueueDuplicate = "sdk_request_queue"
 const ProcessRequestTask = "process_sdk_request"
 
 const (
-	sdkRequestTypeEventTrack                = "sdk_event_track"
-	sdkRequestTypeUserIdentify              = "sdk_user_identify"
-	sdkRequestTypeUserAddProperties         = "sdk_user_add_properties"
-	sdkRequestTypeEventUpdateProperties     = "sdk_event_update_properties"
-	sdkRequestTypeAMPEventTrack             = "sdk_amp_event_track"
-	sdkRequestTypedAMPEventUpdateProperties = "sdk_amp_event_update_properties"
-	sdkRequestTypeAMPIdentify               = "sdk_amp_identify"
+	sdkRequestTypeEventTrack               = "sdk_event_track"
+	sdkRequestTypeUserIdentify             = "sdk_user_identify"
+	sdkRequestTypeUserAddProperties        = "sdk_user_add_properties"
+	sdkRequestTypeEventUpdateProperties    = "sdk_event_update_properties"
+	sdkRequestTypeAMPEventTrack            = "sdk_amp_event_track"
+	sdkRequestTypeAMPEventUpdateProperties = "sdk_amp_event_update_properties"
+	sdkRequestTypeAMPIdentify              = "sdk_amp_identify"
 )
 
 func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string, error) {
@@ -152,6 +152,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 
 	// Todo(Dinesh): Add request_id for better tracing.
 
+	execStartTime := time.Now()
 	logCtx := log.WithFields(log.Fields{"queue": RequestQueue, "token": token,
 		"req_type": reqType, "req_payload_str": reqPayloadStr})
 
@@ -223,7 +224,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 
 		status, response = AMPTrackByToken(token, &reqPayload)
 
-	case sdkRequestTypedAMPEventUpdateProperties:
+	case sdkRequestTypeAMPEventUpdateProperties:
 		var reqPayload AMPUpdateEventPropertiesPayload
 
 		err := json.Unmarshal([]byte(reqPayloadStr), &reqPayload)
@@ -260,6 +261,8 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	// Do not retry on below conditions.
 	if status == http.StatusBadRequest || status == http.StatusNotAcceptable || status == http.StatusUnauthorized {
 		metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
+		recordLatencyMetricByRequestType(reqType, execStartTime)
+
 		return float64(status), "", nil
 	}
 
@@ -273,11 +276,44 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 
 	// Log for analysing queue process status.
 	metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
+	recordLatencyMetricByRequestType(reqType, execStartTime)
 
 	return http.StatusOK, string(responseBytes), nil
 }
 
-func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int, perQueryPullRange int, skipExpiryForCache bool) {
+func recordLatencyMetricByRequestType(requestType string, execStartTime time.Time) {
+	var metricName string
+	switch requestType {
+	case sdkRequestTypeEventTrack:
+		metricName = metrics.LatencySDKRequestTypeTrack
+	case sdkRequestTypeAMPEventTrack:
+		metricName = metrics.LatencySDKRequestTypeAMPTrack
+	case sdkRequestTypeEventUpdateProperties:
+		metricName = metrics.LatencySDKRequestTypeUpdateEventProperties
+	case sdkRequestTypeAMPEventUpdateProperties:
+		metricName = metrics.LatencySDKRequestTypeAMPUpdateEventProperties
+	case sdkRequestTypeUserAddProperties:
+		metricName = metrics.LatencySDKRequestTypeAddUserProperties
+	case sdkRequestTypeUserIdentify:
+		metricName = metrics.LatencySDKRequestTypeIdentifyUser
+	case sdkRequestTypeAMPIdentify:
+		metricName = metrics.LatencySDKRequestTypeAMPIdentifyUser
+	default:
+		log.WithField("type", requestType).
+			Info("Invalid request type on record latency.")
+		return
+	}
+
+	if C.IsSDKAndIntegrationRequestQueueDuplicationEnabled() {
+		metricName = "dup_" + metricName
+	}
+
+	latencyInMs := time.Now().Sub(execStartTime).Milliseconds()
+	metrics.RecordLatency(metricName, float64(latencyInMs))
+}
+
+func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int,
+	eventsLimit, propertyLimit, valuesLimit int, rowsLimit int, perQueryPullRange int, skipExpiryForCache bool) {
 
 	// Preload EventNames-count-lastseen
 	// TODO: Janani Make this 30 configurable, limit in cache, limit in ui
@@ -1858,7 +1894,7 @@ func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventP
 	}
 
 	if U.UseQueue(token, queueAllowedTokens) {
-		err := enqueueRequest(token, sdkRequestTypedAMPEventUpdateProperties, reqPayload)
+		err := enqueueRequest(token, sdkRequestTypeAMPEventUpdateProperties, reqPayload)
 		if err != nil {
 			log.WithError(err).Error("Failed to queue amp sdk update event request.")
 			return http.StatusInternalServerError, &Response{Error: "Update event properties failed"}
