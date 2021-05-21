@@ -63,8 +63,7 @@ function SignUp({ signup }) {
             <Row justify={'space-between'} className={'py-4 m-0 '}>
               <Col>
                 <div className={'flex items-center'}>
-                    <SVG name={'brand'} size={40}/>
-                    <Text type={'title'} level={4} extraClass={'m-0 ml-2'} weight={'bold'}>FACTORS.AI</Text>
+                    <SVG name={'BrandFull'} size={40} color="white"/>
                 </div>
               </Col>
               <Col>

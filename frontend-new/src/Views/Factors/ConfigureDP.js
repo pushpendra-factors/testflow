@@ -196,7 +196,7 @@ const ConfigureDP = (props) => {
                 </div>
                 <div className={'flex items-center mt-6'}>
                 <Button size={'large'} type={'primary'} onClick={()=>setshowInfo(false)}>Got it</Button>
-                <Button ghost size={'large'} className={'ml-4'}>learn more</Button>
+                <Button ghost size={'large'} className={'ml-4'}>Learn more</Button>
 
                 </div>
                 </div>

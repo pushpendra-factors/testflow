@@ -91,11 +91,13 @@
     &.ant-btn-primary {
         color: $fa-color--white;
         background: $fa-color--brand-color;
-        border-color: $fa-color--brand-color; 
+        border-color: $fa-color--brand-color;  
         &:focus, &:hover, &:active{
             color: $fa-color--white;
-            background: $fa-color--brand-7;
-            border-color: $fa-color--brand-7; 
+            // background: $fa-color--brand-7;
+            // border-color: $fa-color--brand-7; 
+            border-color: lighten($fa-color--brand-color,10%);
+            background: lighten($fa-color--brand-color,10%);
         }
     }
 
@@ -117,10 +119,10 @@
     &.ant-btn.ant-btn-link{
         border-style: solid;
         border-color: transparent;
-        color: $fa-color--brand-6;
+        color: $fa-color--brand-color;
         background-color: $fa-color--mono-1;
         &:focus, &:hover, &:active{
-            border-color: $fa-color--brand-6 !important; 
+            border-color: $fa-color--brand-color !important; 
         }
     }
 

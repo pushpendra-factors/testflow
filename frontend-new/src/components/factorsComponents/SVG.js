@@ -22,7 +22,7 @@ class SVG extends React.Component {
     const strokeColor =
       color === 'white' ? '#FFFFFF'
         : color === 'black' ? '#0E2647'
-          : color === 'purple' ? '#5949BC'
+          : color === 'purple' ? '#1E89FF' //blue color now.
             : color === 'green' ? '#5ACA89'
                 : color === 'red' ? '#EA6262'
                   : color === 'grey' ? '#63686F' : color;

@@ -100,7 +100,7 @@ const Factors = ({
                       </Col>
                       <Col span={20}>
                           <Button size={'large'} type={'primary'} onClick={() => setGoalDrawer(true)}>Create a New Goal</Button>
-                          <a className={'ml-4'}>learn more</a>
+                          <a className={'ml-4'}>Learn more</a>
                       </Col>
                   </Row> 
                   <Row gutter={[24, 24]} justify="center">
