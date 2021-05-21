@@ -66,6 +66,8 @@ const (
 	tableSmartProperties               = "smart_properties"
 	tableSmartPropertyRules            = "smart_property_rules"
 	tableDisplayNames                  = "display_names"
+	tableProjectModelMetadata          = "project_model_metadata"
+	tableGoogleOrganicDocuments        = "google_organic_documents"
 
 	healthcheckPingID = "e6e3735b-82a3-4534-82be-b621470c4c69"
 )
@@ -85,6 +87,8 @@ type TableRecord struct {
 	Timestamp uint64      `json:"timestamp"`
 	// adwords_documents
 	CustomerAccountID string `json:"customer_acc_id"`
+	// google_organic_documents
+	URLPrefix string `json:"url_prefix"`
 	// linkedin_documents
 	CustomerAdAccountID string `json:"customer_ad_account_id"`
 	// facebook_documents
@@ -390,6 +394,10 @@ func getAdditionalPrimaryKeyConditionsByTableName(tableName string, sourceTableR
 		conditions = []string{"object_id", "object_type", "source"}
 		params = append(params, sourceTableRecord.ObjectID, sourceTableRecord.ObjectType, sourceTableRecord.Source)
 
+	case tableGoogleOrganicDocuments:
+		conditions = []string{"url_prefix", "timestamp"}
+		params = append(params, sourceTableRecord.URLPrefix, sourceTableRecord.Timestamp)
+
 	}
 
 	var condition string
@@ -577,6 +585,7 @@ func isTableWithoutUniquePrimaryKey(tableName string) bool {
 		tableLinkedInDocuments,
 		tableHubspotDocuments,
 		tableSalesforceDocuments,
+		tableGoogleOrganicDocuments,
 	})
 }
 
@@ -789,6 +798,10 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.SmartPropertyRules{}
 	case tableDisplayNames:
 		record = &model.DisplayName{}
+	case tableGoogleOrganicDocuments:
+		record = &model.GoogleOrganicDocument{}
+	case tableProjectModelMetadata:
+		record = &model.ProjectModelMetadata{}
 
 	// Tables related to analytics.
 	case tableEvents:
@@ -1137,6 +1150,8 @@ func migrateAllTables(projectIDs []uint64) {
 		tableSmartProperties,
 		tableSmartPropertyRules,
 		tableDisplayNames,
+		tableGoogleOrganicDocuments,
+		tableProjectModelMetadata,
 	}
 
 	// Runs replication continiously for each table
