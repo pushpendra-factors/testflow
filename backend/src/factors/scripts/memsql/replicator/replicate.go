@@ -40,7 +40,6 @@ var excludeTablesMap map[string]bool
 var modeMigrate bool
 
 const (
-	tableUserProperties                = "user_properties"
 	tableUsers                         = "users"
 	tableEventNames                    = "event_names"
 	tableEvents                        = "events"
@@ -303,8 +302,6 @@ func getDedupeMap(tableName string) *sync.Map {
 		return &eventNamesMap
 	case tableUsers:
 		return &usersMap
-	case tableUserProperties:
-		return &userPropertiesMap
 	default:
 		log.Fatalf("Unsupported table %s on getDedupeMap.", tableName)
 		return nil
@@ -452,7 +449,7 @@ func getTableRecordByIDFromMemSQL(projectID uint64, tableName string, id interfa
 	}
 
 	// Add user_id also part of the filter to speed up the query.
-	if tableName == tableEvents || tableName == tableUserProperties {
+	if tableName == tableEvents {
 		if sourceTableRecord.UserID == "" {
 			logCtx.Error("user_id not provided on getTableRecordByIDFromMemSQL")
 		} else {
@@ -488,7 +485,7 @@ func deleteByIDOnMemSQL(projectID uint64, tableName string, id interface{}, sour
 	}
 
 	// Add user_id also part of the filter to speed up the query.
-	if tableName == tableEvents || tableName == tableUserProperties {
+	if tableName == tableEvents {
 		if sourceTableRecord.UserID == "" {
 			logCtx.Error("user_id not provided on deleteByIDOnMemSQL")
 		} else {
@@ -574,7 +571,6 @@ func convertToTableRecord(tableName string, record interface{}) (*TableRecord, e
 func isTableWithoutUniquePrimaryKey(tableName string) bool {
 	return U.StringValueIn(tableName, []string{
 		tableEvents,
-		tableUserProperties,
 		tableEventNames,
 		tableAdwordsDocuments,
 		tableFacebookDocuments,
@@ -799,8 +795,6 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.Event{}
 	case tableUsers:
 		record = &model.User{}
-	case tableUserProperties:
-		record = &model.UserProperties{}
 	case tableEventNames:
 		record = &model.EventName{}
 

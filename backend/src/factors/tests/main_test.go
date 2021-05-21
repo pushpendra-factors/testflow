@@ -76,16 +76,8 @@ func TestMain(m *testing.M) {
 		// Test is not 100% backward compatible. Only some of the unit tests
 		// have flag based cases for both backward and forward compatibility.
 		// So kept on-table user_properties as primary.
-
-		// List of project to enable on-table user_properties write
-		// on events and users table.
-		OnTableUserPropertiesWriteAllowedProjects: "*",
-		// List of projects to use on-table user_properties for read.
-		DeprecateUserPropertiesTableReadProjects: "*",
-		// List of projects to stop writing to user_properties table.
-		DeprecateUserPropertiesTableWriteProjects: "*",
-		AllowedCampaignEnrichmentByProjectID:      *allowedCampaignEnrichmentByProjectID,
-		UseOpportunityAssociationByProjectID:      "*",
+		AllowedCampaignEnrichmentByProjectID: *allowedCampaignEnrichmentByProjectID,
+		UseOpportunityAssociationByProjectID: "*",
 	}
 
 	// Setup.

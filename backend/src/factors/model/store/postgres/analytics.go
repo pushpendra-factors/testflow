@@ -80,10 +80,6 @@ func getOp(OpStr string) string {
 
 func getPropertyEntityField(projectID uint64, groupProp model.QueryGroupByProperty) string {
 	if groupProp.Entity == model.PropertyEntityUser {
-		if C.ShouldUseUserPropertiesTableForRead(projectID) {
-			return "user_properties.properties"
-		}
-
 		// Use event level user properties for event level group by.
 		if isEventLevelGroupBy(groupProp) {
 			return "events.user_properties"
@@ -99,10 +95,6 @@ func getPropertyEntityField(projectID uint64, groupProp model.QueryGroupByProper
 
 func getPropertyEntityFieldForFilter(projectID uint64, entityName string) string {
 	if entityName == model.PropertyEntityUser {
-		if C.ShouldUseUserPropertiesTableForRead(projectID) {
-			return "user_properties.properties"
-		}
-
 		// Filtering is supported only with event level user_properties.
 		return "events.user_properties"
 	} else if entityName == model.PropertyEntityEvent {
@@ -254,17 +246,7 @@ func getFilterSQLStmtForUserProperties(projectID uint64, properties []model.Quer
 
 	var filteredProperty []model.QueryProperty
 	for _, p := range properties {
-
 		propertyEntity := getPropertyEntityFieldForFilter(projectID, p.Entity)
-
-		if C.ShouldUseUserPropertiesTableForRead(projectID) {
-			if propertyEntity == "user_properties.properties" {
-				filteredProperty = append(filteredProperty, p)
-			}
-
-			continue
-		}
-
 		if propertyEntity == "events.user_properties" {
 			filteredProperty = append(filteredProperty, p)
 		}
@@ -455,13 +437,6 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 
 	rStmnt := "SELECT " + addSelecStmnt + " FROM events" + " " + addJoinStmnt
 
-	if C.ShouldUseUserPropertiesTableForRead(projectId) {
-		// join user property, if user_property present on event with properties list.
-		if hasWhereEntity(qep, model.PropertyEntityUser) {
-			rStmnt = appendStatement(rStmnt, "LEFT JOIN user_properties ON events.user_properties_id=user_properties.id")
-		}
-	}
-
 	var fromTimestamp string
 	if from > 0 {
 		fromTimestamp = "?"
@@ -579,12 +554,6 @@ func addJoinLatestUserPropsQuery(projectID uint64, groupProps []model.QueryGroup
 
 	rStmnt := "SELECT " + joinWithComma(groupSelect, addSelect) + " from " + refStepName +
 		" " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
-
-	if C.ShouldUseUserPropertiesTableForRead(projectID) {
-		if hasGroupEntity(groupProps, model.PropertyEntityUser) {
-			rStmnt = rStmnt + " " + " LEFT JOIN user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id"
-		}
-	}
 
 	if stepName != "" {
 		rStmnt = as(stepName, rStmnt)

@@ -58,9 +58,6 @@ var (
 	onlyWebAnalytics  = flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
 	skipWebAnalytics  = flag.Bool("skip_web_analytics", false, "Skip the web analytics and run other.")
 
-	deprecateUserPropertiesTableReadProjectIDs = flag.String("deprecate_user_properties_table_read_projects",
-		"", "List of projects for which user_properties table read to be deprecated.")
-
 	overrideHealthcheckPingID = flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName           = flag.String("app_name", "", "Override default app_name.")
 )
@@ -242,11 +239,10 @@ func main() {
 			Password: *memSQLPass,
 			AppName:  appName,
 		},
-		PrimaryDatastore:                         *primaryDatastore,
-		RedisHost:                                *redisHost,
-		RedisPort:                                *redisPort,
-		SentryDSN:                                *sentryDSN,
-		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
+		PrimaryDatastore: *primaryDatastore,
+		RedisHost:        *redisHost,
+		RedisPort:        *redisPort,
+		SentryDSN:        *sentryDSN,
 	}
 	beam.PipelineOptions.Set("HealthchecksPingID", healthcheckPingID)
 	beam.PipelineOptions.Set("StartTime", fmt.Sprint(U.TimeNowUnix()))

@@ -156,16 +156,10 @@ type Configuration struct {
 	enablePropertyTypeFromDB               bool
 	whitelistedProjectIDPropertyTypeFromDB string
 	blacklistedProjectIDPropertyTypeFromDB string
-	// List of projects to start updating/creating on-table user_properties.
-	OnTableUserPropertiesWriteAllowedProjects string
-	// List of projects to stop writing to user_properties table.
-	DeprecateUserPropertiesTableWriteProjects string
-	// List of projects to use on-table user_properties for read.
-	DeprecateUserPropertiesTableReadProjects string
-	ShowSmartPropertiesAllowedProjectIDs     string
-	CacheSortedSet                           bool
-	ProjectAnalyticsWhitelistedUUIds         []string
-	PrimaryDatastore                         string
+	ShowSmartPropertiesAllowedProjectIDs   string
+	CacheSortedSet                         bool
+	ProjectAnalyticsWhitelistedUUIds       []string
+	PrimaryDatastore                       string
 	// Flag for enabling only the /mql routes for secondary env testing.
 	EnableMQLAPI bool
 	// Flags to disable DB and Redis writes when primary datastore is memSQL.
@@ -1457,29 +1451,6 @@ func isProjectOnProjectsList(configProjectIDList string, projectID uint64) bool 
 	return exists
 }
 
-// IsUserPropertiesTableWriteDeprecated - Deprecates user_properties table for
-// projects given and supports '*'.
-func IsUserPropertiesTableWriteDeprecated(projectID uint64) bool {
-	return isProjectOnProjectsList(configuration.DeprecateUserPropertiesTableWriteProjects, projectID)
-}
-
-// IsUserPropertiesTableReadDeprecated - Deprecates usage of user_properties
-// table for read, for given projects and supports '*'.
-func IsUserPropertiesTableReadDeprecated(projectID uint64) bool {
-	return isProjectOnProjectsList(configuration.DeprecateUserPropertiesTableReadProjects, projectID)
-}
-
-// ShouldUseUserPropertiesTableForRead - Allows usage of user_properties
-// table for read based on projects.
-func ShouldUseUserPropertiesTableForRead(projectID uint64) bool {
-	return !IsUserPropertiesTableReadDeprecated(projectID)
-}
-
-// IsOnTableUserPropertiesWriteAllowed - Enables on-table user_properties
-// write for users and events table..
-func IsOnTableUserPropertiesWriteAllowed(projectID uint64) bool {
-	return isProjectOnProjectsList(configuration.OnTableUserPropertiesWriteAllowedProjects, projectID)
-}
 func IsShowSmartPropertiesAllowed(projectID uint64) bool {
 	return isProjectOnProjectsList(configuration.ShowSmartPropertiesAllowedProjectIDs, projectID)
 }

@@ -173,7 +173,6 @@ func (pg *Postgres) RunAttributionForMethodologyComparison(projectID uint64,
 		usersToBeAttributed = append(usersToBeAttributed, model.UserEventInfo{CoalUserID: key,
 			EventName: query.ConversionEvent.Name})
 	}
-
 	err = pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo,
 		linkedEvents, eventNameToIDList, userIDToInfoConverted,
 		&usersToBeAttributed)
@@ -245,10 +244,8 @@ func (pg *Postgres) runAttribution(projectID uint64,
 		usersToBeAttributed = append(usersToBeAttributed, model.UserEventInfo{CoalUserID: key,
 			EventName: goalEventName})
 	}
-
 	err = pg.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents,
 		eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
-
 	if err != nil {
 		return nil, err
 	}
@@ -276,8 +273,8 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 	for _, users := range userIDsInBatches {
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
-		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id, " +
-			" properties_id FROM users WHERE id = ANY (VALUES " + placeHolder + " )"
+		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id" + " " +
+			"FROM users WHERE id = ANY (VALUES " + placeHolder + " )"
 		rows, err := pg.ExecQueryWithContext(queryUserIDCoalID, value)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
@@ -287,9 +284,8 @@ func (pg *Postgres) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64)
 		for rows.Next() {
 			var userID string
 			var coalesceID string
-			var propertiesID string
 
-			if err = rows.Scan(&userID, &coalesceID, &propertiesID); err != nil {
+			if err = rows.Scan(&userID, &coalesceID); err != nil {
 				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 				continue
 			}

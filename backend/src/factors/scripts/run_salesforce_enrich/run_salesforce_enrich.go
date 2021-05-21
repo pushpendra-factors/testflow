@@ -59,12 +59,6 @@ func main() {
 	enablePropertyTypeFromDB := flag.Bool("enable_property_type_from_db", false, "Enable property type check from db.")
 	whitelistedProjectIDPropertyTypeFromDB := flag.String("whitelisted_project_ids_property_type_check_from_db", "", "Allowed project id for property type check from db.")
 	blacklistedProjectIDPropertyTypeFromDB := flag.String("blacklisted_project_ids_property_type_check_from_db", "", "Blocked project id for property type check from db.")
-	ontableUserPropertiesWriteAllowedProjectIDs := flag.String("ontable_user_properties_allowed_projects",
-		"", "List of projects to enable writing to on-table user_properties column.")
-	deprecateUserPropertiesTableWriteProjectIDs := flag.String("deprecate_user_properties_table_write_projects",
-		"", "List of projects to stop writing to user_properties table.")
-	deprecateUserPropertiesTableReadProjectIDs := flag.String("deprecate_user_properties_table_read_projects",
-		"", "List of projects for which user_properties table read to be deprecated.")
 	blacklistEnrichmentByProjectID := flag.String("blacklist_enrichment_by_project_id", "", "Blacklist enrichment by project_id.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	syncOnly := flag.Bool("sync_only", false, "Run only sync.")
@@ -115,25 +109,19 @@ func main() {
 			Certiifcate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		APIDomain:           *apiDomain,
-		SentryDSN:           *sentryDSN,
-		SalesforceAppID:     *salesforceAppID,
-		SalesforceAppSecret: *salesforceAppSecret,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
-		DryRunCRMSmartEvent: *dryRunSmartEvent,
-		// List of project to enable on-table user_properties write on events and users table.
-		OnTableUserPropertiesWriteAllowedProjects: *ontableUserPropertiesWriteAllowedProjectIDs,
-		// List of projects to stop writing to user_properties table.
-		DeprecateUserPropertiesTableWriteProjects: *deprecateUserPropertiesTableWriteProjectIDs,
-		// List of projects to use on-table user_properties for read.
-		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
-		CacheSortedSet:                           *cacheSortedSet,
-		AllowedCampaignEnrichmentByProjectID:     *allowedCampaignEnrichmentByProjectID,
-		UseOpportunityAssociationByProjectID:     *useOpportunityAssociationByProjectID,
+		PrimaryDatastore:                     *primaryDatastore,
+		APIDomain:                            *apiDomain,
+		SentryDSN:                            *sentryDSN,
+		SalesforceAppID:                      *salesforceAppID,
+		SalesforceAppSecret:                  *salesforceAppSecret,
+		RedisHost:                            *redisHost,
+		RedisPort:                            *redisPort,
+		RedisHostPersistent:                  *redisHostPersistent,
+		RedisPortPersistent:                  *redisPortPersistent,
+		DryRunCRMSmartEvent:                  *dryRunSmartEvent,
+		CacheSortedSet:                       *cacheSortedSet,
+		AllowedCampaignEnrichmentByProjectID: *allowedCampaignEnrichmentByProjectID,
+		UseOpportunityAssociationByProjectID: *useOpportunityAssociationByProjectID,
 	}
 
 	C.InitConf(config)

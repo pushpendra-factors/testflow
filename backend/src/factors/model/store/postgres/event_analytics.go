@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"errors"
-	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -724,11 +723,10 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 
 		var stepSelect, stepOrderBy string
 		var stepParams []interface{}
-		var groupByUserProperties bool
 		if q.EventsCondition == model.EventCondAllGivenEvent || q.EventsCondition == model.EventCondEachGivenEvent {
 			var stepGroupSelect, stepGroupKeys string
 			var stepGroupParams []interface{}
-			stepGroupSelect, stepGroupParams, stepGroupKeys, groupByUserProperties = buildGroupKeyForStep(projectID,
+			stepGroupSelect, stepGroupParams, stepGroupKeys, _ = buildGroupKeyForStep(projectID,
 				&q.EventsWithProperties[i], q.GroupByProperties, i+1)
 
 			eventSelect := commonSelect
@@ -762,14 +760,6 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 
 		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
 		stepParams = append(stepParams, projectID)
-		if C.ShouldUseUserPropertiesTableForRead(projectID) {
-			if groupByUserProperties && !hasWhereEntity(ewp, model.PropertyEntityUser) {
-				// If event has filter on user property, JOIN on user_properties is added in next step.
-				// Skip adding here to avoid duplication.
-				addJoinStmnt += " JOIN user_properties on events.user_properties_id=user_properties.id"
-			}
-		}
-
 		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy)
 
@@ -835,9 +825,6 @@ func addUniqueUsersAggregationQuery(projectID uint64, query *model.Query, qStmnt
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
-		if C.ShouldUseUserPropertiesTableForRead(projectID) {
-			termStmnt = termStmnt + " " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
-		}
 	}
 
 	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties)
@@ -1563,9 +1550,6 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 	// join with users for latest user_properties.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id"
-		if C.ShouldUseUserPropertiesTableForRead(projectID) {
-			termStmnt = termStmnt + " " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
-		}
 	}
 
 	withUsersStepName := "users_any_event"
@@ -1807,8 +1791,7 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 		var stepParams []interface{}
 		var stepGroupSelect, stepGroupKeys string
 		var stepGroupParams []interface{}
-		var groupByUserProperties bool
-		stepGroupSelect, stepGroupParams, stepGroupKeys, groupByUserProperties = buildGroupKeyForStep(projectID,
+		stepGroupSelect, stepGroupParams, stepGroupKeys, _ = buildGroupKeyForStep(projectID,
 			&q.EventsWithProperties[i], q.GroupByProperties, i+1)
 
 		eventSelect := commonSelect
@@ -1828,15 +1811,6 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 
 		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
 		stepParams = append(stepParams, projectID)
-		if C.ShouldUseUserPropertiesTableForRead(projectID) {
-			if groupByUserProperties && !hasWhereEntity(ewp, model.PropertyEntityUser) {
-				// If event has filter on user property, JOIN on user_properties is added in next step.
-				// Skip adding here to avoid duplication.
-				addJoinStmnt += " JOIN user_properties on events.user_properties_id=user_properties.id"
-			}
-
-		}
-
 		err := addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
 			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy)
 		if err != nil {
@@ -1909,9 +1883,6 @@ func addEventCountAggregationQuery(projectID uint64, query *model.Query, qStmnt 
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
-		if C.ShouldUseUserPropertiesTableForRead(projectID) {
-			termStmnt = termStmnt + " " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
-		}
 	}
 
 	_, _, groupKeys := buildGroupKeys(projectID, query.GroupByProperties)

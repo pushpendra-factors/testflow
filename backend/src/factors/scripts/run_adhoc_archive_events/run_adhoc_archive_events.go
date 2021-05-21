@@ -42,8 +42,6 @@ func main() {
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
-	deprecateUserPropertiesTableReadProjectIDs := flag.String("deprecate_user_properties_table_read_projects",
-		"", "List of projects for which user_properties table read to be deprecated.")
 	flag.Parse()
 
 	taskID := "Script#AdhocArchiveEvents"
@@ -80,10 +78,8 @@ func main() {
 			Password: *memSQLPass,
 			AppName:  taskID,
 		},
-		SentryDSN: *sentryDSN,
-		// List of projects to use on-table user_properties for read.
-		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
-		PrimaryDatastore:                         *primaryDatastore,
+		SentryDSN:        *sentryDSN,
+		PrimaryDatastore: *primaryDatastore,
 	}
 	C.InitConf(config)
 

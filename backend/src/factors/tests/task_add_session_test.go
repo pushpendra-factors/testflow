@@ -12,7 +12,6 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 
-	C "factors/config"
 	SDK "factors/sdk"
 	TaskSession "factors/task/session"
 	U "factors/util"
@@ -110,11 +109,13 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	// create new user_properties state, for testing session user_properties addition
 	// on latest user_properties, which is not associated to any event.
 	userProperties := postgres.Jsonb{RawMessage: json.RawMessage(`{"plan": "enterprise"}`)}
-	newUserPropertiesID, _, errCode := store.GetStore().UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
+	userProperties1, errCode := store.GetStore().UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
 	user, _ := store.GetStore().GetUser(project.ID, userId)
 	assert.NotNil(t, user)
 	// new user_properties state should be the user's latest user_property state.
-	assert.Equal(t, newUserPropertiesID, user.PropertiesId)
+	properties1, _ := U.DecodePostgresJsonb(userProperties1)
+	properties, _ := U.DecodePostgresJsonb(&user.Properties)
+	assert.Equal(t, properties1, properties)
 
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
@@ -139,11 +140,6 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	event, errCode := store.GetStore().GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(event.UserProperties)
-	if C.ShouldUseUserPropertiesTableForRead(project.ID) {
-		userPropertiesRecord, errCode := store.GetStore().GetUserPropertiesRecord(project.ID, event.UserId, event.UserPropertiesId)
-		assert.Equal(t, http.StatusFound, errCode)
-		userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
-	}
 	assert.Nil(t, err)
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
@@ -154,11 +150,6 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	lastestUserPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, user.Properties)
-	if C.IsUserPropertiesTableWriteDeprecated(project.ID) {
-		assert.Empty(t, event.UserPropertiesId)
-	} else {
-		assert.NotEmpty(t, event.UserPropertiesId)
-	}
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Equal(t, float64(10), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
@@ -293,11 +284,6 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event4.UserProperties)
-	if C.ShouldUseUserPropertiesTableForRead(project.ID) {
-		userPropertiesRecord, errCode := store.GetStore().GetUserPropertiesRecord(project.ID, event4.UserId, event4.UserPropertiesId)
-		assert.Equal(t, http.StatusFound, errCode)
-		userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
-	}
 	assert.Nil(t, err)
 
 	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
@@ -347,11 +333,6 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event6.UserProperties)
-	if C.ShouldUseUserPropertiesTableForRead(project.ID) {
-		userPropertiesRecord, errCode := store.GetStore().GetUserPropertiesRecord(project.ID, event6.UserId, event6.UserPropertiesId)
-		assert.Equal(t, http.StatusFound, errCode)
-		userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
-	}
 	assert.Nil(t, err)
 	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_PAGE_COUNT])
@@ -1641,11 +1622,12 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	// create new user_properties state, for testing session user_properties addition
 	// on latest user_properties, which is not associated to any event.
 	userProperties := postgres.Jsonb{RawMessage: json.RawMessage(`{"plan": "enterprise"}`)}
-	newUserPropertiesID, _, errCode := store.GetStore().UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
+	newUserProperties, errCode := store.GetStore().UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
 	user, _ := store.GetStore().GetUser(project.ID, userId)
 	assert.NotNil(t, user)
 	// new user_properties state should be the user's latest user_property state.
-	assert.Equal(t, newUserPropertiesID, user.PropertiesId)
+	assert.Equal(t, DecodePostgresJsonbWithoutError(newUserProperties),
+		DecodePostgresJsonbWithoutError(&user.Properties))
 
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
@@ -1670,11 +1652,6 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	event, errCode := store.GetStore().GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(event.UserProperties)
-	if C.ShouldUseUserPropertiesTableForRead(project.ID) {
-		userPropertiesRecord, errCode := store.GetStore().GetUserPropertiesRecord(project.ID, event.UserId, event.UserPropertiesId)
-		assert.Equal(t, http.StatusFound, errCode)
-		userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
-	}
 	assert.Nil(t, err)
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
@@ -1685,11 +1662,6 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	lastestUserPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, user.Properties)
-	if C.IsUserPropertiesTableWriteDeprecated(project.ID) {
-		assert.Empty(t, event.UserPropertiesId)
-	} else {
-		assert.NotEmpty(t, event.UserPropertiesId)
-	}
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Equal(t, float64(10), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
@@ -1826,11 +1798,6 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event4.UserProperties)
-	if C.ShouldUseUserPropertiesTableForRead(project.ID) {
-		userPropertiesRecord, errCode := store.GetStore().GetUserPropertiesRecord(project.ID, event4.UserId, event4.UserPropertiesId)
-		assert.Equal(t, http.StatusFound, errCode)
-		userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
-	}
 	assert.Nil(t, err)
 
 	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
@@ -1882,11 +1849,6 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event6.UserProperties)
-	if C.ShouldUseUserPropertiesTableForRead(project.ID) {
-		userPropertiesRecord, errCode := store.GetStore().GetUserPropertiesRecord(project.ID, event6.UserId, event6.UserPropertiesId)
-		assert.Equal(t, http.StatusFound, errCode)
-		userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
-	}
 	assert.Nil(t, err)
 	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_PAGE_COUNT])

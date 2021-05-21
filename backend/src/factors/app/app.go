@@ -94,12 +94,6 @@ func main() {
 	factorsActiveTrackedUserPropertiesLimit := flag.Int("active_tracked_user_properties_limit",
 		50, "Active Tracked user properties limit per project")
 	allowSmartEventRuleCreation := flag.Bool("allow_smart_event_rule_creation", false, "Should allow smart event rule creation")
-	ontableUserPropertiesWriteAllowedProjectIDs := flag.String("ontable_user_properties_allowed_projects",
-		"", "List of projects to enable writing to on-table user_properties column.")
-	deprecateUserPropertiesTableWriteProjectIDs := flag.String("deprecate_user_properties_table_write_projects",
-		"", "List of projects to stop writing to user_properties table.")
-	deprecateUserPropertiesTableReadProjectIDs := flag.String("deprecate_user_properties_table_read_projects",
-		"", "List of projects for which user_properties table read to be deprecated.")
 	projectAnalyticsWhitelistedUUIds := flag.String("project_analytics_whitelisted_uuids",
 		"", "List of UUIDs whitelisted for project analytics API")
 	showSmartPropertiesAllowedProjectIDs := flag.String("show_smart_properties_allowed_projects",
@@ -170,17 +164,11 @@ func main() {
 		ActiveFactorsTrackedEventsLimit:         *factorsActiveTrackedEventsLimit,
 		ActiveFactorsTrackedUserPropertiesLimit: *factorsActiveTrackedUserPropertiesLimit,
 		AllowSmartEventRuleCreation:             *allowSmartEventRuleCreation,
-		// List of project to enable on-table user_properties write on events and users table.
-		OnTableUserPropertiesWriteAllowedProjects: *ontableUserPropertiesWriteAllowedProjectIDs,
-		// List of projects to stop writing to user_properties table.
-		DeprecateUserPropertiesTableWriteProjects: *deprecateUserPropertiesTableWriteProjectIDs,
-		// List of projects to use on-table user_properties for read.
-		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
-		ShowSmartPropertiesAllowedProjectIDs:     *showSmartPropertiesAllowedProjectIDs,
-		ProjectAnalyticsWhitelistedUUIds:         C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
-		EnableMQLAPI:                             *enableMQLAPI,
-		DisableMemSQLDBWrites:                    disableMemSQLDBWrites,
-		DisableMemSQLRedisWrites:                 disableMemSQLRedisWrites,
+		ShowSmartPropertiesAllowedProjectIDs:    *showSmartPropertiesAllowedProjectIDs,
+		ProjectAnalyticsWhitelistedUUIds:        C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
+		EnableMQLAPI:                            *enableMQLAPI,
+		DisableMemSQLDBWrites:                   disableMemSQLDBWrites,
+		DisableMemSQLRedisWrites:                disableMemSQLRedisWrites,
 	}
 
 	// Initialize configs and connections.

@@ -56,13 +56,6 @@ func main() {
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 
-	ontableUserPropertiesWriteAllowedProjectIDs := flag.String("ontable_user_properties_allowed_projects",
-		"", "List of projects to enable writing to on-table user_properties column.")
-	deprecateUserPropertiesTableWriteProjectIDs := flag.String("deprecate_user_properties_table_write_projects",
-		"", "List of projects to stop writing to user_properties table.")
-	deprecateUserPropertiesTableReadProjectIDs := flag.String("deprecate_user_properties_table_read_projects",
-		"", "List of projects for which user_properties table read to be deprecated.")
-
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
@@ -112,13 +105,7 @@ func main() {
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *redisPortPersistent,
 		SentryDSN:           *sentryDSN,
-		// List of project to enable on-table user_properties write on events and users table.
-		OnTableUserPropertiesWriteAllowedProjects: *ontableUserPropertiesWriteAllowedProjectIDs,
-		// List of projects to stop writing to user_properties table.
-		DeprecateUserPropertiesTableWriteProjects: *deprecateUserPropertiesTableWriteProjectIDs,
-		// List of projects to use on-table user_properties for read.
-		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
-		CacheSortedSet:                           *cacheSortedSet,
+		CacheSortedSet:      *cacheSortedSet,
 	}
 
 	C.InitConf(config)

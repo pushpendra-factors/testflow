@@ -61,11 +61,6 @@ var opportunityMappingOrder = []string{
 
 var allowedCampaignFields = map[string]bool{}
 
-func getUserIDFromLastestProperties(properties []model.UserProperties) string {
-	latestIndex := len(properties) - 1
-	return properties[latestIndex].UserId
-}
-
 func getSalesforceMappedDataTypeValue(projectID uint64, eventName, enKey string, value interface{}) (interface{}, error) {
 	if value == nil || value == "" {
 		return nil, nil

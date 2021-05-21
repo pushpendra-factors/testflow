@@ -2,7 +2,6 @@ package tests
 
 import (
 	"encoding/json"
-	C "factors/config"
 	H "factors/handler"
 	"factors/model/model"
 	"factors/model/store"
@@ -61,12 +60,6 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	retUser.CreatedAt = time.Time{}
 	retUser.UpdatedAt = time.Time{}
 	assert.Equal(t, user.ProjectId, retUser.ProjectId)
-	// id of null user_properties row. updated as user_properties_id.
-	if C.IsUserPropertiesTableWriteDeprecated(projectId) {
-		assert.Empty(t, retUser.PropertiesId)
-	} else {
-		assert.NotEmpty(t, retUser.PropertiesId)
-	}
 	assert.NotEmpty(t, retUser.Properties)
 	// Test Get User with wrong project id.
 	retUser, errCode = store.GetStore().GetUser(projectId+1, user.ID)
@@ -185,7 +178,6 @@ func assertUsersWithOffset(t *testing.T, expectedUsers []model.User, actualUsers
 		assert.Equal(t, expectedUser.ProjectId, actualUser.ProjectId)
 		assert.Equal(t, expectedUser.ID, actualUser.ID)
 		assert.Equal(t, expectedUser.CustomerUserId, actualUser.CustomerUserId)
-		assert.Equal(t, expectedUser.PropertiesId, actualUser.PropertiesId)
 		assert.Equal(t, expectedUser.SegmentAnonymousId, actualUser.SegmentAnonymousId)
 	}
 }
@@ -243,7 +235,8 @@ func TestDBUpdateUserById(t *testing.T) {
 	assert.Equal(t, rCustomerUserId, gUser.CustomerUserId)
 	// Update user should not create properties while updating
 	// other fields (identify).
-	assert.Equal(t, user.PropertiesId, gUser.PropertiesId)
+	assert.Equal(t, DecodePostgresJsonbWithoutError(&gUser.Properties),
+		DecodePostgresJsonbWithoutError(&user.Properties))
 
 	segAid := "seg_aid_1"
 	_, errCode = store.GetStore().UpdateUser(project.ID, user.ID, &model.User{SegmentAnonymousId: segAid,
@@ -294,13 +287,13 @@ func TestDBUpdateUserProperties(t *testing.T) {
 
 	// No change on empty json
 	newProperties := &postgres.Jsonb{}
-	_, oldUpdatedProperties, status := store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	oldUpdatedProperties, status := store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusNotModified, status)
 
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"country": "india", "age": 30.1, "paid": true, "$hubspot_contact_lead_guid": "lead-guid1"}`))}
-	_, newUpdatedProperties, status := store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	newUpdatedProperties, status := store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, status)
 	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
@@ -313,7 +306,7 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	// do not allow overwrite existing user properties from past timestamp.
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"country": "US", "age": 30.1, "paid": true}`))}
-	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix()-60)
 	assert.Equal(t, status, http.StatusAccepted)
 	assert.Equal(t, oldUpdatedProperties, newUpdatedProperties)
@@ -322,7 +315,7 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	// allow adding new keys from past timestamp.
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"country": "US", "age": 30.1, "paid": true, "past": true}`))}
-	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix()-60)
 	assert.Equal(t, http.StatusAccepted, status)
 	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
@@ -330,7 +323,7 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"country": "india", "age": 30.1, "paid": true}`))}
-	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, status, http.StatusAccepted)
 	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
@@ -338,7 +331,7 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"age": 30.1, "paid": true, "country": "usa"}`))}
-	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, status)
 	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
@@ -346,7 +339,7 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"device": "android", "$hubspot_contact_lead_guid": "lead-guid2"}`))}
-	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, status)
 	assert.NotEqual(t, oldUpdatedProperties, newUpdatedProperties)
@@ -360,7 +353,7 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"age": 30.1, "country": "usa", "device": "android", "paid": true}`))}
-	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, status, http.StatusAccepted)
 	assert.Equal(t, oldUpdatedProperties, newUpdatedProperties)
@@ -369,7 +362,7 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	oldUpdatedProperties = newUpdatedProperties
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"prop1": "value1"}`))}
-	_, newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
+	newUpdatedProperties, status = store.GetStore().UpdateUserProperties(project.ID, user.ID,
 		newProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, status)
 	user, status = store.GetStore().GetUser(project.ID, user.ID)

@@ -177,7 +177,6 @@ func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
 	err = store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo,
 		linkedEvents, eventNameToIDList, userIDToInfoConverted,
 		&usersToBeAttributed)
-
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +234,6 @@ func (store *MemSQL) runAttribution(projectID uint64,
 	// Fetch users who hit conversion event.
 	userIDToInfoConverted, coalescedIDToInfoConverted, coalUserIdConversionTimestamp, err = store.GetConvertedUsersWithFilter(projectID,
 		goalEventName, goalEventProperties, conversionFrom, conversionTo, eventNameToIDList)
-
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +247,6 @@ func (store *MemSQL) runAttribution(projectID uint64,
 
 	err = store.GetLinkedFunnelEventUsersFilter(projectID, conversionFrom, conversionTo, query.LinkedEvents,
 		eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
-
 	if err != nil {
 		return nil, err
 	}
@@ -277,8 +274,8 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 	for _, users := range userIDsInBatches {
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
-		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id, " +
-			" properties_id FROM users WHERE id IN (" + placeHolder + ")"
+		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id" + " " +
+			"FROM users WHERE id IN (" + placeHolder + ")"
 		rows, err := store.ExecQueryWithContext(queryUserIDCoalID, value)
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
@@ -288,9 +285,8 @@ func (store *MemSQL) GetCoalesceIDFromUserIDs(userIDs []string, projectID uint64
 		for rows.Next() {
 			var userID string
 			var coalesceID string
-			var propertiesID string
 
-			if err = rows.Scan(&userID, &coalesceID, &propertiesID); err != nil {
+			if err = rows.Scan(&userID, &coalesceID); err != nil {
 				logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
 				continue
 			}
