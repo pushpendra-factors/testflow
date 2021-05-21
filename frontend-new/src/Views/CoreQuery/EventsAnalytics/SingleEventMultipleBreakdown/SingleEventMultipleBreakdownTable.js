@@ -107,37 +107,16 @@ function SingleEventMultipleBreakdownTable({
     durationObj.frequency,
   ]);
 
-  const getCSVData = useCallback(() => {
+  const getCSVData = () => {
     const activeTableData =
       chartType === CHART_TYPE_BARCHART ? tableData : dateBasedTableData;
-    const activeTableColumns =
-      chartType === CHART_TYPE_BARCHART ? columns : dateBasedColumns;
-    const csvKeys = activeTableColumns.map((c) => c.dataIndex);
     return {
       fileName: `${reportTitle}.csv`,
       data: activeTableData.map(({ index, ...rest }) => {
-        const output = {};
-        const existingKeys = [];
-        csvKeys.forEach((key) => {
-          if (existingKeys.indexOf(key) === -1) {
-            output[key] = rest[key];
-          } else {
-            const index = existingKeys.filter((elem) => elem === key).length;
-            output[`${key}-${index}`] = rest[key];
-          }
-          existingKeys.push(key);
-        });
-        return output;
+        return { ...rest };
       }),
     };
-  }, [
-    chartType,
-    columns,
-    dateBasedColumns,
-    dateBasedTableData,
-    reportTitle,
-    tableData,
-  ]);
+  };
 
   const selectedRowKeys = useMemo(() => {
     return visibleProperties.map((vp) => vp.index);

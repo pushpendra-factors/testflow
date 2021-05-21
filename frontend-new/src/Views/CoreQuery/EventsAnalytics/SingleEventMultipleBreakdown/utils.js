@@ -1,6 +1,5 @@
 import React from 'react';
 import moment from 'moment';
-import { labelsObj } from '../../utils';
 import { SortData, getTitleWithSorter } from '../../../../utils/dataFormatter';
 import { Number as NumFormat } from '../../../../components/factorsComponents';
 
@@ -40,16 +39,18 @@ export const getTableColumns = (
   eventPropNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
-
     let displayTitle = e.property;
-    if(e.prop_category === 'user') {
-      displayTitle = userPropNames[e.property]? userPropNames[e.property] : e.property;
+    if (e.prop_category === 'user') {
+      displayTitle = userPropNames[e.property]
+        ? userPropNames[e.property]
+        : e.property;
     }
 
-    if(e.prop_category === 'event') {
-      displayTitle = eventPropNames[e.property]? eventPropNames[e.property] : e.property;
+    if (e.prop_category === 'event') {
+      displayTitle = eventPropNames[e.property]
+        ? eventPropNames[e.property]
+        : e.property;
     }
-
 
     return {
       title: displayTitle,
@@ -61,15 +62,16 @@ export const getTableColumns = (
 
   const e = events[0];
   const title = eventNames[e] || e;
-  
+
   const countColumn = {
     title: getTitleWithSorter(
-      `${title}: ${labelsObj[page]}`,
+      title,
       'Event Count',
       currentSorter,
       handleSorting
     ),
     dataIndex: 'Event Count',
+    width: 200,
     render: (d) => {
       return <NumFormat number={d} />;
     },
@@ -109,23 +111,26 @@ export const getDateBasedColumns = (
   currentSorter,
   handleSorting,
   frequency,
-  userPropNames, 
-    eventPropNames
+  userPropNames,
+  eventPropNames
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
-
     let displayTitle = e.property;
-    if(e.prop_category === 'user') {
-      displayTitle = userPropNames[e.property]? userPropNames[e.property] : e.property;
+    if (e.prop_category === 'user') {
+      displayTitle = userPropNames[e.property]
+        ? userPropNames[e.property]
+        : e.property;
     }
 
-    if(e.prop_category === 'event') {
-      displayTitle = eventPropNames[e.property]? eventPropNames[e.property] : e.property;
+    if (e.prop_category === 'event') {
+      displayTitle = eventPropNames[e.property]
+        ? eventPropNames[e.property]
+        : e.property;
     }
 
     return {
       title: displayTitle,
-      dataIndex: e.property,
+      dataIndex: `${e.property} - ${index}`,
       fixed: !index ? 'left' : '',
       width: 200,
     };
@@ -175,7 +180,7 @@ export const getDateBasedTableData = (
       const splittedLabel = sd.name.split(',');
       const breakdownData = {};
       breakdown.forEach((b, index) => {
-        breakdownData[b.property] = splittedLabel[index];
+        breakdownData[`${b.property} - ${index}`] = splittedLabel[index];
       });
       return {
         index: sd.index,

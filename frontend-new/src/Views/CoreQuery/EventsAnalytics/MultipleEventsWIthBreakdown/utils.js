@@ -7,14 +7,18 @@ import { Number as NumFormat } from '../../../../components/factorsComponents';
 export const getBreakdownTitle = (breakdown, userPropNames, eventPropNames) => {
   const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   let displayTitle = breakdown.property;
-  if(breakdown.prop_category === 'user') {
-    displayTitle = userPropNames[breakdown.property]? userPropNames[breakdown.property] : breakdown.property;
+  if (breakdown.prop_category === 'user') {
+    displayTitle = userPropNames[breakdown.property]
+      ? userPropNames[breakdown.property]
+      : breakdown.property;
   }
 
-  if(breakdown.prop_category === 'event') {
-    displayTitle = eventPropNames[breakdown.property]? eventPropNames[breakdown.property] : breakdown.property;
+  if (breakdown.prop_category === 'event') {
+    displayTitle = eventPropNames[breakdown.property]
+      ? eventPropNames[breakdown.property]
+      : breakdown.property;
   }
-  
+
   if (!breakdown.eventIndex) {
     return displayTitle;
   }
@@ -110,6 +114,8 @@ export const getTableColumns = (
   result.push({
     title: 'Event',
     dataIndex: 'event',
+    width: 200,
+    fixed: 'left',
     render: (d) => {
       return eventNames[d] || d;
     },
@@ -118,6 +124,7 @@ export const getTableColumns = (
     result.push({
       title: getBreakdownTitle(b, userPropNames, eventPropNames),
       dataIndex: b.property + ';' + index,
+      width: 200,
     });
   });
   result.push({
@@ -128,6 +135,7 @@ export const getTableColumns = (
       handleSorting
     ),
     dataIndex: 'Event Count',
+    width: 150,
     render: (d) => {
       return <NumFormat number={d} />;
     },
@@ -162,7 +170,8 @@ export const getDateBasedColumns = (
   currentSorter,
   handleSorting,
   frequency,
-  userPropNames, eventPropNames
+  userPropNames,
+  eventPropNames
 ) => {
   const breakdownColumns = breakdown.map((elem, index) => {
     return {
