@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	cacheRedis "factors/cache/redis"
-	"factors/config"
 	C "factors/config"
 	"factors/metrics"
 	"factors/model/model"
@@ -274,19 +273,11 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 
 	// Use current properties of user, if user_properties is not provided.
 	if event.UserProperties == nil {
-		if C.IsOnTableUserPropertiesWriteAllowed(event.ProjectId) {
-			properties, errCode := store.GetUserPropertiesByUserID(event.ProjectId, event.UserId)
-			if errCode != http.StatusFound {
-				logCtx.WithField("err_code", errCode).Error("Failed to get properties of user for event creation.")
-			}
-			event.UserProperties = properties
+		properties, errCode := store.GetUserPropertiesByUserID(event.ProjectId, event.UserId)
+		if errCode != http.StatusFound {
+			logCtx.WithField("err_code", errCode).Error("Failed to get properties of user for event creation.")
 		}
-	}
-
-	if !C.IsOnTableUserPropertiesWriteAllowed(event.ProjectId) {
-		// Reset user_properties, if not allowed on config,
-		// for controlled rollout.
-		event.UserProperties = nil
+		event.UserProperties = properties
 	}
 
 	// Incrementing count based on EventNameId, not by EventName.
@@ -317,10 +308,6 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 		event.Timestamp, transTime, transTime}
 
 	// Conditinal columns added to the end of column list and params.
-	if event.UserPropertiesId != "" {
-		columnsInOrder = columnsInOrder + "," + "user_properties_id"
-		paramsInOrder = append(paramsInOrder, event.UserPropertiesId)
-	}
 	if event.UserProperties != nil {
 		columnsInOrder = columnsInOrder + "," + "user_properties"
 		paramsInOrder = append(paramsInOrder, event.UserProperties)
@@ -1011,47 +998,20 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 				logCtx = logCtx.WithField("event_id", firstEvent.ID)
 
 				var userPropertiesMap U.PropertiesMap
-				if C.ShouldUseUserPropertiesTableForRead(projectId) {
-					// TODO(Dinesh): Remove the code block after permanent
-					// deprecation of user_properties table.
-					if firstEvent.UserPropertiesId != "" {
-						userProperties, errCode := pg.GetUserProperties(projectId, userId, firstEvent.UserPropertiesId)
-						if errCode != http.StatusFound {
-							logCtx.WithField("err_code", errCode).
-								WithField("user_properties_id", firstEvent.UserPropertiesId).
-								Error("Failed to get user properties of first event on session.")
-							return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
-								isLastEventToBeProcessed, http.StatusInternalServerError
-						}
-
-						userPropertiesDecoded, err := U.DecodePostgresJsonb(userProperties)
-						if err != nil {
-							logCtx.WithField("user_properties_id", firstEvent.UserPropertiesId).
-								Error("Failed to decode user properties of first event on session.")
-							return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
-								isLastEventToBeProcessed, http.StatusInternalServerError
-						}
-
-						userPropertiesMap = U.PropertiesMap(*userPropertiesDecoded)
-					} else {
-						logCtx.Error("Empty first event user_properties_id.")
+				isEmptyUserProperties := firstEvent.UserProperties == nil ||
+					U.IsEmptyPostgresJsonb(firstEvent.UserProperties)
+				if !isEmptyUserProperties {
+					userPropertiesDecoded, err := U.DecodePostgresJsonb(firstEvent.UserProperties)
+					if err != nil {
+						logCtx.WithField("user_properties", firstEvent.UserProperties).
+							Error("Failed to decode user properties of first event on session.")
+						return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+							isLastEventToBeProcessed, http.StatusInternalServerError
 					}
+
+					userPropertiesMap = U.PropertiesMap(*userPropertiesDecoded)
 				} else {
-					isEmptyUserProperties := firstEvent.UserProperties == nil ||
-						U.IsEmptyPostgresJsonb(firstEvent.UserProperties)
-					if !isEmptyUserProperties {
-						userPropertiesDecoded, err := U.DecodePostgresJsonb(firstEvent.UserProperties)
-						if err != nil {
-							logCtx.WithField("user_properties", firstEvent.UserProperties).
-								Error("Failed to decode user properties of first event on session.")
-							return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
-								isLastEventToBeProcessed, http.StatusInternalServerError
-						}
-
-						userPropertiesMap = U.PropertiesMap(*userPropertiesDecoded)
-					} else {
-						logCtx.Error("Empty first event user_properties.")
-					}
+					logCtx.Error("Empty first event user_properties.")
 				}
 
 				firstEventPropertiesDecoded, err := U.DecodePostgresJsonb(&firstEvent.Properties)
@@ -1084,15 +1044,11 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 				newSessionEvent, errCode := pg.CreateEvent(&model.Event{
 					EventNameId: sessionEventNameId,
 					// Timestamp - 1sec before the first event of session.
-					Timestamp: firstEvent.Timestamp - 1,
-					ProjectId: projectId,
-					UserId:    userId,
-					// TODO(Dinesh): Remove UserPropertiesId after user_properties
-					// table is permanently deprecated. The value will be empty
-					// when it is deprecated using flag.
-					UserPropertiesId: firstEvent.UserPropertiesId,
-					UserProperties:   firstEvent.UserProperties,
-					Properties:       *sessionPropertiesJsonb,
+					Timestamp:      firstEvent.Timestamp - 1,
+					ProjectId:      projectId,
+					UserId:         userId,
+					UserProperties: firstEvent.UserProperties,
+					Properties:     *sessionPropertiesJsonb,
 				})
 
 				if errCode != http.StatusCreated {
@@ -1170,13 +1126,7 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 
 			// associate user_properties state using session of the event.
 			for i := range eventsOfSession {
-				var userPropertiesRefID string
-				if C.ShouldUseUserPropertiesTableForRead(projectId) {
-					userPropertiesRefID = eventsOfSession[i].UserPropertiesId
-				} else {
-					userPropertiesRefID = eventsOfSession[i].ID
-				}
-
+				userPropertiesRefID := eventsOfSession[i].ID
 				sessionUserPropertiesRecordMap[userPropertiesRefID] = model.SessionUserProperties{
 					UserID:                userId,
 					SessionEventTimestamp: sessionEvent.Timestamp,
@@ -1722,17 +1672,6 @@ func (store *MemSQL) PullEventRowsForBuildSequenceJob(projectID uint64, startTim
 		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d",
 		projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
 
-	if config.ShouldUseUserPropertiesTableForRead(projectID) {
-		rawQuery = fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
-			" events.properties, users.join_timestamp, user_properties.properties FROM events "+
-			"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
-			"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
-			"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
-			"WHERE events.project_id = %d AND events.timestamp BETWEEN  %d AND %d "+
-			"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d",
-			projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
-	}
-
 	db := C.GetServices().Db
 	return db.Raw(rawQuery).Rows()
 }
@@ -1746,15 +1685,6 @@ func (store *MemSQL) PullEventRowsForArchivalJob(projectID uint64, startTime, en
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
 		"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
 		"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, projectID, startTime, endTime)
-
-	if config.ShouldUseUserPropertiesTableForRead(projectID) {
-		rawQuery = fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
-			"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, events.user_properties FROM events "+
-			"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
-			"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
-			"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
-			"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, projectID, startTime, endTime)
-	}
 
 	db := C.GetServices().Db
 	return db.Raw(rawQuery).Rows()

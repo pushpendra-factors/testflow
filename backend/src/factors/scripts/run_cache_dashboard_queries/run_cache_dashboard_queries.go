@@ -43,9 +43,6 @@ func main() {
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
-	deprecateUserPropertiesTableReadProjectIDs := flag.String("deprecate_user_properties_table_read_projects",
-		"", "List of projects for which user_properties table read to be deprecated.")
-
 	flag.Parse()
 	taskID := "dashboard_caching"
 	healthcheckPingID := C.HealthcheckDashboardCachingPingID
@@ -77,8 +74,6 @@ func main() {
 		RedisHost: *redisHost,
 		RedisPort: *redisPort,
 		SentryDSN: *sentryDSN,
-		// List of projects to use on-table user_properties for read.
-		DeprecateUserPropertiesTableReadProjects: *deprecateUserPropertiesTableReadProjectIDs,
 		MemSQLInfo: C.DBConf{
 			Host:     *memSQLHost,
 			Port:     *memSQLPort,

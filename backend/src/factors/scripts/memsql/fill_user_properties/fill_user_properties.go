@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"factors/model/model"
 	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
@@ -52,6 +51,22 @@ type User struct {
 	JoinTimestamp      int64          `json:"join_timestamp"`
 	CreatedAt          time.Time      `json:"created_at"`
 	UpdatedAt          time.Time      `json:"updated_at"`
+}
+
+type UserProperties struct {
+	// Composite primary key with project_id, user_id and random uuid.
+	ID string `gorm:"primary_key:true;uuid;default:uuid_generate_v4()" json:"id"`
+	// Below are the foreign key constraints added in creation script.
+	// project_id -> projects(id)
+	// (project_id, user_id) -> users(project_id, id)
+	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	UserId    string `gorm:"primary_key:true;" json:"user_id"`
+
+	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
+	Properties       postgres.Jsonb `json:"properties"`
+	UpdatedTimestamp int64          `gorm:"not null;default:0" json:"updated_timestamp"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
 func initMemSQLDB(env, dsn string) {
@@ -142,7 +157,7 @@ func getUserPropertiesByUserAndCache(projectID uint64, userPropertiesIDs []strin
 
 	logCtx := log.WithField("project_id", projectID)
 
-	var userProperties []model.UserProperties
+	var userProperties []UserProperties
 	if err := memSQLDB.Where("project_id = ?", projectID).
 		Where("id IN (?)", userPropertiesIDs).Select("id, user_id, properties").
 		Find(&userProperties).Error; err != nil {

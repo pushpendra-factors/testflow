@@ -2,7 +2,6 @@ package memsql
 
 import (
 	"errors"
-	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -536,7 +535,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 				addSelect = addSelect + ", events.id as session_id"
 			}
 		}
-		egSelect, egParams, egGroupKeys, groupByUserProperties := buildGroupKeyForStep(
+		egSelect, egParams, egGroupKeys, _ := buildGroupKeyForStep(
 			projectId, &q.EventsWithProperties[i], q.GroupByProperties, i+1)
 		if egSelect != "" {
 			addSelect = joinWithComma(addSelect, egSelect)
@@ -544,13 +543,6 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 		addParams = egParams
 		addJoinStatement := "JOIN users ON events.user_id=users.id AND users.project_id = ? "
 		addParams = append(addParams, projectId)
-		if C.ShouldUseUserPropertiesTableForRead(projectId) {
-			if groupByUserProperties && !hasWhereEntity(q.EventsWithProperties[i], model.PropertyEntityUser) {
-				// If event has filter on user property, JOIN on user_properties is added in next step.
-				// Skip adding here to avoid duplication.
-				addJoinStatement += " JOIN user_properties ON events.user_id = user_properties.user_id AND events.user_properties_id=user_properties.id"
-			}
-		}
 
 		var groupBy string
 		if i == 0 {
@@ -629,9 +621,6 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 	propertiesJoinStmnt := ""
 	if hasGroupEntity(q.GroupByProperties, model.PropertyEntityUser) {
 		propertiesJoinStmnt = fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id", funnelSteps[0])
-		if C.ShouldUseUserPropertiesTableForRead(projectId) {
-			propertiesJoinStmnt = propertiesJoinStmnt + " " + "LEFT JOIN user_properties ON user_properties.user_id=users.id AND users.properties_id=user_properties.id"
-		}
 	}
 
 	stepFunnelName := "funnel"

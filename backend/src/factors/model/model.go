@@ -331,19 +331,6 @@ type Model interface {
 	GetFactorsTrackedUserPropertyByID(ID int64, ProjectID uint64) (*model.FactorsTrackedUserProperty, error)
 	IsUserPropertyValid(ProjectID uint64, UserProperty string) bool
 
-	// user_properties
-	MergeUserPropertiesForProjectID(projectID uint64, dryRun bool) int
-	SanitizeAddTypeProperties(projectID uint64, users []model.User, propertiesMap *map[string]interface{})
-	GetUserProperties(projectID uint64, userId string, id string) (*postgres.Jsonb, int)
-	GetUserPropertiesRecord(projectID uint64, userId string, id string) (*model.UserProperties, int)
-	OverwriteUserProperties(projectId uint64, userId string, id string, propertiesJsonb *postgres.Jsonb) int
-	GetUserPropertiesRecordsByProperty(projectId uint64, key string, value interface{}) ([]model.UserProperties, int)
-	UpdateUserPropertiesForSession(projectID uint64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int
-	UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error
-	BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int, skipExpiryForCache bool)
-	MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProperties postgres.Jsonb, currentPropertiesID string, timestamp int64, dryRun bool, updateCalledUser bool) (string, int)
-	GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID uint64, userID string, formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int)
-
 	// user
 	CreateUser(user *model.User) (*model.User, int)
 	CreateOrGetUser(projectID uint64, custUserId string) (*model.User, int)
@@ -364,13 +351,15 @@ type Model interface {
 	GetLatestUserPropertiesOfUserAsMap(projectID uint64, id string) (*map[string]interface{}, int)
 	GetDistinctCustomerUserIDSForProject(projectID uint64) ([]string, int)
 	GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string)
-	UpdateUserPropertiesByCurrentProperties(projectId uint64, id string, currentPropertiesId string, properties *postgres.Jsonb, updateTimestamp int64) (string, int)
 	UpdateUser(projectID uint64, id string, user *model.User, updateTimestamp int64) (*model.User, int)
-	UpdateUserProperties(projectId uint64, id string, properties *postgres.Jsonb, updateTimestamp int64) (string, *postgres.Jsonb, int)
+	UpdateUserProperties(projectId uint64, id string, properties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int)
 	UpdateUserPropertiesV2(projectID uint64, id string, newProperties *postgres.Jsonb, newUpdateTimestamp int64) (*postgres.Jsonb, int)
 	OverwriteUserPropertiesByID(projectID uint64, id string, properties *postgres.Jsonb, withUpdateTimestamp bool, updateTimestamp int64) int
 	OverwriteUserPropertiesByCustomerUserID(projectID uint64, customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int
 	GetUserByPropertyKey(projectID uint64, key string, value interface{}) (*model.User, int)
+	UpdateUserPropertiesForSession(projectID uint64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int
+	GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID uint64, userID string, formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int)
+	UpdateIdentifyOverwriteUserPropertiesMeta(projectID uint64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error
 
 	// web_analytics
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *model.WebAnalyticsQueries, int)

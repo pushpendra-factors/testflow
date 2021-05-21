@@ -24,10 +24,6 @@ type Event struct {
 	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
 	UserId    string `json:"user_id"`
 
-	// TODO(Dinesh): Remove user_properties_id column and field after
-	// user_properties table is permanantly deprecated.
-	UserPropertiesId string `json:"user_properties_id"`
-
 	UserProperties *postgres.Jsonb `json:"user_properties"`
 	SessionId      *string         `json:session_id`
 	EventNameId    string          `json:"event_name_id"`

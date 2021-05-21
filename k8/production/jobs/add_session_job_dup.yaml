@@ -62,10 +62,6 @@ spec:
             - $(GCP_PROJECT_LOCATION)
             - --primary_datastore
             - "memsql"
-            - --ontable_user_properties_allowed_projects
-            - "*"
-            - --deprecate_user_properties_table_read_projects
-            - "*"
             - --cache_with_sorted_set
             envFrom:
             - configMapRef:

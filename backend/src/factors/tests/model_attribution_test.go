@@ -904,9 +904,9 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays0", func(t *testing.T) {
 		// continuation to previous users
-		_, _, status := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		_, status := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
 		assert.Equal(t, http.StatusAccepted, status)
-		_, _, status = store.GetStore().UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		_, status = store.GetStore().UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
 		assert.True(t, status == http.StatusAccepted)
 		/*
 			t+3day -> first time $initial_campaign set with event for user1 and user2

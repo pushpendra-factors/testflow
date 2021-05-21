@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	U "factors/util"
 )
@@ -99,4 +100,9 @@ func DecodeJSONResponseToMap(body *bytes.Buffer) map[string]interface{} {
 func RandomURL() string {
 	return fmt.Sprintf("http://%s.com/%s",
 		U.RandomLowerAphaNumString(5), U.RandomLowerAphaNumString(5))
+}
+
+func DecodePostgresJsonbWithoutError(jsonb *postgres.Jsonb) *map[string]interface{} {
+	properties, _ := U.DecodePostgresJsonb(jsonb)
+	return properties
 }

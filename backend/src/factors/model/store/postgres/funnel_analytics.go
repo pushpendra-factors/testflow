@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"errors"
-	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
@@ -529,7 +528,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 				addSelect = addSelect + ", events.id::text as session_id"
 			}
 		}
-		egSelect, egParams, egGroupKeys, groupByUserProperties := buildGroupKeyForStep(projectId,
+		egSelect, egParams, egGroupKeys, _ := buildGroupKeyForStep(projectId,
 			&q.EventsWithProperties[i], q.GroupByProperties, i+1)
 		if egSelect != "" {
 			addSelect = joinWithComma(addSelect, egSelect)
@@ -537,14 +536,6 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 		addParams = egParams
 		addJoinStatement := "JOIN users ON events.user_id=users.id AND users.project_id = ? "
 		addParams = append(addParams, projectId)
-		if C.ShouldUseUserPropertiesTableForRead(projectId) {
-			if groupByUserProperties && !hasWhereEntity(q.EventsWithProperties[i], model.PropertyEntityUser) {
-				// If event has filter on user property, JOIN on user_properties is added in next step.
-				// Skip adding here to avoid duplication.
-				addJoinStatement += " JOIN user_properties on events.user_properties_id=user_properties.id"
-			}
-		}
-
 		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
 			"", stepName, addSelect, addParams, addJoinStatement, "", "coal_user_id, events.timestamp ASC")
 
@@ -614,9 +605,6 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 	propertiesJoinStmnt := ""
 	if hasGroupEntity(q.GroupByProperties, model.PropertyEntityUser) {
 		propertiesJoinStmnt = fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id", funnelSteps[0])
-		if C.ShouldUseUserPropertiesTableForRead(projectId) {
-			propertiesJoinStmnt = propertiesJoinStmnt + " " + "LEFT JOIN user_properties on users.properties_id=user_properties.id"
-		}
 	}
 
 	stepFunnelName := "funnel"

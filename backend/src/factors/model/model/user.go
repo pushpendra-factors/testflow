@@ -1,14 +1,20 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	cacheRedis "factors/cache/redis"
+	"factors/config"
+	"factors/util"
 	U "factors/util"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 type User struct {
@@ -16,10 +22,7 @@ type User struct {
 	ID string `gorm:"primary_key:true;uuid;default:uuid_generate_v4()" json:"id"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
-	// TODO(Dinesh): Omit properties_id on gorm once
-	// properties is made primary.
-	PropertiesId               string         `json:"properties_id"`
+	ProjectId                  uint64         `gorm:"primary_key:true;" json:"project_id"`
 	Properties                 postgres.Jsonb `json:"properties"`
 	PropertiesUpdatedTimestamp int64          `json:"properties_updated_timestamp"`
 	SegmentAnonymousId         string         `gorm:"type:varchar(200);default:null" json:"seg_aid"`
@@ -32,6 +35,49 @@ type User struct {
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
+
+type LatestUserPropertiesFromSession struct {
+	PageCount      float64
+	TotalSpentTime float64
+	SessionCount   uint64
+	Timestamp      int64
+}
+
+type SessionUserProperties struct {
+	// Meta
+	UserID                string
+	SessionEventTimestamp int64
+
+	// Current event user properties.
+	EventUserProperties *postgres.Jsonb
+
+	// Properties
+	SessionCount         uint64
+	SessionPageCount     float64
+	SessionPageSpentTime float64
+}
+
+// indexed hubspot user property.
+const UserPropertyHubspotContactLeadGUID = "$hubspot_contact_lead_guid"
+
+var UserPropertiesToSkipOnMergeByCustomerUserID = [...]string{
+	UserPropertyHubspotContactLeadGUID,
+}
+
+var ErrDifferentEmailSeen error = errors.New("different_email_seen_for_customer_user_id")
+var ErrDifferentPhoneNoSeen error = errors.New("different_phone_no_seen_for_customer_user_id")
+
+const MaxUsersForPropertiesMerge = 100
+
+// IdentifyMeta holds data for overwriting customer_user_id
+type IdentifyMeta struct {
+	Timestamp int64  `json:"timestamp"`
+	PageURL   string `json:"page_url,omitempty"`
+	Source    string `json:"source"`
+}
+
+// UserPropertiesMeta is a map for customer_user_id to IdentifyMeta
+type UserPropertiesMeta map[string]IdentifyMeta
 
 func GetIdentifiedUserProperties(customerUserId string) (map[string]interface{}, error) {
 	if customerUserId == "" {
@@ -107,4 +153,309 @@ func GetUserPropertiesCategoryByProjectCountCacheKey(projectId uint64, dateKey s
 func GetValuesByUserPropertyCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:US:PV"
 	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
+}
+
+func GetUpdatedPhoneNoFromFormSubmit(formPropertyPhone, userPropertyPhone string) (string, error) {
+	if userPropertyPhone != formPropertyPhone {
+		if userPropertyPhone == "" {
+			return U.SanitizePhoneNumber(formPropertyPhone), nil
+		}
+
+		if formPropertyPhone == "" {
+			return userPropertyPhone, nil
+		}
+
+		sanitizedPhoneNumber := U.SanitizePhoneNumber(formPropertyPhone)
+		if shouldAllowCustomerUserID(U.GetPropertyValueAsString(userPropertyPhone), sanitizedPhoneNumber) {
+			return sanitizedPhoneNumber, ErrDifferentPhoneNoSeen
+		}
+
+		return "", nil
+	}
+
+	return formPropertyPhone, nil
+}
+
+func shouldAllowCustomerUserID(current, incoming string) bool {
+	if current == "" || incoming == "" {
+		return false
+	}
+
+	if U.IsEmail(current) {
+		if U.IsContainsAnySubString(incoming, "@example", "@yahoo", "@gmail") {
+			return false
+		}
+		return true
+	}
+
+	if len(incoming) > len(current) &&
+		strings.Contains(incoming, current) {
+		return true
+	}
+
+	return false
+
+}
+
+func GetUpdatedEmailFromFormSubmit(formPropertyEmail, userPropertyEmail string) (string, error) {
+	lowerCaseformPropertyEmail := U.GetEmailLowerCase(formPropertyEmail)
+	lowerCaseUserPropertyEmail := U.GetEmailLowerCase(userPropertyEmail)
+
+	if lowerCaseUserPropertyEmail != lowerCaseformPropertyEmail {
+
+		if lowerCaseUserPropertyEmail == "" {
+			return lowerCaseformPropertyEmail, nil
+		}
+
+		if lowerCaseformPropertyEmail == "" {
+			return lowerCaseUserPropertyEmail, nil
+		}
+
+		// avoid free email update
+		if !shouldAllowCustomerUserID(U.GetPropertyValueAsString(lowerCaseUserPropertyEmail), lowerCaseformPropertyEmail) {
+			return "", ErrDifferentEmailSeen
+		}
+
+		return lowerCaseformPropertyEmail, ErrDifferentEmailSeen
+	}
+
+	return lowerCaseformPropertyEmail, nil
+}
+
+func GetUserPropertiesFromFormSubmitEventProperties(formSubmitProperties *U.PropertiesMap) *U.PropertiesMap {
+	properties := make(U.PropertiesMap)
+	for k, v := range *formSubmitProperties {
+		if U.IsFormSubmitUserProperty(k) {
+			if k == U.UP_EMAIL {
+				email := U.GetEmailLowerCase(v)
+				if email != "" {
+					properties[k] = email
+				}
+
+			} else if k == U.UP_PHONE {
+				sPhoneNo := U.SanitizePhoneNumber(v)
+				if sPhoneNo != "" {
+					properties[k] = sPhoneNo
+				}
+
+			} else {
+				properties[k] = v
+			}
+		}
+	}
+	return &properties
+}
+
+func AnyPropertyChanged(propertyValuesMap map[string][]interface{}, numUsers int) bool {
+	for property := range propertyValuesMap {
+		if len(propertyValuesMap[property]) < numUsers {
+			// Some new property was added which is missing for one or more users.
+			return true
+		} else if len(propertyValuesMap[property]) < 2 {
+			continue
+		}
+		initialValue := propertyValuesMap[property][0]
+		for _, propertyValue := range propertyValuesMap[property][1:] {
+			if fmt.Sprintf("%v", propertyValue) != fmt.Sprintf("%v", initialValue) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// Initializes merged properties with the one being updated which will be the last of `userPropertiesRecords`.
+// Now for every user, add value if:
+//     1. Not set already from the one being updated.
+//     2. User property is not merged before i.e. $merge_timestamp is not set.
+//     3. Value is greater than the value already set. Add the difference then. (This should ideally not happen)
+func MergeAddTypeUserProperties(mergedProperties *map[string]interface{}, existingProperties []postgres.Jsonb) {
+	// Last record in the array would be the latest one.
+	latestProperties := existingProperties[len(existingProperties)-1]
+	latestPropertiesMap, err := U.DecodePostgresJsonb(&latestProperties)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode user property")
+		return
+	}
+
+	// Boolean map to indicate whether merged value is used at least once.
+	mergedValueAddedOnce := make(map[string]bool)
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+		mergedValueAddedOnce[property] = false
+	}
+
+	// Cases to consider:
+	//    1. What if latestPropertiesMap has one of add type property missing? Add full on first encounter. And add diff after that.
+	//    2. Already merged property with value more than latestProperty value? Add difference.
+	//    3. Already merged property with value less than latestProperty value? Do nothing.
+	//    4. Is not a merged property. Probably for a new user? Add full as is.
+	//    5. Does ordering matter while parsing non latest properties? No.
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+		if _, found := (*latestPropertiesMap)[property]; !found {
+			continue
+		}
+		(*mergedProperties)[property] = (*latestPropertiesMap)[property]
+		if _, isLatestMerged := (*latestPropertiesMap)[U.UP_MERGE_TIMESTAMP]; isLatestMerged {
+			// Since latest properties is also a merged property, set mergedValueAddedOnce true
+			// to avoid another merged property getting added which would double the value otherwise.
+			mergedValueAddedOnce[property] = true
+		}
+	}
+
+	// Loop over all records except last record.
+	for _, userPropertiesRecord := range existingProperties[:len(existingProperties)-1] {
+		userProperties, err := U.DecodePostgresJsonb(&userPropertiesRecord)
+		if err != nil {
+			log.WithError(err).Error("Failed to decode user property")
+			return
+		}
+
+		_, isMergedBefore := (*userProperties)[U.UP_MERGE_TIMESTAMP]
+		for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+			mergedValue, mergedExists := (*mergedProperties)[property]
+			userValue, userValueExists := (*userProperties)[property]
+			if isMergedBefore {
+				if !mergedValueAddedOnce[property] && userValueExists {
+					// Merged values must be added full at least once. Since not added already, add full here.
+					(*mergedProperties)[property] = addValuesForProperty(mergedValue, userValue.(float64), mergedExists)
+					mergedValueAddedOnce[property] = true
+				} else if mergedExists && userValueExists && userValue.(float64)-mergedValue.(float64) > 0 {
+					// Add the difference of values to mergedValues.
+					(*mergedProperties)[property] = addValuesForProperty(mergedValue, userValue.(float64)-mergedValue.(float64), true)
+				} else if userValueExists && !mergedExists && !mergedValueAddedOnce[property] {
+					// mergedValue does not exists. Which means this property was not present in the latest or has
+					// not been added so far. Add the values as is to initialize.
+					(*mergedProperties)[property] = addValuesForProperty(0, userValue.(float64), false)
+					mergedValueAddedOnce[property] = true
+				}
+			} else if userValueExists {
+				(*mergedProperties)[property] = addValuesForProperty(mergedValue, (*userProperties)[property].(float64), mergedExists)
+			}
+		}
+	}
+}
+
+// addValuesForProperty To add old and new value for the user property type add.
+// Adding 0.1 + 0.2 will result in 0.30000000000000004 as explained https://floating-point-gui.de/
+// Round off values with precision to avoid this.
+func addValuesForProperty(oldValue interface{}, newValue float64, addOld bool) float64 {
+	var addedValue float64
+	var err error
+	if addOld {
+		addedValue, err = U.FloatRoundOffWithPrecision(oldValue.(float64)+newValue, 2)
+		if err != nil {
+			// If error in round off, use as is.
+			addedValue = oldValue.(float64) + newValue
+		}
+	} else {
+		addedValue, err = U.FloatRoundOffWithPrecision(newValue, 2)
+		if err != nil {
+			addedValue = newValue
+		}
+	}
+	return addedValue
+}
+
+func IsEmptyPropertyValue(propertyValue interface{}) bool {
+	if propertyValue == nil {
+		return true
+	}
+
+	// Check only for string empty case.
+	// For floats / integers hard to decide whether it was intentionally set as 0.
+	switch propertyValue.(type) {
+	case string:
+		return propertyValue.(string) == ""
+	default:
+		return false
+	}
+}
+
+func FillLocationUserProperties(properties *util.PropertiesMap, clientIP string) error {
+	geo := config.GetServices().GeoLocation
+
+	// ClientIP unavailable.
+	if clientIP == "" {
+		return fmt.Errorf("invalid IP, failed adding geolocation properties")
+	}
+
+	city, err := geo.City(net.ParseIP(clientIP))
+	if err != nil {
+		log.WithFields(log.Fields{"clientIP": clientIP}).WithError(err).Error(
+			"Failed to get city information from geodb")
+		return err
+	}
+
+	// Using en -> english name.
+	if countryName, ok := city.Country.Names["en"]; ok && countryName != "" {
+		if c, ok := (*properties)[util.UP_COUNTRY]; !ok || c == "" {
+			(*properties)[util.UP_COUNTRY] = countryName
+		}
+	}
+
+	if cityName, ok := city.City.Names["en"]; ok && cityName != "" {
+		if c, ok := (*properties)[util.UP_CITY]; !ok || c == "" {
+			(*properties)[util.UP_CITY] = cityName
+		}
+	}
+
+	return nil
+}
+
+// GetDecodedUserPropertiesIdentifierMetaObject gets the identifier meta data from the user properties
+func GetDecodedUserPropertiesIdentifierMetaObject(existingUserProperties *map[string]interface{}) (*UserPropertiesMeta, error) {
+	metaObj := make(UserPropertiesMeta)
+	if existingUserProperties == nil {
+		return &metaObj, nil
+	}
+
+	intMetaObj, exists := (*existingUserProperties)[util.UP_META_OBJECT_IDENTIFIER_KEY]
+	if !exists {
+		return &metaObj, nil
+	}
+
+	metaObjMap, ok := intMetaObj.(map[string]interface{})
+	if !ok {
+		err := json.Unmarshal([]byte(util.GetPropertyValueAsString(intMetaObj)), &metaObj)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to get meta data from user properties")
+		}
+		return &metaObj, err
+	}
+
+	var enMetaObj []byte
+	enMetaObj, err := json.Marshal(metaObjMap)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to encode meta data from user properties")
+		return &metaObj, err
+	}
+
+	err = json.Unmarshal(enMetaObj, &metaObj)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to unmarshal meta data from user properties")
+	}
+
+	return &metaObj, err
+}
+
+// UpdateUserPropertiesIdentifierMetaObject overwrites the identifier meta date in the user properties
+func UpdateUserPropertiesIdentifierMetaObject(userProperties *postgres.Jsonb, metaObj *UserPropertiesMeta) error {
+	if metaObj == nil {
+		return errors.New("invalid meta object")
+	}
+
+	userPropertiesMap, err := U.DecodePostgresJsonbAsPropertiesMap(userProperties)
+	if err != nil {
+		return err
+	}
+
+	(*userPropertiesMap)[U.UP_META_OBJECT_IDENTIFIER_KEY] = *metaObj
+
+	newUserProperties, err := U.EncodeStructTypeToPostgresJsonb(userPropertiesMap)
+	if err != nil {
+		return err
+	}
+
+	*userProperties = *newUserProperties
+	return nil
 }

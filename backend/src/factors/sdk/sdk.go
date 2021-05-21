@@ -700,7 +700,7 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 
 	newUserPropertiesJSON := &postgres.Jsonb{RawMessage: userPropsJSON}
-	userPropertiesIDV1, userPropertiesV2, errCode := store.GetStore().UpdateUserProperties(
+	userPropertiesV2, errCode := store.GetStore().UpdateUserProperties(
 		projectId, request.UserId, newUserPropertiesJSON, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		logCtx.WithField("err_code", errCode).
@@ -715,12 +715,6 @@ func Track(projectId uint64, request *TrackPayload,
 		Timestamp:       request.Timestamp,
 		ProjectId:       projectId,
 		UserId:          request.UserId,
-
-		// UserPropertiesId - Computed using user_properties table.
-		// Kept for backward compatibility. Will be removed after
-		// deprecating user_properties table.
-		UserPropertiesId: userPropertiesIDV1,
-
 		// UserProperties - Computed using properties on users table.
 		UserProperties: userPropertiesV2,
 	}
@@ -1118,7 +1112,7 @@ func AddUserProperties(projectId uint64,
 			&AddUserPropertiesResponse{Error: "Add user properties failed"}
 	}
 
-	_, _, errCode = store.GetStore().UpdateUserProperties(projectId, user.ID,
+	_, errCode = store.GetStore().UpdateUserProperties(projectId, user.ID,
 		&postgres.Jsonb{propertiesJSON}, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return errCode,
@@ -1441,7 +1435,7 @@ func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropert
 }
 
 func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
-	eventID, userID, userPropertiesID string, newInitialUserProperties *U.PropertiesMap) int {
+	eventID, userID string, newInitialUserProperties *U.PropertiesMap) int {
 
 	logCtx := log.WithField("project_id", projectID).WithField("event_id", eventID)
 
@@ -1492,23 +1486,7 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
 		return http.StatusBadRequest
 	}
 
-	var statusV1 int
-	if !C.IsUserPropertiesTableWriteDeprecated(projectID) {
-		statusV1 = store.GetStore().OverwriteUserProperties(projectID, userID,
-			userPropertiesID, updateUserPropertiesJson)
-	}
-
-	var statusV2 int
-	if C.IsOnTableUserPropertiesWriteAllowed(projectID) {
-		statusV2 = overwriteUserPropertiesOnTable(projectID, userID, eventID, updateUserPropertiesJson)
-	}
-
-	// Use statusV1 till deprecation.
-	if !C.IsUserPropertiesTableWriteDeprecated(projectID) {
-		return statusV1
-	}
-
-	return statusV2
+	return overwriteUserPropertiesOnTable(projectID, userID, eventID, updateUserPropertiesJson)
 }
 
 func overwriteUserPropertiesOnTable(projectID uint64, userID string, eventID string,
@@ -1566,12 +1544,6 @@ func UpdateEventProperties(projectId uint64,
 			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid event."}
 	}
 
-	user, errCode := store.GetStore().GetUser(projectId, event.UserId)
-	if errCode != http.StatusFound {
-		return errCode, &UpdateEventPropertiesResponse{
-			Error: "Update event properties failed. User not found."}
-	}
-
 	errCode = store.GetStore().UpdateEventProperties(projectId, request.EventId,
 		properitesToBeUpdated, request.Timestamp)
 	if errCode != http.StatusAccepted {
@@ -1584,21 +1556,16 @@ func UpdateEventProperties(projectId uint64,
 
 	// Update user_properties state associate to event.
 	errCode = updateInitialUserPropertiesFromUpdateEventProperties(projectId, event.ID,
-		event.UserId, event.UserPropertiesId, newInitialUserProperties)
+		event.UserId, newInitialUserProperties)
 	if errCode != http.StatusAccepted {
 		return errCode,
 			&UpdateEventPropertiesResponse{
 				Error: "Update event properties failed. Failed to update event user properties."}
 	}
 
-	if event.UserPropertiesId == user.PropertiesId {
-		return http.StatusAccepted,
-			&UpdateEventPropertiesResponse{Message: "Updated event properties successfully."}
-	}
-
 	// Update lastest user properties state of user.
 	errCode = updateInitialUserPropertiesFromUpdateEventProperties(projectId, event.ID,
-		event.UserId, user.PropertiesId, newInitialUserProperties)
+		event.UserId, newInitialUserProperties)
 	if errCode != http.StatusAccepted {
 		return errCode,
 			&UpdateEventPropertiesResponse{

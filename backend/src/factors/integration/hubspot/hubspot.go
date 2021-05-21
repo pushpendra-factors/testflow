@@ -603,28 +603,10 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		eventID = response.EventId
 	} else if document.Action == model.HubspotDocumentActionUpdated {
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED
-
-		if C.ShouldUseUserPropertiesTableForRead(projectID) {
-			userPropertiesRecords, errCode := store.GetStore().GetUserPropertiesRecordsByProperty(
-				projectID, model.UserPropertyHubspotContactLeadGUID, leadGUID)
-			if errCode != http.StatusFound {
-				logCtx.WithField("err_code", errCode).Error(
-					"Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
-				return http.StatusInternalServerError
-			}
-
-			// use the user_id of same lead_guid done
-			// contact created event.
-			userID = userPropertiesRecords[0].UserId
-		} else {
-			user, errCode := store.GetStore().GetUserByPropertyKey(
-				projectID, model.UserPropertyHubspotContactLeadGUID, leadGUID)
-			if errCode != http.StatusFound {
-				if errCode != http.StatusNotFound {
-					logCtx.WithField("err_code", errCode).Error("Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
-					return http.StatusInternalServerError
-				}
-
+		user, errCode := store.GetStore().GetUserByPropertyKey(
+			projectID, model.UserPropertyHubspotContactLeadGUID, leadGUID)
+		if errCode != http.StatusFound {
+			if errCode == http.StatusNotFound {
 				// Added below fallback for getting user_id by contact create synced for same document.
 				// This is not the ideal scenario. Ideally the user_id should be availble one-one on users table.
 				lastSyncedDocument, errCode := store.GetStore().GetSyncedHubspotDocumentByFilter(projectID,
@@ -653,8 +635,11 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 				}
 
 			} else {
-				userID = user.ID
+				logCtx.WithField("err_code", errCode).Error("Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
+				return http.StatusInternalServerError
 			}
+		} else {
+			userID = user.ID
 		}
 
 		if customerUserID != "" {
@@ -895,7 +880,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 				contactSyncEvent, errCode := store.GetStore().GetEventById(
 					projectID, contactDocument.SyncId)
 				if errCode == http.StatusFound {
-					_, _, errCode := store.GetStore().UpdateUserProperties(projectID,
+					_, errCode := store.GetStore().UpdateUserProperties(projectID,
 						contactSyncEvent.UserId, userPropertiesJsonb, time.Now().Unix())
 					if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 						logCtx.WithField("user_id", contactSyncEvent.UserId).Error(

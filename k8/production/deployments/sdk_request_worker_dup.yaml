@@ -85,10 +85,6 @@ spec:
           - $(GCP_PROJECT_LOCATION)
           - --primary_datastore
           - "memsql"
-          - --ontable_user_properties_allowed_projects
-          - "*"
-          - --deprecate_user_properties_table_read_projects
-          - "*"
           - --enable_sdk_and_integration_request_queue_duplication
           - --cache_with_sorted_set
         envFrom:

@@ -151,9 +151,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_LOAD_TIME])      // Should be default value.
 	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SCROLL_PERCENT]) // Should be default value.
 	assert.True(t, eventProperties[U.EP_IS_PAGE_VIEW].(bool))
-	if C.IsOnTableUserPropertiesWriteAllowed(project.ID) {
-		assert.NotNil(t, rEvent.UserProperties)
-	}
+	assert.NotNil(t, rEvent.UserProperties)
 	rUser, errCode := store.GetStore().GetUser(rEvent.ProjectId, rEvent.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rUser)
@@ -666,7 +664,6 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	// Latest user properties state should contain latest campaign as "campaign1".
 	assert.Equal(t, "campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	userID := response.UserId
-	lastUserPropertiesID := user.PropertiesId
 
 	timestamp = timestamp + 1
 	trackPayload = SDK.TrackPayload{
@@ -684,8 +681,6 @@ func TestUserPropertiesLatestCampaign(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	user, errCode = store.GetStore().GetUser(project.ID, userID)
 	assert.Equal(t, http.StatusFound, errCode)
-	// Should be the same user_properties state as there is no change.
-	assert.Equal(t, lastUserPropertiesID, user.PropertiesId)
 	userPropertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	// Latest user properties state should should be the same after form_submitted event.
@@ -1227,7 +1222,7 @@ func TestTrackHandlerWithFormSubmit(t *testing.T) {
 	assert.NotNil(t, responseMap["user_id"])
 	userId := responseMap["user_id"].(string)
 	userProperties := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
-	_, _, errCode := store.GetStore().UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
+	_, errCode := store.GetStore().UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
 	// form submit event name created.
 	formSubmitEventName, errCode := store.GetStore().GetEventName(U.EVENT_NAME_FORM_SUBMITTED, project.ID)
@@ -1902,7 +1897,7 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	assert.Equal(t, event.ID, (*userProperties)[U.UP_INITIAL_PAGE_EVENT_ID])
 	// Creating new user_properties state for the event user.
 	newUserPropertiesJson := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
-	_, _, _ = store.GetStore().UpdateUserProperties(project.ID, event.UserId, &newUserPropertiesJson, U.TimeNowUnix())
+	_, _ = store.GetStore().UpdateUserProperties(project.ID, event.UserId, &newUserPropertiesJson, U.TimeNowUnix())
 	// Trigger update event properties again after user properties update.
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
 		eventId, 200)), map[string]string{"Authorization": project.Token})
@@ -2255,10 +2250,6 @@ func TestSDKTrackFirstEventUserProperties(t *testing.T) {
 	user, errCode := store.GetStore().GetUser(project.ID, event.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
 
-	// After first event tracking, the event associated user_properites_id
-	// should be same as lastest user_properties_id of the user.
-	assert.Equal(t, user.PropertiesId, event.UserPropertiesId)
-
 	// Should contain first event properties.
 	userPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
@@ -2455,7 +2446,7 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 	timestamp := time.Now().Unix() - 500
 	propertiesPJson, err := U.EncodeToPostgresJsonb(&properties)
 	assert.Nil(t, err)
-	_, _, status = store.GetStore().UpdateUserProperties(project.ID, user.ID, propertiesPJson, timestamp)
+	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID, propertiesPJson, timestamp)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	// verify decoding properties
