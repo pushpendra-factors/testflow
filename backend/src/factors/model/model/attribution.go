@@ -437,14 +437,26 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 }
 
 // getLinkedEventColumnAsInterfaceList return interface list having linked event count and CPC
-func getLinkedEventColumnAsInterfaceList(spend float64, data []float64) []interface{} {
+func getLinkedEventColumnAsInterfaceList(spend float64, data []float64, linkedEventCount int) []interface{} {
+
 	var list []interface{}
-	for _, val := range data {
-		cpc := 0.0
-		if val != 0.0 {
-			cpc, _ = U.FloatRoundOffWithPrecision(spend/val, U.DefaultPrecision)
+	// If empty linked events, add 0s
+	if len(data) == 0 {
+		for i := 0; i < linkedEventCount; i++ {
+			list = append(list, 0.0, 0.0)
 		}
-		list = append(list, val, cpc)
+	} else {
+		for _, val := range data {
+			cpc := 0.0
+			if val != 0.0 {
+				cpc, _ = U.FloatRoundOffWithPrecision(spend/val, U.DefaultPrecision)
+			}
+			list = append(list, val, cpc)
+		}
+	}
+	// Each LE should have 2 values, one for conversion, 2nd for conversion cost.
+	for len(list) < 2*linkedEventCount {
+		list = append(list, 0.0)
 	}
 	return list
 }
@@ -556,7 +568,7 @@ func GetRowsByMaps(attributionKey string, attributionData *map[string]*Attributi
 			} else {
 				row = append(row, cpc, float64(0), float64(0))
 			}
-			row = append(row, getLinkedEventColumnAsInterfaceList(data.Spend, data.LinkedEventsCount)...)
+			row = append(row, getLinkedEventColumnAsInterfaceList(data.Spend, data.LinkedEventsCount, len(linkedEvents))...)
 			rows = append(rows, row)
 		}
 	}
@@ -705,8 +717,12 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 	sessionKeyUserCount := make(map[string]int64)
 	sessionKeyCount := make(map[string]int64)
 	for _, value := range sessions {
-		userKeyPairCounted := false
+
+		// Run for each userID
+		userKeyMapCounter := make(map[string]int)
 		for k, v := range value {
+
+			// Runs for each unique userID-Key pair
 			sessionKeyMarketingInfo[k] = v.MarketingInfo
 			for index, sv := range v.TimeStamps {
 				if sv >= query.From && sv <= query.To {
@@ -725,9 +741,9 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 			}
 
 			// Any one instance of this user if the session by them is WithinQueryPeriod
-			if !userKeyPairCounted && v.WithinQueryPeriod {
+			if userKeyMapCounter[k] == 0 && v.WithinQueryPeriod {
 				sessionKeyUserCount[k] = sessionKeyUserCount[k] + 1
-				userKeyPairCounted = true
+				userKeyMapCounter[k] = 1
 			}
 		}
 	}
@@ -858,13 +874,9 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 			// ignore ZERO valued keys
 			continue
 		}
-		if _, found := (*attributionData)[key]; found {
+		// Create a new record if not found
+		if _, found := (*attributionData)[key]; !found {
 
-			(*attributionData)[key].Impressions = value.Impressions
-			(*attributionData)[key].Clicks = value.Clicks
-			(*attributionData)[key].Spend = value.Spend
-
-		} else {
 			(*attributionData)[key] = &AttributionData{}
 			(*attributionData)[key].MarketingInfo = reportKeyData[key]
 			switch attributionKey {
@@ -881,7 +893,16 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 			case AttributionKeySource:
 				(*attributionData)[key].Name = reportKeyData[key].Source
 			}
+			(*attributionData)[key].ConversionEventCount = 0
+			(*attributionData)[key].ConversionEventCompareCount = 0
+			(*attributionData)[key].Sessions = 0
+			(*attributionData)[key].Users = 0
+			(*attributionData)[key].PageViews = 0
+			(*attributionData)[key].AvgSessionTime = 0
 		}
+		(*attributionData)[key].Impressions = value.Impressions
+		(*attributionData)[key].Clicks = value.Clicks
+		(*attributionData)[key].Spend = value.Spend
 	}
 }
 
