@@ -34,6 +34,8 @@ var (
 		"Channel__c":                         true,
 		"DC_Lead_Source__c":                  true,
 		"DSA__c":                             true,
+		"DSA_Category__c":                    true,
+		"DSAname__c":                         true,
 		"Designer__c":                        true,
 		"First_Date_of_Contact__c":           true,
 		"Follow_Up_Count__c":                 true,
@@ -197,7 +199,7 @@ var (
 	*/
 	DesignCafeIdentificationField = map[string][]string{
 		SalesforceDocumentTypeNameLead:        {"MobilePhone", "MobileYM__c"},
-		SalesforceDocumentTypeNameOpportunity: {"MobileYM__c", "Mobile__c", "Phone__c"},
+		SalesforceDocumentTypeNameOpportunity: {"Mobile__c", "MobileYM__c", "Phone__c"},
 	}
 
 	MoEngageIdentificationField = map[string][]string{

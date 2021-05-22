@@ -7,7 +7,6 @@ function CampaignAnalytics({
   chartType,
   arrayMapper,
   resultState,
-  setwidgetModal,
   unit,
   section
 }) {
@@ -20,7 +19,6 @@ function CampaignAnalytics({
         data={resultState.data}
         breakdown={breakdown}
         isWidgetModal={false}
-        setwidgetModal={setwidgetModal}
         unit={unit}
         section={section}
       />
@@ -32,7 +30,6 @@ function CampaignAnalytics({
         chartType={chartType}
         data={resultState.data}
         isWidgetModal={false}
-        setwidgetModal={setwidgetModal}
         unit={unit}
         section={section}
       />

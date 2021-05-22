@@ -17,7 +17,6 @@ function EventsAnalytics({
   events,
   chartType,
   unit,
-  setwidgetModal,
   durationObj,
   arrayMapper,
   section,
@@ -37,7 +36,6 @@ function EventsAnalytics({
           section={section}
           breakdown={breakdown}
           unit={unit}
-          setwidgetModal={setwidgetModal}
         />
       );
     }
@@ -53,7 +51,6 @@ function EventsAnalytics({
           section={section}
           breakdown={breakdown}
           unit={unit}
-          setwidgetModal={setwidgetModal}
         />
       );
     }
@@ -69,7 +66,6 @@ function EventsAnalytics({
           section={section}
           breakdown={breakdown}
           unit={unit}
-          setwidgetModal={setwidgetModal}
         />
       );
     }
@@ -85,7 +81,6 @@ function EventsAnalytics({
           durationObj={durationObj}
           section={section}
           unit={unit}
-          setwidgetModal={setwidgetModal}
         />
       );
     }
@@ -98,7 +93,6 @@ function EventsAnalytics({
         resultState={resultState}
         breakdown={breakdown}
         chartType={chartType}
-        setwidgetModal={setwidgetModal}
         unit={unit}
       />
     );

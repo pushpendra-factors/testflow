@@ -62,7 +62,7 @@ function ResetPassword(props) {
                         <Row>
                             <Col span={24} >
                                 <div className={'flex justify-center items-center mb-5'} >
-                                    <SVG name={'brand'} size={40} color="white"/><Text type={'title'} level={4} weight={'bold'} extraClass={'m-0 ml-2'}>FACTORS.AI</Text>
+                                  <SVG name={'BrandFull'} size={40} color="white"/>
                                 </div>
                             </Col>
                         </Row>

@@ -260,25 +260,27 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 
 	// Do not retry on below conditions.
 	if status == http.StatusBadRequest || status == http.StatusNotAcceptable || status == http.StatusUnauthorized {
-		metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
-		recordLatencyMetricByRequestType(reqType, execStartTime)
-
+		recordSDKRequestProcessedMetrics(reqType, execStartTime)
 		return float64(status), "", nil
 	}
 
 	// Return error only for retry. Retry after a period till it is successfull.
 	// Retry dependencies not found and failures which can be successful on retries.
 	if status == http.StatusNotFound || status == http.StatusInternalServerError {
-		metrics.Increment(metrics.IncrSDKRequestQueueRetry)
+		metrics.Increment(C.GetSDKAndIntegrationMetricNameByConfig(metrics.IncrSDKRequestQueueRetry))
 		return http.StatusInternalServerError, "",
 			tasks.NewErrRetryTaskExp("EXP_RETRY__REQUEST_PROCESSING_FAILURE")
 	}
 
 	// Log for analysing queue process status.
-	metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
-	recordLatencyMetricByRequestType(reqType, execStartTime)
+	recordSDKRequestProcessedMetrics(reqType, execStartTime)
 
 	return http.StatusOK, string(responseBytes), nil
+}
+
+func recordSDKRequestProcessedMetrics(requestType string, execStartTime time.Time) {
+	metrics.Increment(C.GetSDKAndIntegrationMetricNameByConfig(metrics.IncrSDKRequestQueueProcessed))
+	recordLatencyMetricByRequestType(requestType, execStartTime)
 }
 
 func recordLatencyMetricByRequestType(requestType string, execStartTime time.Time) {
@@ -304,12 +306,8 @@ func recordLatencyMetricByRequestType(requestType string, execStartTime time.Tim
 		return
 	}
 
-	if C.IsSDKAndIntegrationRequestQueueDuplicationEnabled() {
-		metricName = "dup_" + metricName
-	}
-
 	latencyInMs := time.Now().Sub(execStartTime).Milliseconds()
-	metrics.RecordLatency(metricName, float64(latencyInMs))
+	metrics.RecordLatency(C.GetSDKAndIntegrationMetricNameByConfig(metricName), float64(latencyInMs))
 }
 
 func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int,

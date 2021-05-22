@@ -8,7 +8,6 @@ function Funnels({
   events,
   chartType,
   unit,
-  setwidgetModal,
   arrayMapper,
   section,
 }) {
@@ -18,7 +17,6 @@ function Funnels({
         resultState={resultState}
         queries={events}
         chartType={chartType}
-        setwidgetModal={setwidgetModal}
         unit={unit}
         arrayMapper={arrayMapper}
         section={section}
@@ -32,7 +30,6 @@ function Funnels({
         breakdown={breakdown}
         chartType={chartType}
         unit={unit}
-        setwidgetModal={setwidgetModal}
         arrayMapper={arrayMapper}
         section={section}
       />

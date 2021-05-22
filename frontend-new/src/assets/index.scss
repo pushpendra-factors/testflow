@@ -1,33 +1,34 @@
 body {
-    margin: 0;
-    font-family: 'Work Sans', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow-y: auto !important;
+  margin: 0;
+  font-family: 'Work Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-y: auto !important;
 }
 
 code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
 }
 
 .ant-layout.ant-layout-has-sider {
-    min-height: 100vh;
+  min-height: 100vh;
 }
 
 .ant-popover-title {
-    padding: 0;
+  padding: 0;
 }
 
 .ant-popover-arrow {
-    display: none;
+  display: none;
 }
 
 .app-font-family {
-    font-family: 'Work Sans', sans-serif !important;
+  font-family: 'Work Sans', sans-serif !important;
 }
 
 .tableParentHeader {
-    background-color: #F5F6F8 !important;
+  background-color: #f5f6f8 !important;
 }
 
 .top-4 {
@@ -35,4 +36,8 @@ code {
 }
 .-right-4 {
   right: -1rem;
+}
+
+.ant-table-cell-fix-left {
+  z-index: 20 !important;
 }

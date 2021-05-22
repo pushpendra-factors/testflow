@@ -83,7 +83,7 @@ const FAFilterSelect = ({
     const setValues = () => {
         let values;
         if (filter.props[1] === 'datetime') { 
-            const parsedValues = (filter.values ? (typeof filter.values === 'string')? JSON.parse(filter.values) : filter.values : {});
+            const parsedValues = (filter.values[0] ? (typeof filter.values[0] === 'string')? JSON.parse(filter.values) : filter.values : {});
             values = parseDateRangeFilter(parsedValues.fr, parsedValues.to)
         } else {
             values = filter.values;

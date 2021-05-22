@@ -16,7 +16,6 @@ function SingleTouchPoint({
   attribution_method,
   touchpoint,
   linkedEvents,
-  setwidgetModal,
   chartType,
   resultState,
   unit,
@@ -27,9 +26,11 @@ function SingleTouchPoint({
   const [visibleIndices, setVisibleIndices] = useState(
     Array.from(Array(maxAllowedVisibleProperties).keys())
   );
-  const { attributionMetrics, setAttributionMetrics } = useContext(
-    DashboardContext
-  );
+  const {
+    attributionMetrics,
+    setAttributionMetrics,
+    handleEditQuery,
+  } = useContext(DashboardContext);
 
   useEffect(() => {
     const formattedData = formatData(data, event, visibleIndices, touchpoint);
@@ -85,7 +86,7 @@ function SingleTouchPoint({
   if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
-        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
         className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >

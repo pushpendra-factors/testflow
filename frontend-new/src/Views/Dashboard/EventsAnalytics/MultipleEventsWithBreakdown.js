@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import {
   formatData,
   formatVisibleProperties,
@@ -20,6 +20,7 @@ import {
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
 import { useSelector } from 'react-redux';
+import { DashboardContext } from '../../../contexts/DashboardContext';
 // import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
@@ -31,9 +32,9 @@ function MultipleEventsWithBreakdown({
   unit,
   durationObj,
   section,
-  setwidgetModal,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const { handleEditQuery } = useContext(DashboardContext);
   const { eventNames } = useSelector((state) => state.coreQuery);
 
   const appliedQueries = useMemo(() => {
@@ -93,7 +94,7 @@ function MultipleEventsWithBreakdown({
   if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
-        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
         className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >

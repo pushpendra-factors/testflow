@@ -1459,6 +1459,14 @@ func IsSDKAndIntegrationRequestQueueDuplicationEnabled() bool {
 	return configuration.EnableSDKAndIntegrationRequestQueueDuplication
 }
 
+func GetSDKAndIntegrationMetricNameByConfig(metricName string) string {
+	if IsSDKAndIntegrationRequestQueueDuplicationEnabled() {
+		metricName = "dup_" + metricName
+	}
+
+	return metricName
+}
+
 func IsSortedSetCachingAllowed() bool {
 	return configuration.CacheSortedSet
 }
