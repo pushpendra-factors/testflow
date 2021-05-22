@@ -1,26 +1,27 @@
-import React, { useState, useEffect } from "react";
-import { formatData } from "../../CoreQuery/EventsAnalytics/EventBreakdown/utils";
-import BarChart from "../../../components/BarChart";
-import EventBreakdownTable from "../../CoreQuery/EventsAnalytics/EventBreakdown/EventBreakdownTable";
-import ChartHeader from "../../../components/SparkLineChart/ChartHeader";
+import React, { useState, useEffect, useContext } from 'react';
+import { formatData } from '../../CoreQuery/EventsAnalytics/EventBreakdown/utils';
+import BarChart from '../../../components/BarChart';
+import EventBreakdownTable from '../../CoreQuery/EventsAnalytics/EventBreakdown/EventBreakdownTable';
+import ChartHeader from '../../../components/SparkLineChart/ChartHeader';
 import {
   CHART_TYPE_TABLE,
   CHART_TYPE_BARCHART,
   CHART_TYPE_SPARKLINES,
   DASHBOARD_WIDGET_BAR_CHART_HEIGHT,
-} from "../../../utils/constants";
-import NoDataChart from "../../../components/NoDataChart";
+} from '../../../utils/constants';
+import NoDataChart from '../../../components/NoDataChart';
+import { DashboardContext } from '../../../contexts/DashboardContext';
 
 function EventBreakdownCharts({
   resultState,
   breakdown,
   section,
   chartType,
-  setwidgetModal,
   unit,
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const { handleEditQuery } = useContext(DashboardContext);
   const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
@@ -33,7 +34,7 @@ function EventBreakdownCharts({
 
   if (!chartsData.length) {
     return (
-      <div className="mt-4 flex justify-center items-center w-full h-64 ">
+      <div className='mt-4 flex justify-center items-center w-full h-64 '>
         <NoDataChart />
       </div>
     );
@@ -57,8 +58,8 @@ function EventBreakdownCharts({
     chartContent = (
       <ChartHeader
         total={resultState.data.rows[0]}
-        query={"Count"}
-        bgColor="#4D7DB4"
+        query={'Count'}
+        bgColor='#4D7DB4'
       />
     );
   } else {
@@ -76,9 +77,9 @@ function EventBreakdownCharts({
   if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
-        onClick={() => setwidgetModal({ unit, data: resultState.data })}
-        style={{ color: "#5949BC" }}
-        className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
+        onClick={handleEditQuery}
+        style={{ color: '#5949BC' }}
+        className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >
         Show More &rarr;
       </div>

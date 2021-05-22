@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import {
   formatData,
   formatDataInStackedAreaFormat,
@@ -18,6 +18,7 @@ import {
 } from '../../../utils/constants';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
+import { DashboardContext } from '../../../contexts/DashboardContext';
 
 function SingleEventMultipleBreakdown({
   resultState,
@@ -28,9 +29,9 @@ function SingleEventMultipleBreakdown({
   unit,
   durationObj,
   section,
-  setwidgetModal,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const { handleEditQuery } = useContext(DashboardContext);
 
   const aggregateData = useMemo(() => {
     return formatData(resultState.data);
@@ -79,7 +80,7 @@ function SingleEventMultipleBreakdown({
   if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
-        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
         className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >

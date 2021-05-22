@@ -64,6 +64,7 @@ function CoreQuery({
   getCampaignConfigData,
 }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [navigatedFromDashboard, setNavigatedFromDashboard] = useState(false);
   const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
   const [activeKey, setActiveKey] = useState('0');
   const [showResult, setShowResult] = useState(false);
@@ -165,6 +166,9 @@ function CoreQuery({
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         setShowResult(true);
         setQuerySaved(isQuerySaved);
+        if (!isQuerySaved) {
+          setNavigatedFromDashboard(false);
+        }
         setAppliedQueries(queries.map((elem) => elem.label));
         updateAppliedBreakdown();
         setBreakdownType(user_type);
@@ -256,6 +260,9 @@ function CoreQuery({
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         setShowResult(true);
         setQuerySaved(isQuerySaved);
+        if (!isQuerySaved) {
+          setNavigatedFromDashboard(false);
+        }
         setAppliedQueries(queries.map((elem) => elem.label));
         updateAppliedBreakdown();
         updateResultState({ ...initialState, loading: true });
@@ -339,6 +346,9 @@ function CoreQuery({
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         setShowResult(true);
         setQuerySaved(isQuerySaved);
+        if (!isQuerySaved) {
+          setNavigatedFromDashboard(false);
+        }
         updateResultState({
           ...initialState,
           loading: true,
@@ -399,6 +409,9 @@ function CoreQuery({
         dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
         setShowResult(true);
         setQuerySaved(isQuerySaved);
+        if (!isQuerySaved) {
+          setNavigatedFromDashboard(false);
+        }
         updateResultState({
           ...initialState,
           loading: true,
@@ -718,7 +731,12 @@ function CoreQuery({
 
         {showResult ? (
           <CoreQueryContext.Provider
-            value={{ attributionMetrics, setAttributionMetrics }}
+            value={{
+              attributionMetrics,
+              setAttributionMetrics,
+              navigatedFromDashboard,
+              setNavigatedFromDashboard
+            }}
           >
             <AnalysisResultsPage
               queryType={queryType}
@@ -755,6 +773,7 @@ function CoreQuery({
             location={location}
             setActiveKey={setActiveKey}
             setBreakdownType={setBreakdownType}
+            setNavigatedFromDashboard={setNavigatedFromDashboard}
           />
         )}
       </ErrorBoundary>

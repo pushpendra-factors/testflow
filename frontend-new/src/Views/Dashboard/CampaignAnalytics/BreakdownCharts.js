@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import {
   formatData,
   formatDataInHighChartsFormat,
@@ -20,6 +20,7 @@ import NoDataChart from '../../../components/NoDataChart';
 import StackedAreaChart from '../../../components/StackedAreaChart';
 import StackedBarChart from '../../../components/StackedBarChart';
 import { generateColors, SortData } from '../../../utils/dataFormatter';
+import { DashboardContext } from '../../../contexts/DashboardContext';
 
 function BreakdownCharts({
   arrayMapper,
@@ -27,11 +28,13 @@ function BreakdownCharts({
   breakdown,
   data,
   isWidgetModal,
-  setwidgetModal,
   unit,
   section,
 }) {
   const [visibleProperties, setVisibleProperties] = useState([]);
+  const {
+    handleEditQuery,
+  } = useContext(DashboardContext);
   const currentEventIndex = 0;
 
   const aggregateData = useMemo(() => {
@@ -100,7 +103,7 @@ function BreakdownCharts({
   if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
-        onClick={() => setwidgetModal({ unit, data })}
+        onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
         className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >

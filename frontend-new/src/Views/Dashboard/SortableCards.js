@@ -94,7 +94,6 @@ function SortableCards({
               key={item.id}
               unit={{ ...item, query: savedQuery }}
               onDrop={onDrop}
-              setwidgetModal={setwidgetModal}
               showDeleteWidgetModal={showDeleteWidgetModal}
               refreshClicked={refreshClicked}
               setRefreshClicked={setRefreshClicked}

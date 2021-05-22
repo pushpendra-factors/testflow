@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { generateUngroupedChartsData } from "../../CoreQuery/FunnelsResultPage/utils";
 import Chart from "../../CoreQuery/FunnelsResultPage/UngroupedChart/Chart";
 import FunnelsResultTable from "../../CoreQuery/FunnelsResultPage/FunnelsResultTable";
 import { CHART_TYPE_BARCHART, CHART_TYPE_TABLE, DASHBOARD_WIDGET_UNGROUPED_FUNNEL_CHART_HEIGHT } from "../../../utils/constants";
+import { DashboardContext } from "../../../contexts/DashboardContext";
 
 function UngroupedChart({
   resultState,
   queries,
   chartType,
-  setwidgetModal,
   unit,
   arrayMapper,
   section
 }) {
   const [chartData, setChartData] = useState([]);
-
+  const { handleEditQuery } = useContext(DashboardContext);
   useEffect(() => {
     const formattedData = generateUngroupedChartsData(
       resultState.data,
@@ -59,7 +59,7 @@ function UngroupedChart({
   if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
-        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        onClick={handleEditQuery}
         style={{ color: "#5949BC" }}
         className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
       >

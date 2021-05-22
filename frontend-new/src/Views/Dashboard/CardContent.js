@@ -21,7 +21,7 @@ import CampaignAnalytics from './CampaignAnalytics';
 import NoDataChart from '../../components/NoDataChart';
 import { useSelector } from 'react-redux';
 
-function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
+function CardContent({ unit, resultState, durationObj }) {
   let content = null;
   const { eventNames } = useSelector((state) => state.coreQuery);
 
@@ -135,7 +135,6 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
           unit={unit}
-          setwidgetModal={setwidgetModal}
           arrayMapper={arrayMapper}
           section={DASHBOARD_WIDGET_SECTION}
         />
@@ -151,7 +150,6 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
           unit={unit}
-          setwidgetModal={setwidgetModal}
           arrayMapper={arrayMapper}
           section={DASHBOARD_WIDGET_SECTION}
           breakdownType={breakdownType}
@@ -164,7 +162,6 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
         <Attributions
           unit={unit}
           resultState={resultState}
-          setwidgetModal={setwidgetModal}
           attributionsState={attributionsState}
           chartType={presentationObj[dashboardPresentation]}
           section={DASHBOARD_WIDGET_SECTION}
@@ -177,7 +174,6 @@ function CardContent({ unit, resultState, setwidgetModal, durationObj }) {
         <CampaignAnalytics
           unit={unit}
           resultState={resultState}
-          setwidgetModal={setwidgetModal}
           campaignState={campaignState}
           chartType={presentationObj[dashboardPresentation]}
           arrayMapper={arrayMapper}

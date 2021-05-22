@@ -45,6 +45,7 @@ import {
   SET_SHOW_CRITERIA,
   SET_PERFORMANCE_CRITERIA,
 } from '../../reducers/analyticsQuery';
+import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
 
 const coreQueryoptions = [
   {
@@ -118,11 +119,13 @@ function CoreQuery({
   setQueryOptions,
   location,
   setBreakdownType,
+  setNavigatedFromDashboard,
 }) {
   const queriesState = useSelector((state) => state.queries);
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
   const dispatch = useDispatch();
+  const history = useHistory();
 
   const getFormattedRow = (q) => {
     let svgName = 'funnels_cq';
@@ -295,7 +298,9 @@ function CoreQuery({
   useEffect(() => {
     if (location.state && location.state.global_search) {
       setQueryToState(location.state.query);
+      setNavigatedFromDashboard(location.state.navigatedFromDashboard);
       location.state = undefined;
+      window.history.replaceState(null, '');
     } else {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     }

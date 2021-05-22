@@ -1,7 +1,6 @@
 import React from 'react';
 import { Text } from '../factorsComponents';
 import { charts_legend_length } from '../../utils/constants';
-import { useSelector } from 'react-redux';
 
 function TopLegends({
   parentClassName = 'flex justify-center py-3',

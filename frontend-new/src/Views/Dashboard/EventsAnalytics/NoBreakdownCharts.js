@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useContext } from 'react';
 import { useSelector } from 'react-redux';
 import {
   formatSingleEventAnalyticsData,
@@ -16,6 +16,7 @@ import {
   CHART_TYPE_LINECHART,
 } from '../../../utils/constants';
 import NoDataChart from '../../../components/NoDataChart';
+import { DashboardContext } from '../../../contexts/DashboardContext';
 
 function NoBreakdownCharts({
   queries,
@@ -26,10 +27,10 @@ function NoBreakdownCharts({
   arrayMapper,
   unit,
   section,
-  setwidgetModal,
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const { eventNames } = useSelector((state) => state.coreQuery);
+  const { handleEditQuery } = useContext(DashboardContext);
   const appliedColors = generateColors(queries.length);
 
   let chartsData = [];
@@ -89,7 +90,7 @@ function NoBreakdownCharts({
   if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
-        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
         className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >

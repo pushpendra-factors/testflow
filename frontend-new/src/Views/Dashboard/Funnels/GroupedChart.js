@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   generateEventsData,
   generateGroups,
@@ -6,6 +6,7 @@ import {
 } from "../../CoreQuery/FunnelsResultPage/utils";
 import Chart from "../../CoreQuery/FunnelsResultPage/GroupedChart/Chart";
 import FunnelsResultTable from "../../CoreQuery/FunnelsResultPage/FunnelsResultTable";
+import { DashboardContext } from "../../../contexts/DashboardContext";
 
 function GroupedChart({
   resultState,
@@ -14,10 +15,10 @@ function GroupedChart({
   breakdown,
   chartType,
   unit,
-  setwidgetModal,
   section,
 }) {
   const [groups, setGroups] = useState([]);
+  const { handleEditQuery } = useContext(DashboardContext);
   const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
@@ -76,7 +77,7 @@ function GroupedChart({
   if (chartType === "table") {
     tableContent = (
       <div
-        onClick={() => setwidgetModal({ unit, data: resultState.data })}
+        onClick={handleEditQuery}
         style={{ color: "#5949BC" }}
         className="mt-3 font-medium text-base cursor-pointer flex justify-end item-center"
       >

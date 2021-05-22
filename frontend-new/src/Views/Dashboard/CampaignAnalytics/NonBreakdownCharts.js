@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useContext } from 'react';
 import {
   formatData,
   formatDataInHighChartsSeriesFormat,
@@ -20,6 +20,7 @@ import {
   Text,
   Number as NumFormat,
 } from '../../../components/factorsComponents';
+import { DashboardContext } from '../../../contexts/DashboardContext';
 
 function NoBreakdownCharts({
   chartType,
@@ -27,8 +28,8 @@ function NoBreakdownCharts({
   arrayMapper,
   isWidgetModal,
   unit,
-  setwidgetModal,
 }) {
+  const { handleEditQuery } = useContext(DashboardContext);
   const chartsData = useMemo(() => {
     return formatData(data, arrayMapper);
   }, [data, arrayMapper]);
@@ -56,7 +57,7 @@ function NoBreakdownCharts({
   if (chartType === CHART_TYPE_TABLE) {
     tableContent = (
       <div
-        onClick={() => setwidgetModal({ unit, data })}
+        onClick={handleEditQuery}
         style={{ color: '#5949BC' }}
         className='mt-3 font-medium text-base cursor-pointer flex justify-end item-center'
       >

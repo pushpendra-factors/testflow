@@ -22,22 +22,40 @@ import {
   ATTRIBUTION_METRICS,
 } from '../../utils/constants';
 import { DashboardContext } from '../../contexts/DashboardContext';
+import { useHistory, useLocation } from 'react-router-dom';
 
 function WidgetCard({
   unit,
   onDrop,
-  setwidgetModal,
   showDeleteWidgetModal,
   durationObj,
   refreshClicked,
   setRefreshClicked,
 }) {
+  const cardRef = useRef(null);
+  const history = useHistory();
+  const location = useLocation();
   const [resultState, setResultState] = useState(initialState);
   const { active_project } = useSelector((state) => state.global);
   const { activeDashboardUnits } = useSelector((state) => state.dashboard);
   const [attributionMetrics, setAttributionMetrics] = useState([
     ...ATTRIBUTION_METRICS,
   ]);
+
+  useEffect(() => {
+    if (
+      location.state &&
+      location.state.dashboardWidgetId &&
+      location.state.dashboardWidgetId === unit.id
+    ) {
+      window.scrollTo({
+        top: cardRef.current.getBoundingClientRect().top - 180,
+        behavior: 'smooth',
+      });
+      location.state = undefined;
+      window.history.replaceState(null, '');
+    }
+  }, [location.state, unit.id]);
 
   const getData = useCallback(
     async (refresh = false) => {
@@ -213,7 +231,16 @@ function WidgetCard({
     [unit, activeDashboardUnits.data, onDrop]
   );
 
-  const cardRef = useRef();
+  const handleEditQuery = useCallback(() => {
+    history.push({
+      pathname: '/analyse',
+      state: {
+        query: { ...unit.query, settings: unit.settings },
+        global_search: true,
+        navigatedFromDashboard: unit.id,
+      },
+    });
+  }, [history, unit]);
 
   return (
     <div
@@ -238,9 +265,7 @@ function WidgetCard({
                 <div className='flex flex-col truncate'>
                   <div
                     className='flex cursor-pointer items-center'
-                    onClick={() =>
-                      setwidgetModal({ unit, data: resultState.data })
-                    }
+                    onClick={handleEditQuery}
                   >
                     <Text
                       ellipsis
@@ -276,13 +301,16 @@ function WidgetCard({
               </div>
             </div>
             <DashboardContext.Provider
-              value={{ attributionMetrics, setAttributionMetrics }}
+              value={{
+                attributionMetrics,
+                setAttributionMetrics,
+                handleEditQuery,
+              }}
             >
               <CardContent
                 durationObj={durationObj}
                 unit={unit}
                 resultState={resultState}
-                setwidgetModal={setwidgetModal}
               />
             </DashboardContext.Provider>
           </div>
