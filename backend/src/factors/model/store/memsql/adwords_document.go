@@ -1316,7 +1316,11 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 	}
 
 	// orderBy
-	finalOrderByKeys = appendSuffix("DESC", metrics.values...)
+	if isGroupByTimestamp {
+		finalOrderByKeys = appendSuffix("DESC", model.AliasDateTime)
+	} else {
+		finalOrderByKeys = appendSuffix("DESC", metrics.values...)
+	}
 	if len(finalOrderByKeys) != 0 {
 		finalOrderByStatement = " ORDER BY " + joinWithComma(finalOrderByKeys...)
 	}
@@ -1443,7 +1447,11 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 	}
 
 	// orderBy
-	finalOrderByKeys = appendSuffix("DESC", metrics.values...)
+	if isGroupByTimestamp {
+		finalOrderByKeys = appendSuffix("DESC", model.AliasDateTime)
+	} else {
+		finalOrderByKeys = appendSuffix("DESC", metrics.values...)
+	}
 	if len(finalOrderByKeys) != 0 {
 		finalOrderByStatement = " ORDER BY " + joinWithComma(finalOrderByKeys...)
 	}

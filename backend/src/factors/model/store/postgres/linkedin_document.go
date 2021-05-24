@@ -690,7 +690,7 @@ func getSQLAndParamsFromLinkedinWithSmartPropertyReports(query *model.ChannelQue
 	}
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
-	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
+	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getLinkedinFiltersWhereStatementWithSmartProperty(query.Filters, smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
 	filterStatementForSmartPropertyGroupBy := getFilterStatementForSmartPropertyGroupBy(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForLinkedinWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
@@ -771,7 +771,7 @@ func getSQLAndParamsFromLinkedinReports(query *model.ChannelQueryV1, projectID u
 	}
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
-	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
+	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getLinkedinFiltersWhereStatement(query.Filters)
 
 	resultSQLStatement := selectQuery + fromLinkedinDocuments + staticWhereStatementForLinkedin + whereConditionForFilters
