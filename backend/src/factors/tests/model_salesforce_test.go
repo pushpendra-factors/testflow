@@ -1186,8 +1186,9 @@ func TestSalesforcePropertyDetails(t *testing.T) {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
 
-	rollBackWindow := 1
-	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
 	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, eventNameCreated, 2500, 1)
 	assert.Nil(t, err)
 	assert.Contains(t, properties[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2)
@@ -1534,8 +1535,9 @@ func TestSmartEventPropertyDetails(t *testing.T) {
 	assert.Equal(t, "success", enrichStatus[1].Status)
 	assert.Equal(t, "success", enrichStatus[2].Status)
 
-	rollBackWindow := 1
-	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
 
 	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED, 2500, 1)
 	assert.Nil(t, err)

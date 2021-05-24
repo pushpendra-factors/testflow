@@ -419,6 +419,27 @@ type Model interface {
 	GetDisplayNamesForObjectEntities(projectID uint64) (int, map[string]string)
 	CreateOrUpdateDisplayName(projectID uint64, eventName, propertyName, displayName, tag string) int
 
+	// task and task-execution
+	RegisterTaskWithDefaultConfiguration(taskName string, source string, frequency int, isProjectEnabled bool) (uint64, int, string)
+	RegisterTask(taskName string, source string, frequency int, isProjectEnabled bool, frequencyInterval int, skipStartIndex int, skipEndIndex int, recurrence bool, offsetStartMinutes int) (uint64, int, string)
+	GetTaskDetailsByName(taskName string) (model.TaskDetails, int, string)
+	GetTaskDetailsById(taskID uint64) (model.TaskDetails, int, string)
+
+	DeregisterTaskDependency(taskId uint64, dependentTaskId uint64) (int, string)
+	RegisterTaskDependency(taskId uint64, dependentTaskId uint64, offset int) (int, string)
+	GetAllDependentTasks(taskID uint64) ([]model.TaskExecutionDependencyDetails, int, string)
+	IsDependencyCircular(taskId, dependentTaskId uint64) bool
+
+	GetAllDeltasByConfiguration(taskID uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string)
+	GetAllProcessedIntervals(taskID uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string)
+	InsertTaskBeginRecord(taskId uint64, projectId uint64, delta uint64) (int, string)
+	InsertTaskEndRecord(taskId uint64, projectId uint64, delta uint64) (int, string)
+	GetAllToBeExecutedDeltas(taskId uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string)
+	GetAllInProgressIntervals(taskID uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string)
+	IsDependentTaskDone(taskId uint64, projectId uint64, delta uint64) bool
+	DeleteTaskEndRecord(taskId uint64, projectId uint64, delta uint64) (int, string)
+	GetAllProcessedIntervalsFromStartDate(taskID uint64, projectId uint64, startDate *time.Time) ([]uint64, int, string)
+
 	// project model metadata
 	CreateProjectModelMetadata(pmm *model.ProjectModelMetadata) (int, string)
 	GetProjectModelMetadata(projectId uint64) ([]model.ProjectModelMetadata, int, string)

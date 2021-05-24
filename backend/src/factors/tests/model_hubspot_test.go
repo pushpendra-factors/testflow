@@ -731,8 +731,9 @@ func TestHubspotPropertyDetails(t *testing.T) {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
 
-	rollBackWindow := 1
-	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
 	properties, err := store.GetStore().GetPropertiesByEvent(project.ID, eventNameCreated, 2500, 1)
 	assert.Nil(t, err)
 	assert.Contains(t, properties[U.PropertyTypeDateTime], dtEnKey1, dtEnKey2)

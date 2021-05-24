@@ -4,9 +4,11 @@ import (
 	C "factors/config"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	cleanup "factors/task/event_user_cache"
+	taskWrapper "factors/task/task_wrapper"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -14,11 +16,19 @@ import (
 func main() {
 
 	env := flag.String("env", "development", "")
-	dbHost := flag.String("db_host", "localhost", "")
-	dbPort := flag.Int("db_port", 5432, "")
-	dbUser := flag.String("db_user", "autometa", "")
-	dbName := flag.String("db_name", "autometa", "")
-	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
+	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
+	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
+	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
+	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
+
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	RedisPortPersistent := flag.Int("redis_port_ps", 6379, "")
@@ -26,8 +36,6 @@ func main() {
 	eventsLimit := flag.Int("events_limit", 10000, "")
 	propertiesLimit := flag.Int("properties_limit", 100000, "")
 	valuesLimit := flag.Int("values_limit", 100000, "")
-	// This is in days
-	rollupLookback := flag.Int("rollup_lookback", 1, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
@@ -67,10 +75,26 @@ func main() {
 		RedisHostPersistent: *redisHostPersistent,
 		RedisPortPersistent: *RedisPortPersistent,
 		SentryDSN:           *sentryDSN,
+		MemSQLInfo: C.DBConf{
+			Host:     *memSQLHost,
+			Port:     *memSQLPort,
+			User:     *memSQLUser,
+			Name:     *memSQLName,
+			Password: *memSQLPass,
+			// Todo: Remove UseSSL after enabling it by environment on all workloads.
+			UseSSL:      *env == C.STAGING || *env == C.PRODUCTION,
+			Certiifcate: *memSQLCertificate,
+		},
+		PrimaryDatastore: *primaryDatastore,
 	}
 
 	C.InitConf(config)
-
+	err := C.InitDB(*config)
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{"env": *env,
+			"host": *dbHost, "port": *dbPort}).Panic("Failed to initialize DB.")
+		os.Exit(0)
+	}
 	// Cache dependency for requests not using queue.
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
@@ -78,7 +102,12 @@ func main() {
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
-	status := cleanup.DoCleanUpSortedSet(eventsLimit, propertiesLimit, valuesLimit, rollupLookback)
+	configs := make(map[string]interface{})
+	configs["eventsLimit"] = *eventsLimit
+	configs["propertiesLimit"] = *propertiesLimit
+	configs["valuesLimit"] = *valuesLimit
+
+	status := taskWrapper.TaskFunc("CleanUpSortedSet", 1, cleanup.DoCleanUpSortedSet, configs)
 
 	log.Info("Done!!!")
 	C.PingHealthcheckForSuccess(healthcheckPingID, status)

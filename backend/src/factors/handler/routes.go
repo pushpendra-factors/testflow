@@ -51,7 +51,9 @@ func InitAppRoutes(r *gin.Engine) {
 	r.PUT(routePrefix+"/agents/billing", mid.SetLoggedInAgent(), UpdateAgentBillingAccount)
 	r.GET(routePrefix+"/agents/info", mid.SetLoggedInAgent(), AgentInfo)
 	r.PUT(routePrefix+"/agents/info", mid.SetLoggedInAgent(), UpdateAgentInfo)
-	r.GET(routePrefix+"/projectanalytics", mid.SetLoggedInAgent(), V1.GetFactorsAnalyticsHandler)
+	r.GET(routePrefix+"/projectanalytics", mid.SetLoggedInAgentInternalOnly(), V1.GetFactorsAnalyticsHandler)
+	r.GET(routePrefix+"/registertask", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.RegisterTaskHandler))
+	r.GET(routePrefix+"/registertaskdependency", mid.SetLoggedInAgentInternalOnly(), responseWrapper(V1.RegisterTaskDependencyHandler))
 
 	r.POST(routePrefix+ROUTE_PROJECTS_ROOT, mid.SetLoggedInAgent(), CreateProjectHandler)
 

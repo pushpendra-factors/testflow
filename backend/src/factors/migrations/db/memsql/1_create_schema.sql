@@ -605,6 +605,52 @@ CREATE TABLE IF NOT EXISTS project_model_metadata
     -- Add Foreign Key for project_id
 );
 
+CREATE TABLE IF NOT EXISTS task_details
+(
+    id text NOT NULL,
+    task_id bigint AUTO_INCREMENT,
+    task_name text NOT NULL,
+    source text NULL,
+    frequency integer NOT NULL,
+    frequency_interval integer, -- There are 4 types hourly/daily/weekly/stateless
+    skip_start_index integer,
+    skip_end_index integer,
+    offset_start_minutes integer, 
+    recurrence boolean,
+    metadata json,
+    is_project_enabled boolean,
+    delay_alert_threshold_hours integer,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    PRIMARY KEY (task_id)
+);
+
+CREATE TABLE IF NOT EXISTS task_execution_details
+(
+    id text NOT NULL,
+    execution_id bigint AUTO_INCREMENT,
+    task_id bigint NOT NULL,
+    project_id bigint NOT NULL,
+    delta bigint NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    metadata json,
+    is_completed boolean,
+    KEY (task_id) USING HASH,
+    PRIMARY KEY (execution_id)
+);
+
+CREATE TABLE IF NOT EXISTS task_execution_dependency_details
+(
+    id text NOT NULL,
+    task_id bigint NOT NULL,
+    dependent_task_id bigint NOT NULL,
+    dependency_offset integer NOT NULL,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    PRIMARY KEY (id),
+    KEY (task_id) USING HASH
+);
 
 -- DOWN
 
