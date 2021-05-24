@@ -4,20 +4,13 @@ import (
 	"factors/model/store"
 	"net/http"
 
-	C "factors/config"
-	mid "factors/middleware"
-	U "factors/util"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
-	"strconv"
 )
 
 func GetFactorsAnalyticsHandler(c *gin.Context) {
-	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-	if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agentUUID) {
-		c.AbortWithStatus(http.StatusUnauthorized)
-		return
-	}
 	noOfDays := int(7)
 	noOfDaysParam := c.Query("days")
 	var err error

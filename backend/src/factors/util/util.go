@@ -445,6 +445,11 @@ func GetDateAsStringZ(timestamp int64, timezoneString TimeZoneString) int64 {
 	return value
 }
 
+func DateAsFormattedInt(dateTime time.Time) uint64 {
+	datetimeInt, _ := strconv.ParseInt(fmt.Sprintf("%d%02d%02d%02d", dateTime.Year(), int(dateTime.Month()), dateTime.Day(), dateTime.Hour()), 10, 64)
+	return uint64(datetimeInt)
+}
+
 // IsStartOfTodaysRange Checks if the from value is start of todays range.
 func IsStartOfTodaysRange(from int64, timezoneString TimeZoneString) bool {
 	return from == GetBeginningOfDayTimestampZ(TimeNowUnix(), TimeZoneStringIST)

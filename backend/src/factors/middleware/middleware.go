@@ -493,6 +493,43 @@ func SetLoggedInAgent() gin.HandlerFunc {
 	}
 }
 
+func SetLoggedInAgentInternalOnly() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Cookie login.
+		cookieStr, err := c.Cookie(C.GetFactorsCookieName())
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "session cookie not found"})
+			return
+		}
+
+		if cookieStr == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "missing session cookie data"})
+			return
+		}
+
+		agent, errMsg, errCode := validateAuthData(cookieStr)
+		if errCode != http.StatusOK {
+			c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+			return
+		}
+
+		if agent == nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "unable to authenticate"})
+			return
+		}
+
+		if !C.IsLoggedInUserWhitelistedForProjectAnalytics(agent.UUID) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "operation allowed for only admins"})
+			return
+		}
+
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		c.Next()
+	}
+}
+
 func SetAuthorizedProjectsByLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		loggedInAgentUUID := U.GetScopeByKeyAsString(c, SCOPE_LOGGEDIN_AGENT_UUID)

@@ -5,21 +5,24 @@ import (
 	cacheRedis "factors/cache/redis"
 	"factors/model/model"
 	U "factors/util"
-	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
-func DoRollUpSortedSet(rollupLookback *int) map[string]interface{} {
+func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, bool) {
 	// Get all projects sorted set
 	// Zrange for all the keys
 	// Rollup data
 	// delete the sorted set
 
+	rollupLookback := configs["rollupLookback"].(int)
+
 	var isCurrentDay bool
 	currentDate := U.TimeNow()
-	for i := 0; i <= *rollupLookback; i++ {
+	for i := 0; i <= rollupLookback; i++ {
 		if i == 0 {
 			isCurrentDay = true
 		} else {
@@ -30,10 +33,14 @@ func DoRollUpSortedSet(rollupLookback *int) map[string]interface{} {
 			currentTimeDatePart)
 		if err != nil {
 			log.WithError(err).Error("Failed to get cache key - uniqueEventsCountKey")
-			return nil
+			return nil, false
 		}
-		allProjects, _ := cacheRedis.ZrangeWithScoresPersistent(true, uniqueUsersCountKey)
+		allProjects, err := cacheRedis.ZrangeWithScoresPersistent(true, uniqueUsersCountKey)
 		log.WithField("projects", allProjects).Info("AllProjects")
+		if err != nil {
+			log.WithError(err).Error("Failed to get projects")
+			return nil, false
+		}
 		for id, _ := range allProjects {
 			projId, _ := strconv.Atoi(id)
 			projectID := uint64(projId)
@@ -42,34 +49,34 @@ func DoRollUpSortedSet(rollupLookback *int) map[string]interface{} {
 				currentTimeDatePart)
 			if err != nil {
 				log.WithError(err).Error("Failed to get cache key - events")
-				return nil
+				return nil, false
 			}
 			eventNamesKeySortedSet, err := model.GetEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 				currentTimeDatePart)
 			if err != nil {
 				log.WithError(err).Error("Failed to get cache key - smart events")
-				return nil
+				return nil, false
 			}
 			propertyCategoryKeySortedSet, err := model.GetPropertiesByEventCategoryCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
 				log.WithError(err).Error("Failed to get cache key - properties")
-				return nil
+				return nil, false
 			}
 			valueKeySortedSet, err := model.GetValuesByEventPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
 				log.WithError(err).Error("Failed to get cache key - values")
-				return nil
+				return nil, false
 			}
 
 			userPropertyCategoryKeySortedSet, err := model.GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
 				log.WithError(err).Error("Failed to get cache key - property category")
-				return nil
+				return nil, false
 			}
 			userValueKeySortedSet, err := model.GetValuesByUserPropertyCacheKeySortedSet(projectID, currentTimeDatePart)
 			if err != nil {
 				log.WithError(err).Error("Failed to get cache key - values")
-				return nil
+				return nil, false
 			}
 			smartEvents, err := cacheRedis.ZrangeWithScoresPersistent(false, eventNamesSmartKeySortedSet)
 			log.WithField("Count", len(smartEvents)).Info("SmartEventCount")
@@ -225,13 +232,13 @@ func DoRollUpSortedSet(rollupLookback *int) map[string]interface{} {
 						userValueKeySortedSet)
 					if err != nil {
 						log.WithError(err).Error("Failed to del cache keys")
-						return nil
+						return nil, false
 					}
 				}
 			}
 		}
 	}
-	return nil
+	return nil, true
 }
 
 func GetCacheEventObject(events map[string]string, smartEvents map[string]string, date string) model.CacheEventNamesWithTimestamp {

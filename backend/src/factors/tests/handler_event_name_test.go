@@ -253,8 +253,9 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Test events ingested via sdk/track call
-	rollBackWindow := 1
-	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
 	w = sendGetEventNamesExactRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)

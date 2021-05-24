@@ -60,8 +60,9 @@ func createProjectAgentEventsFactorsTrackedEvents(r *gin.Engine) (uint64, *model
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
 		})
-	rollBackWindow := 1
-	event_user_cache.DoRollUpSortedSet(&rollBackWindow)
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
 	return project.ID, agent
 }
 
