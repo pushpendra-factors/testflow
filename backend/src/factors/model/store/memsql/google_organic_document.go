@@ -422,7 +422,7 @@ func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, ur
 	}
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
-	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
+	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getGoogleOrganicFiltersWhereStatement(query.Filters)
 
 	resultSQLStatement := selectQuery + fromGoogleOrganicDocuments + staticWhereStatementForGoogleOrganic + whereConditionForFilters
