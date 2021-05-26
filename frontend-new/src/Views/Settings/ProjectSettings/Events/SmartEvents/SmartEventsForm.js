@@ -128,7 +128,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
         }  
 
         saveSmartEvents(activeProject.id,finalData).then((data)=>{ 
-            message.success('Smart Event Added!');
+            message.success('Custom Event Added!');
             fetchSmartEvents(activeProject.id);
             setShowSmartEventForm(false);
             setLoading(false); 
@@ -232,7 +232,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
                         >
                             <Row>
                                 <Col span={12}>
-                                    <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>New Smart Event</Text>
+                                    <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>New Custom Event</Text>
                                 </Col>
                                 <Col span={12}>
                                     <div className={'flex justify-end'}>
@@ -414,7 +414,7 @@ function SmartEventsForm({smart_events, objPropertiesSource, specificPropertiesD
                                     </div>
                                 </Col>
                                 <Col span={24}> 
-                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Previous and current values of the object property will be available as smart event properties</Text> 
+                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>Previous and current values of the object property will be available as custom event properties</Text> 
                                 </Col>
                             </Row> }
 

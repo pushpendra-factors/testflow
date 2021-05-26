@@ -331,6 +331,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 	var finalQuery string
 	var finalParams []interface{}
 	var selectMetrics, columns []string
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
@@ -346,7 +347,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 			selectMetrics = append(selectMetrics, value)
 		}
 		finalQuery = fmt.Sprintf(CAUnionQuery1, joinWithComma(selectMetrics...), joinWithWordInBetween("UNION", finalSQLs...),
-			getOrderByClause(commonMetrics), channeAnalyticsLimit)
+			getOrderByClause(isGroupByTimestamp, commonMetrics), channeAnalyticsLimit)
 		columns = append(commonKeys, commonMetrics...)
 	} else if (query.GroupBy == nil || len(query.GroupBy) == 0) && (!(query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0)) {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
@@ -363,7 +364,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 			selectMetrics = append(selectMetrics, value)
 		}
 		finalQuery = fmt.Sprintf(CAUnionQuery2, joinWithComma(selectMetrics...), joinWithWordInBetween("UNION", finalSQLs...),
-			model.AliasDateTime, getOrderByClause(commonMetrics), channeAnalyticsLimit)
+			model.AliasDateTime, getOrderByClause(isGroupByTimestamp, commonMetrics), channeAnalyticsLimit)
 		columns = append(commonKeys, commonMetrics...)
 	} else {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, true)
@@ -374,7 +375,7 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 		finalParams = append(adwordsParams, facebookParams...)
 		finalParams = append(finalParams, linkedinParams...)
 
-		finalQuery = fmt.Sprintf(CAUnionQuery3, joinWithWordInBetween("UNION", finalSQLs...), getOrderByClause(commonMetrics), channeAnalyticsLimit)
+		finalQuery = fmt.Sprintf(CAUnionQuery3, joinWithWordInBetween("UNION", finalSQLs...), getOrderByClause(isGroupByTimestamp, commonMetrics), channeAnalyticsLimit)
 		columns = append(commonKeys, commonMetrics...)
 	}
 	_, resultMetrics, err := pg.ExecuteSQL(finalQuery, finalParams, logCtx)
@@ -543,10 +544,14 @@ func getSelectTimestampByTypeForChannels(timestampType, timezone string) string 
 }
 
 // @Kark TODO v1
-func getOrderByClause(selectMetrics []string) string {
+func getOrderByClause(isGroupByTimestamp bool, selectMetrics []string) string {
 	selectMetricsWithDesc := make([]string, 0, 0)
-	for _, selectMetric := range selectMetrics {
-		selectMetricsWithDesc = append(selectMetricsWithDesc, selectMetric+" DESC")
+	if isGroupByTimestamp {
+		selectMetricsWithDesc = append(selectMetricsWithDesc, model.AliasDateTime+" DESC")
+	} else {
+		for _, selectMetric := range selectMetrics {
+			selectMetricsWithDesc = append(selectMetricsWithDesc, selectMetric+" DESC")
+		}
 	}
 	return joinWithComma(selectMetricsWithDesc...)
 }

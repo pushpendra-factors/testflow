@@ -89,7 +89,7 @@ const (
 // Group Names
 var MostRecent string = "MOST RECENT"
 var FrequentlySeen string = "FREQUENTLY SEEN"
-var SmartEvent string = "SMART EVENTS"
+var SmartEvent string = "CUSTOM EVENTS"
 
 func RandomString(n int) string {
 	rand.Seed(time.Now().UnixNano())

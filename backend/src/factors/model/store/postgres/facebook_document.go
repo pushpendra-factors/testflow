@@ -650,7 +650,7 @@ func getSQLAndParamsFromFacebookReportsWithSmartProperty(query *model.ChannelQue
 	}
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
-	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
+	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getFacebookFiltersWhereStatementWithSmartProperty(query.Filters, smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
 	filterStatementForSmartPropertyGroupBy := getFilterStatementForSmartPropertyGroupBy(smartPropertyCampaignGroupBys, smartPropertyAdGroupGroupBys)
 	finalFilterStatement := joinWithWordInBetween("AND", staticWhereStatementForFacebookWithSmartProperty, whereConditionForFilters, filterStatementForSmartPropertyGroupBy)
@@ -730,7 +730,7 @@ func getSQLAndParamsFromFacebookReports(query *model.ChannelQueryV1, projectID u
 	}
 
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
-	orderByQuery := "ORDER BY " + getOrderByClause(responseSelectMetrics)
+	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getFacebookFiltersWhereStatement(query.Filters)
 
 	resultSQLStatement := selectQuery + fromFacebookDocuments + staticWhereStatementForFacebook + whereConditionForFilters
