@@ -160,7 +160,7 @@ function SmartProperties ({activeProject,
             setShowModalVisible(false);
             notification.success({
                 message: "Success",
-                description: "Smart Property rules created successfully ",
+                description: "Custom Dimension rules created successfully ",
                 duration: 5,
               });
         }, err => {
@@ -181,7 +181,7 @@ function SmartProperties ({activeProject,
             setShowModalVisible(false);
             notification.success({
                 message: "Success",
-                description: "Smart Property rules updated successfully ",
+                description: "Custom Dimension rules updated successfully ",
                 duration: 5,
               });
         }, err => {
@@ -337,7 +337,7 @@ function SmartProperties ({activeProject,
                         <Col span={12}>
                             <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>{
                                 formState ==='add'?  
-                                    'New Smart Property' : 'Smart Property Details'
+                                    'New Custom Dimension' : 'Custom Dimension Details'
                                 }
                             </Text>
                         </Col>

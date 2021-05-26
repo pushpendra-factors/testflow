@@ -63,7 +63,7 @@ const columns = [
 
   const confirmRemove = (values) =>{ 
     removeSmartEvents(values?.project_id, values?.id).then(()=>{
-      message.success("Smart Event removed!")
+      message.success("Custom Event removed!")
       fetchSmartEvents(values?.project_id);
     }).catch((err)=>{
       message.error(err?.data?.error);
@@ -108,7 +108,7 @@ const columns = [
             <Col span={24}>  
             <div className={'mt-6'}>
                 <Tabs defaultActiveKey="1" >
-                            <TabPane tab="Smart Events" key="1">
+                            <TabPane tab="Custom Events" key="1">
                                     <Table className="fa-table--basic mt-4" 
                                     columns={columns} 
                                     dataSource={smartEvents} 
