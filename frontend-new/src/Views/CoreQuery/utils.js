@@ -177,13 +177,13 @@ export const getQuery = (
 
   const period = {};
   if (dateRange.from && dateRange.to) {
-    period.from = moment(dateRange.from).startOf('day').utc().unix();
-    period.to = moment(dateRange.to).endOf('day').utc().unix();
+    period.from = moment(dateRange.from).utc().unix();
+    period.to = moment(dateRange.to).utc().unix();
   } else {
     period.from = moment().startOf('week').utc().unix();
     period.to =
       moment().format('dddd') !== 'Sunday'
-        ? moment().subtract(1, 'day').endOf('day').utc().unix()
+        ? moment().subtract(1, 'day').utc().unix()
         : moment().utc().unix();
   }
 

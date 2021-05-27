@@ -95,6 +95,27 @@ const FaDatepicker = ({ placement,
         }  
     }
 
+    const onCustomChange = (startDate, dateString) =>  {
+        const startDt = moment(startDate[0]).startOf('day');
+        let endDt = moment(startDate[1]);
+        if(endDt.isBefore(moment().startOf('day'))) {
+            endDt = endDt.endOf('day');
+        } else {
+            endDt = moment();
+        }
+
+        let newDateData = {
+            ...dateData,
+            startDate: startDt,
+            endDate: endDt,
+            datePickerType,
+            dateString
+        }
+        setdateString(dateString);
+        onSelect(newDateData);
+        setShowDatePicker(false);
+    }
+
     const returnPreSetDate = (type) => {
         setdatePickerType(null)
         const today = moment();
@@ -305,7 +326,7 @@ const FaDatepicker = ({ placement,
                         {!showDatePicker && !range ? `Choose Date` : null}
                         {showDatePicker && <>
                             {datePickerType == 'custom' ? <RangePicker format={'MMM DD YYYY'} 
-                            disabledDate={d => !d || d.isAfter(moment())} dropdownClassName={'fa-custom-datepicker--datepicker'} size={'small'} suffixIcon={null} showToday={false} bordered={false} autoFocus={true} allowClear={true} open={true} onChange={onChange} /> :
+                            disabledDate={d => !d || d.isAfter(moment())} dropdownClassName={'fa-custom-datepicker--datepicker'} size={'small'} suffixIcon={null} showToday={false} bordered={false} autoFocus={true} allowClear={true} open={true} onChange={onCustomChange} /> :
                                 <DatePicker picker={datePickerType}
                                     disabledDate={d => !d || d.isAfter(moment())}
                                     dropdownClassName={'fa-custom-datepicker--datepicker'} autoFocus={true} open={true} size={'small'} suffixIcon={null} showToday={false} bordered={false} allowClear={true} onChange={onChange} />}
