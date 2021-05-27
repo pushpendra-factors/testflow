@@ -306,7 +306,7 @@ func (f *pullEventsByProjectIdFn) ProcessElement(ctx context.Context,
 		emitted = true
 	}
 	usersCount := 0
-	if emitted == false {
+	if emitted == false && noOfEventsDownloaded > 0 {
 		beamStatus.NoOfEvents = noOfEventsDownloaded
 		beamStatus.NoOfUsers = len(*userEventsMap)
 		for userId, events := range *userEventsMap {
@@ -566,7 +566,7 @@ func reportOverallJobSummary(commonKey uint64, values func(*ProjectStatusRespons
 
 	for values(&projectStatusResponse) {
 
-		if projectStatusResponse.HasUpdatedJobLastTimestamp == false {
+		if projectStatusResponse.HasUpdatedJobLastTimestamp == false && projectStatusResponse.Status.NoOfEvents > 0 {
 			projectsWithError++
 			message := fmt.Sprintf("Had error(s) for project ID: %d", projectStatusResponse.ProjectID)
 			C.PingHealthcheckForFailure(beam.PipelineOptions.Get("HealthchecksPingID"), message)
