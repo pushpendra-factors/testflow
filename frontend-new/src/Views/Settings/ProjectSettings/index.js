@@ -23,7 +23,7 @@ const MenuTabs = {
   EventAlias: 'Event Alias',
   Events:'Events',
   Properties: 'Properties',
-  MarketingInteractions: 'Marketing Interactions'
+  MarketingInteractions: 'Marketing Touchpoints'
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents }) {

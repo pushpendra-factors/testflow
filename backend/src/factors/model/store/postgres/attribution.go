@@ -133,10 +133,21 @@ func (pg *Postgres) ExecuteAttributionQuery(projectID uint64, queryOriginal *mod
 	result := &model.QueryResult{}
 	model.AddHeadersByAttributionKey(result, query)
 
+	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 	// sort the rows by conversionEvent
 	conversionIndex := model.GetConversionIndex(result.Headers)
 	sort.Slice(mergedDataRows, func(i, j int) bool {
-		return mergedDataRows[i][conversionIndex].(float64) > mergedDataRows[j][conversionIndex].(float64)
+		if len(mergedDataRows[i]) < conversionIndex || len(mergedDataRows[j]) < conversionIndex {
+			logCtx.WithFields(log.Fields{"row1": mergedDataRows[i], "row2": mergedDataRows[j]}).Info("final result: rows len mismatch. Ignoring row and continuing.")
+			return true
+		}
+		v1, ok1 := mergedDataRows[i][conversionIndex].(float64)
+		v2, ok2 := mergedDataRows[j][conversionIndex].(float64)
+		if !ok1 || !ok2 {
+			logCtx.WithFields(log.Fields{"row1": mergedDataRows[i], "row2": mergedDataRows[j]}).Info("final result: cast mismatch. Ignoring row and continuing.")
+			return true
+		}
+		return v1 > v2
 	})
 
 	result.Rows = mergedDataRows

@@ -252,10 +252,11 @@ const (
 func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interface{} {
 
 	logCtx := log.WithFields(log.Fields{"Method": "MergeDataRowsHavingSameKey"})
-
+	maxRowSize := 0
 	rowKeyMap := make(map[string][]interface{})
 	for _, row := range rows {
-		if len(row) == 0 {
+		maxRowSize = U.MaxInt(len(row), maxRowSize)
+		if len(row) == 0 || len(row) != maxRowSize {
 			continue
 		}
 		// creating a key for using added keys and index
