@@ -3,10 +3,6 @@ package histogram
 import (
 	"fmt"
 	"math"
-
-	"encoding/json"
-
-	histlog "github.com/sirupsen/logrus"
 )
 
 const NHIST_MIN_BIN_SIZE = 12
@@ -331,41 +327,14 @@ func (h *NumericHistogramStruct) trim() {
 		// Remove min_i and min_j bins
 		min, max := sortTuple(min_i, min_j)
 
-		if min != max && max != 0 {
-			head := h.Bins[0:min]
-			mid := h.Bins[min+1 : max]
-			tail := h.Bins[max+1:]
+		head := h.Bins[0:min]
+		mid := h.Bins[min+1 : max]
+		tail := h.Bins[max+1:]
 
-			h.Bins = append(head, mid...)
-			h.Bins = append(h.Bins, tail...)
+		h.Bins = append(head, mid...)
+		h.Bins = append(h.Bins, tail...)
 
-			h.Bins = append(h.Bins, mergedbin)
-		} else {
-			histlog.Info("unable to merge , Len of hBins  and  h.Maxbins ", len(h.Bins), " ", h.Maxbins)
-			histlog.Info("unable to merge min_i : ", min_i)
-			histlog.Info("unable to merge min_j : ", min_j)
-			b, err := json.Marshal(h)
-			if err != nil {
-				histlog.Info("Unable to marshall numeric histogram")
-			}
-			stringb := string(b)
-			histlog.Info("unable to merge numeric struct h  : ", stringb)
-
-			b, err = json.Marshal(h.Bins[min_i])
-			if err != nil {
-				histlog.Info("Unable to marshall numeric histogram")
-			}
-			stringb = string(b)
-			histlog.Info("unable to merge numeric struct h.Bins[min_i] : ", stringb)
-
-			b, err = json.Marshal(h.Bins[min_j])
-			if err != nil {
-				histlog.Info("Unable to marshall numeric histogram")
-			}
-			stringb = string(b)
-			histlog.Info("unable to merge numeric struct h.Bins[min_j] : ", stringb)
-
-		}
+		h.Bins = append(h.Bins, mergedbin)
 	}
 }
 
