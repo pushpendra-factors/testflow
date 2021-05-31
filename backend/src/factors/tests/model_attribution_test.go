@@ -131,21 +131,21 @@ func TestAttributionModel(t *testing.T) {
 	timestamp := int64(1589068800)
 
 	// Creating 3 users
-	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
-	assert.NotNil(t, user1)
+	assert.NotNil(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
-	assert.NotNil(t, user2)
+	assert.NotNil(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
-	assert.NotNil(t, user3)
+	assert.NotNil(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// Events with +1 Days
-	errCode = createEventWithSession(project.ID, "event1", user1.ID,
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
 		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -184,11 +184,11 @@ func TestAttributionModel(t *testing.T) {
 
 	// Events with +5 Days
 	errCode = createEventWithSession(project.ID, "event1",
-		user2.ID, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "")
+		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user3.ID, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "")
+		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("AttributionQueryLastTouchCampaignNoLookbackDays", func(t *testing.T) {
@@ -210,7 +210,7 @@ func TestAttributionModel(t *testing.T) {
 	})
 
 	// linked event for user1
-	errCode = createEventWithSession(project.ID, "event2", user1.ID,
+	errCode = createEventWithSession(project.ID, "event2", createdUserID1,
 		timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -277,20 +277,20 @@ func TestAttributionEngagementModel(t *testing.T) {
 	timestamp := int64(1589068800)
 
 	// Creating 3 users
-	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
-	assert.NotNil(t, user1)
+	assert.NotNil(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
-	assert.NotNil(t, user2)
+	assert.NotNil(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
-	assert.NotNil(t, user3)
+	assert.NotNil(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	errCode = createEventWithSession(project.ID, "event1", user1.ID,
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
 		timestamp+1*U.SECONDS_IN_A_DAY, "111111", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -329,11 +329,11 @@ func TestAttributionEngagementModel(t *testing.T) {
 	})
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user2.ID, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "")
+		createdUserID2, timestamp+5*U.SECONDS_IN_A_DAY, "222222", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user3.ID, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "")
+		createdUserID3, timestamp+5*U.SECONDS_IN_A_DAY, "333333", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("TestAttributionEngagementQueryLastTouchCampaignNoLookbackDays", func(t *testing.T) {
@@ -356,7 +356,7 @@ func TestAttributionEngagementModel(t *testing.T) {
 	})
 
 	// linked event for user1
-	errCode = createEventWithSession(project.ID, "event2", user1.ID,
+	errCode = createEventWithSession(project.ID, "event2", createdUserID1,
 		timestamp+6*U.SECONDS_IN_A_DAY, "1234567", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -400,21 +400,21 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 	timestamp := int64(1589068800)
 
 	// Creating 3 users
-	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
-	assert.NotNil(t, user1)
+	assert.NotEmpty(t, createdUserID1)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
-	assert.NotNil(t, user2)
+	assert.NotNil(t, createdUserID2)
 	assert.Equal(t, http.StatusCreated, errCode)
-	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{},
 		JoinTimestamp: timestamp})
-	assert.NotNil(t, user3)
+	assert.NotNil(t, createdUserID3)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// Events with +1 Days
-	errCode = createEventWithSession(project.ID, "event1", user1.ID,
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1,
 		timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
 		"Adgroup_Adwords_200", "Keyword_Adwords_300", "Cj0KCQjwmpb0BRCBARIsAG7y4zbZArcUWztiqP5bs", "google")
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -484,12 +484,12 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 	})
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user2.ID, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
+		createdUserID2, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
 		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	errCode = createEventWithSession(project.ID, "event1",
-		user3.ID, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
+		createdUserID3, timestamp+1*U.SECONDS_IN_A_DAY, "Campaign_Adwords_100",
 		"Adgroup_Adwords_200", "Keyword_Adwords_300", "", "google")
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -796,19 +796,19 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	user1Properties := make(map[string]interface{})
 	user1Properties[U.UP_LATEST_CAMPAIGN] = 123456
 	user1PropertiesBytes, _ := json.Marshal(user1Properties)
-	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{RawMessage: user1PropertiesBytes},
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{RawMessage: user1PropertiesBytes},
 		JoinTimestamp: timestamp})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotNil(t, user1)
+	assert.NotEmpty(t, createdUserID1)
 
-	_, errCode = createSession(project.ID, user1.ID, timestamp+4*U.SECONDS_IN_A_DAY, "", "", "", "", "")
+	_, errCode = createSession(project.ID, createdUserID1, timestamp+4*U.SECONDS_IN_A_DAY, "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	userEventName, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "event1"})
 	assert.Equal(t, http.StatusCreated, errCode)
 	_, errCode = store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "event2"})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID, UserId: user1.ID,
+	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID, UserId: createdUserID1,
 		Timestamp: timestamp + 3*U.SECONDS_IN_A_DAY})
 	assert.Equal(t, http.StatusCreated, errCode)
 
@@ -827,10 +827,10 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	assert.Nil(t, err)
 
 	_, errCode = store.GetStore().CreateEvent(&model.Event{ProjectId: project.ID, EventNameId: userEventName.ID,
-		UserId: user1.ID, Timestamp: timestamp + 5*U.SECONDS_IN_A_DAY})
+		UserId: createdUserID1, Timestamp: timestamp + 5*U.SECONDS_IN_A_DAY})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	_, errCode = createSession(project.ID, user1.ID, timestamp+8*U.SECONDS_IN_A_DAY, "", "", "", "", "")
+	_, errCode = createSession(project.ID, createdUserID1, timestamp+8*U.SECONDS_IN_A_DAY, "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	query.From = timestamp + 5*U.SECONDS_IN_A_DAY
 
@@ -848,20 +848,20 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user1.ID)
+	assert.NotEmpty(t, createdUserID1)
 
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user2.ID)
+	assert.NotEmpty(t, createdUserID2)
 
 	timestamp := int64(1589068800)
 
-	errCode = createEventWithSession(project.ID, "event1", user1.ID, timestamp, "", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1, timestamp, "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	errCode = createEventWithSession(project.ID, "event1", user2.ID, timestamp, "", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event1", createdUserID2, timestamp, "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &model.AttributionQuery{
@@ -882,9 +882,9 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 
 	customerUserId := U.RandomLowerAphaNumString(15)
-	_, errCode = store.GetStore().UpdateUser(project.ID, user1.ID, &model.User{CustomerUserId: customerUserId}, timestamp+1*U.SECONDS_IN_A_DAY)
+	_, errCode = store.GetStore().UpdateUser(project.ID, createdUserID1, &model.User{CustomerUserId: customerUserId}, timestamp+1*U.SECONDS_IN_A_DAY)
 	assert.Equal(t, http.StatusAccepted, errCode)
-	_, errCode = store.GetStore().UpdateUser(project.ID, user2.ID, &model.User{CustomerUserId: customerUserId}, timestamp+1*U.SECONDS_IN_A_DAY)
+	_, errCode = store.GetStore().UpdateUser(project.ID, createdUserID2, &model.User{CustomerUserId: customerUserId}, timestamp+1*U.SECONDS_IN_A_DAY)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	query = &model.AttributionQuery{
@@ -904,21 +904,21 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays0", func(t *testing.T) {
 		// continuation to previous users
-		_, status := store.GetStore().UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		_, status := store.GetStore().UpdateUserProperties(project.ID, createdUserID1, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
 		assert.Equal(t, http.StatusAccepted, status)
-		_, status = store.GetStore().UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		_, status = store.GetStore().UpdateUserProperties(project.ID, createdUserID2, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
 		assert.True(t, status == http.StatusAccepted)
 		/*
 			t+3day -> first time $initial_campaign set with event for user1 and user2
 			t+6day -> session event for user1 and user2
 		*/
-		status = createEventWithSession(project.ID, "event1", user1.ID, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "event1", user2.ID, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+3*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "event1", user1.ID, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status = createEventWithSession(project.ID, "event1", createdUserID1, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "event1", user2.ID, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status = createEventWithSession(project.ID, "event1", createdUserID2, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
 
 		query := &model.AttributionQuery{
@@ -947,20 +947,20 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user1.ID)
+	assert.NotEmpty(t, createdUserID1)
 
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user2.ID)
+	assert.NotEmpty(t, createdUserID2)
 
 	timestamp := int64(1589068800)
 
-	errCode = createEventWithSession(project.ID, "event1", user1.ID, timestamp, "", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event1", createdUserID1, timestamp, "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	errCode = createEventWithSession(project.ID, "event1", user2.ID, timestamp, "", "", "", "", "")
+	errCode = createEventWithSession(project.ID, "event1", createdUserID2, timestamp, "", "", "", "", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	query := &model.AttributionQuery{
@@ -998,9 +998,9 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 
 	customerUserId1 := U.RandomLowerAphaNumString(15) + "_one"
 	customerUserId2 := U.RandomLowerAphaNumString(15) + "_two"
-	_, errCode = store.GetStore().UpdateUser(project.ID, user1.ID, &model.User{CustomerUserId: customerUserId1}, timestamp+1*U.SECONDS_IN_A_DAY)
+	_, errCode = store.GetStore().UpdateUser(project.ID, createdUserID1, &model.User{CustomerUserId: customerUserId1}, timestamp+1*U.SECONDS_IN_A_DAY)
 	assert.Equal(t, http.StatusAccepted, errCode)
-	_, errCode = store.GetStore().UpdateUser(project.ID, user2.ID, &model.User{CustomerUserId: customerUserId2}, timestamp+1*U.SECONDS_IN_A_DAY)
+	_, errCode = store.GetStore().UpdateUser(project.ID, createdUserID2, &model.User{CustomerUserId: customerUserId2}, timestamp+1*U.SECONDS_IN_A_DAY)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
 	result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
@@ -1010,9 +1010,9 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
 		// 3 days is out of query window, but should be considered as it falls under Engagement window
-		status := createEventWithSession(project.ID, "eventNewX", user1.ID, timestamp+5*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status := createEventWithSession(project.ID, "eventNewX", createdUserID1, timestamp+5*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
-		status = createEventWithSession(project.ID, "eventNewX", user2.ID, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
+		status = createEventWithSession(project.ID, "eventNewX", createdUserID2, timestamp+6*U.SECONDS_IN_A_DAY, "12345", "", "", "", "")
 		assert.Equal(t, http.StatusCreated, status)
 
 		query := &model.AttributionQuery{

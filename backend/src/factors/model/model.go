@@ -332,12 +332,12 @@ type Model interface {
 	IsUserPropertyValid(ProjectID uint64, UserProperty string) bool
 
 	// user
-	CreateUser(user *model.User) (*model.User, int)
-	CreateOrGetUser(projectID uint64, custUserId string) (*model.User, int)
+	CreateUser(user *model.User) (string, int)
+	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64) (string, int)
 	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int)
-	CreateOrGetAMPUser(projectID uint64, ampUserId string, timestamp int64) (*model.User, int)
 	GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int)
 	GetUser(projectID uint64, id string) (*model.User, int)
+	IsUserExistByID(projectID uint64, id string) int
 	GetUsers(projectID uint64, offset uint64, limit uint64) ([]model.User, int)
 	GetUsersByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int)
 	GetUserLatestByCustomerUserId(projectID uint64, customerUserId string) (*model.User, int)

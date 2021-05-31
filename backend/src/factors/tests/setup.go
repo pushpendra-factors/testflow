@@ -50,9 +50,14 @@ func SetupProjectUserReturnDAO() (*model.Project, *model.User, error) {
 		return nil, nil, err
 	}
 
-	user, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
-	if err_code != http.StatusCreated {
-		return nil, nil, fmt.Errorf("User Creation failed.")
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	if errCode != http.StatusCreated {
+		return nil, nil, errors.New("user creation failure")
+	}
+
+	user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+	if errCode != http.StatusFound {
+		return nil, nil, errors.New("created user not found")
 	}
 
 	return project, user, nil
@@ -70,7 +75,7 @@ func SetupProjectUserEventName() (uint64, string, string, error) {
 	if err != nil {
 		return projectId, userId, eventNameId, err
 	}
-	user, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	if err_code != http.StatusCreated {
 		return projectId, userId, eventNameId, fmt.Errorf("User Creation failed.")
 	}
@@ -79,7 +84,7 @@ func SetupProjectUserEventName() (uint64, string, string, error) {
 		return projectId, userId, eventNameId, fmt.Errorf("EventName Creation failed.")
 	}
 	projectId = project.ID
-	userId = user.ID
+	userId = createdUserID
 	eventNameId = en.ID
 	return projectId, userId, eventNameId, nil
 }
@@ -92,9 +97,14 @@ func SetupProjectUserEventNameReturnDAO() (*model.Project, *model.User, *model.E
 		return nil, nil, nil, err
 	}
 
-	user, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	if err_code != http.StatusCreated {
 		return nil, nil, nil, fmt.Errorf("User Creation failed.")
+	}
+
+	user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+	if errCode != http.StatusFound {
+		return nil, nil, nil, errors.New("created user not found")
 	}
 
 	en, err_code := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "login"})
@@ -142,13 +152,18 @@ func SetupProjectUserEventNameAgentReturnDAO() (*model.Project, *model.User, *mo
 		return nil, nil, nil, nil, err
 	}
 
-	user, err_code := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
-	if err_code != http.StatusCreated {
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	if errCode != http.StatusCreated {
 		return nil, nil, nil, nil, fmt.Errorf("User Creation failed.")
 	}
 
-	en, err_code := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "login"})
-	if err_code != http.StatusConflict && err_code != http.StatusCreated {
+	user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
+	if errCode != http.StatusFound {
+		return nil, nil, nil, nil, errors.New("created user not found")
+	}
+
+	en, errCode := store.GetStore().CreateOrGetUserCreatedEventName(&model.EventName{ProjectId: project.ID, Name: "login"})
+	if errCode != http.StatusConflict && errCode != http.StatusCreated {
 		return nil, nil, nil, nil, fmt.Errorf("EventName Creation failed.")
 	}
 
@@ -156,6 +171,7 @@ func SetupProjectUserEventNameAgentReturnDAO() (*model.Project, *model.User, *mo
 	if errCode != http.StatusCreated {
 		return nil, nil, nil, nil, fmt.Errorf("Agent Creation failed.")
 	}
+
 	_, errCode = store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent.UUID})
 	if errCode != http.StatusCreated {

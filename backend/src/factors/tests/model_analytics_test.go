@@ -37,14 +37,14 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 		}
 		eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
 
-		user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		assert.Equal(t, http.StatusCreated, errCode)
-		assert.NotEmpty(t, user.ID)
+		assert.NotEmpty(t, createdUserID)
 
 		occurrenceByIndex := []int{0, 1, 2}
 		for index, eventIndex := range occurrenceByIndex {
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-				eventNames[eventIndex], user.ID, eventTimestamp+int64(index))
+				eventNames[eventIndex], createdUserID, eventTimestamp+int64(index))
 			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 			assert.Equal(t, http.StatusOK, w.Code)
 			response := DecodeJSONResponseToMap(w.Body)
@@ -92,16 +92,16 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 		}
 		eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
 
-		user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		assert.Equal(t, http.StatusCreated, errCode)
-		assert.NotEmpty(t, user.ID)
+		assert.NotEmpty(t, createdUserID)
 
 		// user did only 0 first few times, did only 1 few times then 2.
 		occurrenceByIndexUser1 := []int{0, 0, 0, 1, 1, 2}
 
 		for index, eventIndex := range occurrenceByIndexUser1 {
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-				eventNames[eventIndex], user.ID, eventTimestamp+int64(index))
+				eventNames[eventIndex], createdUserID, eventTimestamp+int64(index))
 			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 			assert.Equal(t, http.StatusOK, w.Code)
 			response := DecodeJSONResponseToMap(w.Body)
@@ -156,14 +156,14 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 		}
 		eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
 
-		user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		assert.Equal(t, http.StatusCreated, errCode)
-		assert.NotEmpty(t, user.ID)
+		assert.NotEmpty(t, createdUserID)
 
 		occurrenceByIndexUser1 := []int{0, 0, 0, 1, 1, 0, 2}
 		for index, eventIndex := range occurrenceByIndexUser1 {
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-				eventNames[eventIndex], user.ID, eventTimestamp+int64(index))
+				eventNames[eventIndex], createdUserID, eventTimestamp+int64(index))
 			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 			assert.Equal(t, http.StatusOK, w.Code)
 			response := DecodeJSONResponseToMap(w.Body)
@@ -218,14 +218,14 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 		}
 		eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
 
-		user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		assert.Equal(t, http.StatusCreated, errCode)
-		assert.NotEmpty(t, user.ID)
+		assert.NotEmpty(t, createdUserID)
 
 		occurrenceByIndexUser1 := []int{0, 0, 0, 1, 1, 0, 2, 1}
 		for index, eventIndex := range occurrenceByIndexUser1 {
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-				eventNames[eventIndex], user.ID, eventTimestamp+int64(index))
+				eventNames[eventIndex], createdUserID, eventTimestamp+int64(index))
 			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 			assert.Equal(t, http.StatusOK, w.Code)
 			response := DecodeJSONResponseToMap(w.Body)
@@ -288,23 +288,23 @@ func TestAnalyticsFunnelWithUserIdentification(t *testing.T) {
 	eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
 	trackURI := "/sdk/event/track"
 
-	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user3.ID)
+	assert.NotEmpty(t, createdUserID3)
 
-	user4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user4.ID)
+	assert.NotEmpty(t, createdUserID4)
 
 	payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-		eventNames[2], user3.ID, eventTimestamp+100)
+		eventNames[2], createdUserID3, eventTimestamp+100)
 	w1 := ServePostRequestWithHeaders(r, trackURI, []byte(payload1), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w1.Code)
 	response1 := DecodeJSONResponseToMap(w1.Body)
 	assert.NotNil(t, response1["event_id"])
 
 	payload2 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-		eventNames[3], user4.ID, eventTimestamp+200)
+		eventNames[3], createdUserID4, eventTimestamp+200)
 	w2 := ServePostRequestWithHeaders(r, trackURI, []byte(payload2), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w2.Code)
 	response2 := DecodeJSONResponseToMap(w2.Body)
@@ -314,11 +314,11 @@ func TestAnalyticsFunnelWithUserIdentification(t *testing.T) {
 	identifyURI := "/sdk/user/identify"
 	customerUserId := U.RandomLowerAphaNumString(15)
 	w := ServePostRequestWithHeaders(r, identifyURI, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
-		customerUserId, user3.ID)), map[string]string{"Authorization": project.Token})
+		customerUserId, createdUserID3)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	w = ServePostRequestWithHeaders(r, identifyURI, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
-		customerUserId, user4.ID)), map[string]string{"Authorization": project.Token})
+		customerUserId, createdUserID4)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	query := model.Query{
@@ -360,9 +360,9 @@ func TestAnalyticsFunnelQueryWithFilterConditionNumericalProperty(t *testing.T) 
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user.ID)
+	assert.NotEmpty(t, createdUserID)
 
 	timestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	startTimestamp := timestamp
@@ -442,9 +442,9 @@ func TestInsightsAnalyticsQueryGroupingMultipleFilters(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user.ID)
+	assert.NotEmpty(t, createdUserID)
 
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 
@@ -534,9 +534,9 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user.ID)
+	assert.NotEmpty(t, createdUserID)
 
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
@@ -749,16 +749,16 @@ func TestAnalyticsFunnelQueryRepeatedEvents(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user1.ID)
+	assert.NotEmpty(t, createdUserID1)
 
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
 
 	for i := 0; i < 5; i++ {
 		payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-			"s1", user1.ID, stepTimestamp)
+			"s1", createdUserID1, stepTimestamp)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload1), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		response := DecodeJSONResponseToMap(w.Body)
@@ -766,11 +766,11 @@ func TestAnalyticsFunnelQueryRepeatedEvents(t *testing.T) {
 		stepTimestamp = stepTimestamp + 10
 	}
 
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user2.ID)
+	assert.NotEmpty(t, createdUserID2)
 	payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-		"s1", user2.ID, startTimestamp)
+		"s1", createdUserID2, startTimestamp)
 	w := ServePostRequestWithHeaders(r, uri, []byte(payload1), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response := DecodeJSONResponseToMap(w.Body)
@@ -805,11 +805,11 @@ func TestAnalyticsFunnelQueryRepeatedEvents(t *testing.T) {
 	identifyURI := "/sdk/user/identify"
 	customerUserId := U.RandomLowerAphaNumString(15)
 	w = ServePostRequestWithHeaders(r, identifyURI, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
-		customerUserId, user1.ID)), map[string]string{"Authorization": project.Token})
+		customerUserId, createdUserID1)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	w = ServePostRequestWithHeaders(r, identifyURI, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
-		customerUserId, user2.ID)), map[string]string{"Authorization": project.Token})
+		customerUserId, createdUserID2)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	query1 := model.Query{
@@ -853,32 +853,32 @@ func TestAnalyticsFunnelQueryCRMEventsWithSameTimestamp(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user1.ID)
+	assert.NotEmpty(t, createdUserID1)
 
 	// create 3 events with 2 users for the same timestamp
 	// user1 : s1, user2 : s1,s2
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-		"s1", user1.ID, startTimestamp)
+		"s1", createdUserID1, startTimestamp)
 	w := ServePostRequestWithHeaders(r, uri, []byte(payload1), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response := DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user2.ID)
+	assert.NotEmpty(t, createdUserID2)
 	payload2 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-		"s1", user2.ID, startTimestamp)
+		"s1", createdUserID2, startTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload2), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
 	payload3 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
-		"s2", user2.ID, startTimestamp)
+		"s2", createdUserID2, startTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload3), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
@@ -946,9 +946,9 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user.ID)
+	assert.NotEmpty(t, createdUserID)
 
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
@@ -1720,15 +1720,15 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user1.ID)
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	assert.NotEmpty(t, createdUserID1)
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user2.ID)
-	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	assert.NotEmpty(t, createdUserID2)
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user3.ID)
+	assert.NotEmpty(t, createdUserID3)
 
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	stepTimestamp := startTimestamp
@@ -1739,43 +1739,43 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		user3 -> event s0 with property2 -> s1 with property2
 	*/
 
-	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", user1.ID, stepTimestamp, "A", 1234)
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID1, stepTimestamp, "A", 1234)
 	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response := DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", user1.ID, stepTimestamp+10, "B", 4321)
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID1, stepTimestamp+10, "B", 4321)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", user1.ID, stepTimestamp+20, "B", 4321)
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", createdUserID1, stepTimestamp+20, "B", 4321)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", user2.ID, stepTimestamp, "A", 1234)
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID2, stepTimestamp, "A", 1234)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", user2.ID, stepTimestamp+10, "A", 1234)
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", createdUserID2, stepTimestamp+10, "A", 1234)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", user3.ID, stepTimestamp, "B", 4321)
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", createdUserID3, stepTimestamp, "B", 4321)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, response["event_id"])
 
-	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", user3.ID, stepTimestamp+10, "B", 4321)
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", createdUserID3, stepTimestamp+10, "B", 4321)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	response = DecodeJSONResponseToMap(w.Body)
@@ -2074,20 +2074,20 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 		numPropertyRangeStart := 1
 		numPropertyRangeEnd := 100
 		for i := numPropertyRangeStart; i <= numPropertyRangeEnd; i++ {
-			iUser, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+			icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
-				eventName1, iUser.ID, startTimestamp+10, i, i)
+				eventName1, icreatedUserID, startTimestamp+10, i, i)
 			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 			assert.Equal(t, http.StatusOK, w.Code)
 		}
 
 		// Add "bad_number" string for numerical page_load_time and numerical_property.
 		// Should get filteted out and existing tests should pass as is.
-		iUser, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"$page_load_time":"%s"},"user_properties":{"numerical_property":"%s"}}`,
-			eventName1, iUser.ID, startTimestamp+10, "bad_number", "bad_number")
+			eventName1, icreatedUserID, startTimestamp+10, "bad_number", "bad_number")
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 
@@ -2174,10 +2174,10 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 			User property numerical_property set as empty ($none).
 			Will create 11 buckets. including 1 $none.
 		*/
-		iUser, _ = store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		icreatedUserID, _ = store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":""}}`,
-			eventName1, iUser.ID, startTimestamp+10, 0)
+			eventName1, icreatedUserID, startTimestamp+10, 0)
 		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 
@@ -2215,17 +2215,17 @@ func TestAnalyticsFunnelQueryWithNumericalBucketing(t *testing.T) {
 		// nonPercentileBucketRange := (upperPercentileValue - lowerPercentileValue) / (model.NumericalGroupByBuckets - 2)
 
 		for i := numPropertyRangeStart; i <= numPropertyRangeEnd; i++ {
-			iUser, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+			icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
-				eventName1, iUser.ID, startTimestamp+10, i, i)
+				eventName1, icreatedUserID, startTimestamp+10, i, i)
 			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 			assert.Equal(t, http.StatusOK, w.Code)
 
 			// Event2 by 25 users with timestamp + 20 for funnel.
 			if i%4 == 0 {
 				payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d}`,
-					eventName2, iUser.ID, startTimestamp+20)
+					eventName2, icreatedUserID, startTimestamp+20)
 				w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 				assert.Equal(t, http.StatusOK, w.Code)
 			}
@@ -2300,28 +2300,28 @@ func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
 	t.Run("FunnelSingleBreakdown", func(t *testing.T) {
 		// 20 events with single incremented value.
 		eventName1 := "event1"
-		iUser, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"date_property":%d},"user_properties":{"date_property":%d}}`,
-			eventName1, iUser.ID, startTimestamp+10, startTimestamp, startTimestamp)
+			eventName1, icreatedUserID, startTimestamp+10, startTimestamp, startTimestamp)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"date_property":%d},"user_properties":{"date_property":%d}}`,
-			eventName1, iUser.ID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
+			eventName1, icreatedUserID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
 		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"date_property1":%d},"user_properties":{"date_property":%d}}`,
-			eventName1, iUser.ID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
+			eventName1, icreatedUserID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
 		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"date_property":%d},"user_properties":{"date_property":%d}}`,
-			eventName1, iUser.ID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
+			eventName1, icreatedUserID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
 		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"date_property1":%d},"user_properties":{"date_property":%d}}`,
-			eventName1, iUser.ID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
+			eventName1, icreatedUserID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
 		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		query := model.Query{
@@ -2512,10 +2512,10 @@ func TestNumericalBucketingRegex(t *testing.T) {
 
 	for _, numericValue := range []float64{1, 1.2, 1.4678, -2, -2.86, 0} {
 		eventName := U.RandomString(5)
-		iUser, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		icreatedUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"numerical_property":%f}}`,
-			eventName, iUser.ID, startTimestamp+10, numericValue)
+			eventName, icreatedUserID, startTimestamp+10, numericValue)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 

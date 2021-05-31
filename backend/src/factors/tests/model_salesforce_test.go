@@ -858,16 +858,16 @@ func TestSalesforceEventUserPropertiesState(t *testing.T) {
 
 	cuID := getRandomEmail()
 	firstPropTimestamp := time.Now().Unix()
-	user, status := store.GetStore().CreateUser(&model.User{
+	createdUserID, status := store.GetStore().CreateUser(&model.User{
 		ProjectId:      project.ID,
 		JoinTimestamp:  firstPropTimestamp,
 		CustomerUserId: cuID,
 	})
 	assert.Equal(t, http.StatusCreated, status)
-	assert.NotNil(t, user)
+	assert.NotEmpty(t, createdUserID)
 
 	properties := &postgres.Jsonb{RawMessage: []byte(`{"name":"user1","city":"bangalore"}`)}
-	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID, properties, firstPropTimestamp)
+	_, status = store.GetStore().UpdateUserProperties(project.ID, createdUserID, properties, firstPropTimestamp)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	contactID := U.RandomLowerAphaNumString(7)

@@ -34,11 +34,11 @@ func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (uint64, *model.
 
 	project, agent, _ := SetupProjectWithAgentDAO()
 
-	user, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 
 	rEventName := "event1"
 	_ = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -46,7 +46,7 @@ func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (uint64, *model.
 
 	rEventName = "event2"
 	_ = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon", "up1": "uv1"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon", "up1": "uv1"}}`, createdUserID, rEventName)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -54,7 +54,7 @@ func createProjectAgentEventsTrackedUserProperty(r *gin.Engine) (uint64, *model.
 
 	rEventName = "event3"
 	_ = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon", "up2": "uv2"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon", "up2": "uv2"}}`, createdUserID, rEventName)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",

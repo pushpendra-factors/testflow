@@ -261,3 +261,11 @@ func SanitizeStringValueForUnicode(s string) string {
 	}
 	return string(runes)
 }
+
+func SantizePostgresJsonbForUnicode(jsonb *postgres.Jsonb) {
+	if jsonb == nil {
+		return
+	}
+
+	jsonb.RawMessage = json.RawMessage(string(jsonb.RawMessage))
+}

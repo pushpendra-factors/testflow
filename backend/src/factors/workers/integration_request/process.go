@@ -10,9 +10,10 @@ import (
 	Int "factors/integration"
 	IntSegment "factors/integration/segment"
 	U "factors/util"
+	"factors/vendor_custom/machinery/v1"
 )
 
-const workerName = "integration_request_worker"
+const defaultWorkerName = "integration_request_worker"
 const duplicateWorkerName = "duplicate_integration_request_worker"
 
 func ProcessRequest(token, reqType, reqPayload string) (float64, string, error) {
@@ -74,8 +75,12 @@ func main() {
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	enableSDKAndIntegrationRequestQueueDuplication := flag.Bool("enable_sdk_and_integration_request_queue_duplication",
 		false, "Enables SDK and Integration request queue duplication.")
-
 	flag.Parse()
+
+	workerName := defaultWorkerName
+	if *enableSDKAndIntegrationRequestQueueDuplication {
+		workerName = duplicateWorkerName
+	}
 
 	defer U.NotifyOnPanic(workerName, *env)
 
@@ -129,31 +134,23 @@ func main() {
 	C.InitPropertiesTypeCache(*enablePropertyTypeFromDB, *propertiesTypeCacheSize,
 		*whitelistedProjectIDPropertyTypeFromDB, *blacklistedProjectIDPropertyTypeFromDB)
 
-	// Start worker with duplicate queue client, if enabled.
+	var queueClient *machinery.Server
+	var queueName string
 	if C.IsSDKAndIntegrationRequestQueueDuplicationEnabled() {
-		duplicateQueueClient := C.GetServices().DuplicateQueueClient
-		err = duplicateQueueClient.RegisterTask(Int.ProcessRequestTask, ProcessRequest)
-		if err != nil {
-			log.WithError(err).Fatal(
-				"Failed to register tasks on duplicate queue client in integration request worker.")
-		}
-
-		duplicateQueueWorker := duplicateQueueClient.NewCustomQueueWorker(duplicateWorkerName,
-			*workerConcurrency, Int.RequestQueueDuplicate)
-		duplicateQueueWorker.Launch()
-		return
+		queueClient = C.GetServices().DuplicateQueueClient
+		queueName = Int.RequestQueueDuplicate
+	} else {
+		queueClient = C.GetServices().QueueClient
+		queueName = Int.RequestQueue
 	}
 
 	// Register tasks on queueClient.
-	queueClient := C.GetServices().QueueClient
 	err = queueClient.RegisterTask(Int.ProcessRequestTask, ProcessRequest)
 	if err != nil {
-		log.WithError(err).Fatal(
-			"Failed to register tasks on queue client in integration request worker.")
+		log.WithError(err).WithField("worker", workerName).
+			Fatal("Failed to register tasks on queue client in integration request worker.")
 	}
 
-	// Todo(Dinesh): Add pod_id to worker name.
-	worker := queueClient.NewCustomQueueWorker(workerName,
-		*workerConcurrency, Int.RequestQueue)
+	worker := queueClient.NewCustomQueueWorker(workerName, *workerConcurrency, queueName)
 	worker.Launch()
 }

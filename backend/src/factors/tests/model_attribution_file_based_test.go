@@ -7,11 +7,12 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
@@ -70,12 +71,16 @@ func TestAttributionModelFile(t *testing.T) {
 	users := getUsers()
 	customerUserIdToUser := make(map[string]model.User)
 	for _, user := range users {
-		userTemp, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		userIDTemp, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
 			CustomerUserId: user.CustomerUserID, Properties: postgres.Jsonb{},
 			JoinTimestamp: user.JoinTimestamp})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		userTemp, errCode := store.GetStore().GetUser(project.ID, userIDTemp)
+		assert.Equal(t, http.StatusFound, errCode)
+
 		customerUserIdToUser[user.CustomerUserID] = *userTemp
 		assert.NotNil(t, userTemp)
-		assert.Equal(t, http.StatusCreated, errCode)
 	}
 
 	// Read events.

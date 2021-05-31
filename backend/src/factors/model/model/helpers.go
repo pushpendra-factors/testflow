@@ -31,12 +31,12 @@ func IsPasswordAndHashEqual(password, hash string) bool {
 	return err == nil
 }
 
-// LogOnSlowExecution - Logs details of execution which slow.
-func LogOnSlowExecution(starttime time.Time) {
+func LogOnSlowExecutionWithParams(starttime time.Time, params *log.Fields) {
 	timeTakenInMillsecs := time.Now().Sub(starttime).Milliseconds()
 	logCtx := log.WithField("app_name", C.GetConfig().AppName).
 		WithField("tag", "slow_exec").
-		WithField("time_taken_in_ms", timeTakenInMillsecs)
+		WithField("time_taken_in_ms", timeTakenInMillsecs).
+		WithField("params", params)
 
 	pc, _, _, _ := runtime.Caller(1)
 	if fn := runtime.FuncForPC(pc); fn != nil {
