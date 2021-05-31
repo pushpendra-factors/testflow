@@ -48,12 +48,12 @@ var mapOfFacebookObjectsToPropertiesAndRelated = map[string]map[string]Propertie
 		"objective":         PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 		"bid_strategy":      PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
 	},
-	// CAFilterAd: {
-	// 	"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	// 	"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	// 	"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	// 	"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
-	// },
+	CAFilterAd: {
+		"id":                PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"name":              PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"configured_status": PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+		"effective_status":  PropertiesAndRelated{typeOfProperty: U.PropertyTypeCategorical},
+	},
 }
 
 var facebookDocumentTypeAlias = map[string]int{
@@ -84,10 +84,10 @@ var objectAndPropertyToValueInFacebookReportsMapping = map[string]string{
 	"ad_set:bid_strategy":        "JSON_EXTRACT_STRING(value, 'ad_set_bid_strategy')",
 	"ad_set:name":                "JSON_EXTRACT_STRING(value, 'adset_name')",
 	"ad_set:id":                  "ad_set_id",
-	// "ad:id":                      "ad_id::bigint",
-	// "ad:name":                    "JSON_EXTRACT_STRING(value, 'ad_name')",
-	// "ad:configured_status":       "JSON_EXTRACT_STRING(value, 'ad_configured_status')",
-	// "ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
+	"ad:id":                      "ad_id::bigint",
+	"ad:name":                    "JSON_EXTRACT_STRING(value, 'ad_name')",
+	"ad:configured_status":       "JSON_EXTRACT_STRING(value, 'ad_configured_status')",
+	"ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
 }
 
 var objectToValueInFacebookFiltersMapping = map[string]string{
@@ -108,10 +108,10 @@ var objectToValueInFacebookFiltersMapping = map[string]string{
 	"ad_set:bid_strategy":        "JSON_EXTRACT_STRING(value,'ad_set_bid_strategy')",
 	"ad_set:name":                "JSON_EXTRACT_STRING(value,'adset_name')",
 	"ad_set:id":                  "ad_set_id",
-	// "ad:id":                      "ad_id",
-	// "ad:name":                    "JSON_EXTRACT_STRING(value, 'ad_name')",
-	// "ad:configured_status":       "JSON_EXTRACT_STRING(value, 'ad_configured_status')",
-	// "ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
+	"ad:id":                      "ad_id",
+	"ad:name":                    "JSON_EXTRACT_STRING(value, 'ad_name')",
+	"ad:configured_status":       "JSON_EXTRACT_STRING(value, 'ad_configured_status')",
+	"ad:effective_status":        "JSON_EXTRACT_STRING(value, 'ad_effective_status')",
 }
 
 var facebookMetricsToAggregatesInReportsMapping = map[string]string{

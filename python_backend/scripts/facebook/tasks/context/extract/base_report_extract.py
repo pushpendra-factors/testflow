@@ -53,7 +53,8 @@ class BaseReportExtract(BaseExtract):
         curr_timestamp_in_string = TimeUtil.get_string_of_specific_format_from_timestamp(self.curr_timestamp,
                                                                                          '%Y-%m-%d')
         time_range = {'since': curr_timestamp_in_string, 'until': curr_timestamp_in_string}
-        url_ = self.UNFORMATTED_URL.format(self.customer_account_id, self.get_segments(), time_range, self.get_fields(),self.int_facebook_access_token, self.LEVEL_BREAKDOWN)
+        url_ = self.UNFORMATTED_URL.format(self.customer_account_id, self.get_segments(), time_range, self.get_fields(),
+                                           self.int_facebook_access_token, self.LEVEL_BREAKDOWN)
         return url_
 
     def get_next_timestamps(self):
