@@ -1317,7 +1317,7 @@ func getSQLAndParamsForAdwordsWithSmartPropertyV2(query *model.ChannelQueryV1, p
 
 	// orderBy
 	if isGroupByTimestamp {
-		finalOrderByKeys = appendSuffix("DESC", model.AliasDateTime)
+		finalOrderByKeys = appendSuffix("ASC", model.AliasDateTime)
 	} else {
 		finalOrderByKeys = appendSuffix("DESC", metrics.values...)
 	}
@@ -1448,7 +1448,7 @@ func getSQLAndParamsForAdwordsV2(query *model.ChannelQueryV1, projectID uint64, 
 
 	// orderBy
 	if isGroupByTimestamp {
-		finalOrderByKeys = appendSuffix("DESC", model.AliasDateTime)
+		finalOrderByKeys = appendSuffix("ASC", model.AliasDateTime)
 	} else {
 		finalOrderByKeys = appendSuffix("DESC", metrics.values...)
 	}

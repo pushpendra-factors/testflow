@@ -548,7 +548,7 @@ func getSelectTimestampByTypeForChannels(timestampType, timezone string) string 
 func getOrderByClause(isGroupByTimestamp bool, selectMetrics []string) string {
 	selectMetricsWithDesc := make([]string, 0, 0)
 	if isGroupByTimestamp {
-		selectMetricsWithDesc = append(selectMetricsWithDesc, model.AliasDateTime+" DESC")
+		selectMetricsWithDesc = append(selectMetricsWithDesc, model.AliasDateTime+" ASC")
 	} else {
 		for _, selectMetric := range selectMetrics {
 			selectMetricsWithDesc = append(selectMetricsWithDesc, selectMetric+" DESC")
