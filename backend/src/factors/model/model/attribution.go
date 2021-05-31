@@ -251,17 +251,24 @@ const (
 // MergeDataRowsHavingSameKey merges rows having same key by adding each column value
 func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interface{} {
 
-	logCtx := log.WithFields(log.Fields{"MISMATCH": "MergeDataRowsHavingSameKey"})
-
+	logCtx := log.WithFields(log.Fields{"Method": "MergeDataRowsHavingSameKey"})
+	maxRowSize := 0
 	rowKeyMap := make(map[string][]interface{})
 	for _, row := range rows {
-		if len(row) == 0 {
+		maxRowSize = U.MaxInt(len(row), maxRowSize)
+		if len(row) == 0 || len(row) != maxRowSize {
 			continue
 		}
 		// creating a key for using added keys and index
 		key := ""
 		for j := 0; j <= keyIndex; j++ {
-			key = key + row[j].(string)
+			val, ok := row[j].(string)
+			// Ignore row if key is not proper
+			if !ok {
+				logCtx.WithFields(log.Fields{"RowKeyCandidate": row[j], "Row": row}).Info("empty key value error. Ignoring row and continuing.")
+				continue
+			}
+			key = key + val
 		}
 
 		if _, exists := rowKeyMap[key]; exists {
@@ -294,15 +301,6 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 		} else {
 			rowKeyMap[key] = row
 		}
-
-		logCtx.WithFields(log.Fields{
-			"Key":         key,
-			"Name":        rowKeyMap[key][keyIndex],
-			"Impressions": rowKeyMap[key][keyIndex+1],
-			"Clicks":      rowKeyMap[key][keyIndex+2],
-			"Spend":       rowKeyMap[key][keyIndex+3],
-		}).Info("Original Value from ReportKeyData")
-
 	}
 	resultRows := make([][]interface{}, 0)
 	for _, mapRow := range rowKeyMap {

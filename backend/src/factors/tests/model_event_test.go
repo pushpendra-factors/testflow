@@ -375,12 +375,15 @@ func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
-	assert.NotNil(t, user)
+	userID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	assert.NotEmpty(t, userID)
 	assert.Equal(t, http.StatusCreated, status)
 
 	timeNow := U.TimeNow()
 	timeNowUnix := timeNow.Unix()
+
+	user, errCode := store.GetStore().GetUser(project.ID, userID)
+	assert.Equal(t, http.StatusFound, errCode)
 
 	createEventWithTimestampByName(t, project, user, "event1", timeNowUnix)
 	// 1 Day older events.

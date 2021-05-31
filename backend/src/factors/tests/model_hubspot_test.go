@@ -227,16 +227,16 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 
 	cuID := U.RandomLowerAphaNumString(5) + "@exm.com"
 	firstPropTimestamp := time.Now().Unix()
-	user, status := store.GetStore().CreateUser(&model.User{
+	createdUserID, status := store.GetStore().CreateUser(&model.User{
 		ProjectId:      project.ID,
 		JoinTimestamp:  firstPropTimestamp,
 		CustomerUserId: cuID,
 	})
 	assert.Equal(t, http.StatusCreated, status)
-	assert.NotNil(t, user)
+	assert.NotEmpty(t, createdUserID)
 
 	properties := &postgres.Jsonb{RawMessage: []byte(`{"name":"user1","city":"bangalore"}`)}
-	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID, properties, firstPropTimestamp)
+	_, status = store.GetStore().UpdateUserProperties(project.ID, createdUserID, properties, firstPropTimestamp)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	createdDate := time.Now()

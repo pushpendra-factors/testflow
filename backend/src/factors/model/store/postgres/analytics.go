@@ -286,8 +286,8 @@ func getNoneHandledGroupBySelect(projectID uint64, groupProp model.QueryGroupByP
 			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
 	} else {
-		groupSelect = fmt.Sprintf("CASE WHEN %s->>? IS NULL THEN '%s' WHEN %s->>? = '' THEN '%s' WHEN %s->>? = '0' THEN '%s' ELSE  date_trunc('%s', to_timestamp(to_number((%s->>?)::text,'9999999999'))::timestamp)::text END AS %s",
-			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, groupProp.Granularity, entityField, groupKey)
+		groupSelect = fmt.Sprintf("CASE WHEN %s->>? IS NULL THEN '%s' WHEN %s->>? = '' THEN '%s' WHEN %s->>? = '0' THEN '%s' ELSE  date_trunc('%s', timezone('%s', to_timestamp(to_number((%s->>?)::text,'9999999999'))))::text END AS %s",
+			entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, entityField, model.PropertyValueNone, groupProp.Granularity, U.TimeZoneStringIST, entityField, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
 	}
 	return groupSelect, groupSelectParams

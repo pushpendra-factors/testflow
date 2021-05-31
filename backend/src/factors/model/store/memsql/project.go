@@ -54,7 +54,7 @@ func generateUniqueToken(private bool) (token string, err error) {
 func createProject(project *model.Project) (*model.Project, int) {
 	logCtx := log.WithFields(log.Fields{"project": project})
 
-	defer model.LogOnSlowExecution(time.Now())
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	// Input Validation. (ID is to be auto generated)
 	if project.ID > 0 {

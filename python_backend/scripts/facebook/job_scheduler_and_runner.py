@@ -15,7 +15,7 @@ from scripts.facebook.task_context_setter import TaskContextSetter
 # TODO IMP - Handle migrations properly.
 # This might fail if metadata job itself is not run using run_job.
 class JobSchedulerAndRunner:
-    TASKS_WITH_INC_EXECUTION_ORDER = [AD, AD_SET, CAMPAIGN, CAMPAIGN_INSIGHTS, AD_SET_INSIGHTS]
+    TASKS_WITH_INC_EXECUTION_ORDER = [AD, AD_SET, CAMPAIGN, CAMPAIGN_INSIGHTS, AD_SET_INSIGHTS, AD_INSIGHTS]
 
     @classmethod
     def sync(cls, facebook_int_setting: dict, sync_info_with_type: dict):

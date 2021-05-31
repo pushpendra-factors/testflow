@@ -11,14 +11,18 @@ CREATE TABLE IF NOT EXISTS events (
     user_properties_id text, 
     event_name_id text, 
     count bigint,
-    properties json,
-    user_properties json,
+    properties JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
+    user_properties JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     session_id text,
     timestamp bigint,
     properties_updated_timestamp bigint,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     KEY (project_id, event_name_id, timestamp) USING CLUSTERED COLUMNSTORE,
+    KEY (project_id) USING HASH,
+    KEY (id) USING HASH,
+    KEY (event_name_id) USING HASH,
+    KEY (user_id) USING HASH,
     KEY (customer_event_id) USING HASH,
     SHARD KEY (user_id)
 
@@ -40,14 +44,16 @@ CREATE TABLE IF NOT EXISTS users (
     segment_anonymous_id text,
     amp_user_id text,
     properties_id text,
-    properties json,
+    properties JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     properties_updated_timestamp bigint,
     join_timestamp bigint,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
-    KEY (project_id, customer_user_id) USING CLUSTERED COLUMNSTORE,
+    KEY (project_id, id) USING CLUSTERED COLUMNSTORE,
+    KEY (project_id) USING HASH,
+    KEY (id) USING HASH,
     KEY (customer_user_id) USING HASH,
     KEY (segment_anonymous_id) USING HASH,
     KEY (amp_user_id) USING HASH,
@@ -58,25 +64,6 @@ CREATE TABLE IF NOT EXISTS users (
     -- Unique (project_id, amp_user_id)
     -- Ref (project_id) -> projects(id)
     -- Ref (project_id, properties_id) -> user_properties(project_id, id)
-);
-
-CREATE TABLE IF NOT EXISTS user_properties (
-    id text NOT NULL,
-    project_id bigint NOT NULL,
-    user_id text,
-    properties json,
-    updated_timestamp bigint,
-    created_at timestamp(6) NOT NULL,
-    updated_at timestamp(6) NOT NULL,
-    KEY (project_id, user_id) USING CLUSTERED COLUMNSTORE,
-    SHARD KEY (user_id)
-
-    -- Required constraints.
-    -- Ref (project_id) -> projects(id)
-    -- Ref (project_id, user_id) -> users(project_id, id)
-
-    -- Missing index.
-    -- Index (project_id, properties::$hubspot_contact_lead_guid)
 );
 
 CREATE TABLE IF NOT EXISTS event_names (
@@ -105,7 +92,7 @@ CREATE TABLE IF NOT EXISTS adwords_documents (
     customer_account_id text,
     type int,
     timestamp bigint,
-    value json,
+    value JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     ad_group_id bigint,
     ad_id bigint,
     keyword_id bigint,
@@ -236,7 +223,7 @@ CREATE TABLE IF NOT EXISTS facebook_documents (
     platform text,
     type int,
     timestamp bigint,
-    value json,
+    value JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     campaign_id text,
     ad_set_id text,
     ad_id text,
@@ -316,7 +303,7 @@ CREATE TABLE IF NOT EXISTS hubspot_documents (
     type int,
     action int,
     timestamp bigint,
-    value json,
+    value JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     synced boolean NOT NULL DEFAULT FALSE,
     sync_id text,
     user_id text,
@@ -450,7 +437,7 @@ CREATE TABLE IF NOT EXISTS salesforce_documents (
     type int,
     action int,
     timestamp bigint,
-    value json,
+    value JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     synced boolean NOT NULL DEFAULT FALSE,
     sync_id text, 
     user_id text,
@@ -490,7 +477,7 @@ CREATE TABLE IF NOT EXISTS linkedin_documents (
     customer_ad_account_id text NOT NULL,
     type int NOT NULL,
     timestamp bigint NOT NULL,
-    value json,
+    value JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     creative_id text,
     campaign_group_id text,
     campaign_id text,
@@ -576,7 +563,7 @@ CREATE TABLE IF NOT EXISTS google_organic_documents (
     project_id bigint NOT NULL,
     url_prefix text NOT NULL,
     timestamp bigint NOT NULL,
-    value json,
+    value JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),

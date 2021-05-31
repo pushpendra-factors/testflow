@@ -61,10 +61,11 @@ const EventFilterBy = (props) => {
     }
 
     props.userProperties.map((item)=>{ 
-      if(item[1]=='categorical' || item[1]=='numerical'){ 
+      if(item[2]=='categorical' || item[2]=='numerical'){ 
         catAndNumericalProps.push(item); 
       }
     }); 
+    
     assignFilterProps.user = catAndNumericalProps;
     setFilterProperties(assignFilterProps);
 

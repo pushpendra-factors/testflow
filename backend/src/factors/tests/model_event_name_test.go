@@ -565,12 +565,12 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 
-	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
-	assert.NotNil(t, user)
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	assert.NotEmpty(t, createdUserID)
 	assert.Equal(t, http.StatusCreated, errCode)
 	rEventName := "event1"
 	w := ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "timestamp": %d, "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName, timestamp)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "timestamp": %d, "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName, timestamp)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -579,7 +579,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 	rEventName = "event2"
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "timestamp": %d, "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName, timestamp+1)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "timestamp": %d, "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName, timestamp+1)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -588,7 +588,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 
 	rEventName = "event3"
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "timestamp": %d, "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName, timestamp+2)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "timestamp": %d, "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName, timestamp+2)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -608,7 +608,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 
 	rEventName = "event2"
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -617,7 +617,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 
 	rEventName = "event3"
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -626,7 +626,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 
 	rEventName = "event2"
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, createdUserID, rEventName)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -1720,7 +1720,7 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 		eventNames = append(eventNames, *eventName)
 	}
 
-	user, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, status := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, status)
 
 	// creating multiple normal events
@@ -1728,7 +1728,7 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 		_, status := store.GetStore().CreateEvent(&model.Event{
 			EventNameId: eventNames[i%5].ID,
 			ProjectId:   project.ID,
-			UserId:      user.ID,
+			UserId:      createdUserID,
 			Timestamp:   U.TimeNowUnix(),
 		})
 		assert.Equal(t, http.StatusCreated, status)
@@ -1739,7 +1739,7 @@ func TestPrioritizeSmartEventNames(t *testing.T) {
 		_, status := store.GetStore().CreateEvent(&model.Event{
 			EventNameId: smartEventNames[i%5].ID,
 			ProjectId:   project.ID,
-			UserId:      user.ID,
+			UserId:      createdUserID,
 			Timestamp:   U.TimeNowUnix(),
 		})
 		assert.Equal(t, http.StatusCreated, status)

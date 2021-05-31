@@ -160,7 +160,7 @@ var FacebookObjectMapForSmartProperty = map[string]string{
 	"ad_set":   "ad_group",
 }
 
-var ObjectsForFacebook = []string{CAFilterCampaign, CAFilterAdGroup}
+var ObjectsForFacebook = []string{CAFilterCampaign, CAFilterAdGroup, CAFilterAd}
 
 const (
 	FacebookSpecificError = "Failed in facebook with the following error."
