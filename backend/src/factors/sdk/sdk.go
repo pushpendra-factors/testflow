@@ -581,7 +581,7 @@ func Track(projectId uint64, request *TrackPayload,
 	// if create_user not true and user is not found,
 	// allow to create_user.
 	if !request.CreateUser && request.UserId != "" {
-		_, errCode := store.GetStore().GetUser(projectId, request.UserId)
+		errCode := store.GetStore().IsUserExistByID(projectId, request.UserId)
 		if errCode == http.StatusNotFound {
 			request.CreateUser = true
 		}
@@ -606,13 +606,13 @@ func Track(projectId uint64, request *TrackPayload,
 		}
 
 		// Precondition: create new user, if user_id not given or create_user is true.
-		createdUser, errCode := store.GetStore().CreateUser(newUser)
+		createdUserID, errCode := store.GetStore().CreateUser(newUser)
 		if errCode != http.StatusCreated {
 			return errCode, &TrackResponse{Error: "Tracking failed. User creation failed."}
 		}
 
-		request.UserId = createdUser.ID
-		response.UserId = createdUser.ID
+		request.UserId = createdUserID
+		response.UserId = createdUserID
 	} else {
 		// Adding initial user properties if user_id exists,
 		// but initial properties are not. i.e user created on identify.
@@ -883,7 +883,7 @@ func Identify(projectId uint64, request *IdentifyPayload, overwrite bool) (int, 
 	// if create_user not true and user is not found,
 	// allow to create_user.
 	if !request.CreateUser && request.UserId != "" {
-		_, errCode := store.GetStore().GetUser(projectId, request.UserId)
+		errCode := store.GetStore().IsUserExistByID(projectId, request.UserId)
 		if errCode == http.StatusNotFound {
 			request.CreateUser = true
 		}
@@ -1068,7 +1068,7 @@ func AddUserProperties(projectId uint64,
 	// if create_user not true and user is not found,
 	// allow to create_user.
 	if !request.CreateUser && request.UserId != "" {
-		_, errCode := store.GetStore().GetUser(projectId, request.UserId)
+		errCode := store.GetStore().IsUserExistByID(projectId, request.UserId)
 		if errCode == http.StatusNotFound {
 			request.CreateUser = true
 		}
@@ -1093,15 +1093,16 @@ func AddUserProperties(projectId uint64,
 		}
 
 		// Create user with properties and respond user_id. Only properties allowed on create.
-		newUser, errCode := store.GetStore().CreateUser(newUser)
+		createdUserID, errCode := store.GetStore().CreateUser(newUser)
 		if errCode != http.StatusCreated {
 			return errCode, &AddUserPropertiesResponse{Error: "Add user properties failed. User create failed"}
 		}
-		return http.StatusOK, &AddUserPropertiesResponse{UserId: newUser.ID,
+
+		return http.StatusOK, &AddUserPropertiesResponse{UserId: createdUserID,
 			Message: "Added user properties successfully."}
 	}
 
-	user, errCode := store.GetStore().GetUser(projectId, request.UserId)
+	errCode := store.GetStore().IsUserExistByID(projectId, request.UserId)
 	if errCode == http.StatusNotFound {
 		return http.StatusBadRequest,
 			&AddUserPropertiesResponse{Error: "Add user properties failed. Invalid user_id."}
@@ -1110,7 +1111,7 @@ func AddUserProperties(projectId uint64,
 			&AddUserPropertiesResponse{Error: "Add user properties failed"}
 	}
 
-	_, errCode = store.GetStore().UpdateUserProperties(projectId, user.ID,
+	_, errCode = store.GetStore().UpdateUserProperties(projectId, request.UserId,
 		&postgres.Jsonb{propertiesJSON}, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return errCode,
@@ -1257,14 +1258,14 @@ func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *Ide
 		return http.StatusUnauthorized, &IdentifyResponse{Error: "Identify failed. Invalid project id."}
 	}
 
-	user, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
 	if errCode != http.StatusCreated && errCode != http.StatusFound {
 		log.WithField("project_id", project.ID).Error("Identify failed. Failed to CreateOrGetAMPUser.")
 		return errCode, &IdentifyResponse{Error: "Identify failed. Failed to get AMP user."}
 	}
 
 	identifyPayload := &IdentifyPayload{
-		UserId:         user.ID,
+		UserId:         userID,
 		CustomerUserId: reqPayload.CustomerUserID,
 		Timestamp:      reqPayload.Timestamp,
 	}
@@ -1437,12 +1438,12 @@ func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
 
 	logCtx := log.WithField("project_id", projectID).WithField("event_id", eventID)
 
-	user, errCode := store.GetStore().GetUser(projectID, userID)
+	existingUserProperties, errCode := store.GetStore().GetUserPropertiesByUserID(projectID, userID)
 	if errCode != http.StatusFound {
 		return errCode
 	}
 
-	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
+	userProperties, err := U.DecodePostgresJsonb(existingUserProperties)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to decode user_properties.")
 		return http.StatusBadRequest
@@ -1531,6 +1532,7 @@ func UpdateEventProperties(projectId uint64,
 		WithField("event_id", request.EventId).
 		WithField("timestamp", request.Timestamp)
 
+	// TODO: Add support for user_id on SDK and use user_id on GetEventById for routing to a shard.
 	event, errCode := store.GetStore().GetEventById(projectId, request.EventId)
 	if errCode == http.StatusNotFound && request.Timestamp > U.UnixTimeBeforeDuration(time.Hour*5) {
 		logCtx.Warn("Failed old update event properties request with unavailable event_id permanently.")
@@ -1552,22 +1554,13 @@ func UpdateEventProperties(projectId uint64,
 
 	newInitialUserProperties := U.GetUpdateAllowedInitialUserProperties(properitesToBeUpdated)
 
-	// Update user_properties state associate to event.
+	// Update user_properties state associate to event and lastest user properties state of user.
 	errCode = updateInitialUserPropertiesFromUpdateEventProperties(projectId, event.ID,
 		event.UserId, newInitialUserProperties)
 	if errCode != http.StatusAccepted {
 		return errCode,
 			&UpdateEventPropertiesResponse{
 				Error: "Update event properties failed. Failed to update event user properties."}
-	}
-
-	// Update lastest user properties state of user.
-	errCode = updateInitialUserPropertiesFromUpdateEventProperties(projectId, event.ID,
-		event.UserId, newInitialUserProperties)
-	if errCode != http.StatusAccepted {
-		return errCode,
-			&UpdateEventPropertiesResponse{
-				Error: "Update event properties failed. Failed to update latest user properties."}
 	}
 
 	return http.StatusAccepted,
@@ -1625,14 +1618,14 @@ func AMPUpdateEventPropertiesByToken(token string,
 
 	pageURL := U.CleanURI(parsedSourceURL.Host + parsedSourceURL.Path)
 
-	user, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
 	if errCode != http.StatusFound {
 		return errCode, &Response{Error: "Invalid amp user."}
 	}
 
-	logCtx = logCtx.WithField("user_id", user.ID).WithField("page_url", pageURL)
+	logCtx = logCtx.WithField("user_id", userID).WithField("page_url", pageURL)
 
-	eventID, errCode := GetCacheAMPSDKEventIDByPageURL(project.ID, user.ID, pageURL)
+	eventID, errCode := GetCacheAMPSDKEventIDByPageURL(project.ID, userID, pageURL)
 	if errCode != http.StatusFound {
 		if errCode == http.StatusInternalServerError {
 			logCtx.Error("Failed to get eventId by page_url from cache.")
@@ -1669,10 +1662,10 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 	if errCode != http.StatusFound {
 		return http.StatusUnauthorized, &Response{Error: "Invalid token"}
 	}
-	logCtx := log.WithField("project_id", project.ID)
+	logCtx := log.WithField("project_id", project.ID).WithField("client_id", reqPayload.ClientID)
 
 	var isNewUser bool
-	user, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
 	if errCode != http.StatusFound && errCode != http.StatusCreated {
 		return errCode, &Response{Error: "Invalid user"}
 	}
@@ -1741,7 +1734,7 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 
 	trackPayload := TrackPayload{
 		Auto:            true,
-		UserId:          user.ID,
+		UserId:          userID,
 		IsNewUser:       isNewUser,
 		Name:            pageURL,
 		EventProperties: eventProperties,
@@ -1758,13 +1751,14 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 
 	errCode, trackResponse := Track(project.ID, &trackPayload, false, SourceAMPSDK)
 	if trackResponse.EventId != "" {
-		cacheErrCode := SetCacheAMPSDKEventIDByPageURL(project.ID, user.ID,
+		cacheErrCode := SetCacheAMPSDKEventIDByPageURL(project.ID, userID,
 			trackResponse.EventId, pageURL)
 		if cacheErrCode != http.StatusAccepted {
-			logCtx.Error("Failed to set cache event_id by page_url on AMP.")
+			logCtx.WithField("err_code", errCode).WithField("user_id", userID).
+				Error("Failed to set cache event_id by page_url on AMP.")
 		}
 	} else {
-		logCtx.WithFields(log.Fields{"user_id": user.ID, "event_id": trackResponse.EventId}).
+		logCtx.WithFields(log.Fields{"user_id": userID, "event_id": trackResponse.EventId}).
 			Error("Missing event_id from response of track on AMP track.")
 	}
 
@@ -1779,7 +1773,8 @@ func getAMPSDKByEventIDCacheKey(projectId uint64, userId string, pageURL string)
 }
 
 func SetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, eventId string, pageURL string) int {
-	logctx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+	logctx := log.WithFields(log.Fields{"project_id": projectId,
+		"user_id": userId, "event_id": eventId, "page_url": pageURL})
 
 	if projectId == 0 || userId == "" || eventId == "" || pageURL == "" {
 		logctx.Error("Invalid scope ids.")

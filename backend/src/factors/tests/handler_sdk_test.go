@@ -1111,13 +1111,13 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	assert.Nil(t, err)
 
 	timestampBeforeOneDay := U.UnixTimeBeforeDuration(time.Hour * 24)
-	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
 		JoinTimestamp: timestampBeforeOneDay})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// New session has to created.
 	payload := fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
-		user.ID, timestampBeforeOneDay)
+		createdUserID, timestampBeforeOneDay)
 	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap := DecodeJSONResponseToMap(w.Body)
@@ -1132,7 +1132,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	// Existing session has to be used.
 	lastEventTimestamp := timestampBeforeOneDay + 10
 	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
-		user.ID, lastEventTimestamp)
+		createdUserID, lastEventTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -1148,7 +1148,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	sessionEventName, errCode := store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
-	sessionEvents, errCode := store.GetStore().GetUserEventsByEventNameId(project.ID, user.ID,
+	sessionEvents, errCode := store.GetStore().GetUserEventsByEventNameId(project.ID, createdUserID,
 		sessionEventName.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, sessionEvents, 1)
@@ -1157,7 +1157,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	// as user was inactive.
 	lastEventTimestamp = lastEventTimestamp + 1801
 	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
-		user.ID, lastEventTimestamp)
+		createdUserID, lastEventTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -1173,7 +1173,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	sessionEventName, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
-	sessionEvents, errCode = store.GetStore().GetUserEventsByEventNameId(project.ID, user.ID,
+	sessionEvents, errCode = store.GetStore().GetUserEventsByEventNameId(project.ID, createdUserID,
 		sessionEventName.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, sessionEvents, 2)
@@ -1249,16 +1249,16 @@ func TestTrackHandlerFormSubmitWithUserAlreadyIdentfiedBySDKRequest(t *testing.T
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotEmpty(t, user.ID)
+	assert.NotEmpty(t, createdUserID)
 
 	identifyURI := "/sdk/user/identify"
 	customerUserID := U.RandomLowerAphaNumString(15)
 	w := ServePostRequestWithHeaders(r, identifyURI, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
-		customerUserID, user.ID)), map[string]string{"Authorization": project.Token})
+		customerUserID, createdUserID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
-	user, errCode = store.GetStore().GetUser(project.ID, user.ID)
+	user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, customerUserID, user.CustomerUserId)
 	userProperties, errCode := store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
@@ -1528,10 +1528,10 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 	project, user1, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix() - 10})
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix() - 10})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix()})
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, JoinTimestamp: U.TimeNowUnix()})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// identify all users with same c_uid.
@@ -1540,7 +1540,7 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 		customerUserId, user1.ID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
-		customerUserId, user2.ID)), map[string]string{"Authorization": project.Token})
+		customerUserId, createdUserID2)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// All the latest user properties of users with customer user id should have min of join_time.
@@ -1557,12 +1557,12 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 	uniqueName := U.RandomLowerAphaNumString(16)
 	uniqueEmail := fmt.Sprintf(`%s@example.com`, U.RandomLowerAphaNumString(10))
 	w = ServePostRequestWithHeaders(r, addPropertiesURI, []byte(fmt.Sprintf(
-		`{"user_id": "%s", "properties": {"name": "%s", "email": "%s"}}`, user3.ID, uniqueName, uniqueEmail)),
+		`{"user_id": "%s", "properties": {"name": "%s", "email": "%s"}}`, createdUserID3, uniqueName, uniqueEmail)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
-		customerUserId, user3.ID)), map[string]string{"Authorization": project.Token})
+		customerUserId, createdUserID3)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	userPropertiesRecords, errCode = store.GetStore().GetUsersByCustomerUserID(project.ID, customerUserId)
@@ -1992,9 +1992,9 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	}
 	errCode, _ := SDK.AMPTrackByToken(project.Token, payload)
 	assert.Equal(t, errCode, http.StatusOK)
-	user, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload.Timestamp)
+	userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotEqual(t, user.ID, "")
+	assert.NotEqual(t, userID, "")
 
 	payload1 := &SDK.AMPTrackPayload{
 		ClientID:  ampClientId,
@@ -2007,9 +2007,9 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	}
 	errCode, _ = SDK.AMPTrackByToken(project.Token, payload1)
 	assert.Equal(t, errCode, http.StatusOK)
-	user1, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload1.Timestamp)
+	user1ID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload1.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotEqual(t, user1.ID, "")
+	assert.NotEqual(t, user1ID, "")
 
 	payload2 := &SDK.AMPTrackPayload{
 		ClientID:  ampClientId,
@@ -2022,9 +2022,9 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	}
 	errCode, _ = SDK.AMPTrackByToken(project.Token, payload2)
 	assert.Equal(t, errCode, http.StatusOK)
-	user2, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload2.Timestamp)
+	user2ID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload2.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotEqual(t, user2.ID, "")
+	assert.NotEqual(t, user2ID, "")
 
 	// with query param.
 	url3 := fmt.Sprintf("abcd.com/%s", U.RandomLowerAphaNumString(5))
@@ -2039,9 +2039,9 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	}
 	errCode, _ = SDK.AMPTrackByToken(project.Token, payload3)
 	assert.Equal(t, errCode, http.StatusOK)
-	user3, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload3.Timestamp)
+	ampUserID3, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, ampClientId, payload3.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotEqual(t, user3.ID, "")
+	assert.NotEqual(t, ampUserID3, "")
 }
 
 func TestSDKAMPTrackByToken(t *testing.T) {
@@ -2088,7 +2088,9 @@ func TestSDKAMPIdentifyHandler(t *testing.T) {
 	var jsonResponseMap map[string]interface{}
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	assert.Equal(t, "User has been identified successfully.", jsonResponseMap["message"])
-	user, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	createdUserID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	assert.Equal(t, http.StatusFound, errCode)
+	user, errCode := store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, cUID, user.CustomerUserId)
 
@@ -2104,7 +2106,9 @@ func TestSDKAMPIdentifyHandler(t *testing.T) {
 	status, message := SDK.AMPIdentifyByToken(project.Token, &payload)
 	assert.Equal(t, http.StatusOK, status)
 	assert.Equal(t, "User has been identified successfully.", message.Message)
-	user, errCode = store.GetStore().CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	ampUserID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	assert.Equal(t, http.StatusFound, errCode)
+	user, errCode = store.GetStore().GetUser(project.ID, ampUserID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, oldTimestamp, user.JoinTimestamp)
 }
@@ -2114,7 +2118,7 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 	assert.Nil(t, err)
 
 	customerUserID := getRandomEmail()
-	user1, _ := store.GetStore().CreateUser(&model.User{
+	createdUserID1, _ := store.GetStore().CreateUser(&model.User{
 		ID:             U.GetUUID(),
 		ProjectId:      project.ID,
 		CustomerUserId: customerUserID,
@@ -2129,7 +2133,7 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 		))},
 	})
 
-	user2, _ := store.GetStore().CreateUser(&model.User{
+	createdUserID2, _ := store.GetStore().CreateUser(&model.User{
 		ID:             U.GetUUID(),
 		ProjectId:      project.ID,
 		CustomerUserId: customerUserID,
@@ -2147,15 +2151,15 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 	errCode, _ := SDK.AddUserPropertiesByToken(
 		project.Token,
 		&SDK.AddUserPropertiesPayload{
-			UserId: user1.ID,
+			UserId: createdUserID1,
 			Properties: U.PropertiesMap{
 				"revenue": 42,
 			},
 		},
 	)
 	assert.Equal(t, http.StatusOK, errCode)
-	user1DBAfterAdd, _ := store.GetStore().GetUser(project.ID, user1.ID)
-	user2DBAfterAdd, _ := store.GetStore().GetUser(project.ID, user2.ID)
+	user1DBAfterAdd, _ := store.GetStore().GetUser(project.ID, createdUserID1)
+	user2DBAfterAdd, _ := store.GetStore().GetUser(project.ID, createdUserID2)
 	user1DBAfterAddProperties, _ := U.DecodePostgresJsonb(&user1DBAfterAdd.Properties)
 	user2DBAfterAddProperties, _ := U.DecodePostgresJsonb(&user2DBAfterAdd.Properties)
 	// Merge must have got called and updated user2 as well.
@@ -2169,7 +2173,7 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	assert.Nil(t, err)
 
 	customerUserID := getRandomEmail()
-	user1, _ := store.GetStore().CreateUser(&model.User{
+	createdUserID1, _ := store.GetStore().CreateUser(&model.User{
 		ID:             U.GetUUID(),
 		ProjectId:      project.ID,
 		CustomerUserId: customerUserID,
@@ -2185,7 +2189,7 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	})
 
 	// Without CustomerUserID
-	user2, _ := store.GetStore().CreateUser(&model.User{
+	createdUserID2, _ := store.GetStore().CreateUser(&model.User{
 		ID:        U.GetUUID(),
 		ProjectId: project.ID,
 		Properties: postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{
@@ -2198,21 +2202,21 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 		))},
 	})
 	// Before identify, properties are different for the users.
-	user1DB, _ := store.GetStore().GetUser(project.ID, user1.ID)
-	user2DB, _ := store.GetStore().GetUser(project.ID, user2.ID)
+	user1DB, _ := store.GetStore().GetUser(project.ID, createdUserID1)
+	user2DB, _ := store.GetStore().GetUser(project.ID, createdUserID2)
 	user1DBProperties, _ := U.DecodePostgresJsonb(&user1DB.Properties)
 	user2DBProperties, _ := U.DecodePostgresJsonb(&user2DB.Properties)
 	assert.NotEqual(t, user1DBProperties, user2DBProperties)
 
 	identifyPayload := &SDK.IdentifyPayload{
-		UserId:         user2.ID,
+		UserId:         createdUserID2,
 		CustomerUserId: customerUserID,
 	}
 
 	errCode, _ := SDK.IdentifyByToken(project.Token, identifyPayload)
 	assert.Equal(t, http.StatusOK, errCode)
-	user1DB, _ = store.GetStore().GetUser(project.ID, user1.ID)
-	user2DB, _ = store.GetStore().GetUser(project.ID, user2.ID)
+	user1DB, _ = store.GetStore().GetUser(project.ID, createdUserID1)
+	user2DB, _ = store.GetStore().GetUser(project.ID, createdUserID2)
 	user1DBProperties, _ = U.DecodePostgresJsonb(&user1DB.Properties)
 	user2DBProperties, _ = U.DecodePostgresJsonb(&user2DB.Properties)
 	// Merge must have got called and updated user2 as well.
@@ -2221,8 +2225,8 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	// Should not change on retry.
 	errCode, _ = SDK.IdentifyByToken(project.Token, identifyPayload)
 	assert.Equal(t, http.StatusOK, errCode)
-	user1DBRetry, _ := store.GetStore().GetUser(project.ID, user1.ID)
-	user2DBRetry, _ := store.GetStore().GetUser(project.ID, user2.ID)
+	user1DBRetry, _ := store.GetStore().GetUser(project.ID, createdUserID1)
+	user2DBRetry, _ := store.GetStore().GetUser(project.ID, createdUserID2)
 	user1DBRetryProperties, _ := U.DecodePostgresJsonb(&user1DBRetry.Properties)
 	user2DBRetryProperties, _ := U.DecodePostgresJsonb(&user2DBRetry.Properties)
 	// Merge must have got called and updated user2 as well.
@@ -2429,7 +2433,7 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 	project, _, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 	cuid := "kevin.wunder@lovelandinnovations.com"
-	user, status := store.GetStore().CreateUser(&model.User{
+	createdUserID, status := store.GetStore().CreateUser(&model.User{
 		ProjectId:      project.ID,
 		CustomerUserId: cuid,
 	})
@@ -2446,7 +2450,7 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 	timestamp := time.Now().Unix() - 500
 	propertiesPJson, err := U.EncodeToPostgresJsonb(&properties)
 	assert.Nil(t, err)
-	_, status = store.GetStore().UpdateUserProperties(project.ID, user.ID, propertiesPJson, timestamp)
+	_, status = store.GetStore().UpdateUserProperties(project.ID, createdUserID, propertiesPJson, timestamp)
 	assert.Equal(t, http.StatusAccepted, status)
 
 	// verify decoding properties
@@ -2475,13 +2479,13 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 	// should not overwide since user already identified by sdk_user_identify
 	cuid2 := "user2"
 	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
-		UserId:         user.ID,
+		UserId:         createdUserID,
 		CustomerUserId: cuid2,
 		Source:         "test",
 	}, true)
 
 	assert.Equal(t, http.StatusOK, status)
-	user, _ = store.GetStore().GetUser(project.ID, user.ID)
+	user, _ := store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, cuid, user.CustomerUserId)
 
 	// update customer_user_id by sdk_user_identify
@@ -2505,18 +2509,18 @@ func TestUserPropertiesMetaObjectFallbackDecoder(t *testing.T) {
 
 	// using new format by creating new user, will follow new type
 	cuid3 := "user3"
-	user, status = store.GetStore().CreateUser(&model.User{
+	createdUserID, status = store.GetStore().CreateUser(&model.User{
 		ProjectId: project.ID,
 	})
 
 	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
-		UserId:         user.ID,
+		UserId:         createdUserID,
 		CustomerUserId: cuid3,
 		Source:         "sdk_user_identify",
 	}, true)
 
 	assert.Equal(t, http.StatusOK, status)
-	user, _ = store.GetStore().GetUser(project.ID, user.ID)
+	user, _ = store.GetStore().GetUser(project.ID, createdUserID)
 	assert.Equal(t, cuid3, user.CustomerUserId)
 	propertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)

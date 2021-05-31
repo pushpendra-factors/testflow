@@ -488,6 +488,8 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       prop_type: opt.pty,
       eventName: opt.ena,
       eventIndex: opt.eni ? opt.eni : 0,
+      grn: opt.grn,
+      gbty: opt.gbty
     };
   });
   const event = breakdown.filter((b) => b.eventIndex);

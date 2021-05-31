@@ -97,13 +97,13 @@ func (pg *Postgres) createUserWithError(user *model.User) (*model.User, error) {
 	return user, nil
 }
 
-func (pg *Postgres) CreateUser(user *model.User) (*model.User, int) {
+func (pg *Postgres) CreateUser(user *model.User) (string, int) {
 	logCtx := log.WithField("project_id", user.ProjectId).
 		WithField("user_id", user.ID)
 
 	newUser, err := pg.createUserWithError(user)
 	if err == nil {
-		return newUser, http.StatusCreated
+		return newUser.ID, http.StatusCreated
 	}
 
 	if U.IsPostgresIntegrityViolationError(err) {
@@ -114,19 +114,18 @@ func (pg *Postgres) CreateUser(user *model.User) (*model.User, int) {
 			existingUser, errCode := pg.GetUser(user.ProjectId, user.ID)
 			if errCode == http.StatusFound {
 				// Using StatusCreated for consistency.
-				return existingUser, http.StatusCreated
+				return existingUser.ID, http.StatusCreated
 			}
 
-			// Returned err_codes will be retried on queue.
-			return nil, errCode
+			return "", errCode
 		}
 
 		logCtx.WithError(err).Error("Failed to create user. Integrity violation.")
-		return nil, http.StatusNotAcceptable
+		return "", http.StatusNotAcceptable
 	}
 
 	logCtx.WithError(err).Error("Failed to create user.")
-	return nil, http.StatusInternalServerError
+	return "", http.StatusInternalServerError
 }
 
 // UpdateUser updates user fields by Id.
@@ -537,6 +536,30 @@ func (pg *Postgres) OverwriteUserPropertiesByID(projectID uint64, id string,
 	return http.StatusAccepted
 }
 
+func (pg *Postgres) IsUserExistByID(projectID uint64, id string) int {
+	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": id})
+
+	var user model.User
+	db := C.GetServices().Db
+	if err := db.Limit(1).Where("project_id = ? AND id = ?", projectID, id).
+		Select("id").Find(&user).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to check is user exists by id.")
+		return http.StatusInternalServerError
+	}
+
+	if user.ID == "" {
+		return http.StatusNotFound
+	}
+
+	return http.StatusFound
+}
+
 func (pg *Postgres) GetUser(projectId uint64, id string) (*model.User, int) {
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": id})
@@ -653,39 +676,6 @@ func (pg *Postgres) GetUserBySegmentAnonymousId(projectId uint64, segAnonId stri
 	return &users[0], http.StatusFound
 }
 
-// CreateOrGetUser create or updates(c_uid) and returns user customer_user_id.
-func (pg *Postgres) CreateOrGetUser(projectId uint64, custUserId string) (*model.User, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectId,
-		"provided_c_uid": custUserId})
-	if custUserId == "" {
-		logCtx.Error("No customer user id given")
-		return nil, http.StatusBadRequest
-	}
-
-	var user *model.User
-	var errCode int
-	user, errCode = pg.GetUserLatestByCustomerUserId(projectId, custUserId)
-	if errCode == http.StatusFound {
-		return user, http.StatusOK
-	}
-
-	if errCode == http.StatusInternalServerError {
-		logCtx.WithField("err_code", errCode).Error(
-			"Failed to fetching user with provided c_uid.")
-		return nil, errCode
-	}
-
-	cUser := &model.User{ProjectId: projectId, CustomerUserId: custUserId}
-
-	user, errCode = pg.CreateUser(cUser)
-	if errCode != http.StatusCreated {
-		logCtx.WithField("err_code", errCode).Error(
-			"Failed creating user with c_uid. get_segment_user failed.")
-		return nil, errCode
-	}
-	return user, errCode
-}
-
 // GetAllUserIDByCustomerUserID returns all users with same customer_user_id
 func (pg *Postgres) GetAllUserIDByCustomerUserID(projectID uint64, customerUserID string) ([]string, int) {
 	if projectID == 0 || customerUserID == "" {
@@ -800,42 +790,45 @@ func (pg *Postgres) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUser
 	return user, http.StatusOK
 }
 
-func getUserByAMPUserId(projectId uint64, ampUserId string) (*model.User, int) {
+func getUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int) {
 	logCtx := log.WithField("project_id", projectId).WithField(
 		"amp_user_id", ampUserId)
 
-	var users []model.User
-
 	db := C.GetServices().Db
+	var user model.User
 	err := db.Limit(1).Where("project_id = ? AND amp_user_id = ?",
-		projectId, ampUserId).Find(&users).Error
+		projectId, ampUserId).Select("id").Find(&user).Error
 	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return "", http.StatusNotFound
+		}
+
 		logCtx.Error("Failed to get user by amp_user_id")
-		return nil, http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 
-	if len(users) == 0 {
-		return nil, http.StatusNotFound
+	if user.ID == "" {
+		return "", http.StatusNotFound
 	}
 
-	return &users[0], http.StatusFound
+	return user.ID, http.StatusFound
 }
 
-func (pg *Postgres) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (*model.User, int) {
+func (pg *Postgres) CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (string, int) {
 	if projectId == 0 || ampUserId == "" {
-		return nil, http.StatusBadRequest
+		return "", http.StatusBadRequest
 	}
 
 	logCtx := log.WithField("project_id",
 		projectId).WithField("amp_user_id", ampUserId)
 
-	user, errCode := getUserByAMPUserId(projectId, ampUserId)
+	userID, errCode := getUserIDByAMPUserID(projectId, ampUserId)
 	if errCode == http.StatusInternalServerError {
-		return nil, errCode
+		return "", errCode
 	}
 
 	if errCode == http.StatusFound {
-		return user, errCode
+		return userID, errCode
 	}
 
 	user, err := pg.createUserWithError(&model.User{ProjectId: projectId,
@@ -843,20 +836,21 @@ func (pg *Postgres) CreateOrGetAMPUser(projectId uint64, ampUserId string, times
 	if err != nil {
 		// Get and return error is duplicate error.
 		if U.IsPostgresUniqueIndexViolationError(uniqueIndexProjectIdAmpUserId, err) {
-			user, errCode := getUserByAMPUserId(projectId, ampUserId)
+			userID, errCode := getUserIDByAMPUserID(projectId, ampUserId)
 			if errCode != http.StatusFound {
-				return nil, errCode
+				return "", errCode
 			}
 
-			return user, http.StatusFound
+			return userID, http.StatusFound
 		}
 
 		logCtx.WithError(err).Error(
 			"Failed to create user by amp user id on CreateOrGetAMPUser")
-		return nil, http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
+	userID = user.ID
 
-	return user, http.StatusCreated
+	return userID, http.StatusCreated
 }
 
 // GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project

@@ -263,13 +263,19 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 }
 
 func eventToDb(event denEvent, project *model.Project) int {
-	user, err := store.GetStore().CreateOrGetUser(project.ID, event.UserId)
-	if err != http.StatusCreated && err != http.StatusOK {
-		log.Errorf("Failed to GetSegmentUser status: %d", err)
-		return err
+	userID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, ID: event.UserId})
+	if errCode != http.StatusCreated && errCode != http.StatusOK {
+		log.Errorf("Failed to create user status: %d", errCode)
+		return errCode
 	}
 
-	userPropertiesId, _, errCode := store.GetStore().UpdateUserProperties(project.ID,
+	user, errCode := store.GetStore().GetUser(project.ID, userID)
+	if errCode != http.StatusFound {
+		log.Errorf("Failed to get user status: %d", errCode)
+		return errCode
+	}
+
+	userProperties, errCode := store.GetStore().UpdateUserProperties(project.ID,
 		user.ID, event.UserProperties, event.UserJoinTimestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return errCode
@@ -284,13 +290,13 @@ func eventToDb(event denEvent, project *model.Project) int {
 
 	_, errCode = store.GetStore().CreateEvent(
 		&model.Event{
-			ProjectId:        project.ID,
-			EventNameId:      eventName.ID,
-			UserId:           user.ID,
-			Timestamp:        event.EventTime,
-			Count:            event.EventCount,
-			Properties:       *event.EventProperties,
-			UserPropertiesId: userPropertiesId,
+			ProjectId:      project.ID,
+			EventNameId:    eventName.ID,
+			UserId:         user.ID,
+			Timestamp:      event.EventTime,
+			Count:          event.EventCount,
+			Properties:     *event.EventProperties,
+			UserProperties: userProperties,
 		})
 	if errCode != http.StatusFound && errCode != http.StatusCreated {
 		log.Errorf("failed to create event, errCode: %+v\n", errCode)

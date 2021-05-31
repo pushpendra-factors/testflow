@@ -65,7 +65,9 @@ func TestAPIGetUsers(t *testing.T) {
 	users := make([]model.User, 0, 0)
 	numUsers := 100
 	for i := 0; i < numUsers; i++ {
-		user, _ := store.GetStore().CreateUser(&model.User{ProjectId: projectId})
+		createdUserID, _ := store.GetStore().CreateUser(&model.User{ProjectId: projectId})
+		user, errCode := store.GetStore().GetUser(projectId, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
 		users = append(users, *user)
 	}
 

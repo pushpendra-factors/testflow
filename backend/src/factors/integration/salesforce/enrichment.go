@@ -241,7 +241,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	if document.Action == model.SalesforceDocumentCreated {
 		payload := *trackPayload
 		if customerUserID != "" {
-			user, status := store.GetStore().CreateUser(&model.User{
+			userID, status := store.GetStore().CreateUser(&model.User{
 				ProjectId:      projectID,
 				CustomerUserId: customerUserID,
 				JoinTimestamp:  createdTimestamp,
@@ -250,7 +250,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 			if status != http.StatusCreated {
 				return "", "", fmt.Errorf("create user failed for doc type %d, status code %d", document.Type, status)
 			}
-			payload.UserId = user.ID
+			payload.UserId = userID
 		}
 
 		payload.Name = model.GetSalesforceEventNameByDocumentAndAction(document, model.SalesforceDocumentCreated)

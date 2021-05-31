@@ -543,6 +543,11 @@ func createOnMemSQL(projectID uint64, tableName string, record interface{}, id i
 			return http.StatusCreated
 		}
 
+		if strings.Contains(err.Error(), "Error 1364: Field") {
+			logCtx.WithError(err).Error("Skipping record with invalid field value.")
+			return http.StatusCreated
+		}
+
 		logCtx.WithError(err).Error("Failed to create record on memsql.")
 		return http.StatusInternalServerError
 	}

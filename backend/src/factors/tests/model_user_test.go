@@ -29,8 +29,10 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	start := time.Now()
 
 	// Test successful create user.
-	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId})
+	createUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId})
 	assert.Equal(t, http.StatusCreated, errCode)
+	user, errCode := store.GetStore().GetUser(projectId, createUserID)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.True(t, len(user.ID) > 30)
 	assert.Equal(t, projectId, user.ProjectId)
 	assert.True(t, user.JoinTimestamp >= start.Unix()-60)
@@ -69,8 +71,10 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	// Test successful create user with customer_user_id and properties.
 	customerUserId := "customer_id"
 	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "india", "age": 30, "paid": true}`))}
-	user, errCode = store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: customerUserId, Properties: properties})
+	createUserID, errCode = store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: customerUserId, Properties: properties})
 	assert.Equal(t, http.StatusCreated, errCode)
+	user, errCode = store.GetStore().GetUser(projectId, createUserID)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, customerUserId, user.CustomerUserId)
 	assert.True(t, len(user.ID) > 30)
 	assert.Equal(t, projectId, user.ProjectId)
@@ -91,11 +95,11 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	// Creating again with the same customer_user_id with no properties.
 	// Should respond with last user of customer_user instead of creating.
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
-	newUser, newUserErrorCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: rCustomerUserId})
+	createUserID, newUserErrorCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId, CustomerUserId: rCustomerUserId})
 	assert.Equal(t, http.StatusCreated, newUserErrorCode)
 	lastUser, lastUserErrorCode := store.GetStore().GetUserLatestByCustomerUserId(projectId, rCustomerUserId)
 	assert.Equal(t, http.StatusFound, lastUserErrorCode)
-	assert.Equal(t, newUser.ID, lastUser.ID)
+	assert.Equal(t, createUserID, lastUser.ID)
 
 	// Test Get User on random id.
 	randomId := U.RandomLowerAphaNumString(15)
@@ -105,16 +109,15 @@ func TestDBCreateAndGetUser(t *testing.T) {
 
 	// Test external UUID as id.
 	uuid := U.GetUUID()
-	user, errCode = store.GetStore().CreateUser(&model.User{ID: uuid, ProjectId: projectId})
+	createUserID, errCode = store.GetStore().CreateUser(&model.User{ID: uuid, ProjectId: projectId})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotNil(t, user)
 	// User should be create with given id.
-	assert.Equal(t, uuid, user.ID)
+	assert.Equal(t, uuid, createUserID)
 
-	// Use an existing user_id to create. should get and return the user.
-	user, errCode = store.GetStore().CreateUser(&model.User{ID: uuid, ProjectId: projectId})
+	// Use an existing user_id to create. Should get and return the user.
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ID: uuid, ProjectId: projectId})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotNil(t, user)
+	assert.Equal(t, createUserID, createdUserID2)
 }
 
 func TestDBGetUsers(t *testing.T) {
@@ -135,8 +138,10 @@ func TestDBGetUsers(t *testing.T) {
 	var users []model.User
 	numUsers := 100
 	for i := 0; i < numUsers; i++ {
-		user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId})
+		createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: projectId})
 		assert.Equal(t, http.StatusCreated, errCode)
+		user, errCode := store.GetStore().GetUser(projectId, createdUserID)
+		assert.Equal(t, http.StatusFound, errCode)
 		assert.True(t, len(user.ID) > 30)
 		users = append(users, *user)
 	}
@@ -190,11 +195,11 @@ func TestDBGetUserLatestByCustomerUserId(t *testing.T) {
 
 	// Test latest user return for the customer_user.
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
-	latestUser, latestUserErrCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId})
+	createUserID1, latestUserErrCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId})
 	assert.Equal(t, http.StatusCreated, latestUserErrCode)
 	getUser, getUserErrCode := store.GetStore().GetUserLatestByCustomerUserId(project.ID, rCustomerUserId)
 	assert.Equal(t, http.StatusFound, getUserErrCode)
-	assert.Equal(t, latestUser.ID, getUser.ID)
+	assert.Equal(t, createUserID1, getUser.ID)
 
 	// Bad input. // Without project scope.
 	_, errCode := store.GetStore().GetUserLatestByCustomerUserId(0, rCustomerUserId)
@@ -205,14 +210,14 @@ func TestDBGetUserLatestByCustomerUserId(t *testing.T) {
 	assert.NotEqual(t, http.StatusFound, errCode)
 
 	sameCustomerId := "user_1"
-	user1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId})
-	assert.NotNil(t, user1)
-	user2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId})
-	assert.NotNil(t, user2)
-	user3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId})
-	assert.NotNil(t, user3)
+	createUserID1, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId})
+	assert.NotEmpty(t, createUserID1)
+	createUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId})
+	assert.NotEmpty(t, createUserID2)
+	createUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, CustomerUserId: sameCustomerId})
+	assert.NotEmpty(t, createUserID3)
 	luser, errCode := store.GetStore().GetUserLatestByCustomerUserId(project.ID, sameCustomerId)
-	assert.Equal(t, user3.ID, luser.ID) // Should be the latest user with same customer_user_id.
+	assert.Equal(t, createUserID3, luser.ID) // Should be the latest user with same customer_user_id.
 }
 
 func TestDBUpdateUserById(t *testing.T) {
@@ -498,22 +503,22 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	// Test successful CreateEvent.
 	props1 := json.RawMessage(`{"prop1": "value1", "prop2": 1}`)
 	props2 := json.RawMessage(`{"prop3": "value2", "prop4": 2}`)
-	user1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
-	user2, errCode2 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
+	createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
+	createdUserID2, errCode2 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
 	assert.Equal(t, http.StatusCreated, errCode1)
 	assert.Equal(t, http.StatusCreated, errCode2)
 
 	uri := "/sdk/event/track"
 
 	_ = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop1": "value1", "prop2": 1}}`, user1.ID, "e1")),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop1": "value1", "prop2": 1}}`, createdUserID1, "e1")),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
 		})
 
 	_ = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop3": "value2", "prop4": 2}}`, user2.ID, "e2")),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop3": "value2", "prop4": 2}}`, createdUserID2, "e2")),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -553,22 +558,22 @@ func TestGetRecentUserPropertyValues(t *testing.T) {
 	// Test successful CreateEvent.
 	props1 := json.RawMessage(`{"prop1": "value1", "prop2": 1}`)
 	props2 := json.RawMessage(`{"prop3": "value2", "prop4": 2}`)
-	user1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
-	user2, errCode2 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
+	createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
+	createdUserID2, errCode2 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
 	assert.Equal(t, http.StatusCreated, errCode1)
 	assert.Equal(t, http.StatusCreated, errCode2)
 
 	uri := "/sdk/event/track"
 
 	_ = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop1": "value1", "prop2": 1}}`, user1.ID, "e1")),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop1": "value1", "prop2": 1}}`, createdUserID1, "e1")),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
 		})
 
 	_ = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop3": "value2", "prop4": 2}}`, user2.ID, "e2")),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop3": "value2", "prop4": 2}}`, createdUserID2, "e2")),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -592,14 +597,14 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 	assert.Nil(t, err)
 
 	t.Run("UserWithoutProperties", func(t *testing.T) {
-		user, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
 			U.UP_EMAIL: "xxx@example.com",
 			U.UP_PHONE: "99999999999",
 		}
 		customerUserId, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
-			user.ID, &formSubmitProperties)
+			createdUserID1, &formSubmitProperties)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "xxx@example.com", customerUserId)
 		assert.Equal(t, "xxx@example.com", (*formSubmitUserProperties)[U.UP_EMAIL])
@@ -607,7 +612,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 	})
 
 	t.Run("FormSubmitWithEmailAndUserPropertiesWithSameEmail", func(t *testing.T) {
-		user, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
 			Properties: postgres.Jsonb{json.RawMessage(`{"$email": "xxx@example.com"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
@@ -616,7 +621,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 			U.UP_COMPANY: "Example Inc",
 		}
 		customerUserId, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
-			user.ID, &formSubmitProperties)
+			createdUserID1, &formSubmitProperties)
 		assert.Equal(t, http.StatusOK, errCode)
 		// Should add phone and other properties from
 		// form submit as email matches.
@@ -627,7 +632,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 	})
 
 	t.Run("FormSubmitWithEmailAndUserPropertiesWithDifferentEmail", func(t *testing.T) {
-		user, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
 			Properties: postgres.Jsonb{json.RawMessage(`{"$email": "yyy@example.com"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
@@ -636,7 +641,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 			U.UP_COMPANY: "Example Inc",
 		}
 		customerUserId, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
-			user.ID, &formSubmitProperties)
+			createdUserID1, &formSubmitProperties)
 		// free email overwrite will be avoided
 		assert.Equal(t, http.StatusBadRequest, errCode)
 		assert.Equal(t, "", customerUserId)
@@ -644,7 +649,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 	})
 
 	t.Run("FormSubmitWithPhoneAndUserPropertiesWithSamePhone", func(t *testing.T) {
-		user, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
 			Properties: postgres.Jsonb{json.RawMessage(`{"$phone": "99999999999"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
@@ -653,7 +658,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 			U.UP_COMPANY: "Example Inc",
 		}
 		customerUserId, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
-			user.ID, &formSubmitProperties)
+			createdUserID1, &formSubmitProperties)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "xxx@example.com", customerUserId)
 		// Should add all other properties from form submit as phone matches.
@@ -663,7 +668,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 	})
 
 	t.Run("FormSubmitWithPhoneAndUserPropertiesWithDifferentPhone", func(t *testing.T) {
-		user, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
 			Properties: postgres.Jsonb{json.RawMessage(`{"$phone": "99999999999"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
@@ -672,7 +677,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 			U.UP_COMPANY: "Example Inc",
 		}
 		customerUserId, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
-			user.ID, &formSubmitProperties)
+			createdUserID1, &formSubmitProperties)
 		assert.Equal(t, http.StatusOK, errCode)
 		assert.Equal(t, "xxx@example.com", customerUserId)
 		// Should add all other properties from form submit as phone matches.
@@ -680,7 +685,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 	})
 
 	t.Run("FormSubmitWithCaseSensitiveEmailAndLeadingZeroPhoneNo", func(t *testing.T) {
-		user, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
+		createdUserID1, errCode1 := store.GetStore().CreateUser(&model.User{ProjectId: project.ID})
 		assert.Equal(t, http.StatusCreated, errCode1)
 		formSubmitProperties := U.PropertiesMap{
 			U.UP_EMAIL:   "Xyz@Example.com",
@@ -689,7 +694,7 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 		}
 
 		customerUserId, formSubmitUserProperties, errCode := store.GetStore().GetCustomerUserIDAndUserPropertiesFromFormSubmit(project.ID,
-			user.ID, &formSubmitProperties)
+			createdUserID1, &formSubmitProperties)
 		assert.Equal(t, http.StatusOK, errCode)
 
 		// email translated to lower case
@@ -718,19 +723,18 @@ func TestGetUserPropertiesAsMap(t *testing.T) {
 }
 
 func TestUserIdentityPropertiesOnCreateUser(t *testing.T) {
-	project, user, err := SetupProjectUserReturnDAO()
+	project, _, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
-	assert.NotNil(t, user)
 
 	cuid := "abcd@xyz.com"
-	user, status := store.GetStore().CreateUser(&model.User{
+	createdUserID1, status := store.GetStore().CreateUser(&model.User{
 		ProjectId:      project.ID,
 		CustomerUserId: cuid,
 		Properties:     postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"city":"city1"}`))},
 	})
 	assert.Equal(t, http.StatusCreated, status)
-	properties, status := store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
+	properties, status := store.GetStore().GetLatestUserPropertiesOfUserAsMap(project.ID, createdUserID1)
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, cuid, (*properties)[U.UP_EMAIL])
 	assert.Equal(t, cuid, (*properties)[U.UP_USER_ID])
@@ -914,18 +918,20 @@ func TestUsersUniquenessConstraints(t *testing.T) {
 
 	segAid := "seg_anon_id_1"
 	ampUserID := "amp_user_id_1"
-	user, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, SegmentAnonymousId: segAid, AMPUserId: ampUserID})
+	createdUserID1, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, SegmentAnonymousId: segAid, AMPUserId: ampUserID})
 	assert.Equal(t, http.StatusCreated, errCode)
+	user, errCode := store.GetStore().GetUser(project.ID, createdUserID1)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, user)
 	assert.Equal(t, segAid, user.SegmentAnonymousId)
 
 	// Creating again with same project_id, seg_anon_id should fail.
-	user, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, SegmentAnonymousId: segAid})
+	createdUserID1, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, SegmentAnonymousId: segAid})
 	assert.Equal(t, http.StatusNotFound, errCode)
-	assert.Nil(t, user)
+	assert.Empty(t, createdUserID1)
 
 	// Creating again with same project_id, amp_user_id should fail.
-	user, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, AMPUserId: ampUserID})
+	createdUserID1, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, AMPUserId: ampUserID})
 	assert.Equal(t, http.StatusNotFound, errCode)
-	assert.Nil(t, user)
+	assert.Empty(t, createdUserID1)
 }

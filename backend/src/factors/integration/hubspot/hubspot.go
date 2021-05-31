@@ -581,7 +581,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 	var eventID, userID string
 	if document.Action == model.HubspotDocumentActionCreated {
 
-		user, status := store.GetStore().CreateUser(&model.User{
+		createdUserID, status := store.GetStore().CreateUser(&model.User{
 			ProjectId:      projectID,
 			JoinTimestamp:  getEventTimestamp(document.Timestamp),
 			CustomerUserId: customerUserID})
@@ -591,7 +591,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 		}
 
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_CREATED
-		trackPayload.UserId = user.ID
+		trackPayload.UserId = createdUserID
 
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -599,7 +599,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 			return http.StatusInternalServerError
 		}
 
-		userID = user.ID
+		userID = createdUserID
 		eventID = response.EventId
 	} else if document.Action == model.HubspotDocumentActionUpdated {
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED
