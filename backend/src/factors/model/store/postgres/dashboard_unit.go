@@ -498,6 +498,9 @@ func (pg *Postgres) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitGr
 
 // CacheDashboardUnitForDateRange To cache a dashboard unit for the given range.
 func (pg *Postgres) CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string) {
+	// Catches any panic in query execution and logs as an error. Prevents jobs from crashing.
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+
 	dashboardUnit := cachePayload.DashboardUnit
 	baseQuery := cachePayload.BaseQuery
 	projectID := dashboardUnit.ProjectID

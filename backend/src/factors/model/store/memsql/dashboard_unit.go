@@ -513,6 +513,9 @@ func (store *MemSQL) CacheDashboardUnit(dashboardUnit model.DashboardUnit, waitG
 
 // CacheDashboardUnitForDateRange To cache a dashboard unit for the given range.
 func (store *MemSQL) CacheDashboardUnitForDateRange(cachePayload model.DashboardUnitCachePayload) (int, string) {
+	// Catches any panic in query execution and logs as an error. Prevents jobs from crashing.
+	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
+
 	dashboardUnit := cachePayload.DashboardUnit
 	baseQuery := cachePayload.BaseQuery
 	projectID := dashboardUnit.ProjectID
