@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-highmem-16
+    nodePool: persistent-pool-highmem
   name: yourstory-add-properties-job
 spec:
   schedule: "0 * * * *" # every 1 hour
@@ -15,10 +15,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-highmem-16
+            nodePool: persistent-pool-highmem
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem-16
+            cloud.google.com/gke-nodepool: persistent-pool-highmem
           containers:
           - name: yourstory-add-properties-job
             image: us.gcr.io/factors-production/yourstory-add-properties-job:v0.02-e8c91a1

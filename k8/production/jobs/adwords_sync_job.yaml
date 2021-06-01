@@ -2,7 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   labels:
-    nodePool: persistent-pool-highmem-16
+    nodePool: persistent-pool-highmem
   name: adwords-sync-job
 spec:
   schedule: "0 00 * * *" # In UTC
@@ -16,10 +16,10 @@ spec:
         metadata:
           labels:
             layer: jobs
-            nodePool: persistent-pool-highmem-16
+            nodePool: persistent-pool-highmem
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-highmem-16
+            cloud.google.com/gke-nodepool: persistent-pool-highmem
           containers:
           - name: adwords-sync
             image: us.gcr.io/factors-staging/adwords-etl:v0.49-4bcdb5e2-644
