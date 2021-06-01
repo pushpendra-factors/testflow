@@ -3,7 +3,8 @@ package main
 import (
 	C "factors/config"
 	"factors/integration"
-	"factors/model/store/postgres"
+	"factors/model/store"
+	mqlStore "factors/model/store/memsql"
 	"factors/sdk"
 	"factors/util"
 	"flag"
@@ -14,16 +15,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-type SlowQueries struct {
-	Runtime                  float64 `json:"runtime"`
-	Query                    string  `json:"query"`
-	Pid                      int64   `json:"pid"`
-	Usename                  string  `json:"usename"`
-	ApplicationName          string  `json:"application_name"`
-	VacuumProgressPercentage float64 `json:"vacuum_progress_percentage,omitempty"`
-	VacuumPhase              string  `json:"vacuum_phase,omitempty"`
-}
 
 func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
@@ -38,6 +29,7 @@ func main() {
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
@@ -51,14 +43,16 @@ func main() {
 	integrationQueueThreshold := flag.Int("integration_queue_threshold", 1000, "Threshold to report integration queue size")
 	delayedTaskThreshold := flag.Int("delayed_task_threshold", 1000, "Threshold to report delayed task size")
 
-	killSlowQueries := flag.Bool("kill_slow_queries", false, "Kill slow queries. TO BE USED WITH CAUTION")
-
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
 	flag.Parse()
 	defaultAppName := "monitoring_job"
 	defaultHealthcheckPingID := C.HealthcheckMonitoringJobPingID
+	if *primaryDatastore == C.DatastoreTypeMemSQL {
+		defaultHealthcheckPingID = C.HealthcheckMonitoringJobMemSQLPingID
+	}
+
 	healthcheckPingID := C.GetHealthcheckPingID(defaultHealthcheckPingID, *overrideHealthcheckPingID)
 	appName := C.GetAppName(defaultAppName, *overrideAppName)
 
@@ -83,7 +77,10 @@ func main() {
 			User:     *memSQLUser,
 			Name:     *memSQLName,
 			Password: *memSQLPass,
-			AppName:  appName,
+			// Todo: Remove UseSSL after enabling it by environment on all workloads.
+			UseSSL:      *env == C.STAGING || *env == C.PRODUCTION,
+			Certiifcate: *memSQLCertificate,
+			AppName:     appName,
 		},
 		PrimaryDatastore: *primaryDatastore,
 		QueueRedisHost:   *queueRedisHost,
@@ -105,55 +102,69 @@ func main() {
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
-	sqlAdminSlowQueries, factorsSlowQueries, err := postgres.GetStore().RunMonitoringQuery()
+	sqlAdminSlowQueries, factorsSlowQueries, err := store.GetStore().MonitorSlowQueries()
 	if err != nil {
 		log.WithError(err).Panic("Failed to run monitoring query.")
 	}
-
-	if *killSlowQueries && len(factorsSlowQueries) > 0 {
-		var killQuery string
-		for _, slowQuery := range factorsSlowQueries {
-			killQuery = killQuery + fmt.Sprintf("SELECT pg_cancel_backend(%d);", slowQuery.Pid)
-		}
-		_, err = db.Raw(killQuery).Rows()
-		if err != nil {
-			log.WithError(err).Panic("Failed to kill slow queries")
-		}
-		util.NotifyThroughSNS(appName, *env, fmt.Sprintf("Killed %d slow queries. %v", len(factorsSlowQueries), factorsSlowQueries))
-		return
-	}
-
 	if len(factorsSlowQueries) > *slowQueriesThreshold {
-		C.PingHealthcheckForFailure(C.HealthcheckDatabaseHealthPingID,
+		dbHealthcheckPingID := C.HealthcheckDatabaseHealthPingID
+		if C.UseMemSQLDatabaseStore() {
+			dbHealthcheckPingID = C.HealthcheckDatabaseHealthMemSQLPingID
+		}
+		C.PingHealthcheckForFailure(dbHealthcheckPingID,
 			fmt.Sprintf("Slow query count %d exceeds threshold of %d", len(factorsSlowQueries), *slowQueriesThreshold))
 	}
+
+	if C.UseMemSQLDatabaseStore() {
+		mqlStore.GetStore().MonitorMemSQLDiskUsage()
+	}
+
+	delayedTaskCount, sdkQueueLength, integrationQueueLength := MonitorSDKHealth(
+		*delayedTaskThreshold, *sdkQueueThreshold, *integrationQueueThreshold)
+
+	tableSizes := store.GetStore().CollectTableSizes()
+
+	monitoringPayload := map[string]interface{}{
+		"factorsSlowQueries":       factorsSlowQueries[:util.MinInt(5, len(factorsSlowQueries))],
+		"sqlAdminSlowQueries":      sqlAdminSlowQueries[:util.MinInt(5, len(sqlAdminSlowQueries))],
+		"factorsSlowQueriesCount":  len(factorsSlowQueries),
+		"sqlAdminSlowQueriesCount": len(sqlAdminSlowQueries),
+		"delayedTaskCount":         delayedTaskCount,
+		"sdkQueueLength":           sdkQueueLength,
+		"integrationQueueLength":   integrationQueueLength,
+		"tableSizes":               tableSizes,
+	}
+	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
+}
+
+func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueThreshold int) (int, int, int) {
 
 	queueClient := C.GetServices().QueueClient
 	delayedTaskCount, err := queueClient.GetBroker().GetDelayedTasksCount()
 	if err != nil {
 		log.WithError(err).Panic("Failed to get delayed task count from redis")
 	}
-	if delayedTaskCount > *delayedTaskThreshold {
+	if delayedTaskCount > delayedTaskThreshold {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-			fmt.Sprintf("Delayed task count %d exceeds threshold of %d", delayedTaskCount, *delayedTaskThreshold))
+			fmt.Sprintf("Delayed task count %d exceeds threshold of %d", delayedTaskCount, delayedTaskThreshold))
 	}
 
 	sdkQueueLength, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueue)
 	if err != nil {
 		log.WithError(err).Panic("Failed to get sdk_request_queue length")
 	}
-	if sdkQueueLength > *sdkQueueThreshold {
+	if sdkQueueLength > sdkQueueThreshold {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-			fmt.Sprintf("SDK queue length %d exceeds threshold of %d", sdkQueueLength, *sdkQueueThreshold))
+			fmt.Sprintf("SDK queue length %d exceeds threshold of %d", sdkQueueLength, sdkQueueThreshold))
 	}
 
 	integrationQueueLength, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueue)
 	if err != nil {
 		log.WithError(err).Panic("Failed to get integration_request_queue length")
 	}
-	if integrationQueueLength > *integrationQueueThreshold {
+	if integrationQueueLength > integrationQueueThreshold {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
-			fmt.Sprintf("Integration queue length %d exceeds threshold of %d", integrationQueueLength, *integrationQueueThreshold))
+			fmt.Sprintf("Integration queue length %d exceeds threshold of %d", integrationQueueLength, integrationQueueThreshold))
 	}
 
 	res, err := http.Get(C.SDKAssetsURL)
@@ -169,17 +180,5 @@ func main() {
 			fmt.Sprintf("Size '%d' of SDK file lesser than expected 20k chars. Content: '%s'", len(sdkBody), string(sdkBody)))
 	}
 
-	tableSizes := postgres.GetStore().CollectTableSizes()
-
-	monitoringPayload := map[string]interface{}{
-		"factorsSlowQueries":       factorsSlowQueries[:util.MinInt(5, len(factorsSlowQueries))],
-		"sqlAdminSlowQueries":      sqlAdminSlowQueries[:util.MinInt(5, len(sqlAdminSlowQueries))],
-		"factorsSlowQueriesCount":  len(factorsSlowQueries),
-		"sqlAdminSlowQueriesCount": len(sqlAdminSlowQueries),
-		"delayedTaskCount":         delayedTaskCount,
-		"sdkQueueLength":           sdkQueueLength,
-		"integrationQueueLength":   integrationQueueLength,
-		"tableSizes":               tableSizes,
-	}
-	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
+	return delayedTaskCount, sdkQueueLength, integrationQueueLength
 }

@@ -205,11 +205,13 @@ const (
 	HealthCheckSmartPropertiesPingID         = "ead84671-b84c-481b-bfa5-59403d626652"
 	HealthcheckBeamDashboardCachingPingID    = "ecb259b9-4ff8-4825-b989-81d47bd34d93"
 	HealthcheckBeamDashboardCachingNowPingID = "be2f00de-57e1-401b-b2c9-9df305c3f528"
+	HealthcheckMonitoringJobMemSQLPingID     = "de2b64d4-952e-47ca-ac70-1bf9d8e1587e"
 
 	// Other services ping IDs. Only reported when alert conditions are met, not periodically.
 	// Once an alert is triggered, ping manually from Healthchecks UI after fixing.
-	HealthcheckDatabaseHealthPingID = "8464d06b-418b-42d2-9201-b01dc744d283"
-	HealthcheckSDKHealthPingID      = "bb2c4757-9fa4-48eb-bd08-42a16996a61b"
+	HealthcheckDatabaseHealthPingID       = "8464d06b-418b-42d2-9201-b01dc744d283"
+	HealthcheckDatabaseHealthMemSQLPingID = "763baa99-61bf-4721-b293-e62eb1027987"
+	HealthcheckSDKHealthPingID            = "bb2c4757-9fa4-48eb-bd08-42a16996a61b"
 )
 
 func (service *Services) GetPatternServerAddresses() []string {

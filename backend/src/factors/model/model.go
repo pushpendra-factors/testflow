@@ -450,4 +450,8 @@ type Model interface {
 	GetAllGoogleOrganicLastSyncInfoForAllProjects() ([]model.GoogleOrganicLastSyncInfo, int)
 	CreateGoogleOrganicDocument(gscDoc *model.GoogleOrganicDocument) int
 	CreateMultipleGoogleOrganicDocument(gscDocuments []model.GoogleOrganicDocument) int
+
+	// monitoring
+	MonitorSlowQueries() ([]interface{}, []interface{}, error)
+	CollectTableSizes() map[string]string
 }

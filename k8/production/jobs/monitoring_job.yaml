@@ -36,6 +36,18 @@ spec:
             - $(POSTGRES_USER)
             - --db_pass
             - $(POSTGRES_PASSWORD)
+            - --memsql_host
+            - $(MEMSQL_HOST)
+            - --memsql_port
+            - $(MEMSQL_PORT)
+            - --memsql_name
+            - $(MEMSQL_DB)
+            - --memsql_user
+            - $(MEMSQL_ADMIN_USER)
+            - --memsql_pass
+            - $(MEMSQL_ADMIN_PASSWORD)
+            - --memsql_cert
+            - $(MEMSQL_CERTIFICATE)
             - --queue_redis_host
             - $(QUEUE_REDIS_HOST)
             - --queue_redis_port
@@ -50,7 +62,11 @@ spec:
             - configMapRef:
                 name: config-postgres
             - configMapRef:
+                name: config-memsql
+            - configMapRef:
                 name: config-queue-redis
             - secretRef:
                 name: secret-postgres
+            - secretRef:
+                name: secret-memsql
           restartPolicy: OnFailure

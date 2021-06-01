@@ -4,6 +4,7 @@ import (
 	C "factors/config"
 	"factors/metrics"
 	"factors/util"
+	U "factors/util"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 
 type SlowQueries struct {
 	Runtime                  float64 `json:"runtime"`
+	RuntimeString            string  `json:"runtime_string"`
 	Query                    string  `json:"query"`
 	Pid                      int64   `json:"pid"`
 	Usename                  string  `json:"usename"`
@@ -20,9 +22,9 @@ type SlowQueries struct {
 	VacuumPhase              string  `json:"vacuum_phase,omitempty"`
 }
 
-func (pg *Postgres) RunMonitoringQuery() ([]SlowQueries, []SlowQueries, error) {
-	sqlAdminSlowQueries := make([]SlowQueries, 0, 0)
-	factorsSlowQueries := make([]SlowQueries, 0, 0)
+func (pg *Postgres) MonitorSlowQueries() ([]interface{}, []interface{}, error) {
+	sqlAdminSlowQueries := make([]interface{}, 0, 0)
+	factorsSlowQueries := make([]interface{}, 0, 0)
 
 	queryStr := "SELECT EXTRACT(epoch from (now() - query_start)) as runtime,query, pg_stat_activity.pid, usename, application_name," + " " +
 		"CASE WHEN heap_blks_vacuumed > 0 THEN (heap_blks_vacuumed::FLOAT/heap_blks_total::FLOAT) * 100 ELSE 0 END vacuum_progress_percentage, phase as vacuum_phase" + " " +
@@ -42,6 +44,7 @@ func (pg *Postgres) RunMonitoringQuery() ([]SlowQueries, []SlowQueries, error) {
 			log.WithError(err).Error("Failed to scan slow queries from db.")
 			return sqlAdminSlowQueries, factorsSlowQueries, err
 		}
+		slowQuery.RuntimeString = U.SecondsToHMSString(int64(slowQuery.Runtime))
 		if slowQuery.Query != "" {
 			if slowQuery.Usename == "cloudsqladmin" {
 				sqlAdminSlowQueries = append(sqlAdminSlowQueries, slowQuery)
