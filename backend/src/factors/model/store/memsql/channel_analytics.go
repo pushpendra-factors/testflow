@@ -44,7 +44,7 @@ const (
 	CAColumnValueAll                       = "all"
 	CAChannelGroupKey                      = "group_key"
 	innerJoinClause                        = " INNER JOIN "
-	channeAnalyticsLimit                   = " LIMIT 2500 "
+	channeAnalyticsLimit                   = " LIMIT 10000 "
 	source                                 = "source"
 	CAColumnLikes                          = "likes"
 	CAColumnFollows                        = "follows"
