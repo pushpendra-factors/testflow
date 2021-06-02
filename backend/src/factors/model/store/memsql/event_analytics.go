@@ -547,6 +547,9 @@ func getAllTimestampsBetweenByType(from, to int64, typ, timezone string) []time.
 	if typ == model.GroupByTimestampMonth {
 		return U.GetAllMonthsAsTimestamp(from, to, timezone)
 	}
+	if typ == model.GroupByTimestampQuarter {
+		return U.GetAllQuartersAsTimestamp(from, to, timezone)
+	}
 	return []time.Time{}
 }
 

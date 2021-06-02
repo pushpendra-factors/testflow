@@ -85,6 +85,7 @@ func (pg *Postgres) RunInsightsQuery(projectId uint64, query model.Query) (*mode
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
+
 	result, err := pg.ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
@@ -545,6 +546,10 @@ func getAllTimestampsBetweenByType(from, to int64, typ, timezone string) []time.
 
 	if typ == model.GroupByTimestampMonth {
 		return U.GetAllMonthsAsTimestamp(from, to, timezone)
+	}
+
+	if typ == model.GroupByTimestampQuarter {
+		return U.GetAllQuartersAsTimestamp(from, to, timezone)
 	}
 	return []time.Time{}
 }
