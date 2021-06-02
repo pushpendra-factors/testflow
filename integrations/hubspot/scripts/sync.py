@@ -207,11 +207,12 @@ def sync_contacts(project_id, api_key, sync_all=False):
         if sync_all:
             parameter_dict['vidOffset'] = response_dict['vid-offset']
         else:
-            if parameter_dict.get('timeOffset') == response_dict.get('time-offset'):
-                log.warning("same offset on consective pages on recent contacts sync %s, %s and has more is %s", 
+            if parameter_dict.get('vidOffset') == response_dict.get('vid-offset'):
+                log.warning("same offset on consective pages on recent contacts sync %s, %s,  and has more is %s", 
                     parameter_dict.get('timeOffset'), response_dict.get('time-offset'), response_dict.get('has-more'))
                 raise Exception("Same offset for consecutive pages on sync_contacts")
             parameter_dict['timeOffset'] = response_dict['time-offset']
+            parameter_dict['vidOffset'] = response_dict['vid-offset']
 
         create_all_documents(project_id, 'contact', docs)
         count = count + len(docs)
