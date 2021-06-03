@@ -45,6 +45,7 @@ func TestMain(m *testing.M) {
 	flag.Parse()
 
 	config = &C.Configuration{
+		AppName:       "development_test",
 		Env:           *env,
 		Port:          *port,
 		EtcdEndpoints: strings.Split(*etcd, ","),
