@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	lastSyncInfoQueryForAllProjectsGoogleOrganic = "SELECT project_id, url_prefix, max(timestamp) as last_timestamp" +
-		" " + "FROM google_organic_documents GROUP BY project_id, url_prefix"
-	lastSyncInfoForAProjectGoogleOrganic = "SELECT project_id, url_prefix, max(timestamp) as last_timestamp" +
-		" " + "FROM google_organic_documents WHERE project_id = ? GROUP BY project_id, url_prefix"
+	lastSyncInfoQueryForAllProjectsGoogleOrganic = "SELECT project_id, url_prefix, max(timestamp) as last_timestamp, type" +
+		" " + "FROM google_organic_documents GROUP BY project_id, url_prefix, type"
+	lastSyncInfoForAProjectGoogleOrganic = "SELECT project_id, url_prefix, max(timestamp) as last_timestamp, type" +
+		" " + "FROM google_organic_documents WHERE project_id = ? GROUP BY project_id, url_prefix, type"
 	insertGoogleOrganicDocumentsStr = "INSERT INTO google_organic_documents (id,project_id,url_prefix,timestamp,value,created_at,updated_at) VALUES "
 	googleOrganicFilterQueryStr     = "SELECT DISTINCT JSON_EXTRACT_STRING(value, ?) as filter_value FROM google_organic_documents WHERE project_id = ? AND" +
 		" " + "JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
@@ -166,7 +166,7 @@ func sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos []model.Goog
 	}
 
 	// add settings for project_id existing on googleOrganic documents.
-	existingProjectAndURLWithTypes := make(map[uint64]map[string]bool)
+	existingProjectAndURLWithTypes := make(map[uint64]map[string]map[int64]bool)
 	selectedLastSyncInfos := make([]model.GoogleOrganicLastSyncInfo, 0)
 
 	for i := range googleOrganicLastSyncInfos {
@@ -190,10 +190,11 @@ func sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos []model.Goog
 
 		if _, projectWithURLExists := existingProjectAndURLWithTypes[googleOrganicLastSyncInfos[i].ProjectId][googleOrganicLastSyncInfos[i].URLPrefix]; !projectWithURLExists {
 			if _, projectExists := existingProjectAndURLWithTypes[googleOrganicLastSyncInfos[i].ProjectId]; !projectExists {
-				existingProjectAndURLWithTypes[googleOrganicLastSyncInfos[i].ProjectId] = make(map[string]bool)
+				existingProjectAndURLWithTypes[googleOrganicLastSyncInfos[i].ProjectId] = make(map[string]map[int64]bool)
 			}
-			existingProjectAndURLWithTypes[googleOrganicLastSyncInfos[i].ProjectId][googleOrganicLastSyncInfos[i].URLPrefix] = true
+			existingProjectAndURLWithTypes[googleOrganicLastSyncInfos[i].ProjectId][googleOrganicLastSyncInfos[i].URLPrefix] = make(map[int64]bool)
 		}
+		existingProjectAndURLWithTypes[googleOrganicLastSyncInfos[i].ProjectId][googleOrganicLastSyncInfos[i].URLPrefix][googleOrganicLastSyncInfos[i].Type] = true
 	}
 
 	// add all types for missing projects and
@@ -201,15 +202,18 @@ func sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos []model.Goog
 	for i := range googleOrganicSettings {
 		URLs := strings.Split(googleOrganicSettings[i].URLPrefix, ",")
 		for _, URL := range URLs {
-			_, urlExists := existingProjectAndURLWithTypes[googleOrganicSettings[i].ProjectID][URL]
-			if !urlExists {
-				syncInfo := model.GoogleOrganicLastSyncInfo{
-					ProjectId:     googleOrganicSettings[i].ProjectID,
-					RefreshToken:  googleOrganicSettings[i].RefreshToken,
-					URLPrefix:     URL,
-					LastTimestamp: 0, // no sync yet.
+			existingTypeForURL, urlExists := existingProjectAndURLWithTypes[googleOrganicSettings[i].ProjectID][URL]
+			for _, docType := range model.GoogleOrganicTypes {
+				if !urlExists || (urlExists && !existingTypeForURL[docType]) {
+					syncInfo := model.GoogleOrganicLastSyncInfo{
+						ProjectId:     googleOrganicSettings[i].ProjectID,
+						RefreshToken:  googleOrganicSettings[i].RefreshToken,
+						URLPrefix:     URL,
+						LastTimestamp: 0, // no sync yet.
+						Type:          docType,
+					}
+					selectedLastSyncInfos = append(selectedLastSyncInfos, syncInfo)
 				}
-				selectedLastSyncInfos = append(selectedLastSyncInfos, syncInfo)
 			}
 		}
 
@@ -378,6 +382,20 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForGoogleOrgani
 	return &query, *url_prefix, nil
 }
 
+func checkIfOnlyPageExistsInFiltersAndGroupBys(filters []model.ChannelFilterV1, groupBys []model.ChannelGroupBy) bool {
+	for _, filter := range filters {
+		if filter.Property != "page" {
+			return false
+		}
+	}
+	for _, groupBy := range groupBys {
+		if groupBy.Property != "page" {
+			return false
+		}
+	}
+	return true
+}
+
 func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, urlPrefixes string) (string, []interface{}, []string, []string) {
 	customerUrlPrefixes := strings.Split(urlPrefixes, ",")
 	selectQuery := "SELECT "
@@ -390,6 +408,7 @@ func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, ur
 	responseSelectKeys := make([]string, 0, 0)
 	responseSelectMetrics := make([]string, 0, 0)
 
+	isPageLevelDataReq := checkIfOnlyPageExistsInFiltersAndGroupBys(query.Filters, query.GroupBy)
 	// Group By
 	for _, groupBy := range query.GroupBy {
 		groupByKeysWithoutTimestamp = append(groupByKeysWithoutTimestamp, groupBy.Object+"_"+groupBy.Property)
@@ -424,6 +443,11 @@ func buildGoogleOrganicQueryV1(query *model.ChannelQueryV1, projectID uint64, ur
 	selectQuery += joinWithComma(append(finalSelectKeys, selectMetrics...)...)
 	orderByQuery := "ORDER BY " + getOrderByClause(isGroupByTimestamp, responseSelectMetrics)
 	whereConditionForFilters := getGoogleOrganicFiltersWhereStatement(query.Filters)
+	if isPageLevelDataReq {
+		whereConditionForFilters += " AND type = 2 "
+	} else {
+		whereConditionForFilters += " AND type = 1 "
+	}
 
 	resultSQLStatement := selectQuery + fromGoogleOrganicDocuments + staticWhereStatementForGoogleOrganic + whereConditionForFilters
 	if len(groupByStatement) != 0 {
