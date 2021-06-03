@@ -136,10 +136,12 @@ class GetCustomerAccountsV1Handler(BaseHandler):
             traceback.print_tb(e.__traceback__)
             log.warning("Errored during customer fetch from adwords" + str(e))
             self.finish({"message":"Error happened during fetch of customers from adwords."})
+            return
 
         if len(customer_accounts) == 0:
             self.set_status(404)
             self.finish({"message": "no customer accounts found for user on adwords"})
+            return
 
         for account in customer_accounts:
             resp_account = {}

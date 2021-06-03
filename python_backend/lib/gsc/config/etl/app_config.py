@@ -10,6 +10,7 @@ class AppConfig(Config):
     skip_today = None
     project_ids = None
     exclude_project_ids = None
+    document_type = None
     google_project_name = None
     data_service_host = None
 
@@ -22,13 +23,14 @@ class AppConfig(Config):
 
     @classmethod
     def _init(cls, env, skip_today, 
-              project_ids, exclude_project_ids, data_service_host,
+              project_ids, exclude_project_ids, document_type, data_service_host,
               type_of_run, dry, last_timestamp, to_timestamp):
         cls.env = env
         cls.skip_today = (skip_today == "True")
         cls.project_ids = project_ids
         cls.exclude_project_ids = exclude_project_ids
         cls.data_service_host = data_service_host
+        cls.document_type = document_type
 
         cls.type_of_run = type_of_run
         cls.dry = (dry == "True")
@@ -49,7 +51,7 @@ class AppConfig(Config):
             exclude_project_ids = set([int(x) for x in argv.exclude_project_id.split(",")])
 
         cls._init(argv.env, argv.skip_today,
-                  project_ids, exclude_project_ids, argv.data_service_host,
+                  project_ids, exclude_project_ids, argv.document_type, argv.data_service_host,
                   argv.type_of_run, argv.dry, argv.last_timestamp, argv.to_timestamp)
 
     @classmethod

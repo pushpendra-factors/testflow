@@ -40,7 +40,6 @@ class SyncUtil:
     @staticmethod
     def get_gsc_next_sync_infos(last_sync, input_last_timestamp, input_to_timestamp):
         sync_last_timestamp = last_sync.get("last_timestamp")
-        sync_doc_type = last_sync.get("url_prefix")
         first_run = (sync_last_timestamp == 0)
         next_timestamps = []
         if first_run or (input_last_timestamp is None and input_to_timestamp is None):

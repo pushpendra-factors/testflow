@@ -131,12 +131,14 @@ class GetGSCURLsV1Handler(BaseHandler):
         if 'siteEntry' not in site_list:
             self.set_status(404)
             self.finish({"message": "Error fetching url prefixes for user"})
+            return
 
         verified_sites_urls = [s['siteUrl'] for s in site_list['siteEntry']
                        if s['permissionLevel'] != 'siteUnverifiedUser']
         if len(verified_sites_urls) == 0:
             self.set_status(404)
             self.finish({"message": "no verified urls found for search console user"})
+            return
 
         self.set_status(200)
         self.finish({"urls": verified_sites_urls})

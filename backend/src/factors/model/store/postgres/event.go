@@ -1425,8 +1425,7 @@ func (pg *Postgres) PullEventRowsForBuildSequenceJob(projectID uint64, startTime
 		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT %d",
 		projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
 
-	db := C.GetServices().Db
-	return db.Raw(rawQuery).Rows()
+	return pg.ExecQueryWithContext(rawQuery, []interface{}{})
 }
 
 // PullEventRowsForArchivalJob - Function to pull events for archival.
@@ -1438,8 +1437,7 @@ func (pg *Postgres) PullEventRowsForArchivalJob(projectID uint64, startTime, end
 		"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
 		"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, projectID, startTime, endTime)
 
-	db := C.GetServices().Db
-	return db.Raw(rawQuery).Rows()
+	return pg.ExecQueryWithContext(rawQuery, []interface{}{})
 }
 
 func (pg *Postgres) GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int) {

@@ -175,10 +175,10 @@ class FactorsDataService:
         return response
 
     @classmethod
-    def add_gsc_document(cls, project_id, url_prefix, doc, timestamp):
+    def add_gsc_document(cls, project_id, url_prefix, doc_type, doc, timestamp):
         url = cls.data_service_path + "/google_organic/documents/add"
 
-        payload = cls.get_payload_for_gsc(project_id, url_prefix, doc, timestamp)
+        payload = cls.get_payload_for_gsc(project_id, url_prefix, doc_type, doc, timestamp)
 
         response = requests.post(url, json=payload)
         if not response.ok:
@@ -188,9 +188,9 @@ class FactorsDataService:
         return response
 
     @classmethod
-    def add_multiple_gsc_document(cls, project_id, url_prefix, docs, timestamp):
+    def add_multiple_gsc_document(cls, project_id, url_prefix, doc_type, docs, timestamp):
         url = cls.data_service_path + "/google_organic/documents/add_multiple"
-        batch_of_payloads = [cls.get_payload_for_gsc(project_id, url_prefix,
+        batch_of_payloads = [cls.get_payload_for_gsc(project_id, url_prefix, doc_type,
                                     doc, timestamp) for doc in docs]
 
         response = requests.post(url, json=batch_of_payloads)
@@ -200,10 +200,11 @@ class FactorsDataService:
         return response
 
     @staticmethod
-    def get_payload_for_gsc(project_id, url, doc, timestamp):
+    def get_payload_for_gsc(project_id, url, doc_type, doc, timestamp):
         return {
             "project_id": project_id,
             "url_prefix": url,
+            "type": doc_type,
             "value": doc,
             "timestamp": timestamp,
             "id": doc["id"]

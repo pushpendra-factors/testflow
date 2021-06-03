@@ -20,6 +20,7 @@ from .. import EXTRACT, REQUEST_COUNT, LATENCY_COUNT, LOAD, RECORDS_COUNT
 
 
 class ReportsFetch(BaseJob):
+    DIMENSIONS = []
 
     def __init__(self, next_info):
         next_info["extract_load_timestamps"] = [next_info.get("next_timestamp")]
@@ -43,7 +44,7 @@ class ReportsFetch(BaseJob):
         request = {
             'startDate': str_timestamp,
             'endDate': str_timestamp,
-            'dimensions': ["query", "page", "country", "device"],
+            'dimensions': self.DIMENSIONS,
             'rowLimit': 1000,
             'startRow': row_start
         }
@@ -61,7 +62,9 @@ class ReportsFetch(BaseJob):
 
         # adding hash
         for i in range(len(response_rows)):
-            hashKey = response_rows[i]["keys"][0] + response_rows[i]["keys"][1] + response_rows[i]["keys"][2] + response_rows[i]["keys"][3]
+            hashKey = ""
+            for j in range(len(self.DIMENSIONS)):
+                hashKey += response_rows[i]["keys"][j]
             hash_object = hashlib.md5(hashKey.encode())
             response_rows[i]["id"] = hash_object.hexdigest()
 
@@ -108,17 +111,31 @@ class ReportsFetch(BaseJob):
         rows_string = JsonUtil.create(rows)
         for timestamp in self._extract_load_timestamps:
             job_storage = scripts.gsc.CONFIG.GSC_APP.job_storage
-            job_storage.write_gsc(rows_string, timestamp, self._project_id, self._url_prefix)
-            self.update_to_file_metrics(EXTRACT, REQUEST_COUNT, self._project_id, self._url_prefix, 1)
-            self.update_to_file_metrics(EXTRACT, RECORDS_COUNT, self._project_id, self._url_prefix, len(rows))
+            job_storage.write(rows_string, timestamp, self._project_id, self._url_prefix, self._doc_type)
+            self.update_to_file_metrics(EXTRACT, REQUEST_COUNT, self._project_id, self._doc_type, 1)
+            self.update_to_file_metrics(EXTRACT, RECORDS_COUNT, self._project_id, self._doc_type, len(rows))
     
     def read_for_load(self, ran_extract, timestamp):
         if ran_extract:
             rows = self._rows
         else:
             job_storage = scripts.gsc.CONFIG.GSC_APP.job_storage
-            rows_string = job_storage.read_gsc(timestamp, self._project_id, self._url_prefix)
+            rows_string = job_storage.read(timestamp, self._project_id, self._url_prefix, self._doc_type)
             rows = JsonUtil.read(rows_string)
         return rows
+
+    def transform_entities(self, rows):
+        transformed_rows = []
+        for row in rows:
+            transformed_row = {}
+            for key in row:
+                if key == "keys":
+                    for index in range(len(self.DIMENSIONS)):
+                        transformed_row[self.DIMENSIONS[index]] = row["keys"][index]
+                else:
+                    transformed_row[key] = row[key]
+            transformed_rows.append(transformed_row)
+        
+        return transformed_rows
 
         

@@ -271,26 +271,17 @@ func (pg *Postgres) buildObjectAndPropertiesForFacebook(projectID uint64, object
 		// to do: check if normal properties present then only smart properties will be there
 		propertiesAndRelated, isPresent := mapOfFacebookObjectsToPropertiesAndRelated[currentObject]
 		var currentProperties []model.ChannelProperty
+		var currentPropertiesSmart []model.ChannelProperty
 		if isPresent {
-			if C.IsShowSmartPropertiesAllowed(projectID) {
-				smartProperties := pg.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
-				if smartProperties != nil {
-					for key, value := range smartProperties {
-						propertiesAndRelated[key] = value
-					}
-				}
-			}
 			currentProperties = buildProperties(propertiesAndRelated)
+			smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
+			currentPropertiesSmart = buildProperties(smartProperty)
+			currentProperties = append(currentProperties, currentPropertiesSmart...)
 		} else {
-			if C.IsShowSmartPropertiesAllowed(projectID) {
-				smartProperties := pg.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
-				if smartProperties != nil {
-					for key, value := range smartProperties {
-						allChannelsPropertyToRelated[key] = value
-					}
-				}
-			}
 			currentProperties = buildProperties(allChannelsPropertyToRelated)
+			smartProperty := pg.GetSmartPropertyAndRelated(projectID, currentObject, "facebook")
+			currentPropertiesSmart = buildProperties(smartProperty)
+			currentProperties = append(currentProperties, currentPropertiesSmart...)
 		}
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)
 	}

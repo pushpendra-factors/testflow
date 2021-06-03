@@ -20,10 +20,11 @@ class BaseJob:
         self._next_timestamp = next_info.get("next_timestamp")
         self._extract_load_timestamps = next_info.get("extract_load_timestamps")
         self._first_run = next_info.get("first_run")
+        self._doc_type = next_info.get("type")
 
     def start(self):
-        log.warning("ETL for project: %s, url: %s, timestamp: %s",
-                    str(self._project_id), self._url_prefix, str(self._next_timestamp))
+        log.warning("ETL for project: %s, url: %s, doc_type: %s, timestamp: %s",
+                    str(self._project_id), self._url_prefix, str(self._doc_type), str(self._next_timestamp))
         self.execute()
 
     # TODO handle error cases
@@ -35,7 +36,7 @@ class BaseJob:
             self.extract_task()
         else:
             self.transform_and_load_task(False)
-        metrics_controller.update_gsc_job_stats(self._project_id, self._url_prefix, SUCCESS_MESSAGE)
+        metrics_controller.update_job_stats(self._project_id, self._url_prefix, self._doc_type, SUCCESS_MESSAGE)
 
     def extract_and_load_task(self):
         self.extract_task()
@@ -55,12 +56,11 @@ class BaseJob:
                 log.error("Dry run. Skipped add gsc documents to db.")
                 response = None
             else:
-                for record in records:
-                    response = FactorsDataService.add_gsc_document(self._project_id, self._url_prefix, record, timestamp)
-                    if not response.ok:
-                        return response
+                response = FactorsDataService.add_multiple_gsc_document(self._project_id, self._url_prefix, self._doc_type, records, timestamp)
+                if not response.ok:
+                    return response
         else:
-            response = FactorsDataService.add_gsc_document(self._project_id, self._url_prefix, {}, timestamp)
+            response = FactorsDataService.add_gsc_document(self._project_id, self._url_prefix, self._doc_type, {}, timestamp)
         self.update_to_file_metrics(LOAD, REQUEST_COUNT, self._project_id, self._url_prefix, 1)
         self.update_to_file_metrics(LOAD, RECORDS_COUNT, self._project_id, self._url_prefix, len(records))
         return response
