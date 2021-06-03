@@ -66,6 +66,34 @@ func GetAllDatesAsTimestamp(fromUnix int64, toUnix int64, timezone string) []tim
 	return rTimestamps
 }
 
+// GetAllQuartersAsTimestamp buckets the days into start of quarter
+func GetAllQuartersAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
+	rTimestamps := make([]time.Time, 0, 0)
+
+	from, err := getTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	if err != nil {
+		return rTimestamps
+	}
+	from = now.New(from).BeginningOfQuarter()
+
+	to, err := getTimeFromUnixTimestampWithZone(toUnix, timezone)
+	if err != nil {
+		return rTimestamps
+	}
+	to = now.New(to).BeginningOfQuarter()
+
+	toStr := GetTimestampAsStrWithTimezone(to, timezone)
+	for t, tStr := from, ""; tStr != toStr; {
+		tStr = GetTimestampAsStrWithTimezone(t, timezone)
+		rTimestamps = append(rTimestamps, t)
+		// get the some date in next quarter, here it is 120+10 i.e. 10day in next quarter
+		t = t.AddDate(0, 0, 130) // next quarter.
+		t = now.New(t).BeginningOfQuarter()
+	}
+
+	return rTimestamps
+}
+
 // GetAllMonthsAsTimestamp buckets the days into start of weeks i.e.
 // returns list of Sundays for from to to
 func GetAllMonthsAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {

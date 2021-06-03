@@ -32,14 +32,7 @@ var queryOps = map[string]string{
 	model.NotContainsOpStr:        "NOT ILIKE",
 }
 
-var groupByTimestampTypes = []string{
-	model.GroupByTimestampDate,
-	model.GroupByTimestampHour,
-	model.GroupByTimestampWeek,
-	model.GroupByTimestampMonth,
-}
-
-// Query cache related contants.
+// Query cache related constants.
 const (
 	QueryCacheInProgressPlaceholder string = "QUERY_CACHE_IN_PROGRESS"
 
@@ -616,9 +609,12 @@ func getSelectTimestampByType(timestampType, timezone string) string {
 	if timestampType == model.GroupByTimestampHour {
 		selectStr = fmt.Sprintf("date_trunc('hour', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)
 	} else if timestampType == model.GroupByTimestampWeek {
-		selectStr = fmt.Sprintf("date_trunc('week', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)
+		// default week is Monday to Sunday for postgres, updating it to Sunday to Saturday
+		selectStr = fmt.Sprintf("date_trunc('week', to_timestamp(timestamp + (24*60*60)) AT TIME ZONE '%s') - INTERVAL '1 day' ", selectTz)
 	} else if timestampType == model.GroupByTimestampMonth {
 		selectStr = fmt.Sprintf("date_trunc('month', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)
+	} else if timestampType == model.GroupByTimestampQuarter {
+		selectStr = fmt.Sprintf("date_trunc('quarter', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)
 	} else {
 		// defaults to GroupByTimestampDate.
 		selectStr = fmt.Sprintf("date_trunc('day', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)
@@ -771,7 +767,7 @@ func isValidGroupByTimestamp(groupByTimestamp string) bool {
 		return true
 	}
 
-	for _, gbtType := range groupByTimestampTypes {
+	for _, gbtType := range model.GroupByTimestampTypes {
 		if gbtType == groupByTimestamp {
 			return true
 		}

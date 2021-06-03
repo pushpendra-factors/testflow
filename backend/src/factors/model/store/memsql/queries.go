@@ -58,7 +58,7 @@ func (store *MemSQL) GetALLQueriesWithProjectId(projectID uint64) ([]model.Queri
 
 	queries := make([]model.Queries, 0, 0)
 	err := db.Table("queries").Select("*").
-		Where("project_id = ? AND is_deleted = ?", projectID, "false").
+		Where("project_id = ? AND is_deleted = ?", projectID, false).
 		Order("created_at DESC").Find(&queries).Error
 	if err != nil {
 		log.WithField("project_id", projectID).Error("Failed to fetch rows from queries table for project")
@@ -141,10 +141,10 @@ func (store *MemSQL) getQueryWithQueryID(projectID uint64, queryID uint64, query
 	var err error
 	if queryType == model.QueryTypeAllQueries {
 		err = db.Table("queries").Where("project_id = ? AND id=? AND is_deleted = ?",
-			projectID, queryID, "false").Find(&query).Error
+			projectID, queryID, false).Find(&query).Error
 	} else {
 		err = db.Table("queries").Where("project_id = ? AND id=? AND type=? AND is_deleted = ?",
-			projectID, queryID, queryType, "false").Find(&query).Error
+			projectID, queryID, queryType, false).Find(&query).Error
 	}
 	if err != nil {
 		return &model.Queries{}, http.StatusNotFound
@@ -241,7 +241,7 @@ func (store *MemSQL) UpdateSavedQuery(projectID uint64, queryID uint64, query *m
 	}
 
 	err := db.Model(&model.Queries{}).Where("project_id = ? AND id=? AND type=? AND is_deleted = ?",
-		projectID, queryID, query.Type, "false").Update(updateFields).Error
+		projectID, queryID, query.Type, false).Update(updateFields).Error
 	if err != nil {
 		return &model.Queries{}, http.StatusInternalServerError
 	}
@@ -252,7 +252,7 @@ func (store *MemSQL) SearchQueriesWithProjectId(projectID uint64, searchString s
 	db := C.GetServices().Db
 
 	var queries []model.Queries
-	err := db.Table("queries").Where("project_id = ? AND title RLIKE ? AND is_deleted= ?", projectID, searchString, "false").Find(&queries).Error
+	err := db.Table("queries").Where("project_id = ? AND title RLIKE ? AND is_deleted= ?", projectID, searchString, false).Find(&queries).Error
 	if err != nil || len(queries) == 0 {
 		return nil, http.StatusNotFound
 	}

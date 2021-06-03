@@ -33,10 +33,11 @@ const (
 )
 
 const (
-	GroupByTimestampHour  = "hour"
-	GroupByTimestampDate  = "date"
-	GroupByTimestampWeek  = "week"
-	GroupByTimestampMonth = "month"
+	GroupByTimestampHour    = "hour"
+	GroupByTimestampDate    = "date"
+	GroupByTimestampWeek    = "week"
+	GroupByTimestampMonth   = "month"
+	GroupByTimestampQuarter = "quarter"
 )
 
 const (
@@ -138,6 +139,14 @@ const (
 	QueryTypeEventsOccurrence = "events_occurrence"
 	QueryTypeUniqueUsers      = "unique_users"
 )
+
+var GroupByTimestampTypes = []string{
+	GroupByTimestampDate,
+	GroupByTimestampHour,
+	GroupByTimestampWeek,
+	GroupByTimestampMonth,
+	GroupByTimestampQuarter,
+}
 
 // BaseQuery Base query interface for all query classes.
 type BaseQuery interface {
