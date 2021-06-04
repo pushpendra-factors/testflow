@@ -133,6 +133,8 @@ def get_with_fallback_retry(project_id, get_url):
                 r = requests.get(url=get_url, headers = {})
                 if r.status_code != 429:
                     if not r.ok:
+                        if r.status_code== 414:
+                            return r
                         if retries < RETRY_LIMIT:
                             log.error("Failed to get data from hubspot %d.Retries %d. Retrying in 2 seconds",r.status_code,retries)
                             time.sleep(2)
@@ -167,6 +169,51 @@ def get_with_fallback_retry(project_id, get_url):
         end_time = time.time()
         log.warning("Request took %d sec", end_time - start_time )
 
+def get_contacts_with_properties_by_id(project_id,api_key,get_url):
+    batch_contact_url = "https://api.hubapi.com/contacts/v1/contact/vids/batch?"
+
+    log.warning("Downloading contacts without properties list "+get_url)
+    r = get_with_fallback_retry(project_id,get_url)
+    if not r.ok:
+        return {}, r
+    response_dict = json.loads(r.text)
+    if "contacts" not in response_dict:
+        raise Exception("Missing contacts property key on contacts")
+    contacts = response_dict["contacts"]
+    contact_ids = []
+    for contact in contacts:
+        if "vid" not in contact:
+            log.error("Missing contact vid on contacts api")
+            continue
+        contact_ids.append(contact["vid"])
+    contact_ids_str = "&".join([ "vid="+str(id) for id in contact_ids ])
+    batch_url = batch_contact_url +"hapikey="+ api_key + "&" + contact_ids_str
+    log.warning("Downloading batch contact from url "+batch_url)
+    r = get_with_fallback_retry(project_id,batch_url)
+    if not r.ok:
+        log.error("Failure getting batch contacts for project_id %d on sync_contacts", project_id)
+        return {},r
+    batch_contact_dict = json.loads(r.text)
+
+    for contact in contacts:
+        if "vid" not in contact:
+            log.error("Missing contact vid on get batch contacts")
+            continue
+        contact_id = str(contact["vid"])
+        log.info("Inserting properties into contact "+ contact_id)
+        if contact_id in batch_contact_dict:
+            if "properties" not in batch_contact_dict[str(contact["vid"])]:
+                log.error("Missing properties key on batch contact")
+                continue
+            contact["properties"] = batch_contact_dict[str(contact["vid"])]["properties"]
+        else :
+            log.error("Missing contact %s in batch contact processing ",contact_id)
+
+    response_dict["contacts"] = contacts
+
+    return response_dict, r
+
+
 def sync_contacts(project_id, api_key, sync_all=False):    
     if sync_all:
         # init sync all contacts.
@@ -186,21 +233,37 @@ def sync_contacts(project_id, api_key, sync_all=False):
         return 0
 
     contact_api_calls = 0
+    err_url_too_long = False
     while has_more:
         parameters = urllib.parse.urlencode(parameter_dict)
         get_url = url + parameters
 
         # contacts api uses property instead of properties in query parameter
         properties_str = "&".join([ "property="+property_name for property_name in properties ])
-        get_url = get_url + '&' + properties_str
+        get_url_with_properties = get_url + '&' + properties_str
 
-        log.warning("Downloading contacts for project_id %d from url %s.", project_id, get_url)
-        r = get_with_fallback_retry(project_id,get_url)
-        if not r.ok:
-            log.error("Failure response %d from hubspot on sync_contacts", r.status_code)
-            break
+        log.warning("Downloading contacts for project_id %d from url %s.", project_id, get_url_with_properties)
+        response_dict = {}
+        if err_url_too_long == False:
+            r = get_with_fallback_retry(project_id,get_url_with_properties)
+            if not r.ok:
+                if r.status_code == 414:
+                    log.error("Failure response %d from hubspot on sync_contacts, using fallback logic", r.status_code)
+                    err_url_too_long= True
+                else:
+                    log.error("Failure response %d from hubspot on sync_contacts", r.status_code)
+                    break
+            else:
+                response_dict = json.loads(r.text)
+
+        if err_url_too_long == True:
+            contact_dict, r = get_contacts_with_properties_by_id(project_id,api_key,get_url)
+            if not r.ok:
+                log.error("Failure response %d from hubspot on batch sync_contacts", r.status_code)
+                break
+            response_dict = contact_dict
+
         contact_api_calls +=1
-        response_dict = json.loads(r.text)
 
         has_more = response_dict['has-more']
         docs = response_dict['contacts']
@@ -219,6 +282,18 @@ def sync_contacts(project_id, api_key, sync_all=False):
         log.warning("Downloaded and created %d contacts. total %d.", len(docs), count)
     return contact_api_calls
 
+## https://community.hubspot.com/t5/APIs-Integrations/Deals-Endpoint-Returning-414/m-p/320468/highlight/true#M30810
+def get_deals_with_properties(project_id,get_url):
+    param_dict_include_all_properties = {
+        "includeAllProperties" : True,
+        "allPropertiesFetchMode" : "latest_version",
+    }
+
+    parameters = urllib.parse.urlencode(param_dict_include_all_properties)
+    url = get_url + "&" + parameters
+
+    return get_with_fallback_retry(project_id, url)
+
 
 def sync_deals(project_id, api_key, sync_all=False):
     if sync_all:
@@ -232,6 +307,7 @@ def sync_deals(project_id, api_key, sync_all=False):
         log.warning("Downloading recently created or modified deals for project_id : "+ str(project_id) + ".")
 
     deal_api_calls = 0
+    err_url_too_long = False
     for url in urls:
         count = 0
         parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
@@ -251,16 +327,31 @@ def sync_deals(project_id, api_key, sync_all=False):
 
             # List of all properties to get, returns empty properties if not given.
             if sync_all:
-                get_url = get_url + '&' + build_properties_param_str(properties)
-                get_url = get_url + '&includeAssociations=true'
+                get_url_with_properties = get_url + '&' + build_properties_param_str(properties)
+                get_url_with_properties = get_url_with_properties + '&includeAssociations=true'
 
             log.warning("Downloading deals for project_id %d from url %s.", project_id, get_url)
-            r = get_with_fallback_retry(project_id, get_url)
-            if not r.ok:
-                log.error("Failure response %d from hubspot on sync_deals", r.status_code)
-                break
+            response_dict = {}
+            if err_url_too_long == False:
+                r = get_with_fallback_retry(project_id, get_url_with_properties)
+                if not r.ok:
+                    if r.status_code == 414:
+                        log.error("Failure response %d from hubspot on sync_deals, using fallback logic", r.status_code)
+                        err_url_too_long = True
+                    else:
+                        log.error("Failure response %d from hubspot on sync_deals", r.status_code)
+                        break
+                else:
+                    response_dict = json.loads(r.text)
+
+            if err_url_too_long == True:
+                r = get_deals_with_properties(project_id,get_url)
+                if not r.ok:
+                   log.error("Failure response %d from hubspot on sync deals using fallback logic", r.status_code)
+                   break
+                response_dict = json.loads(r.text)
+
             deal_api_calls +=1
-            response_dict = json.loads(r.text)
 
             # Need this check as has-more is not standard
             # across apis :) 
@@ -486,7 +577,6 @@ def get_next_sync_info(project_settings, last_sync_info):
 
     return next_sync_info 
 
-
 def sync(project_id, api_key, doc_type, sync_all):
     response = {}
     response["project_id"] = project_id
@@ -496,7 +586,7 @@ def sync(project_id, api_key, doc_type, sync_all):
     try:
         if project_id == None or api_key == None or doc_type == None or sync_all == None:
             raise Exception("invalid params on sync, project_id "+str(project_id)+", api_key "+str(api_key)+", doc_type "+str(doc_type)+", sync_all "+str(sync_all))            
-        
+
         if doc_type == "contact":
             response["contact_api_calls"] = sync_contacts(project_id, api_key, sync_all)
         elif doc_type == "company":        
