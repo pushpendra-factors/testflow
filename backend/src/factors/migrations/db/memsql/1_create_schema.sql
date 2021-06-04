@@ -562,6 +562,7 @@ CREATE TABLE IF NOT EXISTS google_organic_documents (
     id text NOT NULL,
     project_id bigint NOT NULL,
     url_prefix text NOT NULL,
+    type int,
     timestamp bigint NOT NULL,
     value JSON COLLATE utf8_bin OPTION 'SeekableLZ4',
     created_at timestamp(6) NOT NULL,

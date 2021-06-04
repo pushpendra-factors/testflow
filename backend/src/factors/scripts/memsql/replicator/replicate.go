@@ -40,34 +40,37 @@ var excludeTablesMap map[string]bool
 var modeMigrate bool
 
 const (
-	tableUsers                         = "users"
-	tableEventNames                    = "event_names"
-	tableEvents                        = "events"
-	tableProjects                      = "projects"
-	tableAgents                        = "agents"
-	tableProjectAgentMappings          = "project_agent_mappings"
-	tableProjectBillingAccountMappings = "project_billing_account_mappings"
-	tableProjectSettings               = "project_settings"
-	tableAdwordsDocuments              = "adwords_documents"
-	tableBigquerySettings              = "bigquery_settings"
-	tableBillingAccounts               = "billing_accounts"
-	tableDashboardUnits                = "dashboard_units"
-	tableDashboards                    = "dashboards"
-	tableFacebookDocuments             = "facebook_documents"
-	tableFactorsGoals                  = "factors_goals"
-	tableFactorsTrackedEvents          = "factors_tracked_events"
-	tableFactorsTrackedUserProperties  = "factors_tracked_user_properties"
-	tableHubspotDocuments              = "hubspot_documents"
-	tableSalesforceDocuments           = "salesforce_documents"
-	tableQueries                       = "queries"
-	tableScheduledTasks                = "scheduled_tasks"
-	tableLinkedInDocuments             = "linkedin_documents"
-	tablePropertyDetails               = "property_details"
-	tableSmartProperties               = "smart_properties"
-	tableSmartPropertyRules            = "smart_property_rules"
-	tableDisplayNames                  = "display_names"
-	tableProjectModelMetadata          = "project_model_metadata"
-	tableGoogleOrganicDocuments        = "google_organic_documents"
+	tableUsers                          = "users"
+	tableEventNames                     = "event_names"
+	tableEvents                         = "events"
+	tableProjects                       = "projects"
+	tableAgents                         = "agents"
+	tableProjectAgentMappings           = "project_agent_mappings"
+	tableProjectBillingAccountMappings  = "project_billing_account_mappings"
+	tableProjectSettings                = "project_settings"
+	tableAdwordsDocuments               = "adwords_documents"
+	tableBigquerySettings               = "bigquery_settings"
+	tableBillingAccounts                = "billing_accounts"
+	tableDashboardUnits                 = "dashboard_units"
+	tableDashboards                     = "dashboards"
+	tableFacebookDocuments              = "facebook_documents"
+	tableFactorsGoals                   = "factors_goals"
+	tableFactorsTrackedEvents           = "factors_tracked_events"
+	tableFactorsTrackedUserProperties   = "factors_tracked_user_properties"
+	tableHubspotDocuments               = "hubspot_documents"
+	tableSalesforceDocuments            = "salesforce_documents"
+	tableQueries                        = "queries"
+	tableScheduledTasks                 = "scheduled_tasks"
+	tableLinkedInDocuments              = "linkedin_documents"
+	tablePropertyDetails                = "property_details"
+	tableSmartProperties                = "smart_properties"
+	tableSmartPropertyRules             = "smart_property_rules"
+	tableDisplayNames                   = "display_names"
+	tableProjectModelMetadata           = "project_model_metadata"
+	tableGoogleOrganicDocuments         = "google_organic_documents"
+	tableTaskDetails                    = "task_details"
+	tableTaskExecutionDetails           = "task_execution_details"
+	tableTaskExecutionDependencyDetails = "task_execution_dependency_details"
 
 	healthcheckPingID = "e6e3735b-82a3-4534-82be-b621470c4c69"
 )
@@ -807,6 +810,12 @@ func getRecordInterfaceByTableName(tableName string) interface{} {
 		record = &model.GoogleOrganicDocument{}
 	case tableProjectModelMetadata:
 		record = &model.ProjectModelMetadata{}
+	case tableTaskDetails:
+		record = &model.TaskDetails{}
+	case tableTaskExecutionDetails:
+		record = &model.TaskExecutionDetails{}
+	case tableTaskExecutionDependencyDetails:
+		record = &model.TaskExecutionDependencyDetails{}
 
 	// Tables related to analytics.
 	case tableEvents:
@@ -1157,6 +1166,9 @@ func migrateAllTables(projectIDs []uint64) {
 		tableDisplayNames,
 		tableGoogleOrganicDocuments,
 		tableProjectModelMetadata,
+		tableTaskDetails,
+		tableTaskExecutionDetails,
+		tableTaskExecutionDependencyDetails,
 	}
 
 	// Runs replication continiously for each table
