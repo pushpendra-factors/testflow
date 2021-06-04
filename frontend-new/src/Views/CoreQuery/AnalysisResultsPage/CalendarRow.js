@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
-import FaDatepicker from "../../../components/FaDatepicker";
-import ChartTypeDropdown from "../../../components/ChartTypeDropdown";
-import { QUERY_TYPE_ATTRIBUTION, QUERY_TYPE_WEB } from "../../../utils/constants";
+import React, { useCallback, useContext } from 'react';
+import FaDatepicker from '../../../components/FaDatepicker';
+import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
+import { QUERY_TYPE_WEB } from '../../../utils/constants';
 import styles from './index.module.scss';
-import { Button } from "antd";
-import { SVG, Spiner} from "../../../components/factorsComponents";
+import { Button } from 'antd';
+import { SVG, Spiner } from '../../../components/factorsComponents';
+import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 
 function CalendarRow({
   durationObj,
@@ -15,18 +16,17 @@ function CalendarRow({
   metricsDropdown,
   queryType,
   triggerAttrComparision,
-  cmprResultState
 }) {
-
-  const [comparisionEnabled, enableComparision] = useState(false);
-  const [isCompareCalendar, showCompareCalendar] = useState(false);
-  const [selComparRange, setSelComparRange] = useState();
-
-  useEffect(() => {
-    if(queryType === QUERY_TYPE_ATTRIBUTION) {
-      enableComparision(true);
-    }
-  }, [queryType])
+  const {
+    coreQueryState: {
+      comparison_supported,
+      comparison_data,
+      comparison_enabled,
+      comparison_duration
+    },
+    resetComparisonData,
+    handleCompareWithClick,
+  } = useContext(CoreQueryContext);
 
   const setDateRange = useCallback(
     (range) => {
@@ -35,72 +35,68 @@ function CalendarRow({
     [handleDurationChange]
   );
 
-  if(queryType === QUERY_TYPE_WEB) {
+  const setCompareDateRange = useCallback(
+    (range) => {
+      handleDurationChange(range, true);
+    },
+    [handleDurationChange]
+  );
+
+  if (queryType === QUERY_TYPE_WEB) {
     return null;
-  }
-
-  const delComparision = () => {
-    showCompareCalendar(false);
-    triggerAttrComparision(null);
-  }
-
-  const raiseComparisionRange = (rnge) => {
-    const dtRange = {};
-        if (rnge && rnge.startDate) {
-            if (Array.isArray(rnge.startDate)) {
-                dtRange.from = rnge.startDate[0]
-                dtRange.to = rnge.startDate[1];
-            } else {
-                dtRange.from = rnge.startDate;
-                dtRange.to = rnge.endDate;
-            }
-        }
-    setSelComparRange(dtRange);
-    triggerAttrComparision(dtRange);
   }
 
   const renderCompareScenario = () => {
     return (
-      <div className={`${styles.comparisonCalendar} flex items-center ml-4 mr-4`}>
-        {!isCompareCalendar && <Button icon={<SVG name="compare" />} onClick={() => showCompareCalendar(true)}></Button>}
+      <div
+        className={`${styles.comparisonCalendar} flex items-center ml-4 mr-4`}
+      >
+        {/* {!isCompareCalendar && (
+          <Button
+            icon={<SVG name='compare' />}
+            onClick={() => showCompareCalendar(true)}
+          ></Button>
+        )} */}
 
-        
-
-        {(isCompareCalendar) &&
+        {comparison_enabled && (
           <>
-            <SVG name="compare"/>
-            <div className="calendar ml-4">
+            <div>vs</div>
+            <div className='calendar ml-4'>
               <FaDatepicker
                 customPicker
                 presetRange
                 monthPicker
-                placement="topRight"
-                range={selComparRange && {
-                  startDate: selComparRange.from,
-                  endDate: selComparRange.to,
-                }}
-                onSelect={raiseComparisionRange} 
+                placement='topRight'
+                range={
+                  comparison_duration && {
+                    startDate: comparison_duration.from,
+                    endDate: comparison_duration.to,
+                  }
+                }
+                onSelect={setCompareDateRange}
               />
             </div>
-          </> 
-        }
+          </>
+        )}
 
-        {cmprResultState && cmprResultState.data && 
-          <Button className={`ml-2`} icon={<SVG name="times" />} onClick={() => delComparision()}></Button>}
+        {comparison_enabled ? (
+          <Button
+            className={`ml-2`}
+            icon={<SVG name='times' />}
+            onClick={resetComparisonData}
+          ></Button>
+        ) : null}
 
-        {cmprResultState && cmprResultState.loading && <Spiner size={`small`}></Spiner>}
-
-
+        {comparison_data.loading && <Spiner size={`small`}></Spiner>}
       </div>
-    )
-  }
-
+    );
+  };
 
   return (
-    <div className="flex justify-between items-center">
-      <div className="flex items-center">
+    <div className='flex justify-between items-center'>
+      <div className='flex items-center'>
         {metricsDropdown}
-        <div className="calendar">
+        <div className='calendar'>
           <FaDatepicker
             customPicker
             presetRange
@@ -109,13 +105,15 @@ function CalendarRow({
               startDate: durationObj.from,
               endDate: durationObj.to,
             }}
-            placement="topRight"
-            onSelect={setDateRange} 
+            placement='topRight'
+            onSelect={setDateRange}
+            comparison_supported={comparison_supported}
+            handleCompareWithClick={handleCompareWithClick}
           />
         </div>
-        {comparisionEnabled && renderCompareScenario()}
+        {comparison_supported && renderCompareScenario()}
       </div>
-      <div className="flex items-center">
+      <div className='flex items-center'>
         {chartTypeMenuItems.length ? (
           <ChartTypeDropdown
             chartType={chartType}

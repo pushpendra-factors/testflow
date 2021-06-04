@@ -7,7 +7,8 @@ function FunnelsResultPage({
   breakdown,
   arrayMapper,
   isWidgetModal,
-  section
+  section,
+  durationObj
 }) {
   return (
     <ResultantChart
@@ -17,6 +18,7 @@ function FunnelsResultPage({
       arrayMapper={arrayMapper}
       isWidgetModal={isWidgetModal}
       section={section}
+      durationObj={durationObj}
     />
   );
 }

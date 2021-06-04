@@ -1,7 +1,11 @@
-$textColor: #3E516C;
+$textColor: #3e516c;
 
 .eventsText {
-    &:hover {
-        border-bottom: 1px solid $textColor;
-    }
+  &:hover {
+    border-bottom: 1px solid $textColor;
+  }
+}
+
+td.usersColumn {
+  padding: 0 !important;
 }

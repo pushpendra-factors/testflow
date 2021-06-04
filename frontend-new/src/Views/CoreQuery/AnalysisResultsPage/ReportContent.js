@@ -171,6 +171,7 @@ function ReportContent({
           breakdown={breakdown}
           arrayMapper={arrayMapper}
           section={section}
+          durationObj={durationObj}
         />
       );
     }
