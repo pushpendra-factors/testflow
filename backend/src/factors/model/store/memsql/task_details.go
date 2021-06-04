@@ -31,7 +31,7 @@ func (store *MemSQL) RegisterTask(taskName string, source string, frequency int,
 		return 0, http.StatusBadRequest, "Missing task_name/frequency"
 	}
 
-	if !(frequency == model.Hourly || frequency == model.Daily || frequency == model.Weekly || frequency == model.Stateless) {
+	if !(frequency == model.Hourly || frequency == model.Daily || frequency == model.Weekly || frequency == model.Stateless || frequency == model.Monthly || frequency == model.Quarterly) {
 		logCtx.Error("Incorrect frequency")
 		return 0, http.StatusBadRequest, "incorrect frequency"
 	}
@@ -42,7 +42,18 @@ func (store *MemSQL) RegisterTask(taskName string, source string, frequency int,
 			return 0, http.StatusBadRequest, "Weekly job doesnt allow these parameter overrides - skipStartIndex/skipEndIndex"
 		}
 	}
-
+	if frequency == model.Monthly {
+		if skipStartIndex != 0 || skipEndIndex != -1 {
+			logCtx.Error("monthly job doesnt allow these parameter overrides - skipStartIndex/skipEndIndex")
+			return 0, http.StatusBadRequest, "monthly job doesnt allow these parameter overrides - skipStartIndex/skipEndIndex"
+		}
+	}
+	if frequency == model.Quarterly {
+		if skipStartIndex != 0 || skipEndIndex != -1 {
+			logCtx.Error("quarterly job doesnt allow these parameter overrides - skipStartIndex/skipEndIndex")
+			return 0, http.StatusBadRequest, "quarterly job doesnt allow these parameter overrides - skipStartIndex/skipEndIndex"
+		}
+	}
 	if frequency == model.Stateless {
 		if skipStartIndex != 0 || skipEndIndex != -1 || recurrence == false || offsetStartMinutes != 0 || frequency != 1 {
 			logCtx.Error("stateless job doesnt allow these parameter - skipStartIndex/skipEndIndex/recurrence/offsetStartMinutes/frequency")
@@ -114,15 +125,22 @@ func isValidFrequency(frequency, frequencyInterval, skipStartIndex int, skipEndI
 		}
 	}
 	if frequency == model.Weekly {
-		if skipEndIndex > 3 {
-			return false
-		}
 		if offsetStart >= 7*24*60 {
 			return false
 		}
-		if frequencyInterval+skipStartIndex <= 4 && (skipEndIndex-skipStartIndex >= frequencyInterval || skipEndIndex == -1) {
-			return true
+		return true
+	}
+	if frequency == model.Monthly {
+		if offsetStart >= 7*24*60 {
+			return false
 		}
+		return true
+	}
+	if frequency == model.Quarterly {
+		if offsetStart >= 7*24*60 {
+			return false
+		}
+		return true
 	}
 	if frequency == model.Stateless {
 		return true

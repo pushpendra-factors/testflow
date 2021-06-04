@@ -67,18 +67,6 @@ func TestGetModelEventInfoFilePath(t *testing.T) {
 	assert.Equal(t, expectedName, resultName)
 }
 
-func TestGetModelPatternsFilePath(t *testing.T) {
-	projectId := U.RandomUint64()
-	modelId := U.RandomUint64()
-	expectedPath := diskDriver.GetProjectModelDir(projectId, modelId)
-	expectedName := fmt.Sprintf("patterns_%d.txt", modelId)
-
-	resultPath, resultName := diskDriver.GetModelPatternsFilePathAndName(projectId, modelId)
-
-	assert.Equal(t, expectedPath, resultPath)
-	assert.Equal(t, expectedName, resultName)
-}
-
 func TestGetModelEventsFilePath(t *testing.T) {
 	projectId := U.RandomUint64()
 	modelId := U.RandomUint64()
@@ -86,17 +74,6 @@ func TestGetModelEventsFilePath(t *testing.T) {
 	resultPath, resultName := diskDriver.GetModelEventsFilePathAndName(projectId, modelId)
 	expectedPath := diskDriver.GetProjectModelDir(projectId, modelId)
 	expectedName := fmt.Sprintf("events_%d.txt", modelId)
-
-	assert.Equal(t, expectedPath, resultPath)
-	assert.Equal(t, expectedName, resultName)
-}
-
-func TestGetProjectsDataFilePathAndName(t *testing.T) {
-	version := U.RandomString(8)
-	expectedPath := fmt.Sprintf("%s/metadata/", diskDriver.baseDir)
-	expectedName := fmt.Sprintf("%s.txt", version)
-
-	resultPath, resultName := diskDriver.GetProjectsDataFilePathAndName(version)
 
 	assert.Equal(t, expectedPath, resultPath)
 	assert.Equal(t, expectedName, resultName)

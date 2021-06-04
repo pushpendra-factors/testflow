@@ -1410,8 +1410,8 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	var err error
 
 	// download events file from cloud to local
-	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, modelId)
-	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
+	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTime, modelType)
+	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, startTime, modelType)
 	mineLog.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
 		"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
 	eReader, err := (*cloudManager).Get(efCloudPath, efCloudName)
@@ -1420,7 +1420,12 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
 		return 0, err
 	}
-
+	err = diskManager.Create(efTmpPath, efTmpName, eReader)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
+		return 0, err
+	}
 	tmpEventsFilepath := efTmpPath + efTmpName
 	mineLog.Info("Successfuly downloaded events file from cloud.", tmpEventsFilepath, efTmpPath, efTmpName)
 	eventNames, eventNamesWithType, err := GetEventNamesAndType(tmpEventsFilepath, projectId)

@@ -52,7 +52,7 @@ CREATE TABLE public.task_execution_details
         ON DELETE RESTRICT
 );
 
-CREATE UNIQUE INDEX task_id_delta_unique_idx on task_execution_details(task_id, delta);
+CREATE UNIQUE INDEX task_id_delta_unique_idx on task_execution_details(task_id, delta, project_id);
 
 CREATE INDEX task_execution_details_task_id ON task_execution_details(task_id ASC);
 

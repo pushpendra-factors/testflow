@@ -3,9 +3,7 @@ package task
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"math/rand"
 	"os"
 	"time"
 
@@ -17,7 +15,6 @@ import (
 
 	U "factors/util"
 
-	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -42,6 +39,7 @@ func pullEventsForBuildSeq(projectID uint64, startTime, endTime int64, eventsFil
 	var firstEvent, lastEvent *P.CounterEventFormat
 
 	rowCount := 0
+	nilUserProperties := 0
 	for rows.Next() {
 		var userID string
 		var eventName string
@@ -86,7 +84,7 @@ func pullEventsForBuildSeq(projectID uint64, startTime, endTime int64, eventsFil
 				return 0, "", err
 			}
 		} else {
-			peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil user properties.")
+			nilUserProperties++
 		}
 
 		event := P.CounterEventFormat{
@@ -117,6 +115,7 @@ func pullEventsForBuildSeq(projectID uint64, startTime, endTime int64, eventsFil
 		lastEvent = &event
 		rowCount++
 	}
+	peLog.WithFields(log.Fields{"err": err, "project_id": projectID, "count": nilUserProperties}).Error("Nil user properties.")
 
 	if rowCount > model.EventsPullLimit {
 		// Todo(Dinesh): notify
@@ -250,65 +249,76 @@ func PullEventsForArchive(projectID uint64, eventsFilePath, usersFilePath string
 	return rowCount, eventsFilePath, usersFilePath, nil
 }
 
-func PullEvents(db *gorm.DB, cloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, projectId uint64, startTimestamp int64,
-	endTimestamp int64) (uint64, int, error) {
+func PullEvents(projectId uint64, configs map[string]interface{}) (map[string]interface{}, bool) {
 
-	var err error
+	modelType := configs["modelType"].(string)
+	startTimestamp := configs["startTimestamp"].(int64)
+	endTimestamp := configs["endTimestamp"].(int64)
+	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
+	cloudManager := configs["cloudManager"].(*filestore.FileManager)
 
+	status := make(map[string]interface{})
 	if projectId == 0 {
-		return 0, 0, errors.New("invalid project_id")
+		status["error"] = "invalid project_id"
+		return status, false
 	}
 	if startTimestamp == 0 {
-		return 0, 0, errors.New("invalid start timestamp")
+		status["error"] = "invalid start timestamp"
+		return status, false
 	}
-	if endTimestamp == 0 {
-		return 0, 0, errors.New("invalid end timestamp")
+	if endTimestamp == 0 || endTimestamp > U.TimeNowUnix() {
+		status["error"] = "invalid end timestamp"
+		return status, false
 	}
 
 	logCtx := peLog.WithFields(log.Fields{"ProjectId": projectId,
 		"StartTime": startTimestamp, "EndTime": endTimestamp})
 
-	// Todo(Dinesh): Move modelId assignment to build task.
-	// Prefix timestamp with randomAlphanumeric(5).
-	curTimeInMilliSecs := time.Now().UnixNano() / 1000000
-	// modelId = time in millisecs + random number upto 3 digits.
-	modelId := uint64(curTimeInMilliSecs + rand.Int63n(999))
-
 	logCtx.Info("Pulling events.")
 	// Writing events to tmp file before upload.
-	fPath, fName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
+	fPath, fName := diskManager.GetModelEventsFilePathAndName(projectId, startTimestamp, modelType)
 	serviceDisk.MkdirAll(fPath) // create dir if not exist.
 	tmpEventsFile := fPath + fName
+	startAt := time.Now().UnixNano()
 	eventsCount, eventsFilePath, err := pullEventsForBuildSeq(projectId, startTimestamp, endTimestamp, tmpEventsFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Pull events failed. Pull and write events failed.")
-		return 0, 0, err
+		status["error"] = err.Error()
+		return status, false
 	}
+	timeTakenToPullEvents := (time.Now().UnixNano() - startAt) / 1000000
+	logCtx = logCtx.WithField("TimeTakenToPullEvents", timeTakenToPullEvents)
 
 	// Zero events. Returns eventCount as 0.
 	if eventsCount == 0 {
 		logCtx.Info("No events found.")
-		return 0, 0, nil
+		status["error"] = "No events found."
+		return status, true
 	}
 
 	tmpOutputFile, err := os.Open(tmpEventsFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Failed to pull events. Write to tmp failed.")
-		return 0, 0, err
+		status["error"] = "Failed to pull events. Write to tmp failed."
+		return status, false
 	}
 
-	cDir, cName := (*cloudManager).GetModelEventsFilePathAndName(projectId, modelId)
+	cDir, cName := (*cloudManager).GetModelEventsFilePathAndName(projectId, startTimestamp, modelType)
 	err = (*cloudManager).Create(cDir, cName, tmpOutputFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Failed to pull events. Upload failed.")
-		return 0, 0, err
+		status["error"] = "Failed to pull events. Upload failed."
+		return status, false
 	}
 
 	logCtx.WithFields(log.Fields{
-		"ModelId":        modelId,
-		"EventsCount":    eventsCount,
-		"EventsFilePath": eventsFilePath,
+		"EventsCount":           eventsCount,
+		"EventsFilePath":        eventsFilePath,
+		"TimeTakenToPullEvents": timeTakenToPullEvents,
 	}).Info("Successfully pulled events and written to file.")
-	return modelId, eventsCount, nil
+
+	status["EventsCount"] = eventsCount
+	status["EventsFilePath"] = eventsFilePath
+	status["TimeTakenToPullEvents"] = timeTakenToPullEvents
+	return status, true
 }

@@ -1,18 +1,9 @@
 package main
 
-// Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
-
-// Sample usage in terminal.
-// export GOPATH=/Users/aravindmurthy/code/factors/backend/
-// go run run_pattern_mine.go --env=development --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --s3_region=us-east-1 --s3=/usr/local/var/factors/cloud_storage --num_routines=3 --project_id=<projectId> --model_id=<modelId>
-// or
-// go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
-// default of count occurence is False
-// go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId> --count_occurence=true/false
-
 import (
 	C "factors/config"
 	"factors/filestore"
+	"factors/model/store"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
@@ -20,24 +11,31 @@ import (
 	"factors/util"
 	"flag"
 	"fmt"
+	"net/http"
 	"strings"
+
+	taskWrapper "factors/task/task_wrapper"
 
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
-	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
-	modelIdFlag := flag.Uint64("model_id", 0, "Model Id")
 
 	envFlag := flag.String("env", "development", "")
-	etcd := flag.String("etcd", "localhost:2379",
-		"Comma separated list of etcd endpoints localhost:2379,localhost:2378")
-	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
+	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
+	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp",
+		"--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
+	projectIdFlag := flag.String("project_ids", "",
+		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
+	projectIdsToSkipFlag := flag.String("project_ids_to_skip", "", "Optional: Comma separated values of projects to skip")
 	maxModelSizeFlag := flag.Int64("max_size", 10000000000, "Max size of the model")
 	shouldCountOccurence := flag.Bool("count_occurence", false, "")
+	isWeeklyEnabled := flag.Bool("weekly_enabled", false, "")
+	isMonthlyEnabled := flag.Bool("monthly_enabled", false, "")
+	isQuarterlyEnabled := flag.Bool("quarterly_enabled", false, "")
 	numActiveFactorsGoalsLimit := flag.Int("goals_limit", 50, "Max number of goals model")
 	numActiveFactorsTrackedEventsLimit := flag.Int("max_tracked_events", 50, "Max number of Tracked Events")
 	numActiveFactorsTrackedUserPropertiesLimit := flag.Int("max_user_properties", 50, "Max numbr of Tracked user properties")
@@ -56,7 +54,15 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
+	redisHost := flag.String("redis_host", "localhost", "")
+	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
+	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	flag.Parse()
+
+	defer util.NotifyOnPanic("Task#PatternMine", *envFlag)
 
 	if *envFlag != "development" &&
 		*envFlag != "staging" &&
@@ -64,8 +70,6 @@ func main() {
 		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
 		panic(err)
 	}
-
-	defer util.NotifyOnPanic("Task#PatternMine", *envFlag)
 
 	// init DB, etcd
 	appName := "pattern_mine_job"
@@ -89,7 +93,11 @@ func main() {
 			Password: *memSQLPass,
 			AppName:  appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
+		PrimaryDatastore:    *primaryDatastore,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
 	}
 
 	C.InitConf(config)
@@ -111,19 +119,16 @@ func main() {
 		log.WithFields(log.Fields{"err": err}).Fatal("Failed to init etcd client")
 	}
 
+	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+
 	log.WithFields(log.Fields{
 		"Env":             *envFlag,
 		"EtcdEndpoints":   *etcd,
 		"localDiskTmpDir": *localDiskTmpDirFlag,
-		"ProjectId":       *projectIdFlag,
-		"ModelId":         *modelIdFlag,
 		"Bucket":          *bucketName,
 		"NumRoutines":     *numRoutinesFlag,
 	}).Infoln("Initialising")
-
-	if *projectIdFlag <= 0 || *modelIdFlag <= 0 {
-		log.Fatal("project_id and model_id are required.")
-	}
 
 	if *numRoutinesFlag < 1 {
 		log.Fatal("num_routines is less than one.")
@@ -140,16 +145,60 @@ func main() {
 		}
 	}
 
-	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
+	projectIdsToSkip := util.GetIntBoolMapFromStringList(projectIdsToSkipFlag)
+	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+	if allProjects {
+		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			log.Fatal("Failed to get all projects and project_ids set to '*'.")
+		}
+
+		projectIdsToRun = make(map[uint64]bool, 0)
+		for _, projectID := range projectIDs {
+			projectIdsToRun[projectID] = true
+		}
+	}
+
+	projectIdsArray := make([]uint64, 0)
+	for projectId, _ := range projectIdsToRun {
+		projectIdsArray = append(projectIdsArray, projectId)
+	}
+
 	C.GetConfig().ActiveFactorsGoalsLimit = *numActiveFactorsGoalsLimit
 	C.GetConfig().ActiveFactorsTrackedEventsLimit = *numActiveFactorsTrackedEventsLimit
 	C.GetConfig().ActiveFactorsTrackedUserPropertiesLimit = *numActiveFactorsTrackedUserPropertiesLimit
+	log.Info("config :", config)
+	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
-	// modelType, startTime, endTime is part of update meta.
-	// kept null on run script.
-	_, err = T.PatternMine(db, etcdClient, &cloudManager, diskManager,
-		*bucketName, *numRoutinesFlag, *projectIdFlag, *modelIdFlag, "", 0, 0, *maxModelSizeFlag, *shouldCountOccurence, *numCampaignsLimit)
-	if err != nil {
-		log.WithError(err).Fatal("Pattern mining failed")
+	configs := make(map[string]interface{})
+	configs["env"] = *envFlag
+	configs["db"] = db
+	configs["cloudManager"] = &cloudManager
+	configs["etcdClient"] = etcdClient
+	configs["diskManger"] = diskManager
+	configs["bucketName"] = *bucketName
+	configs["noOfPatternWorkers"] = *numRoutinesFlag
+	configs["projectIdsToSkip"] = projectIdsToSkip
+	configs["maxModelSize"] = *maxModelSizeFlag
+	configs["countOccurence"] = *shouldCountOccurence
+	configs["numCampaignsLimit"] = *numCampaignsLimit
+
+	// This job has dependency on pull_events
+	if *isWeeklyEnabled {
+		configs["modelType"] = T.ModelTypeWeek
+		status := taskWrapper.TaskFuncWithProjectId("PatternMineWeekly", *lookback, projectIdsArray, T.BuildSequential, configs)
+		log.Info(status)
+	}
+
+	if *isMonthlyEnabled {
+		configs["modelType"] = T.ModelTypeMonth
+		status := taskWrapper.TaskFuncWithProjectId("PatternMineMonthly", *lookback, projectIdsArray, T.BuildSequential, configs)
+		log.Info(status)
+	}
+
+	if *isQuarterlyEnabled {
+		configs["modelType"] = T.ModelTypeQuarter
+		status := taskWrapper.TaskFuncWithProjectId("PatternMineQuarterly", *lookback, projectIdsArray, T.BuildSequential, configs)
+		log.Info(status)
 	}
 }

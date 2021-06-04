@@ -2,6 +2,7 @@ package s3
 
 import (
 	"factors/filestore"
+	U "factors/util"
 	"fmt"
 	"io"
 
@@ -62,23 +63,19 @@ func (sd *S3Driver) GetProjectModelDir(projectId, modelId uint64) string {
 	return fmt.Sprintf("projects/%d/models/%d/", projectId, modelId)
 }
 
+func (sd *S3Driver) GetProjectEventFileDir(projectId, startTimestamp int64, modelType string) string {
+	dateFormatted := U.GetDateOnlyFromTimestamp(startTimestamp)
+	return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
+}
+
 func (sd *S3Driver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
 	path := sd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
 }
 
-func (sd *S3Driver) GetModelPatternsFilePathAndName(projectId, modelId uint64) (string, string) {
-	path := sd.GetProjectModelDir(projectId, modelId)
-	return path, fmt.Sprintf("patterns_%d.txt", modelId)
-}
-
-func (sd *S3Driver) GetModelEventsFilePathAndName(projectId, modelId uint64) (string, string) {
-	path := sd.GetProjectModelDir(projectId, modelId)
-	return path, fmt.Sprintf("events_%d.txt", modelId)
-}
-
-func (sd *S3Driver) GetProjectsDataFilePathAndName(version string) (string, string) {
-	return "metadata/", fmt.Sprintf("%s.txt", version)
+func (sd *S3Driver) GetModelEventsFilePathAndName(projectId, startTimestamp int64, modelType string) (string, string) {
+	path := sd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, fmt.Sprintf("events.txt")
 }
 
 func (sd *S3Driver) GetPatternChunksDir(projectId, modelId uint64) string {

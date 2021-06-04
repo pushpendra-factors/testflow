@@ -8,13 +8,16 @@ package main
 import (
 	C "factors/config"
 	"factors/filestore"
+	"factors/model/store"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
 	"factors/util"
 	"flag"
 	"fmt"
-	"time"
+	"net/http"
+
+	taskWrapper "factors/task/task_wrapper"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -29,9 +32,6 @@ func main() {
 	env := flag.String("env", C.DEVELOPMENT, "")
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory.")
-	endTimeFlag := flag.Int64("end_time", time.Now().Unix(), "Pull events, interval end timestamp. defaults to current timestamp. Format is unix timestamp.")
-	modelTypeFlag := flag.String("model_type", "monthly", "Type of model for which to pull events, can be weekly or monthly. defaults to monthly.")
-	startTimeFlag := flag.Int64("start_time", 0, "Pull events, interval start timestamp. Format is unix timestamp.")
 
 	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
 	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
@@ -46,8 +46,14 @@ func main() {
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
-	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
+	isWeeklyEnabled := flag.Bool("weekly_enabled", false, "")
+	isMonthlyEnabled := flag.Bool("monthly_enabled", false, "")
+	isQuarterlyEnabled := flag.Bool("quarterly_enabled", false, "")
 
+	projectIdFlag := flag.String("project_ids", "",
+		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
+
+	lookback := flag.Int("lookback", 30, "lookback_for_delta lookup")
 	flag.Parse()
 
 	if *env != "development" &&
@@ -91,25 +97,23 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	if *projectIdFlag <= 0 {
-		log.Fatal("Failed to pull events. Invalid project_id.")
-	}
+	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+	if allProjects {
+		projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			log.Fatal("Failed to get all projects and project_ids set to '*'.")
+		}
 
-	var startTime int64
-	if *startTimeFlag > 0 {
-		// Give precedence to given start time.
-		startTime = *startTimeFlag
-	} else {
-		// Calculate start time based on model type, if start time not given.
-		if *modelTypeFlag == "weekly" {
-			startTime = *endTimeFlag - WeekInSecs
-		} else if *modelTypeFlag == "monthly" {
-			startTime = *endTimeFlag - MonthInSecs
-		} else {
-			log.Fatal("Invalid model_type. Use weekly or monthly.")
+		projectIdsToRun = make(map[uint64]bool, 0)
+		for _, projectID := range projectIDs {
+			projectIdsToRun[projectID] = true
 		}
 	}
 
+	projectIdsArray := make([]uint64, 0)
+	for projectId, _ := range projectIdsToRun {
+		projectIdsArray = append(projectIdsArray, projectId)
+	}
 	// Init cloud manager.
 	var cloudManager filestore.FileManager
 	if *env == "development" {
@@ -123,8 +127,25 @@ func main() {
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
-	_, _, err = T.PullEvents(db, &cloudManager, diskManager, *projectIdFlag, startTime, *endTimeFlag)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to pull events.")
+	configs := make(map[string]interface{})
+	configs["diskManager"] = diskManager
+	configs["cloudManager"] = &cloudManager
+
+	if *isWeeklyEnabled {
+		configs["modelType"] = T.ModelTypeWeek
+		status := taskWrapper.TaskFuncWithProjectId("PullEventsWeekly", *lookback, projectIdsArray, T.PullEvents, configs)
+		log.Info(status)
+	}
+
+	if *isMonthlyEnabled {
+		configs["modelType"] = T.ModelTypeMonth
+		status := taskWrapper.TaskFuncWithProjectId("PullEventsMonthly", *lookback, projectIdsArray, T.PullEvents, configs)
+		log.Info(status)
+	}
+
+	if *isQuarterlyEnabled {
+		configs["modelType"] = T.ModelTypeQuarter
+		status := taskWrapper.TaskFuncWithProjectId("PullEventsQuarterly", *lookback, projectIdsArray, T.PullEvents, configs)
+		log.Info(status)
 	}
 }

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	U "factors/util"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -78,24 +80,19 @@ func (dd *DiskDriver) GetProjectModelDir(projectId, modelId uint64) string {
 	return fmt.Sprintf("%s/projects/%d/models/%d/", dd.baseDir, projectId, modelId)
 }
 
+func (dd *DiskDriver) GetProjectEventFileDir(projectId uint64, startTimestamp int64, modelType string) string {
+	dateFormatted := U.GetDateOnlyFromTimestamp(startTimestamp)
+	return fmt.Sprintf("%s/projects/%d/events/%s/%s/", dd.baseDir, projectId, modelType, dateFormatted)
+}
+
 func (dd *DiskDriver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
 	path := dd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
 }
 
-func (dd *DiskDriver) GetModelPatternsFilePathAndName(projectId, modelId uint64) (string, string) {
-	path := dd.GetProjectModelDir(projectId, modelId)
-	return path, fmt.Sprintf("patterns_%d.txt", modelId)
-}
-
-func (dd *DiskDriver) GetModelEventsFilePathAndName(projectId, modelId uint64) (string, string) {
-	path := dd.GetProjectModelDir(projectId, modelId)
-	return path, fmt.Sprintf("events_%d.txt", modelId)
-}
-
-func (dd *DiskDriver) GetProjectsDataFilePathAndName(version string) (string, string) {
-	path := fmt.Sprintf("%s/metadata/", dd.baseDir)
-	return path, fmt.Sprintf("%s.txt", version)
+func (dd *DiskDriver) GetModelEventsFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+	path := dd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, fmt.Sprintf("events.txt")
 }
 
 func (dd *DiskDriver) GetPatternChunksDir(projectId, modelId uint64) string {

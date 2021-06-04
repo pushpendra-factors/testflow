@@ -19,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Given a startdate till now what are all date/hours have the job been completed for
 func (store *MemSQL) GetAllProcessedIntervalsFromStartDate(taskID uint64, projectId uint64, startDate *time.Time) ([]uint64, int, string) {
 
 	// get all the processed deltas with the given range
@@ -69,6 +70,7 @@ func (store *MemSQL) GetAllProcessedIntervalsFromStartDate(taskID uint64, projec
 	return deltas, http.StatusOK, ""
 }
 
+// Given a enddate and lookback what are all date/hours have the job been completed for
 func (store *MemSQL) GetAllProcessedIntervals(taskID uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
 
 	// get all the processed deltas with the given range
@@ -119,6 +121,7 @@ func (store *MemSQL) GetAllProcessedIntervals(taskID uint64, projectId uint64, l
 	return deltas, http.StatusOK, ""
 }
 
+// Get all the date/hours which is in progress state
 func (store *MemSQL) GetAllInProgressIntervals(taskID uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
 
 	// get all the processed deltas with the given range
@@ -170,6 +173,7 @@ func (store *MemSQL) GetAllInProgressIntervals(taskID uint64, projectId uint64, 
 	return deltas, http.StatusOK, ""
 }
 
+// Insert a record before starting execution
 func (store *MemSQL) InsertTaskBeginRecord(taskId uint64, projectId uint64, delta uint64) (int, string) {
 	// THROW CONFLICT ERROR IT ITS A DUPLICATE ENTRY
 	// else insert
@@ -217,6 +221,7 @@ func (store *MemSQL) InsertTaskBeginRecord(taskId uint64, projectId uint64, delt
 	return http.StatusCreated, ""
 }
 
+// Insert a record after execution
 func (store *MemSQL) InsertTaskEndRecord(taskId uint64, projectId uint64, delta uint64) (int, string) {
 	// THROW CONFLICT ERROR IT ITS A DUPLICATE ENTRY
 	// else insert
@@ -257,6 +262,7 @@ func (store *MemSQL) InsertTaskEndRecord(taskId uint64, projectId uint64, delta 
 	return http.StatusCreated, ""
 }
 
+// Delete a record if failed execution
 func (store *MemSQL) DeleteTaskEndRecord(taskId uint64, projectId uint64, delta uint64) (int, string) {
 	// THROW CONFLICT ERROR IT ITS A DUPLICATE ENTRY
 	// else insert
@@ -295,6 +301,7 @@ func (store *MemSQL) DeleteTaskEndRecord(taskId uint64, projectId uint64, delta 
 	return http.StatusAccepted, ""
 }
 
+// Get All the execution date/hour in the given range
 func (store *MemSQL) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
 
 	// get all the processed deltas with the given range
@@ -382,7 +389,7 @@ func (store *MemSQL) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays i
 		nearestSundayIndex := int(weekday)
 		i, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateTime.Format(U.DATETIME_FORMAT_YYYYMMDD))
 		if nearestSundayIndex != 0 {
-			i = startDateTime.AddDate(0, 0, -nearestSundayIndex)
+			i = i.AddDate(0, 0, -nearestSundayIndex)
 		}
 		for {
 			if i.After(endDateTime) {
@@ -390,6 +397,40 @@ func (store *MemSQL) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays i
 			}
 			deltas = append(deltas, U.DateAsFormattedInt(i))
 			i = i.AddDate(0, 0, 7)
+		}
+	}
+	if taskDetails.Frequency == model.Monthly {
+		// Weekly doesnt support skipping a week
+		dateValue := startDateTime.Day()
+		i, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateTime.Format(U.DATETIME_FORMAT_YYYYMMDD))
+		if dateValue != 1 {
+			i = i.AddDate(0, 0, -(dateValue - 1))
+		}
+		for {
+			if i.After(endDateTime) {
+				break
+			}
+			deltas = append(deltas, U.DateAsFormattedInt(i))
+			i = i.AddDate(0, 1, 0)
+		}
+	}
+	if taskDetails.Frequency == model.Quarterly {
+		// Weekly doesnt support skipping a week
+		dateValue := startDateTime.Day()
+		monthValue := int(startDateTime.Month() % 3)
+		i, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateTime.Format(U.DATETIME_FORMAT_YYYYMMDD))
+		if dateValue != 1 {
+			i = i.AddDate(0, 0, -(dateValue - 1))
+		}
+		if monthValue != 1 {
+			i = i.AddDate(0, -(monthValue - 1), 0)
+		}
+		for {
+			if i.After(endDateTime) {
+				break
+			}
+			deltas = append(deltas, U.DateAsFormattedInt(i))
+			i = i.AddDate(0, 3, 0)
 		}
 	}
 	if taskDetails.Frequency == model.Stateless {
@@ -400,6 +441,7 @@ func (store *MemSQL) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays i
 
 // TODO: JANANI tasks with same frequency but different offset. how to handle that? - May be avoid adding such dependencies
 // avoid adding offsets for stateless
+// To check if all the dependent jobs for a give date/hour range is done
 func (store *MemSQL) IsDependentTaskDone(taskId uint64, projectId uint64, delta uint64) bool {
 	dependentTaskOffsetMap := make(map[uint64]int, 0)
 	dependentTaskStateMap := make(map[uint64]bool, 0)
@@ -466,19 +508,108 @@ func (store *MemSQL) IsDependentTaskDone(taskId uint64, projectId uint64, delta 
 			deltaDateWithDepOffset := deltaDate.AddDate(0, 0, (offset * 7))
 			depTaskDetails, _, _ := store.GetTaskDetailsById(depTaskId)
 			if depTaskDetails.Frequency == model.Hourly {
-				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 0, 1)
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 0, 7)
 				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 28, &deltaDateWithDepOffset)
 				configuredDeltas, _, _ := store.GetAllDeltasByConfiguration(depTaskId, 7, &deltaDateWithDepOffset)
 				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
 				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
 			} else if depTaskDetails.Frequency == model.Daily {
-				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 0, 1)
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 0, 7)
 				configuredDeltas, _, _ := store.GetAllDeltasByConfiguration(depTaskId, 7, &deltaDateWithDepOffset)
 				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
 				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 28, &deltaDateWithDepOffset)
 				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
 			} else if depTaskDetails.Frequency == model.Weekly {
 				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 28, &deltaDateWithDepOffset)
+				if arrayUint64Contains(processedDeltas, U.DateAsFormattedInt(deltaDateWithDepOffset)) {
+					dependentTaskStateMap[depTaskId] = true
+				}
+			} else if depTaskDetails.Frequency == model.Stateless {
+				processedDeltas, _, _ := store.GetAllProcessedIntervalsFromStartDate(depTaskId, projectId, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAnyHigherDeltaPresent(processedDeltas, delta)
+				// if anything greateer than or equal to delta is done . mark it true
+			} else {
+				dependentTaskStateMap[depTaskId] = false
+			}
+		}
+	}
+	if baseTaskDetails.Frequency == model.Monthly {
+		// monthly - hour
+		// monthly - daily
+		// monthly - week
+		// monthly - weekly
+		// monthly - stateless
+		for depTaskId, offset := range dependentTaskOffsetMap {
+			deltaDateWithDepOffset := deltaDate.AddDate(0, offset, 0)
+			depTaskDetails, _, _ := store.GetTaskDetailsById(depTaskId)
+			if depTaskDetails.Frequency == model.Hourly {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 1, 0)
+				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 31, &deltaDateWithDepOffset)
+				configuredDeltas, _, _ := store.GetAllDeltasByConfiguration(depTaskId, 31, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Daily {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 1, 0)
+				configuredDeltas, _, _ := store.GetAllDeltasByConfiguration(depTaskId, 31, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 31, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Weekly {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 1, 0)
+				configuredDeltas, _, _ := store.GetAllDeltasByConfiguration(depTaskId, 31, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 31, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Monthly {
+				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 31, &deltaDateWithDepOffset)
+				if arrayUint64Contains(processedDeltas, U.DateAsFormattedInt(deltaDateWithDepOffset)) {
+					dependentTaskStateMap[depTaskId] = true
+				}
+			} else if depTaskDetails.Frequency == model.Stateless {
+				processedDeltas, _, _ := store.GetAllProcessedIntervalsFromStartDate(depTaskId, projectId, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAnyHigherDeltaPresent(processedDeltas, delta)
+				// if anything greateer than or equal to delta is done . mark it true
+			} else {
+				dependentTaskStateMap[depTaskId] = false
+			}
+		}
+	}
+	if baseTaskDetails.Frequency == model.Quarterly {
+		// Quarterly - hour
+		// Quarterly - daily
+		// Quarterly - week
+		// Quarterly - weekly
+		// Quarterly - monthly
+		// Quarterly - stateless
+		for depTaskId, offset := range dependentTaskOffsetMap {
+			deltaDateWithDepOffset := deltaDate.AddDate(0, offset, 0)
+			depTaskDetails, _, _ := store.GetTaskDetailsById(depTaskId)
+			if depTaskDetails.Frequency == model.Hourly {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 3, 0)
+				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 93, &deltaDateWithDepOffset)
+				configuredDeltas, _, _ := store.GetAllDeltasByConfiguration(depTaskId, 93, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Daily {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 3, 0)
+				configuredDeltas, _, _ := store.GetAllDeltasByConfiguration(depTaskId, 93, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 93, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Weekly {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 3, 0)
+				configuredDeltas, _, _ := store.GetAllDeltasByConfiguration(depTaskId, 93, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 93, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Monthly {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 3, 0)
+				configuredDeltas, _, _ := store.GetAllDeltasByConfiguration(depTaskId, 93, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 93, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Quarterly {
+				processedDeltas, _, _ := store.GetAllProcessedIntervals(depTaskId, projectId, 93, &deltaDateWithDepOffset)
 				if arrayUint64Contains(processedDeltas, U.DateAsFormattedInt(deltaDateWithDepOffset)) {
 					dependentTaskStateMap[depTaskId] = true
 				}
@@ -512,6 +643,7 @@ func (store *MemSQL) IsDependentTaskDone(taskId uint64, projectId uint64, delta 
 	return true
 }
 
+// Get All the date/time range that are yet to be executed
 func (store *MemSQL) GetAllToBeExecutedDeltas(taskId uint64, projectId uint64, lookbackInDays int, endDate *time.Time) ([]uint64, int, string) {
 	if endDate == nil {
 		currentTime := U.TimeNow()
@@ -519,6 +651,7 @@ func (store *MemSQL) GetAllToBeExecutedDeltas(taskId uint64, projectId uint64, l
 	}
 	taskDetails, _, _ := store.GetTaskDetailsById(taskId)
 	endDateWithOffset := *endDate
+	startDateDelta := U.DateAsFormattedInt((*endDate).AddDate(0, 0, -lookbackInDays))
 	endDateWithOffset = endDateWithOffset.Add(time.Minute * time.Duration(-taskDetails.OffsetStartMinutes))
 	allDeltas, _, _ := store.GetAllDeltasByConfiguration(taskId, lookbackInDays, &endDateWithOffset)
 	processedDeltas, _, _ := store.GetAllProcessedIntervals(taskId, projectId, lookbackInDays, &endDateWithOffset)
@@ -532,7 +665,7 @@ func (store *MemSQL) GetAllToBeExecutedDeltas(taskId uint64, projectId uint64, l
 		processedDeltaMap[delta] = true
 	}
 	for _, delta := range allDeltas {
-		if !processedDeltaMap[delta] == true {
+		if processedDeltaMap[delta] != true && delta >= startDateDelta {
 			unprocessedDeltas = append(unprocessedDeltas, delta)
 		}
 	}

@@ -386,7 +386,7 @@ func (pg *Postgres) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays in
 		nearestSundayIndex := int(weekday)
 		i, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateTime.Format(U.DATETIME_FORMAT_YYYYMMDD))
 		if nearestSundayIndex != 0 {
-			i = startDateTime.AddDate(0, 0, -nearestSundayIndex)
+			i = i.AddDate(0, 0, -nearestSundayIndex)
 		}
 		for {
 			if i.After(endDateTime) {
@@ -394,6 +394,40 @@ func (pg *Postgres) GetAllDeltasByConfiguration(taskID uint64, lookbackInDays in
 			}
 			deltas = append(deltas, U.DateAsFormattedInt(i))
 			i = i.AddDate(0, 0, 7)
+		}
+	}
+	if taskDetails.Frequency == model.Monthly {
+		// Weekly doesnt support skipping a week
+		dateValue := startDateTime.Day()
+		i, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateTime.Format(U.DATETIME_FORMAT_YYYYMMDD))
+		if dateValue != 1 {
+			i = i.AddDate(0, 0, -(dateValue - 1))
+		}
+		for {
+			if i.After(endDateTime) {
+				break
+			}
+			deltas = append(deltas, U.DateAsFormattedInt(i))
+			i = i.AddDate(0, 1, 0)
+		}
+	}
+	if taskDetails.Frequency == model.Quarterly {
+		// Weekly doesnt support skipping a week
+		dateValue := startDateTime.Day()
+		monthValue := int(startDateTime.Month() % 3)
+		i, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, startDateTime.Format(U.DATETIME_FORMAT_YYYYMMDD))
+		if dateValue != 1 {
+			i = i.AddDate(0, 0, -(dateValue - 1))
+		}
+		if monthValue != 1 {
+			i = i.AddDate(0, -(monthValue - 1), 0)
+		}
+		for {
+			if i.After(endDateTime) {
+				break
+			}
+			deltas = append(deltas, U.DateAsFormattedInt(i))
+			i = i.AddDate(0, 3, 0)
 		}
 	}
 	if taskDetails.Frequency == model.Stateless {
@@ -471,19 +505,108 @@ func (pg *Postgres) IsDependentTaskDone(taskId uint64, projectId uint64, delta u
 			deltaDateWithDepOffset := deltaDate.AddDate(0, 0, (offset * 7))
 			depTaskDetails, _, _ := pg.GetTaskDetailsById(depTaskId)
 			if depTaskDetails.Frequency == model.Hourly {
-				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 0, 1)
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 0, 7)
 				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 28, &deltaDateWithDepOffset)
 				configuredDeltas, _, _ := pg.GetAllDeltasByConfiguration(depTaskId, 7, &deltaDateWithDepOffset)
 				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
 				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
 			} else if depTaskDetails.Frequency == model.Daily {
-				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 0, 1)
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 0, 7)
 				configuredDeltas, _, _ := pg.GetAllDeltasByConfiguration(depTaskId, 7, &deltaDateWithDepOffset)
 				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
 				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 28, &deltaDateWithDepOffset)
 				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
 			} else if depTaskDetails.Frequency == model.Weekly {
 				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 28, &deltaDateWithDepOffset)
+				if arrayUint64Contains(processedDeltas, U.DateAsFormattedInt(deltaDateWithDepOffset)) {
+					dependentTaskStateMap[depTaskId] = true
+				}
+			} else if depTaskDetails.Frequency == model.Stateless {
+				processedDeltas, _, _ := pg.GetAllProcessedIntervalsFromStartDate(depTaskId, projectId, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAnyHigherDeltaPresent(processedDeltas, delta)
+				// if anything greateer than or equal to delta is done . mark it true
+			} else {
+				dependentTaskStateMap[depTaskId] = false
+			}
+		}
+	}
+	if baseTaskDetails.Frequency == model.Monthly {
+		// monthly - hour
+		// monthly - daily
+		// monthly - week
+		// monthly - weekly
+		// monthly - stateless
+		for depTaskId, offset := range dependentTaskOffsetMap {
+			deltaDateWithDepOffset := deltaDate.AddDate(0, offset, 0)
+			depTaskDetails, _, _ := pg.GetTaskDetailsById(depTaskId)
+			if depTaskDetails.Frequency == model.Hourly {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 1, 0)
+				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 31, &deltaDateWithDepOffset)
+				configuredDeltas, _, _ := pg.GetAllDeltasByConfiguration(depTaskId, 31, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Daily {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 1, 0)
+				configuredDeltas, _, _ := pg.GetAllDeltasByConfiguration(depTaskId, 31, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 31, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Weekly {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 1, 0)
+				configuredDeltas, _, _ := pg.GetAllDeltasByConfiguration(depTaskId, 31, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 31, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Monthly {
+				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 31, &deltaDateWithDepOffset)
+				if arrayUint64Contains(processedDeltas, U.DateAsFormattedInt(deltaDateWithDepOffset)) {
+					dependentTaskStateMap[depTaskId] = true
+				}
+			} else if depTaskDetails.Frequency == model.Stateless {
+				processedDeltas, _, _ := pg.GetAllProcessedIntervalsFromStartDate(depTaskId, projectId, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAnyHigherDeltaPresent(processedDeltas, delta)
+				// if anything greateer than or equal to delta is done . mark it true
+			} else {
+				dependentTaskStateMap[depTaskId] = false
+			}
+		}
+	}
+	if baseTaskDetails.Frequency == model.Quarterly {
+		// Quarterly - hour
+		// Quarterly - daily
+		// Quarterly - week
+		// Quarterly - weekly
+		// Quarterly - monthly
+		// Quarterly - stateless
+		for depTaskId, offset := range dependentTaskOffsetMap {
+			deltaDateWithDepOffset := deltaDate.AddDate(0, offset, 0)
+			depTaskDetails, _, _ := pg.GetTaskDetailsById(depTaskId)
+			if depTaskDetails.Frequency == model.Hourly {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 3, 0)
+				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 93, &deltaDateWithDepOffset)
+				configuredDeltas, _, _ := pg.GetAllDeltasByConfiguration(depTaskId, 93, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Daily {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 3, 0)
+				configuredDeltas, _, _ := pg.GetAllDeltasByConfiguration(depTaskId, 93, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 93, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Weekly {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 3, 0)
+				configuredDeltas, _, _ := pg.GetAllDeltasByConfiguration(depTaskId, 93, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 93, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Monthly {
+				deltaDateWithDepOffset := deltaDateWithDepOffset.AddDate(0, 3, 0)
+				configuredDeltas, _, _ := pg.GetAllDeltasByConfiguration(depTaskId, 93, &deltaDateWithDepOffset)
+				configuredDeltas = configuredDeltas[0 : len(configuredDeltas)-1]
+				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 93, &deltaDateWithDepOffset)
+				dependentTaskStateMap[depTaskId] = isAllDeltaPresent(processedDeltas, configuredDeltas)
+			} else if depTaskDetails.Frequency == model.Quarterly {
+				processedDeltas, _, _ := pg.GetAllProcessedIntervals(depTaskId, projectId, 93, &deltaDateWithDepOffset)
 				if arrayUint64Contains(processedDeltas, U.DateAsFormattedInt(deltaDateWithDepOffset)) {
 					dependentTaskStateMap[depTaskId] = true
 				}
@@ -525,6 +648,7 @@ func (pg *Postgres) GetAllToBeExecutedDeltas(taskId uint64, projectId uint64, lo
 	}
 	taskDetails, _, _ := pg.GetTaskDetailsById(taskId)
 	endDateWithOffset := *endDate
+	startDateDelta := U.DateAsFormattedInt((*endDate).AddDate(0, 0, -lookbackInDays))
 	endDateWithOffset = endDateWithOffset.Add(time.Minute * time.Duration(-taskDetails.OffsetStartMinutes))
 	allDeltas, _, _ := pg.GetAllDeltasByConfiguration(taskId, lookbackInDays, &endDateWithOffset)
 	processedDeltas, _, _ := pg.GetAllProcessedIntervals(taskId, projectId, lookbackInDays, &endDateWithOffset)
@@ -538,7 +662,7 @@ func (pg *Postgres) GetAllToBeExecutedDeltas(taskId uint64, projectId uint64, lo
 		processedDeltaMap[delta] = true
 	}
 	for _, delta := range allDeltas {
-		if !processedDeltaMap[delta] == true {
+		if processedDeltaMap[delta] != true && delta >= startDateDelta {
 			unprocessedDeltas = append(unprocessedDeltas, delta)
 		}
 	}
