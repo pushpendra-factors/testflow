@@ -126,6 +126,13 @@ upload-pull-events: export IMAGE_NAME=pull-events-job
 upload-pull-events: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/pull-events-job:$(TAG)
 
+pack-pattern-mine:
+	docker build -t us.gcr.io/factors-$(ENV)/pattern-mine-job:$(TAG) -f Dockerfile.pattern_mine_job .
+
+upload-pattern-mine: export IMAGE_NAME=pattern-mine-job
+upload-pattern-mine: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/pattern-mine-job:$(TAG)
+
 pack-add-session:
 	docker build -t us.gcr.io/factors-$(ENV)/add-session-job:$(TAG) -f Dockerfile.add_session_job .
 

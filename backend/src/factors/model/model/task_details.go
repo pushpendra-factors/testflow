@@ -11,6 +11,8 @@ const (
 	Hourly    = 2
 	Daily     = 3
 	Weekly    = 4
+	Monthly   = 5
+	Quarterly = 6
 )
 
 type TaskDetails struct {

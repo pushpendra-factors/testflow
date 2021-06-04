@@ -3,6 +3,7 @@ package gcstorage
 import (
 	"context"
 	"factors/filestore"
+	U "factors/util"
 	"fmt"
 	"io"
 	"strings"
@@ -72,23 +73,19 @@ func (gcsd *GCSDriver) GetProjectModelDir(projectId, modelId uint64) string {
 	return fmt.Sprintf("projects/%d/models/%d/", projectId, modelId)
 }
 
+func (gcsd *GCSDriver) GetProjectEventFileDir(projectId uint64, startTimestamp int64, modelType string) string {
+	dateFormatted := U.GetDateOnlyFromTimestamp(startTimestamp)
+	return fmt.Sprintf("projects/%d/events/%s/%s/", projectId, modelType, dateFormatted)
+}
+
 func (gcsd *GCSDriver) GetModelEventInfoFilePathAndName(projectId, modelId uint64) (string, string) {
 	path := gcsd.GetProjectModelDir(projectId, modelId)
 	return path, fmt.Sprintf("event_info_%d.txt", modelId)
 }
 
-func (gcsd *GCSDriver) GetModelPatternsFilePathAndName(projectId, modelId uint64) (string, string) {
-	path := gcsd.GetProjectModelDir(projectId, modelId)
-	return path, fmt.Sprintf("patterns_%d.txt", modelId)
-}
-
-func (gcsd *GCSDriver) GetModelEventsFilePathAndName(projectId, modelId uint64) (string, string) {
-	path := gcsd.GetProjectModelDir(projectId, modelId)
-	return path, fmt.Sprintf("events_%d.txt", modelId)
-}
-
-func (gcsd *GCSDriver) GetProjectsDataFilePathAndName(version string) (string, string) {
-	return "metadata/", fmt.Sprintf("%s.txt", version)
+func (gcsd *GCSDriver) GetModelEventsFilePathAndName(projectId uint64, startTimestamp int64, modelType string) (string, string) {
+	path := gcsd.GetProjectEventFileDir(projectId, startTimestamp, modelType)
+	return path, fmt.Sprintf("events.txt")
 }
 
 func (gcsd *GCSDriver) GetPatternChunksDir(projectId, modelId uint64) string {

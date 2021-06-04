@@ -39,18 +39,6 @@ func TestGetModelEventInfoFilePath(t *testing.T) {
 	assert.Equal(t, expectedName, resultName)
 }
 
-func TestGetModelPatternsFilePath(t *testing.T) {
-	projectId := U.RandomUint64()
-	modelId := U.RandomUint64()
-	expectedPath := s3Driver.GetProjectModelDir(projectId, modelId)
-	expectedName := fmt.Sprintf("patterns_%d.txt", modelId)
-
-	resultPath, resultName := s3Driver.GetModelPatternsFilePathAndName(projectId, modelId)
-
-	assert.Equal(t, expectedPath, resultPath)
-	assert.Equal(t, expectedName, resultName)
-}
-
 func TestGetModelEventsFilePath(t *testing.T) {
 	projectId := U.RandomUint64()
 	modelId := U.RandomUint64()
@@ -63,16 +51,6 @@ func TestGetModelEventsFilePath(t *testing.T) {
 	assert.Equal(t, expectedName, resultName)
 }
 
-func TestGetProjectsDataFilePathAndName(t *testing.T) {
-	version := U.RandomString(8)
-	expectedPath := "metadata/"
-	expectedName := fmt.Sprintf("%s.txt", version)
-
-	resultPath, resultName := s3Driver.GetProjectsDataFilePathAndName(version)
-
-	assert.Equal(t, expectedPath, resultPath)
-	assert.Equal(t, expectedName, resultName)
-}
 func TestGetPatternChunkFilePathAndName(t *testing.T) {
 	projectId := U.RandomUint64()
 	modelId := U.RandomUint64()
