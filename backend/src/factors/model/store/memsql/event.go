@@ -1480,7 +1480,7 @@ func (store *MemSQL) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourSto
 
 		if hasSome {
 			propAuthorName, exists := filteredPropertiesMap["authorName"]
-			if !exists && propAuthorName != nil {
+			if !exists && propAuthorName == nil {
 				continue
 			}
 			authorName := propAuthorName.(string)

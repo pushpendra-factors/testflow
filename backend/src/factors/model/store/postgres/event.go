@@ -1344,7 +1344,7 @@ func (pg *Postgres) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStor
 
 		if hasSome {
 			propAuthorName, exists := filteredPropertiesMap["authorName"]
-			if !exists && propAuthorName != nil {
+			if !exists && propAuthorName == nil {
 				continue
 			}
 			authorName := propAuthorName.(string)
