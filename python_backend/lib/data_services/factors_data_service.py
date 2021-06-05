@@ -163,11 +163,11 @@ class FactorsDataService:
         return response.json()
 
     @classmethod
-    def add_all_gsc_documents(cls, project_id, url, docs, timestamp):
+    def add_all_gsc_documents(cls, project_id, url, doc_type, docs, timestamp):
 
         for i in range(0, len(docs), cls.BATCH_SIZE):
             batch = docs[i:i+cls.BATCH_SIZE]
-            response = cls.add_multiple_gsc_document(project_id, url,
+            response = cls.add_multiple_gsc_document(project_id, url, doc_type,
                                      batch, timestamp)
             if not response.ok:
                 return response

@@ -56,7 +56,7 @@ class BaseJob:
                 log.error("Dry run. Skipped add gsc documents to db.")
                 response = None
             else:
-                response = FactorsDataService.add_multiple_gsc_document(self._project_id, self._url_prefix, self._doc_type, records, timestamp)
+                response = FactorsDataService.add_all_gsc_documents(self._project_id, self._url_prefix, self._doc_type, records, timestamp)
                 if not response.ok:
                     return response
         else:

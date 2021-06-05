@@ -18,7 +18,7 @@ const (
 		" " + "FROM google_organic_documents GROUP BY project_id, url_prefix, type"
 	lastSyncInfoForAProjectGoogleOrganic = "SELECT project_id, url_prefix, max(timestamp) as last_timestamp, type" +
 		" " + "FROM google_organic_documents WHERE project_id = ? GROUP BY project_id, url_prefix, type"
-	insertGoogleOrganicDocumentsStr = "INSERT INTO google_organic_documents (id,project_id,url_prefix,timestamp,value,created_at,updated_at) VALUES "
+	insertGoogleOrganicDocumentsStr = "INSERT INTO google_organic_documents (id,project_id,url_prefix,timestamp,value,type,created_at,updated_at) VALUES "
 	googleOrganicFilterQueryStr     = "SELECT DISTINCT JSON_EXTRACT_STRING(value, ?) as filter_value FROM google_organic_documents WHERE project_id = ? AND" +
 		" " + "JSON_EXTRACT_STRING(value, ?) IS NOT NULL LIMIT 5000"
 	fromGoogleOrganicDocuments                              = " FROM google_organic_documents "
@@ -265,9 +265,9 @@ func (store *MemSQL) CreateMultipleGoogleOrganicDocument(googleOrganicDocuments 
 	insertValuesStatement := make([]string, 0)
 	insertValues := make([]interface{}, 0)
 	for _, googleOrganicDoc := range googleOrganicDocuments {
-		insertValuesStatement = append(insertValuesStatement, "(?, ?, ?, ?, ?, ?, ?)")
+		insertValuesStatement = append(insertValuesStatement, "(?, ?, ?, ?, ?, ?, ?, ?)")
 		insertValues = append(insertValues, googleOrganicDoc.ID, googleOrganicDoc.ProjectID, googleOrganicDoc.URLPrefix,
-			googleOrganicDoc.Timestamp, googleOrganicDoc.Value, googleOrganicDoc.CreatedAt, googleOrganicDoc.UpdatedAt)
+			googleOrganicDoc.Timestamp, googleOrganicDoc.Value, googleOrganicDoc.Type, googleOrganicDoc.CreatedAt, googleOrganicDoc.UpdatedAt)
 	}
 	insertStatement += joinWithComma(insertValuesStatement...)
 	rows, err := db.Raw(insertStatement, insertValues...).Rows()

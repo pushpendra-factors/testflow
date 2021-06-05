@@ -648,10 +648,10 @@ func TestExecuteChannelQueryHandlerForSearchConsole(t *testing.T) {
 
 	googleOrganicDocuments := []model.GoogleOrganicDocument{
 		{ID: id1, ProjectID: project.ID, URLPrefix: urlPrefix, Timestamp: 20210205,
-			Value: &postgres.Jsonb{value1}},
+			Value: &postgres.Jsonb{value1}, Type: 1},
 
 		{ID: id2, ProjectID: project.ID, URLPrefix: urlPrefix, Timestamp: 20210206,
-			Value: &postgres.Jsonb{value2}},
+			Value: &postgres.Jsonb{value2}, Type: 1},
 	}
 
 	for _, googleOrganicDocument := range googleOrganicDocuments {
