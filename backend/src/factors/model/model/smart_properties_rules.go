@@ -12,6 +12,16 @@ const (
 	DELETED = "deleted"
 )
 
+var SmartPropertyRulesTypeToTypeAlias = map[int]string{
+	1: "campaign",
+	2: "ad_group",
+}
+
+var SmartPropertyRulesTypeAliasToType = map[string]int{
+	"campaign": 1,
+	"ad_group": 2,
+}
+
 var EvaluationStatusMap = map[string]int{
 	"not_picked": 0,
 	"picked":     1,

@@ -777,7 +777,7 @@ func (pg *Postgres) GetAdwordsFilterValues(projectID uint64, requestFilterObject
 }
 func (pg *Postgres) getSmartPropertyFilterValues(projectID uint64, requestFilterObject string, requestFilterProperty string, source string, reqID string) ([]interface{}, int) {
 	logCtx := log.WithField("req_id", reqID).WithField("project_id", projectID).WithField("smart_property_name", requestFilterProperty)
-	objectType, isExists := smartPropertyRulesTypeAliasToType[requestFilterObject]
+	objectType, isExists := model.SmartPropertyRulesTypeAliasToType[requestFilterObject]
 	if !isExists {
 		logCtx.Error("Invalid filter object")
 		return make([]interface{}, 0, 0), http.StatusBadRequest

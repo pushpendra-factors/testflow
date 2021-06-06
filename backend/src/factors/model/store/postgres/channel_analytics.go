@@ -580,7 +580,7 @@ func (pg *Postgres) ExecuteSQL(sqlStatement string, params []interface{}, logCtx
 func (pg *Postgres) GetSmartPropertyAndRelated(projectID uint64, object string, source string) map[string]PropertiesAndRelated {
 	db := C.GetServices().Db
 	var smartPropertyRules []model.SmartPropertyRules
-	object_type, isPresent := smartPropertyRulesTypeAliasToType[object]
+	object_type, isPresent := model.SmartPropertyRulesTypeAliasToType[object]
 	if !isPresent {
 		return nil
 	}

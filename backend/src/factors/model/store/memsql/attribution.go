@@ -23,6 +23,10 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 
 	var query *model.AttributionQuery
 	U.DeepCopy(queryOriginal, &query)
+
+	// supporting existing old/saved queries
+	model.AddDefaultKeyDimensionsToAttributionQuery(query)
+
 	// for existing queries and backward support
 	if query.QueryType == "" {
 		query.QueryType = model.AttributionQueryTypeConversionBased
@@ -36,6 +40,11 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	}
 
 	marketingReports, err := store.FetchMarketingReports(projectID, *query, *projectSetting)
+	if err != nil {
+		return nil, err
+	}
+
+	err = store.PullCustomDimensionData(projectID, query.AttributionKey, marketingReports)
 	if err != nil {
 		return nil, err
 	}
@@ -123,34 +132,47 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	// Add the performance information
 	model.AddPerformanceData(attributionData, query.AttributionKey, marketingReports)
 
+	// Filter out the key values from query (apply filter after performance enrichment)
+	model.ApplyFilter(attributionData, query)
+
 	// Add additional metrics values
 	model.ComputeAdditionalMetrics(attributionData)
 
-	// Merging same name key's into single row
-	dataRows := model.GetRowsByMaps(query.AttributionKey, attributionData, query.LinkedEvents, isCompare)
-	mergedDataRows := model.MergeDataRowsHavingSameKey(dataRows, model.GetKeyIndexOrAddedKeySize(query.AttributionKey))
+	// Add custom dimensions
+	model.AddCustomDimensions(attributionData, query, marketingReports)
+
+	// Attribution data to rows
+	dataRows := model.GetRowsByMaps(query.AttributionKey, query.AttributionKeyCustomDimension, attributionData, query.LinkedEvents, isCompare)
 
 	result := &model.QueryResult{}
 	model.AddHeadersByAttributionKey(result, query)
+	result.Rows = dataRows
+
+	// Update result based on Key Dimensions
+	err = model.GetUpdatedRowsByDimensions(result, query)
+	if err != nil {
+		return nil, err
+	}
+
+	result.Rows = model.MergeDataRowsHavingSameKey(result.Rows, model.GetLastKeyValueIndex(result.Headers))
 
 	logCtx := log.WithFields(log.Fields{"Method": "ExecuteAttributionQuery"})
 	// sort the rows by conversionEvent
 	conversionIndex := model.GetConversionIndex(result.Headers)
-	sort.Slice(mergedDataRows, func(i, j int) bool {
-		if len(mergedDataRows[i]) < conversionIndex || len(mergedDataRows[j]) < conversionIndex {
-			logCtx.WithFields(log.Fields{"row1": mergedDataRows[i], "row2": mergedDataRows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
+	sort.Slice(result.Rows, func(i, j int) bool {
+		if len(result.Rows[i]) < conversionIndex || len(result.Rows[j]) < conversionIndex {
+			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results are rows len mismatch. Ignoring row and continuing.")
 			return true
 		}
-		v1, ok1 := mergedDataRows[i][conversionIndex].(float64)
-		v2, ok2 := mergedDataRows[j][conversionIndex].(float64)
+		v1, ok1 := result.Rows[i][conversionIndex].(float64)
+		v2, ok2 := result.Rows[j][conversionIndex].(float64)
 		if !ok1 || !ok2 {
-			logCtx.WithFields(log.Fields{"row1": mergedDataRows[i], "row2": mergedDataRows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
+			logCtx.WithFields(log.Fields{"row1": result.Rows[i], "row2": result.Rows[j]}).Info("final results cast mismatch. Ignoring row and continuing.")
 			return true
 		}
 		return v1 > v2
 	})
 
-	result.Rows = mergedDataRows
 	currency, err := store.GetAdwordsCurrency(projectID, *projectSetting.IntAdwordsCustomerAccountId, query.From, query.To)
 	if err != nil {
 		return result, err
@@ -389,11 +411,12 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 			userIdsWithSession = append(userIdsWithSession, userID)
 			userIdMap[userID] = true
 		}
-		marketingValues := model.MarketingData{CampaignName: campaignName, AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName}
+		marketingValues := model.MarketingData{Channel: model.PropertyValueNone, CampaignName: campaignName, AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName}
 		var attributionIdBasedOnGclID string
 		// Override GCLID based campaign info if presents
 		if gclID != model.PropertyValueNone && !(query.AttributionKey == model.AttributionKeyKeyword && !model.IsASearchSlotKeyword(&(*reports).AdwordsGCLIDData, gclID)) {
 			attributionIdBasedOnGclID, marketingValues = model.GetGCLIDAttributionValue(&(*reports).AdwordsGCLIDData, gclID, query.AttributionKey, marketingValues)
+			marketingValues.Channel = model.ChannelAdwords
 			// In cases where GCLID is present in events, but not in adwords report (as users tend to bookmark expired URLs),
 			// fallback is attributionId
 			if attributionIdBasedOnGclID != model.PropertyValueNone && attributionIdBasedOnGclID != "" {
