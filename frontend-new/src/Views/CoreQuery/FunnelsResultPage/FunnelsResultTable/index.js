@@ -1,9 +1,8 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { generateTableColumns, generateTableData } from '../utils';
 import DataTable from '../../../../components/DataTable';
 
 function FunnelsResultTable({
-  chartData,
   breakdown,
   setGroups,
   queries,
@@ -12,7 +11,12 @@ function FunnelsResultTable({
   isWidgetModal,
   arrayMapper,
   reportTitle = 'FunnelAnalysis',
+  chartData,
   durations,
+  comparisonChartData,
+  comparisonChartDurations,
+  durationObj,
+  comparison_duration,
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -21,14 +25,41 @@ function FunnelsResultTable({
     setSorter(sorter);
   }, []);
 
-  const columns = generateTableColumns(
+  const columns = useMemo(() => {
+    return generateTableColumns(
+      breakdown,
+      queries,
+      sorter,
+      handleSorting,
+      arrayMapper,
+      comparisonChartData
+    );
+  }, [
     breakdown,
     queries,
     sorter,
     handleSorting,
-    arrayMapper
-  );
-  const tableData = generateTableData(
+    arrayMapper,
+    comparisonChartData,
+  ]);
+
+  // const columns = ;
+  const tableData = useMemo(() => {
+    return generateTableData(
+      chartData,
+      breakdown,
+      queries,
+      groups,
+      arrayMapper,
+      sorter,
+      searchText,
+      durations,
+      comparisonChartDurations,
+      comparisonChartData,
+      durationObj,
+      comparison_duration
+    );
+  }, [
     chartData,
     breakdown,
     queries,
@@ -36,8 +67,12 @@ function FunnelsResultTable({
     arrayMapper,
     sorter,
     searchText,
-    durations
-  );
+    durations,
+    comparisonChartData,
+    comparisonChartDurations,
+    comparison_duration,
+    durationObj,
+  ]);
 
   const getCSVData = () => {
     return {

@@ -109,7 +109,7 @@ export const FUNNELS_COUNT = {
 
 export const legend_counts = {
   0: 3,
-  1: 5,
+  1: 6,
   2: 1,
 };
 
@@ -216,3 +216,10 @@ export const ATTRIBUTION_METRICS = [
     enabled: false,
   },
 ];
+
+export const FUNNEL_CHART_MARGIN = {
+  top: 20,
+  right: 0,
+  bottom: 30,
+  left: 40,
+};

@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+} from 'react';
 import moment from 'moment';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector, useDispatch } from 'react-redux';
@@ -28,6 +34,7 @@ import {
   DefaultDateRangeFormat,
   getAttributionQuery,
   getCampaignsQuery,
+  isComparisonEnabled,
 } from './utils';
 import {
   getEventsData,
@@ -56,6 +63,16 @@ import {
   SET_ATTR_DATE_RANGE,
 } from '../../reducers/coreQuery/actions';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
+import CoreQueryReducer from './CoreQueryReducer';
+import {
+  CORE_QUERY_INITIAL_STATE,
+  SET_COMPARISON_ENABLED,
+  COMPARISON_DATA_LOADING,
+  COMPARISON_DATA_FETCHED,
+  RESET_COMPARISON_DATA,
+  SET_COMPARISON_SUPPORTED,
+  SET_COMPARE_DURATION,
+} from './constants';
 
 function CoreQuery({
   activeProject,
@@ -63,6 +80,10 @@ function CoreQuery({
   location,
   getCampaignConfigData,
 }) {
+  const [coreQueryState, localDispatch] = useReducer(
+    CoreQueryReducer,
+    CORE_QUERY_INITIAL_STATE
+  );
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [navigatedFromDashboard, setNavigatedFromDashboard] = useState(false);
   const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
@@ -156,23 +177,45 @@ function CoreQuery({
     setAppliedBreakdown(newAppliedBreakdown);
   }, [groupBy]);
 
+  const configActionsOnRunningQuery = useCallback(
+    (isQuerySaved) => {
+      closeDrawer();
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+      setShowResult(true);
+      setQuerySaved(isQuerySaved);
+      if (!isQuerySaved) {
+        setNavigatedFromDashboard(false);
+      }
+      localDispatch({
+        type: SET_COMPARISON_SUPPORTED,
+        payload: isComparisonEnabled(queryType, queries, groupBy),
+      });
+      if (queryType === QUERY_TYPE_FUNNEL || queryType === QUERY_TYPE_EVENT) {
+        setAppliedQueries(queries.map((elem) => elem.label));
+        updateAppliedBreakdown();
+      }
+    },
+    [dispatch, groupBy, queries, queryType, updateAppliedBreakdown]
+  );
+
+  const updateLocalReducer = useCallback((type, payload) => {
+    localDispatch({ type, payload });
+  }, []);
+
+  const resetComparisonData = useCallback(() => {
+    updateLocalReducer(RESET_COMPARISON_DATA);
+  }, [updateLocalReducer]);
+
+  const handleCompareWithClick = useCallback(() => {
+    updateLocalReducer(SET_COMPARISON_ENABLED, true);
+  }, [updateLocalReducer]);
+
   const runQuery = useCallback(
-    async (isQuerySaved, durationObj) => {
+    async (isQuerySaved, durationObj, isCompareQuery) => {
       try {
         if (!durationObj) {
           durationObj = dateRange;
         }
-        closeDrawer();
-        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-        setShowResult(true);
-        setQuerySaved(isQuerySaved);
-        if (!isQuerySaved) {
-          setNavigatedFromDashboard(false);
-        }
-        setAppliedQueries(queries.map((elem) => elem.label));
-        updateAppliedBreakdown();
-        setBreakdownType(user_type);
-        updateResultState({ ...initialState, loading: true });
         const query = getQuery(
           groupBy,
           queries,
@@ -180,7 +223,14 @@ function CoreQuery({
           user_type,
           durationObj
         );
-        updateRequestQuery(query);
+        if (!isCompareQuery) {
+          configActionsOnRunningQuery(isQuerySaved);
+          setBreakdownType(user_type);
+          updateRequestQuery(query);
+          updateResultState({ ...initialState, loading: true });
+        } else {
+          updateLocalReducer(COMPARISON_DATA_LOADING);
+        }
         const res = await getEventsData(activeProject.id, query);
         if (result_criteria === TOTAL_EVENTS_CRITERIA) {
           updateResultState({
@@ -243,41 +293,38 @@ function CoreQuery({
       result_criteria,
       user_type,
       activeProject.id,
-      dispatch,
       groupBy,
-      updateAppliedBreakdown,
       updateResultState,
+      configActionsOnRunningQuery,
+      updateLocalReducer,
     ]
   );
 
   const runFunnelQuery = useCallback(
-    async (isQuerySaved, durationObj) => {
+    async (isQuerySaved, durationObj, isCompareQuery) => {
       try {
         if (!durationObj) {
           durationObj = dateRange;
+          resetComparisonData();
         }
-        closeDrawer();
-        dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-        setShowResult(true);
-        setQuerySaved(isQuerySaved);
-        if (!isQuerySaved) {
-          setNavigatedFromDashboard(false);
-        }
-        setAppliedQueries(queries.map((elem) => elem.label));
-        updateAppliedBreakdown();
-        updateResultState({ ...initialState, loading: true });
         const query = getFunnelQuery(
           groupBy,
           queries,
           session_analytics_seq,
           durationObj
         );
-        updateRequestQuery(query);
-        const res = await getFunnelData(activeProject.id, query);
-        if (res.status === 200) {
-          updateResultState({ ...initialState, data: res.data });
+        if (!isCompareQuery) {
+          configActionsOnRunningQuery(isQuerySaved);
+          updateResultState({ ...initialState, loading: true });
+          updateRequestQuery(query);
         } else {
-          updateResultState({ ...initialState, error: true });
+          updateLocalReducer(COMPARISON_DATA_LOADING);
+        }
+        const res = await getFunnelData(activeProject.id, query);
+        if (isCompareQuery) {
+          updateLocalReducer(COMPARISON_DATA_FETCHED, res.data);
+        } else {
+          updateResultState({ ...initialState, data: res.data });
         }
       } catch (err) {
         console.log(err);
@@ -287,12 +334,13 @@ function CoreQuery({
     [
       queries,
       session_analytics_seq,
-      updateAppliedBreakdown,
       activeProject.id,
       groupBy,
       dateRange,
-      dispatch,
       updateResultState,
+      configActionsOnRunningQuery,
+      updateLocalReducer,
+      resetComparisonData,
     ]
   );
 
@@ -349,6 +397,10 @@ function CoreQuery({
         if (!isQuerySaved) {
           setNavigatedFromDashboard(false);
         }
+        localDispatch({
+          type: SET_COMPARISON_SUPPORTED,
+          payload: isComparisonEnabled(QUERY_TYPE_ATTRIBUTION),
+        });
         updateResultState({
           ...initialState,
           loading: true,
@@ -460,7 +512,7 @@ function CoreQuery({
   );
 
   const handleDurationChange = useCallback(
-    (dates) => {
+    (dates, isCompareDate) => {
       let from,
         to,
         frequency = 'date';
@@ -474,17 +526,27 @@ function CoreQuery({
       if (moment(to).diff(from, 'hours') < 24) {
         frequency = 'hour';
       }
-      setQueryOptions((currState) => {
-        return {
-          ...currState,
-          date_range: {
-            ...currState.date_range,
-            from,
-            to,
-            frequency,
-          },
-        };
-      });
+      if (!isCompareDate) {
+        setQueryOptions((currState) => {
+          return {
+            ...currState,
+            date_range: {
+              ...currState.date_range,
+              from,
+              to,
+              frequency,
+            },
+          };
+        });
+      }
+
+      if (isCompareDate) {
+        localDispatch({
+          type: SET_COMPARE_DURATION,
+          payload: { from, to, frequency },
+        });
+      }
+
       const appliedDateRange = {
         ...queryOptions.date_range,
         from,
@@ -493,7 +555,7 @@ function CoreQuery({
       };
 
       if (queryType === QUERY_TYPE_FUNNEL) {
-        runFunnelQuery(querySaved, appliedDateRange);
+        runFunnelQuery(querySaved, appliedDateRange, isCompareDate);
       }
       if (queryType === QUERY_TYPE_EVENT) {
         runQuery(querySaved, appliedDateRange);
@@ -732,10 +794,13 @@ function CoreQuery({
         {showResult ? (
           <CoreQueryContext.Provider
             value={{
+              coreQueryState,
               attributionMetrics,
-              setAttributionMetrics,
               navigatedFromDashboard,
-              setNavigatedFromDashboard
+              setAttributionMetrics,
+              setNavigatedFromDashboard,
+              resetComparisonData,
+              handleCompareWithClick,
             }}
           >
             <AnalysisResultsPage

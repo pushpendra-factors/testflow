@@ -1,348 +1,391 @@
-import React, { useState, useEffect } from 'react';
-import { Text, SVG } from 'factorsComponents';
+import React, { useState } from 'react';
+import { SVG } from '../factorsComponents';
 import { DatePicker, Menu, Dropdown, Button } from 'antd';
 import moment from 'moment';
+import {
+  getFirstDayOfLastWeek,
+  getLastDayOfLastWeek,
+  getFirstDayOfLastMonth,
+  getLastDayOfLastMonth,
+  getRangeByLabel,
+} from './utils';
 const { RangePicker } = DatePicker;
 
-import {getFirstDayOfLastWeek, getLastDayOfLastWeek, 
-    getFirstDayOfLastMonth, getLastDayOfLastMonth, 
-    getRangeByLabel
-} from './utils';
-
-
-const FaDatepicker = ({ placement,
-    onSelect, customPicker, presetRange,
-    weekPicker, monthPicker, quarterPicker, yearPicker,
-    range, buttonSize, nowPicker, className
-
+const FaDatepicker = ({
+  placement,
+  onSelect,
+  customPicker,
+  presetRange,
+  weekPicker,
+  monthPicker,
+  quarterPicker,
+  yearPicker,
+  range,
+  buttonSize,
+  nowPicker,
+  className,
+  comparison_supported = false,
+  handleCompareWithClick,
 }) => {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerType, setdatePickerType] = useState('');
+  const [dateString, setdateString] = useState(false);
 
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [datePickerType, setdatePickerType] = useState('');
-    const [dateString, setdateString] = useState(false);
+  const momentKey = {
+    day: 'days',
+    week: 'weeks',
+    month: 'months',
+    quarter: 'quarters',
+    year: 'years',
+    hour: 'hours',
+    minutes: 'minutes',
+  };
+  const dateData = {
+    startDate: null,
+    endDate: null,
+    dateString: null,
+    dateType: null,
+  };
+  const onChange = (startDate, dateString) => {
+    setShowDatePicker(false);
+    const dateType = datePickerType;
+    const endDate = moment(startDate).add(1, momentKey[dateType]);
 
+    const newDateData = {
+      ...dateData,
+      startDate,
+      endDate,
+      dateString,
+      dateType,
+    };
 
+    if (datePickerType == 'month') {
+      let startDateMonth = moment(startDate).startOf('month');
+      let endDateMonth = moment(startDate).endOf('month');
+      let newDateDataMonth = {
+        ...dateData,
+        startDate: startDateMonth,
+        endDate: endDateMonth,
+        dateType: datePickerType,
+      };
+      onSelect(newDateDataMonth);
+      // setdateString('++Month');
+    } else if (datePickerType === 'quarter') {
+      if (endDate.isAfter(moment())) {
+        const endDateMonth = moment();
+        let newDateDataMonth = {
+          ...dateData,
+          startDate,
+          endDate: endDateMonth,
+          dateType: datePickerType,
+        };
 
-    const momentKey = {
-        day: 'days',
-        week: 'weeks',
-        month: 'months',
-        quarter: 'quarters',
-        year: 'years',
-        hour: 'hours',
-        minutes: 'minutes'
+        onSelect(newDateDataMonth);
+      } else {
+        let newDateDataMonth = {
+          ...dateData,
+          startDate,
+          endDate,
+          dateType: datePickerType,
+        };
 
+        onSelect(newDateDataMonth);
+      }
+    } else {
+      onSelect(newDateData);
     }
-    const dateData = {
-        startDate: null,
-        endDate: null,
-        dateString: null,
-        dateType: null
-    }
-    const onChange = (startDate, dateString) => {
-        
-        setShowDatePicker(false);
-        const dateType = datePickerType;
-        const endDate = moment(startDate).add(1, momentKey[dateType]);
-     
-        const newDateData = {
-            ...dateData,
-            startDate,
-            endDate,
-            dateString,
-            dateType
+  };
 
-        } 
-
-        if (datePickerType == 'month') { 
-            let startDateMonth = moment(startDate).startOf('month');
-            let endDateMonth = moment(startDate).endOf('month');
-            let newDateDataMonth = {
-                ...dateData,
-                startDate: startDateMonth,
-                endDate: endDateMonth,
-                dateType:datePickerType
-            } 
-            onSelect(newDateDataMonth);
-            // setdateString('++Month'); 
-        }
-        else if (datePickerType === 'quarter') {
-            if(endDate.isAfter(moment())) {
-                const endDateMonth = moment();
-                let newDateDataMonth = {
-                    ...dateData,
-                    startDate,
-                    endDate: endDateMonth,
-                    dateType:datePickerType
-                }
-
-                onSelect(newDateDataMonth);
-            } else {
-
-                let newDateDataMonth = {
-                    ...dateData,
-                    startDate,
-                    endDate,
-                    dateType:datePickerType
-                }
-
-                onSelect(newDateDataMonth);
-                
-            }
-        }
-        else{ 
-            onSelect(newDateData); 
-        }  
-    }
-
-    const onCustomChange = (startDate, dateString) =>  {
-        const startDt = moment(startDate[0]).startOf('day');
-        let endDt = moment(startDate[1]);
-        if(endDt.isBefore(moment().startOf('day'))) {
-            endDt = endDt.endOf('day');
-        } else {
-            endDt = moment();
-        }
-
-        let newDateData = {
-            ...dateData,
-            startDate: startDt,
-            endDate: endDt,
-            datePickerType,
-            dateString
-        }
-        setdateString(dateString);
-        onSelect(newDateData);
-        setShowDatePicker(false);
+  const onCustomChange = (startDate, dateString) => {
+    const startDt = moment(startDate[0]).startOf('day');
+    let endDt = moment(startDate[1]);
+    if (endDt.isBefore(moment().startOf('day'))) {
+      endDt = endDt.endOf('day');
+    } else {
+      endDt = moment();
     }
 
-    const returnPreSetDate = (type) => {
-        setdatePickerType(null)
-        const today = moment();
-        if (type == 'now') {
-            let newDateData = {
-                ...dateData,
-                startDate: moment().subtract(30, 'minutes'),
-                endDate: today,
-                dateType:type,
-                dateString: 'Now',
-            }
-            setdateString('Now');
-            onSelect(newDateData);
-        }
-        if (type == 'today') {
-            let newDateData = {
-                ...dateData,
-                startDate: moment(today).startOf('day'),
-                endDate: today,
-                dateType:type,
-                dateString: 'Today',
-            }
-            setdateString('Today');
-            onSelect(newDateData);
-        }
-        if (type == 'yesterday') {
-            let newDateData = {
-                ...dateData,
-                startDate: moment(today).subtract(1, 'days').startOf('day'),
-                endDate: moment(today).subtract(1, 'days').endOf('day'),
-                dateType:type,
-                dateString: 'Yesterday',
-            }
-            setdateString('Yesterday');
-            onSelect(newDateData);
-        }
-        if (type == 'this_week') {
-            const dateRng = getRangeByLabel('This Week');
-            let startDate = dateRng.startDate;
-            let endDate = dateRng.endDate;
-            let newDateData = {
-                ...dateData,
-                startDate,
-                endDate,
-                dateType:type,
-                dateString: 'This Week',
-            }
-            setdateString('This Week');
-            onSelect(newDateData);
-        }
-        if (type == 'last_week') {
-            let startDate = moment(getFirstDayOfLastWeek()).startOf('day').toDate();
-            let endDate = moment(getLastDayOfLastWeek()).endOf('day').toDate();
-            let newDateData = {
-                ...dateData,
-                startDate,
-                endDate,
-                dateType:type,
-                dateString: 'Last Week',
-            }
-            setdateString('Last Week');
-            onSelect(newDateData);
-        }
-        if (type == 'this_month') {
-            const dateRng = getRangeByLabel('This Month');
-            let startDate = dateRng.startDate;
-            let endDate = dateRng.endDate;
-            let newDateData = {
-                ...dateData,
-                startDate,
-                endDate,
-                dateType:type,
-                dateString: 'This Month',
-            }
-            setdateString('This Month');
-            onSelect(newDateData);
-        }
-        if (type == 'last_month') {
-            let startDate = moment(getFirstDayOfLastMonth()).startOf('day').toDate();
-            let endDate = moment(getLastDayOfLastMonth()).endOf('day').toDate();
-            let newDateData = {
-                ...dateData,
-                startDate,
-                endDate,
-                dateType:type,
-                dateString: 'Last Month',
-                
-            }
-            setdateString('Last Month');
-            onSelect(newDateData);
-        }
+    let newDateData = {
+      ...dateData,
+      startDate: startDt,
+      endDate: endDt,
+      datePickerType,
+      dateString,
+    };
+    setdateString(dateString);
+    onSelect(newDateData);
+    setShowDatePicker(false);
+  };
+
+  const returnPreSetDate = (type) => {
+    setdatePickerType(null);
+    const today = moment();
+    if (type == 'now') {
+      let newDateData = {
+        ...dateData,
+        startDate: moment().subtract(30, 'minutes'),
+        endDate: today,
+        dateType: type,
+        dateString: 'Now',
+      };
+      setdateString('Now');
+      onSelect(newDateData);
     }
-
-    const showDatePickerFn = (type) => {
-        setdatePickerType(type);
-        setShowDatePicker(true);
+    if (type == 'today') {
+      let newDateData = {
+        ...dateData,
+        startDate: moment(today).startOf('day'),
+        endDate: today,
+        dateType: type,
+        dateString: 'Today',
+      };
+      setdateString('Today');
+      onSelect(newDateData);
     }
+    if (type == 'yesterday') {
+      let newDateData = {
+        ...dateData,
+        startDate: moment(today).subtract(1, 'days').startOf('day'),
+        endDate: moment(today).subtract(1, 'days').endOf('day'),
+        dateType: type,
+        dateString: 'Yesterday',
+      };
+      setdateString('Yesterday');
+      onSelect(newDateData);
+    }
+    if (type == 'this_week') {
+      const dateRng = getRangeByLabel('This Week');
+      let startDate = dateRng.startDate;
+      let endDate = dateRng.endDate;
+      let newDateData = {
+        ...dateData,
+        startDate,
+        endDate,
+        dateType: type,
+        dateString: 'This Week',
+      };
+      setdateString('This Week');
+      onSelect(newDateData);
+    }
+    if (type == 'last_week') {
+      let startDate = moment(getFirstDayOfLastWeek()).startOf('day').toDate();
+      let endDate = moment(getLastDayOfLastWeek()).endOf('day').toDate();
+      let newDateData = {
+        ...dateData,
+        startDate,
+        endDate,
+        dateType: type,
+        dateString: 'Last Week',
+      };
+      setdateString('Last Week');
+      onSelect(newDateData);
+    }
+    if (type == 'this_month') {
+      const dateRng = getRangeByLabel('This Month');
+      let startDate = dateRng.startDate;
+      let endDate = dateRng.endDate;
+      let newDateData = {
+        ...dateData,
+        startDate,
+        endDate,
+        dateType: type,
+        dateString: 'This Month',
+      };
+      setdateString('This Month');
+      onSelect(newDateData);
+    }
+    if (type == 'last_month') {
+      let startDate = moment(getFirstDayOfLastMonth()).startOf('day').toDate();
+      let endDate = moment(getLastDayOfLastMonth()).endOf('day').toDate();
+      let newDateData = {
+        ...dateData,
+        startDate,
+        endDate,
+        dateType: type,
+        dateString: 'Last Month',
+      };
+      setdateString('Last Month');
+      onSelect(newDateData);
+    }
+  };
 
-    const menu = (
-        <Menu>
+  const showDatePickerFn = (type) => {
+    setdatePickerType(type);
+    setShowDatePicker(true);
+  };
 
-            {nowPicker &&
-                <Menu.Item>
-                    <a target="_blank" onClick={() => returnPreSetDate('now')}>
-                        Now
-                    </a>
-                </Menu.Item>
-            }
+  const menu = (
+    <Menu>
+      {nowPicker && (
+        <Menu.Item>
+          <a target='_blank' onClick={() => returnPreSetDate('now')}>
+            Now
+          </a>
+        </Menu.Item>
+      )}
 
-            {presetRange && <>
-                <Menu.Item>
-                    <a target="_blank" onClick={() => returnPreSetDate('today')}>
-                        Today
-                </a>
-                </Menu.Item>
-                <Menu.Item>
-                    <a target="_blank" onClick={() => returnPreSetDate('yesterday')}>
-                        Yesterday
-                </a>
-                </Menu.Item>
-                <Menu.Item>
-                    <a target="_blank" onClick={() => returnPreSetDate('this_week')}>
-                        This Week
-                </a>
-                </Menu.Item>
-                <Menu.Item>
-                    <a target="_blank" onClick={() => returnPreSetDate('last_week')}>
-                        Last Week
-                </a>
-                </Menu.Item>
-                <Menu.Item>
-                    <a target="_blank" onClick={() => returnPreSetDate('this_month')}>
-                        This Month
-                </a>
-                </Menu.Item>
-                <Menu.Item>
-                    <a target="_blank" onClick={() => returnPreSetDate('last_month')}>
-                        Last Month
-                </a>
-                </Menu.Item>
-                <Menu.Divider />
-            </>}
-
-            {weekPicker &&
-                <Menu.Item>
-                    <a target="_blank" onClick={() => showDatePickerFn('week')}>
-                        Select Week
-                    </a>
-                </Menu.Item>
-            }
-            {monthPicker &&
-                <Menu.Item>
-                    <a target="_blank" onClick={() => showDatePickerFn('month')}>
-                        Select Month
-                </a>
-                </Menu.Item>
-            }
-            {quarterPicker &&
-                <Menu.Item>
-                    <a target="_blank" onClick={() => showDatePickerFn('quarter')}>
-                        Select Quarter
-                </a>
-                </Menu.Item>
-            }
-            {yearPicker &&
-                <Menu.Item>
-                    <a target="_blank" onClick={() => showDatePickerFn('year')}>
-                        Select Year
-                </a>
-                </Menu.Item>
-            }
-            {(weekPicker || monthPicker || quarterPicker || yearPicker) && <Menu.Divider />}
-
-            {customPicker &&
-                <Menu.Item>
-                    <a target="_blank" onClick={() => showDatePickerFn('custom')}>
-                        Select Custom Range
+      {presetRange && (
+        <>
+          <Menu.Item>
+            <a target='_blank' onClick={() => returnPreSetDate('today')}>
+              Today
             </a>
-                </Menu.Item>
-            }
+          </Menu.Item>
+          <Menu.Item>
+            <a target='_blank' onClick={() => returnPreSetDate('yesterday')}>
+              Yesterday
+            </a>
+          </Menu.Item>
+          <Menu.Item>
+            <a target='_blank' onClick={() => returnPreSetDate('this_week')}>
+              This Week
+            </a>
+          </Menu.Item>
+          <Menu.Item>
+            <a target='_blank' onClick={() => returnPreSetDate('last_week')}>
+              Last Week
+            </a>
+          </Menu.Item>
+          <Menu.Item>
+            <a target='_blank' onClick={() => returnPreSetDate('this_month')}>
+              This Month
+            </a>
+          </Menu.Item>
+          <Menu.Item>
+            <a target='_blank' onClick={() => returnPreSetDate('last_month')}>
+              Last Month
+            </a>
+          </Menu.Item>
+          <Menu.Divider />
+        </>
+      )}
 
-        </Menu>
-    );
+      {weekPicker && (
+        <Menu.Item>
+          <a target='_blank' onClick={() => showDatePickerFn('week')}>
+            Select Week
+          </a>
+        </Menu.Item>
+      )}
+      {monthPicker && (
+        <Menu.Item>
+          <a target='_blank' onClick={() => showDatePickerFn('month')}>
+            Select Month
+          </a>
+        </Menu.Item>
+      )}
+      {quarterPicker && (
+        <Menu.Item>
+          <a target='_blank' onClick={() => showDatePickerFn('quarter')}>
+            Select Quarter
+          </a>
+        </Menu.Item>
+      )}
+      {yearPicker && (
+        <Menu.Item>
+          <a target='_blank' onClick={() => showDatePickerFn('year')}>
+            Select Year
+          </a>
+        </Menu.Item>
+      )}
+      {(weekPicker || monthPicker || quarterPicker || yearPicker) && (
+        <Menu.Divider />
+      )}
 
+      {customPicker && (
+        <Menu.Item>
+          <a target='_blank' onClick={() => showDatePickerFn('custom')}>
+            Select Custom Range
+          </a>
+        </Menu.Item>
+      )}
 
-    const displayRange = (range) => { 
-        if(dateString == 'Now'){
-            // return moment(range.startDate).format('MMM DD, YYYY hh:mma')
-            return 'Now'
-        }
-        if(dateString == 'Today' || range.startDate == range.endDate ){
-            return moment(range.startDate).format('MMM DD, YYYY')
-        }
-        else{
-            return moment(range.startDate).format('MMM DD, YYYY') + ' - ' +
-                moment(range.endDate).format('MMM DD, YYYY'); 
-        }
-        
+      {comparison_supported && <Menu.Divider />}
+
+      {comparison_supported && (
+        <Menu.Item>
+          <a target='_blank' onClick={handleCompareWithClick}>
+            Compare with...
+          </a>
+        </Menu.Item>
+      )}
+    </Menu>
+  );
+
+  const displayRange = (range) => {
+    if (dateString == 'Now') {
+      // return moment(range.startDate).format('MMM DD, YYYY hh:mma')
+      return 'Now';
     }
+    if (dateString == 'Today' || range.startDate == range.endDate) {
+      return moment(range.startDate).format('MMM DD, YYYY');
+    } else {
+      return (
+        moment(range.startDate).format('MMM DD, YYYY') +
+        ' - ' +
+        moment(range.endDate).format('MMM DD, YYYY')
+      );
+    }
+  };
 
-    return (
-        <div className={`fa-custom-datepicker`}>
-            {<>
-                <Dropdown overlayClassName={'fa-custom-datepicker--dropdown'} overlay={menu} placement={placement} trigger={!showDatePicker ? ['click'] : []} >
-
-                    <Button className={className} size={buttonSize? buttonSize : null}><SVG name={'calendar'} size={16} extraClass={'mr-1'} />
-                        {!showDatePicker && range ? displayRange(range) : null}
-                        {!showDatePicker && !range ? `Choose Date` : null}
-                        {showDatePicker && <>
-                            {datePickerType == 'custom' ? <RangePicker format={'MMM DD YYYY'} 
-                            disabledDate={d => !d || d.isAfter(moment())} dropdownClassName={'fa-custom-datepicker--datepicker'} size={'small'} suffixIcon={null} showToday={false} bordered={false} autoFocus={true} allowClear={true} open={true} onChange={onCustomChange} /> :
-                                <DatePicker picker={datePickerType}
-                                    disabledDate={d => !d || d.isAfter(moment())}
-                                    dropdownClassName={'fa-custom-datepicker--datepicker'} autoFocus={true} open={true} size={'small'} suffixIcon={null} showToday={false} bordered={false} allowClear={true} onChange={onChange} />}
-                        </>
-                        }
-                        {showDatePicker && <span onClick={() => setShowDatePicker(false)}>
-                            <SVG name={'Times'} size={16} extraClass={'mr-1'} />
-                        </span>}
-                    </Button>
-                </Dropdown>
-            </>
-            }
-
-        </div>
-    );
+  return (
+    <div className={`fa-custom-datepicker`}>
+      {
+        <>
+          <Dropdown
+            overlayClassName={'fa-custom-datepicker--dropdown'}
+            overlay={menu}
+            placement={placement}
+            trigger={!showDatePicker ? ['click'] : []}
+          >
+            <Button className={className} size={buttonSize ? buttonSize : null}>
+              <SVG name={'calendar'} size={16} extraClass={'mr-1'} />
+              {!showDatePicker && range ? displayRange(range) : null}
+              {!showDatePicker && !range ? `Choose Date` : null}
+              {showDatePicker && (
+                <>
+                  {datePickerType == 'custom' ? (
+                    <RangePicker
+                      format={'MMM DD YYYY'}
+                      disabledDate={(d) => !d || d.isAfter(moment())}
+                      dropdownClassName={'fa-custom-datepicker--datepicker'}
+                      size={'small'}
+                      suffixIcon={null}
+                      showToday={false}
+                      bordered={false}
+                      autoFocus={true}
+                      allowClear={true}
+                      open={true}
+                      onChange={onCustomChange}
+                    />
+                  ) : (
+                    <DatePicker
+                      picker={datePickerType}
+                      disabledDate={(d) => !d || d.isAfter(moment())}
+                      dropdownClassName={'fa-custom-datepicker--datepicker'}
+                      autoFocus={true}
+                      open={true}
+                      size={'small'}
+                      suffixIcon={null}
+                      showToday={false}
+                      bordered={false}
+                      allowClear={true}
+                      onChange={onChange}
+                    />
+                  )}
+                </>
+              )}
+              {showDatePicker && (
+                <span onClick={() => setShowDatePicker(false)}>
+                  <SVG name={'Times'} size={16} extraClass={'mr-1'} />
+                </span>
+              )}
+            </Button>
+          </Dropdown>
+        </>
+      }
+    </div>
+  );
 };
 
 export default FaDatepicker;
-

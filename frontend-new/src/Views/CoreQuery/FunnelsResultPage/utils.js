@@ -1,19 +1,72 @@
-import React from "react";
+import React from 'react';
+import moment from 'moment';
 import {
   calculatePercentage,
   getTitleWithSorter,
   formatDuration,
-} from "../../../utils/dataFormatter";
+} from '../../../utils/dataFormatter';
 import {
   SVG,
   Number as NumFormat,
-} from "../../../components/factorsComponents";
+  Text,
+} from '../../../components/factorsComponents';
+import styles from './index.module.scss';
 
 const windowSize = {
   w: window.outerWidth,
   h: window.outerHeight,
   iw: window.innerWidth,
   ih: window.innerHeight,
+};
+
+const NoBreakdownUsersColumn = (d, breakdown, isComparisonApplied) => {
+  if (breakdown.length) {
+    if (d.includes('$no_group')) {
+      return 'Overall';
+    } else {
+      return d;
+    }
+  } else {
+    if (isComparisonApplied) {
+      return (
+        <div className='flex items-center'>
+          <Text
+            type='title'
+            weight='normal'
+            color='grey-8'
+            extraClass='text-sm mb-0 py-2 px-4 w-1/2'
+          >
+            All
+          </Text>
+          <div
+            style={{ borderLeft: '1px solid #E7E9ED' }}
+            className='flex py-2 flex-col px-4 w-1/2'
+          >
+            <Text
+              type='title'
+              weight='normal'
+              color='grey-8'
+              extraClass='text-xs mb-0'
+            >
+              {`${moment(d.durationObj.from).format('MMM DD')} - ${moment(
+                d.durationObj.to
+              ).format('MMM DD')}`}
+            </Text>
+            <Text
+              type='title'
+              weight='normal'
+              color='grey'
+              extraClass='text-xs mb-0'
+            >{`vs ${moment(d.comparison_duration.from).format(
+              'MMM DD'
+            )} - ${moment(d.comparison_duration.to).format('MMM DD')}`}</Text>
+          </div>
+        </div>
+      );
+    } else {
+      return d;
+    }
+  }
 };
 
 export const generateGroupedChartsData = (
@@ -30,12 +83,12 @@ export const generateGroupedChartsData = (
     .map((g) => {
       return { name: g.name };
     });
-  const firstEventIdx = response.headers.findIndex((elem) => elem === "step_0");
+  const firstEventIdx = response.headers.findIndex((elem) => elem === 'step_0');
   response.rows.forEach((row) => {
-    const breakdownName = row.slice(0, firstEventIdx).join(",");
+    const breakdownName = row.slice(0, firstEventIdx).join(',');
     const obj = result.find((r) => r.name === breakdownName);
     if (obj) {
-      const netCounts = row.filter((val) => typeof val === "number");
+      const netCounts = row.filter((val) => typeof val === 'number');
       queries.forEach((_, idx) => {
         const eventIdx = response.headers.findIndex(
           (elem) => elem === `step_${idx}`
@@ -54,23 +107,87 @@ export const generateGroups = (response, maxAllowedVisibleProperties) => {
   if (!response) {
     return [];
   }
-  const firstEventIdx = response.headers.findIndex((elem) => elem === "step_0");
+  const firstEventIdx = response.headers.findIndex((elem) => elem === 'step_0');
   const result = response.rows.map((elem, index) => {
     const row = elem.map((item) => {
       return item;
     });
-    const netCounts = row.filter((row) => typeof row === "number");
-    const name = row.slice(0, firstEventIdx).join(",");
+    const netCounts = row.filter((row) => typeof row === 'number');
+    const name = row.slice(0, firstEventIdx).join(',');
     return {
       index,
       name,
       value:
         calculatePercentage(netCounts[netCounts.length - 1], netCounts[0]) +
-        "%",
+        '%',
       is_visible: index < maxAllowedVisibleProperties ? true : false,
     };
   });
   return result;
+};
+
+const compareSkeleton = (val1, val2) => {
+  return (
+    <div className='flex flex-col'>
+      <Text
+        type='title'
+        weight='normal'
+        color='grey-8'
+        extraClass='text-xs mb-0'
+      >
+        {val1}
+      </Text>
+      <Text type='title' weight='normal' color='grey' extraClass='text-xs mb-0'>
+        {val2}
+      </Text>
+    </div>
+  );
+};
+
+const RenderTotalConversion = (d, breakdown, isComparisonApplied) => {
+  if (breakdown.length || !isComparisonApplied) {
+    return d;
+  } else {
+    return compareSkeleton(d.conversion, d.comparsion_conversion);
+  }
+};
+
+const RenderConversionTime = (d, breakdown, isComparisonApplied) => {
+  if (breakdown.length || !isComparisonApplied) {
+    return d;
+  } else {
+    return compareSkeleton(d.overallDuration, d.comparisonOverallDuration);
+  }
+};
+
+const RenderEventData = (d, breakdown, isComparisonApplied) => {
+  if (breakdown.length || !isComparisonApplied) {
+    return (
+      <>
+        <NumFormat number={d.count} /> ({d.percentage}%)
+      </>
+    );
+  } else {
+    const val1 = (
+      <>
+        <NumFormat number={d.count} /> ({d.percentage}%)
+      </>
+    );
+    const val2 = (
+      <>
+        <NumFormat number={d.compare_count} /> ({d.compare_percent}%)
+      </>
+    );
+    return compareSkeleton(val1, val2);
+  }
+};
+
+const RenderDurations = (d, breakdown, isComparisonApplied) => {
+  if (breakdown.length || !isComparisonApplied) {
+    return d;
+  } else {
+    return compareSkeleton(d.time, d.compare_time);
+  }
 };
 
 export const generateTableColumns = (
@@ -79,30 +196,28 @@ export const generateTableColumns = (
   currentSorter,
   handleSorting,
   arrayMapper,
+  isComparisonApplied
 ) => {
   const result = [
     {
-      title: breakdown.length ? "Grouping" : "Users",
-      dataIndex: "Grouping",
-      fixed: "left",
-      width: 100,
-      render: (d) => {
-        if (d.includes("$no_group")) {
-          return "Overall";
-        } else {
-          return d;
-        }
-      },
+      title: breakdown.length ? 'Grouping' : 'Users',
+      dataIndex: 'Grouping',
+      fixed: 'left',
+      width: isComparisonApplied ? 300 : 100,
+      className: isComparisonApplied ? styles.usersColumn : '',
+      render: (d) => NoBreakdownUsersColumn(d, breakdown, isComparisonApplied),
     },
     {
-      title: "Total Conversion",
-      dataIndex: "Conversion",
+      title: 'Total Conversion',
+      dataIndex: 'Conversion',
       width: 100,
+      render: (d) => RenderTotalConversion(d, breakdown, isComparisonApplied),
     },
     {
-      title: "Conversion Time",
-      dataIndex: "Converstion Time",
+      title: 'Conversion Time',
+      dataIndex: 'Converstion Time',
       width: 100,
+      render: (d) => RenderConversionTime(d, breakdown, isComparisonApplied),
     },
   ];
   const eventColumns = [];
@@ -118,38 +233,36 @@ export const generateTableColumns = (
         : arrayMapper[index].displayName,
       dataIndex: arrayMapper[index].mapper,
       width: 200,
-      render: (d) => {
-        return (
-          <div>
-            <NumFormat number={d.count} /> ({d.percentage}%)
-          </div>
-        );
-      },
+      render: (d) => RenderEventData(d, breakdown, isComparisonApplied),
     });
     if (index < queries.length - 1) {
       eventColumns.push({
         title: (
-          <div className="flex items-center justify-between">
-            <div className="text-base" style={{ color: "#8692A3" }}>
+          <div className='flex items-center justify-between'>
+            <div className='text-base' style={{ color: '#8692A3' }}>
               &mdash;
             </div>
-            <SVG name="clock" />
-            <div className="text-base" style={{ color: "#8692A3", marginTop: '2px' }}>
+            <SVG name='clock' />
+            <div
+              className='text-base'
+              style={{ color: '#8692A3', marginTop: '2px' }}
+            >
               &rarr;
             </div>
           </div>
         ),
         dataIndex: `time[${index}-${index + 1}]`,
         width: 75,
+        render: (d) => RenderDurations(d, breakdown, isComparisonApplied),
       });
     }
   });
 
   const blankCol = {
-    title: "",
-    dataIndex: "",
+    title: '',
+    dataIndex: '',
     width: 37,
-    fixed: "left",
+    fixed: 'left',
   };
   if (breakdown.length) {
     return [...result, ...eventColumns];
@@ -166,30 +279,62 @@ export const generateTableData = (
   arrayMapper,
   currentSorter,
   searchText,
-  durations
+  durations,
+  comparisonChartDurations,
+  comparisonChartData,
+  durationObj,
+  comparison_duration
 ) => {
   if (!breakdown.length) {
     const queryData = {};
+
     const overallDuration = getOverAllDuration(durations);
+    const comparisonOverallDuration = getOverAllDuration(
+      comparisonChartDurations
+    );
+
     queries.forEach((q, index) => {
       queryData[arrayMapper[index].mapper] = {
         percentage: data[index].value,
         count: data[index].netCount,
+        compare_percent:
+          comparisonChartData && comparisonChartData[index].value,
+        compare_count:
+          comparisonChartData && comparisonChartData[index].netCount,
       };
       if (index < queries.length - 1) {
-        queryData[`time[${index}-${index + 1}]`] = getStepDuration(
-          durations,
-          index,
-          index + 1
-        );
+        const time = getStepDuration(durations, index, index + 1);
+
+        const compare_time =
+          comparisonChartData &&
+          getStepDuration(comparisonChartDurations, index, index + 1);
+
+        queryData[`time[${index}-${index + 1}]`] = comparisonChartData
+          ? {
+              time,
+              compare_time,
+            }
+          : time;
       }
     });
+    const conversion = data[data.length - 1].value + '%';
+
+    const comparsion_conversion =
+      comparisonChartData &&
+      comparisonChartData[comparisonChartData.length - 1].value + '%';
+
     return [
       {
         index: 0,
-        Grouping: "All",
-        Conversion: data[data.length - 1].value + "%",
-        "Converstion Time": overallDuration,
+        Grouping: comparisonChartData
+          ? { durationObj, comparison_duration }
+          : 'All',
+        Conversion: comparisonChartData
+          ? { conversion, comparsion_conversion }
+          : conversion,
+        'Converstion Time': comparisonChartData
+          ? { overallDuration, comparisonOverallDuration }
+          : overallDuration,
         ...queryData,
       },
     ];
@@ -200,15 +345,15 @@ export const generateTableData = (
         (elem) => elem.toLowerCase().indexOf(searchText.toLowerCase()) > -1
       );
     const durationMetric = durations.metrics.find(
-      (elem) => elem.title === "MetaStepTimeInfo"
+      (elem) => elem.title === 'MetaStepTimeInfo'
     );
     const firstEventIdx = durationMetric.headers.findIndex(
-      (elem) => elem === "step_0_1_time"
+      (elem) => elem === 'step_0_1_time'
     );
     const result = appliedGroups.map((grp, index) => {
       const group = grp;
       const durationGrp = durationMetric.rows.find(
-        (elem) => elem.slice(0, firstEventIdx).join(",") === grp
+        (elem) => elem.slice(0, firstEventIdx).join(',') === grp
       );
       const eventsData = {};
       let totalDuration = 0;
@@ -224,19 +369,19 @@ export const generateTableData = (
           );
           eventsData[`time[${idx}-${idx + 1}]`] = durationGrp
             ? formatDuration(durationGrp[durationIdx])
-            : "NA";
+            : 'NA';
           totalDuration += durationGrp ? Number(durationGrp[durationIdx]) : 0;
         }
       });
       return {
         index,
         Grouping: grp,
-        "Converstion Time": formatDuration(totalDuration),
+        'Converstion Time': formatDuration(totalDuration),
         Conversion:
           calculatePercentage(
             data[data.length - 1].data[group],
             data[0].data[group]
-          ) + "%",
+          ) + '%',
         ...eventsData,
       };
     });
@@ -245,12 +390,12 @@ export const generateTableData = (
       const sortKey = currentSorter.key;
       const { order } = currentSorter;
       result.sort((a, b) => {
-        if (order === "ascend") {
+        if (order === 'ascend') {
           return parseFloat(a[sortKey].count) >= parseFloat(b[sortKey].count)
             ? 1
             : -1;
         }
-        if (order === "descend") {
+        if (order === 'descend') {
           return parseFloat(a[sortKey].count) <= parseFloat(b[sortKey].count)
             ? 1
             : -1;
@@ -267,7 +412,7 @@ export const generateUngroupedChartsData = (response, arrayMapper) => {
     return [];
   }
 
-  const netCounts = response.rows[0].filter((elem) => typeof elem === "number");
+  const netCounts = response.rows[0].filter((elem) => typeof elem === 'number');
   const result = [];
   let index = 0;
 
@@ -320,12 +465,12 @@ export const generateEventsData = (response, queries, arrayMapper) => {
   if (!response) {
     return [];
   }
-  const firstEventIdx = response.headers.findIndex((elem) => elem === "step_0");
+  const firstEventIdx = response.headers.findIndex((elem) => elem === 'step_0');
   const result = queries.map((q, idx) => {
     const data = {};
     response.rows.forEach((r) => {
-      const name = r.slice(0, firstEventIdx).join(",");
-      const netCounts = r.filter((elem) => typeof elem === "number");
+      const name = r.slice(0, firstEventIdx).join(',');
+      const netCounts = r.filter((elem) => typeof elem === 'number');
       data[name] = netCounts[idx];
     });
     return {
@@ -340,7 +485,7 @@ export const generateEventsData = (response, queries, arrayMapper) => {
 export const getOverAllDuration = (durationsObj) => {
   if (durationsObj && durationsObj.metrics) {
     const durationMetric = durationsObj.metrics.find(
-      (d) => d.title === "MetaStepTimeInfo"
+      (d) => d.title === 'MetaStepTimeInfo'
     );
     if (durationMetric && durationMetric.rows && durationMetric.rows.length) {
       try {
@@ -350,18 +495,18 @@ export const getOverAllDuration = (durationsObj) => {
         });
         return formatDuration(total);
       } catch (err) {
-        return "NA";
+        return 'NA';
       }
     }
   }
-  return "NA";
+  return 'NA';
 };
 
 export const getStepDuration = (durationsObj, index1, index2) => {
-  let durationVal = "NA";
+  let durationVal = 'NA';
   if (durationsObj && durationsObj.metrics) {
     const durationMetric = durationsObj.metrics.find(
-      (d) => d.title === "MetaStepTimeInfo"
+      (d) => d.title === 'MetaStepTimeInfo'
     );
     if (
       durationMetric &&

@@ -915,3 +915,18 @@ export const getSaveChartOptions = (queryType, requestQuery) => {
     }
   }
 };
+
+export const isComparisonEnabled = (queryType, events, groupBy) => {
+  if (queryType === QUERY_TYPE_FUNNEL) {
+    const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
+    return newAppliedBreakdown.length === 0;
+  }
+  // if (queryType === QUERY_TYPE_EVENT) {
+  //   const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
+  //   return !(events.length > 1 && newAppliedBreakdown.length > 0);
+  // }
+  if (queryType === QUERY_TYPE_ATTRIBUTION) {
+    return false;
+  }
+  return false;
+};

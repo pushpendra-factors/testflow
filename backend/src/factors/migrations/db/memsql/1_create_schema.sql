@@ -568,7 +568,7 @@ CREATE TABLE IF NOT EXISTS google_organic_documents (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
-    KEY (project_id, url_prefix, timestamp) USING CLUSTERED COLUMNSTORE
+    KEY (project_id, url_prefix, timestamp, type, id) USING CLUSTERED COLUMNSTORE
 
     -- Required constraints.
     -- Unique (project_id, customer_ad_account_id, type, timestamp, id)
