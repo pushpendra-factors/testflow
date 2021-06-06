@@ -15,11 +15,6 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
-var smartPropertyRulesTypeToTypeAlias = map[int]string{
-	1: "campaign",
-	2: "ad_group",
-}
-
 type Status struct {
 	ProjectID uint64 `json:"project_id"`
 	ErrCode   int    `json:"err_code"`
@@ -80,7 +75,7 @@ func EnrichSmartPropertyForChangedRulesForProject(projectID uint64) int {
 
 		if !C.IsDryRunSmartProperties() {
 			smartPropertyRule.EvaluationStatus = model.EvaluationStatusMap["picked"]
-			smartPropertyRule.TypeAlias = smartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
+			smartPropertyRule.TypeAlias = model.SmartPropertyRulesTypeToTypeAlias[smartPropertyRule.Type]
 			_, errMsg, errCode := store.GetStore().UpdateSmartPropertyRules(smartPropertyRule.ProjectID, smartPropertyRule.ID, smartPropertyRule)
 			if errCode != http.StatusAccepted {
 				log.WithFields(log.Fields{"errMsg": errMsg, "smart_properties_rule": smartPropertyRule}).Error("failed to update smart properties rule.")

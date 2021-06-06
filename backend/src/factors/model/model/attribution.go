@@ -11,19 +11,23 @@ import (
 )
 
 type AttributionQuery struct {
-	CampaignMetrics               []string                   `json:"cm"`
-	ConversionEvent               QueryEventWithProperties   `json:"ce"`
-	ConversionEventCompare        QueryEventWithProperties   `json:"ce_c"`
-	LinkedEvents                  []QueryEventWithProperties `json:"lfe"`
-	AttributionKey                string                     `json:"attribution_key"`
-	AttributionKeyFilter          []AttributionKeyFilter     `json:"attribution_key_f"`
-	AttributionMethodology        string                     `json:"attribution_methodology"`
-	AttributionMethodologyCompare string                     `json:"attribution_methodology_c"`
-	LookbackDays                  int                        `json:"lbw"`
-	From                          int64                      `json:"from"`
-	To                            int64                      `json:"to"`
-	QueryType                     string                     `json:"query_type"`
-	Timezone                      string                     `json:"time_zone"`
+	CampaignMetrics        []string                   `json:"cm"`
+	ConversionEvent        QueryEventWithProperties   `json:"ce"`
+	ConversionEventCompare QueryEventWithProperties   `json:"ce_c"`
+	LinkedEvents           []QueryEventWithProperties `json:"lfe"`
+	AttributionKey         string                     `json:"attribution_key"`
+	// Dimensions related to key
+	AttributionKeyDimension []string `json:"attribution_key_dimensions"`
+	// Custom dimensions related to key
+	AttributionKeyCustomDimension []string               `json:"attribution_key_custom_dimensions"`
+	AttributionKeyFilter          []AttributionKeyFilter `json:"attribution_key_f"`
+	AttributionMethodology        string                 `json:"attribution_methodology"`
+	AttributionMethodologyCompare string                 `json:"attribution_methodology_c"`
+	LookbackDays                  int                    `json:"lbw"`
+	From                          int64                  `json:"from"`
+	To                            int64                  `json:"to"`
+	QueryType                     string                 `json:"query_type"`
+	Timezone                      string                 `json:"time_zone"`
 }
 
 type AttributionQueryUnit struct {
@@ -129,37 +133,70 @@ const (
 	LinkedinAdgroupName = "campaign_name"
 
 	KeyDelimiter = ":-:"
+
+	ChannelAdwords  = "adwords"
+	ChannelFacebook = "facebook"
+	ChannelLinkedin = "linkedin"
+
+	FieldChannelName      = "channel_name"
+	FieldCampaignName     = "campaign_name"
+	FieldAdgroupName      = "adgroup_name"
+	FieldKeywordMatchType = "keyword_match_type"
+	FieldKeyword          = "keyword"
+	FieldSource           = "source"
 )
 
+var AddedKeysForCampaign = []string{"ChannelName"}
+var AddedKeysForAdgroup = []string{"ChannelName", "Campaign"}
+var AddedKeysForKeyword = []string{"ChannelName", "Campaign", "AdGroup", "MatchType"}
+var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR(%)", "Average CPC", "CPM", "ConversionRate(%)", "Sessions", "Users", "Average Session Time", "PageViews"}
+var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "Compare - Users", "Compare Cost Per Conversion"}
+var KeyDimensionToHeaderMap = map[string]string{
+	FieldChannelName:      "ChannelName",
+	FieldCampaignName:     "Campaign",
+	FieldAdgroupName:      "AdGroup",
+	FieldKeywordMatchType: "MatchType",
+	FieldKeyword:          "Keyword",
+	FieldSource:           "Source",
+}
+
 type MarketingReports struct {
-	AdwordsGCLIDData      map[string]MarketingData
-	AdwordsCampaignIDData map[string]MarketingData
-	//AdwordsCampaignNameData map[string]MarketingData
+	AdwordsGCLIDData       map[string]MarketingData
+	AdwordsCampaignIDData  map[string]MarketingData
 	AdwordsCampaignKeyData map[string]MarketingData
 
-	AdwordsAdgroupIDData map[string]MarketingData
-	//AdwordsAdgroupNameData map[string]MarketingData
+	AdwordsAdgroupIDData  map[string]MarketingData
 	AdwordsAdgroupKeyData map[string]MarketingData
 
-	AdwordsKeywordIDData map[string]MarketingData
-	//AdwordsKeywordNameData map[string]MarketingData
+	AdwordsKeywordIDData  map[string]MarketingData
 	AdwordsKeywordKeyData map[string]MarketingData
 
-	FacebookCampaignIDData map[string]MarketingData
-	//FacebookCampaignNameData map[string]MarketingData
+	FacebookCampaignIDData  map[string]MarketingData
 	FacebookCampaignKeyData map[string]MarketingData
 
-	FacebookAdgroupIDData map[string]MarketingData
-	//FacebookAdgroupNameData map[string]MarketingData
+	FacebookAdgroupIDData  map[string]MarketingData
 	FacebookAdgroupKeyData map[string]MarketingData
 
-	LinkedinCampaignIDData map[string]MarketingData
-	//LinkedinCampaignNameData map[string]MarketingData
+	LinkedinCampaignIDData  map[string]MarketingData
 	LinkedinCampaignKeyData map[string]MarketingData
 
-	LinkedinAdgroupIDData map[string]MarketingData
-	//LinkedinAdgroupNameData map[string]MarketingData
+	LinkedinAdgroupIDData  map[string]MarketingData
 	LinkedinAdgroupKeyData map[string]MarketingData
+
+	// id = campaignID + KeyDelimiter + campaignName
+	AdwordsCampaignDimensions map[string]MarketingData
+	// id = campaignID + KeyDelimiter + campaignName + KeyDelimiter + adgroupID + KeyDelimiter + adgroupName
+	AdwordsAdgroupDimensions map[string]MarketingData
+
+	// id = campaignID + KeyDelimiter + campaignName
+	FacebookCampaignDimensions map[string]MarketingData
+	// id = campaignID + KeyDelimiter + campaignName  + KeyDelimiter + adgroupID + KeyDelimiter + adgroupName
+	FacebookAdgroupDimensions map[string]MarketingData
+
+	// id = campaignID + KeyDelimiter + campaignName
+	LinkedinCampaignDimensions map[string]MarketingData
+	// id = campaignID + KeyDelimiter + campaignName  + KeyDelimiter + adgroupID + KeyDelimiter + adgroupName
+	LinkedinAdgroupDimensions map[string]MarketingData
 }
 type MarketingData struct {
 	// Key is CampaignName + AdgroupName + KeywordName + MatchType (i.e. ExtraValue)
@@ -169,6 +206,7 @@ type MarketingData struct {
 	// CampaignName, AdgroupName etc
 	Name string
 	// For Adwords Keyword Perf report, it is keyword_match_type, for others it is $none
+	Channel          string
 	CampaignID       string
 	CampaignName     string
 	AdgroupID        string
@@ -183,6 +221,7 @@ type MarketingData struct {
 	Impressions      int64
 	Clicks           int64
 	Spend            float64
+	CustomDimensions map[string]interface{}
 }
 
 type UserSessionData struct {
@@ -195,18 +234,11 @@ type UserSessionData struct {
 	MarketingInfo     MarketingData
 }
 
-var AddedKeysForAdgroup = []string{"Campaign"}
-var AddedKeysForKeyword = []string{"Campaign", "AdGroup", "MatchType"}
-
-// TODO (Anil) Update Website Visitors to Session back
-var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR", "Average CPC", "CPM", "ConversionRate", "Website Visitors", "Users", "Average Session Time", "PageViews"}
-
-// var AttributionFixedHeaders = []string{"Impressions", "Clicks", "Spend", "CTR(%)", "Average CPC", "CPM", "ConversionRate(%)", "Sessions", "Users", "Average Session Time", "PageViews"}
-var AttributionFixedHeadersPostPostConversion = []string{"Cost Per Conversion", "Compare - Users", "Compare Cost Per Conversion"}
-
 type AttributionData struct {
 	AddedKeys                     []string
 	Name                          string
+	Channel                       string
+	CustomDimensions              map[string]interface{}
 	Impressions                   int64
 	Clicks                        int64
 	Spend                         float64
@@ -220,9 +252,9 @@ type AttributionData struct {
 	PageViews                     int64
 	ConversionEventCount          float64
 	CostPerConversion             float64
-	LinkedEventsCount             []float64
 	ConversionEventCompareCount   float64
 	CostPerConversionCompareCount float64
+	LinkedEventsCount             []float64
 	MarketingInfo                 MarketingData
 }
 
@@ -248,65 +280,22 @@ const (
 	UserBatchSize          = 3000
 )
 
-// MergeDataRowsHavingSameKey merges rows having same key by adding each column value
-func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interface{} {
+// AddDefaultKeyDimensionsToAttributionQuery adds default custom Dimensions for supporting existing old/saved queries
+func AddDefaultKeyDimensionsToAttributionQuery(query *AttributionQuery) {
 
-	logCtx := log.WithFields(log.Fields{"Method": "MergeDataRowsHavingSameKey"})
-	maxRowSize := 0
-	rowKeyMap := make(map[string][]interface{})
-	for _, row := range rows {
-		maxRowSize = U.MaxInt(len(row), maxRowSize)
-		if len(row) == 0 || len(row) != maxRowSize {
-			continue
-		}
-		// creating a key for using added keys and index
-		key := ""
-		for j := 0; j <= keyIndex; j++ {
-			val, ok := row[j].(string)
-			// Ignore row if key is not proper
-			if !ok {
-				logCtx.WithFields(log.Fields{"RowKeyCandidate": row[j], "Row": row}).Info("empty key value error. Ignoring row and continuing.")
-				continue
-			}
-			key = key + val
-		}
+	if query.AttributionKeyDimension == nil || len(query.AttributionKeyDimension) == 0 {
 
-		if _, exists := rowKeyMap[key]; exists {
-			seenRow := rowKeyMap[key]
-			// Don't sum up Impressions, Clicks, Spend.
-			seenRow[keyIndex+1] = U.Max(seenRow[keyIndex+1].(int64), row[keyIndex+1].(int64))            // Impressions.
-			seenRow[keyIndex+2] = U.Max(seenRow[keyIndex+2].(int64), row[keyIndex+2].(int64))            // Clicks.
-			seenRow[keyIndex+3] = U.MaxFloat64(seenRow[keyIndex+3].(float64), row[keyIndex+3].(float64)) // Spend.
-
-			seenRow[keyIndex+4] = U.MaxFloat64(seenRow[keyIndex+4].(float64), row[keyIndex+4].(float64)) // CTR.
-			seenRow[keyIndex+5] = U.MaxFloat64(seenRow[keyIndex+5].(float64), row[keyIndex+5].(float64)) // AvgCPC.
-			seenRow[keyIndex+6] = U.MaxFloat64(seenRow[keyIndex+6].(float64), row[keyIndex+6].(float64)) // CPM.
-			seenRow[keyIndex+7] = U.MaxFloat64(seenRow[keyIndex+7].(float64), row[keyIndex+7].(float64)) // ConversionRate.
-
-			seenRow[keyIndex+8] = seenRow[keyIndex+8].(int64) + row[keyIndex+8].(int64) // Sessions.
-			seenRow[keyIndex+9] = seenRow[keyIndex+9].(int64) + row[keyIndex+9].(int64) // Users.
-
-			seenRow[keyIndex+10] = U.MaxFloat64(seenRow[keyIndex+10].(float64), row[keyIndex+10].(float64)) // AvgSessionTime.
-			seenRow[keyIndex+11] = seenRow[keyIndex+11].(int64) + row[keyIndex+11].(int64)                  // PageViews.
-
-			seenRow[keyIndex+12] = seenRow[keyIndex+12].(float64) + row[keyIndex+12].(float64)              // Conversion.
-			seenRow[keyIndex+13] = U.MaxFloat64(seenRow[keyIndex+13].(float64), row[keyIndex+13].(float64)) // Conversion - CPC.
-			seenRow[keyIndex+14] = seenRow[keyIndex+14].(float64) + row[keyIndex+14].(float64)              // Compare Conversion.
-			seenRow[keyIndex+15] = U.MaxFloat64(seenRow[keyIndex+15].(float64), row[keyIndex+15].(float64)) // Compare Conversion - CPC.
-			// Remaining linked funnel events & CPCs
-			for i := keyIndex + 16; i < len(seenRow); i++ {
-				seenRow[i] = seenRow[i].(float64) + row[i].(float64)
-			}
-			rowKeyMap[key] = seenRow
-		} else {
-			rowKeyMap[key] = row
+		switch query.AttributionKey {
+		case AttributionKeyCampaign:
+			(*query).AttributionKeyDimension = append((*query).AttributionKeyDimension, FieldCampaignName)
+		case AttributionKeyAdgroup:
+			(*query).AttributionKeyDimension = append((*query).AttributionKeyDimension, FieldCampaignName, FieldAdgroupName)
+		case AttributionKeyKeyword:
+			(*query).AttributionKeyDimension = append((*query).AttributionKeyDimension, FieldCampaignName, FieldAdgroupName, FieldKeywordMatchType, FieldKeyword)
+		case AttributionKeySource:
+			(*query).AttributionKeyDimension = append((*query).AttributionKeyDimension, FieldSource)
 		}
 	}
-	resultRows := make([][]interface{}, 0)
-	for _, mapRow := range rowKeyMap {
-		resultRows = append(resultRows, mapRow)
-	}
-	return resultRows
 }
 
 // GetGCLIDAttributionValue Returns the matching value for GCLID, if not found returns $none
@@ -414,7 +403,7 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 	// Add up for Added Keys {Campaign, Adgroup, Keyword}
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		// No keys are added.
+		result.Headers = append(result.Headers, AddedKeysForCampaign...)
 	case AttributionKeyAdgroup:
 		result.Headers = append(result.Headers, AddedKeysForAdgroup...)
 	case AttributionKeyKeyword:
@@ -422,7 +411,16 @@ func AddHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 	default:
 	}
 
-	result.Headers = append(append(result.Headers, attributionKey), AttributionFixedHeaders...)
+	// add up the attribution key
+	result.Headers = append(result.Headers, attributionKey)
+
+	// add up custom dimensions
+	for _, key := range query.AttributionKeyCustomDimension {
+		result.Headers = append(result.Headers, key)
+	}
+
+	// add up fixed metrics
+	result.Headers = append(result.Headers, AttributionFixedHeaders...)
 	conversionEventUsers := fmt.Sprintf("%s - Users", query.ConversionEvent.Name)
 	result.Headers = append(result.Headers, conversionEventUsers)
 	result.Headers = append(result.Headers, AttributionFixedHeadersPostPostConversion...)
@@ -465,11 +463,11 @@ func GetKeyIndexOrAddedKeySize(attributionKey string) int {
 	// Add up for Added Keys {Campaign, Adgroup, Keyword}
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addedKeysSize = 0
-	case AttributionKeyAdgroup:
 		addedKeysSize = 1
+	case AttributionKeyAdgroup:
+		addedKeysSize = 2
 	case AttributionKeyKeyword:
-		addedKeysSize = 3
+		addedKeysSize = 4
 	default:
 	}
 	return addedKeysSize
@@ -481,7 +479,34 @@ func GetConversionIndex(headers []string) int {
 			return index + 1
 		}
 	}
-	return 0
+	return -1
+}
+
+func GetLastKeyValueIndex(headers []string) int {
+	for index, val := range headers {
+		if val == "Impressions" {
+			return index - 1
+		}
+	}
+	return -1
+}
+
+func GetImpressionsIndex(headers []string) int {
+	for index, val := range headers {
+		if val == "Impressions" {
+			return index
+		}
+	}
+	return -1
+}
+
+func GetCompareConversionUserCountIndex(headers []string) int {
+	for index, val := range headers {
+		if val == "Compare - Users" {
+			return index
+		}
+	}
+	return -1
 }
 
 func GetSpendIndex(headers []string) int {
@@ -490,35 +515,45 @@ func GetSpendIndex(headers []string) int {
 			return index + 1
 		}
 	}
-	return 0
+	return -1
 }
 
 // GetRowsByMaps Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
-func GetRowsByMaps(attributionKey string, attributionData *map[string]*AttributionData,
+func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *map[string]*AttributionData,
 	linkedEvents []QueryEventWithProperties, isCompare bool) [][]interface{} {
 
 	// Name, impression, clicks, spend
-	defaultMatchingRow := []interface{}{"none", int64(0), int64(0), float64(0),
+	defaultMatchingRow := []interface{}{int64(0), int64(0), float64(0),
 		// (CTR, AvgCPC, CPM, ConversionRate)
 		float64(0), float64(0), float64(0), float64(0),
 		// Sessions, (users), (AvgSessionTime), (pageViews),
 		int64(0), int64(0), float64(0), int64(0),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
 		float64(0), float64(0), float64(0), float64(0)}
-	var nonMatchingRow []interface{}
 
-	addedKeysSize := 0
+	var customDims []interface{}
+	for i := 0; i < len(dimensions); i++ {
+		customDims = append(customDims, "none")
+	}
+
+	addedKeysSize := GetKeyIndexOrAddedKeySize(attributionKey)
+	nonMatchingRow := []interface{}{"none"}
 	// Add up for Added Keys {Campaign, Adgroup, Keyword}
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		nonMatchingRow = defaultMatchingRow
+		nonMatchingRow = append(nonMatchingRow, "none") // channel
+		nonMatchingRow = append(nonMatchingRow, customDims...)
+		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
 	case AttributionKeyAdgroup:
-		addedKeysSize = 1
-		nonMatchingRow = append([]interface{}{"none"}, defaultMatchingRow...)
+		nonMatchingRow = append(nonMatchingRow, "none", "none") // channel, camp
+		nonMatchingRow = append(nonMatchingRow, customDims...)
+		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
 	case AttributionKeyKeyword:
-		addedKeysSize = 3
-		nonMatchingRow = append([]interface{}{"none", "none", "none"}, defaultMatchingRow...)
+		nonMatchingRow = append(nonMatchingRow, "none", "none", "none", "none") // channel, camp, adgroup, match_type
+		nonMatchingRow = append(nonMatchingRow, customDims...)
+		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
 	default:
+		nonMatchingRow = append(nonMatchingRow, defaultMatchingRow...)
 	}
 
 	// Add up for linkedEvents for conversion and CPC
@@ -526,11 +561,11 @@ func GetRowsByMaps(attributionKey string, attributionData *map[string]*Attributi
 		nonMatchingRow = append(nonMatchingRow, float64(0), float64(0))
 	}
 	rows := make([][]interface{}, 0)
-	for key, data := range *attributionData {
+	for _, data := range *attributionData {
 		attributionIdName := ""
 		switch attributionKey {
 		case AttributionKeyCampaign:
-			attributionIdName = key
+			attributionIdName = data.MarketingInfo.Name
 		case AttributionKeyAdgroup:
 			attributionIdName = data.MarketingInfo.AdgroupName
 		case AttributionKeyKeyword:
@@ -543,7 +578,10 @@ func GetRowsByMaps(attributionKey string, attributionData *map[string]*Attributi
 			attributionIdName = PropertyValueNone
 		}
 		if attributionIdName != "" {
+
 			var row []interface{}
+
+			// Add up keys
 			for i := 0; i < addedKeysSize; i++ {
 				if data.AddedKeys != nil && data.AddedKeys[i] != "" {
 					row = append(row, data.AddedKeys[i])
@@ -551,8 +589,21 @@ func GetRowsByMaps(attributionKey string, attributionData *map[string]*Attributi
 					row = append(row, PropertyValueNone)
 				}
 			}
-			row = append(row, attributionIdName, data.Impressions, data.Clicks, data.Spend,
-				data.CTR, data.AvgCPC, data.CPM, data.ConversionRate, data.Sessions, data.Users, data.AvgSessionTime, data.PageViews, data.ConversionEventCount)
+
+			// Add up Name
+			row = append(row, attributionIdName)
+
+			// Add up custom dimensions
+			for i := 0; i < len(dimensions); i++ {
+				if v, exists := data.CustomDimensions[dimensions[i]]; exists {
+					row = append(row, v)
+				} else {
+					row = append(row, PropertyValueNone)
+				}
+			}
+
+			// Append fixed Metrics
+			row = append(row, data.Impressions, data.Clicks, data.Spend, data.CTR, data.AvgCPC, data.CPM, data.ConversionRate, data.Sessions, data.Users, data.AvgSessionTime, data.PageViews, data.ConversionEventCount)
 			cpc := 0.0
 			if data.ConversionEventCount != 0.0 {
 				cpc, _ = U.FloatRoundOffWithPrecision(data.Spend/data.ConversionEventCount, U.DefaultPrecision)
@@ -572,6 +623,108 @@ func GetRowsByMaps(attributionKey string, attributionData *map[string]*Attributi
 	}
 	rows = append(rows, nonMatchingRow)
 	return rows
+}
+
+// GetUpdatedRowsByDimensions updated the granular result with reduced dimensions
+func GetUpdatedRowsByDimensions(result *QueryResult, query *AttributionQuery) error {
+
+	validHeadersDimensions := make(map[string]int)
+	for _, val := range query.AttributionKeyDimension {
+		if _, exists := KeyDimensionToHeaderMap[val]; !exists {
+			return errors.New("couldn't find the header value for given dimensions value")
+		}
+		validHeadersDimensions[KeyDimensionToHeaderMap[val]] = 1
+	}
+
+	addedKeysSize := GetKeyIndexOrAddedKeySize(query.AttributionKey)
+	// Build new header
+	var newHeaders []string
+	for j, field := range result.Headers {
+		// filter out the Added Key Dimensions if reduced
+		if j <= addedKeysSize && validHeadersDimensions[field] == 0 {
+			continue
+		}
+		newHeaders = append(newHeaders, field)
+	}
+
+	// Build new row
+	newRows := make([][]interface{}, 0)
+	for _, data := range result.Rows {
+		var row []interface{}
+		for j, field := range result.Headers {
+			// filter out the Added Key Dimensions if reduced
+			if j <= addedKeysSize && validHeadersDimensions[field] == 0 {
+				continue
+			}
+			row = append(row, data[j])
+		}
+		newRows = append(newRows, row)
+	}
+
+	result.Headers = newHeaders
+	result.Rows = newRows
+	return nil
+}
+
+// MergeDataRowsHavingSameKey merges rows having same key by adding each column value
+func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interface{} {
+
+	logCtx := log.WithFields(log.Fields{"Method": "MergeDataRowsHavingSameKey"})
+	rowKeyMap := make(map[string][]interface{})
+	maxRowSize := 0
+	for _, row := range rows {
+		maxRowSize = U.MaxInt(len(row), maxRowSize)
+		if len(row) == 0 || len(row) != maxRowSize {
+			continue
+		}
+		// creating a key for using added keys and index
+		key := ""
+		for j := 0; j <= keyIndex; j++ {
+			val, ok := row[j].(string)
+			// Ignore row if key is not proper
+			if !ok {
+				logCtx.WithFields(log.Fields{"RowKeyCandidate": row[j], "Row": row}).Info("empty key value error. Ignoring row and continuing.")
+				continue
+			}
+			key = key + val
+		}
+
+		if _, exists := rowKeyMap[key]; exists {
+			seenRow := rowKeyMap[key]
+			// Don't sum up Impressions, Clicks, Spend.
+			seenRow[keyIndex+1] = seenRow[keyIndex+1].(int64) + row[keyIndex+1].(int64)     // Impressions.
+			seenRow[keyIndex+2] = seenRow[keyIndex+2].(int64) + row[keyIndex+2].(int64)     // Clicks.
+			seenRow[keyIndex+3] = seenRow[keyIndex+3].(float64) + row[keyIndex+3].(float64) // Spend.
+
+			seenRow[keyIndex+4] = seenRow[keyIndex+4].(float64) + row[keyIndex+4].(float64) // CTR.
+			seenRow[keyIndex+5] = seenRow[keyIndex+5].(float64) + row[keyIndex+5].(float64) // AvgCPC.
+			seenRow[keyIndex+6] = seenRow[keyIndex+6].(float64) + row[keyIndex+6].(float64) // CPM.
+			seenRow[keyIndex+7] = seenRow[keyIndex+7].(float64) + row[keyIndex+7].(float64) // ConversionRate.
+
+			seenRow[keyIndex+8] = seenRow[keyIndex+8].(int64) + row[keyIndex+8].(int64) // Sessions.
+			seenRow[keyIndex+9] = seenRow[keyIndex+9].(int64) + row[keyIndex+9].(int64) // Users.
+
+			seenRow[keyIndex+10] = seenRow[keyIndex+10].(float64) + row[keyIndex+10].(float64) // AvgSessionTime.
+			seenRow[keyIndex+11] = seenRow[keyIndex+11].(int64) + row[keyIndex+11].(int64)     // PageViews.
+
+			seenRow[keyIndex+12] = seenRow[keyIndex+12].(float64) + row[keyIndex+12].(float64) // Conversion.
+			seenRow[keyIndex+13] = seenRow[keyIndex+13].(float64) + row[keyIndex+13].(float64) // Conversion - CPC.
+			seenRow[keyIndex+14] = seenRow[keyIndex+14].(float64) + row[keyIndex+14].(float64) // Compare Conversion.
+			seenRow[keyIndex+15] = seenRow[keyIndex+15].(float64) + row[keyIndex+15].(float64) // Compare Conversion - CPC.
+			// Remaining linked funnel events & CPCs
+			for i := keyIndex + 16; i < len(seenRow); i++ {
+				seenRow[i] = seenRow[i].(float64) + row[i].(float64)
+			}
+			rowKeyMap[key] = seenRow
+		} else {
+			rowKeyMap[key] = row
+		}
+	}
+	resultRows := make([][]interface{}, 0)
+	for _, mapRow := range rowKeyMap {
+		resultRows = append(resultRows, mapRow)
+	}
+	return resultRows
 }
 
 // AddUpConversionEventCount Groups all unique users by attributionId and adds it to attributionData
@@ -771,14 +924,13 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 					(*attributionData)[key].MarketingInfo = sessionKeyMarketingInfo[key]
 					switch query.AttributionKey {
 					case AttributionKeyCampaign:
+						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].Channel)
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].CampaignName
 					case AttributionKeyAdgroup:
-						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
+						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].Channel, sessionKeyMarketingInfo[key].CampaignName)
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].AdgroupName
 					case AttributionKeyKeyword:
-						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].CampaignName)
-						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].AdgroupName)
-						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].KeywordMatchType)
+						(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, sessionKeyMarketingInfo[key].Channel, sessionKeyMarketingInfo[key].CampaignName, sessionKeyMarketingInfo[key].AdgroupName, sessionKeyMarketingInfo[key].KeywordMatchType)
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].KeywordName
 					case AttributionKeySource:
 						(*attributionData)[key].Name = sessionKeyMarketingInfo[key].Source
@@ -810,6 +962,18 @@ func AddTheAddedKeysAndMetrics(attributionData *map[string]*AttributionData, que
 	}
 }
 
+func ApplyFilter(attributionData *map[string]*AttributionData, query *AttributionQuery) {
+	// Filter out the key values from query (apply filter after performance enrichment)
+	for key, value := range *attributionData {
+		attributionId := value.Name
+		if !IsValidAttributionKeyValueAND(query.AttributionKey,
+			attributionId, query.AttributionKeyFilter) && !IsValidAttributionKeyValueOR(query.AttributionKey,
+			attributionId, query.AttributionKeyFilter) {
+			delete(*attributionData, key)
+		}
+	}
+}
+
 func AddPerformanceData(attributionData *map[string]*AttributionData, attributionKey string, marketingData *MarketingReports) {
 
 	AddAdwordsPerformanceReportInfo(attributionData, attributionKey, marketingData)
@@ -821,11 +985,11 @@ func AddAdwordsPerformanceReportInfo(attributionData *map[string]*AttributionDat
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.AdwordsCampaignKeyData, attributionKey)
+		addMetricsFromReport(attributionData, marketingData.AdwordsCampaignKeyData, attributionKey, ChannelAdwords)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.AdwordsAdgroupKeyData, attributionKey)
+		addMetricsFromReport(attributionData, marketingData.AdwordsAdgroupKeyData, attributionKey, ChannelAdwords)
 	case AttributionKeyKeyword:
-		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordKeyData, attributionKey)
+		addMetricsFromReport(attributionData, marketingData.AdwordsKeywordKeyData, attributionKey, ChannelAdwords)
 	default:
 		// no enrichment for any other type
 		return
@@ -836,9 +1000,9 @@ func AddFacebookPerformanceReportInfo(attributionData *map[string]*AttributionDa
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.FacebookCampaignKeyData, attributionKey)
+		addMetricsFromReport(attributionData, marketingData.FacebookCampaignKeyData, attributionKey, ChannelFacebook)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.FacebookAdgroupKeyData, attributionKey)
+		addMetricsFromReport(attributionData, marketingData.FacebookAdgroupKeyData, attributionKey, ChannelFacebook)
 	case AttributionKeyKeyword:
 		// No keyword report for fb.
 		return
@@ -852,9 +1016,9 @@ func AddLinkedinPerformanceReportInfo(attributionData *map[string]*AttributionDa
 
 	switch attributionKey {
 	case AttributionKeyCampaign:
-		addMetricsFromReport(attributionData, marketingData.LinkedinCampaignKeyData, attributionKey)
+		addMetricsFromReport(attributionData, marketingData.LinkedinCampaignKeyData, attributionKey, ChannelLinkedin)
 	case AttributionKeyAdgroup:
-		addMetricsFromReport(attributionData, marketingData.LinkedinAdgroupKeyData, attributionKey)
+		addMetricsFromReport(attributionData, marketingData.LinkedinAdgroupKeyData, attributionKey, ChannelLinkedin)
 	case AttributionKeyKeyword:
 		// No keyword report for Linkedin.
 		return
@@ -864,7 +1028,7 @@ func AddLinkedinPerformanceReportInfo(attributionData *map[string]*AttributionDa
 	}
 }
 
-func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string) {
+func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKeyData map[string]MarketingData, attributionKey string, channel string) {
 
 	for key, value := range reportKeyData {
 
@@ -879,14 +1043,13 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 			(*attributionData)[key].MarketingInfo = reportKeyData[key]
 			switch attributionKey {
 			case AttributionKeyCampaign:
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].Channel)
 				(*attributionData)[key].Name = reportKeyData[key].CampaignName
 			case AttributionKeyAdgroup:
-				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].CampaignName)
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].Channel, reportKeyData[key].CampaignName)
 				(*attributionData)[key].Name = reportKeyData[key].AdgroupName
 			case AttributionKeyKeyword:
-				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].CampaignName)
-				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].AdgroupName)
-				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].KeywordMatchType)
+				(*attributionData)[key].AddedKeys = append((*attributionData)[key].AddedKeys, reportKeyData[key].Channel, reportKeyData[key].CampaignName, reportKeyData[key].AdgroupName, reportKeyData[key].KeywordMatchType)
 				(*attributionData)[key].Name = reportKeyData[key].KeywordName
 			case AttributionKeySource:
 				(*attributionData)[key].Name = reportKeyData[key].Source
@@ -898,6 +1061,10 @@ func addMetricsFromReport(attributionData *map[string]*AttributionData, reportKe
 			(*attributionData)[key].PageViews = 0
 			(*attributionData)[key].AvgSessionTime = 0
 		}
+		if (*attributionData)[key].CustomDimensions == nil {
+			(*attributionData)[key].CustomDimensions = make(map[string]interface{})
+		}
+		(*attributionData)[key].Channel = channel
 		(*attributionData)[key].Impressions = value.Impressions
 		(*attributionData)[key].Clicks = value.Clicks
 		(*attributionData)[key].Spend = value.Spend
@@ -938,12 +1105,12 @@ func GetMarketingDataKey(attributionKey string, data MarketingData) string {
 	switch attributionKey {
 	case AttributionKeyCampaign:
 		// we know we get campaignIDReport here
-		key = key + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.CampaignName).(string)
+		key = key + data.Channel + KeyDelimiter + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.CampaignName).(string)
 	case AttributionKeyAdgroup:
-		key = key + data.CampaignName + KeyDelimiter + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.AdgroupName).(string)
+		key = key + data.Channel + KeyDelimiter + data.CampaignName + KeyDelimiter + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.AdgroupName).(string)
 	case AttributionKeyKeyword:
 		// we know we get keywordIDReport here
-		key = key + data.CampaignName + KeyDelimiter + data.AdgroupName + KeyDelimiter + data.KeywordMatchType + KeyDelimiter + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.KeywordName).(string)
+		key = key + data.Channel + KeyDelimiter + data.CampaignName + KeyDelimiter + data.AdgroupName + KeyDelimiter + data.KeywordMatchType + KeyDelimiter + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.KeywordName).(string)
 	case AttributionKeySource:
 		key = key + U.IfThenElse(data.Name != "" && data.Name != PropertyValueNone, data.Name, data.Source).(string)
 	default:
@@ -965,7 +1132,7 @@ func GetKeyMapToData(attributionKey string, allRows []MarketingData) map[string]
 	return keyToData
 }
 
-func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry) (map[string]MarketingData, []MarketingData) {
+func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry, channel string) (map[string]MarketingData, []MarketingData) {
 
 	// ID is CampaignID, AdgroupID, KeywordID etc
 	marketingDataIDMap := make(map[string]MarketingData)
@@ -995,6 +1162,7 @@ func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry) (map[strin
 		if ID == "" {
 			continue
 		}
+		data.Channel = channel
 		marketingDataIDMap[ID] = data
 		allRows = append(allRows, data)
 	}
@@ -1074,4 +1242,92 @@ func getMarketingDataFromValues(campaignIDNull sql.NullString, adgroupIDNull sql
 		data.KeywordName = name
 	}
 	return ID, data
+}
+
+func AddCustomDimensions(attributionData *map[string]*AttributionData, query *AttributionQuery, reports *MarketingReports) {
+
+	// Custom Dimensions are support only for Campaign and Adgroup currently
+	if query.AttributionKey != AttributionKeyCampaign && query.AttributionKey != AttributionKeyAdgroup {
+		return
+	}
+
+	// Return if extra Custom Dimensions not required
+	if !isExtraDimensionRequired(query) {
+		return
+	}
+
+	if query.AttributionKey == AttributionKeyCampaign {
+		enrichDimensions(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsCampaignDimensions, reports.FacebookCampaignDimensions, reports.LinkedinCampaignDimensions, query.AttributionKey)
+	} else if query.AttributionKey == AttributionKeyAdgroup {
+		enrichDimensions(attributionData, query.AttributionKeyCustomDimension, reports.AdwordsAdgroupDimensions, reports.FacebookAdgroupDimensions, reports.LinkedinAdgroupDimensions, query.AttributionKey)
+	}
+}
+func enrichDimensions(attributionData *map[string]*AttributionData, dimensions []string, adwordsData, fbData, linkedinData map[string]MarketingData, attributionKey string) {
+
+	for k, v := range *attributionData {
+
+		for _, dim := range dimensions {
+
+			customDimKey := GetKeyForCustomDimensions(v.MarketingInfo.CampaignID, v.MarketingInfo.CampaignName, v.MarketingInfo.AdgroupID, v.MarketingInfo.AdgroupName, attributionKey)
+
+			if (*attributionData)[k].CustomDimensions == nil {
+				(*attributionData)[k].CustomDimensions = make(map[string]interface{})
+			}
+			(*attributionData)[k].CustomDimensions[dim] = PropertyValueNone
+
+			switch (*attributionData)[k].Channel {
+			case ChannelAdwords:
+				if d, exists := adwordsData[customDimKey]; exists {
+					if val, found := d.CustomDimensions[dim]; found {
+						(*attributionData)[k].CustomDimensions[dim] = val
+					}
+				}
+			case ChannelFacebook:
+				if d, exists := fbData[customDimKey]; exists {
+					if val, found := d.CustomDimensions[dim]; found {
+						(*attributionData)[k].CustomDimensions[dim] = val
+					}
+				}
+			case ChannelLinkedin:
+				if d, exists := linkedinData[customDimKey]; exists {
+					if val, found := d.CustomDimensions[dim]; found {
+						(*attributionData)[k].CustomDimensions[dim] = val
+					}
+				}
+			}
+		}
+	}
+}
+
+func GetKeyForCustomDimensions(cID, cName, adgID, adgName, attributionKey string) string {
+
+	key := ""
+	if attributionKey == AttributionKeyCampaign {
+		key = cID + KeyDelimiter + cName
+	} else if attributionKey == AttributionKeyAdgroup {
+		key = cID + KeyDelimiter + cName + KeyDelimiter + adgID + KeyDelimiter + adgName
+	}
+	return key
+}
+
+func isExtraDimensionRequired(query *AttributionQuery) bool {
+	defaultDimensionsMap := make(map[string]int)
+	defaultDimensionsMap[FieldCampaignName] = 1
+	defaultDimensionsMap[FieldAdgroupName] = 1
+	extraDimensionsRequired := false
+	for _, dim := range query.AttributionKeyCustomDimension {
+		if defaultDimensionsMap[dim] == 0 {
+			extraDimensionsRequired = true
+			break
+		}
+	}
+	return extraDimensionsRequired
+}
+
+func IfValidGetValElseNone(value sql.NullString) string {
+
+	if value.Valid && value.String != "" {
+		return value.String
+	}
+	return PropertyValueNone
 }

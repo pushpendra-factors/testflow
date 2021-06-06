@@ -421,66 +421,70 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 	t.Run("AttributionWithMarketingPropertyCampaign", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                   timestamp,
-			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
-			AttributionKey:         model.AttributionKeyCampaign,
-			AttributionMethodology: model.AttributionMethodFirstTouch,
-			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           10,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionMethodology:  model.AttributionMethodFirstTouch,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
 		}
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, "Campaign_Adwords_100", result.Rows[0][0])
-		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_100"))
-		assert.Equal(t, int64(1), getImpressions(query.AttributionKey, result, "Campaign_Adwords_100"))
-		assert.Equal(t, int64(1), getClicks(query.AttributionKey, result, "Campaign_Adwords_100"))
-		assert.Equal(t, float64(0.000001), getSpend(query.AttributionKey, result, "Campaign_Adwords_100"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
+		assert.Equal(t, "adwords", result.Rows[0][0])
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, int64(1), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, int64(1), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, float64(0.000001), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"))
 	})
 
 	t.Run("AttributionWithMarketingPropertyAdgroup", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                   timestamp,
-			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
-			AttributionKey:         model.AttributionKeyAdgroup,
-			AttributionMethodology: model.AttributionMethodFirstTouch,
-			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           10,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyAdgroup,
+			AttributionMethodology:  model.AttributionMethodFirstTouch,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName, model.FieldAdgroupName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
 		}
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		// Conversion.
-		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
-		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
-		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
-		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"))
 	})
 
 	t.Run("AttributionWithMarketingPropertyKeyword", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                   timestamp,
-			To:                     timestamp + 3*U.SECONDS_IN_A_DAY,
-			AttributionKey:         model.AttributionKeyKeyword,
-			AttributionMethodology: model.AttributionMethodFirstTouch,
-			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           10,
+			From:                    timestamp,
+			To:                      timestamp + 3*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyKeyword,
+			AttributionMethodology:  model.AttributionMethodFirstTouch,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName, model.FieldAdgroupName, model.FieldKeywordMatchType, model.FieldKeyword},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
 		}
 
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		// Added keys.
-		assert.Equal(t, "Campaign_Adwords_100", result.Rows[0][0])
-		assert.Equal(t, "Adgroup_Adwords_200", result.Rows[0][1])
-		assert.Equal(t, "Broad", result.Rows[0][2])
+		assert.Equal(t, "adwords", result.Rows[0][0])
+		assert.Equal(t, "Campaign_Adwords_100", result.Rows[0][1])
+		assert.Equal(t, "Adgroup_Adwords_200", result.Rows[0][2])
+		assert.Equal(t, "Broad", result.Rows[0][3])
 		// Conversion.
-		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"))
 	})
 
 	errCode = createEventWithSession(project.ID, "event1",
@@ -495,63 +499,67 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 
 	t.Run("AttributionQueryLinearCampaignMultiUserSession", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                   timestamp,
-			To:                     timestamp + 4*U.SECONDS_IN_A_DAY,
-			AttributionKey:         model.AttributionKeyCampaign,
-			AttributionMethodology: model.AttributionMethodLinear,
-			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           10,
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyCampaign,
+			AttributionMethodology:  model.AttributionMethodLinear,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
 		}
 
 		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, "Campaign_Adwords_100", result.Rows[0][0])
-		assert.Equal(t, float64(3), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_100"))
-		assert.Equal(t, int64(1), getImpressions(query.AttributionKey, result, "Campaign_Adwords_100"))
-		assert.Equal(t, int64(1), getClicks(query.AttributionKey, result, "Campaign_Adwords_100"))
-		assert.Equal(t, float64(0.000001), getSpend(query.AttributionKey, result, "Campaign_Adwords_100"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, int64(1), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, int64(1), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, float64(0.000001), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"))
 	})
 
 	t.Run("AttributionQueryLinearAdgroupMultiUserSession", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                   timestamp,
-			To:                     timestamp + 4*U.SECONDS_IN_A_DAY,
-			AttributionKey:         model.AttributionKeyAdgroup,
-			AttributionMethodology: model.AttributionMethodLinear,
-			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           10,
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyAdgroup,
+			AttributionMethodology:  model.AttributionMethodLinear,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName, model.FieldAdgroupName},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
 		}
 
 		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, float64(3), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
-		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
-		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
-		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"))
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"))
 	})
 
 	t.Run("AttributionQueryLinearKeywordMultiUserSession", func(t *testing.T) {
 		query := &model.AttributionQuery{
-			From:                   timestamp,
-			To:                     timestamp + 4*U.SECONDS_IN_A_DAY,
-			AttributionKey:         model.AttributionKeyKeyword,
-			AttributionMethodology: model.AttributionMethodLinear,
-			ConversionEvent:        model.QueryEventWithProperties{Name: "event1"},
-			LookbackDays:           10,
+			From:                    timestamp,
+			To:                      timestamp + 4*U.SECONDS_IN_A_DAY,
+			AttributionKey:          model.AttributionKeyKeyword,
+			AttributionMethodology:  model.AttributionMethodLinear,
+			AttributionKeyDimension: []string{model.FieldChannelName, model.FieldCampaignName, model.FieldAdgroupName, model.FieldKeywordMatchType, model.FieldKeyword},
+			ConversionEvent:         model.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:            10,
 		}
 
 		result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		// with "$none" match type for 2 users
-		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"$none"+model.KeyDelimiter+"Keyword_Adwords_300"))
 		// with 'Board' match type for 1 user1
-		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"))
+		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
+		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"))
 	})
 }
 
@@ -708,11 +716,13 @@ func addMarketingData(t *testing.T, project *model.Project) {
 
 func getConversionUserCount(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
 
-	addedKeysSize := model.GetKeyIndexOrAddedKeySize(attributionKey)
+	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
+	conversionIndex := model.GetConversionIndex(result.Headers)
+
 	for _, row := range result.Rows {
 		rowKey := getRowKey(addedKeysSize, row)
 		if rowKey == key {
-			return row[addedKeysSize+12]
+			return row[conversionIndex]
 		}
 	}
 	return int64(-1)
@@ -731,7 +741,7 @@ func getRowKey(addedKeysSize int, row []interface{}) string {
 
 func getClicks(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
 
-	addedKeysSize := model.GetKeyIndexOrAddedKeySize(attributionKey)
+	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
 	for _, row := range result.Rows {
 		rowKey := getRowKey(addedKeysSize, row)
 		if rowKey == key {
@@ -743,7 +753,7 @@ func getClicks(attributionKey string, result *model.QueryResult, key interface{}
 
 func getSpend(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
 
-	addedKeysSize := model.GetKeyIndexOrAddedKeySize(attributionKey)
+	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
 	for _, row := range result.Rows {
 		rowKey := getRowKey(addedKeysSize, row)
 		if rowKey == key {
@@ -755,11 +765,12 @@ func getSpend(attributionKey string, result *model.QueryResult, key interface{})
 
 func getImpressions(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
 
-	addedKeysSize := model.GetKeyIndexOrAddedKeySize(attributionKey)
+	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
+	impressionIndex := model.GetImpressionsIndex(result.Headers)
 	for _, row := range result.Rows {
 		rowKey := getRowKey(addedKeysSize, row)
 		if rowKey == key {
-			return row[addedKeysSize+1]
+			return row[impressionIndex]
 		}
 	}
 	return int64(-1)
@@ -767,10 +778,12 @@ func getImpressions(attributionKey string, result *model.QueryResult, key interf
 
 func getCompareConversionUserCount(attributionKey string, result *model.QueryResult, key interface{}) interface{} {
 
-	addedKeysSize := model.GetKeyIndexOrAddedKeySize(attributionKey)
+	addedKeysSize := model.GetLastKeyValueIndex(result.Headers)
+	ccuIndex := model.GetCompareConversionUserCountIndex(result.Headers)
 	for _, row := range result.Rows {
-		if row[0] == key {
-			return row[addedKeysSize+14]
+		rowKey := getRowKey(addedKeysSize, row)
+		if rowKey == key {
+			return row[ccuIndex]
 		}
 	}
 	return int64(-1)
@@ -976,7 +989,7 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	// Both user should be treated different
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
-	// Lookback days = 0. Hence conversion couldn't happen withing lookback.
+	// Lookback days = 0. Hence conversion couldn't happen within lookback.
 	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 
 	query = &model.AttributionQuery{
@@ -1403,13 +1416,13 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 	rows = append(rows, row1, row2)
 
 	mergedRows := make([][]interface{}, 0)
-	row3 := []interface{}{"Campaign1", int64(3), int64(3), float64(3),
+	row3 := []interface{}{"Campaign1", int64(5), int64(5), float64(5),
 		// (CTR, AvgCPC, CPM, ConversionRate)
-		float64(3), float64(3), float64(3), float64(3),
+		float64(5), float64(5), float64(5), float64(5),
 		// Sessions, (users), (AvgSessionTime), (pageViews),
-		int64(5), int64(5), float64(3), int64(5),
+		int64(5), int64(5), float64(5), int64(5),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(5), float64(3), float64(5), float64(3)}
+		float64(5), float64(5), float64(5), float64(5)}
 
 	mergedRows = append(mergedRows, row3)
 	type args struct {

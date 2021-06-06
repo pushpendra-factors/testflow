@@ -1,12 +1,13 @@
 package postgres
 
 import (
+	"database/sql"
 	"factors/model/model"
 	U "factors/util"
 	"fmt"
-	"strings"
-
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQuery, projectSetting model.ProjectSetting) (*model.MarketingReports, error) {
@@ -239,7 +240,7 @@ func (pg *Postgres) PullAdwordsMarketingData(projectID uint64, from, to int64, c
 	}
 	defer rows.Close()
 
-	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx)
+	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelAdwords)
 	return marketingDataIDMap, allRows, nil
 }
 
@@ -265,7 +266,7 @@ func (pg *Postgres) PullFacebookMarketingData(projectID uint64, from, to int64, 
 	}
 	defer rows.Close()
 
-	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx)
+	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelFacebook)
 	return marketingDataIDMap, allRows, nil
 }
 
@@ -291,6 +292,119 @@ func (pg *Postgres) PullLinkedinMarketingData(projectID uint64, from, to int64, 
 	}
 	defer rows.Close()
 
-	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx)
+	marketingDataIDMap, allRows := model.ProcessRow(rows, reportName, logCtx, model.ChannelLinkedin)
 	return marketingDataIDMap, allRows, nil
+}
+
+func (pg *Postgres) PullCustomDimensionData(projectID uint64, attributionKey string, marketingReport *model.MarketingReports) error {
+
+	// Custom Dimensions are support only for Campaign and Adgroup currently
+	if attributionKey != model.AttributionKeyCampaign && attributionKey != model.AttributionKeyAdgroup {
+		return nil
+	}
+
+	var err error
+	switch attributionKey {
+	case model.AttributionKeyCampaign:
+
+		marketingReport.AdwordsCampaignDimensions, err = pg.PullSmartProperties(projectID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.AdwordsAdgroupID, model.AdwordsAdgroupName, model.AdwordsAdgroupName, 1, attributionKey)
+		if err != nil {
+			return err
+		}
+		marketingReport.FacebookCampaignDimensions, err = pg.PullSmartProperties(projectID, model.FacebookCampaignID, model.FacebookCampaignName, model.FacebookAdgroupID, model.FacebookAdgroupName, model.FacebookAdgroupName, 1, attributionKey)
+		if err != nil {
+			return err
+		}
+		marketingReport.LinkedinCampaignDimensions, err = pg.PullSmartProperties(projectID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.LinkedinAdgroupName, 1, attributionKey)
+		if err != nil {
+			return err
+		}
+	case model.FieldAdgroupName:
+		marketingReport.AdwordsAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.AdwordsAdgroupID, model.AdwordsAdgroupName, model.AdwordsAdgroupName, 2, attributionKey)
+		if err != nil {
+			return err
+		}
+		marketingReport.FacebookAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.FacebookCampaignID, model.FacebookCampaignName, model.FacebookAdgroupID, model.FacebookAdgroupName, model.FacebookAdgroupName, 2, attributionKey)
+		if err != nil {
+			return err
+		}
+		marketingReport.LinkedinAdgroupDimensions, err = pg.PullSmartProperties(projectID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.LinkedinAdgroupName, 2, attributionKey)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// PullSmartProperties Pulls Smart Properties
+func (pg *Postgres) PullSmartProperties(projectID uint64, campaignIDPlaceHolder string, campaignNamePlaceHolder string, adgroupIDPlaceHolder string, adgroupNamePlaceHolder string, sourceChannelPlaceHolder string, objectType int, attributionKey string) (map[string]model.MarketingData, error) {
+
+	// GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID, "Type": objectType, "Source": sourceChannelPlaceHolder})
+	stmt := "SELECT object_property->>? AS campaignID,  object_property->>? AS campaignName, " +
+		"object_property->>? AS adgroupID,  object_property->>? AS adgroupName, " +
+		"properties FROM smart_properties " +
+		"where project_id = ? AND source = ? AND object_type = ?"
+
+	params := []interface{}{campaignIDPlaceHolder, campaignNamePlaceHolder, adgroupIDPlaceHolder, adgroupNamePlaceHolder, projectID, sourceChannelPlaceHolder, objectType}
+	rows, err := pg.ExecQueryWithContext(stmt, params)
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return nil, err
+	}
+	defer rows.Close()
+
+	dataKeyDimensions := make(map[string]model.MarketingData)
+	for rows.Next() {
+		var campaignIDNull sql.NullString
+		var campaignNameNull sql.NullString
+		var adgroupIDNull sql.NullString
+		var adgroupNameNull sql.NullString
+		var properties postgres.Jsonb
+
+		if err := rows.Scan(&campaignIDNull, &campaignNameNull, &adgroupIDNull, &adgroupNameNull, &properties); err != nil {
+			logCtx.WithError(err).Error("Bad row. Ignoring row and continuing")
+			continue
+		}
+		if !campaignIDNull.Valid && !adgroupIDNull.Valid {
+			continue
+		}
+		_campaignID := model.IfValidGetValElseNone(campaignIDNull)
+		_campaignName := model.IfValidGetValElseNone(campaignNameNull)
+		_adgroupID := model.IfValidGetValElseNone(adgroupIDNull)
+		_adgroupName := model.IfValidGetValElseNone(adgroupNameNull)
+
+		propertiesMap, err := U.DecodePostgresJsonb(&properties)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to decode smart properties. Ignoring row and continuing")
+			continue
+		}
+		marketData := model.MarketingData{
+			Name:    _campaignName,
+			ID:      _campaignID,
+			Channel: sourceChannelPlaceHolder,
+		}
+		key := model.GetKeyForCustomDimensions(_campaignID, _campaignName, _adgroupID, _adgroupName, attributionKey)
+		if objectType == model.SmartPropertyRulesTypeAliasToType["ad_group"] { // 1: "campaign", 2: "ad_group"
+			marketData.Name = _adgroupName
+			marketData.ID = _adgroupID
+		}
+		// added custom dimensions
+		(*propertiesMap)["campaign_id"] = _campaignID
+		(*propertiesMap)["campaign_name"] = _campaignName
+		(*propertiesMap)["adgroup_id"] = _adgroupID
+		(*propertiesMap)["adgroup_name"] = _adgroupName
+		(*propertiesMap)["channel_name"] = sourceChannelPlaceHolder
+
+		dataKeyDimensions[key] = model.MarketingData{
+			Key:              key,
+			CampaignID:       _campaignID,
+			CampaignName:     _campaignName,
+			AdgroupID:        _adgroupID,
+			AdgroupName:      _adgroupName,
+			CustomDimensions: *propertiesMap,
+		}
+
+	}
+	return dataKeyDimensions, nil
 }
