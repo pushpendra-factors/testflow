@@ -310,10 +310,12 @@ func (pg *Postgres) GetEvent(projectId uint64, userId string, id string) (*model
 	return &event, http.StatusFound
 }
 
-func (pg *Postgres) GetEventById(projectId uint64, id string) (*model.Event, int) {
+func (pg *Postgres) GetEventById(projectId uint64, id, userID string) (*model.Event, int) {
 	db := C.GetServices().Db
 
 	var event model.Event
+	// NOTE: NOT USING user_id intentionally to use primary_key index for faster lookup on pg.
+	// user_id is added to function signature to optimise performance on MemSQL.
 	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&event).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			// Do not log error. Log on caller, if needed.
@@ -425,14 +427,14 @@ func (pg *Postgres) GetRecentEventPropertyValuesWithLimits(projectID uint64, eve
 	return values, U.GetCategoryType(property, values), nil
 }
 
-func (pg *Postgres) UpdateEventProperties(projectId uint64, id string,
+func (pg *Postgres) UpdateEventProperties(projectId uint64, id, userID string,
 	properties *U.PropertiesMap, updateTimestamp int64) int {
 
 	if projectId == 0 || id == "" {
 		return http.StatusBadRequest
 	}
 
-	event, errCode := pg.GetEventById(projectId, id)
+	event, errCode := pg.GetEventById(projectId, id, userID)
 	if errCode != http.StatusFound {
 		return errCode
 	}
@@ -459,6 +461,8 @@ func (pg *Postgres) UpdateEventProperties(projectId uint64, id string,
 		"properties":                   updatedPostgresJsonb,
 		"properties_updated_timestamp": propertiesLastUpdatedAt,
 	}
+	// NOTE: NOT USING user_id intentionally to use primary_key index for faster lookup on pg.
+	// user_id is added to function signature to optimise performance on MemSQL.
 	err = db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id).Update(updatedFields).Error
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectId, "id": id,
@@ -852,7 +856,8 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 			var existingSessionEvent *model.Event
 			if events[sessionStartIndex].SessionId != nil {
 				var errCode int
-				existingSessionEvent, errCode = pg.GetEventById(projectId, *events[sessionStartIndex].SessionId)
+				existingSessionEvent, errCode = pg.GetEventById(projectId,
+					*events[sessionStartIndex].SessionId, *&events[sessionStartIndex].UserId)
 				if errCode == http.StatusNotFound {
 					// Log and continue with new session, if the session event is not found.
 					logCtx.WithField("session_id", events[sessionStartIndex].SessionId).
@@ -996,7 +1001,7 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 
 			// Update session event properties.
 			errCode = pg.UpdateEventProperties(projectId, sessionEvent.ID,
-				&sessionPropertiesMap, sessionEvent.Timestamp+1)
+				sessionEvent.UserId, &sessionPropertiesMap, sessionEvent.Timestamp+1)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed updating session event properties on add session.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,

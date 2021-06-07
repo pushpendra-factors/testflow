@@ -1,10 +1,16 @@
 package model
 
 import (
+	cacheRedis "factors/cache/redis"
 	U "factors/util"
+	"fmt"
+	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 type Project struct {
@@ -71,4 +77,65 @@ func DefaultURLPropertiesToMarketingPropertiesMap() map[string]string {
 		}
 	}
 	return urlToEventPropMap
+}
+
+func getCacheKeyForProjectIDByToken(token string) (*cacheRedis.Key, error) {
+	return cacheRedis.NewKeyWithProjectUID(token, "projects_token_id", "")
+}
+
+func GetCacheProjectIDByToken(token string) (uint64, int) {
+	logCtx := log.WithField("token", token)
+
+	if token == "" {
+		logCtx.Error("Invalid params on GetCacheProjectIDByToken.")
+		return 0, http.StatusInternalServerError
+	}
+
+	key, err := getCacheKeyForProjectIDByToken(token)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache key GetCacheProjectIDByToken")
+		return 0, http.StatusInternalServerError
+	}
+
+	projectIDAsString, err := cacheRedis.Get(key)
+	if err != nil {
+		if err == redis.ErrNil {
+			return 0, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to GetCacheProjectIDByToken.")
+		return 0, http.StatusInternalServerError
+	}
+
+	projectID, err := strconv.ParseUint(projectIDAsString, 10, 64)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to convert project_id to uint64 in GetCacheProjectIDByToken.")
+		return 0, http.StatusInternalServerError
+	}
+
+	return projectID, http.StatusFound
+}
+
+func SetCacheProjectIDByToken(token string, projectID uint64) int {
+	logCtx := log.WithField("token", token).WithField("project_id", projectID)
+
+	if token == "" || projectID == 0 {
+		logCtx.Error("Invalid params on SetCacheProjectIDByToken.")
+		return http.StatusInternalServerError
+	}
+
+	key, err := getCacheKeyForProjectIDByToken(token)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache key for SetCacheProjectIDByToken.")
+		return http.StatusInternalServerError
+	}
+
+	var expiryInSecs float64 = 60 * 60 * 24 // one day
+	err = cacheRedis.Set(key, fmt.Sprintf("%d", projectID), expiryInSecs)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache on SetCacheProjectIDByToken")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
 }

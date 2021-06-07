@@ -620,7 +620,7 @@ func syncContact(projectID uint64, document *model.HubspotDocument, hubspotSmart
 					if errCode == http.StatusFound && userByCustomerUserID != nil {
 						userID = userByCustomerUserID.ID
 					} else if lastSyncedDocument != nil && lastSyncedDocument.SyncId != "" {
-						event, status := store.GetStore().GetEventById(projectID, lastSyncedDocument.SyncId)
+						event, status := store.GetStore().GetEventById(projectID, lastSyncedDocument.SyncId, "")
 						if status == http.StatusFound {
 							logCtx.Info("Failed to get user with given lead_guid on contact updated event. Not able to get user by customer user id. Using contact create event user id.")
 							userID = event.UserId
@@ -763,7 +763,7 @@ func getDealUserID(projectID uint64, deal *Deal) string {
 		return ""
 	}
 
-	event, errCode := store.GetStore().GetEventById(projectID, contactDocument.SyncId)
+	event, errCode := store.GetStore().GetEventById(projectID, contactDocument.SyncId, "")
 	if errCode != http.StatusFound {
 		logCtx.WithField("event_id", contactDocument.SyncId).Error(
 			"Failed to get deal user. Failed to get hubspot contact created event using sync_id.")
@@ -878,7 +878,7 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 		for _, contactDocument := range contactDocuments {
 			if contactDocument.SyncId != "" {
 				contactSyncEvent, errCode := store.GetStore().GetEventById(
-					projectID, contactDocument.SyncId)
+					projectID, contactDocument.SyncId, "")
 				if errCode == http.StatusFound {
 					_, errCode := store.GetStore().UpdateUserProperties(projectID,
 						contactSyncEvent.UserId, userPropertiesJsonb, time.Now().Unix())

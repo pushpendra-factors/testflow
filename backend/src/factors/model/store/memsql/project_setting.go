@@ -84,7 +84,8 @@ type ProjectSettingChannelResponse struct {
 // config/flag use_default_project_setting_for_sdk is set to true.
 func (store *MemSQL) GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*model.ProjectSetting, int) {
 	if C.GetConfig().UseDefaultProjectSettingForSDK {
-		return getProjectSettingDefault(), http.StatusFound
+		// Returning not_modified to avoid caching default.
+		return getProjectSettingDefault(), http.StatusNotModified
 	}
 
 	// TODO(Dinesh): Use gorm db.WithContext and context.WithTimeout
@@ -269,7 +270,7 @@ func (store *MemSQL) getProjectSettingByKeyWithDefault(tokenKey, tokenValue stri
 		return settings, http.StatusFound
 	}
 
-	settings, errCode = store.GetProjectSettingByKeyWithTimeout(tokenKey, tokenValue, time.Millisecond*30)
+	settings, errCode = store.GetProjectSettingByKeyWithTimeout(tokenKey, tokenValue, time.Millisecond*200)
 	if errCode != http.StatusFound {
 		// Use default settings, if db failure.
 		// Do not cache default.

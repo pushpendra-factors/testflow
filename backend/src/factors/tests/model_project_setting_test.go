@@ -94,7 +94,7 @@ func TestGetProjectSettingByKeyWithTimeout(t *testing.T) {
 	C.GetConfig().UseDefaultProjectSettingForSDK = true
 	projectSetting, errCode = store.GetStore().GetProjectSettingByKeyWithTimeout("token",
 		project.Token, time.Microsecond*1)
-	assert.Equal(t, errCode, http.StatusFound)
+	assert.Equal(t, errCode, http.StatusNotModified)
 	assert.NotNil(t, projectSetting)
 }
 

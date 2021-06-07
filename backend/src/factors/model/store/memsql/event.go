@@ -355,17 +355,15 @@ func existsEventByCustomerEventID(projectID uint64, customerEventID string) bool
 
 	db := C.GetServices().Db
 	if err := db.Limit(1).Where("project_id = ?", projectID).
-		Where("customer_event_id = ?", customerEventID).Select("id").Find(&event).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			log.WithFields(log.Fields{"projectId": projectID}).WithError(err).Error(
-				"Getttng event failed on existsEventByCustomerEventID")
-		}
+		Where("customer_event_id = ?", customerEventID).
+		Select("id").Find(&event).Error; err != nil {
 		return false
 	}
 
 	if event.ID != "" {
 		return true
 	}
+
 	return false
 }
 
@@ -389,13 +387,19 @@ func (store *MemSQL) GetEvent(projectId uint64, userId string, id string) (*mode
 	return &event, http.StatusFound
 }
 
-func (store *MemSQL) GetEventById(projectId uint64, id string) (*model.Event, int) {
+func (store *MemSQL) GetEventById(projectId uint64, id, userID string) (*model.Event, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
 	var event model.Event
 
 	db := C.GetServices().Db
-	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&event).Error; err != nil {
+	dbx := db.Limit(1).Where("project_id = ?", projectId).Where("id = ?", id)
+	// TODO: Make userID mandatory once support is added to all queries.
+	if userID != "" {
+		dbx = dbx.Where("user_id", userID)
+	}
+
+	if err := dbx.Find(&event).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			// Do not log error. Log on caller, if needed.
 			return nil, http.StatusNotFound
@@ -541,7 +545,7 @@ func (store *MemSQL) GetRecentEventPropertyValuesWithLimits(projectID uint64, ev
 	return values, U.GetCategoryType(property, values), nil
 }
 
-func (store *MemSQL) UpdateEventProperties(projectId uint64, id string,
+func (store *MemSQL) UpdateEventProperties(projectId uint64, id, userID string,
 	properties *U.PropertiesMap, updateTimestamp int64) int {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
@@ -549,7 +553,7 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id string,
 		return http.StatusBadRequest
 	}
 
-	event, errCode := store.GetEventById(projectId, id)
+	event, errCode := store.GetEventById(projectId, id, userID)
 	if errCode != http.StatusFound {
 		return errCode
 	}
@@ -571,13 +575,18 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id string,
 		return http.StatusInternalServerError
 	}
 
-	db := C.GetServices().Db
 	updatedFields := map[string]interface{}{
 		"properties":                   updatedPostgresJsonb,
 		"properties_updated_timestamp": propertiesLastUpdatedAt,
 	}
 
-	err = db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id).Update(updatedFields).Error
+	db := C.GetServices().Db
+	dbx := db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id)
+	if userID != "" {
+		dbx = dbx.Where("user_id", userID)
+	}
+
+	err = dbx.Update(updatedFields).Error
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectId, "id": id,
 			"update": updatedFields}).WithError(err).Error("Failed to update event properties.")
@@ -977,7 +986,8 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 			var existingSessionEvent *model.Event
 			if events[sessionStartIndex].SessionId != nil {
 				var errCode int
-				existingSessionEvent, errCode = pg.GetEventById(projectId, *events[sessionStartIndex].SessionId)
+				existingSessionEvent, errCode = pg.GetEventById(projectId,
+					*events[sessionStartIndex].SessionId, *&events[sessionStartIndex].UserId)
 				if errCode == http.StatusNotFound {
 					// Log and continue with new session, if the session event is not found.
 					logCtx.WithField("session_id", events[sessionStartIndex].SessionId).
@@ -1120,7 +1130,7 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 			}
 
 			// Update session event properties.
-			errCode = pg.UpdateEventProperties(projectId, sessionEvent.ID,
+			errCode = pg.UpdateEventProperties(projectId, sessionEvent.ID, sessionEvent.UserId,
 				&sessionPropertiesMap, sessionEvent.Timestamp+1)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed updating session event properties on add session.")

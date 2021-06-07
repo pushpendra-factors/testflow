@@ -519,3 +519,17 @@ func (pg *Postgres) GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map[
 
 	return projectIds, http.StatusFound
 }
+
+func (pg *Postgres) GetProjectIDByToken(token string) (uint64, int) {
+	projectID, errCode := model.GetCacheProjectIDByToken(token)
+	if errCode == http.StatusFound {
+		return projectID, errCode
+	}
+
+	project, errCode := pg.GetProjectByToken(token)
+	if errCode == http.StatusFound {
+		return project.ID, errCode
+	}
+
+	return 0, errCode
+}

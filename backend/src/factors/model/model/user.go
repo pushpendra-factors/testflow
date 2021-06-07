@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"factors/util"
 	U "factors/util"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -458,4 +460,59 @@ func UpdateUserPropertiesIdentifierMetaObject(userProperties *postgres.Jsonb, me
 
 	*userProperties = *newUserProperties
 	return nil
+}
+
+func getCacheKeyForUserIDByAMPUserID(projectID uint64, ampUserID string) (*cacheRedis.Key, error) {
+	return cacheRedis.NewKey(projectID, "users_ampid_id", ampUserID)
+}
+
+func GetCacheUserIDByAMPUserID(projectID uint64, ampUserID string) (string, int) {
+	logCtx := log.WithField("project_id", projectID).WithField("amp_user_id", ampUserID)
+
+	if projectID == 0 || ampUserID == "" {
+		logCtx.Error("Invalid params on getCacheUserIDByAMPUserID.")
+		return "", http.StatusInternalServerError
+	}
+
+	key, err := getCacheKeyForUserIDByAMPUserID(projectID, ampUserID)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache key for user_id by amp_user_id.")
+		return "", http.StatusInternalServerError
+	}
+
+	userID, err := cacheRedis.Get(key)
+	if err != nil {
+		if err == redis.ErrNil {
+			return "", http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to user_id by amp_user_id from cache.")
+		return "", http.StatusInternalServerError
+	}
+
+	return userID, http.StatusFound
+}
+
+func SetCacheUserIDByAMPUserID(projectID uint64, ampUserID, userID string) int {
+	logCtx := log.WithField("project_id", projectID).WithField("amp_user_id", ampUserID)
+
+	if projectID == 0 || ampUserID == "" || userID == "" {
+		logCtx.Error("Invalid params on setCacheUserIDByAMPUserID.")
+		return http.StatusInternalServerError
+	}
+
+	key, err := getCacheKeyForUserIDByAMPUserID(projectID, ampUserID)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache key for setCacheUserIDByAMPUserID.")
+		return http.StatusInternalServerError
+	}
+
+	var expiryInSecs float64 = 60 * 15 // 15 minutes.
+	err = cacheRedis.Set(key, userID, expiryInSecs)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache on setCacheUserIDByAMPUserID")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
 }

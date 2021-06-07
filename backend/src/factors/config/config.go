@@ -605,13 +605,26 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 
 	// Removes emoji and cleans up string and postgres.Jsonb columns.
 	memSQLDB.Callback().Create().Before("gorm:create").Register("cleanup", U.GormCleanupCallback)
+	memSQLDB.Callback().Create().Before("gorm:update").Register("cleanup", U.GormCleanupCallback)
 
 	if IsDevelopment() {
 		memSQLDB.LogMode(true)
 	} else {
 		memSQLDB.LogMode(false)
-		memSQLDB.DB().SetMaxOpenConns(maxOpenConns)
-		memSQLDB.DB().SetMaxIdleConns(maxIdleConns)
+
+		// Using same no.of connections for both max_open and
+		// max_idle (greatest among two) as a workaround to
+		// avoid connection timout error, while adding new
+		// connection to the pool.
+		// dial tcp 34.82.234.136:3306: connect: connection timed out
+		connections := maxOpenConns
+		if maxIdleConns > connections {
+			connections = maxIdleConns
+		}
+		log.Warnf("Using %d connections for both max_idle and max_open for memsql.", connections)
+
+		memSQLDB.DB().SetMaxOpenConns(connections)
+		memSQLDB.DB().SetMaxIdleConns(connections)
 	}
 
 	log.Info("MemSQL Db Service initialized")
@@ -1061,14 +1074,14 @@ func InitSDKService(config *Configuration) error {
 	return nil
 }
 
-func InitQueueWorker(config *Configuration) error {
+func InitQueueWorker(config *Configuration, concurrency int) error {
 	if initiated {
 		return fmt.Errorf("Config already initialized")
 	}
 
 	configuration = config
 
-	err := InitDB(*config)
+	err := InitDBWithMaxIdleAndMaxOpenConn(*config, concurrency, concurrency)
 	if err != nil {
 		return err
 	}

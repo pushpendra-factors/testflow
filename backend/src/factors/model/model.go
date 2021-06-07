@@ -157,11 +157,11 @@ type Model interface {
 	GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID string) (uint64, int)
 	CreateEvent(event *model.Event) (*model.Event, int)
 	GetEvent(projectID uint64, userId string, id string) (*model.Event, int)
-	GetEventById(projectID uint64, id string) (*model.Event, int)
+	GetEventById(projectID uint64, id, userID string) (*model.Event, int)
 	GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId string, startTimestamp int64, endTimestamp int64) (*model.Event, int)
 	GetRecentEventPropertyKeysWithLimits(projectID uint64, eventName string, starttime int64, endtime int64, eventsLimit int) ([]U.Property, error)
 	GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string, property string, valuesLimit int, rowsLimit int, starttime int64, endtime int64) ([]U.PropertyValue, string, error)
-	UpdateEventProperties(projectId uint64, id string, properties *U.PropertiesMap, updateTimestamp int64) int
+	UpdateEventProperties(projectId uint64, id, userID string, properties *U.PropertiesMap, updateTimestamp int64) int
 	GetUserEventsByEventNameId(projectID uint64, userId string, eventNameId string) ([]model.Event, int)
 	OverwriteEventProperties(projectId uint64, userId string, eventId string, newEventProperties *postgres.Jsonb) int
 	OverwriteEventPropertiesByID(projectId uint64, id string, newEventProperties *postgres.Jsonb) int
@@ -246,6 +246,7 @@ type Model interface {
 	GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*model.ProjectSetting, int)
 	GetProjectSettingByTokenWithCacheAndDefault(token string) (*model.ProjectSetting, int)
 	GetProjectSettingByPrivateTokenWithCacheAndDefault(privateToken string) (*model.ProjectSetting, int)
+	GetProjectIDByToken(token string) (uint64, int)
 	UpdateProjectSettings(projectID uint64, settings *model.ProjectSetting) (*model.ProjectSetting, int)
 	GetIntAdwordsRefreshTokenForProject(projectID uint64) (string, int)
 	GetIntGoogleOrganicRefreshTokenForProject(projectID uint64) (string, int)
@@ -337,6 +338,7 @@ type Model interface {
 	CreateOrGetSegmentUser(projectID uint64, segAnonId, custUserId string, requestTimestamp int64) (*model.User, int)
 	GetUserPropertiesByUserID(projectID uint64, id string) (*postgres.Jsonb, int)
 	GetUser(projectID uint64, id string) (*model.User, int)
+	GetUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int)
 	IsUserExistByID(projectID uint64, id string) int
 	GetUsers(projectID uint64, offset uint64, limit uint64) ([]model.User, int)
 	GetUsersByCustomerUserID(projectID uint64, customerUserID string) ([]model.User, int)

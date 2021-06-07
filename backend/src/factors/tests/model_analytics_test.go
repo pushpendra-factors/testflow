@@ -1630,7 +1630,7 @@ func TestAnalyticsInsightsQuery(t *testing.T) {
 			response := DecodeJSONResponseToMap(w.Body)
 			assert.NotNil(t, response["event_id"])
 			if i == 0 {
-				event, errCode := store.GetStore().GetEventById(project.ID, response["event_id"].(string))
+				event, errCode := store.GetStore().GetEventById(project.ID, response["event_id"].(string), "")
 				assert.Equal(t, http.StatusFound, errCode)
 				assert.NotNil(t, event)
 				firstEvent = event
