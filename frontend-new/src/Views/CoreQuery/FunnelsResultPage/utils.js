@@ -46,7 +46,7 @@ const NoBreakdownUsersColumn = (d, breakdown, isComparisonApplied) => {
               type='title'
               weight='normal'
               color='grey-8'
-              extraClass='text-xs mb-0'
+              extraClass='text-sm mb-0'
             >
               {`${moment(d.durationObj.from).format('MMM DD')} - ${moment(
                 d.durationObj.to
@@ -133,7 +133,7 @@ const compareSkeleton = (val1, val2) => {
         type='title'
         weight='normal'
         color='grey-8'
-        extraClass='text-xs mb-0'
+        extraClass='text-sm mb-0'
       >
         {val1}
       </Text>

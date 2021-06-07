@@ -177,12 +177,12 @@ export const ATTRIBUTION_METRICS = [
   },
   {
     title: 'Sessions',
-    header: 'Website Visitors',
+    header: 'Sessions',
     enabled: true,
   },
   {
-    title: 'CTR',
-    header: 'CTR',
+    title: 'CTR (%)',
+    header: 'CTR(%)',
     enabled: false,
   },
   {
@@ -196,8 +196,8 @@ export const ATTRIBUTION_METRICS = [
     enabled: false,
   },
   {
-    title: 'Conversion Rate',
-    header: 'ConversionRate',
+    title: 'Conversion Rate (%)',
+    header: 'ConversionRate(%)',
     enabled: false,
   },
   {
@@ -216,6 +216,104 @@ export const ATTRIBUTION_METRICS = [
     enabled: false,
   },
 ];
+
+export const KEY_TOUCH_POINT_DIMENSIONS = [
+  {
+    title: 'Channel Name',
+    header: 'channel_name',
+    responseHeader: 'ChannelName',
+    enabled: false,
+    disabled: false,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.CAMPAIGN,
+  },
+  {
+    title: 'Campaign Name',
+    header: 'campaign_name',
+    responseHeader: MARKETING_TOUCHPOINTS.CAMPAIGN,
+    enabled: true,
+    disabled: true,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.CAMPAIGN,
+  },
+  {
+    title: 'Channel Name',
+    header: 'channel_name',
+    responseHeader: 'ChannelName',
+    enabled: false,
+    disabled: false,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.ADGROUP,
+  },
+  {
+    title: 'Campaign Name',
+    header: 'campaign_name',
+    responseHeader: MARKETING_TOUCHPOINTS.CAMPAIGN,
+    enabled: true,
+    disabled: false,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.ADGROUP,
+  },
+  {
+    title: 'AdGroup Name',
+    header: 'adgroup_name',
+    responseHeader: MARKETING_TOUCHPOINTS.ADGROUP,
+    enabled: true,
+    disabled: true,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.ADGROUP,
+  },
+  {
+    title: 'Channel Name',
+    header: 'channel_name',
+    responseHeader: 'ChannelName',
+    enabled: false,
+    disabled: false,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
+  },
+  {
+    title: 'Campaign Name',
+    header: 'campaign_name',
+    responseHeader: MARKETING_TOUCHPOINTS.CAMPAIGN,
+    enabled: true,
+    disabled: false,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
+  },
+  {
+    title: 'AdGroup Name',
+    header: 'adgroup_name',
+    responseHeader: MARKETING_TOUCHPOINTS.ADGROUP,
+    enabled: true,
+    disabled: false,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
+  },
+  {
+    title: 'Keyword Match Type',
+    header: 'keyword_match_type',
+    responseHeader: MARKETING_TOUCHPOINTS.MATCHTYPE,
+    enabled: true,
+    disabled: false,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
+  },
+  {
+    title: 'Keyword',
+    header: 'keyword',
+    responseHeader: MARKETING_TOUCHPOINTS.KEYWORD,
+    enabled: true,
+    disabled: true,
+    type: 'key',
+    touchPoint: MARKETING_TOUCHPOINTS.KEYWORD,
+  }
+];
+
+export const MARKETING_TOUCHPOINTS_ALIAS = {
+  campaign: MARKETING_TOUCHPOINTS.CAMPAIGN,
+  ad_group: MARKETING_TOUCHPOINTS.ADGROUP,
+};
 
 export const FUNNEL_CHART_MARGIN = {
   top: 20,

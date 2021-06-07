@@ -20,6 +20,7 @@ function DualTouchPoint({
   unit,
   resultState,
   section,
+  attr_dimensions
 }) {
   const maxAllowedVisibleProperties = unit.cardSize ? 5 : 3;
   const [chartsData, setChartsData] = useState([]);
@@ -106,6 +107,7 @@ function DualTouchPoint({
         attributionMetrics={attributionMetrics}
         setAttributionMetrics={setAttributionMetrics}
         section={section}
+        attr_dimensions={attr_dimensions}
       />
     );
   }

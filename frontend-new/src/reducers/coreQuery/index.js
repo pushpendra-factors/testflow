@@ -25,16 +25,17 @@ import {
   SET_DEFAULT_STATE,
   SET_EVENT_NAMES,
   SET_USER_PROP_NAME,
-  SET_EVENT_PROP_NAME
-} from "./actions";
+  SET_EVENT_PROP_NAME,
+} from './actions';
 import {
   SHOW_ANALYTICS_RESULT,
   INITIALIZE_MTA_STATE,
   INITIALIZE_CAMPAIGN_STATE,
-} from "../types";
-import { DefaultDateRangeFormat } from "../../Views/CoreQuery/utils";
+  INITIALIZE_TOUCHPOINT_DIMENSIONS,
+} from '../types';
+import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 
-const DEFAULT_TOUCHPOINTS = ["Campaign", "Source", "AdGroup", "Keyword"];
+const DEFAULT_TOUCHPOINTS = ['Campaign', 'Source', 'AdGroup', 'Keyword'];
 
 const defaultState = {
   eventOptions: [],
@@ -46,20 +47,21 @@ const defaultState = {
   },
   touchpointOptions: [
     {
-      label: "Paid Marketing",
-      icon: "fav",
+      label: 'Paid Marketing',
+      icon: 'fav',
       values: DEFAULT_TOUCHPOINTS.map((v) => [v]),
     },
   ],
   show_analytics_result: false,
   eventGoal: {},
-  touchpoint: "",
+  touchpoint: '',
   touchpoint_filters: [],
   attr_query_type: 'EngagementBased',
   attr_dateRange: {
     ...DefaultDateRangeFormat,
-    dateStr: ""
+    dateStr: '',
   },
+  attr_dimensions: [],
   models: [],
   window: null,
   linkedEvents: [],
@@ -67,17 +69,17 @@ const defaultState = {
     metrics: [],
     properties: [],
   },
-  camp_channels: "google_ads",
+  camp_channels: 'google_ads',
   camp_measures: [],
   camp_filters: [],
   camp_groupBy: [],
   camp_dateRange: {
     ...DefaultDateRangeFormat,
-    dateStr: "",
+    dateStr: '',
   },
   eventNames: [],
   userPropNames: [],
-  eventPropNames: []
+  eventPropNames: [],
 };
 
 export default function (state = defaultState, action) {
@@ -85,9 +87,9 @@ export default function (state = defaultState, action) {
     case FETCH_EVENTS:
       return { ...state, eventOptions: action.payload };
     case SET_EVENT_NAMES:
-      return { ...state, eventNames: action.payload}
+      return { ...state, eventNames: action.payload };
     case SET_USER_PROP_NAME:
-      return {...state, userPropNames: action.payload}
+      return { ...state, userPropNames: action.payload };
     case FETCH_USER_PROPERTIES:
       return { ...state, userProperties: action.payload };
     case FETCH_EVENT_PROPERTIES:
@@ -95,8 +97,8 @@ export default function (state = defaultState, action) {
       eventPropState[action.eventName] = action.payload;
       return { ...state, eventProperties: eventPropState };
     case SET_EVENT_PROP_NAME:
-      const evnPropNames = {...state.eventPropNames, ...action.payload};
-      return {...state, eventPropNames: evnPropNames}
+      const evnPropNames = { ...state.eventPropNames, ...action.payload };
+      return { ...state, eventPropNames: evnPropNames };
     case INITIALIZE_GROUPBY: {
       return {
         ...state,
@@ -170,6 +172,12 @@ export default function (state = defaultState, action) {
         touchpoint: action.payload,
       };
     }
+    case INITIALIZE_TOUCHPOINT_DIMENSIONS: {
+      return {
+        ...state,
+        attr_dimensions: action.payload,
+      };
+    }
     case SET_TOUCHPOINT_FILTERS: {
       return {
         ...state,
@@ -185,8 +193,8 @@ export default function (state = defaultState, action) {
     case SET_ATTR_DATE_RANGE: {
       return {
         ...state,
-        attr_dateRange: action.payload
-      }
+        attr_dateRange: action.payload,
+      };
     }
     case SET_ATTRIBUTION_MODEL: {
       return {
@@ -251,13 +259,13 @@ export default function (state = defaultState, action) {
     case SET_CAMP_DATE_RANGE: {
       return {
         ...state,
-        camp_dateRange: action.payload
-      }
+        camp_dateRange: action.payload,
+      };
     }
     case SET_DEFAULT_STATE: {
       return {
-        ...defaultState
-      }
+        ...defaultState,
+      };
     }
     default:
       return state;

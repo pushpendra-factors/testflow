@@ -13,7 +13,7 @@ function AttributionsResult({
 }) {
   let content = null;
 
-  const { eventGoal, touchpoint, models, linkedEvents } = attributionsState;
+  const { eventGoal, touchpoint, models, linkedEvents, attr_dimensions } = attributionsState;
 
   if (models.length === 1) {
     content = (
@@ -32,6 +32,7 @@ function AttributionsResult({
         isWidgetModal={false}
         attribution_method={models[0]}
         section={section}
+        attr_dimensions={attr_dimensions}
       />
     );
   }
@@ -55,6 +56,7 @@ function AttributionsResult({
         currMetricsValue={currMetricsValue}
         durationObj={durationObj}
         cmprDuration={cmprDuration}
+        attr_dimensions={attr_dimensions}
       />
     );
   }

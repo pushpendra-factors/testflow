@@ -15,7 +15,7 @@ import {
   useHistory,
 } from "react-router-dom";
 import { fetchProjects } from "../../reducers/agentActions";
-import { fetchQueries } from "../../reducers/coreQuery/services";
+import { fetchQueries, fetchSmartPropertyRules } from "../../reducers/coreQuery/services";
 import { getUserProperties, getEventProperties, fetchEventNames } from "../../reducers/coreQuery/middleware";
 import { fetchDashboards } from "../../reducers/dashboard/services";
 import PageSuspenseLoader from "../../components/SuspenseLoaders/PageSuspenseLoader";
@@ -61,6 +61,7 @@ function AppLayout({ fetchProjects,
       fetchEventNames(active_project.id);
       getUserProperties(active_project.id);
       getEventProperties(active_project.id);
+      fetchSmartPropertyRules(dispatch, active_project.id);
     }
   }, [dispatch, active_project.id]);
 

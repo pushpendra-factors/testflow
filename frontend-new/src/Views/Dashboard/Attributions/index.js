@@ -3,7 +3,7 @@ import SingleTouchPoint from "./SingleTouchPoint";
 import DualTouchPoint from "./DualTouchPoint";
 
 function Attributions({ chartType, attributionsState, resultState, unit, section }) {
-  const { eventGoal, touchpoint, models, linkedEvents } = attributionsState;
+  const { eventGoal, touchpoint, models, linkedEvents, attr_dimensions } = attributionsState;
   if (models.length === 1) {
     return (
       <SingleTouchPoint
@@ -16,6 +16,7 @@ function Attributions({ chartType, attributionsState, resultState, unit, section
 				chartType={chartType}
         unit={unit}
         section={section}
+        attr_dimensions={attr_dimensions}
       />
     );
   }
@@ -33,6 +34,7 @@ function Attributions({ chartType, attributionsState, resultState, unit, section
 				chartType={chartType}
         unit={unit}
         section={section}
+        attr_dimensions={attr_dimensions}
       />
     );
   }

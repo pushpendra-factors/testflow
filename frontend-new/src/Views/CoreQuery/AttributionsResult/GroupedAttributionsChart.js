@@ -18,6 +18,7 @@ function GroupedAttributionsChart({
   currMetricsValue,
   durationObj,
   cmprDuration,
+  attr_dimensions
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -111,6 +112,7 @@ function GroupedAttributionsChart({
           attributionMetrics={attributionMetrics}
           setAttributionMetrics={setAttributionMetrics}
           section={section}
+          attr_dimensions={attr_dimensions}
         />
       </div>
     </div>

@@ -1160,6 +1160,23 @@ const StackedbarchartSVG = ({ size = 16, color, extraClass }) => {
   );
 };
 
+const CaretDownSVG = ({ size = 16, color, extraClass }) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox='0 0 16 16'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+    >
+      <path
+        d='M4.52475 6C4.056 6 3.82162 6.57292 4.16016 6.91146L7.4935 10.2448C7.70183 10.4531 8.04037 10.4531 8.2487 10.2448L11.582 6.91146C11.9206 6.57292 11.6862 6 11.2175 6H4.52475Z'
+        fill='#8692A3'
+      />
+    </svg>
+  );
+};
+
 
 export {
   BrandSVG,
@@ -1249,4 +1266,5 @@ export {
   StackedbarchartSVG,
   GoogleSVG,
   BrandFullSVG,
+  CaretDownSVG
 };
