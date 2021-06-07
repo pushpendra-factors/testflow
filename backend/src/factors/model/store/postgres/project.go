@@ -83,6 +83,14 @@ func createProject(project *model.Project) (*model.Project, int) {
 		project.InteractionSettings = *settingsJsonb
 	}
 
+	//Initialize default channel group rules
+	channelGroupRulesJsonb, err := U.EncodeStructTypeToPostgresJsonb(model.DefaultChannelPropertyRules)
+	if err != nil {
+		// Log error and continue to create project.
+		logCtx.WithError(err).Error("Failed to marshal defaultChannelGroupRules on create project.")
+	} else {
+		project.ChannelGroupRules = *channelGroupRulesJsonb
+	}
 	// Add project token before create.
 	token, err := generateUniqueToken(false)
 	if err != nil {
@@ -131,6 +139,13 @@ func (pg *Postgres) UpdateProject(projectId uint64, project *model.Project) int 
 
 	if !U.IsEmptyPostgresJsonb(&project.InteractionSettings) {
 		updateFields["interaction_settings"] = project.InteractionSettings
+	}
+	if !U.IsEmptyPostgresJsonb(&project.ChannelGroupRules) {
+		isValid := model.ValidateChannelGroupRules(project.ChannelGroupRules)
+		if !isValid {
+			return http.StatusInternalServerError
+		}
+		updateFields["channel_group_rules"] = project.ChannelGroupRules
 	}
 
 	err := db.Model(&model.Project{}).Where("id = ?", projectId).Update(updateFields).Error

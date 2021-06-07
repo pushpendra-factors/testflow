@@ -55,6 +55,504 @@ func assertAssociatedSession(t *testing.T, projectId uint64, eventIdsInOrder []s
 
 	return sessionEvent
 }
+func TestAddSessionWithChannelGroup(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+
+	// Test: New user with one event and one skip_session event.
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+	// Updating project timestamp to before events start timestamp.
+	errCode := store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName := RandomURL()
+	trackEventProperties := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+	}
+	trackUserProperties := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload := SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties,
+		UserProperties:  trackUserProperties,
+	}
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId := response.EventId
+
+	// no session created.
+	_, errCode = store.GetStore().GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent1 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 1")
+	// session event properties added from event properties.
+	lsEventProperties1, err := U.DecodePostgresJsonb(&sessionEvent1.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties1)[U.EP_CHANNEL], "Direct")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties1 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_GCLID:           "xyz1231",
+	}
+	trackUserProperties1 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties1,
+		UserProperties:  trackUserProperties1,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent2 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 2")
+	// session event properties added from event properties.
+	lsEventProperties2, err := U.DecodePostgresJsonb(&sessionEvent2.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties2)[U.EP_CHANNEL], "Paid Search")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties2 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_SOURCE:          "google",
+		U.EP_MEDIUM:          "paid",
+	}
+	trackUserProperties2 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties2,
+		UserProperties:  trackUserProperties2,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent3 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 3")
+	// session event properties added from event properties.
+	lsEventProperties3, err := U.DecodePostgresJsonb(&sessionEvent3.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties3)[U.EP_CHANNEL], "Paid Search")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties3 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_CAMPAIGN:        "google",
+		U.EP_REFERRER_DOMAIN: "bing.com",
+	}
+	trackUserProperties3 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties3,
+		UserProperties:  trackUserProperties3,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent4 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 4")
+	// session event properties added from event properties.
+	lsEventProperties4, err := U.DecodePostgresJsonb(&sessionEvent4.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties4)[U.EP_CHANNEL], "Paid Search")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties4 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_SOURCE:          "google",
+		U.EP_FBCLID:          "qweqr1231",
+	}
+	trackUserProperties4 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties4,
+		UserProperties:  trackUserProperties4,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent5 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 5")
+	// session event properties added from event properties.
+	lsEventProperties5, err := U.DecodePostgresJsonb(&sessionEvent5.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties5)[U.EP_CHANNEL], "Paid Social")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties5 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_SOURCE:          "linkedin",
+		U.EP_MEDIUM:          "paid",
+	}
+	trackUserProperties5 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties5,
+		UserProperties:  trackUserProperties5,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent6 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 6")
+	// session event properties added from event properties.
+	lsEventProperties6, err := U.DecodePostgresJsonb(&sessionEvent6.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties6)[U.EP_CHANNEL], "Paid Social")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties6 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_SOURCE:          "google",
+		U.EP_MEDIUM:          "paidsocial",
+	}
+	trackUserProperties6 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties6,
+		UserProperties:  trackUserProperties6,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent7 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 7")
+	// session event properties added from event properties.
+	lsEventProperties7, err := U.DecodePostgresJsonb(&sessionEvent7.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties7)[U.EP_CHANNEL], "Paid Social")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties7 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_REFERRER_DOMAIN: "facebook.com",
+		U.EP_MEDIUM:          "paid",
+	}
+	trackUserProperties7 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties7,
+		UserProperties:  trackUserProperties7,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent8 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 8")
+	// session event properties added from event properties.
+	lsEventProperties8, err := U.DecodePostgresJsonb(&sessionEvent8.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties8)[U.EP_CHANNEL], "Paid Social")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties8 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_REFERRER_DOMAIN: "facebook.com",
+		U.EP_MEDIUM:          "something",
+	}
+	trackUserProperties8 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties8,
+		UserProperties:  trackUserProperties8,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent9 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 9")
+	// session event properties added from event properties.
+	lsEventProperties9, err := U.DecodePostgresJsonb(&sessionEvent9.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties9)[U.EP_CHANNEL], "Organic Social")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties9 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_REFERRER_DOMAIN: "google.com",
+	}
+	trackUserProperties9 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties9,
+		UserProperties:  trackUserProperties9,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent10 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 10")
+	// session event properties added from event properties.
+	lsEventProperties10, err := U.DecodePostgresJsonb(&sessionEvent10.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties10)[U.EP_CHANNEL], "Organic Search")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties10 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_SOURCE:          "email",
+	}
+	trackUserProperties10 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties10,
+		UserProperties:  trackUserProperties10,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent11 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 11")
+	// session event properties added from event properties.
+	lsEventProperties11, err := U.DecodePostgresJsonb(&sessionEvent11.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties11)[U.EP_CHANNEL], "Email")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties11 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_MEDIUM:          "affiliate",
+	}
+	trackUserProperties11 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties11,
+		UserProperties:  trackUserProperties11,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent12 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 12")
+	// session event properties added from event properties.
+	lsEventProperties12, err := U.DecodePostgresJsonb(&sessionEvent12.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties12)[U.EP_CHANNEL], "Affiliate")
+
+	timestamp = timestamp + 2000
+	// Updating project timestamp to before events start timestamp.
+	errCode = store.GetStore().UpdateNextSessionStartTimestampForProject(project.ID, timestamp-1)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	randomEventName = RandomURL()
+	trackEventProperties12 := U.PropertiesMap{
+		U.EP_PAGE_URL:        "https://example.com/1/2/",
+		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
+		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_REFERRER_DOMAIN: "abc.com",
+	}
+	trackUserProperties12 := U.PropertiesMap{
+		U.UP_OS:         "Mac OSX",
+		U.UP_OS_VERSION: "1.23.1",
+	}
+	trackPayload = SDK.TrackPayload{
+		Auto:            true,
+		Name:            randomEventName,
+		Timestamp:       timestamp,
+		EventProperties: trackEventProperties12,
+		UserProperties:  trackUserProperties12,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotEmpty(t, response.UserId)
+	eventId = response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
+	assert.Nil(t, err)
+
+	sessionEvent13 := assertAssociatedSession(t, project.ID, []string{eventId},
+		[]string{}, "Session 13")
+	// session event properties added from event properties.
+	lsEventProperties13, err := U.DecodePostgresJsonb(&sessionEvent13.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*lsEventProperties13)[U.EP_CHANNEL], "Referral")
+}
 
 func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	project, _, err := SetupProjectUserReturnDAO()

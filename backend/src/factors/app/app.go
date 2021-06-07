@@ -100,6 +100,8 @@ func main() {
 		"", "List of projects to show smart properties in channel configs.")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+	allowChannelGroupingForProjectIDs := flag.String("allow_channel_grouping_for_projects",
+		"", "List of projects to allow channel property population in sesion events.")
 
 	flag.Parse()
 
@@ -169,6 +171,7 @@ func main() {
 		EnableMQLAPI:                            *enableMQLAPI,
 		DisableMemSQLDBWrites:                   disableMemSQLDBWrites,
 		DisableMemSQLRedisWrites:                disableMemSQLRedisWrites,
+		AllowChannelGroupingForProjectIDs:       *allowChannelGroupingForProjectIDs,
 	}
 
 	// Initialize configs and connections.
