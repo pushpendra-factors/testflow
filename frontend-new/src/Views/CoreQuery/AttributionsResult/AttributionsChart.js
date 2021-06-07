@@ -15,6 +15,7 @@ function AttributionsChart({
   data2,
   durationObj,
   cmprDuration,
+  attr_dimensions,
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -66,6 +67,7 @@ function AttributionsChart({
           attributionMetrics={attributionMetrics}
           setAttributionMetrics={setAttributionMetrics}
           section={section}
+          attr_dimensions={attr_dimensions}
         />
       </div>
     </div>

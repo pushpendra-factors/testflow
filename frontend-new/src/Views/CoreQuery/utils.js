@@ -23,6 +23,7 @@ import {
   CHART_TYPE_STACKED_BAR,
   apiChartAnnotations,
   INITIAL_SESSION_ANALYTICS_SEQ,
+  MARKETING_TOUCHPOINTS,
 } from '../../utils/constants';
 import { Radio } from 'antd';
 
@@ -489,7 +490,7 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
       eventName: opt.ena,
       eventIndex: opt.eni ? opt.eni : 0,
       grn: opt.grn,
-      gbty: opt.gbty
+      gbty: opt.gbty,
     };
   });
   const event = breakdown.filter((b) => b.eventIndex);
@@ -581,6 +582,7 @@ const getFiltersTouchpoints = (filters, touchpoint) => {
 export const getAttributionQuery = (
   eventGoal,
   touchpoint,
+  attr_dimensions,
   touchpointFilters,
   queryType,
   models,
@@ -588,9 +590,6 @@ export const getAttributionQuery = (
   linkedEvents,
   dateRange = {}
 ) => {
-  //attribution_key_f Filters
-  //query_type conv_time, interact_time [ConversionBased,EngagementBased];
-
   const eventFilters = getFilters(eventGoal.filters);
   let touchPointFiltersQuery = [];
   if (touchpointFilters.length) {
@@ -640,10 +639,27 @@ export const getAttributionQuery = (
       };
     });
   }
+  const attribution_key_dimensions = attr_dimensions
+    .filter((d) => d.touchPoint === touchpoint && d.enabled && d.type === 'key')
+    .map((d) => d.header);
+  const attribution_key_custom_dimensions = attr_dimensions
+    .filter(
+      (d) => d.touchPoint === touchpoint && d.enabled && d.type === 'custom'
+    )
+    .map((d) => d.header);
+
+  if (touchpoint !== MARKETING_TOUCHPOINTS.SOURCE) {
+    query.query.attribution_key_dimensions = attribution_key_dimensions;
+    query.query.attribution_key_custom_dimensions = attribution_key_custom_dimensions;
+  }
+
   return query;
 };
 
-export const getAttributionStateFromRequestQuery = (requestQuery) => {
+export const getAttributionStateFromRequestQuery = (
+  requestQuery,
+  initial_attr_dimensions
+) => {
   const filters = [];
   requestQuery.ce.pr.forEach((pr) => {
     if (pr.lop === 'AND') {
@@ -669,6 +685,22 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
     });
   }
 
+  const touchpoint = requestQuery.attribution_key;
+  const attr_dimensions = initial_attr_dimensions.map((dimension) => {
+    if (dimension.touchPoint === touchpoint) {
+      return {
+        ...dimension,
+        enabled:
+          requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
+            -1 ||
+          requestQuery.attribution_key_custom_dimensions?.indexOf(
+            dimension.header
+          ) > -1,
+      };
+    }
+    return dimension;
+  });
+
   const result = {
     queryType: QUERY_TYPE_ATTRIBUTION,
     eventGoal: {
@@ -677,7 +709,8 @@ export const getAttributionStateFromRequestQuery = (requestQuery) => {
     },
     touchpoint_filters: touchPointFilters,
     attr_query_type: requestQuery.query_type,
-    touchpoint: requestQuery.attribution_key,
+    touchpoint,
+    attr_dimensions,
     models: [requestQuery.attribution_methodology],
     window: requestQuery.lbw,
   };

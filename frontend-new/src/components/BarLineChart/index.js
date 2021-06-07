@@ -44,7 +44,7 @@ function BarLineChart({
               document.body.parentNode ||
               document.body
             ).scrollTop;
-      if (chartType === "bar") {
+      if (chartType === 'bar') {
         nodePosition = d3.select(nodes[i]).node()?.getBoundingClientRect();
         left = nodePosition.x + nodePosition.width / 2;
         // // if user is hovering over the last bar
@@ -73,11 +73,13 @@ function BarLineChart({
       const impressionsIdx = responseHeaders.indexOf('Impressions');
       const clicksIdx = responseHeaders.indexOf('Clicks');
       const spendIdx = responseHeaders.indexOf('Spend');
-      const sessionsIdx = responseHeaders.indexOf('Website Visitors');
+      const sessionsIdx = responseHeaders.indexOf('Sessions');
       const rowIndex = visibleIndices[i];
 
-      const toolTipHeight = d3.select(".toolTip").node()?.getBoundingClientRect()
-        .height;
+      const toolTipHeight = d3
+        .select('.toolTip')
+        .node()
+        ?.getBoundingClientRect().height;
 
       tooltip.current.html(
         `
@@ -121,9 +123,13 @@ function BarLineChart({
           </div>
           <div class="flex justify-between pt-2">
             <div>Sessions</div>
-            <div>${numberWithCommas(
-              formatCount(responseRows[rowIndex][sessionsIdx], 1)
-            )}</div>
+            <div>${
+              responseRows[rowIndex][sessionsIdx]
+                ? numberWithCommas(
+                    formatCount(responseRows[rowIndex][sessionsIdx], 1)
+                  )
+                : 0
+            }</div>
           </div>
         </div>
                 `

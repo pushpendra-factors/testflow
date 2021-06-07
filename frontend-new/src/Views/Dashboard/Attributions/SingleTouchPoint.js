@@ -20,6 +20,7 @@ function SingleTouchPoint({
   resultState,
   unit,
   section,
+  attr_dimensions
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -77,6 +78,7 @@ function SingleTouchPoint({
         attributionMetrics={attributionMetrics}
         setAttributionMetrics={setAttributionMetrics}
         section={section}
+        attr_dimensions={attr_dimensions}
       />
     );
   }

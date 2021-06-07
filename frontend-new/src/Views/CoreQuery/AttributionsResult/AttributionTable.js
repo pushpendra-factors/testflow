@@ -30,6 +30,7 @@ function AttributionTable({
   attributionMetrics,
   setAttributionMetrics,
   section = null,
+  attr_dimensions,
 }) {
   const [searchText, setSearchText] = useState('');
   const [sorter, setSorter] = useState({});
@@ -91,7 +92,8 @@ function AttributionTable({
         event,
         eventNames,
         attributionMetrics,
-        metricsOptionsPopover
+        metricsOptionsPopover,
+        attr_dimensions
       );
 
   const tableData = data2
@@ -114,7 +116,8 @@ function AttributionTable({
         attribution_method_compare,
         touchpoint,
         linkedEvents,
-        attributionMetrics
+        attributionMetrics,
+        attr_dimensions
       );
 
   const calcTotal = (rowTtl, tblItem) => {

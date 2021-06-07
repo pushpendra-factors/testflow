@@ -336,8 +336,34 @@ export const getTableColumns = (
   event,
   eventNames,
   metrics,
-  OptionsPopover
+  OptionsPopover,
+  attr_dimensions
 ) => {
+  const enabledDimensions = attr_dimensions.filter(
+    (d) => d.touchPoint === touchpoint && d.enabled
+  );
+  let dimensionColumns;
+  if (enabledDimensions.length) {
+    dimensionColumns = enabledDimensions.map((d, index) => {
+      return {
+        title: d.title,
+        dataIndex: d.title,
+        fixed: !index ? 'left' : '',
+        width: 150,
+        className: 'align-bottom',
+      };
+    });
+  } else {
+    dimensionColumns = [
+      {
+        title: touchpoint,
+        dataIndex: touchpoint,
+        fixed: 'left',
+        width: 150,
+        className: 'align-bottom',
+      },
+    ];
+  }
   const metricsColumns = metrics
     .filter((metric) => metric.enabled)
     .map((metric, index, arr) => {
@@ -382,13 +408,7 @@ export const getTableColumns = (
       };
     });
   const result = [
-    {
-      title: touchpoint,
-      dataIndex: touchpoint,
-      fixed: 'left',
-      width: 150,
-      className: 'align-bottom',
-    },
+    ...dimensionColumns,
     ...metricsColumns,
     {
       title: eventNames[event] || event,
@@ -528,44 +548,44 @@ export const getTableColumns = (
       };
     });
   }
-  let extraCols = [];
-  if (touchpoint === MARKETING_TOUCHPOINTS.ADGROUP) {
-    extraCols = [
-      {
-        title: MARKETING_TOUCHPOINTS.CAMPAIGN,
-        dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
-        fixed: 'left',
-        width: 150,
-        className: 'align-bottom',
-      },
-    ];
-  }
-  if (touchpoint === MARKETING_TOUCHPOINTS.KEYWORD) {
-    extraCols = [
-      {
-        title: MARKETING_TOUCHPOINTS.CAMPAIGN,
-        dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
-        fixed: 'left',
-        width: 150,
-        className: 'align-bottom',
-      },
-      {
-        title: MARKETING_TOUCHPOINTS.ADGROUP,
-        dataIndex: MARKETING_TOUCHPOINTS.ADGROUP,
-        fixed: 'left',
-        width: 150,
-        className: 'align-bottom',
-      },
-      {
-        title: MARKETING_TOUCHPOINTS.MATCHTYPE,
-        dataIndex: MARKETING_TOUCHPOINTS.MATCHTYPE,
-        fixed: 'left',
-        width: 150,
-        className: 'align-bottom',
-      },
-    ];
-  }
-  return [...extraCols, ...result, ...linkedEventsColumns];
+  // let extraCols = [];
+  // if (touchpoint === MARKETING_TOUCHPOINTS.ADGROUP) {
+  //   extraCols = [
+  //     {
+  //       title: MARKETING_TOUCHPOINTS.CAMPAIGN,
+  //       dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
+  //       fixed: 'left',
+  //       width: 150,
+  //       className: 'align-bottom',
+  //     },
+  //   ];
+  // }
+  // if (touchpoint === MARKETING_TOUCHPOINTS.KEYWORD) {
+  //   extraCols = [
+  //     {
+  //       title: MARKETING_TOUCHPOINTS.CAMPAIGN,
+  //       dataIndex: MARKETING_TOUCHPOINTS.CAMPAIGN,
+  //       fixed: 'left',
+  //       width: 150,
+  //       className: 'align-bottom',
+  //     },
+  //     {
+  //       title: MARKETING_TOUCHPOINTS.ADGROUP,
+  //       dataIndex: MARKETING_TOUCHPOINTS.ADGROUP,
+  //       fixed: 'left',
+  //       width: 150,
+  //       className: 'align-bottom',
+  //     },
+  //     {
+  //       title: MARKETING_TOUCHPOINTS.MATCHTYPE,
+  //       dataIndex: MARKETING_TOUCHPOINTS.MATCHTYPE,
+  //       fixed: 'left',
+  //       width: 150,
+  //       className: 'align-bottom',
+  //     },
+  //   ];
+  // }
+  return [...result, ...linkedEventsColumns];
 };
 
 const constrComparisionCellData = (row, row2, index) => {
@@ -702,14 +722,17 @@ export const getTableData = (
   attribution_method_compare,
   touchpoint,
   linkedEvents,
-  metrics
+  metrics,
+  attr_dimensions
 ) => {
   const { headers } = data;
-  const touchpointIdx = headers.indexOf(touchpoint);
   const costIdx = headers.indexOf('Cost Per Conversion');
   const userIdx = headers.indexOf(`${event} - Users`);
   const compareUsersIdx = headers.indexOf(`Compare - Users`);
   const compareCostIdx = headers.indexOf(`Compare Cost Per Conversion`);
+  const enabledDimensions = attr_dimensions.filter(
+    (d) => d.touchPoint === touchpoint && d.enabled
+  );
   const result = data.rows
     .map((row, index) => {
       const metricsData = {};
@@ -718,31 +741,25 @@ export const getTableData = (
         const index = headers.indexOf(metric.header);
         metricsData[metric.title] = row[index];
       });
+
+      const dimensionsData = {};
+      if (enabledDimensions.length) {
+        enabledDimensions.forEach((dimension) => {
+          const index = headers.indexOf(dimension.responseHeader);
+          dimensionsData[dimension.title] = row[index];
+        });
+      } else {
+        const touchpointIdx = headers.indexOf(touchpoint);
+        dimensionsData[touchpoint] = row[touchpointIdx];
+      }
+
       let resultantRow = {
         index,
-        [touchpoint]: row[touchpointIdx],
+        ...dimensionsData,
         ...metricsData,
         conversion: formatCount(row[userIdx], 1),
         cost: formatCount(row[costIdx], 1),
       };
-      if (touchpoint === MARKETING_TOUCHPOINTS.ADGROUP) {
-        const campaignIdx = headers.indexOf(MARKETING_TOUCHPOINTS.CAMPAIGN);
-        resultantRow = {
-          [MARKETING_TOUCHPOINTS.CAMPAIGN]: row[campaignIdx],
-          ...resultantRow,
-        };
-      }
-      if (touchpoint === MARKETING_TOUCHPOINTS.KEYWORD) {
-        const campaignIdx = headers.indexOf(MARKETING_TOUCHPOINTS.CAMPAIGN);
-        const adGroupIdx = headers.indexOf(MARKETING_TOUCHPOINTS.ADGROUP);
-        const matchTypeIdx = headers.indexOf(MARKETING_TOUCHPOINTS.MATCHTYPE);
-        resultantRow = {
-          [MARKETING_TOUCHPOINTS.CAMPAIGN]: row[campaignIdx],
-          [MARKETING_TOUCHPOINTS.ADGROUP]: row[adGroupIdx],
-          [MARKETING_TOUCHPOINTS.MATCHTYPE]: row[matchTypeIdx],
-          ...resultantRow,
-        };
-      }
       if (linkedEvents.length) {
         linkedEvents.forEach((le) => {
           const eventUsersIdx = headers.indexOf(`${le.label} - Users`);
@@ -760,10 +777,16 @@ export const getTableData = (
       }
       return resultantRow;
     })
-    .filter(
-      (row) =>
-        row[touchpoint].toLowerCase().indexOf(searchText.toLowerCase()) > -1
-    );
+    .filter((row) => {
+      if (enabledDimensions.length) {
+        const filteredRows = enabledDimensions.filter((dimension) =>
+          row[dimension.title].toLowerCase().includes(searchText.toLowerCase())
+        );
+        return filteredRows.length > 0;
+      } else {
+        return row[touchpoint].toLowerCase().includes(searchText.toLowerCase());
+      }
+    });
 
   if (!currentSorter.key) {
     return SortData(result, 'conversion', 'descend');

@@ -23,7 +23,9 @@ import { useSelector } from 'react-redux';
 
 function CardContent({ unit, resultState, durationObj }) {
   let content = null;
-  const { eventNames } = useSelector((state) => state.coreQuery);
+  const { eventNames, attr_dimensions } = useSelector(
+    (state) => state.coreQuery
+  );
 
   if (resultState.loading) {
     content = (
@@ -60,7 +62,8 @@ function CardContent({ unit, resultState, durationObj }) {
       unit.query.query.cl === QUERY_TYPE_ATTRIBUTION
     ) {
       equivalentQuery = getAttributionStateFromRequestQuery(
-        unit.query.query.query
+        unit.query.query.query,
+        attr_dimensions
       );
     } else {
       equivalentQuery = getStateQueryFromRequestQuery(unit.query.query);
@@ -100,6 +103,7 @@ function CardContent({ unit, resultState, durationObj }) {
         touchpoint: equivalentQuery.touchpoint,
         models: equivalentQuery.models,
         linkedEvents: equivalentQuery.linkedEvents,
+        attr_dimensions: equivalentQuery.attr_dimensions,
       };
     }
 

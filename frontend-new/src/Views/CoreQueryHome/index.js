@@ -125,6 +125,7 @@ function CoreQuery({
   const [deleteModal, showDeleteModal] = useState(false);
   const [activeRow, setActiveRow] = useState(null);
   const dispatch = useDispatch();
+  const { attr_dimensions } = useSelector((state) => state.coreQuery);
   const history = useHistory();
 
   const getFormattedRow = (q) => {
@@ -251,7 +252,8 @@ function CoreQuery({
           record.query.cl === QUERY_TYPE_ATTRIBUTION
         ) {
           equivalentQuery = getAttributionStateFromRequestQuery(
-            record.query.query
+            record.query.query,
+            attr_dimensions
           );
           const usefulQuery = { ...equivalentQuery };
           delete usefulQuery.queryType;
@@ -270,7 +272,7 @@ function CoreQuery({
         console.log(err);
       }
     },
-    [updateEventFunnelsState]
+    [updateEventFunnelsState, attr_dimensions]
   );
 
   const getMenu = (row) => {

@@ -5,9 +5,14 @@ import {
   QUERIES_LOADING_FAILED,
   QUERY_DELETED,
   QUERIES_LOADING_STOPPED,
+  INITIALIZE_TOUCHPOINT_DIMENSIONS,
 } from '../types';
 import { notification } from 'antd';
 import { getErrorMessage } from '../../utils/dataFormatter';
+import {
+  MARKETING_TOUCHPOINTS_ALIAS,
+  KEY_TOUCH_POINT_DIMENSIONS,
+} from '../../utils/constants';
 const host = getHostUrl();
 
 export const getEventNames = (dispatch, projectId) => {
@@ -204,4 +209,28 @@ export const getWebAnalyticsData = (
 ) => {
   const url = `${host}projects/${projectId}/dashboard/${dashboardId}/units/query/web_analytics?refresh=${refresh}`;
   return post(null, url, reqBody);
+};
+
+export const fetchSmartPropertyRules = async (dispatch, projectId) => {
+  try {
+    const url = host + 'projects/' + projectId + '/v1/smart_properties/rules';
+    const res = await get(null, url);
+    const customDimensions = res.data.map((elem) => {
+      return {
+        title: elem.name,
+        header: elem.name,
+        responseHeader: elem.name,
+        enabled: false,
+        disabled: false,
+        type: 'custom',
+        touchPoint: MARKETING_TOUCHPOINTS_ALIAS[elem.type_alias],
+      };
+    });
+    dispatch({
+      type: INITIALIZE_TOUCHPOINT_DIMENSIONS,
+      payload: [...KEY_TOUCH_POINT_DIMENSIONS, ...customDimensions],
+    });
+  } catch (err) {
+    console.log(err);
+  }
 };

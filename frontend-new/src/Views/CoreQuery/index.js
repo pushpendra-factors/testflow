@@ -119,6 +119,7 @@ function CoreQuery({
     models: [],
     linkedEvents: [],
     date_range: {},
+    attr_dimensions: [],
   });
 
   const [cmprAttrDurationObj, setcmprAttrDurationObj] = useState({});
@@ -152,6 +153,7 @@ function CoreQuery({
     camp_dateRange,
     attr_dateRange,
     eventNames,
+    attr_dimensions,
   } = useSelector((state) => state.coreQuery);
 
   const {
@@ -411,6 +413,7 @@ function CoreQuery({
         const query = getAttributionQuery(
           eventGoal,
           touchpoint,
+          attr_dimensions,
           touchpoint_filters,
           attr_query_type,
           models,
@@ -424,6 +427,7 @@ function CoreQuery({
           touchpoint,
           models,
           linkedEvents,
+          attr_dimensions,
           date_range: { ...durationObj },
         });
         const res = await getAttributionsData(activeProject.id, query);
@@ -451,6 +455,7 @@ function CoreQuery({
       window,
       attr_dateRange,
       updateResultState,
+      attr_dimensions,
     ]
   );
 

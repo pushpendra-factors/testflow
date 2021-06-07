@@ -45,7 +45,7 @@ function GroupedBarChart({
       const impressionsIdx = responseHeaders.indexOf('Impressions');
       const clicksIdx = responseHeaders.indexOf('Clicks');
       const spendIdx = responseHeaders.indexOf('Spend');
-      const sessionsIdx = responseHeaders.indexOf('Website Visitors');
+      const sessionsIdx = responseHeaders.indexOf('Sessions');
       const row = responseRows.find((elem) => elem[0] === data.group);
       let padY = 300;
       let padX = 10;
@@ -180,7 +180,9 @@ function GroupedBarChart({
                     extraClass='mb-0 leading-4'
                     level={8}
                   >
-                    <NumFormat number={row[sessionsIdx]} />
+                    <NumFormat
+                      number={row[sessionsIdx] ? row[sessionsIdx] : 0}
+                    />
                   </Text>
                 </div>
               </div>
@@ -330,19 +332,11 @@ function GroupedBarChart({
   return (
     <div className='w-full'>
       {section === DASHBOARD_WIDGET_SECTION ? (
-        <TopLegends
-          legends={legends}
-          cardSize={cardSize}
-          colors={colors}
-        />
+        <TopLegends legends={legends} cardSize={cardSize} colors={colors} />
       ) : null}
       <div ref={chartRef} className={styles.groupedChart}></div>
       {section === REPORT_SECTION || section === DASHBOARD_MODAL ? (
-        <TopLegends
-          legends={legends}
-          cardSize={cardSize}
-          colors={colors}
-        />
+        <TopLegends legends={legends} cardSize={cardSize} colors={colors} />
       ) : null}
       <div ref={tooltipRef} className={styles.groupedChartTooltip}></div>
     </div>
