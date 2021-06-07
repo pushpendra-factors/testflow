@@ -10,6 +10,11 @@ const (
 	CREATED = "created"
 	UPDATED = "updated"
 	DELETED = "deleted"
+
+	SmartPropertyCampaignID   = "campaign_id"
+	SmartPropertyCampaignName = "campaign_name"
+	SmartPropertyAdGroupID    = "ad_group_id"
+	SmartPropertyAdGroupName  = "ad_group_name"
 )
 
 var SmartPropertyRulesTypeToTypeAlias = map[int]string{

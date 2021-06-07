@@ -308,28 +308,28 @@ func (store *MemSQL) PullCustomDimensionData(projectID uint64, attributionKey st
 	switch attributionKey {
 	case model.AttributionKeyCampaign:
 
-		marketingReport.AdwordsCampaignDimensions, err = store.PullSmartProperties(projectID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.AdwordsAdgroupID, model.AdwordsAdgroupName, model.AdwordsAdgroupName, 1, attributionKey)
+		marketingReport.AdwordsCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelAdwords, 1, attributionKey)
 		if err != nil {
 			return err
 		}
-		marketingReport.FacebookCampaignDimensions, err = store.PullSmartProperties(projectID, model.FacebookCampaignID, model.FacebookCampaignName, model.FacebookAdgroupID, model.FacebookAdgroupName, model.FacebookAdgroupName, 1, attributionKey)
+		marketingReport.FacebookCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelFacebook, 1, attributionKey)
 		if err != nil {
 			return err
 		}
-		marketingReport.LinkedinCampaignDimensions, err = store.PullSmartProperties(projectID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.LinkedinAdgroupName, 1, attributionKey)
+		marketingReport.LinkedinCampaignDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelLinkedin, 1, attributionKey)
 		if err != nil {
 			return err
 		}
 	case model.FieldAdgroupName:
-		marketingReport.AdwordsAdgroupDimensions, err = store.PullSmartProperties(projectID, model.AdwordsCampaignID, model.AdwordsCampaignName, model.AdwordsAdgroupID, model.AdwordsAdgroupName, model.AdwordsAdgroupName, 2, attributionKey)
+		marketingReport.AdwordsAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelAdwords, 2, attributionKey)
 		if err != nil {
 			return err
 		}
-		marketingReport.FacebookAdgroupDimensions, err = store.PullSmartProperties(projectID, model.FacebookCampaignID, model.FacebookCampaignName, model.FacebookAdgroupID, model.FacebookAdgroupName, model.FacebookAdgroupName, 2, attributionKey)
+		marketingReport.FacebookAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelFacebook, 2, attributionKey)
 		if err != nil {
 			return err
 		}
-		marketingReport.LinkedinAdgroupDimensions, err = store.PullSmartProperties(projectID, model.LinkedinCampaignID, model.LinkedinCampaignName, model.LinkedinAdgroupID, model.LinkedinAdgroupName, model.LinkedinAdgroupName, 2, attributionKey)
+		marketingReport.LinkedinAdgroupDimensions, err = store.PullSmartProperties(projectID, model.SmartPropertyCampaignID, model.SmartPropertyCampaignName, model.SmartPropertyAdGroupID, model.SmartPropertyAdGroupName, model.ChannelLinkedin, 2, attributionKey)
 		if err != nil {
 			return err
 		}
