@@ -384,7 +384,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.Nil(t, eventProperties["$qp_gclid"])
 		assert.NotNil(t, eventProperties[U.EP_GCLID])
 		assert.Nil(t, eventProperties["$qp_fbclid"])
-		assert.NotNil(t, eventProperties[U.EP_FBCLIID])
+		assert.NotNil(t, eventProperties[U.EP_FBCLID])
 		// test map from second option.
 		assert.Nil(t, eventProperties["$qp_utm_adgroup_id"])
 		assert.NotNil(t, eventProperties[U.EP_ADGROUP_ID])
@@ -1059,7 +1059,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotEmpty(t, sessionProperties[U.EP_ADGROUP_ID])
 	assert.NotEmpty(t, sessionProperties[U.EP_CREATIVE])
 	assert.NotEmpty(t, sessionProperties[U.EP_GCLID])
-	assert.NotEmpty(t, sessionProperties[U.EP_FBCLIID])
+	assert.NotEmpty(t, sessionProperties[U.EP_FBCLID])
 	// Tracked event should have latest session of user associated with it.
 	rEvent, errCode := store.GetStore().GetEvent(project.ID, responseUserId, responseEventId)
 	assert.Equal(t, http.StatusFound, errCode)

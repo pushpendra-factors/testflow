@@ -154,3 +154,19 @@ func AreMarketingPropertiesMatching(event1 Event, event2 Event) bool {
 	}
 	return true
 }
+
+func GetChannelGroup(project Project, sessionPropertiesMap U.PropertiesMap) (string, string) {
+
+	var channelGroupRules []ChannelPropertyRule
+
+	if !U.IsEmptyPostgresJsonb(&project.ChannelGroupRules) {
+		err := U.DecodePostgresJsonbToStructType(&project.ChannelGroupRules, &channelGroupRules)
+		if err != nil {
+			return "", "Failed to decode channel group rules from project"
+		}
+	} else {
+		channelGroupRules = DefaultChannelPropertyRules
+	}
+
+	return EvaluateChannelPropertyRules(channelGroupRules, sessionPropertiesMap), ""
+}

@@ -854,7 +854,7 @@ e1 - t1
 e2 - t2
 e3 - t3
 */
-func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents []model.Event,
+func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents []model.Event,
 	bufferTimeBeforeSessionCreateInSecs int64, sessionEventNameId string) (int, int, bool, int, bool, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
@@ -877,6 +877,12 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 
 	events := filterEventsForSession(userEvents, endTimestamp)
 	if len(events) == 0 {
+		return 0, 0, false, 0, false, http.StatusNotModified
+	}
+
+	project, errCode := store.GetProject(projectId)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get project on addSessionForUser")
 		return 0, 0, false, 0, false, http.StatusNotModified
 	}
 
@@ -986,7 +992,7 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 			var existingSessionEvent *model.Event
 			if events[sessionStartIndex].SessionId != nil {
 				var errCode int
-				existingSessionEvent, errCode = pg.GetEventById(projectId,
+				existingSessionEvent, errCode = store.GetEventById(projectId,
 					*events[sessionStartIndex].SessionId, *&events[sessionStartIndex].UserId)
 				if errCode == http.StatusNotFound {
 					// Log and continue with new session, if the session event is not found.
@@ -1036,7 +1042,7 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 				}
 				firstEventPropertiesMap := U.PropertiesMap(*firstEventPropertiesDecoded)
 
-				sessionEventCount, errCode := pg.GetEventCountOfUserByEventName(projectId, userId, sessionEventNameId)
+				sessionEventCount, errCode := store.GetEventCountOfUserByEventName(projectId, userId, sessionEventNameId)
 				if errCode == http.StatusInternalServerError {
 					logCtx.Error("Failed to get session event count for user.")
 					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
@@ -1055,7 +1061,7 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 				}
 
 				// session event properties, to be updated
-				newSessionEvent, errCode := pg.CreateEvent(&model.Event{
+				newSessionEvent, errCode := store.CreateEvent(&model.Event{
 					EventNameId: sessionEventNameId,
 					// Timestamp - 1sec before the first event of session.
 					Timestamp:      firstEvent.Timestamp - 1,
@@ -1129,8 +1135,22 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 				sessionPropertiesMap[U.SP_SPENT_TIME] = sessionPageSpentTime
 			}
 
+			if C.IsChannelGroupingAllowed(projectId) {
+				sessionEventProps, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
+				if err != nil {
+					logCtx.Error("Failed to decode session event properties for adding channel property on add session")
+				} else {
+					channel, errString := model.GetChannelGroup(*project, *sessionEventProps)
+					if errString != "" {
+						logCtx.Error(errString)
+					} else {
+						sessionPropertiesMap[U.EP_CHANNEL] = channel
+					}
+				}
+			}
+
 			// Update session event properties.
-			errCode = pg.UpdateEventProperties(projectId, sessionEvent.ID, sessionEvent.UserId,
+			errCode = store.UpdateEventProperties(projectId, sessionEvent.ID, sessionEvent.UserId,
 				&sessionPropertiesMap, sessionEvent.Timestamp+1)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed updating session event properties on add session.")
@@ -1159,7 +1179,7 @@ func (pg *MemSQL) addSessionForUser(projectId uint64, userId string, userEvents 
 
 	// Todo: The property values being updated are not accurate. Fix it.
 	// Issue - https://github.com/Slashbit-Technologies/factors/issues/445
-	errCode := pg.UpdateUserPropertiesForSession(projectId, &sessionUserPropertiesRecordMap)
+	errCode = store.UpdateUserPropertiesForSession(projectId, &sessionUserPropertiesRecordMap)
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("err_code", errCode).
 			Error("Failed to update user properties record for session.")

@@ -168,6 +168,7 @@ type Configuration struct {
 	DisableMemSQLRedisWrites             *bool
 	AllowedCampaignEnrichmentByProjectID string
 	UseOpportunityAssociationByProjectID string
+	AllowChannelGroupingForProjectIDs    string
 }
 
 type Services struct {
@@ -1468,6 +1469,10 @@ func isProjectOnProjectsList(configProjectIDList string, projectID uint64) bool 
 
 func IsShowSmartPropertiesAllowed(projectID uint64) bool {
 	return isProjectOnProjectsList(configuration.ShowSmartPropertiesAllowedProjectIDs, projectID)
+}
+
+func IsChannelGroupingAllowed(projectID uint64) bool {
+	return isProjectOnProjectsList(configuration.AllowChannelGroupingForProjectIDs, projectID)
 }
 
 func IsSDKAndIntegrationRequestQueueDuplicationEnabled() bool {

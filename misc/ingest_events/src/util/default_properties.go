@@ -29,7 +29,7 @@ var EP_AD_GROUP string = "$ad_group"
 var EP_AD_GROUP_ID string = "$ad_group_id"
 var EP_CREATIVE string = "$creative"
 var EP_GCLID string = "$gclid"
-var EP_FBCLIID string = "$fbclid"
+var EP_FBCLID string = "$fbclid"
 var EP_COST string = "$cost"
 var EP_REVENUE string = "$revenue"
 

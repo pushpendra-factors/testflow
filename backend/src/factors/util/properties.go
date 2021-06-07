@@ -154,7 +154,7 @@ var EP_ADGROUP string = "$adgroup"
 var EP_ADGROUP_ID string = "$adgroup_id"
 var EP_CREATIVE string = "$creative"
 var EP_GCLID string = "$gclid"
-var EP_FBCLIID string = "$fbclid"
+var EP_FBCLID string = "$fbclid"
 var EP_COST string = "$cost"
 var EP_REVENUE string = "$revenue"
 var EP_TIMESTAMP string = "$timestamp"
@@ -318,7 +318,7 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_ADGROUP_ID,
 	EP_CREATIVE,
 	EP_GCLID,
-	EP_FBCLIID,
+	EP_FBCLID,
 	EP_COST,
 	EP_REVENUE,
 	EP_TERM,
@@ -548,7 +548,7 @@ var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
 	EP_ADGROUP_ID:          UP_INITIAL_ADGROUP_ID,
 	EP_CREATIVE:            UP_INITIAL_CREATIVE,
 	EP_GCLID:               UP_INITIAL_GCLID,
-	EP_FBCLIID:             UP_INITIAL_FBCLID,
+	EP_FBCLID:              UP_INITIAL_FBCLID,
 	EP_COST:                UP_INITIAL_COST,
 	EP_REVENUE:             UP_INITIAL_REVENUE,
 }
@@ -574,7 +574,7 @@ var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
 	EP_ADGROUP_ID:          UP_LATEST_ADGROUP_ID,
 	EP_CREATIVE:            UP_LATEST_CREATIVE,
 	EP_GCLID:               UP_LATEST_GCLID,
-	EP_FBCLIID:             UP_LATEST_FBCLID,
+	EP_FBCLID:              UP_LATEST_FBCLID,
 	EP_COST:                UP_LATEST_COST,
 	EP_REVENUE:             UP_LATEST_REVENUE,
 }
@@ -619,7 +619,7 @@ var EVENT_TO_SESSION_PROPERTIES = map[string]string{
 	EP_ADGROUP_ID:         EP_ADGROUP_ID,
 	EP_CREATIVE:           EP_CREATIVE,
 	EP_GCLID:              EP_GCLID,
-	EP_FBCLIID:            EP_FBCLIID,
+	EP_FBCLID:             EP_FBCLID,
 
 	// Uses session property names.
 	EP_REFERRER:        SP_INITIAL_REFERRER,
@@ -640,7 +640,7 @@ var DEFINED_MARKETING_PROPERTIES = [...]string{
 	EP_ADGROUP_ID,
 	EP_CREATIVE,
 	EP_GCLID,
-	EP_FBCLIID,
+	EP_FBCLID,
 }
 
 var PREDEFINED_BIN_RANGES_FOR_PROPERTY = map[string][][2]float64{
@@ -921,7 +921,7 @@ var DISABLED_FACTORS_EVENT_PROPERTIES = [...]string{
 	EP_SEGMENT_SOURCE_CHANNEL,
 	EP_PAGE_RAW_URL,
 	EP_GCLID,
-	EP_FBCLIID,
+	EP_FBCLID,
 }
 
 var DEFAULT_EVENT_PROPERTY_VALUES = map[string]interface{}{
@@ -1468,7 +1468,7 @@ func MapEventPropertiesToDefinedProperties(properties *PropertiesMap) (*Properti
 		case QUERY_PARAM_PROPERTY_PREFIX + "gclid":
 			property = EP_GCLID
 		case QUERY_PARAM_PROPERTY_PREFIX + "fbclid":
-			property = EP_FBCLIID
+			property = EP_FBCLID
 		default:
 			property = k
 		}

@@ -28,6 +28,7 @@ type Project struct {
 	TimeZone            string          `json:"time_zone"`
 	InteractionSettings postgres.Jsonb  `json:"interaction_settings"`
 	JobsMetadata        *postgres.Jsonb `json:"jobs_metadata"`
+	ChannelGroupRules   postgres.Jsonb  `json:"channel_group_rules"`
 }
 
 const (
@@ -58,7 +59,7 @@ func DefaultMarketingPropertiesMap() InteractionSettings {
 	interactionSettings.UTMMappings[U.EP_KEYWORD] = []string{U.QUERY_PARAM_UTM_PREFIX + "keyword", U.QUERY_PARAM_UTM_PREFIX + "key_word"}
 	interactionSettings.UTMMappings[U.EP_CONTENT] = []string{U.QUERY_PARAM_UTM_PREFIX + "content", U.QUERY_PARAM_UTM_PREFIX + "utm_content"}
 	interactionSettings.UTMMappings[U.EP_GCLID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "gclid", U.QUERY_PARAM_PROPERTY_PREFIX + "utm_gclid"}
-	interactionSettings.UTMMappings[U.EP_FBCLIID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "fbclid", U.QUERY_PARAM_PROPERTY_PREFIX + "utm_fbclid"}
+	interactionSettings.UTMMappings[U.EP_FBCLID] = []string{U.QUERY_PARAM_PROPERTY_PREFIX + "fbclid", U.QUERY_PARAM_PROPERTY_PREFIX + "utm_fbclid"}
 
 	interactionSettings.UTMMappings[U.EP_TERM] = []string{U.QUERY_PARAM_UTM_PREFIX + "term"}
 	interactionSettings.UTMMappings[U.EP_KEYWORD_MATCH_TYPE] = []string{U.QUERY_PARAM_UTM_PREFIX + "matchtype", U.QUERY_PARAM_UTM_PREFIX + "match_type"}
@@ -79,6 +80,24 @@ func DefaultURLPropertiesToMarketingPropertiesMap() map[string]string {
 	return urlToEventPropMap
 }
 
+func ValidateChannelGroupRules(rules postgres.Jsonb) bool {
+	var channelPropertyRules []ChannelPropertyRule
+	err := U.DecodePostgresJsonbToStructType(&rules, &channelPropertyRules)
+	if err != nil {
+		return false
+	}
+	for _, rule := range channelPropertyRules {
+		if rule.Channel == "" || len(rule.Conditions) == 0 {
+			return false
+		}
+		for _, filter := range rule.Conditions {
+			if filter.Condition == "" || filter.Property == "" || filter.LogicalOp == "" {
+				return false
+			}
+		}
+	}
+	return true
+}
 func getCacheKeyForProjectIDByToken(token string) (*cacheRedis.Key, error) {
 	return cacheRedis.NewKeyWithProjectUID(token, "projects_token_id", "")
 }

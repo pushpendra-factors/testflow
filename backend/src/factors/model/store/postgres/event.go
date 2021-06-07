@@ -750,6 +750,12 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 		return 0, 0, false, 0, false, http.StatusNotModified
 	}
 
+	project, errCode := pg.GetProject(projectId)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get project on addSessionForUser")
+		return 0, 0, false, 0, false, http.StatusNotModified
+	}
+
 	noOfFilteredEvents := len(events)
 
 	sessionStartIndex := 0
@@ -998,6 +1004,19 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 			if sessionPageSpentTime > 0 {
 				sessionPropertiesMap[U.SP_SPENT_TIME] = sessionPageSpentTime
 			}
+			if C.IsChannelGroupingAllowed(projectId) {
+				sessionEventProps, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
+				if err != nil {
+					logCtx.Error("Failed to decode session event properties for adding channel property on add session")
+				} else {
+					channel, errString := model.GetChannelGroup(*project, *sessionEventProps)
+					if errString != "" {
+						logCtx.Error(errString)
+					} else {
+						sessionPropertiesMap[U.EP_CHANNEL] = channel
+					}
+				}
+			}
 
 			// Update session event properties.
 			errCode = pg.UpdateEventProperties(projectId, sessionEvent.ID,
@@ -1029,7 +1048,7 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 
 	// Todo: The property values being updated are not accurate. Fix it.
 	// Issue - https://github.com/Slashbit-Technologies/factors/issues/445
-	errCode := pg.UpdateUserPropertiesForSession(projectId, &sessionUserPropertiesRecordMap)
+	errCode = pg.UpdateUserPropertiesForSession(projectId, &sessionUserPropertiesRecordMap)
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("err_code", errCode).
 			Error("Failed to update user properties record for session.")
