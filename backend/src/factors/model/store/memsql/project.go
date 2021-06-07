@@ -540,3 +540,19 @@ func (store *MemSQL) GetProjectsWithoutWebAnalyticsDashboard(onlyProjectsMap map
 
 	return projectIds, http.StatusFound
 }
+
+func (store *MemSQL) GetProjectIDByToken(token string) (uint64, int) {
+	projectID, errCode := model.GetCacheProjectIDByToken(token)
+	if errCode == http.StatusFound {
+		return projectID, errCode
+	}
+
+	project, errCode := store.GetProjectByToken(token)
+	if errCode == http.StatusFound {
+		return project.ID, errCode
+	}
+
+	model.SetCacheProjectIDByToken(token, project.ID)
+
+	return 0, errCode
+}

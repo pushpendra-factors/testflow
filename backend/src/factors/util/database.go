@@ -267,5 +267,5 @@ func SantizePostgresJsonbForUnicode(jsonb *postgres.Jsonb) {
 		return
 	}
 
-	jsonb.RawMessage = json.RawMessage(string(jsonb.RawMessage))
+	jsonb.RawMessage = json.RawMessage(SanitizeStringValueForUnicode(string(jsonb.RawMessage)))
 }

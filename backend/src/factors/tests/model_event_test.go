@@ -25,7 +25,8 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 
 	// Test successful CreateEvent.
 	newEvent := &model.Event{EventNameId: eventNameId, ProjectId: projectId,
-		UserId: userId, Timestamp: start.Unix()}
+		UserId: userId, Timestamp: start.Unix(),
+		Properties: postgres.Jsonb{RawMessage: []byte(`{"value": "The Impact of Using Emojis 😄 😍 💗 in Push Notifications"}`)}}
 	event, errCode := store.GetStore().CreateEvent(newEvent)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(event.ID) > 30)
@@ -263,10 +264,10 @@ func TestUpdateEventProperties(t *testing.T) {
 		json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
 
 	// should add properties if not exist.
-	errCode := store.GetStore().UpdateEventProperties(project.ID, event.ID, &U.PropertiesMap{
+	errCode := store.GetStore().UpdateEventProperties(project.ID, event.ID, event.UserId, &U.PropertiesMap{
 		"$page_spent_time": 1.346, "$page_load_time": 1.594}, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
-	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, event.ID)
+	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, event.ID, event.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
 	eventProperties, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
 	assert.Nil(t, err)
@@ -279,10 +280,10 @@ func TestUpdateEventProperties(t *testing.T) {
 	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
 
 	// should update properties if exist.
-	errCode = store.GetStore().UpdateEventProperties(project.ID, event.ID, &U.PropertiesMap{
+	errCode = store.GetStore().UpdateEventProperties(project.ID, event.ID, event.UserId, &U.PropertiesMap{
 		"$page_spent_time": 3}, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
-	updatedEvent, errCode = store.GetStore().GetEventById(project.ID, event.ID)
+	updatedEvent, errCode = store.GetStore().GetEventById(project.ID, event.ID, event.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
 	eventProperties, _ = U.DecodePostgresJsonb(&updatedEvent.Properties)
 	assert.Contains(t, *eventProperties, "$page_spent_time")

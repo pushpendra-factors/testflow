@@ -50,7 +50,7 @@ func createSession(projectId uint64, userId string, timestamp int64, campaignNam
 	_, response := SDK.Track(projectId, &trackPayload, false, SDK.SourceJSSDK)
 	TaskSession.AddSession([]uint64{projectId}, timestamp-60, 0, 0, 0, 0, 1)
 
-	event, errCode := store.GetStore().GetEventById(projectId, response.EventId)
+	event, errCode := store.GetStore().GetEventById(projectId, response.EventId, "")
 	if errCode != http.StatusFound {
 		return nil, errCode
 	}
@@ -59,7 +59,7 @@ func createSession(projectId uint64, userId string, timestamp int64, campaignNam
 		return nil, http.StatusInternalServerError
 	}
 
-	sessionEvent, errCode := store.GetStore().GetEventById(projectId, *event.SessionId)
+	sessionEvent, errCode := store.GetStore().GetEventById(projectId, *event.SessionId, event.UserId)
 	if errCode == http.StatusFound {
 		return sessionEvent, http.StatusCreated
 	}

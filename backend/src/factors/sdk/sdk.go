@@ -97,6 +97,7 @@ type AddUserPropertiesResponse struct {
 }
 
 type UpdateEventPropertiesPayload struct {
+	UserId     string          `json:"user_id"`
 	EventId    string          `json:"event_id"`
 	Properties U.PropertiesMap `json:"properties"`
 	Timestamp  int64           `json:"timestamp"`
@@ -1171,9 +1172,9 @@ func excludeBotRequestBySetting(token, userAgent string) bool {
 }
 
 func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) {
-	project, errCode := store.GetStore().GetProjectByToken(token)
+	projectID, errCode := store.GetStore().GetProjectIDByToken(token)
 	if errCode == http.StatusFound {
-		return Track(project.ID, reqPayload, false, SourceJSSDK)
+		return Track(projectID, reqPayload, false, SourceJSSDK)
 	}
 
 	if errCode == http.StatusNotFound {
@@ -1229,9 +1230,9 @@ func TrackWithQueue(token string, reqPayload *TrackPayload,
 }
 
 func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyResponse) {
-	project, errCode := store.GetStore().GetProjectByToken(token)
+	projectID, errCode := store.GetStore().GetProjectIDByToken(token)
 	if errCode == http.StatusFound {
-		return Identify(project.ID, reqPayload, true)
+		return Identify(projectID, reqPayload, true)
 	}
 
 	if errCode == http.StatusNotFound {
@@ -1246,8 +1247,7 @@ func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyR
 
 // AMPIdentifyByToken identifies AMP user by project token
 func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *IdentifyResponse) {
-
-	project, errCode := store.GetStore().GetProjectByToken(token)
+	projectID, errCode := store.GetStore().GetProjectIDByToken(token)
 	if errCode != http.StatusFound {
 		log.WithField("token", token).Error("Failed to get project from AMP sdk project token.")
 
@@ -1258,9 +1258,9 @@ func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *Ide
 		return http.StatusUnauthorized, &IdentifyResponse{Error: "Identify failed. Invalid project id."}
 	}
 
-	userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	userID, errCode := store.GetStore().CreateOrGetAMPUser(projectID, reqPayload.ClientID, reqPayload.Timestamp)
 	if errCode != http.StatusCreated && errCode != http.StatusFound {
-		log.WithField("project_id", project.ID).Error("Identify failed. Failed to CreateOrGetAMPUser.")
+		log.WithField("project_id", projectID).Error("Identify failed. Failed to CreateOrGetAMPUser.")
 		return errCode, &IdentifyResponse{Error: "Identify failed. Failed to get AMP user."}
 	}
 
@@ -1270,7 +1270,7 @@ func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *Ide
 		Timestamp:      reqPayload.Timestamp,
 	}
 
-	return Identify(project.ID, identifyPayload, false)
+	return Identify(projectID, identifyPayload, false)
 }
 
 // AMPIdentifyWithQueue identifies AMP user by customer_user_id. Uses queue if alowed for the poject
@@ -1339,9 +1339,9 @@ func IdentifyWithQueue(token string, reqPayload *IdentifyPayload,
 func AddUserPropertiesByToken(token string,
 	reqPayload *AddUserPropertiesPayload) (int, *AddUserPropertiesResponse) {
 
-	project, errCode := store.GetStore().GetProjectByToken(token)
+	projectID, errCode := store.GetStore().GetProjectIDByToken(token)
 	if errCode == http.StatusFound {
-		return AddUserProperties(project.ID, reqPayload)
+		return AddUserProperties(projectID, reqPayload)
 	}
 
 	if errCode == http.StatusNotFound {
@@ -1389,9 +1389,9 @@ func AddUserPropertiesWithQueue(token string, reqPayload *AddUserPropertiesPaylo
 func UpdateEventPropertiesByToken(token string,
 	reqPayload *UpdateEventPropertiesPayload) (int, *UpdateEventPropertiesResponse) {
 
-	project, errCode := store.GetStore().GetProjectByToken(token)
+	projectID, errCode := store.GetStore().GetProjectIDByToken(token)
 	if errCode == http.StatusFound {
-		return UpdateEventProperties(project.ID, reqPayload)
+		return UpdateEventProperties(projectID, reqPayload)
 	}
 
 	if errCode == http.StatusNotFound {
@@ -1533,7 +1533,7 @@ func UpdateEventProperties(projectId uint64,
 		WithField("timestamp", request.Timestamp)
 
 	// TODO: Add support for user_id on SDK and use user_id on GetEventById for routing to a shard.
-	event, errCode := store.GetStore().GetEventById(projectId, request.EventId)
+	event, errCode := store.GetStore().GetEventById(projectId, request.EventId, request.UserId)
 	if errCode == http.StatusNotFound && request.Timestamp > U.UnixTimeBeforeDuration(time.Hour*5) {
 		logCtx.Warn("Failed old update event properties request with unavailable event_id permanently.")
 		return http.StatusBadRequest, &UpdateEventPropertiesResponse{
@@ -1545,7 +1545,7 @@ func UpdateEventProperties(projectId uint64,
 	}
 
 	errCode = store.GetStore().UpdateEventProperties(projectId, request.EventId,
-		properitesToBeUpdated, request.Timestamp)
+		request.UserId, properitesToBeUpdated, request.Timestamp)
 	if errCode != http.StatusAccepted {
 		return errCode,
 			&UpdateEventPropertiesResponse{
@@ -1601,12 +1601,12 @@ type AMPTrackResponse struct {
 func AMPUpdateEventPropertiesByToken(token string,
 	reqPayload *AMPUpdateEventPropertiesPayload) (int, *Response) {
 
-	project, errCode := store.GetStore().GetProjectByToken(token)
+	projectID, errCode := store.GetStore().GetProjectIDByToken(token)
 	if errCode != http.StatusFound {
 		return http.StatusUnauthorized, &Response{Error: "Invalid token"}
 	}
 
-	logCtx := log.WithField("project_id", project.ID)
+	logCtx := log.WithField("project_id", projectID)
 
 	parsedSourceURL, err := U.ParseURLStable(reqPayload.SourceURL)
 
@@ -1618,14 +1618,14 @@ func AMPUpdateEventPropertiesByToken(token string,
 
 	pageURL := U.CleanURI(parsedSourceURL.Host + parsedSourceURL.Path)
 
-	userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	userID, errCode := store.GetStore().GetUserIDByAMPUserID(projectID, reqPayload.ClientID)
 	if errCode != http.StatusFound {
 		return errCode, &Response{Error: "Invalid amp user."}
 	}
 
 	logCtx = logCtx.WithField("user_id", userID).WithField("page_url", pageURL)
 
-	eventID, errCode := GetCacheAMPSDKEventIDByPageURL(project.ID, userID, pageURL)
+	eventID, errCode := GetCacheAMPSDKEventIDByPageURL(projectID, userID, pageURL)
 	if errCode != http.StatusFound {
 		if errCode == http.StatusInternalServerError {
 			logCtx.Error("Failed to get eventId by page_url from cache.")
@@ -1646,10 +1646,9 @@ func AMPUpdateEventPropertiesByToken(token string,
 		updateEventProperties[U.EP_PAGE_SCROLL_PERCENT] = reqPayload.PageScrollPercent
 	}
 
-	errCode = store.GetStore().UpdateEventProperties(project.ID, eventID, &updateEventProperties, time.Now().Unix())
-
+	errCode = store.GetStore().UpdateEventProperties(projectID, eventID, userID, &updateEventProperties, time.Now().Unix())
 	if errCode != http.StatusAccepted {
-		logCtx.WithFields(log.Fields{"project_id": project.ID, "event_id": eventID}).
+		logCtx.WithFields(log.Fields{"project_id": projectID, "event_id": eventID}).
 			Error("Failed to update event properties")
 		return errCode, &Response{Error: "Failed to update event properties."}
 	}
@@ -1658,14 +1657,14 @@ func AMPUpdateEventPropertiesByToken(token string,
 }
 
 func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response) {
-	project, errCode := store.GetStore().GetProjectByToken(token)
+	projectID, errCode := store.GetStore().GetProjectIDByToken(token)
 	if errCode != http.StatusFound {
 		return http.StatusUnauthorized, &Response{Error: "Invalid token"}
 	}
-	logCtx := log.WithField("project_id", project.ID).WithField("client_id", reqPayload.ClientID)
+	logCtx := log.WithField("project_id", projectID).WithField("client_id", reqPayload.ClientID)
 
 	var isNewUser bool
-	userID, errCode := store.GetStore().CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	userID, errCode := store.GetStore().CreateOrGetAMPUser(projectID, reqPayload.ClientID, reqPayload.Timestamp)
 	if errCode != http.StatusFound && errCode != http.StatusCreated {
 		return errCode, &Response{Error: "Invalid user"}
 	}
@@ -1749,9 +1748,9 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		trackPayload.Name = reqPayload.EventName
 	}
 
-	errCode, trackResponse := Track(project.ID, &trackPayload, false, SourceAMPSDK)
+	errCode, trackResponse := Track(projectID, &trackPayload, false, SourceAMPSDK)
 	if trackResponse.EventId != "" {
-		cacheErrCode := SetCacheAMPSDKEventIDByPageURL(project.ID, userID,
+		cacheErrCode := SetCacheAMPSDKEventIDByPageURL(projectID, userID,
 			trackResponse.EventId, pageURL)
 		if cacheErrCode != http.StatusAccepted {
 			logCtx.WithField("err_code", errCode).WithField("user_id", userID).

@@ -107,7 +107,7 @@ func main() {
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
 	}
 
-	err := C.InitQueueWorker(config)
+	err := C.InitQueueWorker(config, *workerConcurrency)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return

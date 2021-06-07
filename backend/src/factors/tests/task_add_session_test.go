@@ -22,7 +22,7 @@ func assertAssociatedSession(t *testing.T, projectId uint64, eventIdsInOrder []s
 
 	var firstEvent *model.Event
 	for i, eventId := range eventIdsInOrder {
-		event, errCode := store.GetStore().GetEventById(projectId, eventId)
+		event, errCode := store.GetStore().GetEventById(projectId, eventId, "")
 		assert.Equal(t, http.StatusFound, errCode, message)
 
 		if i == 0 {
@@ -49,7 +49,7 @@ func assertAssociatedSession(t *testing.T, projectId uint64, eventIdsInOrder []s
 	}
 
 	// check session event
-	sessionEvent, errCode := store.GetStore().GetEventById(projectId, *firstEvent.SessionId)
+	sessionEvent, errCode := store.GetStore().GetEventById(projectId, *firstEvent.SessionId, firstEvent.UserId)
 	assert.Equal(t, http.StatusFound, errCode, message)
 	assert.Equal(t, firstEvent.Timestamp-1, sessionEvent.Timestamp, message)
 
@@ -137,7 +137,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 
 	// check session user_properties so far, on both event associated
 	// user_property and user's latest user_property.
-	event, errCode := store.GetStore().GetEventById(project.ID, eventId)
+	event, errCode := store.GetStore().GetEventById(project.ID, eventId, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(event.UserProperties)
 	assert.Nil(t, err)
@@ -281,7 +281,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.Equal(t, float64(2), (*lsEventProperties2)[U.SP_SPENT_TIME])
 
 	// check session count so far.
-	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
+	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event4.UserProperties)
 	assert.Nil(t, err)
@@ -330,7 +330,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	assert.NotEqual(t, sessionEvent2.ID, sessionEvent3.ID)
 
 	// check session count so far.
-	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
+	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event6.UserProperties)
 	assert.Nil(t, err)
@@ -365,7 +365,7 @@ func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {
 	// to avoid associating previous session.
 	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
-	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7)
+	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.NotEqual(t, *event6.SessionId, *event7.SessionId)
@@ -1529,16 +1529,16 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
-	event, errCode := store.GetStore().GetEventById(project.ID, eventId)
+	event, errCode := store.GetStore().GetEventById(project.ID, eventId, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, event.SessionId)
 
 	// events within buffer time.
-	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1)
+	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, event1.SessionId)
 
-	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2)
+	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, event2.SessionId)
 }
@@ -1649,7 +1649,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 
 	// check session user_properties so far, on both event associated
 	// user_property and user's latest user_property.
-	event, errCode := store.GetStore().GetEventById(project.ID, eventId)
+	event, errCode := store.GetStore().GetEventById(project.ID, eventId, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err := U.DecodePostgresJsonb(event.UserProperties)
 	assert.Nil(t, err)
@@ -1795,7 +1795,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.Equal(t, float64(2), (*lsEventProperties2)[U.SP_SPENT_TIME])
 
 	// check session count so far.
-	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
+	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event4.UserProperties)
 	assert.Nil(t, err)
@@ -1846,7 +1846,7 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	assert.NotEqual(t, sessionEvent2.ID, sessionEvent3.ID)
 
 	// check session count so far.
-	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
+	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesMap, err = U.DecodePostgresJsonb(event6.UserProperties)
 	assert.Nil(t, err)
@@ -1907,17 +1907,17 @@ func TestAddSessionMergingEventsOnCommonMarketingProperty(t *testing.T) {
 	sessionEvent4 := assertAssociatedSession(t, project.ID, []string{eventId5, eventId6}, []string{}, "Session 4")
 	assert.Equal(t, sessionEvent3.ID, sessionEvent4.ID)
 
-	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7)
+	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.NotEqual(t, *event6.SessionId, *event7.SessionId)
 
-	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8)
+	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.NotEqual(t, *event7.SessionId, *event8.SessionId)
 
-	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9)
+	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.NotEqual(t, *event8.SessionId, *event9.SessionId)
@@ -2016,16 +2016,16 @@ func TestAddSessionMergingEventsOnDifferentMarketingProperty(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
-	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7)
+	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 
-	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8)
+	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.NotEqual(t, *event7.SessionId, *event8.SessionId)
 
-	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9)
+	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.NotEqual(t, *event8.SessionId, *event9.SessionId)
@@ -2097,16 +2097,16 @@ func TestAddSessionMergingEventsOnSameMarketingProperty(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
-	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7)
+	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 
-	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8)
+	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.Equal(t, *event7.SessionId, *event8.SessionId)
 
-	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9)
+	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.Equal(t, *event8.SessionId, *event9.SessionId)
@@ -2223,33 +2223,33 @@ func TestAddSessionMergingEventsOnVaryingMarketingProperty(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
-	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
+	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 
-	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5)
+	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event5.SessionId)
 
-	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
+	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event6.SessionId)
 
 	assert.NotEqual(t, *event4.SessionId, *event5.SessionId)
 	assert.NotEqual(t, *event5.SessionId, *event6.SessionId)
 
-	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7)
+	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 
 	assert.NotEqual(t, *event6.SessionId, *event7.SessionId)
 
-	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8)
+	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.Equal(t, *event7.SessionId, *event8.SessionId)
 
-	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9)
+	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event7.SessionId)
 	assert.Equal(t, *event8.SessionId, *event9.SessionId)
@@ -2411,47 +2411,47 @@ func TestAddSessionMergingEventsOnCommonMarketingPropertyInMiddle(t *testing.T) 
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
-	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1)
+	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event1.SessionId)
 
-	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2)
+	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event2.SessionId)
 
-	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3)
+	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event3.SessionId)
 
 	assert.NotEqual(t, *event1.SessionId, *event2.SessionId)
 	assert.NotEqual(t, *event2.SessionId, *event3.SessionId)
 
-	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
+	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.NotEqual(t, *event3.SessionId, *event4.SessionId)
 
-	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5)
+	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.Equal(t, *event4.SessionId, *event5.SessionId)
 
-	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
+	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.Equal(t, *event5.SessionId, *event6.SessionId)
 
-	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7)
+	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.NotEqual(t, *event6.SessionId, *event7.SessionId)
 
-	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8)
+	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.NotEqual(t, *event8.SessionId, *event7.SessionId)
 
-	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9)
+	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.NotEqual(t, *event9.SessionId, *event8.SessionId)
@@ -2747,92 +2747,92 @@ func TestAddSessionMergingEventsOnVaryingMarketingPropertyContinuous(t *testing.
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
-	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1)
+	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event1.SessionId)
 
-	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2)
+	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event2.SessionId)
 
-	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3)
+	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event3.SessionId)
 
 	assert.NotEqual(t, *event1.SessionId, *event2.SessionId)
 	assert.NotEqual(t, *event2.SessionId, *event3.SessionId)
 
-	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
+	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.NotEqual(t, *event3.SessionId, *event4.SessionId)
 
-	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5)
+	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.Equal(t, *event4.SessionId, *event5.SessionId)
 
-	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
+	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.Equal(t, *event5.SessionId, *event6.SessionId)
 
-	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7)
+	event7, errCode := store.GetStore().GetEventById(project.ID, eventId7, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.NotEqual(t, *event6.SessionId, *event7.SessionId)
 
-	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8)
+	event8, errCode := store.GetStore().GetEventById(project.ID, eventId8, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.NotEqual(t, *event8.SessionId, *event7.SessionId)
 
-	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9)
+	event9, errCode := store.GetStore().GetEventById(project.ID, eventId9, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.NotEqual(t, *event9.SessionId, *event8.SessionId)
 
-	event91, errCode := store.GetStore().GetEventById(project.ID, eventId91)
+	event91, errCode := store.GetStore().GetEventById(project.ID, eventId91, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event91.SessionId)
 
-	event92, errCode := store.GetStore().GetEventById(project.ID, eventId92)
+	event92, errCode := store.GetStore().GetEventById(project.ID, eventId92, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event92.SessionId)
 
-	event93, errCode := store.GetStore().GetEventById(project.ID, eventId93)
+	event93, errCode := store.GetStore().GetEventById(project.ID, eventId93, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event93.SessionId)
 
 	assert.NotEqual(t, *event91.SessionId, *event92.SessionId)
 	assert.NotEqual(t, *event92.SessionId, *event93.SessionId)
 
-	event94, errCode := store.GetStore().GetEventById(project.ID, eventId94)
+	event94, errCode := store.GetStore().GetEventById(project.ID, eventId94, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event94.SessionId)
 	assert.NotEqual(t, *event93.SessionId, *event94.SessionId)
 
-	event95, errCode := store.GetStore().GetEventById(project.ID, eventId95)
+	event95, errCode := store.GetStore().GetEventById(project.ID, eventId95, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event94.SessionId)
 	assert.Equal(t, *event94.SessionId, *event95.SessionId)
 
-	event96, errCode := store.GetStore().GetEventById(project.ID, eventId96)
+	event96, errCode := store.GetStore().GetEventById(project.ID, eventId96, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event94.SessionId)
 	assert.Equal(t, *event95.SessionId, *event96.SessionId)
 
-	event97, errCode := store.GetStore().GetEventById(project.ID, eventId97)
+	event97, errCode := store.GetStore().GetEventById(project.ID, eventId97, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event94.SessionId)
 	assert.NotEqual(t, *event96.SessionId, *event97.SessionId)
 
-	event98, errCode := store.GetStore().GetEventById(project.ID, eventId98)
+	event98, errCode := store.GetStore().GetEventById(project.ID, eventId98, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event94.SessionId)
 	assert.NotEqual(t, *event98.SessionId, *event97.SessionId)
 
-	event99, errCode := store.GetStore().GetEventById(project.ID, eventId99)
+	event99, errCode := store.GetStore().GetEventById(project.ID, eventId99, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event94.SessionId)
 	assert.NotEqual(t, *event99.SessionId, *event98.SessionId)
@@ -2932,26 +2932,26 @@ func TestAddSessionMergingEventsOnMissedMarketingProperty(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
-	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1)
+	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event1.SessionId)
 
-	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2)
+	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event2.SessionId)
 	assert.Equal(t, *event2.SessionId, *event1.SessionId)
 
-	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3)
+	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event3.SessionId)
 	assert.Equal(t, *event3.SessionId, *event1.SessionId)
 
-	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
+	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.Equal(t, *event4.SessionId, *event1.SessionId)
 
-	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5)
+	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event5.SessionId)
 	assert.Equal(t, *event5.SessionId, *event1.SessionId)
@@ -3065,32 +3065,32 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSession(t *testing
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
-	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1)
+	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event1.SessionId)
 
-	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2)
+	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event2.SessionId)
 	assert.Equal(t, *event2.SessionId, *event1.SessionId)
 
-	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3)
+	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event3.SessionId)
 	assert.Equal(t, *event3.SessionId, *event1.SessionId)
 
-	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
+	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.Equal(t, *event4.SessionId, *event1.SessionId)
 
-	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5)
+	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event5.SessionId)
 	assert.Equal(t, *event5.SessionId, *event1.SessionId)
 
 	// since user id different, should create a new session for this
-	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
+	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event6.SessionId)
 	assert.NotEqual(t, *event6.SessionId, *event5.SessionId)
@@ -3209,33 +3209,33 @@ func TestAddSessionMergingEventsOnMissedMarketingPropertyMultiSessionEmptyProper
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 0, 0, 30, 1, 1)
 	assert.Nil(t, err)
 
-	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1)
+	event1, errCode := store.GetStore().GetEventById(project.ID, eventId1, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event1.SessionId)
 
-	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2)
+	event2, errCode := store.GetStore().GetEventById(project.ID, eventId2, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event2.SessionId)
 	assert.Equal(t, *event2.SessionId, *event1.SessionId)
 
-	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3)
+	event3, errCode := store.GetStore().GetEventById(project.ID, eventId3, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event3.SessionId)
 	assert.Equal(t, *event3.SessionId, *event1.SessionId)
 
-	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4)
+	event4, errCode := store.GetStore().GetEventById(project.ID, eventId4, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event4.SessionId)
 	assert.Equal(t, *event4.SessionId, *event1.SessionId)
 
 	//
-	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5)
+	event5, errCode := store.GetStore().GetEventById(project.ID, eventId5, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event5.SessionId)
 	assert.Equal(t, *event5.SessionId, *event1.SessionId)
 
 	// since user id different, should create a new session for this
-	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6)
+	event6, errCode := store.GetStore().GetEventById(project.ID, eventId6, "")
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEmpty(t, event6.SessionId)
 	assert.NotEqual(t, *event6.SessionId, *event5.SessionId)

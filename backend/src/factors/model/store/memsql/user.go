@@ -31,14 +31,10 @@ func isConstraintViolationError(err error) bool {
 }
 
 func (store *MemSQL) satisfiesUserConstraints(user model.User) int {
-	logCtx := log.WithFields(log.Fields{
-		"method":     "satisfiesUserConstraints",
-		"project_id": user.ProjectId,
-		"id":         user.ID,
-	})
-
-	if errCode := store.IsUserExistByID(user.ProjectId, user.ID); errCode == http.StatusFound {
-		logCtx.Error("duplicate user id being inserted for proejct")
+	if user.ID != "" {
+		if errCode := store.IsUserExistByID(user.ProjectId, user.ID); errCode == http.StatusFound {
+			return http.StatusConflict
+		}
 	}
 
 	// Unique (project_id, segment_anonymous_id) constraint.
@@ -50,7 +46,8 @@ func (store *MemSQL) satisfiesUserConstraints(user model.User) int {
 
 	// Unique (project_id, amp_user_id) constraint.
 	if user.AMPUserId != "" {
-		if exists := existsUserWithAMPUserID(user.ProjectId, user.AMPUserId); exists {
+		_, errCode := store.GetUserIDByAMPUserID(user.ProjectId, user.AMPUserId)
+		if errCode == http.StatusFound {
 			return http.StatusConflict
 		}
 	}
@@ -75,8 +72,11 @@ func (store *MemSQL) createUserWithError(user *model.User) (*model.User, error) 
 		user.ID = U.GetUUID()
 	}
 
-	if errCode := store.satisfiesUserConstraints(*user); errCode != http.StatusOK {
+	errCode := store.satisfiesUserConstraints(*user)
+	if errCode == http.StatusConflict {
 		return user, errors.New(constraintViolationError)
+	} else if errCode != http.StatusOK {
+		return nil, errors.New("failed to create user")
 	}
 
 	// Add join timestamp before creation.
@@ -469,14 +469,20 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 		}
 
 		cUser := &model.User{ProjectId: projectId, JoinTimestamp: requestTimestamp}
-
 		// add seg_aid, if provided and not exist already.
 		if segAnonId != "" {
 			cUser.SegmentAnonymousId = segAnonId
 		}
+		if custUserId != "" {
+			cUser.CustomerUserId = custUserId
+		}
 
 		user, err := store.createUserWithError(cUser)
 		if err != nil {
+			if IsDuplicateRecordError(err) || isConstraintViolationError(err) {
+				return user, http.StatusOK
+			}
+
 			logCtx.WithError(err).Error(
 				"Failed to create user by segment anonymous id on CreateOrGetSegmentUser")
 			return nil, http.StatusInternalServerError
@@ -501,30 +507,14 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 	return user, http.StatusOK
 }
 
-func existsUserWithAMPUserID(projectId uint64, ampUserId string) bool {
-	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
-
-	var user model.User
-	db := C.GetServices().Db
-
-	if err := db.Limit(1).Where("project_id = ? AND amp_user_id = ?",
-		projectId, ampUserId).Select("id").Find(&user).Error; err != nil {
-		if !gorm.IsRecordNotFoundError(err) {
-			log.WithField("project_id", projectId).WithField("amp_user_id", ampUserId).
-				Error("Failed to get count of users by amp_user_id")
-		}
-		return false
-	}
-
-	if user.ID != "" {
-		return true
-	}
-	return false
-}
-
-func getUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int) {
+func (store *MemSQL) GetUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int) {
 	logCtx := log.WithField("project_id", projectId).WithField(
 		"amp_user_id", ampUserId)
+
+	userID, errCode := model.GetCacheUserIDByAMPUserID(projectId, ampUserId)
+	if errCode == http.StatusFound {
+		return userID, errCode
+	}
 
 	db := C.GetServices().Db
 	var user model.User
@@ -543,6 +533,8 @@ func getUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int) {
 		return "", http.StatusNotFound
 	}
 
+	model.SetCacheUserIDByAMPUserID(projectId, ampUserId, user.ID)
+
 	return user.ID, http.StatusFound
 }
 
@@ -557,7 +549,7 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 		projectId).WithField("amp_user_id", ampUserId)
 
 	// Unique (project_id, amp_user_id) constraint.
-	userID, errCode := getUserIDByAMPUserID(projectId, ampUserId)
+	userID, errCode := store.GetUserIDByAMPUserID(projectId, ampUserId)
 	if errCode == http.StatusInternalServerError {
 		return "", errCode
 	}
@@ -572,7 +564,7 @@ func (store *MemSQL) CreateOrGetAMPUser(projectId uint64, ampUserId string, time
 		// Handle user creation failure if already created between
 		// the execution by another thread.
 		if isConstraintViolationError(err) && user != nil {
-			return getUserIDByAMPUserID(projectId, ampUserId)
+			return store.GetUserIDByAMPUserID(projectId, ampUserId)
 		}
 
 		logCtx.WithError(err).Error(
@@ -985,6 +977,9 @@ func (store *MemSQL) GetUserPropertiesByUserID(projectID uint64, id string) (*po
 	db := C.GetServices().Db
 	if err := db.Model(&model.User{}).Where("project_id = ? AND id = ?", projectID, id).
 		Select("properties").Find(&user).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
 
 		logCtx.WithError(err).Error("Failed to get properties of user.")
 		return nil, http.StatusInternalServerError
@@ -1384,7 +1379,7 @@ func (store *MemSQL) OverwriteUserPropertiesByID(projectID uint64, id string,
 	err := db.Model(&model.User{}).Limit(1).
 		Where("project_id = ? AND id = ?", projectID, id).Update(update).Error
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to overwrite user properteis.")
+		logCtx.WithError(err).Error("Failed to overwrite user properties.")
 		return http.StatusInternalServerError
 	}
 

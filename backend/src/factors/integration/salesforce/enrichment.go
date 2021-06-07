@@ -283,7 +283,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 				return "", "", errors.New("failed to get synced document")
 			}
 
-			event, status := store.GetStore().GetEventById(projectID, documents[0].SyncID)
+			event, status := store.GetStore().GetEventById(projectID, documents[0].SyncID, "")
 			if status != http.StatusFound {
 				return "", "", errors.New("failed to get event from sync id ")
 			}

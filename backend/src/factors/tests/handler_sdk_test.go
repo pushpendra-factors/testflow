@@ -747,7 +747,7 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 		assert.Equal(t, eventId, response.EventId)
 		// User should be created with the given user id, as create_user is set.
 		assert.Equal(t, userId, response.UserId)
-		event, _ := store.GetStore().GetEventById(project.ID, response.EventId)
+		event, _ := store.GetStore().GetEventById(project.ID, response.EventId, "")
 		assert.NotNil(t, event)
 		// Event timestamp should be externaly given timestamp.
 		assert.Equal(t, timestamp, event.Timestamp)
@@ -776,7 +776,7 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 		assert.Equal(t, eventId, response.EventId)
 		// User should not be created with the given user id, as create_user is false.
 		assert.Empty(t, response.UserId)
-		event, _ := store.GetStore().GetEventById(project.ID, response.EventId)
+		event, _ := store.GetStore().GetEventById(project.ID, response.EventId, "")
 		assert.NotNil(t, event)
 		// Event should be associated with the given existing user.
 		assert.Equal(t, user.ID, event.UserId)
@@ -1125,7 +1125,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	assert.NotNil(t, responseMap["event_id"])
 	_, err = TaskSession.AddSession([]uint64{project.ID}, timestampBeforeOneDay-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
-	event1, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string))
+	event1, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event1.SessionId)
 
@@ -1140,7 +1140,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	assert.NotNil(t, responseMap["event_id"])
 	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
-	event2, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string))
+	event2, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event2.SessionId)
 	assert.Equal(t, *event1.SessionId, *event2.SessionId)
@@ -1165,7 +1165,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	assert.NotNil(t, responseMap["event_id"])
 	_, err = TaskSession.AddSession([]uint64{project.ID}, lastEventTimestamp-60, 0, 0, 0, 1, 1)
 	assert.Nil(t, err)
-	event3, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string))
+	event3, errCode := store.GetStore().GetEventById(project.ID, responseMap["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event3.SessionId)
 	assert.NotEqual(t, *event2.SessionId, *event3.SessionId) // new session.
@@ -1874,8 +1874,8 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 
 	// Test update event properties and initial user properites added
 	// from update event properties.
-	eventId, _ = getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
-	event, errCode := store.GetStore().GetEventById(project.ID, eventId)
+	eventId, userId := getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
+	event, errCode := store.GetStore().GetEventById(project.ID, eventId, userId)
 	assert.NotNil(t, event)
 	user, errCode := store.GetStore().GetUser(project.ID, event.UserId)
 	assert.NotNil(t, user)
@@ -1885,7 +1885,7 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 		eventId, 100)), map[string]string{"Authorization": project.Token})
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	event, _ = store.GetStore().GetEventById(project.ID, eventId)
+	event, _ = store.GetStore().GetEventById(project.ID, eventId, "")
 	assert.NotNil(t, event)
 	user, _ = store.GetStore().GetUser(project.ID, event.UserId)
 	assert.NotNil(t, user)
@@ -1903,7 +1903,7 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 		eventId, 200)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
 	// Event user_properties should be updated.
-	event, _ = store.GetStore().GetEventById(project.ID, eventId)
+	event, _ = store.GetStore().GetEventById(project.ID, eventId, "")
 	assert.NotNil(t, event)
 	userProperties, _ = U.DecodePostgresJsonb(event.UserProperties)
 	assert.NotNil(t, userProperties)
@@ -1916,11 +1916,11 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	assert.NotEmpty(t, userProperties)
 	assert.Equal(t, float64(200), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
 
-	eventId, _ = getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
+	eventId, userId = getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d, "$page_scroll_percent": %d}}`,
 		eventId, 1, 10)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, eventId)
+	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, eventId, userId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, updatedEvent)
 	propertiesMap, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
@@ -1943,7 +1943,7 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d, "$page_scroll_percent": %d}}`,
 		eventId, 100, 10)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
-	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, eventId)
+	updatedEvent, errCode := store.GetStore().GetEventById(project.ID, eventId, userId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, *updatedEvent.SessionId)
 	// Should update initial user properties on initial call.
@@ -1960,7 +1960,7 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	eventId = getAutoTrackedEventIdWithUserIdAndPageRawURL(t, project.Token, userId, pageRawURL)
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
 		eventId, 200)), map[string]string{"Authorization": project.Token})
-	updatedEvent2, errCode := store.GetStore().GetEventById(project.ID, eventId)
+	updatedEvent2, errCode := store.GetStore().GetEventById(project.ID, eventId, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, *updatedEvent.SessionId)
 	// Should use the same session.
@@ -2057,7 +2057,7 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 	}
 	errCode, response := SDK.AMPTrackByToken(project.Token, request)
 	assert.Equal(t, http.StatusOK, errCode)
-	event, errCode := store.GetStore().GetEventById(project.ID, response.EventId)
+	event, errCode := store.GetStore().GetEventById(project.ID, response.EventId, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	// AMP Tracked event should use the given timestamp.
 	assert.Equal(t, timestamp, event.Timestamp)
@@ -2246,7 +2246,7 @@ func TestSDKTrackFirstEventUserProperties(t *testing.T) {
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 	assert.Equal(t, http.StatusOK, status)
 
-	event, errCode := store.GetStore().GetEventById(project.ID, response.EventId)
+	event, errCode := store.GetStore().GetEventById(project.ID, response.EventId, "")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, event)
 	assert.NotEmpty(t, event.UserId)

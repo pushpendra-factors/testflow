@@ -265,8 +265,9 @@ App.prototype.updateEventProperties = function(eventId, properties={}) {
     
     if (Object.keys(properties).length == 0)
         logger.debug("No properties given to update event.");
-
-    return this.client.updateEventProperties({ event_id: eventId, properties: properties });
+        
+    var payload = { event_id: eventId, properties: properties };
+    return this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload));
 }
 
 App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs, 
@@ -307,7 +308,8 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs,
     if (Object.keys(properties).length > 0) {
         logger.debug("Updating page properties : " + JSON.stringify(properties), false);
         var eventId = getCurrentPageAutoTrackEventIdFromStore();
-        this.client.updateEventProperties({ event_id: eventId, properties: properties });
+        var payload = { event_id: eventId, properties: properties };
+        this.client.updateEventProperties(updatePayloadWithUserIdFromCookie(payload));
     } else {
         logger.debug("No change on page properties, skipping update for : " + JSON.stringify(lastPageProperties), false);
     }

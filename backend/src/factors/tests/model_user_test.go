@@ -411,7 +411,7 @@ func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 	user, errCode := store.GetStore().CreateOrGetSegmentUser(project.ID, "", customerUserID, time.Now().Unix())
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user)
-	assert.Empty(t, user.CustomerUserId)
+	assert.NotEmpty(t, user.CustomerUserId)
 	status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user.ID, CustomerUserId: customerUserID}, false)
 	assert.Equal(t, http.StatusOK, status)
 	user, errCode = store.GetStore().GetUser(project.ID, user.ID)

@@ -462,7 +462,7 @@ func (pg *Postgres) UpdateUserPropertiesV2(projectID uint64, id string,
 		errCode = pg.OverwriteUserPropertiesByID(projectID, user.ID,
 			mergedPropertiesAfterSkipJSON, true, newUpdateTimestamp)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-			logCtx.WithField("user_id", user.ID).Error("Failed to update merged user properties on user.")
+			logCtx.WithField("err_code", errCode).WithField("user_id", user.ID).Error("Failed to update merged user properties on user.")
 			hasFailure = true
 		}
 	}
@@ -746,10 +746,12 @@ func (pg *Postgres) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUser
 		}
 
 		cUser := &model.User{ProjectId: projectId, JoinTimestamp: requestTimestamp}
-
 		// add seg_aid, if provided and not exist already.
 		if segAnonId != "" {
 			cUser.SegmentAnonymousId = segAnonId
+		}
+		if custUserId != "" {
+			cUser.CustomerUserId = custUserId
 		}
 
 		user, err := pg.createUserWithError(cUser)
@@ -790,9 +792,14 @@ func (pg *Postgres) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUser
 	return user, http.StatusOK
 }
 
-func getUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int) {
+func (pg *Postgres) GetUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int) {
 	logCtx := log.WithField("project_id", projectId).WithField(
 		"amp_user_id", ampUserId)
+
+	userID, errCode := model.GetCacheUserIDByAMPUserID(projectId, ampUserId)
+	if errCode == http.StatusFound {
+		return userID, errCode
+	}
 
 	db := C.GetServices().Db
 	var user model.User
@@ -811,6 +818,8 @@ func getUserIDByAMPUserID(projectId uint64, ampUserId string) (string, int) {
 		return "", http.StatusNotFound
 	}
 
+	model.SetCacheUserIDByAMPUserID(projectId, ampUserId, user.ID)
+
 	return user.ID, http.StatusFound
 }
 
@@ -822,7 +831,7 @@ func (pg *Postgres) CreateOrGetAMPUser(projectId uint64, ampUserId string, times
 	logCtx := log.WithField("project_id",
 		projectId).WithField("amp_user_id", ampUserId)
 
-	userID, errCode := getUserIDByAMPUserID(projectId, ampUserId)
+	userID, errCode := pg.GetUserIDByAMPUserID(projectId, ampUserId)
 	if errCode == http.StatusInternalServerError {
 		return "", errCode
 	}
@@ -836,7 +845,7 @@ func (pg *Postgres) CreateOrGetAMPUser(projectId uint64, ampUserId string, times
 	if err != nil {
 		// Get and return error is duplicate error.
 		if U.IsPostgresUniqueIndexViolationError(uniqueIndexProjectIdAmpUserId, err) {
-			userID, errCode := getUserIDByAMPUserID(projectId, ampUserId)
+			userID, errCode := pg.GetUserIDByAMPUserID(projectId, ampUserId)
 			if errCode != http.StatusFound {
 				return "", errCode
 			}
@@ -1190,6 +1199,9 @@ func (pg *Postgres) GetUserPropertiesByUserID(projectID uint64, id string) (*pos
 	var user model.User
 	if err := db.Model(&model.User{}).Where("project_id = ? AND id = ?", projectID, id).
 		Select("properties").Find(&user).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
 
 		logCtx.WithError(err).Error("Failed to get properties of user.")
 		return nil, http.StatusInternalServerError

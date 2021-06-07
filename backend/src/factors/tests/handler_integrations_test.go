@@ -389,7 +389,8 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
 	// Check event properties added.
-	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	retEvent, errCode := store.GetStore().GetEventById(project.ID,
+		jsonResponseMap2["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	eventPropertiesBytes, err := retEvent.Properties.Value()
 	var eventPropertiesMap map[string]interface{}
@@ -514,7 +515,8 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 		assert.Nil(t, jsonResponseMap2["error"])
 		assert.NotNil(t, jsonResponseMap2["event_id"])
 		// Check event properties added.
-		retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+		retEvent, errCode := store.GetStore().GetEventById(project.ID,
+			jsonResponseMap2["event_id"].(string), "")
 		assert.Equal(t, http.StatusFound, errCode)
 		eventPropertiesBytes, err := retEvent.Properties.Value()
 		assert.Nil(t, err)
@@ -634,7 +636,8 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 		json.Unmarshal(jsonResponse2, &jsonResponseMap2)
 		assert.Nil(t, jsonResponseMap2["error"])
 		assert.NotNil(t, jsonResponseMap2["event_id"])
-		event, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+		event, errCode := store.GetStore().GetEventById(project.ID,
+			jsonResponseMap2["event_id"].(string), "")
 		assert.Equal(t, http.StatusFound, errCode)
 		eventName, err := store.GetStore().GetEventNameFromEventNameId(event.EventNameId, project.ID)
 		assert.Nil(t, err)
@@ -771,7 +774,7 @@ func TestIntSegmentHandlePageEventWithFilterExpression(t *testing.T) {
 	json.Unmarshal(jsonResponse2, &jsonResponseMap2)
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
-	event, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	event, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	// event should use filter expr event name.
 	assert.Equal(t, filterEventName.ID, event.EventNameId)
@@ -890,7 +893,7 @@ func TestIntSegmentHandlePageEventWithFilterExpression(t *testing.T) {
 	json.Unmarshal(jsonResponse2, &jsonResponseMap)
 	assert.Nil(t, jsonResponseMap["error"])
 	assert.NotNil(t, jsonResponseMap["event_id"])
-	event1, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap["event_id"].(string))
+	event1, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	// event should use filter expr event name.
 	assert.NotEqual(t, filterEventName1.ID, event1.EventNameId)
@@ -1025,11 +1028,11 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		_, err := TaskSession.AddSession([]uint64{project.ID}, timestamp-60, 0, 0, 0, 1, 1)
 		assert.Nil(t, err)
 
-		event, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+		event, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string), "")
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, event.SessionId)
 
-		sessionEvent, errCode := store.GetStore().GetEventById(project.ID, *event.SessionId)
+		sessionEvent, errCode := store.GetStore().GetEventById(project.ID, *event.SessionId, event.UserId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, sessionEvent)
 
@@ -1294,7 +1297,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
 	// Check event properties added.
-	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	eventPropertiesBytes, err := retEvent.Properties.Value()
 	var eventPropertiesMap map[string]interface{}
@@ -1431,7 +1434,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	assert.Nil(t, jsonResponseMap3["error"])
 	assert.NotNil(t, jsonResponseMap3["event_id"])
 	// Check event properties added.
-	retEvent1, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap3["event_id"].(string))
+	retEvent1, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap3["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	eventPropertiesBytes1, err := retEvent1.Properties.Value()
 	var eventPropertiesMap1 map[string]interface{}
@@ -1574,7 +1577,7 @@ func TestIntSegmentHandlerWithTrackEventQueryParam(t *testing.T) {
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
 	// Check event properties added.
-	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	eventPropertiesBytes, err := retEvent.Properties.Value()
 	var eventPropertiesMap map[string]interface{}
@@ -1718,7 +1721,7 @@ func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
 	// Check event properties added.
-	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	eventPropertiesBytes, err := retEvent.Properties.Value()
 	var eventPropertiesMap map[string]interface{}
@@ -2090,7 +2093,7 @@ func TestIntSegmentHandlerWithTimestamp(t *testing.T) {
 	assert.Nil(t, jsonResponseMap2["error"])
 	assert.NotNil(t, jsonResponseMap2["event_id"])
 	// Check event properties added.
-	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	retEvent, errCode := store.GetStore().GetEventById(project.ID, jsonResponseMap2["event_id"].(string), "")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, retEvent)
 	assert.Equal(t, eventTimestampInUnix, retEvent.Timestamp)

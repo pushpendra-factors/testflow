@@ -62,6 +62,7 @@ func main() {
 	blacklistEnrichmentByProjectID := flag.String("blacklist_enrichment_by_project_id", "", "Blacklist enrichment by project_id.")
 	cacheSortedSet := flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
 	syncOnly := flag.Bool("sync_only", false, "Run only sync.")
+	enrichOnly := flag.Bool("enrich_only", false, "Run only enrichment.")
 	allowedCampaignEnrichmentByProjectID := flag.String("allowed_campaign_enrichment_by_project_id", "", "Campaign enrichment by project_id.")
 	useOpportunityAssociationByProjectID := flag.String("use_opportunity_association_by_project_id", "", "Use salesforce associations for opportunity stitching")
 
@@ -153,29 +154,32 @@ func main() {
 	var syncStatus salesforceSyncStatus
 	var propertyDetailSyncStatus []IntSalesforce.Status
 	anyFailure := false
-	for pid, projectSettings := range syncInfo.ProjectSettings {
-		accessToken, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
-		if err != nil {
-			log.WithField("project_id", pid).Errorf("Failed to get salesforce access token: %s", err)
-			continue
-		}
 
-		objectStatus := IntSalesforce.SyncDocuments(projectSettings, syncInfo.LastSyncInfo[pid], accessToken)
-		for i := range objectStatus {
-			if objectStatus[i].Status != U.CRM_SYNC_STATUS_SUCCESS {
-				syncStatus.Failures = append(syncStatus.Failures, objectStatus[i])
-				anyFailure = true
-			} else {
-				syncStatus.Success = append(syncStatus.Success, objectStatus[i])
+	if !*enrichOnly {
+		for pid, projectSettings := range syncInfo.ProjectSettings {
+			accessToken, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
+			if err != nil {
+				log.WithField("project_id", pid).Errorf("Failed to get salesforce access token: %s", err)
+				continue
 			}
-		}
 
-		failure, propertyDetailSyncStatus := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, projectSettings.InstanceURL)
-		if failure {
-			anyFailure = true
-		}
+			objectStatus := IntSalesforce.SyncDocuments(projectSettings, syncInfo.LastSyncInfo[pid], accessToken)
+			for i := range objectStatus {
+				if objectStatus[i].Status != U.CRM_SYNC_STATUS_SUCCESS {
+					syncStatus.Failures = append(syncStatus.Failures, objectStatus[i])
+					anyFailure = true
+				} else {
+					syncStatus.Success = append(syncStatus.Success, objectStatus[i])
+				}
+			}
 
-		propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailSyncStatus...)
+			failure, propertyDetailSync := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, projectSettings.InstanceURL)
+			if failure {
+				anyFailure = true
+			}
+
+			propertyDetailSyncStatus = append(propertyDetailSyncStatus, propertyDetailSync...)
+		}
 	}
 
 	var jobStatus salesforceJobStatus

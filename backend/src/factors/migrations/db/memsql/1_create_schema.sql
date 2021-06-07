@@ -76,7 +76,10 @@ CREATE TABLE IF NOT EXISTS event_names (
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
     SHARD KEY (project_id),
-    KEY (project_id, name) USING CLUSTERED COLUMNSTORE
+    KEY (project_id, name) USING CLUSTERED COLUMNSTORE,
+    KEY (project_id) USING HASH,
+    KEY (id) USING HASH,
+    KEY (name) USING HASH
 
     -- Required constraints.
     -- Unique (project_id, name, type) WHERE type != 'FE'
