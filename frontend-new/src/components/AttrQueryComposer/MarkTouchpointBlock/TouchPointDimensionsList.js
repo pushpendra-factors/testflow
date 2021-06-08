@@ -13,12 +13,9 @@ function TouchPointDimensionsList({ touchPoint }) {
       const changedDimensionIndex = attr_dimensions.findIndex(
         (elem) => elem.header === header && elem.touchPoint === touchPoint
       );
-      const isDisabled = attr_dimensions[changedDimensionIndex].disabled;
-      if (isDisabled) {
-        return false;
-      }
       const currentEnabilityVal =
         attr_dimensions[changedDimensionIndex].enabled;
+
       const newAttrDimensions = [
         ...attr_dimensions.slice(0, changedDimensionIndex),
         {
@@ -27,10 +24,16 @@ function TouchPointDimensionsList({ touchPoint }) {
         },
         ...attr_dimensions.slice(changedDimensionIndex + 1),
       ];
-      dispatch({
-        type: INITIALIZE_TOUCHPOINT_DIMENSIONS,
-        payload: newAttrDimensions,
-      });
+      const isAtleastOneSelected =
+        newAttrDimensions.filter(
+          (d) => d.touchPoint === touchPoint && d.enabled
+        ).length > 0;
+      if (isAtleastOneSelected) {
+        dispatch({
+          type: INITIALIZE_TOUCHPOINT_DIMENSIONS,
+          payload: newAttrDimensions,
+        });
+      }
     },
     [attr_dimensions, dispatch, touchPoint]
   );

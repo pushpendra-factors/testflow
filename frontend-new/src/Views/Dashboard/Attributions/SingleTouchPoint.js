@@ -34,9 +34,12 @@ function SingleTouchPoint({
   } = useContext(DashboardContext);
 
   useEffect(() => {
-    const formattedData = formatData(data, event, visibleIndices, touchpoint);
+    const firstEnabledDimension = attr_dimensions.filter(
+      (d) => d.touchPoint === touchpoint && d.enabled
+    )[0];
+    const formattedData = formatData(data, event, visibleIndices, firstEnabledDimension.responseHeader);
     setChartsData(formattedData);
-  }, [data, event, visibleIndices, touchpoint]);
+  }, [data, event, visibleIndices, touchpoint, attr_dimensions]);
 
   if (!chartsData.length) {
     return null;

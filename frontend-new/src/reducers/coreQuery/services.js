@@ -221,9 +221,9 @@ export const fetchSmartPropertyRules = async (dispatch, projectId) => {
         header: elem.name,
         responseHeader: elem.name,
         enabled: false,
-        disabled: false,
         type: 'custom',
         touchPoint: MARKETING_TOUCHPOINTS_ALIAS[elem.type_alias],
+        defaultValue: false,
       };
     });
     dispatch({
