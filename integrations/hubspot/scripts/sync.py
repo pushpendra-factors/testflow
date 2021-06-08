@@ -9,8 +9,14 @@ import time
 parser = OptionParser()
 parser.add_option("--env", dest="env", default="development")
 parser.add_option("--dry", dest="dry", help="", default="False")
+parser.add_option("--first_sync", dest="first_sync",action="store_true", help="", default=False)
 parser.add_option("--data_service_host", dest="data_service_host",
     help="Data service host", default="http://localhost:8089")
+parser.add_option("--app_name", dest="app_name",
+    help="App name", default="")
+parser.add_option("--healthcheck_ping_id", dest="healthcheck_ping_id",
+    help="Healthcheck ping id", default="")
+
 
 APP_NAME = "hubspot_sync"
 PAGE_SIZE = 50
@@ -329,8 +335,10 @@ def sync_deals(project_id, api_key, sync_all=False):
             if sync_all:
                 get_url_with_properties = get_url + '&' + build_properties_param_str(properties)
                 get_url_with_properties = get_url_with_properties + '&includeAssociations=true'
+            else:
+                get_url_with_properties = get_url
 
-            log.warning("Downloading deals for project_id %d from url %s.", project_id, get_url)
+            log.warning("Downloading deals for project_id %d from url %s.", project_id, get_url_with_properties)
             response_dict = {}
             if err_url_too_long == False:
                 r = get_with_fallback_retry(project_id, get_url_with_properties)
@@ -540,22 +548,50 @@ def sync_form_submissions(project_id, api_key):
             len(docs), count)
 
 
-def get_sync_info():
-    uri = "/data_service/hubspot/documents/sync_info"
+def get_sync_info(sync_first_time = False):
+    uri = "/data_service/hubspot/documents/sync_info?is_first_time="
+    if sync_first_time == True:
+        uri = uri + "true"
+    else:
+        uri = uri + "false"
+    
     url = options.data_service_host + uri
-
     response = requests.get(url)
     if not response.ok:
         raise Exception('Failed to get sync info with status: '+str(response.status_code))
-
     return response.json()
 
+def update_first_time_sync_status(request_payload):
+    uri = "/data_service/hubspot/documents/sync_info"
+    url = options.data_service_host + uri
 
-def get_next_sync_info(project_settings, last_sync_info):
+    retries = 0
+    while True:
+        try:
+            res = requests.post(url, data=json.dumps(request_payload))
+            if not res.ok:
+                raise Exception('Failed to send first time sync update: ' + str(res.status_code))
+            return
+        except Exception as e:
+            if retries > RETRY_LIMIT:
+                raise Exception("Retry exhausted on send first time sync update "+str(e)+ " , retries "+ str(retries))
+            log.warning("Failed to send first time sync update. retrying in 2s "+str(e))
+            retries += 1
+            time.sleep(2)
+    return res.json()
+
+
+def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False):
     next_sync_info = []
     
     for project_id in project_settings:
         settings = project_settings[project_id]
+        if first_time_sync == True and settings.get("is_first_time_synced")!=False :
+            continue
+
+        if first_time_sync == False and settings.get("is_first_time_synced")!=True:
+            continue
+
         api_key = settings.get("api_key")
         if api_key == None:
             log.error("No api_key on project_settings of project %d", project_id)
@@ -572,7 +608,7 @@ def get_next_sync_info(project_settings, last_sync_info):
             next_sync["api_key"] = api_key
             next_sync["doc_type"] = doc_type
             # sync all, if last sync timestamp is 0.
-            next_sync["sync_all"] = sync_info[doc_type] == 0
+            next_sync["sync_all"] = first_time_sync
             next_sync_info.append(next_sync)
 
     return next_sync_info 
@@ -610,7 +646,7 @@ def sync(project_id, api_key, doc_type, sync_all):
 
 if __name__ == "__main__":
     (options, args) = parser.parse_args()
-    sync_info = get_sync_info()
+    sync_info = get_sync_info(options.first_sync)
 
     project_settings = sync_info.get("project_settings")
     if project_settings == None:
@@ -622,7 +658,7 @@ if __name__ == "__main__":
         log.error("Last sync info missing on get sync info response")
         sys.exit(1)
 
-    next_sync_info = get_next_sync_info(project_settings, last_sync_info)
+    next_sync_info = get_next_sync_info(project_settings, last_sync_info, options.first_sync)
 
     next_sync_failures = []
     next_sync_success = []
@@ -644,8 +680,17 @@ if __name__ == "__main__":
     }
 
     log.warning("Successfully synced. End of hubspot sync job.")
+    if options.first_sync == True:
+        try:
+            update_first_time_sync_status(notification_payload)
+            ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload)
+            sys.exit(0)
+        except Exception as e:
+            next_sync_failures.append(str(e))
+            ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload, endpoint="/fail")
+
     if len(next_sync_failures) > 0:
         ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
     else:
-        ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload)    
+        ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload)
     sys.exit(0)

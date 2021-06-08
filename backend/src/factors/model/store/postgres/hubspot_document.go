@@ -255,6 +255,78 @@ func getHubspotTypeAlias(t int) string {
 	return ""
 }
 
+// UpdateHubspotProjectSettingsBySyncStatus update hubspot first time sync project settings
+func (pg *Postgres) UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus,
+	failure []model.HubspotProjectSyncStatus) int {
+	projectStatus := make(map[uint64]bool)
+	for i := range success {
+		projectStatus[success[i].ProjectID] = true
+	}
+
+	for i := range failure {
+		projectStatus[failure[i].ProjectID] = false
+		log.WithFields(log.Fields{"project_id": failure[i].ProjectID, "doc_type": failure[i].DocType}).Error("Failed to compelete hubspot first time sync.")
+	}
+
+	anyFailure := false
+	for pid, projectSuccess := range projectStatus {
+		if projectSuccess {
+			_, status := pg.UpdateProjectSettings(pid, &model.ProjectSetting{IntHubspotFirstTimeSynced: true})
+			if status != http.StatusAccepted {
+				log.WithFields(log.Fields{"project_id": pid}).Error("Failed to update hubspot first time sync status on success.")
+				anyFailure = true
+			}
+		}
+	}
+
+	if anyFailure {
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+// GetHubspotFirstSyncProjectsInfo return list of projects to be synced for first time
+func (pg *Postgres) GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, int) {
+
+	// project sync of hubspot enable projects.
+	enabledProjectLastSync := make(map[uint64]map[string]int64, 0)
+
+	// get project settings of hubspot enabled projects.
+	projectSettings, errCode := pg.GetAllHubspotProjectSettings()
+	if errCode != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	settingsByProject := make(map[uint64]*model.HubspotProjectSettings, 0)
+	for i, ps := range projectSettings {
+		if ps.IsFirstTimeSynced {
+			continue
+		}
+
+		// add types not synced before.
+		for typ := range model.HubspotDocumentTypeAlias {
+			if _, exist := enabledProjectLastSync[ps.ProjectId]; !exist {
+				enabledProjectLastSync[ps.ProjectId] = make(map[string]int64)
+			}
+
+			_, typExists := enabledProjectLastSync[ps.ProjectId][typ]
+			if !typExists {
+				// last sync timestamp as zero as type not synced before.
+				enabledProjectLastSync[ps.ProjectId][typ] = 0
+			}
+		}
+
+		settingsByProject[projectSettings[i].ProjectId] = &projectSettings[i]
+	}
+
+	var syncInfo model.HubspotSyncInfo
+	syncInfo.LastSyncInfo = enabledProjectLastSync
+	syncInfo.ProjectSettings = settingsByProject
+
+	return &syncInfo, http.StatusFound
+}
+
 func (pg *Postgres) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 	var lastSyncInfo []model.HubspotLastSyncInfo
 
@@ -286,6 +358,10 @@ func (pg *Postgres) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 
 	settingsByProject := make(map[uint64]*model.HubspotProjectSettings, 0)
 	for i, ps := range projectSettings {
+		if !ps.IsFirstTimeSynced {
+			continue
+		}
+
 		_, pExists := lastSyncInfoByProject[ps.ProjectId]
 
 		if !pExists {

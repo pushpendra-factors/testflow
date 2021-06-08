@@ -23,10 +23,12 @@ type ProjectSetting struct {
 	IntGoogleOrganicEnabledAgentUUID *string `json:"int_google_organic_enabled_agent_uuid,omitempty"`
 	IntGoogleOrganicURLPrefixes      *string `json:"int_google_organic_url_prefixes,omitempty"`
 	// Hubspot integration settings.
-	IntHubspot       *bool     `gorm:"not null;default:false" json:"int_hubspot,omitempty"`
-	IntHubspotApiKey string    `json:"int_hubspot_api_key,omitempty"`
-	CreatedAt        time.Time `json:"created_at"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	IntHubspot                *bool     `gorm:"not null;default:false" json:"int_hubspot,omitempty"`
+	IntHubspotApiKey          string    `json:"int_hubspot_api_key,omitempty"`
+	IntHubspotFirstTimeSynced bool      `json:"int_hubspot_first_time_synced,omitempty"`
+	IntHubspotPortalID        *int      `json:"int_hubspot_portal_id,omitempty"`
+	CreatedAt                 time.Time `json:"created_at"`
+	UpdatedAt                 time.Time `json:"updated_at"`
 	//Facebook settings
 	IntFacebookEmail       string  `json:"int_facebook_email,omitempty"`
 	IntFacebookAccessToken string  `json:"int_facebook_access_token,omitempty"`
@@ -70,8 +72,9 @@ type GoogleOrganicProjectSettings struct {
 	RefreshToken string
 }
 type HubspotProjectSettings struct {
-	ProjectId uint64 `json:"-"`
-	APIKey    string `json:"api_key"`
+	ProjectId         uint64 `json:"-"`
+	APIKey            string `json:"api_key"`
+	IsFirstTimeSynced bool   `json:"is_first_time_synced"`
 }
 
 type FacebookProjectSettings struct {

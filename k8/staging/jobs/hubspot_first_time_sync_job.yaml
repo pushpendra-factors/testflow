@@ -1,0 +1,37 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    nodePool: factors-staging-node-pool
+  name: hubspot-first-time-sync-job
+spec:
+  schedule: "0 18 * * *" # In UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+            nodePool: factors-staging-node-pool
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: hubspot-first-time-sync-job
+            image: us.gcr.io/factors-staging/hubspot-sync-job:v0.02-c9c3a3a
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --data_service_host
+            - $(DATA_SERVICE_HOST_URL)
+            - --first_sync
+            - --app_name
+            - "hubspot_sync_first"
+            envFrom:
+            - configMapRef:
+                name: config-env
+          restartPolicy: OnFailure

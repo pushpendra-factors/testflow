@@ -168,3 +168,29 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 		assert.Equal(t, 1, len(jsonRespMap))
 	})
 }
+
+func TestUpdateHubspotProjectSettings(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
+		"int_hubspot_api_key": "1234",
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+	var jsonResponseMap map[string]interface{}
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotNil(t, jsonResponseMap["int_hubspot_api_key"])
+
+	w = sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
+		"int_hubspot_portal_id": 1234,
+	})
+
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.Equal(t, float64(1234), jsonResponseMap["int_hubspot_portal_id"])
+}
