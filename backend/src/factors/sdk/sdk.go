@@ -1609,7 +1609,6 @@ func AMPUpdateEventPropertiesByToken(token string,
 	logCtx := log.WithField("project_id", projectID)
 
 	parsedSourceURL, err := U.ParseURLStable(reqPayload.SourceURL)
-
 	if err != nil {
 		logCtx.WithField("canonical_url", reqPayload.SourceURL).WithError(err).Error(
 			"Failed to parsing page url from canonical_url query param on amp sdk update event properties")
@@ -1620,7 +1619,13 @@ func AMPUpdateEventPropertiesByToken(token string,
 
 	userID, errCode := store.GetStore().GetUserIDByAMPUserID(projectID, reqPayload.ClientID)
 	if errCode != http.StatusFound {
-		return errCode, &Response{Error: "Invalid amp user."}
+		if errCode == http.StatusNotFound {
+			logCtx.WithField("client_id", reqPayload.ClientID).
+				Warn("User not found on amp update event_properties.")
+			return http.StatusBadRequest, &Response{Error: "Invalid amp user."}
+		}
+
+		return http.StatusInternalServerError, &Response{Error: "Invalid amp user."}
 	}
 
 	logCtx = logCtx.WithField("user_id", userID).WithField("page_url", pageURL)

@@ -2063,6 +2063,50 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 	assert.Equal(t, timestamp, event.Timestamp)
 }
 
+func TestSDKUpdateEventProperties(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := U.UnixTimeBeforeAWeek()
+	clientId := U.RandomLowerAphaNumString(5)
+	request := &SDK.AMPTrackPayload{
+		ClientID:  clientId,
+		SourceURL: "https://example.com/a/b",
+		Timestamp: timestamp,
+	}
+	errCode, response := SDK.AMPTrackByToken(project.Token, request)
+	assert.Equal(t, http.StatusOK, errCode)
+	event, errCode := store.GetStore().GetEventById(project.ID, response.EventId, "")
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, timestamp, event.Timestamp)
+
+	updateRequest := &SDK.AMPUpdateEventPropertiesPayload{
+		ClientID:          clientId,
+		SourceURL:         "https://example.com/a/b",
+		Timestamp:         timestamp,
+		PageScrollPercent: 98,
+		PageSpentTime:     99,
+	}
+	errCode, _ = SDK.AMPUpdateEventPropertiesByToken(project.Token, updateRequest)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	event, errCode = store.GetStore().GetEventById(project.ID, response.EventId, "")
+	assert.Equal(t, http.StatusFound, errCode)
+	properties, err := U.DecodePostgresJsonbAsPropertiesMap(&event.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(99), (*properties)[U.EP_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(98), (*properties)[U.EP_PAGE_SCROLL_PERCENT])
+
+	updateRequest2 := &SDK.AMPUpdateEventPropertiesPayload{
+		ClientID:          "amp-random",
+		SourceURL:         "https://example.com/a/b",
+		Timestamp:         timestamp,
+		PageScrollPercent: 98,
+		PageSpentTime:     99,
+	}
+	errCode, _ = SDK.AMPUpdateEventPropertiesByToken(project.Token, updateRequest2)
+	assert.Equal(t, http.StatusBadRequest, errCode)
+}
+
 func TestSDKAMPIdentifyHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitSDKServiceRoutes(r)
