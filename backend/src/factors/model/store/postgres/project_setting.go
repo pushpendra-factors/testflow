@@ -305,6 +305,33 @@ func (pg *Postgres) UpdateProjectSettings(projectId uint64, settings *model.Proj
 		*settings.IntAdwordsCustomerAccountId = strings.Join(cleanAdwordsAccountIds, ",")
 	}
 
+	if settings.IntHubspotApiKey != "" {
+		existingSettings, status := pg.GetProjectSetting(projectId)
+		if status != http.StatusFound {
+			return nil, http.StatusInternalServerError
+		}
+
+		if existingSettings.IntHubspotApiKey != settings.IntHubspotApiKey {
+			hubspotIntegrationAccount, err := model.GetHubspotIntegrationAccount(settings.IntHubspotApiKey)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectId}).WithError(
+					err).Error("Error fetching hubspot account details on integration.") // log error but still allow integration
+			}
+
+			if existingSettings.IntHubspotPortalID != nil {
+				if existingSettings.IntHubspotApiKey != "" &&
+					hubspotIntegrationAccount.PortalID != *existingSettings.IntHubspotPortalID {
+					log.WithFields(log.Fields{"project_id": projectId, "previous_portal_id": *existingSettings.IntHubspotPortalID,
+						"new_portal_id": hubspotIntegrationAccount.PortalID}).Error("Portal id mismatch on hubspot re integration.")
+					settings.IntHubspotPortalID = &hubspotIntegrationAccount.PortalID
+				}
+			} else {
+				settings.IntHubspotPortalID = &hubspotIntegrationAccount.PortalID
+			}
+
+		}
+	}
+
 	var updatedProjectSetting model.ProjectSetting
 	if err := db.Model(&updatedProjectSetting).Where("project_id = ?",
 		projectId).Updates(settings).Error; err != nil {
@@ -482,7 +509,7 @@ func (pg *Postgres) GetAllHubspotProjectSettings() ([]model.HubspotProjectSettin
 	db := C.GetServices().Db
 	err := db.Table("project_settings").Where(
 		"int_hubspot='true' AND int_hubspot_api_key IS NOT NULL ").Select(
-		"project_id, int_hubspot_api_key as api_key").Find(
+		"project_id, int_hubspot_api_key as api_key, int_hubspot_first_time_synced as is_first_time_synced").Find(
 		&hubspotProjectSettings).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get hubspot project_settings.")

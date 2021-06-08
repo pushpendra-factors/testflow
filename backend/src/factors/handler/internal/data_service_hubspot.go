@@ -45,8 +45,45 @@ func DataServiceHubspotAddDocumentHandler(c *gin.Context) {
 }
 
 func DataServiceHubspotGetSyncInfoHandler(c *gin.Context) {
+	isFirstTime := c.Query("is_first_time") == "true"
+
+	if isFirstTime {
+		syncInfo, errCode := store.GetStore().GetHubspotFirstSyncProjectsInfo()
+		c.JSON(errCode, syncInfo)
+		return
+	}
+
 	syncInfo, errCode := store.GetStore().GetHubspotSyncInfo()
 	c.JSON(errCode, syncInfo)
+	return
+}
+
+type HubspotFirstTimeSyncRequestPayload struct {
+	Status   string                           `json:"status"`
+	Failures []model.HubspotProjectSyncStatus `json:"failures"`
+	Success  []model.HubspotProjectSyncStatus `json:"success"`
+}
+
+func DataServiceHubspotUpdateFirstTimeSyncInfo(c *gin.Context) {
+	r := c.Request
+
+	var hubspotFirstTimeSyncRequestPayload HubspotFirstTimeSyncRequestPayload
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&hubspotFirstTimeSyncRequestPayload); err != nil {
+		log.WithError(err).Error("Failed to decode Json request on hubspot first time sync update.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Invalid request json."})
+		return
+	}
+
+	status := store.GetStore().UpdateHubspotProjectSettingsBySyncStatus(hubspotFirstTimeSyncRequestPayload.Success,
+		hubspotFirstTimeSyncRequestPayload.Failures)
+	if status != http.StatusAccepted {
+		c.Status(status)
+		return
+	}
+
+	c.Status(http.StatusOK)
 }
 
 func DataServiceGetHubspotFormDocumentsHandler(c *gin.Context) {

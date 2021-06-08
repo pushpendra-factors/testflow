@@ -1248,3 +1248,117 @@ func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {
 	assert.Equal(t, toCustomerTimestamp/1000, eventNameTimestamp[eventNameLifecycleStageCustomer])
 	assert.Equal(t, (toJunkTimestamp-1)/1000+1, eventNameTimestamp[eventNameLifecycleStageJunk]) // timestamp+1
 }
+
+func sendGetHubspotFirstSyncInfo(r *gin.Engine) *httptest.ResponseRecorder {
+
+	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("http://localhost:8089/data_service/hubspot/documents/sync_info?is_first_time=true"))
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating request")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func sendUpdateHubspotFirstSyncInfo(r *gin.Engine, updateInfo map[string]interface{}) *httptest.ResponseRecorder {
+
+	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("http://localhost:8089/data_service/hubspot/documents/sync_info")).
+		WithPostParams(updateInfo)
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating request")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestHubspotFirstSyncStatus(t *testing.T) {
+	project1, agent1, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	H.InitDataServiceRoutes(r)
+
+	project2, agent2, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	w := sendUpdateProjectSettingReq(r, project1.ID, agent1, map[string]interface{}{
+		"int_hubspot_api_key": "1234", "int_hubspot": true,
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = sendUpdateProjectSettingReq(r, project2.ID, agent2, map[string]interface{}{
+		"int_hubspot_api_key": "1234", "int_hubspot": true,
+	})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	project, status := store.GetStore().GetProjectSetting(project1.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, false, project.IntHubspotFirstTimeSynced)
+	project, status = store.GetStore().GetProjectSetting(project2.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, false, project.IntHubspotFirstTimeSynced)
+
+	w = sendGetHubspotFirstSyncInfo(r)
+	assert.Equal(t, http.StatusFound, w.Code)
+
+	var jsonResponseMap map[string]map[string]map[string]interface{}
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.Equal(t, float64(0), jsonResponseMap["last_sync_info"][fmt.Sprintf("%d", project1.ID)]["company"])
+	assert.Equal(t, float64(0), jsonResponseMap["last_sync_info"][fmt.Sprintf("%d", project1.ID)]["contact"])
+	assert.Equal(t, float64(0), jsonResponseMap["last_sync_info"][fmt.Sprintf("%d", project1.ID)]["deal"])
+
+	assert.Equal(t, float64(0), jsonResponseMap["last_sync_info"][fmt.Sprintf("%d", project2.ID)]["company"])
+	assert.Equal(t, float64(0), jsonResponseMap["last_sync_info"][fmt.Sprintf("%d", project2.ID)]["contact"])
+	assert.Equal(t, float64(0), jsonResponseMap["last_sync_info"][fmt.Sprintf("%d", project2.ID)]["deal"])
+
+	payload := map[string]interface{}{
+		"status": "success",
+		"success": []map[string]interface{}{
+			{
+				"project_id": project1.ID,
+				"doc_type":   "contact",
+				"status":     "success",
+			},
+			{
+				"project_id": project1.ID,
+				"doc_type":   "company",
+				"status":     "success",
+			},
+			{
+				"project_id": project1.ID,
+				"doc_type":   "deals",
+				"status":     "success",
+			},
+			{
+				"project_id": project2.ID,
+				"doc_type":   "contact",
+				"status":     "success",
+			},
+			{
+				"project_id": project2.ID,
+				"doc_type":   "company",
+				"status":     "success",
+			},
+			{
+				"project_id": project2.ID,
+				"doc_type":   "deals",
+				"status":     "success",
+			},
+		},
+	}
+	w = sendUpdateHubspotFirstSyncInfo(r, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	project, status = store.GetStore().GetProjectSetting(project1.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, true, project.IntHubspotFirstTimeSynced)
+	project, status = store.GetStore().GetProjectSetting(project2.ID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, true, project.IntHubspotFirstTimeSynced)
+
+}

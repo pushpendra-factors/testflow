@@ -215,6 +215,8 @@ type Model interface {
 	GetSyncedHubspotDocumentByFilter(projectId uint64, id string, docType, action int) (*model.HubspotDocument, int)
 	CreateHubspotDocument(projectID uint64, document *model.HubspotDocument) int
 	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
+	GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, int)
+	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus) int
 	GetHubspotFormDocuments(projectID uint64) ([]model.HubspotDocument, int)
 	GetHubspotDocumentsByTypeForSync(projectID uint64, typ int) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string, stage string) (*model.HubspotDocument, int)

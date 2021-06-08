@@ -5,6 +5,8 @@ import (
 	"errors"
 	"factors/util"
 	U "factors/util"
+	"fmt"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -91,6 +93,13 @@ type HubspotProperty struct {
 // HubspotDocumentProperties only holds the properties object of the doucment
 type HubspotDocumentProperties struct {
 	Properties map[string]HubspotProperty `json:"properties"`
+}
+
+// HubspotProjectSyncStatus hubspot project sync status
+type HubspotProjectSyncStatus struct {
+	ProjectID uint64 `json:"project_id"`
+	DocType   string `json:"doc_type"`
+	Status    string `json:"status"`
 }
 
 // GetHubspotMappedDataType returns mapped factors data type
@@ -384,4 +393,37 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 	}
 
 	return createdAt, nil
+}
+
+type HubspotIntegrationAccount struct {
+	PortalID  int    `json:"portalId"`
+	TimeZone  string `json:"timeZone"`
+	Currency  string `json:"currency"`
+	UtcOffset string `json:"utcOffset"`
+}
+
+// GetHubspotIntegrationAccount gets hubspot integration account using access token
+func GetHubspotIntegrationAccount(apiKey string) (*HubspotIntegrationAccount, error) {
+	var hubspotIntegrationAccount HubspotIntegrationAccount
+
+	if apiKey == "" {
+		return &hubspotIntegrationAccount, errors.New("missing hubspot api key")
+	}
+
+	url := "https://api.hubapi.com/integrations/v1/me?hapikey=" + apiKey
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return &hubspotIntegrationAccount, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return &hubspotIntegrationAccount, fmt.Errorf("error getting integration account using hubspot access token")
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&hubspotIntegrationAccount)
+	if err != nil {
+		return &hubspotIntegrationAccount, err
+	}
+	return &hubspotIntegrationAccount, nil
 }

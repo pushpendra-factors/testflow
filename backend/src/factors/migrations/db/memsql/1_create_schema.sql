@@ -361,6 +361,8 @@ CREATE TABLE IF NOT EXISTS project_settings (
     int_adwords_customer_account_id text,
     int_hubspot boolean NOT NULL DEFAULT FALSE,
     int_hubspot_api_key text,
+    int_hubspot_portal_id int,
+    int_hubspot_first_time_synced boolean NOT NULL DEFAULT FALSE,
     int_facebook_email text,
     int_facebook_access_token text,
     int_facebook_agent_uuid text,
