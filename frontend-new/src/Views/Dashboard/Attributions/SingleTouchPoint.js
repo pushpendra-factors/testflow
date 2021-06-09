@@ -20,7 +20,7 @@ function SingleTouchPoint({
   resultState,
   unit,
   section,
-  attr_dimensions
+  attr_dimensions,
 }) {
   const maxAllowedVisibleProperties = 5;
   const [chartsData, setChartsData] = useState([]);
@@ -37,7 +37,12 @@ function SingleTouchPoint({
     const firstEnabledDimension = attr_dimensions.filter(
       (d) => d.touchPoint === touchpoint && d.enabled
     )[0];
-    const formattedData = formatData(data, event, visibleIndices, firstEnabledDimension.responseHeader);
+    const formattedData = formatData(
+      data,
+      event,
+      visibleIndices,
+      firstEnabledDimension ? firstEnabledDimension.responseHeader : touchpoint
+    );
     setChartsData(formattedData);
   }, [data, event, visibleIndices, touchpoint, attr_dimensions]);
 

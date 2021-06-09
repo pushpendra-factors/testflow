@@ -34,7 +34,7 @@ function AttributionsChart({
       data,
       event,
       visibleIndices,
-      firstEnabledDimension.responseHeader
+      firstEnabledDimension ? firstEnabledDimension.responseHeader : touchpoint
     );
     setChartsData(formattedData);
   }, [data, event, visibleIndices, touchpoint, attr_dimensions]);
