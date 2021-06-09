@@ -30,7 +30,7 @@ spec:
         cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
       - name: appserver-memsql
-        image: us.gcr.io/factors-staging/app-server-memsql:v3.16-1d6b430-721
+        image: us.gcr.io/factors-staging/app-server:65072f80c
         ports:
         - containerPort: 8080
         volumeMounts:
@@ -64,6 +64,8 @@ spec:
         args:          
           - --env
           - $(ENV)
+          - --app_name
+          - "appserver_memsql"
           - --api_http_port
           - $(API_HTTP_PORT)
           - --etcd
@@ -130,10 +132,15 @@ spec:
           - $(GCP_PROJECT_ID)
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
+          - --allow_smart_event_rule_creation
+          - --lookback_window_event_user_cache
+          - "10"
+          - --project_analytics_whitelisted_uuids
+          - a2d600fc-75b4-4384-9bda-7a039f6e64c9
           - --primary_datastore
-          - "memsql"
-          - --whitelisted_projects_ids_event_user_cache
-          - "2,37"
+          - memsql
+          - --disable_mql_db_writes
+          - --disable_mql_redis_writes
         env:
           - name: MY_POD_IP
             valueFrom:

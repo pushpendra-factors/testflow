@@ -17,6 +17,9 @@
       "hosting": {
         "production": [
           "factors-production"
+        ],
+        "flash-production": [
+          "flash-production-1"
         ]
       }
     }
