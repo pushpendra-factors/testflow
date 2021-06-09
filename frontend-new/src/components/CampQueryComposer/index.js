@@ -99,6 +99,10 @@ const CampQueryComposer = ({ activeProject, channel,
 
     const setMeasuresToState = (msrs) => {
         setCampMeasures(msrs);
+        if(!msrs.length) {
+            setCampFilters([]);
+            setCampGroupBy([]);
+        }
     }
 
     const renderMeasuresBlock = () => {
@@ -120,6 +124,15 @@ const CampQueryComposer = ({ activeProject, channel,
         setCampFilters(fltrs);
         closeFilter();
     };
+
+    const editFilter = (index, val) => {
+        const fltrs = [...filters];
+        let value = Object.assign({}, val);
+        value.props[2] = val.props[2].replace(' ', '_');
+        fltrs[index] = value;
+        setCampFilters(fltrs);
+        closeFilter();
+    }
 
     const closeFilter = () => {
         setFilterDD(false);
@@ -147,6 +160,8 @@ const CampQueryComposer = ({ activeProject, channel,
                             delBtnClass={styles.filterDelBtn}
                             delIcon={`trash`}
                             deleteFilter={delFilter}
+                            insertFilter={(val) => editFilter(id, val)}
+                            closeFilter={closeFilter}
                             typeProps={{ channel: channel }} filterProps={filterProps}
                             propsConstants={Object.keys(filterProps)}
                         ></CampFilterBlock>
@@ -164,6 +179,7 @@ const CampQueryComposer = ({ activeProject, channel,
                             typeProps={{ channel: channel }} filterProps={filterProps}
                             propsConstants={Object.keys(filterProps)}
                             insertFilter={addFilter}
+                            deleteFilter={() => closeFilter()}
                             closeFilter={closeFilter}
                         ></CampFilterBlock>
                     </div>

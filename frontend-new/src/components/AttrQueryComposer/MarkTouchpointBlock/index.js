@@ -44,6 +44,25 @@ const MarkTouchpointBlock = ({
     }
   }, [campaign_config, touchPoint]);
 
+  const editFilter = (index, val) => {
+    const fltrs = [...filters];
+    fltrs[index] = val;
+    setTouchPointFilters(fltrs);
+    setFilterDD(false);
+  }
+
+  const delFilter = (index) => {
+    const fltrs = [...filters].filter((f, i) => i !== index);
+    setTouchPointFilters(fltrs);
+    setFilterDD(false);
+  }
+
+  const addFilterBlock = () => { setFilterDD(true) };
+
+  const deleteItem = () => {
+    setTouchpoint("");
+    setFilters([]);
+  };
   const toggleTouchPointSelect = () => {
     setSelectVisible(!selectVisible);
   };
@@ -101,20 +120,6 @@ const MarkTouchpointBlock = ({
     setFilterDD(false);
   };
 
-  const delFilter = (index) => {
-    const fltrs = [...filters].filter((f, i) => i !== index);
-    setTouchPointFilters(fltrs);
-    setFilterDD(false);
-  };
-
-  const addFilterBlock = () => {
-    setFilterDD(true);
-  };
-
-  const deleteItem = () => {
-    setTouchpoint('');
-  };
-
   const ifTouchPointFilter = () => {
     if (
       touchPoint === 'AdGroup' &&
@@ -161,40 +166,39 @@ const MarkTouchpointBlock = ({
       filters.forEach((filt, id) => {
         filtrs.push(
           <div key={id} className={`mt-4`}>
-            <AttrFilterBlock
-              activeProject={activeProject}
+            <AttrFilterBlock activeProject={activeProject}
               index={id}
-              blockType={'event'}
-              filterType={'channel'}
+              blockType={'event'} filterType={'channel'}
               filter={filt}
+              insertFilter={(val) => editFilter(id, val)}
+              closeFilter={() => setFilterDD(false)}
               deleteFilter={delFilter}
-              typeProps={{ channel: 'all_ads' }}
-              filterProps={filterProps}
+              closeFilter={() => setFilterDD(false)}
+              typeProps={{ channel: "all_ads" }} filterProps={filterProps}
               propsConstants={Object.keys(filterProps)}
             ></AttrFilterBlock>
           </div>
-        );
-      });
+        )
+      })
 
       if (filterDD) {
         filtrs.push(
           <div key={filtrs.length} className={`mt-4`}>
-            <AttrFilterBlock
-              activeProject={activeProject}
-              blockType={'event'}
-              filterType={'channel'}
+            <AttrFilterBlock activeProject={activeProject}
+              blockType={'event'} filterType={'channel'}
+
               delBtnClass={styles.filterDelBtn}
-              typeProps={{ channel: 'all_ads' }}
-              filterProps={filterProps}
+              typeProps={{ channel: 'all_ads' }} filterProps={filterProps}
               propsConstants={Object.keys(filterProps)}
               insertFilter={insertFilter}
+              deleteFilter={() => setFilterDD(false)}
               closeFilter={() => setFilterDD(false)}
             ></AttrFilterBlock>
           </div>
-        );
+        )
       }
 
-      return <div className={styles.block}>{filtrs}</div>;
+      return (<div className={styles.block}>{filtrs}</div>);
     }
   };
 

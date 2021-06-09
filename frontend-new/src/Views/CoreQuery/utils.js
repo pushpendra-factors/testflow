@@ -669,7 +669,7 @@ export const getAttributionStateFromRequestQuery = (
         props: [pr.pr, pr.ty, pr.en],
         values: val,
       });
-    } else {
+    } else if (pr.ty === 'categorical') {
       filters[filters.length - 1].values.push(pr.va);
     }
   });
@@ -677,11 +677,16 @@ export const getAttributionStateFromRequestQuery = (
   const touchPointFilters = [];
   if (requestQuery.attribution_key_f) {
     requestQuery.attribution_key_f.forEach((pr) => {
+      if (pr.lop === 'AND') {
+        let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
       touchPointFilters.push({
         operator: reverseOperatorMap[pr.op],
-        props: [pr.pr, pr.ty, pr.en],
-        values: [pr.va],
+        props: [pr.pr, pr.ty, pr.attribution_key],
+        values: val,
       });
+    } else if (pr.ty === 'categorical') {
+      touchPointFilters[touchPointFilters.length - 1].values.push(pr.va);
+    }
     });
   }
 
@@ -725,12 +730,13 @@ export const getAttributionStateFromRequestQuery = (
       const linkedFilters = [];
       le.pr.forEach((pr) => {
         if (pr.lop === 'AND') {
+          let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
           linkedFilters.push({
             operator: reverseOperatorMap[pr.op],
             props: [pr.pr, pr.ty, pr.en],
-            values: [pr.va],
+            values: val,
           });
-        } else {
+        } else if (pr.ty === 'categorical') {
           linkedFilters[linkedFilters.length - 1].values.push(pr.va);
         }
       });
