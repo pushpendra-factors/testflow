@@ -113,6 +113,32 @@
           ]
         }
       ]
+    },
+    {
+      "target": "flash-production",
+      "public": "dist/production",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers" : [
+        {
+          "source" : "/assets/factors.js",
+          "headers" : [ 
+            {
+              "key" : "Cache-Control",
+              "value" : "public, max-age=3600, s-maxage=3600"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

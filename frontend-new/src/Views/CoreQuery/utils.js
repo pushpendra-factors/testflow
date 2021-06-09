@@ -690,12 +690,13 @@ export const getAttributionStateFromRequestQuery = (
     if (dimension.touchPoint === touchpoint) {
       return {
         ...dimension,
-        enabled:
-          requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
-            -1 ||
-          requestQuery.attribution_key_custom_dimensions?.indexOf(
-            dimension.header
-          ) > -1,
+        enabled: !requestQuery.attribution_key_dimensions
+          ? dimension.defaultValue
+          : requestQuery.attribution_key_dimensions?.indexOf(dimension.header) >
+              -1 ||
+            requestQuery.attribution_key_custom_dimensions?.indexOf(
+              dimension.header
+            ) > -1,
       };
     }
     return dimension;

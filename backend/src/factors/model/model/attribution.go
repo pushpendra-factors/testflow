@@ -283,7 +283,8 @@ const (
 // AddDefaultKeyDimensionsToAttributionQuery adds default custom Dimensions for supporting existing old/saved queries
 func AddDefaultKeyDimensionsToAttributionQuery(query *AttributionQuery) {
 
-	if query.AttributionKeyDimension == nil || len(query.AttributionKeyDimension) == 0 {
+	if (query.AttributionKeyDimension == nil || len(query.AttributionKeyDimension) == 0) &&
+		(query.AttributionKeyCustomDimension == nil || len(query.AttributionKeyCustomDimension) == 0) {
 
 		switch query.AttributionKey {
 		case AttributionKeyCampaign:
@@ -621,7 +622,10 @@ func GetRowsByMaps(attributionKey string, dimensions []string, attributionData *
 			rows = append(rows, row)
 		}
 	}
-	rows = append(rows, nonMatchingRow)
+	if len(rows) == 0 {
+		// In case of empty result, send a row of zeros
+		rows = append(rows, nonMatchingRow)
+	}
 	return rows
 }
 
