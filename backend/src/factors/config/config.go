@@ -166,6 +166,7 @@ type Configuration struct {
 	// Added as pointer to prevent accidental writes from other services while testing.
 	DisableMemSQLDBWrites                *bool
 	DisableMemSQLRedisWrites             *bool
+	DisableMemSQLQueryCache              *bool
 	AllowedCampaignEnrichmentByProjectID string
 	UseOpportunityAssociationByProjectID string
 	AllowChannelGroupingForProjectIDs    string
@@ -683,6 +684,18 @@ func DisableMemSQLRedisWrites() bool {
 		return *GetConfig().DisableMemSQLRedisWrites
 	}
 	return true
+}
+
+// DisableMemSQLQueryCache If dashboard and query cache to be disabled. Defaults to false unless specified explicitly.
+func DisableMemSQLQueryCache() bool {
+	if !UseMemSQLDatabaseStore() || GetConfig().Env == DEVELOPMENT || GetConfig().Env == TEST {
+		return false
+	}
+
+	if GetConfig().DisableMemSQLQueryCache != nil {
+		return *GetConfig().DisableMemSQLQueryCache
+	}
+	return false
 }
 
 func NewRequestBuilderWithPrefix(methodType, URL string) *U.RequestBuilder {

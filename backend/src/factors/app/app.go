@@ -47,6 +47,7 @@ func main() {
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 	disableMemSQLDBWrites := flag.Bool("disable_mql_db_writes", true, "To disable DB writes when using MemSQL")
 	disableMemSQLRedisWrites := flag.Bool("disable_mql_redis_writes", true, "To disable redis writes when using MemSQL")
+	disableMemSQLQueryCache := flag.Bool("disable_mql_query_cache", false, "To disable dashboard and query analytics cache")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -171,6 +172,7 @@ func main() {
 		EnableMQLAPI:                            *enableMQLAPI,
 		DisableMemSQLDBWrites:                   disableMemSQLDBWrites,
 		DisableMemSQLRedisWrites:                disableMemSQLRedisWrites,
+		DisableMemSQLQueryCache:                 disableMemSQLQueryCache,
 		AllowChannelGroupingForProjectIDs:       *allowChannelGroupingForProjectIDs,
 	}
 
