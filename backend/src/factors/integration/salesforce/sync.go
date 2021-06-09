@@ -561,7 +561,7 @@ func getLeadIDForOpportunityRecords(projectID uint64, records []model.Salesforce
 			if leadID != "" {
 				convertOppID := util.GetPropertyValueAsString(objectRecords[i]["ConvertedOpportunityId"])
 				if convertOppID != "" {
-					if _, exist := oppToLeadID[convertOppID]; exist {
+					if leadID, exist := oppToLeadID[convertOppID]; exist && leadID != "" {
 						log.WithFields(log.Fields{"lead_id": leadID}).Error("Duplicate opportunity id on multiple leads")
 					}
 

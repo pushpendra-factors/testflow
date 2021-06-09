@@ -357,7 +357,7 @@ func enrichAccount(projectID uint64, document *model.SalesforceDocument, salesfo
 
 	customerUserID, _ := getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	if customerUserID == "" {
-		logCtx.Error("Skipping user identification on salesforce account sync. No customer_user_id on properties.")
+		logCtx.Warn("Skipping user identification on salesforce account sync. No customer_user_id on properties.")
 	}
 
 	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document, customerUserID)
@@ -602,7 +602,7 @@ type OpportunityChildRelationship struct {
 	OppLeadID              string                             `json:"opportunity_to_lead"`
 }
 
-var errMissingOpportunityLeadAndContact = errors.New("missing lead and contact id")
+var errMissingOpportunityLeadAndContact = errors.New("missing lead and contact record for opportunity link")
 
 func getOpportuntityLeadAndContactID(document *model.SalesforceDocument) (string, string, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": document.ProjectID, "doc_id": document.ID, "doc_type": document.Type})
@@ -665,7 +665,7 @@ func getOpportunityLinkedLeadOrContactDocument(projectID uint64, document *model
 		}
 	}
 
-	return nil, errors.New("missing lead and contact record for opportunity link")
+	return nil, errMissingOpportunityLeadAndContact
 }
 
 func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, salesforceSmartEventNames []SalesforceSmartEventName) int {
@@ -722,7 +722,7 @@ func enrichOpportunities(projectID uint64, document *model.SalesforceDocument, s
 		customerUserID, userID = getCustomerUserIDFromProperties(projectID, *enProperties, model.GetSalesforceAliasByDocType(document.Type), &model.SalesforceProjectIdentificationFieldStore)
 	}
 
-	if customerUserID != "" {
+	if customerUserID != "" || userID != "" {
 		if userID != "" {
 			trackPayload.UserId = userID // will also handle opportunity updated event which is not stiched with other object
 			eventID, eventUserID, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document, "")
