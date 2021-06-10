@@ -16,6 +16,7 @@ from scripts.facebook import *
 from .base_extract import BaseExtract
 
 
+# TODO - Add number of lower class file paths changed.
 class BaseReportExtract(BaseExtract):
     # Currently not treating this as configuration Related Context.
     NAME = ""
@@ -38,7 +39,7 @@ class BaseReportExtract(BaseExtract):
 
     # fields + metrics.
     def get_fields(self):
-        return list(itertools.chain(self.FIELDS, self.METRICS))
+        pass
 
     def get_destinations(self):
         return self.destinations
@@ -50,12 +51,7 @@ class BaseReportExtract(BaseExtract):
         return self.SEGMENTS
 
     def get_url(self):
-        curr_timestamp_in_string = TimeUtil.get_string_of_specific_format_from_timestamp(self.curr_timestamp,
-                                                                                         '%Y-%m-%d')
-        time_range = {'since': curr_timestamp_in_string, 'until': curr_timestamp_in_string}
-        url_ = self.UNFORMATTED_URL.format(self.customer_account_id, self.get_segments(), time_range, self.get_fields(),
-                                           self.int_facebook_access_token, self.LEVEL_BREAKDOWN)
-        return url_
+        pass
 
     def get_next_timestamps(self):
         if self.input_from_timestamp is not None and self.input_to_timestamp is not None:
