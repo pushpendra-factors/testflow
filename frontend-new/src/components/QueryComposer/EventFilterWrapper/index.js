@@ -106,6 +106,12 @@ export default function EventFilterWrapper({
 
   }, [filterProps])
 
+  // const getGroupLabel = (grp) => {
+  //   if(grp === 'event') return 'Event Properties';
+  //   if(grp === 'user') return 'User Properties';
+  //   return grp;
+  // }
+
   const parseDateRangeFilter = (fr, to) => {
     return (moment(fr).format('MMM DD, YYYY') + ' - ' +
               moment(to).format('MMM DD, YYYY'));
@@ -186,26 +192,41 @@ export default function EventFilterWrapper({
         if(!dropDownValues[newFilterState.props[0]]) {
           fetchUserPropertyValues(activeProject.id, newFilterState.props[0]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[newFilterState.props[0]] = res.data;
+            ddValues[newFilterState.props[0]] = [...res.data, '$none'];
             setDropDownValues(ddValues);
-          })
+          }).catch(() => {
+            console.log(err)
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[newFilterState.props[0]] = ['$none'];
+            setDropDownValues(ddValues);
+          });
         }
     } else if(newFilterState.props[2] === 'event') {
       if(!dropDownValues[newFilterState.props[0]]) {
         fetchEventPropertyValues(activeProject.id, event.label, newFilterState.props[0]).then(res => {
           const ddValues = Object.assign({}, dropDownValues);
-          ddValues[newFilterState.props[0]] = res.data;
+          ddValues[newFilterState.props[0]] = [...res.data, '$none'];
           setDropDownValues(ddValues);
-        })
+        }).catch(() => {
+          console.log(err)
+          const ddValues = Object.assign({}, dropDownValues);
+          ddValues[newFilterState.props[0]] = ['$none'];
+          setDropDownValues(ddValues);
+        });
       }
     } else {
       if(filterType === 'channel') {
         fetchChannelObjPropertyValues(activeProject.id, typeProps.channel, 
           newFilterState.props[2].replace(" ", "_"), newFilterState.props[0]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[newFilterState.props[0]] = res?.data?.result?.filter_values;
+            ddValues[newFilterState.props[0]] = [...res?.data?.result?.filter_values, '$none'];
             setDropDownValues(ddValues);
-        }).catch(err => console.log(err));
+        }).catch(() => {
+          console.log(err)
+          const ddValues = Object.assign({}, dropDownValues);
+          ddValues[newFilterState.props[0]] = ['$none'];
+          setDropDownValues(ddValues);
+        });
       }
     }
   }
@@ -485,18 +506,26 @@ export default function EventFilterWrapper({
         if(!dropDownValues[props[1]]) {
           fetchUserPropertyValues(activeProject.id,props[1]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[props[1]] = res.data;
+            ddValues[props[1]] = [...res.data, '$none'];
             setDropDownValues(ddValues);
-          });
+          }).catch(err => {
+            const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+          });;
         }
       }
       else if(props[3] === 'event') {
         if(!dropDownValues[props[0]]) {
           fetchEventPropertyValues(activeProject.id, event.label, props[1]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[props[1]] = res.data;
+            ddValues[props[1]] = [...res.data, '$none'];
             setDropDownValues(ddValues);
-          });
+          }).catch(err => {
+            const ddValues = Object.assign({}, dropDownValues);
+              ddValues[props[0]] = ['$none'];
+              setDropDownValues(ddValues);
+          });;
         }
       }
     } 

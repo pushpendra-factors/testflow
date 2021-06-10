@@ -4,10 +4,11 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
 import GroupSelect from '../../QueryComposer/GroupSelect';
-import FilterBlock from '../../QueryComposer/FilterBlock';
+import EventFilterWrapper from '../../QueryComposer/EventFilterWrapper';
 
 import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
+import { isArray } from 'lodash';
 
 const ConversionGoalBlock = ({
     eventGoal, 
@@ -51,6 +52,14 @@ const ConversionGoalBlock = ({
         eventGoalChange(updatedEvent);
     };
 
+    const editFiler = (index, val) => {
+        const updatedEvent = Object.assign({}, eventGoal);
+        const filt = Object.assign({}, val);
+        filt.operator = isArray(val.operator) ? val.operator[0] : val.operator;
+        updatedEvent.filters[index] = filt;
+        eventGoalChange(updatedEvent);
+    }
+
     const delFilter = (val) => {
         const updatedEvent = Object.assign({}, eventGoal);
         const filt = updatedEvent.filters.filter((v, i) => i !== val);
@@ -64,6 +73,7 @@ const ConversionGoalBlock = ({
 
     const deleteItem = () => {
         delEvent();
+        closeFilter();
     };
 
     const addFilterBlock = () => {
@@ -71,14 +81,15 @@ const ConversionGoalBlock = ({
     }
 
     const selectEventFilter = () => {
-          return <FilterBlock
+          return <EventFilterWrapper
           filterProps={filterProps}
           activeProject={activeProject}
           event={eventGoal}
+          deleteFilter={() => closeFilter()}
           insertFilter={addFilter}
           closeFilter={closeFilter}
           >
-          </FilterBlock>;
+          </EventFilterWrapper>;
     };
     
 
@@ -86,11 +97,21 @@ const ConversionGoalBlock = ({
         const filters = [];
         if (eventGoal && eventGoal?.filters?.length) {
             eventGoal.filters.forEach((filter, index) => {
-            filters.push(
-                        <div key={index} className={'fa--query_block--filters'}>
-                            <FilterBlock index={index} filter={filter} deleteFilter={delFilter} insertFilter={addFilter} closeFilter={closeFilter}></FilterBlock>
-                        </div>
-            );
+                let filterContent = filter;
+                filterContent.values = filter.props[1] === 'datetime' && isArray(filter.values)? filter.values[0] : filter.values;
+                filters.push(
+                            <div key={index} className={'fa--query_block--filters'}>
+                                <EventFilterWrapper index={index} 
+                                    filter={filter} 
+                                    filterProps={filterProps} 
+                                    activeProject={activeProject} 
+                                    deleteFilter={delFilter} 
+                                    insertFilter={(val) => editFiler(index, val)} 
+                                    closeFilter={closeFilter}
+                                    event={eventGoal}
+                                ></EventFilterWrapper>
+                            </div>
+                );
           });
         }
     
@@ -109,6 +130,7 @@ const ConversionGoalBlock = ({
         currentEventGoal.filters = [];
         eventGoalChange(currentEventGoal);
         setSelectVisible(false);
+        closeFilter();
     };
 
     const additionalActions = () => {

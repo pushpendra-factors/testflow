@@ -34,7 +34,10 @@ func getQueryCacheResponse(c *gin.Context, cacheResult model.QueryCacheResult, f
 
 // ShouldAllowHardRefresh To check from query api if hard refresh should be applied or return from cache.
 func ShouldAllowHardRefresh(from, to int64, hardRefresh bool) bool {
-	// If MemSQLStore, should refresh everytime.
+	if C.DisableMemSQLQueryCache() {
+		// Always do hard refresh if configured.
+		return true
+	}
 	return ((U.IsStartOfTodaysRange(from, U.TimeZoneStringIST) || U.Is30MinutesTimeRange(from, to)) && hardRefresh)
 }
 
@@ -55,9 +58,10 @@ func SleepIfHeaderSet(c *gin.Context) {
 // GetResponseIfCachedQuery Returns response for the query is cached.
 func GetResponseIfCachedQuery(c *gin.Context, projectID uint64, requestPayload model.BaseQuery,
 	resultContainer interface{}, forDashboard bool, reqID string) (bool, int, interface{}) {
+	if C.DisableMemSQLQueryCache() {
+		return false, http.StatusNotFound, nil
+	}
 
-	// Don't return from cache when using MemSQL.
-	// TODO(prateek): To be removed once stable in production.
 	if c.Request.Header.Get(model.QueryCacheRequestInvalidatedCacheHeader) == "true" {
 		model.DeleteQueryCacheKey(projectID, requestPayload)
 		return false, http.StatusNotFound, nil

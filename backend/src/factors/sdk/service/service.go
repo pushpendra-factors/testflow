@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 
-	swaggerDocs "factors/sdk_docs"
+	swaggerDocs "factors/sdk/docs"
 )
 
 // @title Factors SDK Service Backend Api

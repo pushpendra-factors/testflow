@@ -4,10 +4,11 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 
 import GroupSelect from '../../QueryComposer/GroupSelect';
-import FilterBlock from '../../QueryComposer/FilterBlock';
+import EventFilterWrapper from '../../QueryComposer/EventFilterWrapper';
 
 import { Button, Tooltip } from 'antd';
 import { SVG, Text } from 'factorsComponents';
+import { isArray } from 'lodash';
 
 const LinkedEventsBlock = ({
     linkEvent, 
@@ -51,6 +52,13 @@ const LinkedEventsBlock = ({
         linkEventChange(updatedEvent);
     };
 
+    const editFilter = (index, val) => {
+        const updatedEvent = Object.assign({}, linkEvent);
+        // const filt = updatedEvent.filters.filter(fil => JSON.stringify(fil) === JSON.stringify(val));
+        updatedEvent.filters[index] = val;
+        linkEventChange(updatedEvent);
+    }
+
     const delFilter = (val) => {
         const updatedEvent = Object.assign({}, linkEvent);
         const filt = updatedEvent.filters.filter((v, i) => i !== val);
@@ -64,6 +72,7 @@ const LinkedEventsBlock = ({
 
     const deleteItem = () => {
         delLinkEvent();
+        closeFilter();
     };
 
     const addFilterBlock = () => {
@@ -71,14 +80,16 @@ const LinkedEventsBlock = ({
     }
 
     const selectEventFilter = () => {
-          return <FilterBlock
-          filterProps={filterProps}
-          activeProject={activeProject}
-          event={linkEvent}
-          insertFilter={addFilter}
-          closeFilter={closeFilter}
+          return <EventFilterWrapper
+            filterProps={filterProps}
+            activeProject={activeProject}
+            event={linkEvent}
+            deleteFilter={() => closeFilter()}
+            insertFilter={addFilter}
+            closeFilter={closeFilter}
+            
           >
-          </FilterBlock>;
+          </EventFilterWrapper>;
     };
     
 
@@ -86,11 +97,24 @@ const LinkedEventsBlock = ({
         const filters = [];
         if (linkEvent && linkEvent?.filters?.length) {
             linkEvent.filters.forEach((filter, index) => {
-            filters.push(
-                        <div key={index} className={'fa--query_block--filters'}>
-                            <FilterBlock index={index} filter={filter} deleteFilter={delFilter} insertFilter={addFilter} closeFilter={closeFilter}></FilterBlock>
-                        </div>
-            );
+                
+                let filterContent = filter;
+                filterContent.values = filter.props[1] === 'datetime' && isArray(filter.values)? filter.values[0] : filter.values;
+                filters.push(
+                            <div key={index} className={'fa--query_block--filters'}>
+                                <EventFilterWrapper 
+                                    index={index} 
+                                    filter={filterContent} 
+                                    filterProps={filterProps}
+                                    activeProject={activeProject}
+                                    event={linkEvent}
+                                    deleteFilter={delFilter} 
+                                    insertFilter={(val) => editFilter(index, val)} 
+                                    closeFilter={closeFilter}>
+                                    
+                                </EventFilterWrapper>
+                            </div>
+                );
           });
         }
     

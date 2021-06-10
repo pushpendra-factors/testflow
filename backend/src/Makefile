@@ -35,7 +35,7 @@ serve-ds:
 	$(GOPATH)/bin/data-service
 
 build-sdk:
-	rm $(GOPATH)/bin/sdk-service; go build -o $(GOPATH)/bin/sdk-service $(GOPATH)/src/factors/sdk_service/sdk-service.go
+	rm $(GOPATH)/bin/sdk-service; go build -o $(GOPATH)/bin/sdk-service $(GOPATH)/src/factors/sdk/service/service.go
 
 serve-sdk:
 	$(GOPATH)/bin/sdk-service
@@ -354,7 +354,7 @@ build-api-doc:
 	cd $(GOPATH)/src/factors;../../bin/swag init -g app/app.go
 
 go-fmt:
-	cd $(GOPATH)/src/factors;gofmt -s -w -l model handler scripts tests util sdk sdk_service pattern pattern_client pattern_server data_service config
+	cd $(GOPATH)/src/factors;gofmt -s -w -l model handler scripts tests util sdk pattern pattern_client pattern_server data_service config
 
 test:
 	go test -failfast -v $(GOPATH)/src/factors/tests && go test -failfast -v $(GOPATH)/src/factors/pattern_server/store

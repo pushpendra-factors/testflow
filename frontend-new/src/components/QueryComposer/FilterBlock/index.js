@@ -180,7 +180,7 @@ export default function FilterBlock({
         if(!dropDownValues[newFilterState.props[0]]) {
           fetchUserPropertyValues(activeProject.id, newFilterState.props[0]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[newFilterState.props[0]] = res.data;
+            ddValues[newFilterState.props[0]] = [...res.data, '$none'];
             setDropDownValues(ddValues);
           })
         }
@@ -188,7 +188,7 @@ export default function FilterBlock({
       if(!dropDownValues[newFilterState.props[0]]) {
         fetchEventPropertyValues(activeProject.id, event.label, newFilterState.props[0]).then(res => {
           const ddValues = Object.assign({}, dropDownValues);
-          ddValues[newFilterState.props[0]] = res.data;
+          ddValues[newFilterState.props[0]] = [...res.data, '$none'];
           setDropDownValues(ddValues);
         })
       }

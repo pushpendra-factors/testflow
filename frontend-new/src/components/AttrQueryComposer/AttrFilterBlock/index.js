@@ -31,8 +31,9 @@ const defaultOpProps = {
 
 import { fetchEventPropertyValues, fetchUserPropertyValues, 
   fetchChannelObjPropertyValues } from 'Reducers/coreQuery/services';
+import AttrFilterSelect from '../AttrFilterSelect';
 
-export default function CampFilterBlock({ 
+export default function AttrFilterBlock({ 
   index, 
   blockType = 'event', 
   filterType = 'analytics',
@@ -84,15 +85,21 @@ export default function CampFilterBlock({
   });
 
   useEffect(() => {
-    if(filterType === 'channel') {
+    if(filter && filter.props[1] === 'categorical') {
+      setValuesByProps(filter.props)
+      setNewFilterState(filter);
+    }
+
+  }, [filter])
+
+  useEffect(() => {
       const filterDD = Object.assign({}, filterDropDownOptions);
       const propState = [];
       Object.keys(filterProps).forEach((k, i) => {
-        propState.push({label: k, icon: k.replace(' ', '_')});
+        propState.push({label: k, icon: k === 'event'? 'mouseclick' : k, values: filterProps[k]});
       })
       filterDD.props = propState;
       setFiltDD(filterDD);
-    }
 
   }, [filterProps])
 
@@ -102,20 +109,16 @@ export default function CampFilterBlock({
   }
 
   const renderFilterContent = () => {
-    let values;
-    if(filter.props[1] === 'categorical'){ 
-      values = filter.values.join(', ');
-    } else if (filter.props[1] === 'datetime') { 
-      const parsedValues = JSON.parse(filter.values);
-      values = parseDateRangeFilter(parsedValues.fr, parsedValues.to)
-    } else {
-      values = filter.values;
-    }
-    return (
-      <Button type={'link'} className={'ml-2 fa-button--truncate'}>
-        {filter.props[0] + ' ' + filter.operator + ' ' + values} 
-      </Button> 
-    );
+    return (<AttrFilterSelect 
+      propOpts={filterDropDownOptions.props} 
+      operatorOpts={filterDropDownOptions.operator}
+      valueOpts={dropDownValues}
+      applyFilter={applyFilter}
+      setValuesByProps={setValuesByProps}
+      filter={filter}
+    >
+
+    </AttrFilterSelect>)
   };
 
   const onSelectSearch = (userInput) => {
@@ -180,7 +183,12 @@ export default function CampFilterBlock({
         if(!dropDownValues[newFilterState.props[0]]) {
           fetchUserPropertyValues(activeProject.id, newFilterState.props[0]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[newFilterState.props[0]] = res.data;
+            ddValues[newFilterState.props[0]] = [...res.data, '$none'];
+            setDropDownValues(ddValues);
+          }).catch(() => {
+            console.log(err)
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[newFilterState.props[0]] = ['$none'];
             setDropDownValues(ddValues);
           })
         }
@@ -188,7 +196,12 @@ export default function CampFilterBlock({
       if(!dropDownValues[newFilterState.props[0]]) {
         fetchEventPropertyValues(activeProject.id, event.label, newFilterState.props[0]).then(res => {
           const ddValues = Object.assign({}, dropDownValues);
-          ddValues[newFilterState.props[0]] = res.data;
+          ddValues[newFilterState.props[0]] = [...res.data, '$none'];
+          setDropDownValues(ddValues);
+        }).catch(() => {
+          console.log(err)
+          const ddValues = Object.assign({}, dropDownValues);
+          ddValues[newFilterState.props[0]] = ['$none'];
           setDropDownValues(ddValues);
         })
       }
@@ -197,9 +210,14 @@ export default function CampFilterBlock({
         fetchChannelObjPropertyValues(activeProject.id, typeProps.channel, 
           newFilterState.props[2].replace(" ", "_"), newFilterState.props[0]).then(res => {
             const ddValues = Object.assign({}, dropDownValues);
-            ddValues[newFilterState.props[0]] = res?.data?.result?.filter_values;
+            ddValues[newFilterState.props[0]] = [...res?.data?.result?.filter_values, '$none'];
             setDropDownValues(ddValues);
-        }).catch(err => console.log(err));
+        }).catch(() => {
+          console.log(err)
+          const ddValues = Object.assign({}, dropDownValues);
+          ddValues[newFilterState.props[0]] = ['$none'];
+          setDropDownValues(ddValues);
+        })
       }
     }
   }
@@ -292,7 +310,7 @@ export default function CampFilterBlock({
                   if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                     valuesOptions.push(
                       <div title={val[0]} className={`fa-select-group-select--options`}
-                            onClick={() => optionClick([val[0], val[1], propsConstants[grpIndex]])} >
+                            onClick={() => optionClick([...val, propsConstants[grpIndex]])} >
                           {searchTerm.length > 0 &&
                            <div>
                             <SVG  color={'purple'} name={group.icon} extraClass={'self-center'}></SVG>
@@ -462,12 +480,9 @@ export default function CampFilterBlock({
     );
   };
 
-  const applyFilter = () => {
-    if (newFilterState.props.length &&
-      newFilterState.operator.length &&
-      newFilterState.values.length
-    ) {
-      insertFilter(newFilterState);
+  const applyFilter = (filterState) => {
+    if(filterState) {
+      insertFilter(filterState, index);
       closeFilter();
     }
   }
@@ -476,17 +491,72 @@ export default function CampFilterBlock({
     closeFilter();
   };
 
+  const setValuesByProps = (props) => {
+    if(filterType === 'channel') {
+      fetchChannelObjPropertyValues(activeProject.id, typeProps.channel, 
+        props[2].replace(" ", "_"), props[0]).then(res => {
+          const ddValues = Object.assign({}, dropDownValues);
+          ddValues[props[0]] = [...res?.data?.result?.filter_values, '$none'];
+          setDropDownValues(ddValues);
+      }).catch(err => {
+        const ddValues = Object.assign({}, dropDownValues);
+          ddValues[props[0]] = ['$none'];
+          setDropDownValues(ddValues);
+      });
+    }
+    if(props[2] === 'categorical' && filterType === 'analytics') {
+      if(props[3] === 'user') {
+        if(!dropDownValues[props[1]]) {
+          fetchUserPropertyValues(activeProject.id,props[1]).then(res => {
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[props[1]] = [...res.data, '$none'];
+            setDropDownValues(ddValues);
+          }).catch(err => {
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[props[0]] = ['$none'];
+            setDropDownValues(ddValues);
+          });
+        }
+      }
+      else if(props[3] === 'event') {
+        if(!dropDownValues[props[0]]) {
+          fetchEventPropertyValues(activeProject.id, event.label, props[1]).then(res => {
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[props[1]] = [...res.data, '$none'];
+            setDropDownValues(ddValues);
+          }).catch(err => {
+            const ddValues = Object.assign({}, dropDownValues);
+            ddValues[props[0]] = ['$none'];
+            setDropDownValues(ddValues);
+          });
+        }
+      }
+    } 
+  }
+
   const filterSelComp = () => {
+    // return <>
+    //   {renderFilterSelect()}
+    //   <div className={styles.filter_block__hd_overlay} onClick={onClickOutside}></div>
+    // </>
+
     return <>
-      {renderFilterSelect()}
-      <div className={styles.filter_block__hd_overlay} onClick={onClickOutside}></div>
+      <AttrFilterSelect 
+        propOpts={filterDropDownOptions.props} 
+        operatorOpts={filterDropDownOptions.operator}
+        valueOpts={dropDownValues}
+        applyFilter={applyFilter}
+        setValuesByProps={setValuesByProps}
+      >
+
+      </AttrFilterSelect>
     </>
   }
 
   return (
     <div className={`flex items-center relative w-full`}>
       {
-        filter && 
+        delFilter && 
           <Button 
           type="text" 
           onClick={delFilter}
@@ -498,7 +568,7 @@ export default function CampFilterBlock({
           filter && blockType === 'event' 
           && <Text level={8} type={'title'} extraClass={'m-0'} weight={'thin'}>{index >=1 ? 'and' : 'where'}</Text>
       }
-      <div className={'relative flex flex-grow'}>  
+      <div className={`relative flex flex-grow ${filter ? 'ml-2': ''}`}>  
         {filter
           ? renderFilterContent()
           : filterSelComp()
