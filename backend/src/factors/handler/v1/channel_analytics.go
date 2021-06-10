@@ -182,6 +182,9 @@ func ExecuteChannelQueryHandler(c *gin.Context) (interface{}, int, string, strin
 	if errCode != http.StatusOK {
 		model.DeleteQueryCacheKey(projectId, &queryPayload)
 		logCtx.Error("Failed to process query from DB")
+		if errCode == http.StatusPartialContent {
+			return queryResult, errCode, PROCESSING_FAILED, "Failed to process query from DB", true
+		}
 		return nil, errCode, PROCESSING_FAILED, "Failed to process query from DB", true
 	}
 	model.SetQueryCacheResult(projectId, &queryPayload, queryResult)

@@ -4,6 +4,7 @@ import (
 	"context"
 	FB "factors/beam"
 	C "factors/config"
+	Const "factors/constants"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -45,6 +46,7 @@ func initConf(config *C.Configuration) {
 	}
 	C.InitRedisConnection(config.RedisHost, config.RedisPort, true, 20, 0)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	Const.SetSmartPropertiesReservedNames()
 	C.KillDBQueriesOnExit()
 }
 

@@ -208,3 +208,15 @@ func (query *ChannelQueryV1) GetGroupByTimestamp() string {
 	}
 	return query.GroupByTimestamp.(string)
 }
+
+// buildErrorResult takes the failure msg and wraps it into a model.QueryResult object
+func BuildErrorResultForChannelsV1(errMsg string) *ChannelQueryResultV1 {
+	errMsg = "Query failed:" + " - " + errMsg
+	headers := []string{AliasError}
+	rows := make([][]interface{}, 0, 0)
+	row := make([]interface{}, 0, 0)
+	row = append(row, errMsg)
+	rows = append(rows, row)
+	errorResult := &ChannelQueryResultV1{Headers: headers, Rows: rows}
+	return errorResult
+}
