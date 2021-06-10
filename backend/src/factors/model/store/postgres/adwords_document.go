@@ -910,7 +910,6 @@ func (pg *Postgres) ExecuteAdwordsChannelQueryV1(projectID uint64, query *model.
 	if errCode != http.StatusOK {
 		return make([]string, 0, 0), make([][]interface{}, 0, 0), errCode
 	}
-	// to do : remove follwing
 	_, resultMetrics, err := pg.ExecuteSQL(sql, params, logCtx)
 	columns := append(selectKeys, selectMetrics...)
 	if err != nil {

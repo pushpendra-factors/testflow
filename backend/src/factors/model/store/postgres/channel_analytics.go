@@ -261,26 +261,34 @@ func (pg *Postgres) RunChannelGroupQuery(projectID uint64, queriesOriginal []mod
 	waitGroup.Add(U.MinInt(len(queries), AllowedGoroutines))
 	for index, query := range queries {
 		count++
-		go pg.runSingleChannelQuery(projectID, query, &resultGroup, index, &waitGroup, reqID)
+		go pg.runSingleChannelQuery(projectID, query, &resultGroup.Results[index], &waitGroup, reqID)
 		if count%AllowedGoroutines == 0 {
 			waitGroup.Wait()
 			waitGroup.Add(U.MinInt(len(queries)-count, AllowedGoroutines))
 		}
 	}
 	waitGroup.Wait()
+	log.Warn(resultGroup.Results)
+	for _, result := range resultGroup.Results {
+		if result.Headers[0] == model.AliasError {
+			log.Warn(resultGroup)
+			return resultGroup, http.StatusPartialContent
+		}
+	}
 	return resultGroup, http.StatusOK
 }
 
 // @Kark TODO v1
 // TODO Handling errorcase.
 func (pg *Postgres) runSingleChannelQuery(projectID uint64, query model.ChannelQueryV1,
-	resultHolder *model.ChannelResultGroupV1, index int, waitGroup *sync.WaitGroup, reqID string) {
+	resultHolder *model.ChannelQueryResultV1, waitGroup *sync.WaitGroup, reqID string) {
 
 	environment := C.GetConfig().Env
 	defer waitGroup.Done()
 	defer U.NotifyOnPanicWithError(environment, "app_server")
-	result, _ := pg.ExecuteChannelQueryV1(projectID, &query, reqID)
-	(*resultHolder).Results[index] = *result
+	tempResultHolder, _ := pg.ExecuteChannelQueryV1(projectID, &query, reqID)
+	resultHolder.Headers = tempResultHolder.Headers
+	resultHolder.Rows = tempResultHolder.Rows
 }
 
 // ExecuteChannelQueryV1 - @Kark TODO v1
@@ -311,7 +319,8 @@ func (pg *Postgres) ExecuteChannelQueryV1(projectID uint64, query *model.Channel
 	}
 	if err != http.StatusOK {
 		logCtx.Warn(query)
-		status = http.StatusBadRequest
+		errorResult := model.BuildErrorResultForChannelsV1("")
+		return errorResult, http.StatusBadRequest
 	}
 	resultMetrics = U.ConvertInternalToExternal(resultMetrics)
 	queryResult.Headers = columns
