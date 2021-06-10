@@ -50,7 +50,6 @@ var SelectableMetricsForFacebook = []string{
 	"link_click_through_rate",
 	"link_clicks",
 	"frequency",
-	"leads",
 	"reach",
 }
 
@@ -108,7 +107,6 @@ var FacebookExternalRepresentationToInternalRepresentation = map[string]string{
 	"click_through_rate":            "click_through_rate",
 	"link_click_through_rate":       "link_click_through_rate",
 	"frequency":                     "frequency",
-	"leads":                         "leads",
 	"reach":                         "reach",
 	"campaign":                      "campaign",
 	"ad_group":                      "ad_set",
@@ -131,7 +129,6 @@ var FacebookInternalRepresentationToExternalRepresentation = map[string]string{
 	"click_through_rate":            "click_through_rate",
 	"link_click_through_rate":       "link_click_through_rate",
 	"frequency":                     "frequency",
-	"leads":                         "leads",
 	"reach":                         "reach",
 	"campaign:name":                 "campaign_name",
 	"campaign:id":                   "campaign_id",

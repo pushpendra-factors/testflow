@@ -1,3 +1,5 @@
+import itertools
+
 from lib.utils.facebook.metrics_aggregator import MetricsAggregator
 from lib.utils.json import JsonUtil
 from lib.utils.time import TimeUtil
@@ -5,54 +7,87 @@ from scripts.facebook import AD_INSIGHTS, ERROR_MESSAGE
 from scripts.facebook.tasks.context.extract.base_report_extract import BaseReportExtract as BaseExtractContext
 import logging as log
 
-
+# Splitting adperformance extract into 2 different jobs is possible. But because of backward compatibility and time taken, we are not going ahead.
 class AdPerformanceReportExtract(BaseExtractContext):
     NAME = AD_INSIGHTS
     FIELDS = ["account_name", "account_id", "account_currency", "ad_id", "ad_name", "adset_name", "campaign_name",
-              "adset_id", "campaign_id", "actions", "action_values", "date_start", "date_stop"]
+              "adset_id", "campaign_id", "date_start", "date_stop"]
     SEGMENTS = ["publisher_platform"]
-    METRICS = ["clicks", "conversions", "cost_per_conversion", "cost_per_ad_click", "cpc", "cpm", "cpp", "ctr",
-               "frequency", "impressions", "inline_post_engagement", "social_spend", "spend",
-               "inline_link_clicks", "unique_clicks", "reach",
+    METRICS_1 = ["clicks", "cost_per_conversion", "cost_per_ad_click", "cpc", "cpm", "cpp", "ctr",
+               "frequency", "impressions", "inline_post_engagement", "social_spend", "spend"]
+    METRICS_2 = ["inline_link_clicks", "unique_clicks", "reach",
                "video_p50_watched_actions", "video_p25_watched_actions", "video_30_sec_watched_actions",
-               "video_p100_watched_actions", "video_p75_watched_actions"]
+               "video_p100_watched_actions", "video_p75_watched_actions"
+               ]
     LEVEL_BREAKDOWN = "ad"
+    UNFORMATTED_URL = 'https://graph.facebook.com/v9.0/{}/insights?' \
+                    'time_range={}&&fields={}&&access_token={}&&level={' \
+                    '}&&filtering=[{{\'field\':\'impressions\',\'operator\':\'GREATER_THAN\',\'value\':0}}]&&limit=1000'
 
-    def read_records(self):
-        adset_records, response_status = self.get_adset_ids()
-        total_records = []
-        if response_status == "failed":
-            return "failed"
+
+    # fields + metrics1.
+    def get_fields_for_extract1(self):
+        return list(itertools.chain(self.FIELDS, self.METRICS_1))
+    
+    # fields + metrics2.
+    def get_fields_for_extract2(self):
+        return list(itertools.chain(self.FIELDS, self.METRICS_2))
+
+    def get_url_for_extract1(self):
         curr_timestamp_in_string = TimeUtil.get_string_of_specific_format_from_timestamp(self.curr_timestamp,
                                                                                          '%Y-%m-%d')
         time_range = {'since': curr_timestamp_in_string, 'until': curr_timestamp_in_string}
-        for adset_record in adset_records:
-            adset_id = adset_record["id"]
-            current_url = self.UNFORMATTED_URL.format(adset_id, self.get_segments(), time_range,
-                                                      self.get_fields(), self.int_facebook_access_token,
-                                                      self.LEVEL_BREAKDOWN)
-            attributes = {"url": current_url}
-            self.source.set_attributes(attributes)
+        url_ = self.UNFORMATTED_URL.format(self.customer_account_id, time_range, self.get_fields_for_extract1(),
+                                           self.int_facebook_access_token, self.LEVEL_BREAKDOWN)
+        return url_
 
-            response_status = super().read_records()
-            if response_status == "failed":
-                return response_status
-            total_records.extend(self.records)
-        self.records = total_records
+    def get_url_for_extract2(self):
+        curr_timestamp_in_string = TimeUtil.get_string_of_specific_format_from_timestamp(self.curr_timestamp,
+                                                                                         '%Y-%m-%d')
+        time_range = {'since': curr_timestamp_in_string, 'until': curr_timestamp_in_string}
+        url_ = self.UNFORMATTED_URL.format(self.customer_account_id, time_range, self.get_fields_for_extract2(),
+                                           self.int_facebook_access_token, self.LEVEL_BREAKDOWN)
+        return url_
+
+    def read_records(self):
+        resp_status = super().read_records()
+        if resp_status != "success":
+            return resp_status
+        records_with_metrics1 = self.records
+        self.add_source_attributes_for_metrics2()
+        resp_status = super().read_records()
+        if resp_status != "success":
+            return resp_status
+        records_with_metrics2 = self.records
+        self.records = self.merge_records_of_metrics1_and_2(records_with_metrics1, records_with_metrics2)
         return "success"
 
-    def get_adset_ids(self):
-        unformatted_url = "https://graph.facebook.com/v9.0/{}/{}s?fields={}&&access_token={}&&limit=1000"
-        fetch_adids_url = unformatted_url.format(self.customer_account_id, 'adset',
-                                                 ["ad_id"], self.int_facebook_access_token)
-        attributes = {"url": fetch_adids_url}
-        source = self.source
-        source.set_attributes(attributes)
-        records_string, result_response = source.read()
-        if not result_response.ok:
-            log.warning(ERROR_MESSAGE.format(self.get_name(), result_response.status_code, result_response.text,
-                                             self.project_id))
-            MetricsAggregator.update_job_stats(self.project_id, self.customer_account_id,
-                                               self.type_alias, "failed", result_response.text)
-            return [], "failed"
-        return JsonUtil.read(records_string), "success"
+
+    def add_source_attributes(self):
+        self.add_source_attributes_for_metrics1()
+
+    def add_source_attributes_for_metrics1(self):
+        url = self.get_url_for_extract1()
+        attributes = {"url": url}
+        self.source.set_attributes(attributes)
+        return
+
+    def add_source_attributes_for_metrics2(self):
+        url = self.get_url_for_extract2()
+        attributes = {"url": url}
+        self.source.set_attributes(attributes)
+        return
+    
+    # In place merge of record.
+    def merge_records_of_metrics1_and_2(self, records_with_metrics1, records_with_metrics2):
+        id_to_records2 = self.get_map_of_id_to_record(records_with_metrics2)
+        for record in records_with_metrics1:
+            if record["ad_id"] in id_to_records2:
+                record.update(id_to_records2[record["ad_id"]])
+        return records_with_metrics1
+
+    def get_map_of_id_to_record(self, records):
+        result_records = {}
+        for record in records:
+            result_records[record["ad_id"]] = record
+        return result_records

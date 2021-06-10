@@ -129,7 +129,6 @@ var facebookMetricsToAggregatesInReportsMapping = map[string]string{
 	"click_through_rate":            fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "clicks", "100", "impressions", "impressions"),
 	"link_click_through_rate":       fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "inline_link_clicks", "100", "impressions", "impressions"),
 	"frequency":                     fmt.Sprintf(metricsExpressionOfDivisionWithHandleOf0AndNull, "impressions", "1", "reach", "reach"),
-	"leads":                         "SUM(JSON_EXTRACT_STRING(value,'action_lead'))",
 	"reach":                         "SUM(JSON_EXTRACT_STRING(value,'reach'))",
 }
 

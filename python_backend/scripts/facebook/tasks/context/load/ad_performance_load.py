@@ -94,6 +94,5 @@ class AdPerformanceLoad(BaseReportLoad):
         for record in records:
             record["id"] = record["ad_id"]
             record = self.transform_video_attributes(record)
-            record = self.transform_action_attributes(record)
             result_records.append(record)
         return result_records
