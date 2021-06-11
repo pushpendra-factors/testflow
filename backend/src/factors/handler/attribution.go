@@ -118,6 +118,7 @@ func AttributionHandler(c *gin.Context) (interface{}, int, string, string, bool)
 	if isDashboardQueryRequest {
 		model.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
 			requestPayload.Query.From, requestPayload.Query.To)
+		return H.DashboardQueryResponsePayload{Result: result, Cache: false, RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix()}, http.StatusOK, "", "", false
 	}
 	return result, http.StatusOK, "", "", false
 }
