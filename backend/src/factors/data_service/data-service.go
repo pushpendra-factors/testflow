@@ -30,6 +30,7 @@ func main() {
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -58,18 +59,20 @@ func main() {
 			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
-			AppName:  appName,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     appName,
 		},
 		PrimaryDatastore: *primaryDatastore,
 		RedisHost:        *redisHost,
 		RedisPort:        *redisPort,
 		SentryDSN:        *sentryDSN,
 	}
+	C.InitConf(config)
 
 	err := C.InitDataService(config)
 	if err != nil {

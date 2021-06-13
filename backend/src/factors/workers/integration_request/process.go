@@ -110,19 +110,18 @@ func main() {
 		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
-			// Todo: Remove UseSSL after enabling it by environment on all workloads.
-			UseSSL:      *env == C.STAGING || *env == C.PRODUCTION,
-			Certiifcate: *memSQLCertificate,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
 			AppName:     workerName,
 		},
 		CacheSortedSet:   *cacheSortedSet,
 		PrimaryDatastore: *primaryDatastore,
 	}
+	C.InitConf(config)
 
 	err := C.InitQueueWorker(config, *workerConcurrency)
 	if err != nil {

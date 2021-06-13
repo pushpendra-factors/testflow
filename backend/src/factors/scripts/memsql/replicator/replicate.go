@@ -258,7 +258,7 @@ func main() {
 		User:        *memSQLUser,
 		Name:        *memSQLName,
 		Password:    *memSQLPass,
-		Certiifcate: *memSQLCertificate,
+		Certificate: *memSQLCertificate,
 	}
 	initMemSQLDB(*env, &memSQLDBConf, maxOpenConns)
 

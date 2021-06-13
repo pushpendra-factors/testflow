@@ -32,28 +32,27 @@ type denEvent struct {
 
 /*
 default to ingest mode
-go run run_build_db_from_model_file.go --file_path=<path-to-denormalized-file> --project_name=<new-project-name> --agent_uuid=<agent-uuid> --mode=
+go run run_ingest_to_db_from_model_file.go --file_path=<path-to-denormalized-file> --project_name=<new-project-name> --agent_uuid=<agent-uuid> --mode=
 */
 
 /*
 for query mode
-go run run_build_db_from_model_file.go --mode=query --project_id=<project-id> --start_time= --end_time= --file_path=
+go run run_ingest_to_db_from_model_file.go --mode=query --project_id=<project-id> --start_time= --end_time= --file_path=
 */
 
 /*
 for query with filters mode
-go run run_build_db_from_model_file.go --mode=query_filter --project_id=<project-id> --start_time= --end_time= --file_path=
+go run run_ingest_to_db_from_model_file.go --mode=query_filter --project_id=<project-id> --start_time= --end_time= --file_path=
 */
 
 /*
-go run run_build_DB_from_model_file.go --mode=ingest --file_path=<eventsFilePath> --project_name=<newProjectName> --agent_uuid=<yourAgentUUID>
+go run run_ingest_to_db_from_model_file.go --mode=ingest --file_path=<eventsFilePath> --project_name=<newProjectName> --agent_uuid=<yourAgentUUID>
 --count_occurence=true
 */
 
 func main() {
 
 	env := flag.String("env", C.DEVELOPMENT, "")
-
 	dbHost := flag.String("db_host", C.PostgresDefaultDBParams.Host, "")
 	dbPort := flag.Int("db_port", C.PostgresDefaultDBParams.Port, "")
 	dbUser := flag.String("db_user", C.PostgresDefaultDBParams.User, "")
@@ -65,6 +64,7 @@ func main() {
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	filePath := flag.String("file_path", "", "")
@@ -84,8 +84,11 @@ func main() {
 
 	defer util.NotifyOnPanic("Task#BuildDbFromModelFile", *env)
 
+	appName := "db_from_model_file"
+
 	config := &C.Configuration{
-		Env: *env,
+		Env:     *env,
+		AppName: appName,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -94,11 +97,13 @@ func main() {
 			Password: *dbPass,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     appName,
 		},
 		PrimaryDatastore: *primaryDatastore,
 		RedisHost:        *redisHost,

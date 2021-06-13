@@ -48,8 +48,6 @@ import (
 	cache "github.com/hashicorp/golang-lru"
 )
 
-var initiated bool = false
-
 const DEVELOPMENT = "development"
 const TEST = "test"
 const STAGING = "staging"
@@ -94,7 +92,7 @@ type DBConf struct {
 	Password    string
 	AppName     string
 	UseSSL      bool
-	Certiifcate string
+	Certificate string
 }
 
 type Configuration struct {
@@ -469,6 +467,11 @@ func initCookieInfo(env string) {
 }
 
 func InitConf(c *Configuration) {
+	if IsConfigInitialized() {
+		log.Info("Configuration alreay initialised.")
+		return
+	}
+
 	if c == nil {
 		log.Fatal("Invalid configuration.")
 	}
@@ -479,6 +482,10 @@ func InitConf(c *Configuration) {
 	}
 
 	configuration = c
+}
+
+func IsConfigInitialized() bool {
+	return configuration != nil && configuration.Env != ""
 }
 
 func InitSortedSetCache(cacheSortedSet bool) {
@@ -571,7 +578,7 @@ func GetMemSQLDSNString(dbConf *DBConf) string {
 	}
 
 	if dbConf.UseSSL {
-		if dbConf.Certiifcate == "" {
+		if dbConf.Certificate == "" {
 			log.Fatal("Enable use_ssl but certificate not given.")
 		}
 
@@ -579,7 +586,7 @@ func GetMemSQLDSNString(dbConf *DBConf) string {
 
 		// Register certificate.
 		rootCertPool := x509.NewCertPool()
-		if ok := rootCertPool.AppendCertsFromPEM([]byte(dbConf.Certiifcate)); !ok {
+		if ok := rootCertPool.AppendCertsFromPEM([]byte(dbConf.Certificate)); !ok {
 			log.Fatal("Failed to add certificate for memsql connection.")
 		}
 		mysql.RegisterTLSConfig(tlsConfigname, &tls.Config{RootCAs: rootCertPool})
@@ -598,8 +605,9 @@ func InitMemSQLDBWithMaxIdleAndMaxOpenConn(dbConf DBConf, maxOpenConns, maxIdleC
 		services = &Services{}
 	}
 
-	// Todo: Enable SSL mandatory environments after adding support for all workloads.
-	// dbConf.UseSSL = IsDevelopment() || IsProduction()
+	// SSL Mandatory for staging and production.
+	dbConf.UseSSL = IsStaging() || IsProduction()
+
 	memSQLDB, err := gorm.Open("mysql", GetMemSQLDSNString(&dbConf))
 	if err != nil {
 		log.WithError(err).Fatal("Failed connecting to memsql.")
@@ -718,6 +726,10 @@ func KillDBQueriesOnExit() {
 }
 
 func InitDB(config Configuration) error {
+	if !IsConfigInitialized() {
+		log.Fatal("Config not initialised on InitDB.")
+	}
+
 	// default configuration.
 	return InitDBWithMaxIdleAndMaxOpenConn(config, 50, 10)
 }
@@ -994,18 +1006,15 @@ func watchPatternServers(psUpdateChannel clientv3.WatchChan) {
 }
 
 func Init(config *Configuration) error {
-	if initiated {
-		return fmt.Errorf("Config already initialized")
+	if !IsConfigInitialized() {
+		log.Fatal("Config not initialised on Init.")
 	}
-
-	configuration = config
 
 	err := initServices(config)
 	if err != nil {
 		return err
 	}
 
-	initiated = true
 	return nil
 }
 
@@ -1031,11 +1040,9 @@ func UseOpportunityAssociationByProjectID(projectID uint64) bool {
 }
 
 func InitDataService(config *Configuration) error {
-	if initiated {
-		return fmt.Errorf("Config already initialized")
+	if !IsConfigInitialized() {
+		log.Fatal("Config not initialised on InitDataService.")
 	}
-
-	configuration = config
 
 	err := InitDB(*config)
 	if err != nil {
@@ -1045,16 +1052,13 @@ func InitDataService(config *Configuration) error {
 	InitSentryLogging(config.SentryDSN, config.AppName)
 	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 
-	initiated = true
 	return nil
 }
 
 func InitSDKService(config *Configuration) error {
-	if initiated {
-		return fmt.Errorf("Config already initialized")
+	if !IsConfigInitialized() {
+		log.Fatal("Config not initialised on InitSDKService.")
 	}
-
-	configuration = config
 
 	// DB dependency for SDK project_settings.
 	if err := InitDB(*config); err != nil {
@@ -1084,16 +1088,13 @@ func InitSDKService(config *Configuration) error {
 	InitSentryLogging(config.SentryDSN, config.AppName)
 	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 
-	initiated = true
 	return nil
 }
 
 func InitQueueWorker(config *Configuration, concurrency int) error {
-	if initiated {
-		return fmt.Errorf("Config already initialized")
+	if !IsConfigInitialized() {
+		log.Fatal("Config not initialised on InitSDKService.")
 	}
-
-	configuration = config
 
 	err := InitDBWithMaxIdleAndMaxOpenConn(*config, concurrency, concurrency)
 	if err != nil {
@@ -1121,7 +1122,6 @@ func InitQueueWorker(config *Configuration, concurrency int) error {
 	InitSentryLogging(config.SentryDSN, config.AppName)
 	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 
-	initiated = true
 	return nil
 }
 

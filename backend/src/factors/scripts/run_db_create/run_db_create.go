@@ -25,13 +25,6 @@ func main() {
 	dbName := flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
 	dbPass := flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
-	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
-	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
-	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
-	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
-	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
-	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
-
 	flag.Parse()
 
 	defer util.NotifyOnPanic("Task#DbCreate", *env)
@@ -45,15 +38,8 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
-		},
-		PrimaryDatastore: *primaryDatastore,
 	}
+
 	C.InitConf(config)
 	// Initialize configs and connections.
 	err := C.InitDB(*config)
@@ -141,36 +127,10 @@ func main() {
 		log.Info("users table unique index users_project_id_amp_user_idx crated")
 	}
 
-	// Create user_properties table.
-	if err := db.CreateTable(&model.UserProperties{}).Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("user_properties table creation failed.")
-	} else {
-		log.Info("Created user_propeties table")
-	}
-	// Add foreign key with projects.
-	if err := db.Model(&model.UserProperties{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("user_properties table association with projects table failed.")
-	} else {
-		log.Info("user_properties table is associated with projects table.")
-	}
-	// Adding composite foreign key with users table.
-	if err := db.Model(&model.UserProperties{}).AddForeignKey("project_id, user_id", "users(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("user_properties table association with users table failed.")
-	} else {
-		log.Info("user_properties table is associated with users table.")
-	}
-
 	if err := db.Exec("CREATE INDEX users_project_id_customer_user_id_idx ON users(project_id, customer_user_id)").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("users table users_project_id_customer_user_id_idx index creation failed.")
 	} else {
 		log.Info("Created users table users_project_id_customer_user_id_idx index.")
-	}
-
-	// Index for user_property $hubspot_contact_lead_guid.
-	if err := db.Exec("CREATE INDEX user_property_hubspot_contact_lead_guid_indx ON user_properties USING gin ((properties->'$hubspot_contact_lead_guid'))").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("user_properties table user_property_hubspot_contact_lead_guid_indx index creation failed.")
-	} else {
-		log.Info("Created user_properties table user_property_hubspot_contact_lead_guid_indx index.")
 	}
 
 	// Create event_names table.

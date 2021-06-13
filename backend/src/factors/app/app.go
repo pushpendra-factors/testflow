@@ -125,14 +125,12 @@ func main() {
 			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
-			// Todo: Remove UseSSL after enabling it by environment on all workloads.
-			UseSSL:      *env == C.STAGING || *env == C.PRODUCTION,
-			Certiifcate: *memSQLCertificate,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
 		PrimaryDatastore:                        *primaryDatastore,
@@ -175,6 +173,7 @@ func main() {
 		DisableMemSQLQueryCache:                 disableMemSQLQueryCache,
 		AllowChannelGroupingForProjectIDs:       *allowChannelGroupingForProjectIDs,
 	}
+	C.InitConf(config)
 
 	// Initialize configs and connections.
 	err := C.Init(config)

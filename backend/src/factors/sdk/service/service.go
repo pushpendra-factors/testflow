@@ -124,6 +124,7 @@ func main() {
 		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
 		SentryDSN:               *sentryDSN,
 	}
+	C.InitConf(config)
 
 	err := C.InitSDKService(config)
 	if err != nil {

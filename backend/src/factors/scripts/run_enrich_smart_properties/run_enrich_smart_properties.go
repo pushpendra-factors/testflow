@@ -23,6 +23,14 @@ func main() {
 	dryRunSmartProperties := flag.Bool("dry_run_smart_properties", false, "Dry run mode for smart properties job")
 	projectIDs := flag.String("project_ids", "", "Projects for which the smart properties are to be populated")
 
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
 
@@ -42,7 +50,7 @@ func main() {
 	defer C.PingHealthcheckForPanic(appName, *env, healthcheckPingID)
 
 	config := &C.Configuration{
-		AppName: "enrich_smart_properties_job",
+		AppName: appName,
 		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
@@ -50,8 +58,18 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
-			AppName:  "enrich_smart_properties_job",
+			AppName:  appName,
 		},
+		MemSQLInfo: C.DBConf{
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     appName,
+		},
+		PrimaryDatastore:      *primaryDatastore,
 		DryRunSmartProperties: *dryRunSmartProperties,
 	}
 	C.InitConf(config)
