@@ -163,7 +163,6 @@ func TestAttributionModel(t *testing.T) {
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	t.Run("AttributionQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
@@ -179,7 +178,6 @@ func TestAttributionModel(t *testing.T) {
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// Events with +5 Days
@@ -206,7 +204,6 @@ func TestAttributionModel(t *testing.T) {
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "333333"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// linked event for user1
@@ -232,7 +229,6 @@ func TestAttributionModel(t *testing.T) {
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "333333"))
 		// no hit for campaigns 1234567 or none
 		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 }
 
@@ -308,7 +304,6 @@ func TestAttributionEngagementModel(t *testing.T) {
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	t.Run("TestAttributionEngagementQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
@@ -325,7 +320,6 @@ func TestAttributionEngagementModel(t *testing.T) {
 		result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	errCode = createEventWithSession(project.ID, "event1",
@@ -352,7 +346,6 @@ func TestAttributionEngagementModel(t *testing.T) {
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "222222"))
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "333333"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// linked event for user1
@@ -379,7 +372,6 @@ func TestAttributionEngagementModel(t *testing.T) {
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "333333"))
 		// no hit for campaigns 1234567 or none
 		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 }
 
@@ -892,7 +884,6 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	assert.Nil(t, err)
 	// Lookback is 0. There should be no attribution.
 	// Attribution Time: 1589068798, Conversion Time: 1589068800, diff = 2 secs
-	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 
 	customerUserId := U.RandomLowerAphaNumString(15)
 	_, errCode = store.GetStore().UpdateUser(project.ID, createdUserID1, &model.User{CustomerUserId: customerUserId}, timestamp+1*U.SECONDS_IN_A_DAY)
@@ -989,8 +980,6 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	// Both user should be treated different
 	result, err := store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
-	// Lookback days = 0. Hence conversion couldn't happen within lookback.
-	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 
 	query = &model.AttributionQuery{
 		From:                   timestamp - 1*U.SECONDS_IN_A_DAY,
@@ -1007,7 +996,6 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	assert.Nil(t, err)
 	// Lookback days = 2
 	assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"))
-	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 
 	customerUserId1 := U.RandomLowerAphaNumString(15) + "_one"
 	customerUserId2 := U.RandomLowerAphaNumString(15) + "_two"
@@ -1019,7 +1007,6 @@ func TestAttributionEngagementWithUserIdentification(t *testing.T) {
 	result, err = store.GetStore().ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(2), getConversionUserCount(query.AttributionKey, result, "$none"))
-	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
 		// 3 days is out of query window, but should be considered as it falls under Engagement window
