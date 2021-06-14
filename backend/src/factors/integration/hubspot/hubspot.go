@@ -880,8 +880,17 @@ func syncCompany(projectID uint64, document *model.HubspotDocument) int {
 				contactSyncEvent, errCode := store.GetStore().GetEventById(
 					projectID, contactDocument.SyncId, "")
 				if errCode == http.StatusFound {
+
+					contactUser, status := store.GetStore().GetUser(projectID, contactSyncEvent.UserId)
+					if status != http.StatusFound {
+						logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
+							"Failed to get user by contact event user update user properites with company properties.")
+						isContactsUpdateFailed = true
+						continue
+					}
+
 					_, errCode := store.GetStore().UpdateUserProperties(projectID,
-						contactSyncEvent.UserId, userPropertiesJsonb, time.Now().Unix())
+						contactUser.ID, userPropertiesJsonb, contactUser.PropertiesUpdatedTimestamp+1)
 					if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 						logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
 							"Failed to update user properites with company properties.")
