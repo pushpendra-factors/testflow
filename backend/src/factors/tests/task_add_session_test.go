@@ -71,6 +71,8 @@ func TestAddSessionWithChannelGroup(t *testing.T) {
 		U.EP_PAGE_URL:        "https://example.com/1/2/",
 		U.EP_PAGE_RAW_URL:    "https://example.com/1/2?x=1",
 		U.EP_PAGE_SPENT_TIME: 10,
+		U.EP_REFERRER:        "",
+		U.EP_REFERRER_DOMAIN: "",
 	}
 	trackUserProperties := U.PropertiesMap{
 		U.UP_OS:         "Mac OSX",
