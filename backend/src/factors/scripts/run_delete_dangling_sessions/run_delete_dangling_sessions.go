@@ -89,6 +89,14 @@ func main() {
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
+	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort := flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
+	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+
 	startTimestamp := flag.Int64("start_timestamp", 0, "")
 	endTimestamp := flag.Int64("end_timestamp", 0, "")
 
@@ -109,9 +117,10 @@ func main() {
 		panic(err)
 	}
 
+	appName := "delete_unused_sessions"
 	config := &C.Configuration{
 		Env:     *env,
-		AppName: "delete_unused_sessions",
+		AppName: appName,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -119,7 +128,17 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		SentryDSN: *sentryDSN,
+		MemSQLInfo: C.DBConf{
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     appName,
+		},
+		PrimaryDatastore: *primaryDatastore,
+		SentryDSN:        *sentryDSN,
 	}
 
 	C.InitConf(config)

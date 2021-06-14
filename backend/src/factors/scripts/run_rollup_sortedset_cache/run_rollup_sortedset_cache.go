@@ -69,14 +69,13 @@ func main() {
 		RedisPortPersistent: *RedisPortPersistent,
 		SentryDSN:           *sentryDSN,
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
-			// Todo: Remove UseSSL after enabling it by environment on all workloads.
-			UseSSL:      *env == C.STAGING || *env == C.PRODUCTION,
-			Certiifcate: *memSQLCertificate,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     taskID,
 		},
 		PrimaryDatastore: *primaryDatastore,
 	}

@@ -80,6 +80,7 @@ func TestMain(m *testing.M) {
 		AllowedCampaignEnrichmentByProjectID: *allowedCampaignEnrichmentByProjectID,
 		UseOpportunityAssociationByProjectID: "*",
 	}
+	C.InitConf(config)
 
 	// Setup.
 	// Initialize configs and connections.

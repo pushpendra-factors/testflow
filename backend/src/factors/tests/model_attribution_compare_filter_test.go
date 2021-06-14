@@ -92,7 +92,6 @@ func TestAttributionModelCompare(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	t.Run("AttributionQueryCompareOutOfTimestampRangeNoLookBack", func(t *testing.T) {
@@ -113,7 +112,6 @@ func TestAttributionModelCompare(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// Events with +5 Days
@@ -148,7 +146,6 @@ func TestAttributionModelCompare(t *testing.T) {
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "222222"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// linked event for user1
@@ -181,7 +178,6 @@ func TestAttributionModelCompare(t *testing.T) {
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
 		// no hit for campaigns 1234567 or none
 		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 }
 
@@ -251,7 +247,6 @@ func TestAttributionCompareWithLookBackWindowX(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "campaign1"))
 	assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "$none"))
-	assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 }
 
 func TestAttributionModelCompareFilter(t *testing.T) {
@@ -335,7 +330,6 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
@@ -360,7 +354,6 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
@@ -384,7 +377,6 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 	t.Run("AttributionQueryCompareTimestampRangeNoLookBack", func(t *testing.T) {
 		query := &model.AttributionQuery{
@@ -408,7 +400,6 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// Events with +5 Days
@@ -446,7 +437,6 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "222222"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	t.Run("AttributionQueryCompareNoLookBackDays", func(t *testing.T) {
@@ -475,7 +465,6 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "111111"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "222222"))
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	// linked event for user1
@@ -529,7 +518,6 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		assert.Equal(t, float64(1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
 		// no hit for campaigns 1234567 or none
 		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "1234567"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 
 	t.Run("TestFirstTouchCampaignCompareWithLookBackDays", func(t *testing.T) {
@@ -579,6 +567,5 @@ func TestAttributionModelCompareFilter(t *testing.T) {
 		assert.Equal(t, int64(-1), getCompareConversionUserCount(query.AttributionKey, result, "333333"))
 		// no hit for campaigns 1234567 or none
 		assert.Equal(t, int64(-1), getConversionUserCount(query.AttributionKey, result, "1234567"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"))
 	})
 }

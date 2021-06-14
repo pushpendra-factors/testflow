@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS event_names (
     deleted bool NOT NULL DEFAULT false,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
-    SHARD KEY (project_id),
+    SHARD KEY (id),
     KEY (project_id, name) USING CLUSTERED COLUMNSTORE,
     KEY (project_id) USING HASH,
     KEY (id) USING HASH,

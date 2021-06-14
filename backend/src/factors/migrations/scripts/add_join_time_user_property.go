@@ -55,8 +55,8 @@ func main() {
 		},
 		PrimaryDatastore: *primaryDatastore,
 	}
-
 	C.InitConf(config)
+
 	// Initialize configs and connections and close with defer.
 	err := C.InitDB(*config)
 	if err != nil {

@@ -58,6 +58,8 @@ func main() {
 
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
+	allowChannelGroupingForProjectIDs := flag.String("allow_channel_grouping_for_projects",
+		"", "List of projects to allow channel property population in sesion events.")
 
 	flag.Parse()
 
@@ -89,23 +91,22 @@ func main() {
 			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
-			// Todo: Remove UseSSL after enabling it by environment on all workloads.
-			UseSSL:      *env == C.STAGING || *env == C.PRODUCTION,
-			Certiifcate: *memSQLCertificate,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
-		SentryDSN:           *sentryDSN,
-		CacheSortedSet:      *cacheSortedSet,
+		PrimaryDatastore:                  *primaryDatastore,
+		RedisHost:                         *redisHost,
+		RedisPort:                         *redisPort,
+		RedisHostPersistent:               *redisHostPersistent,
+		RedisPortPersistent:               *redisPortPersistent,
+		SentryDSN:                         *sentryDSN,
+		CacheSortedSet:                    *cacheSortedSet,
+		AllowChannelGroupingForProjectIDs: *allowChannelGroupingForProjectIDs,
 	}
 
 	C.InitConf(config)

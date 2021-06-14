@@ -42,12 +42,13 @@ var (
 	dbName = flag.String("db_name", C.PostgresDefaultDBParams.Name, "")
 	dbPass = flag.String("db_pass", C.PostgresDefaultDBParams.Password, "")
 
-	memSQLHost       = flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
-	memSQLPort       = flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
-	memSQLUser       = flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
-	memSQLName       = flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
-	memSQLPass       = flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
-	primaryDatastore = flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
+	memSQLHost        = flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
+	memSQLPort        = flag.Int("memsql_port", C.MemSQLDefaultDBParams.Port, "")
+	memSQLUser        = flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
+	memSQLName        = flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
+	memSQLPass        = flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate = flag.String("memsql_cert", "", "")
+	primaryDatastore  = flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	redisHost = flag.String("redis_host", "localhost", "")
 	redisPort = flag.Int("redis_port", 6379, "")
@@ -232,12 +233,13 @@ func main() {
 			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
-			AppName:  appName,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     appName,
 		},
 		PrimaryDatastore: *primaryDatastore,
 		RedisHost:        *redisHost,

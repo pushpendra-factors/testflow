@@ -161,7 +161,6 @@ func main() {
 	}
 
 	C.InitConf(config)
-
 	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Panic("Failed to initialize db in add session.")

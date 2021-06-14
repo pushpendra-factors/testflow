@@ -171,6 +171,7 @@ func main() {
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	flag.Parse()
@@ -180,6 +181,7 @@ func main() {
 		panic(err)
 	}
 
+	appName := "pattern_server"
 	dbConfig := &C.Configuration{
 		Env: *env,
 		DBInfo: C.DBConf{
@@ -188,18 +190,22 @@ func main() {
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Certificate: *memSQLCertificate,
+			Password:    *memSQLPass,
+			AppName:     appName,
 		},
 		PrimaryDatastore: *primaryDatastore,
 	}
-	C.InitConf(&C.Configuration{Env: *env})
-	C.InitSentryLogging(*sentryDSN, "pattern_server")
+	C.InitConf(dbConfig)
+
+	C.InitSentryLogging(*sentryDSN, appName)
 	defer C.SafeFlushAllCollectors()
 	err = C.InitDB(*dbConfig)
 	if err != nil {

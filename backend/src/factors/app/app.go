@@ -97,12 +97,8 @@ func main() {
 	allowSmartEventRuleCreation := flag.Bool("allow_smart_event_rule_creation", false, "Should allow smart event rule creation")
 	projectAnalyticsWhitelistedUUIds := flag.String("project_analytics_whitelisted_uuids",
 		"", "List of UUIDs whitelisted for project analytics API")
-	showSmartPropertiesAllowedProjectIDs := flag.String("show_smart_properties_allowed_projects",
-		"", "List of projects to show smart properties in channel configs.")
 	enableMQLAPI := flag.Bool("enable_mql_api", false, "Enable MQL API routes.")
 	overrideAppName := flag.String("app_name", "", "Override default app_name.")
-	allowChannelGroupingForProjectIDs := flag.String("allow_channel_grouping_for_projects",
-		"", "List of projects to allow channel property population in sesion events.")
 
 	flag.Parse()
 
@@ -125,14 +121,12 @@ func main() {
 			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
-			// Todo: Remove UseSSL after enabling it by environment on all workloads.
-			UseSSL:      *env == C.STAGING || *env == C.PRODUCTION,
-			Certiifcate: *memSQLCertificate,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
 		PrimaryDatastore:                        *primaryDatastore,
@@ -167,14 +161,13 @@ func main() {
 		ActiveFactorsTrackedEventsLimit:         *factorsActiveTrackedEventsLimit,
 		ActiveFactorsTrackedUserPropertiesLimit: *factorsActiveTrackedUserPropertiesLimit,
 		AllowSmartEventRuleCreation:             *allowSmartEventRuleCreation,
-		ShowSmartPropertiesAllowedProjectIDs:    *showSmartPropertiesAllowedProjectIDs,
 		ProjectAnalyticsWhitelistedUUIds:        C.GetUUIdsFromStringListAsString(*projectAnalyticsWhitelistedUUIds),
 		EnableMQLAPI:                            *enableMQLAPI,
 		DisableMemSQLDBWrites:                   disableMemSQLDBWrites,
 		DisableMemSQLRedisWrites:                disableMemSQLRedisWrites,
 		DisableMemSQLQueryCache:                 disableMemSQLQueryCache,
-		AllowChannelGroupingForProjectIDs:       *allowChannelGroupingForProjectIDs,
 	}
+	C.InitConf(config)
 
 	// Initialize configs and connections.
 	err := C.Init(config)

@@ -39,6 +39,7 @@ func main() {
 	memSQLUser := flag.String("memsql_user", C.MemSQLDefaultDBParams.User, "")
 	memSQLName := flag.String("memsql_name", C.MemSQLDefaultDBParams.Name, "")
 	memSQLPass := flag.String("memsql_pass", C.MemSQLDefaultDBParams.Password, "")
+	memSQLCertificate := flag.String("memsql_cert", "", "")
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypePostgres, "Primary datastore type as memsql or postgres")
 
 	customStartTime := flag.Int64("start_time", 0, "")
@@ -55,21 +56,26 @@ func main() {
 
 	defer util.NotifyOnPanic("Task#AttributionQuery", *env)
 
+	appName := "unique_user_count"
 	config := &C.Configuration{
-		Env: *env,
+		Env:     *env,
+		AppName: appName,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
 			User:     *dbUser,
 			Name:     *dbName,
 			Password: *dbPass,
+			AppName:  appName,
 		},
 		MemSQLInfo: C.DBConf{
-			Host:     *memSQLHost,
-			Port:     *memSQLPort,
-			User:     *memSQLUser,
-			Name:     *memSQLName,
-			Password: *memSQLPass,
+			Host:        *memSQLHost,
+			Port:        *memSQLPort,
+			User:        *memSQLUser,
+			Name:        *memSQLName,
+			Password:    *memSQLPass,
+			Certificate: *memSQLCertificate,
+			AppName:     appName,
 		},
 		PrimaryDatastore: *primaryDatastore,
 	}
