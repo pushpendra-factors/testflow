@@ -396,7 +396,7 @@ func (store *MemSQL) GetEventById(projectId uint64, id, userID string) (*model.E
 	dbx := db.Limit(1).Where("project_id = ?", projectId).Where("id = ?", id)
 	// TODO: Make userID mandatory once support is added to all queries.
 	if userID != "" {
-		dbx = dbx.Where("user_id", userID)
+		dbx = dbx.Where("user_id = ?", userID)
 	}
 
 	if err := dbx.Find(&event).Error; err != nil {
@@ -583,7 +583,7 @@ func (store *MemSQL) UpdateEventProperties(projectId uint64, id, userID string,
 	db := C.GetServices().Db
 	dbx := db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectId, id)
 	if userID != "" {
-		dbx = dbx.Where("user_id", userID)
+		dbx = dbx.Where("user_id = ?", userID)
 	}
 
 	err = dbx.Update(updatedFields).Error
