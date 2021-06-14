@@ -78,9 +78,11 @@ var (
 
 	sentryDSN = flag.String("sentry_dsn", "", "Sentry DSN")
 
-	gcpProjectID       = flag.String("gcp_project_id", "", "Project ID on Google Cloud")
-	gcpProjectLocation = flag.String("gcp_project_location", "", "Location of google cloud project cluster")
-	cacheSortedSet     = flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
+	gcpProjectID                      = flag.String("gcp_project_id", "", "Project ID on Google Cloud")
+	gcpProjectLocation                = flag.String("gcp_project_location", "", "Location of google cloud project cluster")
+	cacheSortedSet                    = flag.Bool("cache_with_sorted_set", false, "Cache with sorted set keys")
+	allowChannelGroupingForProjectIDs = flag.String("allow_channel_grouping_for_projects",
+		"", "List of projects to allow channel property population in sesion events.")
 )
 
 func registerStructs() {
@@ -695,13 +697,14 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore:    *primaryDatastore,
-		RedisHost:           *redisHost,
-		RedisPort:           *redisPort,
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *redisPortPersistent,
-		SentryDSN:           *sentryDSN,
-		CacheSortedSet:      *cacheSortedSet,
+		PrimaryDatastore:                  *primaryDatastore,
+		RedisHost:                         *redisHost,
+		RedisPort:                         *redisPort,
+		RedisHostPersistent:               *redisHostPersistent,
+		RedisPortPersistent:               *redisPortPersistent,
+		SentryDSN:                         *sentryDSN,
+		CacheSortedSet:                    *cacheSortedSet,
+		AllowChannelGroupingForProjectIDs: *allowChannelGroupingForProjectIDs,
 	}
 
 	beam.PipelineOptions.Set("HealthchecksPingID", "0e224a5e-01bd-454c-b361-651d303562c6")

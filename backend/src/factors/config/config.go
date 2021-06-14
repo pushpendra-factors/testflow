@@ -154,7 +154,6 @@ type Configuration struct {
 	enablePropertyTypeFromDB               bool
 	whitelistedProjectIDPropertyTypeFromDB string
 	blacklistedProjectIDPropertyTypeFromDB string
-	ShowSmartPropertiesAllowedProjectIDs   string
 	CacheSortedSet                         bool
 	ProjectAnalyticsWhitelistedUUIds       []string
 	PrimaryDatastore                       string
@@ -1478,10 +1477,6 @@ func isProjectOnProjectsList(configProjectIDList string, projectID uint64) bool 
 
 	_, exists := allowedProjectIDsMap[projectID]
 	return exists
-}
-
-func IsShowSmartPropertiesAllowed(projectID uint64) bool {
-	return isProjectOnProjectsList(configuration.ShowSmartPropertiesAllowedProjectIDs, projectID)
 }
 
 func IsChannelGroupingAllowed(projectID uint64) bool {
