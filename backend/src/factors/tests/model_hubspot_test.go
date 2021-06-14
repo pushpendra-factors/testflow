@@ -1362,3 +1362,151 @@ func TestHubspotFirstSyncStatus(t *testing.T) {
 	assert.Equal(t, true, project.IntHubspotFirstTimeSynced)
 
 }
+
+func TestHubspotLatestUserProperties(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	createdAt := time.Now().AddDate(0, 0, -11)
+	updatedDate := createdAt.AddDate(0, 0, 1)
+
+	email := getRandomEmail()
+	contact := IntHubspot.Contact{
+		Vid: int64(1),
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", createdAt.Unix()*1000)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", updatedDate.Unix()*1000)},
+			"lifecyclestage":   {Value: "lead"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: email,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err := json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, createdAt.Unix()*1000, hubspotDocument.Timestamp)
+
+	companyCreatedDate := createdAt.AddDate(0, 0, -1)
+	companyUpdatedDate := companyCreatedDate.AddDate(0, 0, 1)
+	company := IntHubspot.Company{
+		CompanyId:  1,
+		ContactIds: []int64{1},
+		Properties: map[string]IntHubspot.Property{
+			"createdate":             {Value: fmt.Sprintf("%d", companyCreatedDate.Unix()*1000)},
+			"hs_lastmodifieddate":    {Value: fmt.Sprintf("%d", companyUpdatedDate.Unix()*1000)},
+			"company_lifecyclestage": {Value: "lead"},
+			"name": {
+				Value:     "testcompany",
+				Timestamp: companyCreatedDate.Unix() * 1000,
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(company)
+	assert.Nil(t, err)
+	companyPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &companyPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, companyCreatedDate.Unix()*1000, hubspotDocument.Timestamp)
+
+	IntHubspot.Sync(project.ID)
+
+	query := model.Query{
+		From: createdAt.Unix() - 500,
+		To:   updatedDate.Unix() + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "$hubspot_contact_created",
+				Properties: []model.QueryProperty{},
+			},
+		},
+
+		Type:            model.QueryTypeEventsOccurrence,
+		EventsCondition: model.EventCondAnyGivenEvent,
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:   model.PropertyEntityUser,
+				Property: "$hubspot_contact_lifecyclestage",
+			},
+		},
+	}
+
+	result, status, _ := store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, 1, len(result.Rows))
+	assert.Equal(t, "$hubspot_contact_created", result.Rows[0][0])
+	assert.Equal(t, "lead", result.Rows[0][1])
+	assert.Equal(t, float64(1), result.Rows[0][2])
+
+	updatedDate = updatedDate.AddDate(0, 0, 1)
+	contact = IntHubspot.Contact{
+		Vid: int64(1),
+		Properties: map[string]IntHubspot.Property{
+			"createdate":       {Value: fmt.Sprintf("%d", createdAt.Unix()*1000)},
+			"lastmodifieddate": {Value: fmt.Sprintf("%d", updatedDate.Unix()*1000)},
+			"lifecyclestage":   {Value: "customer"},
+		},
+		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
+			{
+				Identities: []IntHubspot.ContactIdentity{
+					{
+						Type:  "EMAIL",
+						Value: email,
+					},
+					{
+						Type:  "LEAD_GUID",
+						Value: "123-45",
+					},
+				},
+			},
+		},
+	}
+
+	enJSON, err = json.Marshal(contact)
+	assert.Nil(t, err)
+	contactPJson = postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+	assert.Equal(t, updatedDate.Unix()*1000, hubspotDocument.Timestamp)
+	hubspotDocument = model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &contactPJson,
+	}
+
+	IntHubspot.Sync(project.ID)
+
+	result, status, _ = store.GetStore().Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, 1, len(result.Rows))
+	assert.Equal(t, "$hubspot_contact_created", result.Rows[0][0])
+	assert.Equal(t, "customer", result.Rows[0][1])
+	assert.Equal(t, float64(1), result.Rows[0][2])
+
+}

@@ -72,6 +72,7 @@ import {
   RESET_COMPARISON_DATA,
   SET_COMPARISON_SUPPORTED,
   SET_COMPARE_DURATION,
+  SET_NAVIGATED_FROM_DASHBOARD,
 } from './constants';
 
 function CoreQuery({
@@ -85,14 +86,12 @@ function CoreQuery({
     CORE_QUERY_INITIAL_STATE
   );
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const [navigatedFromDashboard, setNavigatedFromDashboard] = useState(false);
   const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
   const [activeKey, setActiveKey] = useState('0');
   const [showResult, setShowResult] = useState(false);
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
   const [resultState, setResultState] = useState(initialState);
-  const [cmprResultState, setCmprResultState] = useState(initialState);
   const [requestQuery, updateRequestQuery] = useState(null);
   const [rowClicked, setRowClicked] = useState(false);
   const [querySaved, setQuerySaved] = useState(false);
@@ -121,8 +120,6 @@ function CoreQuery({
     date_range: {},
     attr_dimensions: [],
   });
-
-  const [cmprAttrDurationObj, setcmprAttrDurationObj] = useState({});
 
   const [campaignState, setCampaignState] = useState({
     channel: '',
@@ -179,6 +176,25 @@ function CoreQuery({
     setAppliedBreakdown(newAppliedBreakdown);
   }, [groupBy]);
 
+  const updateLocalReducer = useCallback((type, payload) => {
+    localDispatch({ type, payload });
+  }, []);
+
+  const resetComparisonData = useCallback(() => {
+    updateLocalReducer(RESET_COMPARISON_DATA);
+  }, [updateLocalReducer]);
+
+  const handleCompareWithClick = useCallback(() => {
+    updateLocalReducer(SET_COMPARISON_ENABLED, true);
+  }, [updateLocalReducer]);
+
+  const setNavigatedFromDashboard = useCallback(
+    (payload) => {
+      updateLocalReducer(SET_NAVIGATED_FROM_DASHBOARD, payload);
+    },
+    [updateLocalReducer]
+  );
+
   const configActionsOnRunningQuery = useCallback(
     (isQuerySaved) => {
       closeDrawer();
@@ -197,20 +213,30 @@ function CoreQuery({
         updateAppliedBreakdown();
       }
     },
-    [dispatch, groupBy, queries, queryType, updateAppliedBreakdown]
+    [
+      dispatch,
+      groupBy,
+      queries,
+      queryType,
+      updateAppliedBreakdown,
+      setNavigatedFromDashboard,
+    ]
   );
 
-  const updateLocalReducer = useCallback((type, payload) => {
-    localDispatch({ type, payload });
-  }, []);
-
-  const resetComparisonData = useCallback(() => {
-    updateLocalReducer(RESET_COMPARISON_DATA);
-  }, [updateLocalReducer]);
-
-  const handleCompareWithClick = useCallback(() => {
-    updateLocalReducer(SET_COMPARISON_ENABLED, true);
-  }, [updateLocalReducer]);
+  const getDashboardConfigs = useCallback(
+    (isQuerySaved) => {
+      // use cache urls when user expands the dashboard widget
+      if (isQuerySaved && coreQueryState.navigatedFromDashboard) {
+        return {
+          id: coreQueryState.navigatedFromDashboard.dashboard_id,
+          unit_id: coreQueryState.navigatedFromDashboard.id,
+          refresh: false,
+        };
+      }
+      return null;
+    },
+    [coreQueryState.navigatedFromDashboard]
+  );
 
   const runQuery = useCallback(
     async (isQuerySaved, durationObj, isCompareQuery) => {
@@ -233,36 +259,35 @@ function CoreQuery({
         } else {
           updateLocalReducer(COMPARISON_DATA_LOADING);
         }
-        const res = await getEventsData(activeProject.id, query);
+        const res = await getEventsData(
+          activeProject.id,
+          query,
+          getDashboardConfigs(isQuerySaved)
+        );
+        const data = res.data.result || res.data;
         if (result_criteria === TOTAL_EVENTS_CRITERIA) {
           updateResultState({
             ...initialState,
-            data: formatApiData(
-              res.data.result_group[0],
-              res.data.result_group[1]
-            ),
+            data: formatApiData(data.result_group[0], data.result_group[1]),
           });
         } else if (result_criteria === TOTAL_USERS_CRITERIA) {
           if (user_type === EACH_USER_TYPE) {
             updateResultState({
               ...initialState,
-              data: formatApiData(
-                res.data.result_group[0],
-                res.data.result_group[1]
-              ),
+              data: formatApiData(data.result_group[0], data.result_group[1]),
             });
           } else {
             updateResultState({
               ...initialState,
-              data: res.data.result_group[0],
+              data: data.result_group[0],
             });
           }
         } else if (result_criteria === ACTIVE_USERS_CRITERIA) {
           const userData = formatApiData(
-            res.data.result_group[0],
-            res.data.result_group[1]
+            data.result_group[0],
+            data.result_group[1]
           );
-          const sessionsData = res.data.result_group[2];
+          const sessionsData = data.result_group[2];
           const activeUsersData = calculateActiveUsersData(
             userData,
             sessionsData,
@@ -271,12 +296,12 @@ function CoreQuery({
           updateResultState({ ...initialState, data: activeUsersData });
         } else if (result_criteria === FREQUENCY_CRITERIA) {
           const eventData = formatApiData(
-            res.data.result_group[0],
-            res.data.result_group[1]
+            data.result_group[0],
+            data.result_group[1]
           );
           const userData = formatApiData(
-            res.data.result_group[2],
-            res.data.result_group[3]
+            data.result_group[2],
+            data.result_group[3]
           );
           const frequencyData = calculateFrequencyData(eventData, userData, [
             ...groupBy.global,
@@ -299,6 +324,7 @@ function CoreQuery({
       updateResultState,
       configActionsOnRunningQuery,
       updateLocalReducer,
+      getDashboardConfigs,
     ]
   );
 
@@ -322,11 +348,21 @@ function CoreQuery({
         } else {
           updateLocalReducer(COMPARISON_DATA_LOADING);
         }
-        const res = await getFunnelData(activeProject.id, query);
+        const res = await getFunnelData(
+          activeProject.id,
+          query,
+          getDashboardConfigs(isQuerySaved)
+        );
         if (isCompareQuery) {
-          updateLocalReducer(COMPARISON_DATA_FETCHED, res.data);
+          updateLocalReducer(
+            COMPARISON_DATA_FETCHED,
+            res.data.result || res.data
+          );
         } else {
-          updateResultState({ ...initialState, data: res.data });
+          updateResultState({
+            ...initialState,
+            data: res.data.result || res.data,
+          });
         }
       } catch (err) {
         console.log(err);
@@ -343,51 +379,9 @@ function CoreQuery({
       configActionsOnRunningQuery,
       updateLocalReducer,
       resetComparisonData,
+      getDashboardConfigs,
     ]
   );
-
-  const runAttrCmprQuery = (cmprDuration) => {
-    if (!cmprDuration) {
-      setCmprResultState({
-        ...initialState,
-      });
-    }
-
-    setcmprAttrDurationObj(cmprDuration);
-    const query = getAttributionQuery(
-      eventGoal,
-      touchpoint,
-      touchpoint_filters,
-      attr_query_type,
-      models,
-      window,
-      linkedEvents,
-      cmprDuration
-    );
-
-    setCmprResultState({
-      ...initialState,
-      loading: true,
-      data: null,
-    });
-
-    getAttributionsData(activeProject.id, query).then(
-      (res) => {
-        setCmprResultState({
-          ...initialState,
-          data: res.data,
-        });
-      },
-      (err) => {
-        setCmprResultState({
-          ...initialState,
-          loading: false,
-          error: true,
-          data: null,
-        });
-      }
-    );
-  };
 
   const runAttributionQuery = useCallback(
     async (isQuerySaved, durationObj) => {
@@ -430,10 +424,14 @@ function CoreQuery({
           attr_dimensions,
           date_range: { ...durationObj },
         });
-        const res = await getAttributionsData(activeProject.id, query);
+        const res = await getAttributionsData(
+          activeProject.id,
+          query,
+          getDashboardConfigs(isQuerySaved)
+        );
         updateResultState({
           ...initialState,
-          data: res.data,
+          data: res.data.result || res.data,
         });
       } catch (err) {
         console.log(err);
@@ -456,6 +454,8 @@ function CoreQuery({
       attr_dateRange,
       updateResultState,
       attr_dimensions,
+      setNavigatedFromDashboard,
+      getDashboardConfigs,
     ]
   );
 
@@ -491,10 +491,14 @@ function CoreQuery({
           date_range: { ...durationObj },
         });
         updateRequestQuery(query);
-        const res = await getCampaignsData(activeProject.id, query);
+        const res = await getCampaignsData(
+          activeProject.id,
+          query,
+          getDashboardConfigs(isQuerySaved)
+        );
         updateResultState({
           ...initialState,
-          data: res.data.result ? res.data.result : res.data,
+          data: res.data.result || res.data,
         });
       } catch (err) {
         console.log(err);
@@ -513,6 +517,8 @@ function CoreQuery({
       camp_channels,
       camp_dateRange,
       updateResultState,
+      setNavigatedFromDashboard,
+      getDashboardConfigs,
     ]
   );
 
@@ -801,7 +807,6 @@ function CoreQuery({
             value={{
               coreQueryState,
               attributionMetrics,
-              navigatedFromDashboard,
               setAttributionMetrics,
               setNavigatedFromDashboard,
               resetComparisonData,
@@ -819,7 +824,7 @@ function CoreQuery({
               querySaved={querySaved}
               setQuerySaved={setQuerySaved}
               durationObj={queryOptions.date_range}
-              cmprDuration={cmprAttrDurationObj}
+              cmprDuration={null}
               handleDurationChange={handleDurationChange}
               arrayMapper={arrayMapper}
               queryOptions={queryOptions}
@@ -828,8 +833,8 @@ function CoreQuery({
               campaignState={campaignState}
               eventPage={result_criteria}
               section={REPORT_SECTION}
-              runAttrCmprQuery={runAttrCmprQuery}
-              cmprResultState={cmprResultState}
+              runAttrCmprQuery={null}
+              cmprResultState={null}
               campaignsArrayMapper={campaignsArrayMapper}
             />
           </CoreQueryContext.Provider>
