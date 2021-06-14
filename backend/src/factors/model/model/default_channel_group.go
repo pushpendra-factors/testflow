@@ -577,7 +577,7 @@ func checkFilter(sessionPropertesMap U.PropertiesMap, filter ChannelPropertyFilt
 }
 func compareEqual(isExists bool, propertyValue string, filterValue string) bool {
 	if filterValue == "$none" {
-		return !isExists || propertyValue == filterValue || filterValue == ""
+		return !isExists || propertyValue == filterValue || propertyValue == ""
 	} else {
 		return propertyValue == filterValue
 	}

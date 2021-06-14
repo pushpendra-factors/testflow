@@ -12,59 +12,72 @@ const { confirm } = Modal;
 
 const UTM_Mapping = {
     "utm_mapping": {
-        "$term": [
-            "$qp_utm_term"
-        ],
-        "$gclid": [
-            "$qp_gclid",
-            "$qp_utm_gclid"
-        ],
-        "$fbclid": [
-            "$qp_fbclid",
-            "$qp_utm_fbclid"
-        ],
-        "$medium": [
-            "$qp_utm_medium"
-        ],
-        "$source": [
-            "$qp_utm_source"
-        ],
-        "$adgroup": [
-            "$qp_utm_adgroup",
-            "$qp_utm_ad_group"
-        ],
-        "$content": [
-            "$qp_utm_content",
-            "$qp_utm_utm_content"
-        ],
-        "$keyword": [
-            "$qp_utm_keyword",
-            "$qp_utm_key_word"
-        ],
-        "$campaign": [
-            "$qp_utm_campaign",
-            "$qp_utm_campaign_name"
-        ],
-        "$creative": [
-            "$qp_utm_creative",
-            "$qp_utm_creative_id",
-            "$qp_utm_creativeid"
-        ],
-        "$adgroup_id": [
-            "$qp_utm_adgroupid",
-            "$qp_utm_adgroup_id",
-            "$qp_utm_ad_group_id"
-        ],
-        "$campaign_id": [
-            "$qp_utm_campaignid",
-            "$qp_utm_campaign_id"
-        ],
-        "$keyword_match_type": [
-            "$qp_utm_matchtype",
-            "$qp_utm_match_type"
-        ],
+      "$ad": [
+        "$qp_utm_ad",
+      ],
+      "$term": [
+        "$qp_utm_term",
+      ],
+      "$ad_id": [
+        "$qp_utm_ad_id",
+        "$qp_utm_adid",
+        "$qp_utm_hsa_ad",
+      ],
+      "$gclid": [
+        "$qp_gclid",
+        "$qp_utm_gclid",
+        "$qp_wbraid",
+        "$qp_gbraid"
+      ],
+      "$fbclid": [
+        "$qp_fbclid",
+        "$qp_utm_fbclid"
+      ],
+      "$medium": [
+        "$qp_utm_medium"
+      ],
+      "$source": [
+        "$qp_utm_source"
+      ],
+      "$adgroup": [
+        "$qp_utm_adgroup",
+        "$qp_utm_ad_group"
+      ],
+      "$content": [
+        "$qp_utm_content",
+        "$qp_utm_utm_content"
+      ],
+      "$keyword": [
+        "$qp_utm_keyword",
+        "$qp_utm_key_word"
+      ],
+      "$campaign": [
+        "$qp_utm_campaign",
+        "$qp_utm_campaign_name"
+      ],
+      "$creative": [
+        "$qp_utm_creative",
+        "$qp_utm_creative_id",
+        "$qp_utm_creativeid"
+      ],
+      "$adgroup_id": [
+        "$qp_utm_adgroupid",
+        "$qp_utm_adgroup_id",
+        "$qp_utm_ad_group_id",
+        "$qp_utm_hsa_grp",
+      ],
+      "$campaign_id": [
+        "$qp_utm_campaignid",
+        "$qp_utm_campaign_id",
+        "$qp_utm_hsa_cam",
+      ],
+      "$keyword_match_type": [
+        "$qp_utm_matchtype",
+        "$qp_utm_match_type"
+      ]
     }
-};
+  }
+  
 
 const MartInt = ({activeProject, udpateProjectDetails}) => {
 

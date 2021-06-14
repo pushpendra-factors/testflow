@@ -152,6 +152,8 @@ var EP_KEYWORD_MATCH_TYPE string = "$keyword_match_type"
 var EP_CONTENT string = "$content"
 var EP_ADGROUP string = "$adgroup"
 var EP_ADGROUP_ID string = "$adgroup_id"
+var EP_AD string = "$ad"
+var EP_AD_ID string = "$ad_id"
 var EP_CREATIVE string = "$creative"
 var EP_GCLID string = "$gclid"
 var EP_FBCLID string = "$fbclid"
@@ -316,6 +318,8 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_CONTENT,
 	EP_ADGROUP,
 	EP_ADGROUP_ID,
+	EP_AD,
+	EP_AD_ID,
 	EP_CREATIVE,
 	EP_GCLID,
 	EP_FBCLID,
@@ -617,6 +621,8 @@ var EVENT_TO_SESSION_PROPERTIES = map[string]string{
 	EP_CONTENT:            EP_CONTENT,
 	EP_ADGROUP:            EP_ADGROUP,
 	EP_ADGROUP_ID:         EP_ADGROUP_ID,
+	EP_AD:                 EP_AD,
+	EP_AD_ID:              EP_AD_ID,
 	EP_CREATIVE:           EP_CREATIVE,
 	EP_GCLID:              EP_GCLID,
 	EP_FBCLID:             EP_FBCLID,
@@ -638,6 +644,8 @@ var DEFINED_MARKETING_PROPERTIES = [...]string{
 	EP_CONTENT,
 	EP_ADGROUP,
 	EP_ADGROUP_ID,
+	EP_AD,
+	EP_AD_ID,
 	EP_CREATIVE,
 	EP_GCLID,
 	EP_FBCLID,
@@ -1427,56 +1435,6 @@ func UnEscapeQueryParamProperties(properties *PropertiesMap) {
 			(*properties)[k] = GetUnEscapedPropertyValue((*properties)[k])
 		}
 	}
-}
-
-func GetDefinedMarketingProperties() []string {
-	props := []string{}
-	for _, marketingProperty := range DEFINED_MARKETING_PROPERTIES {
-		props = append(props, marketingProperty)
-	}
-	return props
-}
-
-func MapEventPropertiesToDefinedProperties(properties *PropertiesMap) (*PropertiesMap, bool) {
-	mappedProperties := make(PropertiesMap)
-
-	for k, v := range *properties {
-		var property string
-		switch k {
-		case QUERY_PARAM_UTM_PREFIX + "campaign", QUERY_PARAM_UTM_PREFIX + "campaign_name":
-			property = EP_CAMPAIGN
-		case QUERY_PARAM_UTM_PREFIX + "campaignid", QUERY_PARAM_UTM_PREFIX + "campaign_id":
-			property = EP_CAMPAIGN_ID
-		case QUERY_PARAM_UTM_PREFIX + "source":
-			property = EP_SOURCE
-		case QUERY_PARAM_UTM_PREFIX + "medium":
-			property = EP_MEDIUM
-		case QUERY_PARAM_UTM_PREFIX + "keyword", QUERY_PARAM_UTM_PREFIX + "key_word":
-			property = EP_KEYWORD
-		case QUERY_PARAM_UTM_PREFIX + "term":
-			property = EP_TERM
-		case QUERY_PARAM_UTM_PREFIX + "matchtype", QUERY_PARAM_UTM_PREFIX + "match_type":
-			property = EP_KEYWORD_MATCH_TYPE
-		case QUERY_PARAM_UTM_PREFIX + "content":
-			property = EP_CONTENT
-		case QUERY_PARAM_UTM_PREFIX + "adgroup", QUERY_PARAM_UTM_PREFIX + "ad_group":
-			property = EP_ADGROUP
-		case QUERY_PARAM_UTM_PREFIX + "adgroupid", QUERY_PARAM_UTM_PREFIX + "adgroup_id", QUERY_PARAM_UTM_PREFIX + "ad_group_id":
-			property = EP_ADGROUP_ID
-		case QUERY_PARAM_UTM_PREFIX + "creative", QUERY_PARAM_UTM_PREFIX + "creative_id", QUERY_PARAM_UTM_PREFIX + "creativeid":
-			property = EP_CREATIVE
-		case QUERY_PARAM_PROPERTY_PREFIX + "gclid":
-			property = EP_GCLID
-		case QUERY_PARAM_PROPERTY_PREFIX + "fbclid":
-			property = EP_FBCLID
-		default:
-			property = k
-		}
-
-		mappedProperties[property] = v
-	}
-
-	return &mappedProperties, HasDefinedMarketingProperty(&mappedProperties)
 }
 
 func HasDefinedMarketingProperty(properties *PropertiesMap) bool {
