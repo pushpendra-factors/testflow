@@ -6,17 +6,21 @@ import ProjectTabs from './ProjectTabs';
 import AddDashboard from './AddDashboard';
 import { useDispatch } from 'react-redux';
 import { DASHBOARD_UNMOUNTED } from '../../reducers/types';
-import { DefaultDateRangeFormat } from '../CoreQuery/utils';
 import { FaErrorComp, FaErrorLog } from '../../components/factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { fetchEventNames } from '../../reducers/coreQuery/middleware';
+import { setItemToLocalStorage } from '../../utils/dataFormatter';
+import { getDashboardDateRange } from './utils';
+import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
 
 function Dashboard({ fetchEventNames, activeProject }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
-  const [durationObj, setDurationObj] = useState({ ...DefaultDateRangeFormat });
+  const [durationObj, setDurationObj] = useState(
+    getDashboardDateRange()
+  );
   const [refreshClicked, setRefreshClicked] = useState(false);
   const dispatch = useDispatch();
 
@@ -45,14 +49,19 @@ function Dashboard({ fetchEventNames, activeProject }) {
     if (moment(to).diff(from, 'hours') < 24) {
       frequency = 'hour';
     }
+
     setDurationObj((currState) => {
-      return {
+      const newState = {
         ...currState,
         from,
         to,
         frequency,
-        ...dates,
       };
+      setItemToLocalStorage(
+        LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION,
+        JSON.stringify(newState)
+      );
+      return newState;
     });
   }, []);
 

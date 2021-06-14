@@ -237,7 +237,7 @@ function WidgetCard({
       state: {
         query: { ...unit.query, settings: unit.settings },
         global_search: true,
-        navigatedFromDashboard: unit.id,
+        navigatedFromDashboard: unit,
       },
     });
   }, [history, unit]);

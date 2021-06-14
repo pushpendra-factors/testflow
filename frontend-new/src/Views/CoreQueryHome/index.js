@@ -35,6 +35,7 @@ import {
   reverse_user_types,
   EACH_USER_TYPE,
   QUERY_TYPE_WEB,
+  LOCAL_STORAGE_ITEMS,
 } from '../../utils/constants';
 import {
   SHOW_ANALYTICS_RESULT,
@@ -46,6 +47,7 @@ import {
   SET_PERFORMANCE_CRITERIA,
 } from '../../reducers/analyticsQuery';
 import { useHistory } from 'react-router-dom/cjs/react-router-dom.min';
+import { getDashboardDateRange } from '../Dashboard/utils';
 
 const coreQueryoptions = [
   {
@@ -175,13 +177,17 @@ function CoreQuery({
   }, []);
 
   const updateEventFunnelsState = useCallback(
-    (equivalentQuery) => {
+    (equivalentQuery, navigatedFromDashboard) => {
       dispatch({
         type: INITIALIZE_GROUPBY,
         payload: equivalentQuery.breakdown,
       });
       setQueries(equivalentQuery.events);
       setQueryOptions((currData) => {
+        let newDateRange = {};
+        if (navigatedFromDashboard) {
+          newDateRange = { date_range: getDashboardDateRange() };
+        }
         return {
           ...currData,
           session_analytics_seq: equivalentQuery.session_analytics_seq,
@@ -189,6 +195,7 @@ function CoreQuery({
             ...equivalentQuery.breakdown.global,
             ...equivalentQuery.breakdown.event,
           ],
+          ...newDateRange,
         };
       });
     },
@@ -196,7 +203,7 @@ function CoreQuery({
   );
 
   const setQueryToState = useCallback(
-    (record) => {
+    (record, navigatedFromDashboard) => {
       try {
         let equivalentQuery;
         if (record.query.query_group) {
@@ -204,14 +211,18 @@ function CoreQuery({
             equivalentQuery = getCampaignStateFromRequestQuery(
               record.query.query_group[0]
             );
-            const usefulQuery = { ...equivalentQuery };
+            let newDateRange;
+            if (navigatedFromDashboard) {
+              newDateRange = { camp_dateRange: getDashboardDateRange() };
+            }
+            const usefulQuery = { ...equivalentQuery, ...newDateRange };
             delete usefulQuery.queryType;
             dispatch({ type: INITIALIZE_CAMPAIGN_STATE, payload: usefulQuery });
           } else {
             equivalentQuery = getStateQueryFromRequestQuery(
               record.query.query_group[0]
             );
-            updateEventFunnelsState(equivalentQuery);
+            updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
             if (record.query.query_group.length === 1) {
               dispatch({
                 type: SET_PERFORMANCE_CRITERIA,
@@ -255,12 +266,16 @@ function CoreQuery({
             record.query.query,
             attr_dimensions
           );
-          const usefulQuery = { ...equivalentQuery };
+          let newDateRange = {};
+          if (navigatedFromDashboard) {
+            newDateRange = { attr_dateRange: getDashboardDateRange() };
+          }
+          const usefulQuery = { ...equivalentQuery, ...newDateRange };
           delete usefulQuery.queryType;
           dispatch({ type: INITIALIZE_MTA_STATE, payload: usefulQuery });
         } else {
           equivalentQuery = getStateQueryFromRequestQuery(record.query);
-          updateEventFunnelsState(equivalentQuery);
+          updateEventFunnelsState(equivalentQuery, navigatedFromDashboard);
         }
         setQueryType(equivalentQuery.queryType);
         setRowClicked({
@@ -299,7 +314,10 @@ function CoreQuery({
 
   useEffect(() => {
     if (location.state && location.state.global_search) {
-      setQueryToState(location.state.query);
+      setQueryToState(
+        location.state.query,
+        location.state.navigatedFromDashboard
+      );
       setNavigatedFromDashboard(location.state.navigatedFromDashboard);
       location.state = undefined;
       window.history.replaceState(null, '');

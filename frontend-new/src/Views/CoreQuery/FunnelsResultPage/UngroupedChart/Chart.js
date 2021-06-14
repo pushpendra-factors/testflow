@@ -477,6 +477,7 @@ function Chart({
     margin,
     showXAxisLabels,
     showYAxisLabels,
+    showStripes
   ]);
 
   useEffect(() => {

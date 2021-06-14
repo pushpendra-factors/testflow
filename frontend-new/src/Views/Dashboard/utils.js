@@ -9,7 +9,13 @@ import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_CAMPAIGN,
   NAMED_QUERY,
+  LOCAL_STORAGE_ITEMS,
 } from '../../utils/constants';
+import {
+  getItemFromLocalStorage,
+  setItemToLocalStorage,
+} from '../../utils/dataFormatter';
+import { DefaultDateRangeFormat } from '../CoreQuery/utils';
 
 export const getDataFromServer = (
   query,
@@ -167,4 +173,20 @@ export const getWebAnalyticsRequestBody = (units, durationObj) => {
   // query.from = 1601490600;
   // query.to = 1604168999;
   return query;
+};
+
+export const getDashboardDateRange = () => {
+  const lastAppliedDuration = getItemFromLocalStorage(
+    LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION
+  );
+  if (lastAppliedDuration) {
+    return JSON.parse(lastAppliedDuration);
+  }
+  setItemToLocalStorage(
+    LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION,
+    JSON.stringify(DefaultDateRangeFormat)
+  );
+  return {
+    ...DefaultDateRangeFormat,
+  };
 };

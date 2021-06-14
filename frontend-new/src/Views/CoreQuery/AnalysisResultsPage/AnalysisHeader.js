@@ -17,7 +17,9 @@ function AnalysisHeader({
   breakdownType,
 }) {
   const [showSaveModal, setShowSaveModal] = useState(false);
-  const { navigatedFromDashboard } = useContext(CoreQueryContext);
+  const {
+    coreQueryState: { navigatedFromDashboard },
+  } = useContext(CoreQueryContext);
   const history = useHistory();
 
   const addShadowToHeader = useCallback(() => {
@@ -40,7 +42,7 @@ function AnalysisHeader({
   const handleCloseDashboardQuery = useCallback(() => {
     history.push({
       pathname: '/',
-      state: { dashboardWidgetId: navigatedFromDashboard },
+      state: { dashboardWidgetId: navigatedFromDashboard.id },
     });
   }, [history, navigatedFromDashboard]);
 

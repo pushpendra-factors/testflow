@@ -321,3 +321,7 @@ export const FUNNEL_CHART_MARGIN = {
   bottom: 30,
   left: 40,
 };
+
+export const LOCAL_STORAGE_ITEMS = {
+  DASHBOARD_DURATION: 'dashboard_duration',
+};
