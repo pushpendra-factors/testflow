@@ -342,6 +342,15 @@ func (pg *Postgres) executeAllChannelsQueryV1(projectID uint64, query *model.Cha
 	var selectMetrics, columns []string
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 
+	projectSetting, errCode := pg.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return make([]string, 0, 0), [][]interface{}{}, http.StatusNotFound
+	} else if (projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "") &&
+		(projectSetting.IntFacebookAdAccount == "") && (projectSetting.IntLinkedinAdAccount == "") {
+		log.Warn("Integration not present for channels.")
+		return make([]string, 0, 0), [][]interface{}{}, http.StatusNotFound
+	}
+
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := pg.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
 		if err != http.StatusOK {
