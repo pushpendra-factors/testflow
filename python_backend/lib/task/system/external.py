@@ -29,7 +29,7 @@ class ExternalSystem(BaseSystem):
     def write(self, input_string):
         input_records = JsonUtil.read(input_string)
         if len(input_records) == 0:
-            curr_payload = self.get_payload_for_facebook_data_service({"id": str(uuid.uuid4()), "publisher_platform": "facebook"})
+            curr_payload = self.get_payload_for_facebook_data_service({"id": str(uuid.uuid4())})
             curr_response = requests.post(self.system_attributes["url"], json=curr_payload)
             if not curr_response.ok:
                 return
@@ -64,6 +64,6 @@ class ExternalSystem(BaseSystem):
             'id': value["id"],
             'value': value,
             'timestamp': self.system_attributes["timestamp"],
-            'platform': value['publisher_platform']
+            'platform': 'facebook'
         }
         return payload

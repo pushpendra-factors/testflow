@@ -341,6 +341,15 @@ func (store *MemSQL) executeAllChannelsQueryV1(projectID uint64, query *model.Ch
 	var selectMetrics, columns []string
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 
+	projectSetting, errCode := store.GetProjectSetting(projectID)
+	if errCode != http.StatusFound {
+		return make([]string, 0, 0), [][]interface{}{}, http.StatusNotFound
+	} else if (projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "") &&
+		(projectSetting.IntFacebookAdAccount == "") && (projectSetting.IntLinkedinAdAccount == "") {
+		log.Warn("Integration not present for channels.")
+		return make([]string, 0, 0), [][]interface{}{}, http.StatusNotFound
+	}
+
 	if (query.GroupBy == nil || len(query.GroupBy) == 0) && (query.GroupByTimestamp == nil || len(query.GroupByTimestamp.(string)) == 0) {
 		adwordsSQL, adwordsParams, commonKeys, commonMetrics, facebookSQL, facebookParams, linkedinSQL, linkedinParams, err := store.getIndividualChannelsSQLAndParametersV1(projectID, query, reqID, false)
 		if err != http.StatusOK {
