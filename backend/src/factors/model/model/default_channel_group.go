@@ -145,6 +145,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Value:     "display",
 				LogicalOp: LOGICAL_OP_OR,
 			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: COMPARE_EQUAL,
+				Value:     "cpm",
+				LogicalOp: LOGICAL_OP_OR,
+			},
 		},
 	},
 	{
@@ -268,6 +274,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Value:     "ppc",
 				LogicalOp: LOGICAL_OP_OR,
 			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: COMPARE_EQUAL,
+				Value:     "cpm",
+				LogicalOp: LOGICAL_OP_OR,
+			},
 		},
 	},
 	{
@@ -306,6 +318,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Property:  U.EP_MEDIUM,
 				Condition: COMPARE_EQUAL,
 				Value:     "ppc",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: COMPARE_EQUAL,
+				Value:     "cpm",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
@@ -371,6 +389,12 @@ var DefaultChannelPropertyRules = []ChannelPropertyRule{
 				Property:  U.EP_MEDIUM,
 				Condition: COMPARE_NOT_EQUAL,
 				Value:     "ppc",
+				LogicalOp: LOGICAL_OP_OR,
+			},
+			{
+				Property:  U.EP_MEDIUM,
+				Condition: COMPARE_NOT_EQUAL,
+				Value:     "cpm",
 				LogicalOp: LOGICAL_OP_OR,
 			},
 			{
