@@ -40,12 +40,9 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         resources:
-          limits:
-            memory: "5Gi"
-            cpu: "1"
           requests:
-            memory: "500Mi"
             cpu: "0.5"
+            memory: "11G"
         securityContext: {}
         readinessProbe:
           httpGet:

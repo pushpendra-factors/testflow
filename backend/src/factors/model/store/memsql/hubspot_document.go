@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
 	"factors/model/model"
+	"factors/util"
 	U "factors/util"
 )
 
@@ -242,29 +244,40 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 	}
 	isNew := errCode == http.StatusNotFound
 
-	var timestamp int64
-	var updatedDocument model.HubspotDocument // use for duplicating new document to updated document.
-	if isNew {
-		updatedDocument = *document
-		document.Action = model.HubspotDocumentActionCreated // created
-		timestamp, err = model.GetHubspotDocumentCreatedTimestamp(document)
-	} else {
-		document.Action = model.HubspotDocumentActionUpdated // updated
-		// Any update on the entity would create a new hubspot document.
-		// i.e, deal will be synced after updating a created deal with a
-		// contact or a company.
-		timestamp, err = model.GetHubspotDocumentUpdatedTimestamp(document)
-	}
+	createdTimestamp, err := model.GetHubspotDocumentCreatedTimestamp(document)
 	if err != nil {
 		if err != model.ErrorHubspotUsingFallbackKey {
 			logCtx.WithField("action", document.Action).WithError(err).Error(
-				"Failed to get timestamp from hubspot document on create.")
+				"Failed to get created timestamp from hubspot document on create.")
 			return http.StatusInternalServerError
 		}
 
 		logCtx.WithField("action", document.Action).WithError(err).Error("Missing document key.")
 	}
-	document.Timestamp = timestamp
+
+	updatedTimestamp, err := model.GetHubspotDocumentUpdatedTimestamp(document)
+	if err != nil {
+		if err != model.ErrorHubspotUsingFallbackKey {
+			logCtx.WithField("action", document.Action).WithError(err).Error(
+				"Failed to get updated timestamp from hubspot document on create.")
+			return http.StatusInternalServerError
+		}
+
+		logCtx.WithField("action", document.Action).WithError(err).Error("Missing document key.")
+	}
+
+	var updatedDocument model.HubspotDocument // use for duplicating new document to updated document.
+	if isNew {
+		updatedDocument = *document
+		document.Action = model.HubspotDocumentActionCreated // created
+		document.Timestamp = createdTimestamp
+	} else {
+		document.Action = model.HubspotDocumentActionUpdated // updated
+		// Any update on the entity would create a new hubspot document.
+		// i.e, deal will be synced after updating a created deal with a
+		// contact or a company.
+		document.Timestamp = updatedTimestamp
+	}
 
 	errCode = store.satisfiesHubspotDocumentForeignConstraints(*document)
 	if errCode != http.StatusOK {
@@ -289,7 +302,8 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 
 	if isNew { // create updated document for new user
 		updatedDocument.Action = model.HubspotDocumentActionUpdated
-		updatedDocument.Timestamp = timestamp
+		updatedDocument.Timestamp = createdTimestamp
+		recentUpdatedDocument := updatedDocument
 		err = db.Create(&updatedDocument).Error
 		if err != nil {
 			if IsDuplicateRecordError(err) {
@@ -298,6 +312,20 @@ func (store *MemSQL) CreateHubspotDocument(projectId uint64, document *model.Hub
 
 			logCtx.WithError(err).Error("Failed to create updated hubspot document.")
 			return http.StatusInternalServerError
+		}
+
+		if updatedTimestamp > createdTimestamp {
+			recentUpdatedDocument.Action = model.HubspotDocumentActionUpdated
+			recentUpdatedDocument.Timestamp = updatedTimestamp
+			err = db.Create(&recentUpdatedDocument).Error
+			if err != nil {
+				if IsDuplicateRecordError(err) {
+					return http.StatusConflict
+				}
+
+				logCtx.WithError(err).Error("Failed to create recent updated hubspot document.")
+				return http.StatusInternalServerError
+			}
 		}
 	}
 
@@ -314,27 +342,83 @@ func getHubspotTypeAlias(t int) string {
 	return ""
 }
 
-// UpdateHubspotProjectSettingsBySyncStatus update hubspot first time sync project settings
+func (store *MemSQL) updateHubspotProjectSettingsLastSyncInfo(projectID uint64, incomingSyncInfo map[string]int64) error {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	if projectID == 0 || incomingSyncInfo == nil {
+		logCtx.Error("Missing required fields.")
+		return errors.New("missing required fields")
+	}
+
+	projectSetting, status := store.GetProjectSetting(projectID)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get project setttings on hubspot last sync info.")
+		return errors.New("failed to get project settings ")
+	}
+
+	existingSyncInfoMap, err := model.GetHubspotDecodedSyncInfo(projectSetting.IntHubspotSyncInfo)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to decode project setting on hubspot last sync info.")
+		return err
+	}
+
+	updatedSyncInfo := model.GetHubspotSyncUpdatedInfo(&incomingSyncInfo, existingSyncInfoMap)
+
+	enlastSyncInfo, err := json.Marshal(updatedSyncInfo)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode hubspot last sync info.")
+		return err
+	}
+
+	pJSONLastSyncInfo := postgres.Jsonb{RawMessage: enlastSyncInfo}
+	_, status = store.UpdateProjectSettings(projectID, &model.ProjectSetting{IntHubspotSyncInfo: &pJSONLastSyncInfo})
+	if status != http.StatusAccepted {
+		logCtx.Error("Failed to update hubspot last sync info on success.")
+		return errors.New("Failed to update hubspot last sync info")
+	}
+
+	return nil
+}
+
+// UpdateHubspotProjectSettingsBySyncStatus update hubspot sync project settings
 func (store *MemSQL) UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus,
-	failure []model.HubspotProjectSyncStatus) int {
-	projectStatus := make(map[uint64]bool)
-	for i := range success {
-		projectStatus[success[i].ProjectID] = true
-	}
-
-	for i := range failure {
-		projectStatus[failure[i].ProjectID] = false
-		log.WithFields(log.Fields{"project_id": failure[i].ProjectID, "doc_type": failure[i].DocType}).Error("Failed to compelete hubspot first time sync.")
-	}
-
+	failure []model.HubspotProjectSyncStatus, syncALl bool) int {
 	anyFailure := false
-	for pid, projectSuccess := range projectStatus {
-		if projectSuccess {
-			_, status := store.UpdateProjectSettings(pid, &model.ProjectSetting{IntHubspotFirstTimeSynced: true})
-			if status != http.StatusAccepted {
-				log.WithFields(log.Fields{"project_id": pid}).Error("Failed to update hubspot first time sync status on success.")
-				anyFailure = true
+	if syncALl {
+		syncStatus, status := model.GetHubspotProjectOverAllStatus(success, failure)
+		for pid, projectSuccess := range status {
+			if projectSuccess {
+				_, status := store.UpdateProjectSettings(pid, &model.ProjectSetting{
+					IntHubspotFirstTimeSynced: true,
+				})
+
+				if status != http.StatusAccepted {
+					log.WithFields(log.Fields{"project_id": pid}).
+						Error("Failed to update hubspot first time sync status on success.")
+					anyFailure = true
+				}
+
+				err := store.updateHubspotProjectSettingsLastSyncInfo(pid, syncStatus[pid])
+				if err != nil {
+					log.WithFields(log.Fields{"project_id": pid}).WithError(err).Error("Failed to update hubspot last sync info.")
+					anyFailure = true
+				}
 			}
+		}
+
+		if anyFailure {
+			return http.StatusInternalServerError
+		}
+
+		return http.StatusAccepted
+	}
+
+	syncStatus, _ := model.GetHubspotProjectOverAllStatus(success, failure)
+
+	for pid, docTypeStatus := range syncStatus {
+		err := store.updateHubspotProjectSettingsLastSyncInfo(pid, docTypeStatus)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": pid}).WithError(err).Error("Failed to update hubspot last sync info.")
+			anyFailure = true
 		}
 	}
 
@@ -399,11 +483,11 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 
 	lastSyncInfoByProject := make(map[uint64]map[string]int64, 0)
 	for _, syncInfo := range lastSyncInfo {
-		if _, projectExists := lastSyncInfoByProject[syncInfo.ProjectId]; !projectExists {
-			lastSyncInfoByProject[syncInfo.ProjectId] = make(map[string]int64)
+		if _, projectExists := lastSyncInfoByProject[syncInfo.ProjectID]; !projectExists {
+			lastSyncInfoByProject[syncInfo.ProjectID] = make(map[string]int64)
 		}
 
-		lastSyncInfoByProject[syncInfo.ProjectId][getHubspotTypeAlias(syncInfo.Type)] = syncInfo.Timestamp
+		lastSyncInfoByProject[syncInfo.ProjectID][getHubspotTypeAlias(syncInfo.Type)] = syncInfo.Timestamp
 	}
 
 	// project sync of hubspot enable projects.
@@ -429,6 +513,26 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 		} else {
 			// add sync info if avaliable.
 			enabledProjectLastSync[ps.ProjectId] = lastSyncInfoByProject[ps.ProjectId]
+		}
+
+		// overwrite last syncinfo from project settings
+		if projectSettings[i].SyncInfo != nil {
+			lastSyncInfoMap, err := util.DecodePostgresJsonbAsPropertiesMap(projectSettings[i].SyncInfo)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": ps.ProjectId}).WithError(err).
+					Error("Failed to decode hubspot last sync info.")
+			} else {
+				for docType, timestampInt := range *lastSyncInfoMap {
+					timestamp, err := util.GetPropertyValueAsFloat64(timestampInt)
+					if err != nil {
+						log.WithFields(log.Fields{"project_id": ps.ProjectId}).WithError(err).
+							Error("Failed to get timestamp for hubspot last sync info.")
+					} else {
+						enabledProjectLastSync[ps.ProjectId][docType] = int64(timestamp)
+					}
+
+				}
+			}
 		}
 
 		// add types not synced before.

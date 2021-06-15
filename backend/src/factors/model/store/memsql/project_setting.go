@@ -372,6 +372,7 @@ func (store *MemSQL) UpdateProjectSettings(projectId uint64, settings *model.Pro
 				}
 			} else {
 				settings.IntHubspotPortalID = &hubspotIntegrationAccount.PortalID
+				settings.IntHubspotSyncInfo = nil
 			}
 
 		}
@@ -557,8 +558,9 @@ func (store *MemSQL) GetAllHubspotProjectSettings() ([]model.HubspotProjectSetti
 	db := C.GetServices().Db
 	err := db.Table("project_settings").Where(
 		"int_hubspot=true AND int_hubspot_api_key IS NOT NULL ").Select(
-		"project_id, int_hubspot_api_key as api_key, int_hubspot_first_time_synced as is_first_time_synced").Find(
-		&hubspotProjectSettings).Error
+		"project_id, int_hubspot_api_key as api_key, int_hubspot_first_time_synced as is_first_time_synced," +
+			"int_hubspot_sync_info as sync_info").
+		Find(&hubspotProjectSettings).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get hubspot project_settings.")
 		return hubspotProjectSettings, http.StatusInternalServerError

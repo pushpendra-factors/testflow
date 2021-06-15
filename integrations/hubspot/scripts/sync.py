@@ -29,6 +29,9 @@ API_RATE_LIMIT_TEN_SECONDLY_ROLLING = "TEN_SECONDLY_ROLLING"
 API_RATE_LIMIT_DAILY = "DAILY"
 API_ERROR_RATE_LIMIT = "RATE_LIMIT"
 RETRY_LIMIT = 15
+CONTACT_PROPERTY_KEY_LAST_MODIFIED_DATE = "lastmodifieddate"
+COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE = "hs_lastmodifieddate"
+RECORD_PROPERTIES_KEY = "properties"
 
 # Todo: Boilerplate, move this to a reusable module.
 def notify(env, source, message):
@@ -175,6 +178,56 @@ def get_with_fallback_retry(project_id, get_url):
         end_time = time.time()
         log.warning("Request took %d sec", end_time - start_time )
 
+def get_batch_documents_max_timestamp(project_id,docs, object_type, max_timestamp):
+    last_modified_key = ""
+    if object_type =="contacts":
+        last_modified_key = CONTACT_PROPERTY_KEY_LAST_MODIFIED_DATE
+    if object_type =="companies":
+        last_modified_key = COMPANY_PROPERTY_KEY_LAST_MODIFIED_DATE
+
+    for doc in docs:
+        object_properties = doc[RECORD_PROPERTIES_KEY]
+        if last_modified_key not in object_properties:
+                log.error("Missing lastmodified in contacts for project_id %d.",project_id)
+                return max_timestamp
+        doc_last_modified_timestamp = int(object_properties[last_modified_key]["value"])
+        if max_timestamp== 0 :
+            max_timestamp = doc_last_modified_timestamp
+        elif max_timestamp < doc_last_modified_timestamp:
+            max_timestamp = doc_last_modified_timestamp
+    return max_timestamp
+
+def should_continue_contact_historical_data(project_id, object_dict, last_sync_timestamp):
+    docs = object_dict["contacts"]
+
+    curr_timestamp = 0
+    if len(docs) < 1:
+        return False, False
+    for i in range(len(docs)):
+        if RECORD_PROPERTIES_KEY not in docs[i]:
+            log.error("Unknow error for project_id %d. Continue to pull all data", project_id)
+            return False, True
+        else:
+            object_properties = docs[i][RECORD_PROPERTIES_KEY]
+            if CONTACT_PROPERTY_KEY_LAST_MODIFIED_DATE not in object_properties:
+                log.error("Missing lastmodified in contacts for project_id %d. Continue to pull all data",project_id)
+                return False, True
+            else:
+                doc_last_modified_timestamp = int(object_properties[CONTACT_PROPERTY_KEY_LAST_MODIFIED_DATE]["value"])
+                log.error("last modified timestamp %d",doc_last_modified_timestamp)
+                if i==0:
+                    curr_timestamp = doc_last_modified_timestamp
+
+                if doc_last_modified_timestamp <= curr_timestamp:
+                    curr_timestamp = doc_last_modified_timestamp
+                else:
+                    log.error("Invalid order of records for project_id %d.Received timestamp %d Continue to pull all data",project_id, doc_last_modified_timestamp)
+                    return False, True
+                if last_sync_timestamp > doc_last_modified_timestamp:
+                    return True, False
+
+    return False, False
+
 def get_contacts_with_properties_by_id(project_id,api_key,get_url):
     batch_contact_url = "https://api.hubapi.com/contacts/v1/contact/vids/batch?"
 
@@ -208,10 +261,10 @@ def get_contacts_with_properties_by_id(project_id,api_key,get_url):
         contact_id = str(contact["vid"])
         log.info("Inserting properties into contact "+ contact_id)
         if contact_id in batch_contact_dict:
-            if "properties" not in batch_contact_dict[str(contact["vid"])]:
+            if RECORD_PROPERTIES_KEY not in batch_contact_dict[str(contact["vid"])]:
                 log.error("Missing properties key on batch contact")
                 continue
-            contact["properties"] = batch_contact_dict[str(contact["vid"])]["properties"]
+            contact[RECORD_PROPERTIES_KEY] = batch_contact_dict[str(contact["vid"])][RECORD_PROPERTIES_KEY]
         else :
             log.error("Missing contact %s in batch contact processing ",contact_id)
 
@@ -220,7 +273,7 @@ def get_contacts_with_properties_by_id(project_id,api_key,get_url):
     return response_dict, r
 
 
-def sync_contacts(project_id, api_key, sync_all=False):    
+def sync_contacts(project_id, api_key,last_sync_timestamp, sync_all=False):
     if sync_all:
         # init sync all contacts.
         url = "https://api.hubapi.com/contacts/v1/lists/all/contacts/all?"
@@ -236,9 +289,11 @@ def sync_contacts(project_id, api_key, sync_all=False):
     properties, ok = get_all_properties_by_doc_type(project_id,"contacts", api_key)
     if not ok:
         log.error("Failure loading properties for project_id %d on sync_contacts", project_id)
-        return 0
+        return 0, 0
 
     contact_api_calls = 0
+    ordered_historical_data_failure= False
+    max_timestamp = 0
     err_url_too_long = False
     while has_more:
         parameters = urllib.parse.urlencode(parameter_dict)
@@ -273,6 +328,11 @@ def sync_contacts(project_id, api_key, sync_all=False):
 
         has_more = response_dict['has-more']
         docs = response_dict['contacts']
+        if sync_all == False and ordered_historical_data_failure == False:
+            should_stop, ordered_historical_data_failure  = should_continue_contact_historical_data(project_id,
+            response_dict,last_sync_timestamp-(10800*1000)) # fallback to 3hrs since hubspot api may not have updated latest change on bulk updates
+            if should_stop:
+                has_more = False
         if sync_all:
             parameter_dict['vidOffset'] = response_dict['vid-offset']
         else:
@@ -283,10 +343,11 @@ def sync_contacts(project_id, api_key, sync_all=False):
             parameter_dict['timeOffset'] = response_dict['time-offset']
             parameter_dict['vidOffset'] = response_dict['vid-offset']
 
+        max_timestamp = get_batch_documents_max_timestamp(project_id, docs,"contacts",max_timestamp)
         create_all_documents(project_id, 'contact', docs)
         count = count + len(docs)
         log.warning("Downloaded and created %d contacts. total %d.", len(docs), count)
-    return contact_api_calls
+    return contact_api_calls, max_timestamp
 
 ## https://community.hubspot.com/t5/APIs-Integrations/Deals-Endpoint-Returning-414/m-p/320468/highlight/true#M30810
 def get_deals_with_properties(project_id,get_url):
@@ -423,7 +484,7 @@ def fill_contacts_for_companies(project_id, api_key, docs):
         doc["contactIds"] = contactIds
     return docs, company_contacts_api_calls
 
-def sync_companies(project_id, api_key, sync_all=False):
+def sync_companies(project_id, api_key,last_sync_timestamp, sync_all=False):
     if sync_all:
         urls = [ "https://api.hubapi.com/companies/v2/companies/paged?" ]
         log.warning("Downloading all companies for project_id : "+ str(project_id) + ".")
@@ -433,6 +494,7 @@ def sync_companies(project_id, api_key, sync_all=False):
 
     companies_api_calls = 0
     companies_contacts_api_calls = 0
+    max_timestamp = 0
     for url in urls:
         count = 0
         parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
@@ -442,7 +504,7 @@ def sync_companies(project_id, api_key, sync_all=False):
             properties, ok = get_all_properties_by_doc_type(project_id,"companies", api_key)
             if not ok:
                 log.error("Failure loading properties for project_id %d on sync_companies", project_id)
-                return 0, 0
+                return 0, 0,0
 
         has_more = True
         while has_more:
@@ -451,6 +513,9 @@ def sync_companies(project_id, api_key, sync_all=False):
             
             if sync_all:
                 get_url = get_url + '&' + build_properties_param_str(properties)
+
+            if not sync_all:
+                get_url = get_url + "&since=" + str(last_sync_timestamp)
 
             log.warning("Downloading companies for project_id %d from url %s.", project_id, get_url)
             r = get_with_fallback_retry(project_id, get_url)
@@ -465,18 +530,19 @@ def sync_companies(project_id, api_key, sync_all=False):
             has_more = response_dict.get('has-more')
             if has_more is None:
                 has_more = response_dict.get('hasMore')
-            
+
             if sync_all:
                 docs = response_dict['companies']
             else:
                 docs = response_dict['results']
             parameter_dict['offset']= response_dict['offset']
+            max_timestamp = get_batch_documents_max_timestamp(project_id, docs, "companies", max_timestamp)
             # fills contact ids for each comapany under 'contactIds'.
             _, companies_contacts_api_calls = fill_contacts_for_companies(project_id, api_key, docs)
             create_all_documents(project_id, 'company', docs)
             count = count + len(docs)
             log.warning("Downloaded and created %d companies. total %d.", len(docs), count)
-    return companies_api_calls, companies_contacts_api_calls
+    return companies_api_calls, companies_contacts_api_calls, max_timestamp
 
 def sync_forms(project_id, api_key):
     url = "https://api.hubapi.com/forms/v2/forms?"
@@ -561,8 +627,13 @@ def get_sync_info(sync_first_time = False):
         raise Exception('Failed to get sync info with status: '+str(response.status_code))
     return response.json()
 
-def update_first_time_sync_status(request_payload):
-    uri = "/data_service/hubspot/documents/sync_info"
+def update_sync_status(request_payload, first_sync=False):
+    uri = "/data_service/hubspot/documents/sync_info?"
+    if first_sync:
+        uri = uri+"is_first_time=true"
+    else:
+        uri = uri+"is_first_time=false"
+
     url = options.data_service_host + uri
 
     retries = 0
@@ -609,24 +680,27 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
             next_sync["doc_type"] = doc_type
             # sync all, if last sync timestamp is 0.
             next_sync["sync_all"] = first_time_sync
+            next_sync["last_sync_timestamp"] = sync_info[doc_type]
             next_sync_info.append(next_sync)
 
     return next_sync_info 
 
-def sync(project_id, api_key, doc_type, sync_all):
+
+def sync(project_id, api_key, doc_type, sync_all, last_sync_timestamp):
     response = {}
     response["project_id"] = project_id
     response["doc_type"] = doc_type
     response["sync_all"] = sync_all
 
+    max_timestamp  = 0
     try:
         if project_id == None or api_key == None or doc_type == None or sync_all == None:
             raise Exception("invalid params on sync, project_id "+str(project_id)+", api_key "+str(api_key)+", doc_type "+str(doc_type)+", sync_all "+str(sync_all))            
 
         if doc_type == "contact":
-            response["contact_api_calls"] = sync_contacts(project_id, api_key, sync_all)
+            response["contact_api_calls"],max_timestamp = sync_contacts(project_id, api_key, last_sync_timestamp, sync_all)
         elif doc_type == "company":        
-            response["companies_api_calls"], response["companies_contacts_api_calls"] = sync_companies(project_id, api_key, sync_all)
+            response["companies_api_calls"], response["companies_contacts_api_calls"],max_timestamp = sync_companies(project_id, api_key, last_sync_timestamp, sync_all)
         elif doc_type == "deal":
             response["deal_api_calls"] = sync_deals(project_id, api_key, sync_all)
         elif doc_type == "form":
@@ -642,6 +716,7 @@ def sync(project_id, api_key, doc_type, sync_all):
         return response
 
     response["status"] = "success"
+    response["timestamp"]= max_timestamp
     return response
 
 if __name__ == "__main__":
@@ -664,8 +739,8 @@ if __name__ == "__main__":
     next_sync_success = []
     for info in next_sync_info:
         response = sync(info.get("project_id"), info.get("api_key"), 
-                info.get("doc_type"), info.get("sync_all"))
-        if response["status"] == "failed": 
+                info.get("doc_type"), info.get("sync_all"), info.get("last_sync_timestamp"))
+        if response["status"] == "failed":
             next_sync_failures.append(response)
         else:
             next_sync_success.append(response)
@@ -680,17 +755,21 @@ if __name__ == "__main__":
     }
 
     log.warning("Successfully synced. End of hubspot sync job.")
-    if options.first_sync == True:
-        try:
-            update_first_time_sync_status(notification_payload)
+    try:
+        update_sync_status(notification_payload, options.first_sync)
+        if options.first_sync == True:
             ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload)
-            sys.exit(0)
-        except Exception as e:
-            next_sync_failures.append(str(e))
-            ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload, endpoint="/fail")
+        else:
+            if len(next_sync_failures) > 0:
+                ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
+            else:
+                ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload)
 
-    if len(next_sync_failures) > 0:
-        ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
-    else:
-        ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload)
+    except Exception as e:
+        next_sync_failures.append(str(e))
+        if options.first_sync == True:
+            ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload, endpoint="/fail")
+        else:
+            ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
+
     sys.exit(0)
