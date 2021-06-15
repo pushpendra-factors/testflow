@@ -8,15 +8,14 @@ from scripts.facebook.tasks.context.extract.base_report_extract import BaseRepor
 import logging as log
 
 # Splitting adperformance extract into 2 different jobs is possible. But because of backward compatibility and time taken, we are not going ahead.
+# Duplicated code across adPerformance and AdsetPerformance
 class AdPerformanceReportExtract(BaseExtractContext):
     NAME = AD_INSIGHTS
     FIELDS = ["account_name", "account_id", "account_currency", "ad_id", "ad_name", "adset_name", "campaign_name",
               "adset_id", "campaign_id", "date_start", "date_stop"]
-    SEGMENTS = ["publisher_platform"]
     METRICS_1 = ["clicks", "cost_per_conversion", "cost_per_ad_click", "cpc", "cpm", "cpp", "ctr",
-               "frequency", "impressions", "inline_post_engagement", "social_spend", "spend"]
-    METRICS_2 = ["inline_link_clicks", "unique_clicks", "reach",
-               "video_p50_watched_actions", "video_p25_watched_actions", "video_30_sec_watched_actions",
+               "frequency", "impressions", "inline_post_engagement", "social_spend", "spend", "inline_link_clicks", "unique_clicks", "reach"]
+    METRICS_2 = ["video_p50_watched_actions", "video_p25_watched_actions", "video_30_sec_watched_actions",
                "video_p100_watched_actions", "video_p75_watched_actions"
                ]
     LEVEL_BREAKDOWN = "ad"
@@ -61,7 +60,6 @@ class AdPerformanceReportExtract(BaseExtractContext):
         records_with_metrics2 = self.records
         self.records = self.merge_records_of_metrics1_and_2(records_with_metrics1, records_with_metrics2)
         return "success"
-
 
     def add_source_attributes(self):
         self.add_source_attributes_for_metrics1()
