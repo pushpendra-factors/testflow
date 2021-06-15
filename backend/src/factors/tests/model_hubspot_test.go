@@ -83,7 +83,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, status)
 
 	// updated to opportunity
-	updatedDate = createdAt.AddDate(0, 0, 1)
+	updatedDate = updatedDate.AddDate(0, 0, 1)
 	jsonContact = fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", "test@gmail.com", "123-45")
 	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
@@ -132,7 +132,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	assert.Equal(t, "opportunity", smartEvent.Properties["$curr_hubspot_contact_lifecyclestage"])
 
 	// updated last synced to customer
-	updatedDate = createdAt.AddDate(0, 0, 2)
+	updatedDate = updatedDate.AddDate(0, 0, 2)
 	jsonContact = fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "customer", cuid, "123-45")
 	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
@@ -153,7 +153,7 @@ func TestHubspotCRMSmartEvent(t *testing.T) {
 	assert.Equal(t, false, ok)
 
 	// updated last synced to lead with different user_id having same customer_user_id
-	updatedDate = createdAt.AddDate(0, 0, 3)
+	updatedDate = updatedDate.AddDate(0, 0, 3)
 	jsonContact = fmt.Sprintf(jsonContactModel, 1, updatedDate.Unix(), createdAt.Unix(), updatedDate.Unix(), "lead", cuid, "123-45")
 	contactPJson = postgres.Jsonb{json.RawMessage(jsonContact)}
 
@@ -397,6 +397,18 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, createdAt, hubspotDocument.Timestamp)
 
+	documents, status := store.GetStore().GetHubspotDocumentsByTypeForSync(project.ID, model.HubspotDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 3, len(documents))
+
+	// try reinserting the same record
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusConflict, status)
+
+	documents, status = store.GetStore().GetHubspotDocumentsByTypeForSync(project.ID, model.HubspotDocumentTypeContact)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 3, len(documents))
+
 	// 100 unique values
 	limit := 99
 	for i := 0; i < limit; i++ {
@@ -427,7 +439,7 @@ func TestHubspotObjectPropertiesAPI(t *testing.T) {
 
 	// increasing count based on value1
 	for i := 0; i < 5; i++ {
-		for j := 0; j < i+1; j++ {
+		for j := 0; j < i+2; j++ {
 			updatedAt = updatedAt + 100
 			value1 = fmt.Sprintf("%s_%d", property1, i)
 			jsonContact = fmt.Sprintf(jsonContactModel, documentID, updatedAt, createdAt, updatedAt, property1, value1, cuid, "123-45")
@@ -1249,9 +1261,16 @@ func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {
 	assert.Equal(t, (toJunkTimestamp-1)/1000+1, eventNameTimestamp[eventNameLifecycleStageJunk]) // timestamp+1
 }
 
-func sendGetHubspotFirstSyncInfo(r *gin.Engine) *httptest.ResponseRecorder {
+func sendGetHubspotSyncInfo(r *gin.Engine, isFirstTime bool) *httptest.ResponseRecorder {
 
-	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("http://localhost:8089/data_service/hubspot/documents/sync_info?is_first_time=true"))
+	url := "http://localhost:8089/data_service/hubspot/documents/sync_info?is_first_time="
+	if isFirstTime {
+		url = url + "true"
+	} else {
+		url = url + "false"
+	}
+
+	rb := U.NewRequestBuilder(http.MethodGet, url)
 	req, err := rb.Build()
 	if err != nil {
 		log.WithError(err).Error("Error creating request")
@@ -1262,9 +1281,15 @@ func sendGetHubspotFirstSyncInfo(r *gin.Engine) *httptest.ResponseRecorder {
 	return w
 }
 
-func sendUpdateHubspotFirstSyncInfo(r *gin.Engine, updateInfo map[string]interface{}) *httptest.ResponseRecorder {
+func sendUpdateHubspotSyncInfo(r *gin.Engine, updateInfo map[string]interface{}, isFirstTime bool) *httptest.ResponseRecorder {
 
-	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("http://localhost:8089/data_service/hubspot/documents/sync_info")).
+	url := "http://localhost:8089/data_service/hubspot/documents/sync_info?is_first_time="
+	if isFirstTime {
+		url = url + "true"
+	} else {
+		url = url + "false"
+	}
+	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf(url)).
 		WithPostParams(updateInfo)
 	req, err := rb.Build()
 	if err != nil {
@@ -1303,7 +1328,7 @@ func TestHubspotFirstSyncStatus(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, false, project.IntHubspotFirstTimeSynced)
 
-	w = sendGetHubspotFirstSyncInfo(r)
+	w = sendGetHubspotSyncInfo(r, true)
 	assert.Equal(t, http.StatusFound, w.Code)
 
 	var jsonResponseMap map[string]map[string]map[string]interface{}
@@ -1352,7 +1377,7 @@ func TestHubspotFirstSyncStatus(t *testing.T) {
 			},
 		},
 	}
-	w = sendUpdateHubspotFirstSyncInfo(r, payload)
+	w = sendUpdateHubspotSyncInfo(r, payload, true)
 	assert.Equal(t, http.StatusOK, w.Code)
 	project, status = store.GetStore().GetProjectSetting(project1.ID)
 	assert.Equal(t, http.StatusFound, status)
@@ -1361,6 +1386,315 @@ func TestHubspotFirstSyncStatus(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, true, project.IntHubspotFirstTimeSynced)
 
+}
+
+func TestHubspotSyncInfo(t *testing.T) {
+	project1, agent1, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	H.InitDataServiceRoutes(r)
+
+	project2, agent2, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	t.Run("HubspotBeforeIntegrationResponse", func(t *testing.T) {
+		w := sendGetProjectSettingsReq(r, project1.ID, agent1)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var jsonResponseMap map[string]interface{}
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		err = json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.Nil(t, err)
+		assert.Nil(t, jsonResponseMap["int_hubspot_api_key"])
+		assert.Equal(t, false, jsonResponseMap["int_hubspot"])
+		assert.Nil(t, jsonResponseMap["int_hubspot_first_time_synced"])
+		assert.Nil(t, jsonResponseMap["int_hubspot_portal_id"])
+		assert.Nil(t, jsonResponseMap["int_hubspot_sync_info"])
+
+		w = sendGetProjectSettingsReq(r, project2.ID, agent2)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ = ioutil.ReadAll(w.Body)
+		err = json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.Nil(t, err)
+		assert.Nil(t, jsonResponseMap["int_hubspot_api_key"])
+		assert.Equal(t, false, jsonResponseMap["int_hubspot"])
+		assert.Nil(t, jsonResponseMap["int_hubspot_first_time_synced"])
+		assert.Nil(t, jsonResponseMap["int_hubspot_portal_id"])
+		assert.Nil(t, jsonResponseMap["int_hubspot_sync_info"])
+	})
+
+	t.Run("HubspotAfterIntegrationResponse", func(t *testing.T) {
+		w := sendUpdateProjectSettingReq(r, project1.ID, agent1, map[string]interface{}{
+			"int_hubspot_api_key": "1234", "int_hubspot": true,
+		})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		w = sendUpdateProjectSettingReq(r, project2.ID, agent2, map[string]interface{}{
+			"int_hubspot_api_key": "1234", "int_hubspot": true,
+		})
+
+		w = sendGetProjectSettingsReq(r, project1.ID, agent1)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var jsonResponseMap map[string]interface{}
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		err = json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.Nil(t, err)
+		assert.Equal(t, "1234", jsonResponseMap["int_hubspot_api_key"])
+		assert.Equal(t, true, jsonResponseMap["int_hubspot"])
+		assert.Equal(t, float64(0), jsonResponseMap["int_hubspot_portal_id"])
+		assert.Nil(t, jsonResponseMap["int_hubspot_sync_info"])
+
+		w = sendGetProjectSettingsReq(r, project2.ID, agent2)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ = ioutil.ReadAll(w.Body)
+		err = json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.Nil(t, err)
+		assert.Equal(t, "1234", jsonResponseMap["int_hubspot_api_key"])
+		assert.Equal(t, true, jsonResponseMap["int_hubspot"])
+		assert.Equal(t, float64(0), jsonResponseMap["int_hubspot_portal_id"])
+		assert.Nil(t, jsonResponseMap["int_hubspot_sync_info"])
+	})
+
+	t.Run("HubSyncInfoBeforeFirstRun", func(t *testing.T) {
+		w := sendGetHubspotSyncInfo(r, true)
+		assert.Equal(t, http.StatusFound, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var hubspotSyncInfo model.HubspotSyncInfo
+		err = json.Unmarshal(jsonResponse, &hubspotSyncInfo)
+		assert.Nil(t, err)
+		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project1.ID]["contact"])
+		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project1.ID]["deals"])
+		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project1.ID]["companies"])
+
+		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project2.ID]["contact"])
+		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project2.ID]["deals"])
+		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project2.ID]["companies"])
+
+		w = sendGetHubspotSyncInfo(r, false)
+		assert.Equal(t, http.StatusFound, w.Code)
+		jsonResponse, _ = ioutil.ReadAll(w.Body)
+		var hubspotSyncInfo2 model.HubspotSyncInfo
+		err = json.Unmarshal(jsonResponse, &hubspotSyncInfo2)
+		assert.Nil(t, err)
+		assert.Nil(t, hubspotSyncInfo2.LastSyncInfo[project1.ID])
+
+		assert.Nil(t, hubspotSyncInfo2.LastSyncInfo[project2.ID])
+	})
+
+	t.Run("HubSyncInfoFirstRun", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"status": "success",
+			"success": []map[string]interface{}{
+				{
+					"project_id": project1.ID,
+					"doc_type":   "contact",
+					"status":     "success",
+					"timestamp":  123,
+				},
+				{
+					"project_id": project1.ID,
+					"doc_type":   "company",
+					"status":     "success",
+					"timestamp":  1234,
+				},
+				{
+					"project_id": project1.ID,
+					"doc_type":   "deals",
+					"status":     "success",
+					"timestamp":  12345,
+				},
+				{
+					"project_id": project2.ID,
+					"doc_type":   "contact",
+					"status":     "success",
+					"timestamp":  123456,
+				},
+				{
+					"project_id": project2.ID,
+					"doc_type":   "company",
+					"status":     "success",
+					"timestamp":  1234567,
+				},
+				{
+					"project_id": project2.ID,
+					"doc_type":   "deals",
+					"status":     "success",
+					"timestamp":  12345678,
+				},
+			},
+		}
+
+		w := sendUpdateHubspotSyncInfo(r, payload, true)
+		assert.Equal(t, http.StatusOK, w.Code)
+		w = sendGetProjectSettingsReq(r, project1.ID, agent1)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var jsonResponseMap map[string]interface{}
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		err = json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.Nil(t, err)
+		assert.Equal(t, true, jsonResponseMap["int_hubspot_first_time_synced"])
+		projectSyncInfo := jsonResponseMap["int_hubspot_sync_info"].(map[string]interface{})
+		assert.Equal(t, float64(123), projectSyncInfo["contact"])
+		assert.Equal(t, float64(1234), projectSyncInfo["company"])
+		assert.Equal(t, float64(12345), projectSyncInfo["deals"])
+
+		w = sendGetProjectSettingsReq(r, project2.ID, agent2)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponseMap = map[string]interface{}{}
+		jsonResponse, _ = ioutil.ReadAll(w.Body)
+		err = json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.Nil(t, err)
+		assert.Equal(t, true, jsonResponseMap["int_hubspot_first_time_synced"])
+		projectSyncInfo = jsonResponseMap["int_hubspot_sync_info"].(map[string]interface{})
+		assert.Equal(t, float64(123456), projectSyncInfo["contact"])
+		assert.Equal(t, float64(1234567), projectSyncInfo["company"])
+		assert.Equal(t, float64(12345678), projectSyncInfo["deals"])
+
+		w = sendGetHubspotSyncInfo(r, true)
+		assert.Equal(t, http.StatusFound, w.Code)
+		jsonResponse, _ = ioutil.ReadAll(w.Body)
+		hubspotSyncInfo := model.HubspotSyncInfo{}
+		err = json.Unmarshal(jsonResponse, &hubspotSyncInfo)
+		assert.Nil(t, err)
+		assert.Nil(t, hubspotSyncInfo.LastSyncInfo[project1.ID])
+
+		assert.Nil(t, hubspotSyncInfo.LastSyncInfo[project2.ID])
+
+		w = sendGetHubspotSyncInfo(r, false)
+		assert.Equal(t, http.StatusFound, w.Code)
+		jsonResponse, _ = ioutil.ReadAll(w.Body)
+		hubspotSyncInfo = model.HubspotSyncInfo{}
+		err = json.Unmarshal(jsonResponse, &hubspotSyncInfo)
+		assert.Nil(t, err)
+		assert.NotNil(t, hubspotSyncInfo.LastSyncInfo[project1.ID])
+
+		assert.NotNil(t, hubspotSyncInfo.LastSyncInfo[project2.ID])
+
+		assert.Equal(t, int64(123), hubspotSyncInfo.LastSyncInfo[project1.ID]["contact"])
+		assert.Equal(t, int64(1234), hubspotSyncInfo.LastSyncInfo[project1.ID]["company"])
+		assert.Equal(t, int64(12345), hubspotSyncInfo.LastSyncInfo[project1.ID]["deals"])
+
+		assert.Equal(t, int64(123456), hubspotSyncInfo.LastSyncInfo[project2.ID]["contact"])
+		assert.Equal(t, int64(1234567), hubspotSyncInfo.LastSyncInfo[project2.ID]["company"])
+		assert.Equal(t, int64(12345678), hubspotSyncInfo.LastSyncInfo[project2.ID]["deals"])
+	})
+
+	t.Run("HubSyncInfoRecentRun", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"status": "success",
+			"success": []map[string]interface{}{
+				{
+					"project_id": project1.ID,
+					"doc_type":   "contact",
+					"status":     "success",
+					"timestamp":  1234,
+				},
+				{
+					"project_id": project1.ID,
+					"doc_type":   "company",
+					"status":     "success",
+					"timestamp":  1233, // should not update since old timestamp
+				},
+				{
+					"project_id": project1.ID,
+					"doc_type":   "deals",
+					"status":     "success",
+					"timestamp":  12346,
+				},
+				{
+					"project_id": project2.ID,
+					"doc_type":   "contact",
+					"status":     "success",
+					"timestamp":  123455, // should not update
+				},
+				{
+					"project_id": project2.ID,
+					"doc_type":   "company",
+					"status":     "success",
+					"timestamp":  1234567,
+				},
+				{
+					"project_id": project2.ID,
+					"doc_type":   "deals",
+					"status":     "success",
+					"timestamp":  12345678,
+				},
+			},
+		}
+
+		w := sendUpdateHubspotSyncInfo(r, payload, false)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		w = sendGetHubspotSyncInfo(r, false)
+		assert.Equal(t, http.StatusFound, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		hubspotSyncInfo := model.HubspotSyncInfo{}
+		err = json.Unmarshal(jsonResponse, &hubspotSyncInfo)
+		assert.Nil(t, err)
+		assert.Equal(t, int64(1234), hubspotSyncInfo.LastSyncInfo[project1.ID]["contact"])
+		assert.Equal(t, int64(1234), hubspotSyncInfo.LastSyncInfo[project1.ID]["company"]) // same as before
+		assert.Equal(t, int64(12346), hubspotSyncInfo.LastSyncInfo[project1.ID]["deals"])
+
+		assert.Equal(t, int64(123456), hubspotSyncInfo.LastSyncInfo[project2.ID]["contact"]) // same as before
+		assert.Equal(t, int64(1234567), hubspotSyncInfo.LastSyncInfo[project2.ID]["company"])
+		assert.Equal(t, int64(12345678), hubspotSyncInfo.LastSyncInfo[project2.ID]["deals"])
+	})
+
+	t.Run("HubspotSyncFallbackToDocumentTimestamp", func(t *testing.T) {
+		jsonContactModel := `{
+			"vid": %d,
+			"addedAt": %d,
+			"properties": {
+			  "createdate": { "value": "%d" },
+			  "lastmodifieddate": { "value": "%d" },
+			  "lifecyclestage": { "value": "%s" }
+			},
+			"identity-profiles": [
+			  {
+				"vid": 1,
+				"identities": [
+				  {
+					"type": "EMAIL",
+					"value": "%s"
+				  },
+				  {
+					"type": "LEAD_GUID",
+					"value": "%s"
+				  }
+				]
+			  }
+			]
+		  }`
+
+		jsonContact := fmt.Sprintf(jsonContactModel, 1, 111, 112, 111, "lead", "123@124.com", "123-45")
+		contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Value:     &contactPJson,
+		}
+
+		status := store.GetStore().CreateHubspotDocument(project1.ID, &hubspotDocument)
+		assert.Equal(t, http.StatusCreated, status)
+
+		newSyncInfoMap := map[string]int64{
+			"company": 1234,
+			"deals":   123,
+		}
+		enNewSyncInfoMap, err := json.Marshal(newSyncInfoMap)
+		assert.Nil(t, err)
+		store.GetStore().UpdateProjectSettings(project1.ID, &model.ProjectSetting{IntHubspotSyncInfo: &postgres.Jsonb{enNewSyncInfoMap}})
+
+		w := sendGetHubspotSyncInfo(r, false)
+		assert.Equal(t, http.StatusFound, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		hubspotSyncInfo := model.HubspotSyncInfo{}
+		err = json.Unmarshal(jsonResponse, &hubspotSyncInfo)
+		assert.Nil(t, err)
+		assert.Equal(t, int64(112), hubspotSyncInfo.LastSyncInfo[project1.ID]["contact"])
+		assert.Equal(t, int64(1234), hubspotSyncInfo.LastSyncInfo[project1.ID]["company"]) // same as before
+		assert.Equal(t, int64(123), hubspotSyncInfo.LastSyncInfo[project1.ID]["deals"])
+	})
 }
 
 func TestHubspotLatestUserProperties(t *testing.T) {

@@ -30,9 +30,11 @@ type HubspotDocument struct {
 	UpdatedAt time.Time       `json:"updated_at"`
 }
 
+// HubspotLastSyncInfo doc type last sync info
 type HubspotLastSyncInfo struct {
-	ProjectId uint64 `json:"-"`
+	ProjectID uint64 `json:"-"`
 	Type      int    `json:"type"`
+	TypeAlias string `json:"type_alias"`
 	Timestamp int64  `json:"timestamp"`
 }
 
@@ -90,7 +92,7 @@ type HubspotProperty struct {
 	Value string `json:"value"`
 }
 
-// HubspotDocumentProperties only holds the properties object of the doucment
+// HubspotDocumentProperties only holds the properties object of the document
 type HubspotDocumentProperties struct {
 	Properties map[string]HubspotProperty `json:"properties"`
 }
@@ -100,6 +102,8 @@ type HubspotProjectSyncStatus struct {
 	ProjectID uint64 `json:"project_id"`
 	DocType   string `json:"doc_type"`
 	Status    string `json:"status"`
+	SyncAll   bool   `json:"sync_all"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // GetHubspotMappedDataType returns mapped factors data type
@@ -395,6 +399,7 @@ func GetHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 	return createdAt, nil
 }
 
+// HubspotIntegrationAccount account specific data for the hubspot api key
 type HubspotIntegrationAccount struct {
 	PortalID  int    `json:"portalId"`
 	TimeZone  string `json:"timeZone"`
@@ -426,4 +431,65 @@ func GetHubspotIntegrationAccount(apiKey string) (*HubspotIntegrationAccount, er
 		return &hubspotIntegrationAccount, err
 	}
 	return &hubspotIntegrationAccount, nil
+}
+
+// GetHubspotDecodedSyncInfo decode sync info from project settings to map
+func GetHubspotDecodedSyncInfo(syncInfo *postgres.Jsonb) (*map[string]int64, error) {
+	syncInfoMap := make(map[string]int64)
+	if syncInfo == nil {
+		return &syncInfoMap, nil
+	}
+
+	err := json.Unmarshal(syncInfo.RawMessage, &syncInfoMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return &syncInfoMap, nil
+}
+
+// GetHubspotProjectOverAllStatus return  list of success projects and last successfull timestamp per document type
+func GetHubspotProjectOverAllStatus(success []HubspotProjectSyncStatus,
+	failure []HubspotProjectSyncStatus) (map[uint64]map[string]int64, map[uint64]bool) {
+
+	status := make(map[uint64]bool)
+	syncStatus := make(map[uint64]map[string]int64)
+	for i := range success {
+		status[success[i].ProjectID] = true
+
+		if _, exist := syncStatus[success[i].ProjectID]; !exist {
+			syncStatus[success[i].ProjectID] = make(map[string]int64)
+		}
+		syncStatus[success[i].ProjectID][success[i].DocType] = success[i].Timestamp
+	}
+
+	for i := range failure {
+		status[success[i].ProjectID] = false
+		log.WithFields(log.Fields{"project_id": failure[i].ProjectID, "doc_type": failure[i].DocType}).
+			Error("Failed to complete hubspot first time sync.")
+	}
+
+	return syncStatus, status
+}
+
+// GetHubspotSyncUpdatedInfo return merged sync info
+func GetHubspotSyncUpdatedInfo(incomingSyncInfo, existingSyncInfo *map[string]int64) *map[string]int64 {
+	mergedSyncInfo := make(map[string]int64)
+	for docType, timestamp := range *incomingSyncInfo {
+		var hubspotLastSyncInfo HubspotLastSyncInfo
+		hubspotLastSyncInfo.TypeAlias = docType
+		if existingSyncInfo != nil {
+			if _, exist := (*existingSyncInfo)[docType]; !exist {
+				mergedSyncInfo[docType] = 0
+			}
+
+			if timestamp < (*existingSyncInfo)[docType] {
+				mergedSyncInfo[docType] = (*existingSyncInfo)[docType]
+			} else {
+				mergedSyncInfo[docType] = timestamp
+			}
+		}
+	}
+
+	return &mergedSyncInfo
 }

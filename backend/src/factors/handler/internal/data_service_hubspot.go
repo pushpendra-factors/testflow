@@ -58,26 +58,26 @@ func DataServiceHubspotGetSyncInfoHandler(c *gin.Context) {
 	return
 }
 
-type HubspotFirstTimeSyncRequestPayload struct {
+type HubspotSyncRequestPayload struct {
 	Status   string                           `json:"status"`
 	Failures []model.HubspotProjectSyncStatus `json:"failures"`
 	Success  []model.HubspotProjectSyncStatus `json:"success"`
 }
 
-func DataServiceHubspotUpdateFirstTimeSyncInfo(c *gin.Context) {
+func DataServiceHubspotUpdateSyncInfo(c *gin.Context) {
 	r := c.Request
-
-	var hubspotFirstTimeSyncRequestPayload HubspotFirstTimeSyncRequestPayload
+	isFirstTime := c.Query("is_first_time") == "true"
+	var hubspotSyncRequestPayload HubspotSyncRequestPayload
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&hubspotFirstTimeSyncRequestPayload); err != nil {
-		log.WithError(err).Error("Failed to decode Json request on hubspot first time sync update.")
+	if err := decoder.Decode(&hubspotSyncRequestPayload); err != nil {
+		log.WithError(err).Error("Failed to decode Json request on hubspot sync update.")
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{"error": "Invalid request json."})
 		return
 	}
 
-	status := store.GetStore().UpdateHubspotProjectSettingsBySyncStatus(hubspotFirstTimeSyncRequestPayload.Success,
-		hubspotFirstTimeSyncRequestPayload.Failures)
+	status := store.GetStore().UpdateHubspotProjectSettingsBySyncStatus(hubspotSyncRequestPayload.Success,
+		hubspotSyncRequestPayload.Failures, isFirstTime)
 	if status != http.StatusAccepted {
 		c.Status(status)
 		return
