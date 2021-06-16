@@ -89,7 +89,7 @@ const ConfigureDP = (props) => {
   const onChangeEventDD = (grp, value) => {
     setShowDropDown(false);  
     const EventData = {
-      "event_name": `${value[0]}`
+      "event_name": `${value[1] ? value[1] : value[0]}`
     }
     addEventToTracked(activeProject.id, EventData).then(()=>{
       message.success('Event added successfully!')
@@ -104,7 +104,7 @@ const ConfigureDP = (props) => {
   const onChangeUserPropertiesDD = (grp, value) => {
     setShowDropDown1(false);  
     const UserPropertyData = {
-      "user_property_name": `${value[0]}`
+      "user_property_name": `${value[1] ? value[1] : value[0]}`
     }
     addUserPropertyToTracked(activeProject.id, UserPropertyData).then(()=>{
       message.success('User Property added successfully!')
@@ -213,7 +213,7 @@ const ConfigureDP = (props) => {
                                 </div>
                             </Col>
                             <Col span={24}>
-                                <Progress percent={(activeEventsTracked*2) + (InQueueEventsEvents*2)} strokeColor={'#ACA4DE'} success={{ percent: activeEventsTracked*2, strokeColor: '#5949BC' }} showInfo={false} />
+                                <Progress percent={(activeEventsTracked*2) + (InQueueEventsEvents*2)} strokeColor={'#ACA4DE'} success={{ percent: activeEventsTracked*2, strokeColor: '#1E89FF' }} showInfo={false} />
                             </Col>
                             <Col span={24}>
                                 <div className={'flex w-full justify-between items-center border-bottom--thin-2 pb-4'}>
@@ -248,7 +248,7 @@ const ConfigureDP = (props) => {
                                 return (
                                       <div key={index} className={'flex items-center justify-between px-4 py-2 fa-cdp--item'}>
                                           <div className={'flex items-center'}>
-                                            <SVG size={16} name={'MouseClick'} color={'purple'} className={'mr-1'} />
+                                            <SVG size={16} name={'Mouseclick'} color={'purple'} className={'mr-1'} />
                                             <Text type={'title'} level={7} weight={'thin'} extraClass={'m-0 ml-2'} >{event.name}</Text> 
                                           </div>
                                           <Button onClick={()=>DeleteEvent(event.id) }className={'fa-cdp--action fa-button-ghost'} size={'small'} type="text"><SVG name="delete" color={'grey'} /></Button>
@@ -271,7 +271,7 @@ const ConfigureDP = (props) => {
                                 </div>
                             </Col>
                             <Col span={24}>
-                                <Progress percent={(InQueueUserProperties*2)+ (activeUserProperties*2)} strokeColor={'#ACA4DE'} success={{ percent: activeUserProperties*2, strokeColor: '#5949BC' }} showInfo={false} />
+                                <Progress percent={(InQueueUserProperties*2)+ (activeUserProperties*2)} strokeColor={'#ACA4DE'} success={{ percent: activeUserProperties*2, strokeColor: '#1E89FF' }} showInfo={false} />
                             </Col>
                             <Col span={24}>
                                 <div className={'flex w-full justify-between items-center border-bottom--thin-2 pb-4'}>
