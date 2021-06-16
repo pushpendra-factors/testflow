@@ -169,12 +169,13 @@ type Model interface {
 	GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int)
 	GetAllEventsForSessionCreationAsUserEventsMap(projectId uint64, sessionEventNameId string, startTimestamp, endTimestamp int64) (*map[string][]model.Event, int, int)
 	GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStory(projectID uint64, from, to int64, mandatoryProperties []string) ([]model.EventWithProperties, *map[string]U.PropertiesMap, int)
-	OverwriteEventUserPropertiesByID(projectID uint64, id string, properties *postgres.Jsonb) int
+	OverwriteEventUserPropertiesByID(projectID uint64, userID, id string, properties *postgres.Jsonb) int
 	PullEventRowsForBuildSequenceJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error)
 	PullEventRowsForArchivalJob(projectID uint64, startTime, endTime int64) (*sql.Rows, error)
 	GetUnusedSessionIDsForJob(projectID uint64, startTimestamp, endTimestamp int64) ([]string, int)
 	DeleteEventsByIDsInBatchForJob(projectID uint64, eventNameID string, ids []string, batchSize int) int
 	DeleteEventByIDs(projectID uint64, eventNameID string, ids []string) int
+	AssociateSessionByEventIds(projectId uint64, userID string, eventIds []string, sessionId string) int
 
 	// facebook_document
 	CreateFacebookDocument(projectID uint64, document *model.FacebookDocument) int

@@ -637,11 +637,14 @@ func filterEventsForSession(events []model.Event, endTimestamp int64) []*model.E
 	return filteredEvents
 }
 
-func associateSessionByEventIds(projectId uint64, eventIds []string, sessionId string) int {
+func (pg *Postgres) AssociateSessionByEventIds(projectId uint64,
+	userID string, eventIds []string, sessionId string) int {
+
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"event_ids": eventIds, "session_id": sessionId})
 
-	if projectId == 0 || len(eventIds) == 0 {
+	// Not using userID intentionlly to keep using primary key on pg.
+	if projectId == 0 || len(eventIds) == 0 || sessionId == "" {
 		logCtx.Error("Invalid args on associateSessionToEvents.")
 		return http.StatusBadRequest
 	}
@@ -659,7 +662,7 @@ func associateSessionByEventIds(projectId uint64, eventIds []string, sessionId s
 	return http.StatusAccepted
 }
 
-func associateSessionToEventsInBatch(projectId uint64, events []*model.Event,
+func (pg *Postgres) associateSessionToEventsInBatch(projectId uint64, userID string, events []*model.Event,
 	sessionId string, batchSize int) int {
 
 	eventIds := make([]string, 0, len(events))
@@ -670,7 +673,7 @@ func associateSessionToEventsInBatch(projectId uint64, events []*model.Event,
 
 	batchEventIds := U.GetStringListAsBatch(eventIds, batchSize)
 	for i := range batchEventIds {
-		errCode := associateSessionByEventIds(projectId, batchEventIds[i], sessionId)
+		errCode := pg.AssociateSessionByEventIds(projectId, userID, batchEventIds[i], sessionId)
 		if errCode != http.StatusAccepted {
 			return errCode
 		}
@@ -954,7 +957,7 @@ func (pg *Postgres) addSessionForUser(projectId uint64, userId string, userEvent
 			eventsOfSession := events[sessionStartIndex : sessionEndIndex+1]
 
 			// Update the session_id to all events between start index and end index + 1.
-			errCode := associateSessionToEventsInBatch(projectId, eventsOfSession, sessionEvent.ID, 100)
+			errCode := pg.associateSessionToEventsInBatch(projectId, userId, eventsOfSession, sessionEvent.ID, 100)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed to associate session to events.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
@@ -1412,7 +1415,7 @@ func (pg *Postgres) GetEventsWithoutPropertiesAndWithPropertiesByNameForYourStor
 	return eventsWithoutProperties, propertiesByName, http.StatusFound
 }
 
-func (pg *Postgres) OverwriteEventUserPropertiesByID(projectID uint64,
+func (pg *Postgres) OverwriteEventUserPropertiesByID(projectID uint64, userID,
 	id string, userProperties *postgres.Jsonb) int {
 
 	logCtx := log.WithField("project_id", projectID).WithField("id", id)
