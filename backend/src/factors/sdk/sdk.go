@@ -1503,7 +1503,7 @@ func overwriteUserPropertiesOnTable(projectID uint64, userID string, eventID str
 	}
 
 	errCode = store.GetStore().OverwriteEventUserPropertiesByID(
-		projectID, eventID, updateUserPropertiesJson)
+		projectID, userID, eventID, updateUserPropertiesJson)
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("err_code", errCode).
 			Error("Failed to overwrite event's user properties with initial page properties.")

@@ -765,13 +765,14 @@ func filterEventsForSession(events []model.Event, endTimestamp int64) []*model.E
 	return filteredEvents
 }
 
-func associateSessionByEventIds(projectId uint64, eventIds []string, sessionId string) int {
+func (store *MemSQL) AssociateSessionByEventIds(projectId uint64,
+	userID string, eventIds []string, sessionId string) int {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectId,
-		"event_ids": eventIds, "session_id": sessionId})
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "event_ids": eventIds,
+		"session_id": sessionId, "user_id": userID})
 
-	if projectId == 0 || len(eventIds) == 0 {
+	if projectId == 0 || len(eventIds) == 0 || sessionId == "" || userID == "" {
 		logCtx.Error("Invalid args on associateSessionToEvents.")
 		return http.StatusBadRequest
 	}
@@ -779,8 +780,9 @@ func associateSessionByEventIds(projectId uint64, eventIds []string, sessionId s
 	// Updates session_id to all events between given timestamp.
 	updateFields := map[string]interface{}{"session_id": sessionId}
 	db := C.GetServices().Db
-	err := db.Model(&model.Event{}).Where("project_id = ? AND id IN (?)",
-		projectId, eventIds).Update(updateFields).Error
+	err := db.Model(&model.Event{}).
+		Where("project_id = ? AND user_id = ? AND id IN (?)", projectId, userID, eventIds).
+		Update(updateFields).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to associate session to events.")
 		return http.StatusInternalServerError
@@ -789,7 +791,7 @@ func associateSessionByEventIds(projectId uint64, eventIds []string, sessionId s
 	return http.StatusAccepted
 }
 
-func associateSessionToEventsInBatch(projectId uint64, events []*model.Event,
+func (store *MemSQL) associateSessionToEventsInBatch(projectId uint64, userID string, events []*model.Event,
 	sessionId string, batchSize int) int {
 
 	eventIds := make([]string, 0, len(events))
@@ -800,7 +802,7 @@ func associateSessionToEventsInBatch(projectId uint64, events []*model.Event,
 
 	batchEventIds := U.GetStringListAsBatch(eventIds, batchSize)
 	for i := range batchEventIds {
-		errCode := associateSessionByEventIds(projectId, batchEventIds[i], sessionId)
+		errCode := store.AssociateSessionByEventIds(projectId, userID, batchEventIds[i], sessionId)
 		if errCode != http.StatusAccepted {
 			return errCode
 		}
@@ -1084,7 +1086,8 @@ func (store *MemSQL) addSessionForUser(projectId uint64, userId string, userEven
 			eventsOfSession := events[sessionStartIndex : sessionEndIndex+1]
 
 			// Update the session_id to all events between start index and end index + 1.
-			errCode := associateSessionToEventsInBatch(projectId, eventsOfSession, sessionEvent.ID, 100)
+			errCode := store.associateSessionToEventsInBatch(projectId, userId,
+				eventsOfSession, sessionEvent.ID, 100)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed to associate session to events.")
 				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
@@ -1666,12 +1669,11 @@ func (store *MemSQL) DeleteEventByIDs(projectID uint64, eventNameID string, ids 
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID uint64,
+func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID uint64, userID,
 	id string, userProperties *postgres.Jsonb) int {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 
-	logCtx := log.WithField("project_id", projectID).WithField("id", id)
-
+	logCtx := log.WithField("project_id", projectID).WithField("id", id).WithField("user_id", userID)
 	if projectID == 0 || id == "" {
 		logCtx.Error("Invalid values for arguments.")
 		return http.StatusBadRequest
@@ -1684,8 +1686,12 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID uint64,
 
 	// Not updating the event_user_properties
 	db := C.GetServices().Db
-	err := db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectID, id).
-		Update("user_properties", userProperties).Error
+	dbx := db.Model(&model.Event{}).Where("project_id = ? AND id = ?", projectID, id)
+	if userID != "" {
+		dbx = dbx.Where("user_id = ?", userID)
+	}
+
+	err := dbx.Update("user_properties", userProperties).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to overwrite user properteis.")
 		return http.StatusInternalServerError

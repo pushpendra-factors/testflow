@@ -1627,7 +1627,8 @@ func (store *MemSQL) updateUserPropertiesForSessionV2(projectID uint64,
 			continue
 		}
 
-		errCode := store.OverwriteEventUserPropertiesByID(projectID, eventID, userPropertiesJsonb)
+		errCode := store.OverwriteEventUserPropertiesByID(projectID,
+			sessionUserProperties.UserID, eventID, userPropertiesJsonb)
 		if errCode != http.StatusAccepted {
 			logCtx.WithField("err_code", errCode).Error("Failed to overwrite event user properties.")
 			hasFailure = true

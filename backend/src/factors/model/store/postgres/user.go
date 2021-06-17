@@ -1480,7 +1480,8 @@ func (pg *Postgres) updateUserPropertiesForSessionV2(projectID uint64,
 			continue
 		}
 
-		errCode := pg.OverwriteEventUserPropertiesByID(projectID, eventID, userPropertiesJsonb)
+		errCode := pg.OverwriteEventUserPropertiesByID(projectID,
+			sessionUserProperties.UserID, eventID, userPropertiesJsonb)
 		if errCode != http.StatusAccepted {
 			logCtx.WithField("err_code", errCode).Error("Failed to overwrite event user properties.")
 			hasFailure = true

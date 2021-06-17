@@ -67,60 +67,7 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	// coalUserId[Key][UserSessionData]
 	sessions := updateSessionsMapWithCoalesceID(_sessions, usersInfo)
 
-	isCompare := false
-	// Default conversion for AttributionQueryTypeConversionBased.
-	conversionFrom := query.From
-	conversionTo := query.To
-	// Extend the campaign window for engagement based attribution.
-	if query.QueryType == model.AttributionQueryTypeEngagementBased {
-		conversionFrom = query.From
-		conversionTo = lookbackAdjustedTo(query.To, query.LookbackDays)
-	}
-	var attributionData *map[string]*model.AttributionData
-	if query.AttributionMethodologyCompare != "" {
-		// Two AttributionMethodologies comparison
-		isCompare = true
-		attributionData, err = store.RunAttributionForMethodologyComparison(projectID,
-			conversionFrom, conversionTo, query, eventNameToIDList, sessions)
-
-	} else if query.ConversionEventCompare.Name != "" {
-		// Two events comparison
-		isCompare = true
-		attributionData, err = store.runAttribution(projectID,
-			conversionFrom, conversionTo, query.ConversionEvent, query, eventNameToIDList, sessions)
-
-		if err != nil {
-			return nil, err
-		}
-		// Running for ConversionEventCompare.
-		attributionCompareData, err := store.runAttribution(projectID,
-			conversionFrom, conversionTo, query.ConversionEventCompare, query, eventNameToIDList, sessions)
-
-		if err != nil {
-			return nil, err
-		}
-
-		// Merge compare data into attributionData.
-		for key := range *attributionData {
-			if _, exists := (*attributionCompareData)[key]; exists {
-				(*attributionData)[key].ConversionEventCompareCount = (*attributionCompareData)[key].ConversionEventCount
-			} else {
-				(*attributionData)[key].ConversionEventCompareCount = 0
-			}
-		}
-		// Filling any non-matched touch points.
-		for missingKey := range *attributionCompareData {
-			if _, exists := (*attributionData)[missingKey]; !exists {
-				(*attributionData)[missingKey] = &model.AttributionData{}
-				(*attributionData)[missingKey].ConversionEventCompareCount = (*attributionCompareData)[missingKey].ConversionEventCount
-			}
-		}
-	} else {
-		// Single event attribution.
-		attributionData, err = store.runAttribution(projectID,
-			conversionFrom, conversionTo, query.ConversionEvent,
-			query, eventNameToIDList, sessions)
-	}
+	attributionData, isCompare, err := store.FireAttribution(projectID, query, eventNameToIDList, sessions)
 
 	if err != nil {
 		return nil, err
@@ -179,6 +126,67 @@ func (store *MemSQL) ExecuteAttributionQuery(projectID uint64, queryOriginal *mo
 	}
 	result.Meta.Currency = currency
 	return result, nil
+}
+
+func (store *MemSQL) FireAttribution(projectID uint64, query *model.AttributionQuery, eventNameToIDList map[string][]interface{},
+	sessions map[string]map[string]model.UserSessionData) (*map[string]*model.AttributionData, bool, error) {
+
+	isCompare := false
+	var err error
+	// Default conversion for AttributionQueryTypeConversionBased.
+	conversionFrom := query.From
+	conversionTo := query.To
+	// Extend the campaign window for engagement based attribution.
+	if query.QueryType == model.AttributionQueryTypeEngagementBased {
+		conversionFrom = query.From
+		conversionTo = lookbackAdjustedTo(query.To, query.LookbackDays)
+	}
+	var attributionData *map[string]*model.AttributionData
+	if query.AttributionMethodologyCompare != "" {
+		// Two AttributionMethodologies comparison
+		isCompare = true
+		attributionData, err = store.RunAttributionForMethodologyComparison(projectID,
+			conversionFrom, conversionTo, query, eventNameToIDList, sessions)
+
+	} else if query.ConversionEventCompare.Name != "" {
+		// Two events comparison
+		isCompare = true
+		attributionData, err = store.runAttribution(projectID,
+			conversionFrom, conversionTo, query.ConversionEvent, query, eventNameToIDList, sessions)
+
+		if err != nil {
+			return nil, isCompare, err
+		}
+		// Running for ConversionEventCompare.
+		attributionCompareData, err := store.runAttribution(projectID,
+			conversionFrom, conversionTo, query.ConversionEventCompare, query, eventNameToIDList, sessions)
+
+		if err != nil {
+			return nil, isCompare, err
+		}
+
+		// Merge compare data into attributionData.
+		for key := range *attributionData {
+			if _, exists := (*attributionCompareData)[key]; exists {
+				(*attributionData)[key].ConversionEventCompareCount = (*attributionCompareData)[key].ConversionEventCount
+			} else {
+				(*attributionData)[key].ConversionEventCompareCount = 0
+			}
+		}
+		// Filling any non-matched touch points.
+		for missingKey := range *attributionCompareData {
+			if _, exists := (*attributionData)[missingKey]; !exists {
+				(*attributionData)[missingKey] = &model.AttributionData{}
+				(*attributionData)[missingKey].ConversionEventCompareCount = (*attributionCompareData)[missingKey].ConversionEventCount
+			}
+		}
+	} else {
+		// Single event attribution.
+		attributionData, err = store.runAttribution(projectID,
+			conversionFrom, conversionTo, query.ConversionEvent,
+			query, eventNameToIDList, sessions)
+	}
+	return attributionData, isCompare, err
 }
 
 func (store *MemSQL) RunAttributionForMethodologyComparison(projectID uint64,
@@ -347,17 +355,15 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 		return nil, nil, err
 	}
 
-	attributedSessionsByUserId := make(map[string]map[string]model.UserSessionData)
-	userIdMap := make(map[string]bool)
-	var userIdsWithSession []string
-
 	caseSelectStmt := "CASE WHEN JSON_EXTRACT_STRING(sessions.properties, ?) IS NULL THEN ? " +
 		" WHEN JSON_EXTRACT_STRING(sessions.properties, ?) = '' THEN ? ELSE JSON_EXTRACT_STRING(sessions.properties, ?) END"
 
 	queryUserSessionTimeRange := "SELECT sessions.user_id, " +
 		caseSelectStmt + " AS sessionTimeSpent, " +
 		caseSelectStmt + " AS pageCount, " +
+		caseSelectStmt + " AS campaignID, " +
 		caseSelectStmt + " AS campaignName, " +
+		caseSelectStmt + " AS adgroupID, " +
 		caseSelectStmt + " AS adgroupName, " +
 		caseSelectStmt + " AS keywordName, " +
 		caseSelectStmt + " AS keywordMatchType, " +
@@ -371,7 +377,9 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 	qParams = append(qParams,
 		U.SP_SPENT_TIME, 0, U.SP_SPENT_TIME, 0, U.SP_SPENT_TIME,
 		U.SP_PAGE_COUNT, 0, U.SP_PAGE_COUNT, 0, U.SP_PAGE_COUNT,
+		U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID, model.PropertyValueNone, U.EP_CAMPAIGN_ID,
 		U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN, model.PropertyValueNone, U.EP_CAMPAIGN,
+		U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID, model.PropertyValueNone, U.EP_ADGROUP_ID,
 		U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP, model.PropertyValueNone, U.EP_ADGROUP,
 		U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD, model.PropertyValueNone, U.EP_KEYWORD,
 		U.EP_KEYWORD_MATCH_TYPE, model.PropertyValueNone, U.EP_KEYWORD_MATCH_TYPE, model.PropertyValueNone, U.EP_KEYWORD_MATCH_TYPE,
@@ -382,85 +390,11 @@ func (store *MemSQL) getAllTheSessions(projectId uint64, sessionEventNameId stri
 	rows, err := store.ExecQueryWithContext(queryUserSessionTimeRange, qParams)
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
-		return attributedSessionsByUserId, userIdsWithSession, err
+		return nil, nil, err
 	}
 	defer rows.Close()
-	for rows.Next() {
-		var userID string
-		var sessionSpentTime float64
-		var pageCount int64
-		var campaignName string
-		var adgroupName string
-		var keywordName string
-		var keywordMatchType string
-		var sourceName string
-		var attributionId string
-		var gclID string
-		var timestamp int64
-		if err = rows.Scan(&userID, &sessionSpentTime, &pageCount, &campaignName, &adgroupName, &keywordName, &keywordMatchType, &sourceName, &attributionId, &gclID, &timestamp); err != nil {
-			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
-			continue
-		}
-		// apply filter at extracting session level itself
-		if !model.IsValidAttributionKeyValueAND(query.AttributionKey,
-			attributionId, query.AttributionKeyFilter) && !model.IsValidAttributionKeyValueOR(query.AttributionKey,
-			attributionId, query.AttributionKeyFilter) {
-			continue
-		}
-		if _, ok := userIdMap[userID]; !ok {
-			userIdsWithSession = append(userIdsWithSession, userID)
-			userIdMap[userID] = true
-		}
-		marketingValues := model.MarketingData{Channel: model.PropertyValueNone, CampaignName: campaignName, AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName}
-		var attributionIdBasedOnGclID string
-		// Override GCLID based campaign info if presents
-		if gclID != model.PropertyValueNone && !(query.AttributionKey == model.AttributionKeyKeyword && !model.IsASearchSlotKeyword(&(*reports).AdwordsGCLIDData, gclID)) {
-			attributionIdBasedOnGclID, marketingValues = model.GetGCLIDAttributionValue(&(*reports).AdwordsGCLIDData, gclID, query.AttributionKey, marketingValues)
-			marketingValues.Channel = model.ChannelAdwords
-			// In cases where GCLID is present in events, but not in adwords report (as users tend to bookmark expired URLs),
-			// fallback is attributionId
-			if attributionIdBasedOnGclID != model.PropertyValueNone && attributionIdBasedOnGclID != "" {
-				attributionId = attributionIdBasedOnGclID
-			}
-		} else {
-			// we can't enrich the values in any other way, why?
-			// Because, an adgroup can belong to multiple campaign, keyword also has match type, adgroup, campaign as keys
-		}
-		// Name
-		marketingValues.Name = attributionId
-		// Add the unique attributionKey key
-		marketingValues.Key = model.GetMarketingDataKey(query.AttributionKey, marketingValues)
-		uniqueAttributionKey := marketingValues.Key
-		// add session info uniquely for user-attributionId pair
-		if _, ok := attributedSessionsByUserId[userID]; ok {
 
-			if userSessionData, ok := attributedSessionsByUserId[userID][uniqueAttributionKey]; ok {
-				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
-				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
-				userSessionData.SessionSpentTimes = append(userSessionData.SessionSpentTimes, sessionSpentTime)
-				userSessionData.PageCounts = append(userSessionData.PageCounts, pageCount)
-				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
-				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
-				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
-			} else {
-				userSessionDataNew := model.UserSessionData{MinTimestamp: timestamp,
-					SessionSpentTimes: []float64{sessionSpentTime},
-					PageCounts:        []int64{pageCount},
-					MaxTimestamp:      timestamp, TimeStamps: []int64{timestamp},
-					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
-				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
-			}
-		} else {
-			attributedSessionsByUserId[userID] = make(map[string]model.UserSessionData)
-			userSessionDataNew := model.UserSessionData{MinTimestamp: timestamp,
-				SessionSpentTimes: []float64{sessionSpentTime},
-				PageCounts:        []int64{pageCount},
-				MaxTimestamp:      timestamp, TimeStamps: []int64{timestamp},
-				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
-			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
-		}
-	}
-	return attributedSessionsByUserId, userIdsWithSession, nil
+	return model.ProcessEventRows(rows, query, logCtx, reports)
 }
 
 // Returns the concatenated list of conversion event + funnel events names
