@@ -1206,6 +1206,13 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 	userIdMap := make(map[string]bool)
 	var userIdsWithSession []string
 
+	type MissingCollection struct {
+		AttributionKey string
+		GCLID          string
+		CampaignID     string
+		AdgroupID      string
+	}
+	var missingIDs []MissingCollection
 	for rows.Next() {
 		var userID string
 		var sessionSpentTime float64
@@ -1245,7 +1252,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			if U.IsNonEmptyKey(attributionIdBasedOnGclID) {
 				attributionId = attributionIdBasedOnGclID
 			} else {
-				logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey, "GCLID": gclID}).Error("no document was found in any of the reports for GCLID. Logging and continuing")
+				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, GCLID: gclID})
 			}
 		} else if (query.AttributionKey == AttributionKeyCampaign || query.AttributionKey == AttributionKeyAdgroup) &&
 			(U.IsNonEmptyKey(campaignID) || U.IsNonEmptyKey(adgroupID)) {
@@ -1255,7 +1262,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			if U.IsNonEmptyKey(attributionIdBasedOnEnrichment) {
 				attributionId = attributionIdBasedOnEnrichment
 			} else {
-				logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey, "CampaignID": campaignID, "AdgroupID": adgroupID}).Error("no document was found in any of the reports for ID. Logging and continuing")
+				missingIDs = append(missingIDs, MissingCollection{AttributionKey: query.AttributionKey, CampaignID: campaignID, AdgroupID: adgroupID})
 			}
 		} else {
 			// can't enrich the values in any other way, why?
@@ -1295,6 +1302,7 @@ func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry
 			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
 		}
 	}
+	logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey}).Info("no document was found in any of the reports for ID. Logging and continuing %+v", missingIDs[:U.MinInt(100, len(missingIDs))])
 	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
