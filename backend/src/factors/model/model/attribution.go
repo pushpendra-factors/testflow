@@ -299,8 +299,72 @@ func AddDefaultKeyDimensionsToAttributionQuery(query *AttributionQuery) {
 	}
 }
 
-// GetGCLIDAttributionValue Returns the matching value for GCLID, if not found returns $none
-func GetGCLIDAttributionValue(gclIDBasedCampaign *map[string]MarketingData, gclID string,
+// EnrichUsingMarketingID Enriched Name using ID for Campaign and Adgroup attribution queries
+func EnrichUsingMarketingID(attributionKey string, sessionUTMMarketingValue MarketingData, reports *MarketingReports) (string, MarketingData) {
+
+	// Select the best value for attributionKey
+	switch attributionKey {
+	case AttributionKeyCampaign:
+
+		ID := sessionUTMMarketingValue.CampaignID
+		report := reports.AdwordsCampaignIDData
+		if v, ok := report[ID]; ok {
+			sessionUTMMarketingValue.CampaignName = v.CampaignName
+			sessionUTMMarketingValue.Name = v.CampaignName
+			sessionUTMMarketingValue.Channel = ChannelAdwords
+			return v.CampaignName, sessionUTMMarketingValue
+		}
+
+		report = reports.FacebookCampaignIDData
+		if v, ok := report[ID]; ok {
+			sessionUTMMarketingValue.CampaignName = v.CampaignName
+			sessionUTMMarketingValue.Name = v.CampaignName
+			sessionUTMMarketingValue.Channel = ChannelFacebook
+			return v.CampaignName, sessionUTMMarketingValue
+		}
+
+		report = reports.LinkedinCampaignIDData
+		if v, ok := report[ID]; ok {
+			sessionUTMMarketingValue.CampaignName = v.CampaignName
+			sessionUTMMarketingValue.Name = v.CampaignName
+			sessionUTMMarketingValue.Channel = ChannelLinkedin
+			return v.CampaignName, sessionUTMMarketingValue
+		}
+
+	case AttributionKeyAdgroup:
+		ID := sessionUTMMarketingValue.AdgroupID
+		report := reports.AdwordsAdgroupIDData
+		if v, ok := report[ID]; ok {
+			sessionUTMMarketingValue.AdgroupName = v.AdgroupName
+			sessionUTMMarketingValue.Name = v.AdgroupName
+			sessionUTMMarketingValue.Channel = ChannelAdwords
+			return v.AdgroupName, sessionUTMMarketingValue
+		}
+
+		report = reports.FacebookAdgroupIDData
+		if v, ok := report[ID]; ok {
+			sessionUTMMarketingValue.AdgroupName = v.AdgroupName
+			sessionUTMMarketingValue.Name = v.AdgroupName
+			sessionUTMMarketingValue.Channel = ChannelFacebook
+			return v.AdgroupName, sessionUTMMarketingValue
+		}
+
+		report = reports.LinkedinAdgroupIDData
+		if v, ok := report[ID]; ok {
+			sessionUTMMarketingValue.AdgroupName = v.AdgroupName
+			sessionUTMMarketingValue.Name = v.AdgroupName
+			sessionUTMMarketingValue.Channel = ChannelLinkedin
+			return v.AdgroupName, sessionUTMMarketingValue
+		}
+	default:
+		// No enrichment for other types using ID
+		return PropertyValueNone, sessionUTMMarketingValue
+	}
+	return PropertyValueNone, sessionUTMMarketingValue
+}
+
+// EnrichUsingGCLID Returns the matching value for GCLID, if not found returns $none
+func EnrichUsingGCLID(gclIDBasedCampaign *map[string]MarketingData, gclID string,
 	attributionKey string, sessionUTMMarketingValue MarketingData) (string, MarketingData) {
 
 	if v, ok := (*gclIDBasedCampaign)[gclID]; ok {
@@ -333,6 +397,7 @@ func GetGCLIDAttributionValue(gclIDBasedCampaign *map[string]MarketingData, gclI
 }
 
 func enrichMarketData(v *MarketingData, sessionUTMMarketingValue *MarketingData) {
+
 	if U.IsNonEmptyKey(v.CampaignID) {
 		sessionUTMMarketingValue.CampaignID = v.CampaignID
 	}
@@ -1134,6 +1199,103 @@ func GetKeyMapToData(attributionKey string, allRows []MarketingData) map[string]
 		keyToData[key] = val
 	}
 	return keyToData
+}
+func ProcessEventRows(rows *sql.Rows, query *AttributionQuery, logCtx *log.Entry, reports *MarketingReports) (map[string]map[string]UserSessionData, []string, error) {
+
+	attributedSessionsByUserId := make(map[string]map[string]UserSessionData)
+	userIdMap := make(map[string]bool)
+	var userIdsWithSession []string
+
+	for rows.Next() {
+		var userID string
+		var sessionSpentTime float64
+		var pageCount int64
+		var campaignID string
+		var campaignName string
+		var adgroupID string
+		var adgroupName string
+		var keywordName string
+		var keywordMatchType string
+		var sourceName string
+		var attributionId string
+		var gclID string
+		var timestamp int64
+		if err := rows.Scan(&userID, &sessionSpentTime, &pageCount, &campaignID, &campaignName, &adgroupID, &adgroupName, &keywordName, &keywordMatchType, &sourceName, &attributionId, &gclID, &timestamp); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed. Ignoring row. Continuing")
+			continue
+		}
+		// apply filter at extracting session level itself
+		if !IsValidAttributionKeyValueAND(query.AttributionKey,
+			attributionId, query.AttributionKeyFilter) && !IsValidAttributionKeyValueOR(query.AttributionKey,
+			attributionId, query.AttributionKeyFilter) {
+			continue
+		}
+		if _, ok := userIdMap[userID]; !ok {
+			userIdsWithSession = append(userIdsWithSession, userID)
+			userIdMap[userID] = true
+		}
+		marketingValues := MarketingData{Channel: PropertyValueNone, CampaignID: campaignID, CampaignName: campaignName, AdgroupID: adgroupID, AdgroupName: adgroupName, KeywordName: keywordName, KeywordMatchType: keywordMatchType, Source: sourceName}
+		// Override GCLID based campaign info if presents
+		if gclID != PropertyValueNone && !(query.AttributionKey == AttributionKeyKeyword && !IsASearchSlotKeyword(&(*reports).AdwordsGCLIDData, gclID)) {
+			var attributionIdBasedOnGclID string
+			attributionIdBasedOnGclID, marketingValues = EnrichUsingGCLID(&(*reports).AdwordsGCLIDData, gclID, query.AttributionKey, marketingValues)
+			marketingValues.Channel = ChannelAdwords
+			// In cases where GCLID is present in events, but not in adwords report (as users tend to bookmark expired URLs),
+			// fallback is attributionId
+			if U.IsNonEmptyKey(attributionIdBasedOnGclID) {
+				attributionId = attributionIdBasedOnGclID
+			} else {
+				logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey, "GCLID": gclID}).Error("no document was found in any of the reports for GCLID. Logging and continuing")
+			}
+		} else if (query.AttributionKey == AttributionKeyCampaign || query.AttributionKey == AttributionKeyAdgroup) &&
+			(U.IsNonEmptyKey(campaignID) || U.IsNonEmptyKey(adgroupID)) {
+			// enrich for campaign/adgroup based session having campaign_id/adgroup_id
+			var attributionIdBasedOnEnrichment string
+			attributionIdBasedOnEnrichment, marketingValues = EnrichUsingMarketingID(query.AttributionKey, marketingValues, reports)
+			if U.IsNonEmptyKey(attributionIdBasedOnEnrichment) {
+				attributionId = attributionIdBasedOnEnrichment
+			} else {
+				logCtx.WithFields(log.Fields{"AttributionKey": query.AttributionKey, "CampaignID": campaignID, "AdgroupID": adgroupID}).Error("no document was found in any of the reports for ID. Logging and continuing")
+			}
+		} else {
+			// can't enrich the values in any other way, why?
+			// Because, an adgroup can belong to multiple campaign, keyword also has match type, adgroup, campaign as keys
+		}
+		// Name
+		marketingValues.Name = attributionId
+		// Add the unique attributionKey key
+		marketingValues.Key = GetMarketingDataKey(query.AttributionKey, marketingValues)
+		uniqueAttributionKey := marketingValues.Key
+		// add session info uniquely for user-attributionId pair
+		if _, ok := attributedSessionsByUserId[userID]; ok {
+
+			if userSessionData, ok := attributedSessionsByUserId[userID][uniqueAttributionKey]; ok {
+				userSessionData.MinTimestamp = U.Min(userSessionData.MinTimestamp, timestamp)
+				userSessionData.MaxTimestamp = U.Max(userSessionData.MaxTimestamp, timestamp)
+				userSessionData.SessionSpentTimes = append(userSessionData.SessionSpentTimes, sessionSpentTime)
+				userSessionData.PageCounts = append(userSessionData.PageCounts, pageCount)
+				userSessionData.TimeStamps = append(userSessionData.TimeStamps, timestamp)
+				userSessionData.WithinQueryPeriod = userSessionData.WithinQueryPeriod || timestamp >= query.From && timestamp <= query.To
+				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionData
+			} else {
+				userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
+					SessionSpentTimes: []float64{sessionSpentTime},
+					PageCounts:        []int64{pageCount},
+					MaxTimestamp:      timestamp, TimeStamps: []int64{timestamp},
+					WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+				attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
+			}
+		} else {
+			attributedSessionsByUserId[userID] = make(map[string]UserSessionData)
+			userSessionDataNew := UserSessionData{MinTimestamp: timestamp,
+				SessionSpentTimes: []float64{sessionSpentTime},
+				PageCounts:        []int64{pageCount},
+				MaxTimestamp:      timestamp, TimeStamps: []int64{timestamp},
+				WithinQueryPeriod: timestamp >= query.From && timestamp <= query.To, MarketingInfo: marketingValues}
+			attributedSessionsByUserId[userID][uniqueAttributionKey] = userSessionDataNew
+		}
+	}
+	return attributedSessionsByUserId, userIdsWithSession, nil
 }
 
 func ProcessRow(rows *sql.Rows, reportName string, logCtx *log.Entry, channel string) (map[string]MarketingData, []MarketingData) {

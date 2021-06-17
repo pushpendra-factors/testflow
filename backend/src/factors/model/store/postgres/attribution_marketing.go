@@ -100,7 +100,8 @@ func (pg *Postgres) FetchMarketingReports(projectID uint64, q model.AttributionQ
 			}
 		}
 
-		adwordsGCLIDData, err = pg.GetGCLIDBasedCampaignInfo(projectID, effectiveFrom, effectiveTo, adwordsCustomerID,
+		// Adding 2 days in the effective query range for GCLID report to capture GCLID leakage
+		adwordsGCLIDData, err = pg.PullGCLIDReport(projectID, effectiveFrom-(2*model.SecsInADay), effectiveTo+(2*model.SecsInADay), adwordsCustomerID,
 			adwordsCampaignIDData, adwordsAdgroupIDData, adwordsKeywordIDData, q.Timezone)
 		if err != nil {
 			return data, err

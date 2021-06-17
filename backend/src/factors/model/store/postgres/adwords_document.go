@@ -604,8 +604,8 @@ func sanitizedLastSyncInfos(adwordsLastSyncInfos []model.AdwordsLastSyncInfo, ad
 	return selectedLastSyncInfos, http.StatusOK
 }
 
-// GetGCLIDBasedCampaignInfo - It returns GCLID based campaign info for given time range and adwords account
-func (pg *Postgres) GetGCLIDBasedCampaignInfo(projectID uint64, from, to int64, adwordsAccountIDs string,
+// PullGCLIDReport - It returns GCLID based campaign info for given time range and adwords account
+func (pg *Postgres) PullGCLIDReport(projectID uint64, from, to int64, adwordsAccountIDs string,
 	campaignIDReport, adgroupIDReport, keywordIDReport map[string]model.MarketingData, timeZone string) (map[string]model.MarketingData, error) {
 
 	logCtx := log.WithFields(log.Fields{"ProjectID": projectID, "Range": fmt.Sprintf("%d - %d", from, to)})
