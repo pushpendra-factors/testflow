@@ -480,7 +480,13 @@ func (store *MemSQL) CreateOrGetSegmentUser(projectId uint64, segAnonId, custUse
 		user, err := store.createUserWithError(cUser)
 		if err != nil {
 			if IsDuplicateRecordError(err) || isConstraintViolationError(err) {
-				return user, http.StatusOK
+				user, errCode = store.GetUserBySegmentAnonymousId(projectId, segAnonId)
+				if errCode == http.StatusFound {
+					return user, http.StatusOK
+				}
+
+				logCtx.Error("Failed to get user by segment anonymous id after constraint failure.")
+				return nil, http.StatusInternalServerError
 			}
 
 			logCtx.WithError(err).Error(
