@@ -14,7 +14,8 @@ const HubspotIntegration = ({
     udpateProjectSettings,
     activeProject,
     currentProjectSettings, 
-    setIsActive
+    setIsActive,
+    kbLink = false
 }) =>{ 
     const [form] = Form.useForm();
     const [errorInfo, seterrorInfo] = useState(null);
@@ -155,7 +156,7 @@ return (
     <div className={'mt-4 flex'}>
     {currentProjectSettings?.int_hubspot ? <Button loading={loading} onClick={()=>onDisconnect()}>Disconnect</Button> : <Button type={'primary'} loading={loading} onClick={()=>setShowForm(!showForm)}>Connect</Button>
     }
-        <Button className={'ml-2 '}>View documentation</Button> 
+        {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}
     </div>
     </ErrorBoundary>
     </>

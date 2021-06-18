@@ -15,7 +15,8 @@ const SalesForceIntegration = ({
     currentProjectSettings, 
     setIsActive,
     enableSalesforceIntegration,
-    fetchSalesforceRedirectURL
+    fetchSalesforceRedirectURL,
+    kbLink = false
 }) =>{  
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -65,7 +66,7 @@ return (
     </>} 
     {!isEnabled && <>
     <Button type={'primary'} loading={loading} onClick={onClickEnableSalesforce}>Enable using Salesforce</Button> 
-    <Button className={'ml-2 '}>View documentation</Button> 
+    {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}
     </>
     }
     </div>

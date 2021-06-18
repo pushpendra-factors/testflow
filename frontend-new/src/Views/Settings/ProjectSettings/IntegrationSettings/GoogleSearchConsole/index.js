@@ -25,7 +25,8 @@ const GoogleSearchConsole = ({
     setIsActive,
     fetchSearchConsoleCustomerAccounts,
     udpateProjectSettings,
-    fetchProjectSettings
+    fetchProjectSettings,
+    kbLink = false
 }) => {
 
     const [loading, setLoading] = useState(false);
@@ -248,7 +249,7 @@ const GoogleSearchConsole = ({
                 {
                     !currentProjectSettings?.int_google_organic_enabled_agent_uuid && <>
                         <Button type={'primary'} loading={loading} onClick={enableGSC}>Enable using Google</Button>
-                        <Button className={'ml-2 '}>View documentation</Button>
+                        {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}
                     </>
                 }
             </div>

@@ -16,7 +16,8 @@ const FacebookIntegration = ({
   activeProject,
   currentProjectSettings,
   setIsActive,
-  addFacebookAccessToken
+  addFacebookAccessToken,
+  kbLink = false
 }) => {
   const [loading, setLoading] = useState(false);
   const [FbResponse, SetFbResponse] = useState(null);
@@ -205,7 +206,7 @@ const FacebookIntegration = ({
 
       { !(currentProjectSettings?.int_facebook_access_token) && <div className={'mt-4 flex'}>
         {renderFacebookLogin()}
-        <Button className={'ml-2 '}>View documentation</Button>
+        {kbLink && <a className={'ant-btn ml-2 '} target={"_blank"} href={kbLink}>View documentation</a>}
       </div>}
     </ErrorBoundary>
     </>
