@@ -140,13 +140,18 @@ func (h *CategoricalHistogramStruct) PDF(x []string) (float64, error) {
 
 func (h *CategoricalHistogramStruct) PDFFromMap(xMap map[string]string) (float64, error) {
 	x := make([]string, h.Dimension)
+	numOfFilterValues := int(0)
 	for i := 0; i < h.Dimension; i++ {
 		eventName := (*h.Template)[i].Name
 		if val, ok := xMap[eventName]; ok {
 			x[i] = val
+			numOfFilterValues++
 		} else {
 			x[i] = ""
 		}
+	}
+	if numOfFilterValues != len(xMap) {
+		return 0.0, nil
 	}
 	return h.PDF(x)
 }
