@@ -18,15 +18,22 @@ function CalendarRow({
   triggerAttrComparision,
 }) {
   const {
-    coreQueryState: {
-      comparison_supported,
-      comparison_data,
-      comparison_enabled,
-      comparison_duration
-    },
+    coreQueryState,
     resetComparisonData,
     handleCompareWithClick,
   } = useContext(CoreQueryContext);
+
+  let comparison_supported,
+    comparison_data,
+    comparison_enabled,
+    comparison_duration;
+
+  if (queryType !== 'web') {
+    comparison_supported = coreQueryState.comparison_supported;
+    comparison_data = coreQueryState.comparison_data;
+    comparison_enabled = coreQueryState.comparison_enabled;
+    comparison_duration = coreQueryState.comparison_duration;
+  }
 
   const setDateRange = useCallback(
     (range) => {
