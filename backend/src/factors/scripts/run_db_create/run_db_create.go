@@ -595,5 +595,112 @@ func main() {
 	} else {
 		log.Info("Created google_organic_documents table.")
 	}
+	// task management
+	if err := db.CreateTable(&model.TaskDetails{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("task_details table creation failed.")
+	} else {
+		log.Info("Created task_details table.")
+	}
 
+	if err := db.CreateTable(&model.TaskExecutionDependencyDetails{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("task_dependency_Details table creation failed.")
+	} else {
+		log.Info("Created task_dependency_Details table.")
+	}
+
+	// Add foreign key constraint by TaskId.
+	if err := db.Model(&model.TaskExecutionDependencyDetails{}).AddForeignKey("task_id", "task_details(task_id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("task_dependency_Details table association with projects table failed.")
+	} else {
+		log.Info("task_dependency_Details table is associated with projects table.")
+	}
+
+	// Add foreign key constraint by DependenctTaskId.
+	if err := db.Model(&model.TaskExecutionDependencyDetails{}).AddForeignKey("dependent_task_id", "task_details(task_id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("task_dependency_Details table association with projects table failed.")
+	} else {
+		log.Info("task_dependency_Details table is associated with projects table.")
+	}
+
+	if err := db.CreateTable(&model.TaskExecutionDetails{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("task_execution_Details table creation failed.")
+	} else {
+		log.Info("Created task_execution_Details table.")
+	}
+
+	// Add foreign key constraint by task_id.
+	if err := db.Model(&model.TaskExecutionDetails{}).AddForeignKey("task_id", "task_details(task_id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("task_execution_Details table association with projects table failed.")
+	} else {
+		log.Info("task_execution_Details table is associated with projects table.")
+	}
+
+	// Add unique index on task_details tokens.
+	if err := db.Exec("CREATE UNIQUE INDEX task_name_unique_idx on task_details(task_name);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("task_details table token unique indexing failed.")
+	} else {
+		log.Info("task_details table token unique index created.")
+	}
+
+	// Add unique index on task_execution_details tokens.
+	if err := db.Exec("CREATE UNIQUE INDEX task_id_delta_unique_idx on task_execution_details(task_id, delta, project_id);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("task_execution_details table token unique indexing failed.")
+	} else {
+		log.Info("task_execution_details table token unique index created.")
+	}
+
+	// Add unique index on task_execution_dependency_details tokens.
+	if err := db.Exec("CREATE UNIQUE INDEX task_id_dependent_task_id_unique_idx on task_execution_dependency_details(task_id, dependent_task_id);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("task_execution_dependency_details table token unique indexing failed.")
+	} else {
+		log.Info("task_execution_dependency_details table token unique index created.")
+	}
+
+	// project model metadata
+	if err := db.CreateTable(&model.ProjectModelMetadata{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_model_metadata table creation failed.")
+	} else {
+		log.Info("Created project_model_metadata table.")
+	}
+
+	// Add unique index on project_model_metadata tokens.
+	if err := db.Exec("CREATE UNIQUE INDEX project_model_metadata_project_id_stdate_enddate_unique_idx on project_model_metadata(project_id, start_time, end_time);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_model_metadata table token unique indexing failed.")
+	} else {
+		log.Info("project_model_metadata table token unique index created.")
+	}
+
+	// Add foreign key constraint by project.
+	if err := db.Model(&model.ProjectModelMetadata{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_model_metadata table association with projects table failed.")
+	} else {
+		log.Info("project_model_metadata table is associated with projects table.")
+	}
+	// display name
+	if err := db.CreateTable(&model.DisplayName{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("displayname table creation failed.")
+	} else {
+		log.Info("Created display name table.")
+	}
+
+	// Add foreign key constraint by project.
+	if err := db.Model(&model.DisplayName{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("displayname table association with projects table failed.")
+	} else {
+		log.Info("display_name table is associated with projects table.")
+	}
+
+	// Add unique index on display_names tokens.
+	if err := db.Exec("CREATE UNIQUE INDEX display_names_project_id_object_group_entity_tag_unique_idx on display_names(project_id, entity_type, group_name, group_object_name, display_name);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("display_names table token unique indexing failed.")
+	} else {
+		log.Info("display_names table token unique index created.")
+	}
+
+	// Add unique index on display_names tokens.
+	if err := db.Exec("CREATE UNIQUE INDEX display_names_project_id_event_name_property_name_tag_unique_idx on display_names(project_id, event_name, property_name, tag);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("display_names table token unique indexing failed.")
+	} else {
+		log.Info("display_names table token unique index created.")
+	}
 }

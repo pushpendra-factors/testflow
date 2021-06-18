@@ -765,11 +765,6 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 			seenRow[keyIndex+2] = seenRow[keyIndex+2].(int64) + row[keyIndex+2].(int64)     // Clicks.
 			seenRow[keyIndex+3] = seenRow[keyIndex+3].(float64) + row[keyIndex+3].(float64) // Spend.
 
-			seenRow[keyIndex+4] = seenRow[keyIndex+4].(float64) + row[keyIndex+4].(float64) // CTR.
-			seenRow[keyIndex+5] = seenRow[keyIndex+5].(float64) + row[keyIndex+5].(float64) // AvgCPC.
-			seenRow[keyIndex+6] = seenRow[keyIndex+6].(float64) + row[keyIndex+6].(float64) // CPM.
-			seenRow[keyIndex+7] = seenRow[keyIndex+7].(float64) + row[keyIndex+7].(float64) // ConversionRate.
-
 			seenRow[keyIndex+8] = seenRow[keyIndex+8].(int64) + row[keyIndex+8].(int64) // Sessions.
 			seenRow[keyIndex+9] = seenRow[keyIndex+9].(int64) + row[keyIndex+9].(int64) // Users.
 
@@ -777,12 +772,43 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 			seenRow[keyIndex+11] = seenRow[keyIndex+11].(int64) + row[keyIndex+11].(int64)     // PageViews.
 
 			seenRow[keyIndex+12] = seenRow[keyIndex+12].(float64) + row[keyIndex+12].(float64) // Conversion.
-			seenRow[keyIndex+13] = seenRow[keyIndex+13].(float64) + row[keyIndex+13].(float64) // Conversion - CPC.
 			seenRow[keyIndex+14] = seenRow[keyIndex+14].(float64) + row[keyIndex+14].(float64) // Compare Conversion.
-			seenRow[keyIndex+15] = seenRow[keyIndex+15].(float64) + row[keyIndex+15].(float64) // Compare Conversion - CPC.
+
+			impressions := (seenRow[keyIndex+1]).(int64)
+			clicks := (seenRow[keyIndex+2]).(int64)
+			spend := seenRow[keyIndex+3].(float64)
+			if impressions > 0 {
+				seenRow[keyIndex+4] = 100 * float64(clicks) / float64(impressions) // CTR.
+				seenRow[keyIndex+6] = 1000 * float64(spend) / float64(impressions) // CPM.
+			} else {
+				seenRow[keyIndex+4] = float64(0) // CTR.
+				seenRow[keyIndex+6] = float64(0) // CPM.
+			}
+			if clicks > 0 {
+				seenRow[keyIndex+5] = float64(spend) / float64(clicks)                                // AvgCPC.
+				seenRow[keyIndex+7] = 100 * float64(seenRow[keyIndex+12].(float64)) / float64(clicks) // ConversionRate.
+			} else {
+				seenRow[keyIndex+5] = float64(0) // AvgCPC.
+				seenRow[keyIndex+7] = float64(0) // ConversionRate.
+			}
+			if seenRow[keyIndex+12].(float64) > 0 {
+				seenRow[keyIndex+13] = spend / seenRow[keyIndex+12].(float64) // Conversion - CPC.
+			} else {
+				seenRow[keyIndex+13] = float64(0) // Conversion - CPC.
+			}
+			if seenRow[keyIndex+14].(float64) > 0 {
+				seenRow[keyIndex+15] = spend / seenRow[keyIndex+14].(float64) // Compare Conversion - CPC.
+			} else {
+				seenRow[keyIndex+15] = float64(0) // Compare Conversion - CPC.
+			}
 			// Remaining linked funnel events & CPCs
-			for i := keyIndex + 16; i < len(seenRow); i++ {
+			for i := keyIndex + 16; i < len(seenRow); i += 2 {
 				seenRow[i] = seenRow[i].(float64) + row[i].(float64)
+				if seenRow[i].(float64) > 0 && i < len(seenRow) {
+					seenRow[i+1] = spend / seenRow[i].(float64) // Funnel - Conversion - CPC.
+				} else {
+					seenRow[i+1] = float64(0) // Funnel - Conversion - CPC.
+				}
 			}
 			rowKeyMap[key] = seenRow
 		} else {
