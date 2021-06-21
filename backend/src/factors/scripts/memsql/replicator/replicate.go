@@ -1049,6 +1049,13 @@ func convertIDToUUIDFromInterface(id interface{}) (string, error) {
 		uuid, err = U.ConvertIntToUUID(id.(uint64))
 	case string:
 		uuid, err = U.ConvertIntStringToUUID(id.(string))
+	case *string:
+		if id == nil {
+			return "", nil
+		}
+
+		idString := id.(*string)
+		uuid, err = U.ConvertIntStringToUUID(*idString)
 	default:
 		return "", errors.New(fmt.Sprintf("Invalid type %T with value %v", id, id))
 	}
@@ -1106,6 +1113,28 @@ func convertColumnTypeByTable(tableName string, record interface{}) (interface{}
 		}
 		memsqlEvent.EventNameId = uuid
 		return &memsqlEvent, nil
+
+	case tablePropertyDetails:
+		record := record.(*model.PropertyDetail)
+		if record.EventNameID == nil {
+			return &record, nil
+		}
+
+		uuid, err := convertIDToUUIDFromInterface(record.EventNameID)
+		if err != nil {
+			return record, err
+		}
+		record.EventNameID = &uuid
+		return &record, nil
+
+	case tableFactorsTrackedEvents:
+		record := record.(*model.FactorsTrackedEvent)
+		uuid, err := convertIDToUUIDFromInterface(record.EventNameID)
+		if err != nil {
+			return record, err
+		}
+		record.EventNameID = uuid
+		return &record, nil
 	}
 
 	return record, nil
