@@ -16,8 +16,8 @@ const EventFilterBy = (props) => {
   const [filterLoader, setfilterLoader] = useState(false); 
   const [filters, setfilters] = useState([]);
   const [filterProps, setFilterProperties] = useState({
-    user: [],
-    event: []
+    event: [],
+    user: []
 }); 
 // const [filterDD, setFilterDD] = useState(false);
 

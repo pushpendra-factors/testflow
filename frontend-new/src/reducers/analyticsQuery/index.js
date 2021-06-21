@@ -5,8 +5,8 @@ import {
 
 const defaultState = {
   session_order: {
-    between: 1,
-    to: 2,
+    between: 0,
+    to: 0,
   },
   show_criteria: TOTAL_EVENTS_CRITERIA,
   performance_criteria: EACH_USER_TYPE,

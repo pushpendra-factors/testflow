@@ -34,8 +34,8 @@ function QueryBlock({
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
   const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
   const [filterProps, setFilterProperties] = useState({
-    user: [],
     event: [],
+    user: [],
   });
 
   const alphabetIndex = 'ABCDEF';
