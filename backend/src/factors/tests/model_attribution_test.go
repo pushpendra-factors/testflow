@@ -429,7 +429,6 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		assert.Equal(t, int64(1), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, int64(1), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, float64(0.000001), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"))
 	})
 
 	t.Run("AttributionWithMarketingPropertyAdgroup", func(t *testing.T) {
@@ -450,7 +449,6 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
 		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
 		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"))
 	})
 
 	t.Run("AttributionWithMarketingPropertyKeyword", func(t *testing.T) {
@@ -476,7 +474,6 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
 		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
 		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"))
 	})
 
 	errCode = createEventWithSession(project.ID, "event1",
@@ -507,7 +504,6 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		assert.Equal(t, int64(1), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, int64(1), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
 		assert.Equal(t, float64(0.000001), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"))
 	})
 
 	t.Run("AttributionQueryLinearAdgroupMultiUserSession", func(t *testing.T) {
@@ -528,7 +524,6 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		assert.Equal(t, int64(2), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
 		assert.Equal(t, int64(2), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
 		assert.Equal(t, float64(0.000002), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"))
 	})
 
 	t.Run("AttributionQueryLinearKeywordMultiUserSession", func(t *testing.T) {
@@ -551,7 +546,6 @@ func TestAttributionModelEndToEndWithEnrichment(t *testing.T) {
 		assert.Equal(t, int64(3), getImpressions(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
 		assert.Equal(t, int64(3), getClicks(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
 		assert.Equal(t, float64(0.000003), getSpend(query.AttributionKey, result, "adwords"+model.KeyDelimiter+"Campaign_Adwords_100"+model.KeyDelimiter+"Adgroup_Adwords_200"+model.KeyDelimiter+"Broad"+model.KeyDelimiter+"Keyword_Adwords_300"))
-		assert.Equal(t, float64(0), getConversionUserCount(query.AttributionKey, result, "none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"+model.KeyDelimiter+"none"))
 	})
 }
 
@@ -1405,11 +1399,11 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 	mergedRows := make([][]interface{}, 0)
 	row3 := []interface{}{"Campaign1", int64(5), int64(5), float64(5),
 		// (CTR, AvgCPC, CPM, ConversionRate)
-		float64(5), float64(5), float64(5), float64(5),
+		float64(100), float64(1), float64(1000), float64(100),
 		// Sessions, (users), (AvgSessionTime), (pageViews),
 		int64(5), int64(5), float64(5), int64(5),
 		// ConversionEventCount, CostPerConversion, ConversionEventCompareCount, CostPerConversionCompareCount
-		float64(5), float64(5), float64(5), float64(5)}
+		float64(5), float64(1), float64(5), float64(1)}
 
 	mergedRows = append(mergedRows, row3)
 	type args struct {
@@ -1428,7 +1422,7 @@ func TestMergeDataRowsHavingSameKey(t *testing.T) {
 			for rowNo, _ := range got {
 				for colNo, _ := range got[rowNo] {
 					if got[rowNo][colNo] != tt.want[rowNo][colNo] {
-						t.Errorf("MergeDataRowsHavingSameKey() = %v, want %v", got[rowNo][colNo], tt.want[rowNo][colNo])
+						t.Errorf("MergeDataRowsHavingSameKey()col No: %v=,  = %v, want %v", colNo, got[rowNo][colNo], tt.want[rowNo][colNo])
 					}
 				}
 			}
