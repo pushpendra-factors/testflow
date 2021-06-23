@@ -515,7 +515,7 @@ export const DefaultDateRangeFormat = {
   to:
     moment().format('dddd') === 'Sunday' || moment().format('dddd') === 'Monday'
       ? moment().subtract(3, 'days').endOf('week')
-      : moment().subtract(1, 'day'),
+      : moment().subtract(1, 'day').endOf('day'),
   frequency: 'date',
 };
 
@@ -679,14 +679,14 @@ export const getAttributionStateFromRequestQuery = (
     requestQuery.attribution_key_f.forEach((pr) => {
       if (pr.lop === 'AND') {
         let val = pr.ty === 'categorical' ? [pr.va] : pr.va;
-      touchPointFilters.push({
-        operator: reverseOperatorMap[pr.op],
-        props: [pr.pr, pr.ty, pr.attribution_key],
-        values: val,
-      });
-    } else if (pr.ty === 'categorical') {
-      touchPointFilters[touchPointFilters.length - 1].values.push(pr.va);
-    }
+        touchPointFilters.push({
+          operator: reverseOperatorMap[pr.op],
+          props: [pr.pr, pr.ty, pr.attribution_key],
+          values: val,
+        });
+      } else if (pr.ty === 'categorical') {
+        touchPointFilters[touchPointFilters.length - 1].values.push(pr.va);
+      }
     });
   }
 
@@ -782,7 +782,7 @@ export const getCampaignsQuery = (
       };
     }),
     filters: appliedFilters,
-    gbt: 'date',
+    gbt: dateRange.frequency,
   };
   if (dateRange.from && dateRange.to) {
     query.fr = moment(dateRange.from).startOf('day').utc().unix();

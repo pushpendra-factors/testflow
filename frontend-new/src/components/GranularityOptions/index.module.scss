@@ -1,0 +1,37 @@
+$fontFamily: 'Work Sans', sans-serif;
+
+.dropdownMenu {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+  border-radius: 12px;
+  width: 250px;
+}
+
+.dropdownMenuItem {
+  font-family: $fontFamily;
+  font-weight: normal;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: -0.01em;
+  color: #3e516c;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+
+  &:hover {
+    background-color: #fff !important;
+  }
+}
+
+.dropdownMenuItem.disabled {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.dropdownMenuItem.active {
+  background-color: #f5f6f8;
+  color: #3e516c;
+
+  &:hover {
+    background-color: #f5f6f8 !important;
+    color: #3e516c;
+  }
+}

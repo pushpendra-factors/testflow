@@ -7,6 +7,7 @@ import {
   RESET_COMPARISON_DATA,
   SET_COMPARISON_SUPPORTED,
   SET_COMPARE_DURATION,
+  UPDATE_CHART_TYPES,
 } from './constants';
 
 export default function (state, action) {
@@ -65,6 +66,11 @@ export default function (state, action) {
       return {
         ...state,
         comparison_duration: payload,
+      };
+    case UPDATE_CHART_TYPES:
+      return {
+        ...state,
+        chartTypes: payload,
       };
     default:
       return state;

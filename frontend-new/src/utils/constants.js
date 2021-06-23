@@ -325,3 +325,49 @@ export const FUNNEL_CHART_MARGIN = {
 export const LOCAL_STORAGE_ITEMS = {
   DASHBOARD_DURATION: 'dashboard_duration',
 };
+
+export const DateBreakdowns = [
+  {
+    title: 'Hourly Trend',
+    key: 'hour',
+    disabled: false,
+  },
+  {
+    title: 'Daily Trend',
+    key: 'date',
+    disabled: false,
+  },
+  {
+    title: 'Weekly Trend',
+    key: 'week',
+    disabled: false,
+  },
+  {
+    title: 'Monthly Trend',
+    key: 'month',
+    disabled: false,
+  },
+  {
+    title: 'Quarterly Trend',
+    key: 'quarter',
+    disabled: false,
+  },
+];
+
+export const DefaultChartTypes = {
+  [QUERY_TYPE_EVENT]: {
+    no_breakdown: CHART_TYPE_SPARKLINES,
+    breakdown: CHART_TYPE_BARCHART,
+  },
+  [QUERY_TYPE_CAMPAIGN]: {
+    no_breakdown: CHART_TYPE_SPARKLINES,
+    breakdown: CHART_TYPE_BARCHART,
+  },
+};
+
+export const QUERY_TYPE_TEXT = {
+  [QUERY_TYPE_EVENT]: 'Events',
+  [QUERY_TYPE_FUNNEL]: 'Funnels',
+  [QUERY_TYPE_CAMPAIGN]: 'Campaigns',
+  [QUERY_TYPE_ATTRIBUTION]: 'Attributions',
+};
