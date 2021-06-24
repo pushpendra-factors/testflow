@@ -47,8 +47,9 @@ const (
 )
 
 const (
-	PropertyEntityUser  = "user"
-	PropertyEntityEvent = "event"
+	PropertyEntityUser       = "user"
+	PropertyEntityEvent      = "event"
+	PropertyEntityUserGlobal = "user_g"
 )
 
 const PropertyValueNone = "$none"
@@ -116,7 +117,10 @@ const (
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
 const UserPropertyGroupByPresent string = "$present"
 
-// Query cache related contants.
+// NumericalValuePostgresRegex Used to remove non numerical values in numerical bucketing.
+const NumericalValuePostgresRegex string = "\\$none|^-?[0-9]+\\.?[0-9]*$"
+
+// Query cache related constants.
 const (
 	QueryCacheInProgressPlaceholder string = "QUERY_CACHE_IN_PROGRESS"
 
@@ -166,6 +170,7 @@ type Query struct {
 	EventsCondition      string                     `json:"ec"` // all or any
 	EventsWithProperties []QueryEventWithProperties `json:"ewp"`
 	GroupByProperties    []QueryGroupByProperty     `json:"gbp"`
+	GlobalUserProperties []QueryProperty            `json:"gup"`
 	GroupByTimestamp     interface{}                `json:"gbt"`
 	Timezone             string                     `json:"tz"`
 	From                 int64                      `json:"fr"`
@@ -600,4 +605,27 @@ func SanitizeStringSumToNumeric(result *QueryResult) {
 			result.Rows[i][j] = U.SafeConvertToFloat64(result.Rows[i][j])
 		}
 	}
+}
+
+func GetPropertyEntityFieldForFilter(entityName string) string {
+	if entityName == PropertyEntityUser {
+		// Filtering is supported only with event level user_properties.
+		return "events.user_properties"
+	} else if entityName == PropertyEntityEvent {
+		return "events.properties"
+	} else if entityName == PropertyEntityUserGlobal {
+		return "users.properties"
+	}
+	return ""
+}
+
+// CheckIfHasNoneFilter Returns if set of filters has $none as a value
+func CheckIfHasNoneFilter(properties []QueryProperty) bool {
+
+	for _, p := range properties {
+		if p.Value == PropertyValueNone {
+			return true
+		}
+	}
+	return false
 }

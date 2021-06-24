@@ -757,7 +757,6 @@ func MergeDataRowsHavingSameKey(rows [][]interface{}, keyIndex int) [][]interfac
 			}
 			key = key + val
 		}
-
 		if _, exists := rowKeyMap[key]; exists {
 			seenRow := rowKeyMap[key]
 			// Don't sum up Impressions, Clicks, Spend.

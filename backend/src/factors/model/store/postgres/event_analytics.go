@@ -766,7 +766,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *model.Query,
 		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
 		stepParams = append(stepParams, projectID)
 		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
-			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy)
+			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties)
 
 		if i < len(q.EventsWithProperties)-1 {
 			*qStmnt = *qStmnt + ","
@@ -937,7 +937,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q model.Query) (str
 	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("COUNT(*) AS %s", model.AliasAggr))
 
 	addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
-		"", "", qSelect, egSelectParams, "", "", "")
+		"", "", qSelect, egSelectParams, "", "", "", q.GlobalUserProperties)
 
 	qStmnt = appendGroupByTimestampIfRequired(qStmnt, isGroupByTimestamp, egKeys)
 	qStmnt = appendOrderByAggr(qStmnt)
@@ -1512,7 +1512,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64,
 		refStepName = fmt.Sprintf("step%d", i)
 		filters = append(filters, refStepName)
 		addFilterEventsWithPropsQuery(projectID, &qStmnt, &qParams, ewp, q.From, q.To, "",
-			refStepName, filterSelect, egParams, "", "", "")
+			refStepName, filterSelect, egParams, "", "", "", q.GlobalUserProperties)
 		if len(q.EventsWithProperties) > 1 {
 			qStmnt = qStmnt + ", "
 		}
@@ -1817,7 +1817,7 @@ func addEventFilterStepsForEventCountQuery(projectID uint64, q *model.Query,
 		addJoinStmnt := "JOIN users ON events.user_id=users.id AND users.project_id = ?"
 		stepParams = append(stepParams, projectID)
 		err := addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
-			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy)
+			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy, q.GlobalUserProperties)
 		if err != nil {
 			return steps, stepsToKeysMap, err
 		}

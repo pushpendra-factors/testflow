@@ -32,6 +32,7 @@ func (pg *Postgres) RunFunnelQuery(projectId uint64, query model.Query) (*model.
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
+
 	result, err := pg.ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
@@ -537,7 +538,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q model.Query) (string, []int
 		addJoinStatement := "JOIN users ON events.user_id=users.id AND users.project_id = ? "
 		addParams = append(addParams, projectId)
 		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
-			"", stepName, addSelect, addParams, addJoinStatement, "", "coal_user_id, events.timestamp ASC")
+			"", stepName, addSelect, addParams, addJoinStatement, "", "coal_user_id, events.timestamp ASC", q.GlobalUserProperties)
 
 		if len(q.EventsWithProperties) > 1 && i == 0 {
 			qStmnt = qStmnt + ", "
