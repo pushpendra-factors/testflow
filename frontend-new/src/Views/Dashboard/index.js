@@ -18,9 +18,7 @@ import { LOCAL_STORAGE_ITEMS } from '../../utils/constants';
 function Dashboard({ fetchEventNames, activeProject }) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
-  const [durationObj, setDurationObj] = useState(
-    getDashboardDateRange()
-  );
+  const [durationObj, setDurationObj] = useState(getDashboardDateRange());
   const [refreshClicked, setRefreshClicked] = useState(false);
   const dispatch = useDispatch();
 
@@ -56,6 +54,7 @@ function Dashboard({ fetchEventNames, activeProject }) {
         from,
         to,
         frequency,
+        dateType: dates.dateType,
       };
       setItemToLocalStorage(
         LOCAL_STORAGE_ITEMS.DASHBOARD_DURATION,

@@ -264,7 +264,7 @@ CREATE TABLE IF NOT EXISTS factors_goals (
 CREATE TABLE IF NOT EXISTS factors_tracked_events (
     id bigint AUTO_INCREMENT,
     project_id bigint,
-    event_name_id bigint,
+    event_name_id text,
     type varchar(2),
     created_by text,
     last_tracked_at timestamp(6), 

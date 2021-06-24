@@ -28,42 +28,50 @@ const IntegrationProviderData = [
   {
     name: 'Segment',
     desc: 'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
-    icon: 'Segment_ads'
+    icon: 'Segment_ads',
+    kbLink:false,
   },
   {
     name: 'Hubspot',
     desc: 'Sync your Contact, Company and Deal objects with Factors on a daily basis',
-    icon: 'Hubspot_ads'
+    icon: 'Hubspot_ads',
+    kbLink:false,
   },
   {
     name: 'Salesforce',
     desc: 'Sync your Leads, Contact, Account, Opportunity and Campaign objects with Factors on a daily basis',
-    icon: 'Salesforce_ads'
+    icon: 'Salesforce_ads',
+    kbLink:false,
   },
   {
     name: 'Google Ads',
     desc: 'Integrate reporting from Google Search, Youtube and Display Network',
-    icon: 'Google_ads'
+    icon: 'Google_ads',
+    kbLink:false,
   },
   {
     name: 'Facebook',
     desc: 'Pull in reports from Facebook, Instagram and Facebook Audience Network',
-    icon: 'Facebook_ads'
+    icon: 'Facebook_ads',
+    kbLink:'https://help.factors.ai/en/articles/5099507-facebook-ads'
   },
   {
     name: 'LinkedIn',
     desc: 'Sync LinkedIn ads reports with Factors for performance reporting',
-    icon: 'Linkedin_ads'
+    icon: 'Linkedin_ads',
+    kbLink:false,
   },
   {
     name: 'Drift',
     desc: 'Track events and conversions from Drift’s chat solution on the website',
-    icon: 'DriftLogo'
+    icon: 'DriftLogo',
+    kbLink:false,
   },
   {
     name: 'Google Search Console',
     desc: 'Track organic search impressions, clicks and position from Google Search',
-    icon: 'Google'
+    icon: 'Google',
+    kbLink:false,
   },
 ];
 
@@ -74,16 +82,16 @@ const IntegrationCard = ({ item, index }) => {
   const [isActive, setIsActive] = useState(false);
   const [toggle, setToggle] = useState(false);
 
-  const loadIntegrationForm = (name) => {
-    switch (name) {
-      case 'Hubspot': return <HubspotIntegration setIsActive={setIsActive} />;
-      case 'Segment': return <SegmentIntegration setIsActive={setIsActive} />;
-      case 'Drift': return <DriftIntegration setIsActive={setIsActive} />;
-      case 'Facebook': return <FacebookIntegration setIsActive={setIsActive} />;
-      case 'Salesforce': return <SalesForceIntegration setIsActive={setIsActive} />;
-      case 'Google Ads': return <GoogleAdWords setIsActive={setIsActive} />;
-      case 'LinkedIn': return <LinkedInIntegration setIsActive={setIsActive} />;
-      case 'Google Search Console': return <GoogleSearchConsole setIsActive={setIsActive} />;
+  const loadIntegrationForm = (item) => {
+    switch (item?.name) {
+      case 'Hubspot': return <HubspotIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
+      case 'Segment': return <SegmentIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
+      case 'Drift': return <DriftIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
+      case 'Facebook': return <FacebookIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
+      case 'Salesforce': return <SalesForceIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
+      case 'Google Ads': return <GoogleAdWords kbLink={item.kbLink} setIsActive={setIsActive} />;
+      case 'LinkedIn': return <LinkedInIntegration kbLink={item.kbLink} setIsActive={setIsActive} />;
+      case 'Google Search Console': return <GoogleSearchConsole kbLink={item.kbLink} setIsActive={setIsActive} />;
       default: return <><Tag color="orange" style={{ marginTop: '8px' }}>Enable from <a href="https://app-old.factors.ai/" target="_blank">here</a></Tag> </>
     }
   }
@@ -110,7 +118,7 @@ const IntegrationCard = ({ item, index }) => {
             {isActive && <Tag color="green" style={{ marginLeft: '8px' }}>Active</Tag>}
           </div>
           <Text type={'paragraph'} mini extraClass={'m-0 w-9/12'} color={'grey'} lineHeight={'medium'}>{item.desc}</Text>
-          {toggle && loadIntegrationForm(item.name)}
+          {toggle && loadIntegrationForm(item)}
         </div>
         {isActive &&
           <div className={'flex flex-col items-start'}>

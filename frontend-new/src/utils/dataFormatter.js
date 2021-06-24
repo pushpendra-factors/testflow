@@ -1,6 +1,14 @@
 import React from 'react';
 import moment from 'moment';
-import { QUERY_TYPE_CAMPAIGN, QUERY_TYPE_EVENT } from './constants';
+import {
+  QUERY_TYPE_CAMPAIGN,
+  QUERY_TYPE_EVENT,
+  CHART_TYPE_STACKED_AREA,
+  CHART_TYPE_LINECHART,
+  CHART_TYPE_STACKED_BAR,
+  QUERY_TYPE_FUNNEL,
+  CHART_TYPE_SPARKLINES,
+} from './constants';
 
 const visualizationColors = [
   '#4D7DB4',
@@ -253,4 +261,46 @@ export const removeItemFromLocalStorage = (key) => {
 
 export const clearLocalStorage = (key) => {
   localStorage.clear();
+};
+
+export const getValidGranularityOptions = ({ from, to }, queryType) => {
+  const startDate = moment(from).startOf('day').utc().unix() * 1000;
+  const endDate = moment(to).endOf('day').utc().unix() * 1000 + 1000;
+  const daysDiff = moment(endDate).diff(startDate, 'days');
+  //whatever will be returned, 0th element will be treated as default
+  if (daysDiff > 93) {
+    return ['week', 'month', 'quarter'];
+  }
+  if (daysDiff > 31) {
+    return ['week', 'date', 'month'];
+  }
+  if (daysDiff > 7) {
+    return ['date', 'week'];
+  }
+  if (daysDiff > 1) {
+    return ['date'];
+  }
+  //hourly data is not supported for campaigns
+  if (queryType === QUERY_TYPE_CAMPAIGN) {
+    return ['date'];
+  }
+  return ['hour'];
+};
+
+export const isSeriesChart = (chartType) => {
+  return (
+    chartType === CHART_TYPE_STACKED_AREA ||
+    chartType === CHART_TYPE_LINECHART ||
+    chartType === CHART_TYPE_STACKED_BAR ||
+    chartType === CHART_TYPE_SPARKLINES
+  );
+};
+
+export const getQueryType = (query) => {
+  const cl = query.cl
+    ? query.cl
+    : Array.isArray(query.query_group) && query.query_group.length
+    ? query.query_group[0].cl
+    : QUERY_TYPE_EVENT;
+  return cl;
 };

@@ -1,11 +1,18 @@
 import React, { useCallback, useContext } from 'react';
 import FaDatepicker from '../../../components/FaDatepicker';
 import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
-import { QUERY_TYPE_WEB } from '../../../utils/constants';
+import {
+  QUERY_TYPE_WEB,
+  QUERY_TYPE_EVENT,
+  QUERY_TYPE_CAMPAIGN,
+  REPORT_SECTION,
+} from '../../../utils/constants';
 import styles from './index.module.scss';
 import { Button } from 'antd';
 import { SVG, Spiner } from '../../../components/factorsComponents';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
+import { isSeriesChart } from '../../../utils/dataFormatter';
+import GranularityOptions from '../../../components/GranularityOptions';
 
 function CalendarRow({
   durationObj,
@@ -16,24 +23,19 @@ function CalendarRow({
   metricsDropdown,
   queryType,
   triggerAttrComparision,
+  handleGranularityChange,
+  section,
 }) {
   const {
-    coreQueryState,
+    coreQueryState: {
+      comparison_supported,
+      comparison_data,
+      comparison_enabled,
+      comparison_duration,
+    },
     resetComparisonData,
     handleCompareWithClick,
   } = useContext(CoreQueryContext);
-
-  let comparison_supported,
-    comparison_data,
-    comparison_enabled,
-    comparison_duration;
-
-  if (queryType !== 'web') {
-    comparison_supported = coreQueryState.comparison_supported;
-    comparison_data = coreQueryState.comparison_data;
-    comparison_enabled = coreQueryState.comparison_enabled;
-    comparison_duration = coreQueryState.comparison_duration;
-  }
 
   const setDateRange = useCallback(
     (range) => {
@@ -99,6 +101,25 @@ function CalendarRow({
     );
   };
 
+  let granularity = null;
+
+  if (
+    (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_CAMPAIGN) &&
+    section === REPORT_SECTION &&
+    isSeriesChart(chartType)
+  ) {
+    granularity = (
+      <>
+        <div className='mx-2'>as</div>
+        <GranularityOptions
+          onClick={handleGranularityChange}
+          durationObj={durationObj}
+          queryType={queryType}
+        />
+      </>
+    );
+  }
+
   return (
     <div className='flex justify-between items-center'>
       <div className='flex items-center'>
@@ -119,6 +140,7 @@ function CalendarRow({
           />
         </div>
         {comparison_supported && renderCompareScenario()}
+        {granularity}
       </div>
       <div className='flex items-center'>
         {chartTypeMenuItems.length ? (

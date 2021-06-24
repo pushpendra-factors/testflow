@@ -25,8 +25,8 @@ const LinkedEventsBlock = ({
     const [filterBlockVisible, setFilterBlockVisible] = useState(false);
 
     const [filterProps, setFilterProperties] = useState({
-        user: [],
-        event: []
+        event: [],
+        user: []
     });
     
     useEffect(() => {
