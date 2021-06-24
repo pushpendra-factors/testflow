@@ -33,7 +33,7 @@ const (
 	lastSyncInfoForAProject = "SELECT project_id, customer_account_id, type as document_type, max(timestamp) as last_timestamp" +
 		" " + "FROM adwords_documents WHERE project_id = ? GROUP BY project_id, customer_account_id, type"
 	insertAdwordsStr                   = "INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,campaign_id,ad_group_id,ad_id,keyword_id,value,created_at,updated_at) VALUES "
-	adwordsFilterQueryStr              = "SELECT DISTINCT(value->>?) as filter_value FROM adwords_documents WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND value->>? IS NOT NULL LIMIT 5000"
+	adwordsFilterQueryStr              = "SELECT DISTINCT(LOWER(value->>?)) as filter_value FROM adwords_documents WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND value->>? IS NOT NULL LIMIT 5000"
 	staticWhereStatementForAdwords     = "WHERE project_id = ? AND customer_account_id IN ( ? ) AND type = ? AND timestamp between ? AND ? "
 	fromAdwordsDocument                = " FROM adwords_documents "
 	shareHigherOrderExpression         = "sum(case when value->>'%s' IS NOT NULL THEN (value->>'%s')::float else 0 END)/NULLIF(sum(case when value->>'%s' IS NOT NULL THEN (value->>'%s')::float else 0 END), 0)"
@@ -1663,7 +1663,7 @@ func (pg *Postgres) GetAdwordsFilterValuesByType(projectID uint64, docType int) 
 		return []string{}, http.StatusBadRequest
 	}
 
-	queryStr := "SELECT DISTINCT(value->>?) as filter_value FROM adwords_documents WHERE project_id = ? AND" +
+	queryStr := "SELECT DISTINCT(LOWER(value->>?)) as filter_value FROM adwords_documents WHERE project_id = ? AND" +
 		" " + "customer_account_id = ? AND type = ? LIMIT 5000"
 	rows, err := db.Raw(queryStr, filterValueKey, projectID, customerAccountID, docType).Rows()
 	if err != nil {

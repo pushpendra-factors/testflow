@@ -678,3 +678,40 @@ func TestExecuteChannelQueryHandlerForSearchConsole(t *testing.T) {
 		assertIfResponseIsEqualToExpected(t, w.Body, expectedResults[index], index)
 	}
 }
+
+func TestWeeklyTrendForChannels(t *testing.T) {
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+	Const.SetSmartPropertiesReservedNames()
+
+	a := gin.Default()
+	H.InitAppRoutes(a)
+
+	project, customerAccountID, agent, statusCode := createProjectAndAddAdwordsDocument(t, r)
+	if statusCode != http.StatusAccepted {
+		assert.Equal(t, false, true)
+		return
+	}
+	adwordsDocuments := []M.AdwordsDocument{
+		{ID: "1", Timestamp: 20210606, ProjectID: project.ID, CustomerAccountID: customerAccountID, TypeAlias: "campaign_performance_report",
+			Value: &postgres.Jsonb{json.RawMessage(`{"cost": "11","clicks": "101","campaign_id":"1","impressions": "1001", "campaign_name": "test1"}`)}},
+	}
+	for _, adwordsDocument := range adwordsDocuments {
+		store.GetStore().CreateAdwordsDocument(&adwordsDocument)
+	}
+
+	successChannelQueries := []map[string]interface{}{
+		{"query_group": [1]map[string]interface{}{{"channel": "google_ads", "select_metrics": [3]string{"clicks", "impressions", "spend"},
+			"gbt": "week", "fr": 1622937600, "to": 1623369599}}, "cl": "channel_v1"},
+	}
+
+	successChannelResponse := [][]byte{
+		[]byte(`{"result":{"result_group":[{"headers":["datetime","clicks","impressions","spend"],"rows":[["2021-06-06T00:00:00Z",101,1001,0]]}]}}`),
+	}
+
+	for index, channelQuery := range successChannelQueries {
+		w := sendChannelAnalyticsQueryReq(a, project.ID, agent, channelQuery)
+		assert.Equal(t, http.StatusOK, w.Code)
+		assertIfResponseIsEqualToExpected(t, w.Body, successChannelResponse[index], index)
+	}
+}
